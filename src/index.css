@@ -1,3 +1,6 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -35,19 +38,12 @@
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
@@ -95,7 +91,69 @@
     @apply border-border;
   }
 
-  body {
-    @apply bg-background text-foreground;
+  html {
+    @apply antialiased;
+    scroll-behavior: smooth;
   }
+
+  body {
+    @apply bg-navy text-white font-sans overflow-x-hidden;
+  }
+
+  img {
+    @apply max-w-full;
+  }
+}
+
+.nav-link {
+  @apply relative text-gold hover:text-gold-light transition-colors duration-300;
+}
+
+.nav-link::after {
+  content: '';
+  @apply absolute left-0 bottom-[-4px] h-[2px] w-0 bg-gold transition-all duration-300 ease-in-out;
+}
+
+.nav-link:hover::after {
+  @apply w-full;
+}
+
+.hero-border {
+  @apply relative;
+}
+
+.hero-border::before {
+  content: '';
+  @apply absolute top-0 left-0 right-0 bottom-0 border-2 border-gold rounded-2xl;
+  transform: scale(1.02);
+  opacity: 0.7;
+  z-index: -1;
+}
+
+.fadein-on-scroll {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.fadein-on-scroll.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.gold-highlight {
+  @apply relative inline-block;
+}
+
+.gold-highlight::after {
+  content: '';
+  @apply absolute left-0 right-0 bottom-0 h-[2px] bg-gold;
+  transform: scaleX(0);
+  transform-origin: bottom right;
+  transition: transform 0.3s ease-out;
+}
+
+.gold-highlight:hover::after {
+  transform: scaleX(1);
+  transform-origin: bottom left;
 }
