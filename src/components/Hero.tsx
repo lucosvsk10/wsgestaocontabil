@@ -23,7 +23,7 @@ const Hero = () => {
       
       
       <div ref={heroRef} className="container relative z-5 transition-all duration-700 transform opacity-0 translate-y-0 px-0 mx-[240px] py-0 my-0">
-        <div className="border overflow-hidden backdrop-blur-sm p-8 md:p-12 border-[5px] border-[#efc349] rounded-2xl px-[30px] py-[30px] my-0 mx-0">
+        <div className="border overflow-hidden backdrop-blur-sm p-8 md:p-12 border-[5px] border-[#efc349] rounded-2xl py-[30px] my-0 mx-0 px-[50px]">
           <div className="flex flex-col md:flex-row items-center justify-between gap-12">
             <div className="w-full md:w-3/5 space-y-6 animate-fade-in-right">
               <h1 className="text-4xl md:text-6xl font-anton text-gold uppercase tracking-tight leading-tight">
@@ -42,7 +42,7 @@ const Hero = () => {
             
             <div className="w-full md:w-2/5 flex justify-center animate-fade-in">
               <div className="relative">
-                <div className="w-60 h-60 md:w-72 md:h-72">
+                <div className="w-60 h-60 md:w-72 md:h-72 img\n">
                   
                 </div>
                 <div className="absolute bottom-0 right-0 left-0 text-center">
