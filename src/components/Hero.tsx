@@ -22,8 +22,8 @@ const Hero = () => {
   return <section className="relative min-h-screen pt-24 flex items-center justify-center overflow-hidden bg-navy" id="hero">
       <div className="absolute inset-0 bg-gradient-to-br from-navy-dark to-navy opacity-70"></div>
       
-      <div ref={heroRef} className="container mx-auto px-6 py-12 relative z-10 transition-all duration-700 transform opacity-0 translate-y-10">
-        <div className="hero-border overflow-hidden backdrop-blur-sm p-8 md:p-12 border border-gold/30 py-[200px] px-[50px] mx-[50px] my-[20px] bg-transparent rounded-2xl">
+      <div ref={heroRef} className="container mx-auto px-6 relative z-10 transition-all duration-700 transform opacity-0 translate-y-10 py-0">
+        <div className="hero-border overflow-hidden backdrop-blur-sm p-8 md:p-12 border-[5px] border-gold/30 py-[200px] rounded-2xl bg-transparent px-[50px] mx-[240px] my-[240px]">
           <div className="flex flex-col md:flex-row items-center justify-between gap-12">
             <div className="w-full md:w-3/5 space-y-6 animate-fade-in-right">
               <h1 className="text-4xl md:text-6xl font-anton text-gold uppercase tracking-tight leading-tight">
@@ -43,7 +43,7 @@ const Hero = () => {
             <div className="w-full md:w-2/5 flex justify-center animate-fade-in">
               <div className="relative">
                 <div className="w-60 h-60 md:w-72 md:h-72">
-                  <img src="/lovable-uploads/cb878201-552e-4728-a814-1554857917b4.png" alt="Caduceu - Símbolo da Profissão Contábil" className="w-full h-full object-contain" />
+                  
                 </div>
                 <div className="absolute bottom-0 right-0 left-0 text-center">
                   <h3 className="text-lg font-anton text-gold mb-2">Caduceu</h3>
