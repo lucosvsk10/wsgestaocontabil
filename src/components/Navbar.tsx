@@ -21,7 +21,7 @@ const Navbar = () => {
             <img 
               src="/lovable-uploads/4b269729-8d34-4824-8425-cc8c319161a8.png" 
               alt="WS Gestão Contábil Logo" 
-              className="h-12 w-auto"
+              className="h-24 w-auto" // Changed from h-12 to h-24 (doubled the size)
             />
           </a>
         </div>
