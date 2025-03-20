@@ -24,20 +24,20 @@ const Navbar = () => {
       <div className="container mx-auto px-6 py-4 flex items-center justify-between">
         <div className="flex items-center">
           <a href="/" className="flex items-center space-x-2">
-            <span className="font-bold text-xl text-gold">WS</span>
-            <span className="text-white text-sm font-medium uppercase tracking-wider">Gestão Contábil</span>
+            <span className="font-anton text-xl text-gold">WS</span>
+            <span className="text-white text-sm font-prompt font-medium uppercase tracking-wider">Gestão Contábil</span>
           </a>
         </div>
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-8">
-          <a href="#servicos" className="nav-link text-sm font-medium uppercase tracking-wider">
+          <a href="#servicos" className="nav-link text-sm font-prompt font-medium uppercase tracking-wider">
             Serviços
           </a>
-          <a href="#sobre" className="nav-link text-sm font-medium uppercase tracking-wider">
+          <a href="#sobre" className="nav-link text-sm font-prompt font-medium uppercase tracking-wider">
             Sobre
           </a>
-          <a href="#contato" className="nav-link text-sm font-medium uppercase tracking-wider">
+          <a href="#contato" className="nav-link text-sm font-prompt font-medium uppercase tracking-wider">
             Contato
           </a>
         </nav>
@@ -71,21 +71,21 @@ const Navbar = () => {
           <nav className="flex flex-col space-y-8 items-center text-center mt-12">
             <a 
               href="#servicos" 
-              className="text-gold hover:text-gold-light text-xl font-medium uppercase tracking-wider transition-colors"
+              className="text-gold hover:text-gold-light text-xl font-prompt font-medium uppercase tracking-wider transition-colors"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               Serviços
             </a>
             <a 
               href="#sobre" 
-              className="text-gold hover:text-gold-light text-xl font-medium uppercase tracking-wider transition-colors"
+              className="text-gold hover:text-gold-light text-xl font-prompt font-medium uppercase tracking-wider transition-colors"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               Sobre
             </a>
             <a 
               href="#contato" 
-              className="text-gold hover:text-gold-light text-xl font-medium uppercase tracking-wider transition-colors"
+              className="text-gold hover:text-gold-light text-xl font-prompt font-medium uppercase tracking-wider transition-colors"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               Contato

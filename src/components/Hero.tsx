@@ -40,17 +40,17 @@ const Hero = () => {
         <div className="hero-border rounded-2xl overflow-hidden bg-navy-dark/30 backdrop-blur-sm p-8 md:p-12 border border-gold/30">
           <div className="flex flex-col md:flex-row items-center justify-between gap-12">
             <div className="w-full md:w-3/5 space-y-6 animate-fade-in-right">
-              <h1 className="text-4xl md:text-6xl font-bold text-gold uppercase tracking-tight leading-tight">
+              <h1 className="text-4xl md:text-6xl font-anton text-gold uppercase tracking-tight leading-tight">
                 WS Gestão Contábil
               </h1>
               
               <div className="space-y-4">
-                <h2 className="text-xl md:text-2xl font-medium text-white">
+                <h2 className="text-xl md:text-2xl font-medium text-white font-prompt">
                   Seja Bem Vindo ao Site Oficial da WS Gestão Contábil
                 </h2>
                 <a 
                   href="#quem-somos" 
-                  className="inline-block text-purple hover:text-purple-400 font-medium transition-colors duration-300"
+                  className="inline-block text-purple hover:text-purple-400 font-prompt font-medium transition-colors duration-300"
                 >
                   Quem Somos
                 </a>
@@ -67,8 +67,8 @@ const Hero = () => {
                   />
                 </div>
                 <div className="absolute bottom-0 right-0 left-0 text-center">
-                  <h3 className="text-lg font-medium text-gold mb-2">Caduceu</h3>
-                  <p className="text-xs md:text-sm text-white/80">
+                  <h3 className="text-lg font-anton text-gold mb-2">Caduceu</h3>
+                  <p className="text-xs md:text-sm text-white/80 font-prompt">
                     O Símbolo da Profissão Contábil: Caduceu é um símbolo antigo composto por um bastão entrelaçado com duas serpentes, duas pequenas asas e um elmo.
                   </p>
                 </div>
