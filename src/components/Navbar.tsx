@@ -14,8 +14,7 @@ const Navbar = () => {
       <div className="container mx-auto flex items-center justify-between bg-[#37353d] py-[3px] px-[24px]">
         <div className="flex items-center">
           <a href="/" className="flex items-center space-x-2">
-            <img src="/lovable-uploads/4b269729-8d34-4824-8425-cc8c319161a8.png" alt="WS Gestão Contábil Logo" className="h-24 w-auto" // Changed from h-12 to h-24 (doubled the size)
-          />
+            <img alt="WS Gestão Contábil Logo" src="/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png" className="h-12  w-auto" />
           </a>
         </div>
 
