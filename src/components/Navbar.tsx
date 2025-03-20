@@ -10,11 +10,12 @@ const Navbar = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-  return <header className="">
-      <div className="container flex items-center justify-between bg-[#37353d] px-[3px] my-0 mx-[240px] py-[10px]">
+  return <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-navy/95 shadow-md backdrop-blur-sm' : 'bg-transparent'}`}>
+      <div className="container mx-auto px-6 flex items-center justify-between bg-[#37353d] py-[3px]">
         <div className="flex items-center">
           <a href="/" className="flex items-center space-x-2">
-            
+            <img src="/lovable-uploads/4b269729-8d34-4824-8425-cc8c319161a8.png" alt="WS Gestão Contábil Logo" className="h-24 w-auto" // Changed from h-12 to h-24 (doubled the size)
+          />
           </a>
         </div>
 
