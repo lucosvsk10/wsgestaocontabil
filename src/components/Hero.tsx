@@ -22,8 +22,8 @@ const Hero = () => {
   return <section id="hero" className="relative min-h-screen pt-24 flex items-center justify-center overflow-hidden bg-navy py-0">
       
       
-      <div ref={heroRef} className="container relative z-5 transition-all duration-700 transform opacity-0 translate-y-10 my-0 py-[240px] px-0 mx-0">
-        <div className="border overflow-hidden backdrop-blur-sm p-8 md:p-12 border-[5px] border-[#efc349] rounded-2xl py-[24px] px-[50px] mx-[20px] my-[24px] ">
+      <div ref={heroRef} className="container relative z-5 transition-all duration-700 transform opacity-0 translate-y-10 my-0 px-0 mx-0 py-[2000\npx]">
+        <div className="border overflow-hidden backdrop-blur-sm p-8 md:p-12 border-[5px] border-[#efc349] rounded-2xl px-[50px] my-0 py-0 mx-[20px]">
           <div className="flex flex-col md:flex-row items-center justify-between gap-12">
             <div className="w-full md:w-3/5 space-y-6 animate-fade-in-right">
               <h1 className="text-4xl md:text-6xl font-anton text-gold uppercase tracking-tight leading-tight">
