@@ -1,8 +1,11 @@
+
 import { useState, useEffect } from 'react';
 import { Menu, X } from 'lucide-react';
+
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
@@ -10,12 +13,16 @@ const Navbar = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
   return <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-navy/95 shadow-md backdrop-blur-sm' : 'bg-transparent'}`}>
       <div className="container mx-auto px-6 flex items-center justify-between py-[35px] bg-[#37353d]">
         <div className="flex items-center">
           <a href="/" className="flex items-center space-x-2">
-            <span className="font-anton text-xl text-gold">WS</span>
-            <span className="text-white text-sm font-prompt font-medium uppercase tracking-wider">Gestão Contábil</span>
+            <img 
+              src="/lovable-uploads/4b269729-8d34-4824-8425-cc8c319161a8.png" 
+              alt="WS Gestão Contábil Logo" 
+              className="h-12 w-auto"
+            />
           </a>
         </div>
 
@@ -61,4 +68,5 @@ const Navbar = () => {
       </div>
     </header>;
 };
+
 export default Navbar;

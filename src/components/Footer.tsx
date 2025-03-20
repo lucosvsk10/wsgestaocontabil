@@ -8,8 +8,11 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
           <div className="space-y-6">
             <div className="flex items-center space-x-2">
-              <span className="text-2xl font-bold text-gold">WS</span>
-              <span className="text-white text-base font-medium">Gestão Contábil</span>
+              <img 
+                src="/lovable-uploads/4b269729-8d34-4824-8425-cc8c319161a8.png" 
+                alt="WS Gestão Contábil Logo" 
+                className="h-16 w-auto"
+              />
             </div>
             <p className="text-white/70 max-w-xs">
               Soluções contábeis completas para o sucesso do seu negócio. 
