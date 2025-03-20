@@ -11,7 +11,7 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
   return <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-navy/95 shadow-md backdrop-blur-sm' : 'bg-transparent'}`}>
-      <div className="container mx-auto px-6 flex items-center justify-between py-[35px]">
+      <div className="container mx-auto px-6 flex items-center justify-between py-[35px] bg-[#37353d]">
         <div className="flex items-center">
           <a href="/" className="flex items-center space-x-2">
             <span className="font-anton text-xl text-gold">WS</span>
