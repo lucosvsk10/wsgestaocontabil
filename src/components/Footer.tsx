@@ -26,7 +26,7 @@ const Footer = () => {
               </li>
               <li className="flex items-center space-x-3">
                 <Mail className="w-5 h-5 text-gold flex-shrink-0" />
-                <span className="text-white/70">contato@wsgestaocontabil.com.br</span>
+                <span className="text-white/70">contabilie2010@hotmail.com</span>
               </li>
             </ul>
           </div>
