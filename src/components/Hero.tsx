@@ -23,7 +23,7 @@ const Hero = () => {
       
       
       <div ref={heroRef} className="container relative z-5 transition-all duration-700 transform opacity-0 translate-y-10 px-0 mx-0 py-0">
-        <div className="border overflow-hidden backdrop-blur-sm p-0 md:p-0 border-[5px] border-gold/30 rounded-0xl bg-transparent py-[24px] px-[50px] mx-[20px] my-[24px]">
+        <div className="hero-border overflow-hidden backdrop-blur-sm p-0 md:p-0 border-[5px] border-gold/30 rounded-2xl bg-transparent py-[24px] px-[50px] mx-[20px] my-[24px]">
           <div className="flex flex-col md:flex-row items-center justify-between gap-12">
             <div className="w-full md:w-3/5 space-y-6 animate-fade-in-right">
               <h1 className="text-4xl md:text-6xl font-anton text-gold uppercase tracking-tight leading-tight">
