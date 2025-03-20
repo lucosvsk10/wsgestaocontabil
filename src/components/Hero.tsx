@@ -31,9 +31,9 @@ const Hero = () => {
               </h1>
               
               <div className="space-y-4">
-                <h2 className="text-xl md:text-2xl font-medium text-white font-prompt">
-                  Seja Bem Vindo ao Site Oficial da WS Gestão Contábil
-                </h2>
+                <h2 className="text-xl md:text-2xl font-medium text-white font-prompt text-left">Seja Bem Vindo ao Site
+Oficial da WS
+Gestão Contábil</h2>
                 <a href="#quem-somos" className="inline-block text-purple hover:text-purple-400 font-prompt font-medium transition-colors duration-300">
                   Quem Somos
                 </a>
