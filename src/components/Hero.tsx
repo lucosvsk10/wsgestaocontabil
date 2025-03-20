@@ -19,7 +19,7 @@ const Hero = () => {
       }
     };
   }, []);
-  return <section className="relative min-h-screen pt-24 flex items-center justify-center overflow-hidden bg-navy" id="hero">
+  return <section id="hero" className="relative min-h-screen pt-24 flex items-center justify-center overflow-hidden bg-navy py-[9px]">
       
       
       <div ref={heroRef} className="container relative z-5 transition-all duration-700 transform opacity-0 translate-y-10 px-0 mx-0 py-0">
