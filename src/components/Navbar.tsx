@@ -14,7 +14,7 @@ const Navbar = () => {
       <div className="container mx-auto flex items-center justify-between bg-[#37353d] px-[28px] py-[19px]">
         <div className="flex items-center">
           <a href="/" className="flex items-center space-x-2">
-            <img alt="WS Gestão Contábil Logo" src="/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png" className="h-12  w-auto" />
+            <img alt="WS Gestão Contábil Logo" src="/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png" className="h-8  w-auto" />
           </a>
         </div>
 
