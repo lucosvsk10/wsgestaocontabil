@@ -27,7 +27,7 @@ const Index = () => {
       });
     };
   }, []);
-  return <div className="relative min-h-screen bg-navy px:6">
+  return <div className="relative min-h-screen px:6 bg-gray-950">
       <Navbar />
       <main>
         <Hero />
