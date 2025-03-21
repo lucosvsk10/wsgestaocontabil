@@ -1,3 +1,4 @@
+
 import { useEffect, useRef } from 'react';
 const Hero = () => {
   const heroRef = useRef<HTMLDivElement>(null);
@@ -42,8 +43,12 @@ const Hero = () => {
             
             <div className="w-full md:w-2/5 flex justify-center animate-fade-in">
               <div className="relative">
-                <div className="w-60 h-60 md:w-72 md:h-72 img\n">
-                  
+                <div className="w-60 h-60 md:w-72 md:h-72 flex items-center justify-center">
+                  <img 
+                    src="/lovable-uploads/a87b6e5f-5e26-4b01-bf74-865e0ec514a7.png" 
+                    alt="Caduceu - Símbolo da Contabilidade" 
+                    className="w-full h-full object-contain"
+                  />
                 </div>
                 <div className="absolute bottom-0 right-0 left-0 text-center">
                   <h3 className="text-lg font-anton text-gold mb-2">Caduceu</h3>
