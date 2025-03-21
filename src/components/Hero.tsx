@@ -1,7 +1,9 @@
 
 import { useEffect, useRef } from 'react';
+
 const Hero = () => {
   const heroRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) {
@@ -11,15 +13,18 @@ const Hero = () => {
     }, {
       threshold: 0.1
     });
+
     if (heroRef.current) {
       observer.observe(heroRef.current);
     }
+
     return () => {
       if (heroRef.current) {
         observer.unobserve(heroRef.current);
       }
     };
   }, []);
+
   return <section id="hero" className="relative min-h-screen pt-24 flex items-center justify-center overflow-hidden bg-navy py-0">
       
       
@@ -42,7 +47,7 @@ const Hero = () => {
             </div>
             
             <div className="w-full md:w-2/5 flex justify-center animate-fade-in">
-              <div className="relative">
+              <div className="flex flex-col items-center">
                 <div className="w-48 h-48 md:w-56 md:h-56 flex items-center justify-center">
                   <img 
                     src="/lovable-uploads/a87b6e5f-5e26-4b01-bf74-865e0ec514a7.png" 
@@ -50,7 +55,7 @@ const Hero = () => {
                     className="w-full h-full object-contain"
                   />
                 </div>
-                <div className="absolute bottom-0 right-0 left-0 text-center mt-4">
+                <div className="text-center mt-4">
                   <h3 className="text-lg font-anton text-gold mb-2">Caduceu</h3>
                   <p className="text-xs md:text-sm text-white/80 font-prompt">
                     O Símbolo da Profissão Contábil: Caduceu é um símbolo antigo composto por um bastão entrelaçado com duas serpentes, duas pequenas asas e um elmo.
@@ -63,4 +68,5 @@ const Hero = () => {
       </div>
     </section>;
 };
+
 export default Hero;
