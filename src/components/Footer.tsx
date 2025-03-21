@@ -1,3 +1,4 @@
+
 import { MapPin, Phone, Mail, Clock } from 'lucide-react';
 const Footer = () => {
   return <footer id="contato" className="bg-navy-dark border-t border-gold/20">
@@ -5,7 +6,7 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
           <div className="space-y-6">
             <div className="flex items-center space-x-2">
-              <img src="/lovable-uploads/4b269729-8d34-4824-8425-cc8c319161a8.png" alt="WS Gestão Contábil Logo" className="h-16 w-auto" />
+              <img src="/lovable-uploads/39120db8-da84-4b89-a7c4-eb7ed10faa83.png" alt="WS Gestão Contábil Logo" className="h-16 w-auto" />
             </div>
             <p className="text-white/70 max-w-xs">
               Soluções contábeis completas para o sucesso do seu negócio. 
