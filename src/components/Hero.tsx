@@ -39,7 +39,12 @@ const Hero = () => {
                 <h2 className="text-xl md:text-2xl font-medium text-white font-prompt">
                   Seja Bem Vindo ao Site Oficial da WS Gestão Contábil
                 </h2>
-                <a href="#quem-somos" className="inline-block text-purple hover:text-purple-400 font-prompt font-medium transition-colors duration-300">
+                <a 
+                  href="https://g.co/kgs/TNVzPqy" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="inline-block text-purple hover:text-purple-400 font-prompt font-medium transition-colors duration-300"
+                >
                   Quem Somos
                 </a>
               </div>
