@@ -1,8 +1,11 @@
+
 import { useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
 import About from '../components/About';
+import BusinessNews from '../components/BusinessNews';
 import Footer from '../components/Footer';
+
 const Index = () => {
   useEffect(() => {
     const handleIntersection = (entries: IntersectionObserverEntry[]) => {
@@ -27,11 +30,13 @@ const Index = () => {
       });
     };
   }, []);
+  
   return <div className="relative min-h-screen px:6 bg-gray-950">
       <Navbar />
       <main>
         <Hero />
         <About />
+        <BusinessNews />
       </main>
       <Footer />
       
@@ -41,9 +46,11 @@ const Index = () => {
           <a href="#hero" className="w-3 h-3 rounded-full bg-gold/30 hover:bg-gold transition-colors duration-300" aria-label="Ir para o topo" />
           <a href="#servicos" className="w-3 h-3 rounded-full bg-gold/30 hover:bg-gold transition-colors duration-300" aria-label="Ir para serviços" />
           <a href="#sobre" className="w-3 h-3 rounded-full bg-gold/30 hover:bg-gold transition-colors duration-300" aria-label="Ir para sobre" />
+          <a href="#noticias" className="w-3 h-3 rounded-full bg-gold/30 hover:bg-gold transition-colors duration-300" aria-label="Ir para notícias" />
           <a href="#contato" className="w-3 h-3 rounded-full bg-gold/30 hover:bg-gold transition-colors duration-300" aria-label="Ir para contato" />
         </div>
       </div>
     </div>;
 };
+
 export default Index;
