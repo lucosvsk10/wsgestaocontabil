@@ -1,3 +1,4 @@
+
 import { MapPin, Phone, Mail, Clock } from 'lucide-react';
 const Footer = () => {
   return <footer id="contato" className="bg-navy-dark border-t border-gold/20">
@@ -43,7 +44,12 @@ const Footer = () => {
               </li>
             </ul>
             <div className="pt-4">
-              <a href="#contato" className="inline-flex items-center px-5 py-2.5 rounded-lg bg-gold hover:bg-gold-light text-navy-dark font-medium transition-colors duration-300">
+              <a 
+                href="https://wa.me/5582999324884" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="inline-flex items-center px-5 py-2.5 rounded-lg bg-gold hover:bg-gold-light text-navy-dark font-medium transition-colors duration-300"
+              >
                 Solicite um Orçamento
               </a>
             </div>
