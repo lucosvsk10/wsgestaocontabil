@@ -25,11 +25,10 @@ const Hero = () => {
     };
   }, []);
 
-  return <section id="hero" className="relative min-h-screen pt-24 flex items-center justify-center overflow-hidden bg-navy py-0">
+  return <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden bg-navy py-0">
       
-      
-      <div ref={heroRef} className="container relative z-5 transition-all duration-700 transform opacity-0 translate-y-0 px-0 mx-[240px] py-0 my-0">
-        <div className="border overflow-hidden backdrop-blur-sm p-8 md:p-12 border-[5px] border-[#efc349] rounded-2xl py-[30px] my-0 mx-0 px-[50px]">
+      <div ref={heroRef} className="container relative z-5 transition-all duration-700 transform opacity-0 translate-y-0 flex items-center justify-center">
+        <div className="border overflow-hidden backdrop-blur-sm p-8 md:p-12 border-[5px] border-[#efc349] rounded-2xl py-[30px] my-0 mx-0 px-[50px] max-w-5xl">
           <div className="flex flex-col md:flex-row items-center justify-between gap-12">
             <div className="w-full md:w-3/5 space-y-6 animate-fade-in-right">
               <h1 className="text-4xl md:text-6xl font-anton text-gold uppercase tracking-tight leading-tight">
