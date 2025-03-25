@@ -8,6 +8,12 @@ import AccountingSection from '../components/AccountingSection';
 import Footer from '../components/Footer';
 import { Button } from "@/components/ui/button";
 import { Calculator } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const Index = () => {
   useEffect(() => {
@@ -64,15 +70,22 @@ const Index = () => {
       </div>
       
       {/* Floating Button to Accounting Section */}
-      <div className="fixed left-6 bottom-6 z-50">
-        <Button 
-          size="icon"
-          className="h-14 w-14 rounded-full bg-gold hover:bg-gold-light text-navy shadow-lg animate-bounce"
-          onClick={scrollToContabil}
-          aria-label="Ir para Mundo Contábil"
-        >
-          <Calculator size={24} />
-        </Button>
+      <div className="fixed right-6 bottom-6 z-50">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              size="icon"
+              className="h-14 w-14 rounded-full bg-gold hover:bg-gold-light text-navy shadow-lg animate-bounce"
+              onClick={scrollToContabil}
+              aria-label="Ir para Mundo Contábil"
+            >
+              <Calculator size={24} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Últimas Notícias</p>
+          </TooltipContent>
+        </Tooltip>
       </div>
     </div>;
 };
