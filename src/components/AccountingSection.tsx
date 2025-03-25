@@ -87,7 +87,7 @@ const AccountingSection = () => {
   }, []);
   return <section id="contabil" className="py-16 bg-navy px-6 fadein-on-scroll">
       <div className="container mx-auto">
-        <h2 className="text-4xl font-anton text-gold mb-12 text-center">MUNDO CONTÁBIL</h2>
+        <h2 className="text-4xl font-anton text-gold mb-12 text-center font-bold">MUNDO CONTÁBIL</h2>
         
         <Tabs defaultValue="news" className="w-full max-w-4xl mx-auto">
           <TabsList className="grid w-full grid-cols-2 mb-8">
