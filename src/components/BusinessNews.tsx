@@ -161,7 +161,7 @@ const BusinessNews = () => {
                     Atualizado em {new Date().toLocaleDateString('pt-BR')}
                   </CardDescription>
                 </div>
-                <Button variant="outline" size="icon" className="border-gold/30 text-gold hover:text-white hover:bg-gold/20" onClick={handleRefreshRates} disabled={refreshingRates}>
+                <Button variant="outline" size="icon" onClick={handleRefreshRates} disabled={refreshingRates} className="border-gold/30 text-gold hover:text-white bg-gold-dark">
                   <RefreshCw className={`h-4 w-4 ${refreshingRates ? 'animate-spin' : ''}`} />
                   <span className="sr-only">Atualizar cotações</span>
                 </Button>
@@ -211,7 +211,7 @@ const BusinessNews = () => {
                     Notícias atualizadas diariamente
                   </CardDescription>
                 </div>
-                <Button variant="outline" size="icon" className="border-gold/30 text-gold hover:text-white hover:bg-gold/20" onClick={handleRefreshNews} disabled={refreshingNews}>
+                <Button variant="outline" size="icon" onClick={handleRefreshNews} disabled={refreshingNews} className="border-gold/30 text-gold hover:text-white bg-gold-dark">
                   <RefreshCw className={`h-4 w-4 ${refreshingNews ? 'animate-spin' : ''}`} />
                   <span className="sr-only">Atualizar notícias</span>
                 </Button>
