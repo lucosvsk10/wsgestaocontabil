@@ -60,7 +60,6 @@ const usefulLinks = [{
   url: "https://www.gov.br/pt-br",
   description: "Portal de serviços do Governo Federal"
 }];
-
 const AccountingSection = () => {
   const [isFloatingButtonOpen, setIsFloatingButtonOpen] = useState(false);
   const [newsData, setNewsData] = useState(sampleNews);
@@ -132,7 +131,7 @@ const AccountingSection = () => {
               </CarouselContent>
               <div className="flex justify-center mt-4">
                 <CarouselPrevious className="relative static left-0 right-0 mx-2 translate-y-0" />
-                <CarouselNext className="relative static left-0 right-0 mx-2 translate-y-0" />
+                <CarouselNext className="relative static left-0 right-0 mx-0\n translate-y-0" />
               </div>
             </Carousel>
           </TabsContent>
@@ -177,5 +176,4 @@ const AccountingSection = () => {
       </div>
     </section>;
 };
-
 export default AccountingSection;
