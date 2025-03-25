@@ -6,6 +6,8 @@ import About from '../components/About';
 import BusinessNews from '../components/BusinessNews';
 import AccountingSection from '../components/AccountingSection';
 import Footer from '../components/Footer';
+import { Button } from "@/components/ui/button";
+import { Calculator } from "lucide-react";
 
 const Index = () => {
   useEffect(() => {
@@ -32,6 +34,13 @@ const Index = () => {
     };
   }, []);
   
+  const scrollToContabil = () => {
+    const contabilSection = document.getElementById('contabil');
+    if (contabilSection) {
+      contabilSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+  
   return <div className="relative min-h-screen px:6 bg-gray-950">
       <Navbar />
       <main>
@@ -52,6 +61,18 @@ const Index = () => {
           <a href="#contabil" className="w-3 h-3 rounded-full bg-gold/30 hover:bg-gold transition-colors duration-300" aria-label="Ir para contábil" />
           <a href="#contato" className="w-3 h-3 rounded-full bg-gold/30 hover:bg-gold transition-colors duration-300" aria-label="Ir para contato" />
         </div>
+      </div>
+      
+      {/* Floating Button to Accounting Section */}
+      <div className="fixed left-6 bottom-6 z-50">
+        <Button 
+          size="icon"
+          className="h-14 w-14 rounded-full bg-gold hover:bg-gold-light text-navy shadow-lg animate-bounce"
+          onClick={scrollToContabil}
+          aria-label="Ir para Mundo Contábil"
+        >
+          <Calculator size={24} />
+        </Button>
       </div>
     </div>;
 };

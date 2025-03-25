@@ -3,7 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Newspaper, Link, Plus, X } from "lucide-react";
+import { Newspaper, Link, Plus, X, Calculator } from "lucide-react";
 
 // Sample accounting news data
 const sampleNews = [{
@@ -60,6 +60,7 @@ const usefulLinks = [{
   url: "https://www.gov.br/pt-br",
   description: "Portal de serviços do Governo Federal"
 }];
+
 const AccountingSection = () => {
   const [isFloatingButtonOpen, setIsFloatingButtonOpen] = useState(false);
   const [newsData, setNewsData] = useState(sampleNews);
@@ -176,4 +177,5 @@ const AccountingSection = () => {
       </div>
     </section>;
 };
+
 export default AccountingSection;
