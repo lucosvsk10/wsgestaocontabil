@@ -4,6 +4,7 @@ import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
 import About from '../components/About';
 import BusinessNews from '../components/BusinessNews';
+import AccountingSection from '../components/AccountingSection';
 import Footer from '../components/Footer';
 
 const Index = () => {
@@ -37,6 +38,7 @@ const Index = () => {
         <Hero />
         <About />
         <BusinessNews />
+        <AccountingSection />
       </main>
       <Footer />
       
@@ -47,6 +49,7 @@ const Index = () => {
           <a href="#servicos" className="w-3 h-3 rounded-full bg-gold/30 hover:bg-gold transition-colors duration-300" aria-label="Ir para serviços" />
           <a href="#sobre" className="w-3 h-3 rounded-full bg-gold/30 hover:bg-gold transition-colors duration-300" aria-label="Ir para sobre" />
           <a href="#noticias" className="w-3 h-3 rounded-full bg-gold/30 hover:bg-gold transition-colors duration-300" aria-label="Ir para notícias" />
+          <a href="#contabil" className="w-3 h-3 rounded-full bg-gold/30 hover:bg-gold transition-colors duration-300" aria-label="Ir para contábil" />
           <a href="#contato" className="w-3 h-3 rounded-full bg-gold/30 hover:bg-gold transition-colors duration-300" aria-label="Ir para contato" />
         </div>
       </div>

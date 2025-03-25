@@ -31,6 +31,9 @@ const Navbar = () => {
           <a href="#sobre" className="nav-link text-sm font-prompt font-medium uppercase tracking-wider">
             Sobre
           </a>
+          <a href="#contabil" className="nav-link text-sm font-prompt font-medium uppercase tracking-wider">
+            Contábil
+          </a>
           <a href="#contato" className="nav-link text-sm font-prompt font-medium uppercase tracking-wider">
             Contato
           </a>
@@ -65,6 +68,9 @@ const Navbar = () => {
             </a>
             <a href="#sobre" className="text-gold hover:text-gold-light text-xl font-prompt font-medium uppercase tracking-wider transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
               Sobre
+            </a>
+            <a href="#contabil" className="text-gold hover:text-gold-light text-xl font-prompt font-medium uppercase tracking-wider transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
+              Contábil
             </a>
             <a href="#contato" className="text-gold hover:text-gold-light text-xl font-prompt font-medium uppercase tracking-wider transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
               Contato
