@@ -144,7 +144,7 @@ const BusinessNews = () => {
   }
   return <section id="noticias" className="py-16 bg-navy-light">
       <div className="container mx-auto px-6">
-        <h2 className="text-4xl font-anton text-gold text-center mb-8">
+        <h2 className="text-4xl text-gold text-center mb-8 font-bold">
           Notícias do Mundo de Negócios
         </h2>
         
