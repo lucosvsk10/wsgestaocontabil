@@ -2,7 +2,8 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowDown, ArrowUp, TrendingUp, Newspaper, DollarSign, Euro } from 'lucide-react';
+import { ArrowDown, ArrowUp, TrendingUp, Newspaper, DollarSign, Euro, RefreshCw } from 'lucide-react';
+import { Button } from "@/components/ui/button";
 
 interface ExchangeRate {
   code: string;
@@ -22,75 +23,116 @@ const BusinessNews = () => {
   const [exchangeRates, setExchangeRates] = useState<ExchangeRate[]>([]);
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshingRates, setRefreshingRates] = useState(false);
+  const [refreshingNews, setRefreshingNews] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
+  const fetchExchangeRates = async () => {
+    try {
+      // In a real app, you would use a proper API for exchange rates
+      // For demo purposes, we'll simulate with fixed data that changes slightly each time
+      const baseDate = new Date();
+      const seed = baseDate.getTime(); // Use current timestamp for more randomness on refresh
+      const randomFactor = Math.sin(seed * 0.001) * 0.05;
+      
+      const mockRates: ExchangeRate[] = [
+        {
+          code: 'USD/BRL',
+          name: 'Dólar Americano',
+          rate: 5.42 + randomFactor,
+          change: randomFactor * 2
+        },
+        {
+          code: 'EUR/BRL',
+          name: 'Euro',
+          rate: 5.95 + randomFactor * 1.2,
+          change: randomFactor * 2.2
+        },
+        {
+          code: 'BRL/USD',
+          name: 'Real Brasileiro',
+          rate: (1 / (5.42 + randomFactor)),
+          change: -randomFactor * 1.8
+        }
+      ];
+      
+      setExchangeRates(mockRates);
+    } catch (err) {
+      console.error('Error fetching exchange rates:', err);
+      setError('Não foi possível carregar os dados de cotação. Tente novamente mais tarde.');
+    } finally {
+      setRefreshingRates(false);
+    }
+  };
+  
+  const fetchNews = async () => {
+    try {
+      // Simulate fetching business news with some randomness
+      const baseDate = new Date();
+      const topics = ['tecnologia', 'commodities', 'juros', 'economia', 'varejo', 'mercado financeiro', 'investimentos'];
+      const randomTopic1 = topics[Math.floor(Math.random() * topics.length)];
+      const randomTopic2 = topics[Math.floor(Math.random() * topics.length)];
+      
+      const mockNews: NewsItem[] = [
+        {
+          title: `Mercado reage a dados econômicos do dia ${baseDate.getDate()}/${baseDate.getMonth() + 1}`,
+          description: `Analistas apontam tendências positivas para o setor de ${randomTopic1} e ${randomTopic2} nesta semana.`,
+          url: '#',
+          publishedAt: baseDate.toISOString()
+        },
+        {
+          title: 'Banco Central sinaliza possível alteração na taxa de juros',
+          description: 'Decisão deve impactar mercado financeiro nos próximos dias com reflexos diretos na economia real.',
+          url: '#',
+          publishedAt: baseDate.toISOString()
+        },
+        {
+          title: 'Setor de varejo apresenta recuperação após período de queda',
+          description: 'Dados indicam aumento nas vendas e otimismo para os próximos meses no comércio brasileiro.',
+          url: '#',
+          publishedAt: baseDate.toISOString()
+        }
+      ];
+      
+      setNews(mockNews);
+    } catch (err) {
+      console.error('Error fetching news:', err);
+      setError('Não foi possível carregar as notícias. Tente novamente mais tarde.');
+    } finally {
+      setRefreshingNews(false);
+    }
+  };
+  
+  const handleRefreshRates = () => {
+    setRefreshingRates(true);
+    fetchExchangeRates();
+  };
+  
+  const handleRefreshNews = () => {
+    setRefreshingNews(true);
+    fetchNews();
+  };
+  
   useEffect(() => {
-    const fetchExchangeRates = async () => {
+    const loadInitialData = async () => {
       try {
-        // In a real app, you would use a proper API for exchange rates
-        // For demo purposes, we'll simulate with fixed data that changes slightly each day
-        const baseDate = new Date();
-        const seed = baseDate.getDate() + baseDate.getMonth() * 30;
-        const randomFactor = Math.sin(seed) * 0.05;
-        
-        const mockRates: ExchangeRate[] = [
-          {
-            code: 'USD/BRL',
-            name: 'Dólar Americano',
-            rate: 5.42 + randomFactor,
-            change: randomFactor * 2
-          },
-          {
-            code: 'EUR/BRL',
-            name: 'Euro',
-            rate: 5.95 + randomFactor * 1.2,
-            change: randomFactor * 2.2
-          },
-          {
-            code: 'BRL/USD',
-            name: 'Real Brasileiro',
-            rate: (1 / (5.42 + randomFactor)),
-            change: -randomFactor * 1.8
-          }
-        ];
-        
-        setExchangeRates(mockRates);
-        
-        // Simulate fetching business news
-        const mockNews: NewsItem[] = [
-          {
-            title: `Mercado reage a dados econômicos do dia ${baseDate.getDate()}/${baseDate.getMonth() + 1}`,
-            description: 'Analistas apontam tendências positivas para o setor de tecnologia e commodities nesta semana.',
-            url: '#',
-            publishedAt: baseDate.toISOString()
-          },
-          {
-            title: 'Banco Central sinaliza possível alteração na taxa de juros',
-            description: 'Decisão deve impactar mercado financeiro nos próximos dias com reflexos diretos na economia real.',
-            url: '#',
-            publishedAt: baseDate.toISOString()
-          },
-          {
-            title: 'Setor de varejo apresenta recuperação após período de queda',
-            description: 'Dados indicam aumento nas vendas e otimismo para os próximos meses no comércio brasileiro.',
-            url: '#',
-            publishedAt: baseDate.toISOString()
-          }
-        ];
-        
-        setNews(mockNews);
+        await fetchExchangeRates();
+        await fetchNews();
       } catch (err) {
-        console.error('Error fetching data:', err);
+        console.error('Error loading initial data:', err);
         setError('Não foi possível carregar os dados. Tente novamente mais tarde.');
       } finally {
         setLoading(false);
       }
     };
     
-    fetchExchangeRates();
+    loadInitialData();
     
     // Refresh data every 24 hours (86400000 ms)
-    const intervalId = setInterval(fetchExchangeRates, 86400000);
+    const intervalId = setInterval(() => {
+      fetchExchangeRates();
+      fetchNews();
+    }, 86400000);
     
     return () => clearInterval(intervalId);
   }, []);
@@ -142,14 +184,26 @@ const BusinessNews = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
           <div className="lg:col-span-1">
             <Card className="bg-navy border-gold/30 text-white h-full">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="text-gold" />
-                  <span>Cotações do Dia</span>
-                </CardTitle>
-                <CardDescription className="text-white/70">
-                  Atualizado em {new Date().toLocaleDateString('pt-BR')}
-                </CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="text-gold" />
+                    <span>Cotações do Dia</span>
+                  </CardTitle>
+                  <CardDescription className="text-white/70">
+                    Atualizado em {new Date().toLocaleDateString('pt-BR')}
+                  </CardDescription>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  className="border-gold/30 text-gold hover:text-white hover:bg-gold/20"
+                  onClick={handleRefreshRates}
+                  disabled={refreshingRates}
+                >
+                  <RefreshCw className={`h-4 w-4 ${refreshingRates ? 'animate-spin' : ''}`} />
+                  <span className="sr-only">Atualizar cotações</span>
+                </Button>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -188,14 +242,26 @@ const BusinessNews = () => {
           
           <div className="lg:col-span-2">
             <Card className="bg-navy border-gold/30 text-white h-full">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Newspaper className="text-gold" />
-                  <span>Últimas Notícias</span>
-                </CardTitle>
-                <CardDescription className="text-white/70">
-                  Notícias atualizadas diariamente
-                </CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Newspaper className="text-gold" />
+                    <span>Últimas Notícias</span>
+                  </CardTitle>
+                  <CardDescription className="text-white/70">
+                    Notícias atualizadas diariamente
+                  </CardDescription>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  className="border-gold/30 text-gold hover:text-white hover:bg-gold/20"
+                  onClick={handleRefreshNews}
+                  disabled={refreshingNews}
+                >
+                  <RefreshCw className={`h-4 w-4 ${refreshingNews ? 'animate-spin' : ''}`} />
+                  <span className="sr-only">Atualizar notícias</span>
+                </Button>
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
