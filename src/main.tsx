@@ -6,7 +6,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => {
         const badge = document.querySelector("#lovable-badge");
         if (badge) badge.remove();
-    }, 100); // Espera 0.1 segundo para garantir que ele seja removido
+    }, 20); // Espera 0.01 segundo para garantir que ele seja removido
 });
 
 createRoot(document.getElementById("root")!).render(<App />);
