@@ -56,7 +56,7 @@ const ClientLogin = () => {
   // Check if user exists and password is correct
   const validateLogin = (email, password) => {
     // Check if admin credentials
-    if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+    if (email === wsgestao@gmail.com && password === melquesedeque) {
       return { success: true, isAdmin: true };
     }
     
