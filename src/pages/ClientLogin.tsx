@@ -1,7 +1,7 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Lock, User, UserPlus, Mail } from "lucide-react";
+import { Lock, User, UserPlus, Mail, KeyRound, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const ClientLogin = () => {
   const [email, setEmail] = useState("");
@@ -22,18 +23,61 @@ const ClientLogin = () => {
   const [registerConfirmPassword, setRegisterConfirmPassword] = useState("");
   const [isRegistering, setIsRegistering] = useState(false);
   
+  // Verification code state
+  const [showVerification, setShowVerification] = useState(false);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [expectedCode, setExpectedCode] = useState("");
+  const [verifyingCode, setVerifyingCode] = useState(false);
+  const [pendingRegistration, setPendingRegistration] = useState(null);
+  
+  // Password validation
+  const [passwordError, setPasswordError] = useState("");
+  
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleLogin = (e: React.FormEvent) => {
+  // Load registered users from localStorage
+  const getRegisteredUsers = () => {
+    const users = localStorage.getItem("registeredUsers");
+    return users ? JSON.parse(users) : [];
+  };
+
+  // Save registered users to localStorage
+  const saveRegisteredUser = (user) => {
+    const users = getRegisteredUsers();
+    users.push(user);
+    localStorage.setItem("registeredUsers", JSON.stringify(users));
+  };
+
+  // Check if user exists and password is correct
+  const validateLogin = (email, password) => {
+    const users = getRegisteredUsers();
+    const user = users.find(u => u.email === email);
+    if (!user) {
+      return { success: false, message: "Usuário não encontrado" };
+    }
+    if (user.password !== password) {
+      return { success: false, message: "Senha incorreta" };
+    }
+    return { success: true, user };
+  };
+
+  // Generate a random 6-digit verification code
+  const generateVerificationCode = () => {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  };
+
+  const handleLogin = (e) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Mock login - In a real app, validate with backend
+    const validation = validateLogin(email, password);
+    
     setTimeout(() => {
-      if (email && password) {
-        // Store authentication status
+      if (validation.success) {
+        // Store authentication status and user info
         localStorage.setItem("clientAuth", "true");
+        localStorage.setItem("currentUser", JSON.stringify(validation.user));
         toast({
           title: "Login realizado com sucesso!",
           description: "Bem-vindo à área do cliente.",
@@ -42,15 +86,22 @@ const ClientLogin = () => {
       } else {
         toast({
           title: "Erro no login",
-          description: "Por favor, verifique suas credenciais.",
+          description: validation.message,
           variant: "destructive",
         });
       }
       setIsLoading(false);
-    }, 1500);
+    }, 1000);
   };
 
-  const handleRegistration = (e: React.FormEvent) => {
+  const validatePassword = (password) => {
+    if (password.length < 8) {
+      return "A senha deve ter no mínimo 8 caracteres";
+    }
+    return "";
+  };
+
+  const handleRegistration = (e) => {
     e.preventDefault();
     setIsRegistering(true);
 
@@ -65,28 +116,151 @@ const ClientLogin = () => {
       return;
     }
 
-    // Mock registration - In a real app, send to backend
+    // Validate password strength
+    const passwordValidation = validatePassword(registerPassword);
+    if (passwordValidation) {
+      setPasswordError(passwordValidation);
+      toast({
+        title: "Erro no cadastro",
+        description: passwordValidation,
+        variant: "destructive",
+      });
+      setIsRegistering(false);
+      return;
+    }
+
+    // Check if email is already registered
+    const users = getRegisteredUsers();
+    if (users.some(user => user.email === registerEmail)) {
+      toast({
+        title: "Erro no cadastro",
+        description: "Este email já está registrado.",
+        variant: "destructive",
+      });
+      setIsRegistering(false);
+      return;
+    }
+
+    // Generate verification code
+    const code = generateVerificationCode();
+    setExpectedCode(code);
+    
+    // Create pending registration
+    setPendingRegistration({
+      name: registerName,
+      email: registerEmail,
+      password: registerPassword
+    });
+    
+    // Show verification code screen
+    setShowVerification(true);
+    
+    // In a real app, we would send this code via email
+    // For demonstration, we show it in toast
+    toast({
+      title: "Código de verificação enviado",
+      description: `Seu código é: ${code} (Em um app real, isto seria enviado por email)`,
+    });
+    
+    setIsRegistering(false);
+  };
+
+  const handleVerifyCode = (e) => {
+    e.preventDefault();
+    setVerifyingCode(true);
+    
+    // Simulate API delay
     setTimeout(() => {
-      if (registerName && registerEmail && registerPassword) {
+      if (verificationCode === expectedCode) {
+        // Register the user
+        saveRegisteredUser(pendingRegistration);
+        
         toast({
-          title: "Cadastro realizado com sucesso!",
-          description: "Agora você pode fazer login com suas credenciais.",
+          title: "Verificação bem-sucedida",
+          description: "Sua conta foi criada com sucesso. Agora você pode fazer login.",
         });
-        // Reset form and switch to login tab
+        
+        // Reset form and states
         setRegisterName("");
         setRegisterEmail("");
         setRegisterPassword("");
         setRegisterConfirmPassword("");
+        setVerificationCode("");
+        setShowVerification(false);
+        setPendingRegistration(null);
       } else {
         toast({
-          title: "Erro no cadastro",
-          description: "Por favor, preencha todos os campos corretamente.",
+          title: "Código inválido",
+          description: "O código de verificação está incorreto. Por favor, tente novamente.",
           variant: "destructive",
         });
       }
-      setIsRegistering(false);
-    }, 1500);
+      setVerifyingCode(false);
+    }, 1000);
   };
+
+  const cancelVerification = () => {
+    setShowVerification(false);
+    setPendingRegistration(null);
+    setVerificationCode("");
+  };
+
+  // Show verification UI instead of tabs when in verification mode
+  if (showVerification) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex flex-col">
+        <Navbar />
+        
+        <main className="flex-grow flex items-center justify-center px-4 py-12">
+          <Card className="w-full max-w-md bg-gray-900 border-gray-800">
+            <CardHeader className="space-y-1 text-center">
+              <CardTitle className="text-2xl font-bold text-gold">Verificação de Conta</CardTitle>
+              <p className="text-sm text-gray-400">
+                Digite o código de verificação enviado para seu email
+              </p>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleVerifyCode} className="space-y-4">
+                <div className="space-y-2">
+                  <div className="relative">
+                    <KeyRound 
+                      className="absolute left-3 top-3 h-5 w-5 text-gray-400" 
+                    />
+                    <Input
+                      type="text"
+                      placeholder="Código de verificação"
+                      className="pl-10 bg-gray-800 border-gray-700 text-center text-xl letter-spacing-wide"
+                      value={verificationCode}
+                      onChange={(e) => setVerificationCode(e.target.value)}
+                      maxLength={6}
+                      required
+                    />
+                  </div>
+                </div>
+                <Button 
+                  className="w-full bg-gold hover:bg-gold-light text-navy" 
+                  type="submit"
+                  disabled={verifyingCode}
+                >
+                  {verifyingCode ? "Verificando..." : "Verificar Código"}
+                </Button>
+                <Button 
+                  className="w-full bg-gray-800 hover:bg-gray-700 text-gray-300" 
+                  type="button"
+                  onClick={cancelVerification}
+                  disabled={verifyingCode}
+                >
+                  Cancelar
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </main>
+        
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col">
@@ -207,12 +381,23 @@ const ClientLogin = () => {
                       />
                       <Input
                         type="password"
-                        placeholder="Senha"
+                        placeholder="Senha (mínimo 8 caracteres)"
                         className="pl-10 bg-gray-800 border-gray-700"
                         value={registerPassword}
-                        onChange={(e) => setRegisterPassword(e.target.value)}
+                        onChange={(e) => {
+                          setRegisterPassword(e.target.value);
+                          setPasswordError(validatePassword(e.target.value));
+                        }}
                         required
                       />
+                      {passwordError && (
+                        <div className="mt-1">
+                          <Alert variant="destructive" className="py-2 bg-red-950 border-red-800">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertTitle className="text-xs ml-2">{passwordError}</AlertTitle>
+                          </Alert>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -233,7 +418,7 @@ const ClientLogin = () => {
                   <Button 
                     className="w-full bg-gold hover:bg-gold-light text-navy flex items-center justify-center gap-2" 
                     type="submit"
-                    disabled={isRegistering}
+                    disabled={isRegistering || passwordError}
                   >
                     <UserPlus size={18} />
                     {isRegistering ? "Criando conta..." : "Criar Conta"}
