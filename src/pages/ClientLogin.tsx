@@ -37,7 +37,7 @@ const ClientLogin = () => {
   const { toast } = useToast();
 
   // Admin credentials
-  const ADMIN_EMAIL = "wsgestao@gmail.com";
+  const ADMIN_EMAIL = "WSGESTÃO@gmail.com";
   const ADMIN_PASSWORD = "melquesedeque";
 
   // Load registered users from localStorage
@@ -56,7 +56,7 @@ const ClientLogin = () => {
   // Check if user exists and password is correct
   const validateLogin = (email, password) => {
     // Check if admin credentials
-    if (email === wsgestao@gmail.com && password === melquesedeque) {
+    if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
       return { success: true, isAdmin: true };
     }
     
