@@ -154,14 +154,6 @@ const ClientLogin = () => {
     
     // Show verification code screen
     setShowVerification(true);
-    
-    // In a real app, we would send this code via email
-    // For demonstration, we show it in toast
-    toast({
-      title: "Código de verificação enviado",
-      description: `Seu código é: ${code} (Em um app real, isto seria enviado por email)`,
-    });
-    
     setIsRegistering(false);
   };
 
@@ -220,6 +212,14 @@ const ClientLogin = () => {
               </p>
             </CardHeader>
             <CardContent>
+              <Alert className="mb-6 bg-blue-950 border-blue-800">
+                <AlertCircle className="h-4 w-4 text-blue-400" />
+                <AlertTitle className="text-blue-400">Este é seu código de verificação:</AlertTitle>
+                <AlertDescription className="font-bold text-center text-2xl mt-2 text-white">
+                  {expectedCode}
+                </AlertDescription>
+              </Alert>
+              
               <form onSubmit={handleVerifyCode} className="space-y-4">
                 <div className="space-y-2">
                   <div className="relative">
