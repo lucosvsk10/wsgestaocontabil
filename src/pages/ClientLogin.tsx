@@ -36,6 +36,10 @@ const ClientLogin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Admin credentials
+  const ADMIN_EMAIL = "WSGESTÃO@gmail.com";
+  const ADMIN_PASSWORD = "melquesedeque";
+
   // Load registered users from localStorage
   const getRegisteredUsers = () => {
     const users = localStorage.getItem("registeredUsers");
@@ -51,6 +55,12 @@ const ClientLogin = () => {
 
   // Check if user exists and password is correct
   const validateLogin = (email, password) => {
+    // Check if admin credentials
+    if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+      return { success: true, isAdmin: true };
+    }
+    
+    // Check regular users
     const users = getRegisteredUsers();
     const user = users.find(u => u.email === email);
     if (!user) {
@@ -59,7 +69,7 @@ const ClientLogin = () => {
     if (user.password !== password) {
       return { success: false, message: "Senha incorreta" };
     }
-    return { success: true, user };
+    return { success: true, user, isAdmin: false };
   };
 
   // Generate a random 6-digit verification code
@@ -75,14 +85,24 @@ const ClientLogin = () => {
     
     setTimeout(() => {
       if (validation.success) {
-        // Store authentication status and user info
-        localStorage.setItem("clientAuth", "true");
-        localStorage.setItem("currentUser", JSON.stringify(validation.user));
-        toast({
-          title: "Login realizado com sucesso!",
-          description: "Bem-vindo à área do cliente.",
-        });
-        navigate("/cliente");
+        if (validation.isAdmin) {
+          // Admin login
+          localStorage.setItem("adminAuth", "true");
+          toast({
+            title: "Login de administrador realizado com sucesso!",
+            description: "Bem-vindo à área do administrador.",
+          });
+          navigate("/admin");
+        } else {
+          // Regular user login
+          localStorage.setItem("clientAuth", "true");
+          localStorage.setItem("currentUser", JSON.stringify(validation.user));
+          toast({
+            title: "Login realizado com sucesso!",
+            description: "Bem-vindo à área do cliente.",
+          });
+          navigate("/cliente");
+        }
       } else {
         toast({
           title: "Erro no login",
@@ -418,7 +438,7 @@ const ClientLogin = () => {
                   <Button 
                     className="w-full bg-gold hover:bg-gold-light text-navy flex items-center justify-center gap-2" 
                     type="submit"
-                    disabled={isRegistering || passwordError}
+                    disabled={isRegistering || Boolean(passwordError)}
                   >
                     <UserPlus size={18} />
                     {isRegistering ? "Criando conta..." : "Criar Conta"}
