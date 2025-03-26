@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
-import { Menu, X, Instagram } from 'lucide-react';
+import { Menu, X, Instagram, UserCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -37,6 +38,10 @@ const Navbar = () => {
           <a href="#contato" className="nav-link text-sm font-prompt font-medium uppercase tracking-wider">
             Contato
           </a>
+          <Link to="/login" className="flex items-center text-gold hover:text-gold-light transition-colors duration-300">
+            <UserCircle size={20} className="mr-1" />
+            <span className="text-sm font-prompt font-medium uppercase tracking-wider">Área do Cliente</span>
+          </Link>
           <a 
             href="https://www.instagram.com/ws_gestao_contabil?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" 
             target="_blank"
@@ -75,6 +80,14 @@ const Navbar = () => {
             <a href="#contato" className="text-gold hover:text-gold-light text-xl font-prompt font-medium uppercase tracking-wider transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
               Contato
             </a>
+            <Link 
+              to="/login" 
+              className="flex items-center text-gold hover:text-gold-light text-xl transition-colors"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <UserCircle size={24} className="mr-2" />
+              <span className="font-prompt font-medium uppercase tracking-wider">Área do Cliente</span>
+            </Link>
             <a 
               href="https://www.instagram.com/ws_gestao_contabil?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" 
               target="_blank"
