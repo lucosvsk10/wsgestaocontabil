@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Lock, User, Mail, AlertCircle, MessageSquare } from "lucide-react";
+import { Lock, Mail, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
@@ -20,55 +20,22 @@ const ClientLogin = () => {
   const ADMIN_EMAIL = "wsgestao@gmail.com";
   const ADMIN_PASSWORD = "melquesedeque";
 
-  const getRegisteredUsers = () => {
-    const users = localStorage.getItem("registeredUsers");
-    return users ? JSON.parse(users) : [];
-  };
-
-  const validateLogin = (email, password) => {
-    if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-      return { success: true, isAdmin: true };
-    }
-    
-    const users = getRegisteredUsers();
-    const user = users.find(u => u.email === email);
-    if (!user) {
-      return { success: false, message: "Usuário não encontrado" };
-    }
-    if (user.password !== password) {
-      return { success: false, message: "Senha incorreta" };
-    }
-    return { success: true, user, isAdmin: false };
-  };
-
   const handleLogin = (e) => {
     e.preventDefault();
     setIsLoading(true);
 
-    const validation = validateLogin(email, password);
-    
     setTimeout(() => {
-      if (validation.success) {
-        if (validation.isAdmin) {
-          localStorage.setItem("adminAuth", "true");
-          toast({
-            title: "Login de administrador realizado com sucesso!",
-            description: "Bem-vindo à área do administrador.",
-          });
-          navigate("/admin");
-        } else {
-          localStorage.setItem("clientAuth", "true");
-          localStorage.setItem("currentUser", JSON.stringify(validation.user));
-          toast({
-            title: "Login realizado com sucesso!",
-            description: "Bem-vindo à área do cliente.",
-          });
-          navigate("/cliente");
-        }
+      if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+        localStorage.setItem("adminAuth", "true");
+        toast({
+          title: "Login de administrador realizado com sucesso!",
+          description: "Bem-vindo à área do administrador.",
+        });
+        navigate("/admin");
       } else {
         toast({
           title: "Erro no login",
-          description: validation.message,
+          description: "Email ou senha incorretos",
           variant: "destructive",
         });
       }
@@ -87,7 +54,7 @@ const ClientLogin = () => {
       <main className="flex-grow flex items-center justify-center px-4 py-12">
         <Card className="w-full max-w-md bg-gray-900 border-gray-800">
           <CardHeader className="space-y-1 text-center">
-            <CardTitle className="text-2xl font-bold text-gold">Área do Cliente</CardTitle>
+            <CardTitle className="text-2xl font-bold text-gold">Área do Administrador</CardTitle>
             <p className="text-sm text-gray-400">
               Acesse sua conta para continuar
             </p>
@@ -123,21 +90,6 @@ const ClientLogin = () => {
                     required
                   />
                 </div>
-                <div className="flex items-center justify-end">
-                  <a 
-                    href="#" 
-                    className="text-sm text-gold hover:underline"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      toast({
-                        title: "Recuperação de senha",
-                        description: "Instruções de recuperação foram enviadas para seu email.",
-                      });
-                    }}
-                  >
-                    Esqueceu a senha?
-                  </a>
-                </div>
               </div>
               <Button 
                 className="w-full bg-gold hover:bg-gold-light text-navy" 
@@ -161,7 +113,7 @@ const ClientLogin = () => {
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
             <div className="text-center text-sm text-gray-400">
-              <span>Problemas com seu cadastro? </span>
+              <span>Problemas com acesso? </span>
               <a 
                 href="#" 
                 className="text-gold hover:underline"
@@ -169,7 +121,7 @@ const ClientLogin = () => {
                   e.preventDefault();
                   toast({
                     title: "Suporte",
-                    description: "Entre em contato conosco para obter ajuda com seu cadastro.",
+                    description: "Entre em contato conosco para obter ajuda com seu acesso.",
                   });
                 }}
               >
