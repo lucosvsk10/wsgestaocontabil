@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Lock, User, UserPlus, Mail, KeyRound, AlertCircle } from "lucide-react";
@@ -16,51 +15,42 @@ const ClientLogin = () => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   
-  // Registration state
   const [registerName, setRegisterName] = useState("");
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
   const [registerConfirmPassword, setRegisterConfirmPassword] = useState("");
   const [isRegistering, setIsRegistering] = useState(false);
   
-  // Verification code state
   const [showVerification, setShowVerification] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [expectedCode, setExpectedCode] = useState("");
   const [verifyingCode, setVerifyingCode] = useState(false);
   const [pendingRegistration, setPendingRegistration] = useState(null);
   
-  // Password validation
   const [passwordError, setPasswordError] = useState("");
   
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Admin credentials
-  const ADMIN_EMAIL = "WSGESTÃO@gmail.com";
+  const ADMIN_EMAIL = "wsgestao@gmail.com";
   const ADMIN_PASSWORD = "melquesedeque";
 
-  // Load registered users from localStorage
   const getRegisteredUsers = () => {
     const users = localStorage.getItem("registeredUsers");
     return users ? JSON.parse(users) : [];
   };
 
-  // Save registered users to localStorage
   const saveRegisteredUser = (user) => {
     const users = getRegisteredUsers();
     users.push(user);
     localStorage.setItem("registeredUsers", JSON.stringify(users));
   };
 
-  // Check if user exists and password is correct
   const validateLogin = (email, password) => {
-    // Check if admin credentials
     if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
       return { success: true, isAdmin: true };
     }
     
-    // Check regular users
     const users = getRegisteredUsers();
     const user = users.find(u => u.email === email);
     if (!user) {
@@ -72,7 +62,6 @@ const ClientLogin = () => {
     return { success: true, user, isAdmin: false };
   };
 
-  // Generate a random 6-digit verification code
   const generateVerificationCode = () => {
     return Math.floor(100000 + Math.random() * 900000).toString();
   };
@@ -86,7 +75,6 @@ const ClientLogin = () => {
     setTimeout(() => {
       if (validation.success) {
         if (validation.isAdmin) {
-          // Admin login
           localStorage.setItem("adminAuth", "true");
           toast({
             title: "Login de administrador realizado com sucesso!",
@@ -94,7 +82,6 @@ const ClientLogin = () => {
           });
           navigate("/admin");
         } else {
-          // Regular user login
           localStorage.setItem("clientAuth", "true");
           localStorage.setItem("currentUser", JSON.stringify(validation.user));
           toast({
@@ -125,7 +112,6 @@ const ClientLogin = () => {
     e.preventDefault();
     setIsRegistering(true);
 
-    // Validate passwords match
     if (registerPassword !== registerConfirmPassword) {
       toast({
         title: "Erro no cadastro",
@@ -136,7 +122,6 @@ const ClientLogin = () => {
       return;
     }
 
-    // Validate password strength
     const passwordValidation = validatePassword(registerPassword);
     if (passwordValidation) {
       setPasswordError(passwordValidation);
@@ -149,7 +134,6 @@ const ClientLogin = () => {
       return;
     }
 
-    // Check if email is already registered
     const users = getRegisteredUsers();
     if (users.some(user => user.email === registerEmail)) {
       toast({
@@ -161,18 +145,15 @@ const ClientLogin = () => {
       return;
     }
 
-    // Generate verification code
     const code = generateVerificationCode();
     setExpectedCode(code);
     
-    // Create pending registration
     setPendingRegistration({
       name: registerName,
       email: registerEmail,
       password: registerPassword
     });
     
-    // Show verification code screen
     setShowVerification(true);
     setIsRegistering(false);
   };
@@ -181,10 +162,8 @@ const ClientLogin = () => {
     e.preventDefault();
     setVerifyingCode(true);
     
-    // Simulate API delay
     setTimeout(() => {
       if (verificationCode === expectedCode) {
-        // Register the user
         saveRegisteredUser(pendingRegistration);
         
         toast({
@@ -192,7 +171,6 @@ const ClientLogin = () => {
           description: "Sua conta foi criada com sucesso. Agora você pode fazer login.",
         });
         
-        // Reset form and states
         setRegisterName("");
         setRegisterEmail("");
         setRegisterPassword("");
@@ -217,7 +195,6 @@ const ClientLogin = () => {
     setVerificationCode("");
   };
 
-  // Show verification UI instead of tabs when in verification mode
   if (showVerification) {
     return (
       <div className="min-h-screen bg-gray-950 flex flex-col">
