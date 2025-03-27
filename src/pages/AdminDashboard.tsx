@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, ChevronUp, FileUp, Pencil, Trash2, User, Users } from "lucide-react";
+import { ChevronDown, ChevronUp, FileUp, Pencil, Trash2, User, Users, Plus, Lock, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
@@ -25,18 +25,27 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [expandedUsers, setExpandedUsers] = useState({});
   const [documentName, setDocumentName] = useState("");
   
   // Edit form state
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
+  
+  // Create user form state
+  const [createName, setCreateName] = useState("");
+  const [createEmail, setCreateEmail] = useState("");
+  const [createPassword, setCreatePassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -136,6 +145,74 @@ const AdminDashboard = () => {
     });
   };
 
+  const validatePassword = (password) => {
+    if (password.length < 8) {
+      return "A senha deve ter no mínimo 8 caracteres";
+    }
+    return "";
+  };
+
+  const handleCreateUser = () => {
+    // Validate passwords match
+    if (createPassword !== confirmPassword) {
+      setPasswordError("As senhas não coincidem");
+      toast({
+        title: "Erro no cadastro",
+        description: "As senhas não coincidem.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate password strength
+    const passwordValidation = validatePassword(createPassword);
+    if (passwordValidation) {
+      setPasswordError(passwordValidation);
+      toast({
+        title: "Erro no cadastro",
+        description: passwordValidation,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if email is already registered
+    const emailExists = users.some(user => user.email === createEmail);
+    if (emailExists) {
+      toast({
+        title: "Erro no cadastro",
+        description: "Este email já está registrado.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Create new user
+    const newUser = {
+      name: createName,
+      email: createEmail,
+      password: createPassword,
+      documents: []
+    };
+
+    const updatedUsers = [...users, newUser];
+    localStorage.setItem("registeredUsers", JSON.stringify(updatedUsers));
+    setUsers(updatedUsers);
+    
+    // Reset form and close dialog
+    setCreateName("");
+    setCreateEmail("");
+    setCreatePassword("");
+    setConfirmPassword("");
+    setPasswordError("");
+    setIsCreateDialogOpen(false);
+    
+    toast({
+      title: "Usuário criado",
+      description: "O novo usuário foi criado com sucesso.",
+    });
+  };
+
   const handleFileUpload = (userId, event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -206,9 +283,18 @@ const AdminDashboard = () => {
         </div>
         
         <div className="bg-gray-900 p-6 rounded-lg border border-gray-800 mb-8">
-          <div className="flex items-center gap-3 mb-4">
-            <Users className="text-gold h-6 w-6" />
-            <h2 className="text-xl font-semibold text-white">Usuários Registrados</h2>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <Users className="text-gold h-6 w-6" />
+              <h2 className="text-xl font-semibold text-white">Usuários Registrados</h2>
+            </div>
+            <Button 
+              onClick={() => setIsCreateDialogOpen(true)}
+              className="bg-gold hover:bg-gold-light text-navy flex items-center gap-2"
+            >
+              <Plus size={16} />
+              Criar Novo Usuário
+            </Button>
           </div>
           
           {users.length === 0 ? (
@@ -418,6 +504,131 @@ const AdminDashboard = () => {
               onClick={saveEditedUser}
             >
               Salvar Alterações
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create User Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="bg-gray-900 border-gray-800">
+          <DialogHeader>
+            <DialogTitle className="text-white">Criar Novo Usuário</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Preencha as informações para criar uma nova conta de usuário.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="create-name" className="text-white">
+                Nome Completo
+              </Label>
+              <div className="relative">
+                <User 
+                  className="absolute left-3 top-3 h-5 w-5 text-gray-400" 
+                />
+                <Input
+                  id="create-name"
+                  className="pl-10 bg-gray-800 border-gray-700 text-white"
+                  value={createName}
+                  onChange={(e) => setCreateName(e.target.value)}
+                  placeholder="Nome completo"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="create-email" className="text-white">
+                Email
+              </Label>
+              <div className="relative">
+                <Mail 
+                  className="absolute left-3 top-3 h-5 w-5 text-gray-400" 
+                />
+                <Input
+                  id="create-email"
+                  type="email"
+                  className="pl-10 bg-gray-800 border-gray-700 text-white"
+                  value={createEmail}
+                  onChange={(e) => setCreateEmail(e.target.value)}
+                  placeholder="Email"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="create-password" className="text-white">
+                Senha
+              </Label>
+              <div className="relative">
+                <Lock 
+                  className="absolute left-3 top-3 h-5 w-5 text-gray-400" 
+                />
+                <Input
+                  id="create-password"
+                  type="password"
+                  className="pl-10 bg-gray-800 border-gray-700 text-white"
+                  value={createPassword}
+                  onChange={(e) => {
+                    setCreatePassword(e.target.value);
+                    setPasswordError(validatePassword(e.target.value));
+                  }}
+                  placeholder="Senha (mínimo 8 caracteres)"
+                  required
+                />
+              </div>
+              {passwordError && (
+                <Alert variant="destructive" className="py-2 mt-1 bg-red-950 border-red-800">
+                  <AlertTitle className="text-xs">{passwordError}</AlertTitle>
+                </Alert>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password" className="text-white">
+                Confirmar Senha
+              </Label>
+              <div className="relative">
+                <Lock 
+                  className="absolute left-3 top-3 h-5 w-5 text-gray-400" 
+                />
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  className="pl-10 bg-gray-800 border-gray-700 text-white"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirmar senha"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline"
+              onClick={() => {
+                setIsCreateDialogOpen(false);
+                setCreateName("");
+                setCreateEmail("");
+                setCreatePassword("");
+                setConfirmPassword("");
+                setPasswordError("");
+              }}
+              className="mr-2"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              className="bg-gold hover:bg-gold-light text-navy"
+              onClick={handleCreateUser}
+              disabled={!createName || !createEmail || !createPassword || !confirmPassword || Boolean(passwordError)}
+            >
+              Criar Usuário
             </Button>
           </DialogFooter>
         </DialogContent>
