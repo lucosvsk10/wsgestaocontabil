@@ -1,12 +1,9 @@
-
 import { useState, useEffect } from 'react';
 import { Menu, X, Instagram, UserCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
-
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
@@ -14,7 +11,6 @@ const Navbar = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-  
   return <header className="bg-[#37353d]">
       <div className="container mx-auto flex items-center justify-between bg-[#37353d] px-[28px] py-[19px]">
         <div className="flex items-center">
@@ -25,15 +21,9 @@ const Navbar = () => {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-8">
-          <a href="#servicos" className="nav-link text-sm font-prompt font-medium uppercase tracking-wider">
-            Serviços
-          </a>
-          <a href="#sobre" className="nav-link text-sm font-prompt font-medium uppercase tracking-wider">
-            Sobre
-          </a>
-          <a href="#contabil" className="nav-link text-sm font-prompt font-medium uppercase tracking-wider">
-            Contábil
-          </a>
+          
+          
+          
           
           <Link to="/login" className="flex items-center text-gold hover:text-gold-light transition-colors duration-300">
             <UserCircle size={20} className="mr-1" />
@@ -83,5 +73,4 @@ const Navbar = () => {
       </div>
     </header>;
 };
-
 export default Navbar;
