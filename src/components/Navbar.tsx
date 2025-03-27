@@ -1,9 +1,12 @@
+
 import { useState, useEffect } from 'react';
 import { Menu, X, Instagram, UserCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
@@ -11,6 +14,7 @@ const Navbar = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+  
   return <header className="bg-[#37353d]">
       <div className="container mx-auto flex items-center justify-between bg-[#37353d] px-[28px] py-[19px]">
         <div className="flex items-center">
@@ -33,7 +37,7 @@ const Navbar = () => {
           
           <Link to="/login" className="flex items-center text-gold hover:text-gold-light transition-colors duration-300">
             <UserCircle size={20} className="mr-1" />
-            <span className="text-sm font-prompt font-medium uppercase tracking-wider">Área do Cliente</span>
+            <span className="text-sm font-prompt font-medium uppercase tracking-wider">Login</span>
           </Link>
           <a href="https://www.instagram.com/ws_gestao_contabil?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer" className="text-gold hover:text-gold-light transition-colors duration-300" aria-label="Instagram">
             <Instagram size={20} />
@@ -69,7 +73,7 @@ const Navbar = () => {
             </a>
             <Link to="/login" className="flex items-center text-gold hover:text-gold-light text-xl transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
               <UserCircle size={24} className="mr-2" />
-              <span className="font-prompt font-medium uppercase tracking-wider">Área do Cliente</span>
+              <span className="font-prompt font-medium uppercase tracking-wider">Login</span>
             </Link>
             <a href="https://www.instagram.com/ws_gestao_contabil?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer" className="text-gold hover:text-gold-light text-xl transition-colors" aria-label="Instagram" onClick={() => setIsMobileMenuOpen(false)}>
               <Instagram size={24} />
@@ -79,4 +83,5 @@ const Navbar = () => {
       </div>
     </header>;
 };
+
 export default Navbar;

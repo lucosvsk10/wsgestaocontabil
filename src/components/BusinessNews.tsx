@@ -3,18 +3,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowDown, ArrowUp, TrendingUp, Newspaper, DollarSign, Euro, RefreshCw } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+
 interface ExchangeRate {
   code: string;
   name: string;
   rate: number;
   change: number;
 }
+
 interface NewsItem {
   title: string;
   description: string;
   url: string;
   publishedAt: string;
 }
+
 const BusinessNews = () => {
   const [exchangeRates, setExchangeRates] = useState<ExchangeRate[]>([]);
   const [news, setNews] = useState<NewsItem[]>([]);
@@ -22,12 +25,11 @@ const BusinessNews = () => {
   const [refreshingRates, setRefreshingRates] = useState(false);
   const [refreshingNews, setRefreshingNews] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
   const fetchExchangeRates = async () => {
     try {
-      // In a real app, you would use a proper API for exchange rates
-      // For demo purposes, we'll simulate with fixed data that changes slightly each time
       const baseDate = new Date();
-      const seed = baseDate.getTime(); // Use current timestamp for more randomness on refresh
+      const seed = baseDate.getTime();
       const randomFactor = Math.sin(seed * 0.001) * 0.05;
       const mockRates: ExchangeRate[] = [{
         code: 'USD/BRL',
@@ -53,29 +55,31 @@ const BusinessNews = () => {
       setRefreshingRates(false);
     }
   };
+
   const fetchNews = async () => {
     try {
-      // Simulate fetching business news with some randomness
       const baseDate = new Date();
       const topics = ['tecnologia', 'commodities', 'juros', 'economia', 'varejo', 'mercado financeiro', 'investimentos'];
       const randomTopic1 = topics[Math.floor(Math.random() * topics.length)];
       const randomTopic2 = topics[Math.floor(Math.random() * topics.length)];
+      
       const mockNews: NewsItem[] = [{
         title: `Mercado reage a dados econômicos do dia ${baseDate.getDate()}/${baseDate.getMonth() + 1}`,
         description: `Analistas apontam tendências positivas para o setor de ${randomTopic1} e ${randomTopic2} nesta semana.`,
-        url: '#',
+        url: 'https://valorinveste.globo.com/',
         publishedAt: baseDate.toISOString()
       }, {
         title: 'Banco Central sinaliza possível alteração na taxa de juros',
         description: 'Decisão deve impactar mercado financeiro nos próximos dias com reflexos diretos na economia real.',
-        url: '#',
+        url: 'https://www.bcb.gov.br/detalhenoticia/',
         publishedAt: baseDate.toISOString()
       }, {
         title: 'Setor de varejo apresenta recuperação após período de queda',
         description: 'Dados indicam aumento nas vendas e otimismo para os próximos meses no comércio brasileiro.',
-        url: '#',
+        url: 'https://www.infomoney.com.br/mercados/',
         publishedAt: baseDate.toISOString()
       }];
+      
       setNews(mockNews);
     } catch (err) {
       console.error('Error fetching news:', err);
@@ -84,14 +88,17 @@ const BusinessNews = () => {
       setRefreshingNews(false);
     }
   };
+
   const handleRefreshRates = () => {
     setRefreshingRates(true);
     fetchExchangeRates();
   };
+
   const handleRefreshNews = () => {
     setRefreshingNews(true);
     fetchNews();
   };
+
   useEffect(() => {
     const loadInitialData = async () => {
       try {
@@ -106,16 +113,17 @@ const BusinessNews = () => {
     };
     loadInitialData();
 
-    // Refresh data every 24 hours (86400000 ms)
     const intervalId = setInterval(() => {
       fetchExchangeRates();
       fetchNews();
     }, 86400000);
     return () => clearInterval(intervalId);
   }, []);
+
   const formatCurrency = (value: number): string => {
     return value.toFixed(4);
   };
+
   const formatDate = (dateStr: string): string => {
     const date = new Date(dateStr);
     return date.toLocaleDateString('pt-BR', {
@@ -124,6 +132,7 @@ const BusinessNews = () => {
       year: 'numeric'
     });
   };
+
   if (loading) {
     return <section id="noticias" className="py-16 bg-navy-light">
         <div className="container mx-auto px-6">
@@ -133,6 +142,7 @@ const BusinessNews = () => {
         </div>
       </section>;
   }
+
   if (error) {
     return <section id="noticias" className="py-16 bg-navy-light">
         <div className="container mx-auto px-6">
@@ -142,6 +152,7 @@ const BusinessNews = () => {
         </div>
       </section>;
   }
+
   return <section id="noticias" className="py-16 bg-navy-light">
       <div className="container mx-auto px-6">
         <h2 className="text-4xl text-gold text-center mb-8 font-bold">
@@ -222,7 +233,12 @@ const BusinessNews = () => {
                       <h3 className="text-lg font-medium text-gold mb-2">{item.title}</h3>
                       <p className="text-white/80 mb-2">{item.description}</p>
                       <div className="flex justify-between items-center">
-                        <a href={item.url} className="text-purple hover:text-purple-400 text-sm transition-colors duration-300">
+                        <a 
+                          href={item.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="text-purple hover:text-purple-400 text-sm transition-colors duration-300"
+                        >
                           Ler mais
                         </a>
                         <span className="text-white/60 text-sm">{formatDate(item.publishedAt)}</span>
@@ -236,4 +252,5 @@ const BusinessNews = () => {
       </div>
     </section>;
 };
+
 export default BusinessNews;

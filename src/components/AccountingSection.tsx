@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Newspaper, Link, Plus, X, Calculator } from "lucide-react";
+import { Newspaper, Link, Plus, X, Calculator, FileText } from "lucide-react";
 
 // Sample accounting news data
 const sampleNews = [{
@@ -60,6 +61,35 @@ const usefulLinks = [{
   url: "https://www.gov.br/pt-br",
   description: "Portal de serviços do Governo Federal"
 }];
+
+// Sample declarations links
+const declarationsLinks = [{
+  id: 1,
+  title: "DIRPF - Declaração de Imposto de Renda Pessoa Física",
+  url: "https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/declaracoes-e-demonstrativos/dirpf",
+  description: "Informações sobre a declaração anual de imposto de renda"
+}, {
+  id: 2,
+  title: "DCTF - Declaração de Débitos e Créditos Tributários Federais",
+  url: "https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/declaracoes-e-demonstrativos/dctf",
+  description: "Declaração que contém informações relativas aos tributos e contribuições apurados pela pessoa jurídica"
+}, {
+  id: 3,
+  title: "DEFIS - Declaração de Informações Socioeconômicas e Fiscais",
+  url: "https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/declaracoes-e-demonstrativos/simples-nacional-microempreendedor-individual-mei",
+  description: "Declaração para empresas optantes pelo Simples Nacional"
+}, {
+  id: 4,
+  title: "DASN-SIMEI - Declaração Anual do Simples Nacional - Microempreendedor Individual",
+  url: "https://www.gov.br/empresas-e-negocios/pt-br/empreendedor/servicos-para-mei",
+  description: "Declaração anual para MEIs"
+}, {
+  id: 5,
+  title: "ECF - Escrituração Contábil Fiscal",
+  url: "https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/declaracoes-e-demonstrativos/sped-sistema-publico-de-escrituracao-digital/escrituracao-contabil-fiscal-ecf",
+  description: "Escrituração de informações contábeis e fiscais de pessoas jurídicas"
+}];
+
 const AccountingSection = () => {
   const [isFloatingButtonOpen, setIsFloatingButtonOpen] = useState(false);
   const [newsData, setNewsData] = useState(sampleNews);
@@ -85,12 +115,13 @@ const AccountingSection = () => {
   useEffect(() => {
     // We're using sample data initially, but this would be an API call in production
   }, []);
+
   return <section id="contabil" className="py-16 bg-navy px-6 fadein-on-scroll">
       <div className="container mx-auto">
         <h2 className="text-gold mb-12 text-center text-3xl font-bold">Mundo Contábil </h2>
         
         <Tabs defaultValue="news" className="w-full max-w-4xl mx-auto">
-          <TabsList className="grid w-full grid-cols-2 mb-8">
+          <TabsList className="grid w-full grid-cols-3 mb-8">
             <TabsTrigger value="news" className="flex items-center gap-2">
               <Newspaper size={16} />
               <span>Notícias Contábeis</span>
@@ -98,6 +129,10 @@ const AccountingSection = () => {
             <TabsTrigger value="links" className="flex items-center gap-2">
               <Link size={16} />
               <span>Links Úteis</span>
+            </TabsTrigger>
+            <TabsTrigger value="declarations" className="flex items-center gap-2">
+              <FileText size={16} />
+              <span>Declarações</span>
             </TabsTrigger>
           </TabsList>
           
@@ -150,30 +185,47 @@ const AccountingSection = () => {
                   </Card>
                 </a>)}
             </div>
-            
-            {/* Floating Button */}
-            <div className="fixed bottom-8 right-8 z-30">
-              {isFloatingButtonOpen ? <div className="bg-navy-dark border border-gold/30 rounded-lg p-4 shadow-lg mb-4 animate-fade-in">
-                  <div className="flex justify-between items-center mb-3">
-                    <h3 className="text-gold font-medium">Links Rápidos</h3>
-                    <Button variant="ghost" size="icon" className="text-gold hover:bg-navy-light" onClick={() => setIsFloatingButtonOpen(false)}>
-                      <X size={18} />
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    {usefulLinks.map(link => <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" className="block text-white hover:text-gold transition-colors p-2 hover:bg-navy-light rounded">
-                        {link.title}
-                      </a>)}
-                  </div>
-                </div> : null}
-              
-              <Button size="icon" className="h-12 w-12 rounded-full bg-gold hover:bg-gold-light text-navy shadow-lg" onClick={() => setIsFloatingButtonOpen(!isFloatingButtonOpen)}>
-                {isFloatingButtonOpen ? <X size={20} /> : <Plus size={20} />}
-              </Button>
+          </TabsContent>
+          
+          {/* Declarations Tab */}
+          <TabsContent value="declarations">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {declarationsLinks.map(link => <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" className="block">
+                  <Card className="bg-gray-800 border-gold/20 h-full hover:border-gold/60 transition-colors">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-gold text-xl">{link.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-gray-300">{link.description}</p>
+                    </CardContent>
+                  </Card>
+                </a>)}
             </div>
           </TabsContent>
+            
+          {/* Floating Button */}
+          <div className="fixed bottom-8 right-8 z-30">
+            {isFloatingButtonOpen ? <div className="bg-navy-dark border border-gold/30 rounded-lg p-4 shadow-lg mb-4 animate-fade-in">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="text-gold font-medium">Links Rápidos</h3>
+                  <Button variant="ghost" size="icon" className="text-gold hover:bg-navy-light" onClick={() => setIsFloatingButtonOpen(false)}>
+                    <X size={18} />
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {usefulLinks.map(link => <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" className="block text-white hover:text-gold transition-colors p-2 hover:bg-navy-light rounded">
+                      {link.title}
+                    </a>)}
+                </div>
+              </div> : null}
+            
+            <Button size="icon" className="h-12 w-12 rounded-full bg-gold hover:bg-gold-light text-navy shadow-lg" onClick={() => setIsFloatingButtonOpen(!isFloatingButtonOpen)}>
+              {isFloatingButtonOpen ? <X size={20} /> : <Plus size={20} />}
+            </Button>
+          </div>
         </Tabs>
       </div>
     </section>;
 };
+
 export default AccountingSection;

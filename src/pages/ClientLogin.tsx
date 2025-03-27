@@ -33,18 +33,30 @@ const ClientLogin = () => {
         });
         navigate("/admin");
       } else {
-        toast({
-          title: "Erro no login",
-          description: "Email ou senha incorretos",
-          variant: "destructive",
-        });
+        // Simulate regular user login (in a real app, this would check against a database)
+        // For demo purposes, allow any non-admin email/password combination
+        if (email && password) {
+          localStorage.setItem("userAuth", "true");
+          localStorage.setItem("userEmail", email);
+          toast({
+            title: "Login realizado com sucesso!",
+            description: "Bem-vindo à área do cliente.",
+          });
+          navigate("/client");
+        } else {
+          toast({
+            title: "Erro no login",
+            description: "Email ou senha incorretos",
+            variant: "destructive",
+          });
+        }
       }
       setIsLoading(false);
     }, 1000);
   };
 
   const handleWhatsAppRequest = () => {
-    window.open("https://wa.me/+5500000000000?text=Olá,%20gostaria%20de%20solicitar%20uma%20conta%20na%20plataforma%20WS%20Gestão.", "_blank");
+    window.open("https://wa.me/+5582999324884?text=Olá,%20gostaria%20de%20solicitar%20uma%20conta%20na%20plataforma%20WS%20Gestão.", "_blank");
   };
 
   return (
@@ -54,7 +66,7 @@ const ClientLogin = () => {
       <main className="flex-grow flex items-center justify-center px-4 py-12">
         <Card className="w-full max-w-md bg-gray-900 border-gray-800">
           <CardHeader className="space-y-1 text-center">
-            <CardTitle className="text-2xl font-bold text-gold">Área do Administrador</CardTitle>
+            <CardTitle className="text-2xl font-bold text-gold">Login</CardTitle>
             <p className="text-sm text-gray-400">
               Acesse sua conta para continuar
             </p>
