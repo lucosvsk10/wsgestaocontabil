@@ -37,7 +37,7 @@ const ClientLogin = () => {
   const { toast } = useToast();
 
   // Admin credentials
-  const ADMIN_EMAIL = "WSGESTAO@gmail.com";
+  const ADMIN_EMAIL = "WSGESTÃO@gmail.com";
   const ADMIN_PASSWORD = "melquesedeque";
 
   // Load registered users from localStorage
