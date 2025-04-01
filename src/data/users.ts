@@ -26,6 +26,14 @@ export const predefinedUsers: User[] = [
     documents: []
   },
   {
+    id: "admin-002",
+    name: "Lucas Admin",
+    email: "lucasws@gmail.com",
+    password: "lucas1914",
+    isAdmin: true,
+    documents: []
+  },
+  {
     id: "user-001",
     name: "Cliente Exemplo",
     email: "cliente@example.com",
