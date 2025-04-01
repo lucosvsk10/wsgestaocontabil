@@ -56,7 +56,11 @@ const ClientDashboard = () => {
 
   // Helper function to format date
   const formatDate = (dateString: string) => {
-    const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'numeric', day: 'numeric' };
+    const options: Intl.DateTimeFormatOptions = { 
+      year: 'numeric', 
+      month: 'numeric', 
+      day: 'numeric' 
+    };
     return new Date(dateString).toLocaleDateString('pt-BR', options);
   };
 
