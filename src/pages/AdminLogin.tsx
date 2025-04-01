@@ -29,6 +29,7 @@ const AdminLogin = () => {
 
     setTimeout(() => {
       const user = authenticateUser(email, password);
+      console.log("Login attempt:", { email, found: !!user, isAdmin: user?.isAdmin });
       
       if (user && user.isAdmin) {
         localStorage.setItem("adminAuth", "true");
