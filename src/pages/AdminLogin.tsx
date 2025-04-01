@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Lock, Mail, MessageSquare } from "lucide-react";
+import { Lock, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
@@ -10,7 +10,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { authenticateUser, initializeUserData } from "@/data/users";
 
-const ClientLogin = () => {
+const AdminLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -30,38 +30,24 @@ const ClientLogin = () => {
     setTimeout(() => {
       const user = authenticateUser(email, password);
       
-      if (user) {
-        if (user.isAdmin) {
-          localStorage.setItem("adminAuth", "true");
-          localStorage.setItem("userId", user.id);
-          toast({
-            title: "Login de administrador realizado com sucesso!",
-            description: "Bem-vindo à área do administrador.",
-          });
-          navigate("/admin");
-        } else {
-          localStorage.setItem("userAuth", "true");
-          localStorage.setItem("userId", user.id);
-          toast({
-            title: "Login realizado com sucesso!",
-            description: "Bem-vindo à área do cliente.",
-          });
-          navigate("/client");
-        }
+      if (user && user.isAdmin) {
+        localStorage.setItem("adminAuth", "true");
+        localStorage.setItem("userId", user.id);
+        toast({
+          title: "Login de administrador realizado com sucesso!",
+          description: "Bem-vindo à área do administrador.",
+        });
+        navigate("/admin");
       } else {
         toast({
           title: "Erro no login",
-          description: "Email ou senha incorretos",
+          description: "Credenciais de administrador inválidas",
           variant: "destructive",
         });
       }
       
       setIsLoading(false);
     }, 600);
-  };
-
-  const handleWhatsAppRequest = () => {
-    window.open("https://wa.me/+5582999324884?text=Olá,%20gostaria%20de%20solicitar%20uma%20conta%20na%20plataforma%20WS%20Gestão.", "_blank");
   };
 
   return (
@@ -71,9 +57,9 @@ const ClientLogin = () => {
       <main className="flex-grow flex items-center justify-center px-4 py-12">
         <Card className="w-full max-w-md bg-gray-900 border-gray-800">
           <CardHeader className="space-y-1 text-center">
-            <CardTitle className="text-2xl font-bold text-gold">Login</CardTitle>
+            <CardTitle className="text-2xl font-bold text-gold">Login Administrativo</CardTitle>
             <p className="text-sm text-gray-400">
-              Acesse sua conta para continuar
+              Acesso restrito apenas para administradores
             </p>
           </CardHeader>
           <CardContent>
@@ -116,41 +102,14 @@ const ClientLogin = () => {
                 {isLoading ? "Entrando..." : "Entrar"}
               </Button>
             </form>
-            
-            <div className="mt-6 pt-4 border-t border-gray-800">
-              <Button 
-                className="w-full bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2" 
-                type="button"
-                onClick={handleWhatsAppRequest}
-              >
-                <MessageSquare size={18} />
-                Solicitar Conta via WhatsApp
-              </Button>
-            </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
             <div className="text-center text-sm text-gray-400">
-              <span>Problemas com acesso? </span>
               <a 
-                href="#" 
+                href="/login" 
                 className="text-gold hover:underline"
-                onClick={(e) => {
-                  e.preventDefault();
-                  toast({
-                    title: "Suporte",
-                    description: "Entre em contato conosco para obter ajuda com seu acesso.",
-                  });
-                }}
               >
-                Entre em contato
-              </a>
-            </div>
-            <div className="text-center text-xs text-gray-600">
-              <a 
-                href="/admin-login" 
-                className="hover:text-gray-400 transition-colors"
-              >
-                Acesso administrativo
+                Voltar para login de cliente
               </a>
             </div>
           </CardFooter>
@@ -162,4 +121,4 @@ const ClientLogin = () => {
   );
 };
 
-export default ClientLogin;
+export default AdminLogin;
