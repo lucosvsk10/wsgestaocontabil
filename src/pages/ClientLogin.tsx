@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Lock, Mail, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/componen
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { authenticateUser, initializeUserData } from "@/data/users";
 
 const ClientLogin = () => {
   const [email, setEmail] = useState("");
@@ -17,42 +18,46 @@ const ClientLogin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const ADMIN_EMAIL = "wsgestao@gmail.com";
-  const ADMIN_PASSWORD = "melquesedeque";
+  // Initialize user data from predefined users
+  useEffect(() => {
+    initializeUserData();
+  }, []);
 
-  const handleLogin = (e) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     setTimeout(() => {
-      if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-        localStorage.setItem("adminAuth", "true");
-        toast({
-          title: "Login de administrador realizado com sucesso!",
-          description: "Bem-vindo à área do administrador.",
-        });
-        navigate("/admin");
-      } else {
-        // Simulate regular user login (in a real app, this would check against a database)
-        // For demo purposes, allow any non-admin email/password combination
-        if (email && password) {
+      const user = authenticateUser(email, password);
+      
+      if (user) {
+        if (user.isAdmin) {
+          localStorage.setItem("adminAuth", "true");
+          localStorage.setItem("userId", user.id);
+          toast({
+            title: "Login de administrador realizado com sucesso!",
+            description: "Bem-vindo à área do administrador.",
+          });
+          navigate("/admin");
+        } else {
           localStorage.setItem("userAuth", "true");
-          localStorage.setItem("userEmail", email);
+          localStorage.setItem("userId", user.id);
           toast({
             title: "Login realizado com sucesso!",
             description: "Bem-vindo à área do cliente.",
           });
           navigate("/client");
-        } else {
-          toast({
-            title: "Erro no login",
-            description: "Email ou senha incorretos",
-            variant: "destructive",
-          });
         }
+      } else {
+        toast({
+          title: "Erro no login",
+          description: "Email ou senha incorretos",
+          variant: "destructive",
+        });
       }
+      
       setIsLoading(false);
-    }, 1000);
+    }, 600);
   };
 
   const handleWhatsAppRequest = () => {

@@ -7,56 +7,46 @@ import { Download } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
-
-interface Document {
-  id: string;
-  name: string;
-  uploadedAt: string;
-  mockUrl: string;
-}
+import { Document, getUserByEmail, getAllUsers } from "@/data/users";
 
 const ClientDashboard = () => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userName, setUserName] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
   
   useEffect(() => {
     // Check if user is authenticated
     const isAuthenticated = localStorage.getItem("userAuth");
-    if (!isAuthenticated) {
+    const userId = localStorage.getItem("userId");
+    
+    if (!isAuthenticated || !userId) {
       navigate("/login");
       return;
     }
     
     // Load user documents
-    loadUserDocuments();
+    loadUserDocuments(userId);
   }, [navigate]);
 
-  const loadUserDocuments = () => {
+  const loadUserDocuments = (userId: string) => {
     setLoading(true);
-    const userEmail = localStorage.getItem("userEmail");
-    if (!userEmail) {
-      setLoading(false);
-      return;
+    
+    const users = getAllUsers();
+    const currentUser = users.find(user => user.id === userId);
+    
+    if (currentUser) {
+      setDocuments(currentUser.documents || []);
+      setUserName(currentUser.name);
     }
-
-    // Get registered users from localStorage
-    const registeredUsers = localStorage.getItem("registeredUsers");
-    if (registeredUsers) {
-      const parsedUsers = JSON.parse(registeredUsers);
-      // Find current user
-      const currentUser = parsedUsers.find(user => user.email === userEmail);
-      if (currentUser && currentUser.documents) {
-        setDocuments(currentUser.documents);
-      }
-    }
+    
     setLoading(false);
   };
 
   const handleLogout = () => {
     localStorage.removeItem("userAuth");
-    localStorage.removeItem("userEmail");
+    localStorage.removeItem("userId");
     navigate("/login");
     toast({
       title: "Logout realizado",
@@ -65,8 +55,8 @@ const ClientDashboard = () => {
   };
 
   // Helper function to format date
-  const formatDate = (dateString) => {
-    const options = { year: 'numeric', month: 'numeric', day: 'numeric' };
+  const formatDate = (dateString: string) => {
+    const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'numeric', day: 'numeric' };
     return new Date(dateString).toLocaleDateString('pt-BR', options);
   };
 
@@ -85,6 +75,12 @@ const ClientDashboard = () => {
             Sair
           </Button>
         </div>
+        
+        {userName && (
+          <div className="mb-6">
+            <h2 className="text-xl font-medium text-white">Bem-vindo, {userName}</h2>
+          </div>
+        )}
         
         <section className="mb-12">
           <h2 className="text-2xl font-semibold text-white mb-6">Documentos Disponíveis</h2>
