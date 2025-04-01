@@ -73,10 +73,9 @@ export const predefinedUsers: User[] = [
 
 // Initialize the user data from predefined users when the app loads
 export const initializeUserData = (): void => {
-  // Only initialize if user data doesn't exist yet
-  if (!localStorage.getItem("registeredUsers")) {
-    localStorage.setItem("registeredUsers", JSON.stringify(predefinedUsers));
-  }
+  // Always initialize data to ensure predefined users are available
+  localStorage.setItem("registeredUsers", JSON.stringify(predefinedUsers));
+  console.log("User data initialized:", predefinedUsers);
 };
 
 // Get all users
@@ -122,6 +121,7 @@ export const getUserByEmail = (email: string): User | undefined => {
 // Authenticate user
 export const authenticateUser = (email: string, password: string): User | null => {
   const users = getAllUsers();
+  console.log("Authenticating:", email, "Users available:", users);
   const user = users.find(user => user.email === email && user.password === password);
   return user || null;
 };

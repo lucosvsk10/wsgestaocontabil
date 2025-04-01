@@ -18,9 +18,11 @@ const AdminLogin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Initialize user data from predefined users
+  // Initialize user data when the component mounts
   useEffect(() => {
+    // Force initialize the user data to ensure admin users are available
     initializeUserData();
+    console.log("AdminLogin: User data initialized");
   }, []);
 
   const handleLogin = (e: React.FormEvent) => {
