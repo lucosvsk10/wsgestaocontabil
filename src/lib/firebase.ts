@@ -4,6 +4,16 @@ import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, si
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, getDoc, setDoc } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 
+// Define a proper type for user data
+export interface UserDocument {
+  id: string;
+  email?: string;
+  name?: string;
+  role?: string;
+  createdAt?: string;
+  [key: string]: any; // Allow for additional fields
+}
+
 // Configuração do Firebase - substitua pelos seus valores
 const firebaseConfig = {
   apiKey: "AIzaSyCMFlVNoUndO46weyHz3g_pcZvm38FGoWk",
@@ -62,13 +72,13 @@ export const addUserToFirestore = async (userId: string, userData: any) => {
   }
 };
 
-export const getUserDoc = async (userId: string) => {
+export const getUserDoc = async (userId: string): Promise<UserDocument | null> => {
   try {
     const docRef = doc(db, "users", userId);
     const docSnap = await getDoc(docRef);
     
     if (docSnap.exists()) {
-      return { id: docSnap.id, ...docSnap.data() };
+      return { id: docSnap.id, ...docSnap.data() } as UserDocument;
     }
     
     return null;

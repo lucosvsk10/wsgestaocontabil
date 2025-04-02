@@ -1,11 +1,11 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from 'firebase/auth';
-import { auth, getUserDoc } from '@/lib/firebase';
+import { auth, getUserDoc, UserDocument } from '@/lib/firebase';
 
 interface AuthContextType {
   currentUser: User | null;
-  userDocData: any;
+  userDocData: UserDocument | null;
   userLoading: boolean;
   isAdmin: boolean;
 }
@@ -21,7 +21,7 @@ export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [userDocData, setUserDocData] = useState<any>(null);
+  const [userDocData, setUserDocData] = useState<UserDocument | null>(null);
   const [userLoading, setUserLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
