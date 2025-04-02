@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronDown, ChevronUp, FileUp, Pencil, Trash2, User, Users, Plus, Lock, Mail } from "lucide-react";
@@ -26,6 +25,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { removeUser } from "../data/users";
 
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
@@ -36,11 +36,9 @@ const AdminDashboard = () => {
   const [expandedUsers, setExpandedUsers] = useState({});
   const [documentName, setDocumentName] = useState("");
   
-  // Edit form state
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
   
-  // Create user form state
   const [createName, setCreateName] = useState("");
   const [createEmail, setCreateEmail] = useState("");
   const [createPassword, setCreatePassword] = useState("");
@@ -50,7 +48,6 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Check if admin is authenticated
   useEffect(() => {
     const adminAuth = localStorage.getItem("adminAuth");
     if (adminAuth !== "true") {
@@ -62,7 +59,6 @@ const AdminDashboard = () => {
       });
     }
     
-    // Load users
     loadUsers();
   }, [navigate, toast]);
 
@@ -70,7 +66,6 @@ const AdminDashboard = () => {
     const registeredUsers = localStorage.getItem("registeredUsers");
     if (registeredUsers) {
       const parsedUsers = JSON.parse(registeredUsers);
-      // Add documents array if it doesn't exist
       const usersWithDocuments = parsedUsers.map(user => ({
         ...user,
         documents: user.documents || []
@@ -110,9 +105,8 @@ const AdminDashboard = () => {
   const confirmDeleteUser = () => {
     if (!selectedUser) return;
     
-    const updatedUsers = users.filter(user => user.email !== selectedUser.email);
-    localStorage.setItem("registeredUsers", JSON.stringify(updatedUsers));
-    setUsers(updatedUsers);
+    removeUser(selectedUser.id);
+    loadUsers();
     setIsDeleteDialogOpen(false);
     
     toast({
@@ -153,7 +147,6 @@ const AdminDashboard = () => {
   };
 
   const handleCreateUser = () => {
-    // Validate passwords match
     if (createPassword !== confirmPassword) {
       setPasswordError("As senhas não coincidem");
       toast({
@@ -164,7 +157,6 @@ const AdminDashboard = () => {
       return;
     }
 
-    // Validate password strength
     const passwordValidation = validatePassword(createPassword);
     if (passwordValidation) {
       setPasswordError(passwordValidation);
@@ -176,7 +168,6 @@ const AdminDashboard = () => {
       return;
     }
 
-    // Check if email is already registered
     const emailExists = users.some(user => user.email === createEmail);
     if (emailExists) {
       toast({
@@ -187,7 +178,6 @@ const AdminDashboard = () => {
       return;
     }
 
-    // Create new user
     const newUser = {
       name: createName,
       email: createEmail,
@@ -199,7 +189,6 @@ const AdminDashboard = () => {
     localStorage.setItem("registeredUsers", JSON.stringify(updatedUsers));
     setUsers(updatedUsers);
     
-    // Reset form and close dialog
     setCreateName("");
     setCreateEmail("");
     setCreatePassword("");
@@ -217,13 +206,11 @@ const AdminDashboard = () => {
     const file = event.target.files[0];
     if (!file) return;
     
-    // Simulating file upload - in a real app, we would upload to a server
-    // Here we're just storing the file name and a mock URL
     const documentEntry = {
       id: Date.now().toString(),
       name: documentName || file.name,
       uploadedAt: new Date().toISOString(),
-      mockUrl: URL.createObjectURL(file) // This will work for the current session only
+      mockUrl: URL.createObjectURL(file)
     };
     
     const updatedUsers = users.map(user => {
@@ -353,12 +340,10 @@ const AdminDashboard = () => {
                       </TableCell>
                     </TableRow>
                     
-                    {/* Document upload and listing section */}
                     {expandedUsers[user.email] && (
                       <TableRow className="bg-gray-800/30 hover:bg-gray-800/50 border-0">
                         <TableCell colSpan={4} className="p-4">
                           <div className="space-y-4">
-                            {/* Document upload form */}
                             <div className="flex flex-col md:flex-row gap-3 p-3 bg-gray-800/50 rounded-md">
                               <div className="flex-grow">
                                 <Input
@@ -387,7 +372,6 @@ const AdminDashboard = () => {
                               </div>
                             </div>
                             
-                            {/* Document list */}
                             {user.documents?.length > 0 ? (
                               <div className="space-y-2">
                                 <h4 className="text-sm font-medium text-gray-300 mb-2">Documentos Enviados</h4>
@@ -429,7 +413,6 @@ const AdminDashboard = () => {
         </div>
       </main>
       
-      {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="bg-gray-900 border-gray-800">
           <DialogHeader>
@@ -463,7 +446,6 @@ const AdminDashboard = () => {
         </DialogContent>
       </Dialog>
       
-      {/* Edit User Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="bg-gray-900 border-gray-800">
           <DialogHeader>
@@ -509,7 +491,6 @@ const AdminDashboard = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Create User Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent className="bg-gray-900 border-gray-800">
           <DialogHeader>

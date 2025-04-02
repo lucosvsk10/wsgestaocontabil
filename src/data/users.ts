@@ -15,8 +15,8 @@ export interface Document {
   mockUrl: string;
 }
 
-// Predefined users that will be available across all devices
-export const predefinedUsers: User[] = [
+// Lista mutável de usuários predefinidos que pode ser modificada durante a execução
+export let predefinedUsers: User[] = [
   {
     id: "admin-001",
     name: "Administrador",
@@ -88,6 +88,7 @@ export const getAllUsers = (): User[] => {
 export const addUser = (user: User): void => {
   const users = getAllUsers();
   users.push(user);
+  predefinedUsers.push(user); // Adicionar à lista predefinida também
   localStorage.setItem("registeredUsers", JSON.stringify(users));
 };
 
@@ -98,6 +99,12 @@ export const updateUser = (updatedUser: User): void => {
   if (index !== -1) {
     users[index] = updatedUser;
     localStorage.setItem("registeredUsers", JSON.stringify(users));
+    
+    // Atualiza também na lista de usuários predefinidos
+    const predefinedIndex = predefinedUsers.findIndex(user => user.id === updatedUser.id);
+    if (predefinedIndex !== -1) {
+      predefinedUsers[predefinedIndex] = updatedUser;
+    }
   }
 };
 
@@ -109,6 +116,12 @@ export const addDocumentToUser = (userId: string, document: Document): void => {
   if (userIndex !== -1) {
     users[userIndex].documents.push(document);
     localStorage.setItem("registeredUsers", JSON.stringify(users));
+    
+    // Atualiza também na lista de usuários predefinidos
+    const predefinedIndex = predefinedUsers.findIndex(user => user.id === userId);
+    if (predefinedIndex !== -1) {
+      predefinedUsers[predefinedIndex].documents.push(document);
+    }
   }
 };
 
@@ -124,4 +137,16 @@ export const authenticateUser = (email: string, password: string): User | null =
   console.log("Authenticating:", email, "Users available:", users);
   const user = users.find(user => user.email === email && user.password === password);
   return user || null;
+};
+
+// Remove user by ID
+export const removeUser = (userId: string): void => {
+  // Remove do localStorage
+  const users = getAllUsers();
+  const updatedUsers = users.filter(user => user.id !== userId);
+  localStorage.setItem("registeredUsers", JSON.stringify(updatedUsers));
+  
+  // Remove da lista de usuários predefinidos
+  predefinedUsers = predefinedUsers.filter(user => user.id !== userId);
+  console.log("Usuário removido. Usuários restantes:", predefinedUsers);
 };
