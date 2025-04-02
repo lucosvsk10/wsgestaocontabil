@@ -1,4 +1,3 @@
-
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "firebase/auth";
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, getDoc, setDoc } from "firebase/firestore";
@@ -6,12 +5,13 @@ import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "fire
 
 // Configuração do Firebase - substitua pelos seus valores
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY", // Você precisará substituir por sua chave API do Firebase
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyCMFlVNoUndO46weyHz3g_pcZvm38FGoWk",
+  authDomain: "ws-gestao.firebaseapp.com",
+  projectId: "ws-gestao",
+  storageBucket: "ws-gestao.appspot.com",
+  messagingSenderId: "47664277006",
+  appId: "1:47664277006:web:22078461f12dc008d37e5f",
+  measurementId: "G-895JT6WD7F"
 };
 
 // Inicializa o Firebase
