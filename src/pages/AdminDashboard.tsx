@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, ChevronUp, FileUp, Pencil, Trash2, User, Users, Plus, Mail, LogOut } from "lucide-react";
+import { ChevronDown, ChevronUp, FileUp, Pencil, Trash2, User, Users, Plus, Mail, LogOut, RefreshCw } from "lucide-react";
 import { Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -36,6 +35,7 @@ import {
   getUserDocuments,
   deleteDocument,
   updateUserData,
+  resetUserPassword,
   logoutUser
 } from "@/lib/firebase";
 
@@ -45,6 +45,7 @@ const AdminDashboard = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
   const [expandedUsers, setExpandedUsers] = useState<{[key: string]: boolean}>({});
   const [documentName, setDocumentName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -115,7 +116,6 @@ const AdminDashboard = () => {
     setExpandedUsers(prev => {
       const isExpanding = !prev[userId];
       
-      // Se estiver expandindo, carregar os documentos do usuário
       if (isExpanding) {
         loadUserDocuments(userId);
       }
@@ -131,7 +131,6 @@ const AdminDashboard = () => {
     try {
       const documents = await getUserDocuments(userId);
       
-      // Atualizar o usuário com os documentos carregados
       setUsers(prevUsers => 
         prevUsers.map(user => 
           user.id === userId ? { ...user, documents } : user
@@ -165,7 +164,6 @@ const AdminDashboard = () => {
     try {
       await deleteFirebaseUser(selectedUser.id);
       
-      // Atualizar a lista de usuários localmente
       setUsers(prevUsers => prevUsers.filter(user => user.id !== selectedUser.id));
       setIsDeleteDialogOpen(false);
       
@@ -192,7 +190,6 @@ const AdminDashboard = () => {
         email: editEmail
       });
       
-      // Atualizar a lista de usuários localmente
       setUsers(prevUsers => 
         prevUsers.map(user => 
           user.id === selectedUser.id ? { ...user, name: editName, email: editEmail } : user
@@ -209,6 +206,32 @@ const AdminDashboard = () => {
       toast({
         title: "Erro",
         description: "Não foi possível atualizar o usuário.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleResetPassword = (user: any) => {
+    setSelectedUser(user);
+    setIsResetPasswordDialogOpen(true);
+  };
+
+  const confirmResetPassword = async () => {
+    if (!selectedUser || !selectedUser.email) return;
+    
+    try {
+      await resetUserPassword(selectedUser.email);
+      setIsResetPasswordDialogOpen(false);
+      
+      toast({
+        title: "Email de redefinição enviado",
+        description: `Um email de redefinição de senha foi enviado para ${selectedUser.email}.`,
+      });
+    } catch (error: any) {
+      console.error("Erro ao redefinir senha:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível enviar o email de redefinição de senha.",
         variant: "destructive",
       });
     }
@@ -244,17 +267,14 @@ const AdminDashboard = () => {
     }
 
     try {
-      // Criar usuário no Firebase Auth
       const userCredential = await createUser(createEmail, createPassword);
       
-      // Adicionar dados do usuário ao Firestore
       await addUserToFirestore(userCredential.uid, {
         name: createName,
         email: createEmail,
-        role: "client"  // Por padrão, novos usuários são clientes
+        role: "client"
       });
       
-      // Atualizar a lista de usuários localmente
       const newUser = {
         id: userCredential.uid,
         name: createName,
@@ -265,7 +285,6 @@ const AdminDashboard = () => {
       
       setUsers(prevUsers => [...prevUsers, newUser]);
       
-      // Resetar campos
       setCreateName("");
       setCreateEmail("");
       setCreatePassword("");
@@ -298,7 +317,6 @@ const AdminDashboard = () => {
     try {
       await uploadDocument(userId, file, { name: documentName || file.name });
       
-      // Recarregar documentos do usuário
       await loadUserDocuments(userId);
       
       setDocumentName("");
@@ -321,7 +339,6 @@ const AdminDashboard = () => {
     try {
       await deleteDocument(userId, documentId, fileUrl);
       
-      // Atualizar a lista de documentos localmente
       setUsers(prevUsers => 
         prevUsers.map(user => {
           if (user.id === userId) {
@@ -444,9 +461,17 @@ const AdminDashboard = () => {
                         <Button 
                           variant="ghost" 
                           size="icon"
+                          className="text-yellow-400 hover:text-yellow-300 hover:bg-yellow-950/30"
+                          onClick={() => handleResetPassword(user)}
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
                           className="text-red-400 hover:text-red-300 hover:bg-red-950/30"
                           onClick={() => handleDeleteUser(user)}
-                          disabled={user.role === "admin"} // Não permitir excluir administradores
+                          disabled={user.role === "admin"}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -599,6 +624,39 @@ const AdminDashboard = () => {
               onClick={saveEditedUser}
             >
               Salvar Alterações
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isResetPasswordDialogOpen} onOpenChange={setIsResetPasswordDialogOpen}>
+        <DialogContent className="bg-gray-900 border-gray-800">
+          <DialogHeader>
+            <DialogTitle className="text-white">Redefinir Senha</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Você está prestes a enviar um email de redefinição de senha para este usuário.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedUser && (
+            <div className="py-3">
+              <p className="text-white"><strong>Nome:</strong> {selectedUser.name}</p>
+              <p className="text-white"><strong>Email:</strong> {selectedUser.email}</p>
+            </div>
+          )}
+          
+          <DialogFooter className="flex space-x-2 sm:justify-end">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsResetPasswordDialogOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              className="bg-gold hover:bg-gold-light text-navy"
+              onClick={confirmResetPassword}
+            >
+              Enviar Email de Redefinição
             </Button>
           </DialogFooter>
         </DialogContent>

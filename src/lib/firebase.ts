@@ -1,6 +1,5 @@
-
 import { initializeApp } from "firebase/app";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail } from "firebase/auth";
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, getDoc, setDoc } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 
@@ -53,6 +52,16 @@ export const createUser = async (email: string, password: string) => {
 export const logoutUser = async () => {
   try {
     await signOut(auth);
+    return true;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Nova função para redefinir senha
+export const resetUserPassword = async (email: string) => {
+  try {
+    await sendPasswordResetEmail(auth, email);
     return true;
   } catch (error) {
     throw error;
