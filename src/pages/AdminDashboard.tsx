@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, ChevronUp, FileUp, Pencil, Trash2, User, Users, Plus, Lock, Mail } from "lucide-react";
+import { ChevronDown, ChevronUp, FileUp, Pencil, Trash2, User, Users, Plus, Mail, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
@@ -20,21 +21,32 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { removeUser } from "../data/users";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useAuth } from "@/contexts/AuthContext";
+import { 
+  getAllUsers, 
+  createUser, 
+  addUserToFirestore,
+  deleteUser as deleteFirebaseUser,
+  uploadDocument,
+  getUserDocuments,
+  deleteDocument,
+  updateUserData,
+  logoutUser
+} from "@/lib/firebase";
 
 const AdminDashboard = () => {
-  const [users, setUsers] = useState([]);
-  const [selectedUser, setSelectedUser] = useState(null);
+  const [users, setUsers] = useState<any[]>([]);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [expandedUsers, setExpandedUsers] = useState({});
+  const [expandedUsers, setExpandedUsers] = useState<{[key: string]: boolean}>({});
   const [documentName, setDocumentName] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
   
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
@@ -47,106 +59,168 @@ const AdminDashboard = () => {
   
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { currentUser, isAdmin } = useAuth();
 
   useEffect(() => {
-    const adminAuth = localStorage.getItem("adminAuth");
-    if (adminAuth !== "true") {
+    if (!isAdmin) {
       navigate("/login");
       toast({
         title: "Acesso negado",
-        description: "Você precisa fazer login como administrador para acessar esta página.",
+        description: "Você precisa ter acesso administrativo para acessar esta página.",
         variant: "destructive",
       });
+      return;
     }
     
     loadUsers();
-  }, [navigate, toast]);
+  }, [navigate, toast, isAdmin]);
 
-  const loadUsers = () => {
-    const registeredUsers = localStorage.getItem("registeredUsers");
-    if (registeredUsers) {
-      const parsedUsers = JSON.parse(registeredUsers);
-      const usersWithDocuments = parsedUsers.map(user => ({
-        ...user,
-        documents: user.documents || []
-      }));
-      setUsers(usersWithDocuments);
+  const loadUsers = async () => {
+    try {
+      setIsLoading(true);
+      const fetchedUsers = await getAllUsers();
+      setUsers(fetchedUsers);
+    } catch (error) {
+      console.error("Erro ao carregar usuários:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar os usuários.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("adminAuth");
-    navigate("/login");
-    toast({
-      title: "Logout realizado",
-      description: "Você foi desconectado da área de administrador.",
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      navigate("/login");
+      toast({
+        title: "Logout realizado",
+        description: "Você foi desconectado da área de administrador.",
+      });
+    } catch (error) {
+      console.error("Erro ao fazer logout:", error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao tentar sair.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const toggleUserExpand = async (userId: string) => {
+    setExpandedUsers(prev => {
+      const isExpanding = !prev[userId];
+      
+      // Se estiver expandindo, carregar os documentos do usuário
+      if (isExpanding) {
+        loadUserDocuments(userId);
+      }
+      
+      return {
+        ...prev,
+        [userId]: isExpanding
+      };
     });
   };
 
-  const toggleUserExpand = (userId) => {
-    setExpandedUsers(prev => ({
-      ...prev,
-      [userId]: !prev[userId]
-    }));
+  const loadUserDocuments = async (userId: string) => {
+    try {
+      const documents = await getUserDocuments(userId);
+      
+      // Atualizar o usuário com os documentos carregados
+      setUsers(prevUsers => 
+        prevUsers.map(user => 
+          user.id === userId ? { ...user, documents } : user
+        )
+      );
+    } catch (error) {
+      console.error("Erro ao carregar documentos:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar os documentos do usuário.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleEditUser = (user) => {
+  const handleEditUser = (user: any) => {
     setSelectedUser(user);
     setEditName(user.name);
     setEditEmail(user.email);
     setIsEditDialogOpen(true);
   };
 
-  const handleDeleteUser = (user) => {
+  const handleDeleteUser = (user: any) => {
     setSelectedUser(user);
     setIsDeleteDialogOpen(true);
   };
 
-  const confirmDeleteUser = () => {
+  const confirmDeleteUser = async () => {
     if (!selectedUser) return;
     
-    removeUser(selectedUser.id);
-    loadUsers();
-    setIsDeleteDialogOpen(false);
-    
-    toast({
-      title: "Usuário excluído",
-      description: `O usuário ${selectedUser.name} foi excluído com sucesso.`,
-    });
+    try {
+      await deleteFirebaseUser(selectedUser.id);
+      
+      // Atualizar a lista de usuários localmente
+      setUsers(prevUsers => prevUsers.filter(user => user.id !== selectedUser.id));
+      setIsDeleteDialogOpen(false);
+      
+      toast({
+        title: "Usuário excluído",
+        description: `O usuário ${selectedUser.name} foi excluído com sucesso.`,
+      });
+    } catch (error) {
+      console.error("Erro ao excluir usuário:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir o usuário.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const saveEditedUser = () => {
+  const saveEditedUser = async () => {
     if (!selectedUser) return;
     
-    const updatedUsers = users.map(user => {
-      if (user.email === selectedUser.email) {
-        return {
-          ...user,
-          name: editName,
-          email: editEmail
-        };
-      }
-      return user;
-    });
-    
-    localStorage.setItem("registeredUsers", JSON.stringify(updatedUsers));
-    setUsers(updatedUsers);
-    setIsEditDialogOpen(false);
-    
-    toast({
-      title: "Usuário atualizado",
-      description: `As informações do usuário foram atualizadas com sucesso.`,
-    });
+    try {
+      await updateUserData(selectedUser.id, {
+        name: editName,
+        email: editEmail
+      });
+      
+      // Atualizar a lista de usuários localmente
+      setUsers(prevUsers => 
+        prevUsers.map(user => 
+          user.id === selectedUser.id ? { ...user, name: editName, email: editEmail } : user
+        )
+      );
+      
+      setIsEditDialogOpen(false);
+      toast({
+        title: "Usuário atualizado",
+        description: "As informações do usuário foram atualizadas com sucesso.",
+      });
+    } catch (error) {
+      console.error("Erro ao atualizar usuário:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o usuário.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const validatePassword = (password) => {
+  const validatePassword = (password: string) => {
     if (password.length < 8) {
       return "A senha deve ter no mínimo 8 caracteres";
     }
     return "";
   };
 
-  const handleCreateUser = () => {
+  const handleCreateUser = async () => {
     if (createPassword !== confirmPassword) {
       setPasswordError("As senhas não coincidem");
       toast({
@@ -168,90 +242,118 @@ const AdminDashboard = () => {
       return;
     }
 
-    const emailExists = users.some(user => user.email === createEmail);
-    if (emailExists) {
+    try {
+      // Criar usuário no Firebase Auth
+      const userCredential = await createUser(createEmail, createPassword);
+      
+      // Adicionar dados do usuário ao Firestore
+      await addUserToFirestore(userCredential.uid, {
+        name: createName,
+        email: createEmail,
+        role: "client"  // Por padrão, novos usuários são clientes
+      });
+      
+      // Atualizar a lista de usuários localmente
+      const newUser = {
+        id: userCredential.uid,
+        name: createName,
+        email: createEmail,
+        role: "client",
+        documents: []
+      };
+      
+      setUsers(prevUsers => [...prevUsers, newUser]);
+      
+      // Resetar campos
+      setCreateName("");
+      setCreateEmail("");
+      setCreatePassword("");
+      setConfirmPassword("");
+      setPasswordError("");
+      setIsCreateDialogOpen(false);
+      
+      toast({
+        title: "Usuário criado",
+        description: "O novo usuário foi criado com sucesso.",
+      });
+    } catch (error: any) {
+      console.error("Erro ao criar usuário:", error);
+      const errorMessage = error.code === "auth/email-already-in-use" 
+        ? "Este email já está registrado" 
+        : "Erro ao criar usuário";
+      
       toast({
         title: "Erro no cadastro",
-        description: "Este email já está registrado.",
+        description: errorMessage,
         variant: "destructive",
       });
-      return;
     }
-
-    const newUser = {
-      name: createName,
-      email: createEmail,
-      password: createPassword,
-      documents: []
-    };
-
-    const updatedUsers = [...users, newUser];
-    localStorage.setItem("registeredUsers", JSON.stringify(updatedUsers));
-    setUsers(updatedUsers);
-    
-    setCreateName("");
-    setCreateEmail("");
-    setCreatePassword("");
-    setConfirmPassword("");
-    setPasswordError("");
-    setIsCreateDialogOpen(false);
-    
-    toast({
-      title: "Usuário criado",
-      description: "O novo usuário foi criado com sucesso.",
-    });
   };
 
-  const handleFileUpload = (userId, event) => {
-    const file = event.target.files[0];
+  const handleFileUpload = async (userId: string, event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (!file) return;
     
-    const documentEntry = {
-      id: Date.now().toString(),
-      name: documentName || file.name,
-      uploadedAt: new Date().toISOString(),
-      mockUrl: URL.createObjectURL(file)
-    };
-    
-    const updatedUsers = users.map(user => {
-      if (user.email === userId) {
-        return {
-          ...user,
-          documents: [...(user.documents || []), documentEntry]
-        };
-      }
-      return user;
-    });
-    
-    localStorage.setItem("registeredUsers", JSON.stringify(updatedUsers));
-    setUsers(updatedUsers);
-    setDocumentName("");
-    
-    toast({
-      title: "Documento adicionado",
-      description: `O documento foi adicionado ao usuário com sucesso.`,
-    });
+    try {
+      await uploadDocument(userId, file, { name: documentName || file.name });
+      
+      // Recarregar documentos do usuário
+      await loadUserDocuments(userId);
+      
+      setDocumentName("");
+      
+      toast({
+        title: "Documento adicionado",
+        description: `O documento foi adicionado ao usuário com sucesso.`,
+      });
+    } catch (error) {
+      console.error("Erro ao fazer upload do arquivo:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível fazer upload do documento.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleDeleteDocument = (userId, documentId) => {
-    const updatedUsers = users.map(user => {
-      if (user.email === userId) {
-        return {
-          ...user,
-          documents: user.documents.filter(doc => doc.id !== documentId)
-        };
-      }
-      return user;
-    });
-    
-    localStorage.setItem("registeredUsers", JSON.stringify(updatedUsers));
-    setUsers(updatedUsers);
-    
-    toast({
-      title: "Documento excluído",
-      description: `O documento foi excluído com sucesso.`,
-    });
+  const handleDeleteDocument = async (userId: string, documentId: string, fileUrl: string) => {
+    try {
+      await deleteDocument(userId, documentId, fileUrl);
+      
+      // Atualizar a lista de documentos localmente
+      setUsers(prevUsers => 
+        prevUsers.map(user => {
+          if (user.id === userId) {
+            return {
+              ...user,
+              documents: user.documents.filter((doc: any) => doc.id !== documentId)
+            };
+          }
+          return user;
+        })
+      );
+      
+      toast({
+        title: "Documento excluído",
+        description: "O documento foi excluído com sucesso.",
+      });
+    } catch (error) {
+      console.error("Erro ao excluir documento:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir o documento.",
+        variant: "destructive",
+      });
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gold"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col">
@@ -263,8 +365,9 @@ const AdminDashboard = () => {
           <Button 
             onClick={handleLogout}
             variant="outline" 
-            className="border-gold text-gold hover:bg-gold hover:text-navy"
+            className="border-gold text-gold hover:bg-gold hover:text-navy flex items-center gap-2"
           >
+            <LogOut size={16} />
             Sair
           </Button>
         </div>
@@ -295,25 +398,33 @@ const AdminDashboard = () => {
                 <TableRow className="border-gray-800 hover:bg-gray-800/50">
                   <TableHead className="text-gray-400">Nome</TableHead>
                   <TableHead className="text-gray-400">Email</TableHead>
+                  <TableHead className="text-gray-400">Tipo de Conta</TableHead>
                   <TableHead className="text-gray-400">Documentos</TableHead>
                   <TableHead className="text-gray-400 text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {users.map((user) => (
-                  <React.Fragment key={user.email}>
+                  <React.Fragment key={user.id}>
                     <TableRow className="border-gray-800 hover:bg-gray-800/50">
                       <TableCell className="font-medium text-white">{user.name}</TableCell>
                       <TableCell className="text-gray-300">{user.email}</TableCell>
+                      <TableCell className="text-gray-300">
+                        <span className={`px-2 py-1 rounded text-xs ${
+                          user.role === "admin" ? "bg-purple-900 text-purple-200" : "bg-blue-900 text-blue-200"
+                        }`}>
+                          {user.role === "admin" ? "Administrador" : "Cliente"}
+                        </span>
+                      </TableCell>
                       <TableCell>
                         <Button 
                           variant="ghost" 
                           size="sm"
                           className="text-gray-400 hover:text-white"
-                          onClick={() => toggleUserExpand(user.email)}
+                          onClick={() => toggleUserExpand(user.id)}
                         >
                           {user.documents?.length || 0} documentos
-                          {expandedUsers[user.email] ? (
+                          {expandedUsers[user.id] ? (
                             <ChevronUp className="ml-2 h-4 w-4" />
                           ) : (
                             <ChevronDown className="ml-2 h-4 w-4" />
@@ -334,15 +445,16 @@ const AdminDashboard = () => {
                           size="icon"
                           className="text-red-400 hover:text-red-300 hover:bg-red-950/30"
                           onClick={() => handleDeleteUser(user)}
+                          disabled={user.role === "admin"} // Não permitir excluir administradores
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </TableCell>
                     </TableRow>
                     
-                    {expandedUsers[user.email] && (
+                    {expandedUsers[user.id] && (
                       <TableRow className="bg-gray-800/30 hover:bg-gray-800/50 border-0">
-                        <TableCell colSpan={4} className="p-4">
+                        <TableCell colSpan={5} className="p-4">
                           <div className="space-y-4">
                             <div className="flex flex-col md:flex-row gap-3 p-3 bg-gray-800/50 rounded-md">
                               <div className="flex-grow">
@@ -356,15 +468,15 @@ const AdminDashboard = () => {
                               </div>
                               <div className="flex items-center gap-2">
                                 <Input
-                                  id={`file-upload-${user.email}`}
+                                  id={`file-upload-${user.id}`}
                                   type="file"
                                   className="hidden"
-                                  onChange={(e) => handleFileUpload(user.email, e)}
+                                  onChange={(e) => handleFileUpload(user.id, e)}
                                 />
                                 <Button 
                                   variant="outline"
                                   className="border-gold text-gold hover:bg-gold hover:text-navy flex gap-2 w-full md:w-auto"
-                                  onClick={() => document.getElementById(`file-upload-${user.email}`).click()}
+                                  onClick={() => document.getElementById(`file-upload-${user.id}`)?.click()}
                                 >
                                   <FileUp className="h-4 w-4" />
                                   Adicionar Documento
@@ -376,7 +488,7 @@ const AdminDashboard = () => {
                               <div className="space-y-2">
                                 <h4 className="text-sm font-medium text-gray-300 mb-2">Documentos Enviados</h4>
                                 <div className="divide-y divide-gray-800">
-                                  {user.documents.map(doc => (
+                                  {user.documents.map((doc: any) => (
                                     <div key={doc.id} className="py-2 flex items-center justify-between">
                                       <div>
                                         <p className="text-white font-medium">{doc.name}</p>
@@ -389,7 +501,7 @@ const AdminDashboard = () => {
                                           variant="ghost" 
                                           size="icon"
                                           className="text-red-400 hover:text-red-300 hover:bg-red-950/30"
-                                          onClick={() => handleDeleteDocument(user.email, doc.id)}
+                                          onClick={() => handleDeleteDocument(user.id, doc.id, doc.fileUrl)}
                                         >
                                           <Trash2 className="h-4 w-4" />
                                         </Button>
@@ -563,7 +675,7 @@ const AdminDashboard = () => {
               </div>
               {passwordError && (
                 <Alert variant="destructive" className="py-2 mt-1 bg-red-950 border-red-800">
-                  <AlertTitle className="text-xs">{passwordError}</AlertTitle>
+                  <AlertDescription className="text-xs">{passwordError}</AlertDescription>
                 </Alert>
               )}
             </div>
