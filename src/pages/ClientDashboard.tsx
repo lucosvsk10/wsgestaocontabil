@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,46 +7,16 @@ import { Download } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
-import { Document, getUserByEmail, getAllUsers } from "@/data/users";
+import { Document, predefinedUsers } from "@/data/users";
 
 const ClientDashboard = () => {
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [userName, setUserName] = useState("");
+  // Example data using the first user in our predefined list
+  const user = predefinedUsers[0];
+  const [documents] = useState<Document[]>(user?.documents || []);
   const navigate = useNavigate();
   const { toast } = useToast();
-  
-  useEffect(() => {
-    // Check if user is authenticated
-    const isAuthenticated = localStorage.getItem("userAuth");
-    const userId = localStorage.getItem("userId");
-    
-    if (!isAuthenticated || !userId) {
-      navigate("/login");
-      return;
-    }
-    
-    // Load user documents
-    loadUserDocuments(userId);
-  }, [navigate]);
-
-  const loadUserDocuments = (userId: string) => {
-    setLoading(true);
-    
-    const users = getAllUsers();
-    const currentUser = users.find(user => user.id === userId);
-    
-    if (currentUser) {
-      setDocuments(currentUser.documents || []);
-      setUserName(currentUser.name);
-    }
-    
-    setLoading(false);
-  };
 
   const handleLogout = () => {
-    localStorage.removeItem("userAuth");
-    localStorage.removeItem("userId");
     navigate("/login");
     toast({
       title: "Logout realizado",
@@ -80,20 +50,16 @@ const ClientDashboard = () => {
           </Button>
         </div>
         
-        {userName && (
+        {user && (
           <div className="mb-6">
-            <h2 className="text-xl font-medium text-white">Bem-vindo, {userName}</h2>
+            <h2 className="text-xl font-medium text-white">Bem-vindo, {user.name}</h2>
           </div>
         )}
         
         <section className="mb-12">
           <h2 className="text-2xl font-semibold text-white mb-6">Documentos Disponíveis</h2>
           
-          {loading ? (
-            <div className="text-center py-12">
-              <p className="text-gray-400">Carregando documentos...</p>
-            </div>
-          ) : documents.length > 0 ? (
+          {documents.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {documents.map((doc) => (
                 <Card key={doc.id} className="bg-gray-900 border-gray-800 hover:border-gold/30 transition-colors">

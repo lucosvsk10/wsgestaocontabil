@@ -1,67 +1,27 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Lock, Mail, MessageSquare } from "lucide-react";
+import { Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { authenticateUser, initializeUserData } from "@/data/users";
 
 const ClientLogin = () => {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Initialize user data from predefined users
-  useEffect(() => {
-    initializeUserData();
-  }, []);
-
-  const handleLogin = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-
-    setTimeout(() => {
-      const user = authenticateUser(email, password);
-      
-      if (user) {
-        if (user.isAdmin) {
-          localStorage.setItem("adminAuth", "true");
-          localStorage.setItem("userId", user.id);
-          toast({
-            title: "Login de administrador realizado com sucesso!",
-            description: "Bem-vindo à área do administrador.",
-          });
-          navigate("/admin");
-        } else {
-          localStorage.setItem("userAuth", "true");
-          localStorage.setItem("userId", user.id);
-          toast({
-            title: "Login realizado com sucesso!",
-            description: "Bem-vindo à área do cliente.",
-          });
-          navigate("/client");
-        }
-      } else {
-        toast({
-          title: "Erro no login",
-          description: "Email ou senha incorretos",
-          variant: "destructive",
-        });
-      }
-      
-      setIsLoading(false);
-    }, 600);
-  };
-
-  const handleWhatsAppRequest = () => {
-    window.open("https://wa.me/+5582999324884?text=Olá,%20gostaria%20de%20solicitar%20uma%20conta%20na%20plataforma%20WS%20Gestão.", "_blank");
+    // Simply navigate to client area - no authentication
+    navigate("/client");
+    toast({
+      title: "Acesso concedido",
+      description: "Bem-vindo à área do cliente.",
+    });
   };
 
   return (
@@ -77,7 +37,7 @@ const ClientLogin = () => {
             </p>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <div className="relative">
                   <Mail 
@@ -93,58 +53,15 @@ const ClientLogin = () => {
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <div className="relative">
-                  <Lock 
-                    className="absolute left-3 top-3 h-5 w-5 text-gray-400" 
-                  />
-                  <Input
-                    type="password"
-                    placeholder="Senha"
-                    className="pl-10 bg-gray-800 border-gray-700"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
               <Button 
                 className="w-full bg-gold hover:bg-gold-light text-navy" 
                 type="submit"
-                disabled={isLoading}
               >
-                {isLoading ? "Entrando..." : "Entrar"}
+                Entrar
               </Button>
             </form>
-            
-            <div className="mt-6 pt-4 border-t border-gray-800">
-              <Button 
-                className="w-full bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2" 
-                type="button"
-                onClick={handleWhatsAppRequest}
-              >
-                <MessageSquare size={18} />
-                Solicitar Conta via WhatsApp
-              </Button>
-            </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
-            <div className="text-center text-sm text-gray-400">
-              <span>Problemas com acesso? </span>
-              <a 
-                href="#" 
-                className="text-gold hover:underline"
-                onClick={(e) => {
-                  e.preventDefault();
-                  toast({
-                    title: "Suporte",
-                    description: "Entre em contato conosco para obter ajuda com seu acesso.",
-                  });
-                }}
-              >
-                Entre em contato
-              </a>
-            </div>
             <div className="text-center text-xs text-gray-600">
               <a 
                 href="/admin-login" 

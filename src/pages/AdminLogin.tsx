@@ -1,56 +1,27 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Lock, Mail } from "lucide-react";
+import { Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { authenticateUser, initializeUserData } from "@/data/users";
 
 const AdminLogin = () => {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Initialize user data when the component mounts
-  useEffect(() => {
-    // Force initialize the user data to ensure admin users are available
-    initializeUserData();
-    console.log("AdminLogin: User data initialized");
-  }, []);
-
-  const handleLogin = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-
-    setTimeout(() => {
-      const user = authenticateUser(email, password);
-      console.log("Login attempt:", { email, found: !!user, isAdmin: user?.isAdmin });
-      
-      if (user && user.isAdmin) {
-        localStorage.setItem("adminAuth", "true");
-        localStorage.setItem("userId", user.id);
-        toast({
-          title: "Login de administrador realizado com sucesso!",
-          description: "Bem-vindo à área do administrador.",
-        });
-        navigate("/admin");
-      } else {
-        toast({
-          title: "Erro no login",
-          description: "Credenciais de administrador inválidas",
-          variant: "destructive",
-        });
-      }
-      
-      setIsLoading(false);
-    }, 600);
+    // Simply navigate to admin area - no authentication
+    navigate("/admin");
+    toast({
+      title: "Acesso de administrador concedido",
+      description: "Bem-vindo à área administrativa.",
+    });
   };
 
   return (
@@ -62,11 +33,11 @@ const AdminLogin = () => {
           <CardHeader className="space-y-1 text-center">
             <CardTitle className="text-2xl font-bold text-gold">Login Administrativo</CardTitle>
             <p className="text-sm text-gray-400">
-              Acesso restrito apenas para administradores
+              Acesso à área administrativa
             </p>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <div className="relative">
                   <Mail 
@@ -82,27 +53,11 @@ const AdminLogin = () => {
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <div className="relative">
-                  <Lock 
-                    className="absolute left-3 top-3 h-5 w-5 text-gray-400" 
-                  />
-                  <Input
-                    type="password"
-                    placeholder="Senha"
-                    className="pl-10 bg-gray-800 border-gray-700"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
               <Button 
                 className="w-full bg-gold hover:bg-gold-light text-navy" 
                 type="submit"
-                disabled={isLoading}
               >
-                {isLoading ? "Entrando..." : "Entrar"}
+                Entrar
               </Button>
             </form>
           </CardContent>
