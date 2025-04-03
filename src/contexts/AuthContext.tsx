@@ -17,6 +17,9 @@ interface AuthContextType {
   userData: UserData | null;
   isLoading: boolean;
   isAdmin: boolean;
+  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signOut: () => Promise<void>;
+  signUp: (email: string, password: string, name: string) => Promise<{ error: any, data: any }>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -24,7 +27,10 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   userData: null,
   isLoading: true,
-  isAdmin: false
+  isAdmin: false,
+  signIn: async () => ({ error: null }),
+  signOut: async () => {},
+  signUp: async () => ({ error: null, data: null })
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -102,12 +108,70 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const signIn = async (email: string, password: string) => {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      return { error };
+    } catch (error) {
+      console.error("Error in signIn:", error);
+      return { error };
+    }
+  };
+
+  const signOut = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error("Error in signOut:", error);
+    }
+  };
+
+  const signUp = async (email: string, password: string, name: string) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { name }
+        }
+      });
+      
+      if (!error && data.user) {
+        // Create user profile in the users table
+        const { error: profileError } = await supabase
+          .from('users')
+          .insert({
+            id: data.user.id,
+            email,
+            name,
+            role: 'client'
+          });
+        
+        if (profileError) {
+          console.error("Error creating user profile:", profileError);
+          return { error: profileError, data };
+        }
+      }
+      
+      return { data, error };
+    } catch (error) {
+      console.error("Error in signUp:", error);
+      return { error, data: null };
+    }
+  };
+
   const value = {
     session,
     user,
     userData,
     isLoading,
-    isAdmin
+    isAdmin,
+    signIn,
+    signOut,
+    signUp
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

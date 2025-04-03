@@ -1,12 +1,11 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Mail, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -15,10 +14,9 @@ const AdminLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [loginAttempt, setLoginAttempt] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, signIn } = useAuth();
 
   // If already logged in as admin, redirect
   if (user && isAdmin) {
@@ -30,42 +28,18 @@ const AdminLogin = () => {
     return null;
   }
 
-  // Use useEffect to handle navigation after login
-  useEffect(() => {
-    // Only execute after a login attempt
-    if (loginAttempt && user) {
-      if (isAdmin || user.email === "wsgestao@gmail.com") {
-        toast({
-          title: "Login administrativo realizado",
-          description: "Bem-vindo à área administrativa.",
-        });
-        navigate("/admin");
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Acesso negado",
-          description: "Você não tem permissões administrativas."
-        });
-        navigate("/client");
-      }
-      setLoginAttempt(false);
-      setIsLoading(false);
-    }
-  }, [loginAttempt, user, isAdmin, navigate, toast]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
+      const { error } = await signIn(email, password);
       
       if (error) throw error;
       
-      setLoginAttempt(true);
+      // signIn will trigger onAuthStateChange which will set isAdmin
+      // we'll let the router handle redirection based on isAdmin status
+      
     } catch (error: any) {
       console.error(error);
       toast({
@@ -87,9 +61,9 @@ const AdminLogin = () => {
         <Card className="w-full max-w-md bg-gray-900 border-gray-800">
           <CardHeader className="space-y-1 text-center">
             <CardTitle className="text-2xl font-bold text-gold">Login Administrativo</CardTitle>
-            <p className="text-sm text-gray-400">
+            <CardDescription className="text-sm text-gray-400">
               Acesso à área administrativa
-            </p>
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
