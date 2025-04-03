@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { loginWithEmail } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -18,23 +18,23 @@ const AdminLogin = () => {
   const [loginAttempt, setLoginAttempt] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { currentUser, isAdmin } = useAuth();
+  const { user, isAdmin } = useAuth();
 
-  // Se já estiver logado como admin, redirecionar
-  if (currentUser && isAdmin) {
+  // If already logged in as admin, redirect
+  if (user && isAdmin) {
     navigate("/admin");
     return null;
-  } else if (currentUser) {
-    // Se estiver logado mas não for admin, redirecionar para área do cliente
+  } else if (user) {
+    // If logged in but not admin, redirect to client area
     navigate("/client");
     return null;
   }
 
-  // Use useEffect para lidar com a navegação após o login
+  // Use useEffect to handle navigation after login
   useEffect(() => {
-    // Só executa após uma tentativa de login
-    if (loginAttempt && currentUser) {
-      if (isAdmin || currentUser.email === "wsgestao@gmail.com") {
+    // Only execute after a login attempt
+    if (loginAttempt && user) {
+      if (isAdmin || user.email === "wsgestao@gmail.com") {
         toast({
           title: "Login administrativo realizado",
           description: "Bem-vindo à área administrativa.",
@@ -51,21 +51,27 @@ const AdminLogin = () => {
       setLoginAttempt(false);
       setIsLoading(false);
     }
-  }, [loginAttempt, currentUser, isAdmin, navigate, toast]);
+  }, [loginAttempt, user, isAdmin, navigate, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
     try {
-      await loginWithEmail(email, password);
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (error) throw error;
+      
       setLoginAttempt(true);
     } catch (error: any) {
       console.error(error);
       toast({
         variant: "destructive",
         title: "Erro ao fazer login",
-        description: error.message === "Firebase: Error (auth/invalid-credential)." 
+        description: error.message === "Invalid login credentials" 
           ? "Email ou senha incorretos" 
           : "Ocorreu um erro durante o login. Tente novamente."
       });

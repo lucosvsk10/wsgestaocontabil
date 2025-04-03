@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { loginWithEmail } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -17,10 +17,10 @@ const ClientLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { currentUser } = useAuth();
+  const { user } = useAuth();
 
-  // Se já estiver logado, redirecionar
-  if (currentUser) {
+  // If already logged in, redirect
+  if (user) {
     navigate("/client");
     return null;
   }
@@ -30,7 +30,13 @@ const ClientLogin = () => {
     setIsLoading(true);
     
     try {
-      await loginWithEmail(email, password);
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (error) throw error;
+      
       toast({
         title: "Login realizado",
         description: "Bem-vindo à área do cliente.",
@@ -41,7 +47,7 @@ const ClientLogin = () => {
       toast({
         variant: "destructive",
         title: "Erro ao fazer login",
-        description: error.message === "Firebase: Error (auth/invalid-credential)." 
+        description: error.message === "Invalid login credentials" 
           ? "Email ou senha incorretos" 
           : "Ocorreu um erro durante o login. Tente novamente."
       });

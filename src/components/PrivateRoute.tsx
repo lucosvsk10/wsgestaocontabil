@@ -8,15 +8,15 @@ interface PrivateRouteProps {
 }
 
 const PrivateRoute = ({ children, requireAdmin = false }: PrivateRouteProps) => {
-  const { currentUser, userLoading, isAdmin } = useAuth();
+  const { user, isLoading, isAdmin } = useAuth();
 
-  if (userLoading) {
+  if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center bg-gray-950">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gold"></div>
     </div>;
   }
 
-  if (!currentUser) {
+  if (!user) {
     return <Navigate to="/login" />;
   }
 

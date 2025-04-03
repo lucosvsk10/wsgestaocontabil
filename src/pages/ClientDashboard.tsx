@@ -18,7 +18,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getUserDocuments, uploadDocument, logoutUser } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 
 const ClientDashboard = () => {
   const [documents, setDocuments] = useState<any[]>([]);
@@ -28,22 +28,29 @@ const ClientDashboard = () => {
   
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { currentUser, userDocData } = useAuth();
+  const { user, userData } = useAuth();
 
   useEffect(() => {
-    if (currentUser) {
+    if (user) {
       loadDocuments();
     }
-  }, [currentUser]);
+  }, [user]);
 
   const loadDocuments = async () => {
-    if (!currentUser) return;
+    if (!user) return;
     
     try {
       setIsLoading(true);
-      const fetchedDocuments = await getUserDocuments(currentUser.uid);
-      setDocuments(fetchedDocuments);
-    } catch (error) {
+      const { data, error } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('uploaded_at', { ascending: false });
+        
+      if (error) throw error;
+      
+      setDocuments(data || []);
+    } catch (error: any) {
       console.error("Erro ao carregar documentos:", error);
       toast({
         title: "Erro",
@@ -57,13 +64,13 @@ const ClientDashboard = () => {
 
   const handleLogout = async () => {
     try {
-      await logoutUser();
+      await supabase.auth.signOut();
       navigate("/login");
       toast({
         title: "Logout realizado",
         description: "Você foi desconectado da sua conta.",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao fazer logout:", error);
       toast({
         title: "Erro",
@@ -75,16 +82,39 @@ const ClientDashboard = () => {
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !currentUser) return;
+    if (!file || !user) return;
     
     setIsUploading(true);
     
     try {
-      await uploadDocument(currentUser.uid, file, { 
-        name: documentName || file.name
-      });
+      // 1. Upload file to storage
+      const fileName = `${user.id}/${Date.now()}_${file.name}`;
+      const { data: fileData, error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(fileName, file);
+        
+      if (uploadError) throw uploadError;
+
+      // 2. Get the public URL
+      const { data: urlData } = supabase.storage
+        .from('documents')
+        .getPublicUrl(fileName);
+
+      // 3. Save document record in database
+      const { error: dbError } = await supabase
+        .from('documents')
+        .insert({
+          user_id: user.id,
+          name: documentName || file.name,
+          file_url: urlData.publicUrl,
+          original_filename: file.name,
+          size: file.size,
+          type: file.type
+        });
+        
+      if (dbError) throw dbError;
       
-      // Atualizar a lista de documentos
+      // Refresh document list
       await loadDocuments();
       
       setDocumentName("");
@@ -93,7 +123,7 @@ const ClientDashboard = () => {
         title: "Documento enviado",
         description: "Seu documento foi enviado com sucesso.",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao fazer upload do documento:", error);
       toast({
         title: "Erro",
@@ -143,11 +173,11 @@ const ClientDashboard = () => {
                 <div className="space-y-4">
                   <div>
                     <p className="text-sm text-gray-500">Nome</p>
-                    <p className="text-lg font-medium text-white">{userDocData?.name}</p>
+                    <p className="text-lg font-medium text-white">{userData?.name}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Email</p>
-                    <p className="text-lg font-medium text-white">{currentUser?.email}</p>
+                    <p className="text-lg font-medium text-white">{user?.email}</p>
                   </div>
                 </div>
               </CardContent>
@@ -236,7 +266,7 @@ const ClientDashboard = () => {
                         <div className="flex-1">
                           <p className="font-medium text-white">{doc.name}</p>
                           <p className="text-xs text-gray-400">
-                            Enviado em {format(new Date(doc.uploadedAt), 'dd/MM/yyyy HH:mm')}
+                            Enviado em {format(new Date(doc.uploaded_at), 'dd/MM/yyyy HH:mm')}
                           </p>
                         </div>
                         <div>
@@ -246,7 +276,7 @@ const ClientDashboard = () => {
                             className="text-gold hover:text-gold-light"
                             asChild
                           >
-                            <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer">
+                            <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
                               Visualizar
                             </a>
                           </Button>

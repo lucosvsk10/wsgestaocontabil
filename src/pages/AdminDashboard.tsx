@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronDown, ChevronUp, FileUp, Pencil, Trash2, User, Users, Plus, Mail, LogOut, RefreshCw } from "lucide-react";
@@ -26,18 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/AuthContext";
-import { 
-  getAllUsers, 
-  createUser, 
-  addUserToFirestore,
-  deleteUser as deleteFirebaseUser,
-  uploadDocument,
-  getUserDocuments,
-  deleteDocument,
-  updateUserData,
-  resetUserPassword,
-  logoutUser
-} from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 
 const AdminDashboard = () => {
   const [users, setUsers] = useState<any[]>([]);
@@ -61,7 +51,7 @@ const AdminDashboard = () => {
   
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { currentUser, isAdmin } = useAuth();
+  const { isAdmin } = useAuth();
 
   useEffect(() => {
     if (!isAdmin) {
@@ -80,9 +70,15 @@ const AdminDashboard = () => {
   const loadUsers = async () => {
     try {
       setIsLoading(true);
-      const fetchedUsers = await getAllUsers();
-      setUsers(fetchedUsers);
-    } catch (error) {
+      const { data: usersData, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      
+      setUsers(usersData || []);
+    } catch (error: any) {
       console.error("Erro ao carregar usuários:", error);
       toast({
         title: "Erro",
@@ -96,13 +92,13 @@ const AdminDashboard = () => {
 
   const handleLogout = async () => {
     try {
-      await logoutUser();
+      await supabase.auth.signOut();
       navigate("/login");
       toast({
         title: "Logout realizado",
         description: "Você foi desconectado da área de administrador.",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao fazer logout:", error);
       toast({
         title: "Erro",
@@ -129,14 +125,20 @@ const AdminDashboard = () => {
 
   const loadUserDocuments = async (userId: string) => {
     try {
-      const documents = await getUserDocuments(userId);
+      const { data, error } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('user_id', userId)
+        .order('uploaded_at', { ascending: false });
+        
+      if (error) throw error;
       
       setUsers(prevUsers => 
         prevUsers.map(user => 
-          user.id === userId ? { ...user, documents } : user
+          user.id === userId ? { ...user, documents: data } : user
         )
       );
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao carregar documentos:", error);
       toast({
         title: "Erro",
@@ -148,8 +150,8 @@ const AdminDashboard = () => {
 
   const handleEditUser = (user: any) => {
     setSelectedUser(user);
-    setEditName(user.name);
-    setEditEmail(user.email);
+    setEditName(user.name || '');
+    setEditEmail(user.email || '');
     setIsEditDialogOpen(true);
   };
 
@@ -162,7 +164,12 @@ const AdminDashboard = () => {
     if (!selectedUser) return;
     
     try {
-      await deleteFirebaseUser(selectedUser.id);
+      // Delete from auth (this will cascade to user profile due to our DB setup)
+      const { error } = await supabase.auth.admin.deleteUser(
+        selectedUser.id
+      );
+      
+      if (error) throw error;
       
       setUsers(prevUsers => prevUsers.filter(user => user.id !== selectedUser.id));
       setIsDeleteDialogOpen(false);
@@ -171,7 +178,7 @@ const AdminDashboard = () => {
         title: "Usuário excluído",
         description: `O usuário ${selectedUser.name} foi excluído com sucesso.`,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao excluir usuário:", error);
       toast({
         title: "Erro",
@@ -185,10 +192,15 @@ const AdminDashboard = () => {
     if (!selectedUser) return;
     
     try {
-      await updateUserData(selectedUser.id, {
-        name: editName,
-        email: editEmail
-      });
+      const { error } = await supabase
+        .from('users')
+        .update({
+          name: editName,
+          email: editEmail
+        })
+        .eq('id', selectedUser.id);
+        
+      if (error) throw error;
       
       setUsers(prevUsers => 
         prevUsers.map(user => 
@@ -201,7 +213,7 @@ const AdminDashboard = () => {
         title: "Usuário atualizado",
         description: "As informações do usuário foram atualizadas com sucesso.",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao atualizar usuário:", error);
       toast({
         title: "Erro",
@@ -220,7 +232,15 @@ const AdminDashboard = () => {
     if (!selectedUser || !selectedUser.email) return;
     
     try {
-      await resetUserPassword(selectedUser.email);
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        selectedUser.email,
+        {
+          redirectTo: `${window.location.origin}/reset-password`,
+        }
+      );
+      
+      if (error) throw error;
+      
       setIsResetPasswordDialogOpen(false);
       
       toast({
@@ -267,24 +287,39 @@ const AdminDashboard = () => {
     }
 
     try {
-      const userCredential = await createUser(createEmail, createPassword);
-      
-      await addUserToFirestore(userCredential.uid, {
-        name: createName,
+      // 1. Create auth user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: createEmail,
-        role: "client"
+        password: createPassword,
+        options: {
+          data: {
+            name: createName,
+          },
+        }
       });
       
-      const newUser = {
-        id: userCredential.uid,
-        name: createName,
-        email: createEmail,
-        role: "client",
-        documents: []
-      };
+      if (authError) throw authError;
       
-      setUsers(prevUsers => [...prevUsers, newUser]);
+      if (!authData.user) {
+        throw new Error("Falha ao criar usuário");
+      }
       
+      // 2. Create user profile
+      const { error: profileError } = await supabase
+        .from('users')
+        .insert({
+          id: authData.user.id,
+          name: createName,
+          email: createEmail,
+          role: 'client',
+        });
+        
+      if (profileError) throw profileError;
+      
+      // 3. Refresh user list
+      await loadUsers();
+      
+      // 4. Reset form
       setCreateName("");
       setCreateEmail("");
       setCreatePassword("");
@@ -298,7 +333,7 @@ const AdminDashboard = () => {
       });
     } catch (error: any) {
       console.error("Erro ao criar usuário:", error);
-      const errorMessage = error.code === "auth/email-already-in-use" 
+      const errorMessage = error.message.includes("already registered") 
         ? "Este email já está registrado" 
         : "Erro ao criar usuário";
       
@@ -315,8 +350,34 @@ const AdminDashboard = () => {
     if (!file) return;
     
     try {
-      await uploadDocument(userId, file, { name: documentName || file.name });
+      // 1. Upload file to storage
+      const fileName = `${userId}/${Date.now()}_${file.name}`;
+      const { data: fileData, error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(fileName, file);
+        
+      if (uploadError) throw uploadError;
+
+      // 2. Get the public URL
+      const { data: urlData } = supabase.storage
+        .from('documents')
+        .getPublicUrl(fileName);
+
+      // 3. Save document record in database
+      const { error: dbError } = await supabase
+        .from('documents')
+        .insert({
+          user_id: userId,
+          name: documentName || file.name,
+          file_url: urlData.publicUrl,
+          original_filename: file.name,
+          size: file.size,
+          type: file.type
+        });
+        
+      if (dbError) throw dbError;
       
+      // 4. Reload documents
       await loadUserDocuments(userId);
       
       setDocumentName("");
@@ -325,7 +386,7 @@ const AdminDashboard = () => {
         title: "Documento adicionado",
         description: `O documento foi adicionado ao usuário com sucesso.`,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao fazer upload do arquivo:", error);
       toast({
         title: "Erro",
@@ -337,8 +398,28 @@ const AdminDashboard = () => {
 
   const handleDeleteDocument = async (userId: string, documentId: string, fileUrl: string) => {
     try {
-      await deleteDocument(userId, documentId, fileUrl);
+      // 1. Get filename from URL
+      const url = new URL(fileUrl);
+      const pathParts = url.pathname.split('/');
+      const bucketName = pathParts[1];
+      const filePath = pathParts.slice(2).join('/');
       
+      // 2. Delete file from storage
+      const { error: storageError } = await supabase.storage
+        .from(bucketName)
+        .remove([filePath]);
+      
+      // Even if storage error, continue to delete database record
+      
+      // 3. Delete document record
+      const { error: dbError } = await supabase
+        .from('documents')
+        .delete()
+        .eq('id', documentId);
+        
+      if (dbError) throw dbError;
+      
+      // 4. Update UI
       setUsers(prevUsers => 
         prevUsers.map(user => {
           if (user.id === userId) {
@@ -355,7 +436,7 @@ const AdminDashboard = () => {
         title: "Documento excluído",
         description: "O documento foi excluído com sucesso.",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao excluir documento:", error);
       toast({
         title: "Erro",
@@ -519,7 +600,7 @@ const AdminDashboard = () => {
                                       <div>
                                         <p className="text-white font-medium">{doc.name}</p>
                                         <p className="text-xs text-gray-400">
-                                          Enviado em: {new Date(doc.uploadedAt).toLocaleDateString('pt-BR')}
+                                          Enviado em: {new Date(doc.uploaded_at).toLocaleDateString('pt-BR')}
                                         </p>
                                       </div>
                                       <div className="flex gap-2">
@@ -527,7 +608,7 @@ const AdminDashboard = () => {
                                           variant="ghost" 
                                           size="icon"
                                           className="text-red-400 hover:text-red-300 hover:bg-red-950/30"
-                                          onClick={() => handleDeleteDocument(user.id, doc.id, doc.fileUrl)}
+                                          onClick={() => handleDeleteDocument(user.id, doc.id, doc.file_url)}
                                         >
                                           <Trash2 className="h-4 w-4" />
                                         </Button>
