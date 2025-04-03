@@ -33,7 +33,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           const userData = await getUserDoc(user.uid);
           setUserDocData(userData);
-          setIsAdmin(userData?.role === 'admin');
+          // Verifica se o usuário é admin por papel ou pelo email específico
+          setIsAdmin(userData?.role === 'admin' || user.email === 'wsgestao@gmail.com');
         } catch (error) {
           console.error("Error fetching user data:", error);
         }

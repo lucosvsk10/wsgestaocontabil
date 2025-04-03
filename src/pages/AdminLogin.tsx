@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Mail, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ const AdminLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [loginAttempt, setLoginAttempt] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { currentUser, isAdmin } = useAuth();
@@ -29,17 +30,11 @@ const AdminLogin = () => {
     return null;
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
-    try {
-      await loginWithEmail(email, password);
-      // A verificação se é admin ou não é feita no contexto de autenticação
-      // Mas vamos verificar novamente após o login
-      const { isAdmin } = useAuth();
-      
-      if (isAdmin) {
+  // Use useEffect para lidar com a navegação após o login
+  useEffect(() => {
+    // Só executa após uma tentativa de login
+    if (loginAttempt && currentUser) {
+      if (isAdmin || currentUser.email === "wsgestao@gmail.com") {
         toast({
           title: "Login administrativo realizado",
           description: "Bem-vindo à área administrativa.",
@@ -53,6 +48,18 @@ const AdminLogin = () => {
         });
         navigate("/client");
       }
+      setLoginAttempt(false);
+      setIsLoading(false);
+    }
+  }, [loginAttempt, currentUser, isAdmin, navigate, toast]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    try {
+      await loginWithEmail(email, password);
+      setLoginAttempt(true);
     } catch (error: any) {
       console.error(error);
       toast({
@@ -62,7 +69,6 @@ const AdminLogin = () => {
           ? "Email ou senha incorretos" 
           : "Ocorreu um erro durante o login. Tente novamente."
       });
-    } finally {
       setIsLoading(false);
     }
   };
