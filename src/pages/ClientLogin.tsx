@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Mail, Lock, UserPlus } from "lucide-react";
@@ -27,11 +26,15 @@ const ClientLogin = () => {
   
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, signIn, signUp } = useAuth();
+  const { user, isAdmin, signIn, signUp } = useAuth();
 
-  // If already logged in, redirect
+  // If already logged in, redirect based on role
   if (user) {
-    navigate("/client");
+    if (isAdmin) {
+      navigate("/admin");
+    } else {
+      navigate("/client");
+    }
     return null;
   }
 
@@ -44,11 +47,9 @@ const ClientLogin = () => {
       
       if (error) throw error;
       
-      toast({
-        title: "Login realizado",
-        description: "Bem-vindo à área do cliente.",
-      });
-      navigate("/client");
+      // The redirect will be handled in the AuthContext
+      // based on the user's role
+      
     } catch (error: any) {
       console.error(error);
       toast({
@@ -58,7 +59,6 @@ const ClientLogin = () => {
           ? "Email ou senha incorretos" 
           : "Ocorreu um erro durante o login. Tente novamente."
       });
-    } finally {
       setIsLoading(false);
     }
   };

@@ -37,8 +37,8 @@ const AdminLogin = () => {
       
       if (error) throw error;
       
-      // signIn will trigger onAuthStateChange which will set isAdmin
-      // we'll let the router handle redirection based on isAdmin status
+      // After login, we'll let the AuthContext handle redirects
+      // based on user's role in onAuthStateChange
       
     } catch (error: any) {
       console.error(error);
