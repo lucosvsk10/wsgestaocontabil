@@ -11,6 +11,13 @@ interface UserData {
   created_at: string | null;
 }
 
+interface Document {
+  id: string;
+  name: string;
+  file_url: string;
+  uploaded_at: string;
+}
+
 interface AuthContextType {
   session: Session | null;
   user: User | null;
@@ -20,6 +27,8 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   signUp: (email: string, password: string, name: string) => Promise<{ error: any, data: any }>;
+  uploadDocument: (userId: string, file: File, documentName?: string) => Promise<{ error: any, data: any }>;
+  getUserDocuments: (userId: string) => Promise<{ data: Document[] | null, error: any }>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -30,7 +39,9 @@ const AuthContext = createContext<AuthContextType>({
   isAdmin: false,
   signIn: async () => ({ error: null }),
   signOut: async () => {},
-  signUp: async () => ({ error: null, data: null })
+  signUp: async () => ({ error: null, data: null }),
+  uploadDocument: async () => ({ error: null, data: null }),
+  getUserDocuments: async () => ({ data: null, error: null }),
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -163,6 +174,62 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // New function to upload document for a specific user
+  const uploadDocument = async (userId: string, file: File, documentName?: string) => {
+    try {
+      // 1. Upload file to storage
+      const fileName = `${userId}/${Date.now()}_${file.name}`;
+      const { data: fileData, error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(fileName, file);
+        
+      if (uploadError) throw uploadError;
+
+      // 2. Get the public URL
+      const { data: urlData } = supabase.storage
+        .from('documents')
+        .getPublicUrl(fileName);
+
+      // 3. Save document record in database
+      const { data, error: dbError } = await supabase
+        .from('documents')
+        .insert({
+          user_id: userId,
+          name: documentName || file.name,
+          file_url: urlData.publicUrl,
+          original_filename: file.name,
+          size: file.size,
+          type: file.type
+        })
+        .select();
+        
+      if (dbError) throw dbError;
+      
+      return { data, error: null };
+    } catch (error) {
+      console.error("Error uploading document:", error);
+      return { data: null, error };
+    }
+  };
+
+  // New function to get documents for a specific user
+  const getUserDocuments = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('user_id', userId)
+        .order('uploaded_at', { ascending: false });
+        
+      if (error) throw error;
+      
+      return { data, error: null };
+    } catch (error) {
+      console.error("Error fetching user documents:", error);
+      return { data: null, error };
+    }
+  };
+
   const value = {
     session,
     user,
@@ -171,7 +238,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isAdmin,
     signIn,
     signOut,
-    signUp
+    signUp,
+    uploadDocument,
+    getUserDocuments
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

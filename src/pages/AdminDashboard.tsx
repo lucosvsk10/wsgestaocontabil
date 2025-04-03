@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, ChevronUp, FileUp, Pencil, Trash2, User, Users, Plus, Mail, LogOut, RefreshCw } from "lucide-react";
+import { ChevronDown, ChevronUp, FileUp, Pencil, Trash2, User, Users, Plus, Mail, LogOut, RefreshCw, FileText } from "lucide-react";
 import { Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -38,6 +38,8 @@ const AdminDashboard = () => {
   const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
   const [expandedUsers, setExpandedUsers] = useState<{[key: string]: boolean}>({});
   const [documentName, setDocumentName] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
   const [editName, setEditName] = useState("");
@@ -51,7 +53,7 @@ const AdminDashboard = () => {
   
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isAdmin } = useAuth();
+  const { isAdmin, uploadDocument } = useAuth();
 
   useEffect(() => {
     if (!isAdmin) {
@@ -345,54 +347,64 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleFileUpload = async (userId: string, event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (file) {
+      // Verificar se o arquivo é um PDF
+      if (file.type === 'application/pdf') {
+        setSelectedFile(file);
+      } else {
+        toast({
+          title: "Tipo de arquivo inválido",
+          description: "Por favor, selecione apenas arquivos PDF.",
+          variant: "destructive",
+        });
+        event.target.value = '';
+      }
+    }
+  };
+
+  const handleFileUpload = async (userId: string) => {
+    if (!selectedFile) {
+      toast({
+        title: "Nenhum arquivo selecionado",
+        description: "Por favor, selecione um arquivo PDF para enviar.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsUploading(true);
     
     try {
-      // 1. Upload file to storage
-      const fileName = `${userId}/${Date.now()}_${file.name}`;
-      const { data: fileData, error: uploadError } = await supabase.storage
-        .from('documents')
-        .upload(fileName, file);
+      const { data, error } = await uploadDocument(
+        userId, 
+        selectedFile, 
+        documentName || selectedFile.name
+      );
         
-      if (uploadError) throw uploadError;
-
-      // 2. Get the public URL
-      const { data: urlData } = supabase.storage
-        .from('documents')
-        .getPublicUrl(fileName);
-
-      // 3. Save document record in database
-      const { error: dbError } = await supabase
-        .from('documents')
-        .insert({
-          user_id: userId,
-          name: documentName || file.name,
-          file_url: urlData.publicUrl,
-          original_filename: file.name,
-          size: file.size,
-          type: file.type
-        });
-        
-      if (dbError) throw dbError;
+      if (error) throw error;
       
-      // 4. Reload documents
+      // Reload documents for this user
       await loadUserDocuments(userId);
       
+      // Reset form
       setDocumentName("");
+      setSelectedFile(null);
       
       toast({
-        title: "Documento adicionado",
-        description: `O documento foi adicionado ao usuário com sucesso.`,
+        title: "Documento enviado",
+        description: "O documento foi enviado com sucesso para o usuário.",
       });
     } catch (error: any) {
-      console.error("Erro ao fazer upload do arquivo:", error);
+      console.error("Erro ao fazer upload do documento:", error);
       toast({
         title: "Erro",
         description: "Não foi possível fazer upload do documento.",
         variant: "destructive",
       });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -565,7 +577,11 @@ const AdminDashboard = () => {
                           <div className="space-y-4">
                             <div className="flex flex-col md:flex-row gap-3 p-3 bg-gray-800/50 rounded-md">
                               <div className="flex-grow">
+                                <Label htmlFor={`document-name-${user.id}`} className="text-white mb-2 block">
+                                  Nome do documento
+                                </Label>
                                 <Input
+                                  id={`document-name-${user.id}`}
                                   type="text"
                                   placeholder="Nome do documento"
                                   className="bg-gray-700 border-gray-600"
@@ -573,20 +589,39 @@ const AdminDashboard = () => {
                                   onChange={(e) => setDocumentName(e.target.value)}
                                 />
                               </div>
-                              <div className="flex items-center gap-2">
+                              <div className="flex-grow">
+                                <Label htmlFor={`document-file-${user.id}`} className="text-white mb-2 block">
+                                  Arquivo PDF
+                                </Label>
                                 <Input
-                                  id={`file-upload-${user.id}`}
+                                  id={`document-file-${user.id}`}
                                   type="file"
-                                  className="hidden"
-                                  onChange={(e) => handleFileUpload(user.id, e)}
+                                  accept="application/pdf"
+                                  className="bg-gray-700 border-gray-600"
+                                  onChange={handleFileChange}
                                 />
+                              </div>
+                              <div className="flex items-end">
                                 <Button 
                                   variant="outline"
                                   className="border-gold text-gold hover:bg-gold hover:text-navy flex gap-2 w-full md:w-auto"
-                                  onClick={() => document.getElementById(`file-upload-${user.id}`)?.click()}
+                                  onClick={() => handleFileUpload(user.id)}
+                                  disabled={isUploading || !selectedFile}
                                 >
-                                  <FileUp className="h-4 w-4" />
-                                  Adicionar Documento
+                                  {isUploading ? (
+                                    <>
+                                      <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                      </svg>
+                                      Enviando...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <FileUp className="h-4 w-4" />
+                                      Enviar Documento
+                                    </>
+                                  )}
                                 </Button>
                               </div>
                             </div>
@@ -597,13 +632,26 @@ const AdminDashboard = () => {
                                 <div className="divide-y divide-gray-800">
                                   {user.documents.map((doc: any) => (
                                     <div key={doc.id} className="py-2 flex items-center justify-between">
-                                      <div>
-                                        <p className="text-white font-medium">{doc.name}</p>
-                                        <p className="text-xs text-gray-400">
-                                          Enviado em: {new Date(doc.uploaded_at).toLocaleDateString('pt-BR')}
-                                        </p>
+                                      <div className="flex items-center">
+                                        <FileText className="h-5 w-5 mr-3 text-gold" />
+                                        <div>
+                                          <p className="text-white font-medium">{doc.name}</p>
+                                          <p className="text-xs text-gray-400">
+                                            Enviado em: {new Date(doc.uploaded_at).toLocaleDateString('pt-BR')}
+                                          </p>
+                                        </div>
                                       </div>
                                       <div className="flex gap-2">
+                                        <Button 
+                                          variant="ghost" 
+                                          size="sm"
+                                          className="text-blue-400 hover:text-blue-300"
+                                          asChild
+                                        >
+                                          <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                                            Visualizar
+                                          </a>
+                                        </Button>
                                         <Button 
                                           variant="ghost" 
                                           size="icon"

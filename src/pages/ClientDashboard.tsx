@@ -20,15 +20,25 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 
+interface Document {
+  id: string;
+  name: string;
+  file_url: string;
+  uploaded_at: string;
+  original_filename?: string;
+  size?: number;
+  type?: string;
+}
+
 const ClientDashboard = () => {
-  const [documents, setDocuments] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [documentName, setDocumentName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, userData } = useAuth();
+  const { user, userData, getUserDocuments } = useAuth();
 
   useEffect(() => {
     if (user) {
@@ -41,11 +51,7 @@ const ClientDashboard = () => {
     
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
-        .from('documents')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('uploaded_at', { ascending: false });
+      const { data, error } = await getUserDocuments(user.id);
         
       if (error) throw error;
       
@@ -84,6 +90,16 @@ const ClientDashboard = () => {
     const file = event.target.files?.[0];
     if (!file || !user) return;
     
+    // Permitir apenas PDFs
+    if (file.type !== 'application/pdf') {
+      toast({
+        title: "Tipo de arquivo inválido",
+        description: "Por favor, selecione apenas arquivos PDF.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsUploading(true);
     
     try {
@@ -132,6 +148,8 @@ const ClientDashboard = () => {
       });
     } finally {
       setIsUploading(false);
+      // Limpar o input de arquivo
+      if (event.target) event.target.value = '';
     }
   };
 
@@ -182,60 +200,6 @@ const ClientDashboard = () => {
                 </div>
               </CardContent>
             </Card>
-            
-            <Card className="bg-gray-900 border-gray-800">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-white">Enviar Documento</CardTitle>
-                <CardDescription className="text-gray-400">
-                  Faça upload de documentos para sua conta
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="document-name" className="text-white">Nome do documento</Label>
-                  <Input
-                    id="document-name"
-                    className="bg-gray-800 border-gray-700 text-white"
-                    placeholder="Ex: Declaração de Imposto"
-                    value={documentName}
-                    onChange={(e) => setDocumentName(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="document-file" className="text-white">Arquivo</Label>
-                  <div>
-                    <Input
-                      id="document-file"
-                      type="file"
-                      className="hidden"
-                      onChange={handleFileUpload}
-                      disabled={isUploading}
-                    />
-                    <Button
-                      variant="outline"
-                      className="w-full border-gold text-gold hover:bg-gold hover:text-navy"
-                      onClick={() => document.getElementById('document-file')?.click()}
-                      disabled={isUploading}
-                    >
-                      {isUploading ? (
-                        <span className="flex items-center justify-center">
-                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Enviando...
-                        </span>
-                      ) : (
-                        <>
-                          <Upload className="mr-2 h-4 w-4" />
-                          Selecionar arquivo
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </div>
           
           <div className="md:col-span-2">
@@ -254,7 +218,7 @@ const ClientDashboard = () => {
                   <div className="text-center py-12 text-gray-500">
                     <FileText className="mx-auto h-12 w-12 mb-3 opacity-30" />
                     <p className="text-lg">Nenhum documento disponível</p>
-                    <p className="text-sm mt-1">Os documentos compartilhados aparecerão aqui</p>
+                    <p className="text-sm mt-1">Os documentos compartilhados pelo administrador aparecerão aqui</p>
                   </div>
                 ) : (
                   <div className="divide-y divide-gray-800">
