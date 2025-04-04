@@ -261,7 +261,7 @@ const AdminDashboard = () => {
       <Navbar />
       
       <main className="flex-grow container mx-auto px-4 py-8 bg-white">
-        <h1 className="text-3xl mb-6 font- font-extrabold text-navy-dark">PAINEL ADMINISTRATIVO</h1>
+        <h1 className="text-3xl mb-6 font- font-extrabold text-navy-dark text-center">PAINEL ADMINISTRATIVO</h1>
         
         <Tabs defaultValue="users">
           <TabsList className="mb-6 bg-slate-800">
