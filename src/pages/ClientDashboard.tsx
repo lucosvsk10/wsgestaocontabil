@@ -73,10 +73,10 @@ const ClientDashboard = () => {
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
     return Math.round(bytes / Math.pow(1024, i)) + ' ' + sizes[i];
   };
-  return <div className="min-h-screen bg-gray-950 flex flex-col">
+  return <div className="min-h-screen flex flex-col bg-[#393532]">
       <Navbar />
       
-      <main className="flex-grow container mx-auto px-4 py-8 bg-navy-dark">
+      <main className="flex-grow container mx-auto px-4 py-8 bg-[#393532]">
         <h1 className="text-#efc349 font-medium uppercase tracking-wider text-center">Meus Documentos</h1>
         
         <Card className="py-0 bg-slate-900">
