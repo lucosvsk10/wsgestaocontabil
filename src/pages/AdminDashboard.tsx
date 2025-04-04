@@ -276,11 +276,11 @@ const AdminDashboard = () => {
           </TabsList>
           
           <TabsContent value="users">
-            <Card>
-              <CardHeader className="bg-[#46413d] rounded-none">
+            <Card className="bg-[#46413d]">
+              <CardHeader className="bg-[#46413d] rounded-full">
                 <CardTitle className="text-center text-[#efc349]">Lista de Usuários</CardTitle>
               </CardHeader>
-              <CardContent className="bg-[#46413d]/[0.94]">
+              <CardContent className="bg-[#46413d]/[0.94] rounded-full">
                 {isLoadingUsers ? <div className="flex justify-center py-8">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
                   </div> : <div className="overflow-x-auto">
