@@ -79,14 +79,11 @@ const ClientDashboard = () => {
       <main className="flex-grow container mx-auto px-4 py-8 bg-[_#2e2b28]">
         
         
-        <Card className="py-0 bg-slate-900">
-          <CardHeader className="rounded-full bg-slate-900">
-            <CardTitle className="text-[#e8cc81] font-medium uppercase tracking-wider text-xl my-0 text-center">
-              
-              Documentos Disponíveis
-            </CardTitle>
+        <Card className="py-0 bg-[#393532]">
+          <CardHeader className="rounded-full bg-[#393532]">
+            <CardTitle className="text-[#e8cc81] font-medium uppercase tracking-wider text-xl my-0 text-center">DOCUMENTOS DISPONÍVEIS</CardTitle>
           </CardHeader>
-          <CardContent className="bg-slate-800 rounded-3xl">
+          <CardContent className="rounded-3xl bg-[#393532]">
             {isLoading ? <div className="flex justify-center py-8">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
               </div> : <>
@@ -116,7 +113,7 @@ const ClientDashboard = () => {
                           </TableRow>)}
                       </TableBody>
                     </Table>
-                  </div> : <div className="text-center py-[200px]">
+                  </div> : <div className="text-center py-[20px]">
                     <File className="h-16 w-16 mx-auto mb-4 text-gray-600" />
                     <h3 className="text-lg font-medium mb-2 text-purple-400">Nenhum documento disponível</h3>
                     <p className="text-gray-400">
