@@ -261,7 +261,7 @@ const AdminDashboard = () => {
       <Navbar />
       
       <main className="flex-grow container mx-auto px-4 py-8 bg-[#46413d]">
-        <h1 className="text-3xl mb-6 font- font-extrabold text-center text-slate-50">PAINEL ADMINISTRATIVO</h1>
+        <h1 className="text-3xl mb-6 font- font-extrabold text-center text-[#efc349]">PAINEL ADMINISTRATIVO</h1>
         
         <Tabs defaultValue="users">
           <TabsList className="mb-6 bg-[itext-white] bg-[#2e2b28]">
@@ -278,7 +278,7 @@ const AdminDashboard = () => {
           <TabsContent value="users">
             <Card>
               <CardHeader className="bg-[#46413d] rounded-none">
-                <CardTitle className="text-white text-center">Lista de Usuários</CardTitle>
+                <CardTitle className="text-center text-[#efc349]">Lista de Usuários</CardTitle>
               </CardHeader>
               <CardContent className="bg-[#46413d]/[0.94]">
                 {isLoadingUsers ? <div className="flex justify-center py-8">
@@ -325,11 +325,11 @@ const AdminDashboard = () => {
           <TabsContent value="documents">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Seleção de Usuário */}
-              <Card className="md:col-span-1">
+              <Card className="md:col-span-1 bg-[t#46413d] bg-[#efc349]">
                 <CardHeader className="bg-[#efc349]">
                   <CardTitle className="text- text-[#312d2a]">Seleção de Usuário</CardTitle>
                 </CardHeader>
-                <CardContent className="bg-[#efc349]">
+                <CardContent className="bg-[#efc349] py-0 my-0">
                   {isLoadingUsers ? <div className="flex justify-center py-4">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gold"></div>
                     </div> : <>
