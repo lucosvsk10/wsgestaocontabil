@@ -53,6 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [userData, setUserData] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const navigate = useNavigate();
   
   useEffect(() => {
     // Set up auth state listener
@@ -70,6 +71,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUserData(null);
           setIsAdmin(false);
           setIsLoading(false);
+          
+          // Remove user data from localStorage on signOut
+          if (event === 'SIGNED_OUT') {
+            localStorage.removeItem('user');
+            localStorage.removeItem('isAdmin');
+            navigate('/login');
+          }
         }
       }
     );
@@ -82,6 +90,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (currentSession?.user) {
         fetchUserData(currentSession.user.id);
       } else {
+        // Check if we have stored user data in localStorage
+        const storedUser = localStorage.getItem('user');
+        const storedIsAdmin = localStorage.getItem('isAdmin');
+        
+        if (storedUser) {
+          try {
+            const parsedUser = JSON.parse(storedUser);
+            setUserData(parsedUser);
+            setIsAdmin(storedIsAdmin === 'true');
+          } catch (error) {
+            console.error('Error parsing stored user data:', error);
+            localStorage.removeItem('user');
+            localStorage.removeItem('isAdmin');
+          }
+        }
+        
         setIsLoading(false);
       }
     });
@@ -89,7 +113,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [navigate]);
 
   const fetchUserData = async (userId: string) => {
     try {
@@ -107,10 +131,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Check if admin by role or specific email
         const userEmail = user?.email;
-        setIsAdmin(
+        const isUserAdmin = 
           data?.role === 'admin' || 
-          userEmail === 'wsgestao@gmail.com'
-        );
+          userEmail === 'wsgestao@gmail.com' ||
+          userEmail === 'l09022007@gmail.com';
+        
+        setIsAdmin(isUserAdmin);
+        
+        // Store user data and admin status in localStorage
+        localStorage.setItem('user', JSON.stringify(data));
+        localStorage.setItem('isAdmin', isUserAdmin.toString());
+        
+        // Redirect based on role
+        if (isUserAdmin) {
+          navigate('/admin');
+        } else {
+          navigate('/client');
+        }
       }
     } catch (error) {
       console.error("Error in fetchUserData:", error);
