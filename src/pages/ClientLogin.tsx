@@ -45,7 +45,7 @@ const ClientLogin = () => {
       
       <main className="flex-grow flex items-center justify-center px-4 py-12 bg-[#46413d] pl-10 border-white rounded-none">
         <Card className="w-full max-w-md border-gold -800bg-[#46413d] rounded-md bg-[#46413d]">
-          <CardHeader className="space-y-1 text-center bg-[#46413d] my-0 rounded-none">
+          <CardHeader className="space-y-1 text-center bg-[#46413d] my-0 rounded-full">
             <CardTitle className="text-gold font-prompt font-medium text-3xl">LOGIN</CardTitle>
             <CardDescription className="text-sm text-gray-400">
               Acesse sua área pessoal
@@ -76,7 +76,7 @@ const ClientLogin = () => {
               </Button>
             </form>
           </CardContent>
-          <CardFooter className="flex flex-col space-y- bg-[#46413d]">
+          <CardFooter className="flex flex-col space-y- bg-[#46413d] rounded-full">
             <div className="text-center text-sm text-gray-400">
               <a href="/" className="text-gold hover:underline">
                 Voltar para a página inicial
