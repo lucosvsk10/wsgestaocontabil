@@ -126,6 +126,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) {
         console.error("Error fetching user data:", error);
         setUserData(null);
+        setIsLoading(false);
       } else {
         setUserData(data);
         
@@ -142,17 +143,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('user', JSON.stringify(data));
         localStorage.setItem('isAdmin', isUserAdmin.toString());
         
-        // Redirect based on role
-        if (isUserAdmin) {
-          navigate('/admin');
-        } else {
-          navigate('/client');
+        setIsLoading(false);
+        
+        // Handle redirection after user data is fetched
+        // Only redirect if we're not already on one of these pages
+        const currentPath = window.location.pathname;
+        if (!currentPath.includes('/admin') && !currentPath.includes('/client')) {
+          if (isUserAdmin) {
+            navigate('/admin');
+          } else {
+            navigate('/client');
+          }
         }
       }
     } catch (error) {
       console.error("Error in fetchUserData:", error);
       setUserData(null);
-    } finally {
       setIsLoading(false);
     }
   };

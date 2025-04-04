@@ -1,3 +1,4 @@
+
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffect, useState } from 'react';
@@ -42,12 +43,12 @@ const PrivateRoute = ({ children, requireAdmin = false }: PrivateRouteProps) => 
 
   // Not authenticated
   if (!isAuthenticated) {
-    return <Navigate to="/login" />;
+    return <Navigate to="/login" replace />;
   }
 
   // Requires admin but user is not admin
   if (requireAdmin && !hasAdminAccess) {
-    return <Navigate to="/client" />;
+    return <Navigate to="/client" replace />;
   }
 
   return <>{children}</>;
