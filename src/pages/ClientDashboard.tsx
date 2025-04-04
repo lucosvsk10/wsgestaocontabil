@@ -79,7 +79,7 @@ const ClientDashboard = () => {
       <main className="flex-grow container mx-auto px-4 py-8 bg-[_#2e2b28]">
         
         
-        <Card className="py-0 bg-[#393532]">
+        <Card className="py-0 bg-[#393532] mx-[10px]">
           <CardHeader className="rounded-full bg-[#393532]">
             <CardTitle className="text-[#e8cc81] font-medium uppercase tracking-wider text-xl my-0 text-center">DOCUMENTOS DISPONÍVEIS</CardTitle>
           </CardHeader>
