@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FileText, LogOut, Download } from "lucide-react";
@@ -10,7 +9,6 @@ import Footer from "@/components/Footer";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-
 interface Document {
   id: string;
   name: string;
@@ -20,32 +18,41 @@ interface Document {
   size?: number;
   type?: string;
 }
-
 const ClientDashboard = () => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { user, userData, getUserDocuments, isAdmin } = useAuth();
-  
+  const {
+    toast
+  } = useToast();
+  const {
+    user,
+    userData,
+    getUserDocuments,
+    isAdmin
+  } = useAuth();
+
   // Redirecionar administradores para o painel de administração
   useEffect(() => {
     if (user && isAdmin) {
-      navigate("/admin", { replace: true });
+      navigate("/admin", {
+        replace: true
+      });
     }
   }, [user, isAdmin, navigate]);
-
   useEffect(() => {
     if (user) {
       loadDocuments();
     }
   }, [user]);
-
   const loadDocuments = async () => {
     if (!user) return;
     try {
       setIsLoading(true);
-      const { data, error } = await getUserDocuments(user.id);
+      const {
+        data,
+        error
+      } = await getUserDocuments(user.id);
       if (error) throw error;
       setDocuments(data || []);
     } catch (error: any) {
@@ -59,7 +66,6 @@ const ClientDashboard = () => {
       setIsLoading(false);
     }
   };
-
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
@@ -77,19 +83,18 @@ const ClientDashboard = () => {
       });
     }
   };
-
   if (isLoading) {
     return <div className="min-h-screen bg-gray-950 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gold"></div>
       </div>;
   }
-
   return <div className="min-h-screen bg-gray-950 flex flex-col">
       <Navbar />
       
       <main className="flex-grow container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gold">Área do Cliente</h1>
+          <h1 className="text-3xl font-bold text-gold">oi
+        </h1>
           <Button onClick={handleLogout} variant="outline" className="border-gold text-gold hover:bg-gold hover:text-navy flex items-center gap-2">
             <LogOut size={16} />
             Sair
@@ -171,5 +176,4 @@ const ClientDashboard = () => {
       <Footer />
     </div>;
 };
-
 export default ClientDashboard;
