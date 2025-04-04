@@ -15,7 +15,7 @@ const Navbar = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-  return <header className="bg-[#37353d]">
+  return <header className="bg-[#393532]">
       <div className="container mx-auto flex items-center justify-between px-[28px] py-[19px] bg-[#393532]">
         <div className="flex items-center">
           <a href="/" className="flex items-center space-x-2">
