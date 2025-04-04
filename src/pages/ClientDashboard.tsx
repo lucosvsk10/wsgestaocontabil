@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FileText, LogOut, Upload } from "lucide-react";
@@ -7,19 +6,11 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
-
 interface Document {
   id: string;
   name: string;
@@ -29,122 +20,117 @@ interface Document {
   size?: number;
   type?: string;
 }
-
 const ClientDashboard = () => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [documentName, setDocumentName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { user, userData, getUserDocuments } = useAuth();
-
+  const {
+    toast
+  } = useToast();
+  const {
+    user,
+    userData,
+    getUserDocuments
+  } = useAuth();
   useEffect(() => {
     if (user) {
       loadDocuments();
     }
   }, [user]);
-
   const loadDocuments = async () => {
     if (!user) return;
-    
     try {
       setIsLoading(true);
-      const { data, error } = await getUserDocuments(user.id);
-        
+      const {
+        data,
+        error
+      } = await getUserDocuments(user.id);
       if (error) throw error;
-      
       setDocuments(data || []);
     } catch (error: any) {
       console.error("Erro ao carregar documentos:", error);
       toast({
         title: "Erro",
         description: "Não foi possível carregar seus documentos.",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   };
-
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
       navigate("/login");
       toast({
         title: "Logout realizado",
-        description: "Você foi desconectado da sua conta.",
+        description: "Você foi desconectado da sua conta."
       });
     } catch (error: any) {
       console.error("Erro ao fazer logout:", error);
       toast({
         title: "Erro",
         description: "Ocorreu um erro ao tentar sair.",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !user) return;
-    
+
     // Permitir apenas PDFs
     if (file.type !== 'application/pdf') {
       toast({
         title: "Tipo de arquivo inválido",
         description: "Por favor, selecione apenas arquivos PDF.",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-
     setIsUploading(true);
-    
     try {
       // 1. Upload file to storage
       const fileName = `${user.id}/${Date.now()}_${file.name}`;
-      const { data: fileData, error: uploadError } = await supabase.storage
-        .from('documents')
-        .upload(fileName, file);
-        
+      const {
+        data: fileData,
+        error: uploadError
+      } = await supabase.storage.from('documents').upload(fileName, file);
       if (uploadError) throw uploadError;
 
       // 2. Get the public URL
-      const { data: urlData } = supabase.storage
-        .from('documents')
-        .getPublicUrl(fileName);
+      const {
+        data: urlData
+      } = supabase.storage.from('documents').getPublicUrl(fileName);
 
       // 3. Save document record in database
-      const { error: dbError } = await supabase
-        .from('documents')
-        .insert({
-          user_id: user.id,
-          name: documentName || file.name,
-          file_url: urlData.publicUrl,
-          original_filename: file.name,
-          size: file.size,
-          type: file.type
-        });
-        
+      const {
+        error: dbError
+      } = await supabase.from('documents').insert({
+        user_id: user.id,
+        name: documentName || file.name,
+        file_url: urlData.publicUrl,
+        original_filename: file.name,
+        size: file.size,
+        type: file.type
+      });
       if (dbError) throw dbError;
-      
+
       // Refresh document list
       await loadDocuments();
-      
       setDocumentName("");
-      
       toast({
         title: "Documento enviado",
-        description: "Seu documento foi enviado com sucesso.",
+        description: "Seu documento foi enviado com sucesso."
       });
     } catch (error: any) {
       console.error("Erro ao fazer upload do documento:", error);
       toast({
         title: "Erro",
         description: "Não foi possível enviar o documento.",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsUploading(false);
@@ -152,27 +138,18 @@ const ClientDashboard = () => {
       if (event.target) event.target.value = '';
     }
   };
-
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+    return <div className="min-h-screen bg-gray-950 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gold"></div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="min-h-screen bg-gray-950 flex flex-col">
+  return <div className="min-h-screen bg-gray-950 flex flex-col">
       <Navbar />
       
       <main className="flex-grow container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gold">Minha Área</h1>
-          <Button 
-            onClick={handleLogout} 
-            variant="outline"
-            className="border-gold text-gold hover:bg-gold hover:text-navy flex items-center gap-2"
-          >
+          <h1 className="text-3xl font-bold text-gold">ACESSO ADMINISTRATIVO!!!!</h1>
+          <Button onClick={handleLogout} variant="outline" className="border-gold text-gold hover:bg-gold hover:text-navy flex items-center gap-2">
             <LogOut size={16} />
             Sair
           </Button>
@@ -214,16 +191,12 @@ const ClientDashboard = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {documents.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500">
+                {documents.length === 0 ? <div className="text-center py-12 text-gray-500">
                     <FileText className="mx-auto h-12 w-12 mb-3 opacity-30" />
                     <p className="text-lg">Nenhum documento disponível</p>
                     <p className="text-sm mt-1">Os documentos compartilhados pelo administrador aparecerão aqui</p>
-                  </div>
-                ) : (
-                  <div className="divide-y divide-gray-800">
-                    {documents.map((doc) => (
-                      <div key={doc.id} className="py-4 flex items-center">
+                  </div> : <div className="divide-y divide-gray-800">
+                    {documents.map(doc => <div key={doc.id} className="py-4 flex items-center">
                         <div className="bg-gray-800 p-2 rounded mr-4">
                           <FileText className="h-8 w-8 text-gold" />
                         </div>
@@ -234,21 +207,14 @@ const ClientDashboard = () => {
                           </p>
                         </div>
                         <div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-gold hover:text-gold-light"
-                            asChild
-                          >
+                          <Button variant="ghost" size="sm" className="text-gold hover:text-gold-light" asChild>
                             <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
                               Visualizar
                             </a>
                           </Button>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      </div>)}
+                  </div>}
               </CardContent>
               <CardFooter className="border-t border-gray-800 bg-gray-900/50 mt-auto">
                 <p className="text-xs text-gray-500">
@@ -261,8 +227,6 @@ const ClientDashboard = () => {
       </main>
       
       <Footer />
-    </div>
-  );
+    </div>;
 };
-
 export default ClientDashboard;
