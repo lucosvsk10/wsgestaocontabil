@@ -260,7 +260,7 @@ const AdminDashboard = () => {
   return <div className="min-h-screen flex flex-col bg-[#46413d]">
       <Navbar />
       
-      <main className="flex-grow container mx-auto px-4 py-8 bg-[#46413d]">
+      <main className="flex-grow container mx-auto py-8 bg-[#46413d] px-[100px]">
         <h1 className="text-3xl mb-6 font- font-extrabold text-center text-[#efc349]">PAINEL ADMINISTRATIVO</h1>
         
         <Tabs defaultValue="users">
@@ -276,7 +276,7 @@ const AdminDashboard = () => {
           </TabsList>
           
           <TabsContent value="users">
-            <Card className="bg-[#46413d]">
+            <Card className="bg-[#46413d] px-0">
               <CardHeader className="bg-[#46413d] rounded-full">
                 <CardTitle className="text-center text-[#efc349]">Lista de Usuários</CardTitle>
               </CardHeader>
