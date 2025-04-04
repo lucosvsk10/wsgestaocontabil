@@ -260,11 +260,11 @@ const AdminDashboard = () => {
   return <div className="min-h-screen bg-gray-950 flex flex-col">
       <Navbar />
       
-      <main className="flex-grow container mx-auto px-4 py-8 bg-white">
-        <h1 className="text-3xl mb-6 font- font-extrabold text-navy-dark text-center">PAINEL ADMINISTRATIVO</h1>
+      <main className="flex-grow container mx-auto px-4 py-8 bg-[#46413d]">
+        <h1 className="text-3xl mb-6 font- font-extrabold text-center text-slate-50">PAINEL ADMINISTRATIVO</h1>
         
         <Tabs defaultValue="users">
-          <TabsList className="mb-6 bg-[itext-white] bg-[#46413d]">
+          <TabsList className="mb-6 bg-[itext-white] bg-[#2e2b28]">
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users size={16} />
               <span>Usuários</span>
@@ -277,7 +277,7 @@ const AdminDashboard = () => {
           
           <TabsContent value="users">
             <Card>
-              <CardHeader className="bg-[#46413d]">
+              <CardHeader className="bg-[#46413d] rounded-none">
                 <CardTitle className="text-white text-center">Lista de Usuários</CardTitle>
               </CardHeader>
               <CardContent className="bg-[#46413d]/[0.94]">
@@ -326,10 +326,10 @@ const AdminDashboard = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Seleção de Usuário */}
               <Card className="md:col-span-1">
-                <CardHeader>
-                  <CardTitle>Seleção de Usuário</CardTitle>
+                <CardHeader className="bg-[#efc349]">
+                  <CardTitle className="text- text-[#312d2a]">Seleção de Usuário</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="bg-[#efc349]">
                   {isLoadingUsers ? <div className="flex justify-center py-4">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gold"></div>
                     </div> : <>
@@ -355,9 +355,9 @@ const AdminDashboard = () => {
               </Card>
               
               {/* Upload de Documentos */}
-              <Card className="md:col-span-2">
+              <Card className="md:col-span-2 bg-[#efc349]">
                 <CardHeader>
-                  <CardTitle>Gerenciamento de Documentos</CardTitle>
+                  <CardTitle className="text-[46413d] text-[#312d2a]">Gerenciamento de Documentos</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {selectedUserId ? <div className="space-y-6">
@@ -437,7 +437,7 @@ const AdminDashboard = () => {
                             </Table>
                           </div>}
                       </div>
-                    </div> : <div className="text-center py-8 text-gray-400">
+                    </div> : <div className="text-center py-8 text-[#46413d]-400 bg-[#efc349]">
                       <File className="h-16 w-16 mx-auto mb-4 opacity-20" />
                       <p>Selecione um usuário para gerenciar seus documentos</p>
                     </div>}
