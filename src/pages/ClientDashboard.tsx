@@ -76,13 +76,13 @@ const ClientDashboard = () => {
   return <div className="min-h-screen flex flex-col bg-[#393532]">
       <Navbar />
       
-      <main className="flex-grow container mx-auto px-4 py-8 bg-[#393532]">
-        <h1 className="text-#efc349 font-medium uppercase tracking-wider text-center">Meus Documentos</h1>
+      <main className="flex-grow container mx-auto px-4 py-8 bg-[_#2e2b28]">
+        <h1 className="text-[#efc349] uppercase tracking-wider my-[10px] font-medium text-3xl text-center py-[20px]">Meus Documentos</h1>
         
         <Card className="py-0 bg-slate-900">
           <CardHeader className="rounded-full bg-slate-900">
-            <CardTitle className="text-[#e8cc81] font-medium uppercase tracking-wider text-center">
-              <FileText className="h-5 w-5" />
+            <CardTitle className="text-[#e8cc81] font-medium uppercase tracking-wider text-xl text-left my-0">
+              
               Documentos Disponíveis
             </CardTitle>
           </CardHeader>
