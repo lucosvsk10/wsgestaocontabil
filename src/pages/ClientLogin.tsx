@@ -27,8 +27,8 @@ const ClientLogin = () => {
       
       if (error) throw error;
       
-      // On successful login, redirect to home
-      navigate("/");
+      // Ao fazer login com sucesso, redirecionamos para a rota de seleção automática
+      navigate("/dashboard");
       
     } catch (error: any) {
       console.error(error);
