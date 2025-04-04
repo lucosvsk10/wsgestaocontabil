@@ -39,7 +39,7 @@ const Navbar = () => {
           
           <Link to="/login" className="flex items-center text-gold hover:text-gold-light transition-colors duration-300">
             <UserCircle size={20} className="mr-1" />
-            <span className="text-sm font-prompt font-medium uppercase tracking-wider">Login</span>
+            <span className="text-sm font-medium uppercase tracking-wider">Login</span>
           </Link>
           <a href="https://www.instagram.com/ws_gestao_contabil?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer" className="text-gold hover:text-gold-light transition-colors duration-300" aria-label="Instagram">
             <Instagram size={20} />

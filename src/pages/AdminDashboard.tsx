@@ -276,22 +276,22 @@ const AdminDashboard = () => {
           </TabsList>
           
           <TabsContent value="users">
-            <Card className="px-0 bg-[#eed899]">
-              <CardHeader className="rounded-full bg-[#eed899]">
-                <CardTitle className="text-center text-[312d2a] text-[#312d2a]">Lista de Usuários</CardTitle>
+            <Card className="px-0 bg-[#393532]">
+              <CardHeader className="rounded-full bg-[#393532]">
+                <CardTitle className="text-[#efc349] tracking-wider font-bold">LISTA DE USUARIOS</CardTitle>
               </CardHeader>
-              <CardContent className="rounded-full bg-[#eed899]">
+              <CardContent className="rounded-full bg-[#393532]">
                 {isLoadingUsers ? <div className="flex justify-center py-8">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
                   </div> : <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="bg-inherit text-[#312d2a]">Nome</TableHead>
-                          <TableHead className="text-[#312d2a]">Email</TableHead>
-                          <TableHead className="text-[#312d2a]">Função</TableHead>
-                          <TableHead className="text-[#312d2a]">Data de Cadastro</TableHead>
-                          <TableHead className="text-[#312d2a]">Ações</TableHead>
+                          <TableHead className="text-[#e8cc81] font-medium uppercase tracking-wider">Nome</TableHead>
+                          <TableHead className="text-[#e8cc81] font-medium uppercase tracking-wider">Email</TableHead>
+                          <TableHead className="text-[#e8cc81] font-medium uppercase tracking-wider">Função</TableHead>
+                          <TableHead className="text-[#e8cc81] font-medium uppercase tracking-wider">Data de Cadastro</TableHead>
+                          <TableHead className="text-[#e8cc81] font-medium uppercase tracking-wider">Ações</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
