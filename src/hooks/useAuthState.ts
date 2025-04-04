@@ -2,14 +2,13 @@
 import { useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { UserData, checkIsAdmin, fetchUserDataFromDB } from '@/utils/authUtils';
+import { UserData, fetchUserDataFromDB } from '@/utils/authUtils';
 
 export const useAuthState = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
 
   // Function to fetch user data from database
   const fetchUserData = async (userId: string) => {
@@ -23,15 +22,8 @@ export const useAuthState = () => {
       } else {
         setUserData(data);
         
-        // Check if admin by role or specific email
-        const userEmail = user?.email;
-        const isUserAdmin = checkIsAdmin(data, userEmail);
-        
-        setIsAdmin(isUserAdmin);
-        
-        // Store user data and admin status in localStorage
+        // Store user data in localStorage
         localStorage.setItem('user', JSON.stringify(data));
-        localStorage.setItem('isAdmin', isUserAdmin.toString());
         
         setIsLoading(false);
       }
@@ -57,13 +49,11 @@ export const useAuthState = () => {
           }, 0);
         } else {
           setUserData(null);
-          setIsAdmin(false);
           setIsLoading(false);
           
           // Remove user data from localStorage on signOut
           if (event === 'SIGNED_OUT') {
             localStorage.removeItem('user');
-            localStorage.removeItem('isAdmin');
           }
         }
       }
@@ -80,17 +70,14 @@ export const useAuthState = () => {
       } else {
         // Check if we have stored user data in localStorage
         const storedUser = localStorage.getItem('user');
-        const storedIsAdmin = localStorage.getItem('isAdmin');
         
         if (storedUser) {
           try {
             const parsedUser = JSON.parse(storedUser);
             setUserData(parsedUser);
-            setIsAdmin(storedIsAdmin === 'true');
           } catch (error) {
             console.error('Error parsing stored user data:', error);
             localStorage.removeItem('user');
-            localStorage.removeItem('isAdmin');
           }
         }
         
@@ -108,8 +95,6 @@ export const useAuthState = () => {
     user,
     userData,
     isLoading,
-    isAdmin,
-    setIsAdmin,
     setUserData
   };
 };
