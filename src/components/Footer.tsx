@@ -1,7 +1,7 @@
 import { MapPin, Phone, Mail, Clock } from 'lucide-react';
 const Footer = () => {
   return <footer id="contato" className="bg-navy-dark border-t border-gold/20">
-      <div className="container mx-auto px-6 py-12 bg-navy-dark">
+      <div className="container mx-auto px-6 py-12 bg-[#46413d]">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
           <div className="space-y-6">
             <div className="flex items-center space-x-2">

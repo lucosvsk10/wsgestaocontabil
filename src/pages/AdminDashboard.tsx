@@ -264,34 +264,34 @@ const AdminDashboard = () => {
         <h1 className="text-3xl mb-6 font- font-extrabold text-navy-dark text-center">PAINEL ADMINISTRATIVO</h1>
         
         <Tabs defaultValue="users">
-          <TabsList className="mb-6 bg-slate-800">
+          <TabsList className="mb-6 bg-[itext-white] bg-[#46413d]">
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users size={16} />
               <span>Usuários</span>
             </TabsTrigger>
             <TabsTrigger value="documents" className="flex items-center gap-2">
               <FileText size={16} />
-              <span>Documentos</span>
+              <span className="">Documentos</span>
             </TabsTrigger>
           </TabsList>
           
           <TabsContent value="users">
             <Card>
-              <CardHeader className="bg-navy-light">
-                <CardTitle className="text-slate-300">Lista de Usuários</CardTitle>
+              <CardHeader className="bg-[#46413d]">
+                <CardTitle className="text-white text-center">Lista de Usuários</CardTitle>
               </CardHeader>
-              <CardContent className="bg-slate-800">
+              <CardContent className="bg-[#46413d]/[0.94]">
                 {isLoadingUsers ? <div className="flex justify-center py-8">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
                   </div> : <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Nome</TableHead>
-                          <TableHead>Email</TableHead>
-                          <TableHead>Função</TableHead>
-                          <TableHead>Data de Cadastro</TableHead>
-                          <TableHead>Ações</TableHead>
+                          <TableHead className="bg-inherit text-white">Nome</TableHead>
+                          <TableHead className="text-white">Email</TableHead>
+                          <TableHead className="text-white">Função</TableHead>
+                          <TableHead className="text-white">Data de Cadastro</TableHead>
+                          <TableHead className="text-white">Ações</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
