@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { UserData, checkIsAdmin, fetchUserDataFromDB } from '@/utils/authUtils';
 
@@ -11,7 +10,6 @@ export const useAuthState = () => {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const navigate = useNavigate();
 
   // Function to fetch user data from database
   const fetchUserData = async (userId: string) => {
@@ -36,17 +34,6 @@ export const useAuthState = () => {
         localStorage.setItem('isAdmin', isUserAdmin.toString());
         
         setIsLoading(false);
-        
-        // Handle redirection after user data is fetched
-        // Only redirect if we're not already on one of these pages
-        const currentPath = window.location.pathname;
-        if (!currentPath.includes('/admin') && !currentPath.includes('/client')) {
-          if (isUserAdmin) {
-            navigate('/admin');
-          } else {
-            navigate('/client');
-          }
-        }
       }
     } catch (error) {
       console.error("Error in fetchUserData:", error);
@@ -59,6 +46,7 @@ export const useAuthState = () => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
+        console.log("Auth state changed:", event, currentSession?.user?.email);
         setSession(currentSession);
         setUser(currentSession?.user || null);
 
@@ -76,7 +64,6 @@ export const useAuthState = () => {
           if (event === 'SIGNED_OUT') {
             localStorage.removeItem('user');
             localStorage.removeItem('isAdmin');
-            navigate('/login');
           }
         }
       }
@@ -84,6 +71,7 @@ export const useAuthState = () => {
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      console.log("Initial session check:", currentSession?.user?.email);
       setSession(currentSession);
       setUser(currentSession?.user || null);
       
@@ -113,7 +101,7 @@ export const useAuthState = () => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, []);
 
   return {
     session,

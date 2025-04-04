@@ -16,6 +16,7 @@ const PrivateRoute = ({ children, requireAdmin = false }: PrivateRouteProps) => 
   useEffect(() => {
     // If we have user data from context, use it
     if (!isLoading) {
+      console.log("PrivateRoute: Auth status loaded from context", {user: !!user, isAdmin});
       setIsAuthenticated(!!user);
       setHasAdminAccess(isAdmin);
       return;
@@ -26,9 +27,11 @@ const PrivateRoute = ({ children, requireAdmin = false }: PrivateRouteProps) => 
     const storedIsAdmin = localStorage.getItem('isAdmin') === 'true';
     
     if (storedUser) {
+      console.log("PrivateRoute: Using stored auth data", {storedUser: !!storedUser, storedIsAdmin});
       setIsAuthenticated(true);
       setHasAdminAccess(storedIsAdmin);
     } else {
+      console.log("PrivateRoute: No stored auth data found");
       setIsAuthenticated(false);
       setHasAdminAccess(false);
     }
@@ -43,14 +46,17 @@ const PrivateRoute = ({ children, requireAdmin = false }: PrivateRouteProps) => 
 
   // Not authenticated
   if (!isAuthenticated) {
+    console.log("PrivateRoute: Not authenticated, redirecting to login");
     return <Navigate to="/login" replace />;
   }
 
   // Requires admin but user is not admin
   if (requireAdmin && !hasAdminAccess) {
+    console.log("PrivateRoute: User not admin, redirecting to client");
     return <Navigate to="/client" replace />;
   }
 
+  console.log("PrivateRoute: Authenticated and authorized, rendering children");
   return <>{children}</>;
 };
 
