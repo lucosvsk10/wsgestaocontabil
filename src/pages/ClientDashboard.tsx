@@ -1,22 +1,13 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { FileText, Download, File } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-
 interface Document {
   id: string;
   name: string;
@@ -26,26 +17,26 @@ interface Document {
   type?: string;
   original_filename?: string;
 }
-
 const ClientDashboard = () => {
-  const { user } = useAuth();
-  const { toast } = useToast();
+  const {
+    user
+  } = useAuth();
+  const {
+    toast
+  } = useToast();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
   useEffect(() => {
     const fetchDocuments = async () => {
       if (!user) return;
-      
       try {
-        const { data, error } = await supabase
-          .from('documents')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('uploaded_at', { ascending: false });
-        
+        const {
+          data,
+          error
+        } = await supabase.from('documents').select('*').eq('user_id', user.id).order('uploaded_at', {
+          ascending: false
+        });
         if (error) throw error;
-        
         setDocuments(data || []);
       } catch (error: any) {
         console.error('Erro ao carregar documentos:', error);
@@ -58,7 +49,6 @@ const ClientDashboard = () => {
         setIsLoading(false);
       }
     };
-
     fetchDocuments();
   }, [user, toast]);
 
@@ -78,36 +68,29 @@ const ClientDashboard = () => {
   // Função para formatar o tamanho do arquivo
   const formatFileSize = (bytes?: number) => {
     if (!bytes) return 'Tamanho desconhecido';
-    
     const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
     if (bytes === 0) return '0 Byte';
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
     return Math.round(bytes / Math.pow(1024, i)) + ' ' + sizes[i];
   };
-
-  return (
-    <div className="min-h-screen bg-gray-950 flex flex-col">
+  return <div className="min-h-screen bg-gray-950 flex flex-col">
       <Navbar />
       
-      <main className="flex-grow container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-gold mb-6">Meus Documentos</h1>
+      <main className="flex-grow container mx-auto px-4 py-8 bg-navy-dark">
+        <h1 className="text-#efc349 font-medium uppercase tracking-wider text-center">Meus Documentos</h1>
         
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <Card className="py-0 bg-slate-900">
+          <CardHeader className="rounded-full bg-slate-900">
+            <CardTitle className="text-[#e8cc81] font-medium uppercase tracking-wider text-center">
               <FileText className="h-5 w-5" />
               Documentos Disponíveis
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="flex justify-center py-8">
+          <CardContent className="bg-slate-800 rounded-3xl">
+            {isLoading ? <div className="flex justify-center py-8">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
-              </div>
-            ) : (
-              <>
-                {documents.length > 0 ? (
-                  <div className="overflow-x-auto">
+              </div> : <>
+                {documents.length > 0 ? <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -118,52 +101,35 @@ const ClientDashboard = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {documents.map(doc => (
-                          <TableRow key={doc.id}>
+                        {documents.map(doc => <TableRow key={doc.id}>
                             <TableCell className="font-medium">{doc.name}</TableCell>
                             <TableCell>{formatDate(doc.uploaded_at)}</TableCell>
                             <TableCell>{formatFileSize(doc.size)}</TableCell>
                             <TableCell>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                asChild
-                              >
-                                <a 
-                                  href={doc.file_url} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-1"
-                                >
+                              <Button variant="outline" size="sm" asChild>
+                                <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
                                   <Download size={14} />
                                   <span>Baixar</span>
                                 </a>
                               </Button>
                             </TableCell>
-                          </TableRow>
-                        ))}
+                          </TableRow>)}
                       </TableBody>
                     </Table>
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
+                  </div> : <div className="text-center py-[200px]">
                     <File className="h-16 w-16 mx-auto mb-4 text-gray-600" />
-                    <h3 className="text-lg font-medium mb-2">Nenhum documento disponível</h3>
+                    <h3 className="text-lg font-medium mb-2 text-purple-400">Nenhum documento disponível</h3>
                     <p className="text-gray-400">
                       Não há documentos disponíveis para você no momento. 
                       Quando documentos forem adicionados, eles aparecerão aqui.
                     </p>
-                  </div>
-                )}
-              </>
-            )}
+                  </div>}
+              </>}
           </CardContent>
         </Card>
       </main>
       
       <Footer />
-    </div>
-  );
+    </div>;
 };
-
 export default ClientDashboard;
