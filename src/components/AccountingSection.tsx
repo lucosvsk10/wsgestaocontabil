@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
@@ -89,7 +88,6 @@ const declarationsLinks = [{
   url: "https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/declaracoes-e-demonstrativos/sped-sistema-publico-de-escrituracao-digital/escrituracao-contabil-fiscal-ecf",
   description: "Escrituração de informações contábeis e fiscais de pessoas jurídicas"
 }];
-
 const AccountingSection = () => {
   const [isFloatingButtonOpen, setIsFloatingButtonOpen] = useState(false);
   const [newsData, setNewsData] = useState(sampleNews);
@@ -115,7 +113,6 @@ const AccountingSection = () => {
   useEffect(() => {
     // We're using sample data initially, but this would be an API call in production
   }, []);
-
   return <section id="contabil" className="py-16 bg-navy px-6 fadein-on-scroll">
       <div className="container mx-auto">
         <h2 className="text-gold mb-12 text-center text-3xl font-bold">Mundo Contábil </h2>
@@ -219,13 +216,10 @@ const AccountingSection = () => {
                 </div>
               </div> : null}
             
-            <Button size="icon" className="h-12 w-12 rounded-full bg-gold hover:bg-gold-light text-navy shadow-lg" onClick={() => setIsFloatingButtonOpen(!isFloatingButtonOpen)}>
-              {isFloatingButtonOpen ? <X size={20} /> : <Plus size={20} />}
-            </Button>
+            
           </div>
         </Tabs>
       </div>
     </section>;
 };
-
 export default AccountingSection;
