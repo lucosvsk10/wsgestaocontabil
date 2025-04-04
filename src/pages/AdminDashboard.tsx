@@ -257,7 +257,7 @@ const AdminDashboard = () => {
       minute: '2-digit'
     });
   };
-  return <div className="min-h-screen bg-gray-950 flex flex-col">
+  return <div className="min-h-screen flex flex-col bg-[#46413d]">
       <Navbar />
       
       <main className="flex-grow container mx-auto px-4 py-8 bg-[#46413d]">
