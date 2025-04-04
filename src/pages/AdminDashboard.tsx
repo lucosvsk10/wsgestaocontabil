@@ -278,7 +278,7 @@ const AdminDashboard = () => {
           <TabsContent value="users">
             <Card className="px-0 bg-[#393532]">
               <CardHeader className="rounded-full bg-[#393532]">
-                <CardTitle className="text-[#e8cc81] tracking-wider font-bold">LISTA DE USUARIOS</CardTitle>
+                <CardTitle className="text-[#e8cc81] tracking-wider font-bold text-center">LISTA DE USUARIOS</CardTitle>
               </CardHeader>
               <CardContent className="rounded-full bg-[#393532]">
                 {isLoadingUsers ? <div className="flex justify-center py-8">
