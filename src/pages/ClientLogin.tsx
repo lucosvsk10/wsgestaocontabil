@@ -43,10 +43,10 @@ const ClientLogin = () => {
   return <div className="min-h-screen bg-gray-950 flex flex-col">
       <Navbar />
       
-      <main className="flex-grow flex items-center justify-center px-4 py-12 bg-[#46413d] pl-10 border-white rounded-md">
-        <Card className="w-full max-w-md border-white -800 bg-[#46413d] rounded-md">
-          <CardHeader className="space-y-1 text-center rounded-sm bg-[#46413d]">
-            <CardTitle className="text-2xl font-bold text-gold">Login</CardTitle>
+      <main className="flex-grow flex items-center justify-center px-4 py-12 bg-[#46413d] pl-10 border-white rounded-md ">
+        <Card className="w-full max-w-md border-gold -800bg-[#46413d] rounded-md ">
+          <CardHeader className="space-y-1 text-center rounded-sm bg-[#46413d] my-0">
+            <CardTitle className="text-gold font-prompt font-medium text-3xl">LOGIN</CardTitle>
             <CardDescription className="text-sm text-gray-400">
               Acesse sua área pessoal
             </CardDescription>
@@ -76,7 +76,7 @@ const ClientLogin = () => {
               </Button>
             </form>
           </CardContent>
-          <CardFooter className="flex flex-col space-y-4 bg-[#46413d]">
+          <CardFooter className="flex flex-col space-y- bg-[#46413d]">
             <div className="text-center text-sm text-gray-400">
               <a href="/" className="text-gold hover:underline">
                 Voltar para a página inicial

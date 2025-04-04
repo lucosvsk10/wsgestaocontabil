@@ -260,8 +260,8 @@ const AdminDashboard = () => {
   return <div className="min-h-screen bg-gray-950 flex flex-col">
       <Navbar />
       
-      <main className="flex-grow container mx-auto px-4 py-8">
-        <h1 className="text-3xl text-gold mb-6 font-">Painel Administrativo</h1>
+      <main className="flex-grow container mx-auto px-4 py-8 bg-white">
+        <h1 className="text-3xl mb-6 font- font-extrabold text-navy-dark">PAINEL ADMINISTRATIVO</h1>
         
         <Tabs defaultValue="users">
           <TabsList className="mb-6 bg-slate-800">
@@ -277,8 +277,8 @@ const AdminDashboard = () => {
           
           <TabsContent value="users">
             <Card>
-              <CardHeader className="bg-gold-dark">
-                <CardTitle>Lista de Usuários</CardTitle>
+              <CardHeader className="bg-navy-light">
+                <CardTitle className="text-slate-300">Lista de Usuários</CardTitle>
               </CardHeader>
               <CardContent className="bg-slate-800">
                 {isLoadingUsers ? <div className="flex justify-center py-8">
@@ -333,7 +333,7 @@ const AdminDashboard = () => {
                   {isLoadingUsers ? <div className="flex justify-center py-4">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gold"></div>
                     </div> : <>
-                      <p className="text-sm text-gray-400 mb-4">
+                      <p className="text-sm mb-4 text-navy-dark">
                         Selecione um usuário para gerenciar seus documentos
                       </p>
                       <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
@@ -346,7 +346,7 @@ const AdminDashboard = () => {
                               </span>
                             </div>
                           </Button>)}
-                        {users.length === 0 && <p className="text-center text-gray-400 py-4">
+                        {users.length === 0 && <p className="text-center py-4 text-navy-dark">
                             Nenhum usuário encontrado
                           </p>}
                       </div>
