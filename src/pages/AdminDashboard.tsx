@@ -276,22 +276,22 @@ const AdminDashboard = () => {
           </TabsList>
           
           <TabsContent value="users">
-            <Card className="bg-[#46413d] px-0">
-              <CardHeader className="bg-[#46413d] rounded-full">
-                <CardTitle className="text-center text-[#efc349]">Lista de Usuários</CardTitle>
+            <Card className="px-0 bg-[#eed899]">
+              <CardHeader className="rounded-full bg-[#eed899]">
+                <CardTitle className="text-center text-[312d2a] text-[#312d2a]">Lista de Usuários</CardTitle>
               </CardHeader>
-              <CardContent className="bg-[#46413d]/[0.94] rounded-full">
+              <CardContent className="rounded-full bg-[#eed899]">
                 {isLoadingUsers ? <div className="flex justify-center py-8">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
                   </div> : <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="bg-inherit text-white">Nome</TableHead>
-                          <TableHead className="text-white">Email</TableHead>
-                          <TableHead className="text-white">Função</TableHead>
-                          <TableHead className="text-white">Data de Cadastro</TableHead>
-                          <TableHead className="text-white">Ações</TableHead>
+                          <TableHead className="bg-inherit text-[#312d2a]">Nome</TableHead>
+                          <TableHead className="text-[#312d2a]">Email</TableHead>
+                          <TableHead className="text-[#312d2a]">Função</TableHead>
+                          <TableHead className="text-[#312d2a]">Data de Cadastro</TableHead>
+                          <TableHead className="text-[#312d2a]">Ações</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -311,7 +311,7 @@ const AdminDashboard = () => {
                                 </Button>
                               </TableCell>
                             </TableRow>) : <TableRow>
-                            <TableCell colSpan={5} className="text-center py-4 text-gray-400">
+                            <TableCell colSpan={5} className="text-center py-4 text-[#7d796d] bg-[in] bg-inherit">
                               Nenhum usuário encontrado
                             </TableCell>
                           </TableRow>}
