@@ -14,20 +14,25 @@ const AppRoutes = () => {
       <Route path="/" element={<Index />} />
       <Route path="/login" element={<ClientLogin />} />
       <Route path="/admin-login" element={<AdminLogin />} />
+      
+      {/* Rotas protegidas com verificação de papel */}
       <Route path="/admin" element={
         <PrivateRoute requireAdmin={true}>
           <AdminDashboard />
         </PrivateRoute>
       } />
+      
       <Route path="/client" element={
-        <PrivateRoute>
+        <PrivateRoute requireAdmin={false}>
           <ClientDashboard />
         </PrivateRoute>
       } />
-      {/* Redirect routes */}
+      
+      {/* Rotas de redirecionamento */}
       <Route path="/minha-area" element={<Navigate to="/client" replace />} />
       <Route path="/admin-dashboard" element={<Navigate to="/admin" replace />} />
-      {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+      
+      {/* Rota para capturar URLs não encontradas */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

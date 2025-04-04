@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, LogOut, Upload } from "lucide-react";
+import { FileText, LogOut, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -8,9 +9,8 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+
 interface Document {
   id: string;
   name: string;
@@ -20,33 +20,32 @@ interface Document {
   size?: number;
   type?: string;
 }
+
 const ClientDashboard = () => {
   const [documents, setDocuments] = useState<Document[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
-  const [documentName, setDocumentName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
-  const {
-    toast
-  } = useToast();
-  const {
-    user,
-    userData,
-    getUserDocuments
-  } = useAuth();
+  const { toast } = useToast();
+  const { user, userData, getUserDocuments, isAdmin } = useAuth();
+  
+  // Redirecionar administradores para o painel de administração
+  useEffect(() => {
+    if (user && isAdmin) {
+      navigate("/admin", { replace: true });
+    }
+  }, [user, isAdmin, navigate]);
+
   useEffect(() => {
     if (user) {
       loadDocuments();
     }
   }, [user]);
+
   const loadDocuments = async () => {
     if (!user) return;
     try {
       setIsLoading(true);
-      const {
-        data,
-        error
-      } = await getUserDocuments(user.id);
+      const { data, error } = await getUserDocuments(user.id);
       if (error) throw error;
       setDocuments(data || []);
     } catch (error: any) {
@@ -60,6 +59,7 @@ const ClientDashboard = () => {
       setIsLoading(false);
     }
   };
+
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
@@ -77,78 +77,19 @@ const ClientDashboard = () => {
       });
     }
   };
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !user) return;
 
-    // Permitir apenas PDFs
-    if (file.type !== 'application/pdf') {
-      toast({
-        title: "Tipo de arquivo inválido",
-        description: "Por favor, selecione apenas arquivos PDF.",
-        variant: "destructive"
-      });
-      return;
-    }
-    setIsUploading(true);
-    try {
-      // 1. Upload file to storage
-      const fileName = `${user.id}/${Date.now()}_${file.name}`;
-      const {
-        data: fileData,
-        error: uploadError
-      } = await supabase.storage.from('documents').upload(fileName, file);
-      if (uploadError) throw uploadError;
-
-      // 2. Get the public URL
-      const {
-        data: urlData
-      } = supabase.storage.from('documents').getPublicUrl(fileName);
-
-      // 3. Save document record in database
-      const {
-        error: dbError
-      } = await supabase.from('documents').insert({
-        user_id: user.id,
-        name: documentName || file.name,
-        file_url: urlData.publicUrl,
-        original_filename: file.name,
-        size: file.size,
-        type: file.type
-      });
-      if (dbError) throw dbError;
-
-      // Refresh document list
-      await loadDocuments();
-      setDocumentName("");
-      toast({
-        title: "Documento enviado",
-        description: "Seu documento foi enviado com sucesso."
-      });
-    } catch (error: any) {
-      console.error("Erro ao fazer upload do documento:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível enviar o documento.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsUploading(false);
-      // Limpar o input de arquivo
-      if (event.target) event.target.value = '';
-    }
-  };
   if (isLoading) {
     return <div className="min-h-screen bg-gray-950 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gold"></div>
       </div>;
   }
+
   return <div className="min-h-screen bg-gray-950 flex flex-col">
       <Navbar />
       
       <main className="flex-grow container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gold">ACESSO ADMINISTRATIVO!!!!</h1>
+          <h1 className="text-3xl font-bold text-gold">Área do Cliente</h1>
           <Button onClick={handleLogout} variant="outline" className="border-gold text-gold hover:bg-gold hover:text-navy flex items-center gap-2">
             <LogOut size={16} />
             Sair
@@ -209,7 +150,8 @@ const ClientDashboard = () => {
                         <div>
                           <Button variant="ghost" size="sm" className="text-gold hover:text-gold-light" asChild>
                             <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
-                              Visualizar
+                              <Download className="h-4 w-4 mr-1" />
+                              Download
                             </a>
                           </Button>
                         </div>
@@ -229,4 +171,5 @@ const ClientDashboard = () => {
       <Footer />
     </div>;
 };
+
 export default ClientDashboard;

@@ -56,6 +56,12 @@ const PrivateRoute = ({ children, requireAdmin = false }: PrivateRouteProps) => 
     return <Navigate to="/client" replace />;
   }
 
+  // User is admin but trying to access client area
+  if (!requireAdmin && hasAdminAccess) {
+    console.log("PrivateRoute: Admin accessing client area, redirecting to admin");
+    return <Navigate to="/admin" replace />;
+  }
+
   console.log("PrivateRoute: Authenticated and authorized, rendering children");
   return <>{children}</>;
 };
