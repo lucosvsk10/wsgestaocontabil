@@ -325,11 +325,11 @@ const AdminDashboard = () => {
           <TabsContent value="documents">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Seleção de Usuário */}
-              <Card className="md:col-span-1 bg-[t#46413d] bg-[#efc349]">
-                <CardHeader className="bg-[#efc349]">
+              <Card className="md:col-span-1 bg-[t#46413d] bg-[#eed899]">
+                <CardHeader className="bg-[#eed899]">
                   <CardTitle className="text- text-[#312d2a]">Seleção de Usuário</CardTitle>
                 </CardHeader>
-                <CardContent className="bg-[#efc349] py-0 my-0">
+                <CardContent className="py-0 my-0 bg-[#eed899]">
                   {isLoadingUsers ? <div className="flex justify-center py-4">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gold"></div>
                     </div> : <>
@@ -356,10 +356,10 @@ const AdminDashboard = () => {
               
               {/* Upload de Documentos */}
               <Card className="md:col-span-2 bg-[#efc349]">
-                <CardHeader>
+                <CardHeader className="bg-[#eed899]">
                   <CardTitle className="text-[46413d] text-[#312d2a]">Gerenciamento de Documentos</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="bg-[#eed899]">
                   {selectedUserId ? <div className="space-y-6">
                       {/* Formulário de Upload */}
                       <div className="p-4 bg-gray-800 rounded-md">
@@ -437,7 +437,7 @@ const AdminDashboard = () => {
                             </Table>
                           </div>}
                       </div>
-                    </div> : <div className="text-center py-8 text-[#46413d]-400 bg-[#efc349]">
+                    </div> : <div className="text-center py-8 text-[#46413d]-400 bg-[#eed899]">
                       <File className="h-16 w-16 mx-auto mb-4 opacity-20" />
                       <p>Selecione um usuário para gerenciar seus documentos</p>
                     </div>}

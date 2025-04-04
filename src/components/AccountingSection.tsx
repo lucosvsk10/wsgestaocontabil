@@ -162,8 +162,8 @@ const AccountingSection = () => {
                   </CarouselItem>)}
               </CarouselContent>
               <div className="flex justify-center mt-4">
-                <CarouselPrevious className="relative static left-0 right-0 mx-2 translate-y-0" />
-                <CarouselNext className="relative static left-0 right-0 mx-0\n translate-y-0" />
+                <CarouselPrevious className="relative static left-0 right-0 mx-2 translate-y-0 bg-gold-dark" />
+                <CarouselNext className="relative static left-0 right-0 mx-0\\n translate-y-0 bg-gold-dark" />
               </div>
             </Carousel>
           </TabsContent>
