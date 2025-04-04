@@ -44,25 +44,25 @@ const ClientLogin = () => {
       <Navbar />
       
       <main className="flex-grow flex items-center justify-center px-4 py-12 bg-[#46413d]">
-        <Card className="w-full max-w-md bg-gray-900 border-gray-800">
-          <CardHeader className="space-y-1 text-center">
+        <Card className="w-full max-w-md border-white -800 bg-[#46413d] rounded-md">
+          <CardHeader className="space-y-1 text-center rounded-sm bg-[#46413d]">
             <CardTitle className="text-2xl font-bold text-gold">Login</CardTitle>
             <CardDescription className="text-sm text-gray-400">
               Acesse sua área pessoal
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="bg-[#46413d]">
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <div className="relative">
                   <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                  <Input type="email" placeholder="Email" className="pl-10 bg-gray-800 border-gray-700" value={email} onChange={e => setEmail(e.target.value)} required />
+                  <Input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required className="pl-10 border-white -700 bg-[#46413d]" />
                 </div>
               </div>
               <div className="space-y-2">
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                  <Input type="password" placeholder="Senha" className="pl-10 bg-gray-800 border-gray-700" value={password} onChange={e => setPassword(e.target.value)} required />
+                  <Input type="password" placeholder="Senha" value={password} onChange={e => setPassword(e.target.value)} required className="pl-10 border-white -700 bg-[#46413d]" />
                 </div>
               </div>
               <Button className="w-full bg-gold hover:bg-gold-light text-navy" type="submit" disabled={isLoading}>
@@ -76,7 +76,7 @@ const ClientLogin = () => {
               </Button>
             </form>
           </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
+          <CardFooter className="flex flex-col space-y-4 bg-[#46413d]">
             <div className="text-center text-sm text-gray-400">
               <a href="/" className="text-gold hover:underline">
                 Voltar para a página inicial

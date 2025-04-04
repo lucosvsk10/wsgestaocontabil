@@ -1,16 +1,13 @@
-
 import { useState, useEffect } from 'react';
 import { Menu, X, Instagram, UserCircle } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
-
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
-  
+
   // Check if we're on a route that should hide navigation items
   const shouldHideNavLinks = ['/login', '/admin', '/client'].includes(location.pathname);
-  
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
@@ -18,9 +15,8 @@ const Navbar = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-  
   return <header className="bg-[#37353d]">
-      <div className="container mx-auto flex items-center justify-between bg-[#37353d] px-[28px] py-[19px]">
+      <div className="container mx-auto flex items-center justify-between px-[28px] py-[19px] bg-[#46413d] rounded-sm">
         <div className="flex items-center">
           <a href="/" className="flex items-center space-x-2">
             <img alt="WS Gestão Contábil Logo" src="/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png" className="h-8  w-auto" />
@@ -29,8 +25,7 @@ const Navbar = () => {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-8">
-          {!shouldHideNavLinks && (
-            <>
+          {!shouldHideNavLinks && <>
               <a href="#servicos" className="nav-link text-sm font-prompt font-medium uppercase tracking-wider">
                 Serviços
               </a>
@@ -40,8 +35,7 @@ const Navbar = () => {
               <a href="#contabil" className="nav-link text-sm font-prompt font-medium uppercase tracking-wider">
                 Contábil
               </a>
-            </>
-          )}
+            </>}
           
           <Link to="/login" className="flex items-center text-gold hover:text-gold-light transition-colors duration-300">
             <UserCircle size={20} className="mr-1" />
@@ -67,8 +61,7 @@ const Navbar = () => {
             </button>
           </div>
           <nav className="flex flex-col space-y-8 items-center text-center mt-12">
-            {!shouldHideNavLinks && (
-              <>
+            {!shouldHideNavLinks && <>
                 <a href="#servicos" className="text-gold hover:text-gold-light text-xl font-prompt font-medium uppercase tracking-wider transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
                   Serviços
                 </a>
@@ -81,8 +74,7 @@ const Navbar = () => {
                 <a href="#contato" className="text-gold hover:text-gold-light text-xl font-prompt font-medium uppercase tracking-wider transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
                   Contato
                 </a>
-              </>
-            )}
+              </>}
             <Link to="/login" className="flex items-center text-gold hover:text-gold-light text-xl transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
               <UserCircle size={24} className="mr-2" />
               <span className="font-prompt font-medium uppercase tracking-wider">Login</span>
@@ -95,5 +87,4 @@ const Navbar = () => {
       </div>
     </header>;
 };
-
 export default Navbar;
