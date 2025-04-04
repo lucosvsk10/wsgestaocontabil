@@ -325,15 +325,15 @@ const AdminDashboard = () => {
           <TabsContent value="documents">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Seleção de Usuário */}
-              <Card className="md:col-span-1 bg-[t#46413d] bg-[#eed899]">
-                <CardHeader className="bg-[#eed899]">
-                  <CardTitle className="text- text-[#312d2a]">Seleção de Usuário</CardTitle>
+              <Card className="md:col-span-1 bg-[#393532]">
+                <CardHeader className="bg-[#393532] rounded-2xl">
+                  <CardTitle className="text-[#e8cc81]">Seleção de Usuário</CardTitle>
                 </CardHeader>
-                <CardContent className="py-0 my-0 bg-[#eed899]">
+                <CardContent className="py-0 my-0 bg-[#393532]">
                   {isLoadingUsers ? <div className="flex justify-center py-4">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gold"></div>
                     </div> : <>
-                      <p className="text-sm mb-4 text-navy-dark">
+                      <p className="text-[#e9aa91]">
                         Selecione um usuário para gerenciar seus documentos
                       </p>
                       <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
@@ -346,7 +346,7 @@ const AdminDashboard = () => {
                               </span>
                             </div>
                           </Button>)}
-                        {users.length === 0 && <p className="text-center py-4 text-navy-dark">
+                        {users.length === 0 && <p className="text-[#e9aa91]">
                             Nenhum usuário encontrado
                           </p>}
                       </div>
@@ -356,10 +356,10 @@ const AdminDashboard = () => {
               
               {/* Upload de Documentos */}
               <Card className="md:col-span-2 bg-[#efc349]">
-                <CardHeader className="bg-[#eed899]">
-                  <CardTitle className="text-[46413d] text-[#312d2a]">Gerenciamento de Documentos</CardTitle>
+                <CardHeader className="bg-[#393532]">
+                  <CardTitle className="text-[#e8cc81]">Gerenciamento de Documentos</CardTitle>
                 </CardHeader>
-                <CardContent className="bg-[#eed899]">
+                <CardContent className="bg-[#393532]">
                   {selectedUserId ? <div className="space-y-6">
                       {/* Formulário de Upload */}
                       <div className="p-4 bg-gray-800 rounded-md">
@@ -437,9 +437,9 @@ const AdminDashboard = () => {
                             </Table>
                           </div>}
                       </div>
-                    </div> : <div className="text-center py-8 text-[#46413d]-400 bg-[#eed899]">
-                      <File className="h-16 w-16 mx-auto mb-4 opacity-20" />
-                      <p>Selecione um usuário para gerenciar seus documentos</p>
+                    </div> : <div className="text-center py-8 text-[#46413d]-400 bg-[#393532]">
+                      <File className="h-16 w-16 mx-auto mb-4 opacity-20 bg-[inh] bg-inherit" />
+                      <p className="text-[#e9aa91]">Selecione um usuário para gerenciar seus documentos</p>
                     </div>}
                 </CardContent>
               </Card>
