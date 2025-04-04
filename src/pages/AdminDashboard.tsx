@@ -355,11 +355,11 @@ const AdminDashboard = () => {
               </Card>
               
               {/* Upload de Documentos */}
-              <Card className="md:col-span-2 bg-[#efc349]">
-                <CardHeader className="bg-[#393532]">
+              <Card className="md:col-span-2 bg-[b#393532]] bg-[#393532]">
+                <CardHeader className="bg-[#393532] rounded-3xl">
                   <CardTitle className="text-[#e8cc81]">Gerenciamento de Documentos</CardTitle>
                 </CardHeader>
-                <CardContent className="bg-[#393532]">
+                <CardContent className="bg-[#393532] rounded-3xl">
                   {selectedUserId ? <div className="space-y-6">
                       {/* Formulário de Upload */}
                       <div className="p-4 bg-gray-800 rounded-md">
