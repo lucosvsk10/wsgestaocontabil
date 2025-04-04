@@ -278,7 +278,7 @@ const AdminDashboard = () => {
           <TabsContent value="users">
             <Card className="px-0 bg-[#393532]">
               <CardHeader className="rounded-full bg-[#393532]">
-                <CardTitle className="text-[#efc349] tracking-wider font-bold">LISTA DE USUARIOS</CardTitle>
+                <CardTitle className="text-[#e8cc81] tracking-wider font-bold">LISTA DE USUARIOS</CardTitle>
               </CardHeader>
               <CardContent className="rounded-full bg-[#393532]">
                 {isLoadingUsers ? <div className="flex justify-center py-8">
@@ -287,11 +287,11 @@ const AdminDashboard = () => {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="text-[#e8cc81] font-medium uppercase tracking-wider">Nome</TableHead>
-                          <TableHead className="text-[#e8cc81] font-medium uppercase tracking-wider">Email</TableHead>
-                          <TableHead className="text-[#e8cc81] font-medium uppercase tracking-wider">Função</TableHead>
-                          <TableHead className="text-[#e8cc81] font-medium uppercase tracking-wider">Data de Cadastro</TableHead>
-                          <TableHead className="text-[#e8cc81] font-medium uppercase tracking-wider">Ações</TableHead>
+                          <TableHead className="text-[#e9aa91] font-medium uppercase tracking-wider">NOME</TableHead>
+                          <TableHead className="text-[#e9aa91] font-medium uppercase tracking-wider">Email</TableHead>
+                          <TableHead className="text-[#e9aa91] font-medium uppercase tracking-wider">Função</TableHead>
+                          <TableHead className="text-[#e9aa91] font-medium uppercase tracking-wider">Data de Cadastro</TableHead>
+                          <TableHead className="text-[#e9aa91] font-medium uppercase tracking-wider">Ações</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
