@@ -23,6 +23,7 @@ interface Document {
   size?: number;
   type?: string;
   original_filename?: string;
+  user_id?: string;
 }
 
 // Categorias de documentos
