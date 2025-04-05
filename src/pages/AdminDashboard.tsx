@@ -3,73 +3,19 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  File, PlusCircle, Trash2, User, Users, FileText, Download, 
-  Calendar, Clock, Tag, UserPlus, Lock 
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Dialog, DialogContent, DialogDescription, DialogFooter, 
-  DialogHeader, DialogTitle, DialogTrigger, DialogClose 
-} from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
-import { format } from "date-fns";
-import { pt } from "date-fns/locale";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { UserList } from "@/components/admin/UserList";
+import { UserSelector } from "@/components/admin/UserSelector";
+import { DocumentManager } from "@/components/admin/DocumentManager";
+import { CreateUser } from "@/components/admin/CreateUser";
+import { PasswordChangeModal } from "@/components/admin/PasswordChangeModal";
+import { UserType, Document } from "@/types/admin";
+import { Users, FileText, UserPlus } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-
-interface UserType {
-  id: string;
-  name: string | null;
-  email: string | null;
-  role: string | null;
-  created_at: string | null;
-}
-
-interface Document {
-  id: string;
-  name: string;
-  file_url: string;
-  user_id: string;
-  uploaded_at: string;
-  expires_at: string | null;
-  category: string;
-  size?: number;
-  type?: string;
-  original_filename?: string;
-}
 
 // Categorias de documentos disponíveis
 const DOCUMENT_CATEGORIES = [
@@ -78,13 +24,6 @@ const DOCUMENT_CATEGORIES = [
   "Certidões",
   "Folha de pagamentos"
 ];
-
-// Schema para validação de criação de usuário
-const userSchema = z.object({
-  name: z.string().min(3, { message: "Nome deve ter pelo menos 3 caracteres" }),
-  email: z.string().email({ message: "Email inválido" }),
-  password: z.string().min(6, { message: "Senha deve ter pelo menos 6 caracteres" }),
-});
 
 // Schema para alteração de senha
 const passwordSchema = z.object({
@@ -106,16 +45,6 @@ const AdminDashboard = () => {
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [selectedUserForPasswordChange, setSelectedUserForPasswordChange] = useState<UserType | null>(null);
-
-  // Form para criação de usuário
-  const userForm = useForm<z.infer<typeof userSchema>>({
-    resolver: zodResolver(userSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      password: ""
-    },
-  });
 
   // Form para alteração de senha
   const passwordForm = useForm<z.infer<typeof passwordSchema>>({
@@ -185,7 +114,11 @@ const AdminDashboard = () => {
   };
 
   // Função para criar um novo usuário
-  const createUser = async (data: z.infer<typeof userSchema>) => {
+  const createUser = async (data: z.infer<typeof z.object({
+    name: z.string().min(3),
+    email: z.string().email(),
+    password: z.string().min(6),
+  })>) => {
     setIsCreatingUser(true);
     try {
       // 1. Registrar o usuário no Auth
@@ -227,8 +160,6 @@ const AdminDashboard = () => {
           title: "Usuário criado com sucesso",
           description: `${data.name} (${data.email}) foi cadastrado no sistema.`
         });
-
-        userForm.reset();
       }
     } catch (error: any) {
       console.error('Erro ao criar usuário:', error);
@@ -438,31 +369,6 @@ const AdminDashboard = () => {
     }
   };
 
-  // Formatação da data
-  const formatDate = (dateStr: string) => {
-    if (!dateStr) return 'Data desconhecida';
-    const date = new Date(dateStr);
-    return format(date, "dd/MM/yyyy 'às' HH:mm", { locale: pt });
-  };
-
-  // Verificar se o documento está expirado
-  const isDocumentExpired = (expiresAt: string | null) => {
-    if (!expiresAt) return false;
-    const expirationDate = new Date(expiresAt);
-    return expirationDate < new Date();
-  };
-
-  // Calcular dias restantes até a expiração
-  const daysUntilExpiration = (expiresAt: string | null) => {
-    if (!expiresAt) return null;
-    const expirationDate = new Date(expiresAt);
-    const today = new Date();
-    const diffTime = expirationDate.getTime() - today.getTime();
-    if (diffTime <= 0) return 'Expirado';
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return `${diffDays} dias`;
-  };
-
   return (
     <div className="min-h-screen flex flex-col bg-[#46413d]">
       <Navbar />
@@ -487,372 +393,48 @@ const AdminDashboard = () => {
           </TabsList>
           
           <TabsContent value="users">
-            <Card className="px-0 bg-[#393532]">
-              <CardHeader className="rounded-full bg-[#393532]">
-                <CardTitle className="text-[#e8cc81] tracking-wider font-bold text-center">LISTA DE USUARIOS</CardTitle>
-              </CardHeader>
-              <CardContent className="rounded-full bg-[#393532]">
-                {isLoadingUsers ? (
-                  <div className="flex justify-center py-8">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="text-[#e9aa91] font-medium uppercase tracking-wider">NOME</TableHead>
-                          <TableHead className="text-[#e9aa91] font-medium uppercase tracking-wider">Email</TableHead>
-                          <TableHead className="text-[#e9aa91] font-medium uppercase tracking-wider">Função</TableHead>
-                          <TableHead className="text-[#e9aa91] font-medium uppercase tracking-wider">Data de Cadastro</TableHead>
-                          <TableHead className="text-[#e9aa91] font-medium uppercase tracking-wider">Ações</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {users.length > 0 ? (
-                          users.map(user => (
-                            <TableRow key={user.id}>
-                              <TableCell>{user.name || "Sem nome"}</TableCell>
-                              <TableCell>{user.email || "Sem email"}</TableCell>
-                              <TableCell>
-                                <span className={`px-2 py-1 rounded-full text-xs ${user.role === 'admin' ? 'bg-purple-900 text-purple-100' : 'bg-blue-900 text-blue-100'}`}>
-                                  {user.role || "cliente"}
-                                </span>
-                              </TableCell>
-                              <TableCell>{user.created_at ? formatDate(user.created_at) : "Data desconhecida"}</TableCell>
-                              <TableCell>
-                                <div className="flex space-x-2">
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm" 
-                                    className="flex items-center gap-1" 
-                                    onClick={() => setSelectedUserId(user.id)}
-                                  >
-                                    <FileText size={14} />
-                                    <span>Documentos</span>
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="flex items-center gap-1"
-                                    onClick={() => {
-                                      setSelectedUserForPasswordChange(user);
-                                      passwordForm.reset();
-                                    }}
-                                  >
-                                    <Lock size={14} />
-                                    <span>Senha</span>
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        ) : (
-                          <TableRow>
-                            <TableCell colSpan={5} className="text-center py-4 text-[#7d796d] bg-[in] bg-inherit">
-                              Nenhum usuário encontrado
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <UserList 
+              users={users}
+              isLoading={isLoadingUsers}
+              setSelectedUserId={setSelectedUserId}
+              setSelectedUserForPasswordChange={setSelectedUserForPasswordChange}
+              passwordForm={passwordForm}
+            />
           </TabsContent>
           
           <TabsContent value="documents">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Seleção de Usuário */}
-              <Card className="md:col-span-1 bg-[#393532]">
-                <CardHeader className="bg-[#393532] rounded-2xl">
-                  <CardTitle className="text-[#e8cc81]">Seleção de Usuário</CardTitle>
-                </CardHeader>
-                <CardContent className="py-0 my-0 bg-[#393532]">
-                  {isLoadingUsers ? (
-                    <div className="flex justify-center py-4">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gold"></div>
-                    </div>
-                  ) : (
-                    <>
-                      <p className="text-[#e9aa91]">
-                        Selecione um usuário para gerenciar seus documentos
-                      </p>
-                      <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
-                        {users.map(user => (
-                          <Button 
-                            key={user.id} 
-                            variant={selectedUserId === user.id ? "default" : "outline"} 
-                            className="w-full justify-start text-left" 
-                            onClick={() => setSelectedUserId(user.id)}
-                          >
-                            <User className="mr-2 h-4 w-4" />
-                            <div className="truncate">
-                              <span>{user.name || "Usuário"}</span>
-                              <span className="text-xs text-gray-400 block truncate">
-                                {user.email}
-                              </span>
-                            </div>
-                          </Button>
-                        ))}
-                        {users.length === 0 && (
-                          <p className="text-[#e9aa91]">
-                            Nenhum usuário encontrado
-                          </p>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
+              <UserSelector 
+                users={users}
+                selectedUserId={selectedUserId}
+                setSelectedUserId={setSelectedUserId}
+                isLoadingUsers={isLoadingUsers}
+              />
               
-              {/* Upload de Documentos */}
-              <Card className="md:col-span-2 bg-[b#393532]] bg-[#393532]">
-                <CardHeader className="bg-[#393532] rounded-3xl">
-                  <CardTitle className="text-[#e8cc81]">Gerenciamento de Documentos</CardTitle>
-                </CardHeader>
-                <CardContent className="bg-[#393532] rounded-3xl">
-                  {selectedUserId ? (
-                    <div className="space-y-6">
-                      {/* Formulário de Upload */}
-                      <div className="p-4 bg-gray-800 rounded-md">
-                        <h3 className="font-medium mb-4 flex items-center">
-                          <PlusCircle className="mr-2 h-5 w-5 text-gold" />
-                          Enviar Novo Documento
-                        </h3>
-                        <form onSubmit={handleUpload} className="space-y-4">
-                          <div>
-                            <label htmlFor="documentName" className="block text-sm font-medium mb-1">
-                              Nome do Documento
-                            </label>
-                            <Input 
-                              id="documentName" 
-                              value={documentName} 
-                              onChange={e => setDocumentName(e.target.value)} 
-                              className="bg-gray-700" 
-                              placeholder="Ex: Contrato de Serviço" 
-                              required 
-                            />
-                          </div>
-                          <div>
-                            <label htmlFor="documentCategory" className="block text-sm font-medium mb-1">
-                              Categoria
-                            </label>
-                            <Select
-                              value={documentCategory}
-                              onValueChange={setDocumentCategory}
-                            >
-                              <SelectTrigger className="bg-gray-700">
-                                <SelectValue placeholder="Selecione uma categoria" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {DOCUMENT_CATEGORIES.map((category) => (
-                                  <SelectItem key={category} value={category}>
-                                    {category}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <label htmlFor="fileInput" className="block text-sm font-medium mb-1">
-                              Arquivo (PDF)
-                            </label>
-                            <Input 
-                              id="fileInput" 
-                              type="file" 
-                              accept=".pdf" 
-                              onChange={handleFileChange} 
-                              className="bg-gray-700" 
-                              required 
-                            />
-                          </div>
-                          <Button 
-                            type="submit" 
-                            className="w-full bg-gold hover:bg-gold-light text-navy" 
-                            disabled={isUploading}
-                          >
-                            {isUploading ? (
-                              <span className="flex items-center">
-                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-navy" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                Enviando...
-                              </span>
-                            ) : (
-                              "Enviar Documento"
-                            )}
-                          </Button>
-                        </form>
-                      </div>
-                      
-                      {/* Lista de Documentos */}
-                      <div>
-                        <h3 className="font-medium mb-4 flex items-center">
-                          <File className="mr-2 h-5 w-5 text-gold" />
-                          Documentos do Usuário
-                        </h3>
-                        
-                        {isLoadingDocuments ? (
-                          <div className="flex justify-center py-8">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gold"></div>
-                          </div>
-                        ) : (
-                          <div className="overflow-x-auto">
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>Nome</TableHead>
-                                  <TableHead>Categoria</TableHead>
-                                  <TableHead>Data de Envio</TableHead>
-                                  <TableHead>Expira em</TableHead>
-                                  <TableHead>Ações</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {documents.length > 0 ? (
-                                  documents.map(doc => (
-                                    <TableRow key={doc.id} className={isDocumentExpired(doc.expires_at) ? "bg-red-900/20" : ""}>
-                                      <TableCell className="font-medium">{doc.name}</TableCell>
-                                      <TableCell>
-                                        <span className="px-2 py-1 rounded-full text-xs bg-gray-700">
-                                          {doc.category}
-                                        </span>
-                                      </TableCell>
-                                      <TableCell>{formatDate(doc.uploaded_at)}</TableCell>
-                                      <TableCell>
-                                        <span className={`flex items-center gap-1 ${
-                                          isDocumentExpired(doc.expires_at) 
-                                            ? "text-red-400" 
-                                            : "text-green-400"
-                                        }`}>
-                                          <Clock size={14} />
-                                          {daysUntilExpiration(doc.expires_at)}
-                                        </span>
-                                      </TableCell>
-                                      <TableCell>
-                                        <div className="flex items-center gap-2">
-                                          <Button variant="outline" size="sm" asChild>
-                                            <a 
-                                              href={doc.file_url} 
-                                              target="_blank" 
-                                              rel="noopener noreferrer" 
-                                              className="flex items-center gap-1"
-                                            >
-                                              <Download size={14} />
-                                              <span>Baixar</span>
-                                            </a>
-                                          </Button>
-                                          <Button 
-                                            variant="destructive" 
-                                            size="sm" 
-                                            className="flex items-center gap-1" 
-                                            onClick={() => handleDeleteDocument(doc.id)}
-                                          >
-                                            <Trash2 size={14} />
-                                            <span>Excluir</span>
-                                          </Button>
-                                        </div>
-                                      </TableCell>
-                                    </TableRow>
-                                  ))
-                                ) : (
-                                  <TableRow>
-                                    <TableCell colSpan={5} className="text-center py-4 text-gray-400">
-                                      Nenhum documento encontrado para este usuário
-                                    </TableCell>
-                                  </TableRow>
-                                )}
-                              </TableBody>
-                            </Table>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-[#46413d]-400 bg-[#393532]">
-                      <File className="h-16 w-16 mx-auto mb-4 opacity-20 bg-[inh] bg-inherit" />
-                      <p className="text-[#e9aa91]">Selecione um usuário para gerenciar seus documentos</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              {/* Gerenciamento de Documentos */}
+              <DocumentManager 
+                selectedUserId={selectedUserId}
+                documentName={documentName}
+                setDocumentName={setDocumentName}
+                documentCategory={documentCategory}
+                setDocumentCategory={setDocumentCategory}
+                handleFileChange={handleFileChange}
+                handleUpload={handleUpload}
+                isUploading={isUploading}
+                documents={documents}
+                isLoadingDocuments={isLoadingDocuments}
+                handleDeleteDocument={handleDeleteDocument}
+                documentCategories={DOCUMENT_CATEGORIES}
+              />
             </div>
           </TabsContent>
           
           <TabsContent value="new-user">
-            <Card className="bg-[#393532]">
-              <CardHeader>
-                <CardTitle className="text-[#e8cc81]">Criar Novo Usuário</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Form {...userForm}>
-                  <form onSubmit={userForm.handleSubmit(createUser)} className="space-y-4">
-                    <FormField
-                      control={userForm.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nome Completo</FormLabel>
-                          <FormControl>
-                            <Input placeholder="João da Silva" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={userForm.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <Input placeholder="joao@exemplo.com" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={userForm.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Senha</FormLabel>
-                          <FormControl>
-                            <Input type="password" placeholder="******" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <Button 
-                      type="submit" 
-                      className="w-full" 
-                      disabled={isCreatingUser}
-                    >
-                      {isCreatingUser ? (
-                        <span className="flex items-center justify-center">
-                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Criando...
-                        </span>
-                      ) : (
-                        "Criar Usuário"
-                      )}
-                    </Button>
-                  </form>
-                </Form>
-              </CardContent>
-            </Card>
+            <CreateUser 
+              createUser={createUser}
+              isCreatingUser={isCreatingUser}
+            />
           </TabsContent>
         </Tabs>
       </main>
@@ -860,61 +442,13 @@ const AdminDashboard = () => {
       <Footer />
       
       {/* Modal para alteração de senha */}
-      <Dialog 
-        open={!!selectedUserForPasswordChange} 
-        onOpenChange={(open) => {
-          if (!open) setSelectedUserForPasswordChange(null);
-        }}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Alterar Senha</DialogTitle>
-            <DialogDescription>
-              Alterar senha de {selectedUserForPasswordChange?.name || selectedUserForPasswordChange?.email}
-            </DialogDescription>
-          </DialogHeader>
-          
-          <Form {...passwordForm}>
-            <form onSubmit={passwordForm.handleSubmit(changeUserPassword)} className="space-y-4">
-              <FormField
-                control={passwordForm.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nova Senha</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="******" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button type="button" variant="outline">Cancelar</Button>
-                </DialogClose>
-                <Button 
-                  type="submit" 
-                  disabled={isChangingPassword}
-                >
-                  {isChangingPassword ? (
-                    <span className="flex items-center justify-center">
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Alterando...
-                    </span>
-                  ) : (
-                    "Salvar"
-                  )}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+      <PasswordChangeModal 
+        selectedUserForPasswordChange={selectedUserForPasswordChange}
+        setSelectedUserForPasswordChange={setSelectedUserForPasswordChange}
+        changeUserPassword={changeUserPassword}
+        isChangingPassword={isChangingPassword}
+        passwordForm={passwordForm}
+      />
     </div>
   );
 };
