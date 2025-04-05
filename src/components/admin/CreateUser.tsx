@@ -5,6 +5,7 @@ import * as z from "zod";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Form,
   FormControl,
@@ -19,6 +20,7 @@ const userSchema = z.object({
   name: z.string().min(3, { message: "Nome deve ter pelo menos 3 caracteres" }),
   email: z.string().email({ message: "Email inválido" }),
   password: z.string().min(6, { message: "Senha deve ter pelo menos 6 caracteres" }),
+  isAdmin: z.boolean().default(false)
 });
 
 interface CreateUserProps {
@@ -33,7 +35,8 @@ export const CreateUser = ({ createUser, isCreatingUser }: CreateUserProps) => {
     defaultValues: {
       name: "",
       email: "",
-      password: ""
+      password: "",
+      isAdmin: false
     },
   });
 
@@ -83,6 +86,29 @@ export const CreateUser = ({ createUser, isCreatingUser }: CreateUserProps) => {
                     <Input type="password" placeholder="******" {...field} />
                   </FormControl>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="isAdmin"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>
+                      Administrador
+                    </FormLabel>
+                    <p className="text-sm text-gray-400">
+                      Marque esta opção para conceder ao usuário privilégios de administrador.
+                    </p>
+                  </div>
                 </FormItem>
               )}
             />

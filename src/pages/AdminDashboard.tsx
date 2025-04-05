@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -36,6 +35,7 @@ const userCreateSchema = z.object({
   name: z.string().min(3),
   email: z.string().email(),
   password: z.string().min(6),
+  isAdmin: z.boolean().default(false)
 });
 
 // Interface para usuários do auth.users
@@ -100,7 +100,7 @@ const AdminDashboard = () => {
     fetchUsers();
   }, [toast]);
 
-  // Carregar usuários do auth.users usando a edge function
+  // Carregar usuários do auth.users usando a edge function listUsers
   useEffect(() => {
     const fetchAuthUsers = async () => {
       try {
@@ -112,15 +112,12 @@ const AdminDashboard = () => {
           throw new Error("Você precisa estar logado para acessar os usuários");
         }
         
-        const response = await fetch(`https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/admin-operations`, {
-          method: 'POST',
+        const response = await fetch(`https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/listUsers`, {
+          method: 'GET',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${accessToken}`
-          },
-          body: JSON.stringify({
-            operation: "getUsers"
-          })
+          }
         });
 
         const result = await response.json();
@@ -201,7 +198,7 @@ const AdminDashboard = () => {
           id: authData.user.id,
           email: data.email,
           name: data.name,
-          role: 'client',
+          role: data.isAdmin ? 'admin' : 'client',
         });
 
         if (profileError) throw profileError;
@@ -222,15 +219,12 @@ const AdminDashboard = () => {
         const accessToken = session.data.session?.access_token;
         
         if (accessToken) {
-          const response = await fetch(`https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/admin-operations`, {
-            method: 'POST',
+          const response = await fetch(`https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/listUsers`, {
+            method: 'GET',
             headers: {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${accessToken}`
-            },
-            body: JSON.stringify({
-              operation: "getUsers"
-            })
+            }
           });
 
           const result = await response.json();
@@ -241,7 +235,7 @@ const AdminDashboard = () => {
 
         toast({
           title: "Usuário criado com sucesso",
-          description: `${data.name} (${data.email}) foi cadastrado no sistema.`
+          description: `${data.name} (${data.email}) foi cadastrado no sistema como ${data.isAdmin ? 'administrador' : 'cliente'}.`
         });
       }
     } catch (error: any) {
@@ -262,11 +256,18 @@ const AdminDashboard = () => {
     
     setIsChangingPassword(true);
     try {
-      const response = await fetch(`https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/update-user-password`, {
+      const session = await supabase.auth.getSession();
+      const accessToken = session.data.session?.access_token;
+      
+      if (!accessToken) {
+        throw new Error("Você precisa estar logado para realizar esta ação");
+      }
+      
+      const response = await fetch(`https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/changeUserPassword`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+          'Authorization': `Bearer ${accessToken}`
         },
         body: JSON.stringify({
           userId: selectedUserForPasswordChange.id,

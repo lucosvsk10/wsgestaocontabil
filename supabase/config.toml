@@ -87,3 +87,9 @@ enabled = true
 
 [functions.admin-operations]
 verify_jwt = true
+
+[functions.listUsers]
+verify_jwt = true
+
+[functions.changeUserPassword]
+verify_jwt = true
