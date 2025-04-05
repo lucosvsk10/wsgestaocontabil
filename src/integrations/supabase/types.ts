@@ -11,6 +11,8 @@ export type Database = {
     Tables: {
       documents: {
         Row: {
+          category: string
+          expires_at: string | null
           file_url: string
           id: string
           name: string
@@ -21,6 +23,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          category?: string
+          expires_at?: string | null
           file_url: string
           id?: string
           name: string
@@ -31,6 +35,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          category?: string
+          expires_at?: string | null
           file_url?: string
           id?: string
           name?: string
@@ -94,7 +100,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      delete_expired_documents: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
