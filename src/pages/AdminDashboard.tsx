@@ -30,6 +30,13 @@ const passwordSchema = z.object({
   password: z.string().min(6, { message: "A nova senha deve ter pelo menos 6 caracteres" }),
 });
 
+// Schema para criação de usuário
+const userCreateSchema = z.object({
+  name: z.string().min(3),
+  email: z.string().email(),
+  password: z.string().min(6),
+});
+
 const AdminDashboard = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -114,11 +121,7 @@ const AdminDashboard = () => {
   };
 
   // Função para criar um novo usuário
-  const createUser = async (data: z.infer<typeof z.object({
-    name: z.string().min(3),
-    email: z.string().email(),
-    password: z.string().min(6),
-  })>) => {
+  const createUser = async (data: z.infer<typeof userCreateSchema>) => {
     setIsCreatingUser(true);
     try {
       // 1. Registrar o usuário no Auth
