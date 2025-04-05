@@ -12,8 +12,9 @@ import { UserSelector } from "@/components/admin/UserSelector";
 import { DocumentManager } from "@/components/admin/DocumentManager";
 import { CreateUser } from "@/components/admin/CreateUser";
 import { PasswordChangeModal } from "@/components/admin/PasswordChangeModal";
+import { PasswordChangeForm } from "@/components/admin/PasswordChangeForm";
 import { UserType, Document } from "@/types/admin";
-import { Users, FileText, UserPlus } from "lucide-react";
+import { Users, FileText, UserPlus, Key } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
@@ -37,10 +38,21 @@ const userCreateSchema = z.object({
   password: z.string().min(6),
 });
 
+// Interface para usuários do auth.users
+interface AuthUser {
+  id: string;
+  email: string;
+  created_at: string;
+  user_metadata?: {
+    name?: string;
+  };
+}
+
 const AdminDashboard = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [users, setUsers] = useState<UserType[]>([]);
+  const [supabaseUsers, setSupabaseUsers] = useState<AuthUser[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -48,6 +60,7 @@ const AdminDashboard = () => {
   const [documentCategory, setDocumentCategory] = useState(DOCUMENT_CATEGORIES[0]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  const [isLoadingAuthUsers, setIsLoadingAuthUsers] = useState(true);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -85,6 +98,51 @@ const AdminDashboard = () => {
       }
     };
     fetchUsers();
+  }, [toast]);
+
+  // Carregar usuários do auth.users usando a edge function
+  useEffect(() => {
+    const fetchAuthUsers = async () => {
+      try {
+        setIsLoadingAuthUsers(true);
+        const session = await supabase.auth.getSession();
+        const accessToken = session.data.session?.access_token;
+        
+        if (!accessToken) {
+          throw new Error("Você precisa estar logado para acessar os usuários");
+        }
+        
+        const response = await fetch(`https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/admin-operations`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
+          },
+          body: JSON.stringify({
+            operation: "getUsers"
+          })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || "Erro ao carregar usuários");
+        }
+
+        setSupabaseUsers(result.users || []);
+      } catch (error: any) {
+        console.error('Erro ao carregar usuários do auth.users:', error);
+        toast({
+          variant: "destructive",
+          title: "Erro ao carregar usuários",
+          description: error.message
+        });
+      } finally {
+        setIsLoadingAuthUsers(false);
+      }
+    };
+
+    fetchAuthUsers();
   }, [toast]);
 
   // Carregar documentos do usuário selecionado
@@ -158,6 +216,28 @@ const AdminDashboard = () => {
 
         if (fetchError) throw fetchError;
         setUsers(updatedUsers || []);
+
+        // 4. Atualizar a lista de usuários do auth.users
+        const session = await supabase.auth.getSession();
+        const accessToken = session.data.session?.access_token;
+        
+        if (accessToken) {
+          const response = await fetch(`https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/admin-operations`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`
+            },
+            body: JSON.stringify({
+              operation: "getUsers"
+            })
+          });
+
+          const result = await response.json();
+          if (response.ok) {
+            setSupabaseUsers(result.users || []);
+          }
+        }
 
         toast({
           title: "Usuário criado com sucesso",
@@ -372,6 +452,8 @@ const AdminDashboard = () => {
     }
   };
 
+  const isLoading = isLoadingUsers || isLoadingAuthUsers;
+
   return (
     <div className="min-h-screen flex flex-col bg-[#46413d]">
       <Navbar />
@@ -393,12 +475,17 @@ const AdminDashboard = () => {
               <UserPlus size={16} />
               <span>Criar Usuário</span>
             </TabsTrigger>
+            <TabsTrigger value="password-change" className="flex items-center gap-2">
+              <Key size={16} />
+              <span>Alterar Senha</span>
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="users">
             <UserList 
+              supabaseUsers={supabaseUsers}
               users={users}
-              isLoading={isLoadingUsers}
+              isLoading={isLoading}
               setSelectedUserId={setSelectedUserId}
               setSelectedUserForPasswordChange={setSelectedUserForPasswordChange}
               passwordForm={passwordForm}
@@ -438,6 +525,10 @@ const AdminDashboard = () => {
               createUser={createUser}
               isCreatingUser={isCreatingUser}
             />
+          </TabsContent>
+
+          <TabsContent value="password-change">
+            <PasswordChangeForm />
           </TabsContent>
         </Tabs>
       </main>

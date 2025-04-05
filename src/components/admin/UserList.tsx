@@ -8,7 +8,17 @@ import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 import { UserType } from "@/types/admin";
 
+interface AuthUser {
+  id: string;
+  email: string;
+  created_at: string;
+  user_metadata?: {
+    name?: string;
+  };
+}
+
 interface UserListProps {
+  supabaseUsers: AuthUser[];
   users: UserType[];
   isLoading: boolean;
   setSelectedUserId: (id: string) => void;
@@ -17,6 +27,7 @@ interface UserListProps {
 }
 
 export const UserList = ({ 
+  supabaseUsers,
   users, 
   isLoading, 
   setSelectedUserId, 
@@ -28,6 +39,17 @@ export const UserList = ({
     if (!dateStr) return 'Data desconhecida';
     const date = new Date(dateStr);
     return format(date, "dd/MM/yyyy 'às' HH:mm", { locale: pt });
+  };
+
+  // Função para encontrar o role de um usuário
+  const getUserRole = (authUserId: string) => {
+    const userInfo = users.find(u => u.id === authUserId);
+    return userInfo?.role || "cliente";
+  };
+
+  // Função para encontrar informações do usuário na tabela users
+  const getUserInfo = (authUserId: string) => {
+    return users.find(u => u.id === authUserId) || null;
   };
 
   return (
@@ -53,44 +75,49 @@ export const UserList = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.length > 0 ? (
-                  users.map(user => (
-                    <TableRow key={user.id}>
-                      <TableCell>{user.name || "Sem nome"}</TableCell>
-                      <TableCell>{user.email || "Sem email"}</TableCell>
-                      <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs ${user.role === 'admin' ? 'bg-purple-900 text-purple-100' : 'bg-blue-900 text-blue-100'}`}>
-                          {user.role || "cliente"}
-                        </span>
-                      </TableCell>
-                      <TableCell>{user.created_at ? formatDate(user.created_at) : "Data desconhecida"}</TableCell>
-                      <TableCell>
-                        <div className="flex space-x-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="flex items-center gap-1" 
-                            onClick={() => setSelectedUserId(user.id)}
-                          >
-                            <FileText size={14} />
-                            <span>Documentos</span>
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex items-center gap-1"
-                            onClick={() => {
-                              setSelectedUserForPasswordChange(user);
-                              passwordForm.reset();
-                            }}
-                          >
-                            <Lock size={14} />
-                            <span>Senha</span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                {supabaseUsers.length > 0 ? (
+                  supabaseUsers.map(authUser => {
+                    const userInfo = getUserInfo(authUser.id);
+                    return (
+                      <TableRow key={authUser.id}>
+                        <TableCell>{userInfo?.name || authUser.user_metadata?.name || "Sem nome"}</TableCell>
+                        <TableCell>{authUser.email || "Sem email"}</TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded-full text-xs ${getUserRole(authUser.id) === 'admin' ? 'bg-purple-900 text-purple-100' : 'bg-blue-900 text-blue-100'}`}>
+                            {getUserRole(authUser.id) || "cliente"}
+                          </span>
+                        </TableCell>
+                        <TableCell>{authUser.created_at ? formatDate(authUser.created_at) : "Data desconhecida"}</TableCell>
+                        <TableCell>
+                          <div className="flex space-x-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="flex items-center gap-1" 
+                              onClick={() => setSelectedUserId(authUser.id)}
+                            >
+                              <FileText size={14} />
+                              <span>Documentos</span>
+                            </Button>
+                            {userInfo && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="flex items-center gap-1"
+                                onClick={() => {
+                                  setSelectedUserForPasswordChange(userInfo);
+                                  passwordForm.reset();
+                                }}
+                              >
+                                <Lock size={14} />
+                                <span>Senha</span>
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 ) : (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center py-4 text-[#7d796d] bg-[in] bg-inherit">
