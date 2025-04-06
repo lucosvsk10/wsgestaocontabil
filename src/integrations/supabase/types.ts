@@ -14,37 +14,46 @@ export type Database = {
           category: string
           expires_at: string | null
           file_url: string
+          filename: string | null
           id: string
           name: string
           original_filename: string | null
           size: number | null
+          storage_key: string | null
           type: string | null
           uploaded_at: string | null
           user_id: string
+          viewed: boolean | null
         }
         Insert: {
           category?: string
           expires_at?: string | null
           file_url: string
+          filename?: string | null
           id?: string
           name: string
           original_filename?: string | null
           size?: number | null
+          storage_key?: string | null
           type?: string | null
           uploaded_at?: string | null
           user_id: string
+          viewed?: boolean | null
         }
         Update: {
           category?: string
           expires_at?: string | null
           file_url?: string
+          filename?: string | null
           id?: string
           name?: string
           original_filename?: string | null
           size?: number | null
+          storage_key?: string | null
           type?: string | null
           uploaded_at?: string | null
           user_id?: string
+          viewed?: boolean | null
         }
         Relationships: [
           {
