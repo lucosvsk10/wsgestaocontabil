@@ -32,34 +32,36 @@ const ClientDashboard = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchDocuments = async () => {
-      if (!user) return;
-      try {
-        const { data, error } = await supabase
-          .from('documents')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('uploaded_at', { ascending: false });
-        
-        if (error) throw error;
-        
-        // Guardar todos os documentos
-        setAllDocuments(data || []);
-        // Inicialmente, exibir todos os documentos
-        setDocuments(data || []);
-      } catch (error: any) {
-        console.error('Erro ao carregar documentos:', error);
-        toast({
-          variant: "destructive",
-          title: "Erro ao carregar documentos",
-          description: error.message
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const fetchDocuments = async () => {
+    if (!user) return;
+    setIsLoading(true);
     
+    try {
+      const { data, error } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('uploaded_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      // Guardar todos os documentos
+      setAllDocuments(data || []);
+      // Inicialmente, exibir todos os documentos
+      setDocuments(data || []);
+      setIsLoading(false);
+    } catch (error: any) {
+      console.error('Erro ao carregar documentos:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao carregar documentos",
+        description: error.message
+      });
+      setIsLoading(false);
+    }
+  };
+  
+  useEffect(() => {
     fetchDocuments();
   }, [user, toast]);
 
@@ -104,6 +106,7 @@ const ClientDashboard = () => {
                     formatDate={formatDate}
                     isDocumentExpired={isDocumentExpired}
                     daysUntilExpiration={daysUntilExpiration}
+                    refreshDocuments={fetchDocuments}
                   />
                 ) : (
                   <EmptyDocuments />

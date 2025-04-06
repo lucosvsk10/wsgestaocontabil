@@ -18,4 +18,7 @@ export interface Document {
   size?: number;
   type?: string;
   original_filename?: string;
+  filename?: string;
+  storage_key?: string;
+  viewed?: boolean;
 }

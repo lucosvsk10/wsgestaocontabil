@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,6 +17,7 @@ import { UserType, Document } from "@/types/admin";
 import { Users, FileText, UserPlus, Key } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { v4 as uuidv4 } from "uuid";
 
 // Categorias de documentos disponíveis
 const DOCUMENT_CATEGORIES = [
@@ -65,6 +67,8 @@ const AdminDashboard = () => {
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [selectedUserForPasswordChange, setSelectedUserForPasswordChange] = useState<UserType | null>(null);
+  const [expirationDate, setExpirationDate] = useState<Date | null>(null);
+  const [noExpiration, setNoExpiration] = useState(false);
 
   // Form para alteração de senha
   const passwordForm = useForm<z.infer<typeof passwordSchema>>({
@@ -102,45 +106,49 @@ const AdminDashboard = () => {
 
   // Carregar usuários do auth.users usando a edge function listUsers
   useEffect(() => {
-    const fetchAuthUsers = async () => {
-      try {
-        setIsLoadingAuthUsers(true);
-        const session = await supabase.auth.getSession();
-        const accessToken = session.data.session?.access_token;
-        
-        if (!accessToken) {
-          throw new Error("Você precisa estar logado para acessar os usuários");
-        }
-        
-        const response = await fetch(`https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/listUsers`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`
-          }
-        });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(result.error || "Erro ao carregar usuários");
-        }
-
-        setSupabaseUsers(result.users || []);
-      } catch (error: any) {
-        console.error('Erro ao carregar usuários do auth.users:', error);
-        toast({
-          variant: "destructive",
-          title: "Erro ao carregar usuários",
-          description: error.message
-        });
-      } finally {
-        setIsLoadingAuthUsers(false);
-      }
-    };
-
     fetchAuthUsers();
   }, [toast]);
+
+  // Função para buscar usuários autenticados
+  const fetchAuthUsers = async () => {
+    try {
+      setIsLoadingAuthUsers(true);
+      const session = await supabase.auth.getSession();
+      const accessToken = session.data.session?.access_token;
+      
+      if (!accessToken) {
+        throw new Error("Você precisa estar logado para acessar os usuários");
+      }
+      
+      const response = await fetch(`https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/admin-operations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({
+          action: "getUsers"
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Erro ao carregar usuários");
+      }
+
+      setSupabaseUsers(result.users || []);
+    } catch (error: any) {
+      console.error('Erro ao carregar usuários do auth.users:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao carregar usuários",
+        description: error.message
+      });
+    } finally {
+      setIsLoadingAuthUsers(false);
+    }
+  };
 
   // Carregar documentos do usuário selecionado
   useEffect(() => {
@@ -214,24 +222,8 @@ const AdminDashboard = () => {
         if (fetchError) throw fetchError;
         setUsers(updatedUsers || []);
 
-        // 4. Atualizar a lista de usuários do auth.users
-        const session = await supabase.auth.getSession();
-        const accessToken = session.data.session?.access_token;
-        
-        if (accessToken) {
-          const response = await fetch(`https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/listUsers`, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${accessToken}`
-            }
-          });
-
-          const result = await response.json();
-          if (response.ok) {
-            setSupabaseUsers(result.users || []);
-          }
-        }
+        // 4. Atualizar a lista de usuários do auth
+        fetchAuthUsers();
 
         toast({
           title: "Usuário criado com sucesso",
@@ -305,7 +297,7 @@ const AdminDashboard = () => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
       if (!documentName) {
-        setDocumentName(e.target.files[0].name);
+        setDocumentName(e.target.files[0].name.split('.')[0]);
       }
     }
   };
@@ -348,18 +340,28 @@ const AdminDashboard = () => {
     
     setIsUploading(true);
     try {
+      // Generate a unique storage key
+      const storageKey = `${selectedUserId}/${uuidv4()}`;
+      const originalFilename = selectedFile.name;
+      
       // 1. Upload do arquivo para o Storage
-      const filePath = `${selectedUserId}/${Date.now()}_${selectedFile.name}`;
       const {
         data: fileData,
         error: uploadError
-      } = await supabase.storage.from('documents').upload(filePath, selectedFile);
+      } = await supabase.storage.from('documents').upload(storageKey, selectedFile);
+      
       if (uploadError) throw uploadError;
 
       // 2. Obter URL pública do arquivo
       const {
         data: urlData
-      } = supabase.storage.from('documents').getPublicUrl(filePath);
+      } = supabase.storage.from('documents').getPublicUrl(storageKey);
+
+      // Determine expiration date based on user selection
+      let expires_at = null;
+      if (!noExpiration && expirationDate) {
+        expires_at = expirationDate.toISOString();
+      }
 
       // 3. Salvar informações do documento no banco de dados
       const {
@@ -370,10 +372,14 @@ const AdminDashboard = () => {
         name: documentName,
         category: documentCategory,
         file_url: urlData.publicUrl,
-        original_filename: selectedFile.name,
+        original_filename: originalFilename,
+        storage_key: storageKey,
+        filename: originalFilename,
         size: selectedFile.size,
-        type: selectedFile.type
+        type: selectedFile.type,
+        expires_at: expires_at
       }).select();
+      
       if (dbError) throw dbError;
 
       // 4. Atualizar lista de documentos
@@ -382,8 +388,11 @@ const AdminDashboard = () => {
       // 5. Limpar formulário
       setSelectedFile(null);
       setDocumentName("");
+      setExpirationDate(null);
+      setNoExpiration(false);
       const fileInput = document.getElementById('fileInput') as HTMLInputElement;
       if (fileInput) fileInput.value = "";
+      
       toast({
         title: "Documento enviado com sucesso",
         description: "O documento foi enviado e está disponível para o usuário."
@@ -419,11 +428,18 @@ const AdminDashboard = () => {
       } = await supabase.from('documents').delete().eq('id', documentId);
       if (deleteDbError) throw deleteDbError;
 
-      // 3. Excluir arquivo do Storage (se possível obter o caminho)
-      if (docData && docData.file_url) {
-        const url = new URL(docData.file_url);
-        const pathArray = url.pathname.split('/');
-        const storagePath = pathArray.slice(pathArray.indexOf('documents') + 1).join('/');
+      // 3. Excluir arquivo do Storage (usando o storage_key se disponível)
+      if (docData) {
+        let storagePath;
+        
+        if (docData.storage_key) {
+          storagePath = docData.storage_key;
+        } else if (docData.file_url) {
+          const url = new URL(docData.file_url);
+          const pathArray = url.pathname.split('/');
+          storagePath = pathArray.slice(pathArray.indexOf('documents') + 1).join('/');
+        }
+        
         if (storagePath) {
           const {
             error: deleteStorageError
@@ -490,6 +506,7 @@ const AdminDashboard = () => {
               setSelectedUserId={setSelectedUserId}
               setSelectedUserForPasswordChange={setSelectedUserForPasswordChange}
               passwordForm={passwordForm}
+              refreshUsers={fetchAuthUsers}
             />
           </TabsContent>
           
@@ -517,6 +534,10 @@ const AdminDashboard = () => {
                 isLoadingDocuments={isLoadingDocuments}
                 handleDeleteDocument={handleDeleteDocument}
                 documentCategories={DOCUMENT_CATEGORIES}
+                expirationDate={expirationDate}
+                setExpirationDate={setExpirationDate}
+                noExpiration={noExpiration}
+                setNoExpiration={setNoExpiration}
               />
             </div>
           </TabsContent>

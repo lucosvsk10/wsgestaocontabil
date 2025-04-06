@@ -18,6 +18,10 @@ interface DocumentManagerProps {
   isLoadingDocuments: boolean;
   handleDeleteDocument: (id: string) => void;
   documentCategories: string[];
+  expirationDate: Date | null;
+  setExpirationDate: (date: Date | null) => void;
+  noExpiration: boolean;
+  setNoExpiration: (value: boolean) => void;
 }
 
 export const DocumentManager = ({
@@ -32,7 +36,11 @@ export const DocumentManager = ({
   documents,
   isLoadingDocuments,
   handleDeleteDocument,
-  documentCategories
+  documentCategories,
+  expirationDate,
+  setExpirationDate,
+  noExpiration,
+  setNoExpiration
 }: DocumentManagerProps) => {
   return (
     <Card className="md:col-span-2 bg-[b#393532]] bg-[#393532]">
@@ -52,6 +60,10 @@ export const DocumentManager = ({
               handleUpload={handleUpload}
               isUploading={isUploading}
               documentCategories={documentCategories}
+              expirationDate={expirationDate}
+              setExpirationDate={setExpirationDate}
+              noExpiration={noExpiration}
+              setNoExpiration={setNoExpiration}
             />
             
             {/* Lista de Documentos */}

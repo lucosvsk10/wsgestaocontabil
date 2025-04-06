@@ -33,7 +33,7 @@ export const DocumentList = ({
 
   // Calcular dias restantes até a expiração
   const daysUntilExpiration = (expiresAt: string | null) => {
-    if (!expiresAt) return null;
+    if (!expiresAt) return "Não expira";
     const expirationDate = new Date(expiresAt);
     const today = new Date();
     const diffTime = expirationDate.getTime() - today.getTime();
@@ -58,7 +58,8 @@ export const DocumentList = ({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nome</TableHead>
+                <TableHead>Nome Exibido</TableHead>
+                <TableHead>Arquivo Original</TableHead>
                 <TableHead>Categoria</TableHead>
                 <TableHead>Data de Envio</TableHead>
                 <TableHead>Expira em</TableHead>
@@ -70,6 +71,7 @@ export const DocumentList = ({
                 documents.map(doc => (
                   <TableRow key={doc.id} className={isDocumentExpired(doc.expires_at) ? "bg-red-900/20" : ""}>
                     <TableCell className="font-medium">{doc.name}</TableCell>
+                    <TableCell>{doc.filename || doc.original_filename || "N/A"}</TableCell>
                     <TableCell>
                       <span className="px-2 py-1 rounded-full text-xs bg-gray-700">
                         {doc.category}
@@ -94,6 +96,7 @@ export const DocumentList = ({
                             target="_blank" 
                             rel="noopener noreferrer" 
                             className="flex items-center gap-1"
+                            download={doc.filename || doc.original_filename}
                           >
                             <Download size={14} />
                             <span>Baixar</span>
@@ -114,7 +117,7 @@ export const DocumentList = ({
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-4 text-gray-400">
+                  <TableCell colSpan={6} className="text-center py-4 text-gray-400">
                     Nenhum documento encontrado para este usuário
                   </TableCell>
                 </TableRow>

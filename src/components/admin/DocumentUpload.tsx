@@ -1,8 +1,13 @@
+
 import { useState } from "react";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { format } from "date-fns";
+import { pt } from "date-fns/locale";
+
 interface DocumentUploadProps {
   documentName: string;
   setDocumentName: (name: string) => void;
@@ -12,7 +17,12 @@ interface DocumentUploadProps {
   handleUpload: (e: React.FormEvent) => void;
   isUploading: boolean;
   documentCategories: string[];
+  expirationDate: Date | null;
+  setExpirationDate: (date: Date | null) => void;
+  noExpiration: boolean;
+  setNoExpiration: (value: boolean) => void;
 }
+
 export const DocumentUpload = ({
   documentName,
   setDocumentName,
@@ -21,7 +31,11 @@ export const DocumentUpload = ({
   handleFileChange,
   handleUpload,
   isUploading,
-  documentCategories
+  documentCategories,
+  expirationDate,
+  setExpirationDate,
+  noExpiration,
+  setNoExpiration
 }: DocumentUploadProps) => {
   return <div className="p-4 rounded-md bg-[#46413d]">
       <h3 className="font-medium mb-4 flex items-center">
@@ -52,10 +66,44 @@ export const DocumentUpload = ({
         </div>
         <div>
           <label htmlFor="fileInput" className="block text-sm font-medium mb-1">
-            Arquivo (PDF)
+            Arquivo
           </label>
-          <Input id="fileInput" type="file" accept=".pdf" onChange={handleFileChange} className="bg-gray-700" required />
+          <Input 
+            id="fileInput" 
+            type="file" 
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.rar" 
+            onChange={handleFileChange} 
+            className="bg-gray-700" 
+            required 
+          />
+          <p className="text-xs mt-1 text-gray-400">
+            Formatos aceitos: PDF, Word, Excel, PowerPoint, imagens e RAR
+          </p>
         </div>
+        <div className="flex items-center space-x-2">
+          <Checkbox 
+            id="noExpiration" 
+            checked={noExpiration} 
+            onCheckedChange={(checked) => setNoExpiration(checked === true)}
+          />
+          <label htmlFor="noExpiration" className="text-sm font-medium">
+            Documento não expira
+          </label>
+        </div>
+        {!noExpiration && (
+          <div>
+            <label htmlFor="expirationDate" className="block text-sm font-medium mb-1">
+              Data de Expiração
+            </label>
+            <Input 
+              id="expirationDate" 
+              type="date" 
+              className="bg-gray-700"
+              value={expirationDate ? format(expirationDate, 'yyyy-MM-dd') : ''}
+              onChange={e => setExpirationDate(e.target.value ? new Date(e.target.value) : null)}
+            />
+          </div>
+        )}
         <Button type="submit" className="w-full bg-gold hover:bg-gold-light text-navy" disabled={isUploading}>
           {isUploading ? <span className="flex items-center">
               <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-navy" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

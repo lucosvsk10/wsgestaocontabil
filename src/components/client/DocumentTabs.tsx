@@ -13,6 +13,7 @@ interface DocumentTabsProps {
   formatDate: (dateStr: string) => string;
   isDocumentExpired: (expiresAt: string | null) => boolean;
   daysUntilExpiration: (expiresAt: string | null) => string | null;
+  refreshDocuments: () => void;
 }
 
 export const DocumentTabs = ({
@@ -23,13 +24,28 @@ export const DocumentTabs = ({
   setSelectedCategory,
   formatDate,
   isDocumentExpired,
-  daysUntilExpiration
+  daysUntilExpiration,
+  refreshDocuments
 }: DocumentTabsProps) => {
+  // Count new documents per category
+  const newDocumentCounts = categories.reduce((acc, category) => {
+    acc[category] = documentsByCategory[category].filter(doc => !doc.viewed).length;
+    return acc;
+  }, {} as Record<string, number>);
+
+  // Total new documents
+  const totalNewDocuments = allDocuments.filter(doc => !doc.viewed).length;
+
   return (
     <Tabs defaultValue="all">
       <TabsList className="mb-4">
-        <TabsTrigger value="all" onClick={() => setSelectedCategory(null)}>
+        <TabsTrigger value="all" onClick={() => setSelectedCategory(null)} className="relative">
           Todos
+          {totalNewDocuments > 0 && (
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+              {totalNewDocuments}
+            </span>
+          )}
         </TabsTrigger>
         {categories.map(category => (
           <TabsTrigger 
@@ -37,8 +53,14 @@ export const DocumentTabs = ({
             value={category}
             onClick={() => setSelectedCategory(category)}
             disabled={documentsByCategory[category].length === 0}
+            className="relative"
           >
             {category}
+            {newDocumentCounts[category] > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                {newDocumentCounts[category]}
+              </span>
+            )}
           </TabsTrigger>
         ))}
       </TabsList>
@@ -49,6 +71,7 @@ export const DocumentTabs = ({
           formatDate={formatDate}
           isDocumentExpired={isDocumentExpired}
           daysUntilExpiration={daysUntilExpiration}
+          refreshDocuments={refreshDocuments}
         />
       </TabsContent>
       
@@ -60,6 +83,7 @@ export const DocumentTabs = ({
             formatDate={formatDate}
             isDocumentExpired={isDocumentExpired}
             daysUntilExpiration={daysUntilExpiration}
+            refreshDocuments={refreshDocuments}
           />
         </TabsContent>
       ))}
