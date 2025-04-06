@@ -1,8 +1,6 @@
 
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -13,11 +11,11 @@ import { DocumentManager } from "@/components/admin/DocumentManager";
 import { CreateUser } from "@/components/admin/CreateUser";
 import { PasswordChangeModal } from "@/components/admin/PasswordChangeModal";
 import { PasswordChangeForm } from "@/components/admin/PasswordChangeForm";
-import { UserType, Document } from "@/types/admin";
 import { Users, FileText, UserPlus, Key } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { v4 as uuidv4 } from "uuid";
+import { useUserManagement } from "@/hooks/useUserManagement";
+import { useDocumentManagement } from "@/hooks/useDocumentManagement";
 
 // Categorias de documentos disponíveis
 const DOCUMENT_CATEGORIES = [
@@ -32,43 +30,43 @@ const passwordSchema = z.object({
   password: z.string().min(6, { message: "A nova senha deve ter pelo menos 6 caracteres" }),
 });
 
-// Schema para criação de usuário
-const userCreateSchema = z.object({
-  name: z.string().min(3),
-  email: z.string().email(),
-  password: z.string().min(6),
-  isAdmin: z.boolean().default(false)
-});
-
-// Interface para usuários do auth.users
-interface AuthUser {
-  id: string;
-  email: string;
-  created_at: string;
-  user_metadata?: {
-    name?: string;
-  };
-}
-
 const AdminDashboard = () => {
   const { user } = useAuth();
-  const { toast } = useToast();
-  const [users, setUsers] = useState<UserType[]>([]);
-  const [supabaseUsers, setSupabaseUsers] = useState<AuthUser[]>([]);
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [documentName, setDocumentName] = useState("");
-  const [documentCategory, setDocumentCategory] = useState(DOCUMENT_CATEGORIES[0]);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
-  const [isLoadingAuthUsers, setIsLoadingAuthUsers] = useState(true);
-  const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
-  const [isCreatingUser, setIsCreatingUser] = useState(false);
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [selectedUserForPasswordChange, setSelectedUserForPasswordChange] = useState<UserType | null>(null);
-  const [expirationDate, setExpirationDate] = useState<Date | null>(null);
-  const [noExpiration, setNoExpiration] = useState(false);
+  
+  // Gerenciamento de usuários
+  const {
+    users,
+    supabaseUsers,
+    isLoadingUsers,
+    isLoadingAuthUsers,
+    isCreatingUser,
+    isChangingPassword,
+    selectedUserForPasswordChange,
+    setSelectedUserForPasswordChange,
+    createUser,
+    changeUserPassword,
+    fetchAuthUsers
+  } = useUserManagement();
+
+  // Gerenciamento de documentos
+  const {
+    documents,
+    selectedUserId,
+    setSelectedUserId,
+    isUploading,
+    documentName,
+    setDocumentName,
+    documentCategory,
+    setDocumentCategory,
+    isLoadingDocuments,
+    expirationDate, 
+    setExpirationDate,
+    noExpiration,
+    setNoExpiration,
+    handleFileChange,
+    handleUpload,
+    handleDeleteDocument
+  } = useDocumentManagement();
 
   // Form para alteração de senha
   const passwordForm = useForm<z.infer<typeof passwordSchema>>({
@@ -77,397 +75,6 @@ const AdminDashboard = () => {
       password: ""
     },
   });
-
-  // Carregar usuários
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const {
-          data,
-          error
-        } = await supabase.from('users').select('*').order('created_at', {
-          ascending: false
-        });
-        if (error) throw error;
-        setUsers(data || []);
-      } catch (error: any) {
-        console.error('Erro ao carregar usuários:', error);
-        toast({
-          variant: "destructive",
-          title: "Erro ao carregar usuários",
-          description: error.message
-        });
-      } finally {
-        setIsLoadingUsers(false);
-      }
-    };
-    fetchUsers();
-  }, [toast]);
-
-  // Carregar usuários do auth.users usando a edge function listUsers
-  useEffect(() => {
-    fetchAuthUsers();
-  }, [toast]);
-
-  // Função para buscar usuários autenticados
-  const fetchAuthUsers = async () => {
-    try {
-      setIsLoadingAuthUsers(true);
-      const session = await supabase.auth.getSession();
-      const accessToken = session.data.session?.access_token;
-      
-      if (!accessToken) {
-        throw new Error("Você precisa estar logado para acessar os usuários");
-      }
-      
-      const response = await fetch(`https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/admin-operations`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
-        },
-        body: JSON.stringify({
-          action: "getUsers"
-        })
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Erro ao carregar usuários");
-      }
-
-      setSupabaseUsers(result.users || []);
-    } catch (error: any) {
-      console.error('Erro ao carregar usuários do auth.users:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao carregar usuários",
-        description: error.message
-      });
-    } finally {
-      setIsLoadingAuthUsers(false);
-    }
-  };
-
-  // Carregar documentos do usuário selecionado
-  useEffect(() => {
-    if (selectedUserId) {
-      fetchUserDocuments(selectedUserId);
-    } else {
-      setDocuments([]);
-    }
-  }, [selectedUserId]);
-
-  // Função para buscar documentos de um usuário específico
-  const fetchUserDocuments = async (userId: string) => {
-    setIsLoadingDocuments(true);
-    try {
-      const {
-        data,
-        error
-      } = await supabase.from('documents').select('*').eq('user_id', userId).order('uploaded_at', {
-        ascending: false
-      });
-      if (error) throw error;
-      setDocuments(data || []);
-    } catch (error: any) {
-      console.error('Erro ao carregar documentos:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao carregar documentos",
-        description: error.message
-      });
-    } finally {
-      setIsLoadingDocuments(false);
-    }
-  };
-
-  // Função para criar um novo usuário
-  const createUser = async (data: z.infer<typeof userCreateSchema>) => {
-    setIsCreatingUser(true);
-    try {
-      // 1. Registrar o usuário no Auth
-      const {
-        error: signUpError,
-        data: authData
-      } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
-      });
-
-      if (signUpError) throw signUpError;
-
-      if (authData?.user) {
-        // 2. Adicionar informações do usuário na tabela users
-        const {
-          error: profileError
-        } = await supabase.from('users').insert({
-          id: authData.user.id,
-          email: data.email,
-          name: data.name,
-          role: data.isAdmin ? 'admin' : 'client',
-        });
-
-        if (profileError) throw profileError;
-
-        // 3. Atualizar a lista de usuários
-        const {
-          data: updatedUsers,
-          error: fetchError
-        } = await supabase.from('users').select('*').order('created_at', {
-          ascending: false
-        });
-
-        if (fetchError) throw fetchError;
-        setUsers(updatedUsers || []);
-
-        // 4. Atualizar a lista de usuários do auth
-        fetchAuthUsers();
-
-        toast({
-          title: "Usuário criado com sucesso",
-          description: `${data.name} (${data.email}) foi cadastrado no sistema como ${data.isAdmin ? 'administrador' : 'cliente'}.`
-        });
-      }
-    } catch (error: any) {
-      console.error('Erro ao criar usuário:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao criar usuário",
-        description: error.message
-      });
-    } finally {
-      setIsCreatingUser(false);
-    }
-  };
-
-  // Função para alterar a senha de um usuário
-  const changeUserPassword = async (data: z.infer<typeof passwordSchema>) => {
-    if (!selectedUserForPasswordChange) return;
-    
-    setIsChangingPassword(true);
-    try {
-      const session = await supabase.auth.getSession();
-      const accessToken = session.data.session?.access_token;
-      
-      if (!accessToken) {
-        throw new Error("Você precisa estar logado para realizar esta ação");
-      }
-      
-      const response = await fetch(`https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/changeUserPassword`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
-        },
-        body: JSON.stringify({
-          userId: selectedUserForPasswordChange.id,
-          newPassword: data.password
-        })
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Erro ao alterar senha');
-      }
-
-      toast({
-        title: "Senha alterada com sucesso",
-        description: `A senha de ${selectedUserForPasswordChange.name || selectedUserForPasswordChange.email} foi atualizada.`
-      });
-
-      passwordForm.reset();
-      setSelectedUserForPasswordChange(null);
-    } catch (error: any) {
-      console.error('Erro ao alterar senha:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao alterar senha",
-        description: error.message
-      });
-    } finally {
-      setIsChangingPassword(false);
-    }
-  };
-
-  // Função para lidar com o upload de arquivo
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
-      if (!documentName) {
-        setDocumentName(e.target.files[0].name.split('.')[0]);
-      }
-    }
-  };
-
-  // Função para enviar documento
-  const handleUpload = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedUserId) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao enviar documento",
-        description: "Nenhum usuário selecionado."
-      });
-      return;
-    }
-    if (!selectedFile) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao enviar documento",
-        description: "Nenhum arquivo selecionado."
-      });
-      return;
-    }
-    if (!documentName.trim()) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao enviar documento",
-        description: "Nome do documento é obrigatório."
-      });
-      return;
-    }
-    if (!documentCategory) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao enviar documento",
-        description: "Categoria do documento é obrigatória."
-      });
-      return;
-    }
-    
-    setIsUploading(true);
-    try {
-      // Generate a unique storage key
-      const storageKey = `${selectedUserId}/${uuidv4()}`;
-      const originalFilename = selectedFile.name;
-      
-      // 1. Upload do arquivo para o Storage
-      const {
-        data: fileData,
-        error: uploadError
-      } = await supabase.storage.from('documents').upload(storageKey, selectedFile);
-      
-      if (uploadError) throw uploadError;
-
-      // 2. Obter URL pública do arquivo
-      const {
-        data: urlData
-      } = supabase.storage.from('documents').getPublicUrl(storageKey);
-
-      // Determine expiration date based on user selection
-      let expires_at = null;
-      if (!noExpiration && expirationDate) {
-        expires_at = expirationDate.toISOString();
-      }
-
-      // 3. Salvar informações do documento no banco de dados
-      const {
-        data,
-        error: dbError
-      } = await supabase.from('documents').insert({
-        user_id: selectedUserId,
-        name: documentName,
-        category: documentCategory,
-        file_url: urlData.publicUrl,
-        original_filename: originalFilename,
-        storage_key: storageKey,
-        filename: originalFilename,
-        size: selectedFile.size,
-        type: selectedFile.type,
-        expires_at: expires_at
-      }).select();
-      
-      if (dbError) throw dbError;
-
-      // 4. Atualizar lista de documentos
-      await fetchUserDocuments(selectedUserId);
-
-      // 5. Limpar formulário
-      setSelectedFile(null);
-      setDocumentName("");
-      setExpirationDate(null);
-      setNoExpiration(false);
-      const fileInput = document.getElementById('fileInput') as HTMLInputElement;
-      if (fileInput) fileInput.value = "";
-      
-      toast({
-        title: "Documento enviado com sucesso",
-        description: "O documento foi enviado e está disponível para o usuário."
-      });
-    } catch (error: any) {
-      console.error('Erro ao enviar documento:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao enviar documento",
-        description: error.message
-      });
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  // Função para excluir documento
-  const handleDeleteDocument = async (documentId: string) => {
-    if (!window.confirm("Tem certeza que deseja excluir este documento?")) {
-      return;
-    }
-    try {
-      // 1. Buscar informações do documento para obter o caminho do arquivo
-      const {
-        data: docData,
-        error: fetchError
-      } = await supabase.from('documents').select('*').eq('id', documentId).single();
-      if (fetchError) throw fetchError;
-
-      // 2. Excluir documento do banco de dados
-      const {
-        error: deleteDbError
-      } = await supabase.from('documents').delete().eq('id', documentId);
-      if (deleteDbError) throw deleteDbError;
-
-      // 3. Excluir arquivo do Storage (usando o storage_key se disponível)
-      if (docData) {
-        let storagePath;
-        
-        if (docData.storage_key) {
-          storagePath = docData.storage_key;
-        } else if (docData.file_url) {
-          const url = new URL(docData.file_url);
-          const pathArray = url.pathname.split('/');
-          storagePath = pathArray.slice(pathArray.indexOf('documents') + 1).join('/');
-        }
-        
-        if (storagePath) {
-          const {
-            error: deleteStorageError
-          } = await supabase.storage.from('documents').remove([storagePath]);
-          if (deleteStorageError) {
-            console.error('Erro ao excluir arquivo do storage:', deleteStorageError);
-            // Continuamos mesmo com erro no storage pois o registro já foi excluído
-          }
-        }
-      }
-
-      // 4. Atualizar lista de documentos
-      if (selectedUserId) {
-        await fetchUserDocuments(selectedUserId);
-      }
-      toast({
-        title: "Documento excluído com sucesso",
-        description: "O documento foi removido permanentemente."
-      });
-    } catch (error: any) {
-      console.error('Erro ao excluir documento:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao excluir documento",
-        description: error.message
-      });
-    }
-  };
 
   const isLoading = isLoadingUsers || isLoadingAuthUsers;
 
