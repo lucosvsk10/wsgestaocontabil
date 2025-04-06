@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
@@ -65,20 +64,24 @@ const ClientLogin = () => {
               <div className="space-y-2">
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                  <Input 
-                    type={showPassword ? "text" : "password"} 
-                    placeholder="Senha" 
-                    value={password} 
-                    onChange={e => setPassword(e.target.value)} 
-                    required 
-                    className="pl-10 pr-10 border-white -700 bg-[#46413d]" 
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    id="password"
+                    placeholder="●●●●●●"
+                    className="bg-transparent border-ash-dark border-4 text-lg py-6 focus:border-gold"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                   />
-                  <button 
+                  <button
                     type="button"
                     onClick={togglePasswordVisibility}
-                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-300 focus:outline-none"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
                   </button>
                 </div>
               </div>
