@@ -47,7 +47,7 @@ export const DocumentUpload = ({
   };
 
   return (
-    <Card className="w-full">
+    <Card className="w-full bg-[#46413d]">
       <CardHeader>
         <CardTitle>Enviar Documento</CardTitle>
       </CardHeader>
