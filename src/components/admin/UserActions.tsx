@@ -1,11 +1,11 @@
 
 import { useState } from "react";
 import { Trash2, ShieldCheck } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { UserType } from "@/types/admin";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 interface UserActionsProps {
@@ -17,6 +17,7 @@ interface UserActionsProps {
 }
 
 export const UserActions = ({ authUser, refreshUsers }: UserActionsProps) => {
+  const { toast } = useToast();
   const [deleteUserDialog, setDeleteUserDialog] = useState(false);
   const [makeAdminDialog, setMakeAdminDialog] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
@@ -54,9 +55,8 @@ export const UserActions = ({ authUser, refreshUsers }: UserActionsProps) => {
         })
       });
 
-      const result = await response.json();
-
       if (!response.ok) {
+        const result = await response.json();
         throw new Error(result.error || "Erro ao excluir usuário");
       }
 

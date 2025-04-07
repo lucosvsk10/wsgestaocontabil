@@ -105,11 +105,22 @@ Deno.serve(async (req) => {
           throw new Error('User ID is required')
         }
         
-        // Delete the user
-        const { error: deleteError } = await adminClient.auth.admin.deleteUser(body.userId)
+        // Delete the user from public.users first
+        const { error: deleteProfileError } = await adminClient
+          .from('users')
+          .delete()
+          .eq('id', body.userId)
         
-        if (deleteError) {
-          throw deleteError
+        if (deleteProfileError) {
+          console.error('Error deleting user profile:', deleteProfileError)
+          // Continue anyway, we still want to delete the auth user
+        }
+        
+        // Delete the user from auth.users
+        const { error: deleteAuthError } = await adminClient.auth.admin.deleteUser(body.userId)
+        
+        if (deleteAuthError) {
+          throw deleteAuthError
         }
         
         return new Response(
