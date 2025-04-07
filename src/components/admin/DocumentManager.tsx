@@ -51,7 +51,7 @@ export const DocumentManager = ({
 }: DocumentManagerProps) => {
   if (!selectedUserId) {
     return (
-      <Card className="bg-[#46413d]">
+      <Card className="bg-[#46413d] border-gold">
         <CardContent className="pt-6">
           <Alert>
             <AlertCircle className="h-4 w-4" />
@@ -67,37 +67,39 @@ export const DocumentManager = ({
 
   return (
     <Tabs defaultValue="upload" className="bg-[#46413d]">
-      <TabsList className="mb-4">
-        <TabsTrigger value="upload">Enviar documento</TabsTrigger>
-        <TabsTrigger value="manage">Gerenciar documentos</TabsTrigger>
+      <TabsList className="mb-4 bg-[#46413d] border-gold">
+        <TabsTrigger value="upload" className="text-gold hover:text-gold-light">Enviar documento</TabsTrigger>
+        <TabsTrigger value="manage" className="text-gold hover:text-gold-light">Gerenciar documentos</TabsTrigger>
       </TabsList>
       <TabsContent value="upload" className="bg-[#46413d]">
         <div className="grid grid-cols-1 gap-6">
-          <Alert variant="default">
-            <HelpCircle className="h-4 w-4" />
-            <AlertTitle>Dica</AlertTitle>
-            <AlertDescription>
+          <Alert variant="default" className="border-gold bg-[#46413d]/80">
+            <HelpCircle className="h-4 w-4 text-gold" />
+            <AlertTitle className="text-gold">Dica</AlertTitle>
+            <AlertDescription className="text-white">
               Adicione observações importantes para o cliente ao enviar um documento, 
               como prazos, instruções ou qualquer informação relevante.
             </AlertDescription>
           </Alert>
           
-          <DocumentUpload
-            onUpload={handleUpload}
-            isUploading={isUploading}
-            documentName={documentName}
-            setDocumentName={setDocumentName}
-            documentCategory={documentCategory}
-            setDocumentCategory={setDocumentCategory}
-            documentObservations={documentObservations}
-            setDocumentObservations={setDocumentObservations}
-            documentCategories={documentCategories}
-            handleFileChange={handleFileChange}
-            expirationDate={expirationDate}
-            setExpirationDate={setExpirationDate}
-            noExpiration={noExpiration}
-            setNoExpiration={setNoExpiration}
-          />
+          <div className="flex justify-center w-full">
+            <DocumentUpload
+              onUpload={handleUpload}
+              isUploading={isUploading}
+              documentName={documentName}
+              setDocumentName={setDocumentName}
+              documentCategory={documentCategory}
+              setDocumentCategory={setDocumentCategory}
+              documentObservations={documentObservations}
+              setDocumentObservations={setDocumentObservations}
+              documentCategories={documentCategories}
+              handleFileChange={handleFileChange}
+              expirationDate={expirationDate}
+              setExpirationDate={setExpirationDate}
+              noExpiration={noExpiration}
+              setNoExpiration={setNoExpiration}
+            />
+          </div>
         </div>
       </TabsContent>
       <TabsContent value="manage" className="bg-[#46413d]">

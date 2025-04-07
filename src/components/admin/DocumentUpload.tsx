@@ -47,11 +47,11 @@ export const DocumentUpload = ({
   };
 
   return (
-    <Card className="w-full bg-[#46413d]">
-      <CardHeader>
-        <CardTitle>Enviar Documento</CardTitle>
+    <Card className="w-full max-w-md border-gold bg-[#46413d] rounded-md">
+      <CardHeader className="space-y-1 text-center bg-[#46413d] my-0 rounded-full">
+        <CardTitle className="text-gold font-medium text-3xl">ENVIAR DOCUMENTO</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="bg-[#46413d]">
         <form onSubmit={handleFormSubmit} className="space-y-6">
           <div className="grid gap-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -82,7 +82,7 @@ export const DocumentUpload = ({
             <FileUploadArea handleFileChange={handleFileChange} />
           </div>
 
-          <Button type="submit" className="w-full" disabled={isUploading}>
+          <Button type="submit" className="w-full bg-gold hover:bg-gold-light text-navy" disabled={isUploading}>
             {isUploading ? (
               <>
                 <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-t-foreground"></div>

@@ -97,8 +97,8 @@ export const DocumentList = ({
   };
 
   return (
-    <div>
-      <h3 className="font-medium mb-4 flex items-center">
+    <div className="bg-[#46413d] p-4 rounded-lg border border-gold">
+      <h3 className="font-medium mb-4 flex items-center text-gold">
         <File className="mr-2 h-5 w-5 text-gold" />
         Documentos do Usuário
       </h3>
@@ -111,28 +111,28 @@ export const DocumentList = ({
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Nome Exibido</TableHead>
-                <TableHead>Arquivo Original</TableHead>
-                <TableHead>Categoria</TableHead>
-                <TableHead>Data de Envio</TableHead>
-                <TableHead>Expira em</TableHead>
-                <TableHead>Observações</TableHead>
-                <TableHead>Ações</TableHead>
+              <TableRow className="border-gold">
+                <TableHead className="text-gold">Nome Exibido</TableHead>
+                <TableHead className="text-gold">Arquivo Original</TableHead>
+                <TableHead className="text-gold">Categoria</TableHead>
+                <TableHead className="text-gold">Data de Envio</TableHead>
+                <TableHead className="text-gold">Expira em</TableHead>
+                <TableHead className="text-gold">Observações</TableHead>
+                <TableHead className="text-gold">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {documents.length > 0 ? (
                 documents.map(doc => (
-                  <TableRow key={doc.id} className={isDocumentExpired(doc.expires_at) ? "bg-red-900/20" : ""}>
-                    <TableCell className="font-medium">{doc.name}</TableCell>
-                    <TableCell>{doc.filename || doc.original_filename || "N/A"}</TableCell>
+                  <TableRow key={doc.id} className={isDocumentExpired(doc.expires_at) ? "bg-red-900/20 border-gold/50" : "border-gold/50"}>
+                    <TableCell className="font-medium text-white">{doc.name}</TableCell>
+                    <TableCell className="text-white">{doc.filename || doc.original_filename || "N/A"}</TableCell>
                     <TableCell>
-                      <span className="px-2 py-1 rounded-full text-xs bg-gray-700">
+                      <span className="px-2 py-1 rounded-full text-xs bg-gold text-navy">
                         {doc.category}
                       </span>
                     </TableCell>
-                    <TableCell>{formatDate(doc.uploaded_at)}</TableCell>
+                    <TableCell className="text-white">{formatDate(doc.uploaded_at)}</TableCell>
                     <TableCell>
                       <span className={`flex items-center gap-1 ${
                         isDocumentExpired(doc.expires_at) 
@@ -155,7 +155,7 @@ export const DocumentList = ({
                         <Button 
                           variant="outline" 
                           size="sm"
-                          className="flex items-center gap-1"
+                          className="flex items-center gap-1 border-gold text-gold hover:bg-gold hover:text-navy"
                           onClick={() => handleDownload(doc)}
                           disabled={downloadingIds.has(doc.id)}
                         >
@@ -176,8 +176,8 @@ export const DocumentList = ({
                   </TableRow>
                 ))
               ) : (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-4 text-gray-400">
+                <TableRow className="border-gold/50">
+                  <TableCell colSpan={7} className="text-center py-4 text-gold">
                     Nenhum documento encontrado para este usuário
                   </TableCell>
                 </TableRow>
