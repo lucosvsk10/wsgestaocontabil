@@ -64,7 +64,7 @@ export const CategoryDocumentTable = ({
 
   const handleDownload = async (docItem: Document) => {
     // Mark as viewed when downloaded
-    markAsViewed(docItem);
+    await markAsViewed(docItem);
     
     try {
       if (docItem.storage_key) {
@@ -258,3 +258,4 @@ export const CategoryDocumentTable = ({
     </div>
   );
 };
+
