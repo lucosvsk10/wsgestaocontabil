@@ -60,6 +60,13 @@ export const UserList = ({
     return users.find(u => u.id === authUserId) || null;
   };
 
+  // Função para obter o nome do usuário, priorizando o nome da tabela users
+  const getUserName = (authUser: AuthUser) => {
+    const userInfo = getUserInfo(authUser.id);
+    // Prioriza nome da tabela users, depois metadata e por fim 'Sem nome'
+    return userInfo?.name || authUser.user_metadata?.name || "Sem nome";
+  };
+
   return (
     <Card className="px-0 bg-[#393532]">
       <CardHeader className="rounded-full bg-[#393532]">
@@ -88,7 +95,7 @@ export const UserList = ({
                     const userInfo = getUserInfo(authUser.id);
                     return (
                       <TableRow key={authUser.id}>
-                        <TableCell>{userInfo?.name || authUser.user_metadata?.name || "Sem nome"}</TableCell>
+                        <TableCell>{getUserName(authUser)}</TableCell>
                         <TableCell>{authUser.email || "Sem email"}</TableCell>
                         <TableCell>
                           <span className={`px-2 py-1 rounded-full text-xs ${getUserRole(authUser.id) === 'admin' ? 'bg-purple-900 text-purple-100' : 'bg-blue-900 text-blue-100'}`}>
