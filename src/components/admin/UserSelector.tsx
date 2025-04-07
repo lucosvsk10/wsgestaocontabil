@@ -24,7 +24,7 @@ export const UserSelector = ({
   const { toast } = useToast();
   const [processingUserId, setProcessingUserId] = useState<string | null>(null);
 
-  // Validar sessão para garantir que as políticas RLS funcionem corretamente
+  // Verificar sessão ativa para debug
   useEffect(() => {
     const checkSession = async () => {
       const { data } = await supabase.auth.getSession();
@@ -37,6 +37,28 @@ export const UserSelector = ({
     
     checkSession();
   }, []);
+
+  // Garantir que o perfil do usuário está sempre criado ao selecionar
+  useEffect(() => {
+    if (selectedUserId) {
+      const ensureSelectedUserProfile = async () => {
+        const selectedUser = users.find(u => u.id === selectedUserId);
+        if (selectedUser) {
+          try {
+            await ensureUserProfile(
+              selectedUserId,
+              selectedUser.email || "",
+              selectedUser.name || "Usuário"
+            );
+          } catch (error) {
+            console.warn("Erro ao garantir perfil de usuário selecionado:", error);
+          }
+        }
+      };
+      
+      ensureSelectedUserProfile();
+    }
+  }, [selectedUserId, users]);
 
   const handleSelectUser = async (user: UserType) => {
     try {

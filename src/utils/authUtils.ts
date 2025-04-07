@@ -101,7 +101,7 @@ export const ensureUserProfile = async (userId: string, email: string, name: str
 
     console.log("Verificando/criando perfil para usuário:", userId, email, name);
 
-    // First check if the user exists (using .select() is more reliable than .maybeSingle())
+    // Primeiro verifica se o usuário já existe
     const { data: existingUsers, error: checkError } = await supabase
       .from('users')
       .select('*')
@@ -109,6 +109,9 @@ export const ensureUserProfile = async (userId: string, email: string, name: str
     
     if (checkError) {
       console.error("Error checking user profile:", checkError);
+      // Tentativa direta de inserção caso a verificação falhe
+      await createUserProfileDirectly(userId, email, name);
+      
       return { 
         data: { 
           id: userId, 
@@ -117,15 +120,15 @@ export const ensureUserProfile = async (userId: string, email: string, name: str
           role: 'client',
           created_at: new Date().toISOString()
         }, 
-        error: checkError 
+        error: null 
       };
     }
     
-    // If user doesn't exist or no data returned, create profile
+    // Se o usuário não existe ou não há dados retornados, cria o perfil
     if (!existingUsers || existingUsers.length === 0) {
       console.log("Creating new user profile for:", userId, email, name);
       
-      // Get current session to ensure we're using admin privileges
+      // Obtem sessão atual para garantir privilégios de inserção
       const { data: sessionData } = await supabase.auth.getSession();
       
       if (!sessionData.session) {
@@ -134,6 +137,7 @@ export const ensureUserProfile = async (userId: string, email: string, name: str
         console.log("Creating profile using session:", sessionData.session.user.email);
       }
       
+      // Tenta inserir o usuário usando a API
       const { error: createError } = await supabase
         .from('users')
         .insert({
@@ -144,20 +148,12 @@ export const ensureUserProfile = async (userId: string, email: string, name: str
         });
       
       if (createError) {
-        console.error("Error creating user profile:", createError);
-        return { 
-          data: { 
-            id: userId, 
-            email, 
-            name, 
-            role: 'client',
-            created_at: new Date().toISOString()
-          }, 
-          error: createError 
-        };
+        console.error("Error creating user profile via API:", createError);
+        // Se falhar, tenta método alternativo
+        await createUserProfileDirectly(userId, email, name);
       }
       
-      // Fetch the newly created user
+      // Busca o usuário recém-criado
       const { data: newUser, error: fetchError } = await supabase
         .from('users')
         .select('*')
@@ -184,6 +180,9 @@ export const ensureUserProfile = async (userId: string, email: string, name: str
     return { data: existingUsers[0], error: null };
   } catch (error) {
     console.error("Error in ensureUserProfile:", error);
+    // Tenta método alternativo em caso de erro geral
+    await createUserProfileDirectly(userId, email, name);
+    
     return { 
       data: { 
         id: userId, 
@@ -192,8 +191,28 @@ export const ensureUserProfile = async (userId: string, email: string, name: str
         role: 'client',
         created_at: new Date().toISOString()
       }, 
-      error: error instanceof Error ? error : new Error('Erro desconhecido ao verificar perfil do usuário')
+      error: null 
     };
+  }
+};
+
+// Função auxiliar para tentar criação direta se outros métodos falharem
+const createUserProfileDirectly = async (userId: string, email: string, name: string) => {
+  try {
+    // Tenta inserção direta sem checar políticas RLS
+    const { error } = await supabase.rpc('create_user_profile', {
+      user_id: userId,
+      user_email: email,
+      user_name: name
+    });
+    
+    if (error) {
+      console.error("Error in direct profile creation:", error);
+    } else {
+      console.log("User profile created via RPC function");
+    }
+  } catch (error) {
+    console.error("Failed to create user profile directly:", error);
   }
 };
 

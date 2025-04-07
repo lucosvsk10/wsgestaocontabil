@@ -72,25 +72,21 @@ export const useDocumentUpload = (fetchUserDocuments: (userId: string) => Promis
       const userName = users.find(u => u.id === selectedUserId)?.name || "Usuário";
       
       // Garantir que o usuário existe na tabela users antes de prosseguir
-      const { data: userData, error: profileError } = await ensureUserProfile(
+      const { data: profileData, error: profileError } = await ensureUserProfile(
         selectedUserId,
         userEmail,
         userName
       );
       
       if (profileError) {
-        console.warn("Aviso: Problemas ao verificar perfil do usuário:", profileError);
+        console.warn("Aviso ao verificar perfil do usuário:", profileError);
+        toast({
+          variant: "destructive",
+          title: "Aviso",
+          description: "Continuando mesmo com problemas ao verificar perfil do usuário. Isso pode afetar o funcionamento."
+        });
         // Continuamos mesmo com erro, já que temos o ID do usuário
       }
-      
-      // Usar a sessão atual para garantir que estamos respeitando as políticas de RLS
-      const { data: sessionData } = await supabase.auth.getSession();
-      
-      if (!sessionData.session) {
-        throw new Error("Sessão de usuário não encontrada. Faça login novamente.");
-      }
-      
-      console.log("Usando sessão do usuário:", sessionData.session.user.email);
       
       // Gerar chave única para o storage
       const storageKey = `${selectedUserId}/${uuidv4()}`;
@@ -114,8 +110,11 @@ export const useDocumentUpload = (fetchUserDocuments: (userId: string) => Promis
         expires_at = expirationDate.toISOString();
       }
 
+      // Verificar sessão ativa atual
+      const { data: sessionData } = await supabase.auth.getSession();
+      console.log("Sessão atual:", sessionData?.session?.user?.email || "Nenhuma sessão");
+
       // Inserir registro do documento no banco de dados
-      // Usando a sessão autenticada do administrador que deve ter acesso para inserir documentos
       const { data, error: dbError } = await supabase
         .from('documents')
         .insert({
@@ -131,12 +130,37 @@ export const useDocumentUpload = (fetchUserDocuments: (userId: string) => Promis
           expires_at: expires_at,
           observations: documentObservations || null,
           viewed: false
-        })
-        .select();
+        });
       
       if (dbError) {
         console.error("Erro detalhado ao inserir documento:", dbError);
-        throw new Error(`Erro ao salvar documento no banco: ${dbError.message || dbError.details || 'Verifique as permissões'}`);
+        // Tente fazer um fallback para garantir que o documento seja inserido
+        console.log("Tentando inserção alternativa...");
+        
+        // Atualizar perfil do usuário novamente para garantir
+        await ensureUserProfile(selectedUserId, userEmail, userName);
+        
+        // Nova tentativa após atualizar perfil
+        const { data: retryData, error: retryError } = await supabase
+          .from('documents')
+          .insert({
+            user_id: selectedUserId,
+            name: documentName,
+            category: documentCategory,
+            file_url: urlData.publicUrl,
+            original_filename: originalFilename,
+            storage_key: storageKey,
+            filename: originalFilename,
+            size: selectedFile.size,
+            type: selectedFile.type,
+            expires_at: expires_at,
+            observations: documentObservations || null,
+            viewed: false
+          });
+          
+        if (retryError) {
+          throw new Error(`Erro ao salvar documento no banco: ${retryError.message || retryError.details || 'Verifique as permissões'}`);
+        }
       }
 
       // Atualizar lista de documentos
