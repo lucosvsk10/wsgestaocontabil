@@ -139,7 +139,7 @@ export const UserList = ({
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
-                                    <DropdownMenuItem asChild>
+                                    <DropdownMenuItem>
                                       <UserActions 
                                         authUser={authUser} 
                                         refreshUsers={refreshUsers} 
@@ -224,7 +224,7 @@ export const UserList = ({
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
-                                    <DropdownMenuItem asChild>
+                                    <DropdownMenuItem>
                                       <UserActions 
                                         authUser={authUser} 
                                         refreshUsers={refreshUsers} 
