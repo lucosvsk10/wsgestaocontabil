@@ -67,52 +67,82 @@ export const useDocumentUpload = (fetchUserDocuments: (userId: string) => Promis
     
     setIsUploading(true);
     try {
+      // Obter informações do usuário selecionado
       const userEmail = supabaseUsers.find(u => u.id === selectedUserId)?.email || "";
       const userName = users.find(u => u.id === selectedUserId)?.name || "Usuário";
       
-      // Tentar garantir que o perfil do usuário existe
-      const { data: userData } = await ensureUserProfile(
+      // Garantir que o usuário existe na tabela users antes de prosseguir
+      const { data: userData, error: profileError } = await ensureUserProfile(
         selectedUserId,
         userEmail,
         userName
       );
       
-      // Mesmo que ocorra um erro na função ensureUserProfile, 
-      // tentaremos prosseguir com o upload usando o ID de usuário fornecido
-      console.log("Perfil do usuário confirmado ou criado um padrão:", userData);
+      if (profileError) {
+        console.warn("Aviso: Problemas ao verificar perfil do usuário:", profileError);
+        // Continuamos mesmo com erro, já que temos o ID do usuário
+      }
       
+      // Usar a sessão atual para garantir que estamos respeitando as políticas de RLS
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      if (!sessionData.session) {
+        throw new Error("Sessão de usuário não encontrada. Faça login novamente.");
+      }
+      
+      console.log("Usando sessão do usuário:", sessionData.session.user.email);
+      
+      // Gerar chave única para o storage
       const storageKey = `${selectedUserId}/${uuidv4()}`;
       const originalFilename = selectedFile.name;
       
-      const { data: fileData, error: uploadError } = await supabase.storage.from('documents').upload(storageKey, selectedFile);
+      // Fazer upload do arquivo para o storage
+      const { data: fileData, error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(storageKey, selectedFile);
       
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage.from('documents').getPublicUrl(storageKey);
+      // Obter URL público do arquivo
+      const { data: urlData } = supabase.storage
+        .from('documents')
+        .getPublicUrl(storageKey);
 
+      // Configurar data de expiração, se aplicável
       let expires_at = null;
       if (!noExpiration && expirationDate) {
         expires_at = expirationDate.toISOString();
       }
 
-      const { data, error: dbError } = await supabase.from('documents').insert({
-        user_id: selectedUserId,
-        name: documentName,
-        category: documentCategory,
-        file_url: urlData.publicUrl,
-        original_filename: originalFilename,
-        storage_key: storageKey,
-        filename: originalFilename,
-        size: selectedFile.size,
-        type: selectedFile.type,
-        expires_at: expires_at,
-        observations: documentObservations || null,
-        viewed: false
-      }).select();
+      // Inserir registro do documento no banco de dados
+      // Usando a sessão autenticada do administrador que deve ter acesso para inserir documentos
+      const { data, error: dbError } = await supabase
+        .from('documents')
+        .insert({
+          user_id: selectedUserId,
+          name: documentName,
+          category: documentCategory,
+          file_url: urlData.publicUrl,
+          original_filename: originalFilename,
+          storage_key: storageKey,
+          filename: originalFilename,
+          size: selectedFile.size,
+          type: selectedFile.type,
+          expires_at: expires_at,
+          observations: documentObservations || null,
+          viewed: false
+        })
+        .select();
       
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error("Erro detalhado ao inserir documento:", dbError);
+        throw new Error(`Erro ao salvar documento no banco: ${dbError.message || dbError.details || 'Verifique as permissões'}`);
+      }
 
+      // Atualizar lista de documentos
       await fetchUserDocuments(selectedUserId);
+      
+      // Limpar formulário
       setSelectedFile(null);
       setDocumentName("");
       setDocumentObservations("");

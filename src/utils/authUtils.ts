@@ -1,4 +1,3 @@
-
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -92,7 +91,7 @@ export const signUpNewUser = async (email: string, password: string, name: strin
   }
 };
 
-// Ensure user exists in users table with better error handling and fallback
+// Ensure user exists in users table with better error handling
 export const ensureUserProfile = async (userId: string, email: string, name: string = "Usuário") => {
   try {
     if (!userId) {
@@ -100,7 +99,9 @@ export const ensureUserProfile = async (userId: string, email: string, name: str
       return { error: new Error("ID de usuário não fornecido"), data: null };
     }
 
-    // Check if user exists using .select() instead of .maybeSingle()
+    console.log("Verificando/criando perfil para usuário:", userId, email, name);
+
+    // First check if the user exists (using .select() is more reliable than .maybeSingle())
     const { data: existingUsers, error: checkError } = await supabase
       .from('users')
       .select('*')
@@ -108,8 +109,6 @@ export const ensureUserProfile = async (userId: string, email: string, name: str
     
     if (checkError) {
       console.error("Error checking user profile:", checkError);
-      
-      // Attempt to proceed anyway with default user data
       return { 
         data: { 
           id: userId, 
@@ -118,13 +117,22 @@ export const ensureUserProfile = async (userId: string, email: string, name: str
           role: 'client',
           created_at: new Date().toISOString()
         }, 
-        error: null 
+        error: checkError 
       };
     }
     
     // If user doesn't exist or no data returned, create profile
     if (!existingUsers || existingUsers.length === 0) {
       console.log("Creating new user profile for:", userId, email, name);
+      
+      // Get current session to ensure we're using admin privileges
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      if (!sessionData.session) {
+        console.warn("No active session found when creating user profile");
+      } else {
+        console.log("Creating profile using session:", sessionData.session.user.email);
+      }
       
       const { error: createError } = await supabase
         .from('users')
@@ -137,8 +145,6 @@ export const ensureUserProfile = async (userId: string, email: string, name: str
       
       if (createError) {
         console.error("Error creating user profile:", createError);
-        
-        // Return default user data even if creation fails
         return { 
           data: { 
             id: userId, 
@@ -147,18 +153,23 @@ export const ensureUserProfile = async (userId: string, email: string, name: str
             role: 'client',
             created_at: new Date().toISOString()
           }, 
-          error: null 
+          error: createError 
         };
       }
       
       // Fetch the newly created user
-      const { data: newUser } = await supabase
+      const { data: newUser, error: fetchError } = await supabase
         .from('users')
         .select('*')
-        .eq('id', userId);
+        .eq('id', userId)
+        .maybeSingle();
         
+      if (fetchError) {
+        console.error("Error fetching newly created user:", fetchError);
+      }
+      
       return { 
-        data: newUser?.[0] || { 
+        data: newUser || { 
           id: userId, 
           email, 
           name, 
@@ -169,11 +180,10 @@ export const ensureUserProfile = async (userId: string, email: string, name: str
       };
     }
     
+    console.log("User profile exists:", existingUsers[0]);
     return { data: existingUsers[0], error: null };
   } catch (error) {
     console.error("Error in ensureUserProfile:", error);
-    
-    // Return default user data even if there's an exception
     return { 
       data: { 
         id: userId, 
@@ -182,7 +192,7 @@ export const ensureUserProfile = async (userId: string, email: string, name: str
         role: 'client',
         created_at: new Date().toISOString()
       }, 
-      error: null 
+      error: error instanceof Error ? error : new Error('Erro desconhecido ao verificar perfil do usuário')
     };
   }
 };

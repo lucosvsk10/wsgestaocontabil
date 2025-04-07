@@ -1,10 +1,12 @@
+
 import { User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserType } from "@/types/admin";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureUserProfile } from "@/utils/authUtils";
+import { useToast } from "@/hooks/use-toast";
 
 interface UserSelectorProps {
   users: UserType[];
@@ -19,45 +21,53 @@ export const UserSelector = ({
   setSelectedUserId,
   isLoadingUsers
 }: UserSelectorProps) => {
-  // Ensure that all auth users have corresponding profiles in the users table
+  const { toast } = useToast();
+  const [processingUserId, setProcessingUserId] = useState<string | null>(null);
+
+  // Validar sessão para garantir que as políticas RLS funcionem corretamente
   useEffect(() => {
-    const syncUserProfiles = async () => {
-      try {
-        const { data: authData } = await supabase.auth.getSession();
-        if (!authData.session) return;
-        
-        // This would typically be done through an edge function since we can't
-        // directly query auth.users from the client
-        // For now, we'll sync profiles when a user is selected
-      } catch (error) {
-        console.error("Error checking auth users:", error);
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        console.warn("Sem sessão ativa. Políticas RLS podem bloquear operações.");
+      } else {
+        console.log("Sessão autenticada ativa:", data.session.user.email);
       }
     };
     
-    syncUserProfiles();
+    checkSession();
   }, []);
 
   const handleSelectUser = async (user: UserType) => {
     try {
-      // Primeiro defina o usuário selecionado para feedback imediato
+      // Definir usuário selecionado imediatamente para feedback ao usuário
       setSelectedUserId(user.id);
       
-      // Em segundo plano, tente garantir que o perfil existe
-      ensureUserProfile(
+      // Indicar que estamos processando este usuário
+      setProcessingUserId(user.id);
+      
+      // Tentar garantir que o perfil do usuário existe em segundo plano
+      const { data, error } = await ensureUserProfile(
         user.id, 
         user.email || "", 
         user.name || "Usuário"
-      ).then(({ error }) => {
-        if (error) {
-          console.log("Aviso: Perfil de usuário não encontrado, mas continuaremos usando o ID:", user.id);
-          console.error("Erro ao garantir perfil do usuário:", error);
-        }
-      }).catch(error => {
-        console.error("Erro ao selecionar usuário:", error);
-      });
+      );
+
+      if (error) {
+        console.warn(`Aviso: Problemas ao verificar perfil do usuário ${user.name || user.email}`, error);
+        // Não exibimos toast de erro aqui para não interromper o fluxo principal
+      } else {
+        console.log("Perfil do usuário confirmado:", data);
+      }
     } catch (error) {
-      console.error("Error selecting user:", error);
-      // Mesmo com erro, mantenha o usuário selecionado
+      console.error("Erro ao selecionar usuário:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao selecionar usuário",
+        description: "Houve um problema ao acessar as informações do usuário."
+      });
+    } finally {
+      setProcessingUserId(null);
     }
   };
 
@@ -83,6 +93,7 @@ export const UserSelector = ({
                   variant={selectedUserId === user.id ? "default" : "outline"} 
                   className="w-full justify-start text-left" 
                   onClick={() => handleSelectUser(user)}
+                  disabled={processingUserId === user.id}
                 >
                   <User className="mr-2 h-4 w-4" />
                   <div className="truncate">
@@ -91,6 +102,9 @@ export const UserSelector = ({
                       {user.email}
                     </span>
                   </div>
+                  {processingUserId === user.id && (
+                    <div className="ml-2 animate-spin h-3 w-3 border border-b-0 border-r-0 rounded-full" />
+                  )}
                 </Button>
               ))}
               {users.length === 0 && (
