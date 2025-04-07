@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { UserType } from "@/types/admin";
@@ -55,23 +54,20 @@ export const useUserManagement = () => {
         throw new Error("Você precisa estar logado para acessar os usuários");
       }
       
-      const response = await fetch(`https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/admin-operations`, {
-        method: 'POST',
+      const response = await fetch(`https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/listUsers`, {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken}`
-        },
-        body: JSON.stringify({
-          action: "getUsers"
-        })
+        }
       });
 
-      const result = await response.json();
-
       if (!response.ok) {
-        throw new Error(result.error || "Erro ao carregar usuários");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Erro ao carregar usuários");
       }
 
+      const result = await response.json();
       setSupabaseUsers(result.users || []);
     } catch (error: any) {
       console.error('Erro ao carregar usuários do auth.users:', error);

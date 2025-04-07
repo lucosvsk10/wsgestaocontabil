@@ -57,20 +57,21 @@ serve(async (req) => {
     }
 
     // Listar usuários do auth.users
-    const { data: { users }, error: usersError } = await supabaseAdmin.auth.admin.listUsers();
+    const { data, error: usersError } = await supabaseAdmin.auth.admin.listUsers();
     
     if (usersError) {
-      return new Response(JSON.stringify({ error: "Erro ao buscar usuários" }), { 
+      return new Response(JSON.stringify({ error: "Erro ao buscar usuários", details: usersError }), { 
         status: 500, 
         headers: { ...corsHeaders, "Content-Type": "application/json" } 
       });
     }
     
     // Filtrar apenas os campos necessários
-    const filteredUsers = users.map(user => ({
+    const filteredUsers = data.users.map(user => ({
       id: user.id,
       email: user.email,
-      created_at: user.created_at
+      created_at: user.created_at,
+      user_metadata: user.user_metadata
     }));
     
     return new Response(JSON.stringify({ users: filteredUsers }), { 
@@ -78,7 +79,7 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error("Erro na função:", error);
-    return new Response(JSON.stringify({ error: "Erro interno no servidor" }), { 
+    return new Response(JSON.stringify({ error: "Erro interno no servidor", details: String(error) }), { 
       status: 500, 
       headers: { ...corsHeaders, "Content-Type": "application/json" } 
     });
