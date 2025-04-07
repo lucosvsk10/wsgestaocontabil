@@ -92,6 +92,18 @@ export const useDocumentManagement = () => {
     
     setIsUploading(true);
     try {
+      // First, check if the user exists in the users table
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', selectedUserId)
+        .single();
+      
+      if (userError) {
+        console.error('Erro ao verificar usuário:', userError);
+        throw new Error("O usuário selecionado não existe no banco de dados. Por favor, crie um perfil para este usuário antes de enviar documentos.");
+      }
+      
       const storageKey = `${selectedUserId}/${uuidv4()}`;
       const originalFilename = selectedFile.name;
       

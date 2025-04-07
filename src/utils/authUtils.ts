@@ -92,6 +92,45 @@ export const signUpNewUser = async (email: string, password: string, name: strin
   }
 };
 
+// Ensure user exists in users table
+export const ensureUserProfile = async (userId: string, email: string, name: string = "Usuário") => {
+  try {
+    // Check if user exists
+    const { data: existingUser, error: checkError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle();
+    
+    if (checkError) {
+      console.error("Error checking user profile:", checkError);
+      return { error: checkError };
+    }
+    
+    // If user doesn't exist, create profile
+    if (!existingUser) {
+      const { error: createError } = await supabase
+        .from('users')
+        .insert({
+          id: userId,
+          email,
+          name,
+          role: 'client'
+        });
+      
+      if (createError) {
+        console.error("Error creating user profile:", createError);
+        return { error: createError };
+      }
+    }
+    
+    return { data: existingUser || { id: userId, email, name }, error: null };
+  } catch (error) {
+    console.error("Error in ensureUserProfile:", error);
+    return { error, data: null };
+  }
+};
+
 // Upload document
 export const uploadUserDocument = async (userId: string, file: File, documentName?: string) => {
   try {

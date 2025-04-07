@@ -3,6 +3,9 @@ import { User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserType } from "@/types/admin";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { ensureUserProfile } from "@/utils/authUtils";
 
 interface UserSelectorProps {
   users: UserType[];
@@ -17,6 +20,35 @@ export const UserSelector = ({
   setSelectedUserId,
   isLoadingUsers
 }: UserSelectorProps) => {
+  // Ensure that all auth users have corresponding profiles in the users table
+  useEffect(() => {
+    const syncUserProfiles = async () => {
+      try {
+        const { data: authData } = await supabase.auth.getSession();
+        if (!authData.session) return;
+        
+        // This would typically be done through an edge function since we can't
+        // directly query auth.users from the client
+        // For now, we'll sync profiles when a user is selected
+      } catch (error) {
+        console.error("Error checking auth users:", error);
+      }
+    };
+    
+    syncUserProfiles();
+  }, []);
+
+  const handleSelectUser = async (user: UserType) => {
+    try {
+      // Ensure the user has a profile in the users table
+      await ensureUserProfile(user.id, user.email || "", user.name || "Usuário");
+      // Then set the selected user
+      setSelectedUserId(user.id);
+    } catch (error) {
+      console.error("Error selecting user:", error);
+    }
+  };
+
   return (
     <Card className="md:col-span-1 bg-[#393532]">
       <CardHeader className="bg-[#393532] rounded-2xl">
@@ -38,7 +70,7 @@ export const UserSelector = ({
                   key={user.id} 
                   variant={selectedUserId === user.id ? "default" : "outline"} 
                   className="w-full justify-start text-left" 
-                  onClick={() => setSelectedUserId(user.id)}
+                  onClick={() => handleSelectUser(user)}
                 >
                   <User className="mr-2 h-4 w-4" />
                   <div className="truncate">
