@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Document } from "@/types/admin";
 import { CategoryDocumentTable } from "./CategoryDocumentTable";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useEffect, useState } from "react";
 
 interface DocumentTabsProps {
   documents: Document[];
@@ -28,11 +29,18 @@ export const DocumentTabs = ({
 }: DocumentTabsProps) => {
   const isMobile = useIsMobile();
   
-  // Count new documents per category
-  const newDocumentCounts = categories.reduce((acc, category) => {
-    acc[category] = documentsByCategory[category].filter(doc => !doc.viewed).length;
-    return acc;
-  }, {} as Record<string, number>);
+  // Local state to track category notification counts
+  const [newDocumentCounts, setNewDocumentCounts] = useState<Record<string, number>>({});
+  
+  // Update notification counts whenever documents change
+  useEffect(() => {
+    const counts = categories.reduce((acc, category) => {
+      acc[category] = documentsByCategory[category].filter(doc => !doc.viewed).length;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    setNewDocumentCounts(counts);
+  }, [documentsByCategory, categories]);
 
   return (
     <Tabs defaultValue={categories[0] || ""} className="w-full">
