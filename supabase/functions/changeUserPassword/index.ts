@@ -1,93 +1,115 @@
 
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.21.0";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7'
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
 
-serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+// Handle CORS preflight requests
+const handleCORS = (req: Request) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders, status: 204 })
   }
+}
+
+// Create a Supabase admin client
+const createAdminClient = () => {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
+  
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Missing environment variables for Supabase')
+  }
+  
+  return createClient(supabaseUrl, supabaseServiceKey)
+}
+
+// Check if the user has admin privileges
+const isAdmin = async (token: string) => {
+  const supabaseClient = createClient(
+    Deno.env.get('SUPABASE_URL') || '',
+    Deno.env.get('SUPABASE_ANON_KEY') || '',
+    {
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    }
+  )
+
+  const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
+  
+  if (userError || !user) {
+    throw new Error('Unauthorized')
+  }
+  
+  // Check if the user is an admin
+  const { data: userData, error: roleError } = await supabaseClient
+    .from('users')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+  
+  if (roleError) {
+    throw new Error('Error fetching user role')
+  }
+  
+  const isAdminByEmail = user.email === 'wsgestao@gmail.com' || user.email === 'l09022007@gmail.com'
+  
+  return (userData?.role === 'admin' || isAdminByEmail)
+}
+
+Deno.serve(async (req) => {
+  // Handle CORS
+  const corsResponse = handleCORS(req)
+  if (corsResponse) return corsResponse
 
   try {
-    // Verificar autenticação
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Autenticação inválida" }), { 
-        status: 401, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" } 
-      });
+    // Verify authentication
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new Error('Missing or invalid authorization header')
     }
 
-    // Criar cliente Supabase com service role key
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") || "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "",
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
+    const token = authHeader.substring(7)
+    const adminAuthorized = await isAdmin(token)
 
-    // Obter JWT do cabeçalho de autorização
-    const jwt = authHeader.replace("Bearer ", "");
+    if (!adminAuthorized) {
+      throw new Error('Unauthorized: Admin privileges required')
+    }
+
+    // Parse the request body
+    const { userId, newPassword } = await req.json()
     
-    // Verificar o token e obter o usuário
-    const { data: { user: caller }, error: authError } = await supabaseAdmin.auth.getUser(jwt);
+    if (!userId || !newPassword) {
+      throw new Error('Missing required fields: userId and newPassword')
+    }
     
-    if (authError || !caller) {
-      return new Response(JSON.stringify({ error: "Usuário não autenticado" }), { 
-        status: 401, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" } 
-      });
-    }
-
-    // Verificar se o usuário tem permissão (apenas emails específicos)
-    if (caller.email !== "wsgestao@gmail.com" && caller.email !== "l09022007@gmail.com") {
-      return new Response(JSON.stringify({ error: "Acesso negado. Apenas administradores específicos podem acessar esta função." }), { 
-        status: 403, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" } 
-      });
-    }
-
-    // Obter dados da requisição
-    const { userId, newPassword } = await req.json();
+    // Create an admin client to update the user password
+    const adminClient = createAdminClient()
     
-    if (!userId || !newPassword || newPassword.length < 6) {
-      return new Response(JSON.stringify({ error: "Dados inválidos. A senha deve ter pelo menos 6 caracteres." }), { 
-        status: 400, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" } 
-      });
-    }
-
-    // Atualizar a senha do usuário
-    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+    const { error } = await adminClient.auth.admin.updateUserById(
       userId,
       { password: newPassword }
-    );
-
-    if (updateError) {
-      console.error("Erro ao atualizar senha:", updateError);
-      return new Response(JSON.stringify({ error: "Erro ao atualizar senha" }), { 
-        status: 500, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" } 
-      });
+    )
+    
+    if (error) {
+      throw error
     }
-
-    return new Response(JSON.stringify({ success: true, message: "Senha atualizada com sucesso" }), { 
-      headers: { ...corsHeaders, "Content-Type": "application/json" } 
-    });
+    
+    return new Response(
+      JSON.stringify({ success: true, message: 'Password changed successfully' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+    )
+    
   } catch (error) {
-    console.error("Erro na função:", error);
-    return new Response(JSON.stringify({ error: "Erro interno no servidor" }), { 
-      status: 500, 
-      headers: { ...corsHeaders, "Content-Type": "application/json" } 
-    });
+    console.error('Error:', error.message)
+    
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+    )
   }
-});
+})
