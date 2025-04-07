@@ -27,38 +27,55 @@ const createAdminClient = () => {
 
 // Check if the user has admin privileges
 const isAdmin = async (token: string) => {
-  const supabaseClient = createClient(
-    Deno.env.get('SUPABASE_URL') || '',
-    Deno.env.get('SUPABASE_ANON_KEY') || '',
-    {
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
+  try {
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') || '',
+      Deno.env.get('SUPABASE_ANON_KEY') || '',
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         },
-      },
-    }
-  )
+      }
+    )
 
-  const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
-  
-  if (userError || !user) {
-    throw new Error('Unauthorized')
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
+    
+    if (userError || !user) {
+      console.error('Error getting user:', userError)
+      throw new Error('Unauthorized')
+    }
+    
+    // Check if the user is an admin by email directly
+    const isAdminByEmail = user.email === 'wsgestao@gmail.com' || user.email === 'l09022007@gmail.com'
+    if (isAdminByEmail) {
+      return true
+    }
+    
+    // If not admin by email, check the role in the database
+    try {
+      const { data: userData, error: roleError } = await supabaseClient
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+      
+      if (roleError) {
+        console.error('Error fetching user role:', roleError)
+        // Continue with email check if role lookup fails
+      }
+      
+      return (userData?.role === 'admin' || isAdminByEmail)
+    } catch (roleError) {
+      console.error('Exception when fetching role:', roleError)
+      // If there's an error fetching the role, fall back to email check
+      return isAdminByEmail
+    }
+  } catch (error) {
+    console.error('Exception in isAdmin function:', error)
+    throw error
   }
-  
-  // Check if the user is an admin
-  const { data: userData, error: roleError } = await supabaseClient
-    .from('users')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-  
-  if (roleError) {
-    throw new Error('Error fetching user role')
-  }
-  
-  const isAdminByEmail = user.email === 'wsgestao@gmail.com' || user.email === 'l09022007@gmail.com'
-  
-  return (userData?.role === 'admin' || isAdminByEmail)
 }
 
 Deno.serve(async (req) => {
@@ -74,10 +91,16 @@ Deno.serve(async (req) => {
     }
 
     const token = authHeader.substring(7)
-    const adminAuthorized = await isAdmin(token)
+    
+    try {
+      const adminAuthorized = await isAdmin(token)
 
-    if (!adminAuthorized) {
-      throw new Error('Unauthorized: Admin privileges required')
+      if (!adminAuthorized) {
+        throw new Error('Unauthorized: Admin privileges required')
+      }
+    } catch (authError) {
+      console.error('Authorization error:', authError)
+      throw new Error('Authorization check failed: ' + authError.message)
     }
 
     // Parse the request body
