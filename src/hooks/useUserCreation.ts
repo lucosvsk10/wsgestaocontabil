@@ -31,9 +31,10 @@ export const useUserCreation = (onUserCreated: () => void) => {
         })
       });
 
+      const responseData = await response.json();
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Erro ao criar usuário");
+        throw new Error(responseData.error || "Erro ao criar usuário");
       }
 
       // Notify successful creation

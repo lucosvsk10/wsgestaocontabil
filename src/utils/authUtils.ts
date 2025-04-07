@@ -129,7 +129,7 @@ export const ensureUserProfile = async (userId: string, email: string, name: str
         .select('*')
         .eq('id', userId);
         
-      return { data: newUser?.[0] || { id: userId, email, name }, error: null };
+      return { data: newUser?.[0] || { id: userId, email, name, role: 'client' }, error: null };
     }
     
     return { data: existingUsers[0], error: null };
@@ -142,6 +142,13 @@ export const ensureUserProfile = async (userId: string, email: string, name: str
 // Upload document
 export const uploadUserDocument = async (userId: string, file: File, documentName?: string) => {
   try {
+    // Ensure user profile exists before uploading
+    const { error: profileError } = await ensureUserProfile(userId, '', 'Usuário');
+    if (profileError) {
+      console.error("Error ensuring user profile:", profileError);
+      throw new Error("Erro ao verificar perfil do usuário. Por favor, tente novamente.");
+    }
+
     // 1. Upload file to storage
     const fileName = `${userId}/${Date.now()}_${file.name}`;
     const { data: fileData, error: uploadError } = await supabase.storage

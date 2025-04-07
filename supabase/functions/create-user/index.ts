@@ -27,38 +27,57 @@ const createAdminClient = () => {
 
 // Check if the user has admin privileges
 const isAdmin = async (token: string) => {
-  const supabaseClient = createClient(
-    Deno.env.get('SUPABASE_URL') || '',
-    Deno.env.get('SUPABASE_ANON_KEY') || '',
-    {
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || ''
+    
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error('Missing environment variables for Supabase')
     }
-  )
+    
+    const supabaseClient = createClient(
+      supabaseUrl,
+      supabaseAnonKey,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      }
+    )
 
-  const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
-  
-  if (userError || !user) {
-    throw new Error('Unauthorized')
+    // Get the user from the token
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
+    
+    if (userError || !user) {
+      console.error('Error getting user:', userError)
+      throw new Error('Unauthorized: User not found')
+    }
+    
+    // Check if the user is an admin by email (hardcoded admin emails)
+    const adminEmails = ['wsgestao@gmail.com', 'l09022007@gmail.com']
+    if (user.email && adminEmails.includes(user.email)) {
+      return true
+    }
+    
+    // Check if the user is an admin in the database
+    const { data: userData, error: roleError } = await supabaseClient
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+    
+    if (roleError) {
+      console.error('Error fetching user role:', roleError)
+      return false
+    }
+    
+    return userData?.role === 'admin'
+  } catch (error) {
+    console.error('Error checking admin status:', error)
+    return false
   }
-  
-  // Check if the user is an admin
-  const { data: userData, error: roleError } = await supabaseClient
-    .from('users')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-  
-  if (roleError) {
-    throw new Error('Error fetching user role')
-  }
-  
-  const isAdminByEmail = user.email === 'wsgestao@gmail.com' || user.email === 'l09022007@gmail.com'
-  
-  return (userData?.role === 'admin' || isAdminByEmail)
 }
 
 Deno.serve(async (req) => {
@@ -98,6 +117,7 @@ Deno.serve(async (req) => {
     })
     
     if (authError) {
+      console.error('Error creating auth user:', authError)
       throw authError
     }
     
@@ -117,6 +137,7 @@ Deno.serve(async (req) => {
     
     if (userError) {
       // If user profile creation fails, delete the auth user
+      console.error('Error creating user profile:', userError)
       await adminClient.auth.admin.deleteUser(authUser.user.id)
       throw userError
     }
@@ -135,7 +156,7 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
   } catch (error) {
-    console.error('Error:', error.message)
+    console.error('Error creating user:', error.message)
     
     return new Response(
       JSON.stringify({ error: error.message }),

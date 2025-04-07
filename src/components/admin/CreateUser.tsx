@@ -23,14 +23,16 @@ const userSchema = z.object({
   isAdmin: z.boolean().default(false)
 });
 
+export type UserFormData = z.infer<typeof userSchema>;
+
 interface CreateUserProps {
-  createUser: (data: z.infer<typeof userSchema>) => void;
+  createUser: (data: UserFormData) => void;
   isCreatingUser: boolean;
 }
 
 export const CreateUser = ({ createUser, isCreatingUser }: CreateUserProps) => {
   // Form para criação de usuário
-  const form = useForm<z.infer<typeof userSchema>>({
+  const form = useForm<UserFormData>({
     resolver: zodResolver(userSchema),
     defaultValues: {
       name: "",
@@ -40,6 +42,14 @@ export const CreateUser = ({ createUser, isCreatingUser }: CreateUserProps) => {
     },
   });
 
+  const onSubmit = (data: UserFormData) => {
+    createUser(data);
+    // Reset form after submission only on success, handled in useUserCreation
+    if (!isCreatingUser) {
+      form.reset();
+    }
+  };
+
   return (
     <Card className="bg-[#393532]">
       <CardHeader>
@@ -47,7 +57,7 @@ export const CreateUser = ({ createUser, isCreatingUser }: CreateUserProps) => {
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(createUser)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="name"
