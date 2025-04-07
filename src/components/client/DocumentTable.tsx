@@ -3,11 +3,9 @@ import { useState } from "react";
 import { Download, Clock, Tag, Bell, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Document } from "@/types/admin";
-import { format } from "date-fns";
-import { pt } from "date-fns/locale";
+import { Document } from "@/utils/auth/types";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface DocumentTableProps {
@@ -25,6 +23,7 @@ export const DocumentTable = ({
   daysUntilExpiration,
   refreshDocuments
 }: DocumentTableProps) => {
+  const { toast } = useToast();
   const [loadingDocumentIds, setLoadingDocumentIds] = useState<Set<string>>(new Set());
 
   const markAsViewed = async (document: Document) => {
@@ -59,9 +58,42 @@ export const DocumentTable = ({
     }
   };
 
-  const handleDownload = (document: Document) => {
+  const handleDownload = async (document: Document) => {
     // Mark as viewed when downloaded
     markAsViewed(document);
+    
+    try {
+      if (document.storage_key) {
+        // Se temos o storage_key, usar o método de download
+        const { data, error } = await supabase.storage
+          .from('documents')
+          .download(document.storage_key);
+        
+        if (error) throw error;
+        
+        if (data) {
+          // Criar URL do blob e iniciar download
+          const url = URL.createObjectURL(data);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = document.filename || document.original_filename || document.name;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
+      } else if (document.file_url) {
+        // Fallback para URL pública
+        window.open(document.file_url, '_blank');
+      }
+    } catch (error: any) {
+      console.error('Erro ao baixar documento:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao baixar documento",
+        description: error.message
+      });
+    }
   };
 
   return (
@@ -127,21 +159,13 @@ export const DocumentTable = ({
               <TableCell>
                 <Button 
                   variant="outline" 
-                  size="sm" 
-                  asChild
+                  size="sm"
                   disabled={isDocumentExpired(doc.expires_at) || loadingDocumentIds.has(doc.id)}
                   onClick={() => handleDownload(doc)}
+                  className="flex items-center gap-1"
                 >
-                  <a 
-                    href={doc.file_url} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="flex items-center gap-1"
-                    download={doc.filename || doc.original_filename || doc.name}
-                  >
-                    <Download size={14} />
-                    <span>{doc.filename || doc.original_filename || "Baixar"}</span>
-                  </a>
+                  <Download size={14} />
+                  <span>{doc.filename || doc.original_filename || "Baixar"}</span>
                 </Button>
               </TableCell>
             </TableRow>

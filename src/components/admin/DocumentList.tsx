@@ -1,9 +1,13 @@
+
+import { useState } from "react";
 import { File, Clock, Download, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 import { Document } from "@/utils/auth/types";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface DocumentListProps {
   documents: Document[];
@@ -16,6 +20,9 @@ export const DocumentList = ({
   isLoading, 
   handleDeleteDocument 
 }: DocumentListProps) => {
+  const { toast } = useToast();
+  const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set());
+  
   // Formatação da data
   const formatDate = (dateStr: string) => {
     if (!dateStr) return 'Data desconhecida';
@@ -39,6 +46,54 @@ export const DocumentList = ({
     if (diffTime <= 0) return 'Expirado';
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return `${diffDays} dias`;
+  };
+
+  // Função para fazer download de um documento
+  const handleDownload = async (document: Document) => {
+    try {
+      setDownloadingIds(prev => new Set([...prev, document.id]));
+      
+      if (document.storage_key) {
+        // Usando método de download direto se temos storage_key
+        const { data, error } = await supabase.storage
+          .from('documents')
+          .download(document.storage_key);
+          
+        if (error) throw error;
+        
+        if (data) {
+          const url = URL.createObjectURL(data);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = document.filename || document.original_filename || document.name;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          return;
+        }
+      } 
+      
+      // Fallback para URL pública se não conseguir baixar diretamente
+      if (document.file_url) {
+        window.open(document.file_url, '_blank');
+      } else {
+        throw new Error("URL do documento não encontrada");
+      }
+    } catch (error: any) {
+      console.error('Erro ao baixar documento:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao baixar documento",
+        description: error.message
+      });
+    } finally {
+      setDownloadingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(document.id);
+        return newSet;
+      });
+    }
   };
 
   return (
@@ -97,17 +152,15 @@ export const DocumentList = ({
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" asChild>
-                          <a 
-                            href={doc.file_url} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
-                            className="flex items-center gap-1"
-                            download={doc.filename || doc.original_filename}
-                          >
-                            <Download size={14} />
-                            <span>Baixar</span>
-                          </a>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="flex items-center gap-1"
+                          onClick={() => handleDownload(doc)}
+                          disabled={downloadingIds.has(doc.id)}
+                        >
+                          <Download size={14} />
+                          <span>Baixar</span>
                         </Button>
                         <Button 
                           variant="destructive" 

@@ -94,16 +94,19 @@ export const useDocumentUploader = (fetchUserDocuments: (userId: string) => Prom
         });
       }
       
-      // Gerar chave única para o storage
-      const storageKey = `${selectedUserId}/${uuidv4()}`;
+      // Usar o userId para organizar os arquivos por usuário no storage
+      const storageKey = `${selectedUserId}/${uuidv4()}_${selectedFile.name}`;
       const originalFilename = selectedFile.name;
       
-      // Fazer upload do arquivo para o storage
+      // Fazer upload do arquivo para o storage usando o bucket 'documents'
       const { data: fileData, error: uploadError } = await supabase.storage
         .from('documents')
         .upload(storageKey, selectedFile);
       
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error("Erro ao fazer upload:", uploadError);
+        throw uploadError;
+      }
 
       // Obter URL público do arquivo
       const { data: urlData } = supabase.storage
@@ -165,7 +168,7 @@ export const useDocumentUploader = (fetchUserDocuments: (userId: string) => Prom
           category: category,
           file_url: fileUrl,
           original_filename: originalFilename,
-          storage_key: storageKey,
+          storage_key: storageKey, // Salvar o caminho completo para uso posterior
           filename: originalFilename,
           size: file.size,
           type: file.type,
