@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { UserType } from "@/types/admin";
@@ -85,36 +86,42 @@ export const useUserManagement = () => {
   const createUser = async (data: any) => {
     setIsCreatingUser(true);
     try {
-      // 1. Registrar o usuário no Auth
-      const { error: signUpError, data: authData } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
+      const session = await supabase.auth.getSession();
+      const accessToken = session.data.session?.access_token;
+      
+      if (!accessToken) {
+        throw new Error("Você precisa estar logado para criar usuários");
+      }
+      
+      const response = await fetch(`https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/create-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password,
+          name: data.name,
+          isAdmin: data.isAdmin
+        })
       });
 
-      if (signUpError) throw signUpError;
-
-      if (authData?.user) {
-        // 2. Adicionar informações do usuário na tabela users
-        const { error: profileError } = await supabase.from('users').insert({
-          id: authData.user.id,
-          email: data.email,
-          name: data.name,
-          role: data.isAdmin ? 'admin' : 'client',
-        });
-
-        if (profileError) throw profileError;
-
-        // 3. Atualizar a lista de usuários
-        await fetchUsers();
-        
-        // 4. Atualizar a lista de usuários do auth
-        await fetchAuthUsers();
-
-        toast({
-          title: "Usuário criado com sucesso",
-          description: `${data.name} (${data.email}) foi cadastrado no sistema como ${data.isAdmin ? 'administrador' : 'cliente'}.`
-        });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Erro ao criar usuário");
       }
+
+      // Atualizar a lista de usuários
+      await fetchUsers();
+      
+      // Atualizar a lista de usuários do auth
+      await fetchAuthUsers();
+
+      toast({
+        title: "Usuário criado com sucesso",
+        description: `${data.name} (${data.email}) foi cadastrado no sistema como ${data.isAdmin ? 'administrador' : 'cliente'}.`
+      });
     } catch (error: any) {
       console.error('Erro ao criar usuário:', error);
       toast({
