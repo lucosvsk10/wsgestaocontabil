@@ -47,6 +47,8 @@ const AdminDashboard = () => {
     createUser,
     selectedUserForPasswordChange,
     setSelectedUserForPasswordChange,
+    isChangingPassword,
+    changeUserPassword,
     fetchAuthUsers,
     fetchUsers
   } = useUserManagement();
@@ -132,10 +134,13 @@ const AdminDashboard = () => {
       
       {selectedUserForPasswordChange && (
         <PasswordChangeModal 
-          user={selectedUserForPasswordChange}
+          selectedUserForPasswordChange={selectedUserForPasswordChange}
+          setSelectedUserForPasswordChange={setSelectedUserForPasswordChange}
+          changeUserPassword={changeUserPassword}
+          isChangingPassword={isChangingPassword}
+          passwordForm={passwordForm}
           open={passwordChangeModalOpen}
           onOpenChange={setPasswordChangeModalOpen}
-          form={passwordForm}
         />
       )}
     </div>

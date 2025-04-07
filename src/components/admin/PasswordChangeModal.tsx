@@ -34,6 +34,8 @@ interface PasswordChangeModalProps {
   changeUserPassword: (data: z.infer<typeof passwordSchema>) => void;
   isChangingPassword: boolean;
   passwordForm: any;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 export const PasswordChangeModal = ({
@@ -41,12 +43,15 @@ export const PasswordChangeModal = ({
   setSelectedUserForPasswordChange,
   changeUserPassword,
   isChangingPassword,
-  passwordForm
+  passwordForm,
+  open,
+  onOpenChange
 }: PasswordChangeModalProps) => {
   return (
     <Dialog 
-      open={!!selectedUserForPasswordChange} 
+      open={open} 
       onOpenChange={(open) => {
+        onOpenChange(open);
         if (!open) setSelectedUserForPasswordChange(null);
       }}
     >
