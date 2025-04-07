@@ -19,23 +19,23 @@ export const UserActions = ({ authUser, refreshUsers }: UserActionsProps) => {
 
   return (
     <>
-      <div className="flex flex-col w-full gap-2">
+      <div className="flex items-center gap-2">
         <Button 
           variant="outline" 
-          className="text-purple-500 cursor-pointer w-full justify-start"
+          className="text-purple-500" 
+          size="icon"
           onClick={() => setMakeAdminDialog(true)}
         >
-          <ShieldCheck className="mr-2 h-4 w-4" />
-          <span>Tornar ADM</span>
+          <ShieldCheck className="h-4 w-4" />
         </Button>
         
         <Button 
           variant="outline" 
-          className="text-red-500 cursor-pointer w-full justify-start"
+          className="text-red-500" 
+          size="icon"
           onClick={() => setDeleteUserDialog(true)}
         >
-          <Trash2 className="mr-2 h-4 w-4" />
-          <span>Excluir Usuário</span>
+          <Trash2 className="h-4 w-4" />
         </Button>
       </div>
 

@@ -1,17 +1,10 @@
-
-import { User, FileText, Lock, MoreHorizontal } from "lucide-react";
+import { User, FileText, Lock } from "lucide-react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { UserType } from "@/types/admin";
 import { UserActions } from "./UserActions";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
 
 interface AuthUser {
   id: string;
@@ -121,21 +114,10 @@ export const UserTable = ({
                             <span>Senha</span>
                           </Button>
                         )}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="icon">
-                              <MoreHorizontal size={16} />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
-                              <UserActions 
-                                authUser={authUser} 
-                                refreshUsers={refreshUsers} 
-                              />
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <UserActions 
+                          authUser={authUser} 
+                          refreshUsers={refreshUsers} 
+                        />
                       </div>
                     </TableCell>
                   </TableRow>
