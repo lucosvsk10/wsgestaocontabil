@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { Trash2, ShieldCheck } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { UserType } from "@/types/admin";
 import { useToast } from "@/hooks/use-toast";
@@ -20,20 +19,10 @@ export const UserActions = ({ authUser, refreshUsers }: UserActionsProps) => {
   const { toast } = useToast();
   const [deleteUserDialog, setDeleteUserDialog] = useState(false);
   const [makeAdminDialog, setMakeAdminDialog] = useState(false);
-  const [adminPassword, setAdminPassword] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [isPromoting, setIsPromoting] = useState(false);
 
   const handleDeleteUser = async () => {
-    if (adminPassword !== "5BWasgc1@") {
-      toast({
-        variant: "destructive",
-        title: "Senha incorreta",
-        description: "A senha de administrador está incorreta"
-      });
-      return;
-    }
-
     setIsDeleting(true);
     try {
       const session = await supabase.auth.getSession();
@@ -65,7 +54,6 @@ export const UserActions = ({ authUser, refreshUsers }: UserActionsProps) => {
         description: `O usuário ${authUser.email} foi removido do sistema.`
       });
 
-      setAdminPassword("");
       setDeleteUserDialog(false);
       refreshUsers();
     } catch (error: any) {
@@ -81,15 +69,6 @@ export const UserActions = ({ authUser, refreshUsers }: UserActionsProps) => {
   };
 
   const handleMakeAdmin = async () => {
-    if (adminPassword !== "5BWasgc1@") {
-      toast({
-        variant: "destructive",
-        title: "Senha incorreta",
-        description: "A senha de administrador está incorreta"
-      });
-      return;
-    }
-
     setIsPromoting(true);
     try {
       // Update the user's role in the users table
@@ -105,7 +84,6 @@ export const UserActions = ({ authUser, refreshUsers }: UserActionsProps) => {
         description: `O usuário ${authUser.email} agora tem privilégios de administrador.`
       });
 
-      setAdminPassword("");
       setMakeAdminDialog(false);
       refreshUsers();
     } catch (error: any) {
@@ -152,21 +130,6 @@ export const UserActions = ({ authUser, refreshUsers }: UserActionsProps) => {
               Isso concederá acesso administrativo completo ao sistema.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="adminPassword" className="block text-sm font-medium">
-                Digite a senha de administrador para confirmar
-              </label>
-              <Input
-                id="adminPassword"
-                type="password"
-                value={adminPassword}
-                onChange={(e) => setAdminPassword(e.target.value)}
-                className="mt-1"
-                placeholder="Senha de administrador"
-              />
-            </div>
-          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setMakeAdminDialog(false)}>
               Cancelar
@@ -201,21 +164,6 @@ export const UserActions = ({ authUser, refreshUsers }: UserActionsProps) => {
               Você está prestes a excluir o usuário {authUser.email}. Esta ação não pode ser desfeita.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="adminPassword" className="block text-sm font-medium">
-                Digite a senha de administrador para confirmar
-              </label>
-              <Input
-                id="adminPassword"
-                type="password"
-                value={adminPassword}
-                onChange={(e) => setAdminPassword(e.target.value)}
-                className="mt-1"
-                placeholder="Senha de administrador"
-              />
-            </div>
-          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteUserDialog(false)}>
               Cancelar
