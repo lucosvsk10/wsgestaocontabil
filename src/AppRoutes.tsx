@@ -7,14 +7,13 @@ import PrivateRoute from "./components/PrivateRoute";
 import { useAuth } from "./contexts/AuthContext";
 import AdminDashboard from "./pages/AdminDashboard";
 import ClientDashboard from "./pages/ClientDashboard";
+import { checkIsAdmin } from "./utils/auth/userChecks";
 
 const AppRoutes = () => {
   const { userData, user } = useAuth();
   
   const isAdmin = () => {
-    return userData?.role === 'admin' || 
-           user?.email === 'wsgestao@gmail.com' || 
-           user?.email === 'l09022007@gmail.com';
+    return checkIsAdmin(userData, user?.email);
   };
 
   return (

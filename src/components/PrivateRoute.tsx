@@ -12,9 +12,7 @@ const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
   const { user, userData, isLoading } = useAuth();
   
   const isAdmin = () => {
-    return userData?.role === 'admin' || 
-           user?.email === 'wsgestao@gmail.com' || 
-           user?.email === 'l09022007@gmail.com';
+    return checkIsAdmin(userData, user?.email);
   };
 
   // Enquanto está carregando, mostra um indicador de carregamento
