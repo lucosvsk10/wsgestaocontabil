@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
@@ -9,21 +8,25 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-
 const ClientLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { signIn } = useAuth();
-
+  const {
+    toast
+  } = useToast();
+  const {
+    signIn
+  } = useAuth();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const { error } = await signIn(email, password);
+      const {
+        error
+      } = await signIn(email, password);
       if (error) throw error;
 
       // Ao fazer login com sucesso, redirecionamos para a rota de seleção automática
@@ -38,11 +41,9 @@ const ClientLogin = () => {
       setIsLoading(false);
     }
   };
-
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
-
   return <div className="min-h-screen bg-gray-950 flex flex-col">
       <Navbar />
       
@@ -65,24 +66,9 @@ const ClientLogin = () => {
               <div className="space-y-2">
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                  <Input
-                    type={showPassword ? "text" : "password"}
-                    id="password"
-                    placeholder="●●●●●●"
-                    className="bg-transparent border-ash-dark border-4 text-lg py-6 focus:border-gold"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    onClick={togglePasswordVisibility}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-5 w-5" />
-                    ) : (
-                      <Eye className="h-5 w-5" />
-                    )}
+                  <Input type={showPassword ? "text" : "password"} id="password" placeholder="●●●●●●" value={password} onChange={e => setPassword(e.target.value)} className="pl-10 border-white -700 bg-[#46413d]" />
+                  <button type="button" onClick={togglePasswordVisibility} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
               </div>
@@ -110,5 +96,4 @@ const ClientLogin = () => {
       <Footer />
     </div>;
 };
-
 export default ClientLogin;
