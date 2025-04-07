@@ -3,7 +3,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from "uuid";
-import { ensureUserProfile } from "@/utils/authUtils";
+import { ensureUserProfile } from "@/utils/auth/userProfile";
 import { UserType } from "@/types/admin";
 
 export const useDocumentUpload = (fetchUserDocuments: (userId: string) => Promise<void>) => {

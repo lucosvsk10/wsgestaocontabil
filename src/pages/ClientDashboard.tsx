@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DocumentTabs } from "@/components/client/DocumentTabs";
 import { EmptyDocuments } from "@/components/client/EmptyDocuments";
-import { Document } from "@/types/admin";
+import { Document } from "@/utils/auth/types";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";

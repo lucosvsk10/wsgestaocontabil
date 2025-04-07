@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DocumentUpload } from "./DocumentUpload";
 import { DocumentList } from "./DocumentList";
-import { Document } from "@/types/admin";
+import { Document } from "@/utils/auth/types";
 import { AlertCircle, HelpCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";

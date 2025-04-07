@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
-import { Document } from "@/types/admin";
+import { Document } from "@/utils/auth/types";
 
 interface DocumentListProps {
   documents: Document[];

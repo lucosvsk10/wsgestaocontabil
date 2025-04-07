@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserType } from "@/types/admin";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ensureUserProfile } from "@/utils/authUtils";
+import { ensureUserProfile } from "@/utils/auth/userProfile";
 import { useToast } from "@/hooks/use-toast";
 
 interface UserSelectorProps {
