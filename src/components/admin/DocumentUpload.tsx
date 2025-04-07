@@ -47,11 +47,11 @@ export const DocumentUpload = ({
   };
 
   return (
-    <Card className="w-full max-w-md border-gold bg-[#46413d] rounded-md">
-      <CardHeader className="space-y-1 text-center bg-[#46413d] my-0 rounded-full">
-        <CardTitle className="text-gold font-medium text-3xl">ENVIAR DOCUMENTO</CardTitle>
+    <Card className="w-full max-w-4xl mx-auto border-gold/20 bg-[#46413d] rounded-md">
+      <CardHeader className="space-y-1 text-center bg-[#46413d] my-0 rounded-t-md pb-3">
+        <CardTitle className="text-[#e8cc81] font-medium text-2xl">ENVIAR DOCUMENTO</CardTitle>
       </CardHeader>
-      <CardContent className="bg-[#46413d]">
+      <CardContent className="bg-[#46413d] pt-4">
         <form onSubmit={handleFormSubmit} className="space-y-6">
           <div className="grid gap-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

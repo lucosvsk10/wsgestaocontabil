@@ -92,7 +92,7 @@ export const DocumentManager = ({
             </AlertDescription>
           </Alert>
           
-          <div className="flex justify-center w-full">
+          <div className="w-full px-4 py-2">
             <DocumentUpload
               onUpload={handleUpload}
               isUploading={isUploading}

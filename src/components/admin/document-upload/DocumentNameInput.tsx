@@ -10,7 +10,7 @@ interface DocumentNameInputProps {
 export const DocumentNameInput = ({ documentName, setDocumentName }: DocumentNameInputProps) => {
   return (
     <div className="space-y-2">
-      <label htmlFor="documentName" className="text-sm font-medium">
+      <label htmlFor="documentName" className="text-sm font-medium text-[#e9aa91]">
         Nome do Documento
       </label>
       <Input
@@ -19,6 +19,7 @@ export const DocumentNameInput = ({ documentName, setDocumentName }: DocumentNam
         value={documentName}
         onChange={(e) => setDocumentName(e.target.value)}
         required
+        className="bg-[#393532] border-gold/20 text-white focus-visible:ring-gold/30"
       />
     </div>
   );

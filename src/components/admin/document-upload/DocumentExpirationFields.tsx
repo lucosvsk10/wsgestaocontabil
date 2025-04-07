@@ -35,10 +35,11 @@ export const DocumentExpirationFields = ({
               }
               setNoExpiration(!!checked);
             }}
+            className="border-gold/40 data-[state=checked]:bg-gold data-[state=checked]:text-navy"
           />
           <label
             htmlFor="noExpiration"
-            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            className="text-sm font-medium leading-none text-[#e9aa91] peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
           >
             Sem data de expiração
           </label>
@@ -46,7 +47,7 @@ export const DocumentExpirationFields = ({
       </div>
       
       <div className="space-y-2">
-        <label className="text-sm font-medium">
+        <label className="text-sm font-medium text-[#e9aa91]">
           Data de Expiração
         </label>
         <Popover>
@@ -54,8 +55,9 @@ export const DocumentExpirationFields = ({
             <Button
               variant={"outline"}
               className={cn(
-                "w-full justify-start text-left font-normal",
-                !expirationDate && "text-muted-foreground"
+                "w-full justify-start text-left font-normal bg-[#393532] border-gold/20",
+                !expirationDate && "text-[#e9aa91]/50",
+                expirationDate && "text-white"
               )}
               disabled={noExpiration}
             >
@@ -63,13 +65,14 @@ export const DocumentExpirationFields = ({
               {expirationDate ? format(expirationDate, "PPP", { locale: ptBR }) : "Selecionar data"}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
+          <PopoverContent className="w-auto p-0 bg-[#393532] border-gold/20">
             <Calendar
               mode="single"
               selected={expirationDate || undefined}
               onSelect={setExpirationDate}
               disabled={noExpiration}
               initialFocus
+              className="bg-[#393532] text-white"
             />
           </PopoverContent>
         </Popover>

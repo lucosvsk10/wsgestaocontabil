@@ -15,16 +15,16 @@ export const DocumentCategorySelect = ({
 }: DocumentCategorySelectProps) => {
   return (
     <div className="space-y-2">
-      <label htmlFor="documentCategory" className="text-sm font-medium">
+      <label htmlFor="documentCategory" className="text-sm font-medium text-[#e9aa91]">
         Categoria
       </label>
       <Select value={documentCategory} onValueChange={setDocumentCategory}>
-        <SelectTrigger>
+        <SelectTrigger className="bg-[#393532] border-gold/20 text-white focus:ring-gold/30">
           <SelectValue placeholder="Selecione uma categoria" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="bg-[#393532] border-gold/20 text-white">
           {documentCategories.map((category) => (
-            <SelectItem key={category} value={category}>
+            <SelectItem key={category} value={category} className="focus:bg-gold/20 focus:text-white">
               {category}
             </SelectItem>
           ))}

@@ -13,7 +13,7 @@ export const DocumentObservations = ({
 }: DocumentObservationsProps) => {
   return (
     <div className="space-y-2">
-      <label htmlFor="observations" className="text-sm font-medium">
+      <label htmlFor="observations" className="text-sm font-medium text-[#e9aa91]">
         Observações
       </label>
       <Textarea
@@ -22,8 +22,9 @@ export const DocumentObservations = ({
         value={documentObservations}
         onChange={(e) => setDocumentObservations(e.target.value)}
         rows={3}
+        className="bg-[#393532] border-gold/20 text-white focus-visible:ring-gold/30"
       />
-      <p className="text-xs text-gray-400">
+      <p className="text-xs text-[#e9aa91]/70">
         Adicione instruções ou informações relevantes sobre o documento
       </p>
     </div>

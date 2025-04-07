@@ -18,25 +18,25 @@ export const FileUploadArea = ({ handleFileChange }: FileUploadAreaProps) => {
 
   return (
     <div className="space-y-2">
-      <label htmlFor="fileInput" className="text-sm font-medium">
+      <label htmlFor="fileInput" className="text-sm font-medium text-[#e9aa91]">
         Arquivo
       </label>
       <div className="flex items-center justify-center w-full">
         <label
           htmlFor="fileInput"
-          className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-gray-800/30 transition-colors"
+          className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gold/20 rounded-lg cursor-pointer hover:bg-[#393532]/70 transition-colors bg-[#393532]"
         >
           <div className="flex flex-col items-center justify-center pt-5 pb-6">
-            <Upload className="w-8 h-8 mb-2 text-gray-400" />
-            <p className="mb-2 text-sm text-gray-400">
+            <Upload className="w-8 h-8 mb-2 text-gold/60" />
+            <p className="mb-2 text-sm text-[#e9aa91]">
               <span className="font-semibold">Clique para enviar</span> ou arraste e solte
             </p>
             {selectedFileName ? (
-              <p className="text-xs text-gray-300 bg-gray-700/50 px-2 py-1 rounded">
+              <p className="text-xs text-white bg-[#46413d]/80 px-2 py-1 rounded">
                 {selectedFileName}
               </p>
             ) : (
-              <p className="text-xs text-gray-500">PDF, DOCX, JPG, PNG (max. 10MB)</p>
+              <p className="text-xs text-[#e9aa91]/60">PDF, DOCX, JPG, PNG (max. 10MB)</p>
             )}
           </div>
           <input
