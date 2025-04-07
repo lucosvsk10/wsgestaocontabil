@@ -5,13 +5,14 @@ import { ensureUserProfile } from './userProfile';
 // Sign in with email and password
 export const signInWithEmail = async (email: string, password: string) => {
   try {
-    return await supabase.auth.signInWithPassword({
+    const response = await supabase.auth.signInWithPassword({
       email,
       password
     });
+    return response; // This returns { data, error } structure
   } catch (error) {
     console.error("Error in signIn:", error);
-    return { error };
+    return { error, data: null }; // Ensure we always return { data, error } structure
   }
 };
 

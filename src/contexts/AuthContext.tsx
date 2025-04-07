@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from "react";
 import { User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,9 +22,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = async (email: string, password: string) => {
     try {
       const response = await signInWithEmail(email, password);
+      // Check if response has data property before accessing it
       return { 
         error: response.error as Error | null, 
-        data: response.data 
+        data: response.data || null 
       };
     } catch (error) {
       return { error: error as Error, data: null };
