@@ -1,0 +1,90 @@
+
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
+import { DocumentManager } from "@/components/admin/DocumentManager";
+
+interface AdminDocumentViewProps {
+  selectedUserId: string | null;
+  documentName: string;
+  setDocumentName: (value: string) => void;
+  documentCategory: string;
+  setDocumentCategory: (value: string) => void;
+  documentObservations: string;
+  setDocumentObservations: (value: string) => void;
+  handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleUpload: (e: React.FormEvent) => void;
+  isUploading: boolean;
+  documents: any[];
+  isLoadingDocuments: boolean;
+  handleDeleteDocument: (id: string) => void;
+  documentCategories: string[];
+  expirationDate: Date | null;
+  setExpirationDate: (date: Date | null) => void;
+  noExpiration: boolean;
+  setNoExpiration: (value: boolean) => void;
+  handleBackToUserList: () => void;
+  userName: string;
+}
+
+export const AdminDocumentView = ({
+  selectedUserId,
+  documentName,
+  setDocumentName,
+  documentCategory,
+  setDocumentCategory,
+  documentObservations,
+  setDocumentObservations,
+  handleFileChange,
+  handleUpload,
+  isUploading,
+  documents,
+  isLoadingDocuments,
+  handleDeleteDocument,
+  documentCategories,
+  expirationDate,
+  setExpirationDate,
+  noExpiration,
+  setNoExpiration,
+  handleBackToUserList,
+  userName
+}: AdminDocumentViewProps) => {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-2 mb-4">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={handleBackToUserList}
+          className="flex items-center gap-1"
+        >
+          <ArrowLeft size={16} />
+          Voltar para lista de usuários
+        </Button>
+        <h2 className="text-xl font-semibold text-[#e9aa91]">
+          Documentos de {userName}
+        </h2>
+      </div>
+      
+      <DocumentManager 
+        selectedUserId={selectedUserId}
+        documentName={documentName}
+        setDocumentName={setDocumentName}
+        documentCategory={documentCategory}
+        setDocumentCategory={setDocumentCategory}
+        documentObservations={documentObservations}
+        setDocumentObservations={setDocumentObservations}
+        handleFileChange={handleFileChange}
+        handleUpload={handleUpload}
+        isUploading={isUploading}
+        documents={documents}
+        isLoadingDocuments={isLoadingDocuments}
+        handleDeleteDocument={handleDeleteDocument}
+        documentCategories={documentCategories}
+        expirationDate={expirationDate}
+        setExpirationDate={setExpirationDate}
+        noExpiration={noExpiration}
+        setNoExpiration={setNoExpiration}
+      />
+    </div>
+  );
+};

@@ -1,21 +1,16 @@
 
 import { useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDocumentManagement } from "@/hooks/useDocumentManagement";
 import { useUserManagement } from "@/hooks/useUserManagement";
-import { UserList } from "@/components/admin/UserList";
-import { DocumentManager } from "@/components/admin/DocumentManager";
-import { CreateUser } from "@/components/admin/CreateUser";
-import { PasswordChangeForm } from "@/components/admin/PasswordChangeForm";
-import { PasswordChangeModal } from "@/components/admin/PasswordChangeModal";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { UserType } from "@/types/admin";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { AdminTabsView } from "@/components/admin/AdminTabsView";
+import { AdminDocumentView } from "@/components/admin/AdminDocumentView";
+import { AdminPasswordChangeModal } from "@/components/admin/AdminPasswordChangeModal";
 
 // Schema para alteração de senha
 const passwordSchema = z.object({
@@ -110,90 +105,55 @@ const AdminDashboard = () => {
         <h1 className="text-2xl font-bold mb-6 text-[#e8cc81]">Painel de Administração</h1>
         
         {showDocumentManager ? (
-          <div className="space-y-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleBackToUserList}
-                className="flex items-center gap-1"
-              >
-                <ArrowLeft size={16} />
-                Voltar para lista de usuários
-              </Button>
-              <h2 className="text-xl font-semibold text-[#e9aa91]">
-                Documentos de {getSelectedUserName()}
-              </h2>
-            </div>
-            
-            <DocumentManager 
-              selectedUserId={selectedUserId}
-              documentName={documentName}
-              setDocumentName={setDocumentName}
-              documentCategory={documentCategory}
-              setDocumentCategory={setDocumentCategory}
-              documentObservations={documentObservations}
-              setDocumentObservations={setDocumentObservations}
-              handleFileChange={handleFileChange}
-              handleUpload={handleUpload}
-              isUploading={isUploading}
-              documents={documents}
-              isLoadingDocuments={isLoadingDocuments}
-              handleDeleteDocument={handleDeleteDocument}
-              documentCategories={documentCategories}
-              expirationDate={expirationDate}
-              setExpirationDate={setExpirationDate}
-              noExpiration={noExpiration}
-              setNoExpiration={setNoExpiration}
-            />
-          </div>
+          <AdminDocumentView 
+            selectedUserId={selectedUserId}
+            documentName={documentName}
+            setDocumentName={setDocumentName}
+            documentCategory={documentCategory}
+            setDocumentCategory={setDocumentCategory}
+            documentObservations={documentObservations}
+            setDocumentObservations={setDocumentObservations}
+            handleFileChange={handleFileChange}
+            handleUpload={handleUpload}
+            isUploading={isUploading}
+            documents={documents}
+            isLoadingDocuments={isLoadingDocuments}
+            handleDeleteDocument={handleDeleteDocument}
+            documentCategories={documentCategories}
+            expirationDate={expirationDate}
+            setExpirationDate={setExpirationDate}
+            noExpiration={noExpiration}
+            setNoExpiration={setNoExpiration}
+            handleBackToUserList={handleBackToUserList}
+            userName={getSelectedUserName()}
+          />
         ) : (
-          <Tabs defaultValue="users" className="space-y-6">
-            <TabsList className="grid grid-cols-3 mb-4">
-              <TabsTrigger value="users">Lista de Usuários</TabsTrigger>
-              <TabsTrigger value="create-user">Criar Usuário</TabsTrigger>
-              <TabsTrigger value="change-password">Alterar Senha</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="users" className="space-y-6">
-              <UserList 
-                supabaseUsers={supabaseUsers} 
-                users={users}
-                isLoading={isLoadingUsers || isLoadingAuthUsers}
-                setSelectedUserId={handleDocumentButtonClick}
-                setSelectedUserForPasswordChange={(user: UserType) => {
-                  setSelectedUserForPasswordChange(user);
-                  setPasswordChangeModalOpen(true);
-                }}
-                passwordForm={passwordForm}
-                refreshUsers={refreshUsers}
-              />
-            </TabsContent>
-            
-            <TabsContent value="create-user">
-              <CreateUser 
-                createUser={createUser}
-                isCreatingUser={isCreatingUser}
-              />
-            </TabsContent>
-            
-            <TabsContent value="change-password">
-              <PasswordChangeForm />
-            </TabsContent>
-          </Tabs>
-        )}
-        
-        {selectedUserForPasswordChange && (
-          <PasswordChangeModal 
-            selectedUserForPasswordChange={selectedUserForPasswordChange}
-            setSelectedUserForPasswordChange={setSelectedUserForPasswordChange}
-            changeUserPassword={changeUserPassword}
-            isChangingPassword={isChangingPassword}
+          <AdminTabsView 
+            supabaseUsers={supabaseUsers}
+            users={users}
+            isLoadingUsers={isLoadingUsers}
+            isLoadingAuthUsers={isLoadingAuthUsers}
+            handleDocumentButtonClick={handleDocumentButtonClick}
+            setSelectedUserForPasswordChange={(user: UserType) => {
+              setSelectedUserForPasswordChange(user);
+              setPasswordChangeModalOpen(true);
+            }}
             passwordForm={passwordForm}
-            open={passwordChangeModalOpen}
-            onOpenChange={setPasswordChangeModalOpen}
+            refreshUsers={refreshUsers}
+            createUser={createUser}
+            isCreatingUser={isCreatingUser}
           />
         )}
+        
+        <AdminPasswordChangeModal 
+          selectedUserForPasswordChange={selectedUserForPasswordChange}
+          setSelectedUserForPasswordChange={setSelectedUserForPasswordChange}
+          changeUserPassword={changeUserPassword}
+          isChangingPassword={isChangingPassword}
+          passwordForm={passwordForm}
+          passwordChangeModalOpen={passwordChangeModalOpen}
+          setPasswordChangeModalOpen={setPasswordChangeModalOpen}
+        />
       </div>
       <Footer />
     </>
