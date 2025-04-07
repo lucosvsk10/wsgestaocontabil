@@ -67,9 +67,19 @@ export const DocumentManager = ({
 
   return (
     <Tabs defaultValue="upload" className="bg-[#46413d]">
-      <TabsList className="mb-4 bg-[#46413d] border-gold">
-        <TabsTrigger value="upload" className="text-gold hover:text-gold-light">Enviar documento</TabsTrigger>
-        <TabsTrigger value="manage" className="text-gold hover:text-gold-light">Gerenciar documentos</TabsTrigger>
+      <TabsList className="mb-4 bg-[#46413d] border-gold/20">
+        <TabsTrigger 
+          value="upload" 
+          className="text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
+        >
+          Enviar documento
+        </TabsTrigger>
+        <TabsTrigger 
+          value="manage" 
+          className="text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
+        >
+          Gerenciar documentos
+        </TabsTrigger>
       </TabsList>
       <TabsContent value="upload" className="bg-[#46413d]">
         <div className="grid grid-cols-1 gap-6">

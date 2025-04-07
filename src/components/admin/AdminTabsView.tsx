@@ -1,3 +1,4 @@
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserList } from "@/components/admin/UserList";
 import { CreateUser } from "@/components/admin/CreateUser";
@@ -28,10 +29,25 @@ export const AdminTabsView = ({
   isCreatingUser
 }: AdminTabsViewProps) => {
   return <Tabs defaultValue="users" className="space-y-6">
-      <TabsList className="grid grid-cols-3 mb-4 bg-[[#e8cc81] bg-[#e8cc81]">
-        <TabsTrigger value="users">Lista de Usuários</TabsTrigger>
-        <TabsTrigger value="create-user">Criar Usuário</TabsTrigger>
-        <TabsTrigger value="change-password">Alterar Senha</TabsTrigger>
+      <TabsList className="grid grid-cols-3 mb-4 bg-[#46413d] border border-gold/20">
+        <TabsTrigger 
+          value="users" 
+          className="text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
+        >
+          Lista de Usuários
+        </TabsTrigger>
+        <TabsTrigger 
+          value="create-user" 
+          className="text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
+        >
+          Criar Usuário
+        </TabsTrigger>
+        <TabsTrigger 
+          value="change-password" 
+          className="text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
+        >
+          Alterar Senha
+        </TabsTrigger>
       </TabsList>
       
       <TabsContent value="users" className="space-y-6">

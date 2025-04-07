@@ -113,14 +113,14 @@ export const UserSelector = ({
                 <Button 
                   key={user.id} 
                   variant={selectedUserId === user.id ? "default" : "outline"} 
-                  className="w-full justify-start text-left" 
+                  className={`w-full justify-start text-left ${selectedUserId === user.id ? 'bg-gold text-navy hover:bg-gold-light' : 'bg-[#46413d] text-white hover:bg-[#46413d]/90'}`}
                   onClick={() => handleSelectUser(user)}
                   disabled={processingUserId === user.id}
                 >
                   <User className="mr-2 h-4 w-4" />
                   <div className="truncate">
                     <span>{user.name || "Usuário"}</span>
-                    <span className="text-xs text-gray-400 block truncate">
+                    <span className={`text-xs ${selectedUserId === user.id ? 'text-navy/70' : 'text-gray-400'} block truncate`}>
                       {user.email}
                     </span>
                   </div>
