@@ -57,18 +57,6 @@ export const UserList = ({
           <LoadingSpinner />
         ) : (
           <>
-            {/* Seção de Administradores */}
-            <UserTable 
-              users={adminUsers}
-              userInfoList={users}
-              title="Administradores"
-              roleLabel="Administrador"
-              roleClassName="bg-purple-900 text-purple-100"
-              setSelectedUserForPasswordChange={setSelectedUserForPasswordChange}
-              passwordForm={passwordForm}
-              refreshUsers={refreshUsers}
-            />
-
             {/* Seção de Clientes */}
             <UserTable 
               users={clientUsers}
@@ -81,6 +69,18 @@ export const UserList = ({
               passwordForm={passwordForm}
               refreshUsers={refreshUsers}
               showDocumentButton={true}
+            />
+
+            {/* Seção de Administradores */}
+            <UserTable 
+              users={adminUsers}
+              userInfoList={users}
+              title="Administradores"
+              roleLabel="Administrador"
+              roleClassName="bg-purple-900 text-purple-100"
+              setSelectedUserForPasswordChange={setSelectedUserForPasswordChange}
+              passwordForm={passwordForm}
+              refreshUsers={refreshUsers}
             />
           </>
         )}
