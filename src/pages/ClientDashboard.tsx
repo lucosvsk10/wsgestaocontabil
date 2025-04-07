@@ -1,9 +1,9 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { DocumentTabs } from "@/components/client/DocumentTabs";
 import { EmptyDocuments } from "@/components/client/EmptyDocuments";
+import { EmptyCategory } from "@/components/client/EmptyCategory";
 import { Document } from "@/utils/auth/types";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -29,11 +29,6 @@ const ClientDashboard = () => {
   // Categorias de documentos
   const categories = ["Imposto de Renda", "Documentações", "Certidões"];
   
-  // Filtrar documentos por categoria selecionada
-  const filteredDocuments = selectedCategory
-    ? documents.filter(doc => doc.category === selectedCategory)
-    : documents;
-  
   // Obter documentos por categoria
   const documentsByCategory = getDocumentsByCategory(documents, categories);
   
@@ -58,6 +53,18 @@ const ClientDashboard = () => {
       if (error) throw error;
       
       setDocuments(data || []);
+      
+      // Set default selected category if we have documents
+      if ((data || []).length > 0 && !selectedCategory) {
+        // Find first category that has documents
+        const firstCategoryWithDocs = categories.find(
+          cat => (data || []).some(doc => doc.category === cat)
+        );
+        
+        if (firstCategoryWithDocs) {
+          setSelectedCategory(firstCategoryWithDocs);
+        }
+      }
     } catch (error: any) {
       console.error('Erro ao carregar documentos:', error);
       toast({
@@ -112,15 +119,7 @@ const ClientDashboard = () => {
         <Card className="bg-[#393532] border-gold/20">
           <CardHeader>
             <CardTitle className="text-[#e8cc81] flex items-center justify-between">
-              {selectedCategory ? `Documentos - ${selectedCategory}` : 'Todos os Documentos'}
-              <Button 
-                variant="outline" 
-                onClick={() => setSelectedCategory(null)}
-                className={`${selectedCategory ? 'opacity-100' : 'opacity-0 pointer-events-none'} bg-[#46413d] text-gold hover:bg-gold hover:text-navy border-gold`}
-                size="sm"
-              >
-                Ver Todos
-              </Button>
+              {selectedCategory ? `Documentos - ${selectedCategory}` : 'Meus Documentos'}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -129,19 +128,23 @@ const ClientDashboard = () => {
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#e8cc81]"></div>
               </div>
             ) : documents.length > 0 ? (
-              <div className={`${isMobile ? 'overflow-x-auto' : ''}`}>
-                <DocumentTabs 
-                  documents={filteredDocuments}
-                  allDocuments={documents}
-                  documentsByCategory={documentsByCategory}
-                  categories={categories}
-                  setSelectedCategory={setSelectedCategory}
-                  formatDate={formatDate}
-                  isDocumentExpired={isDocumentExpired}
-                  daysUntilExpiration={daysUntilExpiration}
-                  refreshDocuments={fetchUserDocuments}
-                />
-              </div>
+              selectedCategory ? (
+                <div className={`${isMobile ? 'overflow-x-auto' : ''}`}>
+                  <DocumentTabs 
+                    documents={[]} // Unused prop now
+                    allDocuments={documents}
+                    documentsByCategory={documentsByCategory}
+                    categories={categories}
+                    setSelectedCategory={setSelectedCategory}
+                    formatDate={formatDate}
+                    isDocumentExpired={isDocumentExpired}
+                    daysUntilExpiration={daysUntilExpiration}
+                    refreshDocuments={fetchUserDocuments}
+                  />
+                </div>
+              ) : (
+                <EmptyCategory />
+              )
             ) : (
               <EmptyDocuments />
             )}

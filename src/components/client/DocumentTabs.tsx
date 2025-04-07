@@ -1,7 +1,6 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Document } from "@/types/admin";
-import { DocumentTable } from "./DocumentTable";
 import { CategoryDocumentTable } from "./CategoryDocumentTable";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -18,7 +17,6 @@ interface DocumentTabsProps {
 }
 
 export const DocumentTabs = ({
-  documents,
   allDocuments,
   documentsByCategory,
   categories,
@@ -36,24 +34,9 @@ export const DocumentTabs = ({
     return acc;
   }, {} as Record<string, number>);
 
-  // Total new documents
-  const totalNewDocuments = allDocuments.filter(doc => !doc.viewed).length;
-
   return (
-    <Tabs defaultValue="all" className="w-full">
+    <Tabs defaultValue={categories[0] || ""} className="w-full">
       <TabsList className={`mb-4 border-gold/20 bg-[#46413d] ${isMobile ? 'flex flex-wrap' : ''}`}>
-        <TabsTrigger 
-          value="all" 
-          onClick={() => setSelectedCategory(null)} 
-          className="relative text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
-        >
-          Todos
-          {totalNewDocuments > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-              {totalNewDocuments}
-            </span>
-          )}
-        </TabsTrigger>
         {categories.map(category => (
           <TabsTrigger 
             key={category} 
@@ -71,16 +54,6 @@ export const DocumentTabs = ({
           </TabsTrigger>
         ))}
       </TabsList>
-      
-      <TabsContent value="all">
-        <DocumentTable 
-          documents={documents}
-          formatDate={formatDate}
-          isDocumentExpired={isDocumentExpired}
-          daysUntilExpiration={daysUntilExpiration}
-          refreshDocuments={refreshDocuments}
-        />
-      </TabsContent>
       
       {categories.map(category => (
         <TabsContent key={category} value={category}>
