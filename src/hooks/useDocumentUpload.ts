@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from "uuid";
 import { ensureUserProfile } from "@/utils/authUtils";
+import { UserType } from "@/types/admin";
 
 export const useDocumentUpload = (fetchUserDocuments: (userId: string) => Promise<void>) => {
   const { toast } = useToast();
@@ -24,7 +25,12 @@ export const useDocumentUpload = (fetchUserDocuments: (userId: string) => Promis
     }
   };
 
-  const handleUpload = async (e: React.FormEvent) => {
+  const handleUpload = async (
+    e: React.FormEvent,
+    selectedUserId: string,
+    supabaseUsers: any[],
+    users: UserType[]
+  ) => {
     e.preventDefault();
     if (!selectedUserId) {
       toast({

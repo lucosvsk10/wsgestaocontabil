@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDocumentFetch } from "./useDocumentFetch";
 import { useDocumentDelete } from "./useDocumentDelete";
 import { useDocumentUpload } from "./useDocumentUpload";
@@ -37,18 +37,11 @@ export const useDocumentManagement = () => {
     handleUpload
   } = useDocumentUpload(fetchUserDocuments);
   
-  // Fix the missing variables in the upload hook
+  // Wrapper function for handleUpload that includes the required parameters
   const uploadHandleUpload = async (e: React.FormEvent) => {
-    if (!handleUpload) return;
+    if (!selectedUserId) return;
     
-    // Create a wrapper for the original handleUpload function
-    const event = { ...e, preventDefault: e.preventDefault } as React.FormEvent;
-    
-    // Call the original function with the required context
-    await handleUpload.call(
-      { selectedUserId, supabaseUsers, users, fetchUserDocuments },
-      event
-    );
+    await handleUpload(e, selectedUserId, supabaseUsers, users);
   };
   
   // Wrapper for handleDeleteDocument to include selectedUserId
@@ -57,11 +50,11 @@ export const useDocumentManagement = () => {
   };
   
   // When selectedUserId changes, fetch documents
-  useState(() => {
+  useEffect(() => {
     if (selectedUserId) {
       fetchUserDocuments(selectedUserId);
     }
-  });
+  }, [selectedUserId, fetchUserDocuments]);
 
   return {
     documents,
