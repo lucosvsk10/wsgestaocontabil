@@ -1,4 +1,12 @@
 
+export interface UserData {
+  id: string;
+  name: string | null;
+  email: string | null;
+  role: string | null;
+  created_at: string | null;
+}
+
 export interface Document {
   id: string;
   name: string;
@@ -18,8 +26,9 @@ export interface Document {
 
 export interface AuthContextType {
   user: any | null;
+  userData: UserData | null;
   isLoading: boolean;
-  isAdmin: boolean;
+  isAdmin?: boolean;
   signIn: (email: string, password: string) => Promise<{
     error: Error | null;
     data: any | null;
@@ -27,4 +36,6 @@ export interface AuthContextType {
   signOut: () => Promise<{
     error: Error | null;
   }>;
+  setUser?: React.Dispatch<React.SetStateAction<any | null>>;
+  setUserData?: React.Dispatch<React.SetStateAction<UserData | null>>;
 }

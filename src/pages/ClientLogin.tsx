@@ -8,7 +8,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { signInWithEmail } from "@/utils/auth/authentication";
 
 const ClientLogin = () => {
   const [email, setEmail] = useState("");

@@ -1,17 +1,9 @@
-
 import React, { createContext, useState, useContext, useEffect } from "react";
 import { User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { UserData } from "@/utils/auth/types";
-
-// Context type
-interface AuthContextType {
-  user: User | null;
-  userData: UserData | null;
-  isLoading: boolean;
-  setUser: React.Dispatch<React.SetStateAction<User | null>>;
-  setUserData: React.Dispatch<React.SetStateAction<UserData | null>>;
-}
+import { UserData, AuthContextType } from "@/utils/auth/types";
+import { checkIsAdmin } from "@/utils/auth/userChecks";
+import { signInWithEmail, signOutUser } from "@/utils/auth/authentication";
 
 // Create context
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,6 +13,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Check if user is admin
+  const isAdmin = checkIsAdmin(userData, user?.email);
+
+  // Sign in function
+  const signIn = async (email: string, password: string) => {
+    try {
+      const response = await signInWithEmail(email, password);
+      return { 
+        error: response.error as Error | null, 
+        data: response.data 
+      };
+    } catch (error) {
+      return { error: error as Error, data: null };
+    }
+  };
+
+  // Sign out function
+  const signOut = async () => {
+    try {
+      await signOutUser();
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
+    }
+  };
 
   useEffect(() => {
     // Check active session
@@ -88,6 +106,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     userData,
     isLoading,
+    isAdmin,
+    signIn,
+    signOut,
     setUser,
     setUserData,
   };
