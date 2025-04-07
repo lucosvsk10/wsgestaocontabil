@@ -8,4 +8,4 @@ export interface UserType {
 }
 
 // Re-export Document type from our main type module to avoid duplication
-export { Document } from "@/utils/auth/types";
+export type { Document } from "@/utils/auth/types";

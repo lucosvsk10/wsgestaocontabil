@@ -1,66 +1,109 @@
 
-import React, { createContext, useContext } from 'react';
-import { Session, User } from '@supabase/supabase-js';
-import { useAuthState } from '@/hooks/useAuthState';
-import { 
-  UserData, 
-  Document, 
-  signInWithEmail, 
-  signOutUser, 
-  getUserDocumentsFromDB 
-} from '@/utils/authUtils';
+import React, { createContext, useState, useContext, useEffect } from "react";
+import { User } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
+import { UserData } from "@/utils/auth/types";
 
+// Context type
 interface AuthContextType {
-  session: Session | null;
   user: User | null;
   userData: UserData | null;
   isLoading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signOut: () => Promise<void>;
-  getUserDocuments: (userId: string) => Promise<{ data: Document[] | null, error: any }>;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
+  setUserData: React.Dispatch<React.SetStateAction<UserData | null>>;
 }
 
-const AuthContext = createContext<AuthContextType>({
-  session: null,
-  user: null,
-  userData: null,
-  isLoading: true,
-  signIn: async () => ({ error: null }),
-  signOut: async () => {},
-  getUserDocuments: async () => ({ data: null, error: null }),
-});
+// Create context
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const useAuth = () => useContext(AuthContext);
-
+// Provider component
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { 
-    session, 
-    user, 
-    userData, 
-    isLoading
-  } = useAuthState();
+  const [user, setUser] = useState<User | null>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const signIn = async (email: string, password: string) => {
-    return await signInWithEmail(email, password);
-  };
+  useEffect(() => {
+    // Check active session
+    const checkSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setUser(session?.user || null);
+      } catch (error) {
+        console.error("Erro ao verificar sessão:", error);
+        setUser(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const signOut = async () => {
-    await signOutUser();
-  };
+    checkSession();
 
-  const getUserDocuments = async (userId: string) => {
-    return await getUserDocumentsFromDB(userId);
-  };
+    // Listen for auth changes
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setUser(session?.user || null);
+        setIsLoading(false);
+      }
+    );
 
-  const value = {
-    session,
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  // Fetch user data when user changes
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (user) {
+        try {
+          setIsLoading(true);
+          const { data, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+          if (error) {
+            console.error("Erro ao buscar dados do usuário:", error);
+            setUserData(null);
+          } else {
+            setUserData(data);
+          }
+        } catch (error) {
+          console.error("Erro ao buscar dados do usuário:", error);
+          setUserData(null);
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        setUserData(null);
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [user]);
+
+  const contextValue: AuthContextType = {
     user,
     userData,
     isLoading,
-    signIn,
-    signOut,
-    getUserDocuments
+    setUser,
+    setUserData,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={contextValue}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+// Hook to use the auth context
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
 };
