@@ -12,11 +12,11 @@ interface AdminDocumentViewProps {
   documentObservations: string;
   setDocumentObservations: (value: string) => void;
   handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  handleUpload: (e: React.FormEvent) => void;
+  handleUpload: (e: React.FormEvent) => Promise<void>;
   isUploading: boolean;
   documents: any[];
   isLoadingDocuments: boolean;
-  handleDeleteDocument: (id: string) => void;
+  handleDeleteDocument: (id: string) => Promise<void>;
   documentCategories: string[];
   expirationDate: Date | null;
   setExpirationDate: (date: Date | null) => void;
