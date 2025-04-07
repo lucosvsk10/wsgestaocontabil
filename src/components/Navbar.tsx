@@ -1,13 +1,21 @@
+
 import { useState, useEffect } from 'react';
-import { Menu, X, Instagram, UserCircle } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Menu, X, Instagram, UserCircle, LogOut } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+  const { toast } = useToast();
 
   // Check if we're on a route that should hide navigation items
   const shouldHideNavLinks = ['/login', '/admin', '/client'].includes(location.pathname);
+  
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
@@ -15,6 +23,25 @@ const Navbar = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Logout realizado",
+        description: "Você foi desconectado com sucesso.",
+      });
+      navigate('/');
+    } catch (error) {
+      console.error("Erro ao fazer logout:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao fazer logout",
+        description: "Ocorreu um erro ao tentar desconectar.",
+      });
+    }
+  };
+
   return <header className="bg-[#393532]">
       <div className="container mx-auto flex items-center justify-between px-[28px] py-[19px] bg-[#393532]">
         <div className="flex items-center">
@@ -37,10 +64,21 @@ const Navbar = () => {
               </a>
             </>}
           
-          <Link to="/login" className="flex items-center text-gold hover:text-gold-light transition-colors duration-300">
-            <UserCircle size={20} className="mr-1" />
-            <span className="text-sm font-medium uppercase tracking-wider">Login</span>
-          </Link>
+          {user ? (
+            <button 
+              onClick={handleLogout}
+              className="flex items-center text-gold hover:text-gold-light transition-colors duration-300"
+            >
+              <LogOut size={20} className="mr-1" />
+              <span className="text-sm font-medium uppercase tracking-wider">Sair</span>
+            </button>
+          ) : (
+            <Link to="/login" className="flex items-center text-gold hover:text-gold-light transition-colors duration-300">
+              <UserCircle size={20} className="mr-1" />
+              <span className="text-sm font-medium uppercase tracking-wider">Login</span>
+            </Link>
+          )}
+          
           <a href="https://www.instagram.com/ws_gestao_contabil?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer" className="text-gold hover:text-gold-light transition-colors duration-300" aria-label="Instagram">
             <Instagram size={20} />
           </a>
@@ -75,10 +113,25 @@ const Navbar = () => {
                   Contato
                 </a>
               </>}
-            <Link to="/login" className="flex items-center text-gold hover:text-gold-light text-xl transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
-              <UserCircle size={24} className="mr-2" />
-              <span className="font-prompt font-medium uppercase tracking-wider">Login</span>
-            </Link>
+            
+            {user ? (
+              <button 
+                onClick={() => {
+                  handleLogout();
+                  setIsMobileMenuOpen(false);
+                }}
+                className="flex items-center text-gold hover:text-gold-light text-xl transition-colors"
+              >
+                <LogOut size={24} className="mr-2" />
+                <span className="font-prompt font-medium uppercase tracking-wider">Sair</span>
+              </button>
+            ) : (
+              <Link to="/login" className="flex items-center text-gold hover:text-gold-light text-xl transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
+                <UserCircle size={24} className="mr-2" />
+                <span className="font-prompt font-medium uppercase tracking-wider">Login</span>
+              </Link>
+            )}
+            
             <a href="https://www.instagram.com/ws_gestao_contabil?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer" className="text-gold hover:text-gold-light text-xl transition-colors" aria-label="Instagram" onClick={() => setIsMobileMenuOpen(false)}>
               <Instagram size={24} />
             </a>
