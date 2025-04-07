@@ -1,3 +1,4 @@
+
 import { User, FileText, Lock } from "lucide-react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
@@ -93,7 +94,7 @@ export const UserTable = ({
                           <Button 
                             variant="outline" 
                             size="sm" 
-                            className="flex items-center gap-1" 
+                            className="flex items-center gap-1 bg-[#46413d] text-white hover:bg-[#46413d]/90" 
                             onClick={() => setSelectedUserId(authUser.id)}
                           >
                             <FileText size={14} />
