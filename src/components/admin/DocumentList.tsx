@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
-import { Document } from "@/utils/auth/types";
+import { Document } from "@/types/admin";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -26,26 +26,41 @@ export const DocumentList = ({
   // Formatação da data
   const formatDate = (dateStr: string) => {
     if (!dateStr) return 'Data desconhecida';
-    const date = new Date(dateStr);
-    return format(date, "dd/MM/yyyy 'às' HH:mm", { locale: pt });
+    try {
+      const date = new Date(dateStr);
+      return format(date, "dd/MM/yyyy 'às' HH:mm", { locale: pt });
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return 'Data inválida';
+    }
   };
 
   // Verificar se o documento está expirado
   const isDocumentExpired = (expiresAt: string | null) => {
     if (!expiresAt) return false;
-    const expirationDate = new Date(expiresAt);
-    return expirationDate < new Date();
+    try {
+      const expirationDate = new Date(expiresAt);
+      return expirationDate < new Date();
+    } catch (error) {
+      console.error("Error checking expiration:", error);
+      return false;
+    }
   };
 
   // Calcular dias restantes até a expiração
   const daysUntilExpiration = (expiresAt: string | null) => {
     if (!expiresAt) return "Não expira";
-    const expirationDate = new Date(expiresAt);
-    const today = new Date();
-    const diffTime = expirationDate.getTime() - today.getTime();
-    if (diffTime <= 0) return 'Expirado';
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return `${diffDays} dias`;
+    try {
+      const expirationDate = new Date(expiresAt);
+      const today = new Date();
+      const diffTime = expirationDate.getTime() - today.getTime();
+      if (diffTime <= 0) return 'Expirado';
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return `${diffDays} dias`;
+    } catch (error) {
+      console.error("Error calculating days until expiration:", error);
+      return "Erro no cálculo";
+    }
   };
 
   // Função para fazer download de um documento
@@ -122,7 +137,7 @@ export const DocumentList = ({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {documents.length > 0 ? (
+              {documents && documents.length > 0 ? (
                 documents.map(doc => (
                   <TableRow key={doc.id} className={isDocumentExpired(doc.expires_at) ? "bg-red-900/20 border-gold/20" : "border-gold/20 hover:bg-[#46413d]"}>
                     <TableCell className="font-medium text-white">{doc.name}</TableCell>
