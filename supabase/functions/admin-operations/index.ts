@@ -105,26 +105,66 @@ Deno.serve(async (req) => {
           throw new Error('User ID is required')
         }
         
-        // Delete the user from public.users first
-        const { error: deleteProfileError } = await adminClient
-          .from('users')
-          .delete()
-          .eq('id', body.userId)
-        
-        if (deleteProfileError) {
-          console.error('Error deleting user profile:', deleteProfileError)
-          // Continue anyway, we still want to delete the auth user
+        try {
+          console.log(`Deleting user with ID: ${body.userId}`)
+          
+          // 1. Delete any documents associated with this user
+          const { error: docsError } = await adminClient
+            .from('documents')
+            .delete()
+            .eq('user_id', body.userId)
+          
+          if (docsError) {
+            console.error('Error deleting user documents:', docsError)
+            // Continue with deletion even if documents deletion fails
+          }
+          
+          // 2. Delete the user from public.users
+          const { error: profileError } = await adminClient
+            .from('users')
+            .delete()
+            .eq('id', body.userId)
+          
+          if (profileError) {
+            console.error('Error deleting user profile:', profileError)
+            // Continue anyway, we still want to delete the auth user
+          }
+          
+          // 3. Delete the user from auth.users
+          const { error: authError } = await adminClient.auth.admin.deleteUser(
+            body.userId
+          )
+          
+          if (authError) {
+            throw authError
+          }
+          
+          return new Response(
+            JSON.stringify({ success: true, message: 'User deleted successfully' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+          )
+        } catch (deleteError) {
+          console.error('Error in delete user operation:', deleteError)
+          throw deleteError
         }
         
-        // Delete the user from auth.users
-        const { error: deleteAuthError } = await adminClient.auth.admin.deleteUser(body.userId)
+      case 'makeAdmin':
+        if (!body.userId) {
+          throw new Error('User ID is required')
+        }
         
-        if (deleteAuthError) {
-          throw deleteAuthError
+        // Update the user's role in public.users
+        const { error: updateError } = await adminClient
+          .from('users')
+          .update({ role: 'admin' })
+          .eq('id', body.userId)
+        
+        if (updateError) {
+          throw updateError
         }
         
         return new Response(
-          JSON.stringify({ success: true, message: 'User deleted successfully' }),
+          JSON.stringify({ success: true, message: 'User role updated to admin successfully' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         )
         
