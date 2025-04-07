@@ -51,7 +51,7 @@ export const DocumentManager = ({
 }: DocumentManagerProps) => {
   if (!selectedUserId) {
     return (
-      <Card>
+      <Card className="bg-[#46413d]">
         <CardContent className="pt-6">
           <Alert>
             <AlertCircle className="h-4 w-4" />
@@ -66,12 +66,12 @@ export const DocumentManager = ({
   }
 
   return (
-    <Tabs defaultValue="upload">
+    <Tabs defaultValue="upload" className="bg-[#46413d]">
       <TabsList className="mb-4">
         <TabsTrigger value="upload">Enviar documento</TabsTrigger>
         <TabsTrigger value="manage">Gerenciar documentos</TabsTrigger>
       </TabsList>
-      <TabsContent value="upload">
+      <TabsContent value="upload" className="bg-[#46413d]">
         <div className="grid grid-cols-1 gap-6">
           <Alert variant="default">
             <HelpCircle className="h-4 w-4" />
@@ -100,7 +100,7 @@ export const DocumentManager = ({
           />
         </div>
       </TabsContent>
-      <TabsContent value="manage">
+      <TabsContent value="manage" className="bg-[#46413d]">
         <DocumentList
           documents={documents}
           isLoading={isLoadingDocuments}
