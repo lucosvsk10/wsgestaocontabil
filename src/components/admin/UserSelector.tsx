@@ -1,4 +1,3 @@
-
 import { User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,22 +39,25 @@ export const UserSelector = ({
 
   const handleSelectUser = async (user: UserType) => {
     try {
-      // Modificação: Defina o usuário selecionado primeiro para feedback imediato
+      // Primeiro defina o usuário selecionado para feedback imediato
       setSelectedUserId(user.id);
       
-      // Em seguida, garanta que o perfil existe em segundo plano
-      const { error } = await ensureUserProfile(
+      // Em segundo plano, tente garantir que o perfil existe
+      ensureUserProfile(
         user.id, 
         user.email || "", 
         user.name || "Usuário"
-      );
-      
-      if (error) {
-        console.log("Aviso: Perfil de usuário não encontrado, mas continuaremos usando o ID:", user.id);
-        console.error("Erro ao garantir perfil do usuário:", error);
-      }
+      ).then(({ error }) => {
+        if (error) {
+          console.log("Aviso: Perfil de usuário não encontrado, mas continuaremos usando o ID:", user.id);
+          console.error("Erro ao garantir perfil do usuário:", error);
+        }
+      }).catch(error => {
+        console.error("Erro ao selecionar usuário:", error);
+      });
     } catch (error) {
       console.error("Error selecting user:", error);
+      // Mesmo com erro, mantenha o usuário selecionado
     }
   };
 
