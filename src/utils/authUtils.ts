@@ -1,3 +1,4 @@
+
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -199,17 +200,36 @@ export const ensureUserProfile = async (userId: string, email: string, name: str
 // Função auxiliar para tentar criação direta se outros métodos falharem
 const createUserProfileDirectly = async (userId: string, email: string, name: string) => {
   try {
-    // Tenta inserção direta sem checar políticas RLS
-    const { error } = await supabase.rpc('create_user_profile', {
-      user_id: userId,
-      user_email: email,
-      user_name: name
+    // Fix: removed the RPC call since it doesn't exist in Supabase types
+    // Instead we'll use the Edge Function for creating user profiles
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+
+    if (!accessToken) {
+      console.error("Cannot create user profile: No active session");
+      return;
+    }
+
+    // Call the Supabase Edge Function to create the user profile
+    const response = await fetch('https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/create-user-profile', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
+      },
+      body: JSON.stringify({
+        userId,
+        email,
+        name
+      })
     });
-    
-    if (error) {
-      console.error("Error in direct profile creation:", error);
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("Error from create-user-profile function:", errorData);
     } else {
-      console.log("User profile created via RPC function");
+      const result = await response.json();
+      console.log("User profile created via Edge Function:", result);
     }
   } catch (error) {
     console.error("Failed to create user profile directly:", error);
