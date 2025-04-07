@@ -49,34 +49,34 @@ export const DocumentList = ({
   };
 
   // Função para fazer download de um documento
-  const handleDownload = async (document: Document) => {
+  const handleDownload = async (docItem: Document) => {
     try {
-      setDownloadingIds(prev => new Set([...prev, document.id]));
+      setDownloadingIds(prev => new Set([...prev, docItem.id]));
       
-      if (document.storage_key) {
+      if (docItem.storage_key) {
         // Usando método de download direto se temos storage_key
         const { data, error } = await supabase.storage
           .from('documents')
-          .download(document.storage_key);
+          .download(docItem.storage_key);
           
         if (error) throw error;
         
         if (data) {
           const url = URL.createObjectURL(data);
-          const a = document.createElement('a');
+          const a = window.document.createElement('a');
           a.href = url;
-          a.download = document.filename || document.original_filename || document.name;
-          document.body.appendChild(a);
+          a.download = docItem.filename || docItem.original_filename || docItem.name;
+          window.document.body.appendChild(a);
           a.click();
-          document.body.removeChild(a);
+          window.document.body.removeChild(a);
           URL.revokeObjectURL(url);
           return;
         }
       } 
       
       // Fallback para URL pública se não conseguir baixar diretamente
-      if (document.file_url) {
-        window.open(document.file_url, '_blank');
+      if (docItem.file_url) {
+        window.open(docItem.file_url, '_blank');
       } else {
         throw new Error("URL do documento não encontrada");
       }
@@ -90,7 +90,7 @@ export const DocumentList = ({
     } finally {
       setDownloadingIds(prev => {
         const newSet = new Set(prev);
-        newSet.delete(document.id);
+        newSet.delete(docItem.id);
         return newSet;
       });
     }

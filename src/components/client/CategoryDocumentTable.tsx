@@ -28,17 +28,17 @@ export const CategoryDocumentTable = ({
   const { toast } = useToast();
   const [loadingDocumentIds, setLoadingDocumentIds] = useState<Set<string>>(new Set());
 
-  const markAsViewed = async (document: Document) => {
+  const markAsViewed = async (docItem: Document) => {
     // If already viewed, no need to update
-    if (document.viewed) return;
+    if (docItem.viewed) return;
     
     try {
-      setLoadingDocumentIds(prev => new Set([...prev, document.id]));
+      setLoadingDocumentIds(prev => new Set([...prev, docItem.id]));
       
       const { error } = await supabase
         .from('documents')
         .update({ viewed: true })
-        .eq('id', document.id);
+        .eq('id', docItem.id);
         
       if (error) throw error;
       
@@ -54,39 +54,39 @@ export const CategoryDocumentTable = ({
     } finally {
       setLoadingDocumentIds(prev => {
         const newSet = new Set(prev);
-        newSet.delete(document.id);
+        newSet.delete(docItem.id);
         return newSet;
       });
     }
   };
 
-  const handleDownload = async (document: Document) => {
+  const handleDownload = async (docItem: Document) => {
     // Mark as viewed when downloaded
-    markAsViewed(document);
+    markAsViewed(docItem);
     
     try {
-      if (document.storage_key) {
+      if (docItem.storage_key) {
         // Se temos o storage_key, usar o método de download
         const { data, error } = await supabase.storage
           .from('documents')
-          .download(document.storage_key);
+          .download(docItem.storage_key);
         
         if (error) throw error;
         
         if (data) {
           // Criar URL do blob e iniciar download
           const url = URL.createObjectURL(data);
-          const a = document.createElement('a');
+          const a = window.document.createElement('a');
           a.href = url;
-          a.download = document.filename || document.original_filename || document.name;
-          document.body.appendChild(a);
+          a.download = docItem.filename || docItem.original_filename || docItem.name;
+          window.document.body.appendChild(a);
           a.click();
-          document.body.removeChild(a);
+          window.document.body.removeChild(a);
           URL.revokeObjectURL(url);
         }
-      } else if (document.file_url) {
+      } else if (docItem.file_url) {
         // Fallback para URL pública
-        window.open(document.file_url, '_blank');
+        window.open(docItem.file_url, '_blank');
       }
     } catch (error: any) {
       console.error('Erro ao baixar documento:', error);
