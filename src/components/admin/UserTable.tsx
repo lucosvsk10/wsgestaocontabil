@@ -66,7 +66,7 @@ export const UserTable = ({
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow className="border-gold/20">
               <TableHead className="text-[#e9aa91] font-medium uppercase tracking-wider">NOME</TableHead>
               <TableHead className="text-[#e9aa91] font-medium uppercase tracking-wider">Email</TableHead>
               <TableHead className="text-[#e9aa91] font-medium uppercase tracking-wider">Função</TableHead>
@@ -74,12 +74,12 @@ export const UserTable = ({
               <TableHead className="text-[#e9aa91] font-medium uppercase tracking-wider">Ações</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody className="text-[#EAF6FF]">
+          <TableBody className="text-white">
             {users.length > 0 ? (
               users.map(authUser => {
                 const userInfo = getUserInfo(authUser.id);
                 return (
-                  <TableRow key={authUser.id}>
+                  <TableRow key={authUser.id} className="border-gold/20 hover:bg-[#46413d]">
                     <TableCell>{getUserName(authUser)}</TableCell>
                     <TableCell>{authUser.email || "Sem email"}</TableCell>
                     <TableCell>
@@ -94,7 +94,7 @@ export const UserTable = ({
                           <Button 
                             variant="outline" 
                             size="sm" 
-                            className="flex items-center gap-1 bg-[#46413d] text-white hover:bg-[#46413d]/90" 
+                            className="flex items-center gap-1 bg-[#46413d] text-white hover:bg-gold hover:text-navy border-gold/20" 
                             onClick={() => setSelectedUserId(authUser.id)}
                           >
                             <FileText size={14} />
@@ -105,7 +105,7 @@ export const UserTable = ({
                           <Button
                             variant="outline"
                             size="sm"
-                            className="flex items-center gap-1"
+                            className="flex items-center gap-1 bg-[#46413d] text-white hover:bg-gold hover:text-navy border-gold/20"
                             onClick={() => {
                               setSelectedUserForPasswordChange(userInfo);
                               passwordForm.reset();
@@ -125,8 +125,8 @@ export const UserTable = ({
                 );
               })
             ) : (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-4 text-[#7d796d] bg-[in] bg-inherit">
+              <TableRow className="border-gold/20">
+                <TableCell colSpan={5} className="text-center py-4 text-[#7d796d]">
                   Nenhum {title.toLowerCase()} encontrado
                 </TableCell>
               </TableRow>

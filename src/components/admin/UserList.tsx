@@ -48,7 +48,7 @@ export const UserList = ({
   );
 
   return (
-    <Card className="px-0 bg-[#393532]">
+    <Card className="px-0 bg-[#393532] border border-gold/20">
       <CardHeader className="rounded-full bg-[#393532]">
         <CardTitle className="text-[#e8cc81] tracking-wider font-bold text-center">LISTA DE USUARIOS</CardTitle>
       </CardHeader>

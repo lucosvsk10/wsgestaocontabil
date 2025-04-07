@@ -22,7 +22,7 @@ export const UserActions = ({ authUser, refreshUsers }: UserActionsProps) => {
       <div className="flex items-center gap-2">
         <Button 
           variant="outline" 
-          className="text-purple-500" 
+          className="text-purple-400 border-gold/20 hover:bg-gold hover:text-navy" 
           size="icon"
           onClick={() => setMakeAdminDialog(true)}
         >
@@ -31,7 +31,7 @@ export const UserActions = ({ authUser, refreshUsers }: UserActionsProps) => {
         
         <Button 
           variant="outline" 
-          className="text-red-500" 
+          className="text-red-500 border-gold/20 hover:bg-gold hover:text-navy" 
           size="icon"
           onClick={() => setDeleteUserDialog(true)}
         >

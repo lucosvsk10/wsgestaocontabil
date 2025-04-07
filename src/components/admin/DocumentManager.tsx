@@ -51,12 +51,12 @@ export const DocumentManager = ({
 }: DocumentManagerProps) => {
   if (!selectedUserId) {
     return (
-      <Card className="bg-[#46413d] border-gold">
+      <Card className="bg-[#393532] border-gold/20">
         <CardContent className="pt-6">
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Nenhum usuário selecionado</AlertTitle>
-            <AlertDescription>
+          <Alert className="border-gold/20 bg-[#46413d]/80">
+            <AlertCircle className="h-4 w-4 text-gold" />
+            <AlertTitle className="text-gold">Nenhum usuário selecionado</AlertTitle>
+            <AlertDescription className="text-white">
               Selecione um usuário na lista para gerenciar seus documentos.
             </AlertDescription>
           </Alert>
@@ -66,8 +66,8 @@ export const DocumentManager = ({
   }
 
   return (
-    <Tabs defaultValue="upload" className="bg-[#46413d]">
-      <TabsList className="mb-4 bg-[#46413d] border-gold/20">
+    <Tabs defaultValue="upload" className="bg-[#393532]">
+      <TabsList className="mb-4 bg-[#393532] border-gold/20">
         <TabsTrigger 
           value="upload" 
           className="text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
@@ -81,9 +81,9 @@ export const DocumentManager = ({
           Gerenciar documentos
         </TabsTrigger>
       </TabsList>
-      <TabsContent value="upload" className="bg-[#46413d]">
+      <TabsContent value="upload" className="bg-[#393532]">
         <div className="grid grid-cols-1 gap-6">
-          <Alert variant="default" className="border-gold bg-[#46413d]/80">
+          <Alert variant="default" className="border-gold/20 bg-[#46413d]/80">
             <HelpCircle className="h-4 w-4 text-gold" />
             <AlertTitle className="text-gold">Dica</AlertTitle>
             <AlertDescription className="text-white">
@@ -112,7 +112,7 @@ export const DocumentManager = ({
           </div>
         </div>
       </TabsContent>
-      <TabsContent value="manage" className="bg-[#46413d]">
+      <TabsContent value="manage" className="bg-[#393532]">
         <DocumentList
           documents={documents}
           isLoading={isLoadingDocuments}

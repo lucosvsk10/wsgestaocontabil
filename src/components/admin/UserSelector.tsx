@@ -94,7 +94,7 @@ export const UserSelector = ({
   };
 
   return (
-    <Card className="md:col-span-1 bg-[#393532]">
+    <Card className="md:col-span-1 bg-[#393532] border border-gold/20">
       <CardHeader className="bg-[#393532] rounded-2xl">
         <CardTitle className="text-[#e8cc81]">Seleção de Usuário</CardTitle>
       </CardHeader>
@@ -108,12 +108,12 @@ export const UserSelector = ({
             <p className="text-[#e9aa91]">
               Selecione um usuário para gerenciar seus documentos
             </p>
-            <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
+            <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 mt-4">
               {users.map(user => (
                 <Button 
                   key={user.id} 
                   variant={selectedUserId === user.id ? "default" : "outline"} 
-                  className={`w-full justify-start text-left ${selectedUserId === user.id ? 'bg-gold text-navy hover:bg-gold-light' : 'bg-[#46413d] text-white hover:bg-[#46413d]/90'}`}
+                  className={`w-full justify-start text-left ${selectedUserId === user.id ? 'bg-gold text-navy hover:bg-gold-light' : 'bg-[#46413d] text-white hover:bg-[#46413d]/90 border-gold/20'}`}
                   onClick={() => handleSelectUser(user)}
                   disabled={processingUserId === user.id}
                 >

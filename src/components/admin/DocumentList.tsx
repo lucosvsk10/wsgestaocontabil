@@ -97,7 +97,7 @@ export const DocumentList = ({
   };
 
   return (
-    <div className="bg-[#46413d] p-4 rounded-lg border border-gold">
+    <div className="bg-[#393532] p-4 rounded-lg border border-gold/20">
       <h3 className="font-medium mb-4 flex items-center text-gold">
         <File className="mr-2 h-5 w-5 text-gold" />
         Documentos do Usuário
@@ -111,7 +111,7 @@ export const DocumentList = ({
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow className="border-gold">
+              <TableRow className="border-gold/20">
                 <TableHead className="text-gold">Nome Exibido</TableHead>
                 <TableHead className="text-gold">Arquivo Original</TableHead>
                 <TableHead className="text-gold">Categoria</TableHead>
@@ -124,7 +124,7 @@ export const DocumentList = ({
             <TableBody>
               {documents.length > 0 ? (
                 documents.map(doc => (
-                  <TableRow key={doc.id} className={isDocumentExpired(doc.expires_at) ? "bg-red-900/20 border-gold/50" : "border-gold/50"}>
+                  <TableRow key={doc.id} className={isDocumentExpired(doc.expires_at) ? "bg-red-900/20 border-gold/20" : "border-gold/20 hover:bg-[#46413d]"}>
                     <TableCell className="font-medium text-white">{doc.name}</TableCell>
                     <TableCell className="text-white">{doc.filename || doc.original_filename || "N/A"}</TableCell>
                     <TableCell>
@@ -155,7 +155,7 @@ export const DocumentList = ({
                         <Button 
                           variant="outline" 
                           size="sm"
-                          className="flex items-center gap-1 border-gold text-gold hover:bg-gold hover:text-navy"
+                          className="flex items-center gap-1 border-gold/20 text-gold hover:bg-gold hover:text-navy"
                           onClick={() => handleDownload(doc)}
                           disabled={downloadingIds.has(doc.id)}
                         >
@@ -176,7 +176,7 @@ export const DocumentList = ({
                   </TableRow>
                 ))
               ) : (
-                <TableRow className="border-gold/50">
+                <TableRow className="border-gold/20">
                   <TableCell colSpan={7} className="text-center py-4 text-gold">
                     Nenhum documento encontrado para este usuário
                   </TableCell>

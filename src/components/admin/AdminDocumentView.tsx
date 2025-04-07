@@ -55,7 +55,7 @@ export const AdminDocumentView = ({
           variant="outline" 
           size="sm" 
           onClick={handleBackToUserList}
-          className="flex items-center gap-1 bg-[#46413d] text-white hover:bg-[#46413d]/90"
+          className="flex items-center gap-1 bg-[#46413d] text-white hover:bg-gold hover:text-navy border-gold/20"
         >
           <ArrowLeft size={16} />
           Voltar para lista de usuários
