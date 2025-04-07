@@ -30,6 +30,8 @@ const AdminDashboard = () => {
     setDocumentName,
     documentCategory,
     setDocumentCategory,
+    documentObservations,
+    setDocumentObservations,
     expirationDate,
     setExpirationDate,
     noExpiration,
@@ -126,6 +128,8 @@ const AdminDashboard = () => {
             setDocumentName={setDocumentName}
             documentCategory={documentCategory}
             setDocumentCategory={setDocumentCategory}
+            documentObservations={documentObservations}
+            setDocumentObservations={setDocumentObservations}
             handleFileChange={handleFileChange}
             handleUpload={handleUpload}
             isUploading={isUploading}

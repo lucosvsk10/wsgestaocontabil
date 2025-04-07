@@ -104,7 +104,7 @@ export const DocumentManager = ({
         <DocumentList
           documents={documents}
           isLoading={isLoadingDocuments}
-          onDelete={handleDeleteDocument}
+          handleDeleteDocument={handleDeleteDocument}
         />
       </TabsContent>
     </Tabs>

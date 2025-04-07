@@ -17,6 +17,7 @@ export type Database = {
           filename: string | null
           id: string
           name: string
+          observations: string | null
           original_filename: string | null
           size: number | null
           storage_key: string | null
@@ -32,6 +33,7 @@ export type Database = {
           filename?: string | null
           id?: string
           name: string
+          observations?: string | null
           original_filename?: string | null
           size?: number | null
           storage_key?: string | null
@@ -47,6 +49,7 @@ export type Database = {
           filename?: string | null
           id?: string
           name?: string
+          observations?: string | null
           original_filename?: string | null
           size?: number | null
           storage_key?: string | null

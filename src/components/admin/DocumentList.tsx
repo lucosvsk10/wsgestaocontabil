@@ -8,13 +8,13 @@ import { Document } from "@/types/admin";
 
 interface DocumentListProps {
   documents: Document[];
-  isLoadingDocuments: boolean;
-  handleDeleteDocument: (id: string) => void;
+  isLoading: boolean;
+  handleDeleteDocument: (id: string) => Promise<void>;
 }
 
 export const DocumentList = ({ 
   documents, 
-  isLoadingDocuments, 
+  isLoading, 
   handleDeleteDocument 
 }: DocumentListProps) => {
   // Formatação da data
@@ -49,7 +49,7 @@ export const DocumentList = ({
         Documentos do Usuário
       </h3>
       
-      {isLoadingDocuments ? (
+      {isLoading ? (
         <div className="flex justify-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gold"></div>
         </div>
@@ -63,6 +63,7 @@ export const DocumentList = ({
                 <TableHead>Categoria</TableHead>
                 <TableHead>Data de Envio</TableHead>
                 <TableHead>Expira em</TableHead>
+                <TableHead>Observações</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -87,6 +88,13 @@ export const DocumentList = ({
                         <Clock size={14} />
                         {daysUntilExpiration(doc.expires_at)}
                       </span>
+                    </TableCell>
+                    <TableCell>
+                      {doc.observations ? (
+                        <span className="text-blue-400">{doc.observations}</span>
+                      ) : (
+                        <span className="text-gray-400 text-sm">Nenhuma</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -117,7 +125,7 @@ export const DocumentList = ({
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-4 text-gray-400">
+                  <TableCell colSpan={7} className="text-center py-4 text-gray-400">
                     Nenhum documento encontrado para este usuário
                   </TableCell>
                 </TableRow>
