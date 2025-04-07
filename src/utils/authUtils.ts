@@ -95,20 +95,20 @@ export const signUpNewUser = async (email: string, password: string, name: strin
 // Ensure user exists in users table
 export const ensureUserProfile = async (userId: string, email: string, name: string = "Usuário") => {
   try {
-    // Check if user exists
-    const { data: existingUser, error: checkError } = await supabase
+    // Check if user exists using .select() instead of .maybeSingle()
+    const { data: existingUsers, error: checkError } = await supabase
       .from('users')
       .select('*')
-      .eq('id', userId)
-      .maybeSingle();
+      .eq('id', userId);
     
     if (checkError) {
       console.error("Error checking user profile:", checkError);
       return { error: checkError };
     }
     
-    // If user doesn't exist, create profile
-    if (!existingUser) {
+    // If user doesn't exist or no data returned, create profile
+    if (!existingUsers || existingUsers.length === 0) {
+      console.log("Creating new user profile for:", userId, email, name);
       const { error: createError } = await supabase
         .from('users')
         .insert({
@@ -122,9 +122,17 @@ export const ensureUserProfile = async (userId: string, email: string, name: str
         console.error("Error creating user profile:", createError);
         return { error: createError };
       }
+      
+      // Fetch the newly created user
+      const { data: newUser } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId);
+        
+      return { data: newUser?.[0] || { id: userId, email, name }, error: null };
     }
     
-    return { data: existingUser || { id: userId, email, name }, error: null };
+    return { data: existingUsers[0], error: null };
   } catch (error) {
     console.error("Error in ensureUserProfile:", error);
     return { error, data: null };

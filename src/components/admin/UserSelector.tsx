@@ -40,10 +40,20 @@ export const UserSelector = ({
 
   const handleSelectUser = async (user: UserType) => {
     try {
-      // Ensure the user has a profile in the users table
-      await ensureUserProfile(user.id, user.email || "", user.name || "Usuário");
-      // Then set the selected user
+      // Modificação: Defina o usuário selecionado primeiro para feedback imediato
       setSelectedUserId(user.id);
+      
+      // Em seguida, garanta que o perfil existe em segundo plano
+      const { error } = await ensureUserProfile(
+        user.id, 
+        user.email || "", 
+        user.name || "Usuário"
+      );
+      
+      if (error) {
+        console.log("Aviso: Perfil de usuário não encontrado, mas continuaremos usando o ID:", user.id);
+        console.error("Erro ao garantir perfil do usuário:", error);
+      }
     } catch (error) {
       console.error("Error selecting user:", error);
     }
