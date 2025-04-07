@@ -12,6 +12,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { UserType } from "@/types/admin";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 
 // Schema para alteração de senha
 const passwordSchema = z.object({
@@ -53,6 +55,9 @@ const AdminDashboard = () => {
     fetchUsers
   } = useUserManagement();
 
+  // State to control whether to show document manager or user list
+  const [showDocumentManager, setShowDocumentManager] = useState(false);
+
   // Categorias de documentos
   const documentCategories = ["Imposto de Renda", "Documentações", "Certidões"];
 
@@ -72,34 +77,49 @@ const AdminDashboard = () => {
     fetchAuthUsers();
   };
 
+  // Function to handle document button click
+  const handleDocumentButtonClick = (userId: string) => {
+    setSelectedUserId(userId);
+    setShowDocumentManager(true);
+  };
+
+  // Function to go back to user list
+  const handleBackToUserList = () => {
+    setShowDocumentManager(false);
+  };
+
+  // Get selected user name for display in document manager
+  const getSelectedUserName = () => {
+    if (!selectedUserId) return "";
+    
+    const authUser = supabaseUsers.find(u => u.id === selectedUserId);
+    if (!authUser) return "";
+    
+    const userInfo = users.find(u => u.id === selectedUserId);
+    return userInfo?.name || authUser.user_metadata?.name || authUser.email || "Usuário";
+  };
+
   return (
     <div className="container mx-auto p-4 max-w-7xl">
       <h1 className="text-2xl font-bold mb-6 text-[#e8cc81]">Painel de Administração</h1>
       
-      <Tabs defaultValue="users" className="space-y-6">
-        <TabsList className="grid grid-cols-4 mb-4">
-          <TabsTrigger value="users">Lista de Usuários</TabsTrigger>
-          <TabsTrigger value="documents">Gerenciar Documentos</TabsTrigger>
-          <TabsTrigger value="create-user">Criar Usuário</TabsTrigger>
-          <TabsTrigger value="change-password">Alterar Senha</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="users" className="space-y-6">
-          <UserList 
-            supabaseUsers={supabaseUsers} 
-            users={users}
-            isLoading={isLoadingUsers || isLoadingAuthUsers}
-            setSelectedUserId={setSelectedUserId}
-            setSelectedUserForPasswordChange={(user: UserType) => {
-              setSelectedUserForPasswordChange(user);
-              setPasswordChangeModalOpen(true);
-            }}
-            passwordForm={passwordForm}
-            refreshUsers={refreshUsers}
-          />
-        </TabsContent>
-        
-        <TabsContent value="documents" className="space-y-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+      {showDocumentManager ? (
+        <div className="space-y-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleBackToUserList}
+              className="flex items-center gap-1"
+            >
+              <ArrowLeft size={16} />
+              Voltar para lista de usuários
+            </Button>
+            <h2 className="text-xl font-semibold text-[#e9aa91]">
+              Documentos de {getSelectedUserName()}
+            </h2>
+          </div>
+          
           <DocumentManager 
             selectedUserId={selectedUserId}
             documentName={documentName}
@@ -118,19 +138,42 @@ const AdminDashboard = () => {
             noExpiration={noExpiration}
             setNoExpiration={setNoExpiration}
           />
-        </TabsContent>
-        
-        <TabsContent value="create-user">
-          <CreateUser 
-            createUser={createUser}
-            isCreatingUser={isCreatingUser}
-          />
-        </TabsContent>
-        
-        <TabsContent value="change-password">
-          <PasswordChangeForm />
-        </TabsContent>
-      </Tabs>
+        </div>
+      ) : (
+        <Tabs defaultValue="users" className="space-y-6">
+          <TabsList className="grid grid-cols-3 mb-4">
+            <TabsTrigger value="users">Lista de Usuários</TabsTrigger>
+            <TabsTrigger value="create-user">Criar Usuário</TabsTrigger>
+            <TabsTrigger value="change-password">Alterar Senha</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="users" className="space-y-6">
+            <UserList 
+              supabaseUsers={supabaseUsers} 
+              users={users}
+              isLoading={isLoadingUsers || isLoadingAuthUsers}
+              setSelectedUserId={handleDocumentButtonClick}
+              setSelectedUserForPasswordChange={(user: UserType) => {
+                setSelectedUserForPasswordChange(user);
+                setPasswordChangeModalOpen(true);
+              }}
+              passwordForm={passwordForm}
+              refreshUsers={refreshUsers}
+            />
+          </TabsContent>
+          
+          <TabsContent value="create-user">
+            <CreateUser 
+              createUser={createUser}
+              isCreatingUser={isCreatingUser}
+            />
+          </TabsContent>
+          
+          <TabsContent value="change-password">
+            <PasswordChangeForm />
+          </TabsContent>
+        </Tabs>
+      )}
       
       {selectedUserForPasswordChange && (
         <PasswordChangeModal 
