@@ -16,6 +16,7 @@ import {
   daysUntilExpiration,
   getDocumentsByCategory 
 } from "@/utils/documentUtils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const ClientDashboard = () => {
   const { user } = useAuth();
@@ -23,6 +24,7 @@ const ClientDashboard = () => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const isMobile = useIsMobile();
   
   // Categorias de documentos
   const categories = ["Imposto de Renda", "Documentações", "Certidões"];
@@ -69,12 +71,12 @@ const ClientDashboard = () => {
   };
 
   return (
-    <>
+    <div className="min-h-screen flex flex-col bg-[#46413d]">
       <Navbar />
-      <div className="container mx-auto p-4 max-w-7xl">
+      <div className={`container mx-auto p-4 flex-grow ${isMobile ? 'px-2' : 'px-4'} py-6`}>
         <h1 className="text-2xl font-bold mb-6 text-[#e8cc81]">Meus Documentos</h1>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className={`grid ${isMobile ? 'grid-cols-1 gap-3' : 'grid-cols-1 md:grid-cols-3 gap-4'} mb-6`}>
           {categories.map(category => {
             const categoryDocs = documentsByCategory[category] || [];
             const unviewedCount = categoryDocs.filter(doc => !doc.viewed).length;
@@ -83,7 +85,7 @@ const ClientDashboard = () => {
               <Card 
                 key={category} 
                 className={`cursor-pointer hover:shadow-md transition-shadow ${
-                  selectedCategory === category ? 'border-[#e8cc81] border-2' : 'bg-[#393532]'
+                  selectedCategory === category ? 'border-[#e8cc81] border-2' : 'bg-[#393532] border-gold/20'
                 }`}
                 onClick={() => setSelectedCategory(category)}
               >
@@ -107,14 +109,14 @@ const ClientDashboard = () => {
           })}
         </div>
         
-        <Card className="bg-[#393532]">
+        <Card className="bg-[#393532] border-gold/20">
           <CardHeader>
             <CardTitle className="text-[#e8cc81] flex items-center justify-between">
               {selectedCategory ? `Documentos - ${selectedCategory}` : 'Todos os Documentos'}
               <Button 
                 variant="outline" 
                 onClick={() => setSelectedCategory(null)}
-                className={selectedCategory ? 'opacity-100' : 'opacity-0 pointer-events-none'}
+                className={`${selectedCategory ? 'opacity-100' : 'opacity-0 pointer-events-none'} bg-[#46413d] text-gold hover:bg-gold hover:text-navy border-gold`}
                 size="sm"
               >
                 Ver Todos
@@ -127,17 +129,19 @@ const ClientDashboard = () => {
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#e8cc81]"></div>
               </div>
             ) : documents.length > 0 ? (
-              <DocumentTabs 
-                documents={filteredDocuments}
-                allDocuments={documents}
-                documentsByCategory={documentsByCategory}
-                categories={categories}
-                setSelectedCategory={setSelectedCategory}
-                formatDate={formatDate}
-                isDocumentExpired={isDocumentExpired}
-                daysUntilExpiration={daysUntilExpiration}
-                refreshDocuments={fetchUserDocuments}
-              />
+              <div className={`${isMobile ? 'overflow-x-auto' : ''}`}>
+                <DocumentTabs 
+                  documents={filteredDocuments}
+                  allDocuments={documents}
+                  documentsByCategory={documentsByCategory}
+                  categories={categories}
+                  setSelectedCategory={setSelectedCategory}
+                  formatDate={formatDate}
+                  isDocumentExpired={isDocumentExpired}
+                  daysUntilExpiration={daysUntilExpiration}
+                  refreshDocuments={fetchUserDocuments}
+                />
+              </div>
             ) : (
               <EmptyDocuments />
             )}
@@ -145,7 +149,7 @@ const ClientDashboard = () => {
         </Card>
       </div>
       <Footer />
-    </>
+    </div>
   );
 };
 

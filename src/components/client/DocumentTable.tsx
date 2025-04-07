@@ -7,6 +7,7 @@ import { Document } from "@/utils/auth/types";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface DocumentTableProps {
   documents: Document[];
@@ -25,6 +26,7 @@ export const DocumentTable = ({
 }: DocumentTableProps) => {
   const { toast } = useToast();
   const [loadingDocumentIds, setLoadingDocumentIds] = useState<Set<string>>(new Set());
+  const isMobile = useIsMobile();
 
   const markAsViewed = async (docItem: Document) => {
     // If already viewed, no need to update
@@ -96,23 +98,77 @@ export const DocumentTable = ({
     }
   };
 
+  if (isMobile) {
+    return (
+      <div className="space-y-4">
+        {documents.map(doc => (
+          <div 
+            key={doc.id} 
+            className={`p-3 rounded-lg border ${isDocumentExpired(doc.expires_at) ? "bg-red-900/20 border-red-900/30" : "bg-[#46413d] border-gold/20"}`}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="font-medium text-white flex items-center">
+                {!doc.viewed && <Bell size={14} className="text-red-500 mr-2" />}
+                {doc.name}
+              </div>
+              <span className="text-xs px-2 py-1 rounded-full bg-[#393532] text-gold">
+                {doc.category}
+              </span>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+              <div className="text-gray-300">Data: <span className="text-white">{formatDate(doc.uploaded_at)}</span></div>
+              <div className="text-gray-300">
+                Validade: 
+                <span className={isDocumentExpired(doc.expires_at) ? "text-red-400" : "text-green-400"}>
+                  {" "}{daysUntilExpiration(doc.expires_at)}
+                </span>
+              </div>
+            </div>
+            
+            {doc.observations && (
+              <div className="mb-3 text-sm">
+                <div className="text-blue-400 flex items-center">
+                  <Info size={14} className="mr-1" />
+                  <span className="text-gray-300">Observações:</span>
+                </div>
+                <p className="text-white text-sm ml-5">{doc.observations}</p>
+              </div>
+            )}
+            
+            <Button 
+              variant="outline" 
+              size="sm"
+              disabled={isDocumentExpired(doc.expires_at) || loadingDocumentIds.has(doc.id)}
+              onClick={() => handleDownload(doc)}
+              className="w-full mt-2 bg-[#393532] border-gold/20 text-gold hover:bg-gold hover:text-navy flex items-center justify-center gap-1"
+            >
+              <Download size={14} />
+              <span>Baixar</span>
+            </Button>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-x-auto">
       <Table>
-        <TableHeader>
+        <TableHeader className="bg-[#393532]">
           <TableRow>
-            <TableHead>Nome do Documento</TableHead>
-            <TableHead>Categoria</TableHead>
-            <TableHead>Data de Envio</TableHead>
-            <TableHead>Validade</TableHead>
-            <TableHead>Observações</TableHead>
-            <TableHead>Ações</TableHead>
+            <TableHead className="text-gold">Nome do Documento</TableHead>
+            <TableHead className="text-gold">Categoria</TableHead>
+            <TableHead className="text-gold">Data de Envio</TableHead>
+            <TableHead className="text-gold">Validade</TableHead>
+            <TableHead className="text-gold">Observações</TableHead>
+            <TableHead className="text-gold">Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {documents.map(doc => (
-            <TableRow key={doc.id} className={isDocumentExpired(doc.expires_at) ? "bg-red-900/20" : ""}>
-              <TableCell className="font-medium">
+            <TableRow key={doc.id} className={isDocumentExpired(doc.expires_at) ? "bg-red-900/20 border-red-900/30" : "border-gold/10"}>
+              <TableCell className="font-medium text-white">
                 <div className="flex items-center">
                   {!doc.viewed && (
                     <Bell size={14} className="text-red-500 mr-2" />
@@ -120,13 +176,13 @@ export const DocumentTable = ({
                   {doc.name}
                 </div>
               </TableCell>
-              <TableCell>
+              <TableCell className="text-gray-300">
                 <span className="flex items-center gap-1">
                   <Tag size={14} />
                   {doc.category}
                 </span>
               </TableCell>
-              <TableCell>{formatDate(doc.uploaded_at)}</TableCell>
+              <TableCell className="text-gray-300">{formatDate(doc.uploaded_at)}</TableCell>
               <TableCell>
                 <span className={`flex items-center gap-1 ${
                   isDocumentExpired(doc.expires_at) 
@@ -147,8 +203,8 @@ export const DocumentTable = ({
                           <span className="truncate max-w-[150px]">{doc.observations}</span>
                         </div>
                       </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="max-w-[300px] whitespace-normal break-words">{doc.observations}</p>
+                      <TooltipContent className="bg-[#393532] border-gold/20">
+                        <p className="max-w-[300px] whitespace-normal break-words text-white">{doc.observations}</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -162,7 +218,7 @@ export const DocumentTable = ({
                   size="sm"
                   disabled={isDocumentExpired(doc.expires_at) || loadingDocumentIds.has(doc.id)}
                   onClick={() => handleDownload(doc)}
-                  className="flex items-center gap-1"
+                  className="flex items-center gap-1 bg-[#393532] border-gold/20 text-gold hover:bg-gold hover:text-navy"
                 >
                   <Download size={14} />
                   <span>{doc.filename || doc.original_filename || "Baixar"}</span>
