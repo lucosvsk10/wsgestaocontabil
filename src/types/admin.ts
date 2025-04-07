@@ -21,4 +21,5 @@ export interface Document {
   filename?: string;
   storage_key?: string;
   viewed?: boolean;
+  observations?: string | null;
 }

@@ -12,6 +12,7 @@ export const useDocumentManagement = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [documentName, setDocumentName] = useState("");
   const [documentCategory, setDocumentCategory] = useState("Documentações");
+  const [documentObservations, setDocumentObservations] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
   const [expirationDate, setExpirationDate] = useState<Date | null>(null);
@@ -116,6 +117,7 @@ export const useDocumentManagement = () => {
         size: selectedFile.size,
         type: selectedFile.type,
         expires_at: expires_at,
+        observations: documentObservations || null,
         viewed: false
       }).select();
       
@@ -124,6 +126,7 @@ export const useDocumentManagement = () => {
       await fetchUserDocuments(selectedUserId);
       setSelectedFile(null);
       setDocumentName("");
+      setDocumentObservations("");
       setExpirationDate(null);
       setNoExpiration(false);
       const fileInput = document.getElementById('fileInput') as HTMLInputElement;
@@ -201,6 +204,8 @@ export const useDocumentManagement = () => {
     setDocumentName,
     documentCategory,
     setDocumentCategory,
+    documentObservations,
+    setDocumentObservations,
     selectedFile,
     setSelectedFile,
     isLoadingDocuments,

@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Download, Clock, Tag, Bell } from "lucide-react";
+import { Download, Clock, Tag, Bell, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Document } from "@/types/admin";
@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface DocumentTableProps {
   documents: Document[];
@@ -72,6 +73,7 @@ export const DocumentTable = ({
             <TableHead>Categoria</TableHead>
             <TableHead>Data de Envio</TableHead>
             <TableHead>Validade</TableHead>
+            <TableHead>Observações</TableHead>
             <TableHead>Ações</TableHead>
           </TableRow>
         </TableHeader>
@@ -102,6 +104,25 @@ export const DocumentTable = ({
                   <Clock size={14} />
                   {daysUntilExpiration(doc.expires_at)}
                 </span>
+              </TableCell>
+              <TableCell>
+                {doc.observations ? (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center text-blue-400 cursor-help">
+                          <Info size={14} className="mr-1" />
+                          <span className="truncate max-w-[150px]">{doc.observations}</span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="max-w-[300px] whitespace-normal break-words">{doc.observations}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : (
+                  <span className="text-gray-400 text-sm">Nenhuma</span>
+                )}
               </TableCell>
               <TableCell>
                 <Button 

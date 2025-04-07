@@ -69,14 +69,57 @@ const ClientDashboard = () => {
     <div className="container mx-auto p-4 max-w-7xl">
       <h1 className="text-2xl font-bold mb-6 text-[#e8cc81]">Meus Documentos</h1>
       
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        {categories.map(category => {
+          const categoryDocs = documentsByCategory[category] || [];
+          const unviewedCount = categoryDocs.filter(doc => !doc.viewed).length;
+          
+          return (
+            <Card 
+              key={category} 
+              className={`cursor-pointer hover:shadow-md transition-shadow ${
+                selectedCategory === category ? 'border-[#e8cc81] border-2' : 'bg-[#393532]'
+              }`}
+              onClick={() => setSelectedCategory(category)}
+            >
+              <CardHeader className="pb-2">
+                <CardTitle className="text-[#e8cc81] flex items-center justify-between">
+                  {category}
+                  {unviewedCount > 0 && (
+                    <span className="bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                      {unviewedCount}
+                    </span>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-300">
+                  {categoryDocs.length} documento{categoryDocs.length !== 1 ? 's' : ''}
+                </p>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+      
       <Card className="bg-[#393532]">
         <CardHeader>
-          <CardTitle className="text-[#e8cc81]">Documentos Disponíveis</CardTitle>
+          <CardTitle className="text-[#e8cc81] flex items-center justify-between">
+            {selectedCategory ? `Documentos - ${selectedCategory}` : 'Todos os Documentos'}
+            <Button 
+              variant="outline" 
+              onClick={() => setSelectedCategory(null)}
+              className={selectedCategory ? 'opacity-100' : 'opacity-0 pointer-events-none'}
+              size="sm"
+            >
+              Ver Todos
+            </Button>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#e8cc81]"></div>
             </div>
           ) : documents.length > 0 ? (
             <DocumentTabs 
