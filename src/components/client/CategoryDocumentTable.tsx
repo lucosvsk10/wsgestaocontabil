@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Download, Clock, Bell, Info } from "lucide-react";
+import { Download, Clock, Bell, Info, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Document } from "@/utils/auth/types";
@@ -148,16 +148,31 @@ export const CategoryDocumentTable = ({
                 </div>
               )}
               
-              <Button 
-                variant="outline" 
-                size="sm"
-                disabled={isDocumentExpired(doc.expires_at) || loadingDocumentIds.has(doc.id)}
-                onClick={() => handleDownload(doc)}
-                className="w-full mt-2 bg-[#393532] border-gold/20 text-gold hover:bg-gold hover:text-navy flex items-center justify-center gap-1"
-              >
-                <Download size={14} />
-                <span>Baixar</span>
-              </Button>
+              <div className="flex gap-2 mt-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  disabled={isDocumentExpired(doc.expires_at) || loadingDocumentIds.has(doc.id)}
+                  onClick={() => handleDownload(doc)}
+                  className="flex-1 bg-[#393532] border-gold/20 text-gold hover:bg-gold hover:text-navy flex items-center justify-center gap-1"
+                >
+                  <Download size={14} />
+                  <span>Baixar</span>
+                </Button>
+                
+                {!doc.viewed && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={loadingDocumentIds.has(doc.id)}
+                    onClick={() => markAsViewed(doc)}
+                    className="flex-1 bg-[#393532] border-gold/20 text-gold hover:bg-gold hover:text-navy flex items-center justify-center gap-1"
+                  >
+                    <Check size={14} />
+                    <span>Visualizado</span>
+                  </Button>
+                )}
+              </div>
             </div>
           ))
         ) : (
@@ -233,16 +248,31 @@ export const CategoryDocumentTable = ({
                   )}
                 </TableCell>
                 <TableCell>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    disabled={isDocumentExpired(doc.expires_at) || loadingDocumentIds.has(doc.id)}
-                    onClick={() => handleDownload(doc)}
-                    className="flex items-center gap-1 bg-[#393532] border-gold/20 text-gold hover:bg-gold hover:text-navy"
-                  >
-                    <Download size={14} />
-                    <span>{doc.filename || doc.original_filename || "Baixar"}</span>
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      disabled={isDocumentExpired(doc.expires_at) || loadingDocumentIds.has(doc.id)}
+                      onClick={() => handleDownload(doc)}
+                      className="flex items-center gap-1 bg-[#393532] border-gold/20 text-gold hover:bg-gold hover:text-navy"
+                    >
+                      <Download size={14} />
+                      <span>{doc.filename || doc.original_filename || "Baixar"}</span>
+                    </Button>
+                    
+                    {!doc.viewed && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={loadingDocumentIds.has(doc.id)}
+                        onClick={() => markAsViewed(doc)}
+                        className="flex items-center gap-1 bg-[#393532] border-gold/20 text-gold hover:bg-gold hover:text-navy"
+                      >
+                        <Check size={14} />
+                        <span>Visualizado</span>
+                      </Button>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))
@@ -258,4 +288,3 @@ export const CategoryDocumentTable = ({
     </div>
   );
 };
-
