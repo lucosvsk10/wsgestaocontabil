@@ -55,10 +55,10 @@ export const PasswordChangeModal = ({
         if (!open) setSelectedUserForPasswordChange(null);
       }}
     >
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md bg-[#393532] border border-gold/20">
         <DialogHeader>
-          <DialogTitle>Alterar Senha</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-[#e8cc81]">Alterar Senha</DialogTitle>
+          <DialogDescription className="text-gold/70">
             Alterar senha de {selectedUserForPasswordChange?.name || selectedUserForPasswordChange?.email}
           </DialogDescription>
         </DialogHeader>
@@ -70,9 +70,9 @@ export const PasswordChangeModal = ({
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nova Senha</FormLabel>
+                  <FormLabel className="text-[#e9aa91]">Nova Senha</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="******" {...field} />
+                    <Input type="password" placeholder="******" {...field} className="bg-[#46413d] border-gold/20 focus-visible:ring-gold" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -81,10 +81,11 @@ export const PasswordChangeModal = ({
             
             <DialogFooter>
               <DialogClose asChild>
-                <Button type="button" variant="outline">Cancelar</Button>
+                <Button type="button" variant="outline" className="border-gold/20 text-gold hover:text-navy hover:bg-gold">Cancelar</Button>
               </DialogClose>
               <Button 
                 type="submit" 
+                className="bg-gold hover:bg-gold-light text-navy"
                 disabled={isChangingPassword}
               >
                 {isChangingPassword ? (

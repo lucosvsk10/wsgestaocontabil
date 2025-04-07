@@ -51,9 +51,9 @@ export const CreateUser = ({ createUser, isCreatingUser }: CreateUserProps) => {
   };
 
   return (
-    <Card className="bg-[#393532]">
+    <Card className="bg-[#393532] border border-gold/20">
       <CardHeader>
-        <CardTitle className="text-[#e8cc81]">Criar Novo Usuário</CardTitle>
+        <CardTitle className="text-[#e8cc81] tracking-wider font-bold text-center">CRIAR NOVO USUÁRIO</CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -63,9 +63,9 @@ export const CreateUser = ({ createUser, isCreatingUser }: CreateUserProps) => {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nome Completo</FormLabel>
+                  <FormLabel className="text-[#e9aa91]">Nome Completo</FormLabel>
                   <FormControl>
-                    <Input placeholder="João da Silva" {...field} />
+                    <Input placeholder="João da Silva" {...field} className="bg-[#46413d] border-gold/20 focus-visible:ring-gold" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -77,9 +77,9 @@ export const CreateUser = ({ createUser, isCreatingUser }: CreateUserProps) => {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel className="text-[#e9aa91]">Email</FormLabel>
                   <FormControl>
-                    <Input placeholder="joao@exemplo.com" {...field} />
+                    <Input placeholder="joao@exemplo.com" {...field} className="bg-[#46413d] border-gold/20 focus-visible:ring-gold" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -91,9 +91,9 @@ export const CreateUser = ({ createUser, isCreatingUser }: CreateUserProps) => {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Senha</FormLabel>
+                  <FormLabel className="text-[#e9aa91]">Senha</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="******" {...field} />
+                    <Input type="password" placeholder="******" {...field} className="bg-[#46413d] border-gold/20 focus-visible:ring-gold" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -104,18 +104,19 @@ export const CreateUser = ({ createUser, isCreatingUser }: CreateUserProps) => {
               control={form.control}
               name="isAdmin"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border border-gold/20 p-4 bg-[#46413d]">
                   <FormControl>
                     <Checkbox
                       checked={field.value}
                       onCheckedChange={field.onChange}
+                      className="data-[state=checked]:bg-gold data-[state=checked]:border-gold"
                     />
                   </FormControl>
                   <div className="space-y-1 leading-none">
-                    <FormLabel>
+                    <FormLabel className="text-[#e9aa91]">
                       Administrador
                     </FormLabel>
-                    <p className="text-sm text-gray-400">
+                    <p className="text-sm text-gold/70">
                       Marque esta opção para conceder ao usuário privilégios de administrador.
                     </p>
                   </div>
@@ -125,7 +126,7 @@ export const CreateUser = ({ createUser, isCreatingUser }: CreateUserProps) => {
             
             <Button 
               type="submit" 
-              className="w-full" 
+              className="w-full bg-gold hover:bg-gold-light text-navy" 
               disabled={isCreatingUser}
             >
               {isCreatingUser ? (

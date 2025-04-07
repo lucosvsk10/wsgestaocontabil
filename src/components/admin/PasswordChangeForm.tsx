@@ -83,7 +83,7 @@ export const PasswordChangeForm = () => {
   };
 
   return (
-    <Card className="bg-[#393532]">
+    <Card className="bg-[#393532] border border-gold/20">
       <CardHeader>
         <CardTitle className="text-[#e8cc81] tracking-wider font-bold text-center">ALTERAR SENHA DE USUÁRIO</CardTitle>
       </CardHeader>
@@ -97,7 +97,7 @@ export const PasswordChangeForm = () => {
                 <FormItem>
                   <FormLabel className="text-[#e9aa91]">Email do Usuário</FormLabel>
                   <FormControl>
-                    <Input placeholder="exemplo@email.com" {...field} />
+                    <Input placeholder="exemplo@email.com" {...field} className="bg-[#46413d] border-gold/20 focus-visible:ring-gold" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -111,7 +111,7 @@ export const PasswordChangeForm = () => {
                 <FormItem>
                   <FormLabel className="text-[#e9aa91]">Nova Senha</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="******" {...field} />
+                    <Input type="password" placeholder="******" {...field} className="bg-[#46413d] border-gold/20 focus-visible:ring-gold" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -120,7 +120,7 @@ export const PasswordChangeForm = () => {
             
             <Button 
               type="submit" 
-              className="w-full" 
+              className="w-full bg-gold hover:bg-gold-light text-navy" 
               disabled={isChangingPassword}
             >
               {isChangingPassword ? (
