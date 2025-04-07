@@ -44,8 +44,13 @@ export const CategoryDocumentTable = ({
         
       if (error) throw error;
       
-      // Refresh the documents list
+      // Refresh the documents list to update UI in all places
       refreshDocuments();
+      
+      toast({
+        title: "Documento marcado como visualizado",
+        description: "A notificação foi removida com sucesso."
+      });
     } catch (error: any) {
       console.error('Error marking document as viewed:', error);
       toast({
@@ -63,9 +68,6 @@ export const CategoryDocumentTable = ({
   };
 
   const handleDownload = async (docItem: Document) => {
-    // Mark as viewed when downloaded
-    await markAsViewed(docItem);
-    
     try {
       if (docItem.storage_key) {
         // Se temos o storage_key, usar o método de download
@@ -85,10 +87,20 @@ export const CategoryDocumentTable = ({
           a.click();
           window.document.body.removeChild(a);
           URL.revokeObjectURL(url);
+          
+          // Mark as viewed when downloaded if not already
+          if (!docItem.viewed) {
+            await markAsViewed(docItem);
+          }
         }
       } else if (docItem.file_url) {
         // Fallback para URL pública
         window.open(docItem.file_url, '_blank');
+        
+        // Mark as viewed when downloaded if not already
+        if (!docItem.viewed) {
+          await markAsViewed(docItem);
+        }
       }
     } catch (error: any) {
       console.error('Erro ao baixar documento:', error);
@@ -288,3 +300,4 @@ export const CategoryDocumentTable = ({
     </div>
   );
 };
+
