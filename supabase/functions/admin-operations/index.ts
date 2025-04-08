@@ -71,7 +71,7 @@ serve(async (req) => {
         });
       }
 
-      if (!role || !["admin", "fiscal", "contabil", "geral"].includes(role)) {
+      if (!role || !["fiscal", "contabil", "geral", "client"].includes(role)) {
         return new Response(JSON.stringify({ error: "Função inválida fornecida" }), { 
           status: 400, 
           headers: { ...corsHeaders, "Content-Type": "application/json" } 

@@ -50,7 +50,7 @@ export const UserList = ({
     }
     
     const role = getUserRole(authUserId, email);
-    return ['admin', 'fiscal', 'contabil', 'geral'].includes(role);
+    return ['fiscal', 'contabil', 'geral'].includes(role);
   };
 
   // Separar usuários por papel (administradores e clientes)

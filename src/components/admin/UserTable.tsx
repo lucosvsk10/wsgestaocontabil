@@ -1,4 +1,3 @@
-
 import { User, FileText, Lock } from "lucide-react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
@@ -81,7 +80,6 @@ export const UserTable = ({
     
     // Retornar o papel baseado no valor da role no banco de dados
     switch (userInfo.role) {
-      case 'admin': return "Admin";
       case 'fiscal': return "Fiscal";
       case 'contabil': return "Contábil";
       case 'geral': return "Geral";
@@ -102,7 +100,6 @@ export const UserTable = ({
     
     // Retornar a classe CSS baseada no valor da role no banco de dados
     switch (userInfo.role) {
-      case 'admin': return "bg-purple-900 text-purple-100";
       case 'fiscal': return "bg-green-800 text-green-100";
       case 'contabil': return "bg-indigo-800 text-indigo-100";
       case 'geral': return "bg-[#e8cc81] text-navy";

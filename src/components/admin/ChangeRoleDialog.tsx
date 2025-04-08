@@ -101,10 +101,10 @@ export const ChangeRoleDialog = ({
 
   const getRoleDisplayName = (roleValue: string) => {
     switch (roleValue) {
-      case 'admin': return 'Admin';
       case 'fiscal': return 'Fiscal';
       case 'contabil': return 'Contábil';
       case 'geral': return 'Geral';
+      case 'client': return 'Cliente';
       default: return roleValue;
     }
   };
@@ -127,10 +127,10 @@ export const ChangeRoleDialog = ({
                 <SelectValue placeholder="Selecione uma função" className="text-white" />
               </SelectTrigger>
               <SelectContent className="bg-[#46413d] border-gold/20 text-white">
-                <SelectItem value="admin" className="text-white">Admin</SelectItem>
                 <SelectItem value="fiscal" className="text-white">Fiscal</SelectItem>
                 <SelectItem value="contabil" className="text-white">Contábil</SelectItem>
                 <SelectItem value="geral" className="text-white">Geral</SelectItem>
+                <SelectItem value="client" className="text-white">Cliente</SelectItem>
               </SelectContent>
             </Select>
           </div>
