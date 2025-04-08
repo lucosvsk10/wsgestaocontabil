@@ -43,7 +43,7 @@ export const UserList = ({
   const clientUsers = supabaseUsers.filter(authUser => getUserRole(authUser.id, authUser.email) !== 'admin' && getUserRole(authUser.id, authUser.email) !== 'geral' && authUser.email !== "wsgestao@gmail.com");
   return <Card className="px-0 bg-[#393532] border border-gold/20">
       <CardHeader className="rounded-full bg-[#393532]">
-        <CardTitle className="text-[#e8cc81] bg-transparent font-bold">LISTA DE USUARIOS</CardTitle>
+        <CardTitle className="text-[#e8cc81] bg-transparent font-bold text-center text-2xl">LISTA DE USUARIOS</CardTitle>
       </CardHeader>
       <CardContent className="rounded-full bg-[#393532] space-y-6">
         {isLoading ? <LoadingSpinner /> : <>

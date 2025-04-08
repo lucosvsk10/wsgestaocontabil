@@ -96,7 +96,7 @@ const AdminDashboard = () => {
   return <>
       <Navbar />
       <div className="container mx-auto p-4 max-w-7xl bg-[#393532]">
-        <h1 className="text-[#e8cc81] bg-transparent text-left font-thin">Painel de Administração</h1>
+        <h1 className="text-[#e8cc81] bg-transparent text-left font-thin text-xl px-[8px] py-[10px]">Painel de Administração</h1>
         
         {showDocumentManager ? <AdminDocumentView selectedUserId={selectedUserId} documentName={documentName} setDocumentName={setDocumentName} documentCategory={documentCategory} setDocumentCategory={setDocumentCategory} documentObservations={documentObservations} setDocumentObservations={setDocumentObservations} handleFileChange={handleFileChange} handleUpload={handleUpload} isUploading={isUploading} documents={documents} isLoadingDocuments={isLoadingDocuments} handleDeleteDocument={handleDeleteDocument} documentCategories={documentCategories} expirationDate={expirationDate} setExpirationDate={setExpirationDate} noExpiration={noExpiration} setNoExpiration={setNoExpiration} handleBackToUserList={handleBackToUserList} userName={getSelectedUserName()} /> : <AdminTabsView supabaseUsers={supabaseUsers} users={users} isLoadingUsers={isLoadingUsers} isLoadingAuthUsers={isLoadingAuthUsers} handleDocumentButtonClick={handleDocumentButtonClick} setSelectedUserForPasswordChange={(user: UserType) => {
         setSelectedUserForPasswordChange(user);
