@@ -127,13 +127,10 @@ Deno.serve(async (req) => {
       throw new Error('Failed to create user')
     }
     
-    // Map role from form to database role
-    // If isAdmin was selected, use the role property (fiscal, contabil, geral) or default to 'admin'
-    // If isAdmin was not selected, use 'client'
-    let userRole = 'client';
-    if (body.isAdmin) {
-      userRole = body.role || 'admin';
-    }
+    // Fix the role assignment here - use the role that was explicitly passed 
+    // and don't override it based on isAdmin
+    const userRole = body.role || 'client'
+    console.log('Creating user with role:', userRole)
     
     // 2. Create user in public.users
     const { error: userError } = await adminClient

@@ -17,6 +17,9 @@ export const useUserCreation = (onUserCreated: () => void) => {
         throw new Error("Você precisa estar logado para criar usuários");
       }
       
+      // Fix: The problem is here - we need to correctly set the role
+      // The condition shouldn't force 'client' for non-admins since we want to respect the selected role
+      // For users who are admins, we should send their selected role
       const response = await fetch(`https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/create-user`, {
         method: 'POST',
         headers: {
@@ -28,7 +31,7 @@ export const useUserCreation = (onUserCreated: () => void) => {
           password: data.password,
           name: data.name,
           isAdmin: data.isAdmin,
-          role: data.isAdmin ? (data.role || 'admin') : 'client'
+          role: data.role || 'client' // Just use the role that was selected, with client as fallback
         })
       });
 
@@ -39,21 +42,20 @@ export const useUserCreation = (onUserCreated: () => void) => {
       }
 
       // Get role display text
-      const getRoleDisplayText = (role: string, isAdmin: boolean) => {
-        if (!isAdmin) return 'cliente';
-        
+      const getRoleDisplayText = (role: string) => {
         switch (role) {
+          case 'admin': return 'administrador';
           case 'fiscal': return 'fiscal';
           case 'contabil': return 'contábil';
           case 'geral': return 'geral';
-          default: return 'administrador';
+          default: return 'cliente';
         }
       };
 
       // Notify successful creation
       toast({
         title: "Usuário criado com sucesso",
-        description: `${data.name} (${data.email}) foi cadastrado no sistema como ${getRoleDisplayText(data.role, data.isAdmin)}.`
+        description: `${data.name} (${data.email}) foi cadastrado no sistema como ${getRoleDisplayText(data.role || 'client')}.`
       });
 
       // Call callback to refresh users
