@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { UserType } from "@/types/admin";
 import { UserActions } from "./UserActions";
+import { Badge } from "@/components/ui/badge";
 
 interface AuthUser {
   id: string;
@@ -140,9 +141,9 @@ export const UserTable = ({
                     <TableCell>{getUserName(authUser)}</TableCell>
                     <TableCell>{authUser.email || "Sem email"}</TableCell>
                     <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs ${getRoleClassName(authUser)}`}>
+                      <Badge className={`${getRoleClassName(authUser)}`}>
                         {getRoleText(authUser)}
-                      </span>
+                      </Badge>
                     </TableCell>
                     <TableCell>{authUser.created_at ? formatDate(authUser.created_at) : "Data desconhecida"}</TableCell>
                     <TableCell>

@@ -59,7 +59,7 @@ export const ChangeRoleDialog = ({
         throw new Error("Você precisa estar logado para alterar funções de usuários");
       }
       
-      const response = await fetch(`https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/admin-operations`, {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-operations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
