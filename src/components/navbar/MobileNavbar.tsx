@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { X, Instagram, UserCircle, LogOut } from 'lucide-react';
+import { X, Instagram, UserCircle, LogOut, FileText } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
@@ -47,16 +47,34 @@ const MobileNavbar = ({ isOpen, onClose, handleLogout, navigateToDashboard }: Mo
           {user ? (
             <>
               {!shouldHideAccountButton && (
-                <button 
-                  onClick={() => {
-                    navigateToDashboard();
-                    onClose();
-                  }} 
-                  className="flex items-center text-[#e8cc81] hover:text-[#e8cc81]/80 text-xl transition-colors"
-                >
-                  <UserCircle size={24} className="mr-2" />
-                  <span className="font-prompt font-medium uppercase tracking-wider">CONTA</span>
-                </button>
+                <div className="flex flex-col items-center space-y-4">
+                  <div className="flex items-center text-[#e8cc81] hover:text-[#e8cc81]/80 text-xl">
+                    <UserCircle size={24} className="mr-2" />
+                    <span className="font-prompt font-medium uppercase tracking-wider">CONTA</span>
+                  </div>
+                  
+                  <button 
+                    onClick={() => {
+                      navigateToDashboard();
+                      onClose();
+                    }} 
+                    className="flex items-center text-gold hover:text-gold-light text-lg transition-colors"
+                  >
+                    <FileText size={20} className="mr-2" />
+                    <span className="font-prompt font-medium uppercase tracking-wider">MEUS DOCS</span>
+                  </button>
+                  
+                  <button 
+                    onClick={() => {
+                      handleLogout();
+                      onClose();
+                    }} 
+                    className="flex items-center text-gold hover:text-gold-light text-lg transition-colors"
+                  >
+                    <LogOut size={20} className="mr-2" />
+                    <span className="font-prompt font-medium uppercase tracking-wider">SAIR</span>
+                  </button>
+                </div>
               )}
               
               {isOnDashboardPage && (

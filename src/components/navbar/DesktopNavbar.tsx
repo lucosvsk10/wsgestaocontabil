@@ -1,7 +1,13 @@
 
 import { Link, useLocation } from 'react-router-dom';
-import { Instagram, UserCircle, LogOut } from 'lucide-react';
+import { Instagram, UserCircle, LogOut, FileText } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface DesktopNavbarProps {
   handleLogout: () => Promise<void>;
@@ -33,13 +39,28 @@ const DesktopNavbar = ({ handleLogout, navigateToDashboard }: DesktopNavbarProps
       {user ? (
         <>
           {!shouldHideAccountButton && (
-            <button 
-              onClick={navigateToDashboard} 
-              className="flex items-center text-[#e8cc81] hover:text-[#e8cc81]/80 transition-colors duration-300"
-            >
-              <UserCircle size={20} className="mr-1" />
-              <span className="text-sm font-medium uppercase tracking-wider">CONTA</span>
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger className="flex items-center text-[#e8cc81] hover:text-[#e8cc81]/80 transition-colors duration-300">
+                <UserCircle size={20} className="mr-1" />
+                <span className="text-sm font-medium uppercase tracking-wider">CONTA</span>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-[#46413d] border-gold/20">
+                <DropdownMenuItem 
+                  className="text-gold hover:text-gold-light cursor-pointer"
+                  onClick={navigateToDashboard}
+                >
+                  <FileText size={16} className="mr-2" />
+                  <span className="text-sm font-medium uppercase tracking-wider">MEUS DOCS</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="text-gold hover:text-gold-light cursor-pointer"
+                  onClick={handleLogout}
+                >
+                  <LogOut size={16} className="mr-2" />
+                  <span className="text-sm font-medium uppercase tracking-wider">SAIR</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
           
           {isOnDashboardPage && (
