@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Menu, X, Instagram, UserCircle, LogOut } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -19,13 +18,8 @@ const Navbar = () => {
     toast
   } = useToast();
 
-  // Check if we're on a route that should hide navigation items
   const shouldHideNavLinks = ['/login', '/admin', '/client'].includes(location.pathname);
-  
-  // Check if we're on a dashboard page where the logout button should appear
   const isOnDashboardPage = ['/admin', '/client'].includes(location.pathname);
-
-  // New check to hide the account button on client and admin pages
   const shouldHideAccountButton = ['/client', '/admin'].includes(location.pathname);
 
   useEffect(() => {
@@ -39,11 +33,11 @@ const Navbar = () => {
   const handleLogout = async () => {
     try {
       await signOut();
+      navigate('/login');
       toast({
         title: "Logout realizado",
         description: "Você foi desconectado com sucesso."
       });
-      navigate('/');
     } catch (error) {
       console.error("Erro ao fazer logout:", error);
       toast({
@@ -54,7 +48,6 @@ const Navbar = () => {
     }
   };
   
-  // Function to navigate to appropriate dashboard based on user role
   const navigateToDashboard = () => {
     if (isAdmin) {
       navigate('/admin');
@@ -71,7 +64,6 @@ const Navbar = () => {
           </a>
         </div>
 
-        {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-8">
           {!shouldHideNavLinks && <>
               <a href="#servicos" className="nav-link text-sm font-prompt font-medium uppercase tracking-wider">
@@ -87,7 +79,6 @@ const Navbar = () => {
           
           {user ? (
             <>
-              {/* Account button that only appears when logged in and NOT on client/admin pages */}
               {!shouldHideAccountButton && (
                 <button 
                   onClick={navigateToDashboard} 
@@ -98,7 +89,6 @@ const Navbar = () => {
                 </button>
               )}
               
-              {/* Logout button that only appears on dashboard pages */}
               {isOnDashboardPage && (
                 <button 
                   onClick={handleLogout} 
@@ -121,13 +111,11 @@ const Navbar = () => {
           </a>
         </nav>
 
-        {/* Mobile Menu Button */}
         <button className="md:hidden text-gold hover:text-gold-light focus:outline-none transition-colors" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}>
           {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
       </div>
 
-      {/* Mobile Navigation */}
       <div className={`md:hidden fixed inset-0 z-40 bg-navy-dark/95 backdrop-blur-md transform transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
         <div className="container mx-auto px-6 py-8 flex flex-col h-full">
           <div className="flex justify-end mb-8">
@@ -153,7 +141,6 @@ const Navbar = () => {
             
             {user ? (
               <>
-                {/* Account button for mobile - only on main page */}
                 {!shouldHideAccountButton && (
                   <button 
                     onClick={() => {
@@ -167,7 +154,6 @@ const Navbar = () => {
                   </button>
                 )}
                 
-                {/* Logout button only on dashboard pages */}
                 {isOnDashboardPage && (
                   <button 
                     onClick={() => {

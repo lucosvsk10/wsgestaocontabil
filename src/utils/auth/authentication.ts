@@ -20,8 +20,11 @@ export const signInWithEmail = async (email: string, password: string) => {
 export const signOutUser = async () => {
   try {
     await supabase.auth.signOut();
+    // Note: The actual redirection is handled in the Navbar component
+    return { error: null };
   } catch (error) {
     console.error("Error in signOut:", error);
+    return { error };
   }
 };
 

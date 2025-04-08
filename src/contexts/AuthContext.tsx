@@ -35,8 +35,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Sign out function
   const signOut = async () => {
     try {
-      await signOutUser();
-      return { error: null };
+      const result = await signOutUser();
+      // Clear user data and state immediately
+      setUser(null);
+      setUserData(null);
+      return { error: result.error };
     } catch (error) {
       return { error: error as Error };
     }
