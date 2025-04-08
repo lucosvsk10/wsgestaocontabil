@@ -143,6 +143,72 @@ const handleDeleteUser = async (supabaseAdmin, userId) => {
   return { userId };
 };
 
+// Handler for changing a user's password
+const handleChangePassword = async (supabaseAdmin, userId, newPassword) => {
+  if (!userId) {
+    throw new Error("ID do usuário não fornecido");
+  }
+
+  if (!newPassword || newPassword.length < 6) {
+    throw new Error("Senha inválida. A senha deve ter pelo menos 6 caracteres.");
+  }
+
+  // Update the user's password
+  const { error: passwordError } = await supabaseAdmin.auth.admin.updateUserById(
+    userId,
+    { password: newPassword }
+  );
+
+  if (passwordError) {
+    console.error("Error changing user password:", passwordError);
+    throw new Error("Erro ao alterar senha do usuário");
+  }
+
+  return { userId };
+};
+
+// Alternative handler for changing a user's password by email
+const handleChangePasswordByEmail = async (supabaseAdmin, email, newPassword) => {
+  if (!email) {
+    throw new Error("Email do usuário não fornecido");
+  }
+
+  if (!newPassword || newPassword.length < 6) {
+    throw new Error("Senha inválida. A senha deve ter pelo menos 6 caracteres.");
+  }
+
+  // Get user by email
+  const { data: users, error: emailError } = await supabaseAdmin
+    .from('users')
+    .select('id')
+    .eq('email', email)
+    .limit(1);
+
+  if (emailError) {
+    console.error("Error getting user by email:", emailError);
+    throw new Error("Erro ao buscar usuário pelo email");
+  }
+
+  if (!users || users.length === 0) {
+    throw new Error("Usuário não encontrado com este email");
+  }
+
+  const userId = users[0].id;
+
+  // Update the user's password
+  const { error: passwordError } = await supabaseAdmin.auth.admin.updateUserById(
+    userId,
+    { password: newPassword }
+  );
+
+  if (passwordError) {
+    console.error("Error changing user password:", passwordError);
+    throw new Error("Erro ao alterar senha do usuário");
+  }
+
+  return { userId, email };
+};
+
 // Main request handler
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -182,6 +248,33 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" } 
       });
     } 
+    else if (operation === "changePassword") {
+      // Handle password change by userId
+      if (requestData.userId) {
+        const { userId, newPassword } = requestData;
+        result = await handleChangePassword(supabaseAdmin, userId, newPassword);
+        return new Response(JSON.stringify({ 
+          message: "Senha do usuário alterada com sucesso", 
+          ...result
+        }), { 
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        });
+      } 
+      // Handle password change by email
+      else if (requestData.email) {
+        const { email, newPassword } = requestData;
+        result = await handleChangePasswordByEmail(supabaseAdmin, email, newPassword);
+        return new Response(JSON.stringify({ 
+          message: "Senha do usuário alterada com sucesso", 
+          ...result
+        }), { 
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        });
+      }
+      else {
+        throw new Error("É necessário fornecer userId ou email do usuário");
+      }
+    }
     else {
       return new Response(JSON.stringify({ error: "Operação não suportada" }), { 
         status: 400, 

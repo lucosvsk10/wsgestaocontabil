@@ -61,7 +61,7 @@ export const PasswordChangeForm = () => {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Erro ao alterar senha');
+        throw new Error(result.error || result.details || 'Erro ao alterar senha');
       }
 
       toast({

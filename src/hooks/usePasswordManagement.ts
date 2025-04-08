@@ -21,13 +21,14 @@ export const usePasswordManagement = () => {
         throw new Error("Você precisa estar logado para realizar esta ação");
       }
       
-      const response = await fetch(`https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/changeUserPassword`, {
+      const response = await fetch(`https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/admin-operations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken}`
         },
         body: JSON.stringify({
+          operation: "changePassword",
           userId: selectedUserForPasswordChange.id,
           newPassword: data.password
         })
@@ -36,7 +37,7 @@ export const usePasswordManagement = () => {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Erro ao alterar senha');
+        throw new Error(result.error || result.details || 'Erro ao alterar senha');
       }
 
       toast({
