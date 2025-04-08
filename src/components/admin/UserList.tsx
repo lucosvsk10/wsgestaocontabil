@@ -78,6 +78,7 @@ export const UserList = ({
               passwordForm={passwordForm}
               refreshUsers={refreshUsers}
               showDocumentButton={true}
+              isAdminSection={false}
             />
 
             {/* Seção de Administradores */}
@@ -93,6 +94,7 @@ export const UserList = ({
               specialEmail="wsgestao@gmail.com"
               specialRoleLabel="Geral"
               specialRoleClassName="bg-[#e8cc81] text-navy"
+              isAdminSection={true}
             />
           </>
         )}

@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Trash2, ShieldCheck } from "lucide-react";
+import { Trash2, ShieldCheck, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DeleteUserDialog } from "./DeleteUserDialog";
 import { MakeAdminDialog } from "./MakeAdminDialog";
@@ -11,12 +11,27 @@ interface UserActionsProps {
     email: string;
   };
   refreshUsers: () => void;
+  isAdminSection?: boolean;
 }
 
-export const UserActions = ({ authUser, refreshUsers }: UserActionsProps) => {
+export const UserActions = ({ authUser, refreshUsers, isAdminSection = false }: UserActionsProps) => {
   const [deleteUserDialog, setDeleteUserDialog] = useState(false);
   const [makeAdminDialog, setMakeAdminDialog] = useState(false);
 
+  // For admin section, only show the ellipsis menu
+  if (isAdminSection) {
+    return (
+      <Button 
+        variant="ghost" 
+        className="text-white hover:bg-[#46413d] hover:text-gold" 
+        size="icon"
+      >
+        <MoreVertical className="h-4 w-4" />
+      </Button>
+    );
+  }
+
+  // For regular users section, show the normal actions
   return (
     <>
       <div className="flex items-center gap-2">

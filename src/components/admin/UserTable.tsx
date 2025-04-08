@@ -30,6 +30,7 @@ interface UserTableProps {
   specialEmail?: string;
   specialRoleLabel?: string;
   specialRoleClassName?: string;
+  isAdminSection?: boolean;
 }
 
 export const UserTable = ({
@@ -45,7 +46,8 @@ export const UserTable = ({
   showDocumentButton = false,
   specialEmail,
   specialRoleLabel,
-  specialRoleClassName
+  specialRoleClassName,
+  isAdminSection = false
 }: UserTableProps) => {
   // Formatação da data
   const formatDate = (dateStr: string) => {
@@ -98,7 +100,7 @@ export const UserTable = ({
                     <TableCell>{authUser.created_at ? formatDate(authUser.created_at) : "Data desconhecida"}</TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
-                        {showDocumentButton && setSelectedUserId && (
+                        {showDocumentButton && setSelectedUserId && !isAdminSection && (
                           <Button 
                             variant="outline" 
                             size="sm" 
@@ -109,7 +111,7 @@ export const UserTable = ({
                             <span>Documentos</span>
                           </Button>
                         )}
-                        {userInfo && (
+                        {userInfo && !isAdminSection && (
                           <Button
                             variant="outline"
                             size="sm"
@@ -125,7 +127,8 @@ export const UserTable = ({
                         )}
                         <UserActions 
                           authUser={authUser} 
-                          refreshUsers={refreshUsers} 
+                          refreshUsers={refreshUsers}
+                          isAdminSection={isAdminSection} 
                         />
                       </div>
                     </TableCell>
