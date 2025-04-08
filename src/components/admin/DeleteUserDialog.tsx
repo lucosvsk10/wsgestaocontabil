@@ -37,7 +37,7 @@ export const DeleteUserDialog = ({ open, onOpenChange, authUser, onSuccess }: De
           'Authorization': `Bearer ${accessToken}`
         },
         body: JSON.stringify({
-          action: "deleteUser",
+          operation: "delete_user", // Changed from "action": "deleteUser" to "operation": "delete_user"
           userId: authUser.id
         })
       });

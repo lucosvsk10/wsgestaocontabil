@@ -98,6 +98,46 @@ serve(async (req) => {
       }), { 
         headers: { ...corsHeaders, "Content-Type": "application/json" } 
       });
+    } else if (operation === "delete_user") {
+      // Handle user deletion
+      const { userId } = requestData;
+      
+      if (!userId) {
+        return new Response(JSON.stringify({ error: "ID do usuário não fornecido" }), { 
+          status: 400, 
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        });
+      }
+      
+      // First delete from users table
+      const { error: deleteUserError } = await supabaseAdmin
+        .from('users')
+        .delete()
+        .eq('id', userId);
+        
+      if (deleteUserError) {
+        console.error("Error deleting from users table:", deleteUserError);
+      }
+      
+      // Then delete the auth user
+      const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+      
+      if (deleteAuthError) {
+        return new Response(JSON.stringify({ 
+          error: "Erro ao excluir usuário", 
+          details: deleteAuthError 
+        }), { 
+          status: 500, 
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        });
+      }
+      
+      return new Response(JSON.stringify({ 
+        message: "Usuário excluído com sucesso", 
+        userId 
+      }), { 
+        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      });
     } else {
       return new Response(JSON.stringify({ error: "Operação não suportada" }), { 
         status: 400, 
