@@ -1,9 +1,10 @@
 
 import { useState } from "react";
-import { Trash2, ShieldCheck, MoreVertical } from "lucide-react";
+import { Trash2, ShieldCheck, MoreVertical, UserCog } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DeleteUserDialog } from "./DeleteUserDialog";
 import { MakeAdminDialog } from "./MakeAdminDialog";
+import { ChangeRoleDialog } from "./ChangeRoleDialog";
 
 interface UserActionsProps {
   authUser: {
@@ -17,17 +18,30 @@ interface UserActionsProps {
 export const UserActions = ({ authUser, refreshUsers, isAdminSection = false }: UserActionsProps) => {
   const [deleteUserDialog, setDeleteUserDialog] = useState(false);
   const [makeAdminDialog, setMakeAdminDialog] = useState(false);
+  const [changeRoleDialog, setChangeRoleDialog] = useState(false);
 
-  // For admin section, only show the ellipsis menu
+  // For admin section, show the role change option
   if (isAdminSection) {
     return (
-      <Button 
-        variant="ghost" 
-        className="text-white hover:bg-[#46413d] hover:text-gold" 
-        size="icon"
-      >
-        <MoreVertical className="h-4 w-4" />
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button 
+          variant="outline" 
+          className="text-[#e9aa91] border-gold/20 hover:bg-gold hover:text-navy" 
+          size="icon"
+          onClick={() => setChangeRoleDialog(true)}
+          title="Alterar função"
+        >
+          <UserCog className="h-4 w-4" />
+        </Button>
+
+        {/* Change Role Dialog */}
+        <ChangeRoleDialog 
+          open={changeRoleDialog}
+          onOpenChange={setChangeRoleDialog}
+          authUser={authUser}
+          onSuccess={refreshUsers}
+        />
+      </div>
     );
   }
 
