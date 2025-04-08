@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Download, Clock, Bell, Info, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
-
 interface CategoryDocumentTableProps {
   documents: Document[];
   category: string;
@@ -17,36 +15,33 @@ interface CategoryDocumentTableProps {
   daysUntilExpiration: (expirationDate: string | null) => string | null;
   refreshDocuments: () => void;
 }
-
-export const CategoryDocumentTable = ({ 
-  documents, 
+export const CategoryDocumentTable = ({
+  documents,
   category,
-  formatDate, 
-  isDocumentExpired, 
+  formatDate,
+  isDocumentExpired,
   daysUntilExpiration,
   refreshDocuments
 }: CategoryDocumentTableProps) => {
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const [loadingDocumentIds, setLoadingDocumentIds] = useState<Set<string>>(new Set());
   const isMobile = useIsMobile();
-
   const markAsViewed = async (docItem: Document) => {
     // If already viewed, no need to update
     if (docItem.viewed) return;
-    
     try {
       setLoadingDocumentIds(prev => new Set([...prev, docItem.id]));
-      
-      const { error } = await supabase
-        .from('documents')
-        .update({ viewed: true })
-        .eq('id', docItem.id);
-        
+      const {
+        error
+      } = await supabase.from('documents').update({
+        viewed: true
+      }).eq('id', docItem.id);
       if (error) throw error;
-      
+
       // Refresh the documents list to update UI in all places
       refreshDocuments();
-      
       toast({
         title: "Documento marcado como visualizado",
         description: "A notificação foi removida com sucesso."
@@ -66,17 +61,15 @@ export const CategoryDocumentTable = ({
       });
     }
   };
-
   const handleDownload = async (docItem: Document) => {
     try {
       if (docItem.storage_key) {
         // Se temos o storage_key, usar o método de download
-        const { data, error } = await supabase.storage
-          .from('documents')
-          .download(docItem.storage_key);
-        
+        const {
+          data,
+          error
+        } = await supabase.storage.from('documents').download(docItem.storage_key);
         if (error) throw error;
-        
         if (data) {
           // Criar URL do blob e iniciar download
           const url = URL.createObjectURL(data);
@@ -87,7 +80,7 @@ export const CategoryDocumentTable = ({
           a.click();
           window.document.body.removeChild(a);
           URL.revokeObjectURL(url);
-          
+
           // Mark as viewed when downloaded if not already
           if (!docItem.viewed) {
             await markAsViewed(docItem);
@@ -96,7 +89,7 @@ export const CategoryDocumentTable = ({
       } else if (docItem.file_url) {
         // Fallback para URL pública
         window.open(docItem.file_url, '_blank');
-        
+
         // Mark as viewed when downloaded if not already
         if (!docItem.viewed) {
           await markAsViewed(docItem);
@@ -114,25 +107,16 @@ export const CategoryDocumentTable = ({
 
   // Count new documents
   const newDocumentsCount = documents.filter(doc => !doc.viewed).length;
-
   if (isMobile) {
-    return (
-      <div className="space-y-4">
+    return <div className="space-y-4">
         <div className="flex items-center mb-4">
           <h3 className="text-lg font-medium text-gold">{category}</h3>
-          {newDocumentsCount > 0 && (
-            <span className="ml-2 bg-red-500 text-white text-xs font-bold rounded-full px-2 py-1">
+          {newDocumentsCount > 0 && <span className="ml-2 bg-red-500 text-white text-xs font-bold rounded-full px-2 py-1">
               {newDocumentsCount} novo{newDocumentsCount > 1 ? 's' : ''}
-            </span>
-          )}
+            </span>}
         </div>
       
-        {documents.length > 0 ? (
-          documents.map(doc => (
-            <div 
-              key={doc.id} 
-              className={`p-3 rounded-lg border ${isDocumentExpired(doc.expires_at) ? "bg-red-900/20 border-red-900/30" : "bg-[#46413d] border-gold/20"}`}
-            >
+        {documents.length > 0 ? documents.map(doc => <div key={doc.id} className={`p-3 rounded-lg border ${isDocumentExpired(doc.expires_at) ? "bg-red-900/20 border-red-900/30" : "bg-[#46413d] border-gold/20"}`}>
               <div className="flex items-center justify-between mb-2">
                 <div className="font-medium text-white flex items-center">
                   {!doc.viewed && <Bell size={14} className="text-red-500 mr-2" />}
@@ -150,99 +134,65 @@ export const CategoryDocumentTable = ({
                 </div>
               </div>
               
-              {doc.observations && (
-                <div className="mb-3 text-sm">
+              {doc.observations && <div className="mb-3 text-sm">
                   <div className="text-blue-400 flex items-center">
                     <Info size={14} className="mr-1" />
                     <span className="text-gray-300">Observações:</span>
                   </div>
                   <p className="text-white text-sm ml-5">{doc.observations}</p>
-                </div>
-              )}
+                </div>}
               
               <div className="flex gap-2 mt-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  disabled={isDocumentExpired(doc.expires_at) || loadingDocumentIds.has(doc.id)}
-                  onClick={() => handleDownload(doc)}
-                  className="flex-1 bg-[#393532] border-gold/20 text-gold hover:bg-gold hover:text-navy flex items-center justify-center gap-1"
-                >
+                <Button variant="outline" size="sm" disabled={isDocumentExpired(doc.expires_at) || loadingDocumentIds.has(doc.id)} onClick={() => handleDownload(doc)} className="flex-1 bg-[#393532] border-gold/20 text-gold hover:bg-gold hover:text-navy flex items-center justify-center gap-1">
                   <Download size={14} />
                   <span>Baixar</span>
                 </Button>
                 
-                {!doc.viewed && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={loadingDocumentIds.has(doc.id)}
-                    onClick={() => markAsViewed(doc)}
-                    className="flex-1 bg-[#393532] border-gold/20 text-gold hover:bg-gold hover:text-navy flex items-center justify-center gap-1"
-                  >
+                {!doc.viewed && <Button variant="outline" size="sm" disabled={loadingDocumentIds.has(doc.id)} onClick={() => markAsViewed(doc)} className="flex-1 bg-[#393532] border-gold/20 text-gold hover:bg-gold hover:text-navy flex items-center justify-center gap-1">
                     <Check size={14} />
                     <span>Visualizado</span>
-                  </Button>
-                )}
+                  </Button>}
               </div>
-            </div>
-          ))
-        ) : (
-          <div className="text-center py-4 text-gray-400 bg-[#393532] rounded-lg border border-gold/20 p-4">
+            </div>) : <div className="text-center py-4 text-gray-400 bg-[#393532] rounded-lg border border-gold/20 p-4">
             Não existem documentos na categoria {category}
-          </div>
-        )}
-      </div>
-    );
+          </div>}
+      </div>;
   }
-
-  return (
-    <div className="overflow-x-auto">
+  return <div className="overflow-x-auto">
       <div className="flex items-center mb-4">
-        <h3 className="text-lg font-medium text-gold">{category}</h3>
-        {newDocumentsCount > 0 && (
-          <span className="ml-2 bg-red-500 text-white text-xs font-bold rounded-full px-2 py-1">
+        <h3 className="text-gold text-lg font-normal">{category}</h3>
+        {newDocumentsCount > 0 && <span className="ml-2 bg-red-500 text-white text-xs font-bold rounded-full px-2 py-1">
             {newDocumentsCount} novo{newDocumentsCount > 1 ? 's' : ''}
-          </span>
-        )}
+          </span>}
       </div>
       
       <Table>
         <TableHeader className="bg-[#393532]">
           <TableRow>
-            <TableHead className="text-gold">Nome do Documento</TableHead>
-            <TableHead className="text-gold">Data de Envio</TableHead>
-            <TableHead className="text-gold">Validade</TableHead>
-            <TableHead className="text-gold">Observações</TableHead>
-            <TableHead className="text-gold">Ações</TableHead>
+            <TableHead className="text-gold font-extralight">Nome do Documento</TableHead>
+            <TableHead className="text-gold font-extralight">Data de Envio</TableHead>
+            <TableHead className="text-gold font-extralight">Validade</TableHead>
+            <TableHead className="text-gold font-extralight">Observações</TableHead>
+            <TableHead className="text-gold font-extralight">Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {documents.length > 0 ? (
-            documents.map(doc => (
-              <TableRow key={doc.id} className={isDocumentExpired(doc.expires_at) ? "bg-red-900/20 border-red-900/30" : "border-gold/10"}>
+          {documents.length > 0 ? documents.map(doc => <TableRow key={doc.id} className={isDocumentExpired(doc.expires_at) ? "bg-red-900/20 border-red-900/30" : "border-gold/10"}>
                 <TableCell className="font-medium text-white">
                   <div className="flex items-center">
-                    {!doc.viewed && (
-                      <Bell size={14} className="text-red-500 mr-2" />
-                    )}
+                    {!doc.viewed && <Bell size={14} className="text-red-500 mr-2" />}
                     {doc.name}
                   </div>
                 </TableCell>
                 <TableCell className="text-gray-300">{formatDate(doc.uploaded_at)}</TableCell>
                 <TableCell>
-                  <span className={`flex items-center gap-1 ${
-                    isDocumentExpired(doc.expires_at) 
-                      ? "text-red-400" 
-                      : "text-green-400"
-                  }`}>
+                  <span className={`flex items-center gap-1 ${isDocumentExpired(doc.expires_at) ? "text-red-400" : "text-green-400"}`}>
                     <Clock size={14} />
                     {daysUntilExpiration(doc.expires_at)}
                   </span>
                 </TableCell>
                 <TableCell>
-                  {doc.observations ? (
-                    <TooltipProvider>
+                  {doc.observations ? <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <div className="flex items-center text-blue-400 cursor-help">
@@ -254,50 +204,27 @@ export const CategoryDocumentTable = ({
                           <p className="max-w-[300px] whitespace-normal break-words text-white">{doc.observations}</p>
                         </TooltipContent>
                       </Tooltip>
-                    </TooltipProvider>
-                  ) : (
-                    <span className="text-gray-400 text-sm">Nenhuma</span>
-                  )}
+                    </TooltipProvider> : <span className="text-gray-400 text-sm">Nenhuma</span>}
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      disabled={isDocumentExpired(doc.expires_at) || loadingDocumentIds.has(doc.id)}
-                      onClick={() => handleDownload(doc)}
-                      className="flex items-center gap-1 bg-[#393532] border-gold/20 text-gold hover:bg-gold hover:text-navy"
-                    >
+                    <Button variant="outline" size="sm" disabled={isDocumentExpired(doc.expires_at) || loadingDocumentIds.has(doc.id)} onClick={() => handleDownload(doc)} className="flex items-center gap-1 bg-[#393532] border-gold/20 text-gold hover:bg-gold hover:text-navy">
                       <Download size={14} />
                       <span>{doc.filename || doc.original_filename || "Baixar"}</span>
                     </Button>
                     
-                    {!doc.viewed && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={loadingDocumentIds.has(doc.id)}
-                        onClick={() => markAsViewed(doc)}
-                        className="flex items-center gap-1 bg-[#393532] border-gold/20 text-gold hover:bg-gold hover:text-navy"
-                      >
+                    {!doc.viewed && <Button variant="outline" size="sm" disabled={loadingDocumentIds.has(doc.id)} onClick={() => markAsViewed(doc)} className="flex items-center gap-1 bg-[#393532] border-gold/20 text-gold hover:bg-gold hover:text-navy">
                         <Check size={14} />
                         <span>Visualizado</span>
-                      </Button>
-                    )}
+                      </Button>}
                   </div>
                 </TableCell>
-              </TableRow>
-            ))
-          ) : (
-            <TableRow>
+              </TableRow>) : <TableRow>
               <TableCell colSpan={5} className="text-center py-4 text-gray-400">
                 Não existem documentos na categoria {category}
               </TableCell>
-            </TableRow>
-          )}
+            </TableRow>}
         </TableBody>
       </Table>
-    </div>
-  );
+    </div>;
 };
-
