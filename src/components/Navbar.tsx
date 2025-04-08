@@ -91,7 +91,7 @@ const Navbar = () => {
               {!shouldHideAccountButton && (
                 <button 
                   onClick={navigateToDashboard} 
-                  className="flex items-center text-gold hover:text-gold-light transition-colors duration-300"
+                  className="flex items-center text-[#e8cc81] hover:text-[#e8cc81]/80 transition-colors duration-300"
                 >
                   <UserCircle size={20} className="mr-1" />
                   <span className="text-sm font-medium uppercase tracking-wider">CONTA</span>
@@ -160,7 +160,7 @@ const Navbar = () => {
                       navigateToDashboard();
                       setIsMobileMenuOpen(false);
                     }} 
-                    className="flex items-center text-gold hover:text-gold-light text-xl transition-colors"
+                    className="flex items-center text-[#e8cc81] hover:text-[#e8cc81]/80 text-xl transition-colors"
                   >
                     <UserCircle size={24} className="mr-2" />
                     <span className="font-prompt font-medium uppercase tracking-wider">CONTA</span>
