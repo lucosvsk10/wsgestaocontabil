@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DocumentTabs } from "@/components/client/DocumentTabs";
 import { EmptyDocuments } from "@/components/client/EmptyDocuments";
@@ -20,6 +20,7 @@ const ClientDashboard = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const isMobile = useIsMobile();
   const { documents, isLoadingDocuments, fetchUserDocuments } = useDocumentFetch();
+  const hasInitializedRef = useRef(false);
 
   // Categorias de documentos
   const categories = ["Imposto de Renda", "Documentações", "Certidões"];
@@ -34,9 +35,9 @@ const ClientDashboard = () => {
     }
   }, [user, fetchUserDocuments]);
 
-  // Encontrar a categoria com o documento mais recente
+  // Encontrar a categoria com o documento mais recente - apenas na primeira renderização
   useEffect(() => {
-    if (documents.length > 0 && !isLoadingDocuments) {
+    if (documents.length > 0 && !isLoadingDocuments && !hasInitializedRef.current) {
       let mostRecentCategory: string | null = null;
       let mostRecentDate: Date | null = null;
       
@@ -72,11 +73,20 @@ const ClientDashboard = () => {
         // Fallback final: primeira categoria disponível
         setSelectedCategory(categories[0]);
       }
-    } else if (categories.length > 0 && !isLoadingDocuments) {
+      
+      // Marcar como inicializado após a primeira seleção
+      hasInitializedRef.current = true;
+    } else if (categories.length > 0 && !isLoadingDocuments && !hasInitializedRef.current) {
       // Se não há documentos, selecionar a primeira categoria
       setSelectedCategory(categories[0]);
+      hasInitializedRef.current = true;
     }
   }, [documents, isLoadingDocuments, categories, documentsByCategory]);
+
+  // Função para alterar a categoria selecionada (para uso no DocumentTabs)
+  const handleCategoryChange = (newCategory: string | null) => {
+    setSelectedCategory(newCategory);
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-[#46413d]">
@@ -101,7 +111,7 @@ const ClientDashboard = () => {
                     allDocuments={documents} 
                     documentsByCategory={documentsByCategory} 
                     categories={categories} 
-                    setSelectedCategory={setSelectedCategory} 
+                    setSelectedCategory={handleCategoryChange} 
                     formatDate={formatDate} 
                     isDocumentExpired={isDocumentExpired} 
                     daysUntilExpiration={daysUntilExpiration} 
