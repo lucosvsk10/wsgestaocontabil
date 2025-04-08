@@ -1,5 +1,6 @@
+
 import { useState } from "react";
-import { Download, Clock, Bell, Info, Check } from "lucide-react";
+import { Download, Clock, Bell, Info, Check, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Document } from "@/utils/auth/types";
@@ -7,6 +8,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { format } from "date-fns";
+import { pt } from "date-fns/locale";
+
 interface CategoryDocumentTableProps {
   documents: Document[];
   category: string;
@@ -15,6 +19,7 @@ interface CategoryDocumentTableProps {
   daysUntilExpiration: (expirationDate: string | null) => string | null;
   refreshDocuments: () => void;
 }
+
 export const CategoryDocumentTable = ({
   documents,
   category,
@@ -23,21 +28,25 @@ export const CategoryDocumentTable = ({
   daysUntilExpiration,
   refreshDocuments
 }: CategoryDocumentTableProps) => {
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const [loadingDocumentIds, setLoadingDocumentIds] = useState<Set<string>>(new Set());
   const isMobile = useIsMobile();
+
   const markAsViewed = async (docItem: Document) => {
     // If already viewed, no need to update
     if (docItem.viewed) return;
+    
     try {
       setLoadingDocumentIds(prev => new Set([...prev, docItem.id]));
-      const {
-        error
-      } = await supabase.from('documents').update({
-        viewed: true
-      }).eq('id', docItem.id);
+      
+      const { error } = await supabase
+        .from('documents')
+        .update({ 
+          viewed: true,
+          viewed_at: new Date().toISOString() 
+        })
+        .eq('id', docItem.id);
+        
       if (error) throw error;
 
       // Refresh the documents list to update UI in all places
@@ -61,15 +70,22 @@ export const CategoryDocumentTable = ({
       });
     }
   };
+
   const handleDownload = async (docItem: Document) => {
     try {
+      // Mark as viewed first if not already viewed
+      if (!docItem.viewed) {
+        await markAsViewed(docItem);
+      }
+      
       if (docItem.storage_key) {
         // Se temos o storage_key, usar o método de download
-        const {
-          data,
-          error
-        } = await supabase.storage.from('documents').download(docItem.storage_key);
+        const { data, error } = await supabase.storage
+          .from('documents')
+          .download(docItem.storage_key);
+          
         if (error) throw error;
+        
         if (data) {
           // Criar URL do blob e iniciar download
           const url = URL.createObjectURL(data);
@@ -80,20 +96,10 @@ export const CategoryDocumentTable = ({
           a.click();
           window.document.body.removeChild(a);
           URL.revokeObjectURL(url);
-
-          // Mark as viewed when downloaded if not already
-          if (!docItem.viewed) {
-            await markAsViewed(docItem);
-          }
         }
       } else if (docItem.file_url) {
         // Fallback para URL pública
         window.open(docItem.file_url, '_blank');
-
-        // Mark as viewed when downloaded if not already
-        if (!docItem.viewed) {
-          await markAsViewed(docItem);
-        }
       }
     } catch (error: any) {
       console.error('Erro ao baixar documento:', error);
@@ -105,8 +111,16 @@ export const CategoryDocumentTable = ({
     }
   };
 
+  // Format the viewed_at date
+  const formatViewedDate = (dateStr: string | null) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return format(date, "dd/MM/yyyy 'às' HH:mm", { locale: pt });
+  };
+
   // Count new documents
   const newDocumentsCount = documents.filter(doc => !doc.viewed).length;
+  
   if (isMobile) {
     return <div className="space-y-4">
         <div className="flex items-center mb-4">
@@ -143,21 +157,38 @@ export const CategoryDocumentTable = ({
                 </div>}
               
               <div className="flex gap-2 mt-2">
-                <Button variant="outline" size="sm" disabled={isDocumentExpired(doc.expires_at) || loadingDocumentIds.has(doc.id)} onClick={() => handleDownload(doc)} className="flex-1 bg-[#393532] border-gold/20 text-gold hover:bg-gold hover:text-navy flex items-center justify-center gap-1">
-                  <Download size={14} />
-                  <span>Baixar</span>
-                </Button>
-                
-                {!doc.viewed && <Button variant="outline" size="sm" disabled={loadingDocumentIds.has(doc.id)} onClick={() => markAsViewed(doc)} className="flex-1 bg-[#393532] border-gold/20 text-gold hover:bg-gold hover:text-navy flex items-center justify-center gap-1">
-                    <Check size={14} />
-                    <span>Visualizado</span>
-                  </Button>}
+                {!doc.viewed ? (
+                  <>
+                    <Button variant="outline" size="sm" disabled={isDocumentExpired(doc.expires_at) || loadingDocumentIds.has(doc.id)} onClick={() => handleDownload(doc)} className="flex-1 bg-[#393532] border-gold/20 text-gold hover:bg-gold hover:text-navy flex items-center justify-center gap-1">
+                      <Download size={14} />
+                      <span>Baixar</span>
+                    </Button>
+                    
+                    <Button variant="outline" size="sm" disabled={loadingDocumentIds.has(doc.id)} onClick={() => markAsViewed(doc)} className="flex-1 bg-[#393532] border-gold/20 text-gold hover:bg-gold hover:text-navy flex items-center justify-center gap-1">
+                      <Eye size={14} />
+                      <span>Visualizar</span>
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button variant="outline" size="sm" disabled={isDocumentExpired(doc.expires_at)} onClick={() => handleDownload(doc)} className="flex-1 bg-[#393532] border-gold/20 text-gold hover:bg-gold hover:text-navy flex items-center justify-center gap-1">
+                      <Download size={14} />
+                      <span>Baixar</span>
+                    </Button>
+                    
+                    <div className="flex-1 px-3 py-1.5 bg-[#393532] border border-gold/20 rounded-md text-sm text-green-400 flex items-center justify-center gap-1">
+                      <Check size={14} />
+                      <span>Visualizado {doc.viewed_at ? formatViewedDate(doc.viewed_at) : ''}</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>) : <div className="text-center py-4 text-gray-400 bg-[#393532] rounded-lg border border-gold/20 p-4">
             Não existem documentos na categoria {category}
           </div>}
       </div>;
   }
+  
   return <div className="overflow-x-auto">
       <div className="flex items-center mb-4">
         <h3 className="text-gold text-lg font-normal">{category}</h3>
@@ -208,15 +239,31 @@ export const CategoryDocumentTable = ({
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" disabled={isDocumentExpired(doc.expires_at) || loadingDocumentIds.has(doc.id)} onClick={() => handleDownload(doc)} className="flex items-center gap-1 bg-[#393532] border-gold/20 text-gold hover:bg-gold hover:text-navy">
-                      <Download size={14} />
-                      <span>{doc.filename || doc.original_filename || "Baixar"}</span>
-                    </Button>
-                    
-                    {!doc.viewed && <Button variant="outline" size="sm" disabled={loadingDocumentIds.has(doc.id)} onClick={() => markAsViewed(doc)} className="flex items-center gap-1 bg-[#393532] border-gold/20 text-gold hover:bg-gold hover:text-navy">
-                        <Check size={14} />
-                        <span>Visualizado</span>
-                      </Button>}
+                    {!doc.viewed ? (
+                      <>
+                        <Button variant="outline" size="sm" disabled={isDocumentExpired(doc.expires_at) || loadingDocumentIds.has(doc.id)} onClick={() => handleDownload(doc)} className="flex items-center gap-1 bg-[#393532] border-gold/20 text-gold hover:bg-gold hover:text-navy">
+                          <Download size={14} />
+                          <span>{doc.filename || doc.original_filename || "Baixar"}</span>
+                        </Button>
+                        
+                        <Button variant="outline" size="sm" disabled={loadingDocumentIds.has(doc.id)} onClick={() => markAsViewed(doc)} className="flex items-center gap-1 bg-[#393532] border-gold/20 text-gold hover:bg-gold hover:text-navy">
+                          <Eye size={14} />
+                          <span>Visualizar</span>
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button variant="outline" size="sm" disabled={isDocumentExpired(doc.expires_at)} onClick={() => handleDownload(doc)} className="flex items-center gap-1 bg-[#393532] border-gold/20 text-gold hover:bg-gold hover:text-navy">
+                          <Download size={14} />
+                          <span>{doc.filename || doc.original_filename || "Baixar"}</span>
+                        </Button>
+                        
+                        <div className="px-3 py-1.5 bg-[#393532] border border-gold/20 rounded-md text-sm text-green-400 flex items-center gap-1">
+                          <Check size={14} />
+                          <span>Visualizado {doc.viewed_at ? formatViewedDate(doc.viewed_at) : ''}</span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>) : <TableRow>
