@@ -3,6 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Document } from "@/utils/auth/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DocumentActions } from "./DocumentActions";
+import { BellDot } from "lucide-react";
 
 interface DesktopDocumentTableProps {
   documents: Document[];
@@ -42,6 +43,7 @@ export const DesktopDocumentTable = ({
             <TableRow key={doc.id} className={isDocumentExpired(doc.expires_at) ? "bg-red-900/20 border-red-900/30" : "border-gold/10"}>
               <TableCell className="font-medium text-white">
                 <div className="flex items-center">
+                  {!doc.viewed && <BellDot size={16} className="text-blue-400 mr-2" />}
                   {doc.name}
                 </div>
               </TableCell>

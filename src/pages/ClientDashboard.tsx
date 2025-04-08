@@ -37,47 +37,46 @@ const ClientDashboard = () => {
   // Encontrar a categoria com o documento mais recente
   useEffect(() => {
     if (documents.length > 0 && !isLoadingDocuments) {
-      // Agrupar documentos por categoria
-      const categoryDocuments: Record<string, Document[]> = {};
-      
-      categories.forEach(cat => {
-        categoryDocuments[cat] = documents.filter(doc => doc.category === cat);
-      });
-      
-      // Encontrar a categoria com o documento mais recente
       let mostRecentCategory: string | null = null;
       let mostRecentDate: Date | null = null;
       
-      categories.forEach(cat => {
-        const docsInCategory = categoryDocuments[cat];
+      // Percorrer todas as categorias para encontrar o documento mais recente
+      categories.forEach(category => {
+        const docsInCategory = documentsByCategory[category] || [];
         
         if (docsInCategory.length > 0) {
-          // Encontrar documento mais recente na categoria
-          const mostRecentDoc = docsInCategory.reduce((latest, doc) => {
-            const docDate = new Date(doc.uploaded_at);
-            const latestDate = new Date(latest.uploaded_at);
-            return docDate > latestDate ? doc : latest;
-          }, docsInCategory[0]);
+          // Ordenar documentos por data de upload (mais recente primeiro)
+          const sortedDocs = [...docsInCategory].sort(
+            (a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
+          );
           
-          const docDate = new Date(mostRecentDoc.uploaded_at);
+          const mostRecentInCategory = sortedDocs[0];
+          const docDate = new Date(mostRecentInCategory.uploaded_at);
           
           // Verificar se é o mais recente de todas as categorias
           if (!mostRecentDate || docDate > mostRecentDate) {
             mostRecentDate = docDate;
-            mostRecentCategory = cat;
+            mostRecentCategory = category;
           }
         }
       });
       
-      // Selecionar a categoria com o documento mais recente
+      // Selecionar a categoria com o documento mais recente ou a primeira com documentos
       if (mostRecentCategory) {
         setSelectedCategory(mostRecentCategory);
-      } else if (categories.length > 0) {
-        // Fallback: selecionar a primeira categoria se não houver documentos
+      } else if (categories.some(cat => documentsByCategory[cat]?.length > 0)) {
+        // Fallback: selecionar a primeira categoria que tenha documentos
+        const firstCategoryWithDocs = categories.find(cat => documentsByCategory[cat]?.length > 0);
+        setSelectedCategory(firstCategoryWithDocs || categories[0]);
+      } else {
+        // Fallback final: primeira categoria disponível
         setSelectedCategory(categories[0]);
       }
+    } else if (categories.length > 0 && !isLoadingDocuments) {
+      // Se não há documentos, selecionar a primeira categoria
+      setSelectedCategory(categories[0]);
     }
-  }, [documents, isLoadingDocuments, categories]);
+  }, [documents, isLoadingDocuments, categories, documentsByCategory]);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#46413d]">

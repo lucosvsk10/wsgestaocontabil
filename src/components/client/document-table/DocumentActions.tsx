@@ -23,7 +23,42 @@ export const DocumentActions = ({
 }: DocumentActionsProps) => {
   const { toast } = useToast();
 
+  const markAsViewed = async (docItem: Document) => {
+    // If already viewed, no need to update
+    if (docItem.viewed) return;
+    
+    try {
+      setLoadingDocumentIds(prev => new Set([...prev, docItem.id]));
+      
+      const { error } = await supabase
+        .from('documents')
+        .update({ viewed: true, viewed_at: new Date().toISOString() })
+        .eq('id', docItem.id);
+        
+      if (error) throw error;
+      
+      // Refresh the documents list
+      refreshDocuments();
+    } catch (error: any) {
+      console.error('Error marking document as viewed:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível marcar o documento como visualizado."
+      });
+    } finally {
+      setLoadingDocumentIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(docItem.id);
+        return newSet;
+      });
+    }
+  };
+
   const handleDownload = async (docItem: Document) => {
+    // Mark as viewed when downloaded
+    await markAsViewed(docItem);
+    
     try {
       if (docItem.storage_key) {
         // Se temos o storage_key, usar o método de download
