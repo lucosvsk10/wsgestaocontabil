@@ -28,7 +28,7 @@ export const useUserCreation = (onUserCreated: () => void) => {
           password: data.password,
           name: data.name,
           isAdmin: data.isAdmin,
-          role: data.role
+          role: data.isAdmin ? (data.role || 'admin') : 'client'
         })
       });
 
