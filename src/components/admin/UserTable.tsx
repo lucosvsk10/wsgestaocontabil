@@ -111,11 +111,6 @@ export const UserTable = ({
     }
   };
 
-  // Verificar se um usuário deve estar na seção de administradores
-  const isAdminRole = (role: string | null) => {
-    return role === 'admin' || role === 'fiscal' || role === 'contabil' || role === 'geral';
-  };
-
   return (
     <div>
       <h3 className="text-xl font-semibold mb-3 text-[#e9aa91]">{title}</h3>

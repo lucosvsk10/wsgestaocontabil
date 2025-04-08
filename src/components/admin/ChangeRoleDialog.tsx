@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Loader2 } from "lucide-react";
 
 interface ChangeRoleDialogProps {
   open: boolean;
@@ -140,6 +141,7 @@ export const ChangeRoleDialog = ({
             variant="outline"
             onClick={() => onOpenChange(false)}
             className="border-gold/20 text-[#e9aa91] hover:bg-[#46413d]"
+            disabled={isLoading}
           >
             Cancelar
           </Button>
@@ -148,7 +150,14 @@ export const ChangeRoleDialog = ({
             className="bg-gold hover:bg-gold-light text-navy"
             disabled={isLoading}
           >
-            {isLoading ? "Processando..." : "Alterar Função"}
+            {isLoading ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Processando...
+              </span>
+            ) : (
+              "Alterar Função"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

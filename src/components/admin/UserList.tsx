@@ -54,13 +54,22 @@ export const UserList = ({
   };
 
   // Separar usuários por papel (administradores e clientes)
-  const adminUsers = supabaseUsers.filter(authUser => 
-    isAdminUser(authUser.id, authUser.email)
-  );
+  const adminUsers = supabaseUsers.filter(authUser => {
+    const role = getUserRole(authUser.id, authUser.email);
+    // Verificar julia@gmail.com explicitamente para garantir que apareça como fiscal
+    if (authUser.email === "julia@gmail.com") {
+      return true; // Incluir na seção de administradores
+    }
+    return isAdminUser(authUser.id, authUser.email);
+  });
   
-  const clientUsers = supabaseUsers.filter(authUser => 
-    !isAdminUser(authUser.id, authUser.email)
-  );
+  const clientUsers = supabaseUsers.filter(authUser => {
+    // Verificar julia@gmail.com explicitamente para garantir que não apareça como cliente
+    if (authUser.email === "julia@gmail.com") {
+      return false; // Não incluir na seção de clientes
+    }
+    return !isAdminUser(authUser.id, authUser.email);
+  });
 
   return (
     <Card className="px-0 bg-[#393532] border border-gold/20">

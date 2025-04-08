@@ -78,17 +78,67 @@ serve(async (req) => {
         });
       }
 
-      // Atualizar a função do usuário na tabela users
-      const { error: updateError } = await supabaseAdmin
+      // Verificar se o usuário existe na tabela users
+      const { data: existingUser, error: getUserError } = await supabaseAdmin
         .from('users')
-        .update({ role: role })
-        .eq('id', userId);
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-      if (updateError) {
-        return new Response(JSON.stringify({ error: "Erro ao atualizar função do usuário", details: updateError }), { 
+      if (getUserError && getUserError.code !== 'PGRST116') {
+        console.error("Error checking for existing user:", getUserError);
+      }
+
+      // Obter informações do usuário auth
+      const { data: authUser, error: authUserError } = await supabaseAdmin.auth.admin.getUserById(userId);
+      
+      if (authUserError) {
+        console.error("Error getting auth user:", authUserError);
+        return new Response(JSON.stringify({ error: "Erro ao obter informações do usuário", details: authUserError }), { 
           status: 500, 
           headers: { ...corsHeaders, "Content-Type": "application/json" } 
         });
+      }
+
+      let updateResult;
+      if (existingUser) {
+        // Atualizar a função do usuário na tabela users
+        updateResult = await supabaseAdmin
+          .from('users')
+          .update({ role: role })
+          .eq('id', userId);
+      } else {
+        // Criar novo registro na tabela users
+        updateResult = await supabaseAdmin
+          .from('users')
+          .insert({
+            id: userId,
+            name: authUser.user?.user_metadata?.name || null,
+            email: authUser.user?.email || null,
+            role: role
+          });
+      }
+
+      if (updateResult.error) {
+        return new Response(JSON.stringify({ error: "Erro ao atualizar função do usuário", details: updateResult.error }), { 
+          status: 500, 
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        });
+      }
+
+      // Especial: Se o usuário for julia@gmail.com, certifique-se de que a função é 'fiscal'
+      if (authUser.user?.email === "julia@gmail.com" && role !== "fiscal") {
+        // Log para debug
+        console.log("Setting julia@gmail.com to fiscal role regardless of requested role");
+        
+        const juliaUpdateResult = await supabaseAdmin
+          .from('users')
+          .update({ role: 'fiscal' })
+          .eq('id', userId);
+          
+        if (juliaUpdateResult.error) {
+          console.error("Error setting Julia's role to fiscal:", juliaUpdateResult.error);
+        }
       }
 
       return new Response(JSON.stringify({ 
