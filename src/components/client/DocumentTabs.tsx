@@ -1,4 +1,3 @@
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Document } from "@/types/admin";
 import { CategoryDocumentTable } from "./document-table";
@@ -24,6 +23,8 @@ interface DocumentTabsProps {
   refreshDocuments: () => void;
 }
 
+const ACTIVE_CATEGORY_KEY = 'activeDocumentCategory';
+
 export const DocumentTabs = ({
   allDocuments,
   documentsByCategory,
@@ -35,10 +36,24 @@ export const DocumentTabs = ({
   refreshDocuments
 }: DocumentTabsProps) => {
   const isMobile = useIsMobile();
-  const [activeCategory, setActiveCategory] = useState<string>(categories[0] || "");
+  const [activeCategory, setActiveCategory] = useState<string>(() => {
+    const savedCategory = localStorage.getItem(ACTIVE_CATEGORY_KEY);
+    
+    if (savedCategory && categories.includes(savedCategory)) {
+      return savedCategory;
+    }
+    
+    return categories[0] || "";
+  });
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   
-  // Handler for changing the active category
+  useEffect(() => {
+    if (activeCategory) {
+      localStorage.setItem(ACTIVE_CATEGORY_KEY, activeCategory);
+      setSelectedCategory(activeCategory);
+    }
+  }, [activeCategory, setSelectedCategory]);
+  
   const handleCategoryChange = (category: string) => {
     setActiveCategory(category);
     setSelectedCategory(category);
@@ -96,13 +111,17 @@ export const DocumentTabs = ({
       ))}
     </div>
   ) : (
-    <Tabs defaultValue={categories[0] || ""} className="w-full">
+    <Tabs 
+      defaultValue={activeCategory} 
+      value={activeCategory}
+      onValueChange={handleCategoryChange}
+      className="w-full"
+    >
       <TabsList className="mb-4 border-gold/20 bg-[#46413d]">
         {categories.map(category => (
           <TabsTrigger 
             key={category} 
             value={category}
-            onClick={() => setSelectedCategory(category)}
             disabled={documentsByCategory[category].length === 0}
             className="relative text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
           >
