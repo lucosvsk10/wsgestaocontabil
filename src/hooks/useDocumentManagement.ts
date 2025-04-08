@@ -49,20 +49,19 @@ export const useDocumentManagement = () => {
     await deleteDocument(documentId, selectedUserId);
   };
   
-  // When selectedUserId changes, fetch documents and trigger cleanup
+  // Corrigido: useEffect que estava causando loop infinito
+  // Agora verificamos se selectedUserId existe e usamos uma dependência estável
   useEffect(() => {
     if (selectedUserId) {
       fetchUserDocuments(selectedUserId);
       
       // Run cleanup of expired documents when loading documents for a user
       // This helps keep the database clean without needing a separate cron job
-      triggerExpiredDocumentsCleanup().then(result => {
-        if (result.deleted > 0) {
-          console.log(`Cleanup completed: ${result.deleted} expired documents removed`);
-        }
+      triggerExpiredDocumentsCleanup().catch(error => {
+        console.error("Error during expired documents cleanup:", error);
       });
     }
-  }, [selectedUserId, fetchUserDocuments]);
+  }, [selectedUserId]);
 
   return {
     documents,

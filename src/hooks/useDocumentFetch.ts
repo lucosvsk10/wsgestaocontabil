@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Document } from "@/types/admin";
 import { useToast } from "@/hooks/use-toast";
@@ -9,7 +9,10 @@ export const useDocumentFetch = () => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
 
-  const fetchUserDocuments = async (userId: string) => {
+  // Usar useCallback para evitar recriação da função em cada renderização
+  const fetchUserDocuments = useCallback(async (userId: string) => {
+    if (!userId) return;
+    
     setIsLoadingDocuments(true);
     try {
       const { data, error } = await supabase.from('documents').select('*').eq('user_id', userId).order('uploaded_at', {
@@ -27,7 +30,7 @@ export const useDocumentFetch = () => {
     } finally {
       setIsLoadingDocuments(false);
     }
-  };
+  }, [toast]);
 
   return {
     documents,
