@@ -24,19 +24,12 @@ export const CategoryDocumentTable = ({
 }: CategoryDocumentTableProps) => {
   const [loadingDocumentIds, setLoadingDocumentIds] = useState<Set<string>>(new Set());
   const isMobile = useIsMobile();
-
-  const newDocumentsCount = documents.filter(doc => !doc.viewed).length;
   
   if (isMobile) {
     return (
       <div className="space-y-4">
         <div className="flex items-center mb-4">
           <h3 className="text-lg font-medium text-gold">{category}</h3>
-          {newDocumentsCount > 0 && (
-            <span className="ml-2 bg-red-500 text-white text-xs font-bold rounded-full px-2 py-1">
-              {newDocumentsCount} novo{newDocumentsCount > 1 ? 's' : ''}
-            </span>
-          )}
         </div>
       
         {documents.length > 0 ? (
@@ -65,11 +58,6 @@ export const CategoryDocumentTable = ({
     <div className="overflow-x-auto">
       <div className="flex items-center mb-4">
         <h3 className="text-gold text-lg font-normal">{category}</h3>
-        {newDocumentsCount > 0 && (
-          <span className="ml-2 bg-red-500 text-white text-xs font-bold rounded-full px-2 py-1">
-            {newDocumentsCount} novo{newDocumentsCount > 1 ? 's' : ''}
-          </span>
-        )}
       </div>
       
       <DesktopDocumentTable 

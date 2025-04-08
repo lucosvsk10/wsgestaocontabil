@@ -1,5 +1,5 @@
 
-import { Bell, Info, Clock } from "lucide-react";
+import { Bell } from "lucide-react";
 import { Document } from "@/utils/auth/types";
 import { DocumentActions } from "./DocumentActions";
 
@@ -44,7 +44,6 @@ export const MobileDocumentCard = ({
       {doc.observations && (
         <div className="mb-3 text-sm">
           <div className="text-blue-400 flex items-center">
-            <Info size={14} className="mr-1" />
             <span className="text-gray-300">Observações:</span>
           </div>
           <p className="text-white text-sm ml-5">{doc.observations}</p>

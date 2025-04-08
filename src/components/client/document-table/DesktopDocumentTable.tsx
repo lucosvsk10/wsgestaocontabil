@@ -1,5 +1,5 @@
 
-import { Bell, Info, Clock } from "lucide-react";
+import { Bell } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Document } from "@/utils/auth/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -50,7 +50,6 @@ export const DesktopDocumentTable = ({
               <TableCell className="text-gray-300">{formatDate(doc.uploaded_at)}</TableCell>
               <TableCell>
                 <span className={`flex items-center gap-1 ${isDocumentExpired(doc.expires_at) ? "text-red-400" : "text-green-400"}`}>
-                  <Clock size={14} />
                   {daysUntilExpiration(doc.expires_at)}
                 </span>
               </TableCell>
@@ -60,7 +59,6 @@ export const DesktopDocumentTable = ({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className="flex items-center text-blue-400 cursor-help">
-                          <Info size={14} className="mr-1" />
                           <span className="truncate max-w-[150px]">{doc.observations}</span>
                         </div>
                       </TooltipTrigger>
