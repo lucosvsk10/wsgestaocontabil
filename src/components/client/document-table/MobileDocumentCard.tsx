@@ -1,5 +1,4 @@
 
-import { Bell } from "lucide-react";
 import { Document } from "@/utils/auth/types";
 import { DocumentActions } from "./DocumentActions";
 
@@ -26,7 +25,6 @@ export const MobileDocumentCard = ({
     <div className={`p-3 rounded-lg border ${isDocumentExpired(doc.expires_at) ? "bg-red-900/20 border-red-900/30" : "bg-[#46413d] border-gold/20"}`}>
       <div className="flex items-center justify-between mb-2">
         <div className="font-medium text-white flex items-center">
-          {!doc.viewed && <Bell size={14} className="text-red-500 mr-2" />}
           {doc.name}
         </div>
       </div>

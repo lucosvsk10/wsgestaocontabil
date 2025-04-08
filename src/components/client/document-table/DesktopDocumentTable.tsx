@@ -1,5 +1,4 @@
 
-import { Bell } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Document } from "@/utils/auth/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -43,7 +42,6 @@ export const DesktopDocumentTable = ({
             <TableRow key={doc.id} className={isDocumentExpired(doc.expires_at) ? "bg-red-900/20 border-red-900/30" : "border-gold/10"}>
               <TableCell className="font-medium text-white">
                 <div className="flex items-center">
-                  {!doc.viewed && <Bell size={14} className="text-red-500 mr-2" />}
                   {doc.name}
                 </div>
               </TableCell>
