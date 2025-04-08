@@ -21,6 +21,7 @@ const ClientDashboard = () => {
   const isMobile = useIsMobile();
   const { documents, isLoadingDocuments, fetchUserDocuments } = useDocumentFetch();
   const hasInitializedRef = useRef(false);
+  const userSelectedRef = useRef(false);
 
   // Categorias de documentos
   const categories = ["Imposto de Renda", "Documentações", "Certidões"];
@@ -37,55 +38,62 @@ const ClientDashboard = () => {
 
   // Encontrar a categoria com o documento mais recente - apenas na primeira renderização
   useEffect(() => {
-    if (documents.length > 0 && !isLoadingDocuments && !hasInitializedRef.current) {
-      let mostRecentCategory: string | null = null;
-      let mostRecentDate: Date | null = null;
-      
-      // Percorrer todas as categorias para encontrar o documento mais recente
-      categories.forEach(category => {
-        const docsInCategory = documentsByCategory[category] || [];
+    // Garante que só execute quando os documentos estiverem carregados e ainda não inicializado
+    if (!hasInitializedRef.current && !isLoadingDocuments) {
+      // Apenas faça a seleção automática se o usuário ainda não fez uma seleção manual
+      if (!userSelectedRef.current) {
+        let mostRecentCategory: string | null = null;
         
-        if (docsInCategory.length > 0) {
-          // Ordenar documentos por data de upload (mais recente primeiro)
-          const sortedDocs = [...docsInCategory].sort(
-            (a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
-          );
+        if (documents.length > 0) {
+          let mostRecentDate: Date | null = null;
           
-          const mostRecentInCategory = sortedDocs[0];
-          const docDate = new Date(mostRecentInCategory.uploaded_at);
-          
-          // Verificar se é o mais recente de todas as categorias
-          if (!mostRecentDate || docDate > mostRecentDate) {
-            mostRecentDate = docDate;
-            mostRecentCategory = category;
-          }
+          // Percorrer todas as categorias para encontrar o documento mais recente
+          categories.forEach(category => {
+            const docsInCategory = documentsByCategory[category] || [];
+            
+            if (docsInCategory.length > 0) {
+              // Ordenar documentos por data de upload (mais recente primeiro)
+              const sortedDocs = [...docsInCategory].sort(
+                (a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
+              );
+              
+              const mostRecentInCategory = sortedDocs[0];
+              const docDate = new Date(mostRecentInCategory.uploaded_at);
+              
+              // Verificar se é o mais recente de todas as categorias
+              if (!mostRecentDate || docDate > mostRecentDate) {
+                mostRecentDate = docDate;
+                mostRecentCategory = category;
+              }
+            }
+          });
         }
-      });
-      
-      // Selecionar a categoria com o documento mais recente ou a primeira com documentos
-      if (mostRecentCategory) {
-        setSelectedCategory(mostRecentCategory);
-      } else if (categories.some(cat => documentsByCategory[cat]?.length > 0)) {
-        // Fallback: selecionar a primeira categoria que tenha documentos
-        const firstCategoryWithDocs = categories.find(cat => documentsByCategory[cat]?.length > 0);
-        setSelectedCategory(firstCategoryWithDocs || categories[0]);
-      } else {
-        // Fallback final: primeira categoria disponível
-        setSelectedCategory(categories[0]);
+        
+        // Selecionar a categoria com o documento mais recente ou a primeira com documentos
+        if (mostRecentCategory) {
+          setSelectedCategory(mostRecentCategory);
+        } else if (categories.some(cat => documentsByCategory[cat]?.length > 0)) {
+          // Fallback: selecionar a primeira categoria que tenha documentos
+          const firstCategoryWithDocs = categories.find(cat => documentsByCategory[cat]?.length > 0);
+          setSelectedCategory(firstCategoryWithDocs || categories[0]);
+        } else {
+          // Fallback final: primeira categoria disponível
+          setSelectedCategory(categories[0]);
+        }
       }
       
-      // Marcar como inicializado após a primeira seleção
-      hasInitializedRef.current = true;
-    } else if (categories.length > 0 && !isLoadingDocuments && !hasInitializedRef.current) {
-      // Se não há documentos, selecionar a primeira categoria
-      setSelectedCategory(categories[0]);
+      // Marcar como inicializado para evitar execuções futuras
       hasInitializedRef.current = true;
     }
   }, [documents, isLoadingDocuments, categories, documentsByCategory]);
 
   // Função para alterar a categoria selecionada (para uso no DocumentTabs)
   const handleCategoryChange = (newCategory: string | null) => {
-    setSelectedCategory(newCategory);
+    if (newCategory) {
+      setSelectedCategory(newCategory);
+      // Marca que o usuário fez uma seleção manual
+      userSelectedRef.current = true;
+    }
   };
 
   return (
