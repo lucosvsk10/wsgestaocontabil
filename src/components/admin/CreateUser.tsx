@@ -66,7 +66,7 @@ export const CreateUser = ({
   };
   return <Card className="bg-[#393532] border border-gold/20">
       <CardHeader>
-        <CardTitle className="text-[#e8cc81] tracking-wider font-bold text-center">CRIAR NOVO USUÁRIO</CardTitle>
+        <CardTitle className="text-[#e8cc81] tracking-wider text-center font-normal">CRIAR NOVO USUÁRIO</CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
