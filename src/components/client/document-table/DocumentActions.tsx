@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Download, Eye, Check } from "lucide-react";
+import { Download, Eye, Check, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Document } from "@/utils/auth/types";
 import { supabase } from "@/integrations/supabase/client";
@@ -128,7 +128,7 @@ export const DocumentActions = ({
             onClick={() => markAsViewed(doc)} 
             className="flex-1 bg-[#393532] border-gold/20 text-gold hover:bg-gold hover:text-navy flex items-center justify-center gap-1"
           >
-            <Eye size={14} />
+            <Bell size={14} className="text-red-500 mr-1" />
             <span>Visualizar</span>
           </Button>
         </>
