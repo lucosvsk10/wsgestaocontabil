@@ -25,6 +25,9 @@ const Navbar = () => {
   // Check if we're on a dashboard page where the logout button should appear
   const isOnDashboardPage = ['/admin', '/client'].includes(location.pathname);
 
+  // New check to hide the account button on client and admin pages
+  const shouldHideAccountButton = ['/client', '/admin'].includes(location.pathname);
+
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
@@ -84,14 +87,16 @@ const Navbar = () => {
           
           {user ? (
             <>
-              {/* Account button that only appears when logged in */}
-              <button 
-                onClick={navigateToDashboard} 
-                className="flex items-center text-gold hover:text-gold-light transition-colors duration-300"
-              >
-                <UserCircle size={20} className="mr-1" />
-                <span className="text-sm font-medium uppercase tracking-wider">CONTA</span>
-              </button>
+              {/* Account button that only appears when logged in and NOT on client/admin pages */}
+              {!shouldHideAccountButton && (
+                <button 
+                  onClick={navigateToDashboard} 
+                  className="flex items-center text-gold hover:text-gold-light transition-colors duration-300"
+                >
+                  <UserCircle size={20} className="mr-1" />
+                  <span className="text-sm font-medium uppercase tracking-wider">CONTA</span>
+                </button>
+              )}
               
               {/* Logout button that only appears on dashboard pages */}
               {isOnDashboardPage && (
@@ -148,17 +153,19 @@ const Navbar = () => {
             
             {user ? (
               <>
-                {/* Account button for mobile */}
-                <button 
-                  onClick={() => {
-                    navigateToDashboard();
-                    setIsMobileMenuOpen(false);
-                  }} 
-                  className="flex items-center text-gold hover:text-gold-light text-xl transition-colors"
-                >
-                  <UserCircle size={24} className="mr-2" />
-                  <span className="font-prompt font-medium uppercase tracking-wider">CONTA</span>
-                </button>
+                {/* Account button for mobile - only on main page */}
+                {!shouldHideAccountButton && (
+                  <button 
+                    onClick={() => {
+                      navigateToDashboard();
+                      setIsMobileMenuOpen(false);
+                    }} 
+                    className="flex items-center text-gold hover:text-gold-light text-xl transition-colors"
+                  >
+                    <UserCircle size={24} className="mr-2" />
+                    <span className="font-prompt font-medium uppercase tracking-wider">CONTA</span>
+                  </button>
+                )}
                 
                 {/* Logout button only on dashboard pages */}
                 {isOnDashboardPage && (
