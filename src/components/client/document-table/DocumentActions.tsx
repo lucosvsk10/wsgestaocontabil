@@ -31,6 +31,46 @@ export const DocumentActions = ({
     return format(date, "dd/MM/yyyy 'às' HH:mm", { locale: pt });
   };
 
+  const markAsViewed = async (docItem: Document) => {
+    // If already viewed, no need to update
+    if (docItem.viewed) return;
+    
+    try {
+      setLoadingDocumentIds(prev => new Set([...prev, docItem.id]));
+      
+      const currentTime = new Date().toISOString();
+      const { error } = await supabase
+        .from('documents')
+        .update({ 
+          viewed: true,
+          viewed_at: currentTime 
+        })
+        .eq('id', docItem.id);
+        
+      if (error) throw error;
+
+      // Refresh the documents list to update UI in all places
+      refreshDocuments();
+      toast({
+        title: "Documento marcado como visualizado",
+        description: "A notificação foi removida com sucesso."
+      });
+    } catch (error: any) {
+      console.error('Error marking document as viewed:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível marcar o documento como visualizado."
+      });
+    } finally {
+      setLoadingDocumentIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(docItem.id);
+        return newSet;
+      });
+    }
+  };
+
   const handleDownload = async (docItem: Document) => {
     try {
       if (docItem.storage_key) {
@@ -84,6 +124,8 @@ export const DocumentActions = ({
           <Button 
             variant="outline" 
             size="sm" 
+            disabled={loadingDocumentIds.has(doc.id)} 
+            onClick={() => markAsViewed(doc)} 
             className="flex-1 bg-[#393532] border-gold/20 text-gold hover:bg-gold hover:text-navy flex items-center justify-center gap-1"
           >
             <Eye size={14} />
