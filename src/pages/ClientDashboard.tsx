@@ -74,7 +74,7 @@ const ClientDashboard = () => {
         
         <Card className="bg-[#393532] border-gold/20">
           <CardHeader>
-            <CardTitle className="flex items-center justify-between font-extralight">
+            <CardTitle className="flex items-center justify-between font-extralight text-[#e8cc81] text-2xl">
               {selectedCategory ? `Documentos - ${selectedCategory}` : 'Meus Documentos'}
             </CardTitle>
           </CardHeader>

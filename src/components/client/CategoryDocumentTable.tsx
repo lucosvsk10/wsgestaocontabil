@@ -169,11 +169,11 @@ export const CategoryDocumentTable = ({
       <Table>
         <TableHeader className="bg-[#393532]">
           <TableRow>
-            <TableHead className="text-gold font-extralight">Nome do Documento</TableHead>
-            <TableHead className="text-gold font-extralight">Data de Envio</TableHead>
-            <TableHead className="text-gold font-extralight">Validade</TableHead>
-            <TableHead className="text-gold font-extralight">Observações</TableHead>
-            <TableHead className="text-gold font-extralight">Ações</TableHead>
+            <TableHead className="text-[#e8cc81] font-extralight bg-transparent">Nome do Documento</TableHead>
+            <TableHead className="text-[#e8cc81] font-extralight bg-transparent">Data de Envio</TableHead>
+            <TableHead className="text-[#e8cc81] font-extralight bg-transparent">Validade</TableHead>
+            <TableHead className="text-[#e8cc81] font-extralight bg-transparent">Observações</TableHead>
+            <TableHead className="text-[#e8cc81] font-extralight bg-transparent">Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
