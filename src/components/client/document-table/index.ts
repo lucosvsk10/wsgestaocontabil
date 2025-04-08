@@ -1,0 +1,2 @@
+
+export { CategoryDocumentTable } from './CategoryDocumentTable';
