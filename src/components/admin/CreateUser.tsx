@@ -161,15 +161,15 @@ export const CreateUser = ({ createUser, isCreatingUser }: CreateUserProps) => {
                       value={field.value}
                     >
                       <FormControl>
-                        <SelectTrigger className="bg-[#46413d] border-gold/20 focus-visible:ring-gold">
-                          <SelectValue placeholder="Selecione a função do administrador" />
+                        <SelectTrigger className="bg-[#46413d] border-gold/20 focus-visible:ring-gold text-white">
+                          <SelectValue placeholder="Selecione a função do administrador" className="text-white" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent className="bg-[#46413d] border-gold/20">
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="fiscal">Fiscal</SelectItem>
-                        <SelectItem value="contabil">Contábil</SelectItem>
-                        <SelectItem value="geral">Geral</SelectItem>
+                      <SelectContent className="bg-[#46413d] border-gold/20 text-white">
+                        <SelectItem value="admin" className="text-white">Admin</SelectItem>
+                        <SelectItem value="fiscal" className="text-white">Fiscal</SelectItem>
+                        <SelectItem value="contabil" className="text-white">Contábil</SelectItem>
+                        <SelectItem value="geral" className="text-white">Geral</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
