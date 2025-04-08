@@ -1,8 +1,9 @@
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Document } from "@/types/admin";
 import { CategoryDocumentTable } from "./document-table";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Drawer, 
   DrawerContent, 
@@ -21,9 +22,8 @@ interface DocumentTabsProps {
   isDocumentExpired: (expiresAt: string | null) => boolean;
   daysUntilExpiration: (expiresAt: string | null) => string | null;
   refreshDocuments: () => void;
+  activeCategory: string;
 }
-
-const ACTIVE_CATEGORY_KEY = 'activeDocumentCategory';
 
 export const DocumentTabs = ({
   allDocuments,
@@ -33,29 +33,13 @@ export const DocumentTabs = ({
   formatDate,
   isDocumentExpired,
   daysUntilExpiration,
-  refreshDocuments
+  refreshDocuments,
+  activeCategory
 }: DocumentTabsProps) => {
   const isMobile = useIsMobile();
-  const [activeCategory, setActiveCategory] = useState<string>(() => {
-    const savedCategory = localStorage.getItem(ACTIVE_CATEGORY_KEY);
-    
-    if (savedCategory && categories.includes(savedCategory)) {
-      return savedCategory;
-    }
-    
-    return categories[0] || "";
-  });
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   
-  useEffect(() => {
-    if (activeCategory) {
-      localStorage.setItem(ACTIVE_CATEGORY_KEY, activeCategory);
-      setSelectedCategory(activeCategory);
-    }
-  }, [activeCategory, setSelectedCategory]);
-  
   const handleCategoryChange = (category: string) => {
-    setActiveCategory(category);
     setSelectedCategory(category);
     setIsDrawerOpen(false);
   };
