@@ -33,18 +33,27 @@ export const UserList = ({
   refreshUsers
 }: UserListProps) => {
   // Função para encontrar o role de um usuário
-  const getUserRole = (authUserId: string) => {
+  const getUserRole = (authUserId: string, email: string | null) => {
+    // Verificar se é o usuário especial "wsgestao@gmail.com"
+    if (email === "wsgestao@gmail.com") {
+      return "geral";
+    }
+    
     const userInfo = users.find(u => u.id === authUserId);
     return userInfo?.role || "cliente";
   };
 
   // Separar usuários por papel (administradores e clientes)
   const adminUsers = supabaseUsers.filter(authUser => 
-    getUserRole(authUser.id) === 'admin'
+    getUserRole(authUser.id, authUser.email) === 'admin' || 
+    getUserRole(authUser.id, authUser.email) === 'geral' || 
+    authUser.email === "wsgestao@gmail.com"
   );
   
   const clientUsers = supabaseUsers.filter(authUser => 
-    getUserRole(authUser.id) !== 'admin'
+    getUserRole(authUser.id, authUser.email) !== 'admin' && 
+    getUserRole(authUser.id, authUser.email) !== 'geral' &&
+    authUser.email !== "wsgestao@gmail.com"
   );
 
   return (
@@ -81,6 +90,9 @@ export const UserList = ({
               setSelectedUserForPasswordChange={setSelectedUserForPasswordChange}
               passwordForm={passwordForm}
               refreshUsers={refreshUsers}
+              specialEmail="wsgestao@gmail.com"
+              specialRoleLabel="Geral"
+              specialRoleClassName="bg-[#e8cc81] text-navy"
             />
           </>
         )}

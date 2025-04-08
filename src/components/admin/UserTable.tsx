@@ -27,6 +27,9 @@ interface UserTableProps {
   passwordForm: any;
   refreshUsers: () => void;
   showDocumentButton?: boolean;
+  specialEmail?: string;
+  specialRoleLabel?: string;
+  specialRoleClassName?: string;
 }
 
 export const UserTable = ({
@@ -39,7 +42,10 @@ export const UserTable = ({
   setSelectedUserForPasswordChange,
   passwordForm,
   refreshUsers,
-  showDocumentButton = false
+  showDocumentButton = false,
+  specialEmail,
+  specialRoleLabel,
+  specialRoleClassName
 }: UserTableProps) => {
   // Formatação da data
   const formatDate = (dateStr: string) => {
@@ -78,13 +84,15 @@ export const UserTable = ({
             {users.length > 0 ? (
               users.map(authUser => {
                 const userInfo = getUserInfo(authUser.id);
+                const isSpecialUser = specialEmail && authUser.email === specialEmail;
+                
                 return (
                   <TableRow key={authUser.id} className="border-gold/20 hover:bg-[#46413d]">
                     <TableCell>{getUserName(authUser)}</TableCell>
                     <TableCell>{authUser.email || "Sem email"}</TableCell>
                     <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs ${roleClassName}`}>
-                        {roleLabel}
+                      <span className={`px-2 py-1 rounded-full text-xs ${isSpecialUser ? specialRoleClassName : roleClassName}`}>
+                        {isSpecialUser ? specialRoleLabel : roleLabel}
                       </span>
                     </TableCell>
                     <TableCell>{authUser.created_at ? formatDate(authUser.created_at) : "Data desconhecida"}</TableCell>
