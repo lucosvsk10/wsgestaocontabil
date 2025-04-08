@@ -68,6 +68,53 @@ export const UserTable = ({
     return userInfo?.name || authUser.user_metadata?.name || "Sem nome";
   };
 
+  // Função para obter o texto da função do usuário
+  const getRoleText = (authUser: AuthUser) => {
+    const userInfo = getUserInfo(authUser.id);
+    if (!userInfo) return roleLabel;
+    
+    // Caso especial para email específico
+    if (specialEmail && authUser.email === specialEmail) {
+      return specialRoleLabel || "Geral";
+    }
+    
+    // Retornar o papel baseado no valor da role no banco de dados
+    switch (userInfo.role) {
+      case 'admin': return "Admin";
+      case 'fiscal': return "Fiscal";
+      case 'contabil': return "Contábil";
+      case 'geral': return "Geral";
+      case 'client': return "Cliente";
+      default: return roleLabel;
+    }
+  };
+  
+  // Função para obter a classe CSS da função do usuário
+  const getRoleClassName = (authUser: AuthUser) => {
+    const userInfo = getUserInfo(authUser.id);
+    if (!userInfo) return roleClassName;
+    
+    // Caso especial para email específico
+    if (specialEmail && authUser.email === specialEmail) {
+      return specialRoleClassName || "bg-[#e8cc81] text-navy";
+    }
+    
+    // Retornar a classe CSS baseada no valor da role no banco de dados
+    switch (userInfo.role) {
+      case 'admin': return "bg-purple-900 text-purple-100";
+      case 'fiscal': return "bg-green-800 text-green-100";
+      case 'contabil': return "bg-indigo-800 text-indigo-100";
+      case 'geral': return "bg-[#e8cc81] text-navy";
+      case 'client': return "bg-blue-900 text-blue-100";
+      default: return roleClassName;
+    }
+  };
+
+  // Verificar se um usuário deve estar na seção de administradores
+  const isAdminRole = (role: string | null) => {
+    return role === 'admin' || role === 'fiscal' || role === 'contabil' || role === 'geral';
+  };
+
   return (
     <div>
       <h3 className="text-xl font-semibold mb-3 text-[#e9aa91]">{title}</h3>
@@ -93,8 +140,8 @@ export const UserTable = ({
                     <TableCell>{getUserName(authUser)}</TableCell>
                     <TableCell>{authUser.email || "Sem email"}</TableCell>
                     <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs ${isSpecialUser ? specialRoleClassName : roleClassName}`}>
-                        {isSpecialUser ? specialRoleLabel : roleLabel}
+                      <span className={`px-2 py-1 rounded-full text-xs ${getRoleClassName(authUser)}`}>
+                        {getRoleText(authUser)}
                       </span>
                     </TableCell>
                     <TableCell>{authUser.created_at ? formatDate(authUser.created_at) : "Data desconhecida"}</TableCell>

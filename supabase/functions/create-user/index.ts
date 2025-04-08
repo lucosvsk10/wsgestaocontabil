@@ -73,7 +73,9 @@ const isAdmin = async (token: string) => {
       return false
     }
     
-    return userData?.role === 'admin'
+    // Check if user role is admin, fiscal, contabil, or geral
+    const adminRoles = ['admin', 'fiscal', 'contabil', 'geral']
+    return adminRoles.includes(userData?.role || '')
   } catch (error) {
     console.error('Error checking admin status:', error)
     return false
@@ -125,6 +127,14 @@ Deno.serve(async (req) => {
       throw new Error('Failed to create user')
     }
     
+    // Map role from form to database role
+    // If isAdmin was selected, use the role property (fiscal, contabil, geral) or default to 'admin'
+    // If isAdmin was not selected, use 'client'
+    let userRole = 'client';
+    if (body.isAdmin) {
+      userRole = body.role || 'admin';
+    }
+    
     // 2. Create user in public.users
     const { error: userError } = await adminClient
       .from('users')
@@ -132,7 +142,7 @@ Deno.serve(async (req) => {
         id: authUser.user.id,
         email: body.email,
         name: body.name,
-        role: body.isAdmin ? 'admin' : 'client'
+        role: userRole
       })
     
     if (userError) {
@@ -150,7 +160,7 @@ Deno.serve(async (req) => {
           id: authUser.user.id,
           email: authUser.user.email,
           name: body.name,
-          role: body.isAdmin ? 'admin' : 'client'
+          role: userRole
         }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }

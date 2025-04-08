@@ -14,13 +14,22 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useEffect } from "react";
 
 // Schema para validação de criação de usuário
 const userSchema = z.object({
   name: z.string().min(3, { message: "Nome deve ter pelo menos 3 caracteres" }),
   email: z.string().email({ message: "Email inválido" }),
   password: z.string().min(6, { message: "Senha deve ter pelo menos 6 caracteres" }),
-  isAdmin: z.boolean().default(false)
+  isAdmin: z.boolean().default(false),
+  role: z.string().optional(),
 });
 
 export type UserFormData = z.infer<typeof userSchema>;
@@ -38,9 +47,24 @@ export const CreateUser = ({ createUser, isCreatingUser }: CreateUserProps) => {
       name: "",
       email: "",
       password: "",
-      isAdmin: false
+      isAdmin: false,
+      role: "admin",
     },
   });
+
+  // Watch isAdmin value to control role field visibility and validation
+  const isAdmin = form.watch("isAdmin");
+
+  // Toggle role validation based on isAdmin
+  useEffect(() => {
+    if (isAdmin) {
+      // Require role when isAdmin is true
+      form.setValue("role", form.getValues("role") || "admin");
+    } else {
+      // Clear role when isAdmin is false
+      form.setValue("role", undefined);
+    }
+  }, [isAdmin, form]);
 
   const onSubmit = (data: UserFormData) => {
     createUser(data);
@@ -123,6 +147,36 @@ export const CreateUser = ({ createUser, isCreatingUser }: CreateUserProps) => {
                 </FormItem>
               )}
             />
+            
+            {isAdmin && (
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-[#e9aa91]">Função</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="bg-[#46413d] border-gold/20 focus-visible:ring-gold">
+                          <SelectValue placeholder="Selecione a função do administrador" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="bg-[#46413d] border-gold/20">
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="fiscal">Fiscal</SelectItem>
+                        <SelectItem value="contabil">Contábil</SelectItem>
+                        <SelectItem value="geral">Geral</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
             
             <Button 
               type="submit" 

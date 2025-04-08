@@ -27,7 +27,8 @@ export const useUserCreation = (onUserCreated: () => void) => {
           email: data.email,
           password: data.password,
           name: data.name,
-          isAdmin: data.isAdmin
+          isAdmin: data.isAdmin,
+          role: data.role
         })
       });
 
@@ -37,10 +38,22 @@ export const useUserCreation = (onUserCreated: () => void) => {
         throw new Error(responseData.error || "Erro ao criar usuário");
       }
 
+      // Get role display text
+      const getRoleDisplayText = (role: string, isAdmin: boolean) => {
+        if (!isAdmin) return 'cliente';
+        
+        switch (role) {
+          case 'fiscal': return 'fiscal';
+          case 'contabil': return 'contábil';
+          case 'geral': return 'geral';
+          default: return 'administrador';
+        }
+      };
+
       // Notify successful creation
       toast({
         title: "Usuário criado com sucesso",
-        description: `${data.name} (${data.email}) foi cadastrado no sistema como ${data.isAdmin ? 'administrador' : 'cliente'}.`
+        description: `${data.name} (${data.email}) foi cadastrado no sistema como ${getRoleDisplayText(data.role, data.isAdmin)}.`
       });
 
       // Call callback to refresh users
