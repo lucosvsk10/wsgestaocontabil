@@ -29,7 +29,41 @@ const MobileNavbar = ({ isOpen, onClose, handleLogout, navigateToDashboard }: Mo
           </button>
         </div>
         <nav className="flex flex-col space-y-8 items-center text-center mt-12">
-          {!shouldHideNavLinks && <>
+          {/* Account Button - Now appears first */}
+          {user && !shouldHideAccountButton && (
+            <div className="flex flex-col items-center space-y-4">
+              <div className="flex items-center text-[#e8cc81] hover:text-[#e8cc81]/80 text-xl">
+                <UserCircle size={24} className="mr-2" />
+                <span className="font-prompt font-medium uppercase tracking-wider">CONTA</span>
+              </div>
+              
+              <button 
+                onClick={() => {
+                  navigateToDashboard();
+                  onClose();
+                }} 
+                className="flex items-center text-gold hover:text-gold-light text-lg transition-colors"
+              >
+                <FileText size={20} className="mr-2" />
+                <span className="font-prompt font-medium uppercase tracking-wider">MEUS DOCS</span>
+              </button>
+              
+              <button 
+                onClick={() => {
+                  handleLogout();
+                  onClose();
+                }} 
+                className="flex items-center text-gold hover:text-gold-light text-lg transition-colors"
+              >
+                <LogOut size={20} className="mr-2" />
+                <span className="font-prompt font-medium uppercase tracking-wider">SAIR</span>
+              </button>
+            </div>
+          )}
+          
+          {/* Service Links - Now appear after account section */}
+          {!shouldHideNavLinks && (
+            <>
               <a href="#servicos" className="text-gold hover:text-gold-light text-xl font-prompt font-medium uppercase tracking-wider transition-colors" onClick={onClose}>
                 Serviços
               </a>
@@ -42,55 +76,11 @@ const MobileNavbar = ({ isOpen, onClose, handleLogout, navigateToDashboard }: Mo
               <a href="#contato" className="text-gold hover:text-gold-light text-xl font-prompt font-medium uppercase tracking-wider transition-colors" onClick={onClose}>
                 Contato
               </a>
-            </>}
-          
-          {user ? (
-            <>
-              {!shouldHideAccountButton && (
-                <div className="flex flex-col items-center space-y-4">
-                  <div className="flex items-center text-[#e8cc81] hover:text-[#e8cc81]/80 text-xl">
-                    <UserCircle size={24} className="mr-2" />
-                    <span className="font-prompt font-medium uppercase tracking-wider">CONTA</span>
-                  </div>
-                  
-                  <button 
-                    onClick={() => {
-                      navigateToDashboard();
-                      onClose();
-                    }} 
-                    className="flex items-center text-gold hover:text-gold-light text-lg transition-colors"
-                  >
-                    <FileText size={20} className="mr-2" />
-                    <span className="font-prompt font-medium uppercase tracking-wider">MEUS DOCS</span>
-                  </button>
-                  
-                  <button 
-                    onClick={() => {
-                      handleLogout();
-                      onClose();
-                    }} 
-                    className="flex items-center text-gold hover:text-gold-light text-lg transition-colors"
-                  >
-                    <LogOut size={20} className="mr-2" />
-                    <span className="font-prompt font-medium uppercase tracking-wider">SAIR</span>
-                  </button>
-                </div>
-              )}
-              
-              {isOnDashboardPage && (
-                <button 
-                  onClick={() => {
-                    handleLogout();
-                    onClose();
-                  }} 
-                  className="flex items-center text-gold hover:text-gold-light text-xl transition-colors"
-                >
-                  <LogOut size={24} className="mr-2" />
-                  <span className="font-prompt font-medium uppercase tracking-wider">Sair</span>
-                </button>
-              )}
             </>
-          ) : (
+          )}
+          
+          {/* Login Button and Dashboard Logout */}
+          {!user && !shouldHideNavLinks && (
             <Link 
               to="/login" 
               className="flex items-center text-gold hover:text-gold-light text-xl transition-colors" 
@@ -101,6 +91,20 @@ const MobileNavbar = ({ isOpen, onClose, handleLogout, navigateToDashboard }: Mo
             </Link>
           )}
           
+          {isOnDashboardPage && (
+            <button 
+              onClick={() => {
+                handleLogout();
+                onClose();
+              }} 
+              className="flex items-center text-gold hover:text-gold-light text-xl transition-colors"
+            >
+              <LogOut size={24} className="mr-2" />
+              <span className="font-prompt font-medium uppercase tracking-wider">Sair</span>
+            </button>
+          )}
+          
+          {/* Instagram Link - Kept at the end */}
           <a 
             href="https://www.instagram.com/ws_gestao_contabil?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" 
             target="_blank" 
