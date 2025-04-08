@@ -24,18 +24,7 @@ const DesktopNavbar = ({ handleLogout, navigateToDashboard }: DesktopNavbarProps
 
   return (
     <nav className="hidden md:flex items-center space-x-8">
-      {!shouldHideNavLinks && <>
-          <a href="#servicos" className="nav-link text-sm font-prompt font-medium uppercase tracking-wider">
-            Serviços
-          </a>
-          <a href="#sobre" className="nav-link text-sm font-prompt font-medium uppercase tracking-wider">
-            Sobre
-          </a>
-          <a href="#contabil" className="nav-link text-sm font-prompt font-medium uppercase tracking-wider">
-            Contábil
-          </a>
-        </>}
-      
+      {/* Account or Login button first */}
       {user ? (
         <>
           {!shouldHideAccountButton && (
@@ -80,6 +69,22 @@ const DesktopNavbar = ({ handleLogout, navigateToDashboard }: DesktopNavbarProps
         </Link>
       )}
       
+      {/* Service links in the requested order */}
+      {!shouldHideNavLinks && (
+        <>
+          <a href="#servicos" className="nav-link text-sm font-prompt font-medium uppercase tracking-wider">
+            Serviços
+          </a>
+          <a href="#sobre" className="nav-link text-sm font-prompt font-medium uppercase tracking-wider">
+            Sobre
+          </a>
+          <a href="#contabil" className="nav-link text-sm font-prompt font-medium uppercase tracking-wider">
+            Contábil
+          </a>
+        </>
+      )}
+      
+      {/* Instagram link always at the end */}
       <a href="https://www.instagram.com/ws_gestao_contabil?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer" className="text-gold hover:text-gold-light transition-colors duration-300" aria-label="Instagram">
         <Instagram size={20} />
       </a>
