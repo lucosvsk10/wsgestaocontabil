@@ -25,6 +25,7 @@ export type Database = {
           uploaded_at: string | null
           user_id: string
           viewed: boolean | null
+          viewed_at: string | null
         }
         Insert: {
           category?: string
@@ -41,6 +42,7 @@ export type Database = {
           uploaded_at?: string | null
           user_id: string
           viewed?: boolean | null
+          viewed_at?: string | null
         }
         Update: {
           category?: string
@@ -57,6 +59,7 @@ export type Database = {
           uploaded_at?: string | null
           user_id?: string
           viewed?: boolean | null
+          viewed_at?: string | null
         }
         Relationships: [
           {
