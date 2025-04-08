@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Download, Clock, Bell, Info, Check, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -39,11 +38,12 @@ export const CategoryDocumentTable = ({
     try {
       setLoadingDocumentIds(prev => new Set([...prev, docItem.id]));
       
+      const currentTime = new Date().toISOString();
       const { error } = await supabase
         .from('documents')
         .update({ 
           viewed: true,
-          viewed_at: new Date().toISOString() 
+          viewed_at: currentTime 
         })
         .eq('id', docItem.id);
         
@@ -111,14 +111,12 @@ export const CategoryDocumentTable = ({
     }
   };
 
-  // Format the viewed_at date
-  const formatViewedDate = (dateStr: string | null) => {
+  const formatViewedDate = (dateStr: string | null | undefined) => {
     if (!dateStr) return '';
     const date = new Date(dateStr);
     return format(date, "dd/MM/yyyy 'às' HH:mm", { locale: pt });
   };
 
-  // Count new documents
   const newDocumentsCount = documents.filter(doc => !doc.viewed).length;
   
   if (isMobile) {
@@ -178,7 +176,7 @@ export const CategoryDocumentTable = ({
                     
                     <div className="flex-1 px-3 py-1.5 bg-[#393532] border border-gold/20 rounded-md text-sm text-green-400 flex items-center justify-center gap-1">
                       <Check size={14} />
-                      <span>Visualizado {doc.viewed_at ? formatViewedDate(doc.viewed_at) : ''}</span>
+                      <span>Visualizado {formatViewedDate(doc.viewed_at)}</span>
                     </div>
                   </>
                 )}
@@ -260,7 +258,7 @@ export const CategoryDocumentTable = ({
                         
                         <div className="px-3 py-1.5 bg-[#393532] border border-gold/20 rounded-md text-sm text-green-400 flex items-center gap-1">
                           <Check size={14} />
-                          <span>Visualizado {doc.viewed_at ? formatViewedDate(doc.viewed_at) : ''}</span>
+                          <span>Visualizado {formatViewedDate(doc.viewed_at)}</span>
                         </div>
                       </>
                     )}

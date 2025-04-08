@@ -13,12 +13,13 @@ export interface Document {
   original_filename?: string;
   file_url: string;
   filename?: string;
-  category?: string;
+  category: string;  // Changed from optional to required
   uploaded_at: string;
   observations?: string;
   expires_at: string | null;
   user_id: string;
-  viewed?: boolean;
+  viewed: boolean;
+  viewed_at?: string | null;  // Added viewed_at property
   type?: string;
   size?: number;
   storage_key?: string;
