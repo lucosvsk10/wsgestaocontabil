@@ -33,7 +33,7 @@ const DesktopNavbar = ({ handleLogout, navigateToDashboard }: DesktopNavbarProps
                 <UserCircle size={20} className="mr-1" />
                 <span className="text-sm font-medium uppercase tracking-wider">CONTA</span>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-[#46413d] border-gold/20">
+              <DropdownMenuContent align="end" className="bg-[#393532] border-gold/20">
                 <DropdownMenuItem 
                   className="text-gold hover:text-gold-light cursor-pointer"
                   onClick={navigateToDashboard}

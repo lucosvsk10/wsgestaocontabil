@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -79,7 +80,11 @@ export default {
 				},
 				purple: {
 					DEFAULT: '#9333ea'
-				}
+				},
+                // Add the new background color
+                page: {
+                    DEFAULT: '#393532'
+                }
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
