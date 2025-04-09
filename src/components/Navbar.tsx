@@ -1,11 +1,14 @@
 
 import { useState, useEffect } from 'react';
-import { Menu } from 'lucide-react';
+import { Menu, UserCircle } from 'lucide-react';
 import Logo from './navbar/Logo';
 import DesktopNavbar from './navbar/DesktopNavbar';
 import MobileNavbar from './navbar/MobileNavbar';
 import { useNavigation } from './navbar/hooks/useNavigation';
 import ThemeToggle from './ThemeToggle';
+import { useAuth } from '@/contexts/AuthContext';
+import { Link } from 'react-router-dom';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -14,6 +17,8 @@ const Navbar = () => {
     handleLogout,
     navigateToDashboard
   } = useNavigation();
+  const { user } = useAuth();
+  const isMobile = useIsMobile();
   
   useEffect(() => {
     const handleScroll = () => {
@@ -28,6 +33,29 @@ const Navbar = () => {
         <Logo />
         <div className="flex items-center gap-4">
           <ThemeToggle />
+          
+          {/* Account Button for Mobile */}
+          {isMobile && user && (
+            <button
+              onClick={navigateToDashboard}
+              className="text-gold hover:text-gold-light focus:outline-none transition-colors"
+              aria-label="Conta"
+            >
+              <UserCircle size={24} />
+            </button>
+          )}
+          
+          {/* Login Button for Mobile */}
+          {isMobile && !user && (
+            <Link 
+              to="/login"
+              className="text-gold hover:text-gold-light focus:outline-none transition-colors"
+              aria-label="Login"
+            >
+              <UserCircle size={24} />
+            </Link>
+          )}
+          
           <DesktopNavbar handleLogout={handleLogout} navigateToDashboard={navigateToDashboard} />
           <button className="md:hidden text-gold hover:text-gold-light focus:outline-none transition-colors" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}>
             <Menu size={24} />

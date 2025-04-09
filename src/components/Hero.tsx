@@ -1,3 +1,4 @@
+
 import { useEffect, useRef } from 'react';
 const Hero = () => {
   const heroRef = useRef<HTMLDivElement>(null);
@@ -25,7 +26,7 @@ const Hero = () => {
         <div className="border overflow-hidden backdrop-blur-sm p-8 md:p-12 border-[5px] border-[#efc349] rounded-2xl py-[30px] my-0 mx-0 px-[50px] max-w-5xl">
           <div className="flex flex-col md:flex-row items-center justify-between gap-12">
             <div className="w-full md:w-3/5 space-y-6 animate-fade-in-right">
-              <h1 className="font-prompt uppercase tracking-tight leading-tight text-5xl font-medium py-0 my-0 text-gold-dark">
+              <h1 className="font-prompt uppercase tracking-tight leading-tight text-5xl font-medium py-0 my-0 text-gold">
                 WS Gestão Contábil
               </h1>
               
