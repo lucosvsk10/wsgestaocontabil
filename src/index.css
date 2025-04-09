@@ -106,7 +106,7 @@
 }
 
 .nav-link {
-  @apply relative text-gold hover:text-gold-light transition-colors duration-300;
+  @apply relative text-gold-dark dark:text-gold hover:text-gold dark:hover:text-gold-light transition-colors duration-300;
 }
 
 .nav-link::after {
@@ -157,3 +157,4 @@
   transform: scaleX(1);
   transform-origin: bottom left;
 }
+

@@ -24,7 +24,7 @@ const MobileNavbar = ({ isOpen, onClose, handleLogout, navigateToDashboard }: Mo
     <div className={`md:hidden fixed inset-0 z-40 bg-navy-dark/95 backdrop-blur-md transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
       <div className="container mx-auto px-6 py-8 flex flex-col h-full">
         <div className="flex justify-end mb-8">
-          <button className="text-gold hover:text-gold-light focus:outline-none transition-colors" onClick={onClose} aria-label="Close menu">
+          <button className="text-gold-dark hover:text-gold dark:text-gold dark:hover:text-gold-light focus:outline-none transition-colors" onClick={onClose} aria-label="Close menu">
             <X size={24} />
           </button>
         </div>
@@ -34,7 +34,7 @@ const MobileNavbar = ({ isOpen, onClose, handleLogout, navigateToDashboard }: Mo
             <>
               {!shouldHideAccountButton && (
                 <div className="flex flex-col items-center space-y-4">
-                  <div className="flex items-center text-[#e8cc81] hover:text-[#e8cc81]/80 text-xl">
+                  <div className="flex items-center text-gold-dark dark:text-gold hover:text-gold dark:hover:text-gold-light text-xl">
                     <UserCircle size={24} className="mr-2" />
                     <span className="font-prompt font-medium uppercase tracking-wider">CONTA</span>
                   </div>
@@ -44,7 +44,7 @@ const MobileNavbar = ({ isOpen, onClose, handleLogout, navigateToDashboard }: Mo
                       navigateToDashboard();
                       onClose();
                     }} 
-                    className="flex items-center text-gold hover:text-gold-light text-lg transition-colors"
+                    className="flex items-center text-gold-dark hover:text-gold dark:text-gold dark:hover:text-gold-light text-lg transition-colors"
                   >
                     <FileText size={20} className="mr-2" />
                     <span className="font-prompt font-medium uppercase tracking-wider">MEUS DOCS</span>
@@ -55,7 +55,7 @@ const MobileNavbar = ({ isOpen, onClose, handleLogout, navigateToDashboard }: Mo
                       handleLogout();
                       onClose();
                     }} 
-                    className="flex items-center text-gold hover:text-gold-light text-lg transition-colors"
+                    className="flex items-center text-gold-dark hover:text-gold dark:text-gold dark:hover:text-gold-light text-lg transition-colors"
                   >
                     <LogOut size={20} className="mr-2" />
                     <span className="font-prompt font-medium uppercase tracking-wider">SAIR</span>
@@ -68,7 +68,7 @@ const MobileNavbar = ({ isOpen, onClose, handleLogout, navigateToDashboard }: Mo
               {!shouldHideNavLinks && (
                 <Link 
                   to="/login" 
-                  className="flex items-center text-gold hover:text-gold-light text-xl transition-colors" 
+                  className="flex items-center text-gold-dark hover:text-gold dark:text-gold dark:hover:text-gold-light text-xl transition-colors" 
                   onClick={onClose}
                 >
                   <UserCircle size={24} className="mr-2" />
@@ -81,16 +81,16 @@ const MobileNavbar = ({ isOpen, onClose, handleLogout, navigateToDashboard }: Mo
           {/* Service Links in the requested order */}
           {!shouldHideNavLinks && (
             <>
-              <a href="#servicos" className="text-gold hover:text-gold-light text-xl font-prompt font-medium uppercase tracking-wider transition-colors" onClick={onClose}>
+              <a href="#servicos" className="text-gold-dark hover:text-gold dark:text-gold dark:hover:text-gold-light text-xl font-prompt font-medium uppercase tracking-wider transition-colors" onClick={onClose}>
                 Serviços
               </a>
-              <a href="#sobre" className="text-gold hover:text-gold-light text-xl font-prompt font-medium uppercase tracking-wider transition-colors" onClick={onClose}>
+              <a href="#sobre" className="text-gold-dark hover:text-gold dark:text-gold dark:hover:text-gold-light text-xl font-prompt font-medium uppercase tracking-wider transition-colors" onClick={onClose}>
                 Sobre
               </a>
-              <a href="#contabil" className="text-gold hover:text-gold-light text-xl font-prompt font-medium uppercase tracking-wider transition-colors" onClick={onClose}>
+              <a href="#contabil" className="text-gold-dark hover:text-gold dark:text-gold dark:hover:text-gold-light text-xl font-prompt font-medium uppercase tracking-wider transition-colors" onClick={onClose}>
                 Contábil
               </a>
-              <a href="#contato" className="text-gold hover:text-gold-light text-xl font-prompt font-medium uppercase tracking-wider transition-colors" onClick={onClose}>
+              <a href="#contato" className="text-gold-dark hover:text-gold dark:text-gold dark:hover:text-gold-light text-xl font-prompt font-medium uppercase tracking-wider transition-colors" onClick={onClose}>
                 Contato
               </a>
             </>
@@ -103,7 +103,7 @@ const MobileNavbar = ({ isOpen, onClose, handleLogout, navigateToDashboard }: Mo
                 handleLogout();
                 onClose();
               }} 
-              className="flex items-center text-gold hover:text-gold-light text-xl transition-colors"
+              className="flex items-center text-gold-dark hover:text-gold dark:text-gold dark:hover:text-gold-light text-xl transition-colors"
             >
               <LogOut size={24} className="mr-2" />
               <span className="font-prompt font-medium uppercase tracking-wider">Sair</span>
@@ -115,7 +115,7 @@ const MobileNavbar = ({ isOpen, onClose, handleLogout, navigateToDashboard }: Mo
             href="https://www.instagram.com/ws_gestao_contabil?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" 
             target="_blank" 
             rel="noopener noreferrer" 
-            className="text-gold hover:text-gold-light text-xl transition-colors" 
+            className="text-gold-dark hover:text-gold dark:text-gold dark:hover:text-gold-light text-xl transition-colors" 
             aria-label="Instagram" 
             onClick={onClose}
           >

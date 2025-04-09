@@ -38,7 +38,7 @@ const Navbar = () => {
           {isMobile && user && (
             <button
               onClick={navigateToDashboard}
-              className="text-gold hover:text-gold-light focus:outline-none transition-colors"
+              className="text-gold-dark hover:text-gold dark:text-gold dark:hover:text-gold-light focus:outline-none transition-colors"
               aria-label="Conta"
             >
               <UserCircle size={24} />
@@ -49,7 +49,7 @@ const Navbar = () => {
           {isMobile && !user && (
             <Link 
               to="/login"
-              className="text-gold hover:text-gold-light focus:outline-none transition-colors"
+              className="text-gold-dark hover:text-gold dark:text-gold dark:hover:text-gold-light focus:outline-none transition-colors"
               aria-label="Login"
             >
               <UserCircle size={24} />
@@ -57,7 +57,11 @@ const Navbar = () => {
           )}
           
           <DesktopNavbar handleLogout={handleLogout} navigateToDashboard={navigateToDashboard} />
-          <button className="md:hidden text-gold hover:text-gold-light focus:outline-none transition-colors" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}>
+          <button 
+            className="md:hidden text-gold-dark hover:text-gold dark:text-gold dark:hover:text-gold-light focus:outline-none transition-colors" 
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
+            aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+          >
             <Menu size={24} />
           </button>
         </div>
