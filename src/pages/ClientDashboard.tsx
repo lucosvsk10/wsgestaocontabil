@@ -97,19 +97,19 @@ const ClientDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#46413d]">
+    <div className="min-h-screen flex flex-col bg-[#46413d] dark:bg-gray-900">
       <Navbar />
       <div className={`container mx-auto p-4 flex-grow ${isMobile ? 'px-2' : 'px-4'} py-6`}>
-        <Card className="bg-[#393532] border-gold/20">
+        <Card className="bg-[#393532] dark:bg-gray-800 border-gold/20">
           <CardHeader>
-            <CardTitle className="flex items-center justify-between font-extralight text-[#e8cc81] text-2xl">
+            <CardTitle className="flex items-center justify-between font-extralight text-[#e8cc81] dark:text-gold-light text-2xl">
               {selectedCategory ? `Documentos - ${selectedCategory}` : 'Meus Documentos'}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {isLoadingDocuments ? (
               <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#e8cc81]"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#e8cc81] dark:border-gold-light"></div>
               </div>
             ) : documents.length > 0 ? (
               selectedCategory ? (
