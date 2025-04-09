@@ -33,7 +33,7 @@ const Hero = () => {
                 <h2 className="text-xl md:text-2xl font-prompt font-normal text-left px-0 mx-0 text-gold-dark py-[10px]">
                   Seja Bem Vindo ao Site Oficial da WS Gestão Contábil
                 </h2>
-                <a href="https://g.co/kgs/TNVzPqy" target="_blank" rel="noopener noreferrer" className="inline-block text-purple hover:text-purple-400 font-prompt font-medium transition-colors duration-300">
+                <a href="https://g.co/kgs/TNVzPqy" target="_blank" rel="noopener noreferrer" className="md:text-sm text-navy/80 dark:text-white/80 font-prompt">
                   Quem Somos
                 </a>
               </div>
