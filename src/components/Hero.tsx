@@ -1,4 +1,3 @@
-
 import { useEffect, useRef } from 'react';
 const Hero = () => {
   const heroRef = useRef<HTMLDivElement>(null);
@@ -26,12 +25,12 @@ const Hero = () => {
         <div className="border overflow-hidden backdrop-blur-sm p-8 md:p-12 border-[5px] border-[#efc349] rounded-2xl py-[30px] my-0 mx-0 px-[50px] max-w-5xl">
           <div className="flex flex-col md:flex-row items-center justify-between gap-12">
             <div className="w-full md:w-3/5 space-y-6 animate-fade-in-right">
-              <h1 className="font-prompt text-gold uppercase tracking-tight leading-tight font-light text-5xl">
+              <h1 className="font-prompt uppercase tracking-tight leading-tight text-5xl text-navy-light font-medium py-0 my-0">
                 WS Gestão Contábil
               </h1>
               
               <div className="space-y-4">
-                <h2 className="text-xl md:text-2xl text-navy dark:text-white font-prompt font-normal text-left px-0 mx-0">
+                <h2 className="text-xl md:text-2xl font-prompt font-normal text-left px-0 mx-0 text-gold-dark py-[10px]">
                   Seja Bem Vindo ao Site Oficial da WS Gestão Contábil
                 </h2>
                 <a href="https://g.co/kgs/TNVzPqy" target="_blank" rel="noopener noreferrer" className="inline-block text-purple hover:text-purple-400 font-prompt font-medium transition-colors duration-300">
