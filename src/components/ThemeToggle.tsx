@@ -19,7 +19,6 @@ const ThemeToggle = () => {
         <TooltipTrigger asChild>
           <Toggle
             aria-label="Toggle theme"
-            className="fixed bottom-6 left-6 z-50"
             onClick={toggleTheme}
             pressed={theme === 'dark'}
           >

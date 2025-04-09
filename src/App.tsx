@@ -6,7 +6,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
-import ThemeToggle from "@/components/ThemeToggle";
 import AppRoutes from "./AppRoutes";
 
 const queryClient = new QueryClient();
@@ -20,7 +19,6 @@ const App = () => (
             <Toaster />
             <Sonner />
             <AppRoutes />
-            <ThemeToggle />
           </TooltipProvider>
         </AuthProvider>
       </ThemeProvider>

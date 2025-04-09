@@ -1,4 +1,7 @@
+
 import { MapPin, Phone, Mail, Clock } from 'lucide-react';
+import ThemeToggle from './ThemeToggle';
+
 const Footer = () => {
   return <footer id="contato" className="border-t border-gold/20 bg-[#46413d]">
       <div className="container mx-auto px-6 py-12 bg-[#46413d]">
@@ -50,8 +53,9 @@ const Footer = () => {
           </div>
         </div>
 
-        <div className="border-t border-gold/10 mt-12 pt-6 text-center text-white/60 text-sm">
+        <div className="border-t border-gold/10 mt-12 pt-6 flex justify-between items-center text-white/60 text-sm">
           <p>© {new Date().getFullYear()} WS Gestão Contábil. Todos os direitos reservados.</p>
+          <ThemeToggle />
         </div>
       </div>
     </footer>;
