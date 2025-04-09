@@ -14,6 +14,9 @@ const Footer = () => {
               Soluções contábeis completas para o sucesso do seu negócio. 
               Conte com nossa expertise para cuidar da saúde financeira da sua empresa.
             </p>
+            <div className="flex justify-center mt-4">
+              <ThemeToggle />
+            </div>
           </div>
 
           <div className="space-y-6">
@@ -55,7 +58,6 @@ const Footer = () => {
 
         <div className="border-t border-gold/10 mt-12 pt-6 flex justify-between items-center text-white/60 text-sm">
           <p>© {new Date().getFullYear()} WS Gestão Contábil. Todos os direitos reservados.</p>
-          <ThemeToggle />
         </div>
       </div>
     </footer>;
