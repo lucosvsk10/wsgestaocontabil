@@ -20,12 +20,13 @@ const ThemeToggle = () => {
           <Toggle
             aria-label="Toggle theme"
             onClick={toggleTheme}
+            className={`${theme === 'dark' ? 'bg-white text-[#46413d] hover:bg-white/90' : 'bg-[#0a2946] text-white hover:bg-[#0a2946]/90'} p-2 rounded-full`}
             pressed={theme === 'dark'}
           >
             {theme === 'dark' ? (
-              <Moon className="h-[1.2rem] w-[1.2rem]" />
-            ) : (
               <Sun className="h-[1.2rem] w-[1.2rem]" />
+            ) : (
+              <Moon className="h-[1.2rem] w-[1.2rem]" />
             )}
           </Toggle>
         </TooltipTrigger>

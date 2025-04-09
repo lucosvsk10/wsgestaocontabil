@@ -14,7 +14,7 @@ const Footer = () => {
               Soluções contábeis completas para o sucesso do seu negócio. 
               Conte com nossa expertise para cuidar da saúde financeira da sua empresa.
             </p>
-            <div className="flex justify-center mt-4">
+            <div className="flex justify-end mt-4">
               <ThemeToggle />
             </div>
           </div>
