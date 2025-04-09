@@ -45,7 +45,7 @@ const Hero = () => {
                   <img src="/lovable-uploads/a87b6e5f-5e26-4b01-bf74-865e0ec514a7.png" alt="Caduceu - Símbolo da Contabilidade" className="w-full h-full object-contain" />
                 </div>
                 <div className="text-center mt-4">
-                  <h3 className="text-lg font-anton text-gold mb-2">Caduceu</h3>
+                  <h3 className="font-prompt font-normal px-0 mx-0 text-gold-dark text-center py-0">Caduceu</h3>
                   <p className="text-xs md:text-sm text-navy/80 dark:text-white/80 font-prompt">
                     O Símbolo da Profissão Contábil: Caduceu é um símbolo antigo composto por um bastão entrelaçado com duas serpentes, duas pequenas asas e um elmo.
                   </p>
