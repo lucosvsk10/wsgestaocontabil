@@ -20,8 +20,8 @@ const Navbar = () => {
   }, []);
 
   return (
-    <header className="bg-[#46413d] dark:bg-gray-900">
-      <div className="container mx-auto flex items-center justify-between px-[28px] py-[19px] bg-[#46413d] dark:bg-gray-900">
+    <header className="bg-white dark:bg-[#46413d] text-navy dark:text-white">
+      <div className="container mx-auto flex items-center justify-between px-[28px] py-[19px] bg-white dark:bg-[#46413d]">
         <Logo />
         <div className="flex items-center">
           <DesktopNavbar 

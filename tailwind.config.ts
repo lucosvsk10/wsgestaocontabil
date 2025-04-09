@@ -69,12 +69,12 @@ export default {
 				},
 				// Custom colors
 				navy: {
-					DEFAULT: '#0a1f36',
+					DEFAULT: '#0a2946',
 					dark: '#061525',
 					light: '#132c47'
 				},
 				gold: {
-					DEFAULT: '#e9bd4e',
+					DEFAULT: '#efc349',
 					light: '#f1cd6e',
 					dark: '#d6a932'
 				},

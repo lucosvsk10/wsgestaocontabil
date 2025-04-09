@@ -97,7 +97,7 @@
   }
 
   body {
-    @apply bg-[#393532] dark:bg-gray-900 text-white font-prompt overflow-x-hidden;
+    @apply bg-white dark:bg-[#393532] text-navy dark:text-white font-prompt overflow-x-hidden;
   }
 
   img {

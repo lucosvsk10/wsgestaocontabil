@@ -20,10 +20,10 @@ const Hero = () => {
       }
     };
   }, []);
-  return <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden bg-navy dark:bg-gray-900 py-0">
+  return <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden bg-white dark:bg-navy py-0">
       
       <div ref={heroRef} className="container relative z-5 transition-all duration-700 transform opacity-0 translate-y-0 flex items-center justify-center my-[50px]">
-        <div className="border overflow-hidden backdrop-blur-sm p-8 md:p-12 border-[5px] border-[#efc349] dark:border-gold-dark rounded-2xl py-[30px] my-0 mx-0 px-[50px] max-w-5xl">
+        <div className="border overflow-hidden backdrop-blur-sm p-8 md:p-12 border-[5px] border-[#efc349] rounded-2xl py-[30px] my-0 mx-0 px-[50px] max-w-5xl">
           <div className="flex flex-col md:flex-row items-center justify-between gap-12">
             <div className="w-full md:w-3/5 space-y-6 animate-fade-in-right">
               <h1 className="font-prompt text-gold uppercase tracking-tight leading-tight font-light text-5xl">
@@ -31,7 +31,7 @@ const Hero = () => {
               </h1>
               
               <div className="space-y-4">
-                <h2 className="text-xl md:text-2xl text-white dark:text-gray-100 font-prompt font-normal text-left px-0 mx-0">
+                <h2 className="text-xl md:text-2xl text-navy dark:text-white font-prompt font-normal text-left px-0 mx-0">
                   Seja Bem Vindo ao Site Oficial da WS Gestão Contábil
                 </h2>
                 <a href="https://g.co/kgs/TNVzPqy" target="_blank" rel="noopener noreferrer" className="inline-block text-purple hover:text-purple-400 font-prompt font-medium transition-colors duration-300">
@@ -47,7 +47,7 @@ const Hero = () => {
                 </div>
                 <div className="text-center mt-4">
                   <h3 className="text-lg font-anton text-gold mb-2">Caduceu</h3>
-                  <p className="text-xs md:text-sm text-white/80 dark:text-gray-200 font-prompt">
+                  <p className="text-xs md:text-sm text-navy/80 dark:text-white/80 font-prompt">
                     O Símbolo da Profissão Contábil: Caduceu é um símbolo antigo composto por um bastão entrelaçado com duas serpentes, duas pequenas asas e um elmo.
                   </p>
                 </div>
