@@ -29,7 +29,7 @@ export const AdminTabsView = ({
   isCreatingUser
 }: AdminTabsViewProps) => {
   return <Tabs defaultValue="users" className="space-y-6">
-      <TabsList className="grid grid-cols-3 mb-4 bg-[#46413d] border border-gold/20">
+      <TabsList className="grid grid-cols-3 mb-4 bg-[#46413d] dark:bg-[#2d2a28] border border-gold/20">
         <TabsTrigger 
           value="users" 
           className="text-white data-[state=active]:bg-gold data-[state=active]:text-navy"

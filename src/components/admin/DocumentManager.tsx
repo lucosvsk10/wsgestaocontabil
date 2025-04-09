@@ -53,9 +53,9 @@ export const DocumentManager = ({
 
   if (!selectedUserId) {
     return (
-      <Card className="bg-[#393532] border-gold/20">
+      <Card className="bg-[#393532] dark:bg-[#2d2a28] border-gold/20">
         <CardContent className="pt-6">
-          <Alert className="border-gold/20 bg-[#46413d]/80">
+          <Alert className="border-gold/20 bg-[#46413d]/80 dark:bg-[#2d2a28]/80">
             <AlertCircle className="h-4 w-4 text-gold" />
             <AlertTitle className="text-gold">Nenhum usuário selecionado</AlertTitle>
             <AlertDescription className="text-white">
@@ -68,8 +68,8 @@ export const DocumentManager = ({
   }
 
   return (
-    <Tabs defaultValue="upload" className="bg-[#393532]" value={activeTab} onValueChange={setActiveTab}>
-      <TabsList className="mb-4 border-gold/20 bg-[#46413d]">
+    <Tabs defaultValue="upload" className="bg-[#393532] dark:bg-[#2d2a28]" value={activeTab} onValueChange={setActiveTab}>
+      <TabsList className="mb-4 border-gold/20 bg-[#46413d] dark:bg-[#2d2a28]">
         <TabsTrigger 
           value="upload" 
           className="text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
@@ -84,9 +84,9 @@ export const DocumentManager = ({
         </TabsTrigger>
       </TabsList>
       
-      <TabsContent value="upload" className="bg-[#393532]">
+      <TabsContent value="upload" className="bg-[#393532] dark:bg-[#2d2a28]">
         <div className="grid grid-cols-1 gap-6">
-          <Alert variant="default" className="border-gold/20 bg-[#46413d]/80">
+          <Alert variant="default" className="border-gold/20 bg-[#46413d]/80 dark:bg-[#2d2a28]/80">
             <HelpCircle className="h-4 w-4 text-gold" />
             <AlertTitle className="text-gold">Dica</AlertTitle>
             <AlertDescription className="text-white">
@@ -116,7 +116,7 @@ export const DocumentManager = ({
         </div>
       </TabsContent>
       
-      <TabsContent value="manage" className="bg-[#393532]">
+      <TabsContent value="manage" className="bg-[#393532] dark:bg-[#2d2a28]">
         <DocumentList 
           documents={documents} 
           isLoading={isLoadingDocuments} 

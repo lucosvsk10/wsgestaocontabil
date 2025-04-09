@@ -58,7 +58,7 @@ export const DocumentTabs = ({
             </div>
           </Button>
         </DrawerTrigger>
-        <DrawerContent className="bg-[#393532] border-t border-gold/20 p-4">
+        <DrawerContent className="bg-[#393532] dark:bg-[#2d2a28] border-t border-gold/20 p-4">
           <div className="max-w-md mx-auto">
             <div className="space-y-2">
               {categories.map((category) => (
@@ -101,7 +101,7 @@ export const DocumentTabs = ({
       onValueChange={handleCategoryChange}
       className="w-full"
     >
-      <TabsList className="mb-4 border-gold/20 bg-[#46413d]">
+      <TabsList className="mb-4 border-gold/20 bg-[#46413d] dark:bg-[#2d2a28]">
         {categories.map(category => (
           <TabsTrigger 
             key={category} 

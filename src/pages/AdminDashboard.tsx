@@ -115,7 +115,7 @@ const AdminDashboard = () => {
     <div className="min-h-screen flex flex-col bg-orange-200 dark:bg-navy-dark">
       <Navbar />
       <div className="container mx-auto p-4 max-w-7xl flex-grow">
-        <div className="bg-white dark:bg-[#393532] p-6 rounded-lg shadow-sm">
+        <div className="bg-white dark:bg-[#393532] p-6 rounded-lg shadow-sm border border-gold/20">
           <h1 className="text-gold font-thin text-xl mb-6">Painel de Administração</h1>
           
           {showDocumentManager ? (
