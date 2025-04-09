@@ -53,12 +53,12 @@ export const DocumentManager = ({
 
   if (!selectedUserId) {
     return (
-      <Card className="bg-[#393532] dark:bg-[#2d2a28] border-gold/20">
+      <Card className="bg-orange-200 dark:bg-navy-dark border-gold/20">
         <CardContent className="pt-6">
-          <Alert className="border-gold/20 bg-[#46413d]/80 dark:bg-[#2d2a28]/80">
+          <Alert className="border-gold/20 bg-orange-300/80 dark:bg-navy-light/80">
             <AlertCircle className="h-4 w-4 text-gold" />
-            <AlertTitle className="text-gold">Nenhum usuário selecionado</AlertTitle>
-            <AlertDescription className="text-white">
+            <AlertTitle className="text-navy dark:text-gold">Nenhum usuário selecionado</AlertTitle>
+            <AlertDescription className="text-navy dark:text-white">
               Selecione um usuário na lista para gerenciar seus documentos.
             </AlertDescription>
           </Alert>
@@ -68,28 +68,28 @@ export const DocumentManager = ({
   }
 
   return (
-    <Tabs defaultValue="upload" className="bg-[#393532] dark:bg-[#2d2a28]" value={activeTab} onValueChange={setActiveTab}>
-      <TabsList className="mb-4 border-gold/20 bg-[#46413d] dark:bg-[#2d2a28]">
+    <Tabs defaultValue="upload" className="bg-orange-200 dark:bg-navy-dark" value={activeTab} onValueChange={setActiveTab}>
+      <TabsList className="mb-4 border-gold/20 bg-orange-300 dark:bg-navy-light">
         <TabsTrigger 
           value="upload" 
-          className="text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
+          className="text-navy dark:text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
         >
           Enviar documento
         </TabsTrigger>
         <TabsTrigger 
           value="manage" 
-          className="text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
+          className="text-navy dark:text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
         >
           Gerenciar documentos
         </TabsTrigger>
       </TabsList>
       
-      <TabsContent value="upload" className="bg-[#393532] dark:bg-[#2d2a28]">
+      <TabsContent value="upload" className="bg-orange-200 dark:bg-navy-dark">
         <div className="grid grid-cols-1 gap-6">
-          <Alert variant="default" className="border-gold/20 bg-[#46413d]/80 dark:bg-[#2d2a28]/80">
+          <Alert variant="default" className="border-gold/20 bg-orange-300/80 dark:bg-navy-light/80">
             <HelpCircle className="h-4 w-4 text-gold" />
-            <AlertTitle className="text-gold">Dica</AlertTitle>
-            <AlertDescription className="text-white">
+            <AlertTitle className="text-navy dark:text-gold">Dica</AlertTitle>
+            <AlertDescription className="text-navy dark:text-white">
               Adicione observações importantes para o cliente ao enviar um documento, 
               como prazos, instruções ou qualquer informação relevante.
             </AlertDescription>
@@ -116,7 +116,7 @@ export const DocumentManager = ({
         </div>
       </TabsContent>
       
-      <TabsContent value="manage" className="bg-[#393532] dark:bg-[#2d2a28]">
+      <TabsContent value="manage" className="bg-orange-200 dark:bg-navy-dark">
         <DocumentList 
           documents={documents} 
           isLoading={isLoadingDocuments} 

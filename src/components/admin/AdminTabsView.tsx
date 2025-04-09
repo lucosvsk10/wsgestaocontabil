@@ -29,22 +29,22 @@ export const AdminTabsView = ({
   isCreatingUser
 }: AdminTabsViewProps) => {
   return <Tabs defaultValue="users" className="space-y-6">
-      <TabsList className="grid grid-cols-3 mb-4 bg-[#46413d] dark:bg-[#2d2a28] border border-gold/20">
+      <TabsList className="grid grid-cols-3 mb-4 bg-orange-200 dark:bg-navy-dark border border-gold/20">
         <TabsTrigger 
           value="users" 
-          className="text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
+          className="text-navy dark:text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
         >
           Lista de Usuários
         </TabsTrigger>
         <TabsTrigger 
           value="create-user" 
-          className="text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
+          className="text-navy dark:text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
         >
           Criar Usuário
         </TabsTrigger>
         <TabsTrigger 
           value="change-password" 
-          className="text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
+          className="text-navy dark:text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
         >
           Alterar Senha
         </TabsTrigger>

@@ -1,3 +1,4 @@
+
 import { User, FileText, Lock } from "lucide-react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
@@ -110,26 +111,26 @@ export const UserTable = ({
 
   return (
     <div>
-      <h3 className="text-xl font-semibold mb-3 text-[#e9aa91]">{title}</h3>
+      <h3 className="text-xl font-semibold mb-3 text-navy dark:text-gold">{title}</h3>
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="border-gold/20">
-              <TableHead className="text-[#e9aa91] font-medium uppercase tracking-wider">NOME</TableHead>
-              <TableHead className="text-[#e9aa91] font-medium uppercase tracking-wider">Email</TableHead>
-              <TableHead className="text-[#e9aa91] font-medium uppercase tracking-wider">Função</TableHead>
-              <TableHead className="text-[#e9aa91] font-medium uppercase tracking-wider">Data de Cadastro</TableHead>
-              <TableHead className="text-[#e9aa91] font-medium uppercase tracking-wider">Ações</TableHead>
+              <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">NOME</TableHead>
+              <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Email</TableHead>
+              <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Função</TableHead>
+              <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Data de Cadastro</TableHead>
+              <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Ações</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody className="text-white">
+          <TableBody className="text-navy dark:text-white">
             {users.length > 0 ? (
               users.map(authUser => {
                 const userInfo = getUserInfo(authUser.id);
                 const isSpecialUser = specialEmail && authUser.email === specialEmail;
                 
                 return (
-                  <TableRow key={authUser.id} className="border-gold/20 hover:bg-[#46413d]">
+                  <TableRow key={authUser.id} className="border-gold/20 hover:bg-orange-300/50 dark:hover:bg-navy-light/50">
                     <TableCell>{getUserName(authUser)}</TableCell>
                     <TableCell>{authUser.email || "Sem email"}</TableCell>
                     <TableCell>
@@ -144,7 +145,7 @@ export const UserTable = ({
                           <Button 
                             variant="outline" 
                             size="sm" 
-                            className="flex items-center gap-1 bg-[#46413d] text-white hover:bg-gold hover:text-navy border-gold/20" 
+                            className="flex items-center gap-1 bg-orange-300/80 dark:bg-navy-light/80 text-navy dark:text-white hover:bg-gold hover:text-navy border-gold/20" 
                             onClick={() => setSelectedUserId(authUser.id)}
                           >
                             <FileText size={14} />
@@ -155,7 +156,7 @@ export const UserTable = ({
                           <Button
                             variant="outline"
                             size="sm"
-                            className="flex items-center gap-1 bg-[#46413d] text-white hover:bg-gold hover:text-navy border-gold/20"
+                            className="flex items-center gap-1 bg-orange-300/80 dark:bg-navy-light/80 text-navy dark:text-white hover:bg-gold hover:text-navy border-gold/20"
                             onClick={() => {
                               setSelectedUserForPasswordChange(userInfo);
                               passwordForm.reset();
@@ -177,7 +178,7 @@ export const UserTable = ({
               })
             ) : (
               <TableRow className="border-gold/20">
-                <TableCell colSpan={5} className="text-center py-4 text-[#7d796d]">
+                <TableCell colSpan={5} className="text-center py-4 text-navy/60 dark:text-white/60">
                   Nenhum {title.toLowerCase()} encontrado
                 </TableCell>
               </TableRow>
