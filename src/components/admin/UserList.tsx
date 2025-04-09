@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserType } from "@/types/admin";
 import { UserTable } from "./UserTable";
@@ -64,11 +65,11 @@ export const UserList = ({
     }
     return !isAdminUser(authUser.id, authUser.email);
   });
-  return <Card className="px-0 bg-[#393532] border border-gold/20">
-      <CardHeader className="rounded-full bg-[#393532]">
+  return <Card className="px-0 bg-[#393532] dark:bg-[#2d2a28] border border-gold/20">
+      <CardHeader className="rounded-full bg-[#393532] dark:bg-[#2d2a28]">
         <CardTitle className="text-[#e8cc81] bg-transparent text-center text-2xl font-normal">LISTA DE USUARIOS</CardTitle>
       </CardHeader>
-      <CardContent className="rounded-full bg-[#393532] space-y-6">
+      <CardContent className="rounded-full bg-[#393532] dark:bg-[#2d2a28] space-y-6">
         {isLoading ? <LoadingSpinner /> : <>
             {/* Seção de Clientes */}
             <UserTable users={clientUsers} userInfoList={users} title="Clientes" roleLabel="Cliente" roleClassName="bg-blue-900 text-blue-100" setSelectedUserId={setSelectedUserId} setSelectedUserForPasswordChange={setSelectedUserForPasswordChange} passwordForm={passwordForm} refreshUsers={refreshUsers} showDocumentButton={true} isAdminSection={false} />
