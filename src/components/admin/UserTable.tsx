@@ -120,7 +120,9 @@ export const UserTable = ({
               <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Email</TableHead>
               <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Função</TableHead>
               <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Data de Cadastro</TableHead>
-              <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Ações</TableHead>
+              {!isAdminSection && (
+                <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Ações</TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody className="text-navy dark:text-white">
@@ -139,46 +141,48 @@ export const UserTable = ({
                       </Badge>
                     </TableCell>
                     <TableCell>{authUser.created_at ? formatDate(authUser.created_at) : "Data desconhecida"}</TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        {showDocumentButton && setSelectedUserId && !isAdminSection && (
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="flex items-center gap-1 bg-orange-300/80 dark:bg-navy-light/80 text-navy dark:text-white hover:bg-gold hover:text-navy border-gold/20" 
-                            onClick={() => setSelectedUserId(authUser.id)}
-                          >
-                            <FileText size={14} />
-                            <span>Documentos</span>
-                          </Button>
-                        )}
-                        {userInfo && !isAdminSection && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex items-center gap-1 bg-orange-300/80 dark:bg-navy-light/80 text-navy dark:text-white hover:bg-gold hover:text-navy border-gold/20"
-                            onClick={() => {
-                              setSelectedUserForPasswordChange(userInfo);
-                              passwordForm.reset();
-                            }}
-                          >
-                            <Lock size={14} />
-                            <span>Senha</span>
-                          </Button>
-                        )}
-                        <UserActions 
-                          authUser={authUser} 
-                          refreshUsers={refreshUsers}
-                          isAdminSection={isAdminSection} 
-                        />
-                      </div>
-                    </TableCell>
+                    {!isAdminSection && (
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          {showDocumentButton && setSelectedUserId && (
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="flex items-center gap-1 bg-orange-300/80 dark:bg-navy-light/80 text-navy dark:text-white hover:bg-gold hover:text-navy border-gold/20" 
+                              onClick={() => setSelectedUserId(authUser.id)}
+                            >
+                              <FileText size={14} />
+                              <span>Documentos</span>
+                            </Button>
+                          )}
+                          {userInfo && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center gap-1 bg-orange-300/80 dark:bg-navy-light/80 text-navy dark:text-white hover:bg-gold hover:text-navy border-gold/20"
+                              onClick={() => {
+                                setSelectedUserForPasswordChange(userInfo);
+                                passwordForm.reset();
+                              }}
+                            >
+                              <Lock size={14} />
+                              <span>Senha</span>
+                            </Button>
+                          )}
+                          <UserActions 
+                            authUser={authUser} 
+                            refreshUsers={refreshUsers}
+                            isAdminSection={isAdminSection} 
+                          />
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 );
               })
             ) : (
               <TableRow className="border-gold/20">
-                <TableCell colSpan={5} className="text-center py-4 text-navy/60 dark:text-white/60">
+                <TableCell colSpan={isAdminSection ? 4 : 5} className="text-center py-4 text-navy/60 dark:text-white/60">
                   Nenhum {title.toLowerCase()} encontrado
                 </TableCell>
               </TableRow>
