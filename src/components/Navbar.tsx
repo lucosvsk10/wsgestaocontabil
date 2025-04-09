@@ -4,7 +4,6 @@ import { Menu } from 'lucide-react';
 import Logo from './navbar/Logo';
 import DesktopNavbar from './navbar/DesktopNavbar';
 import MobileNavbar from './navbar/MobileNavbar';
-import ThemeToggle from './ThemeToggle';
 import { useNavigation } from './navbar/hooks/useNavigation';
 
 const Navbar = () => {
@@ -25,7 +24,6 @@ const Navbar = () => {
       <div className="container mx-auto flex items-center justify-between px-[28px] py-[19px] bg-[#46413d] dark:bg-gray-900">
         <Logo />
         <div className="flex items-center">
-          <ThemeToggle />
           <DesktopNavbar 
             handleLogout={handleLogout} 
             navigateToDashboard={navigateToDashboard} 
