@@ -4,8 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DocumentTabs } from "@/components/client/DocumentTabs";
 import { EmptyDocuments } from "@/components/client/EmptyDocuments";
 import { EmptyCategory } from "@/components/client/EmptyCategory";
-import { Document } from "@/utils/auth/types";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
@@ -97,19 +95,19 @@ const ClientDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#46413d] dark:bg-gray-900">
+    <div className="min-h-screen flex flex-col bg-orange-200 dark:bg-navy-dark">
       <Navbar />
       <div className={`container mx-auto p-4 flex-grow ${isMobile ? 'px-2' : 'px-4'} py-6`}>
-        <Card className="bg-[#393532] dark:bg-gray-800 border-gold/20">
+        <Card className="bg-white dark:bg-[#393532] border-gold/20">
           <CardHeader>
-            <CardTitle className="flex items-center justify-between font-extralight text-[#e8cc81] dark:text-gold-light text-2xl">
+            <CardTitle className="flex items-center justify-between font-extralight text-gold text-2xl">
               {selectedCategory ? `Documentos - ${selectedCategory}` : 'Meus Documentos'}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {isLoadingDocuments ? (
               <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#e8cc81] dark:border-gold-light"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
               </div>
             ) : documents.length > 0 ? (
               selectedCategory ? (
