@@ -88,6 +88,7 @@ const declarationsLinks = [{
   url: "https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/declaracoes-e-demonstrativos/sped-sistema-publico-de-escrituracao-digital/escrituracao-contabil-fiscal-ecf",
   description: "Escrituração de informações contábeis e fiscais de pessoas jurídicas"
 }];
+
 const AccountingSection = () => {
   const [isFloatingButtonOpen, setIsFloatingButtonOpen] = useState(false);
   const [newsData, setNewsData] = useState(sampleNews);
@@ -113,7 +114,7 @@ const AccountingSection = () => {
   useEffect(() => {
     // We're using sample data initially, but this would be an API call in production
   }, []);
-  return <section id="contabil" className="py-16 bg-navy px-6 fadein-on-scroll">
+  return <section id="contabil" className="py-16 bg-orange-200 dark:bg-navy-dark px-6 fadein-on-scroll">
       <div className="container mx-auto">
         <h2 className="text-gold mb-12 text-center text-3xl font-bold">Mundo Contábil </h2>
         
@@ -150,20 +151,20 @@ const AccountingSection = () => {
             <Carousel className="w-full max-w-4xl">
               <CarouselContent>
                 {newsData.map(news => <CarouselItem key={news.id} className="md:basis-1/2 lg:basis-1/3">
-                    <Card className="bg-gray-800 border-gold/20 h-full">
+                    <Card className="bg-white/70 dark:bg-gray-800 border-gold/20 h-full">
                       <CardHeader className="pb-2">
                         <CardTitle className="text-gold text-xl">{news.title}</CardTitle>
-                        <CardDescription className="text-gray-400 text-xs">{news.date}</CardDescription>
+                        <CardDescription className="text-navy/70 dark:text-gray-400 text-xs">{news.date}</CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <p className="text-sm text-gray-300">{news.description}</p>
+                        <p className="text-sm text-navy dark:text-gray-300">{news.description}</p>
                       </CardContent>
                     </Card>
                   </CarouselItem>)}
               </CarouselContent>
               <div className="flex justify-center mt-4">
-                <CarouselPrevious className="relative static left-0 right-0 mx-2 translate-y-0 bg-gold-dark" />
-                <CarouselNext className="relative static left-0 right-0 mx-0\\n translate-y-0 bg-gold-dark" />
+                <CarouselPrevious className="relative static left-0 right-0 mx-2 translate-y-0 bg-white/70 dark:bg-gold-dark" />
+                <CarouselNext className="relative static left-0 right-0 mx-0 translate-y-0 bg-white/70 dark:bg-gold-dark" />
               </div>
             </Carousel>
           </TabsContent>
@@ -172,12 +173,12 @@ const AccountingSection = () => {
           <TabsContent value="links">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {usefulLinks.map(link => <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" className="block">
-                  <Card className="bg-gray-800 border-gold/20 h-full hover:border-gold/60 transition-colors">
+                  <Card className="bg-white/70 dark:bg-gray-800 border-gold/20 h-full hover:border-gold/60 transition-colors">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-gold text-xl">{link.title}</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-sm text-gray-300">{link.description}</p>
+                      <p className="text-sm text-navy dark:text-gray-300">{link.description}</p>
                     </CardContent>
                   </Card>
                 </a>)}
@@ -188,21 +189,21 @@ const AccountingSection = () => {
           <TabsContent value="declarations">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {declarationsLinks.map(link => <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" className="block">
-                  <Card className="bg-gray-800 border-gold/20 h-full hover:border-gold/60 transition-colors">
+                  <Card className="bg-white/70 dark:bg-gray-800 border-gold/20 h-full hover:border-gold/60 transition-colors">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-gold text-xl">{link.title}</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-sm text-gray-300">{link.description}</p>
+                      <p className="text-sm text-navy dark:text-gray-300">{link.description}</p>
                     </CardContent>
                   </Card>
                 </a>)}
             </div>
           </TabsContent>
-            
+          
           {/* Floating Button */}
           <div className="fixed bottom-8 right-8 z-30">
-            {isFloatingButtonOpen ? <div className="bg-navy-dark border border-gold/30 rounded-lg p-4 shadow-lg mb-4 animate-fade-in">
+            {isFloatingButtonOpen ? <div className="bg-white/90 dark:bg-navy-dark border border-gold/30 rounded-lg p-4 shadow-lg mb-4 animate-fade-in">
                 <div className="flex justify-between items-center mb-3">
                   <h3 className="text-gold font-medium">Links Rápidos</h3>
                   <Button variant="ghost" size="icon" className="text-gold hover:bg-navy-light" onClick={() => setIsFloatingButtonOpen(false)}>
@@ -210,7 +211,7 @@ const AccountingSection = () => {
                   </Button>
                 </div>
                 <div className="space-y-2">
-                  {usefulLinks.map(link => <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" className="block text-white hover:text-gold transition-colors p-2 hover:bg-navy-light rounded">
+                  {usefulLinks.map(link => <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" className="block text-navy dark:text-white hover:text-gold transition-colors p-2 hover:bg-orange-300 dark:hover:bg-navy-light rounded">
                       {link.title}
                     </a>)}
                 </div>

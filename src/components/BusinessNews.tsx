@@ -153,7 +153,7 @@ const BusinessNews = () => {
       </section>;
   }
 
-  return <section id="noticias" className="py-16 bg-navy-light">
+  return <section id="noticias" className="py-16 bg-orange-200 dark:bg-navy-dark">
       <div className="container mx-auto px-6">
         <h2 className="text-4xl text-gold text-center mb-8 font-bold">
           Notícias do Mundo de Negócios
@@ -161,18 +161,18 @@ const BusinessNews = () => {
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
           <div className="lg:col-span-1">
-            <Card className="bg-navy border-gold/30 text-white h-full">
+            <Card className="bg-white/70 dark:bg-navy border-gold/30 text-navy dark:text-white h-full">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <TrendingUp className="text-gold" />
                     <span>Cotações do Dia</span>
                   </CardTitle>
-                  <CardDescription className="text-white/70">
+                  <CardDescription className="text-navy/70 dark:text-white/70">
                     Atualizado em {new Date().toLocaleDateString('pt-BR')}
                   </CardDescription>
                 </div>
-                <Button variant="outline" size="icon" onClick={handleRefreshRates} disabled={refreshingRates} className="border-gold/30 text-gold hover:text-white bg-gold-dark">
+                <Button variant="outline" size="icon" onClick={handleRefreshRates} disabled={refreshingRates} className="border-gold/30 text-gold hover:text-white bg-white/50 dark:bg-gold-dark">
                   <RefreshCw className={`h-4 w-4 ${refreshingRates ? 'animate-spin' : ''}`} />
                   <span className="sr-only">Atualizar cotações</span>
                 </Button>
@@ -211,18 +211,18 @@ const BusinessNews = () => {
           </div>
           
           <div className="lg:col-span-2">
-            <Card className="bg-navy border-gold/30 text-white h-full">
+            <Card className="bg-white/70 dark:bg-navy border-gold/30 text-navy dark:text-white h-full">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Newspaper className="text-gold" />
                     <span>Últimas Notícias</span>
                   </CardTitle>
-                  <CardDescription className="text-white/70">
+                  <CardDescription className="text-navy/70 dark:text-white/70">
                     Notícias atualizadas diariamente
                   </CardDescription>
                 </div>
-                <Button variant="outline" size="icon" onClick={handleRefreshNews} disabled={refreshingNews} className="border-gold/30 text-gold hover:text-white bg-gold-dark">
+                <Button variant="outline" size="icon" onClick={handleRefreshNews} disabled={refreshingNews} className="border-gold/30 text-gold hover:text-white bg-white/50 dark:bg-gold-dark">
                   <RefreshCw className={`h-4 w-4 ${refreshingNews ? 'animate-spin' : ''}`} />
                   <span className="sr-only">Atualizar notícias</span>
                 </Button>
@@ -231,7 +231,7 @@ const BusinessNews = () => {
                 <div className="space-y-6">
                   {news.map((item, index) => <div key={index} className="border-b border-gold/10 pb-4 last:border-0">
                       <h3 className="text-lg font-medium text-gold mb-2">{item.title}</h3>
-                      <p className="text-white/80 mb-2">{item.description}</p>
+                      <p className="text-navy/80 dark:text-white/80 mb-2">{item.description}</p>
                       <div className="flex justify-between items-center">
                         <a 
                           href={item.url} 
@@ -241,7 +241,7 @@ const BusinessNews = () => {
                         >
                           Ler mais
                         </a>
-                        <span className="text-white/60 text-sm">{formatDate(item.publishedAt)}</span>
+                        <span className="text-navy/60 dark:text-white/60 text-sm">{formatDate(item.publishedAt)}</span>
                       </div>
                     </div>)}
                 </div>
