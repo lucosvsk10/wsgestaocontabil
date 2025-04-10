@@ -28,7 +28,7 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
   
-  return <header className="bg-orange-200 dark:bg-navy-dark text-navy dark:text-gold">
+  return <header className="bg-white dark:bg-navy-dark text-navy dark:text-gold">
       <div className="container mx-auto flex items-center justify-between px-[28px] py-[19px]">
         <Logo />
         <div className="flex items-center gap-4">
