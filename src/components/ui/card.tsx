@@ -1,48 +1,66 @@
 
 import * as React from "react"
-
+import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 
 const Card = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "rounded-lg border bg-white dark:bg-navy-dark text-navy dark:text-white shadow-sm",
-      className
-    )}
-    {...props}
-  />
-))
+>(({ className, ...props }, ref) => {
+  const isMobile = useIsMobile();
+  
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "rounded-lg border bg-white dark:bg-navy-dark text-navy dark:text-white shadow-sm",
+        isMobile ? "aspect-[4/3]" : "aspect-auto",
+        className
+      )}
+      {...props}
+    />
+  )
+})
 Card.displayName = "Card"
 
 const CardHeader = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn("flex flex-col space-y-1.5 p-6", className)}
-    {...props}
-  />
-))
+>(({ className, ...props }, ref) => {
+  const isMobile = useIsMobile();
+  
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "flex flex-col space-y-1.5", 
+        isMobile ? "p-4" : "p-6", 
+        className
+      )}
+      {...props}
+    />
+  )
+})
 CardHeader.displayName = "CardHeader"
 
 const CardTitle = React.forwardRef<
   HTMLParagraphElement,
   React.HTMLAttributes<HTMLHeadingElement>
->(({ className, ...props }, ref) => (
-  <h3
-    ref={ref}
-    className={cn(
-      "text-2xl font-semibold leading-none tracking-tight text-navy dark:text-gold",
-      className
-    )}
-    {...props}
-  />
-))
+>(({ className, ...props }, ref) => {
+  const isMobile = useIsMobile();
+  
+  return (
+    <h3
+      ref={ref}
+      className={cn(
+        isMobile ? "text-xl" : "text-2xl",
+        "font-semibold leading-none tracking-tight text-navy dark:text-gold",
+        className
+      )}
+      {...props}
+    />
+  )
+})
 CardTitle.displayName = "CardTitle"
 
 const CardDescription = React.forwardRef<
@@ -60,21 +78,40 @@ CardDescription.displayName = "CardDescription"
 const CardContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
-))
+>(({ className, ...props }, ref) => {
+  const isMobile = useIsMobile();
+  
+  return (
+    <div 
+      ref={ref} 
+      className={cn(
+        isMobile ? "p-4 pt-0" : "p-6 pt-0", 
+        className
+      )} 
+      {...props} 
+    />
+  )
+})
 CardContent.displayName = "CardContent"
 
 const CardFooter = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn("flex items-center p-6 pt-0", className)}
-    {...props}
-  />
-))
+>(({ className, ...props }, ref) => {
+  const isMobile = useIsMobile();
+  
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "flex items-center", 
+        isMobile ? "p-4 pt-0" : "p-6 pt-0", 
+        className
+      )}
+      {...props}
+    />
+  )
+})
 CardFooter.displayName = "CardFooter"
 
 export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }

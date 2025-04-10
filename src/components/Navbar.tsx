@@ -29,7 +29,7 @@ const Navbar = () => {
   }, []);
   
   return <header className="bg-white dark:bg-navy-dark text-navy dark:text-gold">
-      <div className="container mx-auto flex items-center justify-between px-[28px] py-[19px]">
+      <div className={`container mx-auto flex items-center justify-between ${isMobile ? 'px-4 py-3' : 'px-[28px] py-[19px]'}`}>
         <Logo />
         <div className="flex items-center gap-4">
           <ThemeToggle />
