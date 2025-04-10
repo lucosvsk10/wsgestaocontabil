@@ -97,7 +97,7 @@
   }
 
   body {
-    @apply bg-orange-200 dark:bg-navy-dark text-navy dark:text-white font-prompt overflow-x-hidden;
+    @apply bg-white dark:bg-navy-dark text-navy dark:text-white font-prompt overflow-x-hidden;
   }
 
   img {
@@ -157,4 +157,3 @@
   transform: scaleX(1);
   transform-origin: bottom left;
 }
-

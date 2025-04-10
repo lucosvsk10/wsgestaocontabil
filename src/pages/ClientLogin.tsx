@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
@@ -47,7 +48,7 @@ const ClientLogin = () => {
     setShowPassword(!showPassword);
   };
 
-  return <div className="min-h-screen flex flex-col bg-orange-200 dark:bg-navy-dark">
+  return <div className="min-h-screen flex flex-col bg-white dark:bg-navy-dark">
       <Navbar />
       
       <main className="flex-grow flex items-center justify-center px-4 py-12">
