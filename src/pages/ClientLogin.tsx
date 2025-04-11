@@ -45,7 +45,7 @@ const ClientLogin = () => {
   return <div className="min-h-screen flex flex-col bg-white dark:bg-navy-dark">
       <Navbar />
       
-      <main className="flex-grow flex items-center justify-center px-4 py-12">
+      <main className="flex-grow flex items-center justify-center px-4 py-[200px]">
         <Card className="w-full max-w-md border-gold/20 rounded-md">
           <CardHeader className="space-y-1 text-center">
             <CardTitle className="font-medium text-3xl text-gold-dark">LOGIN</CardTitle>
