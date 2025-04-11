@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
@@ -9,7 +8,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-
 const ClientLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,7 +20,6 @@ const ClientLogin = () => {
   const {
     signIn
   } = useAuth();
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -31,7 +28,6 @@ const ClientLogin = () => {
         error
       } = await signIn(email, password);
       if (error) throw error;
-
       navigate("/dashboard");
     } catch (error: any) {
       console.error(error);
@@ -43,18 +39,16 @@ const ClientLogin = () => {
       setIsLoading(false);
     }
   };
-
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
-
   return <div className="min-h-screen flex flex-col bg-white dark:bg-navy-dark">
       <Navbar />
       
       <main className="flex-grow flex items-center justify-center px-4 py-12">
         <Card className="w-full max-w-md border-gold/20 rounded-md">
           <CardHeader className="space-y-1 text-center">
-            <CardTitle className="text-gold font-medium text-3xl">LOGIN</CardTitle>
+            <CardTitle className="font-medium text-3xl text-gold-dark">LOGIN</CardTitle>
             <CardDescription className="text-sm text-gray-600 dark:text-gray-400">
               Acesse sua área pessoal
             </CardDescription>
@@ -89,7 +83,7 @@ const ClientLogin = () => {
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
             <div className="text-center text-sm text-gray-600 dark:text-gray-400">
-              <a href="/" className="text-gold hover:underline">
+              <a href="/" className="text-gold-dark hover:underline">
                 Voltar para a página inicial
               </a>
             </div>
@@ -100,5 +94,4 @@ const ClientLogin = () => {
       <Footer />
     </div>;
 };
-
 export default ClientLogin;
