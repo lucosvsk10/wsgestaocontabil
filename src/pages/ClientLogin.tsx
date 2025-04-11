@@ -45,7 +45,7 @@ const ClientLogin = () => {
   return <div className="min-h-screen flex flex-col bg-white dark:bg-navy-dark">
       <Navbar />
       
-      <main className="flex-grow flex items-center justify-center px-4 py-[200px]">
+      <main className="flex-grow flex items-center justify-center px-4 py-[120px]">
         <Card className="w-full max-w-md border-gold/20 rounded-md">
           <CardHeader className="space-y-1 text-center">
             <CardTitle className="font-medium text-3xl text-gold-dark">LOGIN</CardTitle>
@@ -54,7 +54,7 @@ const ClientLogin = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4 my-[20px]">
               <div className="space-y-2">
                 <div className="relative">
                   <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
@@ -81,7 +81,7 @@ const ClientLogin = () => {
               </Button>
             </form>
           </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
+          <CardFooter className="flex flex-col space-y-4 py-[10px]">
             <div className="text-center text-sm text-gray-600 dark:text-gray-400">
               <a href="/" className="text-gold-dark hover:underline">
                 Voltar para a página inicial
