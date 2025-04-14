@@ -183,18 +183,21 @@ export const UserTable = ({
                 
                 return (
                   <TableRow key={authUser.id} className="border-gold/20 hover:bg-orange-300/50 dark:hover:bg-navy-light/50">
-                    <TableCell className="flex items-center gap-2">
-                      {getUserName(authUser)}
-                      {userInfo && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 p-0 text-navy dark:text-gold hover:text-navy hover:bg-gold"
-                          onClick={() => handleEditName(authUser)}
-                        >
-                          <Pencil size={14} />
-                        </Button>
-                      )}
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <span>{getUserName(authUser)}</span>
+                        {userInfo && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 p-0 text-navy dark:text-gold hover:text-navy hover:bg-gold"
+                            onClick={() => handleEditName(authUser)}
+                            title="Editar nome"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>{authUser.email || "Sem email"}</TableCell>
                     <TableCell>
