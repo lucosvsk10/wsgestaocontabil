@@ -1,5 +1,5 @@
 
-import { User, FileText, Lock } from "lucide-react";
+import { User, FileText, Lock, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -7,6 +7,11 @@ import { Button } from "@/components/ui/button";
 import { UserType } from "@/types/admin";
 import { UserActions } from "./UserActions";
 import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { toast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AuthUser {
   id: string;
@@ -50,6 +55,9 @@ export const UserTable = ({
   specialRoleClassName,
   isAdminSection = false
 }: UserTableProps) => {
+  const [editingUser, setEditingUser] = useState<{id: string, name: string} | null>(null);
+  const [newName, setNewName] = useState("");
+  
   // Formatação da data
   const formatDate = (dateStr: string) => {
     if (!dateStr) return 'Data desconhecida';
@@ -109,6 +117,48 @@ export const UserTable = ({
     }
   };
 
+  // Função para iniciar a edição do nome do usuário
+  const handleEditName = (authUser: AuthUser) => {
+    const userInfo = getUserInfo(authUser.id);
+    if (!userInfo) return;
+    
+    setEditingUser({
+      id: authUser.id,
+      name: userInfo.name || authUser.user_metadata?.name || ""
+    });
+    setNewName(userInfo.name || authUser.user_metadata?.name || "");
+  };
+
+  // Função para salvar o nome editado
+  const handleSaveName = async () => {
+    if (!editingUser) return;
+    
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ name: newName })
+        .eq('id', editingUser.id);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Nome atualizado",
+        description: "O nome do usuário foi atualizado com sucesso.",
+      });
+      
+      refreshUsers();
+    } catch (error: any) {
+      console.error("Erro ao atualizar nome:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao atualizar nome",
+        description: error.message || "Ocorreu um erro ao atualizar o nome do usuário."
+      });
+    } finally {
+      setEditingUser(null);
+    }
+  };
+
   return (
     <div>
       <h3 className="text-xl font-semibold mb-3 text-navy dark:text-gold">{title}</h3>
@@ -133,7 +183,19 @@ export const UserTable = ({
                 
                 return (
                   <TableRow key={authUser.id} className="border-gold/20 hover:bg-orange-300/50 dark:hover:bg-navy-light/50">
-                    <TableCell>{getUserName(authUser)}</TableCell>
+                    <TableCell className="flex items-center gap-2">
+                      {getUserName(authUser)}
+                      {userInfo && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 p-0 text-navy dark:text-gold hover:text-navy hover:bg-gold"
+                          onClick={() => handleEditName(authUser)}
+                        >
+                          <Pencil size={14} />
+                        </Button>
+                      )}
+                    </TableCell>
                     <TableCell>{authUser.email || "Sem email"}</TableCell>
                     <TableCell>
                       <Badge className={`${getRoleClassName(authUser)}`}>
@@ -190,6 +252,29 @@ export const UserTable = ({
           </TableBody>
         </Table>
       </div>
+
+      {/* Diálogo para edição de nome */}
+      <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
+        <DialogContent className="bg-orange-200 dark:bg-navy-dark border border-gold/20">
+          <DialogHeader>
+            <DialogTitle className="text-navy dark:text-gold">Editar Nome do Usuário</DialogTitle>
+          </DialogHeader>
+          <Input
+            className="bg-orange-300/50 dark:bg-navy-light/50 border-gold/20 text-navy dark:text-white"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="Nome do usuário"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingUser(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveName}>
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
