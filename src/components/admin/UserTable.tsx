@@ -166,7 +166,9 @@ export const UserTable = ({
         <Table>
           <TableHeader>
             <TableRow className="border-gold/20">
-              <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">NOME</TableHead>
+              {!isAdminSection && (
+                <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">NOME</TableHead>
+              )}
               <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Email</TableHead>
               <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Função</TableHead>
               <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Data de Cadastro</TableHead>
@@ -183,22 +185,24 @@ export const UserTable = ({
                 
                 return (
                   <TableRow key={authUser.id} className="border-gold/20 hover:bg-orange-300/50 dark:hover:bg-navy-light/50">
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span>{getUserName(authUser)}</span>
-                        {userInfo && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 p-0 text-navy dark:text-gold hover:text-navy hover:bg-gold"
-                            onClick={() => handleEditName(authUser)}
-                            title="Editar nome"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
+                    {!isAdminSection && (
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span>{getUserName(authUser)}</span>
+                          {userInfo && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 p-0 text-navy dark:text-gold hover:text-navy hover:bg-gold"
+                              onClick={() => handleEditName(authUser)}
+                              title="Editar nome"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    )}
                     <TableCell>{authUser.email || "Sem email"}</TableCell>
                     <TableCell>
                       <Badge className={`${getRoleClassName(authUser)}`}>
@@ -247,7 +251,7 @@ export const UserTable = ({
               })
             ) : (
               <TableRow className="border-gold/20">
-                <TableCell colSpan={isAdminSection ? 4 : 5} className="text-center py-4 text-navy/60 dark:text-white/60">
+                <TableCell colSpan={isAdminSection ? 3 : 5} className="text-center py-4 text-navy/60 dark:text-white/60">
                   Nenhum {title.toLowerCase()} encontrado
                 </TableCell>
               </TableRow>
