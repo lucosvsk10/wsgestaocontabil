@@ -1,4 +1,3 @@
-
 import { User, FileText, Lock, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
@@ -57,37 +56,30 @@ export const UserTable = ({
 }: UserTableProps) => {
   const [editingUser, setEditingUser] = useState<{id: string, name: string} | null>(null);
   const [newName, setNewName] = useState("");
-  
-  // Formatação da data
+
   const formatDate = (dateStr: string) => {
     if (!dateStr) return 'Data desconhecida';
     const date = new Date(dateStr);
     return format(date, "dd/MM/yyyy 'às' HH:mm", { locale: pt });
   };
 
-  // Função para encontrar informações do usuário na tabela users
   const getUserInfo = (authUserId: string) => {
     return userInfoList.find(u => u.id === authUserId) || null;
   };
 
-  // Função para obter o nome do usuário, priorizando o nome da tabela users
   const getUserName = (authUser: AuthUser) => {
     const userInfo = getUserInfo(authUser.id);
-    // Prioriza nome da tabela users, depois metadata e por fim 'Sem nome'
     return userInfo?.name || authUser.user_metadata?.name || "Sem nome";
   };
 
-  // Função para obter o texto da função do usuário
   const getRoleText = (authUser: AuthUser) => {
     const userInfo = getUserInfo(authUser.id);
     if (!userInfo) return roleLabel;
     
-    // Caso especial para email específico
     if (specialEmail && authUser.email === specialEmail) {
       return specialRoleLabel || "Geral";
     }
     
-    // Retornar o papel baseado no valor da role no banco de dados
     switch (userInfo.role) {
       case 'fiscal': return "Fiscal";
       case 'contabil': return "Contábil";
@@ -96,18 +88,15 @@ export const UserTable = ({
       default: return roleLabel;
     }
   };
-  
-  // Função para obter a classe CSS da função do usuário
+
   const getRoleClassName = (authUser: AuthUser) => {
     const userInfo = getUserInfo(authUser.id);
     if (!userInfo) return roleClassName;
     
-    // Caso especial para email específico
     if (specialEmail && authUser.email === specialEmail) {
       return specialRoleClassName || "bg-[#e8cc81] text-navy";
     }
     
-    // Retornar a classe CSS baseada no valor da role no banco de dados
     switch (userInfo.role) {
       case 'fiscal': return "bg-green-800 text-green-100";
       case 'contabil': return "bg-indigo-800 text-indigo-100";
@@ -117,7 +106,6 @@ export const UserTable = ({
     }
   };
 
-  // Função para iniciar a edição do nome do usuário
   const handleEditName = (authUser: AuthUser) => {
     const userInfo = getUserInfo(authUser.id);
     if (!userInfo) return;
@@ -129,7 +117,6 @@ export const UserTable = ({
     setNewName(userInfo.name || authUser.user_metadata?.name || "");
   };
 
-  // Função para salvar o nome editado
   const handleSaveName = async () => {
     if (!editingUser) return;
     
@@ -166,9 +153,6 @@ export const UserTable = ({
         <Table>
           <TableHeader>
             <TableRow className="border-gold/20">
-              {!isAdminSection && (
-                <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">NOME</TableHead>
-              )}
               <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Email</TableHead>
               <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Função</TableHead>
               <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Data de Cadastro</TableHead>
@@ -185,24 +169,6 @@ export const UserTable = ({
                 
                 return (
                   <TableRow key={authUser.id} className="border-gold/20 hover:bg-orange-300/50 dark:hover:bg-navy-light/50">
-                    {!isAdminSection && (
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span>{getUserName(authUser)}</span>
-                          {userInfo && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 p-0 text-navy dark:text-gold hover:text-navy hover:bg-gold"
-                              onClick={() => handleEditName(authUser)}
-                              title="Editar nome"
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    )}
                     <TableCell>{authUser.email || "Sem email"}</TableCell>
                     <TableCell>
                       <Badge className={`${getRoleClassName(authUser)}`}>
@@ -251,7 +217,7 @@ export const UserTable = ({
               })
             ) : (
               <TableRow className="border-gold/20">
-                <TableCell colSpan={isAdminSection ? 3 : 5} className="text-center py-4 text-navy/60 dark:text-white/60">
+                <TableCell colSpan={isAdminSection ? 3 : 4} className="text-center py-4 text-navy/60 dark:text-white/60">
                   Nenhum {title.toLowerCase()} encontrado
                 </TableCell>
               </TableRow>
@@ -260,7 +226,6 @@ export const UserTable = ({
         </Table>
       </div>
 
-      {/* Diálogo para edição de nome */}
       <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
         <DialogContent className="bg-orange-200 dark:bg-navy-dark border border-gold/20">
           <DialogHeader>
