@@ -1,3 +1,4 @@
+
 import { User, FileText, Lock, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
@@ -154,6 +155,9 @@ export const UserTable = ({
           <TableHeader>
             <TableRow className="border-gold/20">
               <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Email</TableHead>
+              {!isAdminSection && (
+                <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Nome</TableHead>
+              )}
               <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Função</TableHead>
               <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Data de Cadastro</TableHead>
               {!isAdminSection && (
@@ -170,6 +174,21 @@ export const UserTable = ({
                 return (
                   <TableRow key={authUser.id} className="border-gold/20 hover:bg-orange-300/50 dark:hover:bg-navy-light/50">
                     <TableCell>{authUser.email || "Sem email"}</TableCell>
+                    {!isAdminSection && (
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span>{getUserName(authUser)}</span>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="flex items-center gap-1 bg-orange-300/80 dark:bg-navy-light/80 text-navy dark:text-white hover:bg-gold hover:text-navy border-gold/20"
+                            onClick={() => handleEditName(authUser)}
+                          >
+                            <Pencil size={14} />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    )}
                     <TableCell>
                       <Badge className={`${getRoleClassName(authUser)}`}>
                         {getRoleText(authUser)}
@@ -217,7 +236,7 @@ export const UserTable = ({
               })
             ) : (
               <TableRow className="border-gold/20">
-                <TableCell colSpan={isAdminSection ? 3 : 4} className="text-center py-4 text-navy/60 dark:text-white/60">
+                <TableCell colSpan={isAdminSection ? 3 : 5} className="text-center py-4 text-navy/60 dark:text-white/60">
                   Nenhum {title.toLowerCase()} encontrado
                 </TableCell>
               </TableRow>
