@@ -154,10 +154,10 @@ export const UserTable = ({
         <Table>
           <TableHeader>
             <TableRow className="border-gold/20">
-              <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Email</TableHead>
               {!isAdminSection && (
                 <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Nome</TableHead>
               )}
+              <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Email</TableHead>
               <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Função</TableHead>
               <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Data de Cadastro</TableHead>
               {!isAdminSection && (
@@ -173,7 +173,6 @@ export const UserTable = ({
                 
                 return (
                   <TableRow key={authUser.id} className="border-gold/20 hover:bg-orange-300/50 dark:hover:bg-navy-light/50">
-                    <TableCell>{authUser.email || "Sem email"}</TableCell>
                     {!isAdminSection && (
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -189,6 +188,7 @@ export const UserTable = ({
                         </div>
                       </TableCell>
                     )}
+                    <TableCell>{authUser.email || "Sem email"}</TableCell>
                     <TableCell>
                       <Badge className={`${getRoleClassName(authUser)}`}>
                         {getRoleText(authUser)}
