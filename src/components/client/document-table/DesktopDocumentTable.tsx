@@ -24,7 +24,6 @@ export const DesktopDocumentTable = ({
   daysUntilExpiration,
   refreshDocuments,
   loadingDocumentIds,
-  setLoadingDocumentIds
 }: DesktopDocumentTableProps) => {
   return (
     <Table>
@@ -78,7 +77,6 @@ export const DesktopDocumentTable = ({
                     isDocumentExpired={isDocumentExpired}
                     refreshDocuments={refreshDocuments}
                     loadingDocumentIds={loadingDocumentIds}
-                    setLoadingDocumentIds={setLoadingDocumentIds}
                   />
                 </div>
               </TableCell>

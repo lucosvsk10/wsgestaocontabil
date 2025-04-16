@@ -20,7 +20,6 @@ export const MobileDocumentCard = ({
   daysUntilExpiration,
   refreshDocuments,
   loadingDocumentIds,
-  setLoadingDocumentIds
 }: MobileDocumentCardProps) => {
   return (
     <div className={`p-3 rounded-lg border ${isDocumentExpired(doc.expires_at) ? "bg-red-900/20 border-red-900/30" : "bg-[#46413d] border-gold/20"}`}>
@@ -56,7 +55,6 @@ export const MobileDocumentCard = ({
           isDocumentExpired={isDocumentExpired}
           refreshDocuments={refreshDocuments}
           loadingDocumentIds={loadingDocumentIds}
-          setLoadingDocumentIds={setLoadingDocumentIds}
         />
       </div>
     </div>
