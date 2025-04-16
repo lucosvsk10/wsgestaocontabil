@@ -21,10 +21,13 @@ export const UserNameEditor = ({ authUser, refreshUsers }: UserNameEditorProps) 
     cancelEditing 
   } = useUserProfileData(refreshUsers);
 
+  // Display either the user metadata name or database name
+  const displayName = authUser.user_metadata?.name || "Sem nome";
+
   return (
     <>
       <div className="flex items-center gap-2">
-        <span>{getUserName(authUser)}</span>
+        <span>{displayName}</span>
         <Button 
           variant="outline" 
           size="sm"
