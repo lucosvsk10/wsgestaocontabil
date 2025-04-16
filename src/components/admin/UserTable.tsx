@@ -1,5 +1,6 @@
 
-import { FileText, Lock } from "lucide-react";
+import { FileText, Lock, ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { UserActions } from "./UserActions";
@@ -25,9 +26,41 @@ export const UserTable = ({
   specialRoleClassName,
   isAdminSection = false
 }: UserTableProps) => {
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>(null);
+  
   const getUserInfo = (authUserId: string) => {
     return userInfoList.find(u => u.id === authUserId) || null;
   };
+
+  const toggleSort = () => {
+    if (sortDirection === null) {
+      setSortDirection('asc');
+    } else if (sortDirection === 'asc') {
+      setSortDirection('desc');
+    } else {
+      setSortDirection(null);
+    }
+  };
+
+  const getSortIcon = () => {
+    if (sortDirection === 'asc') return <ArrowUp size={16} />;
+    if (sortDirection === 'desc') return <ArrowDown size={16} />;
+    return <ArrowUpDown size={16} />;
+  };
+
+  // Sort users by name if sort direction is set
+  const sortedUsers = [...users].sort((a, b) => {
+    if (sortDirection === null) return 0;
+    
+    const nameA = a.user_metadata?.name || "Sem nome";
+    const nameB = b.user_metadata?.name || "Sem nome";
+    
+    if (sortDirection === 'asc') {
+      return nameA.localeCompare(nameB);
+    } else {
+      return nameB.localeCompare(nameA);
+    }
+  });
 
   return (
     <div>
@@ -37,7 +70,20 @@ export const UserTable = ({
           <TableHeader>
             <TableRow className="border-gold/20">
               {!isAdminSection && (
-                <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Nome</TableHead>
+                <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">
+                  <div className="flex items-center gap-2">
+                    <span>Nome</span>
+                    <Button
+                      variant="ghost" 
+                      size="icon"
+                      className="h-6 w-6 p-0"
+                      onClick={toggleSort}
+                      aria-label={sortDirection === 'asc' ? 'Ordenar de Z a A' : 'Ordenar de A a Z'}
+                    >
+                      {getSortIcon()}
+                    </Button>
+                  </div>
+                </TableHead>
               )}
               <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Email</TableHead>
               <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Função</TableHead>
@@ -48,8 +94,8 @@ export const UserTable = ({
             </TableRow>
           </TableHeader>
           <TableBody className="text-navy dark:text-white">
-            {users.length > 0 ? (
-              users.map(authUser => {
+            {sortedUsers.length > 0 ? (
+              sortedUsers.map(authUser => {
                 const userInfo = getUserInfo(authUser.id);
                 
                 return (
@@ -73,13 +119,14 @@ export const UserTable = ({
                     <TableCell>{formatDate(authUser.created_at)}</TableCell>
                     {!isAdminSection && (
                       <TableCell>
-                        <div className="flex space-x-2">
+                        <div className="flex flex-wrap space-x-2 gap-y-2">
                           {showDocumentButton && setSelectedUserId && (
                             <Button 
                               variant="outline" 
                               size="sm" 
                               className="flex items-center gap-1 bg-orange-300/80 dark:bg-navy-light/80 text-navy dark:text-white hover:bg-gold hover:text-navy border-gold/20" 
                               onClick={() => setSelectedUserId(authUser.id)}
+                              aria-label={`Ver documentos de ${authUser.user_metadata?.name || authUser.email || "usuário"}`}
                             >
                               <FileText size={14} />
                               <span>Documentos</span>
@@ -94,6 +141,7 @@ export const UserTable = ({
                                 setSelectedUserForPasswordChange(userInfo);
                                 passwordForm.reset();
                               }}
+                              aria-label={`Alterar senha de ${authUser.user_metadata?.name || authUser.email || "usuário"}`}
                             >
                               <Lock size={14} />
                               <span>Senha</span>

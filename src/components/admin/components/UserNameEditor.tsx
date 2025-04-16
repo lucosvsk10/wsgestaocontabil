@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 import { EditNameDialog } from "./EditNameDialog";
 import { useUserProfileData } from "@/hooks/upload/useUserProfileData";
-import { AuthUser } from "../types/userTable";
+import { AuthUser } from "@/components/admin/types/userTable";
 
 interface UserNameEditorProps {
   authUser: AuthUser;
@@ -15,7 +15,7 @@ export const UserNameEditor = ({ authUser, refreshUsers }: UserNameEditorProps) 
     isEditingUser, 
     newName, 
     setNewName, 
-    getUserName, 
+    nameError,
     handleEditName, 
     handleSaveName, 
     cancelEditing 
@@ -33,6 +33,7 @@ export const UserNameEditor = ({ authUser, refreshUsers }: UserNameEditorProps) 
           size="sm"
           className="flex items-center gap-1 bg-orange-300/80 dark:bg-navy-light/80 text-navy dark:text-white hover:bg-gold hover:text-navy border-gold/20"
           onClick={() => handleEditName(authUser)}
+          aria-label={`Editar nome de ${displayName}`}
         >
           <Pencil size={14} />
         </Button>
@@ -44,6 +45,7 @@ export const UserNameEditor = ({ authUser, refreshUsers }: UserNameEditorProps) 
         name={newName}
         setName={setNewName}
         onSave={() => handleSaveName(authUser.id)}
+        error={nameError}
       />
     </>
   );
