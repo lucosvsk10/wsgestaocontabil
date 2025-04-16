@@ -6,18 +6,17 @@ interface UserRoleDisplayProps {
     id: string;
     email: string;
   };
-  getRoleText: (authUser: any) => string;
-  getRoleClassName: (authUser: any) => string;
+  getRoleText: () => string;
+  getRoleClassName: () => string;
 }
 
 export const UserRoleDisplay = ({ 
-  authUser, 
   getRoleText, 
   getRoleClassName 
 }: UserRoleDisplayProps) => {
   return (
-    <Badge className={`${getRoleClassName(authUser)}`}>
-      {getRoleText(authUser)}
+    <Badge className={`${getRoleClassName()}`}>
+      {getRoleText()}
     </Badge>
   );
 };

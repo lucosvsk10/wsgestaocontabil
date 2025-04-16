@@ -1,12 +1,11 @@
 
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { DocumentUpload } from "./DocumentUpload";
 import { DocumentList } from "./DocumentList";
-import { Document } from "@/types/admin";
 import { AlertCircle, HelpCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState } from "react";
 
 interface DocumentManagerProps {
   selectedUserId: string | null;
@@ -19,7 +18,7 @@ interface DocumentManagerProps {
   handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleUpload: (e: React.FormEvent) => Promise<void>;
   isUploading: boolean;
-  documents: Document[];
+  documents: any[];
   isLoadingDocuments: boolean;
   handleDeleteDocument: (documentId: string) => Promise<void>;
   documentCategories: string[];

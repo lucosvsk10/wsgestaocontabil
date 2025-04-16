@@ -1,18 +1,23 @@
 
-import { useUsersFetch } from "./useUsersFetch";
+import { useDatabaseUsersManagement } from "./auth/useDatabaseUsersManagement";
+import { useAuthUsersManagement } from "./auth/useAuthUsersManagement";
 import { useUserCreation } from "./useUserCreation";
 import { usePasswordManagement } from "./usePasswordManagement";
 
 export const useUserManagement = () => {
-  // Fetch users hook
+  // Database users hook
   const { 
     users, 
-    supabaseUsers, 
     isLoadingUsers, 
-    isLoadingAuthUsers, 
-    fetchUsers, 
-    fetchAuthUsers 
-  } = useUsersFetch();
+    fetchUsers 
+  } = useDatabaseUsersManagement();
+  
+  // Auth users hook
+  const {
+    supabaseUsers,
+    isLoadingAuthUsers,
+    fetchAuthUsers
+  } = useAuthUsersManagement();
 
   // Function to refresh all user data
   const refreshUsers = () => {

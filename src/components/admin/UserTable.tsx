@@ -2,11 +2,11 @@
 import { FileText, Lock } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { UserType } from "@/types/admin";
 import { UserActions } from "./UserActions";
 import { formatDate } from "./utils/dateUtils";
 import { UserRoleDisplay } from "./components/UserRoleDisplay";
 import { UserNameEditor } from "./components/UserNameEditor";
+import { getRoleText, getRoleClassName } from "./utils/roleUtils";
 import type { UserTableProps, AuthUser } from "./types/userTable";
 
 export const UserTable = ({
@@ -27,45 +27,6 @@ export const UserTable = ({
 }: UserTableProps) => {
   const getUserInfo = (authUserId: string) => {
     return userInfoList.find(u => u.id === authUserId) || null;
-  };
-
-  const getUserName = (authUser: AuthUser) => {
-    const userInfo = getUserInfo(authUser.id);
-    return userInfo?.name || authUser.user_metadata?.name || "Sem nome";
-  };
-
-  const getRoleText = (authUser: AuthUser) => {
-    const userInfo = getUserInfo(authUser.id);
-    if (!userInfo) return roleLabel;
-    
-    if (specialEmail && authUser.email === specialEmail) {
-      return specialRoleLabel || "Geral";
-    }
-    
-    switch (userInfo.role) {
-      case 'fiscal': return "Fiscal";
-      case 'contabil': return "Contábil";
-      case 'geral': return "Geral";
-      case 'client': return "Cliente";
-      default: return roleLabel;
-    }
-  };
-
-  const getRoleClassName = (authUser: AuthUser) => {
-    const userInfo = getUserInfo(authUser.id);
-    if (!userInfo) return roleClassName;
-    
-    if (specialEmail && authUser.email === specialEmail) {
-      return specialRoleClassName || "bg-[#e8cc81] text-navy";
-    }
-    
-    switch (userInfo.role) {
-      case 'fiscal': return "bg-green-800 text-green-100";
-      case 'contabil': return "bg-indigo-800 text-indigo-100";
-      case 'geral': return "bg-[#e8cc81] text-navy";
-      case 'client': return "bg-blue-900 text-blue-100";
-      default: return roleClassName;
-    }
   };
 
   return (
@@ -97,7 +58,6 @@ export const UserTable = ({
                       <TableCell>
                         <UserNameEditor 
                           authUser={authUser}
-                          getUserName={getUserName}
                           refreshUsers={refreshUsers}
                         />
                       </TableCell>
@@ -106,8 +66,8 @@ export const UserTable = ({
                     <TableCell>
                       <UserRoleDisplay 
                         authUser={authUser}
-                        getRoleText={getRoleText}
-                        getRoleClassName={getRoleClassName}
+                        getRoleText={() => getRoleText(authUser, userInfoList, specialEmail, specialRoleLabel)}
+                        getRoleClassName={() => getRoleClassName(authUser, userInfoList, specialEmail, specialRoleClassName)}
                       />
                     </TableCell>
                     <TableCell>{formatDate(authUser.created_at)}</TableCell>
