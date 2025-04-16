@@ -63,8 +63,8 @@ describe('UserNameEditor', () => {
   it('displays the user name and edit button', () => {
     render(<UserNameEditor authUser={mockUser} refreshUsers={mockRefreshUsers} />);
     
-    expect(screen.getByText('Test User')).toBeInTheDocument();  // Now this should work
-    expect(screen.getByRole('button')).toBeInTheDocument();     // And this too
+    expect(screen.getByText('Test User')).toBeInTheDocument();  
+    expect(screen.getByRole('button')).toBeInTheDocument();     
   });
   
   it('calls handleEditName when edit button is clicked', () => {
@@ -111,4 +111,3 @@ describe('UserNameEditor', () => {
     expect(mockHookImplementation.handleSaveName).toHaveBeenCalledWith('123');
   });
 });
-

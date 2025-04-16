@@ -10,7 +10,13 @@ export const useUserProfileData = (refreshUsers: () => void) => {
   const [nameError, setNameError] = useState<string | null>(null);
 
   const getUserName = (authUser: AuthUser) => {
-    return authUser.user_metadata?.name || "Sem nome";
+    // First check user_metadata.name
+    if (authUser.user_metadata?.name && authUser.user_metadata.name.trim()) {
+      return authUser.user_metadata.name;
+    }
+    
+    // If no name found, return default
+    return "Sem nome";
   };
 
   const handleEditName = (authUser: AuthUser) => {

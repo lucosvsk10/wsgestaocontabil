@@ -16,13 +16,14 @@ export const UserNameEditor = ({ authUser, refreshUsers }: UserNameEditorProps) 
     newName, 
     setNewName, 
     nameError,
+    getUserName,
     handleEditName, 
     handleSaveName, 
     cancelEditing 
   } = useUserProfileData(refreshUsers);
 
   // Display either the user metadata name or database name
-  const displayName = authUser.user_metadata?.name || "Sem nome";
+  const displayName = getUserName(authUser);
 
   return (
     <>
