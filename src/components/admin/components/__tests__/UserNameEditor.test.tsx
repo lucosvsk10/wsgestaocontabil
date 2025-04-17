@@ -1,7 +1,7 @@
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import '@testing-library/jest-dom/vitest';  // Add this import for matchers
+import '@testing-library/jest-dom/vitest';  // This properly extends the matchers for Vitest
 import { UserNameEditor } from '../UserNameEditor';
 import { useUserProfileData } from '@/hooks/upload/useUserProfileData';
 
