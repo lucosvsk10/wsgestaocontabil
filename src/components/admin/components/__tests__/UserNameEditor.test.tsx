@@ -1,7 +1,7 @@
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import '@testing-library/jest-dom/vitest';  // This properly extends the matchers for Vitest
+import '@testing-library/jest-dom/vitest';  // Ensure this import is present
 import { UserNameEditor } from '../UserNameEditor';
 import { useUserProfileData } from '@/hooks/upload/useUserProfileData';
 
@@ -111,3 +111,4 @@ describe('UserNameEditor', () => {
     expect(mockHookImplementation.handleSaveName).toHaveBeenCalledWith('123');
   });
 });
+
