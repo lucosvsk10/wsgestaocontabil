@@ -4,6 +4,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Newspaper, Link, Plus, X, Calculator, FileText } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Sample accounting news data
 const sampleNews = [{
@@ -93,6 +94,7 @@ const AccountingSection = () => {
   const [isFloatingButtonOpen, setIsFloatingButtonOpen] = useState(false);
   const [newsData, setNewsData] = useState(sampleNews);
   const [isNewsLoading, setIsNewsLoading] = useState(false);
+  const isMobile = useIsMobile();
 
   // Function to refresh news data
   const refreshNews = () => {
@@ -116,19 +118,19 @@ const AccountingSection = () => {
   }, []);
   return <section id="contabil" className="py-16 bg-orange-200 dark:bg-navy-dark px-6 fadein-on-scroll">
       <div className="container mx-auto">
-        <h2 className="text-gold mb-12 text-center text-3xl font-bold">Mundo Contábil </h2>
+        <h2 className="text-gold mb-12 text-center text-3xl font-bold">Mundo Contábil</h2>
         
         <Tabs defaultValue="news" className="w-full max-w-4xl mx-auto">
-          <TabsList className="grid w-full grid-cols-3 mb-8">
-            <TabsTrigger value="news" className="flex items-center gap-2">
+          <TabsList className={`${isMobile ? 'flex flex-col w-full gap-2 h-auto bg-transparent' : 'grid w-full grid-cols-3 mb-8'}`}>
+            <TabsTrigger value="news" className="flex items-center gap-2 data-[state=active]:bg-gold data-[state=active]:text-navy w-full">
               <Newspaper size={16} />
               <span>Notícias Contábeis</span>
             </TabsTrigger>
-            <TabsTrigger value="links" className="flex items-center gap-2">
+            <TabsTrigger value="links" className="flex items-center gap-2 data-[state=active]:bg-gold data-[state=active]:text-navy w-full">
               <Link size={16} />
               <span>Links Úteis</span>
             </TabsTrigger>
-            <TabsTrigger value="declarations" className="flex items-center gap-2">
+            <TabsTrigger value="declarations" className="flex items-center gap-2 data-[state=active]:bg-gold data-[state=active]:text-navy w-full">
               <FileText size={16} />
               <span>Declarações</span>
             </TabsTrigger>
@@ -216,11 +218,10 @@ const AccountingSection = () => {
                     </a>)}
                 </div>
               </div> : null}
-            
-            
           </div>
         </Tabs>
       </div>
     </section>;
 };
+
 export default AccountingSection;
