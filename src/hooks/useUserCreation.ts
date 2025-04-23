@@ -32,9 +32,12 @@ export const useUserCreation = (onUserCreated: () => void) => {
         body: JSON.stringify({
           email: data.email,
           password: data.password,
-          name: data.name,
+          name: data.name,  // Sending the name field
           isAdmin: data.isAdmin,
-          role: userRole
+          role: userRole,
+          user_metadata: {
+            name: data.name  // Include name in user_metadata
+          }
         })
       });
 
