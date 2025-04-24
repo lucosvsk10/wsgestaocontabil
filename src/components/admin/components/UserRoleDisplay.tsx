@@ -14,9 +14,19 @@ export const UserRoleDisplay = ({
   getRoleText, 
   getRoleClassName 
 }: UserRoleDisplayProps) => {
+  const formatRoleText = (role: string): string => {
+    const roleMap: Record<string, string> = {
+      'client': 'Cliente',
+      'contabil': 'Contábil',
+      'fiscal': 'Fiscal',
+      'geral': 'Administrador'
+    };
+    return roleMap[role.toLowerCase()] || role;
+  };
+
   return (
     <Badge className={`${getRoleClassName()}`}>
-      {getRoleText()}
+      {formatRoleText(getRoleText())}
     </Badge>
   );
 };

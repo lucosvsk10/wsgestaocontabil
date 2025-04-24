@@ -1,16 +1,10 @@
 
-import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -18,8 +12,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
+import { useState } from "react";
+import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { LoadingSpinner } from "../common/LoadingSpinner";
 
 interface ChangeRoleDialogProps {
   open: boolean;
@@ -28,7 +25,7 @@ interface ChangeRoleDialogProps {
     id: string;
     email: string;
   };
-  onSuccess?: () => void;
+  onSuccess: () => void;
 }
 
 export const ChangeRoleDialog = ({
@@ -37,129 +34,82 @@ export const ChangeRoleDialog = ({
   authUser,
   onSuccess,
 }: ChangeRoleDialogProps) => {
-  const { toast } = useToast();
-  const [role, setRole] = useState<string>("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const changeUserRole = async () => {
-    if (!role) {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Selecione uma função para continuar",
-      });
-      return;
-    }
+  const handleRoleChange = async () => {
+    if (!selectedRole) return;
 
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
-      const session = await supabase.auth.getSession();
-      const accessToken = session.data.session?.access_token;
-      
-      if (!accessToken) {
-        throw new Error("Você precisa estar logado para alterar funções de usuários");
-      }
-      
-      // Using direct URL to avoid issues with environment variables
-      const response = await fetch(`https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/admin-operations`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
-        },
-        body: JSON.stringify({
-          operation: 'change_role',
-          userId: authUser.id,
-          role: role
-        })
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || "Erro ao alterar função do usuário");
-      }
-      
+      // Update role in the roles table
+      const { error } = await supabase
+        .from('roles')
+        .upsert({ 
+          user_id: authUser.id, 
+          role: selectedRole 
+        }, { 
+          onConflict: 'user_id' 
+        });
+
+      if (error) throw error;
+
       toast({
-        title: "Função alterada com sucesso",
-        description: `A função do usuário foi alterada para ${getRoleDisplayName(role)}.`
+        title: "Função atualizada",
+        description: `A função do usuário foi atualizada com sucesso.`,
       });
-      
-      onSuccess?.();
+
+      onSuccess();
       onOpenChange(false);
     } catch (error: any) {
-      console.error('Erro ao alterar função:', error);
+      console.error("Erro ao atualizar função:", error);
       toast({
         variant: "destructive",
-        title: "Erro ao alterar função",
-        description: error.message
+        title: "Erro ao atualizar função",
+        description: error.message || "Ocorreu um erro ao atualizar a função do usuário."
       });
     } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const getRoleDisplayName = (roleValue: string) => {
-    switch (roleValue) {
-      case 'fiscal': return 'Fiscal';
-      case 'contabil': return 'Contábil';
-      case 'geral': return 'Geral';
-      case 'client': return 'Cliente';
-      default: return roleValue;
+      setIsSubmitting(false);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#393532] border border-gold/20 text-white">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-[#e8cc81]">Alterar Função do Usuário</DialogTitle>
-          <DialogDescription className="text-[#e9aa91]">
-            Altere a função do usuário: {authUser.email}
-          </DialogDescription>
+          <DialogTitle>Alterar Função do Usuário</DialogTitle>
         </DialogHeader>
-        
-        <div className="py-4 space-y-4">
+        <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="role" className="text-[#e9aa91]">Nova Função</Label>
-            <Select onValueChange={setRole} value={role}>
-              <SelectTrigger id="role" className="bg-[#46413d] border-gold/20 focus-visible:ring-gold text-white">
-                <SelectValue placeholder="Selecione uma função" className="text-white" />
+            <Select value={selectedRole} onValueChange={setSelectedRole}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione uma função" />
               </SelectTrigger>
-              <SelectContent className="bg-[#46413d] border-gold/20 text-white">
-                <SelectItem value="fiscal" className="text-white">Fiscal</SelectItem>
-                <SelectItem value="contabil" className="text-white">Contábil</SelectItem>
-                <SelectItem value="geral" className="text-white">Geral</SelectItem>
-                <SelectItem value="client" className="text-white">Cliente</SelectItem>
+              <SelectContent>
+                <SelectItem value="client">Cliente</SelectItem>
+                <SelectItem value="contabil">Contábil</SelectItem>
+                <SelectItem value="fiscal">Fiscal</SelectItem>
+                <SelectItem value="geral">Administrador</SelectItem>
               </SelectContent>
             </Select>
           </div>
+          <div className="flex justify-end space-x-2">
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleRoleChange}
+              disabled={!selectedRole || isSubmitting}
+            >
+              {isSubmitting && <LoadingSpinner />}
+              Salvar
+            </Button>
+          </div>
         </div>
-        
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            className="border-gold/20 text-[#e9aa91] hover:bg-[#46413d]"
-            disabled={isLoading}
-          >
-            Cancelar
-          </Button>
-          <Button
-            onClick={changeUserRole}
-            className="bg-gold hover:bg-gold-light text-navy"
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <span className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Processando...
-              </span>
-            ) : (
-              "Alterar Função"
-            )}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
