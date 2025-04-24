@@ -5,7 +5,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { UserActions } from "./UserActions";
 import { formatDate } from "./utils/dateUtils";
-import { UserNameEditor } from "./components/UserNameEditor";
 import type { UserTableProps, AuthUser } from "./types/userTable";
 
 export const UserTable = ({
@@ -94,10 +93,7 @@ export const UserTable = ({
                   <TableRow key={authUser.id} className="border-gold/20 hover:bg-orange-300/50 dark:hover:bg-navy-light/50">
                     {!isAdminSection && (
                       <TableCell>
-                        <UserNameEditor 
-                          authUser={authUser}
-                          refreshUsers={refreshUsers}
-                        />
+                        {authUser.user_metadata?.name || "Sem nome"}
                       </TableCell>
                     )}
                     <TableCell>{authUser.email || "Sem email"}</TableCell>

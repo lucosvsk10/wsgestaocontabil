@@ -49,28 +49,32 @@ serve(async (req) => {
     }
 
     // Verificar se o usuário tem permissão (apenas emails específicos ou admins)
-    const { data: userData, error: userError } = await supabaseAdmin
-      .from('users')
-      .select('role')
-      .eq('id', caller.id)
-      .single();
-
-    if (userError) {
-      return new Response(JSON.stringify({ error: "Erro ao verificar função do usuário" }), { 
-        status: 500, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" } 
-      });
-    }
-
-    const isAdmin = caller.email === "wsgestao@gmail.com" || 
-                   caller.email === "l09022007@gmail.com" ||
-                   ['fiscal', 'contabil', 'geral'].includes(userData?.role || '');
+    // Simplified admin check - only check directly from auth email and role in users table
+    const isAdminEmail = caller.email === "wsgestao@gmail.com" || caller.email === "l09022007@gmail.com";
     
-    if (!isAdmin) {
-      return new Response(JSON.stringify({ error: "Acesso negado. Apenas administradores podem acessar esta função." }), { 
-        status: 403, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" } 
-      });
+    if (!isAdminEmail) {
+      const { data: userData, error: userError } = await supabaseAdmin
+        .from('users')
+        .select('role')
+        .eq('id', caller.id)
+        .single();
+
+      if (userError) {
+        return new Response(JSON.stringify({ error: "Erro ao verificar função do usuário", details: userError }), { 
+          status: 500, 
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        });
+      }
+
+      // Check if user role has admin privileges
+      const isAdminRole = ['fiscal', 'contabil', 'geral'].includes(userData?.role || '');
+      
+      if (!isAdminRole) {
+        return new Response(JSON.stringify({ error: "Acesso negado. Apenas administradores podem acessar esta função." }), { 
+          status: 403, 
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        });
+      }
     }
 
     // Obter estatísticas de armazenamento por usuário

@@ -1,194 +1,103 @@
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.21.0";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
-// Handle CORS preflight requests
-const handleCORS = (req: Request) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders, status: 204 })
-  }
-}
-
-// Create a Supabase admin client
-const createAdminClient = () => {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
-  
-  if (!supabaseUrl || !supabaseServiceKey) {
-    throw new Error('Missing environment variables for Supabase')
+serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
   }
   
-  return createClient(supabaseUrl, supabaseServiceKey)
-}
-
-// Check if the user has admin privileges
-const isAdmin = async (token: string) => {
-  const supabaseClient = createClient(
-    Deno.env.get('SUPABASE_URL') || '',
-    Deno.env.get('SUPABASE_ANON_KEY') || '',
-    {
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    }
-  )
-
-  const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
-  
-  if (userError || !user) {
-    throw new Error('Unauthorized')
-  }
-  
-  // Admin email check
-  const isAdminByEmail = user.email === 'wsgestao@gmail.com' || user.email === 'l09022007@gmail.com'
-  if (isAdminByEmail) return true
-  
-  // Check if the user is an admin in the database
-  const { data: userData, error: roleError } = await supabaseClient
-    .from('users')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-  
-  if (roleError) {
-    throw new Error('Error fetching user role')
-  }
-  
-  // Check if user role is admin or equivalent
-  return ['admin', 'fiscal', 'contabil', 'geral'].includes(userData?.role || '')
-}
-
-// Main handler
-Deno.serve(async (req) => {
-  // Handle CORS
-  const corsResponse = handleCORS(req)
-  if (corsResponse) return corsResponse
-
   try {
-    // Verify authentication
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new Error('Missing or invalid authorization header')
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      throw new Error("Autenticação inválida");
     }
 
-    const token = authHeader.substring(7)
-    const adminAuthorized = await isAdmin(token)
+    // Create Supabase client with service role key
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL") || "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "",
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
+    );
 
-    if (!adminAuthorized) {
-      throw new Error('Unauthorized: Admin privileges required')
+    // Verify JWT from auth header
+    const jwt = authHeader.replace("Bearer ", "");
+    
+    // Get user from JWT
+    const { data: { user: caller }, error: authError } = await supabaseAdmin.auth.getUser(jwt);
+    
+    if (authError || !caller) {
+      throw new Error("Usuário não autenticado");
     }
 
-    // Parse the request body
-    const body = await req.json()
-    const { operation } = body
+    // Check if user is admin
+    const isAdminEmail = caller.email === "wsgestao@gmail.com" || caller.email === "l09022007@gmail.com";
     
-    if (!operation) {
-      throw new Error('Operation field is required')
-    }
-    
-    // Create an admin client for operations
-    const adminClient = createAdminClient()
-    
-    // Handle different operations
-    switch (operation) {
-      case 'changePassword':
-        return await handleChangePassword(adminClient, body)
+    if (!isAdminEmail) {
+      const { data: userData, error: userError } = await supabaseAdmin
+        .from('users')
+        .select('role')
+        .eq('id', caller.id)
+        .single();
+
+      if (userError) {
+        throw new Error("Erro ao verificar função do usuário");
+      }
       
-      case 'deleteUser':
-        return await handleDeleteUser(adminClient, body)
+      const isAdmin = ['fiscal', 'contabil', 'geral'].includes(userData?.role || '');
       
-      case 'changeRole':
-        return await handleChangeRole(adminClient, body)
+      if (!isAdmin) {
+        throw new Error("Permissão negada. Apenas administradores podem realizar esta operação.");
+      }
+    }
+    
+    // Parse request data
+    const requestData = await req.json();
+    
+    // Handler for each operation
+    switch(requestData.operation) {
+      case "delete_user": {
+        // Delete user from auth.users
+        const { error } = await supabaseAdmin.auth.admin.deleteUser(requestData.userId);
         
-      default:
-        throw new Error(`Unsupported operation: ${operation}`)
+        if (error) {
+          console.error("Error deleting user:", error);
+          throw new Error(`Erro ao excluir usuário: ${error.message}`);
+        }
+        
+        return new Response(
+          JSON.stringify({ success: true, message: "Usuário excluído com sucesso" }),
+          { 
+            status: 200, 
+            headers: { ...corsHeaders, "Content-Type": "application/json" } 
+          }
+        );
+      }
+      
+      default: {
+        throw new Error("Operação não suportada");
+      }
     }
     
   } catch (error) {
-    console.error('Error:', error.message)
-    
+    console.error("Admin operations error:", error.message);
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-    )
+      JSON.stringify({ error: error.message || "Erro ao executar operação administrativa" }),
+      { 
+        status: 400, 
+        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      }
+    );
   }
-})
-
-// Handle password change operation
-async function handleChangePassword(adminClient: any, body: any) {
-  const { userId, newPassword } = body
-  
-  if (!userId || !newPassword) {
-    throw new Error('Missing required fields: userId and newPassword')
-  }
-  
-  const { error } = await adminClient.auth.admin.updateUserById(
-    userId,
-    { password: newPassword }
-  )
-  
-  if (error) {
-    throw error
-  }
-  
-  return new Response(
-    JSON.stringify({ success: true, message: 'Password changed successfully' }),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-  )
-}
-
-// Handle user deletion operation
-async function handleDeleteUser(adminClient: any, body: any) {
-  const { userId } = body
-  
-  if (!userId) {
-    throw new Error('Missing required field: userId')
-  }
-  
-  const { error } = await adminClient.auth.admin.deleteUser(userId)
-  
-  if (error) {
-    throw error
-  }
-  
-  return new Response(
-    JSON.stringify({ success: true, message: 'User deleted successfully' }),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-  )
-}
-
-// Handle role change operation
-async function handleChangeRole(adminClient: any, body: any) {
-  const { userId, newRole } = body
-  
-  if (!userId || !newRole) {
-    throw new Error('Missing required fields: userId and newRole')
-  }
-  
-  // Validate role
-  const validRoles = ['admin', 'fiscal', 'contabil', 'geral', 'client']
-  if (!validRoles.includes(newRole)) {
-    throw new Error(`Invalid role: ${newRole}. Must be one of: ${validRoles.join(', ')}`)
-  }
-  
-  // Update user role in the database
-  const { error } = await adminClient
-    .from('users')
-    .update({ role: newRole })
-    .eq('id', userId)
-  
-  if (error) {
-    throw error
-  }
-  
-  return new Response(
-    JSON.stringify({ success: true, message: `Role changed to ${newRole} successfully` }),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-  )
-}
+});

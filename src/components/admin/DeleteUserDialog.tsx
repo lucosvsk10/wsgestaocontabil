@@ -38,8 +38,10 @@ export const DeleteUserDialog = ({ open, onOpenChange, authUser, onSuccess }: De
       
       if (documentsError) {
         console.error('Erro ao excluir documentos do usuário:', documentsError);
+        throw new Error(`Erro ao excluir documentos: ${documentsError.message}`);
       }
       
+      // Delete roles entry if it exists
       const { error: rolesError } = await supabase
         .from('roles')
         .delete()
@@ -49,6 +51,7 @@ export const DeleteUserDialog = ({ open, onOpenChange, authUser, onSuccess }: De
         console.error('Erro ao excluir funções do usuário:', rolesError);
       }
       
+      // Delete user profile if it exists
       const { error: usersError } = await supabase
         .from('users')
         .delete()
@@ -71,12 +74,13 @@ export const DeleteUserDialog = ({ open, onOpenChange, authUser, onSuccess }: De
         })
       });
 
-      const result = await response.json();
-      
       if (!response.ok) {
+        const result = await response.json();
         throw new Error(result.error || "Erro ao excluir usuário");
       }
 
+      const result = await response.json();
+      
       toast({
         title: "Usuário excluído com sucesso",
         description: `O usuário ${authUser.email} foi removido do sistema.`
