@@ -3,7 +3,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserList } from "@/components/admin/UserList";
 import { CreateUser } from "@/components/admin/CreateUser";
 import { PasswordChangeForm } from "@/components/admin/PasswordChangeForm";
+import { StorageStats } from "@/components/admin/StorageStats";
 import { UserType } from "@/types/admin";
+
 interface AdminTabsViewProps {
   supabaseUsers: any[];
   users: UserType[];
@@ -16,6 +18,7 @@ interface AdminTabsViewProps {
   createUser: (data: any) => void;
   isCreatingUser: boolean;
 }
+
 export const AdminTabsView = ({
   supabaseUsers,
   users,
@@ -28,8 +31,9 @@ export const AdminTabsView = ({
   createUser,
   isCreatingUser
 }: AdminTabsViewProps) => {
-  return <Tabs defaultValue="users" className="space-y-6">
-      <TabsList className="grid grid-cols-3 mb-4 bg-orange-200 dark:bg-navy-dark border border-gold/20">
+  return (
+    <Tabs defaultValue="users" className="space-y-6">
+      <TabsList className="grid grid-cols-4 mb-4 bg-orange-200 dark:bg-navy-dark border border-gold/20">
         <TabsTrigger 
           value="users" 
           className="text-navy dark:text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
@@ -48,10 +52,24 @@ export const AdminTabsView = ({
         >
           Alterar Senha
         </TabsTrigger>
+        <TabsTrigger 
+          value="storage" 
+          className="text-navy dark:text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
+        >
+          Armazenamento
+        </TabsTrigger>
       </TabsList>
       
       <TabsContent value="users" className="space-y-6">
-        <UserList supabaseUsers={supabaseUsers} users={users} isLoading={isLoadingUsers || isLoadingAuthUsers} setSelectedUserId={handleDocumentButtonClick} setSelectedUserForPasswordChange={setSelectedUserForPasswordChange} passwordForm={passwordForm} refreshUsers={refreshUsers} />
+        <UserList 
+          supabaseUsers={supabaseUsers} 
+          users={users} 
+          isLoading={isLoadingUsers || isLoadingAuthUsers} 
+          setSelectedUserId={handleDocumentButtonClick} 
+          setSelectedUserForPasswordChange={setSelectedUserForPasswordChange} 
+          passwordForm={passwordForm} 
+          refreshUsers={refreshUsers} 
+        />
       </TabsContent>
       
       <TabsContent value="create-user">
@@ -61,5 +79,10 @@ export const AdminTabsView = ({
       <TabsContent value="change-password">
         <PasswordChangeForm />
       </TabsContent>
-    </Tabs>;
+      
+      <TabsContent value="storage">
+        <StorageStats />
+      </TabsContent>
+    </Tabs>
+  );
 };

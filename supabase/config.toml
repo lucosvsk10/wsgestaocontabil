@@ -1,106 +1,33 @@
 
-# A string used to distinguish different Supabase projects on the same host. Defaults to the working
-# directory name when running `supabase init`.
 project_id = "nadtoitgkukzbghtbohm"
 
 [api]
-# Port to use for the API URL.
-port = 54321
-# Schemas to expose in your API. Tables, views and stored procedures in this schema will get API
-# endpoints. public and storage are always included.
-schemas = ["public", "storage"]
-# Extra schemas to add to the search_path of every request. public is always included.
-extra_search_path = ["public", "extensions"]
-# The maximum number of rows returns from a view, table, or stored procedure. Limits payload size
-# for accidental or malicious requests.
-max_rows = 1000
-
-[db]
-# Port to use for the local database URL.
-port = 54322
-# The database major version to use. This has to be the same as your remote database's. Run `SHOW
-# server_version;` on the remote database to check.
-major_version = 15
-
-[studio]
-# Port to use for Supabase Studio.
-port = 54323
-
-# Email testing server. Emails sent with the local dev setup are not actually sent - rather, they
-# are monitored, and you can view the emails that would have been sent from the web interface.
-[inbucket]
-# Port to use for the email testing server web interface.
-port = 54324
-smtp_port = 54325
-pop3_port = 54326
-
-[storage]
-# The maximum file size allowed (e.g. "5MB", "500KB").
-file_size_limit = "50MiB"
-
-[auth]
-# The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
-# in emails.
-site_url = "http://localhost:3000"
-# A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://localhost:3000"]
-# How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 seconds (one
-# week).
-jwt_expiry = 3600
-# Allow/disallow new user signups to your project.
-enable_signup = true
-# If disabled, the user will be logged out from all devices when changing their password.
-enable_multi_session = true
+enabled = true
+url = "https://nadtoitgkukzbghtbohm.supabase.co"
+service_role_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5hZHRvaXRna3VremJnaHRib2htIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTY4NDIyMTAwNywiZXhwIjoxOTk5Nzk3MDA3fQ.L_RbIbsmoKqOLWZrQOkzu_I6JU0M0GF1FLn6-PxA4AE"
 
 [auth.email]
-# Allow/disallow new user signups via email to your project.
 enable_signup = true
-# If enabled, a user will be required to confirm any email change on both the old, and new email
-# addresses. If disabled, only the new email is required to confirm.
-double_confirm_changes = true
-# If enabled, users need to confirm their email address before signing in.
+double_confirm_changes = false
 enable_confirmations = false
 
-# Use an external OAuth provider. The full list of providers are: `apple`, `azure`, `bitbucket`,
-# `discord`, `facebook`, `github`, `gitlab`, `google`, `keycloak`, `linkedin`, `notion`, `twitch`,
-# `twitter`, `slack`, `spotify`, `workos`, `zoom`.
-[auth.external.apple]
-enabled = false
-client_id = ""
-secret = ""
-# Overrides the default auth redirectUrl.
-redirect_uri = ""
-# Overrides the default auth provider URL. Used to support self-hosted gitlab, single-tenant Azure,
-# or any other third-party OIDC providers.
-url = ""
-
 [functions]
-# The maximum number of CPU seconds a function can use before timing out.
-function_timeout_seconds = 3
-# Deprecated: used to validate the JWT in the request.
-jwt_secret = ""
-# Allow/disallow functions to be invoked by HTTP requests.
-invoke_function_on_http_request = true
+storage-stats = {}
 
-# Configure one of the supported auth providers: `apple`, `azure`, `bitbucket`, `discord`,
-# `facebook`, `github`, `gitlab`, `google`, `keycloak`, `linkedin`, `notion`, `twitch`, `twitter`,
-# `slack`, `spotify`, `workos`, `zoom`. This can be a map, or a list of maps.
-[[auth.external.twitter]]
-enabled = false
-client_id = ""
-secret = ""
-redirect_uri = ""
-url = ""
+[functions.admin-operations]
+verify_jwt = true
 
-# Configure one of the supported auth providers. This can be a map, or a list of maps.
-[[auth.external.github]]
-enabled = false
-client_id = ""
-secret = ""
-redirect_uri = ""
-url = ""
+[functions.changeUserPassword]
+verify_jwt = true
+
+[functions.create-user]
+verify_jwt = true
+
+[functions.create-user-profile]
+verify_jwt = true
 
 [functions.delete-expired-documents]
 verify_jwt = true
-# Uncomment this if function needs service role
-# service_role_required = true
+
+[functions.listUsers]
+verify_jwt = true

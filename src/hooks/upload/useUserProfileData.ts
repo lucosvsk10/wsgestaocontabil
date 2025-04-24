@@ -45,16 +45,12 @@ export const useUserProfileData = (refreshUsers: () => void) => {
     
     try {
       // Update only the users table in Supabase
-      // This avoids the auth.admin API that requires special permissions
       const { error: dbError } = await supabase
         .from('users')
         .update({ name: newName.trim() })
         .eq('id', userId);
         
       if (dbError) throw dbError;
-      
-      // We'll skip updating auth.user_metadata directly since it requires admin privileges
-      // Instead, we'll just update the users table which is accessible with normal permissions
       
       toast({
         title: "Nome atualizado",

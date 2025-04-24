@@ -5,25 +5,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { UserActions } from "./UserActions";
 import { formatDate } from "./utils/dateUtils";
-import { UserRoleDisplay } from "./components/UserRoleDisplay";
 import { UserNameEditor } from "./components/UserNameEditor";
-import { getRoleText, getRoleClassName } from "./utils/roleUtils";
 import type { UserTableProps, AuthUser } from "./types/userTable";
 
 export const UserTable = ({
   users,
   userInfoList,
   title,
-  roleLabel,
-  roleClassName,
   setSelectedUserId,
   setSelectedUserForPasswordChange,
   passwordForm,
   refreshUsers,
   showDocumentButton = false,
-  specialEmail,
-  specialRoleLabel,
-  specialRoleClassName,
   isAdminSection = false
 }: UserTableProps) => {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>(null);
@@ -86,7 +79,6 @@ export const UserTable = ({
                 </TableHead>
               )}
               <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Email</TableHead>
-              <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Função</TableHead>
               <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Data de Cadastro</TableHead>
               {!isAdminSection && (
                 <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Ações</TableHead>
@@ -109,13 +101,6 @@ export const UserTable = ({
                       </TableCell>
                     )}
                     <TableCell>{authUser.email || "Sem email"}</TableCell>
-                    <TableCell>
-                      <UserRoleDisplay 
-                        authUser={authUser}
-                        getRoleText={() => getRoleText(authUser, userInfoList, specialEmail, specialRoleLabel)}
-                        getRoleClassName={() => getRoleClassName(authUser, userInfoList, specialEmail, specialRoleClassName)}
-                      />
-                    </TableCell>
                     <TableCell>{formatDate(authUser.created_at)}</TableCell>
                     {!isAdminSection && (
                       <TableCell>
@@ -160,7 +145,7 @@ export const UserTable = ({
               })
             ) : (
               <TableRow className="border-gold/20">
-                <TableCell colSpan={isAdminSection ? 3 : 5} className="text-center py-4 text-navy/60 dark:text-white/60">
+                <TableCell colSpan={isAdminSection ? 2 : 4} className="text-center py-4 text-navy/60 dark:text-white/60">
                   Nenhum {title.toLowerCase()} encontrado
                 </TableCell>
               </TableRow>

@@ -30,6 +30,35 @@ export const DeleteUserDialog = ({ open, onOpenChange, authUser, onSuccess }: De
         throw new Error("Você precisa estar logado para realizar esta ação");
       }
       
+      // First delete related records in the database
+      const { error: documentsError } = await supabase
+        .from('documents')
+        .delete()
+        .eq('user_id', authUser.id);
+      
+      if (documentsError) {
+        console.error('Erro ao excluir documentos do usuário:', documentsError);
+      }
+      
+      const { error: rolesError } = await supabase
+        .from('roles')
+        .delete()
+        .eq('user_id', authUser.id);
+      
+      if (rolesError) {
+        console.error('Erro ao excluir funções do usuário:', rolesError);
+      }
+      
+      const { error: usersError } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', authUser.id);
+      
+      if (usersError) {
+        console.error('Erro ao excluir perfil do usuário:', usersError);
+      }
+      
+      // Delete the auth user via edge function
       const response = await fetch(`https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/admin-operations`, {
         method: 'POST',
         headers: {
@@ -37,7 +66,7 @@ export const DeleteUserDialog = ({ open, onOpenChange, authUser, onSuccess }: De
           'Authorization': `Bearer ${accessToken}`
         },
         body: JSON.stringify({
-          operation: "delete_user", // Changed from "action": "deleteUser" to "operation": "delete_user"
+          operation: "delete_user",
           userId: authUser.id
         })
       });
