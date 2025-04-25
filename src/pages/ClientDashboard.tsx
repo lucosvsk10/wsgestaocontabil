@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DocumentTabs } from "@/components/client/DocumentTabs";
@@ -21,8 +20,8 @@ const ClientDashboard = () => {
   const hasInitializedRef = useRef(false);
   const userSelectedRef = useRef(false);
 
-  // Categorias de documentos
-  const categories = ["Imposto de Renda", "Documentações", "Certidões"];
+  // Categorias de documentos atualizadas
+  const categories = ["Impostos", "Folha de Pagamento", "Documentações", "Certidões"];
 
   // Obter documentos por categoria
   const documentsByCategory = getDocumentsByCategory(documents, categories);
@@ -113,7 +112,7 @@ const ClientDashboard = () => {
               selectedCategory ? (
                 <div className={`${isMobile ? 'overflow-x-auto' : ''}`}>
                   <DocumentTabs 
-                    documents={[]} // Unused prop now
+                    documents={[]} 
                     allDocuments={documents} 
                     documentsByCategory={documentsByCategory} 
                     categories={categories} 
