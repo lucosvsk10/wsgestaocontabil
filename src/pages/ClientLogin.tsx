@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
@@ -9,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { supabase } from "@/integrations/supabase/client";
 
 const ClientLogin = () => {
   const [email, setEmail] = useState("");
@@ -59,8 +61,17 @@ const ClientLogin = () => {
     setIsLoading(true);
     
     try {
+      // Primeiro desafiar o MFA para obter o challengeId
+      const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
+        factorId: factorId!
+      });
+      
+      if (challengeError) throw challengeError;
+      
+      // Agora verificar com o código e challengeId
       const { error } = await supabase.auth.mfa.verify({
         factorId: factorId!,
+        challengeId: challengeData.id,
         code: mfaCode
       });
       
@@ -134,7 +145,7 @@ const ClientLogin = () => {
                     render={({ slots }) => (
                       <InputOTPGroup>
                         {slots.map((slot, index) => (
-                          <InputOTPSlot key={index} {...slot} />
+                          <InputOTPSlot key={index} {...slot} index={index} />
                         ))}
                       </InputOTPGroup>
                     )}

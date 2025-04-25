@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { ensureUserProfile } from './userProfile';
 
@@ -14,10 +15,14 @@ export const signInWithEmail = async (email: string, password: string) => {
 
     // Check if MFA challenge is required
     if (data?.session === null && data?.user !== null) {
+      // Get the MFA factors for the user
+      const { data: factorsData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      const factorId = factorsData?.currentLevel?.factors?.[0]?.id || null;
+      
       return { 
         data: { 
           requiresMFA: true, 
-          factorId: data.user.factors?.[0]?.id 
+          factorId
         }, 
         error: null 
       };

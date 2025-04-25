@@ -22,6 +22,7 @@ export const MFASetup = () => {
   const [verifyCode, setVerifyCode] = useState('');
   const [isEnrolling, setIsEnrolling] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [challengeId, setChallengeId] = useState<string>('');
   const { toast } = useToast();
 
   const setupMFA = async () => {
@@ -56,16 +57,19 @@ export const MFASetup = () => {
 
     try {
       setIsVerifying(true);
-      const { error } = await supabase.auth.mfa.challenge({ 
+      const { data, error } = await supabase.auth.mfa.challenge({ 
         factorId 
       });
 
       if (error) {
         throw error;
       }
+      
+      setChallengeId(data.id);
 
       const { error: verifyError } = await supabase.auth.mfa.verify({ 
         factorId, 
+        challengeId: data.id,
         code: verifyCode 
       });
 
@@ -122,7 +126,7 @@ export const MFASetup = () => {
                 render={({ slots }) => (
                   <InputOTPGroup>
                     {slots.map((slot, index) => (
-                      <InputOTPSlot key={index} {...slot} />
+                      <InputOTPSlot key={index} {...slot} index={index} />
                     ))}
                   </InputOTPGroup>
                 )}
