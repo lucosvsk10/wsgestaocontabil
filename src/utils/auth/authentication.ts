@@ -1,18 +1,32 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { ensureUserProfile } from './userProfile';
 
 // Sign in with email and password
 export const signInWithEmail = async (email: string, password: string) => {
   try {
-    const response = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
-      password
+      password,
+      options: {
+        captchaToken: undefined // Will be required if user fails multiple login attempts
+      }
     });
-    return response; // This returns { data, error } structure
+
+    // Check if MFA challenge is required
+    if (data?.session === null && data?.user !== null) {
+      return { 
+        data: { 
+          requiresMFA: true, 
+          factorId: data.user.factors?.[0]?.id 
+        }, 
+        error: null 
+      };
+    }
+
+    return { data, error };
   } catch (error) {
     console.error("Error in signIn:", error);
-    return { error, data: null }; // Ensure we always return { data, error } structure
+    return { error, data: null };
   }
 };
 
