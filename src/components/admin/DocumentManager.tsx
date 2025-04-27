@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { DocumentUpload } from "./DocumentUpload";
 import { DocumentList } from "./DocumentList";
@@ -89,8 +88,7 @@ export const DocumentManager = ({
             <HelpCircle className="h-4 w-4 text-gold" />
             <AlertTitle className="text-navy dark:text-gold">Dica</AlertTitle>
             <AlertDescription className="text-navy dark:text-white">
-              Adicione observações importantes para o cliente ao enviar um documento, 
-              como prazos, instruções ou qualquer informação relevante.
+              Para documentos na categoria "Impostos", você pode especificar se é Imposto de Renda ou outros tipos de impostos.
             </AlertDescription>
           </Alert>
           

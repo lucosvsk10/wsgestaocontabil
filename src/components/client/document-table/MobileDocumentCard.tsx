@@ -1,4 +1,3 @@
-
 import { Document } from "@/utils/auth/types";
 import { DocumentActions } from "./DocumentActions";
 import { BellDot } from "lucide-react";
@@ -21,6 +20,13 @@ export const MobileDocumentCard = ({
   refreshDocuments,
   loadingDocumentIds,
 }: MobileDocumentCardProps) => {
+  const getDisplayCategory = (doc: Document) => {
+    if (doc.category === 'Impostos' && doc.subcategory === 'Imposto de Renda') {
+      return 'Imposto de Renda';
+    }
+    return doc.category;
+  };
+
   return (
     <div className={`p-3 rounded-lg border ${isDocumentExpired(doc.expires_at) ? "bg-red-900/20 border-red-900/30" : "bg-[#46413d] border-gold/20"}`}>
       <div className="flex items-center justify-between mb-2">
@@ -28,6 +34,9 @@ export const MobileDocumentCard = ({
           {!doc.viewed && <BellDot size={16} className="text-blue-400 mr-2" />}
           {doc.name}
         </div>
+        <span className="text-xs px-2 py-1 rounded-full bg-[#393532] text-gold">
+          {getDisplayCategory(doc)}
+        </span>
       </div>
       
       <div className="grid grid-cols-2 gap-2 text-sm mb-3">

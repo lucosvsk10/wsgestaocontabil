@@ -1,4 +1,3 @@
-
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Document } from "@/utils/auth/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -25,11 +24,19 @@ export const DesktopDocumentTable = ({
   refreshDocuments,
   loadingDocumentIds,
 }: DesktopDocumentTableProps) => {
+  const getDisplayCategory = (doc: Document) => {
+    if (doc.category === 'Impostos' && doc.subcategory === 'Imposto de Renda') {
+      return 'Imposto de Renda';
+    }
+    return doc.category;
+  };
+
   return (
     <Table>
       <TableHeader className="bg-[#393532]">
         <TableRow>
           <TableHead className="text-[#e8cc81] font-extralight bg-transparent">Nome do Documento</TableHead>
+          <TableHead className="text-[#e8cc81] font-extralight bg-transparent">Categoria</TableHead>
           <TableHead className="text-[#e8cc81] font-extralight bg-transparent">Data de Envio</TableHead>
           <TableHead className="text-[#e8cc81] font-extralight bg-transparent">Validade</TableHead>
           <TableHead className="text-[#e8cc81] font-extralight bg-transparent">Observações</TableHead>
@@ -45,6 +52,11 @@ export const DesktopDocumentTable = ({
                   {!doc.viewed && <BellDot size={16} className="text-blue-400 mr-2" />}
                   {doc.name}
                 </div>
+              </TableCell>
+              <TableCell>
+                <span className="px-2 py-1 rounded-full text-xs bg-gold text-navy">
+                  {getDisplayCategory(doc)}
+                </span>
               </TableCell>
               <TableCell className="text-gray-300">{formatDate(doc.uploaded_at)}</TableCell>
               <TableCell>
