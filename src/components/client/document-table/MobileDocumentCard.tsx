@@ -20,10 +20,14 @@ export const MobileDocumentCard = ({
   daysUntilExpiration,
   refreshDocuments,
   loadingDocumentIds,
+  setLoadingDocumentIds
 }: MobileDocumentCardProps) => {
   const getDisplayCategory = (doc: Document) => {
-    if (doc.category === 'Impostos' && doc.subcategory === 'Imposto de Renda') {
+    if (doc.category.startsWith('Impostos/') && doc.category.includes('Imposto de Renda')) {
       return 'Imposto de Renda';
+    }
+    if (doc.subcategory) {
+      return doc.subcategory;
     }
     return doc.category;
   };
