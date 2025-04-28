@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowDown, ArrowUp, TrendingUp, Newspaper, DollarSign, Euro, RefreshCw } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ExchangeRate {
   code: string;
@@ -25,6 +26,7 @@ const BusinessNews = () => {
   const [refreshingRates, setRefreshingRates] = useState(false);
   const [refreshingNews, setRefreshingNews] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   const fetchExchangeRates = async () => {
     try {
@@ -134,50 +136,83 @@ const BusinessNews = () => {
   };
 
   if (loading) {
-    return <section id="noticias" className="py-16 bg-navy-light">
-        <div className="container mx-auto px-6">
-          <h2 className="text-3xl font-anton text-gold text-center mb-8">
+    return (
+      <section id="noticias" className="py-8 md:py-16 bg-navy-light">
+        <div className="container mx-auto px-4 md:px-6">
+          <h2 className="text-2xl md:text-3xl font-anton text-gold text-center mb-8">
             Carregando Notícias...
           </h2>
         </div>
-      </section>;
+      </section>
+    );
   }
 
   if (error) {
-    return <section id="noticias" className="py-16 bg-navy-light">
-        <div className="container mx-auto px-6">
-          <h2 className="text-3xl font-anton text-gold text-center mb-8">
+    return (
+      <section id="noticias" className="py-8 md:py-16 bg-navy-light">
+        <div className="container mx-auto px-4 md:px-6">
+          <h2 className="text-2xl md:text-3xl font-anton text-gold text-center mb-8">
             {error}
           </h2>
         </div>
-      </section>;
+      </section>
+    );
   }
 
-  return <section id="noticias" className="py-16 bg-orange-200 dark:bg-navy-dark">
-      <div className="container mx-auto px-6">
-        <h2 className="text-4xl text-gold text-center mb-8 font-bold">
+  return (
+    <section id="noticias" className="py-8 md:py-16 bg-orange-200 dark:bg-navy-dark">
+      <div className="container mx-auto px-4 md:px-6">
+        <h2 className="text-3xl md:text-4xl text-gold text-center mb-8 font-bold">
           Notícias do Mundo de Negócios
         </h2>
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-          <div className="lg:col-span-1">
-            <Card className="bg-white/70 dark:bg-navy border-gold/30 text-navy dark:text-white h-full">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="text-gold" />
-                    <span>Cotações do Dia</span>
-                  </CardTitle>
-                  <CardDescription className="text-navy/70 dark:text-white/70">
-                    Atualizado em {new Date().toLocaleDateString('pt-BR')}
-                  </CardDescription>
+        <div className="grid grid-cols-1 gap-6 md:gap-8">
+          <Card className="bg-white/70 dark:bg-navy border-gold/30 text-navy dark:text-white">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-xl md:text-2xl">
+                  <TrendingUp className="text-gold" />
+                  <span>Cotações do Dia</span>
+                </CardTitle>
+                <CardDescription className="text-navy/70 dark:text-white/70">
+                  Atualizado em {new Date().toLocaleDateString('pt-BR')}
+                </CardDescription>
+              </div>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                onClick={handleRefreshRates} 
+                disabled={refreshingRates} 
+                className="border-gold/30 text-gold hover:text-white bg-white/50 dark:bg-gold-dark"
+              >
+                <RefreshCw className={`h-4 w-4 ${refreshingRates ? 'animate-spin' : ''}`} />
+                <span className="sr-only">Atualizar cotações</span>
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {isMobile ? (
+                <div className="space-y-4">
+                  {exchangeRates.map(rate => (
+                    <div key={rate.code} className="p-4 bg-white/50 dark:bg-navy-light/50 rounded-lg border border-gold/10">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          {rate.code.includes('USD') && <DollarSign className="w-4 h-4 text-gold" />}
+                          {rate.code.includes('EUR') && <Euro className="w-4 h-4 text-gold" />}
+                          {rate.code.includes('BRL/') && <span className="text-gold font-bold">R$</span>}
+                          <span className="font-medium">{rate.name}</span>
+                        </div>
+                        <span className={rate.change >= 0 ? "text-green-400" : "text-red-400"}>
+                          <div className="flex items-center gap-1">
+                            {rate.change >= 0 ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
+                            {Math.abs(rate.change * 100).toFixed(2)}%
+                          </div>
+                        </span>
+                      </div>
+                      <div className="text-lg font-semibold">{formatCurrency(rate.rate)}</div>
+                    </div>
+                  ))}
                 </div>
-                <Button variant="outline" size="icon" onClick={handleRefreshRates} disabled={refreshingRates} className="border-gold/30 text-gold hover:text-white bg-white/50 dark:bg-gold-dark">
-                  <RefreshCw className={`h-4 w-4 ${refreshingRates ? 'animate-spin' : ''}`} />
-                  <span className="sr-only">Atualizar cotações</span>
-                </Button>
-              </CardHeader>
-              <CardContent>
+              ) : (
                 <Table>
                   <TableHeader>
                     <TableRow className="border-gold/20">
@@ -187,7 +222,8 @@ const BusinessNews = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {exchangeRates.map(rate => <TableRow key={rate.code} className="border-gold/10">
+                    {exchangeRates.map(rate => (
+                      <TableRow key={rate.code} className="border-gold/10">
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
                             {rate.code.includes('USD') && <DollarSign className="w-4 h-4 text-gold" />}
@@ -203,54 +239,66 @@ const BusinessNews = () => {
                             {Math.abs(rate.change * 100).toFixed(2)}%
                           </div>
                         </TableCell>
-                      </TableRow>)}
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
-              </CardContent>
-            </Card>
-          </div>
-          
-          <div className="lg:col-span-2">
-            <Card className="bg-white/70 dark:bg-navy border-gold/30 text-navy dark:text-white h-full">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Newspaper className="text-gold" />
-                    <span>Últimas Notícias</span>
-                  </CardTitle>
-                  <CardDescription className="text-navy/70 dark:text-white/70">
-                    Notícias atualizadas diariamente
-                  </CardDescription>
-                </div>
-                <Button variant="outline" size="icon" onClick={handleRefreshNews} disabled={refreshingNews} className="border-gold/30 text-gold hover:text-white bg-white/50 dark:bg-gold-dark">
-                  <RefreshCw className={`h-4 w-4 ${refreshingNews ? 'animate-spin' : ''}`} />
-                  <span className="sr-only">Atualizar notícias</span>
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  {news.map((item, index) => <div key={index} className="border-b border-gold/10 pb-4 last:border-0">
-                      <h3 className="text-lg font-medium text-gold mb-2">{item.title}</h3>
-                      <p className="text-navy/80 dark:text-white/80 mb-2">{item.description}</p>
-                      <div className="flex justify-between items-center">
-                        <a 
-                          href={item.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="text-purple hover:text-purple-400 text-sm transition-colors duration-300"
-                        >
-                          Ler mais
-                        </a>
-                        <span className="text-navy/60 dark:text-white/60 text-sm">{formatDate(item.publishedAt)}</span>
-                      </div>
-                    </div>)}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white/70 dark:bg-navy border-gold/30 text-navy dark:text-white">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-xl md:text-2xl">
+                  <Newspaper className="text-gold" />
+                  <span>Últimas Notícias</span>
+                </CardTitle>
+                <CardDescription className="text-navy/70 dark:text-white/70">
+                  Notícias atualizadas diariamente
+                </CardDescription>
+              </div>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                onClick={handleRefreshNews} 
+                disabled={refreshingNews} 
+                className="border-gold/30 text-gold hover:text-white bg-white/50 dark:bg-gold-dark"
+              >
+                <RefreshCw className={`h-4 w-4 ${refreshingNews ? 'animate-spin' : ''}`} />
+                <span className="sr-only">Atualizar notícias</span>
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {news.map((item, index) => (
+                  <div key={index} className="border-b border-gold/10 pb-4 last:border-0">
+                    <h3 className="text-base md:text-lg font-medium text-gold mb-2">{item.title}</h3>
+                    <p className="text-sm md:text-base text-navy/80 dark:text-white/80 mb-2">
+                      {item.description}
+                    </p>
+                    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2">
+                      <a 
+                        href={item.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-purple hover:text-purple-400 text-sm transition-colors duration-300"
+                      >
+                        Ler mais
+                      </a>
+                      <span className="text-navy/60 dark:text-white/60 text-sm">
+                        {formatDate(item.publishedAt)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
-    </section>;
+    </section>
+  );
 };
 
 export default BusinessNews;
