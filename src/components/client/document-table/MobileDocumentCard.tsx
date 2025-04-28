@@ -39,11 +39,11 @@ export const MobileDocumentCard = ({
         : "bg-orange-300/50 dark:bg-navy-light/50 border-gold/20"
     }`}>
       <div className="flex items-center justify-between mb-2">
-        <div className="font-medium text-navy dark:text-white flex items-center">
+        <div className="font-medium text-navy dark:text-gold flex items-center">
           {!doc.viewed && <BellDot size={16} className="text-blue-500 dark:text-blue-400 mr-2" />}
           {doc.name}
         </div>
-        <span className="text-xs px-2 py-1 rounded-full bg-orange-300 dark:bg-navy text-navy dark:text-gold">
+        <span className="text-xs px-2 py-1 rounded-full bg-gold text-navy">
           {getDisplayCategory(doc)}
         </span>
       </div>
@@ -66,10 +66,10 @@ export const MobileDocumentCard = ({
       
       {doc.observations && (
         <div className="mb-3 text-sm">
-          <div className="text-blue-600 dark:text-blue-400 flex items-center">
-            <span className="text-gray-600 dark:text-gray-300">Observações:</span>
+          <div className="text-gray-600 dark:text-gray-300 flex items-center">
+            <span>Observações:</span>
           </div>
-          <p className="text-navy dark:text-white text-sm ml-5">{doc.observations}</p>
+          <p className="text-navy dark:text-white text-sm ml-2">{doc.observations}</p>
         </div>
       )}
       

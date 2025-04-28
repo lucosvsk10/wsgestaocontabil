@@ -22,10 +22,10 @@ export const DocumentActions = ({
       size="sm" 
       disabled={isDocumentExpired(doc.expires_at)} 
       onClick={() => handleDownload && handleDownload(doc)} 
-      className="flex-1 bg-orange-300/50 dark:bg-navy-light/50 border-gold/20 text-navy dark:text-gold hover:bg-orange-300 hover:text-navy dark:hover:bg-navy dark:hover:text-gold flex items-center justify-center gap-1"
+      className="flex-1 bg-orange-300/50 dark:bg-navy-light/50 border-gold/20 text-navy dark:text-gold hover:bg-gold hover:text-navy dark:hover:bg-gold-light dark:hover:text-navy flex items-center justify-center gap-1"
     >
       <Download size={14} />
-      <span>{doc.filename || doc.original_filename || "Baixar"}</span>
+      <span className="truncate">{doc.filename || doc.original_filename || "Baixar"}</span>
     </Button>
   );
 };

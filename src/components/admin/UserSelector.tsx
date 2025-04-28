@@ -94,18 +94,18 @@ export const UserSelector = ({
   };
 
   return (
-    <Card className="md:col-span-1 bg-[#393532] border border-gold/20">
-      <CardHeader className="bg-[#393532] rounded-2xl">
-        <CardTitle className="text-[#e8cc81]">Seleção de Usuário</CardTitle>
+    <Card className="md:col-span-1 bg-orange-200 dark:bg-navy-dark border border-gold/20">
+      <CardHeader>
+        <CardTitle className="text-navy dark:text-gold">Seleção de Usuário</CardTitle>
       </CardHeader>
-      <CardContent className="py-0 my-0 bg-[#393532]">
+      <CardContent className="py-0 my-0">
         {isLoadingUsers ? (
           <div className="flex justify-center py-4">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gold"></div>
           </div>
         ) : (
           <>
-            <p className="text-[#e9aa91]">
+            <p className="text-navy dark:text-white">
               Selecione um usuário para gerenciar seus documentos
             </p>
             <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 mt-4">
@@ -113,14 +113,22 @@ export const UserSelector = ({
                 <Button 
                   key={user.id} 
                   variant={selectedUserId === user.id ? "default" : "outline"} 
-                  className={`w-full justify-start text-left ${selectedUserId === user.id ? 'bg-gold text-navy hover:bg-gold-light' : 'bg-[#46413d] text-white hover:bg-[#46413d]/90 border-gold/20'}`}
+                  className={`w-full justify-start text-left ${
+                    selectedUserId === user.id 
+                      ? 'bg-gold text-navy hover:bg-gold-light' 
+                      : 'bg-orange-300/50 dark:bg-navy-light/50 text-navy dark:text-white hover:bg-gold/50 dark:hover:bg-gold/50 hover:text-navy dark:hover:text-navy border-gold/20'
+                  }`}
                   onClick={() => handleSelectUser(user)}
                   disabled={processingUserId === user.id}
                 >
                   <User className="mr-2 h-4 w-4" />
                   <div className="truncate">
                     <span>{user.name || "Usuário"}</span>
-                    <span className={`text-xs ${selectedUserId === user.id ? 'text-navy/70' : 'text-gray-400'} block truncate`}>
+                    <span className={`text-xs ${
+                      selectedUserId === user.id 
+                        ? 'text-navy/70' 
+                        : 'text-navy/70 dark:text-white/70'
+                    } block truncate`}>
                       {user.email}
                     </span>
                   </div>
@@ -130,7 +138,7 @@ export const UserSelector = ({
                 </Button>
               ))}
               {users.length === 0 && (
-                <p className="text-[#e9aa91]">
+                <p className="text-navy dark:text-white">
                   Nenhum usuário encontrado
                 </p>
               )}

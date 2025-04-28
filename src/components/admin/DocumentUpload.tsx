@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +7,7 @@ import { DocumentCategorySelect } from "./document-upload/DocumentCategorySelect
 import { DocumentObservations } from "./document-upload/DocumentObservations";
 import { DocumentExpirationFields } from "./document-upload/DocumentExpirationFields";
 import { FileUploadArea } from "./document-upload/FileUploadArea";
+
 interface DocumentUploadProps {
   onUpload: (e: React.FormEvent) => Promise<void>;
   isUploading: boolean;
@@ -22,6 +24,7 @@ interface DocumentUploadProps {
   noExpiration: boolean;
   setNoExpiration: (value: boolean) => void;
 }
+
 export const DocumentUpload = ({
   onUpload,
   isUploading,
@@ -42,11 +45,13 @@ export const DocumentUpload = ({
     e.preventDefault();
     onUpload(e);
   };
-  return <Card className="w-full max-w-4xl mx-auto border-gold/20 bg-[#46413d] rounded-md">
-      <CardHeader className="space-y-1 text-center my-0 rounded-t-md pb-3 bg-[inh] bg-inherit">
-        <CardTitle className="text-[#e8cc81] font-medium text-2xl">ENVIAR DOCUMENTO</CardTitle>
+
+  return (
+    <Card className="w-full max-w-4xl mx-auto border-gold/20 bg-orange-200 dark:bg-navy-dark rounded-md">
+      <CardHeader className="space-y-1 text-center my-0 rounded-t-md pb-3">
+        <CardTitle className="text-navy dark:text-gold font-medium text-2xl">ENVIAR DOCUMENTO</CardTitle>
       </CardHeader>
-      <CardContent className="bg-[#46413d] pt-4">
+      <CardContent className="pt-4">
         <form onSubmit={handleFormSubmit} className="space-y-6">
           <div className="grid gap-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -70,5 +75,6 @@ export const DocumentUpload = ({
           </Button>
         </form>
       </CardContent>
-    </Card>;
+    </Card>
+  );
 };
