@@ -1,4 +1,3 @@
-
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Document } from "@/utils/auth/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -26,8 +25,11 @@ export const DesktopDocumentTable = ({
   loadingDocumentIds,
 }: DesktopDocumentTableProps) => {
   const getDisplayCategory = (doc: Document) => {
-    if (doc.category === 'Impostos' && doc.subcategory === 'Imposto de Renda') {
-      return 'Imposto de Renda';
+    if (doc.category.startsWith('Impostos/')) {
+      return doc.category.split('/')[1];
+    }
+    if (doc.subcategory) {
+      return doc.subcategory;
     }
     return doc.category;
   };
