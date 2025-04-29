@@ -53,7 +53,7 @@ const NewsCard = ({ news, onRefresh, isRefreshing }: NewsCardProps) => {
         <div className="space-y-6">
           {news.map((item, index) => (
             <div key={index} className="border-b border-gold/10 pb-4 last:border-0">
-              <h3 className="text-base md:text-lg font-medium text-gold mb-2">{item.title}</h3>
+              <h3 className="text-base md:text-lg font-medium text-navy-light dark:text-gold mb-2">{item.title}</h3>
               <p className="text-sm md:text-base text-navy/80 dark:text-white/80 mb-2">
                 {item.description}
               </p>
