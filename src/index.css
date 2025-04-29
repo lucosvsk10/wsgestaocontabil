@@ -178,15 +178,11 @@
     aspect-ratio: 3/2;
   }
 }
-/* Esconde completamente o botão "Edit with Lovable" */
-[data-lovable-edit-button],
-.lovable-edit-button,
-button[aria-label="Edit with Lovable"],
-iframe + div[style*="position: fixed"],
-div[style*="Edit with Lovable"] {
+iframe[src*="lovable.dev"] {
   display: none !important;
   visibility: hidden !important;
   pointer-events: none !important;
   opacity: 0 !important;
   z-index: -9999 !important;
 }
+
