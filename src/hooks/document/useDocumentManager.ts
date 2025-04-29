@@ -5,6 +5,7 @@ import { useDocumentActions } from "./useDocumentActions";
 import { useDocumentUpload } from "../useDocumentUpload";
 import { triggerExpiredDocumentsCleanup } from "@/utils/documents/documentCleanup";
 import { UserType } from "@/types/admin";
+import { supabase } from "@/integrations/supabase/client";
 
 export const useDocumentManager = (users: any[], supabaseUsers: any[]) => {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
@@ -60,6 +61,30 @@ export const useDocumentManager = (users: any[], supabaseUsers: any[]) => {
       triggerExpiredDocumentsCleanup().catch(error => {
         console.error("Error during expired documents cleanup:", error);
       });
+
+      // Adicionar canal de tempo real para esse usuário específico
+      const channel = supabase
+        .channel(`admin-documents-${selectedUserId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',  // Monitorar todos os eventos (INSERT, UPDATE, DELETE)
+            schema: 'public',
+            table: 'documents',
+            filter: `user_id=eq.${selectedUserId}`,
+          },
+          (payload) => {
+            console.log("Mudança detectada em documentos:", payload);
+            // Atualizar a lista de documentos
+            fetchUserDocuments(selectedUserId);
+          }
+        )
+        .subscribe();
+      
+      // Limpar inscrição quando o componente desmontar ou o usuário mudar
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [selectedUserId, fetchUserDocuments]);
 

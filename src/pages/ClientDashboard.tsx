@@ -10,6 +10,7 @@ import Footer from "@/components/Footer";
 import { formatDate, isDocumentExpired, daysUntilExpiration, getDocumentsByCategory } from "@/utils/documentUtils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useDocumentFetch } from "@/hooks/useDocumentFetch";
+import { useDocumentRealtime } from "@/hooks/document/useDocumentRealtime"; 
 
 const ClientDashboard = () => {
   const { user } = useAuth();
@@ -19,6 +20,9 @@ const ClientDashboard = () => {
   const { documents, isLoadingDocuments, fetchUserDocuments } = useDocumentFetch();
   const hasInitializedRef = useRef(false);
   const userSelectedRef = useRef(false);
+  
+  // Adicionar hook de notificações em tempo real
+  useDocumentRealtime();
 
   // Categorias de documentos atualizadas
   const categories = ["Impostos", "Folha de Pagamento", "Documentações", "Certidões"];
