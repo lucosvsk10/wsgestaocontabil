@@ -178,11 +178,6 @@
     aspect-ratio: 3/2;
   }
 }
-iframe[src*="lovable.dev"] {
+#lovable-badge {
   display: none !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
-  opacity: 0 !important;
-  z-index: -9999 !important;
 }
-
