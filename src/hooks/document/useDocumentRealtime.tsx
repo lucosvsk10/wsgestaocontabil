@@ -10,7 +10,10 @@ export const useDocumentRealtime = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [newDocument, setNewDocument] = useState<Document | null>(null);
-  const { downloadDocument } = useDocumentActions();
+  
+  // Create a no-op function to pass to useDocumentActions since we're not refreshing the list here
+  const noopFetchDocuments = async () => {};
+  const { downloadDocument } = useDocumentActions(noopFetchDocuments);
 
   // Função para baixar o documento da notificação
   const handleDownloadNotifiedDocument = async () => {
