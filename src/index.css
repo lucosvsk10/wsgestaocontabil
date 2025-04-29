@@ -178,3 +178,8 @@
     aspect-ratio: 3/2;
   }
 }
+/* Esconde o botão "Edit with Lovable" */
+[data-lovable-edit-button],
+.lovable-edit-button {
+  display: none !important;
+}
