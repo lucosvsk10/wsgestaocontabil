@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DocumentTabs } from "@/components/client/DocumentTabs";
@@ -11,6 +12,7 @@ import { formatDate, isDocumentExpired, daysUntilExpiration, getDocumentsByCateg
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useDocumentFetch } from "@/hooks/useDocumentFetch";
 import { useDocumentRealtime } from "@/hooks/document/useDocumentRealtime"; 
+import { NotificationsButton } from "@/components/client/NotificationsButton";
 
 const ClientDashboard = () => {
   const { user } = useAuth();
@@ -102,10 +104,11 @@ const ClientDashboard = () => {
       <Navbar />
       <div className={`container mx-auto p-4 flex-grow ${isMobile ? 'px-2' : 'px-4'} py-6`}>
         <Card className="bg-white dark:bg-[#393532] border-gold/20">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between font-extralight text-gold text-2xl">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="font-extralight text-gold text-2xl">
               {selectedCategory ? `Documentos - ${selectedCategory}` : 'Meus Documentos'}
             </CardTitle>
+            <NotificationsButton />
           </CardHeader>
           <CardContent>
             {isLoadingDocuments ? (

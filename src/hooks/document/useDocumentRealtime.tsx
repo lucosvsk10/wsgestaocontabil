@@ -5,11 +5,13 @@ import { useToast } from "@/hooks/use-toast";
 import { Document } from "@/types/admin";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDocumentActions } from "./useDocumentActions";
+import { useNotifications } from "@/hooks/useNotifications";
 
 export const useDocumentRealtime = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [newDocument, setNewDocument] = useState<Document | null>(null);
+  const { sendNotification, permissionStatus } = useNotifications();
   
   // Create a no-op function to pass to useDocumentActions since we're not refreshing the list here
   const noopFetchDocuments = async () => {};
@@ -59,6 +61,19 @@ export const useDocumentRealtime = () => {
           // Atualizar estado com o novo documento
           setNewDocument(newDoc);
           
+          // Enviar notificação do navegador se permitido
+          if (permissionStatus === 'granted') {
+            sendNotification(
+              "Novo documento disponível!", 
+              {
+                body: `Um novo documento foi enviado para você: ${newDoc.name}`,
+                icon: "/lovable-uploads/ebbdfdb8-bb18-4548-8b25-3d5982c97873.png",
+                tag: `new-document-${newDoc.id}`,
+                requireInteraction: true
+              }
+            );
+          }
+          
           // Mostrar toast de notificação
           toast({
             title: "Novo documento disponível",
@@ -86,7 +101,7 @@ export const useDocumentRealtime = () => {
       console.log("Removendo canal de notificações de documentos");
       supabase.removeChannel(channel);
     };
-  }, [user?.id, toast]);
+  }, [user?.id, toast, permissionStatus, sendNotification]);
 
   return {
     newDocument,
