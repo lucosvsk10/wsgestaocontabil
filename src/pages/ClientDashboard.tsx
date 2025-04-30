@@ -23,39 +23,39 @@ const ClientDashboard = () => {
   const hasInitializedRef = useRef(false);
   const userSelectedRef = useRef(false);
   
-  // Adicionar hook de notificações em tempo real
+  // Add real-time notification hook
   useDocumentRealtime();
 
-  // Categorias de documentos atualizadas
+  // Document categories
   const categories = ["Impostos", "Folha de Pagamento", "Documentações", "Certidões"];
 
-  // Obter documentos por categoria
+  // Get documents by category
   const documentsByCategory = getDocumentsByCategory(documents, categories);
 
-  // Carregar documentos do usuário
+  // Load user documents
   useEffect(() => {
     if (user?.id) {
       fetchUserDocuments(user.id);
     }
   }, [user, fetchUserDocuments]);
 
-  // Encontrar a categoria com o documento mais recente - apenas na primeira renderização
+  // Find category with most recent document - only on first render
   useEffect(() => {
-    // Garante que só execute quando os documentos estiverem carregados e ainda não inicializado
+    // Only execute when documents are loaded and not yet initialized
     if (!hasInitializedRef.current && !isLoadingDocuments) {
-      // Apenas faça a seleção automática se o usuário ainda não fez uma seleção manual
+      // Only do automatic selection if user hasn't made manual selection
       if (!userSelectedRef.current) {
         let mostRecentCategory: string | null = null;
         
         if (documents.length > 0) {
           let mostRecentDate: Date | null = null;
           
-          // Percorrer todas as categorias para encontrar o documento mais recente
+          // Search all categories to find most recent document
           categories.forEach(category => {
             const docsInCategory = documentsByCategory[category] || [];
             
             if (docsInCategory.length > 0) {
-              // Ordenar documentos por data de upload (mais recente primeiro)
+              // Sort documents by upload date (most recent first)
               const sortedDocs = [...docsInCategory].sort(
                 (a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
               );
@@ -63,7 +63,7 @@ const ClientDashboard = () => {
               const mostRecentInCategory = sortedDocs[0];
               const docDate = new Date(mostRecentInCategory.uploaded_at);
               
-              // Verificar se é o mais recente de todas as categorias
+              // Check if it's the most recent of all categories
               if (!mostRecentDate || docDate > mostRecentDate) {
                 mostRecentDate = docDate;
                 mostRecentCategory = category;
@@ -72,29 +72,29 @@ const ClientDashboard = () => {
           });
         }
         
-        // Selecionar a categoria com o documento mais recente ou a primeira com documentos
+        // Select category with most recent document or first with documents
         if (mostRecentCategory) {
           setSelectedCategory(mostRecentCategory);
         } else if (categories.some(cat => documentsByCategory[cat]?.length > 0)) {
-          // Fallback: selecionar a primeira categoria que tenha documentos
+          // Fallback: select first category with documents
           const firstCategoryWithDocs = categories.find(cat => documentsByCategory[cat]?.length > 0);
           setSelectedCategory(firstCategoryWithDocs || categories[0]);
         } else {
-          // Fallback final: primeira categoria disponível
+          // Final fallback: first available category
           setSelectedCategory(categories[0]);
         }
       }
       
-      // Marcar como inicializado para evitar execuções futuras
+      // Mark as initialized to prevent future executions
       hasInitializedRef.current = true;
     }
   }, [documents, isLoadingDocuments, categories, documentsByCategory]);
 
-  // Função para alterar a categoria selecionada (para uso no DocumentTabs)
+  // Function to change selected category (for use in DocumentTabs)
   const handleCategoryChange = (newCategory: string | null) => {
     if (newCategory) {
       setSelectedCategory(newCategory);
-      // Marca que o usuário fez uma seleção manual
+      // Mark that user made a manual selection
       userSelectedRef.current = true;
     }
   };

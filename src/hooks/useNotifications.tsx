@@ -7,7 +7,7 @@ export const useNotifications = () => {
   const [supported, setSupported] = useState(false);
   const { toast } = useToast();
 
-  // Verificar se o navegador suporta notificações
+  // Check if the browser supports notifications
   useEffect(() => {
     if ('Notification' in window) {
       setSupported(true);
@@ -15,7 +15,7 @@ export const useNotifications = () => {
     }
   }, []);
 
-  // Função para solicitar permissão
+  // Function to request permission
   const requestPermission = async () => {
     if (!supported) {
       toast({
@@ -50,7 +50,7 @@ export const useNotifications = () => {
     }
   };
 
-  // Função para enviar notificação
+  // Function to send notification
   const sendNotification = (title: string, options?: NotificationOptions) => {
     if (!supported || permissionStatus !== 'granted') return false;
 

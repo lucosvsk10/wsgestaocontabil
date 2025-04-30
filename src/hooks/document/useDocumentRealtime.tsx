@@ -17,7 +17,7 @@ export const useDocumentRealtime = () => {
   const noopFetchDocuments = async () => {};
   const { downloadDocument } = useDocumentActions(noopFetchDocuments);
 
-  // Função para baixar o documento da notificação
+  // Function to download the document from notification
   const handleDownloadNotifiedDocument = async () => {
     if (!newDocument) return;
     
@@ -30,7 +30,7 @@ export const useDocumentRealtime = () => {
           user?.id
         );
         
-        // Limpar a notificação após download
+        // Clear notification after download
         setNewDocument(null);
       }
     } catch (error) {
@@ -41,7 +41,7 @@ export const useDocumentRealtime = () => {
   useEffect(() => {
     if (!user?.id) return;
 
-    // Inscrever-se para atualizações em tempo real na tabela documents
+    // Subscribe to real-time updates on the documents table
     const channel = supabase
       .channel('document-notifications')
       .on(
@@ -55,13 +55,13 @@ export const useDocumentRealtime = () => {
         (payload) => {
           console.log("Novo documento detectado:", payload);
           
-          // Obter os dados do novo documento
+          // Get new document data
           const newDoc = payload.new as Document;
           
-          // Atualizar estado com o novo documento
+          // Update state with new document
           setNewDocument(newDoc);
           
-          // Enviar notificação do navegador se permitido
+          // Send browser notification if permission is granted
           if (permissionStatus === 'granted') {
             sendNotification(
               "Novo documento disponível!", 
@@ -74,7 +74,7 @@ export const useDocumentRealtime = () => {
             );
           }
           
-          // Mostrar toast de notificação
+          // Show toast notification
           toast({
             title: "Novo documento disponível",
             description: (
@@ -88,7 +88,7 @@ export const useDocumentRealtime = () => {
                 </button>
               </div>
             ),
-            duration: 10000, // 10 segundos
+            duration: 10000, // 10 seconds
           });
         }
       )
@@ -96,7 +96,7 @@ export const useDocumentRealtime = () => {
       
     console.log("Canal de notificações de documentos inscrito");
 
-    // Limpar inscrição quando o componente desmontar
+    // Clean up subscription when component unmounts
     return () => {
       console.log("Removendo canal de notificações de documentos");
       supabase.removeChannel(channel);
