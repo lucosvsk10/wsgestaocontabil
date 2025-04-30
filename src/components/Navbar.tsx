@@ -18,7 +18,7 @@ const Navbar = () => {
     handleLogout,
     navigateToDashboard
   } = useNavigation();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const isMobile = useIsMobile();
   
   useEffect(() => {
@@ -31,12 +31,15 @@ const Navbar = () => {
   
   return <header className="bg-white dark:bg-navy-dark text-navy dark:text-gold">
       <div className={`container mx-auto flex items-center justify-between ${isMobile ? 'px-4 py-3' : 'px-[28px] py-[19px]'}`}>
-        <Logo />
+        {/* Logo e ThemeToggle na esquerda */}
         <div className="flex items-center gap-4">
+          <Logo />
           <ThemeToggle />
-          
-          {/* Notification Bell */}
-          {user && (
+        </div>
+        
+        <div className="flex items-center gap-4">
+          {/* Notification Bell - oculto para administradores */}
+          {user && !isAdmin() && (
             <NotificationBell />
           )}
           
