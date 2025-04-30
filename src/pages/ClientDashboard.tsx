@@ -8,11 +8,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { formatDate, isDocumentExpired, daysUntilExpiration, getDocumentsByCategory } from "@/utils/documentUtils";
+import { formatDate, isDocumentExpired, daysUntilExpiration } from "@/utils/documentUtils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useDocumentFetch } from "@/hooks/useDocumentFetch";
 import { useDocumentRealtime } from "@/hooks/document/useDocumentRealtime"; 
 import { NotificationsButton } from "@/components/client/NotificationsButton";
+import { organizeDocuments } from "@/utils/documents/documentOrganizer";
+import { useNotificationsSystem } from "@/hooks/useNotificationsSystem";
 
 const ClientDashboard = () => {
   const { user } = useAuth();
@@ -25,19 +27,25 @@ const ClientDashboard = () => {
   
   // Add real-time notification hook
   useDocumentRealtime();
-
+  
+  // Mark all notifications as read when visiting dashboard
+  const { markAllAsRead } = useNotificationsSystem();
+  
   // Document categories
   const categories = ["Impostos", "Folha de Pagamento", "Documentações", "Certidões"];
 
-  // Get documents by category
-  const documentsByCategory = getDocumentsByCategory(documents, categories);
+  // Get documents by category with prioritization
+  const documentsByCategory = organizeDocuments(documents, categories);
 
   // Load user documents
   useEffect(() => {
     if (user?.id) {
       fetchUserDocuments(user.id);
+      
+      // Mark all notifications as read when visiting the documents dashboard
+      markAllAsRead();
     }
-  }, [user, fetchUserDocuments]);
+  }, [user, fetchUserDocuments, markAllAsRead]);
 
   // Find category with most recent document - only on first render
   useEffect(() => {

@@ -9,6 +9,7 @@ import ThemeToggle from './ThemeToggle';
 import { useAuth } from '@/contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { NotificationBell } from './notifications/NotificationBell';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -33,6 +34,11 @@ const Navbar = () => {
         <Logo />
         <div className="flex items-center gap-4">
           <ThemeToggle />
+          
+          {/* Notification Bell */}
+          {user && (
+            <NotificationBell />
+          )}
           
           {/* Account Button for Mobile */}
           {isMobile && user && (

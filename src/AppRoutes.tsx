@@ -9,6 +9,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import ClientDashboard from "./pages/ClientDashboard";
 import { checkIsAdmin } from "./utils/auth/userChecks";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/toaster";
 
 const AppRoutes = () => {
   const { userData, user } = useAuth();
@@ -47,6 +48,7 @@ const AppRoutes = () => {
         {/* Route for catching not found URLs */}
         <Route path="*" element={<NotFound />} />
       </Routes>
+      <Toaster />
     </TooltipProvider>
   );
 };
