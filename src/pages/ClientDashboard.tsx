@@ -15,15 +15,19 @@ import { useDocumentRealtime } from "@/hooks/document/useDocumentRealtime";
 import { NotificationsButton } from "@/components/client/NotificationsButton";
 import { organizeDocuments } from "@/utils/documents/documentOrganizer";
 import { useNotificationsSystem } from "@/hooks/useNotificationsSystem";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertTriangle, RefreshCcw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const ClientDashboard = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const isMobile = useIsMobile();
-  const { documents, isLoadingDocuments, fetchUserDocuments } = useDocumentFetch();
+  const { documents, isLoadingDocuments, error, fetchUserDocuments } = useDocumentFetch();
   const hasInitializedRef = useRef(false);
   const userSelectedRef = useRef(false);
+  const fetchAttemptedRef = useRef(false);
   
   // Add real-time notification hook
   useDocumentRealtime();
@@ -39,18 +43,25 @@ const ClientDashboard = () => {
 
   // Load user documents
   useEffect(() => {
+    console.log("ClientDashboard useEffect - User:", user);
+    
     if (user?.id) {
+      console.log("User ID disponível, buscando documentos:", user.id);
       fetchUserDocuments(user.id);
+      fetchAttemptedRef.current = true;
       
       // Mark all notifications as read when visiting the documents dashboard
       markAllAsRead();
+    } else if (!fetchAttemptedRef.current) {
+      console.log("User ID não disponível, não é possível buscar documentos");
     }
   }, [user, fetchUserDocuments, markAllAsRead]);
 
   // Find category with most recent document - only on first render
   useEffect(() => {
     // Only execute when documents are loaded and not yet initialized
-    if (!hasInitializedRef.current && !isLoadingDocuments) {
+    if (!hasInitializedRef.current && !isLoadingDocuments && documents.length > 0) {
+      console.log("Inicializando seleção de categoria baseada em documentos");
       // Only do automatic selection if user hasn't made manual selection
       if (!userSelectedRef.current) {
         let mostRecentCategory: string | null = null;
@@ -107,6 +118,13 @@ const ClientDashboard = () => {
     }
   };
 
+  // Função para tentar novamente em caso de erro
+  const handleRetry = () => {
+    if (user?.id) {
+      fetchUserDocuments(user.id);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-orange-200 dark:bg-navy-dark">
       <Navbar />
@@ -123,6 +141,23 @@ const ClientDashboard = () => {
               <div className="flex justify-center py-8">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
               </div>
+            ) : error ? (
+              <Alert variant="destructive" className="mb-6">
+                <AlertTriangle className="h-5 w-5 mr-2" />
+                <AlertTitle>Erro ao carregar documentos</AlertTitle>
+                <AlertDescription className="flex flex-col gap-2">
+                  <p>{error}</p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleRetry}
+                    className="flex items-center gap-2 self-end"
+                  >
+                    <RefreshCcw className="h-4 w-4" />
+                    Tentar novamente
+                  </Button>
+                </AlertDescription>
+              </Alert>
             ) : documents.length > 0 ? (
               selectedCategory ? (
                 <div className={`${isMobile ? 'overflow-x-auto' : ''}`}>
@@ -135,7 +170,7 @@ const ClientDashboard = () => {
                     formatDate={formatDate} 
                     isDocumentExpired={isDocumentExpired} 
                     daysUntilExpiration={daysUntilExpiration} 
-                    refreshDocuments={() => fetchUserDocuments(user?.id || '')}
+                    refreshDocuments={() => user?.id && fetchUserDocuments(user.id)}
                     activeCategory={selectedCategory}
                   />
                 </div>
