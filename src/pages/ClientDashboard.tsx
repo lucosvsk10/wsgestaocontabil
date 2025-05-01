@@ -18,6 +18,7 @@ import { useNotificationsSystem } from "@/hooks/useNotificationsSystem";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 
 const ClientDashboard = () => {
   const { user } = useAuth();
@@ -138,9 +139,7 @@ const ClientDashboard = () => {
           </CardHeader>
           <CardContent>
             {isLoadingDocuments ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
-              </div>
+              <LoadingSpinner size="lg" />
             ) : error ? (
               <Alert variant="destructive" className="mb-6">
                 <AlertTriangle className="h-5 w-5 mr-2" />
