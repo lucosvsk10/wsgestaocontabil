@@ -1,3 +1,4 @@
+
 import { Document } from "@/types/admin";
 
 // Function to prioritize "Imposto de Renda" documents within "Impostos" category
@@ -11,7 +12,20 @@ export const organizeDocuments = (documents: Document[], categories: string[]): 
   
   // Group documents by category
   documents.forEach(doc => {
-    const category = doc.category || "Documentações";
+    // Handle category format "Category/Subcategory" by extracting the main category
+    let category = doc.category || "Documentações";
+    
+    // If the category contains a slash, extract the main category
+    if (category.includes('/')) {
+      const parts = category.split('/');
+      category = parts[0];
+      
+      // If it's Impostos/imposto de renda, set the subcategory for proper sorting
+      if (category === "Impostos" && parts[1].toLowerCase().includes("imposto de renda")) {
+        doc.subcategory = "Imposto de Renda";
+      }
+    }
+    
     if (!organized[category]) {
       organized[category] = [];
     }
