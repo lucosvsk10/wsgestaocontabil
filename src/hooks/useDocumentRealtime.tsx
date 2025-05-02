@@ -42,6 +42,8 @@ export const useDocumentRealtime = () => {
 
   useEffect(() => {
     if (!user?.id) return;
+    
+    console.log("Setting up document realtime notifications for user:", user.id);
 
     // Subscribe to real-time updates on the documents table
     const channel = supabase

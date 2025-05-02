@@ -46,10 +46,11 @@ export const useDocumentManager = (users: any[], supabaseUsers: any[]) => {
   const uploadHandleUpload = async (e: React.FormEvent) => {
     if (!selectedUserId) return;
     
+    // Fix: Capture the return value from handleUpload which should now properly return {success, documentId}
     const result = await handleUpload(e, selectedUserId, supabaseUsers, users as UserType[]);
     
     // If upload successful, create notification
-    if (result?.success && result.documentId) {
+    if (result && result.success && result.documentId) {
       createNotification(
         "Novo documento disponível",
         `Um novo documento foi enviado: ${documentName || selectedFile?.name || 'Documento'}`,

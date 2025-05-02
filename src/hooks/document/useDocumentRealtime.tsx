@@ -11,7 +11,7 @@ export const useDocumentRealtime = () => {
   const { createNotification } = useNotificationsSystem();
 
   useEffect(() => {
-    // Só adiciona o canal se o usuário estiver autenticado
+    // Only add the channel if user is authenticated
     if (!user?.id) {
       console.log("Usuário não autenticado, não configurando canal de notificações");
       return;
@@ -19,7 +19,7 @@ export const useDocumentRealtime = () => {
     
     console.log("Configurando canal de notificações de documentos para o usuário:", user.id);
     
-    // Canal para monitorar alterações em documentos
+    // Channel to monitor document changes
     const channel = supabase
       .channel(`documents-${user.id}`)
       .on(

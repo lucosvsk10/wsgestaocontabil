@@ -29,6 +29,7 @@ const ClientDashboard = () => {
   const hasInitializedRef = useRef(false);
   const userSelectedRef = useRef(false);
   const fetchAttemptedRef = useRef(false);
+  const notificationsMarkedRef = useRef(false); // New ref to track if notifications were marked
   
   // Add real-time notification hook
   useDocumentRealtime();
@@ -52,7 +53,11 @@ const ClientDashboard = () => {
       fetchAttemptedRef.current = true;
       
       // Mark all notifications as read when visiting the documents dashboard
-      markAllAsRead();
+      // Only do this once per component mount to avoid infinite loop
+      if (!notificationsMarkedRef.current) {
+        markAllAsRead();
+        notificationsMarkedRef.current = true;
+      }
     } else if (!fetchAttemptedRef.current) {
       console.log("User ID não disponível, não é possível buscar documentos");
     }
