@@ -3,10 +3,12 @@ import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useNotificationsSystem } from '@/hooks/useNotificationsSystem';
 
 export const useDocumentRealtime = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { createNotification } = useNotificationsSystem();
 
   useEffect(() => {
     // Só adiciona o canal se o usuário estiver autenticado
@@ -30,13 +32,23 @@ export const useDocumentRealtime = () => {
         },
         (payload) => {
           console.log("Mudança detectada nos documentos:", payload);
-          // Você pode disparar um evento aqui para atualizar os documentos
-          // ou usar um contexto global para notificar outros componentes
           
           if (payload.eventType === 'INSERT') {
+            const newDocument = payload.new;
+            const documentName = newDocument.name || newDocument.filename || newDocument.original_filename || 'Novo documento';
+            const documentCategory = newDocument.category || 'Documentações';
+            
+            // Create a database notification
+            createNotification(
+              "Novo documento disponível",
+              `Um novo documento foi enviado para você: ${documentName}`,
+              newDocument.id
+            );
+            
+            // Show a toast notification
             toast({
               title: "Novo documento disponível",
-              description: "Um novo documento foi adicionado à sua conta.",
+              description: `${documentName} (${documentCategory})`,
             });
           }
         }
@@ -49,5 +61,5 @@ export const useDocumentRealtime = () => {
       console.log("Removendo canal de notificações de documentos");
       supabase.removeChannel(channel);
     };
-  }, [user, toast]);
+  }, [user, toast, createNotification]);
 };

@@ -6,9 +6,11 @@ import { useDocumentUpload } from "../useDocumentUpload";
 import { triggerExpiredDocumentsCleanup } from "@/utils/documents/documentCleanup";
 import { UserType } from "@/types/admin";
 import { supabase } from "@/integrations/supabase/client";
+import { useNotificationsSystem } from "@/hooks/useNotificationsSystem";
 
 export const useDocumentManager = (users: any[], supabaseUsers: any[]) => {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const { createNotification } = useNotificationsSystem();
   
   const {
     documents,
@@ -44,7 +46,16 @@ export const useDocumentManager = (users: any[], supabaseUsers: any[]) => {
   const uploadHandleUpload = async (e: React.FormEvent) => {
     if (!selectedUserId) return;
     
-    await handleUpload(e, selectedUserId, supabaseUsers, users as UserType[]);
+    const result = await handleUpload(e, selectedUserId, supabaseUsers, users as UserType[]);
+    
+    // If upload successful, create notification
+    if (result?.success && result.documentId) {
+      createNotification(
+        "Novo documento disponível",
+        `Um novo documento foi enviado: ${documentName || selectedFile?.name || 'Documento'}`,
+        result.documentId
+      );
+    }
   };
   
   // Wrapper for handleDeleteDocument to include selectedUserId

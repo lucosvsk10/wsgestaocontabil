@@ -10,6 +10,8 @@ export interface Notification {
   title: string;
   message: string;
   document_id: string | null;
+  document_name: string | null;
+  document_category: string | null;
   is_read: boolean;
   created_at: string;
 }
@@ -29,14 +31,28 @@ export const useNotificationsSystem = () => {
     try {
       const { data, error } = await supabase
         .from('notifications')
-        .select('*')
+        .select(`
+          *,
+          documents:document_id (
+            name,
+            category
+          )
+        `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       
-      setNotifications(data || []);
-      setUnreadCount(data?.filter(n => !n.is_read).length || 0);
+      // Process the joined data to include document fields directly in the notification
+      const processedData = data.map(item => ({
+        ...item,
+        document_name: item.documents?.name || null,
+        document_category: item.documents?.category || null,
+        documents: undefined // Remove the nested documents object
+      }));
+      
+      setNotifications(processedData);
+      setUnreadCount(processedData.filter(n => !n.is_read).length || 0);
     } catch (error: any) {
       console.error('Error fetching notifications:', error);
       toast({
@@ -116,6 +132,33 @@ export const useNotificationsSystem = () => {
       console.error('Error creating notification:', error);
     }
   };
+
+  // Check for unread notifications on initial load
+  const checkUnreadNotifications = async () => {
+    if (!user?.id) return;
+    
+    try {
+      const { count, error } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('is_read', false);
+      
+      if (error) throw error;
+      
+      if (count && count > 0) {
+        setUnreadCount(count);
+        
+        // Show a toast notification about unread items
+        toast({
+          title: "Notificações não lidas",
+          description: `Você tem ${count} notificação${count > 1 ? 's' : ''} não lida${count > 1 ? 's' : ''}.`
+        });
+      }
+    } catch (error: any) {
+      console.error('Error checking unread notifications:', error);
+    }
+  };
   
   // Set up realtime subscription for new notifications
   useEffect(() => {
@@ -123,6 +166,9 @@ export const useNotificationsSystem = () => {
     
     // Initial fetch
     fetchNotifications();
+    
+    // Also check for unread notifications on initial load
+    checkUnreadNotifications();
     
     // Subscribe to real-time updates
     const channel = supabase
@@ -137,6 +183,22 @@ export const useNotificationsSystem = () => {
         },
         (payload) => {
           console.log("Notification change detected:", payload);
+          
+          // If a new notification was added, show a toast and update the count
+          if (payload.eventType === 'INSERT') {
+            const newNotification = payload.new as Notification;
+            
+            // Show a toast for the new notification
+            toast({
+              title: newNotification.title,
+              description: newNotification.message,
+              duration: 5000,
+            });
+            
+            // Update unread count without refetching everything
+            setUnreadCount(prev => prev + 1);
+          }
+          
           // Refresh notifications when there are changes
           fetchNotifications();
         }

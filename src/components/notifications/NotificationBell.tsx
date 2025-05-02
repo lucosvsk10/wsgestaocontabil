@@ -123,6 +123,11 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ className })
                     <p className="text-sm text-muted-foreground mt-1">
                       {notification.message}
                     </p>
+                    {notification.document_category && (
+                      <span className="text-xs mt-1 bg-gold/20 text-gold-dark dark:text-gold px-2 py-0.5 rounded-full">
+                        {notification.document_category}
+                      </span>
+                    )}
                     {notification.document_id && (
                       <Link 
                         to="/client" 
