@@ -19,6 +19,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { supabase } from "@/integrations/supabase/client";
 
 const ClientDashboard = () => {
   const { user } = useAuth();
@@ -29,7 +30,8 @@ const ClientDashboard = () => {
   const hasInitializedRef = useRef(false);
   const userSelectedRef = useRef(false);
   const fetchAttemptedRef = useRef(false);
-  const notificationsMarkedRef = useRef(false); // New ref to track if notifications were marked
+  const notificationsMarkedRef = useRef(false);
+  const documentViewUpdateRunRef = useRef(false);
   
   // Add real-time notification hook
   useDocumentRealtime();
@@ -42,6 +44,38 @@ const ClientDashboard = () => {
 
   // Get documents by category with prioritization
   const documentsByCategory = organizeDocuments(documents, categories);
+
+  // Mark unviewed documents as viewed when dashboard is loaded
+  const markUnviewedDocumentsAsViewed = async (userId: string) => {
+    if (!userId || documentViewUpdateRunRef.current) return;
+    
+    try {
+      documentViewUpdateRunRef.current = true;
+      
+      // Find documents that haven't been viewed yet
+      const unviewedDocs = documents.filter(doc => !doc.viewed);
+      
+      if (unviewedDocs.length === 0) return;
+      
+      console.log("Marcando documentos não visualizados como visualizados:", unviewedDocs.length);
+      
+      // Update all unviewed documents to viewed
+      await Promise.all(
+        unviewedDocs.map(async (doc) => {
+          await supabase
+            .from('documents')
+            .update({ viewed: true, viewed_at: new Date().toISOString() })
+            .eq('id', doc.id);
+        })
+      );
+      
+      // Refresh documents list without triggering infinite loops
+      fetchUserDocuments(userId);
+      
+    } catch (error) {
+      console.error("Error updating document view status:", error);
+    }
+  };
 
   // Load user documents
   useEffect(() => {
@@ -62,6 +96,18 @@ const ClientDashboard = () => {
       console.log("User ID não disponível, não é possível buscar documentos");
     }
   }, [user, fetchUserDocuments, markAllAsRead]);
+  
+  // Mark documents as viewed when loaded
+  useEffect(() => {
+    if (user?.id && documents.length > 0 && !documentViewUpdateRunRef.current) {
+      markUnviewedDocumentsAsViewed(user.id);
+    }
+    
+    // Reset the flag when component unmounts to prepare for next mount
+    return () => {
+      documentViewUpdateRunRef.current = false;
+    };
+  }, [user, documents]);
 
   // Find category with most recent document - only on first render
   useEffect(() => {
