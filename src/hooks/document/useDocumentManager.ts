@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useDocumentFetch } from "../useDocumentFetch";
 import { useDocumentActions } from "./useDocumentActions";
 import { useDocumentUpload } from "../useDocumentUpload";
@@ -11,6 +11,7 @@ import { useNotificationsSystem } from "@/hooks/useNotificationsSystem";
 export const useDocumentManager = (users: any[], supabaseUsers: any[]) => {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const { createNotification } = useNotificationsSystem();
+  const realtimeChannelRef = useRef<any>(null);
   
   const {
     documents,
@@ -76,6 +77,11 @@ export const useDocumentManager = (users: any[], supabaseUsers: any[]) => {
         console.error("Error during expired documents cleanup:", error);
       });
 
+      // Clean up previous subscription if it exists
+      if (realtimeChannelRef.current) {
+        supabase.removeChannel(realtimeChannelRef.current);
+      }
+
       // Adicionar canal de tempo real para esse usuário específico
       const channel = supabase
         .channel(`admin-documents-${selectedUserId}`)
@@ -95,9 +101,15 @@ export const useDocumentManager = (users: any[], supabaseUsers: any[]) => {
         )
         .subscribe();
       
+      // Store channel reference to clean it up later
+      realtimeChannelRef.current = channel;
+      
       // Limpar inscrição quando o componente desmontar ou o usuário mudar
       return () => {
-        supabase.removeChannel(channel);
+        if (realtimeChannelRef.current) {
+          supabase.removeChannel(realtimeChannelRef.current);
+          realtimeChannelRef.current = null;
+        }
       };
     }
   }, [selectedUserId, fetchUserDocuments]);

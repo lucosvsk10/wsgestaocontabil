@@ -62,6 +62,9 @@ export const useDocumentUpload = (
         users.find(u => u.id === selectedUserId)?.email || 
         "Usuário sem email";
 
+      // Convert expirationDate to ISO string if it exists and noExpiration is false
+      const expiresAt = noExpiration ? null : expirationDate ? expirationDate.toISOString() : null;
+
       // Insert document record in database
       const { data: docData, error: docError } = await supabase
         .from("documents")
@@ -75,7 +78,7 @@ export const useDocumentUpload = (
           user_id: selectedUserId,
           category: documentCategory,
           observations: documentObservations,
-          expires_at: noExpiration ? null : expirationDate,
+          expires_at: expiresAt,
           viewed: false
         })
         .select("*")
