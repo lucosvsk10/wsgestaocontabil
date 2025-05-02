@@ -44,9 +44,9 @@ export const useDocumentManager = (users: any[], supabaseUsers: any[]) => {
   
   // Wrapper function for handleUpload that includes the required parameters
   const uploadHandleUpload = async (e: React.FormEvent) => {
-    if (!selectedUserId) return;
+    if (!selectedUserId) return { success: false, documentId: null };
     
-    // Fix: Capture the return value from handleUpload which should now properly return {success, documentId}
+    // Fix: Properly capture and return the result from handleUpload
     const result = await handleUpload(e, selectedUserId, supabaseUsers, users as UserType[]);
     
     // If upload successful, create notification
@@ -57,6 +57,8 @@ export const useDocumentManager = (users: any[], supabaseUsers: any[]) => {
         result.documentId
       );
     }
+    
+    return result; // Return the result so it can be used by the caller
   };
   
   // Wrapper for handleDeleteDocument to include selectedUserId
