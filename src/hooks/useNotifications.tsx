@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import type { Notification } from '@/types/notification';
+import { Notification } from '@/types/notification';
 import {
   fetchUserNotifications,
   markNotificationAsRead,
@@ -12,7 +12,7 @@ import {
   countUnreadNotifications
 } from '@/utils/notifications/notificationsAPI';
 
-export type { Notification };
+export { Notification };
 
 export const useNotifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);

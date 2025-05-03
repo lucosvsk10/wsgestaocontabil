@@ -1,6 +1,7 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { Bell } from 'lucide-react';
-import { useNotifications, Notification } from '@/hooks/useNotifications';
+import { useNotificationsSystem, Notification } from '@/hooks/useNotificationsSystem';
 import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
@@ -24,7 +25,7 @@ interface NotificationBellProps {
 
 export const NotificationBell: React.FC<NotificationBellProps> = ({ className }) => {
   const [open, setOpen] = useState(false);
-  const { notifications, unreadCount, markAsRead, markAllAsRead, isLoading, fetchNotifications } = useNotifications();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, isLoading, fetchNotifications } = useNotificationsSystem();
   const { user } = useAuth();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
