@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useDocumentFetch } from "../useDocumentFetch";
 import { useDocumentActions } from "./useDocumentActions";

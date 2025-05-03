@@ -1,19 +1,18 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Document } from "@/types/admin";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDocumentActions } from "./document/useDocumentActions";
 import { useNotifications } from "@/hooks/useNotifications";
-import { useNotificationsSystem } from "@/hooks/useNotificationsSystem";
 
 export const useDocumentRealtime = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [newDocument, setNewDocument] = useState<Document | null>(null);
-  const { sendNotification, permissionStatus } = useNotifications();
-  const { createNotification } = useNotificationsSystem();
+  const { createNotification } = useNotifications();
+  const realtimeChannelRef = useRef<any>(null);
   
   // Create a no-op function to pass to useDocumentActions since we're not refreshing the list here
   const noopFetchDocuments = async () => {};
@@ -72,19 +71,6 @@ export const useDocumentRealtime = () => {
             newDoc.id
           );
           
-          // Send browser notification if permission is granted
-          if (permissionStatus === 'granted') {
-            sendNotification(
-              "Novo documento disponível!", 
-              {
-                body: `Um novo documento foi enviado para você: ${newDoc.name}`,
-                icon: "/lovable-uploads/ebbdfdb8-bb18-4548-8b25-3d5982c97873.png",
-                tag: `new-document-${newDoc.id}`,
-                requireInteraction: true
-              }
-            );
-          }
-          
           // Show toast notification
           toast({
             title: "Novo documento disponível",
@@ -112,7 +98,7 @@ export const useDocumentRealtime = () => {
       console.log("Removendo canal de notificações de documentos");
       supabase.removeChannel(channel);
     };
-  }, [user?.id, toast, permissionStatus, sendNotification, createNotification]);
+  }, [user?.id, toast, createNotification]);
 
   return {
     newDocument,
