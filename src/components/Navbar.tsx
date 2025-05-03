@@ -38,7 +38,7 @@ const Navbar = () => {
         </div>
         
         <div className="flex items-center gap-4">
-          {/* Notification Bell - Always visible for authenticated users, only hidden for administrators */}
+          {/* Notification Bell - oculto para administradores */}
           {user && !isAdmin && (
             <NotificationBell />
           )}

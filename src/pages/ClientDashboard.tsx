@@ -15,23 +15,15 @@ import { useDocumentRealtime } from "@/hooks/document/useDocumentRealtime";
 import { NotificationsButton } from "@/components/client/NotificationsButton";
 import { organizeDocuments } from "@/utils/documents/documentOrganizer";
 import { useNotificationsSystem } from "@/hooks/useNotificationsSystem";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle, RefreshCcw } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { LoadingSpinner } from "@/components/common/LoadingSpinner";
-import { supabase } from "@/integrations/supabase/client";
 
 const ClientDashboard = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const isMobile = useIsMobile();
-  const { documents, isLoadingDocuments, error, fetchUserDocuments } = useDocumentFetch();
+  const { documents, isLoadingDocuments, fetchUserDocuments } = useDocumentFetch();
   const hasInitializedRef = useRef(false);
   const userSelectedRef = useRef(false);
-  const fetchAttemptedRef = useRef(false);
-  const notificationsMarkedRef = useRef(false);
-  const documentViewUpdateRunRef = useRef(false);
   
   // Add real-time notification hook
   useDocumentRealtime();
@@ -45,75 +37,20 @@ const ClientDashboard = () => {
   // Get documents by category with prioritization
   const documentsByCategory = organizeDocuments(documents, categories);
 
-  // Mark unviewed documents as viewed when dashboard is loaded
-  const markUnviewedDocumentsAsViewed = async (userId: string) => {
-    if (!userId || documentViewUpdateRunRef.current) return;
-    
-    try {
-      documentViewUpdateRunRef.current = true;
-      
-      // Find documents that haven't been viewed yet
-      const unviewedDocs = documents.filter(doc => !doc.viewed);
-      
-      if (unviewedDocs.length === 0) return;
-      
-      console.log("Marcando documentos não visualizados como visualizados:", unviewedDocs.length);
-      
-      // Update all unviewed documents to viewed
-      await Promise.all(
-        unviewedDocs.map(async (doc) => {
-          await supabase
-            .from('documents')
-            .update({ viewed: true, viewed_at: new Date().toISOString() })
-            .eq('id', doc.id);
-        })
-      );
-      
-      // Refresh documents list without triggering infinite loops
-      fetchUserDocuments(userId);
-      
-    } catch (error) {
-      console.error("Error updating document view status:", error);
-    }
-  };
-
   // Load user documents
   useEffect(() => {
-    console.log("ClientDashboard useEffect - User:", user);
-    
     if (user?.id) {
-      console.log("User ID disponível, buscando documentos:", user.id);
       fetchUserDocuments(user.id);
-      fetchAttemptedRef.current = true;
       
       // Mark all notifications as read when visiting the documents dashboard
-      // Only do this once per component mount to avoid infinite loop
-      if (!notificationsMarkedRef.current) {
-        markAllAsRead();
-        notificationsMarkedRef.current = true;
-      }
-    } else if (!fetchAttemptedRef.current) {
-      console.log("User ID não disponível, não é possível buscar documentos");
+      markAllAsRead();
     }
   }, [user, fetchUserDocuments, markAllAsRead]);
-  
-  // Mark documents as viewed when loaded
-  useEffect(() => {
-    if (user?.id && documents.length > 0 && !documentViewUpdateRunRef.current) {
-      markUnviewedDocumentsAsViewed(user.id);
-    }
-    
-    // Reset the flag when component unmounts to prepare for next mount
-    return () => {
-      documentViewUpdateRunRef.current = false;
-    };
-  }, [user, documents]);
 
   // Find category with most recent document - only on first render
   useEffect(() => {
     // Only execute when documents are loaded and not yet initialized
-    if (!hasInitializedRef.current && !isLoadingDocuments && documents.length > 0) {
-      console.log("Inicializando seleção de categoria baseada em documentos");
+    if (!hasInitializedRef.current && !isLoadingDocuments) {
       // Only do automatic selection if user hasn't made manual selection
       if (!userSelectedRef.current) {
         let mostRecentCategory: string | null = null;
@@ -170,13 +107,6 @@ const ClientDashboard = () => {
     }
   };
 
-  // Função para tentar novamente em caso de erro
-  const handleRetry = () => {
-    if (user?.id) {
-      fetchUserDocuments(user.id);
-    }
-  };
-
   return (
     <div className="min-h-screen flex flex-col bg-orange-200 dark:bg-navy-dark">
       <Navbar />
@@ -190,24 +120,9 @@ const ClientDashboard = () => {
           </CardHeader>
           <CardContent>
             {isLoadingDocuments ? (
-              <LoadingSpinner size="lg" />
-            ) : error ? (
-              <Alert variant="destructive" className="mb-6">
-                <AlertTriangle className="h-5 w-5 mr-2" />
-                <AlertTitle>Erro ao carregar documentos</AlertTitle>
-                <AlertDescription className="flex flex-col gap-2">
-                  <p>{error}</p>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={handleRetry}
-                    className="flex items-center gap-2 self-end"
-                  >
-                    <RefreshCcw className="h-4 w-4" />
-                    Tentar novamente
-                  </Button>
-                </AlertDescription>
-              </Alert>
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
+              </div>
             ) : documents.length > 0 ? (
               selectedCategory ? (
                 <div className={`${isMobile ? 'overflow-x-auto' : ''}`}>
@@ -220,7 +135,7 @@ const ClientDashboard = () => {
                     formatDate={formatDate} 
                     isDocumentExpired={isDocumentExpired} 
                     daysUntilExpiration={daysUntilExpiration} 
-                    refreshDocuments={() => user?.id && fetchUserDocuments(user.id)}
+                    refreshDocuments={() => fetchUserDocuments(user?.id || '')}
                     activeCategory={selectedCategory}
                   />
                 </div>

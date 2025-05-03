@@ -17,7 +17,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useLocation } from 'react-router-dom';
 
 interface NotificationBellProps {
   className?: string;
@@ -25,18 +24,9 @@ interface NotificationBellProps {
 
 export const NotificationBell: React.FC<NotificationBellProps> = ({ className }) => {
   const [open, setOpen] = useState(false);
-  const { notifications, unreadCount, markAsRead, markAllAsRead, isLoading, fetchNotifications } = useNotificationsSystem();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, isLoading } = useNotificationsSystem();
   const { user } = useAuth();
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const location = useLocation();
-  const isClientDashboard = location.pathname === '/client';
-
-  // Ensure notifications are up to date
-  useEffect(() => {
-    if (user) {
-      fetchNotifications();
-    }
-  }, [user, fetchNotifications]);
 
   const handleNotificationClick = (notification: Notification) => {
     if (!notification.is_read) {
@@ -71,11 +61,6 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ className })
     };
   }, []);
 
-  // Notification badge animation
-  const badgeClass = unreadCount > 0 
-    ? "absolute -top-2 -right-2 px-1.5 bg-red-500 text-white animate-pulse" 
-    : "absolute -top-2 -right-2 px-1.5 bg-red-500 text-white";
-
   if (!user) return null;
 
   return (
@@ -85,32 +70,34 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ className })
           <Button 
             variant="outline" 
             size="icon"
-            className="relative border-none hover:bg-transparent hover:opacity-80 transition-opacity"
+            className="relative"
           >
-            <Bell className="h-[1.2rem] w-[1.2rem] text-gold dark:text-gold" />
+            <Bell className="h-[1.2rem] w-[1.2rem]" />
             {unreadCount > 0 && (
-              <Badge className={badgeClass}>
+              <Badge 
+                className="absolute -top-2 -right-2 px-1.5 bg-red-500 text-white"
+              >
                 {unreadCount > 9 ? '9+' : unreadCount}
               </Badge>
             )}
             <span className="sr-only">Notificações</span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-80 bg-white dark:bg-[#393532] border-gold/20">
+        <DropdownMenuContent align="end" className="w-80">
           <DropdownMenuLabel className="flex justify-between items-center">
-            <span className="text-gold-dark dark:text-gold">Notificações</span>
+            <span>Notificações</span>
             {notifications.length > 0 && (
               <Button 
                 variant="ghost" 
                 size="sm" 
                 onClick={() => markAllAsRead()}
-                className="h-auto py-1 text-xs text-gold-dark dark:text-gold hover:text-gold-dark/80 hover:bg-transparent"
+                className="h-auto py-1 text-xs"
               >
                 Marcar todas como lidas
               </Button>
             )}
           </DropdownMenuLabel>
-          <DropdownMenuSeparator className="bg-gold/20" />
+          <DropdownMenuSeparator />
           
           {isLoading ? (
             <div className="flex justify-center p-4">
@@ -122,33 +109,20 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ className })
                 {notifications.map((notification) => (
                   <DropdownMenuItem 
                     key={notification.id}
-                    className={`p-3 cursor-pointer flex flex-col items-start ${
-                      !notification.is_read 
-                        ? 'bg-orange-100 dark:bg-navy-light/10' 
-                        : ''
-                    }`}
+                    className={`p-3 cursor-pointer flex flex-col items-start ${!notification.is_read ? 'bg-orange-100 dark:bg-navy-light/10' : ''}`}
                     onClick={() => handleNotificationClick(notification)}
                   >
                     <div className="flex w-full justify-between">
-                      <span className={`font-medium ${
-                        !notification.is_read 
-                          ? 'text-gold-dark dark:text-gold' 
-                          : 'text-gray-700 dark:text-gray-300'
-                      }`}>
+                      <span className={`font-medium ${!notification.is_read ? 'text-gold-dark dark:text-gold' : ''}`}>
                         {notification.title}
                       </span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                      <span className="text-xs text-gray-500">
                         {formatTime(notification.created_at)}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    <p className="text-sm text-muted-foreground mt-1">
                       {notification.message}
                     </p>
-                    {notification.document_category && (
-                      <span className="text-xs mt-1 bg-gold/20 text-gold-dark dark:text-gold px-2 py-0.5 rounded-full">
-                        {notification.document_category}
-                      </span>
-                    )}
                     {notification.document_id && (
                       <Link 
                         to="/client" 
@@ -161,15 +135,15 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ className })
                   </DropdownMenuItem>
                 ))}
               </ScrollArea>
-              <DropdownMenuSeparator className="bg-gold/20" />
-              <DropdownMenuItem className="justify-center text-gold-dark dark:text-gold" asChild>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="justify-center" asChild>
                 <Link to="/client" onClick={() => setOpen(false)}>
                   Ver todos os documentos
                 </Link>
               </DropdownMenuItem>
             </>
           ) : (
-            <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+            <div className="p-4 text-center text-gray-500">
               Não há notificações
             </div>
           )}
