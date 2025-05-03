@@ -39,7 +39,7 @@ export const DocumentUpload = ({
   expirationDate,
   setExpirationDate,
   noExpiration,
-  setNoExpiration
+  setNoExpiration,
 }: DocumentUploadProps) => {
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,31 +47,50 @@ export const DocumentUpload = ({
   };
 
   return (
-    <Card className="w-full max-w-4xl mx-auto border-gold/20 bg-orange-200 dark:bg-navy-dark rounded-md">
-      <CardHeader className="space-y-1 text-center my-0 rounded-t-md pb-3">
-        <CardTitle className="text-navy dark:text-gold font-medium text-2xl">ENVIAR DOCUMENTO</CardTitle>
+    <Card className="w-full max-w-4xl mx-auto border-gold/20 bg-[#46413d] rounded-md">
+      <CardHeader className="space-y-1 text-center bg-[#46413d] my-0 rounded-t-md pb-3">
+        <CardTitle className="text-[#e8cc81] font-medium text-2xl">ENVIAR DOCUMENTO</CardTitle>
       </CardHeader>
-      <CardContent className="pt-4">
+      <CardContent className="bg-[#46413d] pt-4">
         <form onSubmit={handleFormSubmit} className="space-y-6">
           <div className="grid gap-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <DocumentNameInput documentName={documentName} setDocumentName={setDocumentName} />
+              <DocumentNameInput 
+                documentName={documentName}
+                setDocumentName={setDocumentName}
+              />
               
-              <DocumentCategorySelect documentCategory={documentCategory} setDocumentCategory={setDocumentCategory} documentCategories={documentCategories} />
+              <DocumentCategorySelect
+                documentCategory={documentCategory}
+                setDocumentCategory={setDocumentCategory}
+                documentCategories={documentCategories}
+              />
             </div>
             
-            <DocumentObservations documentObservations={documentObservations} setDocumentObservations={setDocumentObservations} />
+            <DocumentObservations
+              documentObservations={documentObservations}
+              setDocumentObservations={setDocumentObservations}
+            />
 
-            <DocumentExpirationFields noExpiration={noExpiration} setNoExpiration={setNoExpiration} expirationDate={expirationDate} setExpirationDate={setExpirationDate} />
+            <DocumentExpirationFields
+              noExpiration={noExpiration}
+              setNoExpiration={setNoExpiration}
+              expirationDate={expirationDate}
+              setExpirationDate={setExpirationDate}
+            />
 
             <FileUploadArea handleFileChange={handleFileChange} />
           </div>
 
           <Button type="submit" className="w-full bg-gold hover:bg-gold-light text-navy" disabled={isUploading}>
-            {isUploading ? <>
+            {isUploading ? (
+              <>
                 <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-t-foreground"></div>
                 Enviando...
-              </> : "Enviar Documento"}
+              </>
+            ) : (
+              "Enviar Documento"
+            )}
           </Button>
         </form>
       </CardContent>

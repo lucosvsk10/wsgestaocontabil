@@ -1,4 +1,3 @@
-
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -65,11 +64,9 @@ export const CreateUser = ({
       form.reset();
     }
   };
-  
-  return (
-    <Card className="bg-orange-200 dark:bg-navy-dark border border-gold/20">
+  return <Card className="bg-[#393532] border border-gold/20">
       <CardHeader>
-        <CardTitle className="text-navy dark:text-gold tracking-wider text-center font-normal">CRIAR NOVO USUÁRIO</CardTitle>
+        <CardTitle className="text-[#e8cc81] tracking-wider text-center font-normal">CRIAR NOVO USUÁRIO</CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -77,9 +74,9 @@ export const CreateUser = ({
             <FormField control={form.control} name="name" render={({
             field
           }) => <FormItem>
-                  <FormLabel className="text-navy dark:text-gold">Nome Completo</FormLabel>
+                  <FormLabel className="text-[#e9aa91]">Nome Completo</FormLabel>
                   <FormControl>
-                    <Input placeholder="João da Silva" {...field} className="bg-orange-300/50 dark:bg-navy-light/50 border-gold/20 text-navy dark:text-white focus-visible:ring-gold" />
+                    <Input placeholder="João da Silva" {...field} className="bg-[#46413d] border-gold/20 focus-visible:ring-gold" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>} />
@@ -87,9 +84,9 @@ export const CreateUser = ({
             <FormField control={form.control} name="email" render={({
             field
           }) => <FormItem>
-                  <FormLabel className="text-navy dark:text-gold">Email</FormLabel>
+                  <FormLabel className="text-[#e9aa91]">Email</FormLabel>
                   <FormControl>
-                    <Input placeholder="joao@exemplo.com" {...field} className="bg-orange-300/50 dark:bg-navy-light/50 border-gold/20 text-navy dark:text-white focus-visible:ring-gold" />
+                    <Input placeholder="joao@exemplo.com" {...field} className="bg-[#46413d] border-gold/20 focus-visible:ring-gold" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>} />
@@ -97,24 +94,24 @@ export const CreateUser = ({
             <FormField control={form.control} name="password" render={({
             field
           }) => <FormItem>
-                  <FormLabel className="text-navy dark:text-gold">Senha</FormLabel>
+                  <FormLabel className="text-[#e9aa91]">Senha</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="******" {...field} className="bg-orange-300/50 dark:bg-navy-light/50 border-gold/20 text-navy dark:text-white focus-visible:ring-gold" />
+                    <Input type="password" placeholder="******" {...field} className="bg-[#46413d] border-gold/20 focus-visible:ring-gold" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>} />
             
             <FormField control={form.control} name="isAdmin" render={({
             field
-          }) => <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border border-gold/20 p-4 bg-orange-300/50 dark:bg-navy-light/50">
+          }) => <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border border-gold/20 p-4 bg-[#46413d]">
                   <FormControl>
-                    <Checkbox checked={field.value} onCheckedChange={field.onChange} className="data-[state=checked]:bg-gold data-[state=checked]:border-gold text-navy" />
+                    <Checkbox checked={field.value} onCheckedChange={field.onChange} className="data-[state=checked]:border-gold text-zinc-50 bg-[inhe] bg-inherit" />
                   </FormControl>
                   <div className="space-y-1 leading-none">
-                    <FormLabel className="text-navy dark:text-gold">
+                    <FormLabel className="text-[#e9aa91]">
                       Administrador
                     </FormLabel>
-                    <p className="text-sm text-navy/70 dark:text-gold/70">
+                    <p className="text-sm text-gold/70">
                       Marque esta opção para conceder ao usuário privilégios de administrador.
                     </p>
                   </div>
@@ -123,18 +120,18 @@ export const CreateUser = ({
             {isAdmin && <FormField control={form.control} name="role" render={({
             field
           }) => <FormItem>
-                    <FormLabel className="text-navy dark:text-gold">Função</FormLabel>
+                    <FormLabel className="text-[#e9aa91]">Função</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                       <FormControl>
-                        <SelectTrigger className="bg-orange-300/50 dark:bg-navy-light/50 border-gold/20 text-navy dark:text-white focus-visible:ring-gold">
-                          <SelectValue placeholder="Selecione a função do administrador" />
+                        <SelectTrigger className="bg-[#46413d] border-gold/20 focus-visible:ring-gold text-white">
+                          <SelectValue placeholder="Selecione a função do administrador" className="text-white" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent className="bg-orange-300/50 dark:bg-navy-light/50 border-gold/20 text-navy dark:text-white">
-                        <SelectItem value="admin" className="text-navy dark:text-white">Admin</SelectItem>
-                        <SelectItem value="fiscal" className="text-navy dark:text-white">Fiscal</SelectItem>
-                        <SelectItem value="contabil" className="text-navy dark:text-white">Contábil</SelectItem>
-                        <SelectItem value="geral" className="text-navy dark:text-white">Geral</SelectItem>
+                      <SelectContent className="bg-[#46413d] border-gold/20 text-white">
+                        <SelectItem value="admin" className="text-white">Admin</SelectItem>
+                        <SelectItem value="fiscal" className="text-white">Fiscal</SelectItem>
+                        <SelectItem value="contabil" className="text-white">Contábil</SelectItem>
+                        <SelectItem value="geral" className="text-white">Geral</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -152,6 +149,5 @@ export const CreateUser = ({
           </form>
         </Form>
       </CardContent>
-    </Card>
-  );
+    </Card>;
 };

@@ -4,7 +4,7 @@ import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
 import About from '../components/About';
 import BusinessNews from '../components/BusinessNews';
-import AccountingSection from '../components/accounting/AccountingSection';
+import AccountingSection from '../components/AccountingSection';
 import Footer from '../components/Footer';
 import { Button } from "@/components/ui/button";
 import { Calculator } from "lucide-react";

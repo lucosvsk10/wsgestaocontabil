@@ -42,17 +42,7 @@ export const getDocumentsByCategory = (allDocuments: Document[], categories: str
   const groupedDocuments: Record<string, Document[]> = {};
   
   categories.forEach(category => {
-    // Inicializa a categoria com array vazio
-    groupedDocuments[category] = [];
-    
-    // Filtra documentos para esta categoria
-    allDocuments.forEach(doc => {
-      const docCategory = doc.category.split('/')[0]; // Extrair categoria principal antes da '/'
-      
-      if (docCategory === category) {
-        groupedDocuments[category].push(doc);
-      }
-    });
+    groupedDocuments[category] = allDocuments.filter(doc => doc.category === category);
   });
   
   return groupedDocuments;

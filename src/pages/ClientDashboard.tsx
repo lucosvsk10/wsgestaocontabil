@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DocumentTabs } from "@/components/client/DocumentTabs";
@@ -10,7 +11,6 @@ import Footer from "@/components/Footer";
 import { formatDate, isDocumentExpired, daysUntilExpiration, getDocumentsByCategory } from "@/utils/documentUtils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useDocumentFetch } from "@/hooks/useDocumentFetch";
-import { useDocumentRealtime } from "@/hooks/document/useDocumentRealtime"; 
 
 const ClientDashboard = () => {
   const { user } = useAuth();
@@ -20,12 +20,9 @@ const ClientDashboard = () => {
   const { documents, isLoadingDocuments, fetchUserDocuments } = useDocumentFetch();
   const hasInitializedRef = useRef(false);
   const userSelectedRef = useRef(false);
-  
-  // Adicionar hook de notificações em tempo real
-  useDocumentRealtime();
 
-  // Categorias de documentos atualizadas
-  const categories = ["Impostos", "Folha de Pagamento", "Documentações", "Certidões"];
+  // Categorias de documentos
+  const categories = ["Imposto de Renda", "Documentações", "Certidões"];
 
   // Obter documentos por categoria
   const documentsByCategory = getDocumentsByCategory(documents, categories);
@@ -116,7 +113,7 @@ const ClientDashboard = () => {
               selectedCategory ? (
                 <div className={`${isMobile ? 'overflow-x-auto' : ''}`}>
                   <DocumentTabs 
-                    documents={[]} 
+                    documents={[]} // Unused prop now
                     allDocuments={documents} 
                     documentsByCategory={documentsByCategory} 
                     categories={categories} 

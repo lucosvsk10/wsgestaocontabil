@@ -2,6 +2,7 @@
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Document } from "@/utils/auth/types";
+import { Dispatch, SetStateAction } from "react";
 
 interface DocumentActionsProps {
   doc: Document;
@@ -22,10 +23,10 @@ export const DocumentActions = ({
       size="sm" 
       disabled={isDocumentExpired(doc.expires_at)} 
       onClick={() => handleDownload && handleDownload(doc)} 
-      className="flex-1 bg-orange-300/50 dark:bg-navy-light/50 border-gold/20 text-navy dark:text-gold hover:bg-gold hover:text-navy dark:hover:bg-gold-light dark:hover:text-navy flex items-center justify-center gap-1"
+      className="flex-1 bg-[#393532] border-gold/20 text-gold hover:bg-gold hover:text-navy flex items-center justify-center gap-1"
     >
       <Download size={14} />
-      <span className="truncate">{doc.filename || doc.original_filename || "Baixar"}</span>
+      <span>{doc.filename || doc.original_filename || "Baixar"}</span>
     </Button>
   );
 };

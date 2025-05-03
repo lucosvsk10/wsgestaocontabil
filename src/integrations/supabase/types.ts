@@ -21,7 +21,6 @@ export type Database = {
           original_filename: string | null
           size: number | null
           storage_key: string | null
-          subcategory: string | null
           type: string | null
           uploaded_at: string | null
           user_id: string
@@ -39,7 +38,6 @@ export type Database = {
           original_filename?: string | null
           size?: number | null
           storage_key?: string | null
-          subcategory?: string | null
           type?: string | null
           uploaded_at?: string | null
           user_id: string
@@ -57,7 +55,6 @@ export type Database = {
           original_filename?: string | null
           size?: number | null
           storage_key?: string | null
-          subcategory?: string | null
           type?: string | null
           uploaded_at?: string | null
           user_id?: string
