@@ -3,7 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Document } from "@/types/admin";
 import { CategoryDocumentTable } from "./document-table";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Drawer, 
   DrawerContent, 
@@ -39,7 +39,24 @@ export const DocumentTabs = ({
   const isMobile = useIsMobile();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   
+  // Verificar se a categoria ativa tem documentos, senão selecionar outra
+  useEffect(() => {
+    if (activeCategory && documentsByCategory[activeCategory]?.length === 0) {
+      console.log("Categoria ativa vazia:", activeCategory);
+      // Encontrar a primeira categoria com documentos
+      const firstNonEmptyCategory = categories.find(cat => 
+        documentsByCategory[cat] && documentsByCategory[cat].length > 0
+      );
+      
+      if (firstNonEmptyCategory && firstNonEmptyCategory !== activeCategory) {
+        console.log("Mudando para categoria com documentos:", firstNonEmptyCategory);
+        setSelectedCategory(firstNonEmptyCategory);
+      }
+    }
+  }, [activeCategory, documentsByCategory, categories, setSelectedCategory]);
+  
   const handleCategoryChange = (category: string) => {
+    console.log("Mudando para categoria:", category);
     setSelectedCategory(category);
     setIsDrawerOpen(false);
   };
@@ -68,11 +85,20 @@ export const DocumentTabs = ({
                 >
                   <Button 
                     variant="document"
-                    className="w-full justify-between text-white"
-                    disabled={documentsByCategory[category].length === 0}
+                    className={`w-full justify-between ${
+                      documentsByCategory[category]?.length > 0 
+                        ? "text-white" 
+                        : "text-gray-400"
+                    }`}
+                    disabled={!documentsByCategory[category] || documentsByCategory[category].length === 0}
                     onClick={() => handleCategoryChange(category)}
                   >
                     <span>{category}</span>
+                    {documentsByCategory[category]?.length > 0 && (
+                      <span className="text-xs bg-gold text-navy px-2 py-0.5 rounded-full">
+                        {documentsByCategory[category].length}
+                      </span>
+                    )}
                   </Button>
                 </div>
               ))}
@@ -84,7 +110,7 @@ export const DocumentTabs = ({
       {categories.map((category) => (
         <div key={category} className={category === activeCategory ? 'block' : 'hidden'}>
           <CategoryDocumentTable 
-            documents={documentsByCategory[category]}
+            documents={documentsByCategory[category] || []}
             category={category}
             formatDate={formatDate}
             isDocumentExpired={isDocumentExpired}
@@ -106,10 +132,15 @@ export const DocumentTabs = ({
           <TabsTrigger 
             key={category} 
             value={category}
-            disabled={documentsByCategory[category].length === 0}
+            disabled={!documentsByCategory[category] || documentsByCategory[category].length === 0}
             className="relative text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
           >
             {category}
+            {documentsByCategory[category]?.length > 0 && (
+              <span className="ml-2 text-xs bg-navy dark:bg-gold text-white dark:text-navy px-1.5 py-0.5 rounded-full">
+                {documentsByCategory[category].length}
+              </span>
+            )}
           </TabsTrigger>
         ))}
       </TabsList>
@@ -117,7 +148,7 @@ export const DocumentTabs = ({
       {categories.map(category => (
         <TabsContent key={category} value={category}>
           <CategoryDocumentTable 
-            documents={documentsByCategory[category]}
+            documents={documentsByCategory[category] || []}
             category={category}
             formatDate={formatDate}
             isDocumentExpired={isDocumentExpired}

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Download, Clock, Tag, Bell, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -28,9 +27,9 @@ export const DocumentTable = ({
   const [loadingDocumentIds, setLoadingDocumentIds] = useState<Set<string>>(new Set());
   const isMobile = useIsMobile();
 
-  const markAsViewed = async (docItem: Document) => {
+  const markAsViewed = async (docItem: Document): Promise<{ success: boolean; documentId: string | null }> => {
     // If already viewed, no need to update
-    if (docItem.viewed) return;
+    if (docItem.viewed) return { success: true, documentId: docItem.id };
     
     try {
       setLoadingDocumentIds(prev => new Set([...prev, docItem.id]));
@@ -44,6 +43,8 @@ export const DocumentTable = ({
       
       // Refresh the documents list
       refreshDocuments();
+      
+      return { success: true, documentId: docItem.id };
     } catch (error: any) {
       console.error('Error marking document as viewed:', error);
       toast({
@@ -51,6 +52,7 @@ export const DocumentTable = ({
         title: "Erro",
         description: "Não foi possível marcar o documento como visualizado."
       });
+      return { success: false, documentId: null };
     } finally {
       setLoadingDocumentIds(prev => {
         const newSet = new Set(prev);
@@ -62,7 +64,8 @@ export const DocumentTable = ({
 
   const handleDownload = async (docItem: Document) => {
     // Mark as viewed when downloaded
-    markAsViewed(docItem);
+    const viewResult = await markAsViewed(docItem);
+    if (!viewResult.success) return;
     
     try {
       if (docItem.storage_key) {

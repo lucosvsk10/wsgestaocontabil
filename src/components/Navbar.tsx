@@ -9,6 +9,7 @@ import ThemeToggle from './ThemeToggle';
 import { useAuth } from '@/contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { NotificationBell } from './notifications/NotificationBell';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -17,7 +18,7 @@ const Navbar = () => {
     handleLogout,
     navigateToDashboard
   } = useNavigation();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const isMobile = useIsMobile();
   
   useEffect(() => {
@@ -30,9 +31,17 @@ const Navbar = () => {
   
   return <header className="bg-white dark:bg-navy-dark text-navy dark:text-gold">
       <div className={`container mx-auto flex items-center justify-between ${isMobile ? 'px-4 py-3' : 'px-[28px] py-[19px]'}`}>
-        <Logo />
+        {/* Logo e ThemeToggle na esquerda */}
         <div className="flex items-center gap-4">
+          <Logo />
           <ThemeToggle />
+        </div>
+        
+        <div className="flex items-center gap-4">
+          {/* Notification Bell - Always visible for authenticated users, only hidden for administrators */}
+          {user && !isAdmin && (
+            <NotificationBell />
+          )}
           
           {/* Account Button for Mobile */}
           {isMobile && user && (

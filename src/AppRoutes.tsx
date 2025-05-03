@@ -8,6 +8,8 @@ import { useAuth } from "./contexts/AuthContext";
 import AdminDashboard from "./pages/AdminDashboard";
 import ClientDashboard from "./pages/ClientDashboard";
 import { checkIsAdmin } from "./utils/auth/userChecks";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/toaster";
 
 const AppRoutes = () => {
   const { userData, user } = useAuth();
@@ -17,34 +19,37 @@ const AppRoutes = () => {
   };
 
   return (
-    <Routes>
-      <Route path="/" element={<Index />} />
-      <Route path="/login" element={<ClientLogin />} />
-      
-      {/* Rota protegida para área de administrador */}
-      <Route path="/admin" element={
-        <PrivateRoute requiredRole="admin">
-          <AdminDashboard />
-        </PrivateRoute>
-      } />
-      
-      {/* Rota protegida para área de cliente */}
-      <Route path="/client" element={
-        <PrivateRoute>
-          <ClientDashboard />
-        </PrivateRoute>
-      } />
-      
-      {/* Rota para redirecionamento após login */}
-      <Route path="/dashboard" element={
-        <PrivateRoute>
-          {isAdmin() ? <Navigate to="/admin" replace /> : <Navigate to="/client" replace />}
-        </PrivateRoute>
-      } />
-      
-      {/* Rota para capturar URLs não encontradas */}
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+    <TooltipProvider>
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/login" element={<ClientLogin />} />
+        
+        {/* Protected route for admin area */}
+        <Route path="/admin" element={
+          <PrivateRoute requiredRole="admin">
+            <AdminDashboard />
+          </PrivateRoute>
+        } />
+        
+        {/* Protected route for client area */}
+        <Route path="/client" element={
+          <PrivateRoute>
+            <ClientDashboard />
+          </PrivateRoute>
+        } />
+        
+        {/* Route for redirection after login */}
+        <Route path="/dashboard" element={
+          <PrivateRoute>
+            {isAdmin() ? <Navigate to="/admin" replace /> : <Navigate to="/client" replace />}
+          </PrivateRoute>
+        } />
+        
+        {/* Route for catching not found URLs */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      <Toaster />
+    </TooltipProvider>
   );
 };
 
