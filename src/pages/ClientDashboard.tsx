@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DocumentTabs } from "@/components/client/DocumentTabs";
@@ -14,7 +13,7 @@ import { useDocumentFetch } from "@/hooks/useDocumentFetch";
 import { useDocumentRealtime } from "@/hooks/document/useDocumentRealtime"; 
 import { NotificationsButton } from "@/components/client/NotificationsButton";
 import { organizeDocuments } from "@/utils/documents/documentOrganizer";
-import { useNotificationsSystem } from "@/hooks/useNotificationsSystem";
+import { useNotifications } from "@/hooks/useNotifications";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,14 +29,10 @@ const ClientDashboard = () => {
   const hasInitializedRef = useRef(false);
   const userSelectedRef = useRef(false);
   const fetchAttemptedRef = useRef(false);
-  const notificationsMarkedRef = useRef(false);
   const documentViewUpdateRunRef = useRef(false);
   
-  // Add real-time notification hook
-  useDocumentRealtime();
-  
-  // Mark all notifications as read when visiting dashboard
-  const { markAllAsRead } = useNotificationsSystem();
+  // Add notifications integration
+  const { markAllAsRead } = useNotifications();
   
   // Document categories
   const categories = ["Impostos", "Folha de Pagamento", "Documentações", "Certidões"];
@@ -87,11 +82,7 @@ const ClientDashboard = () => {
       fetchAttemptedRef.current = true;
       
       // Mark all notifications as read when visiting the documents dashboard
-      // Only do this once per component mount to avoid infinite loop
-      if (!notificationsMarkedRef.current) {
-        markAllAsRead();
-        notificationsMarkedRef.current = true;
-      }
+      markAllAsRead();
     } else if (!fetchAttemptedRef.current) {
       console.log("User ID não disponível, não é possível buscar documentos");
     }
