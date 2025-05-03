@@ -81,11 +81,11 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                 <div
                   key={notification.id}
                   className={`p-3 rounded-md border ${
-                    !notification.is_read
+                    !notification.viewed_at
                       ? 'bg-primary/10 border-primary/20'
                       : 'bg-background border-border'
                   }`}
-                  onClick={() => !notification.is_read && markAsRead(notification.id)}
+                  onClick={() => !notification.viewed_at && markAsRead(notification.id)}
                 >
                   <div className="flex justify-between items-start mb-1">
                     <h4 className="font-medium">{notification.title}</h4>
@@ -93,7 +93,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                       {formatDate(notification.created_at)}
                     </span>
                   </div>
-                  <p className="text-sm text-muted-foreground">{notification.message}</p>
+                  <p className="text-sm text-muted-foreground">{notification.body}</p>
                 </div>
               ))}
             </div>
