@@ -10,6 +10,7 @@ interface MobileDocumentCardProps {
   daysUntilExpiration: (expirationDate: string | null) => string | null;
   refreshDocuments: () => void;
   loadingDocumentIds: Set<string>;
+  setLoadingDocumentIds: React.Dispatch<React.SetStateAction<Set<string>>>;
 }
 
 export const MobileDocumentCard = ({
@@ -18,7 +19,8 @@ export const MobileDocumentCard = ({
   isDocumentExpired,
   daysUntilExpiration,
   refreshDocuments,
-  loadingDocumentIds
+  loadingDocumentIds,
+  setLoadingDocumentIds
 }: MobileDocumentCardProps) => {
   const getDisplayCategory = (doc: Document) => {
     if (doc.category.startsWith('Impostos/')) {

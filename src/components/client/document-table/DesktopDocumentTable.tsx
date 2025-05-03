@@ -13,6 +13,7 @@ interface DesktopDocumentTableProps {
   daysUntilExpiration: (expirationDate: string | null) => string | null;
   refreshDocuments: () => void;
   loadingDocumentIds: Set<string>;
+  setLoadingDocumentIds: React.Dispatch<React.SetStateAction<Set<string>>>;
 }
 
 export const DesktopDocumentTable = ({
@@ -112,7 +113,7 @@ export const DesktopDocumentTable = ({
           ))
         ) : (
           <TableRow>
-            <TableCell colSpan={6} className="text-center py-4 text-gray-500 dark:text-gray-400">
+            <TableCell colSpan={5} className="text-center py-4 text-gray-500 dark:text-gray-400">
               Não existem documentos na categoria {category}
             </TableCell>
           </TableRow>
