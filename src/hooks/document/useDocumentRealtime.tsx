@@ -1,23 +1,21 @@
-import { useEffect, useState, useRef } from "react";
+
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Document } from "@/types/admin";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDocumentActions } from "./useDocumentActions";
-import { useNotifications } from "@/hooks/useNotifications";
 
 export const useDocumentRealtime = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [newDocument, setNewDocument] = useState<Document | null>(null);
-  const { createNotification } = useNotifications();
-  const realtimeChannelRef = useRef<any>(null);
   
   // Create a no-op function to pass to useDocumentActions since we're not refreshing the list here
   const noopFetchDocuments = async () => {};
   const { downloadDocument } = useDocumentActions(noopFetchDocuments);
 
-  // Function to download the document from notification
+  // Função para baixar o documento da notificação
   const handleDownloadNotifiedDocument = async () => {
     if (!newDocument) return;
     
@@ -30,7 +28,7 @@ export const useDocumentRealtime = () => {
           user?.id
         );
         
-        // Clear notification after download
+        // Limpar a notificação após download
         setNewDocument(null);
       }
     } catch (error) {
@@ -40,15 +38,8 @@ export const useDocumentRealtime = () => {
 
   useEffect(() => {
     if (!user?.id) return;
-    
-    console.log("Setting up document realtime notifications for user:", user.id);
 
-    // Clean up previous subscription if it exists
-    if (realtimeChannelRef.current) {
-      supabase.removeChannel(realtimeChannelRef.current);
-    }
-
-    // Subscribe to real-time updates on the documents table
+    // Inscrever-se para atualizações em tempo real na tabela documents
     const channel = supabase
       .channel('document-notifications')
       .on(
@@ -62,20 +53,13 @@ export const useDocumentRealtime = () => {
         (payload) => {
           console.log("Novo documento detectado:", payload);
           
-          // Get new document data
+          // Obter os dados do novo documento
           const newDoc = payload.new as Document;
           
-          // Update state with new document
+          // Atualizar estado com o novo documento
           setNewDocument(newDoc);
           
-          // Create a database notification
-          createNotification(
-            "Novo documento disponível", 
-            `Um novo documento foi enviado para você: ${newDoc.name}`,
-            newDoc.id
-          );
-          
-          // Show toast notification
+          // Mostrar toast de notificação
           toast({
             title: "Novo documento disponível",
             description: (
@@ -89,26 +73,20 @@ export const useDocumentRealtime = () => {
                 </button>
               </div>
             ),
-            duration: 10000, // 10 seconds
+            duration: 10000, // 10 segundos
           });
         }
       )
       .subscribe();
       
-    // Store channel reference to clean it up later
-    realtimeChannelRef.current = channel;
-      
     console.log("Canal de notificações de documentos inscrito");
 
-    // Clean up subscription when component unmounts
+    // Limpar inscrição quando o componente desmontar
     return () => {
       console.log("Removendo canal de notificações de documentos");
-      if (realtimeChannelRef.current) {
-        supabase.removeChannel(realtimeChannelRef.current);
-        realtimeChannelRef.current = null;
-      }
+      supabase.removeChannel(channel);
     };
-  }, [user?.id, toast, createNotification]);
+  }, [user?.id, toast]);
 
   return {
     newDocument,

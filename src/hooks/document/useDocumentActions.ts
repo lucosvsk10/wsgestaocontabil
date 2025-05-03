@@ -7,7 +7,7 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
   const { toast } = useToast();
   const [loadingDocumentIds, setLoadingDocumentIds] = useState<Set<string>>(new Set());
 
-  const markAsViewed = async (documentId: string): Promise<{ success: boolean; documentId: string | null }> => {
+  const markAsViewed = async (documentId: string) => {
     try {
       setLoadingDocumentIds(prev => new Set([...prev, documentId]));
       
@@ -17,8 +17,6 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
         .eq('id', documentId);
         
       if (error) throw error;
-      
-      return { success: true, documentId };
     } catch (error: any) {
       console.error('Error marking document as viewed:', error);
       toast({
@@ -26,7 +24,6 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
         title: "Erro",
         description: "Não foi possível marcar o documento como visualizado."
       });
-      return { success: false, documentId: null };
     } finally {
       setLoadingDocumentIds(prev => {
         const newSet = new Set(prev);
