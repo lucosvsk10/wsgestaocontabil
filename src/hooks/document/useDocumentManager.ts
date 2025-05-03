@@ -58,7 +58,7 @@ export const useDocumentManager = (users: any[], supabaseUsers: any[]) => {
       );
     }
     
-    return result; // Return the result so it can be used by the caller
+    return result;
   };
   
   // Wrapper for handleDeleteDocument to include selectedUserId
