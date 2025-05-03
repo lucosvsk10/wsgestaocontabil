@@ -14,7 +14,7 @@ interface MobileNavbarProps {
 
 const MobileNavbar = ({ isOpen, onClose, handleLogout, navigateToDashboard }: MobileNavbarProps) => {
   const location = useLocation();
-  const { user, isAdmin } = useAuth();
+  const { user } = useAuth();
   
   const shouldHideNavLinks = ['/login', '/admin', '/client'].includes(location.pathname);
   const isOnDashboardPage = ['/admin', '/client'].includes(location.pathname);

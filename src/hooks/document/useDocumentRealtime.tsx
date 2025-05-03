@@ -5,19 +5,17 @@ import { useToast } from "@/hooks/use-toast";
 import { Document } from "@/types/admin";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDocumentActions } from "./useDocumentActions";
-import { useNotifications } from "@/hooks/useNotifications";
 
 export const useDocumentRealtime = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [newDocument, setNewDocument] = useState<Document | null>(null);
-  const { sendNotification, permissionStatus } = useNotifications();
   
   // Create a no-op function to pass to useDocumentActions since we're not refreshing the list here
   const noopFetchDocuments = async () => {};
   const { downloadDocument } = useDocumentActions(noopFetchDocuments);
 
-  // Function to download the document from notification
+  // Função para baixar o documento da notificação
   const handleDownloadNotifiedDocument = async () => {
     if (!newDocument) return;
     
@@ -30,7 +28,7 @@ export const useDocumentRealtime = () => {
           user?.id
         );
         
-        // Clear notification after download
+        // Limpar a notificação após download
         setNewDocument(null);
       }
     } catch (error) {
@@ -41,7 +39,7 @@ export const useDocumentRealtime = () => {
   useEffect(() => {
     if (!user?.id) return;
 
-    // Subscribe to real-time updates on the documents table
+    // Inscrever-se para atualizações em tempo real na tabela documents
     const channel = supabase
       .channel('document-notifications')
       .on(
@@ -55,26 +53,13 @@ export const useDocumentRealtime = () => {
         (payload) => {
           console.log("Novo documento detectado:", payload);
           
-          // Get new document data
+          // Obter os dados do novo documento
           const newDoc = payload.new as Document;
           
-          // Update state with new document
+          // Atualizar estado com o novo documento
           setNewDocument(newDoc);
           
-          // Send browser notification if permission is granted
-          if (permissionStatus === 'granted') {
-            sendNotification(
-              "Novo documento disponível!", 
-              {
-                body: `Um novo documento foi enviado para você: ${newDoc.name}`,
-                icon: "/lovable-uploads/ebbdfdb8-bb18-4548-8b25-3d5982c97873.png",
-                tag: `new-document-${newDoc.id}`,
-                requireInteraction: true
-              }
-            );
-          }
-          
-          // Show toast notification
+          // Mostrar toast de notificação
           toast({
             title: "Novo documento disponível",
             description: (
@@ -88,7 +73,7 @@ export const useDocumentRealtime = () => {
                 </button>
               </div>
             ),
-            duration: 10000, // 10 seconds
+            duration: 10000, // 10 segundos
           });
         }
       )
@@ -96,12 +81,12 @@ export const useDocumentRealtime = () => {
       
     console.log("Canal de notificações de documentos inscrito");
 
-    // Clean up subscription when component unmounts
+    // Limpar inscrição quando o componente desmontar
     return () => {
       console.log("Removendo canal de notificações de documentos");
       supabase.removeChannel(channel);
     };
-  }, [user?.id, toast, permissionStatus, sendNotification]);
+  }, [user?.id, toast]);
 
   return {
     newDocument,
