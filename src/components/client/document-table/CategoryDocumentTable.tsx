@@ -42,7 +42,6 @@ export const CategoryDocumentTable = ({
               daysUntilExpiration={daysUntilExpiration}
               refreshDocuments={refreshDocuments}
               loadingDocumentIds={loadingDocumentIds}
-              setLoadingDocumentIds={setLoadingDocumentIds}
             />
           ))
         ) : (
@@ -68,7 +67,6 @@ export const CategoryDocumentTable = ({
         daysUntilExpiration={daysUntilExpiration}
         refreshDocuments={refreshDocuments}
         loadingDocumentIds={loadingDocumentIds}
-        setLoadingDocumentIds={setLoadingDocumentIds}
       />
     </div>
   );
