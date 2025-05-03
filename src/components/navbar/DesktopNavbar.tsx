@@ -16,7 +16,7 @@ interface DesktopNavbarProps {
 
 const DesktopNavbar = ({ handleLogout, navigateToDashboard }: DesktopNavbarProps) => {
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   
   const shouldHideNavLinks = ['/login', '/admin', '/client'].includes(location.pathname);
   const isOnDashboardPage = ['/admin', '/client'].includes(location.pathname);
@@ -84,7 +84,7 @@ const DesktopNavbar = ({ handleLogout, navigateToDashboard }: DesktopNavbarProps
         </>
       )}
       
-      {/* Instagram link always at the end */}
+      {/* Instagram link - agora antes do botão de notificações */}
       <a href="https://www.instagram.com/ws_gestao_contabil?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer" className="text-gold-dark hover:text-gold dark:text-gold dark:hover:text-gold-light transition-colors duration-300" aria-label="Instagram">
         <Instagram size={20} />
       </a>

@@ -37,7 +37,7 @@ export const DocumentTable = ({
       
       const { error } = await supabase
         .from('documents')
-        .update({ viewed: true })
+        .update({ viewed: true, viewed_at: new Date().toISOString() })
         .eq('id', docItem.id);
         
       if (error) throw error;
