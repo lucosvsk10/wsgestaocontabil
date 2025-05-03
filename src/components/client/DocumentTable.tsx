@@ -16,10 +16,10 @@ interface DocumentTableProps {
   refreshDocuments: () => void;
 }
 
-export const DocumentTable = ({ 
-  documents, 
-  formatDate, 
-  isDocumentExpired, 
+export const DocumentTable = ({
+  documents,
+  formatDate,
+  isDocumentExpired,
   daysUntilExpiration,
   refreshDocuments
 }: DocumentTableProps) => {
@@ -28,25 +28,22 @@ export const DocumentTable = ({
   const isMobile = useIsMobile();
 
   const markAsViewed = async (docItem: Document): Promise<{ success: boolean; documentId: string | null }> => {
-    // If already viewed, no need to update
     if (docItem.viewed) return { success: true, documentId: docItem.id };
-    
+
     try {
       setLoadingDocumentIds(prev => new Set([...prev, docItem.id]));
-      
+
       const { error } = await supabase
-        .from('documents')
+        .from("documents")
         .update({ viewed: true, viewed_at: new Date().toISOString() })
-        .eq('id', docItem.id);
-        
+        .eq("id", docItem.id);
+
       if (error) throw error;
-      
-      // Refresh the documents list
+
       refreshDocuments();
-      
       return { success: true, documentId: docItem.id };
     } catch (error: any) {
-      console.error('Error marking document as viewed:', error);
+      console.error("Erro ao marcar como visualizado:", error);
       toast({
         variant: "destructive",
         title: "Erro",
@@ -63,36 +60,32 @@ export const DocumentTable = ({
   };
 
   const handleDownload = async (docItem: Document) => {
-    // Mark as viewed when downloaded
     const viewResult = await markAsViewed(docItem);
     if (!viewResult.success) return;
-    
+
     try {
       if (docItem.storage_key) {
-        // Se temos o storage_key, usar o método de download
         const { data, error } = await supabase.storage
-          .from('documents')
+          .from("documents")
           .download(docItem.storage_key);
-        
+
         if (error) throw error;
-        
+
         if (data) {
-          // Criar URL do blob e iniciar download
           const url = URL.createObjectURL(data);
-          const a = window.document.createElement('a');
+          const a = document.createElement("a");
           a.href = url;
-          a.download = docItem.filename || docItem.original_filename || docItem.name;
-          window.document.body.appendChild(a);
+          a.download = docItem.filename || docItem.original_filename || docItem.name || "documento";
+          document.body.appendChild(a);
           a.click();
-          window.document.body.removeChild(a);
+          document.body.removeChild(a);
           URL.revokeObjectURL(url);
         }
       } else if (docItem.file_url) {
-        // Fallback para URL pública
-        window.open(docItem.file_url, '_blank');
+        window.open(docItem.file_url, "_blank");
       }
     } catch (error: any) {
-      console.error('Erro ao baixar documento:', error);
+      console.error("Erro ao baixar documento:", error);
       toast({
         variant: "destructive",
         title: "Erro ao baixar documento",
@@ -105,30 +98,34 @@ export const DocumentTable = ({
     return (
       <div className="space-y-4">
         {documents.map(doc => (
-          <div 
-            key={doc.id} 
-            className={`p-3 rounded-lg border ${isDocumentExpired(doc.expires_at) ? "bg-red-900/20 border-red-900/30" : "bg-[#46413d] border-gold/20"}`}
+          <div
+            key={doc.id}
+            className={`p-3 rounded-lg border ${
+              isDocumentExpired(doc.expires_at)
+                ? "bg-red-900/20 border-red-900/30"
+                : "bg-[#46413d] border-gold/20"
+            }`}
           >
             <div className="flex items-center justify-between mb-2">
               <div className="font-medium text-white flex items-center">
                 {!doc.viewed && <Bell size={14} className="text-red-500 mr-2" />}
-                {doc.name}
+                {doc.name || "Sem nome"}
               </div>
               <span className="text-xs px-2 py-1 rounded-full bg-[#393532] text-gold">
                 {doc.category}
               </span>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-2 text-sm mb-3">
               <div className="text-gray-300">Data: <span className="text-white">{formatDate(doc.uploaded_at)}</span></div>
               <div className="text-gray-300">
-                Validade: 
+                Validade:
                 <span className={isDocumentExpired(doc.expires_at) ? "text-red-400" : "text-green-400"}>
                   {" "}{daysUntilExpiration(doc.expires_at)}
                 </span>
               </div>
             </div>
-            
+
             {doc.observations && (
               <div className="mb-3 text-sm">
                 <div className="text-blue-400 flex items-center">
@@ -138,9 +135,9 @@ export const DocumentTable = ({
                 <p className="text-white text-sm ml-5">{doc.observations}</p>
               </div>
             )}
-            
-            <Button 
-              variant="outline" 
+
+            <Button
+              variant="outline"
               size="sm"
               disabled={isDocumentExpired(doc.expires_at) || loadingDocumentIds.has(doc.id)}
               onClick={() => handleDownload(doc)}
@@ -173,10 +170,8 @@ export const DocumentTable = ({
             <TableRow key={doc.id} className={isDocumentExpired(doc.expires_at) ? "bg-red-900/20 border-red-900/30" : "border-gold/10"}>
               <TableCell className="font-medium text-white">
                 <div className="flex items-center">
-                  {!doc.viewed && (
-                    <Bell size={14} className="text-red-500 mr-2" />
-                  )}
-                  {doc.name}
+                  {!doc.viewed && <Bell size={14} className="text-red-500 mr-2" />}
+                  {doc.name || "Sem nome"}
                 </div>
               </TableCell>
               <TableCell className="text-gray-300">
@@ -188,9 +183,7 @@ export const DocumentTable = ({
               <TableCell className="text-gray-300">{formatDate(doc.uploaded_at)}</TableCell>
               <TableCell>
                 <span className={`flex items-center gap-1 ${
-                  isDocumentExpired(doc.expires_at) 
-                    ? "text-red-400" 
-                    : "text-green-400"
+                  isDocumentExpired(doc.expires_at) ? "text-red-400" : "text-green-400"
                 }`}>
                   <Clock size={14} />
                   {daysUntilExpiration(doc.expires_at)}
@@ -216,8 +209,8 @@ export const DocumentTable = ({
                 )}
               </TableCell>
               <TableCell>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   disabled={isDocumentExpired(doc.expires_at) || loadingDocumentIds.has(doc.id)}
                   onClick={() => handleDownload(doc)}
