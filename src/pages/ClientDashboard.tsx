@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DocumentTabs } from "@/components/client/DocumentTabs";
@@ -8,13 +7,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { formatDate, isDocumentExpired, daysUntilExpiration } from "@/utils/documentUtils";
+import { formatDate, isDocumentExpired, daysUntilExpiration, getDocumentsByCategory } from "@/utils/documentUtils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useDocumentFetch } from "@/hooks/useDocumentFetch";
 import { useDocumentRealtime } from "@/hooks/document/useDocumentRealtime"; 
-import { NotificationsButton } from "@/components/client/NotificationsButton";
-import { organizeDocuments } from "@/utils/documents/documentOrganizer";
-import { useNotificationsSystem } from "@/hooks/useNotificationsSystem";
 
 const ClientDashboard = () => {
   const { user } = useAuth();
@@ -25,45 +21,39 @@ const ClientDashboard = () => {
   const hasInitializedRef = useRef(false);
   const userSelectedRef = useRef(false);
   
-  // Add real-time notification hook
+  // Adicionar hook de notificações em tempo real
   useDocumentRealtime();
-  
-  // Mark all notifications as read when visiting dashboard
-  const { markAllAsRead } = useNotificationsSystem();
-  
-  // Document categories
+
+  // Categorias de documentos atualizadas
   const categories = ["Impostos", "Folha de Pagamento", "Documentações", "Certidões"];
 
-  // Get documents by category with prioritization
-  const documentsByCategory = organizeDocuments(documents, categories);
+  // Obter documentos por categoria
+  const documentsByCategory = getDocumentsByCategory(documents, categories);
 
-  // Load user documents
+  // Carregar documentos do usuário
   useEffect(() => {
     if (user?.id) {
       fetchUserDocuments(user.id);
-      
-      // Mark all notifications as read when visiting the documents dashboard
-      markAllAsRead();
     }
-  }, [user, fetchUserDocuments, markAllAsRead]);
+  }, [user, fetchUserDocuments]);
 
-  // Find category with most recent document - only on first render
+  // Encontrar a categoria com o documento mais recente - apenas na primeira renderização
   useEffect(() => {
-    // Only execute when documents are loaded and not yet initialized
+    // Garante que só execute quando os documentos estiverem carregados e ainda não inicializado
     if (!hasInitializedRef.current && !isLoadingDocuments) {
-      // Only do automatic selection if user hasn't made manual selection
+      // Apenas faça a seleção automática se o usuário ainda não fez uma seleção manual
       if (!userSelectedRef.current) {
         let mostRecentCategory: string | null = null;
         
         if (documents.length > 0) {
           let mostRecentDate: Date | null = null;
           
-          // Search all categories to find most recent document
+          // Percorrer todas as categorias para encontrar o documento mais recente
           categories.forEach(category => {
             const docsInCategory = documentsByCategory[category] || [];
             
             if (docsInCategory.length > 0) {
-              // Sort documents by upload date (most recent first)
+              // Ordenar documentos por data de upload (mais recente primeiro)
               const sortedDocs = [...docsInCategory].sort(
                 (a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
               );
@@ -71,7 +61,7 @@ const ClientDashboard = () => {
               const mostRecentInCategory = sortedDocs[0];
               const docDate = new Date(mostRecentInCategory.uploaded_at);
               
-              // Check if it's the most recent of all categories
+              // Verificar se é o mais recente de todas as categorias
               if (!mostRecentDate || docDate > mostRecentDate) {
                 mostRecentDate = docDate;
                 mostRecentCategory = category;
@@ -80,29 +70,29 @@ const ClientDashboard = () => {
           });
         }
         
-        // Select category with most recent document or first with documents
+        // Selecionar a categoria com o documento mais recente ou a primeira com documentos
         if (mostRecentCategory) {
           setSelectedCategory(mostRecentCategory);
         } else if (categories.some(cat => documentsByCategory[cat]?.length > 0)) {
-          // Fallback: select first category with documents
+          // Fallback: selecionar a primeira categoria que tenha documentos
           const firstCategoryWithDocs = categories.find(cat => documentsByCategory[cat]?.length > 0);
           setSelectedCategory(firstCategoryWithDocs || categories[0]);
         } else {
-          // Final fallback: first available category
+          // Fallback final: primeira categoria disponível
           setSelectedCategory(categories[0]);
         }
       }
       
-      // Mark as initialized to prevent future executions
+      // Marcar como inicializado para evitar execuções futuras
       hasInitializedRef.current = true;
     }
   }, [documents, isLoadingDocuments, categories, documentsByCategory]);
 
-  // Function to change selected category (for use in DocumentTabs)
+  // Função para alterar a categoria selecionada (para uso no DocumentTabs)
   const handleCategoryChange = (newCategory: string | null) => {
     if (newCategory) {
       setSelectedCategory(newCategory);
-      // Mark that user made a manual selection
+      // Marca que o usuário fez uma seleção manual
       userSelectedRef.current = true;
     }
   };
@@ -112,11 +102,10 @@ const ClientDashboard = () => {
       <Navbar />
       <div className={`container mx-auto p-4 flex-grow ${isMobile ? 'px-2' : 'px-4'} py-6`}>
         <Card className="bg-white dark:bg-[#393532] border-gold/20">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="font-extralight text-gold text-2xl">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between font-extralight text-gold text-2xl">
               {selectedCategory ? `Documentos - ${selectedCategory}` : 'Meus Documentos'}
             </CardTitle>
-            <NotificationsButton />
           </CardHeader>
           <CardContent>
             {isLoadingDocuments ? (
