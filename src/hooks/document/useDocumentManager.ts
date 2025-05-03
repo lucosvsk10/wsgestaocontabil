@@ -6,11 +6,11 @@ import { useDocumentUpload } from "../useDocumentUpload";
 import { triggerExpiredDocumentsCleanup } from "@/utils/documents/documentCleanup";
 import { UserType } from "@/types/admin";
 import { supabase } from "@/integrations/supabase/client";
-import { useNotifications } from "@/hooks/useNotifications";
+import { useNotificationsSystem } from "@/hooks/useNotificationsSystem";
 
 export const useDocumentManager = (users: any[], supabaseUsers: any[]) => {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const { createNotification } = useNotifications();
+  const { createNotification } = useNotificationsSystem();
   const realtimeChannelRef = useRef<any>(null);
   
   const {
