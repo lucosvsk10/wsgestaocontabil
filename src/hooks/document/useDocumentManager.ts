@@ -1,13 +1,16 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useDocumentFetch } from "../useDocumentFetch";
 import { useDocumentActions } from "./useDocumentActions";
 import { useDocumentUpload } from "../useDocumentUpload";
 import { triggerExpiredDocumentsCleanup } from "@/utils/documents/documentCleanup";
 import { UserType } from "@/types/admin";
+import { supabase } from "@/integrations/supabase/client";
+import { useNotifications } from "@/hooks/useNotifications";
 
 export const useDocumentManager = (users: any[], supabaseUsers: any[]) => {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const { createNotification } = useNotifications();
+  const realtimeChannelRef = useRef<any>(null);
   
   const {
     documents,
@@ -41,9 +44,21 @@ export const useDocumentManager = (users: any[], supabaseUsers: any[]) => {
   
   // Wrapper function for handleUpload that includes the required parameters
   const uploadHandleUpload = async (e: React.FormEvent) => {
-    if (!selectedUserId) return;
+    if (!selectedUserId) return { success: false, documentId: null };
     
-    await handleUpload(e, selectedUserId, supabaseUsers, users as UserType[]);
+    // Fix: Properly capture and return the result from handleUpload
+    const result = await handleUpload(e, selectedUserId, supabaseUsers, users as UserType[]);
+    
+    // If upload successful, create notification
+    if (result && result.success && result.documentId) {
+      createNotification(
+        "Novo documento disponível",
+        `Um novo documento foi enviado: ${documentName || selectedFile?.name || 'Documento'}`,
+        result.documentId
+      );
+    }
+    
+    return result;
   };
   
   // Wrapper for handleDeleteDocument to include selectedUserId
@@ -60,6 +75,41 @@ export const useDocumentManager = (users: any[], supabaseUsers: any[]) => {
       triggerExpiredDocumentsCleanup().catch(error => {
         console.error("Error during expired documents cleanup:", error);
       });
+
+      // Clean up previous subscription if it exists
+      if (realtimeChannelRef.current) {
+        supabase.removeChannel(realtimeChannelRef.current);
+      }
+
+      // Adicionar canal de tempo real para esse usuário específico
+      const channel = supabase
+        .channel(`admin-documents-${selectedUserId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',  // Monitorar todos os eventos (INSERT, UPDATE, DELETE)
+            schema: 'public',
+            table: 'documents',
+            filter: `user_id=eq.${selectedUserId}`,
+          },
+          (payload) => {
+            console.log("Mudança detectada em documentos:", payload);
+            // Atualizar a lista de documentos
+            fetchUserDocuments(selectedUserId);
+          }
+        )
+        .subscribe();
+      
+      // Store channel reference to clean it up later
+      realtimeChannelRef.current = channel;
+      
+      // Limpar inscrição quando o componente desmontar ou o usuário mudar
+      return () => {
+        if (realtimeChannelRef.current) {
+          supabase.removeChannel(realtimeChannelRef.current);
+          realtimeChannelRef.current = null;
+        }
+      };
     }
   }, [selectedUserId, fetchUserDocuments]);
 

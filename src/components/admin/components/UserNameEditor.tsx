@@ -28,11 +28,11 @@ export const UserNameEditor = ({ authUser, refreshUsers }: UserNameEditorProps) 
   return (
     <>
       <div className="flex items-center gap-2">
-        <span>{displayName}</span>
+        <span className="text-navy dark:text-white">{displayName}</span>
         <Button 
           variant="outline" 
           size="sm"
-          className="flex items-center gap-1 bg-orange-300/80 dark:bg-navy-light/80 text-navy dark:text-white hover:bg-gold hover:text-navy border-gold/20"
+          className="flex items-center gap-1 bg-orange-300/80 dark:bg-navy-light/80 text-navy dark:text-gold hover:bg-gold hover:text-navy dark:hover:bg-gold dark:hover:text-navy border-gold/20"
           onClick={() => handleEditName(authUser)}
           aria-label={`Editar nome de ${displayName}`}
         >

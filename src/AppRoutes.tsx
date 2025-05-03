@@ -21,28 +21,28 @@ const AppRoutes = () => {
       <Route path="/" element={<Index />} />
       <Route path="/login" element={<ClientLogin />} />
       
-      {/* Rota protegida para área de administrador */}
+      {/* Protected route for admin area */}
       <Route path="/admin" element={
         <PrivateRoute requiredRole="admin">
           <AdminDashboard />
         </PrivateRoute>
       } />
       
-      {/* Rota protegida para área de cliente */}
+      {/* Protected route for client area */}
       <Route path="/client" element={
         <PrivateRoute>
           <ClientDashboard />
         </PrivateRoute>
       } />
       
-      {/* Rota para redirecionamento após login */}
+      {/* Route for redirection after login */}
       <Route path="/dashboard" element={
         <PrivateRoute>
           {isAdmin() ? <Navigate to="/admin" replace /> : <Navigate to="/client" replace />}
         </PrivateRoute>
       } />
       
-      {/* Rota para capturar URLs não encontradas */}
+      {/* Route for catching not found URLs */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

@@ -1,8 +1,9 @@
+
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowDown, ArrowUp, TrendingUp, Newspaper, DollarSign, Euro, RefreshCw } from 'lucide-react';
-import { Button } from "@/components/ui/button";
+import ExchangeRateCard from './business/ExchangeRateCard';
+import NewsCard from './business/NewsCard';
+import LoadingState from './business/LoadingState';
+import ErrorState from './business/ErrorState';
 
 interface ExchangeRate {
   code: string;
@@ -120,137 +121,36 @@ const BusinessNews = () => {
     return () => clearInterval(intervalId);
   }, []);
 
-  const formatCurrency = (value: number): string => {
-    return value.toFixed(4);
-  };
-
-  const formatDate = (dateStr: string): string => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  };
-
   if (loading) {
-    return <section id="noticias" className="py-16 bg-navy-light">
-        <div className="container mx-auto px-6">
-          <h2 className="text-3xl font-anton text-gold text-center mb-8">
-            Carregando Notícias...
-          </h2>
-        </div>
-      </section>;
+    return <LoadingState />;
   }
 
   if (error) {
-    return <section id="noticias" className="py-16 bg-navy-light">
-        <div className="container mx-auto px-6">
-          <h2 className="text-3xl font-anton text-gold text-center mb-8">
-            {error}
-          </h2>
-        </div>
-      </section>;
+    return <ErrorState error={error} />;
   }
 
-  return <section id="noticias" className="py-16 bg-orange-200 dark:bg-navy-dark">
-      <div className="container mx-auto px-6">
-        <h2 className="text-4xl text-gold text-center mb-8 font-bold">
+  return (
+    <section id="noticias" className="py-8 md:py-16 bg-orange-200 dark:bg-navy-dark">
+      <div className="container mx-auto px-4 md:px-6">
+        <h2 className="text-3xl md:text-4xl text-navy-light dark:text-gold text-center mb-8 font-bold">
           Notícias do Mundo de Negócios
         </h2>
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-          <div className="lg:col-span-1">
-            <Card className="bg-white/70 dark:bg-navy border-gold/30 text-navy dark:text-white h-full">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="text-gold" />
-                    <span>Cotações do Dia</span>
-                  </CardTitle>
-                  <CardDescription className="text-navy/70 dark:text-white/70">
-                    Atualizado em {new Date().toLocaleDateString('pt-BR')}
-                  </CardDescription>
-                </div>
-                <Button variant="outline" size="icon" onClick={handleRefreshRates} disabled={refreshingRates} className="border-gold/30 text-gold hover:text-white bg-white/50 dark:bg-gold-dark">
-                  <RefreshCw className={`h-4 w-4 ${refreshingRates ? 'animate-spin' : ''}`} />
-                  <span className="sr-only">Atualizar cotações</span>
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-gold/20">
-                      <TableHead className="text-gold">Moeda</TableHead>
-                      <TableHead className="text-gold">Valor</TableHead>
-                      <TableHead className="text-gold">Variação</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {exchangeRates.map(rate => <TableRow key={rate.code} className="border-gold/10">
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            {rate.code.includes('USD') && <DollarSign className="w-4 h-4 text-gold" />}
-                            {rate.code.includes('EUR') && <Euro className="w-4 h-4 text-gold" />}
-                            {rate.code.includes('BRL/') && <span className="text-gold font-bold">R$</span>}
-                            {rate.name}
-                          </div>
-                        </TableCell>
-                        <TableCell>{formatCurrency(rate.rate)}</TableCell>
-                        <TableCell className={rate.change >= 0 ? "text-green-400" : "text-red-400"}>
-                          <div className="flex items-center gap-1">
-                            {rate.change >= 0 ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
-                            {Math.abs(rate.change * 100).toFixed(2)}%
-                          </div>
-                        </TableCell>
-                      </TableRow>)}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </div>
-          
-          <div className="lg:col-span-2">
-            <Card className="bg-white/70 dark:bg-navy border-gold/30 text-navy dark:text-white h-full">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Newspaper className="text-gold" />
-                    <span>Últimas Notícias</span>
-                  </CardTitle>
-                  <CardDescription className="text-navy/70 dark:text-white/70">
-                    Notícias atualizadas diariamente
-                  </CardDescription>
-                </div>
-                <Button variant="outline" size="icon" onClick={handleRefreshNews} disabled={refreshingNews} className="border-gold/30 text-gold hover:text-white bg-white/50 dark:bg-gold-dark">
-                  <RefreshCw className={`h-4 w-4 ${refreshingNews ? 'animate-spin' : ''}`} />
-                  <span className="sr-only">Atualizar notícias</span>
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  {news.map((item, index) => <div key={index} className="border-b border-gold/10 pb-4 last:border-0">
-                      <h3 className="text-lg font-medium text-gold mb-2">{item.title}</h3>
-                      <p className="text-navy/80 dark:text-white/80 mb-2">{item.description}</p>
-                      <div className="flex justify-between items-center">
-                        <a 
-                          href={item.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="text-purple hover:text-purple-400 text-sm transition-colors duration-300"
-                        >
-                          Ler mais
-                        </a>
-                        <span className="text-navy/60 dark:text-white/60 text-sm">{formatDate(item.publishedAt)}</span>
-                      </div>
-                    </div>)}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+        <div className="grid grid-cols-1 gap-6 md:gap-8">
+          <ExchangeRateCard 
+            exchangeRates={exchangeRates}
+            onRefresh={handleRefreshRates}
+            isRefreshing={refreshingRates}
+          />
+          <NewsCard 
+            news={news}
+            onRefresh={handleRefreshNews}
+            isRefreshing={refreshingNews}
+          />
         </div>
       </div>
-    </section>;
+    </section>
+  );
 };
 
 export default BusinessNews;

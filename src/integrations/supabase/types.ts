@@ -21,6 +21,7 @@ export type Database = {
           original_filename: string | null
           size: number | null
           storage_key: string | null
+          subcategory: string | null
           type: string | null
           uploaded_at: string | null
           user_id: string
@@ -38,6 +39,7 @@ export type Database = {
           original_filename?: string | null
           size?: number | null
           storage_key?: string | null
+          subcategory?: string | null
           type?: string | null
           uploaded_at?: string | null
           user_id: string
@@ -55,6 +57,7 @@ export type Database = {
           original_filename?: string | null
           size?: number | null
           storage_key?: string | null
+          subcategory?: string | null
           type?: string | null
           uploaded_at?: string | null
           user_id?: string
@@ -67,6 +70,44 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          document_id: string | null
+          id: string
+          is_read: boolean | null
+          message: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          document_id?: string | null
+          id?: string
+          is_read?: boolean | null
+          message: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          document_id?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
             referencedColumns: ["id"]
           },
         ]
