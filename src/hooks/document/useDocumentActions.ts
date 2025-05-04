@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -55,18 +54,30 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
       // Mark document as viewed when downloaded
       await markAsViewed(documentId);
       
+      // IMPORTANT: Clean the storage key to ensure it doesn't have any unwanted prefixes
+      // This fixes the issue where paths like "users/..." were incorrectly included
+      let cleanStorageKey = storageKey;
+      
+      // Remove any "users/" prefix if it exists
+      if (cleanStorageKey.startsWith('users/')) {
+        cleanStorageKey = cleanStorageKey.substring(6); // Remove 'users/' prefix
+      }
+      
+      console.log('Attempting to download with storage key:', cleanStorageKey);
+      
       // Try to generate a signed URL first for better security
       try {
         const { data: signedUrlData, error: signedUrlError } = await supabase.storage
           .from('documents')
-          .createSignedUrl(storageKey, 60);
+          .createSignedUrl(cleanStorageKey, 60);
           
         if (signedUrlError) {
-          console.warn("Could not create signed URL, falling back to direct download:", signedUrlError);
+          console.warn("Could not create signed URL:", signedUrlError);
           throw signedUrlError;
         }
         
         if (signedUrlData?.signedUrl) {
+          console.log('Successfully generated signed URL');
           // Download using the signed URL
           const response = await fetch(signedUrlData.signedUrl);
           if (!response.ok) {
@@ -90,21 +101,59 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
           
           return { success: true };
         }
-      } catch (signedUrlError) {
-        console.warn("Signed URL failed, trying direct download:", signedUrlError);
+      } catch (signedUrlError: any) {
+        console.warn("Signed URL failed, trying public URL:", signedUrlError);
+        
+        // Fallback to public URL
+        try {
+          const { data: publicUrlData } = supabase.storage
+            .from('documents')
+            .getPublicUrl(cleanStorageKey);
+            
+          if (publicUrlData?.publicUrl) {
+            console.log('Using public URL as fallback');
+            const response = await fetch(publicUrlData.publicUrl);
+            if (!response.ok) {
+              throw new Error(`Erro ao baixar: ${response.status} ${response.statusText}`);
+            }
+            
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename || 'documento';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            // Refresh documents if userId provided
+            if (userId) {
+              await fetchUserDocuments(userId);
+            }
+            
+            return { success: true };
+          } else {
+            throw new Error("Não foi possível gerar URL pública para o arquivo");
+          }
+        } catch (publicUrlError: any) {
+          console.error("Public URL download failed:", publicUrlError);
+          throw publicUrlError;
+        }
       }
       
-      // Fallback to direct download
+      // Fallback to direct download if everything else fails
+      console.log('Attempting direct download as last resort');
       const { data, error } = await supabase.storage
         .from('documents')
-        .download(storageKey);
+        .download(cleanStorageKey);
         
       if (error) {
         // Provide more descriptive error messages based on error code
         if (error.message.includes("404") || error.message.includes("not found")) {
-          throw new Error("Arquivo não encontrado no storage.");
+          throw new Error("Documento não encontrado. Verifique se ele ainda está disponível no sistema.");
         } else if (error.message.includes("403") || error.message.includes("permission")) {
-          throw new Error("Sem permissão para acessar este arquivo.");
+          throw new Error("Sem permissão para acessar este documento.");
         } else {
           throw error;
         }
@@ -135,7 +184,7 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
       toast({
         variant: "destructive",
         title: "Erro ao baixar documento",
-        description: error.message || "Ocorreu um erro ao baixar o documento."
+        description: error.message || "Documento não encontrado. Verifique se ele ainda está disponível no sistema."
       });
       return { success: false };
     } finally {

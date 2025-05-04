@@ -32,6 +32,7 @@ export const DocumentActions = ({
       let success = false;
       
       if (doc.storage_key) {
+        console.log('Original storage key:', doc.storage_key);
         const result = await downloadDocument(
           doc.id, 
           doc.storage_key, 
