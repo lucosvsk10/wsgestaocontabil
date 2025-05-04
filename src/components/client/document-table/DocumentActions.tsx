@@ -2,9 +2,9 @@
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Document } from "@/utils/auth/types";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { useDocumentActions } from "@/hooks/document/useDocumentActions";
+import { useToast } from "@/hooks/use-toast";
 
 interface DocumentActionsProps {
   doc: Document;
@@ -21,80 +21,44 @@ export const DocumentActions = ({
 }: DocumentActionsProps) => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-
-  const markAsViewed = async (docItem: Document): Promise<boolean> => {
-    if (docItem.viewed) return true;
-
-    try {
-      setIsLoading(true);
-      const { error } = await supabase
-        .from("documents")
-        .update({ viewed: true, viewed_at: new Date().toISOString() })
-        .eq("id", docItem.id);
-
-      if (error) throw error;
-      
-      refreshDocuments();
-      return true;
-    } catch (error: any) {
-      console.error("Erro ao marcar como visualizado:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Não foi possível marcar o documento como visualizado."
-      });
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  
+  // Create a no-op function to pass to useDocumentActions since we're refreshing manually
+  const noopFetchDocuments = async () => {};
+  const { downloadDocument, downloadByUrl } = useDocumentActions(noopFetchDocuments);
 
   const handleDownload = async () => {
-    const viewSuccess = await markAsViewed(doc);
-    if (!viewSuccess) return;
-
+    setIsLoading(true);
     try {
+      let success = false;
+      
       if (doc.storage_key) {
-        const { data, error } = await supabase.storage
-          .from("documents")
-          .download(doc.storage_key);
-
-        if (error) throw error;
-
-        if (data) {
-          const url = URL.createObjectURL(data);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = doc.filename || doc.original_filename || doc.name || "documento";
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-        }
+        const result = await downloadDocument(
+          doc.id, 
+          doc.storage_key, 
+          doc.filename || doc.original_filename || doc.name || "documento"
+        );
+        success = result.success;
       } else if (doc.file_url) {
-        try {
-          const response = await fetch(doc.file_url);
-          const blob = await response.blob();
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = doc.filename || doc.original_filename || doc.name || "documento";
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-        } catch (fetchError) {
-          console.warn("Could not fetch for download, opening in new tab instead:", fetchError);
-          window.open(doc.file_url, "_blank");
-        }
+        const result = await downloadByUrl(
+          doc.id, 
+          doc.file_url, 
+          doc.filename || doc.original_filename || doc.name || "documento"
+        );
+        success = result.success;
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Não foi possível baixar o documento: informações insuficientes."
+        });
+        return;
       }
-    } catch (error: any) {
-      console.error("Erro ao baixar documento:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao baixar documento",
-        description: error.message
-      });
+      
+      if (success) {
+        refreshDocuments(); // Refresh document list to update viewed status
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 

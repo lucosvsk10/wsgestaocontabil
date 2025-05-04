@@ -4,6 +4,7 @@ import { Document } from "@/utils/auth/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DocumentActions } from "./DocumentActions";
 import { BellDot, Clock, Tag, Info } from "lucide-react";
+import { useDocumentNotifications } from "@/hooks/useDocumentNotifications";
 
 interface DesktopDocumentTableProps {
   documents: Document[];
@@ -25,6 +26,9 @@ export const DesktopDocumentTable = ({
   refreshDocuments,
   loadingDocumentIds,
 }: DesktopDocumentTableProps) => {
+  // Use our notification hook for checking if document is unread
+  const { isDocumentUnread } = useDocumentNotifications(refreshDocuments);
+  
   const getDisplayCategory = (doc: Document) => {
     if (doc.category.startsWith('Impostos/')) {
       return doc.category.split('/')[1];
@@ -60,7 +64,7 @@ export const DesktopDocumentTable = ({
             >
               <TableCell className="font-medium text-navy dark:text-white">
                 <div className="flex items-center">
-                  {!doc.viewed && <BellDot size={16} className="text-blue-500 dark:text-blue-400 mr-2" />}
+                  {isDocumentUnread(doc.id) && <BellDot size={16} className="text-blue-500 dark:text-blue-400 mr-2" />}
                   {doc.name}
                 </div>
               </TableCell>

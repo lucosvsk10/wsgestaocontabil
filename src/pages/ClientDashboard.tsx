@@ -11,14 +11,13 @@ import Footer from "@/components/Footer";
 import { formatDate, isDocumentExpired, daysUntilExpiration } from "@/utils/documentUtils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useDocumentFetch } from "@/hooks/useDocumentFetch";
-import { useDocumentRealtime } from "@/hooks/document/useDocumentRealtime"; 
 import { NotificationsButton } from "@/components/client/NotificationsButton";
 import { organizeDocuments } from "@/utils/documents/documentOrganizer";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
-import { supabase } from "@/integrations/supabase/client";
+import { useDocumentNotifications } from "@/hooks/useDocumentNotifications";
 
 const ClientDashboard = () => {
   const { user } = useAuth();
@@ -28,67 +27,34 @@ const ClientDashboard = () => {
   const { documents, isLoadingDocuments, error, fetchUserDocuments } = useDocumentFetch();
   const hasInitializedRef = useRef(false);
   const userSelectedRef = useRef(false);
-  const fetchAttemptedRef = useRef(false);
-  const documentViewUpdateRunRef = useRef(false);
-  
-  // Add real-time notification hook - enables real-time updates for document notifications
-  const { newDocument } = useDocumentRealtime();
   
   // Document categories
   const categories = ["Impostos", "Folha de Pagamento", "Documentações", "Certidões"];
 
   // Get documents by category with prioritization
   const documentsByCategory = organizeDocuments(documents, categories);
-
-  // Refresh documents when a notification occurs
-  useEffect(() => {
-    if (newDocument && user?.id) {
-      console.log("New document notification received, refreshing documents");
+  
+  // Initialize document notifications
+  const { fetchUnreadDocuments } = useDocumentNotifications(() => {
+    if (user?.id) {
       fetchUserDocuments(user.id);
     }
-  }, [newDocument, user, fetchUserDocuments]);
-
-  // Mark unviewed documents as viewed when dashboard is loaded
-  const markUnviewedDocumentsAsViewed = async (userId: string) => {
-    if (!userId || documentViewUpdateRunRef.current) return;
-    
-    try {
-      documentViewUpdateRunRef.current = true;
-      
-      // Find documents that haven't been viewed yet
-      const unviewedDocs = documents.filter(doc => !doc.viewed);
-      
-      if (unviewedDocs.length === 0) return;
-      
-      console.log("Marcando documentos não visualizados como visualizados:", unviewedDocs.length);
-      
-      // Update all unviewed documents to viewed
-      await Promise.all(
-        unviewedDocs.map(async (doc) => {
-          await supabase
-            .from('documents')
-            .update({ viewed: true, viewed_at: new Date().toISOString() })
-            .eq('id', doc.id);
-        })
-      );
-      
-      // Refresh documents list without triggering infinite loops
-      fetchUserDocuments(userId);
-      
-    } catch (error) {
-      console.error("Error updating document view status:", error);
+  });
+  
+  // Function to refresh documents
+  const handleRefreshDocuments = () => {
+    if (user?.id) {
+      fetchUserDocuments(user.id);
+      fetchUnreadDocuments();
     }
   };
 
-  // Load user documents
+  // Load user documents when user changes
   useEffect(() => {
-    console.log("ClientDashboard useEffect - User:", user);
-    
     if (user?.id) {
       console.log("User ID disponível, buscando documentos:", user.id);
       fetchUserDocuments(user.id);
-      fetchAttemptedRef.current = true;
-    } else if (!fetchAttemptedRef.current) {
+    } else {
       console.log("User ID não disponível, não é possível buscar documentos");
     }
   }, [user, fetchUserDocuments]);
@@ -151,14 +117,6 @@ const ClientDashboard = () => {
       setSelectedCategory(newCategory);
       // Mark that user made a manual selection
       userSelectedRef.current = true;
-    }
-  };
-
-  // Manual refresh function
-  const handleRefreshDocuments = () => {
-    if (user?.id) {
-      fetchUserDocuments(user.id);
-      documentViewUpdateRunRef.current = false; // Reset the view update flag to allow running again
     }
   };
 

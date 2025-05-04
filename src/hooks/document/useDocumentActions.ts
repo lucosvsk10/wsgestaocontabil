@@ -36,7 +36,7 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Não foi possível marcar o documento como visualizado."
+        description: error.message || "Não foi possível marcar o documento como visualizado."
       });
       return { success: false, documentId: null };
     } finally {
@@ -55,11 +55,60 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
       // Mark document as viewed when downloaded
       await markAsViewed(documentId);
       
+      // Try to generate a signed URL first for better security
+      try {
+        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+          .from('documents')
+          .createSignedUrl(storageKey, 60);
+          
+        if (signedUrlError) {
+          console.warn("Could not create signed URL, falling back to direct download:", signedUrlError);
+          throw signedUrlError;
+        }
+        
+        if (signedUrlData?.signedUrl) {
+          // Download using the signed URL
+          const response = await fetch(signedUrlData.signedUrl);
+          if (!response.ok) {
+            throw new Error(`Erro ao baixar: ${response.status} ${response.statusText}`);
+          }
+          
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename || 'documento';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          
+          // Refresh documents if userId provided
+          if (userId) {
+            await fetchUserDocuments(userId);
+          }
+          
+          return { success: true };
+        }
+      } catch (signedUrlError) {
+        console.warn("Signed URL failed, trying direct download:", signedUrlError);
+      }
+      
+      // Fallback to direct download
       const { data, error } = await supabase.storage
         .from('documents')
         .download(storageKey);
         
-      if (error) throw error;
+      if (error) {
+        // Provide more descriptive error messages based on error code
+        if (error.message.includes("404") || error.message.includes("not found")) {
+          throw new Error("Arquivo não encontrado no storage.");
+        } else if (error.message.includes("403") || error.message.includes("permission")) {
+          throw new Error("Sem permissão para acessar este arquivo.");
+        } else {
+          throw error;
+        }
+      }
       
       if (data) {
         // Create URL and initiate download
@@ -71,6 +120,8 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+      } else {
+        throw new Error("Não foi possível baixar o arquivo (conteúdo vazio).");
       }
       
       // Refresh documents if userId provided
@@ -84,7 +135,7 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
       toast({
         variant: "destructive",
         title: "Erro ao baixar documento",
-        description: error.message
+        description: error.message || "Ocorreu um erro ao baixar o documento."
       });
       return { success: false };
     } finally {
@@ -106,6 +157,10 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
       try {
         // Try to download the file directly
         const response = await fetch(fileUrl);
+        if (!response.ok) {
+          throw new Error(`Erro ao baixar: ${response.status} ${response.statusText}`);
+        }
+        
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -115,9 +170,14 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-      } catch (fetchError) {
+      } catch (fetchError: any) {
         // Fallback to opening in new tab
         console.warn("Could not download directly, opening in new tab:", fetchError);
+        toast({
+          title: "Download direto falhou",
+          description: "Abrindo o arquivo em uma nova aba.",
+          duration: 3000,
+        });
         window.open(fileUrl, "_blank");
       }
       
@@ -132,7 +192,7 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
       toast({
         variant: "destructive",
         title: "Erro ao baixar documento",
-        description: error.message
+        description: error.message || "Ocorreu um erro ao baixar o documento."
       });
       return { success: false };
     } finally {
@@ -194,7 +254,7 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
       toast({
         variant: "destructive",
         title: "Erro ao excluir documento",
-        description: error.message
+        description: error.message || "Ocorreu um erro ao excluir o documento."
       });
     } finally {
       setLoadingDocumentIds(prev => {

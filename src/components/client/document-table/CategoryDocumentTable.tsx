@@ -4,6 +4,7 @@ import { Document } from "@/utils/auth/types";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileDocumentCard } from "./MobileDocumentCard";
 import { DesktopDocumentTable } from "./DesktopDocumentTable";
+import { useDocumentActions } from "@/hooks/document/useDocumentActions";
 
 interface CategoryDocumentTableProps {
   documents: Document[];
@@ -24,6 +25,19 @@ export const CategoryDocumentTable = ({
 }: CategoryDocumentTableProps) => {
   const [loadingDocumentIds, setLoadingDocumentIds] = useState<Set<string>>(new Set());
   const isMobile = useIsMobile();
+  
+  // Create a helper function to mark a document as loading
+  const markAsLoading = (docId: string, isLoading: boolean) => {
+    setLoadingDocumentIds(prev => {
+      const newSet = new Set(prev);
+      if (isLoading) {
+        newSet.add(docId);
+      } else {
+        newSet.delete(docId);
+      }
+      return newSet;
+    });
+  };
   
   if (isMobile) {
     return (
