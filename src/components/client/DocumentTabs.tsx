@@ -10,7 +10,7 @@ import {
   DrawerTrigger 
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
-import { Menu } from "lucide-react";
+import { Menu, BellDot } from "lucide-react";
 
 interface DocumentTabsProps {
   documents: Document[];
@@ -61,6 +61,12 @@ export const DocumentTabs = ({
     setIsDrawerOpen(false);
   };
 
+  // Get count of unviewed documents for each category
+  const getUnviewedCount = (category: string): number => {
+    if (!documentsByCategory[category]) return 0;
+    return documentsByCategory[category].filter(doc => !doc.viewed).length;
+  };
+
   return isMobile ? (
     <div className="w-full">
       <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
@@ -73,6 +79,14 @@ export const DocumentTabs = ({
               <Menu className="mr-2 h-4 w-4" />
               <span>{activeCategory}</span>
             </div>
+            {getUnviewedCount(activeCategory) > 0 && (
+              <div className="flex items-center">
+                <BellDot size={16} className="text-blue-400 mr-1" />
+                <span className="text-xs bg-blue-500 text-white px-1.5 py-0.5 rounded-full">
+                  {getUnviewedCount(activeCategory)}
+                </span>
+              </div>
+            )}
           </Button>
         </DrawerTrigger>
         <DrawerContent className="bg-[#393532] dark:bg-[#2d2a28] border-t border-gold/20 p-4">
@@ -94,11 +108,18 @@ export const DocumentTabs = ({
                     onClick={() => handleCategoryChange(category)}
                   >
                     <span>{category}</span>
-                    {documentsByCategory[category]?.length > 0 && (
-                      <span className="text-xs bg-gold text-navy px-2 py-0.5 rounded-full">
-                        {documentsByCategory[category].length}
-                      </span>
-                    )}
+                    <div className="flex items-center">
+                      {getUnviewedCount(category) > 0 && <BellDot size={16} className="text-blue-400 mr-1" />}
+                      {documentsByCategory[category]?.length > 0 && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          getUnviewedCount(category) > 0 
+                            ? "bg-blue-500 text-white" 
+                            : "bg-gold text-navy"
+                        }`}>
+                          {documentsByCategory[category].length}
+                        </span>
+                      )}
+                    </div>
                   </Button>
                 </div>
               ))}
@@ -135,9 +156,16 @@ export const DocumentTabs = ({
             disabled={!documentsByCategory[category] || documentsByCategory[category].length === 0}
             className="relative text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
           >
-            {category}
+            <div className="flex items-center">
+              {category}
+              {getUnviewedCount(category) > 0 && <BellDot size={16} className="text-blue-400 ml-1" />}
+            </div>
             {documentsByCategory[category]?.length > 0 && (
-              <span className="ml-2 text-xs bg-navy dark:bg-gold text-white dark:text-navy px-1.5 py-0.5 rounded-full">
+              <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${
+                getUnviewedCount(category) > 0 
+                  ? "bg-blue-500 text-white" 
+                  : "bg-navy dark:bg-gold text-white dark:text-navy"
+              }`}>
                 {documentsByCategory[category].length}
               </span>
             )}

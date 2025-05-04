@@ -5,15 +5,11 @@ import { useToast } from "@/hooks/use-toast";
 import { Document } from "@/types/admin";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDocumentActions } from "./useDocumentActions";
-import { useNotifications } from "@/hooks/useNotifications";
-import { useNotificationsSystem } from "@/hooks/useNotificationsSystem";
 
 export const useDocumentRealtime = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [newDocument, setNewDocument] = useState<Document | null>(null);
-  const { sendNotification, permissionStatus } = useNotifications();
-  const { createNotification } = useNotificationsSystem();
   const realtimeChannelRef = useRef<any>(null);
   
   // Create a no-op function to pass to useDocumentActions since we're not refreshing the list here
@@ -35,6 +31,40 @@ export const useDocumentRealtime = () => {
         
         // Clear notification after download
         setNewDocument(null);
+      } else if (newDocument.file_url) {
+        try {
+          const response = await fetch(newDocument.file_url);
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = newDocument.filename || newDocument.original_filename || newDocument.name || "documento";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          
+          // Mark as viewed in database
+          await supabase
+            .from("documents")
+            .update({ viewed: true, viewed_at: new Date().toISOString() })
+            .eq("id", newDocument.id);
+            
+          // Clear notification after download
+          setNewDocument(null);
+        } catch (fetchError) {
+          console.warn("Could not fetch for download, opening in new tab instead:", fetchError);
+          window.open(newDocument.file_url, "_blank");
+          
+          // Mark as viewed in database
+          await supabase
+            .from("documents")
+            .update({ viewed: true, viewed_at: new Date().toISOString() })
+            .eq("id", newDocument.id);
+            
+          // Clear notification after download
+          setNewDocument(null);
+        }
       }
     } catch (error) {
       console.error("Erro ao baixar documento notificado:", error);
@@ -73,26 +103,6 @@ export const useDocumentRealtime = () => {
             // Update state with new document
             setNewDocument(newDoc);
             
-            // Create a database notification
-            createNotification(
-              "Novo documento disponível", 
-              `Um novo documento foi enviado para você: ${newDoc.name}`,
-              newDoc.id
-            );
-            
-            // Send browser notification if permission is granted
-            if (permissionStatus === 'granted') {
-              sendNotification(
-                "Novo documento disponível!", 
-                {
-                  body: `Um novo documento foi enviado para você: ${newDoc.name}`,
-                  icon: "/lovable-uploads/ebbdfdb8-bb18-4548-8b25-3d5982c97873.png",
-                  tag: `new-document-${newDoc.id}`,
-                  requireInteraction: true
-                }
-              );
-            }
-            
             // Show toast notification
             toast({
               title: "Novo documento disponível",
@@ -127,7 +137,7 @@ export const useDocumentRealtime = () => {
         realtimeChannelRef.current = null;
       }
     };
-  }, [user?.id, toast, permissionStatus, sendNotification, createNotification]);
+  }, [user?.id, toast]);
 
   return {
     newDocument,

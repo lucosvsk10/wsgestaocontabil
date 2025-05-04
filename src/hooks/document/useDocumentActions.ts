@@ -54,7 +54,7 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
         const url = URL.createObjectURL(data);
         const a = document.createElement('a');
         a.href = url;
-        a.download = filename;
+        a.download = filename || 'documento';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -65,6 +65,8 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
       if (userId) {
         await fetchUserDocuments(userId);
       }
+      
+      return { success: true };
     } catch (error: any) {
       console.error('Error downloading document:', error);
       toast({
@@ -72,6 +74,55 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
         title: "Erro ao baixar documento",
         description: error.message
       });
+      return { success: false };
+    } finally {
+      setLoadingDocumentIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(documentId);
+        return newSet;
+      });
+    }
+  };
+
+  const downloadByUrl = async (documentId: string, fileUrl: string, filename: string, userId?: string) => {
+    try {
+      setLoadingDocumentIds(prev => new Set([...prev, documentId]));
+      
+      // Mark document as viewed when downloaded
+      await markAsViewed(documentId);
+      
+      try {
+        // Try to download the file directly
+        const response = await fetch(fileUrl);
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename || 'documento';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (fetchError) {
+        // Fallback to opening in new tab
+        console.warn("Could not download directly, opening in new tab:", fetchError);
+        window.open(fileUrl, "_blank");
+      }
+      
+      // Refresh documents if userId provided
+      if (userId) {
+        await fetchUserDocuments(userId);
+      }
+      
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error downloading document by URL:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao baixar documento",
+        description: error.message
+      });
+      return { success: false };
     } finally {
       setLoadingDocumentIds(prev => {
         const newSet = new Set(prev);
@@ -146,6 +197,7 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
     loadingDocumentIds,
     markAsViewed,
     downloadDocument,
+    downloadByUrl,
     deleteDocument
   };
 };

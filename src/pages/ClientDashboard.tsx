@@ -14,7 +14,6 @@ import { useDocumentFetch } from "@/hooks/useDocumentFetch";
 import { useDocumentRealtime } from "@/hooks/document/useDocumentRealtime"; 
 import { NotificationsButton } from "@/components/client/NotificationsButton";
 import { organizeDocuments } from "@/utils/documents/documentOrganizer";
-import { useNotificationsSystem } from "@/hooks/useNotificationsSystem";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,20 +29,24 @@ const ClientDashboard = () => {
   const hasInitializedRef = useRef(false);
   const userSelectedRef = useRef(false);
   const fetchAttemptedRef = useRef(false);
-  const notificationsMarkedRef = useRef(false);
   const documentViewUpdateRunRef = useRef(false);
   
-  // Add real-time notification hook
-  useDocumentRealtime();
-  
-  // Mark all notifications as read when visiting dashboard
-  const { markAllAsRead } = useNotificationsSystem();
+  // Add real-time notification hook - enables real-time updates for document notifications
+  const { newDocument } = useDocumentRealtime();
   
   // Document categories
   const categories = ["Impostos", "Folha de Pagamento", "Documentações", "Certidões"];
 
   // Get documents by category with prioritization
   const documentsByCategory = organizeDocuments(documents, categories);
+
+  // Refresh documents when a notification occurs
+  useEffect(() => {
+    if (newDocument && user?.id) {
+      console.log("New document notification received, refreshing documents");
+      fetchUserDocuments(user.id);
+    }
+  }, [newDocument, user, fetchUserDocuments]);
 
   // Mark unviewed documents as viewed when dashboard is loaded
   const markUnviewedDocumentsAsViewed = async (userId: string) => {
@@ -85,30 +88,11 @@ const ClientDashboard = () => {
       console.log("User ID disponível, buscando documentos:", user.id);
       fetchUserDocuments(user.id);
       fetchAttemptedRef.current = true;
-      
-      // Mark all notifications as read when visiting the documents dashboard
-      // Only do this once per component mount to avoid infinite loop
-      if (!notificationsMarkedRef.current) {
-        markAllAsRead();
-        notificationsMarkedRef.current = true;
-      }
     } else if (!fetchAttemptedRef.current) {
       console.log("User ID não disponível, não é possível buscar documentos");
     }
-  }, [user, fetchUserDocuments, markAllAsRead]);
+  }, [user, fetchUserDocuments]);
   
-  // Mark documents as viewed when loaded
-  useEffect(() => {
-    if (user?.id && documents.length > 0 && !documentViewUpdateRunRef.current) {
-      markUnviewedDocumentsAsViewed(user.id);
-    }
-    
-    // Reset the flag when component unmounts to prepare for next mount
-    return () => {
-      documentViewUpdateRunRef.current = false;
-    };
-  }, [user, documents]);
-
   // Find category with most recent document - only on first render
   useEffect(() => {
     // Only execute when documents are loaded and not yet initialized
@@ -170,10 +154,11 @@ const ClientDashboard = () => {
     }
   };
 
-  // Função para tentar novamente em caso de erro
-  const handleRetry = () => {
+  // Manual refresh function
+  const handleRefreshDocuments = () => {
     if (user?.id) {
       fetchUserDocuments(user.id);
+      documentViewUpdateRunRef.current = false; // Reset the view update flag to allow running again
     }
   };
 
@@ -186,7 +171,18 @@ const ClientDashboard = () => {
             <CardTitle className="font-extralight text-gold text-2xl">
               {selectedCategory ? `Documentos - ${selectedCategory}` : 'Meus Documentos'}
             </CardTitle>
-            <NotificationsButton />
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleRefreshDocuments}
+                title="Atualizar documentos"
+                className="hover:bg-gold/20"
+              >
+                <RefreshCcw size={18} className="text-gold" />
+              </Button>
+              <NotificationsButton />
+            </div>
           </CardHeader>
           <CardContent>
             {isLoadingDocuments ? (
@@ -200,7 +196,7 @@ const ClientDashboard = () => {
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    onClick={handleRetry}
+                    onClick={handleRefreshDocuments}
                     className="flex items-center gap-2 self-end"
                   >
                     <RefreshCcw className="h-4 w-4" />
@@ -220,7 +216,7 @@ const ClientDashboard = () => {
                     formatDate={formatDate} 
                     isDocumentExpired={isDocumentExpired} 
                     daysUntilExpiration={daysUntilExpiration} 
-                    refreshDocuments={() => user?.id && fetchUserDocuments(user.id)}
+                    refreshDocuments={handleRefreshDocuments}
                     activeCategory={selectedCategory}
                   />
                 </div>

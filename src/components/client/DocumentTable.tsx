@@ -1,5 +1,6 @@
+
 import { useState } from "react";
-import { Download, Clock, Tag, Bell, Info } from "lucide-react";
+import { Download, Clock, Tag, Bell, Info, BellDot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Document } from "@/utils/auth/types";
@@ -82,7 +83,23 @@ export const DocumentTable = ({
           URL.revokeObjectURL(url);
         }
       } else if (docItem.file_url) {
-        window.open(docItem.file_url, "_blank");
+        // For file_url, instead of just opening in a new tab, try to download it
+        try {
+          const response = await fetch(docItem.file_url);
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = docItem.filename || docItem.original_filename || docItem.name || "documento";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        } catch (fetchError) {
+          // Fallback to opening in a new tab if fetch fails
+          console.warn("Could not fetch for download, opening in new tab instead:", fetchError);
+          window.open(docItem.file_url, "_blank");
+        }
       }
     } catch (error: any) {
       console.error("Erro ao baixar documento:", error);
@@ -108,7 +125,7 @@ export const DocumentTable = ({
           >
             <div className="flex items-center justify-between mb-2">
               <div className="font-medium text-white flex items-center">
-                {!doc.viewed && <Bell size={14} className="text-red-500 mr-2" />}
+                {!doc.viewed && <BellDot size={14} className="text-red-500 mr-2" />}
                 {doc.name || "Sem nome"}
               </div>
               <span className="text-xs px-2 py-1 rounded-full bg-[#393532] text-gold">
@@ -170,7 +187,7 @@ export const DocumentTable = ({
             <TableRow key={doc.id} className={isDocumentExpired(doc.expires_at) ? "bg-red-900/20 border-red-900/30" : "border-gold/10"}>
               <TableCell className="font-medium text-white">
                 <div className="flex items-center">
-                  {!doc.viewed && <Bell size={14} className="text-red-500 mr-2" />}
+                  {!doc.viewed && <BellDot size={14} className="text-red-500 mr-2" />}
                   {doc.name || "Sem nome"}
                 </div>
               </TableCell>
@@ -217,7 +234,7 @@ export const DocumentTable = ({
                   className="flex items-center gap-1 bg-[#393532] border-gold/20 text-gold hover:bg-gold hover:text-navy"
                 >
                   <Download size={14} />
-                  <span>{doc.filename || doc.original_filename || "Baixar"}</span>
+                  <span>{docItem.filename || docItem.original_filename || "Baixar"}</span>
                 </Button>
               </TableCell>
             </TableRow>

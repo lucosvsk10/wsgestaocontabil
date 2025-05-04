@@ -1,7 +1,7 @@
 
 import { Document } from "@/utils/auth/types";
 import { DocumentActions } from "./DocumentActions";
-import { BellDot } from "lucide-react";
+import { BellDot, Info } from "lucide-react";
 
 interface MobileDocumentCardProps {
   doc: Document;
@@ -20,7 +20,6 @@ export const MobileDocumentCard = ({
   daysUntilExpiration,
   refreshDocuments,
   loadingDocumentIds,
-  setLoadingDocumentIds
 }: MobileDocumentCardProps) => {
   const getDisplayCategory = (doc: Document) => {
     if (doc.category.startsWith('Impostos/')) {
@@ -67,6 +66,7 @@ export const MobileDocumentCard = ({
       {doc.observations && (
         <div className="mb-3 text-sm">
           <div className="text-gray-600 dark:text-gray-300 flex items-center">
+            <Info size={14} className="mr-1" />
             <span>Observações:</span>
           </div>
           <p className="text-navy dark:text-white text-sm ml-2">{doc.observations}</p>
