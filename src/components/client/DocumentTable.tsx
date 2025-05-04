@@ -234,7 +234,7 @@ export const DocumentTable = ({
                   className="flex items-center gap-1 bg-[#393532] border-gold/20 text-gold hover:bg-gold hover:text-navy"
                 >
                   <Download size={14} />
-                  <span>{docItem.filename || docItem.original_filename || "Baixar"}</span>
+                  <span>{doc.filename || doc.original_filename || "Baixar"}</span>
                 </Button>
               </TableCell>
             </TableRow>

@@ -167,7 +167,7 @@ export const useNotificationsSystem = () => {
     // Initial fetch
     fetchNotifications();
     
-    // Also check for unread notifications on initial load
+    // Check for unread notifications on initial load
     checkUnreadNotifications();
     
     // Subscribe to real-time updates

@@ -122,6 +122,24 @@ export const useDocumentRealtime = () => {
           }
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'documents',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log("Documento atualizado:", payload);
+          
+          // If a document was marked as viewed and it's the one we're showing a notification for
+          if (newDocument && newDocument.id === payload.new.id && payload.new.viewed) {
+            // Clear the notification
+            setNewDocument(null);
+          }
+        }
+      )
       .subscribe();
     
     // Store channel reference to clean it up later

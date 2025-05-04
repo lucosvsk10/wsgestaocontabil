@@ -11,12 +11,24 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
     try {
       setLoadingDocumentIds(prev => new Set([...prev, documentId]));
       
-      const { error } = await supabase
+      // Check if document is already viewed
+      const { data: docData, error: checkError } = await supabase
         .from('documents')
-        .update({ viewed: true, viewed_at: new Date().toISOString() })
-        .eq('id', documentId);
-        
-      if (error) throw error;
+        .select('viewed')
+        .eq('id', documentId)
+        .single();
+      
+      if (checkError) throw checkError;
+      
+      // Only update if not already viewed
+      if (!docData.viewed) {
+        const { error } = await supabase
+          .from('documents')
+          .update({ viewed: true, viewed_at: new Date().toISOString() })
+          .eq('id', documentId);
+          
+        if (error) throw error;
+      }
       
       return { success: true, documentId };
     } catch (error: any) {
