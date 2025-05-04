@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -55,8 +56,13 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
       await markAsViewed(documentId);
       
       // IMPORTANT: Clean the storage key to ensure it doesn't have any unwanted prefixes
-      // This fixes the issue where paths like "users/..." were incorrectly included
+      // This fixes the issue where paths like "documents.userId/..." were incorrectly formatted
       let cleanStorageKey = storageKey;
+      
+      // Remove any "documents." prefix if it exists
+      if (cleanStorageKey.startsWith('documents.')) {
+        cleanStorageKey = cleanStorageKey.substring('documents.'.length);
+      }
       
       // Remove any "users/" prefix if it exists
       if (cleanStorageKey.startsWith('users/')) {
