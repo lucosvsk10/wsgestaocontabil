@@ -1,6 +1,5 @@
-
 import { useState } from "react";
-import { Download, Clock, Tag, Bell, Info, BellDot } from "lucide-react";
+import { Download, Clock, Tag, BellDot, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Document } from "@/utils/auth/types";
@@ -83,7 +82,6 @@ export const DocumentTable = ({
           URL.revokeObjectURL(url);
         }
       } else if (docItem.file_url) {
-        // For file_url, instead of just opening in a new tab, try to download it
         try {
           const response = await fetch(docItem.file_url);
           const blob = await response.blob();
@@ -96,7 +94,6 @@ export const DocumentTable = ({
           document.body.removeChild(a);
           URL.revokeObjectURL(url);
         } catch (fetchError) {
-          // Fallback to opening in a new tab if fetch fails
           console.warn("Could not fetch for download, opening in new tab instead:", fetchError);
           window.open(docItem.file_url, "_blank");
         }
@@ -134,7 +131,9 @@ export const DocumentTable = ({
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-sm mb-3">
-              <div className="text-gray-300">Data: <span className="text-white">{formatDate(doc.uploaded_at)}</span></div>
+              <div className="text-gray-300">
+                Data: <span className="text-white">{formatDate(doc.uploaded_at)}</span>
+              </div>
               <div className="text-gray-300">
                 Validade:
                 <span className={isDocumentExpired(doc.expires_at) ? "text-red-400" : "text-green-400"}>
@@ -184,7 +183,12 @@ export const DocumentTable = ({
         </TableHeader>
         <TableBody>
           {documents.map(doc => (
-            <TableRow key={doc.id} className={isDocumentExpired(doc.expires_at) ? "bg-red-900/20 border-red-900/30" : "border-gold/10"}>
+            <TableRow
+              key={doc.id}
+              className={isDocumentExpired(doc.expires_at)
+                ? "bg-red-900/20 border-red-900/30"
+                : "border-gold/10"}
+            >
               <TableCell className="font-medium text-white">
                 <div className="flex items-center">
                   {!doc.viewed && <BellDot size={14} className="text-red-500 mr-2" />}
@@ -197,7 +201,9 @@ export const DocumentTable = ({
                   {doc.category}
                 </span>
               </TableCell>
-              <TableCell className="text-gray-300">{formatDate(doc.uploaded_at)}</TableCell>
+              <TableCell className="text-gray-300">
+                {formatDate(doc.uploaded_at)}
+              </TableCell>
               <TableCell>
                 <span className={`flex items-center gap-1 ${
                   isDocumentExpired(doc.expires_at) ? "text-red-400" : "text-green-400"
@@ -217,7 +223,9 @@ export const DocumentTable = ({
                         </div>
                       </TooltipTrigger>
                       <TooltipContent className="bg-[#393532] border-gold/20">
-                        <p className="max-w-[300px] whitespace-normal break-words text-white">{doc.observations}</p>
+                        <p className="max-w-[300px] whitespace-normal break-words text-white">
+                          {doc.observations}
+                        </p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
