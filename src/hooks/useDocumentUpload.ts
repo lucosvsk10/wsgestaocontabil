@@ -3,6 +3,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { UserType } from "@/types/admin";
+import { generateDocumentStorageKey } from "@/utils/fileUtils";
 
 export const useDocumentUpload = (
   fetchUserDocuments: (userId: string) => Promise<void>
@@ -42,19 +43,20 @@ export const useDocumentUpload = (
     setIsUploading(true);
 
     try {
-      // Upload file to storage
-      const filename = `${Date.now()}_${selectedFile.name.replace(/\s+/g, "_")}`;
-      const filePath = `users/${selectedUserId}/${filename}`;
+      // Generate a clean storage key with userId/normalized_filename
+      const storageKey = generateDocumentStorageKey(selectedUserId, selectedFile.name);
       
+      // Upload file to storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from("documents")
-        .upload(filePath, selectedFile);
+        .upload(storageKey, selectedFile);
         
       if (uploadError) throw uploadError;
 
+      // Get public URL for fallback
       const { data: urlData } = await supabase.storage
         .from("documents")
-        .getPublicUrl(filePath);
+        .getPublicUrl(storageKey);
 
       // Get user email for reference
       const userEmail = 
@@ -71,7 +73,7 @@ export const useDocumentUpload = (
         .insert({
           name: documentName || selectedFile.name,
           file_url: urlData?.publicUrl || "",
-          storage_key: filePath,
+          storage_key: storageKey,
           filename: selectedFile.name,
           original_filename: selectedFile.name,
           size: selectedFile.size,

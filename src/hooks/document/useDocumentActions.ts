@@ -55,27 +55,13 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
       // Mark document as viewed when downloaded
       await markAsViewed(documentId);
       
-      // IMPORTANT: Clean the storage key to ensure it doesn't have any unwanted prefixes
-      // This fixes the issue where paths like "documents.userId/..." were incorrectly formatted
-      let cleanStorageKey = storageKey;
+      console.log('Attempting to download document with storage key:', storageKey);
       
-      // Remove any "documents." prefix if it exists
-      if (cleanStorageKey.startsWith('documents.')) {
-        cleanStorageKey = cleanStorageKey.substring('documents.'.length);
-      }
-      
-      // Remove any "users/" prefix if it exists
-      if (cleanStorageKey.startsWith('users/')) {
-        cleanStorageKey = cleanStorageKey.substring(6); // Remove 'users/' prefix
-      }
-      
-      console.log('Attempting to download with storage key:', cleanStorageKey);
-      
-      // Try to generate a signed URL first for better security
+      // Try to generate a signed URL for security
       try {
         const { data: signedUrlData, error: signedUrlError } = await supabase.storage
           .from('documents')
-          .createSignedUrl(cleanStorageKey, 60);
+          .createSignedUrl(storageKey, 60);
           
         if (signedUrlError) {
           console.warn("Could not create signed URL:", signedUrlError);
@@ -114,7 +100,7 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
         try {
           const { data: publicUrlData } = supabase.storage
             .from('documents')
-            .getPublicUrl(cleanStorageKey);
+            .getPublicUrl(storageKey);
             
           if (publicUrlData?.publicUrl) {
             console.log('Using public URL as fallback');
@@ -148,11 +134,11 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
         }
       }
       
-      // Fallback to direct download if everything else fails
+      // Last resort: direct download
       console.log('Attempting direct download as last resort');
       const { data, error } = await supabase.storage
         .from('documents')
-        .download(cleanStorageKey);
+        .download(storageKey);
         
       if (error) {
         // Provide more descriptive error messages based on error code
@@ -191,63 +177,6 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
         variant: "destructive",
         title: "Erro ao baixar documento",
         description: error.message || "Documento não encontrado. Verifique se ele ainda está disponível no sistema."
-      });
-      return { success: false };
-    } finally {
-      setLoadingDocumentIds(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(documentId);
-        return newSet;
-      });
-    }
-  };
-
-  const downloadByUrl = async (documentId: string, fileUrl: string, filename: string, userId?: string) => {
-    try {
-      setLoadingDocumentIds(prev => new Set([...prev, documentId]));
-      
-      // Mark document as viewed when downloaded
-      await markAsViewed(documentId);
-      
-      try {
-        // Try to download the file directly
-        const response = await fetch(fileUrl);
-        if (!response.ok) {
-          throw new Error(`Erro ao baixar: ${response.status} ${response.statusText}`);
-        }
-        
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename || 'documento';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      } catch (fetchError: any) {
-        // Fallback to opening in new tab
-        console.warn("Could not download directly, opening in new tab:", fetchError);
-        toast({
-          title: "Download direto falhou",
-          description: "Abrindo o arquivo em uma nova aba.",
-          duration: 3000,
-        });
-        window.open(fileUrl, "_blank");
-      }
-      
-      // Refresh documents if userId provided
-      if (userId) {
-        await fetchUserDocuments(userId);
-      }
-      
-      return { success: true };
-    } catch (error: any) {
-      console.error('Error downloading document by URL:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao baixar documento",
-        description: error.message || "Ocorreu um erro ao baixar o documento."
       });
       return { success: false };
     } finally {
@@ -324,7 +253,6 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
     loadingDocumentIds,
     markAsViewed,
     downloadDocument,
-    downloadByUrl,
     deleteDocument
   };
 };
