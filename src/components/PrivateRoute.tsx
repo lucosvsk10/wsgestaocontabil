@@ -6,10 +6,11 @@ import { checkIsAdmin } from "@/utils/auth/userChecks";
 interface PrivateRouteProps {
   children: JSX.Element;
   requiredRole?: string;
+  allowedRoles?: string[];
 }
 
-const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
-  const { user, userData, isLoading } = useAuth();
+const PrivateRoute = ({ children, requiredRole, allowedRoles = [] }: PrivateRouteProps) => {
+  const { user, userData, isLoading, role } = useAuth();
   
   const isAdmin = () => {
     return checkIsAdmin(userData, user?.email);
@@ -37,6 +38,14 @@ const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
   // Se o usuário é admin mas está acessando a página de cliente, redirecionar para área do admin
   if (!requiredRole && isAdmin()) {
     return <Navigate to="/admin" replace />;
+  }
+  
+  // Verificar roles permitidas (se fornecidas)
+  if (allowedRoles.length > 0) {
+    const userRole = userData?.role || 'client';
+    if (!allowedRoles.includes(userRole) && !isAdmin()) {
+      return <Navigate to="/client" replace />;
+    }
   }
   
   // Se tudo estiver ok, renderiza o componente filho

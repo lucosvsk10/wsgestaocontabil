@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Document } from "@/types/admin";
+import { Document } from "@/utils/auth/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
@@ -13,7 +13,7 @@ export const useDocumentNotifications = (refreshDocuments: () => void) => {
   
   // Function to fetch unread documents
   const fetchUnreadDocuments = async () => {
-    if (!user?.id) return;
+    if (!user?.id) return [];
     
     try {
       setIsLoading(true);
@@ -28,7 +28,7 @@ export const useDocumentNotifications = (refreshDocuments: () => void) => {
       if (error) throw error;
       
       setUnreadDocuments(data || []);
-      return data;
+      return data || [];
     } catch (error: any) {
       console.error("Error fetching unread documents:", error);
       toast({
@@ -140,37 +140,11 @@ export const useDocumentNotifications = (refreshDocuments: () => void) => {
     }
   };
   
-  // Set up real-time subscription for document updates
+  // Fetch unread documents once when component mounts and user is available
   useEffect(() => {
-    if (!user?.id) return;
-    
-    // Initial fetch of unread documents
-    fetchUnreadDocuments();
-    
-    // Subscribe to real-time updates for document status changes
-    const channel = supabase
-      .channel('document-status-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'documents',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          console.log("Document change detected:", payload);
-          
-          // Refresh unread documents when any document changes
-          fetchUnreadDocuments();
-        }
-      )
-      .subscribe();
-    
-    // Clean up subscription on unmount
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    if (user?.id) {
+      fetchUnreadDocuments();
+    }
   }, [user?.id]);
   
   return {

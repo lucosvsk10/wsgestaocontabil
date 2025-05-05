@@ -1,3 +1,4 @@
+
 import { Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import ClientLogin from "./pages/ClientLogin";
@@ -18,7 +19,7 @@ export default function AppRoutes() {
       <Route
         path="/admin/*"
         element={
-          <PrivateRoute allowedRoles={["admin"]}>
+          <PrivateRoute requiredRole="admin">
             <AdminDashboard />
           </PrivateRoute>
         }

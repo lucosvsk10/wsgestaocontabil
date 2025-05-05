@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { UserData, AuthContextType } from "@/utils/auth/types";
 import { checkIsAdmin } from "@/utils/auth/userChecks";
 import { signInWithEmail, signOutUser } from "@/utils/auth/authentication";
+import { ensureUserProfile } from "@/utils/auth/userProfile";
 
 // Create context
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -17,6 +18,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Check if user is admin
   const isAdmin = checkIsAdmin(userData, user?.email);
+  
+  // Define role based on user data
+  const role = userData?.role || (isAdmin ? 'admin' : user ? 'user' : null);
 
   // Sign in function
   const signIn = async (email: string, password: string) => {
@@ -80,17 +84,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (user) {
         try {
           setIsLoading(true);
+          
+          // First, try to get the existing user
           const { data, error } = await supabase
             .from('users')
             .select('*')
             .eq('id', user.id)
-            .single();
+            .maybeSingle();
 
           if (error) {
             console.error("Erro ao buscar dados do usuário:", error);
             setUserData(null);
-          } else {
+          } 
+          else if (data) {
+            // User exists, use the data
             setUserData(data);
+          } 
+          else {
+            // User doesn't exist, create profile
+            console.log("Usuário não encontrado, criando perfil...");
+            const result = await ensureUserProfile(
+              user.id, 
+              user.email || '', 
+              user.user_metadata?.name || 'Usuário'
+            );
+            
+            if (result.error) {
+              console.error("Erro ao criar perfil de usuário:", result.error);
+            } else if (result.data) {
+              setUserData(result.data);
+            }
           }
         } catch (error) {
           console.error("Erro ao buscar dados do usuário:", error);
@@ -112,6 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     userData,
     isLoading,
     isAdmin,
+    role,
     signIn,
     signOut,
     setUser,

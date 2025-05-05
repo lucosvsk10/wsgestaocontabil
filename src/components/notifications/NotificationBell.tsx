@@ -16,7 +16,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useLocation } from 'react-router-dom';
 import { useDocumentNotifications } from '@/hooks/useDocumentNotifications';
 
 interface NotificationBellProps {
@@ -27,9 +26,8 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ className })
   const [open, setOpen] = useState(false);
   const { user } = useAuth();
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const location = useLocation();
   
-  // No-op refresh function for the hook
+  // No-op refresh function for the hook to prevent automatic refreshes
   const refreshDocuments = () => {};
   
   // Use document notifications hook
@@ -43,12 +41,19 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ className })
   
   const unreadCount = getTotalUnreadCount();
 
-  // Ensure notifications are up to date
+  // Fetch notifications when component mounts or user changes
   useEffect(() => {
     if (user) {
       fetchUnreadDocuments();
     }
-  }, [user, fetchUnreadDocuments]);
+  }, [user]);
+  
+  // Manually refresh when dropdown opens
+  useEffect(() => {
+    if (open && user) {
+      fetchUnreadDocuments();
+    }
+  }, [open]);
 
   // Format relative time
   const formatTime = (dateStr: string) => {

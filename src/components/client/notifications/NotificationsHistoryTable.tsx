@@ -53,13 +53,17 @@ export const NotificationsHistoryTable = () => {
     }
   };
   
-  // Initialize document notifications
-  const { markAllAsRead, isDocumentUnread } = useDocumentNotifications(refreshDocuments);
+  // Initialize document notifications hook with our refresh function
+  // Disable automatic refreshes by passing a no-op function to the hook
+  // We'll manually call refreshDocuments when we need to
+  const noopRefresh = () => {};
+  const { markAllAsRead, isDocumentUnread } = useDocumentNotifications(noopRefresh);
   
   // Use document actions hook for download functionality
+  // Pass our refresh function to update documents after download
   const { downloadDocument } = useDocumentActions(refreshDocuments);
   
-  // Fetch documents on component mount or when user changes
+  // Fetch documents only on component mount or when user changes
   useEffect(() => {
     if (user?.id) {
       refreshDocuments();
