@@ -140,12 +140,9 @@ export const useDocumentNotifications = (refreshDocuments: () => void) => {
     }
   };
   
-  // Determine if we're in the notifications history page
-  const isNotificationsHistoryPage = window.location.pathname === "/notifications";
-  
-  // Set up real-time subscription for document updates, but not on the notifications history page
+  // Set up real-time subscription for document updates
   useEffect(() => {
-    if (!user?.id || isNotificationsHistoryPage) return;
+    if (!user?.id) return;
     
     // Initial fetch of unread documents
     fetchUnreadDocuments();
@@ -174,13 +171,7 @@ export const useDocumentNotifications = (refreshDocuments: () => void) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, isNotificationsHistoryPage]);
-  
-  // If we're on the notifications history page, fetch unread documents once only
-  useEffect(() => {
-    if (!user?.id || !isNotificationsHistoryPage) return;
-    fetchUnreadDocuments();
-  }, [user?.id, isNotificationsHistoryPage]);
+  }, [user?.id]);
   
   return {
     unreadDocuments,

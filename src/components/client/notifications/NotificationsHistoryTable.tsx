@@ -53,13 +53,13 @@ export const NotificationsHistoryTable = () => {
     }
   };
   
-  // Initialize document notifications - but don't setup real-time subscriptions
+  // Initialize document notifications
   const { markAllAsRead, isDocumentUnread } = useDocumentNotifications(refreshDocuments);
   
   // Use document actions hook for download functionality
   const { downloadDocument } = useDocumentActions(refreshDocuments);
   
-  // Fetch documents only on component mount or when user changes
+  // Fetch documents on component mount or when user changes
   useEffect(() => {
     if (user?.id) {
       refreshDocuments();

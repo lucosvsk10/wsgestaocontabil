@@ -31,7 +31,6 @@ export interface AuthContextType {
   userData: UserData | null;
   isLoading: boolean;
   isAdmin?: boolean;
-  role: 'admin' | 'user' | 'guest' | null; // Added the role property
   signIn: (email: string, password: string) => Promise<{
     error: Error | null;
     data: any | null;
