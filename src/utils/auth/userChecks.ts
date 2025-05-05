@@ -10,5 +10,5 @@ export const checkIsAdmin = (userData: UserData | null, userEmail: string | null
     userData?.role === 'geral' || 
     userEmail === 'wsgestao@gmail.com' ||
     userEmail === 'l09022007@gmail.com'
-  ) ? true : false;
+  );
 };

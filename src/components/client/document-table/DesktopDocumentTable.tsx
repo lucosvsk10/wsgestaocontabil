@@ -3,8 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Document } from "@/utils/auth/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DocumentActions } from "./DocumentActions";
-import { BellDot, Clock, Tag, Info } from "lucide-react";
-import { useDocumentNotifications } from "@/hooks/useDocumentNotifications";
+import { BellDot } from "lucide-react";
 
 interface DesktopDocumentTableProps {
   documents: Document[];
@@ -26,9 +25,6 @@ export const DesktopDocumentTable = ({
   refreshDocuments,
   loadingDocumentIds,
 }: DesktopDocumentTableProps) => {
-  // Use our notification hook for checking if document is unread
-  const { isDocumentUnread } = useDocumentNotifications(refreshDocuments);
-  
   const getDisplayCategory = (doc: Document) => {
     if (doc.category.startsWith('Impostos/')) {
       return doc.category.split('/')[1];
@@ -64,16 +60,13 @@ export const DesktopDocumentTable = ({
             >
               <TableCell className="font-medium text-navy dark:text-white">
                 <div className="flex items-center">
-                  {isDocumentUnread(doc.id) && <BellDot size={16} className="text-blue-500 dark:text-blue-400 mr-2" />}
+                  {!doc.viewed && <BellDot size={16} className="text-blue-500 dark:text-blue-400 mr-2" />}
                   {doc.name}
                 </div>
               </TableCell>
               <TableCell>
-                <span className="flex items-center gap-1">
-                  <Tag size={14} className="text-gray-700 dark:text-gray-300" />
-                  <span className="px-2 py-1 rounded-full text-xs bg-orange-300 dark:bg-navy text-navy dark:text-gold">
-                    {getDisplayCategory(doc)}
-                  </span>
+                <span className="px-2 py-1 rounded-full text-xs bg-orange-300 dark:bg-navy text-navy dark:text-gold">
+                  {getDisplayCategory(doc)}
                 </span>
               </TableCell>
               <TableCell className="text-gray-700 dark:text-gray-300">{formatDate(doc.uploaded_at)}</TableCell>
@@ -83,7 +76,6 @@ export const DesktopDocumentTable = ({
                     ? "text-red-600 dark:text-red-400" 
                     : "text-green-600 dark:text-green-400"
                 }`}>
-                  <Clock size={14} />
                   {daysUntilExpiration(doc.expires_at)}
                 </span>
               </TableCell>
@@ -93,7 +85,6 @@ export const DesktopDocumentTable = ({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className="flex items-center text-blue-600 dark:text-blue-400 cursor-help">
-                          <Info size={14} className="mr-1" />
                           <span className="truncate max-w-[150px]">{doc.observations}</span>
                         </div>
                       </TooltipTrigger>
@@ -122,7 +113,7 @@ export const DesktopDocumentTable = ({
           ))
         ) : (
           <TableRow>
-            <TableCell colSpan={6} className="text-center py-4 text-gray-500 dark:text-gray-400">
+            <TableCell colSpan={5} className="text-center py-4 text-gray-500 dark:text-gray-400">
               Não existem documentos na categoria {category}
             </TableCell>
           </TableRow>

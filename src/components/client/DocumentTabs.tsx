@@ -3,15 +3,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Document } from "@/types/admin";
 import { CategoryDocumentTable } from "./document-table";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { 
   Drawer, 
   DrawerContent, 
   DrawerTrigger 
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
-import { Menu, BellDot } from "lucide-react";
-import { useDocumentNotifications } from "@/hooks/useDocumentNotifications";
+import { Menu } from "lucide-react";
 
 interface DocumentTabsProps {
   documents: Document[];
@@ -39,26 +38,8 @@ export const DocumentTabs = ({
 }: DocumentTabsProps) => {
   const isMobile = useIsMobile();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const { getUnreadCountByCategory } = useDocumentNotifications(refreshDocuments);
-  
-  // Verificar se a categoria ativa tem documentos, senão selecionar outra
-  useEffect(() => {
-    if (activeCategory && documentsByCategory[activeCategory]?.length === 0) {
-      console.log("Categoria ativa vazia:", activeCategory);
-      // Encontrar a primeira categoria com documentos
-      const firstNonEmptyCategory = categories.find(cat => 
-        documentsByCategory[cat] && documentsByCategory[cat].length > 0
-      );
-      
-      if (firstNonEmptyCategory && firstNonEmptyCategory !== activeCategory) {
-        console.log("Mudando para categoria com documentos:", firstNonEmptyCategory);
-        setSelectedCategory(firstNonEmptyCategory);
-      }
-    }
-  }, [activeCategory, documentsByCategory, categories, setSelectedCategory]);
   
   const handleCategoryChange = (category: string) => {
-    console.log("Mudando para categoria:", category);
     setSelectedCategory(category);
     setIsDrawerOpen(false);
   };
@@ -75,14 +56,6 @@ export const DocumentTabs = ({
               <Menu className="mr-2 h-4 w-4" />
               <span>{activeCategory}</span>
             </div>
-            {getUnreadCountByCategory(activeCategory) > 0 && (
-              <div className="flex items-center">
-                <BellDot size={16} className="text-blue-400 mr-1" />
-                <span className="text-xs bg-blue-500 text-white px-1.5 py-0.5 rounded-full">
-                  {getUnreadCountByCategory(activeCategory)}
-                </span>
-              </div>
-            )}
           </Button>
         </DrawerTrigger>
         <DrawerContent className="bg-[#393532] dark:bg-[#2d2a28] border-t border-gold/20 p-4">
@@ -95,27 +68,11 @@ export const DocumentTabs = ({
                 >
                   <Button 
                     variant="document"
-                    className={`w-full justify-between ${
-                      documentsByCategory[category]?.length > 0 
-                        ? "text-white" 
-                        : "text-gray-400"
-                    }`}
-                    disabled={!documentsByCategory[category] || documentsByCategory[category].length === 0}
+                    className="w-full justify-between text-white"
+                    disabled={documentsByCategory[category].length === 0}
                     onClick={() => handleCategoryChange(category)}
                   >
                     <span>{category}</span>
-                    <div className="flex items-center">
-                      {getUnreadCountByCategory(category) > 0 && <BellDot size={16} className="text-blue-400 mr-1" />}
-                      {documentsByCategory[category]?.length > 0 && (
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          getUnreadCountByCategory(category) > 0 
-                            ? "bg-blue-500 text-white" 
-                            : "bg-gold text-navy"
-                        }`}>
-                          {documentsByCategory[category].length}
-                        </span>
-                      )}
-                    </div>
                   </Button>
                 </div>
               ))}
@@ -127,7 +84,7 @@ export const DocumentTabs = ({
       {categories.map((category) => (
         <div key={category} className={category === activeCategory ? 'block' : 'hidden'}>
           <CategoryDocumentTable 
-            documents={documentsByCategory[category] || []}
+            documents={documentsByCategory[category]}
             category={category}
             formatDate={formatDate}
             isDocumentExpired={isDocumentExpired}
@@ -145,38 +102,22 @@ export const DocumentTabs = ({
       className="w-full"
     >
       <TabsList className="mb-4 border-gold/20 bg-[#46413d] dark:bg-[#2d2a28]">
-        {categories.map(category => {
-          const unreadCount = getUnreadCountByCategory(category);
-          
-          return (
-            <TabsTrigger 
-              key={category} 
-              value={category}
-              disabled={!documentsByCategory[category] || documentsByCategory[category].length === 0}
-              className="relative text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
-            >
-              <div className="flex items-center">
-                {category}
-                {unreadCount > 0 && <BellDot size={16} className="text-blue-400 ml-1" />}
-              </div>
-              {documentsByCategory[category]?.length > 0 && (
-                <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${
-                  unreadCount > 0 
-                    ? "bg-blue-500 text-white" 
-                    : "bg-navy dark:bg-gold text-white dark:text-navy"
-                }`}>
-                  {documentsByCategory[category].length}
-                </span>
-              )}
-            </TabsTrigger>
-          );
-        })}
+        {categories.map(category => (
+          <TabsTrigger 
+            key={category} 
+            value={category}
+            disabled={documentsByCategory[category].length === 0}
+            className="relative text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
+          >
+            {category}
+          </TabsTrigger>
+        ))}
       </TabsList>
       
       {categories.map(category => (
         <TabsContent key={category} value={category}>
           <CategoryDocumentTable 
-            documents={documentsByCategory[category] || []}
+            documents={documentsByCategory[category]}
             category={category}
             formatDate={formatDate}
             isDocumentExpired={isDocumentExpired}

@@ -7,38 +7,23 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
   const { toast } = useToast();
   const [loadingDocumentIds, setLoadingDocumentIds] = useState<Set<string>>(new Set());
 
-  const markAsViewed = async (documentId: string): Promise<{ success: boolean; documentId: string | null }> => {
+  const markAsViewed = async (documentId: string) => {
     try {
       setLoadingDocumentIds(prev => new Set([...prev, documentId]));
       
-      // Check if document is already viewed
-      const { data: docData, error: checkError } = await supabase
+      const { error } = await supabase
         .from('documents')
-        .select('viewed')
-        .eq('id', documentId)
-        .single();
-      
-      if (checkError) throw checkError;
-      
-      // Only update if not already viewed
-      if (!docData.viewed) {
-        const { error } = await supabase
-          .from('documents')
-          .update({ viewed: true, viewed_at: new Date().toISOString() })
-          .eq('id', documentId);
-          
-        if (error) throw error;
-      }
-      
-      return { success: true, documentId };
+        .update({ viewed: true, viewed_at: new Date().toISOString() })
+        .eq('id', documentId);
+        
+      if (error) throw error;
     } catch (error: any) {
       console.error('Error marking document as viewed:', error);
       toast({
         variant: "destructive",
         title: "Erro",
-        description: error.message || "Não foi possível marcar o documento como visualizado."
+        description: "Não foi possível marcar o documento como visualizado."
       });
-      return { success: false, documentId: null };
     } finally {
       setLoadingDocumentIds(prev => {
         const newSet = new Set(prev);
@@ -55,201 +40,35 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
       // Mark document as viewed when downloaded
       await markAsViewed(documentId);
       
-      // IMPORTANT: Clean the storage key to ensure it doesn't have any unwanted prefixes
-      // This fixes the issue where paths like "documents.userId/..." were incorrectly formatted
-      let cleanStorageKey = storageKey;
-      
-      // Remove any "documents." prefix if it exists
-      if (cleanStorageKey.startsWith('documents.')) {
-        cleanStorageKey = cleanStorageKey.substring('documents.'.length);
-      }
-      
-      // Remove any "users/" prefix if it exists
-      if (cleanStorageKey.startsWith('users/')) {
-        cleanStorageKey = cleanStorageKey.substring(6); // Remove 'users/' prefix
-      }
-      
-      console.log('Attempting to download with storage key:', cleanStorageKey);
-      
-      // Try to generate a signed URL first for better security
-      try {
-        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-          .from('documents')
-          .createSignedUrl(cleanStorageKey, 60);
-          
-        if (signedUrlError) {
-          console.warn("Could not create signed URL:", signedUrlError);
-          throw signedUrlError;
-        }
-        
-        if (signedUrlData?.signedUrl) {
-          console.log('Successfully generated signed URL');
-          // Download using the signed URL
-          const response = await fetch(signedUrlData.signedUrl);
-          if (!response.ok) {
-            throw new Error(`Erro ao baixar: ${response.status} ${response.statusText}`);
-          }
-          
-          const blob = await response.blob();
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = filename || 'documento';
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-          
-          // Refresh documents if userId provided
-          if (userId) {
-            await fetchUserDocuments(userId);
-          }
-          
-          return { success: true };
-        }
-      } catch (signedUrlError: any) {
-        console.warn("Signed URL failed, trying public URL:", signedUrlError);
-        
-        // Fallback to public URL
-        try {
-          const { data: publicUrlData } = supabase.storage
-            .from('documents')
-            .getPublicUrl(cleanStorageKey);
-            
-          if (publicUrlData?.publicUrl) {
-            console.log('Using public URL as fallback');
-            const response = await fetch(publicUrlData.publicUrl);
-            if (!response.ok) {
-              throw new Error(`Erro ao baixar: ${response.status} ${response.statusText}`);
-            }
-            
-            const blob = await response.blob();
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename || 'documento';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
-            // Refresh documents if userId provided
-            if (userId) {
-              await fetchUserDocuments(userId);
-            }
-            
-            return { success: true };
-          } else {
-            throw new Error("Não foi possível gerar URL pública para o arquivo");
-          }
-        } catch (publicUrlError: any) {
-          console.error("Public URL download failed:", publicUrlError);
-          throw publicUrlError;
-        }
-      }
-      
-      // Fallback to direct download if everything else fails
-      console.log('Attempting direct download as last resort');
       const { data, error } = await supabase.storage
         .from('documents')
-        .download(cleanStorageKey);
+        .download(storageKey);
         
-      if (error) {
-        // Provide more descriptive error messages based on error code
-        if (error.message.includes("404") || error.message.includes("not found")) {
-          throw new Error("Documento não encontrado. Verifique se ele ainda está disponível no sistema.");
-        } else if (error.message.includes("403") || error.message.includes("permission")) {
-          throw new Error("Sem permissão para acessar este documento.");
-        } else {
-          throw error;
-        }
-      }
+      if (error) throw error;
       
       if (data) {
         // Create URL and initiate download
         const url = URL.createObjectURL(data);
         const a = document.createElement('a');
         a.href = url;
-        a.download = filename || 'documento';
+        a.download = filename;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-      } else {
-        throw new Error("Não foi possível baixar o arquivo (conteúdo vazio).");
       }
       
       // Refresh documents if userId provided
       if (userId) {
         await fetchUserDocuments(userId);
       }
-      
-      return { success: true };
     } catch (error: any) {
       console.error('Error downloading document:', error);
       toast({
         variant: "destructive",
         title: "Erro ao baixar documento",
-        description: error.message || "Documento não encontrado. Verifique se ele ainda está disponível no sistema."
+        description: error.message
       });
-      return { success: false };
-    } finally {
-      setLoadingDocumentIds(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(documentId);
-        return newSet;
-      });
-    }
-  };
-
-  const downloadByUrl = async (documentId: string, fileUrl: string, filename: string, userId?: string) => {
-    try {
-      setLoadingDocumentIds(prev => new Set([...prev, documentId]));
-      
-      // Mark document as viewed when downloaded
-      await markAsViewed(documentId);
-      
-      try {
-        // Try to download the file directly
-        const response = await fetch(fileUrl);
-        if (!response.ok) {
-          throw new Error(`Erro ao baixar: ${response.status} ${response.statusText}`);
-        }
-        
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename || 'documento';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      } catch (fetchError: any) {
-        // Fallback to opening in new tab
-        console.warn("Could not download directly, opening in new tab:", fetchError);
-        toast({
-          title: "Download direto falhou",
-          description: "Abrindo o arquivo em uma nova aba.",
-          duration: 3000,
-        });
-        window.open(fileUrl, "_blank");
-      }
-      
-      // Refresh documents if userId provided
-      if (userId) {
-        await fetchUserDocuments(userId);
-      }
-      
-      return { success: true };
-    } catch (error: any) {
-      console.error('Error downloading document by URL:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao baixar documento",
-        description: error.message || "Ocorreu um erro ao baixar o documento."
-      });
-      return { success: false };
     } finally {
       setLoadingDocumentIds(prev => {
         const newSet = new Set(prev);
@@ -309,7 +128,7 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
       toast({
         variant: "destructive",
         title: "Erro ao excluir documento",
-        description: error.message || "Ocorreu um erro ao excluir o documento."
+        description: error.message
       });
     } finally {
       setLoadingDocumentIds(prev => {
@@ -324,7 +143,6 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
     loadingDocumentIds,
     markAsViewed,
     downloadDocument,
-    downloadByUrl,
     deleteDocument
   };
 };
