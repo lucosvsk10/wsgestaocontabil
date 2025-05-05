@@ -1,36 +1,46 @@
 
-import React from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { checkIsAdmin } from "@/utils/auth/userChecks";
 
-export interface PrivateRouteProps {
-  children: React.ReactNode;
-  requiredRoles: string[];
+interface PrivateRouteProps {
+  children: JSX.Element;
+  requiredRole?: string;
 }
 
-const PrivateRoute: React.FC<PrivateRouteProps> = ({
-  children,
-  requiredRoles = ["client"],
-}) => {
-  const { user, role } = useAuth();
+const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
+  const { user, userData, isLoading } = useAuth();
+  
+  const isAdmin = () => {
+    return checkIsAdmin(userData, user?.email);
+  };
 
+  // Enquanto está carregando, mostra um indicador de carregamento
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
+      </div>
+    );
+  }
+
+  // Se não houver usuário, redireciona para login
   if (!user) {
-    // Redirect to login if not authenticated
     return <Navigate to="/login" replace />;
   }
-
-  // If user is authenticated, check their role
-  if (requiredRoles.length > 0 && role && !requiredRoles.includes(role)) {
-    // If user doesn't have the required role, redirect to appropriate page
-    if (role === "admin") {
-      return <Navigate to="/admin" replace />;
-    } else {
-      return <Navigate to="/client" replace />;
-    }
+  
+  // Se requerer role de admin mas o usuário não é admin, redirecionar para área do cliente
+  if (requiredRole === 'admin' && !isAdmin()) {
+    return <Navigate to="/client" replace />;
   }
-
-  // If authenticated and has required role, render the protected component
-  return <>{children}</>;
+  
+  // Se o usuário é admin mas está acessando a página de cliente, redirecionar para área do admin
+  if (!requiredRole && isAdmin()) {
+    return <Navigate to="/admin" replace />;
+  }
+  
+  // Se tudo estiver ok, renderiza o componente filho
+  return children;
 };
 
 export default PrivateRoute;

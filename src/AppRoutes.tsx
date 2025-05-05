@@ -1,48 +1,56 @@
 
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
-import ClientLogin from "./pages/ClientLogin";
 import NotFound from "./pages/NotFound";
+import ClientLogin from "./pages/ClientLogin";
+import PrivateRoute from "./components/PrivateRoute";
+import { useAuth } from "./contexts/AuthContext";
 import AdminDashboard from "./pages/AdminDashboard";
 import ClientDashboard from "./pages/ClientDashboard";
-import PrivateRoute from "./components/PrivateRoute";
-import NotificationsHistory from "./pages/NotificationsHistory";
+import { checkIsAdmin } from "./utils/auth/userChecks";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/toaster";
 
-export default function AppRoutes() {
+const AppRoutes = () => {
+  const { userData, user } = useAuth();
+  
+  const isAdmin = () => {
+    return checkIsAdmin(userData, user?.email);
+  };
+
   return (
-    <Routes>
-      <Route path="/" element={<Index />} />
-      <Route path="/login" element={<ClientLogin />} />
-      <Route path="*" element={<NotFound />} />
-      
-      {/* Protected Routes */}
-      <Route
-        path="/admin/*"
-        element={
-          <PrivateRoute requiredRoles={["admin"]}>
+    <TooltipProvider>
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/login" element={<ClientLogin />} />
+        
+        {/* Protected route for admin area */}
+        <Route path="/admin" element={
+          <PrivateRoute requiredRole="admin">
             <AdminDashboard />
           </PrivateRoute>
-        }
-      />
-      
-      <Route
-        path="/client"
-        element={
-          <PrivateRoute requiredRoles={["client", "admin"]}>
+        } />
+        
+        {/* Protected route for client area */}
+        <Route path="/client" element={
+          <PrivateRoute>
             <ClientDashboard />
           </PrivateRoute>
-        }
-      />
-      
-      {/* New notifications history route */}
-      <Route
-        path="/notifications"
-        element={
-          <PrivateRoute requiredRoles={["client", "admin"]}>
-            <NotificationsHistory />
+        } />
+        
+        {/* Route for redirection after login */}
+        <Route path="/dashboard" element={
+          <PrivateRoute>
+            {isAdmin() ? <Navigate to="/admin" replace /> : <Navigate to="/client" replace />}
           </PrivateRoute>
-        }
-      />
-    </Routes>
+        } />
+        
+        {/* Route for catching not found URLs */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      <Toaster />
+    </TooltipProvider>
   );
-}
+};
+
+export default AppRoutes;

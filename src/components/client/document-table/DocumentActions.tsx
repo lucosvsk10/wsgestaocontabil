@@ -24,7 +24,7 @@ export const DocumentActions = ({
   
   // Create a no-op function to pass to useDocumentActions since we're refreshing manually
   const noopFetchDocuments = async () => {};
-  const { downloadDocument } = useDocumentActions(noopFetchDocuments);
+  const { downloadDocument, downloadByUrl } = useDocumentActions(noopFetchDocuments);
 
   const handleDownload = async () => {
     setIsLoading(true);
@@ -32,10 +32,17 @@ export const DocumentActions = ({
       let success = false;
       
       if (doc.storage_key) {
-        console.log('Using storage key for download:', doc.storage_key);
+        console.log('Original storage key:', doc.storage_key);
         const result = await downloadDocument(
           doc.id, 
           doc.storage_key, 
+          doc.filename || doc.original_filename || doc.name || "documento"
+        );
+        success = result.success;
+      } else if (doc.file_url) {
+        const result = await downloadByUrl(
+          doc.id, 
+          doc.file_url, 
           doc.filename || doc.original_filename || doc.name || "documento"
         );
         success = result.success;
@@ -51,31 +58,21 @@ export const DocumentActions = ({
       if (success) {
         refreshDocuments(); // Refresh document list to update viewed status
       }
-    } catch (error: any) {
-      console.error("Error downloading document:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao baixar",
-        description: error.message || "Não foi possível baixar o documento."
-      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const isLoaded = !loadingDocumentIds.has(doc.id) && !isLoading;
-  const isDisabled = isDocumentExpired(doc.expires_at) || !isLoaded;
-
   return (
     <Button 
       variant="outline" 
       size="sm" 
-      disabled={isDisabled}
+      disabled={isDocumentExpired(doc.expires_at) || loadingDocumentIds.has(doc.id) || isLoading} 
       onClick={handleDownload} 
       className="flex-1 bg-orange-300/50 dark:bg-navy-light/50 border-gold/20 text-navy dark:text-gold hover:bg-gold hover:text-navy dark:hover:bg-gold-light dark:hover:text-navy flex items-center justify-center gap-1"
     >
       <Download size={14} />
-      <span className="truncate">{isLoaded ? (doc.filename || doc.original_filename || "Baixar") : "Processando..."}</span>
+      <span className="truncate">{doc.filename || doc.original_filename || "Baixar"}</span>
     </Button>
   );
 };

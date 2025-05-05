@@ -28,7 +28,6 @@ export const useDocumentNotifications = (refreshDocuments: () => void) => {
       if (error) throw error;
       
       setUnreadDocuments(data || []);
-      return data;
     } catch (error: any) {
       console.error("Error fetching unread documents:", error);
       toast({
@@ -36,7 +35,6 @@ export const useDocumentNotifications = (refreshDocuments: () => void) => {
         title: "Erro ao carregar notificações",
         description: error.message || "Não foi possível carregar as notificações de documentos."
       });
-      return [];
     } finally {
       setIsLoading(false);
     }
@@ -57,95 +55,9 @@ export const useDocumentNotifications = (refreshDocuments: () => void) => {
     return unreadDocuments.some(doc => doc.id === documentId);
   };
   
-  // Mark all documents in a category as read
-  const markAllCategoryAsRead = async (category: string) => {
-    if (!user?.id) return;
-    
-    try {
-      setIsLoading(true);
-      
-      const docsToUpdate = unreadDocuments.filter(doc => doc.category === category).map(doc => doc.id);
-      
-      if (docsToUpdate.length === 0) return;
-      
-      const { error } = await supabase
-        .from("documents")
-        .update({ 
-          viewed: true,
-          viewed_at: new Date().toISOString()
-        })
-        .in("id", docsToUpdate);
-        
-      if (error) throw error;
-      
-      // Update local state
-      setUnreadDocuments(prev => prev.filter(doc => doc.category !== category));
-      
-      // Refresh documents to update UI
-      refreshDocuments();
-      
-      toast({
-        title: "Notificações atualizadas",
-        description: `Todos os documentos da categoria ${category} foram marcados como visualizados.`
-      });
-    } catch (error: any) {
-      console.error("Error marking category as read:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao atualizar notificações",
-        description: error.message || "Não foi possível marcar os documentos como visualizados."
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  // Mark all documents as read
-  const markAllAsRead = async () => {
-    if (!user?.id) return;
-    
-    try {
-      setIsLoading(true);
-      
-      const { error } = await supabase
-        .from("documents")
-        .update({ 
-          viewed: true,
-          viewed_at: new Date().toISOString()
-        })
-        .eq("user_id", user.id)
-        .eq("viewed", false);
-        
-      if (error) throw error;
-      
-      // Update local state
-      setUnreadDocuments([]);
-      
-      // Refresh documents to update UI
-      refreshDocuments();
-      
-      toast({
-        title: "Notificações atualizadas",
-        description: "Todos os documentos foram marcados como visualizados."
-      });
-    } catch (error: any) {
-      console.error("Error marking all as read:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao atualizar notificações",
-        description: error.message || "Não foi possível marcar os documentos como visualizados."
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  // Determine if we're in the notifications history page
-  const isNotificationsHistoryPage = window.location.pathname === "/notifications";
-  
-  // Set up real-time subscription for document updates, but not on the notifications history page
+  // Set up real-time subscription for document updates
   useEffect(() => {
-    if (!user?.id || isNotificationsHistoryPage) return;
+    if (!user?.id) return;
     
     // Initial fetch of unread documents
     fetchUnreadDocuments();
@@ -166,6 +78,9 @@ export const useDocumentNotifications = (refreshDocuments: () => void) => {
           
           // Refresh unread documents when any document changes
           fetchUnreadDocuments();
+          
+          // Also refresh the full document list
+          refreshDocuments();
         }
       )
       .subscribe();
@@ -174,13 +89,7 @@ export const useDocumentNotifications = (refreshDocuments: () => void) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, isNotificationsHistoryPage]);
-  
-  // If we're on the notifications history page, fetch unread documents once only
-  useEffect(() => {
-    if (!user?.id || !isNotificationsHistoryPage) return;
-    fetchUnreadDocuments();
-  }, [user?.id, isNotificationsHistoryPage]);
+  }, [user?.id]);
   
   return {
     unreadDocuments,
@@ -188,8 +97,6 @@ export const useDocumentNotifications = (refreshDocuments: () => void) => {
     getUnreadCountByCategory,
     getTotalUnreadCount,
     isDocumentUnread,
-    fetchUnreadDocuments,
-    markAllCategoryAsRead,
-    markAllAsRead
+    fetchUnreadDocuments
   };
 };
