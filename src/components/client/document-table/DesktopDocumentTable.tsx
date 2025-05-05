@@ -8,15 +8,18 @@ import { useDocumentNotifications } from "@/hooks/useDocumentNotifications";
 
 interface DesktopDocumentTableProps {
   documents: Document[];
+  category: string; // Added missing category prop
   formatDate: (dateStr: string) => string;
   isDocumentExpired: (expirationDate: string | null) => boolean;
   daysUntilExpiration: (expirationDate: string | null) => string | null;
   refreshDocuments: () => void;
   loadingDocumentIds: Set<string>;
+  setLoadingDocumentIds?: React.Dispatch<React.SetStateAction<Set<string>>>;
 }
 
 export const DesktopDocumentTable = ({
   documents,
+  category,
   formatDate,
   isDocumentExpired,
   daysUntilExpiration,
@@ -103,7 +106,7 @@ export const DesktopDocumentTable = ({
         ) : (
           <TableRow>
             <TableCell colSpan={5} className="text-center py-4 text-gray-500 dark:text-gray-400">
-              Não existem documentos disponíveis
+              Não existem documentos disponíveis em {category}
             </TableCell>
           </TableRow>
         )}

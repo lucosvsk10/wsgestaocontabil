@@ -51,21 +51,31 @@ export const DocumentActions = ({
       if (success) {
         refreshDocuments(); // Refresh document list to update viewed status
       }
+    } catch (error: any) {
+      console.error("Error downloading document:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao baixar",
+        description: error.message || "Não foi possível baixar o documento."
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
+  const isLoaded = !loadingDocumentIds.has(doc.id) && !isLoading;
+  const isDisabled = isDocumentExpired(doc.expires_at) || !isLoaded;
+
   return (
     <Button 
       variant="outline" 
       size="sm" 
-      disabled={isDocumentExpired(doc.expires_at) || loadingDocumentIds.has(doc.id) || isLoading} 
+      disabled={isDisabled}
       onClick={handleDownload} 
       className="flex-1 bg-orange-300/50 dark:bg-navy-light/50 border-gold/20 text-navy dark:text-gold hover:bg-gold hover:text-navy dark:hover:bg-gold-light dark:hover:text-navy flex items-center justify-center gap-1"
     >
       <Download size={14} />
-      <span className="truncate">{doc.filename || doc.original_filename || "Baixar"}</span>
+      <span className="truncate">{isLoaded ? (doc.filename || doc.original_filename || "Baixar") : "Processando..."}</span>
     </Button>
   );
 };
