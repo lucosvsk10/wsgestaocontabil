@@ -17,6 +17,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Check if user is admin
   const isAdmin = checkIsAdmin(userData, user?.email);
+  
+  // Determine role based on userData and isAdmin
+  const role = isAdmin ? 'admin' : (user ? 'user' : null);
 
   // Sign in function
   const signIn = async (email: string, password: string) => {
@@ -112,6 +115,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     userData,
     isLoading,
     isAdmin,
+    role, // Add the role to the context value
     signIn,
     signOut,
     setUser,
