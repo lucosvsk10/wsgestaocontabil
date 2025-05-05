@@ -18,7 +18,6 @@ import { AlertTriangle, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { useDocumentNotifications } from "@/hooks/useDocumentNotifications";
-import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 const ClientDashboard = () => {
   const { user } = useAuth();
@@ -36,7 +35,7 @@ const ClientDashboard = () => {
   const documentsByCategory = organizeDocuments(documents, categories);
   
   // Initialize document notifications
-  const { fetchUnreadDocuments, getTotalUnreadCount } = useDocumentNotifications(() => {
+  const { fetchUnreadDocuments } = useDocumentNotifications(() => {
     if (user?.id) {
       fetchUserDocuments(user.id);
     }
@@ -55,11 +54,10 @@ const ClientDashboard = () => {
     if (user?.id) {
       console.log("User ID disponível, buscando documentos:", user.id);
       fetchUserDocuments(user.id);
-      fetchUnreadDocuments();
     } else {
       console.log("User ID não disponível, não é possível buscar documentos");
     }
-  }, [user?.id]);
+  }, [user, fetchUserDocuments]);
   
   // Find category with most recent document - only on first render
   useEffect(() => {
@@ -141,7 +139,6 @@ const ClientDashboard = () => {
               >
                 <RefreshCcw size={18} className="text-gold" />
               </Button>
-              <NotificationBell />
               <NotificationsButton />
             </div>
           </CardHeader>

@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Document } from "@/utils/auth/types";
+import { Document } from "@/types/admin";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
@@ -13,7 +13,7 @@ export const useDocumentNotifications = (refreshDocuments: () => void) => {
   
   // Function to fetch unread documents
   const fetchUnreadDocuments = async () => {
-    if (!user?.id) return [];
+    if (!user?.id) return;
     
     try {
       setIsLoading(true);
@@ -28,7 +28,7 @@ export const useDocumentNotifications = (refreshDocuments: () => void) => {
       if (error) throw error;
       
       setUnreadDocuments(data || []);
-      return data || [];
+      return data;
     } catch (error: any) {
       console.error("Error fetching unread documents:", error);
       toast({
@@ -140,12 +140,47 @@ export const useDocumentNotifications = (refreshDocuments: () => void) => {
     }
   };
   
-  // Fetch unread documents once when component mounts and user is available
+  // Determine if we're in the notifications history page
+  const isNotificationsHistoryPage = window.location.pathname === "/notifications";
+  
+  // Set up real-time subscription for document updates, but not on the notifications history page
   useEffect(() => {
-    if (user?.id) {
-      fetchUnreadDocuments();
-    }
-  }, [user?.id]);
+    if (!user?.id || isNotificationsHistoryPage) return;
+    
+    // Initial fetch of unread documents
+    fetchUnreadDocuments();
+    
+    // Subscribe to real-time updates for document status changes
+    const channel = supabase
+      .channel('document-status-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'documents',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log("Document change detected:", payload);
+          
+          // Refresh unread documents when any document changes
+          fetchUnreadDocuments();
+        }
+      )
+      .subscribe();
+    
+    // Clean up subscription on unmount
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, isNotificationsHistoryPage]);
+  
+  // If we're on the notifications history page, fetch unread documents once only
+  useEffect(() => {
+    if (!user?.id || !isNotificationsHistoryPage) return;
+    fetchUnreadDocuments();
+  }, [user?.id, isNotificationsHistoryPage]);
   
   return {
     unreadDocuments,

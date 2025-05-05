@@ -53,14 +53,10 @@ export const NotificationsHistoryTable = () => {
     }
   };
   
-  // Initialize document notifications hook with our refresh function
-  // Disable automatic refreshes by passing a no-op function to the hook
-  // We'll manually call refreshDocuments when we need to
-  const noopRefresh = () => {};
-  const { markAllAsRead, isDocumentUnread } = useDocumentNotifications(noopRefresh);
+  // Initialize document notifications - but don't setup real-time subscriptions
+  const { markAllAsRead, isDocumentUnread } = useDocumentNotifications(refreshDocuments);
   
   // Use document actions hook for download functionality
-  // Pass our refresh function to update documents after download
   const { downloadDocument } = useDocumentActions(refreshDocuments);
   
   // Fetch documents only on component mount or when user changes

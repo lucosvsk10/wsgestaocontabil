@@ -1,55 +1,36 @@
 
+import React from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { checkIsAdmin } from "@/utils/auth/userChecks";
 
-interface PrivateRouteProps {
-  children: JSX.Element;
-  requiredRole?: string;
-  allowedRoles?: string[];
+export interface PrivateRouteProps {
+  children: React.ReactNode;
+  requiredRoles: string[];
 }
 
-const PrivateRoute = ({ children, requiredRole, allowedRoles = [] }: PrivateRouteProps) => {
-  const { user, userData, isLoading, role } = useAuth();
-  
-  const isAdmin = () => {
-    return checkIsAdmin(userData, user?.email);
-  };
+const PrivateRoute: React.FC<PrivateRouteProps> = ({
+  children,
+  requiredRoles = ["client"],
+}) => {
+  const { user, role } = useAuth();
 
-  // Enquanto está carregando, mostra um indicador de carregamento
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
-      </div>
-    );
-  }
-
-  // Se não houver usuário, redireciona para login
   if (!user) {
+    // Redirect to login if not authenticated
     return <Navigate to="/login" replace />;
   }
-  
-  // Se requerer role de admin mas o usuário não é admin, redirecionar para área do cliente
-  if (requiredRole === 'admin' && !isAdmin()) {
-    return <Navigate to="/client" replace />;
-  }
-  
-  // Se o usuário é admin mas está acessando a página de cliente, redirecionar para área do admin
-  if (!requiredRole && isAdmin()) {
-    return <Navigate to="/admin" replace />;
-  }
-  
-  // Verificar roles permitidas (se fornecidas)
-  if (allowedRoles.length > 0) {
-    const userRole = userData?.role || 'client';
-    if (!allowedRoles.includes(userRole) && !isAdmin()) {
+
+  // If user is authenticated, check their role
+  if (requiredRoles.length > 0 && role && !requiredRoles.includes(role)) {
+    // If user doesn't have the required role, redirect to appropriate page
+    if (role === "admin") {
+      return <Navigate to="/admin" replace />;
+    } else {
       return <Navigate to="/client" replace />;
     }
   }
-  
-  // Se tudo estiver ok, renderiza o componente filho
-  return children;
+
+  // If authenticated and has required role, render the protected component
+  return <>{children}</>;
 };
 
 export default PrivateRoute;

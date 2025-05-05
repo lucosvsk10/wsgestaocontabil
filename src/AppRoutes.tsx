@@ -19,7 +19,7 @@ export default function AppRoutes() {
       <Route
         path="/admin/*"
         element={
-          <PrivateRoute requiredRole="admin">
+          <PrivateRoute requiredRoles={["admin"]}>
             <AdminDashboard />
           </PrivateRoute>
         }
@@ -28,7 +28,7 @@ export default function AppRoutes() {
       <Route
         path="/client"
         element={
-          <PrivateRoute allowedRoles={["client", "admin"]}>
+          <PrivateRoute requiredRoles={["client", "admin"]}>
             <ClientDashboard />
           </PrivateRoute>
         }
@@ -38,7 +38,7 @@ export default function AppRoutes() {
       <Route
         path="/notifications"
         element={
-          <PrivateRoute allowedRoles={["client", "admin"]}>
+          <PrivateRoute requiredRoles={["client", "admin"]}>
             <NotificationsHistory />
           </PrivateRoute>
         }
