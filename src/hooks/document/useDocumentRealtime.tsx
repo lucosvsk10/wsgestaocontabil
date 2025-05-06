@@ -11,35 +11,18 @@ export const useDocumentRealtime = () => {
   const { toast } = useToast();
   const [newDocument, setNewDocument] = useState<Document | null>(null);
   
-  // Create a no-op function to pass to useDocumentActions since we're not refreshing the list here
-  const noopFetchDocuments = async () => {};
-  const { downloadDocument } = useDocumentActions(noopFetchDocuments);
+  // Usar o hook useDocumentActions para acessar handleDownload
+  const { handleDownload } = useDocumentActions();
 
   // Função para baixar o documento da notificação
   const handleDownloadNotifiedDocument = async () => {
-    if (!newDocument || !user?.id) return;
+    if (!newDocument) return;
     
     try {
-      if (newDocument.storage_key) {
-        // Verify storage key uses the correct user folder path
-        let storageKey = newDocument.storage_key;
-        if (!storageKey.startsWith(`${user.id}/`)) {
-          // Attempt to form the correct path with user ID
-          storageKey = `${user.id}/${storageKey.split('/').pop() || newDocument.filename || newDocument.name}`;
-        }
-        
-        await downloadDocument(
-          newDocument.id, 
-          storageKey, 
-          newDocument.filename || newDocument.original_filename || newDocument.name, 
-          user.id
-        );
-        
-        // Limpar a notificação após download
-        setNewDocument(null);
-      } else {
-        throw new Error("Chave de armazenamento não encontrada para este documento");
-      }
+      await handleDownload(newDocument);
+      
+      // Limpar a notificação após download
+      setNewDocument(null);
     } catch (error) {
       console.error("Erro ao baixar documento notificado:", error);
     }

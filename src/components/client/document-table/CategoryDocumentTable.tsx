@@ -4,6 +4,7 @@ import { Document } from "@/utils/auth/types";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileDocumentCard } from "./MobileDocumentCard";
 import { DesktopDocumentTable } from "./DesktopDocumentTable";
+import { useDocumentActions } from "@/hooks/document/useDocumentActions";
 
 interface CategoryDocumentTableProps {
   documents: Document[];
@@ -22,8 +23,8 @@ export const CategoryDocumentTable = ({
   daysUntilExpiration,
   refreshDocuments
 }: CategoryDocumentTableProps) => {
-  const [loadingDocumentIds, setLoadingDocumentIds] = useState<Set<string>>(new Set());
   const isMobile = useIsMobile();
+  const { loadingDocumentIds, setLoadingDocumentIds, handleDownload } = useDocumentActions();
   
   if (isMobile) {
     return (
@@ -43,6 +44,7 @@ export const CategoryDocumentTable = ({
               refreshDocuments={refreshDocuments}
               loadingDocumentIds={loadingDocumentIds}
               setLoadingDocumentIds={setLoadingDocumentIds}
+              handleDownload={handleDownload}
             />
           ))
         ) : (
@@ -69,6 +71,7 @@ export const CategoryDocumentTable = ({
         refreshDocuments={refreshDocuments}
         loadingDocumentIds={loadingDocumentIds}
         setLoadingDocumentIds={setLoadingDocumentIds}
+        handleDownload={handleDownload}
       />
     </div>
   );

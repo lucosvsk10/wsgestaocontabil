@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useDocumentFetch } from "../useDocumentFetch";
 import { useDocumentActions } from "./useDocumentActions";
+import { useDocumentDelete } from "../useDocumentDelete";
 import { useDocumentUpload } from "../useDocumentUpload";
 import { triggerExpiredDocumentsCleanup } from "@/utils/documents/documentCleanup";
 import { UserType } from "@/types/admin";
@@ -18,9 +19,11 @@ export const useDocumentManager = (users: any[], supabaseUsers: any[]) => {
   
   const {
     loadingDocumentIds,
-    deleteDocument,
-    downloadDocument
-  } = useDocumentActions(fetchUserDocuments);
+    handleDownload
+  } = useDocumentActions();
+  
+  // Uso do hook de exclusão de documentos
+  const { handleDeleteDocument: deleteDocument } = useDocumentDelete(fetchUserDocuments);
   
   const {
     isUploading,
@@ -111,6 +114,6 @@ export const useDocumentManager = (users: any[], supabaseUsers: any[]) => {
     handleFileChange,
     handleUpload: uploadHandleUpload,
     handleDeleteDocument,
-    downloadDocument
+    downloadDocument: handleDownload
   };
 };
