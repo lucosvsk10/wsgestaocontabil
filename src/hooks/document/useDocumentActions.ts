@@ -105,6 +105,7 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
 
       // Delete file from storage if we have a storage_key
       if (docData?.storage_key) {
+        console.log('Removendo arquivo do storage:', docData.storage_key);
         const { error: deleteStorageError } = await supabase.storage
           .from('documents')
           .remove([docData.storage_key]);

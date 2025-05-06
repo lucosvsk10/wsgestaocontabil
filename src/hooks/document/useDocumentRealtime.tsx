@@ -30,6 +30,8 @@ export const useDocumentRealtime = () => {
         
         // Limpar a notificação após download
         setNewDocument(null);
+      } else {
+        throw new Error("Chave de armazenamento não encontrada para este documento");
       }
     } catch (error) {
       console.error("Erro ao baixar documento notificado:", error);
