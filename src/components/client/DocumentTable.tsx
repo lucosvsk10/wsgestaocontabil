@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Download, Clock, Tag, Bell, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface DocumentTableProps {
   documents: Document[];
@@ -25,6 +25,7 @@ export const DocumentTable = ({
   refreshDocuments
 }: DocumentTableProps) => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [loadingDocumentIds, setLoadingDocumentIds] = useState<Set<string>>(new Set());
   const isMobile = useIsMobile();
 
@@ -61,15 +62,34 @@ export const DocumentTable = ({
   };
 
   const handleDownload = async (docItem: Document) => {
+    if (!user?.id) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Usuário não autenticado."
+      });
+      return;
+    }
+    
     // Mark as viewed when downloaded
     markAsViewed(docItem);
     
     try {
-      if (docItem.storage_key) {
+      let storagePath = docItem.storage_key;
+      
+      // Verify and fix storage path to include user ID
+      if (storagePath && !storagePath.startsWith(`${user.id}/`)) {
+        const filename = storagePath.split('/').pop();
+        storagePath = `${user.id}/${filename}`;
+      }
+      
+      if (storagePath) {
+        console.log('Downloading with storage path:', storagePath);
+        
         // Se temos o storage_key, usar o método de download
         const { data, error } = await supabase.storage
           .from('documents')
-          .download(docItem.storage_key);
+          .download(storagePath);
         
         if (error) throw error;
         
@@ -87,6 +107,8 @@ export const DocumentTable = ({
       } else if (docItem.file_url) {
         // Fallback para URL pública
         window.open(docItem.file_url, '_blank');
+      } else {
+        throw new Error("Não foi possível encontrar o arquivo para download.");
       }
     } catch (error: any) {
       console.error('Erro ao baixar documento:', error);

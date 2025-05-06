@@ -12,7 +12,7 @@ export const uploadUserDocument = async (userId: string, file: File, documentNam
       throw new Error("Erro ao verificar perfil do usuário. Por favor, tente novamente.");
     }
 
-    // 1. Upload file to storage - usando o bucket 'documents' e incluindo userId no caminho
+    // 1. Upload file to storage - always using the userId in the path
     const fileName = `${userId}/${Date.now()}_${file.name}`;
     const { data: fileData, error: uploadError } = await supabase.storage
       .from('documents')
@@ -35,7 +35,7 @@ export const uploadUserDocument = async (userId: string, file: File, documentNam
         original_filename: file.name,
         size: file.size,
         type: file.type,
-        storage_key: fileName // Armazenar o caminho completo do storage
+        storage_key: fileName // Store the full storage path including userId/
       })
       .select();
       
@@ -67,8 +67,15 @@ export const getUserDocumentsFromDB = async (userId: string) => {
 };
 
 // Função para fazer download de um documento
-export const downloadDocument = async (storagePath: string) => {
+export const downloadDocument = async (storagePath: string, userId: string) => {
   try {
+    // Ensure the storage path includes the userId for security
+    if (!storagePath.startsWith(`${userId}/`)) {
+      // If not, prepend the userId to the path
+      const filename = storagePath.split('/').pop();
+      storagePath = `${userId}/${filename}`;
+    }
+    
     const { data, error } = await supabase.storage
       .from('documents')
       .download(storagePath);

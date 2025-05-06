@@ -40,6 +40,15 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
       // Mark document as viewed when downloaded
       await markAsViewed(documentId);
       
+      // Verify storage key uses the correct user folder path
+      if (!storageKey.startsWith(`${userId}/`) && userId) {
+        console.warn('Storage key may not be in the correct user folder:', storageKey);
+        // Attempt to form the correct path
+        storageKey = `${userId}/${storageKey.split('/').pop() || filename}`;
+      }
+      
+      console.log('Downloading with storage key:', storageKey);
+      
       const { data, error } = await supabase.storage
         .from('documents')
         .download(storageKey);

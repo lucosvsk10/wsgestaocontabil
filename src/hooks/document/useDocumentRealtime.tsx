@@ -17,15 +17,22 @@ export const useDocumentRealtime = () => {
 
   // Função para baixar o documento da notificação
   const handleDownloadNotifiedDocument = async () => {
-    if (!newDocument) return;
+    if (!newDocument || !user?.id) return;
     
     try {
       if (newDocument.storage_key) {
+        // Verify storage key uses the correct user folder path
+        let storageKey = newDocument.storage_key;
+        if (!storageKey.startsWith(`${user.id}/`)) {
+          // Attempt to form the correct path with user ID
+          storageKey = `${user.id}/${storageKey.split('/').pop() || newDocument.filename || newDocument.name}`;
+        }
+        
         await downloadDocument(
           newDocument.id, 
-          newDocument.storage_key, 
+          storageKey, 
           newDocument.filename || newDocument.original_filename || newDocument.name, 
-          user?.id
+          user.id
         );
         
         // Limpar a notificação após download
