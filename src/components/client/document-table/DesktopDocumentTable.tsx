@@ -3,11 +3,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Document } from "@/utils/auth/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DocumentActions } from "./DocumentActions";
-import { BellDot } from "lucide-react";
+import { BellDot, Clock, Info, Tag } from "lucide-react";
 
 interface DesktopDocumentTableProps {
   documents: Document[];
-  category: string;
+  category?: string;
   formatDate: (dateStr: string) => string;
   isDocumentExpired: (expirationDate: string | null) => boolean;
   daysUntilExpiration: (expirationDate: string | null) => string | null;
@@ -25,16 +25,6 @@ export const DesktopDocumentTable = ({
   refreshDocuments,
   loadingDocumentIds,
 }: DesktopDocumentTableProps) => {
-  const getDisplayCategory = (doc: Document) => {
-    if (doc.category.startsWith('Impostos/')) {
-      return doc.category.split('/')[1];
-    }
-    if (doc.subcategory) {
-      return doc.subcategory;
-    }
-    return doc.category;
-  };
-
   return (
     <Table>
       <TableHeader className="bg-orange-300/50 dark:bg-navy-light/50">
@@ -65,8 +55,9 @@ export const DesktopDocumentTable = ({
                 </div>
               </TableCell>
               <TableCell>
-                <span className="px-2 py-1 rounded-full text-xs bg-orange-300 dark:bg-navy text-navy dark:text-gold">
-                  {getDisplayCategory(doc)}
+                <span className="flex items-center gap-1">
+                  <Tag size={14} />
+                  {doc.category}
                 </span>
               </TableCell>
               <TableCell className="text-gray-700 dark:text-gray-300">{formatDate(doc.uploaded_at)}</TableCell>
@@ -76,6 +67,7 @@ export const DesktopDocumentTable = ({
                     ? "text-red-600 dark:text-red-400" 
                     : "text-green-600 dark:text-green-400"
                 }`}>
+                  <Clock size={14} />
                   {daysUntilExpiration(doc.expires_at)}
                 </span>
               </TableCell>
@@ -85,6 +77,7 @@ export const DesktopDocumentTable = ({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className="flex items-center text-blue-600 dark:text-blue-400 cursor-help">
+                          <Info size={14} className="mr-1" />
                           <span className="truncate max-w-[150px]">{doc.observations}</span>
                         </div>
                       </TooltipTrigger>
@@ -100,21 +93,20 @@ export const DesktopDocumentTable = ({
                 )}
               </TableCell>
               <TableCell>
-                <div className="flex gap-2">
-                  <DocumentActions 
-                    doc={doc}
-                    isDocumentExpired={isDocumentExpired}
-                    refreshDocuments={refreshDocuments}
-                    loadingDocumentIds={loadingDocumentIds}
-                  />
-                </div>
+                <DocumentActions 
+                  doc={doc}
+                  isDocumentExpired={isDocumentExpired}
+                  refreshDocuments={refreshDocuments}
+                  loadingDocumentIds={loadingDocumentIds}
+                  handleDownload={(doc) => console.log("Download action handled by parent")}
+                />
               </TableCell>
             </TableRow>
           ))
         ) : (
           <TableRow>
-            <TableCell colSpan={5} className="text-center py-4 text-gray-500 dark:text-gray-400">
-              Não existem documentos na categoria {category}
+            <TableCell colSpan={6} className="text-center py-4 text-gray-500 dark:text-gray-400">
+              Não existem documentos {category ? `na categoria ${category}` : ''}
             </TableCell>
           </TableRow>
         )}

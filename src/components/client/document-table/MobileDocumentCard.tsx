@@ -1,7 +1,7 @@
 
 import { Document } from "@/utils/auth/types";
 import { DocumentActions } from "./DocumentActions";
-import { BellDot } from "lucide-react";
+import { BellDot, Info } from "lucide-react";
 
 interface MobileDocumentCardProps {
   doc: Document;
@@ -22,16 +22,6 @@ export const MobileDocumentCard = ({
   loadingDocumentIds,
   setLoadingDocumentIds
 }: MobileDocumentCardProps) => {
-  const getDisplayCategory = (doc: Document) => {
-    if (doc.category.startsWith('Impostos/')) {
-      return doc.category.split('/')[1];
-    }
-    if (doc.subcategory) {
-      return doc.subcategory;
-    }
-    return doc.category;
-  };
-
   return (
     <div className={`p-3 rounded-lg border ${
       isDocumentExpired(doc.expires_at) 
@@ -44,7 +34,7 @@ export const MobileDocumentCard = ({
           {doc.name}
         </div>
         <span className="text-xs px-2 py-1 rounded-full bg-gold text-navy">
-          {getDisplayCategory(doc)}
+          {doc.category}
         </span>
       </div>
       
@@ -67,9 +57,10 @@ export const MobileDocumentCard = ({
       {doc.observations && (
         <div className="mb-3 text-sm">
           <div className="text-gray-600 dark:text-gray-300 flex items-center">
+            <Info size={14} className="mr-1" />
             <span>Observações:</span>
           </div>
-          <p className="text-navy dark:text-white text-sm ml-2">{doc.observations}</p>
+          <p className="text-navy dark:text-white text-sm ml-5">{doc.observations}</p>
         </div>
       )}
       
@@ -79,6 +70,7 @@ export const MobileDocumentCard = ({
           isDocumentExpired={isDocumentExpired}
           refreshDocuments={refreshDocuments}
           loadingDocumentIds={loadingDocumentIds}
+          handleDownload={(doc) => console.log("Download action handled by parent")}
         />
       </div>
     </div>
