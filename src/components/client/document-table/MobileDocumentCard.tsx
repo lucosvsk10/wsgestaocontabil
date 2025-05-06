@@ -11,6 +11,7 @@ interface MobileDocumentCardProps {
   refreshDocuments: () => void;
   loadingDocumentIds: Set<string>;
   setLoadingDocumentIds: React.Dispatch<React.SetStateAction<Set<string>>>;
+  handleDownload: (doc: Document) => Promise<void>;
 }
 
 export const MobileDocumentCard = ({
@@ -20,7 +21,7 @@ export const MobileDocumentCard = ({
   daysUntilExpiration,
   refreshDocuments,
   loadingDocumentIds,
-  setLoadingDocumentIds
+  handleDownload
 }: MobileDocumentCardProps) => {
   return (
     <div className={`p-3 rounded-lg border ${
@@ -70,7 +71,7 @@ export const MobileDocumentCard = ({
           isDocumentExpired={isDocumentExpired}
           refreshDocuments={refreshDocuments}
           loadingDocumentIds={loadingDocumentIds}
-          handleDownload={(doc) => console.log("Download action handled by parent")}
+          handleDownload={handleDownload}
         />
       </div>
     </div>

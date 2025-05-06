@@ -9,7 +9,7 @@ interface DocumentActionsProps {
   isDocumentExpired: (expirationDate: string | null) => boolean;
   refreshDocuments: () => void;
   loadingDocumentIds: Set<string>;
-  handleDownload?: (doc: Document) => Promise<void>;
+  handleDownload: (doc: Document) => Promise<void>;
 }
 
 export const DocumentActions = ({
@@ -28,7 +28,7 @@ export const DocumentActions = ({
       variant="outline" 
       size="sm" 
       disabled={!canDownload} 
-      onClick={() => handleDownload && handleDownload(doc)} 
+      onClick={() => handleDownload(doc)} 
       className="flex-1 bg-orange-300/50 dark:bg-navy-light/50 border-gold/20 text-navy dark:text-gold hover:bg-gold hover:text-navy dark:hover:bg-gold-light dark:hover:text-navy flex items-center justify-center gap-1"
     >
       <Download size={14} />

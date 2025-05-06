@@ -2,21 +2,28 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Document } from "@/utils/auth/types";
+import { useAuth } from "@/contexts/AuthContext";
 
-export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promise<void>) => {
+export const useDocumentActions = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [loadingDocumentIds, setLoadingDocumentIds] = useState<Set<string>>(new Set());
 
-  const markAsViewed = async (documentId: string) => {
+  const markAsViewed = async (docItem: Document) => {
+    // If already viewed, no need to update
+    if (docItem.viewed) return;
+    
     try {
-      setLoadingDocumentIds(prev => new Set([...prev, documentId]));
+      setLoadingDocumentIds(prev => new Set([...prev, docItem.id]));
       
       const { error } = await supabase
         .from('documents')
         .update({ viewed: true, viewed_at: new Date().toISOString() })
-        .eq('id', documentId);
+        .eq('id', docItem.id);
         
       if (error) throw error;
+      
     } catch (error: any) {
       console.error('Error marking document as viewed:', error);
       toast({
@@ -27,52 +34,65 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
     } finally {
       setLoadingDocumentIds(prev => {
         const newSet = new Set(prev);
-        newSet.delete(documentId);
+        newSet.delete(docItem.id);
         return newSet;
       });
     }
   };
 
-  const downloadDocument = async (documentId: string, storageKey: string, filename: string, userId?: string) => {
+  const handleDownload = async (docItem: Document) => {
+    if (!user?.id) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Usuário não autenticado."
+      });
+      return;
+    }
+    
+    // Mark as viewed when downloaded
+    await markAsViewed(docItem);
+    
     try {
-      setLoadingDocumentIds(prev => new Set([...prev, documentId]));
+      setLoadingDocumentIds(prev => new Set([...prev, docItem.id]));
       
-      // Mark document as viewed when downloaded
-      await markAsViewed(documentId);
+      let storagePath = docItem.storage_key;
       
-      // Verify storage key uses the correct user folder path
-      if (!storageKey.startsWith(`${userId}/`) && userId) {
-        console.warn('Storage key may not be in the correct user folder:', storageKey);
-        // Attempt to form the correct path
-        storageKey = `${userId}/${storageKey.split('/').pop() || filename}`;
+      // Verify and fix storage path to include user ID
+      if (storagePath && !storagePath.startsWith(`${user.id}/`)) {
+        const filename = storagePath.split('/').pop();
+        storagePath = `${user.id}/${filename}`;
       }
       
-      console.log('Downloading with storage key:', storageKey);
-      
-      const { data, error } = await supabase.storage
-        .from('documents')
-        .download(storageKey);
+      if (storagePath) {
+        console.log('Downloading with storage path:', storagePath);
         
-      if (error) throw error;
-      
-      if (data) {
-        // Create URL and initiate download
-        const url = URL.createObjectURL(data);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }
-      
-      // Refresh documents if userId provided
-      if (userId) {
-        await fetchUserDocuments(userId);
+        // Se temos o storage_key, usar o método de download
+        const { data, error } = await supabase.storage
+          .from('documents')
+          .download(storagePath);
+        
+        if (error) throw error;
+        
+        if (data) {
+          // Criar URL do blob e iniciar download
+          const url = URL.createObjectURL(data);
+          const a = window.document.createElement('a');
+          a.href = url;
+          a.download = docItem.filename || docItem.original_filename || docItem.name;
+          window.document.body.appendChild(a);
+          a.click();
+          window.document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
+      } else if (docItem.file_url) {
+        // Fallback para URL pública
+        window.open(docItem.file_url, '_blank');
+      } else {
+        throw new Error("Não foi possível encontrar o arquivo para download.");
       }
     } catch (error: any) {
-      console.error('Error downloading document:', error);
+      console.error('Erro ao baixar documento:', error);
       toast({
         variant: "destructive",
         title: "Erro ao baixar documento",
@@ -81,69 +101,7 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
     } finally {
       setLoadingDocumentIds(prev => {
         const newSet = new Set(prev);
-        newSet.delete(documentId);
-        return newSet;
-      });
-    }
-  };
-
-  const deleteDocument = async (documentId: string, selectedUserId: string | null) => {
-    if (!window.confirm("Tem certeza que deseja excluir este documento?")) {
-      return;
-    }
-    
-    try {
-      setLoadingDocumentIds(prev => new Set([...prev, documentId]));
-      
-      // Get document to retrieve storage_key
-      const { data: docData, error: fetchError } = await supabase
-        .from('documents')
-        .select('*')
-        .eq('id', documentId)
-        .single();
-        
-      if (fetchError) throw fetchError;
-
-      // Delete document record from database
-      const { error: deleteDbError } = await supabase
-        .from('documents')
-        .delete()
-        .eq('id', documentId);
-        
-      if (deleteDbError) throw deleteDbError;
-
-      // Delete file from storage if we have a storage_key
-      if (docData?.storage_key) {
-        console.log('Removendo arquivo do storage:', docData.storage_key);
-        const { error: deleteStorageError } = await supabase.storage
-          .from('documents')
-          .remove([docData.storage_key]);
-          
-        if (deleteStorageError) {
-          console.error('Error deleting file from storage:', deleteStorageError);
-        }
-      }
-
-      // Update document list
-      if (selectedUserId) {
-        await fetchUserDocuments(selectedUserId);
-      }
-      
-      toast({
-        title: "Documento excluído com sucesso",
-        description: "O documento foi removido permanentemente."
-      });
-    } catch (error: any) {
-      console.error('Error deleting document:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao excluir documento",
-        description: error.message
-      });
-    } finally {
-      setLoadingDocumentIds(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(documentId);
+        newSet.delete(docItem.id);
         return newSet;
       });
     }
@@ -151,8 +109,8 @@ export const useDocumentActions = (fetchUserDocuments: (userId: string) => Promi
 
   return {
     loadingDocumentIds,
+    setLoadingDocumentIds,
     markAsViewed,
-    downloadDocument,
-    deleteDocument
+    handleDownload
   };
 };

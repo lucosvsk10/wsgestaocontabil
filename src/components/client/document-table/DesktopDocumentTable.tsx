@@ -14,6 +14,7 @@ interface DesktopDocumentTableProps {
   refreshDocuments: () => void;
   loadingDocumentIds: Set<string>;
   setLoadingDocumentIds: React.Dispatch<React.SetStateAction<Set<string>>>;
+  handleDownload: (doc: Document) => Promise<void>;
 }
 
 export const DesktopDocumentTable = ({
@@ -24,6 +25,7 @@ export const DesktopDocumentTable = ({
   daysUntilExpiration,
   refreshDocuments,
   loadingDocumentIds,
+  handleDownload,
 }: DesktopDocumentTableProps) => {
   return (
     <Table>
@@ -98,7 +100,7 @@ export const DesktopDocumentTable = ({
                   isDocumentExpired={isDocumentExpired}
                   refreshDocuments={refreshDocuments}
                   loadingDocumentIds={loadingDocumentIds}
-                  handleDownload={(doc) => console.log("Download action handled by parent")}
+                  handleDownload={handleDownload}
                 />
               </TableCell>
             </TableRow>
