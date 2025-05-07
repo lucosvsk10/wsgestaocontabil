@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -136,7 +136,7 @@ export const useNotifications = () => {
                   {formatDate(newNotification.created_at)}
                 </span>
               </div>
-            ),
+            ) as ReactNode,
             duration: 5000,
           });
         }
