@@ -1,3 +1,4 @@
+
 import { Document } from "@/utils/auth/types";
 import { DocumentActions } from "./DocumentActions";
 import { BellDot, Info } from "lucide-react";
@@ -39,15 +40,14 @@ export const MobileDocumentCard = ({
           {!doc.viewed && <BellDot size={16} className="text-blue-500 dark:text-blue-400 mr-2" />}
           {doc.name}
         </div>
-        <span className="text-xs px-2 py-1 rounded-full bg-gold/80 text-navy dark:bg-gold/70">
-          {doc.category}
-        </span>
+        {!doc.viewed && (
+          <span className="text-xs px-2 py-1 rounded-full bg-blue-500/80 text-white">
+            Novo
+          </span>
+        )}
       </div>
       
-      <div className="grid grid-cols-2 gap-2 text-sm mb-3">
-        <div className="text-gray-600 dark:text-gray-300">
-          Data: <span className="text-navy dark:text-white">{formatDate(doc.uploaded_at)}</span>
-        </div>
+      <div className="grid grid-cols-1 gap-2 text-sm mb-3">
         <div className="text-gray-600 dark:text-gray-300">
           Validade: 
           <span className={

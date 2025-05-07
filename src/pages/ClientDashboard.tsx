@@ -44,23 +44,23 @@ const ClientDashboard = () => {
     }
   }, [user, fetchUserDocuments]);
 
-  // Encontrar a categoria com o documento mais recente - apenas na primeira renderização
+  // Find the category with the most recent document - only on first render
   useEffect(() => {
-    // Garante que só execute quando os documentos estiverem carregados e ainda não inicializado
+    // Only execute when documents are loaded and not yet initialized
     if (!hasInitializedRef.current && !isLoadingDocuments) {
-      // Apenas faça a seleção automática se o usuário ainda não fez uma seleção manual
+      // Only auto-select if the user hasn't manually selected yet
       if (!userSelectedRef.current) {
         let mostRecentCategory: string | null = null;
         
         if (documents.length > 0) {
           let mostRecentDate: Date | null = null;
           
-          // Percorrer todas as categorias para encontrar o documento mais recente
+          // Check all categories to find the most recent document
           categories.forEach(category => {
             const docsInCategory = documentsByCategory[category] || [];
             
             if (docsInCategory.length > 0) {
-              // Ordenar documentos por data de upload (mais recente primeiro)
+              // Sort documents by upload date (most recent first)
               const sortedDocs = [...docsInCategory].sort(
                 (a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
               );
@@ -68,7 +68,7 @@ const ClientDashboard = () => {
               const mostRecentInCategory = sortedDocs[0];
               const docDate = new Date(mostRecentInCategory.uploaded_at);
               
-              // Verificar se é o mais recente de todas as categorias
+              // Check if this is the most recent across all categories
               if (!mostRecentDate || docDate > mostRecentDate) {
                 mostRecentDate = docDate;
                 mostRecentCategory = category;
@@ -77,20 +77,20 @@ const ClientDashboard = () => {
           });
         }
         
-        // Selecionar a categoria com o documento mais recente ou a primeira com documentos
+        // Select the category with the most recent document or first one with documents
         if (mostRecentCategory) {
           setSelectedCategory(mostRecentCategory);
         } else if (categories.some(cat => documentsByCategory[cat]?.length > 0)) {
-          // Fallback: selecionar a primeira categoria que tenha documentos
+          // Fallback: select first category that has documents
           const firstCategoryWithDocs = categories.find(cat => documentsByCategory[cat]?.length > 0);
           setSelectedCategory(firstCategoryWithDocs || categories[0]);
         } else {
-          // Fallback final: primeira categoria disponível
+          // Final fallback: first available category
           setSelectedCategory(categories[0]);
         }
       }
       
-      // Marcar como inicializado para evitar execuções futuras
+      // Mark as initialized to avoid future runs
       hasInitializedRef.current = true;
     }
   }, [documents, isLoadingDocuments, categories, documentsByCategory]);

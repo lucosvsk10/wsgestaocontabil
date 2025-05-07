@@ -3,7 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Document } from "@/utils/auth/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DocumentActions } from "./DocumentActions";
-import { BellDot, Clock, Info, Tag } from "lucide-react";
+import { BellDot, Clock, Info } from "lucide-react";
 
 interface DesktopDocumentTableProps {
   documents: Document[];
@@ -32,8 +32,6 @@ export const DesktopDocumentTable = ({
       <TableHeader className="bg-orange-200/60 dark:bg-navy-light/30">
         <TableRow>
           <TableHead className="text-navy dark:text-gold font-extralight">Nome do Documento</TableHead>
-          <TableHead className="text-navy dark:text-gold font-extralight">Categoria</TableHead>
-          <TableHead className="text-navy dark:text-gold font-extralight">Data de Envio</TableHead>
           <TableHead className="text-navy dark:text-gold font-extralight">Validade</TableHead>
           <TableHead className="text-navy dark:text-gold font-extralight">Observações</TableHead>
           <TableHead className="text-navy dark:text-gold font-extralight">Ações</TableHead>
@@ -56,15 +54,13 @@ export const DesktopDocumentTable = ({
                 <div className="flex items-center">
                   {!doc.viewed && <BellDot size={16} className="text-blue-500 dark:text-blue-400 mr-2" />}
                   {doc.name}
+                  {!doc.viewed && (
+                    <span className="ml-2 text-xs px-2 py-1 rounded-full bg-blue-500/80 text-white">
+                      Novo
+                    </span>
+                  )}
                 </div>
               </TableCell>
-              <TableCell>
-                <span className="flex items-center gap-1">
-                  <Tag size={14} />
-                  {doc.category}
-                </span>
-              </TableCell>
-              <TableCell className="text-gray-700 dark:text-gray-300">{formatDate(doc.uploaded_at)}</TableCell>
               <TableCell>
                 <span className={`flex items-center gap-1 ${
                   isDocumentExpired(doc.expires_at) 
@@ -109,7 +105,7 @@ export const DesktopDocumentTable = ({
           ))
         ) : (
           <TableRow>
-            <TableCell colSpan={6} className="text-center py-4 text-gray-500 dark:text-gray-400">
+            <TableCell colSpan={4} className="text-center py-4 text-gray-500 dark:text-gray-400">
               Não existem documentos {category ? `na categoria ${category}` : ''}
             </TableCell>
           </TableRow>
