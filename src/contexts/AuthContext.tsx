@@ -1,7 +1,7 @@
 
 import React, { createContext, useState, useContext, useEffect } from "react";
 import { User } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 import { UserData, AuthContextType } from "@/utils/auth/types";
 import { checkIsAdmin } from "@/utils/auth/userChecks";
 import { signInWithEmail, signOutUser } from "@/utils/auth/authentication";

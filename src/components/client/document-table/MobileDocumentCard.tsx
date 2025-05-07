@@ -2,30 +2,29 @@
 import { Document } from "@/utils/auth/types";
 import { DocumentActions } from "./DocumentActions";
 import { BellDot, Info } from "lucide-react";
+import { isDocumentExpired, daysUntilExpiration } from "@/utils/documents/documentCleanup";
 
 interface MobileDocumentCardProps {
   doc: Document;
   formatDate: (dateStr: string) => string;
-  isDocumentExpired: (expirationDate: string | null) => boolean;
-  daysUntilExpiration: (expirationDate: string | null) => string | null;
   refreshDocuments: () => void;
   loadingDocumentIds: Set<string>;
-  setLoadingDocumentIds: React.Dispatch<React.SetStateAction<Set<string>>>;
   handleDownload: (doc: Document) => Promise<void>;
 }
 
 export const MobileDocumentCard = ({
   doc,
   formatDate,
-  isDocumentExpired,
-  daysUntilExpiration,
   refreshDocuments,
   loadingDocumentIds,
   handleDownload
 }: MobileDocumentCardProps) => {
+  const isExpired = isDocumentExpired(doc.expires_at);
+  const expirationText = daysUntilExpiration(doc.expires_at);
+  
   return (
     <div className={`p-3 rounded-lg border ${
-      isDocumentExpired(doc.expires_at) 
+      isExpired
         ? "bg-red-100/20 dark:bg-red-900/20 border-red-200/30 dark:border-red-900/30" 
         : "bg-orange-200/60 dark:bg-navy-light/20 border-gold/20"
     }`}>
@@ -46,11 +45,11 @@ export const MobileDocumentCard = ({
         <div className="text-gray-600 dark:text-gray-300">
           Validade: 
           <span className={
-            isDocumentExpired(doc.expires_at) 
+            isExpired
               ? "text-red-600 dark:text-red-400" 
               : "text-green-600 dark:text-green-400"
           }>
-            {" "}{daysUntilExpiration(doc.expires_at)}
+            {" "}{expirationText}
           </span>
         </div>
       </div>
@@ -68,9 +67,6 @@ export const MobileDocumentCard = ({
       <div className="flex gap-2 mt-2">
         <DocumentActions 
           doc={doc}
-          isDocumentExpired={isDocumentExpired}
-          refreshDocuments={refreshDocuments}
-          loadingDocumentIds={loadingDocumentIds}
           handleDownload={handleDownload}
         />
       </div>

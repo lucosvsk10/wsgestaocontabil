@@ -1,69 +1,82 @@
-# Welcome to your Lovable project
 
-## Project info
+# WS Gestão Contábil
 
-**URL**: https://lovable.dev/projects/b6a7731d-61d8-4370-ac49-865f9c8c664e
+Sistema de gerenciamento contábil com foco no upload, download e gerenciamento de documentos pelos usuários.
 
-## How can I edit this code?
+## 🚀 Funcionalidades
 
-There are several ways of editing your application.
+- **Gerenciamento de Documentos:** Upload, download e visualização de documentos
+- **Autenticação Segura:** Login, registro e autenticação de dois fatores
+- **Área Administrativa:** Gerenciamento de usuários e documentos
+- **Interface Responsiva:** Compatível com dispositivos móveis e desktop
+- **Suporte a Temas:** Modo claro e escuro integrados
 
-**Use Lovable**
+## 🛠️ Tecnologias
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/b6a7731d-61d8-4370-ac49-865f9c8c664e) and start prompting.
+- **Frontend:** React, TypeScript, Tailwind CSS, shadcn/ui
+- **Backend:** Supabase (Autenticação, Banco de Dados, Storage e Edge Functions)
+- **Ferramentas de Qualidade:** ESLint, Prettier, Vitest
 
-Changes made via Lovable will be committed automatically to this repo.
+## 📋 Pré-requisitos
 
-**Use your preferred IDE**
+- Node.js (v18+)
+- npm ou yarn
+- Conta no Supabase
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## 🏁 Como Rodar o Projeto
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Instalação Local
 
-Follow these steps:
+```bash
+# Clonar o repositório
+git clone https://github.com/seu-usuario/ws-gestao-contabil.git
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+# Entrar na pasta do projeto
+cd ws-gestao-contabil
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# Instalar dependências
+npm install
 
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Iniciar o servidor de desenvolvimento
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### Scripts Disponíveis
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+- `npm run dev` - Inicia o servidor de desenvolvimento
+- `npm run build` - Compila o projeto para produção
+- `npm run lint` - Executa verificação de linting
+- `npm run test` - Executa os testes automatizados
+- `npm run preview` - Exibe a versão de produção localmente
 
-**Use GitHub Codespaces**
+## 📚 Arquitetura do Projeto
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+O projeto segue uma arquitetura modular:
 
-## What technologies are used for this project?
+- `src/components/` - Componentes React reutilizáveis
+- `src/contexts/` - Contextos React para gerenciamento de estado global
+- `src/hooks/` - Hooks personalizados para lógica reutilizável
+- `src/lib/` - Configurações e clientes de bibliotecas externas
+- `src/pages/` - Páginas da aplicação
+- `src/utils/` - Utilitários e funções auxiliares
+  - `auth/` - Utilitários de autenticação
+  - `documents/` - Utilitários de gerenciamento de documentos
 
-This project is built with .
+## 🔒 Segurança
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- **Supabase RLS:** Políticas de segurança por linha para proteção de dados
+- **Autenticação MFA:** Suporte a autenticação de dois fatores
+- **Verificação de Senhas:** Proteção contra senhas vazadas
+- **Controle de Acesso:** Permissões baseadas em papéis de usuário
 
-## How can I deploy this project?
+## 📝 Licença
 
-Simply open [Lovable](https://lovable.dev/projects/b6a7731d-61d8-4370-ac49-865f9c8c664e) and click on Share -> Publish.
+Este projeto está licenciado sob a Licença MIT - consulte o arquivo LICENSE para detalhes.
 
-## I want to use a custom domain - is that possible?
+## 👥 Contribuição
 
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+1. Faça um fork do projeto
+2. Crie sua branch de feature (`git checkout -b feature/nova-funcionalidade`)
+3. Faça commit das alterações (`git commit -m 'feat: Adicionei nova funcionalidade'`)
+4. Faça push para a branch (`git push origin feature/nova-funcionalidade`)
+5. Abra um Pull Request

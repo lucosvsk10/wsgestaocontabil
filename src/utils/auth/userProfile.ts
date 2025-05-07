@@ -1,8 +1,12 @@
 
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabaseClient';
 import { UserData } from './types';
 
-// Fetch user data from database
+/**
+ * Fetch user data from database
+ * @param userId The user's ID
+ * @returns Promise with user data from the database
+ */
 export const fetchUserDataFromDB = async (userId: string) => {
   return await supabase
     .from('users')
@@ -11,7 +15,13 @@ export const fetchUserDataFromDB = async (userId: string) => {
     .single();
 };
 
-// Ensure user exists in users table with better error handling
+/**
+ * Ensure user exists in users table with better error handling
+ * @param userId User ID to check
+ * @param email User's email
+ * @param name User's name (defaults to "Usuário")
+ * @returns Promise with user data or error
+ */
 export const ensureUserProfile = async (userId: string, email: string, name: string = "Usuário") => {
   try {
     if (!userId) {
@@ -21,7 +31,7 @@ export const ensureUserProfile = async (userId: string, email: string, name: str
 
     console.log("Verificando/criando perfil para usuário:", userId, email, name);
 
-    // Primeiro verifica se o usuário já existe
+    // First check if user already exists
     const { data: existingUsers, error: checkError } = await supabase
       .from('users')
       .select('*')
@@ -29,7 +39,7 @@ export const ensureUserProfile = async (userId: string, email: string, name: str
     
     if (checkError) {
       console.error("Error checking user profile:", checkError);
-      // Tentativa direta de inserção caso a verificação falhe
+      // Direct insertion attempt if verification fails
       await createUserProfileDirectly(userId, email, name);
       
       return { 
@@ -44,11 +54,11 @@ export const ensureUserProfile = async (userId: string, email: string, name: str
       };
     }
     
-    // Se o usuário não existe ou não há dados retornados, cria o perfil
+    // If user doesn't exist or no data returned, create profile
     if (!existingUsers || existingUsers.length === 0) {
       console.log("Creating new user profile for:", userId, email, name);
       
-      // Obtem sessão atual para garantir privilégios de inserção
+      // Get current session to ensure insertion privileges
       const { data: sessionData } = await supabase.auth.getSession();
       
       if (!sessionData.session) {
@@ -57,7 +67,7 @@ export const ensureUserProfile = async (userId: string, email: string, name: str
         console.log("Creating profile using session:", sessionData.session.user.email);
       }
       
-      // Tenta inserir o usuário usando a API
+      // Try inserting user using API
       const { error: createError } = await supabase
         .from('users')
         .insert({
@@ -69,11 +79,11 @@ export const ensureUserProfile = async (userId: string, email: string, name: str
       
       if (createError) {
         console.error("Error creating user profile via API:", createError);
-        // Se falhar, tenta método alternativo
+        // Try alternative method if failed
         await createUserProfileDirectly(userId, email, name);
       }
       
-      // Busca o usuário recém-criado
+      // Fetch newly created user
       const { data: newUser, error: fetchError } = await supabase
         .from('users')
         .select('*')
@@ -100,7 +110,7 @@ export const ensureUserProfile = async (userId: string, email: string, name: str
     return { data: existingUsers[0], error: null };
   } catch (error) {
     console.error("Error in ensureUserProfile:", error);
-    // Tenta método alternativo em caso de erro geral
+    // Try alternative method in case of general error
     await createUserProfileDirectly(userId, email, name);
     
     return { 
@@ -116,7 +126,12 @@ export const ensureUserProfile = async (userId: string, email: string, name: str
   }
 };
 
-// Função auxiliar para tentar criação direta se outros métodos falharem
+/**
+ * Helper function to try direct creation if other methods fail
+ * @param userId User ID
+ * @param email User email
+ * @param name User name
+ */
 const createUserProfileDirectly = async (userId: string, email: string, name: string) => {
   try {
     const { data: sessionData } = await supabase.auth.getSession();
