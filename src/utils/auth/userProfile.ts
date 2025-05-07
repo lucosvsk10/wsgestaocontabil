@@ -1,6 +1,6 @@
 
 import { supabase } from '@/lib/supabaseClient';
-import { UserData } from './types';
+import { UserData } from '@/utils/auth/types';
 
 /**
  * Fetch user data from database

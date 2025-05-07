@@ -1,3 +1,4 @@
+
 export interface Document {
   id: string;
   user_id: string;
@@ -14,4 +15,23 @@ export interface Document {
   type?: string;
   viewed?: boolean;
   viewed_at?: string;
+}
+
+export interface UserData {
+  id: string;
+  email?: string;
+  name?: string;
+  role?: string;
+  created_at?: string;
+}
+
+export interface AuthContextType {
+  user: any | null;
+  userData: UserData | null;
+  isLoading: boolean;
+  isAdmin: boolean;
+  signIn: (email: string, password: string) => Promise<{ error: Error | null; data: any | null }>;
+  signOut: () => Promise<{ error: Error | null }>;
+  setUser: (user: any | null) => void;
+  setUserData: (userData: UserData | null) => void;
 }

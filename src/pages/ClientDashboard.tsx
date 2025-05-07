@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DocumentTabs } from "@/components/client/DocumentTabs";
@@ -24,7 +25,11 @@ const ClientDashboard = () => {
   
   // Add realtime hooks for notifications and viewed status updates
   useDocumentRealtime();
-  useViewedDocumentsRealtime(fetchUserDocuments);
+  useViewedDocumentsRealtime(() => {
+    if (user?.id) {
+      fetchUserDocuments(user.id);
+    }
+  });
 
   // Categories of documents
   const categories = ["Impostos", "Folha de Pagamento", "Documentações", "Certidões"];
