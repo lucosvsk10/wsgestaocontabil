@@ -50,7 +50,7 @@ export const DocumentTabs = ({
         <DrawerTrigger asChild>
           <Button 
             variant="document" 
-            className="w-full mb-4 justify-between font-medium text-navy dark:text-gold border-gold/20"
+            className="w-full mb-4 justify-between font-medium text-white border-gold/20"
           >
             <div className="flex items-center">
               <Menu className="mr-2 h-4 w-4" />
@@ -58,7 +58,7 @@ export const DocumentTabs = ({
             </div>
           </Button>
         </DrawerTrigger>
-        <DrawerContent className="bg-orange-100 dark:bg-[#2d2a28] border-t border-gold/20 p-4">
+        <DrawerContent className="bg-[#393532] dark:bg-[#2d2a28] border-t border-gold/20 p-4">
           <div className="max-w-md mx-auto">
             <div className="space-y-2">
               {categories.map((category) => (
@@ -68,7 +68,7 @@ export const DocumentTabs = ({
                 >
                   <Button 
                     variant="document"
-                    className="w-full justify-between text-navy dark:text-white"
+                    className="w-full justify-between text-white"
                     disabled={documentsByCategory[category].length === 0}
                     onClick={() => handleCategoryChange(category)}
                   >
@@ -101,13 +101,13 @@ export const DocumentTabs = ({
       onValueChange={handleCategoryChange}
       className="w-full"
     >
-      <TabsList className="mb-4 border-gold/20 bg-orange-200/60 dark:bg-[#2d2a28]">
+      <TabsList className="mb-4 border-gold/20 bg-[#46413d] dark:bg-[#2d2a28]">
         {categories.map(category => (
           <TabsTrigger 
             key={category} 
             value={category}
             disabled={documentsByCategory[category].length === 0}
-            className="relative text-navy dark:text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
+            className="relative text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
           >
             {category}
           </TabsTrigger>

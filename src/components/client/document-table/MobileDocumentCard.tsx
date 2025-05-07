@@ -27,14 +27,14 @@ export const MobileDocumentCard = ({
     <div className={`p-3 rounded-lg border ${
       isDocumentExpired(doc.expires_at) 
         ? "bg-red-100/20 dark:bg-red-900/20 border-red-200/30 dark:border-red-900/30" 
-        : "bg-orange-200/60 dark:bg-navy-light/20 border-gold/20"
+        : "bg-orange-300/50 dark:bg-navy-light/50 border-gold/20"
     }`}>
       <div className="flex items-center justify-between mb-2">
         <div className="font-medium text-navy dark:text-gold flex items-center">
           {!doc.viewed && <BellDot size={16} className="text-blue-500 dark:text-blue-400 mr-2" />}
           {doc.name}
         </div>
-        <span className="text-xs px-2 py-1 rounded-full bg-gold/80 text-navy dark:bg-gold/70">
+        <span className="text-xs px-2 py-1 rounded-full bg-gold text-navy">
           {doc.category}
         </span>
       </div>

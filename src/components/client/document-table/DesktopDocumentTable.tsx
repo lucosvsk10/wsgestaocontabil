@@ -29,7 +29,7 @@ export const DesktopDocumentTable = ({
 }: DesktopDocumentTableProps) => {
   return (
     <Table>
-      <TableHeader className="bg-orange-200/60 dark:bg-navy-light/30">
+      <TableHeader className="bg-orange-300/50 dark:bg-navy-light/50">
         <TableRow>
           <TableHead className="text-navy dark:text-gold font-extralight">Nome do Documento</TableHead>
           <TableHead className="text-navy dark:text-gold font-extralight">Categoria</TableHead>
@@ -47,7 +47,7 @@ export const DesktopDocumentTable = ({
               className={`${
                 isDocumentExpired(doc.expires_at) 
                   ? "bg-red-100/20 dark:bg-red-900/20 border-red-200/30 dark:border-red-900/30" 
-                  : "border-gold/10 hover:bg-orange-200/50 dark:hover:bg-navy-light/20"
+                  : "border-gold/10 hover:bg-orange-300/50 dark:hover:bg-navy-light/50"
               }`}
             >
               <TableCell className="font-medium text-navy dark:text-white">
@@ -83,7 +83,7 @@ export const DesktopDocumentTable = ({
                           <span className="truncate max-w-[150px]">{doc.observations}</span>
                         </div>
                       </TooltipTrigger>
-                      <TooltipContent className="bg-orange-100 dark:bg-navy-dark border-gold/20">
+                      <TooltipContent className="bg-orange-200 dark:bg-navy border-gold/20">
                         <p className="max-w-[300px] whitespace-normal break-words text-navy dark:text-white">
                           {doc.observations}
                         </p>

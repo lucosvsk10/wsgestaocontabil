@@ -161,12 +161,8 @@ export type Database = {
         Returns: undefined
       }
       foldername: {
-        Args: Record<PropertyKey, never> | { name: string }
+        Args: { name: string }
         Returns: string
-      }
-      set_document_expiration: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
       }
     }
     Enums: {
