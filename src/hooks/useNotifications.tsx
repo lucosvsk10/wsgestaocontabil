@@ -121,6 +121,7 @@ export const useNotifications = () => {
           filter: `user_id=eq.${user.id}`
         },
         (payload) => {
+          console.log("Nova notificação recebida:", payload);
           // Adicionar nova notificação ao estado
           const newNotification = payload.new as Notification;
           setNotifications(prev => [newNotification, ...prev]);
@@ -150,6 +151,7 @@ export const useNotifications = () => {
           filter: `user_id=eq.${user.id}`
         },
         (payload) => {
+          console.log("Notificação atualizada:", payload);
           // Atualizar notificação existente no estado
           const updatedNotification = payload.new as Notification;
           setNotifications(prev => 
@@ -166,7 +168,7 @@ export const useNotifications = () => {
       )
       .subscribe();
 
-    console.log("Canal de notificações inscrito");
+    console.log("Canal de notificações inscrito para o usuário:", user.id);
 
     // Limpar inscrição quando o componente desmontar
     return () => {

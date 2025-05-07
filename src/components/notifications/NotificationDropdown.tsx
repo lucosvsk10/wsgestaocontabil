@@ -1,150 +1,87 @@
-import { useEffect } from "react";
+
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { BellOff, Check, ExternalLink } from "lucide-react";
 import { useNotifications, Notification } from "@/hooks/useNotifications";
 import { formatDate } from "@/utils/documentUtils";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useDocumentActions } from "@/hooks/document/useDocumentActions";
-import { supabase } from "@/integrations/supabase/client";
 
 interface NotificationDropdownProps {
   onClose: () => void;
 }
 
-const NotificationItem = ({ notification, onView }: { notification: Notification; onView: () => void }) => {
-  const isRead = notification.is_read;
-  
-  return (
-    <div 
-      className={`p-3 border-b last:border-b-0 ${
-        isRead 
-          ? 'bg-white dark:bg-navy-dark' 
-          : 'bg-orange-50 dark:bg-navy-light/10'
-      } hover:bg-orange-100 dark:hover:bg-navy-light/20 cursor-pointer transition-colors`}
-      onClick={onView}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <h5 className="text-sm font-medium text-navy dark:text-gold">
-          {notification.title}
-        </h5>
-        <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-          {formatDate(notification.created_at).split(" às")[0]}
-        </span>
-      </div>
-      <p className="text-xs mt-1 text-navy/80 dark:text-gold/80">{notification.message}</p>
-      
-      <div className="mt-2 flex items-center justify-between">
-        <span className="inline-flex items-center text-[10px] px-1.5 py-0.5 rounded bg-orange-200/60 dark:bg-navy-light/30 border-gold/20 text-navy dark:text-gold">
-          <ExternalLink size={10} className="mr-1" />
-          Ver documento
-        </span>
-        
-        {!isRead && (
-          <span className="inline-block w-2 h-2 bg-blue-500 rounded-full"></span>
-        )}
-      </div>
-    </div>
-  );
-};
-
 const NotificationDropdown = ({ onClose }: NotificationDropdownProps) => {
-  const { notifications, unreadCount, isLoading, markAsRead, markAllAsRead, refreshNotifications } = useNotifications();
-  const { handleDownload } = useDocumentActions();
+  const { notifications, unreadCount, isLoading, markAsRead, markAllAsRead } = useNotifications();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-
-  // Recarregar notificações ao abrir o dropdown
-  useEffect(() => {
-    refreshNotifications();
-  }, [refreshNotifications]);
   
-  // Função para visualizar o documento de uma notificação
-  const handleViewDocument = async (notification: Notification) => {
+  const handleNotificationClick = (notification: Notification) => {
     // Marcar como lida
-    if (!notification.is_read) {
-      await markAsRead(notification.id);
-    }
+    markAsRead(notification.id);
     
-    // Se tiver document_id, encontrar o documento nas categorias
+    // Navegar para o documento se houver um document_id
     if (notification.document_id) {
-      try {
-        // Buscar documento específico
-        const { data: document } = await supabase
-          .from('documents')
-          .select('*')
-          .eq('id', notification.document_id)
-          .single();
-          
-        if (document) {
-          // Fazer download do documento
-          await handleDownload(document);
-        }
-      } catch (error) {
-        console.error('Erro ao buscar documento da notificação:', error);
-      }
+      navigate(`/client/documents/${notification.document_id}`);
+      onClose();
     }
-    
-    // Fechar dropdown
-    onClose();
   };
-
+  
+  const dropdownWidth = isMobile ? 'w-[90vw]' : 'w-80';
+  
   return (
-    <div className={`absolute z-50 mt-2 ${isMobile ? 'right-0 w-80' : 'right-0 w-96'} bg-white dark:bg-navy-dark shadow-lg border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden`}>
-      {/* Cabeçalho */}
-      <div className="p-3 bg-orange-50 dark:bg-navy-light/10 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-        <h4 className="font-medium text-navy dark:text-gold">Notificações</h4>
-        <div className="flex items-center gap-1">
-          {unreadCount > 0 && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={markAllAsRead} 
-              className="text-xs h-8 px-2 text-navy/80 dark:text-gold/80 hover:text-navy hover:dark:text-gold"
-            >
-              <Check size={14} className="mr-1" />
-              Marcar todas como lidas
-            </Button>
-          )}
-        </div>
+    <div className={`absolute right-0 mt-2 ${dropdownWidth} bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20 rounded-md shadow-lg z-50 max-h-[80vh] overflow-hidden flex flex-col`}>
+      <div className="p-3 flex items-center justify-between bg-orange-100 dark:bg-navy-light">
+        <h3 className="font-semibold text-navy dark:text-gold">Notificações</h3>
+        {unreadCount > 0 && (
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => markAllAsRead()}
+            className="h-8 text-sm"
+          >
+            Marcar todas como lidas
+          </Button>
+        )}
       </div>
       
-      {/* Lista de notificações */}
-      <ScrollArea className="h-[350px]">
+      <div className="overflow-y-auto max-h-[60vh]">
         {isLoading ? (
-          <div className="flex items-center justify-center p-6">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gold"></div>
-          </div>
-        ) : notifications.length > 0 ? (
-          notifications.map(notification => (
-            <NotificationItem 
-              key={notification.id} 
-              notification={notification} 
-              onView={() => handleViewDocument(notification)} 
-            />
-          ))
+          <div className="p-4 text-center text-gray-500">Carregando...</div>
+        ) : notifications.length === 0 ? (
+          <div className="p-4 text-center text-gray-500">Nenhuma notificação.</div>
         ) : (
-          <div className="flex flex-col items-center justify-center p-8 text-center">
-            <BellOff size={32} className="text-gray-400 mb-2" />
-            <p className="text-gray-500 dark:text-gray-400">Você não tem notificações</p>
-          </div>
+          notifications.map((notification) => (
+            <div 
+              key={notification.id}
+              onClick={() => handleNotificationClick(notification)}
+              className={`p-3 border-b border-gray-200 dark:border-navy-light cursor-pointer transition-colors
+                ${!notification.is_read 
+                  ? 'bg-orange-50 dark:bg-navy hover:bg-orange-100 dark:hover:bg-navy-light' 
+                  : 'hover:bg-gray-50 dark:hover:bg-navy-light/30'}`}
+            >
+              <div className="flex items-start justify-between">
+                <h4 className="font-medium text-navy dark:text-gold">{notification.title}</h4>
+                {!notification.is_read && (
+                  <Badge variant="destructive" className="ml-2 rounded-full h-2 w-2 p-0" />
+                )}
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{notification.message}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{formatDate(notification.created_at)}</p>
+            </div>
+          ))
         )}
-      </ScrollArea>
+      </div>
       
-      {/* Rodapé */}
-      <div className="p-2 border-t border-gray-200 dark:border-gray-700 bg-orange-50 dark:bg-navy-light/10 text-center">
+      <div className="p-2 border-t border-gray-200 dark:border-navy-light mt-auto">
         <Button 
           variant="ghost" 
-          size="sm"
-          onClick={() => {
-            onClose();
-            navigate("/client");
-          }}
-          className="text-xs text-navy/80 dark:text-gold/80 hover:text-navy hover:dark:text-gold w-full"
+          size="sm" 
+          onClick={onClose} 
+          className="w-full"
         >
-          Ver todos os documentos
+          Fechar
         </Button>
       </div>
     </div>

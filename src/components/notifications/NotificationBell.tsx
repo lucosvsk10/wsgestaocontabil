@@ -6,6 +6,7 @@ import { useNotifications } from "@/hooks/useNotifications";
 import NotificationDropdown from "./NotificationDropdown";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 const NotificationBell = () => {
   const [isOpen, setIsOpen] = useState(false);
