@@ -1,4 +1,3 @@
-
 import { Document } from "@/utils/auth/types";
 import { DocumentActions } from "./DocumentActions";
 import { BellDot, Info } from "lucide-react";
@@ -31,7 +30,9 @@ export const MobileDocumentCard = ({
     <div className={`p-3 rounded-lg border ${
       isExpired
         ? "bg-red-100/20 dark:bg-red-900/20 border-red-200/30 dark:border-red-900/30" 
-        : "bg-orange-200/60 dark:bg-navy-light/20 border-gold/20"
+        : !doc.viewed
+          ? "bg-blue-100/20 dark:bg-blue-900/20 border-blue-200/50 dark:border-blue-700/50"
+          : "bg-orange-200/60 dark:bg-navy-light/20 border-gold/20"
     }`}>
       <div className="flex items-center justify-between mb-2">
         <div className="font-medium text-navy dark:text-gold flex items-center">

@@ -46,8 +46,10 @@ export const DesktopDocumentTable = ({
               key={doc.id} 
               className={`${
                 isDocumentExpired(doc.expires_at) 
-                  ? "bg-red-100/20 dark:bg-red-900/20 border-red-200/30 dark:border-red-900/30" 
-                  : "border-gold/10 hover:bg-orange-200/50 dark:hover:bg-navy-light/20"
+                  ? "bg-red-100/20 dark:bg-red-900/20 border-red-200/30 dark:border-red-900/30"
+                  : !doc.viewed
+                    ? "bg-blue-100/20 dark:bg-blue-900/20 border-blue-200/50 dark:border-blue-700/50"
+                    : "border-gold/10 hover:bg-orange-200/50 dark:hover:bg-navy-light/20"
               }`}
             >
               <TableCell className="font-medium text-navy dark:text-white">

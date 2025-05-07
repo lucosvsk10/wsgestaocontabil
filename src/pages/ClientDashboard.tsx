@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DocumentTabs } from "@/components/client/DocumentTabs";
@@ -11,7 +10,8 @@ import Footer from "@/components/Footer";
 import { formatDate, isDocumentExpired, daysUntilExpiration, getDocumentsByCategory } from "@/utils/documentUtils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useDocumentFetch } from "@/hooks/useDocumentFetch";
-import { useDocumentRealtime } from "@/hooks/document/useDocumentRealtime"; 
+import { useDocumentRealtime } from "@/hooks/document/useDocumentRealtime";
+import { useViewedDocumentsRealtime } from "@/hooks/document/useViewedDocumentsRealtime";
 
 const ClientDashboard = () => {
   const { user } = useAuth();
@@ -22,16 +22,17 @@ const ClientDashboard = () => {
   const hasInitializedRef = useRef(false);
   const userSelectedRef = useRef(false);
   
-  // Adicionar hook de notificações em tempo real
+  // Add realtime hooks for notifications and viewed status updates
   useDocumentRealtime();
+  useViewedDocumentsRealtime(fetchUserDocuments);
 
-  // Categorias de documentos atualizadas
+  // Categories of documents
   const categories = ["Impostos", "Folha de Pagamento", "Documentações", "Certidões"];
 
-  // Obter documentos por categoria
+  // Get documents by category
   const documentsByCategory = getDocumentsByCategory(documents, categories);
 
-  // Carregar documentos do usuário
+  // Load user documents
   useEffect(() => {
     if (user?.id) {
       fetchUserDocuments(user.id);
@@ -89,11 +90,11 @@ const ClientDashboard = () => {
     }
   }, [documents, isLoadingDocuments, categories, documentsByCategory]);
 
-  // Função para alterar a categoria selecionada (para uso no DocumentTabs)
+  // Function to change the selected category (for use in DocumentTabs)
   const handleCategoryChange = (newCategory: string | null) => {
     if (newCategory) {
       setSelectedCategory(newCategory);
-      // Marca que o usuário fez uma seleção manual
+      // Mark that the user made a manual selection
       userSelectedRef.current = true;
     }
   };

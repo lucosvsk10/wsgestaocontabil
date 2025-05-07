@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { File, Clock, Download, Trash2 } from "lucide-react";
+import { File, Clock, Download, Trash2, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -8,6 +8,7 @@ import { pt } from "date-fns/locale";
 import { Document } from "@/types/admin";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
 
 interface DocumentListProps {
   documents: Document[];
@@ -23,7 +24,7 @@ export const DocumentList = ({
   const { toast } = useToast();
   const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set());
   
-  // Formatação da data
+  // Date formatting
   const formatDate = (dateStr: string) => {
     if (!dateStr) return 'Data desconhecida';
     try {
@@ -35,7 +36,7 @@ export const DocumentList = ({
     }
   };
 
-  // Verificar se o documento está expirado
+  // Check if document is expired
   const isDocumentExpired = (expiresAt: string | null) => {
     if (!expiresAt) return false;
     try {
@@ -47,7 +48,7 @@ export const DocumentList = ({
     }
   };
 
-  // Calcular dias restantes até a expiração
+  // Calculate days until expiration
   const daysUntilExpiration = (expiresAt: string | null) => {
     if (!expiresAt) return "Não expira";
     try {
@@ -63,7 +64,7 @@ export const DocumentList = ({
     }
   };
 
-  // Função para fazer download de um documento
+  // Function to download document 
   const handleDownload = async (docItem: Document) => {
     try {
       setDownloadingIds(prev => new Set([...prev, docItem.id]));
@@ -131,6 +132,7 @@ export const DocumentList = ({
                 <TableHead className="text-gold">Arquivo Original</TableHead>
                 <TableHead className="text-gold">Categoria</TableHead>
                 <TableHead className="text-gold">Data de Envio</TableHead>
+                <TableHead className="text-gold">Visualizado</TableHead>
                 <TableHead className="text-gold">Expira em</TableHead>
                 <TableHead className="text-gold">Observações</TableHead>
                 <TableHead className="text-gold">Ações</TableHead>
@@ -148,6 +150,20 @@ export const DocumentList = ({
                       </span>
                     </TableCell>
                     <TableCell className="text-white">{formatDate(doc.uploaded_at)}</TableCell>
+                    <TableCell>
+                      {doc.viewed ? (
+                        <div className="flex items-center text-green-400">
+                          <Eye size={14} className="mr-1" />
+                          <span>Sim</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center text-blue-400">
+                          <EyeOff size={14} className="mr-1" />
+                          <span>Não</span>
+                          <Badge variant="secondary" className="ml-2 bg-blue-600 text-white text-xs">Novo</Badge>
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <span className={`flex items-center gap-1 ${
                         isDocumentExpired(doc.expires_at) 
@@ -192,7 +208,7 @@ export const DocumentList = ({
                 ))
               ) : (
                 <TableRow className="border-gold/20">
-                  <TableCell colSpan={7} className="text-center py-4 text-gold">
+                  <TableCell colSpan={8} className="text-center py-4 text-gold">
                     Nenhum documento encontrado para este usuário
                   </TableCell>
                 </TableRow>

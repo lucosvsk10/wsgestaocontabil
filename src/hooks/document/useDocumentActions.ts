@@ -5,6 +5,7 @@ import { Document } from "@/utils/auth/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { downloadDocument } from "@/utils/documents/documentManagement";
 import { hasDocumentAccess } from "@/utils/auth/userChecks";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Hook for document-related actions like download and marking as viewed
@@ -25,7 +26,19 @@ export const useDocumentActions = () => {
     try {
       setLoadingDocumentIds(prev => new Set([...prev, docItem.id]));
       
-      const { supabase } = await import('@/lib/supabaseClient');
+      // Insert record in visualized_documents table
+      const { error: viewError } = await supabase
+        .from('visualized_documents')
+        .insert({
+          user_id: user?.id,
+          document_id: docItem.id,
+        })
+        .select()
+        .single();
+        
+      if (viewError) throw viewError;
+      
+      // Also update viewed flag in documents table for consistency
       const { error } = await supabase
         .from('documents')
         .update({ viewed: true, viewed_at: new Date().toISOString() })

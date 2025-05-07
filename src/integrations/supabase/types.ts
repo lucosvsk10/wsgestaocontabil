@@ -151,6 +151,32 @@ export type Database = {
         }
         Relationships: []
       }
+      visualized_documents: {
+        Row: {
+          document_id: string
+          user_id: string
+          viewed_at: string | null
+        }
+        Insert: {
+          document_id: string
+          user_id: string
+          viewed_at?: string | null
+        }
+        Update: {
+          document_id?: string
+          user_id?: string
+          viewed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visualized_documents_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
