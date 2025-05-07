@@ -48,7 +48,7 @@ export const CategoryDocumentTable = ({
             />
           ))
         ) : (
-          <div className="text-center py-4 text-gray-400 bg-[#393532] rounded-lg border border-gold/20 p-4">
+          <div className="text-center py-4 text-gray-400 bg-navy-light/10 dark:bg-navy-light/20 rounded-lg border border-gold/20 p-4">
             Não existem documentos na categoria {category}
           </div>
         )}

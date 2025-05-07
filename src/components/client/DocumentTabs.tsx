@@ -50,7 +50,7 @@ export const DocumentTabs = ({
         <DrawerTrigger asChild>
           <Button 
             variant="document" 
-            className="w-full mb-4 justify-between font-medium text-white border-gold/20"
+            className="w-full mb-4 justify-between font-medium text-navy dark:text-gold border-gold/20"
           >
             <div className="flex items-center">
               <Menu className="mr-2 h-4 w-4" />

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DocumentTabs } from "@/components/client/DocumentTabs";
@@ -11,6 +12,7 @@ import { formatDate, isDocumentExpired, daysUntilExpiration, getDocumentsByCateg
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useDocumentFetch } from "@/hooks/useDocumentFetch";
 import { useDocumentRealtime } from "@/hooks/document/useDocumentRealtime";
+
 const ClientDashboard = () => {
   const {
     user
@@ -98,16 +100,17 @@ const ClientDashboard = () => {
       userSelectedRef.current = true;
     }
   };
-  return <div className="min-h-screen flex flex-col bg-orange-100 dark:bg-navy-dark">
+
+  return <div className="min-h-screen flex flex-col bg-orange-100 dark:bg-page">
       <Navbar />
       <div className={`container mx-auto p-4 flex-grow ${isMobile ? 'px-2' : 'px-4'} py-6`}>
-        <Card className="bg-white dark:bg-[#2d2a28] border-gold/20">
-          <CardHeader className="bg-navy-dark rounded-lg">
+        <Card className="bg-white dark:bg-navy-dark border-gold/20">
+          <CardHeader className="bg-navy-light rounded-t-lg border-b border-gold/10">
             <CardTitle className="flex items-center justify-between font-extralight text-gold text-2xl">
               {selectedCategory ? `Documentos - ${selectedCategory}` : 'Meus Documentos'}
             </CardTitle>
           </CardHeader>
-          <CardContent className="bg-navy-dark">
+          <CardContent className="p-0">
             {isLoadingDocuments ? <div className="flex justify-center py-8">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
               </div> : documents.length > 0 ? selectedCategory ? <div className={`${isMobile ? 'overflow-x-auto' : ''}`}>
@@ -119,4 +122,5 @@ const ClientDashboard = () => {
       <Footer />
     </div>;
 };
+
 export default ClientDashboard;
