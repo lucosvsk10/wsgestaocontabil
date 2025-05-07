@@ -4,15 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Document } from "@/utils/auth/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { hasDocumentAccess } from "@/utils/auth/userChecks";
-import { isDocumentExpired } from "@/utils/documents/documentCleanup";
 
 interface DocumentActionsProps {
   doc: Document;
+  isDocumentExpired: (expiresAt: string | null) => boolean;
+  refreshDocuments?: () => void;
+  loadingDocumentIds?: Set<string>;
   handleDownload: (doc: Document) => Promise<void>;
 }
 
 export const DocumentActions = ({
   doc,
+  isDocumentExpired,
   handleDownload
 }: DocumentActionsProps) => {
   const { user } = useAuth();

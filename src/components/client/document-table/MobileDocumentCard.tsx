@@ -2,21 +2,26 @@
 import { Document } from "@/utils/auth/types";
 import { DocumentActions } from "./DocumentActions";
 import { BellDot, Info } from "lucide-react";
-import { isDocumentExpired, daysUntilExpiration } from "@/utils/documents/documentCleanup";
 
 interface MobileDocumentCardProps {
   doc: Document;
   formatDate: (dateStr: string) => string;
+  isDocumentExpired: (expirationDate: string | null) => boolean;
+  daysUntilExpiration: (expirationDate: string | null) => string | null;
   refreshDocuments: () => void;
   loadingDocumentIds: Set<string>;
+  setLoadingDocumentIds: React.Dispatch<React.SetStateAction<Set<string>>>;
   handleDownload: (doc: Document) => Promise<void>;
 }
 
 export const MobileDocumentCard = ({
   doc,
   formatDate,
+  isDocumentExpired,
+  daysUntilExpiration,
   refreshDocuments,
   loadingDocumentIds,
+  setLoadingDocumentIds,
   handleDownload
 }: MobileDocumentCardProps) => {
   const isExpired = isDocumentExpired(doc.expires_at);
@@ -67,6 +72,9 @@ export const MobileDocumentCard = ({
       <div className="flex gap-2 mt-2">
         <DocumentActions 
           doc={doc}
+          isDocumentExpired={isDocumentExpired}
+          refreshDocuments={refreshDocuments}
+          loadingDocumentIds={loadingDocumentIds}
           handleDownload={handleDownload}
         />
       </div>
