@@ -16,10 +16,10 @@ interface DesktopNavbarProps {
 
 const DesktopNavbar = ({ handleLogout, navigateToDashboard }: DesktopNavbarProps) => {
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   
   const shouldHideNavLinks = ['/login', '/admin', '/client'].includes(location.pathname);
-  const isOnDashboardPage = ['/admin', '/client'].includes(location.pathname);
+  const isOnDashboardPage = ['/client', '/admin'].includes(location.pathname);
   const shouldHideAccountButton = ['/client', '/admin'].includes(location.pathname);
 
   return (

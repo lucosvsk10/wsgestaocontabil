@@ -18,7 +18,7 @@ const Navbar = () => {
     handleLogout,
     navigateToDashboard
   } = useNavigation();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const isMobile = useIsMobile();
   
   useEffect(() => {
@@ -35,8 +35,8 @@ const Navbar = () => {
         <div className="flex items-center gap-4">
           <ThemeToggle />
           
-          {/* Notificações - Apenas mostrar para usuários logados */}
-          {user && <NotificationBell />}
+          {/* Notificações - Apenas mostrar para usuários logados que NÃO são admin */}
+          {user && !isAdmin && <NotificationBell />}
           
           {/* Account Button for Mobile */}
           {isMobile && user && (
