@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DocumentTabs } from "@/components/client/DocumentTabs";
@@ -98,10 +99,10 @@ const ClientDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-orange-200 dark:bg-navy-dark">
+    <div className="min-h-screen flex flex-col bg-orange-100 dark:bg-navy-dark">
       <Navbar />
       <div className={`container mx-auto p-4 flex-grow ${isMobile ? 'px-2' : 'px-4'} py-6`}>
-        <Card className="bg-white dark:bg-[#393532] border-gold/20">
+        <Card className="bg-white dark:bg-[#2d2a28] border-gold/20">
           <CardHeader>
             <CardTitle className="flex items-center justify-between font-extralight text-gold text-2xl">
               {selectedCategory ? `Documentos - ${selectedCategory}` : 'Meus Documentos'}
