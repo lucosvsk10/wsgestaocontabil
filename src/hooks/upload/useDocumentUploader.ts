@@ -1,9 +1,9 @@
-
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { v4 as uuidv4 } from 'uuid';
 import { useToast } from "@/hooks/use-toast";
 import { useNotifications } from "@/hooks/useNotifications";
+import { callEdgeFunction } from "@/utils/edgeFunctions";
 
 interface DocumentUploadProps {
   selectedUserId: string;
@@ -20,10 +20,38 @@ interface UserData {
   userProfiles: any[];
 }
 
+interface NotifyDocumentResponse {
+  success: boolean;
+  notification?: any;
+  error?: string;
+}
+
 export const useDocumentUploader = (fetchUserDocuments: (userId: string) => Promise<void>) => {
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
   const { notifyNewDocument } = useNotifications();
+  
+  const notifyNewDocumentViaEdgeFunction = async (userId: string, documentName: string) => {
+    try {
+      console.log(`Chamando edge function para notificação do usuário ${userId} sobre documento: ${documentName}`);
+      
+      const result = await callEdgeFunction<NotifyDocumentResponse>('notify_new_document', {
+        user_id: userId,
+        document_name: documentName
+      });
+      
+      if (result.success) {
+        console.log("Notificação salva:", result.notification);
+      } else {
+        throw new Error(result.error || "Erro desconhecido ao criar notificação");
+      }
+      
+      return result;
+    } catch (error: any) {
+      console.error('Erro ao criar notificação:', error);
+      throw error;
+    }
+  };
   
   const uploadDocument = async (
     e: React.FormEvent,
@@ -104,10 +132,10 @@ export const useDocumentUploader = (fetchUserDocuments: (userId: string) => Prom
         throw documentError;
       }
       
-      // Create a notification for the user about the new document
+      // Create a notification for the user about the new document using edge function
       try {
         console.log(`Tentando criar notificação para o usuário ${selectedUserId} sobre documento: ${documentName}`);
-        const notificationResult = await notifyNewDocument(selectedUserId, documentName);
+        const notificationResult = await notifyNewDocumentViaEdgeFunction(selectedUserId, documentName);
         console.log("Notificação salva:", notificationResult);
       } catch (notifError) {
         console.error('Erro ao criar notificação:', notifError);

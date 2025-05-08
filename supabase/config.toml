@@ -31,3 +31,6 @@ verify_jwt = true
 
 [functions.listUsers]
 verify_jwt = true
+
+[functions.notify_new_document]
+verify_jwt = true
