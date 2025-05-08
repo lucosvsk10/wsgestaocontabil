@@ -2,9 +2,9 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserList } from "@/components/admin/UserList";
 import { CreateUser } from "@/components/admin/CreateUser";
-import { PasswordChangeForm } from "@/components/admin/PasswordChangeForm";
 import { StorageStats } from "@/components/admin/StorageStats";
 import { UserType } from "@/types/admin";
+import { PollsTabView } from "@/components/admin/polls/PollsTabView";
 
 interface AdminTabsViewProps {
   supabaseUsers: any[];
@@ -47,10 +47,10 @@ export const AdminTabsView = ({
           Criar Usuário
         </TabsTrigger>
         <TabsTrigger 
-          value="change-password" 
+          value="polls" 
           className="text-navy dark:text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
         >
-          Alterar Senha
+          Enquetes
         </TabsTrigger>
         <TabsTrigger 
           value="storage" 
@@ -76,8 +76,8 @@ export const AdminTabsView = ({
         <CreateUser createUser={createUser} isCreatingUser={isCreatingUser} />
       </TabsContent>
       
-      <TabsContent value="change-password" className="bg-white dark:bg-navy-dark border border-gold/20 rounded-lg p-6 shadow-md">
-        <PasswordChangeForm />
+      <TabsContent value="polls" className="bg-white dark:bg-navy-dark border border-gold/20 rounded-lg p-6 shadow-md">
+        <PollsTabView />
       </TabsContent>
       
       <TabsContent value="storage" className="bg-white dark:bg-navy-dark border border-gold/20 rounded-lg p-6 shadow-md">

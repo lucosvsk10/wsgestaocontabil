@@ -7,6 +7,7 @@ import PrivateRoute from "./components/PrivateRoute";
 import { useAuth } from "./contexts/AuthContext";
 import AdminDashboard from "./pages/AdminDashboard";
 import ClientDashboard from "./pages/ClientDashboard";
+import PollPage from "./pages/PollPage";
 import { checkIsAdmin } from "./utils/auth/userChecks";
 
 const AppRoutes = () => {
@@ -20,6 +21,7 @@ const AppRoutes = () => {
     <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/login" element={<ClientLogin />} />
+      <Route path="/enquete/:id" element={<PollPage />} />
       
       {/* Rota protegida para área de administrador */}
       <Route path="/admin" element={

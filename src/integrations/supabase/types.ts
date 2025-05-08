@@ -98,6 +98,110 @@ export type Database = {
         }
         Relationships: []
       }
+      poll_options: {
+        Row: {
+          created_at: string
+          id: string
+          option_text: string
+          poll_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          option_text: string
+          poll_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          option_text?: string
+          poll_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "poll_options_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "polls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      poll_responses: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          option_id: string
+          poll_id: string
+          user_id: string | null
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          option_id: string
+          poll_id: string
+          user_id?: string | null
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          option_id?: string
+          poll_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "poll_responses_option_id_fkey"
+            columns: ["option_id"]
+            isOneToOne: false
+            referencedRelation: "poll_options"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "poll_responses_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "polls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      polls: {
+        Row: {
+          allow_comments: boolean
+          created_at: string
+          created_by: string
+          description: string | null
+          expires_at: string | null
+          id: string
+          is_public: boolean
+          title: string
+        }
+        Insert: {
+          allow_comments?: boolean
+          created_at?: string
+          created_by: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_public?: boolean
+          title: string
+        }
+        Update: {
+          allow_comments?: boolean
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_public?: boolean
+          title?: string
+        }
+        Relationships: []
+      }
       roles: {
         Row: {
           role: string

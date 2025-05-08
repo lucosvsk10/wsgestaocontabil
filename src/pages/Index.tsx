@@ -8,6 +8,7 @@ import AccountingSection from '../components/accounting/AccountingSection';
 import Footer from '../components/Footer';
 import { Button } from "@/components/ui/button";
 import { Calculator } from "lucide-react";
+import { PollWidget } from "@/components/polls/PollWidget";
 import {
   Tooltip,
   TooltipContent,
@@ -56,6 +57,9 @@ const Index = () => {
         <AccountingSection />
       </main>
       <Footer />
+      
+      {/* Poll Widget */}
+      <PollWidget />
       
       {/* Fixed navigation dots */}
       <div className="fixed right-6 top-1/2 transform -translate-y-1/2 z-40 hidden lg:block">
