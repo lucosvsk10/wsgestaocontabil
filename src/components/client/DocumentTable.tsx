@@ -41,7 +41,7 @@ export const DocumentTable = ({
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const isTablet = !isMobile && window.innerWidth < 1024;
-  const { loadingDocumentIds, setLoadingDocumentIds, handleDownload } = useDocumentActions();
+  const { loadingDocumentIds, handleDownload } = useDocumentActions();
   
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState("");
@@ -189,7 +189,6 @@ export const DocumentTable = ({
                 daysUntilExpiration={daysUntilExpiration}
                 refreshDocuments={refreshDocuments}
                 loadingDocumentIds={loadingDocumentIds}
-                setLoadingDocumentIds={setLoadingDocumentIds}
                 handleDownload={handleDownload}
               />
             </motion.div>
