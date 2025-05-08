@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DocumentTabs } from "@/components/client/DocumentTabs";
@@ -13,6 +14,7 @@ import { useDocumentFetch } from "@/hooks/useDocumentFetch";
 import { useDocumentRealtime } from "@/hooks/document/useDocumentRealtime";
 import { useViewedDocumentsRealtime } from "@/hooks/document/useViewedDocumentsRealtime";
 import { useViewedDocumentNotifier } from "@/hooks/document/useViewedDocumentNotifier";
+
 const ClientDashboard = () => {
   const {
     user
@@ -108,25 +110,50 @@ const ClientDashboard = () => {
       userSelectedRef.current = true;
     }
   };
-  return <div className="min-h-screen flex flex-col bg-orange-100 dark:bg-navy-dark">
+
+  return (
+    <div className="min-h-screen flex flex-col bg-orange-100 dark:bg-navy-dark">
       <Navbar />
       <div className={`container mx-auto p-4 flex-grow ${isMobile ? 'px-2' : 'px-4'} py-6`}>
-        <Card className="border-gold/20 bg-white dark:bg-navy-dark py-[25px] my-[52px]">
-          <CardHeader className="bg-white dark:bg-navy-dark rounded-full">
+        <Card className="border border-gray-200 shadow-sm dark:border-gold/20 bg-white dark:bg-navy-dark py-[25px] my-[52px] rounded-xl">
+          <CardHeader className="bg-white dark:bg-navy-dark rounded-t-xl">
             <CardTitle className="flex items-center justify-between font-extralight text-navy dark:text-gold text-2xl">
               {selectedCategory ? `Documentos - ${selectedCategory}` : 'Meus Documentos'}
             </CardTitle>
           </CardHeader>
-          <CardContent className="bg-white dark:bg-navy-dark rounded-full">
-            {isLoadingDocuments ? <div className="flex justify-center py-8">
+          <CardContent className="bg-white dark:bg-navy-dark rounded-b-xl">
+            {isLoadingDocuments ? (
+              <div className="flex justify-center py-8">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
-              </div> : documents.length > 0 ? selectedCategory ? <div className={`${isMobile ? 'overflow-x-auto' : ''}`}>
-                  <DocumentTabs documents={[]} allDocuments={documents} documentsByCategory={documentsByCategory} categories={categories} setSelectedCategory={handleCategoryChange} formatDate={formatDate} isDocumentExpired={isDocumentExpired} daysUntilExpiration={daysUntilExpiration} refreshDocuments={() => fetchUserDocuments(user?.id || '')} activeCategory={selectedCategory} />
-                </div> : <EmptyCategory /> : <EmptyDocuments />}
+              </div>
+            ) : documents.length > 0 ? (
+              selectedCategory ? (
+                <div className={`${isMobile ? 'overflow-x-auto' : ''}`}>
+                  <DocumentTabs 
+                    documents={[]} 
+                    allDocuments={documents} 
+                    documentsByCategory={documentsByCategory} 
+                    categories={categories} 
+                    setSelectedCategory={handleCategoryChange} 
+                    formatDate={formatDate} 
+                    isDocumentExpired={isDocumentExpired} 
+                    daysUntilExpiration={daysUntilExpiration} 
+                    refreshDocuments={() => fetchUserDocuments(user?.id || '')} 
+                    activeCategory={selectedCategory} 
+                  />
+                </div>
+              ) : (
+                <EmptyCategory />
+              )
+            ) : (
+              <EmptyDocuments />
+            )}
           </CardContent>
         </Card>
       </div>
       <Footer />
-    </div>;
+    </div>
+  );
 };
+
 export default ClientDashboard;
