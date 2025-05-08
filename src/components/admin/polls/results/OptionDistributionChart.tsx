@@ -12,7 +12,7 @@ import {
 } from 'recharts';
 import { CHART_COLORS } from './ChartColors';
 
-interface ChartDataItem {
+export interface ChartDataItem {
   name: string;
   value: number;
   percentage?: string;

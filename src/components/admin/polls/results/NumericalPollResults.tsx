@@ -2,7 +2,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { FormattedNumericalResults } from "@/types/polls";
 import { PollResultsHeader } from "./PollResultsHeader";
-import { OptionDistributionChart } from "./OptionDistributionChart";
+import { OptionDistributionChart, ChartDataItem } from "./OptionDistributionChart";
 
 interface NumericalPollResultsProps {
   results: FormattedNumericalResults;
@@ -32,11 +32,11 @@ export const NumericalPollResults = ({ results }: NumericalPollResultsProps) => 
                 {stat.responseCount > 0 ? (
                   <OptionDistributionChart 
                     data={Object.entries(stat.valueDistribution).map(([value, count]) => ({
-                      label: value,
+                      name: value,
                       value: parseInt(value),
                       count
                     }))}
-                    labelKey="value"
+                    labelKey="name"
                     valueKey="count"
                     xAxisAngle={0}
                     xAxisHeight={40}
