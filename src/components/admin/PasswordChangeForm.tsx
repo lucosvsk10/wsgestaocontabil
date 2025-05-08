@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,6 +19,7 @@ const passwordChangeSchema = z.object({
     message: "A senha deve ter pelo menos 6 caracteres"
   })
 });
+
 export const PasswordChangeForm = () => {
   const {
     toast
@@ -30,6 +32,7 @@ export const PasswordChangeForm = () => {
       password: ""
     }
   });
+
   const onSubmit = async (data: z.infer<typeof passwordChangeSchema>) => {
     setIsChangingPassword(true);
     try {
@@ -70,9 +73,11 @@ export const PasswordChangeForm = () => {
       setIsChangingPassword(false);
     }
   };
-  return <Card className="bg-[#393532] border border-gold/20">
+
+  return (
+    <Card className="bg-white dark:bg-[#393532] border border-gray-200 dark:border-gold/20 shadow-sm">
       <CardHeader>
-        <CardTitle className="text-[#e8cc81] tracking-wider text-center font-normal">ALTERAR SENHA DE USUÁRIO</CardTitle>
+        <CardTitle className="text-navy dark:text-[#e8cc81] tracking-wider text-center font-normal">ALTERAR SENHA DE USUÁRIO</CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -80,9 +85,9 @@ export const PasswordChangeForm = () => {
             <FormField control={form.control} name="email" render={({
             field
           }) => <FormItem>
-                  <FormLabel className="text-[#e9aa91]">Email do Usuário</FormLabel>
+                  <FormLabel className="text-gray-700 dark:text-[#e9aa91]">Email do Usuário</FormLabel>
                   <FormControl>
-                    <Input placeholder="exemplo@email.com" className="border-gold/20 focus-visible:ring-gold bg-navy-dark" />
+                    <Input {...field} placeholder="exemplo@email.com" className="border-gray-300 dark:border-gold/20 focus-visible:ring-navy/30 dark:focus-visible:ring-gold bg-white dark:bg-navy-dark text-gray-800 dark:text-white" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>} />
@@ -90,14 +95,14 @@ export const PasswordChangeForm = () => {
             <FormField control={form.control} name="password" render={({
             field
           }) => <FormItem>
-                  <FormLabel className="text-[#e9aa91]">Nova Senha</FormLabel>
+                  <FormLabel className="text-gray-700 dark:text-[#e9aa91]">Nova Senha</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="******" className="border-gold/20 focus-visible:ring-gold bg-navy-dark" />
+                    <Input {...field} type="password" placeholder="******" className="border-gray-300 dark:border-gold/20 focus-visible:ring-navy/30 dark:focus-visible:ring-gold bg-white dark:bg-navy-dark text-gray-800 dark:text-white" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>} />
             
-            <Button type="submit" className="w-full bg-gold hover:bg-gold-light text-navy" disabled={isChangingPassword}>
+            <Button type="submit" className="w-full bg-navy hover:bg-navy-light text-white dark:bg-gold dark:hover:bg-gold-light dark:text-navy" disabled={isChangingPassword}>
               {isChangingPassword ? <span className="flex items-center justify-center">
                   <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -109,5 +114,6 @@ export const PasswordChangeForm = () => {
           </form>
         </Form>
       </CardContent>
-    </Card>;
+    </Card>
+  );
 };
