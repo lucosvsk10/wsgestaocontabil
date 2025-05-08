@@ -23,7 +23,7 @@ export const DocumentNameInput = ({
         value={documentName} 
         onChange={e => setDocumentName(e.target.value)} 
         required 
-        className="border-gray-300 dark:border-gold/20 text-gray-800 dark:text-white focus-visible:ring-gold/30 bg-white dark:bg-navy-dark" 
+        className="border-gray-300 dark:border-gold/20 text-gray-800 dark:text-white focus-visible:ring-navy/30 dark:focus-visible:ring-gold/30 bg-white dark:bg-navy-dark shadow-sm" 
       />
     </div>
   );
