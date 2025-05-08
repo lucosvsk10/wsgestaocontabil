@@ -5,12 +5,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Poll } from "@/types/polls";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export const PollWidget = () => {
   const [activePoll, setActivePoll] = useState<Poll | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isVisible, setIsVisible] = useState(true);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -88,17 +89,25 @@ export const PollWidget = () => {
     }
   };
 
-  if (loading) {
-    return null;
-  }
+  const handleClose = () => {
+    setIsVisible(false);
+  };
 
-  if (!activePoll) {
+  if (loading || !activePoll || !isVisible) {
     return null;
   }
 
   return (
     <div className="fixed top-24 left-6 z-30 max-w-[300px]">
-      <Card className="border-gold/30 shadow-md bg-white/80 dark:bg-navy-dark/90 backdrop-blur-sm">
+      <Card className="border-gold/30 shadow-md bg-white/80 dark:bg-navy-dark/90 backdrop-blur-sm relative">
+        <Button 
+          variant="ghost" 
+          className="absolute top-1 left-1 h-6 w-6 p-0 rounded-full hover:bg-gold/20" 
+          onClick={handleClose}
+        >
+          <X size={14} className="text-navy dark:text-gold" />
+          <span className="sr-only">Fechar enquete</span>
+        </Button>
         <CardContent className="p-4">
           <div className="mb-2">
             <span className="inline-block px-2 py-1 text-xs font-medium bg-gold/20 text-gold-dark dark:text-gold rounded-full mb-2">
