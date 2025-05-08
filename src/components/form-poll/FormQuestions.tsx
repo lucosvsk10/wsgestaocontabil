@@ -6,12 +6,7 @@ import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-
-// Define the ResponseState interface that matches what useFormPoll returns
-interface ResponseState {
-  questionId: string;
-  response: string | string[] | number | null;
-}
+import { ResponseState } from "@/hooks/polls/useFormResponses";
 
 interface FormQuestionsProps {
   questions: FormQuestion[];
@@ -72,7 +67,7 @@ const FormQuestions = ({
         return (
           <div className="space-y-2">
             {question.options?.options?.map((option: string) => {
-              const selectedOptions = (response?.response ? JSON.parse(response.response as string) : []) as string[];
+              const selectedOptions = Array.isArray(response?.response) ? response?.response : [];
               return (
                 <div key={option} className="flex items-center space-x-2">
                   <Checkbox 
