@@ -14,6 +14,7 @@ import { useDocumentFetch } from "@/hooks/useDocumentFetch";
 import { useDocumentRealtime } from "@/hooks/document/useDocumentRealtime";
 import { useViewedDocumentsRealtime } from "@/hooks/document/useViewedDocumentsRealtime";
 import { useViewedDocumentNotifier } from "@/hooks/document/useViewedDocumentNotifier";
+import { motion } from "framer-motion";
 
 const ClientDashboard = () => {
   const {
@@ -110,25 +111,79 @@ const ClientDashboard = () => {
       userSelectedRef.current = true;
     }
   };
-  return <div className="min-h-screen flex flex-col bg-orange-100 dark:bg-navy-dark">
+
+  // Animation variants for page elements
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { 
+      opacity: 1,
+      transition: { 
+        staggerChildren: 0.1 
+      } 
+    }
+  };
+  
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: {
+        duration: 0.5
+      }
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col bg-orange-100 dark:bg-navy-dark">
       <Navbar />
-      <div className={`container mx-auto p-4 flex-grow ${isMobile ? 'px-2' : 'px-4'} py-6`}>
-        <Card className="border-gold/20 bg-white dark:bg-navy-dark">
-          <CardHeader className="bg-white dark:bg-navy-dark rounded-full">
-            <CardTitle className="flex items-center justify-between font-extralight text-navy dark:text-gold text-2xl">
-              {selectedCategory ? `Documentos - ${selectedCategory}` : 'Meus Documentos'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="bg-white dark:bg-navy-dark rounded-full">
-            {isLoadingDocuments ? <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
-              </div> : documents.length > 0 ? selectedCategory ? <div className={`${isMobile ? 'overflow-x-auto' : ''}`}>
-                  <DocumentTabs documents={[]} allDocuments={documents} documentsByCategory={documentsByCategory} categories={categories} setSelectedCategory={handleCategoryChange} formatDate={formatDate} isDocumentExpired={isDocumentExpired} daysUntilExpiration={daysUntilExpiration} refreshDocuments={() => fetchUserDocuments(user?.id || '')} activeCategory={selectedCategory} />
-                </div> : <EmptyCategory /> : <EmptyDocuments />}
-          </CardContent>
-        </Card>
-      </div>
+      <motion.div 
+        initial="hidden"
+        animate="visible"
+        variants={containerVariants}
+        className={`container mx-auto p-4 flex-grow ${isMobile ? 'px-2' : 'px-4'} py-6`}
+      >
+        <motion.div variants={itemVariants}>
+          <Card className="border-gold/20 bg-white dark:bg-navy-dark shadow-sm">
+            <CardHeader className="rounded-full bg-white dark:bg-navy-dark">
+              <CardTitle className="flex items-center justify-between font-extralight text-navy dark:text-gold text-2xl">
+                {selectedCategory ? `Documentos - ${selectedCategory}` : 'Meus Documentos'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="bg-white dark:bg-navy-dark rounded-full">
+              {isLoadingDocuments ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
+                </div>
+              ) : documents.length > 0 ? (
+                selectedCategory ? (
+                  <div className={`${isMobile ? 'overflow-x-auto' : ''}`}>
+                    <DocumentTabs 
+                      documents={[]} 
+                      allDocuments={documents} 
+                      documentsByCategory={documentsByCategory} 
+                      categories={categories} 
+                      setSelectedCategory={handleCategoryChange} 
+                      formatDate={formatDate} 
+                      isDocumentExpired={isDocumentExpired} 
+                      daysUntilExpiration={daysUntilExpiration} 
+                      refreshDocuments={() => fetchUserDocuments(user?.id || '')} 
+                      activeCategory={selectedCategory} 
+                    />
+                  </div>
+                ) : (
+                  <EmptyCategory />
+                )
+              ) : (
+                <EmptyDocuments />
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      </motion.div>
       <Footer />
-    </div>;
+    </div>
+  );
 };
+
 export default ClientDashboard;

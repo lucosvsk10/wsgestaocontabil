@@ -1,10 +1,7 @@
 
-import { useState } from "react";
 import { Document } from "@/utils/auth/types";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { MobileDocumentCard } from "./MobileDocumentCard";
-import { DesktopDocumentTable } from "./DesktopDocumentTable";
-import { useDocumentActions } from "@/hooks/document/useDocumentActions";
+import { DocumentTable } from "@/components/client/DocumentTable";
 
 interface CategoryDocumentTableProps {
   documents: Document[];
@@ -24,54 +21,19 @@ export const CategoryDocumentTable = ({
   refreshDocuments
 }: CategoryDocumentTableProps) => {
   const isMobile = useIsMobile();
-  const { loadingDocumentIds, setLoadingDocumentIds, handleDownload } = useDocumentActions();
-  
-  if (isMobile) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center mb-4">
-          <h3 className="text-lg font-medium text-gold">{category}</h3>
-        </div>
-      
-        {documents.length > 0 ? (
-          documents.map(doc => (
-            <MobileDocumentCard 
-              key={doc.id}
-              doc={doc}
-              formatDate={formatDate}
-              isDocumentExpired={isDocumentExpired}
-              daysUntilExpiration={daysUntilExpiration}
-              refreshDocuments={refreshDocuments}
-              loadingDocumentIds={loadingDocumentIds}
-              setLoadingDocumentIds={setLoadingDocumentIds}
-              handleDownload={handleDownload}
-            />
-          ))
-        ) : (
-          <div className="text-center py-4 text-gray-400 bg-[#393532] rounded-lg border border-gold/20 p-4">
-            Não existem documentos na categoria {category}
-          </div>
-        )}
-      </div>
-    );
-  }
   
   return (
-    <div className="overflow-x-auto">
+    <div>
       <div className="flex items-center mb-4">
-        <h3 className="text-gold text-lg font-normal">{category}</h3>
+        <h3 className={`text-lg font-medium ${isMobile ? 'text-gold' : 'text-gold'}`}>{category}</h3>
       </div>
       
-      <DesktopDocumentTable 
+      <DocumentTable 
         documents={documents}
-        category={category}
         formatDate={formatDate}
         isDocumentExpired={isDocumentExpired}
         daysUntilExpiration={daysUntilExpiration}
         refreshDocuments={refreshDocuments}
-        loadingDocumentIds={loadingDocumentIds}
-        setLoadingDocumentIds={setLoadingDocumentIds}
-        handleDownload={handleDownload}
       />
     </div>
   );
