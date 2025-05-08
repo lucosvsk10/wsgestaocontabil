@@ -10,7 +10,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useNotifications } from "@/hooks/useNotifications";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-
 const ClientLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,7 +27,6 @@ const ClientLogin = () => {
   const {
     notifyLogin
   } = useNotifications();
-
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -63,10 +61,9 @@ const ClientLogin = () => {
       setIsLoading(false);
     }
   };
-
   return <div className="min-h-screen flex flex-col bg-orange-100 dark:bg-navy-dark">
       <Navbar />
-      <div className="flex-grow flex items-center justify-center p-4">
+      <div className="flex-grow flex items-center justify-center p-4 py-[80px]">
         <Card className="w-full max-w-md border-gold/20">
           <CardHeader className="space-y-1 flex flex-col items-center">
             <CardTitle className="text-2xl font-bold text-center text-navy dark:text-gold">Login do Cliente</CardTitle>
@@ -112,5 +109,4 @@ const ClientLogin = () => {
       <Footer />
     </div>;
 };
-
 export default ClientLogin;
