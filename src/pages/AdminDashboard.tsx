@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useDocumentManagement } from "@/hooks/useDocumentManagement";
 import { useUserManagement } from "@/hooks/useUserManagement";
@@ -18,11 +17,9 @@ const passwordSchema = z.object({
     message: "A senha deve ter pelo menos 6 caracteres"
   })
 });
-
 const AdminDashboard = () => {
   // Estado para controlar se a página já carregou
   const [isInitialized, setIsInitialized] = useState(false);
-  
   const {
     documents,
     selectedUserId,
@@ -43,7 +40,6 @@ const AdminDashboard = () => {
     handleUpload,
     handleDeleteDocument
   } = useDocumentManagement();
-  
   const {
     users,
     supabaseUsers,
@@ -75,7 +71,7 @@ const AdminDashboard = () => {
 
   // Estado para controlar o modal de alteração de senha
   const [passwordChangeModalOpen, setPasswordChangeModalOpen] = useState(false);
-  
+
   // Inicialização única ao montar o componente
   useEffect(() => {
     if (!isInitialized) {
@@ -84,7 +80,6 @@ const AdminDashboard = () => {
       setIsInitialized(true);
     }
   }, [isInitialized, fetchUsers, fetchAuthUsers]);
-
   const refreshUsers = () => {
     fetchUsers();
     fetchAuthUsers();
@@ -110,69 +105,21 @@ const AdminDashboard = () => {
     const userInfo = users.find(u => u.id === selectedUserId);
     return userInfo?.name || authUser.user_metadata?.name || authUser.email || "Usuário";
   };
-
-  return (
-    <div className="min-h-screen flex flex-col bg-orange-100 dark:bg-navy-dark">
+  return <div className="min-h-screen flex flex-col bg-orange-100 dark:bg-navy-dark">
       <Navbar />
       <div className="container mx-auto p-4 max-w-7xl flex-grow">
         <div className="bg-white dark:bg-navy-dark p-6 rounded-lg shadow-md border border-gold/20">
-          <h1 className="text-navy dark:text-gold font-thin text-xl mb-6">Painel de Administração</h1>
+          <h1 className="text-white :text-gold font-thin text-xl mb-6">Painel de Administração</h1>
           
-          {showDocumentManager ? (
-            <AdminDocumentView 
-              selectedUserId={selectedUserId} 
-              documentName={documentName} 
-              setDocumentName={setDocumentName} 
-              documentCategory={documentCategory} 
-              setDocumentCategory={setDocumentCategory} 
-              documentObservations={documentObservations} 
-              setDocumentObservations={setDocumentObservations} 
-              handleFileChange={handleFileChange} 
-              handleUpload={handleUpload} 
-              isUploading={isUploading} 
-              documents={documents} 
-              isLoadingDocuments={isLoadingDocuments} 
-              handleDeleteDocument={handleDeleteDocument} 
-              documentCategories={documentCategories} 
-              expirationDate={expirationDate} 
-              setExpirationDate={setExpirationDate} 
-              noExpiration={noExpiration} 
-              setNoExpiration={setNoExpiration} 
-              handleBackToUserList={handleBackToUserList} 
-              userName={getSelectedUserName()} 
-            />
-          ) : (
-            <AdminTabsView 
-              supabaseUsers={supabaseUsers} 
-              users={users} 
-              isLoadingUsers={isLoadingUsers} 
-              isLoadingAuthUsers={isLoadingAuthUsers} 
-              handleDocumentButtonClick={handleDocumentButtonClick} 
-              setSelectedUserForPasswordChange={(user: UserType) => {
-                setSelectedUserForPasswordChange(user);
-                setPasswordChangeModalOpen(true);
-              }} 
-              passwordForm={passwordForm} 
-              refreshUsers={refreshUsers} 
-              createUser={createUser} 
-              isCreatingUser={isCreatingUser} 
-            />
-          )}
+          {showDocumentManager ? <AdminDocumentView selectedUserId={selectedUserId} documentName={documentName} setDocumentName={setDocumentName} documentCategory={documentCategory} setDocumentCategory={setDocumentCategory} documentObservations={documentObservations} setDocumentObservations={setDocumentObservations} handleFileChange={handleFileChange} handleUpload={handleUpload} isUploading={isUploading} documents={documents} isLoadingDocuments={isLoadingDocuments} handleDeleteDocument={handleDeleteDocument} documentCategories={documentCategories} expirationDate={expirationDate} setExpirationDate={setExpirationDate} noExpiration={noExpiration} setNoExpiration={setNoExpiration} handleBackToUserList={handleBackToUserList} userName={getSelectedUserName()} /> : <AdminTabsView supabaseUsers={supabaseUsers} users={users} isLoadingUsers={isLoadingUsers} isLoadingAuthUsers={isLoadingAuthUsers} handleDocumentButtonClick={handleDocumentButtonClick} setSelectedUserForPasswordChange={(user: UserType) => {
+          setSelectedUserForPasswordChange(user);
+          setPasswordChangeModalOpen(true);
+        }} passwordForm={passwordForm} refreshUsers={refreshUsers} createUser={createUser} isCreatingUser={isCreatingUser} />}
           
-          <AdminPasswordChangeModal 
-            selectedUserForPasswordChange={selectedUserForPasswordChange} 
-            setSelectedUserForPasswordChange={setSelectedUserForPasswordChange} 
-            changeUserPassword={changeUserPassword} 
-            isChangingPassword={isChangingPassword} 
-            passwordForm={passwordForm} 
-            passwordChangeModalOpen={passwordChangeModalOpen} 
-            setPasswordChangeModalOpen={setPasswordChangeModalOpen} 
-          />
+          <AdminPasswordChangeModal selectedUserForPasswordChange={selectedUserForPasswordChange} setSelectedUserForPasswordChange={setSelectedUserForPasswordChange} changeUserPassword={changeUserPassword} isChangingPassword={isChangingPassword} passwordForm={passwordForm} passwordChangeModalOpen={passwordChangeModalOpen} setPasswordChangeModalOpen={setPasswordChangeModalOpen} />
         </div>
       </div>
       <Footer />
-    </div>
-  );
+    </div>;
 };
-
 export default AdminDashboard;

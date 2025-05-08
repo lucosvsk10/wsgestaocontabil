@@ -123,13 +123,13 @@ export const DocumentList = ({
             <TableHeader>
               <TableRow className="border-gold/20">
                 <TableHead className="text-white">Nome Exibido</TableHead>
-                <TableHead className="text-gold">Arquivo Original</TableHead>
-                <TableHead className="text-gold">Categoria</TableHead>
-                <TableHead className="text-gold">Data de Envio</TableHead>
-                <TableHead className="text-gold">Visualizado</TableHead>
-                <TableHead className="text-gold">Expira em</TableHead>
-                <TableHead className="text-gold">Observações</TableHead>
-                <TableHead className="text-gold">Ações</TableHead>
+                <TableHead className="text-white">Arquivo Original</TableHead>
+                <TableHead className="text-white">Categoria</TableHead>
+                <TableHead className="text-white">Data de Envio</TableHead>
+                <TableHead className="text-white">Visualizado</TableHead>
+                <TableHead className="text-white">Expira em</TableHead>
+                <TableHead className="text-white">Observações</TableHead>
+                <TableHead className="text-white">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
