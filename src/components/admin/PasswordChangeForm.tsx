@@ -82,7 +82,7 @@ export const PasswordChangeForm = () => {
           }) => <FormItem>
                   <FormLabel className="text-[#e9aa91]">Email do Usuário</FormLabel>
                   <FormControl>
-                    <Input placeholder="exemplo@email.com" {...field} className="bg-[#46413d] border-gold/20 focus-visible:ring-gold" />
+                    <Input placeholder="exemplo@email.com" className="border-gold/20 focus-visible:ring-gold bg-navy-dark" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>} />
@@ -92,7 +92,7 @@ export const PasswordChangeForm = () => {
           }) => <FormItem>
                   <FormLabel className="text-[#e9aa91]">Nova Senha</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="******" {...field} className="bg-[#46413d] border-gold/20 focus-visible:ring-gold" />
+                    <Input type="password" placeholder="******" className="border-gold/20 focus-visible:ring-gold bg-navy-dark" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>} />
