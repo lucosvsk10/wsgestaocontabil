@@ -33,7 +33,7 @@ export const AdminTabsView = ({
 }: AdminTabsViewProps) => {
   return (
     <Tabs defaultValue="users" className="space-y-6">
-      <TabsList className="grid grid-cols-4 mb-4 bg-orange-200 dark:bg-navy-dark border border-gold/20">
+      <TabsList className="grid grid-cols-4 mb-4 bg-white dark:bg-navy-dark border border-gold/20">
         <TabsTrigger 
           value="users" 
           className="text-navy dark:text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
@@ -72,15 +72,15 @@ export const AdminTabsView = ({
         />
       </TabsContent>
       
-      <TabsContent value="create-user">
+      <TabsContent value="create-user" className="bg-white dark:bg-navy-dark border border-gold/20 rounded-lg p-6 shadow-md">
         <CreateUser createUser={createUser} isCreatingUser={isCreatingUser} />
       </TabsContent>
       
-      <TabsContent value="change-password">
+      <TabsContent value="change-password" className="bg-white dark:bg-navy-dark border border-gold/20 rounded-lg p-6 shadow-md">
         <PasswordChangeForm />
       </TabsContent>
       
-      <TabsContent value="storage">
+      <TabsContent value="storage" className="bg-white dark:bg-navy-dark border border-gold/20 rounded-lg p-6 shadow-md">
         <StorageStats />
       </TabsContent>
     </Tabs>

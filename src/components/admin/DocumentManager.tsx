@@ -1,3 +1,4 @@
+
 import { Card, CardContent } from "@/components/ui/card";
 import { DocumentUpload } from "./DocumentUpload";
 import { DocumentList } from "./DocumentList";
@@ -51,9 +52,9 @@ export const DocumentManager = ({
 
   if (!selectedUserId) {
     return (
-      <Card className="bg-orange-200 dark:bg-navy-dark border-gold/20">
+      <Card className="bg-white dark:bg-navy-dark border border-gold/20 shadow-md">
         <CardContent className="pt-6">
-          <Alert className="border-gold/20 bg-orange-300/80 dark:bg-navy-light/80">
+          <Alert className="border-gold/20 bg-orange-100/80 dark:bg-navy-light/80">
             <AlertCircle className="h-4 w-4 text-gold" />
             <AlertTitle className="text-navy dark:text-gold">Nenhum usuário selecionado</AlertTitle>
             <AlertDescription className="text-navy dark:text-white">
@@ -66,8 +67,8 @@ export const DocumentManager = ({
   }
 
   return (
-    <Tabs defaultValue="upload" className="bg-orange-200 dark:bg-navy-dark" value={activeTab} onValueChange={setActiveTab}>
-      <TabsList className="mb-4 border-gold/20 bg-orange-300 dark:bg-navy-light">
+    <Tabs defaultValue="upload" value={activeTab} onValueChange={setActiveTab}>
+      <TabsList className="mb-4 border border-gold/20 bg-white dark:bg-navy-light shadow-sm">
         <TabsTrigger 
           value="upload" 
           className="text-navy dark:text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
@@ -82,9 +83,9 @@ export const DocumentManager = ({
         </TabsTrigger>
       </TabsList>
       
-      <TabsContent value="upload" className="bg-orange-200 dark:bg-navy-dark">
+      <TabsContent value="upload" className="bg-white dark:bg-navy-dark border border-gold/20 rounded-lg shadow-md p-4">
         <div className="grid grid-cols-1 gap-6">
-          <Alert variant="default" className="border-gold/20 bg-orange-300/80 dark:bg-navy-light/80">
+          <Alert variant="default" className="border-gold/20 bg-orange-100/80 dark:bg-navy-light/80">
             <HelpCircle className="h-4 w-4 text-gold" />
             <AlertTitle className="text-navy dark:text-gold">Dica</AlertTitle>
             <AlertDescription className="text-navy dark:text-white">
@@ -113,7 +114,7 @@ export const DocumentManager = ({
         </div>
       </TabsContent>
       
-      <TabsContent value="manage" className="bg-orange-200 dark:bg-navy-dark">
+      <TabsContent value="manage" className="bg-white dark:bg-navy-dark border border-gold/20 rounded-lg shadow-md">
         <DocumentList 
           documents={documents} 
           isLoading={isLoadingDocuments} 

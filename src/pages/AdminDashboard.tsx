@@ -112,10 +112,10 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-orange-200 dark:bg-navy-dark">
+    <div className="min-h-screen flex flex-col bg-orange-100 dark:bg-navy-dark">
       <Navbar />
       <div className="container mx-auto p-4 max-w-7xl flex-grow">
-        <div className="bg-orange-200 dark:bg-navy-dark p-6 rounded-lg shadow-sm border border-gold/20">
+        <div className="bg-white dark:bg-navy-dark p-6 rounded-lg shadow-md border border-gold/20">
           <h1 className="text-navy dark:text-gold font-thin text-xl mb-6">Painel de Administração</h1>
           
           {showDocumentManager ? (
