@@ -1,19 +1,18 @@
 
-import { useState, useEffect, useCallback, ReactNode } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { formatDate } from "@/utils/documentUtils";
+import { Notification } from "@/types/notifications";
+import { 
+  fetchUserNotifications, 
+  markNotificationAsRead, 
+  markAllNotificationsAsRead, 
+  markDocumentNotificationsAsRead,
+  deleteAllUserNotifications 
+} from "./notifications/notificationService";
+import { useNotificationSubscription } from "./notifications/useNotificationSubscription";
 
-export interface Notification {
-  id: string;
-  user_id: string;
-  document_id: string | null;
-  title: string;
-  message: string;
-  is_read: boolean;
-  created_at: string;
-}
+export type { Notification };
 
 export const useNotifications = () => {
   const { user } = useAuth();
@@ -22,23 +21,17 @@ export const useNotifications = () => {
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Carregar notificações
+  // Fetch notifications
   const fetchNotifications = useCallback(async () => {
     if (!user?.id) return;
 
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
+      const data = await fetchUserNotifications(user.id);
+      
       setNotifications(data || []);
       
-      // Calcular o número de notificações não lidas
+      // Calculate unread notifications count
       const unread = data?.filter(notif => !notif.is_read)?.length || 0;
       setUnreadCount(unread);
     } catch (error) {
@@ -48,49 +41,38 @@ export const useNotifications = () => {
     }
   }, [user?.id]);
 
-  // Marcar uma notificação como lida
+  // Mark a notification as read
   const markAsRead = async (notificationId: string) => {
     try {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ is_read: true })
-        .eq('id', notificationId);
+      await markNotificationAsRead(notificationId);
 
-      if (error) throw error;
-
-      // Atualizar o estado local
+      // Update local state
       setNotifications(prev => 
         prev.map(n => 
           n.id === notificationId ? { ...n, is_read: true } : n
         )
       );
       
-      // Atualizar contador de não lidas
+      // Update unread counter
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
       console.error('Erro ao marcar notificação como lida:', error);
     }
   };
 
-  // Marcar todas as notificações como lidas
+  // Mark all notifications as read
   const markAllAsRead = async () => {
     if (!user?.id || notifications.length === 0) return;
 
     try {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ is_read: true })
-        .eq('user_id', user.id)
-        .eq('is_read', false);
+      await markAllNotificationsAsRead(user.id);
 
-      if (error) throw error;
-
-      // Atualizar o estado local
+      // Update local state
       setNotifications(prev => 
         prev.map(n => ({ ...n, is_read: true }))
       );
       
-      // Zerar contador
+      // Reset unread counter
       setUnreadCount(0);
       
       toast({
@@ -102,46 +84,52 @@ export const useNotifications = () => {
     }
   };
 
-  // Limpar histórico de notificações (apenas na interface)
+  // Clear notifications (UI only)
   const clearNotifications = () => {
-    setNotifications([]);
-    setUnreadCount(0);
-    toast({
-      title: "Histórico limpo",
-      description: "O histórico de notificações foi limpo"
-    });
+    if (!user?.id) return;
+    
+    try {
+      deleteAllUserNotifications(user.id);
+      setNotifications([]);
+      setUnreadCount(0);
+      
+      toast({
+        title: "Histórico limpo",
+        description: "O histórico de notificações foi limpo"
+      });
+    } catch (error) {
+      console.error('Erro ao limpar notificações:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível limpar o histórico de notificações"
+      });
+    }
   };
 
-  // Marcar notificação de um documento específico como lida
+  // Mark notification of a specific document as read
   const markDocumentNotificationAsRead = async (documentId: string) => {
     if (!user?.id || !documentId) return;
     
     try {
-      // Encontrar notificações relacionadas a este documento
+      // Find notifications related to this document
       const docNotifications = notifications.filter(n => 
         n.document_id === documentId && !n.is_read
       );
       
       if (docNotifications.length === 0) return;
       
-      // Atualizar no banco de dados
-      const { error } = await supabase
-        .from('notifications')
-        .update({ is_read: true })
-        .eq('document_id', documentId)
-        .eq('user_id', user.id)
-        .eq('is_read', false);
-        
-      if (error) throw error;
+      // Update in database
+      await markDocumentNotificationsAsRead(documentId, user.id);
       
-      // Atualizar estado local
+      // Update local state
       setNotifications(prev => 
         prev.map(n => 
           n.document_id === documentId ? { ...n, is_read: true } : n
         )
       );
       
-      // Atualizar contador
+      // Update counter
       setUnreadCount(prev => Math.max(0, prev - docNotifications.length));
       
     } catch (error) {
@@ -149,79 +137,41 @@ export const useNotifications = () => {
     }
   };
 
-  // Configurar canal de tempo real para receber novas notificações
+  // Callback handlers for real-time subscription
+  const handleNewNotification = useCallback((newNotification: Notification) => {
+    setNotifications(prev => [newNotification, ...prev]);
+    setUnreadCount(prev => prev + 1);
+  }, []);
+
+  const handleNotificationUpdate = useCallback((updatedNotification: Notification) => {
+    setNotifications(prev => 
+      prev.map(n => n.id === updatedNotification.id ? updatedNotification : n)
+    );
+    
+    // Recalculate unread counter if read status changed
+    if (notifications.some(n => n.id === updatedNotification.id && n.is_read !== updatedNotification.is_read)) {
+      const newUnreadCount = notifications
+        .map(n => n.id === updatedNotification.id ? updatedNotification : n)
+        .filter(n => !n.is_read)
+        .length;
+      
+      setUnreadCount(newUnreadCount);
+    }
+  }, [notifications]);
+
+  // Setup real-time notification subscription
+  useNotificationSubscription({
+    userId: user?.id,
+    onNewNotification: handleNewNotification,
+    onNotificationUpdate: handleNotificationUpdate
+  });
+
+  // Initial load of notifications
   useEffect(() => {
-    if (!user?.id) return;
-
-    // Carregar notificações iniciais
-    fetchNotifications();
-
-    // Inscrever para atualizações em tempo real na tabela notifications
-    const channel = supabase
-      .channel('notifications-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`
-        },
-        (payload) => {
-          console.log("Nova notificação recebida:", payload);
-          // Adicionar nova notificação ao estado
-          const newNotification = payload.new as Notification;
-          setNotifications(prev => [newNotification, ...prev]);
-          setUnreadCount(prev => prev + 1);
-          
-          // Mostrar toast para nova notificação
-          toast({
-            title: newNotification.title,
-            description: (
-              <div className="flex flex-col space-y-1">
-                <p>{newNotification.message}</p>
-                <span className="text-xs text-gray-500">
-                  {formatDate(newNotification.created_at)}
-                </span>
-              </div>
-            ) as ReactNode,
-            duration: 5000,
-          });
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`
-        },
-        (payload) => {
-          console.log("Notificação atualizada:", payload);
-          // Atualizar notificação existente no estado
-          const updatedNotification = payload.new as Notification;
-          setNotifications(prev => 
-            prev.map(n => n.id === updatedNotification.id ? updatedNotification : n)
-          );
-          
-          // Recalcular contador de não lidas se necessário
-          if (payload.old.is_read !== updatedNotification.is_read) {
-            setUnreadCount(prev => 
-              updatedNotification.is_read ? prev - 1 : prev + 1
-            );
-          }
-        }
-      )
-      .subscribe();
-
-    console.log("Canal de notificações inscrito para o usuário:", user.id);
-
-    // Limpar inscrição quando o componente desmontar
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user?.id, fetchNotifications, toast]);
+    if (user?.id) {
+      fetchNotifications();
+    }
+  }, [user?.id, fetchNotifications]);
 
   return {
     notifications,
