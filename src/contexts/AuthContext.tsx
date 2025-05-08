@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { UserData, AuthContextType } from "@/utils/auth/types";
 import { checkIsAdmin } from "@/utils/auth/userChecks";
 import { signInWithEmail, signOutUser } from "@/utils/auth/authentication";
+import { useNotifications } from "@/hooks/useNotifications";
 
 // Create context
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);

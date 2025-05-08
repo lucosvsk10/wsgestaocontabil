@@ -1,13 +1,14 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Notification } from "@/types/notifications";
 import { 
   fetchUserNotifications, 
-  markNotificationAsRead, 
-  markAllNotificationsAsRead, 
-  markDocumentNotificationsAsRead,
-  deleteAllUserNotifications 
+  deleteAllUserNotifications,
+  createLoginNotification,
+  createLogoutNotification,
+  createDocumentNotification
 } from "./notifications/notificationService";
 import { useNotificationSubscription } from "./notifications/useNotificationSubscription";
 
@@ -17,7 +18,7 @@ export const useNotifications = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [hasNewNotifications, setHasNewNotifications] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(false);
 
   // Fetch notifications
@@ -30,9 +31,9 @@ export const useNotifications = () => {
       
       setNotifications(data || []);
       
-      // Calculate unread notifications count
-      const unread = data?.filter(notif => !notif.is_read)?.length || 0;
-      setUnreadCount(unread);
+      // Check if there are any document notifications
+      const hasDocNotifications = data?.some(notif => notif.type === 'document') || false;
+      setHasNewNotifications(hasDocNotifications);
     } catch (error) {
       console.error('Erro ao carregar notificações:', error);
     } finally {
@@ -40,57 +41,14 @@ export const useNotifications = () => {
     }
   }, [user?.id]);
 
-  // Mark a notification as read
-  const markAsRead = async (notificationId: string) => {
-    try {
-      await markNotificationAsRead(notificationId);
-
-      // Update local state
-      setNotifications(prev => 
-        prev.map(n => 
-          n.id === notificationId ? { ...n, is_read: true } : n
-        )
-      );
-      
-      // Update unread counter
-      setUnreadCount(prev => Math.max(0, prev - 1));
-    } catch (error) {
-      console.error('Erro ao marcar notificação como lida:', error);
-    }
-  };
-
-  // Mark all notifications as read
-  const markAllAsRead = async () => {
-    if (!user?.id || notifications.length === 0) return;
-
-    try {
-      await markAllNotificationsAsRead(user.id);
-
-      // Update local state
-      setNotifications(prev => 
-        prev.map(n => ({ ...n, is_read: true }))
-      );
-      
-      // Reset unread counter
-      setUnreadCount(0);
-      
-      toast({
-        title: "Sucesso",
-        description: "Todas as notificações foram marcadas como lidas"
-      });
-    } catch (error) {
-      console.error('Erro ao marcar todas notificações como lidas:', error);
-    }
-  };
-
-  // Clear notifications (UI only)
-  const clearNotifications = () => {
+  // Clear notifications
+  const clearNotifications = async () => {
     if (!user?.id) return;
     
     try {
-      deleteAllUserNotifications(user.id);
+      await deleteAllUserNotifications(user.id);
       setNotifications([]);
-      setUnreadCount(0);
+      setHasNewNotifications(false);
       
       toast({
         title: "Histórico limpo",
@@ -106,63 +64,48 @@ export const useNotifications = () => {
     }
   };
 
-  // Mark notification of a specific document as read
-  const markDocumentNotificationAsRead = async (documentId: string) => {
-    if (!user?.id || !documentId) return;
-    
+  // Create login notification
+  const notifyLogin = useCallback(async () => {
+    if (!user?.id) return;
     try {
-      // Find notifications related to this document
-      const docNotifications = notifications.filter(n => 
-        n.document_id === documentId && !n.is_read
-      );
-      
-      if (docNotifications.length === 0) return;
-      
-      // Update in database
-      await markDocumentNotificationsAsRead(documentId, user.id);
-      
-      // Update local state
-      setNotifications(prev => 
-        prev.map(n => 
-          n.document_id === documentId ? { ...n, is_read: true } : n
-        )
-      );
-      
-      // Update counter
-      setUnreadCount(prev => Math.max(0, prev - docNotifications.length));
-      
+      await createLoginNotification(user.id);
     } catch (error) {
-      console.error('Erro ao marcar notificações do documento como lidas:', error);
+      console.error('Erro ao criar notificação de login:', error);
     }
-  };
+  }, [user?.id]);
 
-  // Callback handlers for real-time subscription
+  // Create logout notification
+  const notifyLogout = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      await createLogoutNotification(user.id);
+    } catch (error) {
+      console.error('Erro ao criar notificação de logout:', error);
+    }
+  }, [user?.id]);
+
+  // Create document notification
+  const notifyNewDocument = useCallback(async (documentName: string) => {
+    if (!user?.id) return;
+    try {
+      await createDocumentNotification(user.id, documentName);
+    } catch (error) {
+      console.error('Erro ao criar notificação de documento:', error);
+    }
+  }, [user?.id]);
+
+  // Callback handler for real-time subscription
   const handleNewNotification = useCallback((newNotification: Notification) => {
     setNotifications(prev => [newNotification, ...prev]);
-    setUnreadCount(prev => prev + 1);
-  }, []);
-
-  const handleNotificationUpdate = useCallback((updatedNotification: Notification) => {
-    setNotifications(prev => 
-      prev.map(n => n.id === updatedNotification.id ? updatedNotification : n)
-    );
-    
-    // Recalculate unread counter if read status changed
-    if (notifications.some(n => n.id === updatedNotification.id && n.is_read !== updatedNotification.is_read)) {
-      const newUnreadCount = notifications
-        .map(n => n.id === updatedNotification.id ? updatedNotification : n)
-        .filter(n => !n.is_read)
-        .length;
-      
-      setUnreadCount(newUnreadCount);
+    if (newNotification.type === 'document') {
+      setHasNewNotifications(true);
     }
-  }, [notifications]);
+  }, []);
 
   // Setup real-time notification subscription
   useNotificationSubscription({
     userId: user?.id,
-    onNewNotification: handleNewNotification,
-    onNotificationUpdate: handleNotificationUpdate
+    onNewNotification: handleNewNotification
   });
 
   // Initial load of notifications
@@ -174,12 +117,12 @@ export const useNotifications = () => {
 
   return {
     notifications,
-    unreadCount,
+    hasNewNotifications,
     isLoading,
-    markAsRead,
-    markAllAsRead,
-    markDocumentNotificationAsRead,
     clearNotifications,
-    refreshNotifications: fetchNotifications
+    refreshNotifications: fetchNotifications,
+    notifyLogin,
+    notifyLogout,
+    notifyNewDocument
   };
 };

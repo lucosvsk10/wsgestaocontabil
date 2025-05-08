@@ -1,174 +1,138 @@
 
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Mail, Lock, Eye, EyeOff } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
+import { useState, FormEvent } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate, Link, useLocation } from "react-router-dom";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useToast } from "@/hooks/use-toast";
+import Logo from "@/components/navbar/Logo";
+import { useNotifications } from "@/hooks/useNotifications";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { supabase } from "@/integrations/supabase/client";
 
 const ClientLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-  const [mfaCode, setMfaCode] = useState('');
-  const [factorId, setFactorId] = useState<string | null>(null);
+  const { signIn } = useAuth();
   const navigate = useNavigate();
-  const {
-    toast
-  } = useToast();
-  const {
-    signIn
-  } = useAuth();
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const location = useLocation();
+  const { toast } = useToast();
+  const { notifyLogin } = useNotifications();
+  
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setError(null);
     setIsLoading(true);
-    
+
     try {
-      const { data, error } = await signIn(email, password);
+      const { error, data } = await signIn(email, password);
       
-      if (error) throw error;
-      
-      if (data?.requiresMFA) {
-        setFactorId(data.factorId);
-        setIsLoading(false);
-        return;
+      if (error) {
+        setError(error.message);
+        toast({
+          title: "Erro de login",
+          description: error.message,
+          variant: "destructive"
+        });
+      } else {
+        // Create login notification after successful login
+        await notifyLogin();
+        
+        toast({
+          title: "Login realizado com sucesso",
+          description: "Bem vindo de volta!"
+        });
+        
+        // Navigate to the dashboard or redirectURL if provided
+        const redirectPath = new URLSearchParams(location.search).get('redirect');
+        navigate(redirectPath || '/dashboard');
       }
-      
-      navigate("/dashboard");
-    } catch (error: any) {
-      console.error(error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao fazer login",
-        description: error.message === "Invalid login credentials" 
-          ? "Email ou senha incorretos" 
-          : "Ocorreu um erro durante o login. Tente novamente."
-      });
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleMFASubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
-    try {
-      // Primeiro desafiar o MFA para obter o challengeId
-      const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
-        factorId: factorId!
-      });
-      
-      if (challengeError) throw challengeError;
-      
-      // Agora verificar com o código e challengeId
-      const { error } = await supabase.auth.mfa.verify({
-        factorId: factorId!,
-        challengeId: challengeData.id,
-        code: mfaCode
-      });
-      
-      if (error) throw error;
-      
-      navigate("/dashboard");
-    } catch (error: any) {
-      console.error(error);
-      toast({
-        variant: "destructive",
-        title: "Erro na verificação",
-        description: "Código inválido ou expirado. Tente novamente."
-      });
-      setIsLoading(false);
-    }
-  };
-
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-white dark:bg-navy-dark">
+    <div className="min-h-screen flex flex-col bg-orange-100 dark:bg-navy-dark">
       <Navbar />
-      
-      <main className="flex-grow flex items-center justify-center px-4 py-[120px]">
-        <Card className="w-full max-w-md border-gold/20 rounded-md">
-          <CardHeader className="space-y-1 text-center">
-            <CardTitle className="font-medium text-3xl text-gold-dark">LOGIN</CardTitle>
-            <CardDescription className="text-sm text-gray-600 dark:text-gray-400">
-              Acesse sua área pessoal
+      <div className="flex-grow flex items-center justify-center p-4">
+        <Card className="w-full max-w-md border-gold/20">
+          <CardHeader className="space-y-1 flex flex-col items-center">
+            <div className="mb-2 mt-2">
+              <Logo />
+            </div>
+            <CardTitle className="text-2xl font-bold text-center text-navy dark:text-gold">Login do Cliente</CardTitle>
+            <CardDescription className="text-center">
+              Entre com seu email e senha
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {!factorId ? (
-              <form onSubmit={handleSubmit} className="space-y-4 my-[20px]">
-                <div className="space-y-2">
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                    <Input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required className="pl-10 bg-white dark:bg-[#46413d] border-gray-300 dark:border-gray-700" />
-                  </div>
+            {error && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertTitle>Erro</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            <form onSubmit={handleSubmit}>
+              <div className="grid gap-4">
+                <div className="grid gap-2">
+                  <label htmlFor="email" className="text-sm font-medium leading-none text-navy dark:text-gold">
+                    Email
+                  </label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="email@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="bg-white dark:bg-navy-light"
+                  />
                 </div>
-                <div className="space-y-2">
+                <div className="grid gap-2">
+                  <label htmlFor="password" className="text-sm font-medium leading-none text-navy dark:text-gold">
+                    Senha
+                  </label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                    <Input type={showPassword ? "text" : "password"} id="password" placeholder="●●●●●●" value={password} onChange={e => setPassword(e.target.value)} className="pl-10 bg-white dark:bg-[#46413d] border-gray-300 dark:border-gray-700" />
-                    <button type="button" onClick={togglePasswordVisibility} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="bg-white dark:bg-navy-light"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-300"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
                 </div>
-                <Button className="w-full bg-gold hover:bg-gold-light text-navy" type="submit" disabled={isLoading}>
-                  {isLoading ? (
-                    <span className="flex items-center justify-center">
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-navy" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Entrando...
-                    </span>
-                  ) : "Entrar"}
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? "Entrando..." : "Entrar"}
                 </Button>
-              </form>
-            ) : (
-              <form onSubmit={handleMFASubmit} className="space-y-4 my-[20px]">
-                <div className="space-y-2">
-                  <InputOTP
-                    maxLength={6}
-                    value={mfaCode}
-                    onChange={setMfaCode}
-                    render={({ slots }) => (
-                      <InputOTPGroup>
-                        {slots.map((slot, index) => (
-                          <InputOTPSlot key={index} {...slot} index={index} />
-                        ))}
-                      </InputOTPGroup>
-                    )}
-                  />
-                </div>
-                
-                <Button className="w-full bg-gold hover:bg-gold-light text-navy" type="submit" disabled={isLoading}>
-                  {isLoading ? "Verificando..." : "Verificar"}
-                </Button>
-              </form>
-            )}
+              </div>
+            </form>
           </CardContent>
-          
-          <CardFooter className="flex flex-col space-y-4 py-[10px]">
-            <div className="text-center text-sm text-gray-600 dark:text-gray-400">
-              <a href="/" className="text-gold-dark hover:underline">
-                Voltar para a página inicial
-              </a>
+          <CardFooter className="flex flex-col space-y-2">
+            <div className="text-center text-sm text-navy dark:text-gold">
+              Não possui uma conta? Entre em contato com o administrador.
             </div>
           </CardFooter>
         </Card>
-      </main>
-      
+      </div>
       <Footer />
     </div>
   );

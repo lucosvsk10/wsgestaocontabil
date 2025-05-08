@@ -21,52 +21,54 @@ export const fetchUserNotifications = async (userId: string) => {
 };
 
 /**
- * Marks a notification as read
- * @param notificationId ID of the notification to mark as read
+ * Creates a notification for a user
+ * @param userId User ID to create notification for
+ * @param message Notification message
+ * @param type Notification type
  */
-export const markNotificationAsRead = async (notificationId: string) => {
-  if (!notificationId) throw new Error("Notification ID is required");
+export const createNotification = async (userId: string, message: string, type?: string) => {
+  if (!userId || !message) throw new Error("User ID and message are required");
   
-  const { error } = await supabase
+  const notification = {
+    user_id: userId,
+    message,
+    type
+  };
+  
+  const { data, error } = await supabase
     .from('notifications')
-    .update({ is_read: true })
-    .eq('id', notificationId);
+    .insert(notification)
+    .select()
+    .single();
     
   if (error) throw error;
+  
+  return data;
 };
 
 /**
- * Marks all notifications for a user as read
- * @param userId User ID to mark all notifications as read for
- */
-export const markAllNotificationsAsRead = async (userId: string) => {
-  if (!userId) throw new Error("User ID is required");
-  
-  const { error } = await supabase
-    .from('notifications')
-    .update({ is_read: true })
-    .eq('user_id', userId)
-    .eq('is_read', false);
-    
-  if (error) throw error;
-};
-
-/**
- * Marks notifications related to a document as read
- * @param documentId ID of the document
+ * Creates a login notification
  * @param userId User ID
  */
-export const markDocumentNotificationsAsRead = async (documentId: string, userId: string) => {
-  if (!documentId || !userId) throw new Error("Document ID and User ID are required");
-  
-  const { error } = await supabase
-    .from('notifications')
-    .update({ is_read: true })
-    .eq('document_id', documentId)
-    .eq('user_id', userId)
-    .eq('is_read', false);
-    
-  if (error) throw error;
+export const createLoginNotification = async (userId: string) => {
+  return createNotification(userId, "Login realizado com sucesso.", "login");
+};
+
+/**
+ * Creates a logout notification
+ * @param userId User ID
+ */
+export const createLogoutNotification = async (userId: string) => {
+  return createNotification(userId, "Logout realizado com sucesso.", "logout");
+};
+
+/**
+ * Creates a new document notification
+ * @param userId User ID
+ * @param documentName Document name
+ */
+export const createDocumentNotification = async (userId: string, documentName: string) => {
+  return createNotification(userId, `Novo documento recebido: ${documentName}`, "document");
 };
 
 /**

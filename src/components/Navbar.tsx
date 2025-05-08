@@ -35,7 +35,7 @@ const Navbar = () => {
         <div className="flex items-center gap-4">
           <ThemeToggle />
           
-          {/* Notificações - Apenas mostrar para usuários logados que NÃO são admin */}
+          {/* Notifications - Only show for logged in users who are NOT admin */}
           {user && !isAdmin && <NotificationBell />}
           
           {/* Account Button for Mobile */}

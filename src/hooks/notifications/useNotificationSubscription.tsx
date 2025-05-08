@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { Notification } from "@/types/notifications";
 import { useToast } from "@/hooks/use-toast";
@@ -9,7 +9,6 @@ import { ReactNode } from 'react';
 interface UseNotificationSubscriptionProps {
   userId: string | undefined;
   onNewNotification: (notification: Notification) => void;
-  onNotificationUpdate: (notification: Notification) => void;
 }
 
 /**
@@ -17,8 +16,7 @@ interface UseNotificationSubscriptionProps {
  */
 export const useNotificationSubscription = ({
   userId,
-  onNewNotification,
-  onNotificationUpdate
+  onNewNotification
 }: UseNotificationSubscriptionProps) => {
   const { toast } = useToast();
 
@@ -44,7 +42,7 @@ export const useNotificationSubscription = ({
           
           // Show toast for new notification
           toast({
-            title: newNotification.title,
+            title: newNotification.type || "Notificação",
             description: (
               <div className="flex flex-col space-y-1">
                 <p>{newNotification.message}</p>
@@ -57,21 +55,6 @@ export const useNotificationSubscription = ({
           });
         }
       )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${userId}`
-        },
-        (payload) => {
-          console.log("Notificação atualizada:", payload);
-          // Handle updated notification
-          const updatedNotification = payload.new as Notification;
-          onNotificationUpdate(updatedNotification);
-        }
-      )
       .subscribe();
 
     console.log("Canal de notificações inscrito para o usuário:", userId);
@@ -80,7 +63,7 @@ export const useNotificationSubscription = ({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId, onNewNotification, onNotificationUpdate, toast]);
+  }, [userId, onNewNotification, toast]);
 
   return null;
 };
