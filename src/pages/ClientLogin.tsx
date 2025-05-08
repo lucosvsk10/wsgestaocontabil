@@ -7,10 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import Logo from "@/components/navbar/Logo";
 import { useNotifications } from "@/hooks/useNotifications";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+
 const ClientLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,6 +28,7 @@ const ClientLogin = () => {
   const {
     notifyLogin
   } = useNotifications();
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -62,14 +63,12 @@ const ClientLogin = () => {
       setIsLoading(false);
     }
   };
+
   return <div className="min-h-screen flex flex-col bg-orange-100 dark:bg-navy-dark">
       <Navbar />
       <div className="flex-grow flex items-center justify-center p-4">
         <Card className="w-full max-w-md border-gold/20">
           <CardHeader className="space-y-1 flex flex-col items-center">
-            <div className="mb-2 mt-2">
-              <Logo />
-            </div>
             <CardTitle className="text-2xl font-bold text-center text-navy dark:text-gold">Login do Cliente</CardTitle>
             <CardDescription className="text-center">
               Entre com seu email e senha
@@ -113,4 +112,5 @@ const ClientLogin = () => {
       <Footer />
     </div>;
 };
+
 export default ClientLogin;
