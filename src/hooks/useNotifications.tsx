@@ -102,6 +102,53 @@ export const useNotifications = () => {
     }
   };
 
+  // Limpar histórico de notificações (apenas na interface)
+  const clearNotifications = () => {
+    setNotifications([]);
+    setUnreadCount(0);
+    toast({
+      title: "Histórico limpo",
+      description: "O histórico de notificações foi limpo"
+    });
+  };
+
+  // Marcar notificação de um documento específico como lida
+  const markDocumentNotificationAsRead = async (documentId: string) => {
+    if (!user?.id || !documentId) return;
+    
+    try {
+      // Encontrar notificações relacionadas a este documento
+      const docNotifications = notifications.filter(n => 
+        n.document_id === documentId && !n.is_read
+      );
+      
+      if (docNotifications.length === 0) return;
+      
+      // Atualizar no banco de dados
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('document_id', documentId)
+        .eq('user_id', user.id)
+        .eq('is_read', false);
+        
+      if (error) throw error;
+      
+      // Atualizar estado local
+      setNotifications(prev => 
+        prev.map(n => 
+          n.document_id === documentId ? { ...n, is_read: true } : n
+        )
+      );
+      
+      // Atualizar contador
+      setUnreadCount(prev => Math.max(0, prev - docNotifications.length));
+      
+    } catch (error) {
+      console.error('Erro ao marcar notificações do documento como lidas:', error);
+    }
+  };
+
   // Configurar canal de tempo real para receber novas notificações
   useEffect(() => {
     if (!user?.id) return;
@@ -182,6 +229,8 @@ export const useNotifications = () => {
     isLoading,
     markAsRead,
     markAllAsRead,
+    markDocumentNotificationAsRead,
+    clearNotifications,
     refreshNotifications: fetchNotifications
   };
 };

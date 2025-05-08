@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { downloadDocument } from "@/utils/documents/documentManagement";
 import { hasDocumentAccess } from "@/utils/auth/userChecks";
 import { supabase } from "@/integrations/supabase/client";
+import { useNotifications } from "@/hooks/useNotifications";
 
 /**
  * Hook for document-related actions like download and marking as viewed
@@ -14,6 +15,7 @@ export const useDocumentActions = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [loadingDocumentIds, setLoadingDocumentIds] = useState<Set<string>>(new Set());
+  const { markDocumentNotificationAsRead } = useNotifications();
 
   /**
    * Mark a document as viewed
@@ -128,6 +130,9 @@ export const useDocumentActions = () => {
         
         // Only mark as viewed AFTER successful download
         await markAsViewed(docItem);
+        
+        // Marcar notificação relacionada ao documento como lida
+        await markDocumentNotificationAsRead(docItem.id);
       } else {
         throw new Error("Arquivo não encontrado no storage.");
       }

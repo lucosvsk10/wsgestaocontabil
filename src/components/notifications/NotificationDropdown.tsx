@@ -6,13 +6,21 @@ import { formatDate } from "@/utils/documentUtils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Trash2 } from "lucide-react";
 
 interface NotificationDropdownProps {
   onClose: () => void;
 }
 
 const NotificationDropdown = ({ onClose }: NotificationDropdownProps) => {
-  const { notifications, unreadCount, isLoading, markAsRead, markAllAsRead } = useNotifications();
+  const { 
+    notifications, 
+    unreadCount, 
+    isLoading, 
+    markAsRead, 
+    markAllAsRead,
+    clearNotifications 
+  } = useNotifications();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   
@@ -63,7 +71,7 @@ const NotificationDropdown = ({ onClose }: NotificationDropdownProps) => {
               <div className="flex items-start justify-between">
                 <h4 className="font-medium text-navy dark:text-gold">{notification.title}</h4>
                 {!notification.is_read && (
-                  <Badge variant="destructive" className="ml-2 rounded-full h-2 w-2 p-0" />
+                  <Badge variant="default" className="ml-2 bg-blue-500 hover:bg-blue-600">Novo</Badge>
                 )}
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{notification.message}</p>
@@ -74,14 +82,27 @@ const NotificationDropdown = ({ onClose }: NotificationDropdownProps) => {
       </div>
       
       <div className="p-2 border-t border-gray-200 dark:border-navy-light mt-auto">
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={onClose} 
-          className="w-full"
-        >
-          Fechar
-        </Button>
+        <div className="flex space-x-2">
+          {notifications.length > 0 && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={clearNotifications}
+              className="flex items-center space-x-1 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/10"
+            >
+              <Trash2 size={16} />
+              <span>Limpar histórico</span>
+            </Button>
+          )}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={onClose} 
+            className="flex-grow"
+          >
+            Fechar
+          </Button>
+        </div>
       </div>
     </div>
   );
