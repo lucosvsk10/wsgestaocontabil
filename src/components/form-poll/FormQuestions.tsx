@@ -1,6 +1,5 @@
 
-import { useState } from "react";
-import { FormQuestion, FormResponse } from "@/types/polls";
+import { FormQuestion } from "@/types/polls";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
@@ -8,9 +7,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 
+// Define the ResponseState interface that matches what useFormPoll returns
+interface ResponseState {
+  questionId: string;
+  response: string | string[] | number | null;
+}
+
 interface FormQuestionsProps {
   questions: FormQuestion[];
-  responses: FormResponse[];
+  responses: ResponseState[];
   onResponseChange: (questionId: string, value: string | string[] | number | null) => void;
   onCheckboxChange: (questionId: string, value: string, checked: boolean) => void;
 }
@@ -23,14 +28,14 @@ const FormQuestions = ({
 }: FormQuestionsProps) => {
   
   const renderQuestionInput = (question: FormQuestion, index: number) => {
-    const response = responses.find(r => r.question_id === question.id);
+    const response = responses.find(r => r.questionId === question.id);
     
     switch(question.question_type) {
       case 'short_text':
         return (
           <Input 
             id={question.id} 
-            value={(response?.response_value as string) || ''} 
+            value={(response?.response as string) || ''} 
             onChange={(e) => onResponseChange(question.id, e.target.value)}
             placeholder="Sua resposta"
           />
@@ -40,7 +45,7 @@ const FormQuestions = ({
         return (
           <Textarea 
             id={question.id} 
-            value={(response?.response_value as string) || ''} 
+            value={(response?.response as string) || ''} 
             onChange={(e) => onResponseChange(question.id, e.target.value)}
             placeholder="Sua resposta"
           />
@@ -49,7 +54,7 @@ const FormQuestions = ({
       case 'multiple_choice':
         return (
           <RadioGroup 
-            value={(response?.response_value as string) || ''}
+            value={(response?.response as string) || ''}
             onValueChange={(value) => onResponseChange(question.id, value)}
           >
             <div className="space-y-2">
@@ -67,7 +72,7 @@ const FormQuestions = ({
         return (
           <div className="space-y-2">
             {question.options?.options?.map((option: string) => {
-              const selectedOptions = (response?.response_value ? JSON.parse(response.response_value as string) : []) as string[];
+              const selectedOptions = (response?.response ? JSON.parse(response.response as string) : []) as string[];
               return (
                 <div key={option} className="flex items-center space-x-2">
                   <Checkbox 
@@ -85,8 +90,8 @@ const FormQuestions = ({
       case 'scale':
         const min = question.options?.min || 1;
         const max = question.options?.max || 5;
-        const currentValue = response?.response_value ? 
-          parseInt(response.response_value as string) : 
+        const currentValue = response?.response ? 
+          parseInt(response.response as string) : 
           Math.round((min + max) / 2);
           
         return (

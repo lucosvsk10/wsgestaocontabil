@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabaseClient";
 import { useToast } from "@/components/ui/use-toast";
-import { Poll, FormQuestion } from "@/types/polls";
+import { Poll, FormQuestion, FormResponse } from "@/types/polls";
 
-interface FormResponse {
+interface ResponseState {
   questionId: string;
   response: string | string[] | number | null;
 }
@@ -20,7 +19,7 @@ interface UseFormPollResult {
   setUserName: (name: string) => void;
   comment: string;
   setComment: (comment: string) => void;
-  responses: FormResponse[];
+  responses: ResponseState[];
   handleResponseChange: (questionId: string, value: string | string[] | number | null) => void;
   handleCheckboxChange: (questionId: string, value: string, checked: boolean) => void;
   handleSubmit: () => Promise<void>;
@@ -37,7 +36,7 @@ export const useFormPoll = (pollId: string | undefined, user: any | null): UseFo
   const [hasVoted, setHasVoted] = useState(false);
   const [userName, setUserName] = useState("");
   const [comment, setComment] = useState("");
-  const [responses, setResponses] = useState<FormResponse[]>([]);
+  const [responses, setResponses] = useState<ResponseState[]>([]);
 
   useEffect(() => {
     const fetchPoll = async () => {
@@ -109,7 +108,7 @@ export const useFormPoll = (pollId: string | undefined, user: any | null): UseFo
         setQuestions(typedQuestions);
         
         // Initialize responses array
-        const initialResponses: FormResponse[] = typedQuestions.map((question: FormQuestion) => ({
+        const initialResponses: ResponseState[] = typedQuestions.map((question: FormQuestion) => ({
           questionId: question.id,
           response: question.question_type === 'checkbox' ? [] : null
         }));
