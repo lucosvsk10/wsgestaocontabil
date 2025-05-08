@@ -43,3 +43,6 @@ verify_jwt = true
 
 [functions.notify_expiring_documents]
 verify_jwt = true
+
+[functions.setup_notification_cron_jobs]
+verify_jwt = true
