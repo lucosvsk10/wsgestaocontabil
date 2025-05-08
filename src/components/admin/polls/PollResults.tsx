@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { 
@@ -331,6 +330,12 @@ export const PollResults = ({ selectedPoll }: PollResultsProps) => {
 
       if (questionsError) throw questionsError;
 
+      // Type assertion to ensure question_type is correctly typed
+      const typedQuestions = questionsData.map((q: any) => ({
+        ...q,
+        question_type: q.question_type as FormQuestion['question_type']
+      })) as FormQuestion[];
+
       // Get responses
       const { data: responsesData, error: responsesError } = await supabase
         .from("form_responses")
@@ -340,7 +345,7 @@ export const PollResults = ({ selectedPoll }: PollResultsProps) => {
       if (responsesError) throw responsesError;
 
       // Calculate statistics for each question
-      const stats = questionsData.map((question: FormQuestion) => {
+      const stats = typedQuestions.map((question: FormQuestion) => {
         const questionResponses = responsesData.filter(
           (r: any) => r.question_id === question.id
         );
@@ -407,7 +412,7 @@ export const PollResults = ({ selectedPoll }: PollResultsProps) => {
 
       setFormResults({
         poll: pollData,
-        questions: questionsData,
+        questions: typedQuestions,
         responses: responsesData,
         stats
       });

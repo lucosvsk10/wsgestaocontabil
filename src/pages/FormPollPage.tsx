@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabaseClient";
@@ -104,10 +103,16 @@ const FormPollPage = () => {
           throw questionsError;
         }
         
-        setQuestions(questionsData || []);
+        // Convert the question_type to the correct type
+        const typedQuestions = questionsData.map((q: any) => ({
+          ...q,
+          question_type: q.question_type as FormQuestion['question_type']
+        })) as FormQuestion[];
+        
+        setQuestions(typedQuestions);
         
         // Initialize responses array
-        const initialResponses: FormResponse[] = questionsData.map((question: FormQuestion) => ({
+        const initialResponses: FormResponse[] = typedQuestions.map((question: FormQuestion) => ({
           questionId: question.id,
           response: question.question_type === 'checkbox' ? [] : null
         }));
