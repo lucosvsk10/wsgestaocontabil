@@ -102,7 +102,7 @@ export const PollWidget = () => {
       <Card className="border-gold/30 shadow-md bg-white/80 dark:bg-navy-dark/90 backdrop-blur-sm relative">
         <Button 
           variant="ghost" 
-          className="absolute top-1 left-1 h-6 w-6 p-0 rounded-full hover:bg-gold/20" 
+          className="absolute top-1 right-1 h-6 w-6 p-0 rounded-full hover:bg-gold/20" 
           onClick={handleClose}
         >
           <X size={14} className="text-navy dark:text-gold" />
