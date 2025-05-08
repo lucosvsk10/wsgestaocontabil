@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { Poll, FormattedPollResults, PollOptionWithVoteCount } from "@/types/polls";
@@ -128,6 +127,7 @@ export const PollResults = ({ selectedPoll }: PollResultsProps) => {
           poll_id,
           option_id,
           user_id,
+          user_name,
           comment,
           created_at,
           poll_options (option_text)
@@ -167,7 +167,10 @@ export const PollResults = ({ selectedPoll }: PollResultsProps) => {
         comment: response.comment,
         created_at: response.created_at,
         option_text: response.poll_options?.option_text,
-        user_name: response.user_id ? usersMap[response.user_id]?.name : "Anônimo",
+        // Priorizar o nome do usuário logado, caso contrário usar o nome fornecido
+        user_name: response.user_id 
+          ? (usersMap[response.user_id]?.name || "Usuário") 
+          : (response.user_name || "Anônimo"),
         user_email: response.user_id ? usersMap[response.user_id]?.email : null
       }));
 

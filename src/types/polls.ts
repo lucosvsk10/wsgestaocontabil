@@ -24,6 +24,7 @@ export interface PollResponse {
   user_id: string | null;
   comment: string | null;
   created_at: string;
+  user_name?: string; // Campo adicional para armazenar o nome de usuários não logados
 }
 
 export interface PollOptionWithVoteCount extends PollOption {
