@@ -37,8 +37,8 @@ export const PasswordChangeModal = ({
   }}>
       <DialogContent className="sm:max-w-md border border-gold/20 bg-navy-dark">
         <DialogHeader>
-          <DialogTitle className="text-[#e8cc81]">Alterar Senha</DialogTitle>
-          <DialogDescription className="text-gold/70">
+          <DialogTitle className="text-gray-50">Alterar Senha</DialogTitle>
+          <DialogDescription className="text-slate-300">
             Alterar senha de {selectedUserForPasswordChange?.name || selectedUserForPasswordChange?.email}
           </DialogDescription>
         </DialogHeader>
@@ -50,7 +50,7 @@ export const PasswordChangeModal = ({
           }) => <FormItem>
                   <FormLabel className="text-[#e9aa91]">Nova Senha</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="******" {...field} className="bg-[#46413d] border-gold/20 focus-visible:ring-gold" />
+                    <Input type="password" placeholder="******" className="border-gold/20 focus-visible:ring-gold bg-navy-dark" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>} />
