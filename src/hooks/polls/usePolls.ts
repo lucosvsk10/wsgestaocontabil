@@ -4,7 +4,14 @@ import { Poll } from "@/types/polls";
 import { supabase } from "@/lib/supabaseClient";
 import { useToast } from "@/components/ui/use-toast";
 
-export const usePolls = (initialSelectedPoll: Poll | null = null) => {
+interface UsePollsResult {
+  polls: Poll[];
+  loading: boolean;
+  selectedPollId: string | null;
+  setSelectedPollId: (id: string | null) => void;
+}
+
+export const usePolls = (initialSelectedPoll: Poll | null = null): UsePollsResult => {
   const [polls, setPolls] = useState<Poll[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPollId, setSelectedPollId] = useState<string | null>(
@@ -43,7 +50,7 @@ export const usePolls = (initialSelectedPoll: Poll | null = null) => {
     };
 
     fetchPolls();
-  }, [initialSelectedPoll, selectedPollId]);
+  }, [initialSelectedPoll, selectedPollId, toast]);
 
   return {
     polls,
