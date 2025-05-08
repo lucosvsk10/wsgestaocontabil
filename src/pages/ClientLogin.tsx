@@ -77,7 +77,7 @@ const ClientLogin = () => {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>}
             <form onSubmit={handleSubmit}>
-              <div className="grid gap-4">
+              <div className="grid gap-4 py-[15px]">
                 <div className="grid gap-2">
                   <label htmlFor="email" className="text-sm font-medium leading-none text-navy dark:text-gold">
                     Email
