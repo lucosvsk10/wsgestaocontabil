@@ -106,9 +106,12 @@ export const useDocumentUploader = (fetchUserDocuments: (userId: string) => Prom
       
       // Create a notification for the user about the new document
       try {
-        await notifyNewDocument(documentData.name);
+        console.log(`Tentando criar notificação para o usuário ${selectedUserId} sobre documento: ${documentName}`);
+        const notificationResult = await notifyNewDocument(selectedUserId, documentName);
+        console.log('Resultado da criação da notificação:', notificationResult);
       } catch (notifError) {
-        console.error('Error creating notification:', notifError);
+        console.error('Erro ao criar notificação de documento:', notifError);
+        // Não interrompemos o fluxo por causa de erro na notificação
       }
       
       // Refresh documents list

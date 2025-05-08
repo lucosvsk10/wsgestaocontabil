@@ -93,15 +93,18 @@ export const useNotifications = () => {
   }, [user?.id]);
 
   // Create document notification
-  const notifyNewDocument = useCallback(async (documentName: string) => {
-    if (!user?.id) return;
+  const notifyNewDocument = useCallback(async (userId: string, documentName: string) => {
+    if (!userId) throw new Error("ID do usuário é necessário para criar notificação");
     try {
-      console.log(`Criando notificação de documento "${documentName}" para o usuário:`, user.id);
-      await createDocumentNotification(user.id, documentName);
+      console.log(`Criando notificação de documento "${documentName}" para o usuário:`, userId);
+      const result = await createDocumentNotification(userId, documentName);
+      console.log("Notificação de documento criada:", result);
+      return result;
     } catch (error) {
       console.error('Erro ao criar notificação de documento:', error);
+      throw error;
     }
-  }, [user?.id]);
+  }, []);
 
   // Mark document notifications as read
   const markDocumentNotificationAsRead = useCallback(async (documentId?: string) => {
