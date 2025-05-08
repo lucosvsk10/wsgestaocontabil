@@ -23,14 +23,14 @@ const FormQuestions = ({
 }: FormQuestionsProps) => {
   
   const renderQuestionInput = (question: FormQuestion, index: number) => {
-    const response = responses.find(r => r.questionId === question.id);
+    const response = responses.find(r => r.question_id === question.id);
     
     switch(question.question_type) {
       case 'short_text':
         return (
           <Input 
             id={question.id} 
-            value={(response?.response as string) || ''} 
+            value={(response?.response_value as string) || ''} 
             onChange={(e) => onResponseChange(question.id, e.target.value)}
             placeholder="Sua resposta"
           />
@@ -40,7 +40,7 @@ const FormQuestions = ({
         return (
           <Textarea 
             id={question.id} 
-            value={(response?.response as string) || ''} 
+            value={(response?.response_value as string) || ''} 
             onChange={(e) => onResponseChange(question.id, e.target.value)}
             placeholder="Sua resposta"
           />
@@ -49,7 +49,7 @@ const FormQuestions = ({
       case 'multiple_choice':
         return (
           <RadioGroup 
-            value={(response?.response as string) || ''}
+            value={(response?.response_value as string) || ''}
             onValueChange={(value) => onResponseChange(question.id, value)}
           >
             <div className="space-y-2">
@@ -66,22 +66,29 @@ const FormQuestions = ({
       case 'checkbox':
         return (
           <div className="space-y-2">
-            {question.options?.options?.map((option: string) => (
-              <div key={option} className="flex items-center space-x-2">
-                <Checkbox 
-                  id={`${question.id}-${option}`} 
-                  checked={(response?.response as string[] || []).includes(option)}
-                  onCheckedChange={(checked) => onCheckboxChange(question.id, option, !!checked)}
-                />
-                <Label htmlFor={`${question.id}-${option}`}>{option}</Label>
-              </div>
-            ))}
+            {question.options?.options?.map((option: string) => {
+              const selectedOptions = (response?.response_value ? JSON.parse(response.response_value as string) : []) as string[];
+              return (
+                <div key={option} className="flex items-center space-x-2">
+                  <Checkbox 
+                    id={`${question.id}-${option}`} 
+                    checked={selectedOptions.includes(option)}
+                    onCheckedChange={(checked) => onCheckboxChange(question.id, option, !!checked)}
+                  />
+                  <Label htmlFor={`${question.id}-${option}`}>{option}</Label>
+                </div>
+              );
+            })}
           </div>
         );
         
       case 'scale':
         const min = question.options?.min || 1;
         const max = question.options?.max || 5;
+        const currentValue = response?.response_value ? 
+          parseInt(response.response_value as string) : 
+          Math.round((min + max) / 2);
+          
         return (
           <div className="space-y-4 py-2">
             <div className="flex justify-between items-center text-sm">
@@ -90,7 +97,7 @@ const FormQuestions = ({
             </div>
             <Slider
               id={question.id}
-              value={[parseInt(response?.response as string) || Math.round((min + max) / 2)]}
+              value={[currentValue]}
               min={min}
               max={max}
               step={1}
@@ -98,7 +105,7 @@ const FormQuestions = ({
               className="my-4"
             />
             <div className="text-center font-bold text-xl mt-2">
-              {(response?.response as number) || Math.round((min + max) / 2)}
+              {currentValue}
             </div>
           </div>
         );
