@@ -34,3 +34,12 @@ verify_jwt = true
 
 [functions.notify_new_document]
 verify_jwt = true
+
+[functions.delete_daily_log_notifications]
+verify_jwt = true
+
+[functions.delete_old_document_notifications]
+verify_jwt = true
+
+[functions.notify_expiring_documents]
+verify_jwt = true
