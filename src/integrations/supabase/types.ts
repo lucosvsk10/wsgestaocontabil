@@ -135,6 +135,7 @@ export type Database = {
           option_id: string
           poll_id: string
           user_id: string | null
+          user_name: string | null
         }
         Insert: {
           comment?: string | null
@@ -143,6 +144,7 @@ export type Database = {
           option_id: string
           poll_id: string
           user_id?: string | null
+          user_name?: string | null
         }
         Update: {
           comment?: string | null
@@ -151,6 +153,7 @@ export type Database = {
           option_id?: string
           poll_id?: string
           user_id?: string | null
+          user_name?: string | null
         }
         Relationships: [
           {
