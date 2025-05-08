@@ -35,7 +35,7 @@ export const useNotifications = () => {
       setNotifications(data || []);
       
       // Check if there are any document notifications that haven't been read yet
-      const hasUnreadDocNotifications = data?.some(notif => notif.type === 'document') || false;
+      const hasUnreadDocNotifications = data?.some(notif => notif.type === 'Novo Documento') || false;
       setHasNewNotifications(hasUnreadDocNotifications);
       console.log("Há novas notificações de documentos?", hasUnreadDocNotifications);
     } catch (error) {
@@ -98,10 +98,10 @@ export const useNotifications = () => {
     try {
       console.log(`Criando notificação de documento "${documentName}" para o usuário:`, userId);
       const result = await createDocumentNotification(userId, documentName);
-      console.log("Notificação de documento criada:", result);
+      console.log("Notificação salva:", result);
       return result;
     } catch (error) {
-      console.error('Erro ao criar notificação de documento:', error);
+      console.error('Erro ao criar notificação:', error);
       throw error;
     }
   }, []);
@@ -123,7 +123,7 @@ export const useNotifications = () => {
   const handleNewNotification = useCallback((newNotification: Notification) => {
     console.log("Nova notificação recebida em tempo real:", newNotification);
     setNotifications(prev => [newNotification, ...prev]);
-    if (newNotification.type === 'document') {
+    if (newNotification.type === 'Novo Documento') {
       setHasNewNotifications(true);
       console.log("Novo indicador de documento não lido definido como true");
     }

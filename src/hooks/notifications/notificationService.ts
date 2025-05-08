@@ -78,7 +78,7 @@ export const createLogoutNotification = async (userId: string) => {
  * @param documentName Document name
  */
 export const createDocumentNotification = async (userId: string, documentName: string) => {
-  return createNotification(userId, `Novo documento recebido: ${documentName}`, "document");
+  return createNotification(userId, `Novo documento recebido: ${documentName}`, "Novo Documento");
 };
 
 /**
@@ -116,7 +116,7 @@ export const markDocumentNotificationsAsRead = async (userId: string, documentId
     .from('notifications')
     .update({ type: 'document_read' })
     .eq('user_id', userId)
-    .eq('type', 'document');
+    .eq('type', 'Novo Documento');
     
   // If a document ID is specified, only mark notifications for that document as read
   if (documentId) {
