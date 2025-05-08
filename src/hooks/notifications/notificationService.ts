@@ -85,3 +85,29 @@ export const deleteAllUserNotifications = async (userId: string) => {
     
   if (error) throw error;
 };
+
+/**
+ * Mark document-related notifications as read
+ * @param userId User ID
+ * @param documentId Document ID
+ */
+export const markDocumentNotificationsAsRead = async (userId: string, documentId?: string) => {
+  if (!userId) throw new Error("User ID is required");
+  
+  let query = supabase
+    .from('notifications')
+    .update({ type: 'document_read' })
+    .eq('user_id', userId)
+    .eq('type', 'document');
+    
+  // If a document ID is specified, only mark notifications for that document as read
+  if (documentId) {
+    // Assumes the document ID is contained in the message
+    // This is a simple implementation - for a more robust solution, we might need to store document_id in notifications
+    query = query.ilike('message', `%${documentId}%`);
+  }
+    
+  const { error } = await query;
+    
+  if (error) throw error;
+};

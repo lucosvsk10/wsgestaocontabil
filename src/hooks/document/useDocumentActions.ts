@@ -131,7 +131,7 @@ export const useDocumentActions = () => {
         // Only mark as viewed AFTER successful download
         await markAsViewed(docItem);
         
-        // Marcar notificação relacionada ao documento como lida
+        // Mark notification related to this document as read
         await markDocumentNotificationAsRead(docItem.id);
       } else {
         throw new Error("Arquivo não encontrado no storage.");

@@ -8,7 +8,8 @@ import {
   deleteAllUserNotifications,
   createLoginNotification,
   createLogoutNotification,
-  createDocumentNotification
+  createDocumentNotification,
+  markDocumentNotificationsAsRead
 } from "./notifications/notificationService";
 import { useNotificationSubscription } from "./notifications/useNotificationSubscription";
 
@@ -94,6 +95,17 @@ export const useNotifications = () => {
     }
   }, [user?.id]);
 
+  // Mark document notifications as read
+  const markDocumentNotificationAsRead = useCallback(async (documentId?: string) => {
+    if (!user?.id) return;
+    try {
+      await markDocumentNotificationsAsRead(user.id, documentId);
+      await fetchNotifications(); // Refresh notifications after marking as read
+    } catch (error) {
+      console.error('Erro ao marcar notificação como lida:', error);
+    }
+  }, [user?.id, fetchNotifications]);
+
   // Callback handler for real-time subscription
   const handleNewNotification = useCallback((newNotification: Notification) => {
     setNotifications(prev => [newNotification, ...prev]);
@@ -123,6 +135,7 @@ export const useNotifications = () => {
     refreshNotifications: fetchNotifications,
     notifyLogin,
     notifyLogout,
-    notifyNewDocument
+    notifyNewDocument,
+    markDocumentNotificationAsRead
   };
 };
