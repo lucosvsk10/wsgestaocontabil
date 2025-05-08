@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { File, Clock, Download, Trash2, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,27 +8,29 @@ import { Document } from "@/types/admin";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-
 interface DocumentListProps {
   documents: Document[];
   isLoading: boolean;
   handleDeleteDocument: (id: string) => Promise<void>;
 }
-
-export const DocumentList = ({ 
-  documents, 
-  isLoading, 
-  handleDeleteDocument 
+export const DocumentList = ({
+  documents,
+  isLoading,
+  handleDeleteDocument
 }: DocumentListProps) => {
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set());
-  
+
   // Date formatting
   const formatDate = (dateStr: string) => {
     if (!dateStr) return 'Data desconhecida';
     try {
       const date = new Date(dateStr);
-      return format(date, "dd/MM/yyyy 'às' HH:mm", { locale: pt });
+      return format(date, "dd/MM/yyyy 'às' HH:mm", {
+        locale: pt
+      });
     } catch (error) {
       console.error("Error formatting date:", error);
       return 'Data inválida';
@@ -68,15 +69,13 @@ export const DocumentList = ({
   const handleDownload = async (docItem: Document) => {
     try {
       setDownloadingIds(prev => new Set([...prev, docItem.id]));
-      
       if (docItem.storage_key) {
         // Usando método de download direto se temos storage_key
-        const { data, error } = await supabase.storage
-          .from('documents')
-          .download(docItem.storage_key);
-          
+        const {
+          data,
+          error
+        } = await supabase.storage.from('documents').download(docItem.storage_key);
         if (error) throw error;
-        
         if (data) {
           const url = URL.createObjectURL(data);
           const a = window.document.createElement('a');
@@ -88,8 +87,8 @@ export const DocumentList = ({
           URL.revokeObjectURL(url);
           return;
         }
-      } 
-      
+      }
+
       // Fallback para URL pública se não conseguir baixar diretamente
       if (docItem.file_url) {
         window.open(docItem.file_url, '_blank');
@@ -111,20 +110,15 @@ export const DocumentList = ({
       });
     }
   };
-
-  return (
-    <div className="bg-[#393532] p-4 rounded-lg border border-gold/20">
-      <h3 className="font-medium mb-4 flex items-center text-gold">
+  return <div className="bg-[#393532] p-4 rounded-lg border border-gold/20">
+      <h3 className="font-medium mb-4 flex items-center text-gray-50">
         <File className="mr-2 h-5 w-5 text-gold" />
         Documentos do Usuário
       </h3>
       
-      {isLoading ? (
-        <div className="flex justify-center py-8">
+      {isLoading ? <div className="flex justify-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gold"></div>
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
+        </div> : <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="border-gold/20">
@@ -139,9 +133,7 @@ export const DocumentList = ({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {documents && documents.length > 0 ? (
-                documents.map(doc => (
-                  <TableRow key={doc.id} className={isDocumentExpired(doc.expires_at) ? "bg-red-900/20 border-gold/20" : "border-gold/20 hover:bg-[#46413d]"}>
+              {documents && documents.length > 0 ? documents.map(doc => <TableRow key={doc.id} className={isDocumentExpired(doc.expires_at) ? "bg-red-900/20 border-gold/20" : "border-gold/20 hover:bg-[#46413d]"}>
                     <TableCell className="font-medium text-white">{doc.name}</TableCell>
                     <TableCell className="text-white">{doc.filename || doc.original_filename || "N/A"}</TableCell>
                     <TableCell>
@@ -151,72 +143,43 @@ export const DocumentList = ({
                     </TableCell>
                     <TableCell className="text-white">{formatDate(doc.uploaded_at)}</TableCell>
                     <TableCell>
-                      {doc.viewed ? (
-                        <div className="flex items-center text-green-400">
+                      {doc.viewed ? <div className="flex items-center text-green-400">
                           <Eye size={14} className="mr-1" />
                           <span>Sim</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center text-blue-400">
+                        </div> : <div className="flex items-center text-blue-400">
                           <EyeOff size={14} className="mr-1" />
                           <span>Não</span>
                           <Badge variant="secondary" className="ml-2 bg-blue-600 text-white text-xs">Novo</Badge>
-                        </div>
-                      )}
+                        </div>}
                     </TableCell>
                     <TableCell>
-                      <span className={`flex items-center gap-1 ${
-                        isDocumentExpired(doc.expires_at) 
-                          ? "text-red-400" 
-                          : "text-green-400"
-                      }`}>
+                      <span className={`flex items-center gap-1 ${isDocumentExpired(doc.expires_at) ? "text-red-400" : "text-green-400"}`}>
                         <Clock size={14} />
                         {daysUntilExpiration(doc.expires_at)}
                       </span>
                     </TableCell>
                     <TableCell>
-                      {doc.observations ? (
-                        <span className="text-blue-400">{doc.observations}</span>
-                      ) : (
-                        <span className="text-gray-400 text-sm">Nenhuma</span>
-                      )}
+                      {doc.observations ? <span className="text-blue-400">{doc.observations}</span> : <span className="text-gray-400 text-sm">Nenhuma</span>}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="flex items-center gap-1 border-gold/20 text-gold hover:bg-gold hover:text-navy"
-                          onClick={() => handleDownload(doc)}
-                          disabled={downloadingIds.has(doc.id)}
-                        >
+                        <Button variant="outline" size="sm" className="flex items-center gap-1 border-gold/20 text-gold hover:bg-gold hover:text-navy" onClick={() => handleDownload(doc)} disabled={downloadingIds.has(doc.id)}>
                           <Download size={14} />
                           <span>Baixar</span>
                         </Button>
-                        <Button 
-                          variant="destructive" 
-                          size="sm" 
-                          className="flex items-center gap-1" 
-                          onClick={() => handleDeleteDocument(doc.id)}
-                        >
+                        <Button variant="destructive" size="sm" className="flex items-center gap-1" onClick={() => handleDeleteDocument(doc.id)}>
                           <Trash2 size={14} />
                           <span>Excluir</span>
                         </Button>
                       </div>
                     </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow className="border-gold/20">
+                  </TableRow>) : <TableRow className="border-gold/20">
                   <TableCell colSpan={8} className="text-center py-4 text-gold">
                     Nenhum documento encontrado para este usuário
                   </TableCell>
-                </TableRow>
-              )}
+                </TableRow>}
             </TableBody>
           </Table>
-        </div>
-      )}
-    </div>
-  );
+        </div>}
+    </div>;
 };
