@@ -76,9 +76,6 @@ export const useDocumentActions = () => {
       return;
     }
     
-    // Mark as viewed when downloaded
-    await markAsViewed(docItem);
-    
     try {
       setLoadingDocumentIds(prev => new Set([...prev, docItem.id]));
       
@@ -128,6 +125,9 @@ export const useDocumentActions = () => {
           title: "Sucesso",
           description: "Documento baixado com sucesso!"
         });
+        
+        // Only mark as viewed AFTER successful download
+        await markAsViewed(docItem);
       } else {
         throw new Error("Arquivo não encontrado no storage.");
       }

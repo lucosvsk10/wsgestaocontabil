@@ -13,6 +13,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useDocumentFetch } from "@/hooks/useDocumentFetch";
 import { useDocumentRealtime } from "@/hooks/document/useDocumentRealtime";
 import { useViewedDocumentsRealtime } from "@/hooks/document/useViewedDocumentsRealtime";
+import { useViewedDocumentNotifier } from "@/hooks/document/useViewedDocumentNotifier";
 
 const ClientDashboard = () => {
   const { user } = useAuth();
@@ -36,6 +37,12 @@ const ClientDashboard = () => {
 
   // Get documents by category
   const documentsByCategory = getDocumentsByCategory(documents, categories);
+  
+  // Use our new notification hook for unviewed documents
+  useViewedDocumentNotifier(
+    documents,
+    selectedCategory || "Todos os documentos"
+  );
 
   // Load user documents
   useEffect(() => {

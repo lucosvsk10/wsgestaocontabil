@@ -56,7 +56,7 @@ export const useDocumentRealtime = () => {
             title: "Novo documento disponível",
             description: (
               <div className="flex flex-col space-y-2">
-                <p>{newDoc.name}</p>
+                <p>O documento "{newDoc.name}" foi adicionado à categoria "{newDoc.category}".</p>
                 <button 
                   onClick={handleDownloadNotifiedDocument}
                   className="bg-gold hover:bg-gold-dark text-navy py-1 px-3 rounded text-sm font-medium"
