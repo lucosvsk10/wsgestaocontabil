@@ -67,7 +67,7 @@ export const CreateUser = ({
   };
   
   return (
-    <Card className="bg-orange-200 dark:bg-navy-dark border border-gold/20">
+    <Card className="bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20 shadow-md">
       <CardHeader>
         <CardTitle className="text-navy dark:text-gold tracking-wider text-center font-normal">CRIAR NOVO USUÁRIO</CardTitle>
       </CardHeader>
@@ -79,7 +79,7 @@ export const CreateUser = ({
           }) => <FormItem>
                   <FormLabel className="text-navy dark:text-gold">Nome Completo</FormLabel>
                   <FormControl>
-                    <Input placeholder="João da Silva" {...field} className="bg-orange-300/50 dark:bg-navy-light/50 border-gold/20 text-navy dark:text-white focus-visible:ring-gold" />
+                    <Input placeholder="João da Silva" {...field} className="bg-white dark:bg-navy-light/50 border-gray-300 dark:border-gold/20 text-navy dark:text-white focus-visible:ring-navy/30 dark:focus-visible:ring-gold" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>} />
@@ -89,7 +89,7 @@ export const CreateUser = ({
           }) => <FormItem>
                   <FormLabel className="text-navy dark:text-gold">Email</FormLabel>
                   <FormControl>
-                    <Input placeholder="joao@exemplo.com" {...field} className="bg-orange-300/50 dark:bg-navy-light/50 border-gold/20 text-navy dark:text-white focus-visible:ring-gold" />
+                    <Input placeholder="joao@exemplo.com" {...field} className="bg-white dark:bg-navy-light/50 border-gray-300 dark:border-gold/20 text-navy dark:text-white focus-visible:ring-navy/30 dark:focus-visible:ring-gold" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>} />
@@ -99,16 +99,16 @@ export const CreateUser = ({
           }) => <FormItem>
                   <FormLabel className="text-navy dark:text-gold">Senha</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="******" {...field} className="bg-orange-300/50 dark:bg-navy-light/50 border-gold/20 text-navy dark:text-white focus-visible:ring-gold" />
+                    <Input type="password" placeholder="******" {...field} className="bg-white dark:bg-navy-light/50 border-gray-300 dark:border-gold/20 text-navy dark:text-white focus-visible:ring-navy/30 dark:focus-visible:ring-gold" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>} />
             
             <FormField control={form.control} name="isAdmin" render={({
             field
-          }) => <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border border-gold/20 p-4 bg-orange-300/50 dark:bg-navy-light/50">
+          }) => <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border border-gray-300 dark:border-gold/20 p-4 bg-gray-50 dark:bg-navy-light/50">
                   <FormControl>
-                    <Checkbox checked={field.value} onCheckedChange={field.onChange} className="data-[state=checked]:bg-gold data-[state=checked]:border-gold text-navy" />
+                    <Checkbox checked={field.value} onCheckedChange={field.onChange} className="data-[state=checked]:bg-navy data-[state=checked]:border-navy dark:data-[state=checked]:bg-gold dark:data-[state=checked]:border-gold text-white" />
                   </FormControl>
                   <div className="space-y-1 leading-none">
                     <FormLabel className="text-navy dark:text-gold">
@@ -126,11 +126,11 @@ export const CreateUser = ({
                     <FormLabel className="text-navy dark:text-gold">Função</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                       <FormControl>
-                        <SelectTrigger className="bg-orange-300/50 dark:bg-navy-light/50 border-gold/20 text-navy dark:text-white focus-visible:ring-gold">
+                        <SelectTrigger className="bg-white dark:bg-navy-light/50 border-gray-300 dark:border-gold/20 text-navy dark:text-white focus-visible:ring-navy/30 dark:focus-visible:ring-gold">
                           <SelectValue placeholder="Selecione a função do administrador" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent className="bg-orange-300/50 dark:bg-navy-light/50 border-gold/20 text-navy dark:text-white">
+                      <SelectContent className="bg-white dark:bg-navy-light/50 border-gray-300 dark:border-gold/20 text-navy dark:text-white">
                         <SelectItem value="admin" className="text-navy dark:text-white">Admin</SelectItem>
                         <SelectItem value="fiscal" className="text-navy dark:text-white">Fiscal</SelectItem>
                         <SelectItem value="contabil" className="text-navy dark:text-white">Contábil</SelectItem>
@@ -140,7 +140,7 @@ export const CreateUser = ({
                     <FormMessage />
                   </FormItem>} />}
             
-            <Button type="submit" className="w-full bg-gold hover:bg-gold-light text-navy" disabled={isCreatingUser}>
+            <Button type="submit" className="w-full bg-navy hover:bg-navy-light text-white dark:bg-gold dark:hover:bg-gold-light dark:text-navy" disabled={isCreatingUser}>
               {isCreatingUser ? <span className="flex items-center justify-center">
                   <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
