@@ -66,7 +66,7 @@ const ClientLogin = () => {
       <div className="flex-grow flex items-center justify-center p-4 py-[80px]">
         <Card className="w-full max-w-md border-gold/20 px-0 mx-0">
           <CardHeader className="space-y-1 flex flex-col items-center">
-            <CardTitle className="text-2xl font-bold text-center text-navy dark:text-gold">Login do Cliente</CardTitle>
+            <CardTitle className="text-2xl text-center text-navy dark:text-gold font-normal">LOGIN</CardTitle>
             <CardDescription className="text-center">
               Entre com seu email e senha
             </CardDescription>
