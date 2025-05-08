@@ -110,6 +110,19 @@ export const ManagePolls = ({ refreshTrigger, onViewResults, onPollDeleted }: Ma
     }
   };
 
+  const getPollTypeBadge = (pollType: string) => {
+    switch (pollType) {
+      case 'standard_options':
+        return <Badge variant="outline" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100">Enquete Padrão</Badge>;
+      case 'numerical':
+        return <Badge variant="outline" className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100">Formulário Numeral</Badge>;
+      case 'form':
+        return <Badge variant="outline" className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100">Formulário Completo</Badge>;
+      default:
+        return <Badge variant="outline">Desconhecido</Badge>;
+    }
+  };
+
   if (loading) {
     return <p className="text-center py-8">Carregando enquetes...</p>;
   }
@@ -129,6 +142,7 @@ export const ManagePolls = ({ refreshTrigger, onViewResults, onPollDeleted }: Ma
             <TableHeader>
               <TableRow>
                 <TableHead>Título</TableHead>
+                <TableHead>Tipo</TableHead>
                 <TableHead>Visibilidade</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Criada em</TableHead>
@@ -140,6 +154,7 @@ export const ManagePolls = ({ refreshTrigger, onViewResults, onPollDeleted }: Ma
               {polls.map((poll) => (
                 <TableRow key={poll.id}>
                   <TableCell className="font-medium">{poll.title}</TableCell>
+                  <TableCell>{getPollTypeBadge(poll.poll_type)}</TableCell>
                   <TableCell>
                     {poll.is_public ? (
                       <Badge variant="outline" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100">

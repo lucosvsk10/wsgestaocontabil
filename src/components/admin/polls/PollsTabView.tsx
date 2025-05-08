@@ -5,10 +5,13 @@ import { CreatePollForm } from "./CreatePollForm";
 import { ManagePolls } from "./ManagePolls";
 import { PollResults } from "./PollResults";
 import { Poll } from "@/types/polls";
+import { CreateNumericalPollForm } from "./CreateNumericalPollForm";
+import { CreateFormPollForm } from "./CreateFormPollForm";
 
 export const PollsTabView = () => {
   const [selectedPoll, setSelectedPoll] = useState<Poll | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [pollTypeTab, setPollTypeTab] = useState<string>("standard");
 
   const handlePollCreated = () => {
     setRefreshTrigger(prev => prev + 1);
@@ -35,7 +38,32 @@ export const PollsTabView = () => {
       <TabsContent value="create">
         <div className="p-4 bg-white dark:bg-navy-dark border border-gold/20 rounded-lg">
           <h3 className="text-xl font-medium mb-4 text-navy dark:text-gold">Criar Nova Enquete</h3>
-          <CreatePollForm onPollCreated={handlePollCreated} />
+          
+          <Tabs value={pollTypeTab} onValueChange={setPollTypeTab} className="mb-6">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="standard" className="text-navy dark:text-white">
+                Enquete Padrão
+              </TabsTrigger>
+              <TabsTrigger value="numerical" className="text-navy dark:text-white">
+                Formulário Numeral
+              </TabsTrigger>
+              <TabsTrigger value="form" className="text-navy dark:text-white">
+                Formulário Completo
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="standard" className="mt-4">
+              <CreatePollForm onPollCreated={handlePollCreated} />
+            </TabsContent>
+            
+            <TabsContent value="numerical" className="mt-4">
+              <CreateNumericalPollForm onPollCreated={handlePollCreated} />
+            </TabsContent>
+            
+            <TabsContent value="form" className="mt-4">
+              <CreateFormPollForm onPollCreated={handlePollCreated} />
+            </TabsContent>
+          </Tabs>
         </div>
       </TabsContent>
 

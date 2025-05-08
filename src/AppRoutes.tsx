@@ -8,6 +8,8 @@ import { useAuth } from "./contexts/AuthContext";
 import AdminDashboard from "./pages/AdminDashboard";
 import ClientDashboard from "./pages/ClientDashboard";
 import PollPage from "./pages/PollPage";
+import NumericalPollPage from "./pages/NumericalPollPage";
+import FormPollPage from "./pages/FormPollPage";
 import { checkIsAdmin } from "./utils/auth/userChecks";
 
 const AppRoutes = () => {
@@ -22,6 +24,8 @@ const AppRoutes = () => {
       <Route path="/" element={<Index />} />
       <Route path="/login" element={<ClientLogin />} />
       <Route path="/enquete/:id" element={<PollPage />} />
+      <Route path="/enquete-numerica/:id" element={<NumericalPollPage />} />
+      <Route path="/formulario/:id" element={<FormPollPage />} />
       
       {/* Rota protegida para área de administrador */}
       <Route path="/admin" element={

@@ -74,6 +74,85 @@ export type Database = {
           },
         ]
       }
+      form_questions: {
+        Row: {
+          created_at: string
+          id: string
+          options: Json | null
+          order_position: number
+          poll_id: string
+          question_text: string
+          question_type: string
+          required: boolean
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          options?: Json | null
+          order_position?: number
+          poll_id: string
+          question_text: string
+          question_type: string
+          required?: boolean
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          options?: Json | null
+          order_position?: number
+          poll_id?: string
+          question_text?: string
+          question_type?: string
+          required?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_questions_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "polls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_responses: {
+        Row: {
+          created_at: string
+          id: string
+          poll_id: string
+          question_id: string
+          response_value: string | null
+          user_id: string | null
+          user_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          poll_id: string
+          question_id: string
+          response_value?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          poll_id?: string
+          question_id?: string
+          response_value?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_responses_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "polls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string | null
@@ -97,6 +176,86 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      numerical_questions: {
+        Row: {
+          created_at: string
+          id: string
+          max_value: number
+          min_value: number
+          poll_id: string
+          question_text: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          max_value?: number
+          min_value?: number
+          poll_id: string
+          question_text: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          max_value?: number
+          min_value?: number
+          poll_id?: string
+          question_text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "numerical_questions_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "polls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      numerical_responses: {
+        Row: {
+          created_at: string
+          id: string
+          poll_id: string
+          question_id: string
+          user_id: string | null
+          user_name: string | null
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          poll_id: string
+          question_id: string
+          user_id?: string | null
+          user_name?: string | null
+          value: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          poll_id?: string
+          question_id?: string
+          user_id?: string | null
+          user_name?: string | null
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "numerical_responses_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "polls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "numerical_responses_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "numerical_questions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       poll_options: {
         Row: {
@@ -181,6 +340,7 @@ export type Database = {
           expires_at: string | null
           id: string
           is_public: boolean
+          poll_type: string
           title: string
         }
         Insert: {
@@ -191,6 +351,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           is_public?: boolean
+          poll_type?: string
           title: string
         }
         Update: {
@@ -201,6 +362,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           is_public?: boolean
+          poll_type?: string
           title?: string
         }
         Relationships: []

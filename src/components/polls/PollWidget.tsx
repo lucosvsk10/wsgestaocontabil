@@ -43,15 +43,44 @@ export const PollWidget = () => {
         if (data && data.length > 0) {
           // Check if user has already voted
           if (user) {
-            const { data: responseData, error: responseError } = await supabase
-              .from("poll_responses")
-              .select("id")
-              .eq("poll_id", data[0].id)
-              .eq("user_id", user.id)
-              .limit(1);
-              
-            if (!responseError && (!responseData || responseData.length === 0)) {
-              setActivePoll(data[0]);
+            // For standard poll
+            if (data[0].poll_type === 'standard_options') {
+              const { data: responseData, error: responseError } = await supabase
+                .from("poll_responses")
+                .select("id")
+                .eq("poll_id", data[0].id)
+                .eq("user_id", user.id)
+                .limit(1);
+                
+              if (!responseError && (!responseData || responseData.length === 0)) {
+                setActivePoll(data[0]);
+              }
+            } 
+            // For numerical poll
+            else if (data[0].poll_type === 'numerical') {
+              const { data: responseData, error: responseError } = await supabase
+                .from("numerical_responses")
+                .select("id")
+                .eq("poll_id", data[0].id)
+                .eq("user_id", user.id)
+                .limit(1);
+                
+              if (!responseError && (!responseData || responseData.length === 0)) {
+                setActivePoll(data[0]);
+              }
+            }
+            // For form poll
+            else if (data[0].poll_type === 'form') {
+              const { data: responseData, error: responseError } = await supabase
+                .from("form_responses")
+                .select("id")
+                .eq("poll_id", data[0].id)
+                .eq("user_id", user.id)
+                .limit(1);
+                
+              if (!responseError && (!responseData || responseData.length === 0)) {
+                setActivePoll(data[0]);
+              }
             }
           } else if (data[0].is_public) {
             setActivePoll(data[0]);
@@ -85,7 +114,13 @@ export const PollWidget = () => {
 
   const handleNavigateToVote = () => {
     if (activePoll) {
-      navigate(`/enquete/${activePoll.id}`);
+      if (activePoll.poll_type === 'standard_options') {
+        navigate(`/enquete/${activePoll.id}`);
+      } else if (activePoll.poll_type === 'numerical') {
+        navigate(`/enquete-numerica/${activePoll.id}`);
+      } else if (activePoll.poll_type === 'form') {
+        navigate(`/formulario/${activePoll.id}`);
+      }
     }
   };
 
@@ -111,7 +146,9 @@ export const PollWidget = () => {
         <CardContent className="p-4">
           <div className="mb-2">
             <span className="inline-block px-2 py-1 text-xs font-medium bg-gold/20 text-gold-dark dark:text-gold rounded-full mb-2">
-              Nova enquete
+              {activePoll.poll_type === 'standard_options' && 'Nova enquete'}
+              {activePoll.poll_type === 'numerical' && 'Novo formulário numeral'}
+              {activePoll.poll_type === 'form' && 'Novo formulário'}
             </span>
             <h4 className="font-medium text-navy dark:text-gold truncate">
               {activePoll.title}
