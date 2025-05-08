@@ -13,7 +13,7 @@ const Card = React.forwardRef<
     <div
       ref={ref}
       className={cn(
-        "rounded-lg border border-gray-200 bg-white shadow-sm dark:border-none dark:bg-navy-dark text-navy dark:text-white",
+        "rounded-lg border bg-white dark:bg-navy-dark text-navy dark:text-white shadow-sm",
         isMobile ? "aspect-[4/3]" : "aspect-auto",
         className
       )}
