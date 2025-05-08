@@ -60,11 +60,11 @@ export const UserList = ({
   });
 
   return (
-    <Card className="px-0 bg-orange-200 dark:bg-navy-dark border border-gold/20">
-      <CardHeader className="rounded-full bg-orange-200 dark:bg-navy-dark">
+    <Card className="px-0 bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20 shadow-md">
+      <CardHeader className="rounded-full bg-white dark:bg-navy-dark">
         <CardTitle className="text-navy dark:text-gold bg-transparent text-center text-2xl font-normal">LISTA DE USUARIOS</CardTitle>
       </CardHeader>
-      <CardContent className="rounded-full bg-orange-200 dark:bg-navy-dark space-y-6">
+      <CardContent className="rounded-full bg-white dark:bg-navy-dark space-y-6">
         {isLoading ? (
           <LoadingSpinner />
         ) : (
