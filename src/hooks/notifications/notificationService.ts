@@ -9,14 +9,19 @@ import { Notification } from "@/types/notifications";
 export const fetchUserNotifications = async (userId: string) => {
   if (!userId) throw new Error("User ID is required");
   
+  console.log("Buscando notificações para o usuário:", userId);
   const { data, error } = await supabase
     .from('notifications')
     .select('*')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
-  if (error) throw error;
+  if (error) {
+    console.error("Erro ao buscar notificações:", error);
+    throw error;
+  }
   
+  console.log(`${data?.length || 0} notificações encontradas`);
   return data || [];
 };
 
@@ -29,6 +34,7 @@ export const fetchUserNotifications = async (userId: string) => {
 export const createNotification = async (userId: string, message: string, type?: string) => {
   if (!userId || !message) throw new Error("User ID and message are required");
   
+  console.log(`Criando notificação tipo "${type}" para usuário:`, userId);
   const notification = {
     user_id: userId,
     message,
@@ -41,8 +47,12 @@ export const createNotification = async (userId: string, message: string, type?:
     .select()
     .single();
     
-  if (error) throw error;
+  if (error) {
+    console.error("Erro ao criar notificação:", error);
+    throw error;
+  }
   
+  console.log("Notificação criada com sucesso:", data);
   return data;
 };
 
@@ -78,12 +88,18 @@ export const createDocumentNotification = async (userId: string, documentName: s
 export const deleteAllUserNotifications = async (userId: string) => {
   if (!userId) throw new Error("User ID is required");
   
+  console.log("Excluindo todas as notificações para o usuário:", userId);
   const { error } = await supabase
     .from('notifications')
     .delete()
     .eq('user_id', userId);
     
-  if (error) throw error;
+  if (error) {
+    console.error("Erro ao excluir notificações:", error);
+    throw error;
+  }
+  
+  console.log("Todas as notificações foram excluídas com sucesso");
 };
 
 /**
@@ -93,6 +109,8 @@ export const deleteAllUserNotifications = async (userId: string) => {
  */
 export const markDocumentNotificationsAsRead = async (userId: string, documentId?: string) => {
   if (!userId) throw new Error("User ID is required");
+  
+  console.log(`Marcando notificações de documento como lidas para usuário: ${userId} ${documentId ? `(documento: ${documentId})` : ''}`);
   
   let query = supabase
     .from('notifications')
@@ -109,5 +127,10 @@ export const markDocumentNotificationsAsRead = async (userId: string, documentId
     
   const { error } = await query;
     
-  if (error) throw error;
+  if (error) {
+    console.error("Erro ao marcar notificações como lidas:", error);
+    throw error;
+  }
+  
+  console.log("Notificações marcadas como lidas com sucesso");
 };

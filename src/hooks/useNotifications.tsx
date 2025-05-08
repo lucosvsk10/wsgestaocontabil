@@ -28,13 +28,16 @@ export const useNotifications = () => {
 
     try {
       setIsLoading(true);
+      console.log("Carregando notificações para o usuário:", user.id);
       const data = await fetchUserNotifications(user.id);
+      console.log("Notificações carregadas:", data?.length || 0);
       
       setNotifications(data || []);
       
-      // Check if there are any document notifications
-      const hasDocNotifications = data?.some(notif => notif.type === 'document') || false;
-      setHasNewNotifications(hasDocNotifications);
+      // Check if there are any document notifications that haven't been read yet
+      const hasUnreadDocNotifications = data?.some(notif => notif.type === 'document') || false;
+      setHasNewNotifications(hasUnreadDocNotifications);
+      console.log("Há novas notificações de documentos?", hasUnreadDocNotifications);
     } catch (error) {
       console.error('Erro ao carregar notificações:', error);
     } finally {
@@ -47,6 +50,7 @@ export const useNotifications = () => {
     if (!user?.id) return;
     
     try {
+      console.log("Limpando todas as notificações para o usuário:", user.id);
       await deleteAllUserNotifications(user.id);
       setNotifications([]);
       setHasNewNotifications(false);
@@ -55,6 +59,7 @@ export const useNotifications = () => {
         title: "Histórico limpo",
         description: "O histórico de notificações foi limpo"
       });
+      console.log("Histórico de notificações limpo com sucesso");
     } catch (error) {
       console.error('Erro ao limpar notificações:', error);
       toast({
@@ -69,6 +74,7 @@ export const useNotifications = () => {
   const notifyLogin = useCallback(async () => {
     if (!user?.id) return;
     try {
+      console.log("Criando notificação de login para o usuário:", user.id);
       await createLoginNotification(user.id);
     } catch (error) {
       console.error('Erro ao criar notificação de login:', error);
@@ -79,6 +85,7 @@ export const useNotifications = () => {
   const notifyLogout = useCallback(async () => {
     if (!user?.id) return;
     try {
+      console.log("Criando notificação de logout para o usuário:", user.id);
       await createLogoutNotification(user.id);
     } catch (error) {
       console.error('Erro ao criar notificação de logout:', error);
@@ -89,6 +96,7 @@ export const useNotifications = () => {
   const notifyNewDocument = useCallback(async (documentName: string) => {
     if (!user?.id) return;
     try {
+      console.log(`Criando notificação de documento "${documentName}" para o usuário:`, user.id);
       await createDocumentNotification(user.id, documentName);
     } catch (error) {
       console.error('Erro ao criar notificação de documento:', error);
@@ -99,8 +107,10 @@ export const useNotifications = () => {
   const markDocumentNotificationAsRead = useCallback(async (documentId?: string) => {
     if (!user?.id) return;
     try {
+      console.log("Marcando notificação de documento como lida para o usuário:", user.id);
       await markDocumentNotificationsAsRead(user.id, documentId);
       await fetchNotifications(); // Refresh notifications after marking as read
+      console.log("Notificação marcada como lida e lista atualizada");
     } catch (error) {
       console.error('Erro ao marcar notificação como lida:', error);
     }
@@ -108,9 +118,11 @@ export const useNotifications = () => {
 
   // Callback handler for real-time subscription
   const handleNewNotification = useCallback((newNotification: Notification) => {
+    console.log("Nova notificação recebida em tempo real:", newNotification);
     setNotifications(prev => [newNotification, ...prev]);
     if (newNotification.type === 'document') {
       setHasNewNotifications(true);
+      console.log("Novo indicador de documento não lido definido como true");
     }
   }, []);
 
@@ -123,6 +135,7 @@ export const useNotifications = () => {
   // Initial load of notifications
   useEffect(() => {
     if (user?.id) {
+      console.log("Carregando notificações iniciais para o usuário:", user.id);
       fetchNotifications();
     }
   }, [user?.id, fetchNotifications]);

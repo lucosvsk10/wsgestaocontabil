@@ -29,14 +29,19 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
   
+  // Log para debug
+  console.log("Estado de autenticação:", { logado: !!user, isAdmin });
+  
   return <header className="bg-white dark:bg-navy-dark text-navy dark:text-gold">
       <div className={`container mx-auto flex items-center justify-between ${isMobile ? 'px-4 py-3' : 'px-[28px] py-[19px]'}`}>
         <Logo />
         <div className="flex items-center gap-4">
           <ThemeToggle />
           
-          {/* Notifications - Only show for logged in users who are NOT admin */}
-          {user && !isAdmin && <NotificationBell />}
+          {/* Notifications - exibir APENAS para usuários logados que NÃO são admin */}
+          {user && !isAdmin && (
+            <NotificationBell />
+          )}
           
           {/* Account Button for Mobile */}
           {isMobile && user && (

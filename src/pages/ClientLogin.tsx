@@ -1,3 +1,4 @@
+
 import { useState, FormEvent } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNotifications } from "@/hooks/useNotifications";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+
 const ClientLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -27,11 +29,13 @@ const ClientLogin = () => {
   const {
     notifyLogin
   } = useNotifications();
+  
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
     try {
+      console.log("Tentando login para:", email);
       const {
         error,
         data
@@ -43,8 +47,10 @@ const ClientLogin = () => {
           description: error.message,
           variant: "destructive"
         });
+        console.error("Erro de login:", error.message);
       } else {
         // Create login notification after successful login
+        console.log("Login bem-sucedido, criando notificação");
         await notifyLogin();
         toast({
           title: "Login realizado com sucesso",
@@ -56,11 +62,13 @@ const ClientLogin = () => {
         navigate(redirectPath || '/dashboard');
       }
     } catch (err: any) {
+      console.error("Erro inesperado durante login:", err.message);
       setError(err.message);
     } finally {
       setIsLoading(false);
     }
   };
+  
   return <div className="min-h-screen flex flex-col bg-orange-100 dark:bg-navy-dark">
       <Navbar />
       <div className="flex-grow flex items-center justify-center p-4 py-[80px]">
@@ -109,4 +117,5 @@ const ClientLogin = () => {
       <Footer />
     </div>;
 };
+
 export default ClientLogin;
