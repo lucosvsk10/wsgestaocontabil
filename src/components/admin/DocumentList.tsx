@@ -8,19 +8,19 @@ import { Document } from "@/types/admin";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+
 interface DocumentListProps {
   documents: Document[];
   isLoading: boolean;
   handleDeleteDocument: (id: string) => Promise<void>;
 }
+
 export const DocumentList = ({
   documents,
   isLoading,
   handleDeleteDocument
 }: DocumentListProps) => {
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set());
 
   // Date formatting
@@ -110,76 +110,118 @@ export const DocumentList = ({
       });
     }
   };
-  return <div className="p-4 rounded-lg border border-gold/20 bg-navy-dark">
-      <h3 className="font-medium mb-4 flex items-center text-gray-50">
-        <File className="mr-2 h-5 w-5 text-gold" />
+  return (
+    <div className="p-4 rounded-lg border border-gray-200 dark:border-gold/20 bg-white dark:bg-navy-dark shadow-sm">
+      <h3 className="font-medium mb-4 flex items-center text-gray-800 dark:text-gray-50">
+        <File className="mr-2 h-5 w-5 text-navy dark:text-gold" />
         Documentos do Usuário
       </h3>
       
-      {isLoading ? <div className="flex justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gold"></div>
-        </div> : <div className="overflow-x-auto">
+      {isLoading ? (
+        <div className="flex justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-navy dark:border-gold"></div>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow className="border-gold/20">
-                <TableHead className="text-white">Nome Exibido</TableHead>
-                <TableHead className="text-white">Arquivo Original</TableHead>
-                <TableHead className="text-white">Categoria</TableHead>
-                <TableHead className="text-white">Data de Envio</TableHead>
-                <TableHead className="text-white">Visualizado</TableHead>
-                <TableHead className="text-white">Expira em</TableHead>
-                <TableHead className="text-white">Observações</TableHead>
-                <TableHead className="text-white">Ações</TableHead>
+              <TableRow className="border-gray-200 dark:border-gold/20">
+                <TableHead className="text-navy dark:text-white">Nome Exibido</TableHead>
+                <TableHead className="text-navy dark:text-white">Arquivo Original</TableHead>
+                <TableHead className="text-navy dark:text-white">Categoria</TableHead>
+                <TableHead className="text-navy dark:text-white">Data de Envio</TableHead>
+                <TableHead className="text-navy dark:text-white">Visualizado</TableHead>
+                <TableHead className="text-navy dark:text-white">Expira em</TableHead>
+                <TableHead className="text-navy dark:text-white">Observações</TableHead>
+                <TableHead className="text-navy dark:text-white">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {documents && documents.length > 0 ? documents.map(doc => <TableRow key={doc.id} className={isDocumentExpired(doc.expires_at) ? "bg-red-900/20 border-gold/20" : "border-gold/20 hover:bg-[#46413d]"}>
-                    <TableCell className="font-medium text-white">{doc.name}</TableCell>
-                    <TableCell className="text-white">{doc.filename || doc.original_filename || "N/A"}</TableCell>
+              {documents && documents.length > 0 ? (
+                documents.map(doc => (
+                  <TableRow 
+                    key={doc.id} 
+                    className={
+                      isDocumentExpired(doc.expires_at) 
+                        ? "bg-red-50 dark:bg-red-900/20 border-gray-200 dark:border-gold/20" 
+                        : "border-gray-200 dark:border-gold/20 hover:bg-gray-50 dark:hover:bg-[#46413d]"
+                    }
+                  >
+                    <TableCell className="font-medium text-gray-800 dark:text-white">{doc.name}</TableCell>
+                    <TableCell className="text-gray-700 dark:text-white">{doc.filename || doc.original_filename || "N/A"}</TableCell>
                     <TableCell>
-                      <span className="px-2 py-1 rounded-full text-xs bg-gold text-navy">
+                      <span className="px-2 py-1 rounded-full text-xs bg-navy text-white dark:bg-gold dark:text-navy">
                         {doc.category}
                       </span>
                     </TableCell>
-                    <TableCell className="text-white">{formatDate(doc.uploaded_at)}</TableCell>
+                    <TableCell className="text-gray-700 dark:text-white">{formatDate(doc.uploaded_at)}</TableCell>
                     <TableCell>
-                      {doc.viewed ? <div className="flex items-center text-green-400">
+                      {doc.viewed ? (
+                        <div className="flex items-center text-green-600 dark:text-green-400">
                           <Eye size={14} className="mr-1" />
                           <span>Sim</span>
-                        </div> : <div className="flex items-center text-blue-400">
+                        </div>
+                      ) : (
+                        <div className="flex items-center text-blue-600 dark:text-blue-400">
                           <EyeOff size={14} className="mr-1" />
                           <span>Não</span>
-                          <Badge variant="secondary" className="ml-2 bg-blue-600 text-white text-xs">Novo</Badge>
-                        </div>}
+                          <Badge variant="secondary" className="ml-2 bg-blue-100 text-blue-800 dark:bg-blue-600 dark:text-white text-xs">Novo</Badge>
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell>
-                      <span className={`flex items-center gap-1 ${isDocumentExpired(doc.expires_at) ? "text-red-400" : "text-green-400"}`}>
+                      <span className={`flex items-center gap-1 ${
+                        isDocumentExpired(doc.expires_at) 
+                          ? "text-red-600 dark:text-red-400" 
+                          : "text-green-600 dark:text-green-400"
+                      }`}>
                         <Clock size={14} />
                         {daysUntilExpiration(doc.expires_at)}
                       </span>
                     </TableCell>
                     <TableCell>
-                      {doc.observations ? <span className="text-blue-400">{doc.observations}</span> : <span className="text-gray-400 text-sm">Nenhuma</span>}
+                      {doc.observations ? (
+                        <span className="text-blue-600 dark:text-blue-400">{doc.observations}</span>
+                      ) : (
+                        <span className="text-gray-500 dark:text-gray-400 text-sm">Nenhuma</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" className="flex items-center gap-1 border-gold/20 text-gold hover:bg-gold hover:text-navy" onClick={() => handleDownload(doc)} disabled={downloadingIds.has(doc.id)}>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex items-center gap-1 border-navy/20 text-navy hover:bg-navy hover:text-white dark:border-gold/20 dark:text-gold dark:hover:bg-gold dark:hover:text-navy" 
+                          onClick={() => handleDownload(doc)} 
+                          disabled={downloadingIds.has(doc.id)}
+                        >
                           <Download size={14} />
                           <span>Baixar</span>
                         </Button>
-                        <Button variant="destructive" size="sm" className="flex items-center gap-1" onClick={() => handleDeleteDocument(doc.id)}>
+                        <Button 
+                          variant="destructive" 
+                          size="sm" 
+                          className="flex items-center gap-1 bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/80 dark:text-red-100 dark:hover:bg-red-900" 
+                          onClick={() => handleDeleteDocument(doc.id)}
+                        >
                           <Trash2 size={14} />
                           <span>Excluir</span>
                         </Button>
                       </div>
                     </TableCell>
-                  </TableRow>) : <TableRow className="border-gold/20">
-                  <TableCell colSpan={8} className="text-center py-4 text-gold">
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow className="border-gray-200 dark:border-gold/20">
+                  <TableCell colSpan={8} className="text-center py-4 text-navy dark:text-gold">
                     Nenhum documento encontrado para este usuário
                   </TableCell>
-                </TableRow>}
+                </TableRow>
+              )}
             </TableBody>
           </Table>
-        </div>}
-    </div>;
+        </div>
+      )}
+    </div>
+  );
 };
