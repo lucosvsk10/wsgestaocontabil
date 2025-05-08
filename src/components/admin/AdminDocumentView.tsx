@@ -51,7 +51,7 @@ export const AdminDocumentView = ({
           <ArrowLeft size={16} />
           Voltar para lista de usuários
         </Button>
-        <h2 className="text-xl font-semibold text-white">
+        <h2 className="text-xl text-white font-extralight">
           Documentos de {userName}
         </h2>
       </div>
