@@ -110,7 +110,7 @@ export const DocumentList = ({
       });
     }
   };
-  return <div className="bg-[#393532] p-4 rounded-lg border border-gold/20">
+  return <div className="p-4 rounded-lg border border-gold/20 bg-navy-dark">
       <h3 className="font-medium mb-4 flex items-center text-gray-50">
         <File className="mr-2 h-5 w-5 text-gold" />
         Documentos do Usuário
