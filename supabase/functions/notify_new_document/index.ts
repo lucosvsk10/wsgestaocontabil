@@ -1,5 +1,7 @@
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.43.3'
+// Update the notify_new_document edge function
+
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 // Set up Supabase client with service role key
 const supabaseUrl = 'https://nadtoitgkukzbghtbohm.supabase.co'

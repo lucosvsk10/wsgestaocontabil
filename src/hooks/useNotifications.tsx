@@ -12,6 +12,7 @@ import {
   markDocumentNotificationsAsRead
 } from "./notifications/notificationService";
 import { useNotificationSubscription } from "./notifications/useNotificationSubscription";
+import { callEdgeFunction } from "@/utils/edgeFunctions";
 
 export type { Notification };
 
@@ -92,14 +93,29 @@ export const useNotifications = () => {
     }
   }, [user?.id]);
 
-  // Create document notification
+  // Create document notification via edge function
   const notifyNewDocument = useCallback(async (userId: string, documentName: string) => {
     if (!userId) throw new Error("ID do usuário é necessário para criar notificação");
     try {
-      console.log(`Criando notificação de documento "${documentName}" para o usuário:`, userId);
-      const result = await createDocumentNotification(userId, documentName);
-      console.log("Notificação salva:", result);
-      return result;
+      console.log(`Chamando edge function para notificação do usuário ${userId} sobre documento: ${documentName}`);
+      
+      interface NotifyDocumentResponse {
+        success: boolean;
+        notification?: any;
+        error?: string;
+      }
+
+      const result = await callEdgeFunction<NotifyDocumentResponse>('notify_new_document', {
+        user_id: userId,
+        document_name: documentName
+      });
+      
+      if (result.success) {
+        console.log("Notificação salva:", result.notification);
+        return result.notification;
+      } else {
+        throw new Error(result.error || "Erro desconhecido ao criar notificação");
+      }
     } catch (error) {
       console.error('Erro ao criar notificação:', error);
       throw error;
