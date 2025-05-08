@@ -122,7 +122,7 @@ export const DocumentList = ({
           <Table>
             <TableHeader>
               <TableRow className="border-gold/20">
-                <TableHead className="text-gold">Nome Exibido</TableHead>
+                <TableHead className="text-white">Nome Exibido</TableHead>
                 <TableHead className="text-gold">Arquivo Original</TableHead>
                 <TableHead className="text-gold">Categoria</TableHead>
                 <TableHead className="text-gold">Data de Envio</TableHead>
