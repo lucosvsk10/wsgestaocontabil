@@ -7,7 +7,6 @@ import BusinessNews from '../components/BusinessNews';
 import AccountingSection from '../components/accounting/AccountingSection';
 import Footer from '../components/Footer';
 import { PollWidget } from "@/components/polls/PollWidget";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import FloatingToolsMenu from '@/components/accounting/FloatingToolsMenu';
 
 const Index = () => {
@@ -35,16 +34,8 @@ const Index = () => {
     };
   }, []);
   
-  const scrollToContabil = () => {
-    const contabilSection = document.getElementById('contabil');
-    if (contabilSection) {
-      contabilSection.scrollIntoView({
-        behavior: 'smooth'
-      });
-    }
-  };
-  
-  return <div className="relative min-h-screen px:6 bg-white dark:bg-navy-dark">
+  return (
+    <div className="relative min-h-screen px:6 bg-white dark:bg-navy-dark">
       <Navbar />
       <main>
         <Hero />
@@ -71,7 +62,8 @@ const Index = () => {
       
       {/* Floating Tools Menu */}
       <FloatingToolsMenu />
-    </div>;
+    </div>
+  );
 };
 
 export default Index;

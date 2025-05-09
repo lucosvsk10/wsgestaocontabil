@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { useNavigation } from "@/components/navbar/hooks/useNavigation";
+import { Link } from "react-router-dom";
 
 const AdminHeader = () => {
   const { user } = useAuth();
@@ -42,10 +43,10 @@ const AdminHeader = () => {
               {user?.email || "Usuário"}
             </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => window.location.href = "/"}>
-              Voltar ao site
+            <DropdownMenuItem asChild>
+              <Link to="/">Voltar ao site</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={handleLogout}>
+            <DropdownMenuItem onClick={handleLogout}>
               Sair
             </DropdownMenuItem>
           </DropdownMenuContent>

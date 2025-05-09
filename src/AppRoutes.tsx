@@ -29,28 +29,28 @@ const AppRoutes = () => {
       <Route path="/formulario/:id" element={<FormPollPage />} />
       <Route path="/simulador-irpf" element={<TaxCalculator />} />
       
-      {/* Rota protegida para área de administrador */}
-      <Route path="/admin" element={
+      {/* Admin routes */}
+      <Route path="/admin/*" element={
         <PrivateRoute requiredRole="admin">
           <AdminDashboard />
         </PrivateRoute>
       } />
       
-      {/* Rota protegida para área de cliente */}
-      <Route path="/client" element={
+      {/* Client routes */}
+      <Route path="/client/*" element={
         <PrivateRoute>
           <ClientDashboard />
         </PrivateRoute>
       } />
       
-      {/* Rota para redirecionamento após login */}
+      {/* Redirect route after login */}
       <Route path="/dashboard" element={
         <PrivateRoute>
           {isAdmin() ? <Navigate to="/admin" replace /> : <Navigate to="/client" replace />}
         </PrivateRoute>
       } />
       
-      {/* Rota para capturar URLs não encontradas */}
+      {/* 404 route - must be last */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

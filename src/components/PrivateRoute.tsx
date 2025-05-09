@@ -15,7 +15,7 @@ const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
     return checkIsAdmin(userData, user?.email);
   };
 
-  // Enquanto está carregando, mostra um indicador de carregamento
+  // While loading, show a loading indicator
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -24,22 +24,22 @@ const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
     );
   }
 
-  // Se não houver usuário, redireciona para login
+  // If no user, redirect to login
   if (!user) {
     return <Navigate to="/login" replace />;
   }
   
-  // Se requerer role de admin mas o usuário não é admin, redirecionar para área do cliente
+  // If admin role is required but user is not admin, redirect to client area
   if (requiredRole === 'admin' && !isAdmin()) {
     return <Navigate to="/client" replace />;
   }
   
-  // Se o usuário é admin mas está acessando a página de cliente, redirecionar para área do admin
+  // If user is admin but accessing client page, redirect to admin area
   if (!requiredRole && isAdmin()) {
     return <Navigate to="/admin" replace />;
   }
   
-  // Se tudo estiver ok, renderiza o componente filho
+  // If everything is ok, render the child component
   return children;
 };
 
