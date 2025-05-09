@@ -94,7 +94,7 @@ const AdminDashboard = ({ activeTab = "dashboard" }: AdminDashboardProps) => {
 
   return (
     <AdminLayout>
-      <div className="bg-white dark:bg-[#1E1E1E] p-6 rounded-lg shadow-md border border-gold/20">          
+      <div className="bg-white dark:bg-navy-medium p-6 rounded-lg shadow-md border border-gray-200 dark:border-navy-lighter/30">          
         <AdminTabsView 
           activeTab={activeTab}
           supabaseUsers={supabaseUsers} 

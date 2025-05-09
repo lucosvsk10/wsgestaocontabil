@@ -22,13 +22,13 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   }, [isMobile]);
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] dark:bg-[#121212] text-[#212121] dark:text-[#E0E0E0] flex overflow-hidden">
+    <div className="min-h-screen bg-[#F5F5F5] dark:bg-navy-deeper text-[#212121] dark:text-[#E0E0E0] flex overflow-hidden">
       {/* Mobile sidebar toggle button */}
       {isMobile && (
         <Button
           variant="ghost"
           size="icon"
-          className="fixed top-4 left-4 z-50 bg-white dark:bg-[#1E1E1E] shadow-md"
+          className="fixed top-4 left-4 z-50 bg-white dark:bg-navy-medium shadow-md"
           onClick={() => setSidebarOpen(!sidebarOpen)}
           aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
         >

@@ -23,7 +23,7 @@ export const DocumentObservations = ({
         id="document-observations"
         value={documentObservations}
         onChange={(e) => setDocumentObservations(e.target.value)}
-        className="mt-1 block w-full border-gray-300 dark:border-gold/30 focus:ring-navy dark:focus:ring-gold/70 focus:border-navy dark:focus:border-gold/70 sm:text-sm rounded-md dark:bg-navy-dark/80 dark:text-white dark:placeholder-gray-300"
+        className="mt-1 block w-full border-gray-300 dark:border-navy-lighter/40 focus:ring-navy dark:focus:ring-gold/70 focus:border-navy dark:focus:border-gold/70 sm:text-sm rounded-md dark:bg-navy-deeper dark:text-white dark:placeholder-gray-300"
         rows={3}
         placeholder="Adicione observações relevantes sobre o documento, como notas ou comentários específicos"
       />

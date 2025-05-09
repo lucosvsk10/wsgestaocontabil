@@ -15,7 +15,7 @@ export const StorageDistributionChart = ({
   const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088fe', '#00C49F'];
 
   return (
-    <div className="h-80 mt-6 p-4 bg-gray-50 dark:bg-navy-light/30 rounded-lg border border-gray-200 dark:border-gold/20">
+    <div className="h-80 mt-6 p-4 bg-white/5 dark:bg-navy-deeper rounded-lg border border-gray-200 dark:border-navy-lighter/30">
       <h3 className="text-lg font-semibold text-navy dark:text-gold mb-4">
         Armazenamento por Cliente
       </h3>
@@ -36,7 +36,7 @@ export const StorageDistributionChart = ({
           <Tooltip 
             formatter={(value: any) => formatSize(value)}
             labelFormatter={(value) => value || 'Sem nome'}
-            contentStyle={{ backgroundColor: '#fff', border: '1px solid #ddd' }}
+            contentStyle={{ backgroundColor: '#11243d', border: '1px solid #18314f', color: '#fff' }}
           />
           <Bar dataKey="sizeBytes" name="Tamanho" fill="#8884d8">
             {storageData.map((entry, index) => (

@@ -16,13 +16,13 @@ export const StorageStats = () => {
   }, []);
 
   return (
-    <Card className="px-0 bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20 shadow-lg">
-      <CardHeader className="rounded-t-lg bg-white dark:bg-navy-dark border-b border-gray-200 dark:border-gold/30">
+    <Card className="px-0 bg-white dark:bg-navy-medium border border-gray-200 dark:border-navy-lighter/30 shadow-lg">
+      <CardHeader className="rounded-t-lg bg-white dark:bg-navy-deeper border-b border-gray-200 dark:border-navy-lighter/30">
         <CardTitle className="text-navy dark:text-gold bg-transparent text-center text-2xl font-semibold">
           ESTATÍSTICAS DE ARMAZENAMENTO
         </CardTitle>
       </CardHeader>
-      <CardContent className="rounded-b-lg bg-white dark:bg-navy-dark space-y-6 p-6">
+      <CardContent className="rounded-b-lg bg-white dark:bg-navy-medium space-y-6 p-6">
         {isLoading ? (
           <div className="flex justify-center my-8">
             <LoadingSpinner />
@@ -53,7 +53,7 @@ export const StorageStats = () => {
             />
           </div>
         ) : (
-          <div className="text-center my-4 text-navy dark:text-white bg-orange-50 dark:bg-navy-light/20 p-4 rounded-lg border border-orange-100 dark:border-gold/10">
+          <div className="text-center my-4 text-navy dark:text-white bg-orange-50 dark:bg-navy-deeper p-4 rounded-lg border border-orange-100 dark:border-navy-lighter/30">
             Nenhum dado disponível
           </div>
         )}

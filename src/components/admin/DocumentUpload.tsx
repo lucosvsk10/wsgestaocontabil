@@ -47,8 +47,8 @@ export const DocumentUpload = ({
   };
 
   return (
-    <Card className="w-full max-w-4xl mx-auto border border-gray-200 dark:border-gold/30 bg-white dark:bg-navy-dark/90 rounded-lg shadow-lg overflow-hidden">
-      <CardHeader className="space-y-1 text-center my-0 rounded-t-md pb-3 bg-gray-50 dark:bg-navy-light/20 border-b border-gray-200 dark:border-gold/30">
+    <Card className="w-full max-w-4xl mx-auto border border-gray-200 dark:border-navy-lighter/30 bg-white dark:bg-navy-medium rounded-lg shadow-lg overflow-hidden">
+      <CardHeader className="space-y-1 text-center my-0 rounded-t-md pb-3 bg-gray-50 dark:bg-navy-deeper border-b border-gray-200 dark:border-navy-lighter/30">
         <CardTitle className="text-navy dark:text-gold/90 font-medium text-2xl tracking-wide">ENVIAR DOCUMENTO</CardTitle>
       </CardHeader>
       <CardContent className="pt-6">

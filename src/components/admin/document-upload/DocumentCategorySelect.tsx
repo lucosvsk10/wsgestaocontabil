@@ -24,7 +24,7 @@ export const DocumentCategorySelect = ({
         id="document-category"
         value={documentCategory}
         onChange={(e) => setDocumentCategory(e.target.value)}
-        className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gold/20 focus:outline-none focus:ring-navy dark:focus:ring-gold/50 focus:border-navy dark:focus:border-gold/50 sm:text-sm rounded-md dark:bg-navy-dark dark:text-white"
+        className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-navy-lighter/40 focus:outline-none focus:ring-navy dark:focus:ring-gold/50 focus:border-navy dark:focus:border-gold/50 sm:text-sm rounded-md dark:bg-navy-deeper dark:text-white"
         required
       >
         <option value="">Selecione uma categoria</option>

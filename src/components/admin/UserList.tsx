@@ -104,8 +104,8 @@ export const UserList = ({
   const remainingStorageMB = Math.max(0, storageLimitMB - usedStorageMB);
 
   return (
-    <Card className="px-0 bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20 shadow-md">
-      <CardHeader className="rounded-full bg-white dark:bg-navy-dark">
+    <Card className="px-0 bg-white dark:bg-navy-medium border border-gray-200 dark:border-navy-lighter/30 shadow-md">
+      <CardHeader className="rounded-full bg-white dark:bg-navy-deeper">
         <div className="flex justify-between items-center">
           <CardTitle className="text-navy dark:text-gold bg-transparent text-2xl font-normal">LISTA DE USUARIOS</CardTitle>
           <Button
@@ -118,8 +118,8 @@ export const UserList = ({
       </CardHeader>
 
       {/* Storage Statistics */}
-      <CardContent className="border-b border-gray-200 dark:border-gold/20 mb-4 pb-4">
-        <div className="bg-orange-100 dark:bg-navy-light/20 rounded-lg p-4 shadow-sm">
+      <CardContent className="border-b border-gray-200 dark:border-navy-lighter/30 mb-4 pb-4">
+        <div className="bg-white/5 dark:bg-navy-deeper rounded-lg p-4 shadow-sm">
           <h3 className="text-lg font-semibold text-navy dark:text-gold mb-3">Estatísticas de Armazenamento</h3>
           
           {isLoadingStorage ? (
@@ -132,27 +132,27 @@ export const UserList = ({
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-white dark:bg-navy-dark rounded p-3 border border-gold/20">
+              <div className="bg-white dark:bg-navy-medium rounded p-3 border border-gray-200 dark:border-navy-lighter/30">
                 <p className="text-sm text-gray-500 dark:text-gray-400">Espaço Utilizado</p>
                 <p className="text-lg font-semibold text-navy dark:text-white">
                   {usedStorageMB.toFixed(2)} MB de {storageLimitMB} MB
                 </p>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mt-2">
+                <div className="w-full bg-gray-200 dark:bg-navy-lighter rounded-full h-2.5 mt-2">
                   <div 
-                    className="bg-blue-600 dark:bg-blue-500 h-2.5 rounded-full" 
+                    className="bg-blue-600 dark:bg-gold h-2.5 rounded-full" 
                     style={{ width: `${Math.min(100, (usedStorageMB / storageLimitMB) * 100)}%` }}
                   ></div>
                 </div>
               </div>
               
-              <div className="bg-white dark:bg-navy-dark rounded p-3 border border-gold/20">
+              <div className="bg-white dark:bg-navy-medium rounded p-3 border border-gray-200 dark:border-navy-lighter/30">
                 <p className="text-sm text-gray-500 dark:text-gray-400">Total de Documentos</p>
                 <p className="text-lg font-semibold text-navy dark:text-white">
                   {totalDocuments} arquivos
                 </p>
               </div>
               
-              <div className="bg-white dark:bg-navy-dark rounded p-3 border border-gold/20">
+              <div className="bg-white dark:bg-navy-medium rounded p-3 border border-gray-200 dark:border-navy-lighter/30">
                 <p className="text-sm text-gray-500 dark:text-gray-400">Espaço Disponível</p>
                 <p className="text-lg font-semibold text-navy dark:text-white">
                   {remainingStorageMB.toFixed(2)} MB restantes
@@ -163,7 +163,7 @@ export const UserList = ({
         </div>
       </CardContent>
 
-      <CardContent className="rounded-full bg-white dark:bg-navy-dark space-y-6">
+      <CardContent className="rounded-full bg-white dark:bg-navy-medium space-y-6">
         {isLoading ? (
           <LoadingSpinner />
         ) : (

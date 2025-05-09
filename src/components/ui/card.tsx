@@ -15,8 +15,8 @@ const Card = React.forwardRef<
       className={cn(
         "rounded-lg border shadow-sm",
         isAdmin 
-          ? "bg-white dark:bg-[#1E1E1E] text-[#212121] dark:text-[#E0E0E0] border-gray-200 dark:border-gray-800" 
-          : "bg-white dark:bg-navy-dark text-navy dark:text-white border-gold/20 dark:border-gold/20",
+          ? "bg-white dark:bg-navy-medium text-[#212121] dark:text-[#E0E0E0] border-gray-200 dark:border-navy-lighter/30" 
+          : "bg-white dark:bg-navy-deeper text-navy dark:text-white border-gold/20 dark:border-navy-lighter/30",
         isMobile ? "aspect-[4/3]" : "aspect-auto",
         className
       )}
@@ -59,7 +59,7 @@ const CardTitle = React.forwardRef<
         isMobile ? "text-xl" : "text-2xl",
         "font-semibold leading-none tracking-tight",
         isAdmin
-          ? "text-[#212121] dark:text-[#E0E0E0]"
+          ? "text-[#212121] dark:text-gold"
           : "text-navy dark:text-gold",
         className
       )}

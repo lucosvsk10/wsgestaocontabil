@@ -13,7 +13,7 @@ export const StorageUsageSummary = ({
   isLoading 
 }: StorageUsageSummaryProps) => {
   return (
-    <div className="text-center p-6 bg-gray-50 dark:bg-navy-dark/70 rounded-lg border border-gray-200 dark:border-gold/30 shadow-md">
+    <div className="text-center p-6 bg-white/5 dark:bg-navy-medium rounded-lg border border-gray-200 dark:border-navy-lighter/30 shadow-md">
       <h3 className="text-lg font-semibold text-navy dark:text-gold mb-3">
         Uso Total de Armazenamento
       </h3>

@@ -12,7 +12,7 @@ export const FileUploadArea = ({ handleFileChange }: FileUploadAreaProps) => {
       <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
         Arquivo do Documento
       </label>
-      <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed border-gray-300 dark:border-gold/20 dark:hover:border-gold/40 rounded-lg cursor-pointer bg-gray-50 dark:bg-navy-light/20 hover:bg-gray-100 dark:hover:bg-navy-light/30 transition-all duration-200">
+      <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed border-gray-300 dark:border-navy-lighter/40 dark:hover:border-gold/40 rounded-lg cursor-pointer bg-gray-50 dark:bg-navy-deeper hover:bg-gray-100 dark:hover:bg-navy-medium transition-all duration-200">
         <div className="space-y-1 text-center">
           <UploadCloud className="mx-auto h-12 w-12 text-gray-400 dark:text-gold/70" />
           <div className="flex text-sm text-gray-600 dark:text-gray-300">

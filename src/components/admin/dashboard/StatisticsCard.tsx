@@ -18,7 +18,7 @@ export const StatisticsCard = ({
   iconColor 
 }: StatisticsCardProps) => {
   return (
-    <Card className="bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20">
+    <Card className="bg-white dark:bg-navy-medium border border-gray-200 dark:border-navy-lighter/30">
       <CardContent className="p-6 flex flex-col items-center text-center">
         <div className={`rounded-full ${iconBgClass} p-3 mb-2`}>
           <div className={`h-8 w-8 ${iconColor}`}>

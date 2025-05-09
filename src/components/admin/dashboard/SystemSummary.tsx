@@ -15,29 +15,29 @@ export const SystemSummary = ({
   appVersion
 }: SystemSummaryProps) => {
   return (
-    <Card className="bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20">
-      <CardHeader className="border-b border-gray-200 dark:border-gold/20">
+    <Card className="bg-white dark:bg-navy-medium border border-gray-200 dark:border-navy-lighter/30">
+      <CardHeader className="border-b border-gray-200 dark:border-navy-lighter/30">
         <CardTitle className="text-lg font-semibold text-navy dark:text-gold">
           Resumo do Sistema
         </CardTitle>
       </CardHeader>
       <CardContent className="p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="p-4 rounded-lg bg-gray-50 dark:bg-navy-light/20">
+          <div className="p-4 rounded-lg bg-gray-50 dark:bg-navy-deeper">
             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total de clientes</p>
             <p className="text-xl font-bold text-navy dark:text-white">{clientsCount}</p>
           </div>
-          <div className="p-4 rounded-lg bg-gray-50 dark:bg-navy-light/20">
+          <div className="p-4 rounded-lg bg-gray-50 dark:bg-navy-deeper">
             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total de documentos</p>
             <p className="text-xl font-bold text-navy dark:text-white">{documentsCount}</p>
           </div>
-          <div className="p-4 rounded-lg bg-gray-50 dark:bg-navy-light/20">
+          <div className="p-4 rounded-lg bg-gray-50 dark:bg-navy-deeper">
             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Espaço utilizado</p>
             <p className="text-xl font-bold text-navy dark:text-white">
               {storageUsed}
             </p>
           </div>
-          <div className="p-4 rounded-lg bg-gray-50 dark:bg-navy-light/20">
+          <div className="p-4 rounded-lg bg-gray-50 dark:bg-navy-deeper">
             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Versão da aplicação</p>
             <p className="text-xl font-bold text-navy dark:text-white">{appVersion}</p>
           </div>

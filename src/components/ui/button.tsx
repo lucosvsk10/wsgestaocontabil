@@ -14,13 +14,13 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline:
-          "border border-input bg-orange-100 dark:bg-navy-dark hover:bg-orange-200 dark:hover:bg-navy-light hover:text-navy dark:hover:text-white",
+          "border border-input bg-orange-100 dark:bg-navy-medium hover:bg-orange-200 dark:hover:bg-navy-lighter hover:text-navy dark:hover:text-white",
         secondary:
-          "bg-orange-200 dark:bg-navy-light text-navy dark:text-white hover:bg-orange-200/80 dark:hover:bg-navy-light/80",
-        ghost: "hover:bg-orange-200 dark:hover:bg-navy-light hover:text-navy dark:hover:text-white",
+          "bg-orange-200 dark:bg-navy-medium text-navy dark:text-white hover:bg-orange-200/80 dark:hover:bg-navy-lighter/80",
+        ghost: "hover:bg-orange-200 dark:hover:bg-navy-lighter hover:text-navy dark:hover:text-white",
         link: "text-navy dark:text-gold underline-offset-4 hover:underline",
-        document: "bg-orange-200 dark:bg-navy-light text-navy dark:text-white hover:bg-orange-200/90 dark:hover:bg-navy-light/90 border border-gold/20",
-        admin: "bg-[#212121] text-white hover:bg-[#333333] dark:bg-[#E0E0E0] dark:text-[#212121] dark:hover:bg-[#CCCCCC]"
+        document: "bg-orange-200 dark:bg-navy-medium text-navy dark:text-white hover:bg-orange-200/90 dark:hover:bg-navy-lighter/90 border border-gold/20",
+        admin: "bg-[#212121] text-white hover:bg-[#333333] dark:bg-gold dark:text-navy-deeper dark:hover:bg-gold-light"
       },
       size: {
         default: "h-10 px-4 py-2",

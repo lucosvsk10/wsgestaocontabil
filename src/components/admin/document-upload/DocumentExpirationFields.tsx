@@ -41,7 +41,7 @@ export const DocumentExpirationFields = ({
             id="no-expiration"
             checked={noExpiration}
             onCheckedChange={handleCheckboxChange}
-            className="border-gray-300 dark:border-gold/30 data-[state=checked]:bg-navy data-[state=checked]:border-navy dark:data-[state=checked]:bg-gold dark:data-[state=checked]:border-gold"
+            className="border-gray-300 dark:border-navy-lighter/40 data-[state=checked]:bg-navy data-[state=checked]:border-navy dark:data-[state=checked]:bg-gold dark:data-[state=checked]:border-gold"
           />
           <label
             htmlFor="no-expiration"
@@ -63,7 +63,7 @@ export const DocumentExpirationFields = ({
                 id="date"
                 variant="outline"
                 className={cn(
-                  "w-full justify-start text-left font-normal mt-1 border-gray-300 dark:border-gold/20 hover:bg-gray-100 dark:hover:bg-navy-light/30 dark:bg-navy-dark dark:text-white",
+                  "w-full justify-start text-left font-normal mt-1 border-gray-300 dark:border-navy-lighter/40 hover:bg-gray-100 dark:hover:bg-navy-lighter dark:bg-navy-deeper dark:text-white",
                   !expirationDate && "text-gray-400 dark:text-gray-400"
                 )}
               >
@@ -75,13 +75,13 @@ export const DocumentExpirationFields = ({
                 )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20">
+            <PopoverContent className="w-auto p-0 bg-white dark:bg-navy-medium border border-gray-200 dark:border-navy-lighter/40">
               <Calendar
                 mode="single"
                 selected={expirationDate || undefined}
                 onSelect={setExpirationDate}
                 initialFocus
-                className="p-3 pointer-events-auto dark:bg-navy-dark dark:text-white"
+                className="p-3 pointer-events-auto dark:bg-navy-medium dark:text-white"
               />
             </PopoverContent>
           </Popover>

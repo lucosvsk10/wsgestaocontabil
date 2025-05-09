@@ -72,7 +72,10 @@ export default {
 				navy: {
 					DEFAULT: '#0a2946',
 					dark: '#061525',
-					light: '#132c47'
+					light: '#132c47',
+					deeper: '#0c1b33',
+					medium: '#11243d',
+					lighter: '#18314f',
 				},
 				gold: {
 					DEFAULT: '#efc349',
@@ -94,9 +97,9 @@ export default {
                         element: '#FFFFFF'
                     },
                     dark: {
-                        bg: '#121212',
+                        bg: '#0c1b33',
                         text: '#E0E0E0',
-                        element: '#1E1E1E'
+                        element: '#11243d'
                     }
                 }
 			},

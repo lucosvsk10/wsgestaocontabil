@@ -18,7 +18,7 @@ const AdminHeader = () => {
   const { handleLogout } = useNavigation();
   
   return (
-    <header className="bg-white dark:bg-[#1E1E1E] border-b border-gray-200 dark:border-gray-800 py-3 px-4 flex items-center justify-between">
+    <header className="bg-white dark:bg-navy-medium border-b border-gray-200 dark:border-navy-lighter/30 py-3 px-4 flex items-center justify-between">
       <h1 className="text-xl font-medium text-navy dark:text-gold">Área Administrativa</h1>
       
       <div className="flex items-center space-x-3">
@@ -38,15 +38,15 @@ const AdminHeader = () => {
               <UserCircle className="h-6 w-6" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <div className="px-2 py-1.5 text-sm font-medium">
+          <DropdownMenuContent align="end" className="w-56 dark:bg-navy-medium dark:border-navy-lighter/30">
+            <div className="px-2 py-1.5 text-sm font-medium dark:text-white">
               {user?.email || "Usuário"}
             </div>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
+            <DropdownMenuSeparator className="dark:bg-navy-lighter/30" />
+            <DropdownMenuItem asChild className="dark:text-white dark:focus:bg-navy-lighter">
               <Link to="/">Voltar ao site</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleLogout}>
+            <DropdownMenuItem onClick={handleLogout} className="dark:text-white dark:focus:bg-navy-lighter">
               Sair
             </DropdownMenuItem>
           </DropdownMenuContent>
