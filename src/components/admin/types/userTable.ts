@@ -1,4 +1,5 @@
 
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -19,3 +20,4 @@ export interface UserTableProps {
   showDocumentButton?: boolean;
   isAdminSection?: boolean;
 }
+

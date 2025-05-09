@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserType } from "@/types/admin";
 import { UserTable } from "./UserTable";
 import { LoadingSpinner } from "../common/LoadingSpinner";
+import { useStorageStats } from "@/hooks/useStorageStats";
+import { useEffect } from "react";
 
 interface AuthUser {
   id: string;
@@ -32,6 +34,14 @@ export const UserList = ({
   passwordForm,
   refreshUsers
 }: UserListProps) => {
+  // Storage stats
+  const { storageStats, isLoading: isLoadingStorage, error, fetchStorageStats } = useStorageStats();
+  
+  // Fetch storage stats when component mounts
+  useEffect(() => {
+    fetchStorageStats();
+  }, []);
+
   // Verificar se o usuário é admin
   const isAdminUser = (authUserId: string, email: string | null) => {
     // Hard-coded admin emails sempre são considerados admin
@@ -59,11 +69,71 @@ export const UserList = ({
     return !isAdminUser(authUser.id, authUser.email);
   });
 
+  // Calculate the total number of documents
+  const totalDocuments = storageStats?.userStorage.reduce((acc, user) => {
+    // Since we don't have document count in the API response, we'll estimate based on average file size
+    // This is a placeholder and would ideally be replaced with actual document count
+    const estimatedDocCount = Math.ceil(user.sizeMB / 0.5); // Assuming average document is 0.5MB
+    return acc + estimatedDocCount;
+  }, 0) || 0;
+
+  // Storage limit in MB (can be adjusted later)
+  const storageLimitMB = 100;
+  const usedStorageMB = storageStats?.totalStorageMB || 0;
+  const remainingStorageMB = Math.max(0, storageLimitMB - usedStorageMB);
+
   return (
     <Card className="px-0 bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20 shadow-md">
       <CardHeader className="rounded-full bg-white dark:bg-navy-dark">
         <CardTitle className="text-navy dark:text-gold bg-transparent text-center text-2xl font-normal">LISTA DE USUARIOS</CardTitle>
       </CardHeader>
+
+      {/* Storage Statistics */}
+      <CardContent className="border-b border-gray-200 dark:border-gold/20 mb-4 pb-4">
+        <div className="bg-orange-100 dark:bg-navy-light/20 rounded-lg p-4 shadow-sm">
+          <h3 className="text-lg font-semibold text-navy dark:text-gold mb-3">Estatísticas de Armazenamento</h3>
+          
+          {isLoadingStorage ? (
+            <div className="flex justify-center py-4">
+              <LoadingSpinner />
+            </div>
+          ) : error ? (
+            <div className="text-red-500 text-center py-2">
+              Erro ao carregar estatísticas: {error}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-white dark:bg-navy-dark rounded p-3 border border-gold/20">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Espaço Utilizado</p>
+                <p className="text-lg font-semibold text-navy dark:text-white">
+                  {usedStorageMB.toFixed(2)} MB de {storageLimitMB} MB
+                </p>
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mt-2">
+                  <div 
+                    className="bg-blue-600 dark:bg-blue-500 h-2.5 rounded-full" 
+                    style={{ width: `${Math.min(100, (usedStorageMB / storageLimitMB) * 100)}%` }}
+                  ></div>
+                </div>
+              </div>
+              
+              <div className="bg-white dark:bg-navy-dark rounded p-3 border border-gold/20">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Total de Documentos</p>
+                <p className="text-lg font-semibold text-navy dark:text-white">
+                  {totalDocuments} arquivos
+                </p>
+              </div>
+              
+              <div className="bg-white dark:bg-navy-dark rounded p-3 border border-gold/20">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Espaço Disponível</p>
+                <p className="text-lg font-semibold text-navy dark:text-white">
+                  {remainingStorageMB.toFixed(2)} MB restantes
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </CardContent>
+
       <CardContent className="rounded-full bg-white dark:bg-navy-dark space-y-6">
         {isLoading ? (
           <LoadingSpinner />

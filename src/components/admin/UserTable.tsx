@@ -1,11 +1,13 @@
 
-import { FileText, Lock, ArrowDown, ArrowUp, ArrowUpDown, Trash2 } from "lucide-react";
+import { FileText, Lock, ArrowDown, ArrowUp, ArrowUpDown, Trash2, Edit } from "lucide-react";
 import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "./utils/dateUtils";
 import { useNavigate } from "react-router-dom";
 import type { UserTableProps } from "./types/userTable";
+import { useUserProfileData } from "@/hooks/upload/useUserProfileData";
+import { EditNameDialog } from "./components/EditNameDialog";
 
 export const UserTable = ({
   users,
@@ -20,6 +22,17 @@ export const UserTable = ({
 }: UserTableProps) => {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>(null);
   const navigate = useNavigate();
+  
+  const {
+    isEditingUser,
+    newName,
+    setNewName,
+    nameError,
+    getUserName,
+    handleEditName,
+    handleSaveName,
+    cancelEditing
+  } = useUserProfileData(refreshUsers);
   
   const getUserInfo = (authUserId: string) => {
     return userInfoList.find(u => u.id === authUserId) || null;
@@ -94,12 +107,27 @@ export const UserTable = ({
             {sortedUsers.length > 0 ? (
               sortedUsers.map(authUser => {
                 const userInfo = getUserInfo(authUser.id);
+                const displayName = getUserName(authUser);
+                const isEditing = isEditingUser === authUser.id;
                 
                 return (
                   <TableRow key={authUser.id} className="border-gold/20 hover:bg-orange-300/50 dark:hover:bg-navy-light/50">
                     {!isAdminSection && (
                       <TableCell>
-                        {authUser.user_metadata?.name || "Sem nome"}
+                        <div className="flex items-center gap-2">
+                          {displayName}
+                          {displayName === "Sem nome" && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-5 w-5 p-0" 
+                              onClick={() => handleEditName(authUser)}
+                              aria-label="Criar nome"
+                            >
+                              <Edit size={14} />
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     )}
                     <TableCell>{authUser.email || "Sem email"}</TableCell>
@@ -165,6 +193,15 @@ export const UserTable = ({
           </TableBody>
         </Table>
       </div>
+      
+      <EditNameDialog
+        isOpen={!!isEditingUser}
+        onClose={cancelEditing}
+        name={newName}
+        setName={setNewName}
+        onSave={() => isEditingUser && handleSaveName(isEditingUser)}
+        error={nameError}
+      />
     </div>
   );
 };

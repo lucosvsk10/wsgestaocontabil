@@ -3,46 +3,44 @@ project_id = "nadtoitgkukzbghtbohm"
 
 [api]
 enabled = true
-url = "https://nadtoitgkukzbghtbohm.supabase.co"
-service_role_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5hZHRvaXRna3VremJnaHRib2htIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTY4NDIyMTAwNywiZXhwIjoxOTk5Nzk3MDA3fQ.L_RbIbsmoKqOLWZrQOkzu_I6JU0M0GF1FLn6-PxA4AE"
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
 
-[auth.email]
-enable_signup = true
-double_confirm_changes = false
-enable_confirmations = false
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
 
-[functions]
-storage-stats = {}
+[studio]
+enabled = true
+port = 54323
+api_url = "http://localhost"
 
-[functions.admin-operations]
-verify_jwt = true
+[inbucket]
+enabled = true
+port = 54324
 
-[functions.changeUserPassword]
-verify_jwt = true
+[storage]
+enabled = true
+port = 54325
 
-[functions.create-user]
-verify_jwt = true
+[auth]
+enabled = true
+port = 54326
 
-[functions.create-user-profile]
-verify_jwt = true
+[realtime]
+enabled = true
+port = 54327
 
-[functions.delete-expired-documents]
-verify_jwt = true
+[analytics]
+enabled = false
+port = 54328
 
-[functions.listUsers]
-verify_jwt = true
+[vector]
+enabled = true
+port = 54329
 
-[functions.notify_new_document]
-verify_jwt = true
-
-[functions.delete_daily_log_notifications]
-verify_jwt = true
-
-[functions.delete_old_document_notifications]
-verify_jwt = true
-
-[functions.notify_expiring_documents]
-verify_jwt = true
-
-[functions.setup_notification_cron_jobs]
+[functions.storage-stats]
 verify_jwt = true
