@@ -5,6 +5,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { formatDate } from "./utils/dateUtils";
 import { useNavigate } from "react-router-dom";
+import { UserNameEditor } from "./components/UserNameEditor";
+import { StorageUsage } from "./components/StorageUsage";
 import type { UserTableProps } from "./types/userTable";
 
 export const UserTable = ({
@@ -86,7 +88,10 @@ export const UserTable = ({
               <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Email</TableHead>
               <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Data de Cadastro</TableHead>
               {!isAdminSection && (
-                <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Ações</TableHead>
+                <>
+                  <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Armazenamento</TableHead>
+                  <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Ações</TableHead>
+                </>
               )}
             </TableRow>
           </TableHeader>
@@ -99,65 +104,70 @@ export const UserTable = ({
                   <TableRow key={authUser.id} className="border-gold/20 hover:bg-orange-300/50 dark:hover:bg-navy-light/50">
                     {!isAdminSection && (
                       <TableCell>
-                        {authUser.user_metadata?.name || "Sem nome"}
+                        <UserNameEditor authUser={authUser} refreshUsers={refreshUsers} />
                       </TableCell>
                     )}
                     <TableCell>{authUser.email || "Sem email"}</TableCell>
                     <TableCell>{formatDate(authUser.created_at)}</TableCell>
                     {!isAdminSection && (
-                      <TableCell>
-                        <div className="flex flex-wrap space-x-2 gap-y-2">
-                          {showDocumentButton && (
+                      <>
+                        <TableCell>
+                          <StorageUsage userId={authUser.id} />
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap space-x-2 gap-y-2">
+                            {showDocumentButton && (
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="flex items-center gap-1 bg-orange-300/80 dark:bg-navy-light/80 text-navy dark:text-white hover:bg-gold hover:text-navy dark:hover:bg-gold dark:hover:text-navy border-gold/20" 
+                                onClick={() => handleDocumentButtonClick(authUser.id)}
+                                aria-label={`Ver documentos de ${authUser.user_metadata?.name || authUser.email || "usuário"}`}
+                              >
+                                <FileText size={14} />
+                                <span>Documentos</span>
+                              </Button>
+                            )}
+                            {userInfo && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="flex items-center gap-1 bg-orange-300/80 dark:bg-navy-light/80 text-navy dark:text-white hover:bg-gold hover:text-navy dark:hover:bg-gold dark:hover:text-navy border-gold/20"
+                                onClick={() => {
+                                  setSelectedUserForPasswordChange(userInfo);
+                                  passwordForm.reset();
+                                }}
+                                aria-label={`Alterar senha de ${authUser.user_metadata?.name || authUser.email || "usuário"}`}
+                              >
+                                <Lock size={14} />
+                                <span>Senha</span>
+                              </Button>
+                            )}
                             <Button 
                               variant="outline" 
                               size="sm" 
-                              className="flex items-center gap-1 bg-orange-300/80 dark:bg-navy-light/80 text-navy dark:text-white hover:bg-gold hover:text-navy dark:hover:bg-gold dark:hover:text-navy border-gold/20" 
-                              onClick={() => handleDocumentButtonClick(authUser.id)}
-                              aria-label={`Ver documentos de ${authUser.user_metadata?.name || authUser.email || "usuário"}`}
-                            >
-                              <FileText size={14} />
-                              <span>Documentos</span>
-                            </Button>
-                          )}
-                          {userInfo && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex items-center gap-1 bg-orange-300/80 dark:bg-navy-light/80 text-navy dark:text-white hover:bg-gold hover:text-navy dark:hover:bg-gold dark:hover:text-navy border-gold/20"
+                              className="flex items-center gap-1 bg-orange-300/80 dark:bg-navy-light/80 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white dark:hover:bg-red-600 dark:hover:text-white border-gold/20"
                               onClick={() => {
-                                setSelectedUserForPasswordChange(userInfo);
-                                passwordForm.reset();
+                                // Delete user action would go here
+                                if (confirm('Deseja realmente excluir este usuário?')) {
+                                  refreshUsers();
+                                }
                               }}
-                              aria-label={`Alterar senha de ${authUser.user_metadata?.name || authUser.email || "usuário"}`}
+                              aria-label={`Excluir ${authUser.user_metadata?.name || authUser.email || "usuário"}`}
                             >
-                              <Lock size={14} />
-                              <span>Senha</span>
+                              <Trash2 size={14} />
+                              <span>Excluir</span>
                             </Button>
-                          )}
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="flex items-center gap-1 bg-orange-300/80 dark:bg-navy-light/80 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white dark:hover:bg-red-600 dark:hover:text-white border-gold/20"
-                            onClick={() => {
-                              // Delete user action would go here
-                              if (confirm('Deseja realmente excluir este usuário?')) {
-                                refreshUsers();
-                              }
-                            }}
-                            aria-label={`Excluir ${authUser.user_metadata?.name || authUser.email || "usuário"}`}
-                          >
-                            <Trash2 size={14} />
-                            <span>Excluir</span>
-                          </Button>
-                        </div>
-                      </TableCell>
+                          </div>
+                        </TableCell>
+                      </>
                     )}
                   </TableRow>
                 );
               })
             ) : (
               <TableRow className="border-gold/20">
-                <TableCell colSpan={isAdminSection ? 2 : 4} className="text-center py-4 text-navy/60 dark:text-white/60">
+                <TableCell colSpan={isAdminSection ? 2 : 5} className="text-center py-4 text-navy/60 dark:text-white/60">
                   Nenhum {title.toLowerCase()} encontrado
                 </TableCell>
               </TableRow>

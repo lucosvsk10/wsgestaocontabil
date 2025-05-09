@@ -8,6 +8,7 @@ import { useUserInfo } from "@/hooks/useUserInfo";
 import { useDocumentManager } from "@/hooks/document/useDocumentManager";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { StorageUsage } from "./components/StorageUsage";
 
 interface UserDocumentViewProps {
   users: any[];
@@ -97,6 +98,9 @@ export const UserDocumentView = ({ users, supabaseUsers }: UserDocumentViewProps
             <CardTitle className="text-xl font-medium text-navy dark:text-gold">
               Gerenciando documentos de: {userName} - {userEmail}
             </CardTitle>
+          </div>
+          <div className="w-full md:w-1/3">
+            {userId && <StorageUsage userId={userId} />}
           </div>
         </div>
       </CardHeader>

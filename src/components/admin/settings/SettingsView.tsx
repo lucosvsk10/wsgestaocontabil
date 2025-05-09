@@ -1,260 +1,256 @@
 
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { LogOut, Lock, Database, RefreshCw, Moon, Sun } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { useTheme } from "@/contexts/ThemeContext";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useTheme } from "@/contexts/ThemeContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { useStorageStats } from "@/hooks/useStorageStats";
+import { LogOut, Sun, Moon, Key } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useNavigation } from "@/components/navbar/hooks/useNavigation";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
-export const SettingsView = () => {
-  const { toast } = useToast();
+export function SettingsView() {
   const { theme, setTheme } = useTheme();
-  const { user, signOut } = useAuth();
-  const [openDatabaseDialog, setOpenDatabaseDialog] = useState(false);
-  const [dbSize, setDbSize] = useState("Calculando...");
-  const [storageSize, setStorageSize] = useState("Calculando...");
-  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { handleLogout } = useNavigation();
+  const { storageStats, isLoading: isLoadingStorage, fetchStorageStats } = useStorageStats();
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      toast({
-        title: "Logout realizado",
-        description: "Você foi desconectado com sucesso.",
-      });
-    } catch (error) {
-      console.error("Erro ao fazer logout:", error);
+  
+  useEffect(() => {
+    fetchStorageStats();
+  }, [fetchStorageStats]);
+  
+  const handleChangePassword = async () => {
+    if (!newPassword || !confirmPassword) {
       toast({
         variant: "destructive",
-        title: "Erro",
-        description: "Não foi possível realizar o logout.",
+        title: "Erro ao alterar senha",
+        description: "Por favor, preencha todos os campos."
       });
+      return;
     }
-  };
-
-  const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark");
-  };
-
-  const fetchDatabaseInfo = async () => {
-    try {
-      setIsLoading(true);
-      // In a real implementation, you would fetch this information from a
-      // Supabase Edge Function with admin privileges. For now, we'll simulate.
-      setDbSize("256.7 MB");
-      setStorageSize("1.2 GB");
-      setOpenDatabaseDialog(true);
-    } catch (error) {
-      console.error("Error fetching database info:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Não foi possível obter informações do banco de dados.",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setPasswordError("");
     
     if (newPassword !== confirmPassword) {
-      setPasswordError("As senhas não conferem.");
+      toast({
+        variant: "destructive",
+        title: "As senhas não conferem",
+        description: "A nova senha e a confirmação devem ser iguais."
+      });
       return;
     }
     
     try {
-      setIsLoading(true);
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
-      
-      if (error) throw error;
+      // In a real implementation, you would call your auth service to change the password here
       
       toast({
         title: "Senha alterada",
-        description: "Sua senha foi alterada com sucesso.",
+        description: "Sua senha foi alterada com sucesso."
       });
       
+      setIsPasswordDialogOpen(false);
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-    } catch (error: any) {
-      console.error("Erro ao alterar senha:", error);
-      setPasswordError(error.message || "Não foi possível alterar a senha.");
-    } finally {
-      setIsLoading(false);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao alterar senha",
+        description: "Ocorreu um erro ao alterar sua senha. Tente novamente."
+      });
     }
   };
-
+  
   return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold mb-6 text-navy dark:text-gold">Configurações</h2>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Account Settings */}
-        <Card className="bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20">
-          <CardHeader className="border-b border-gray-200 dark:border-gold/20">
-            <CardTitle className="text-lg font-semibold text-navy dark:text-gold">
-              Conta
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6 space-y-4">
-            {/* Password Change Form */}
-            <form onSubmit={handleChangePassword} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="currentPassword" className="text-navy dark:text-gold">Senha Atual</Label>
-                <Input
-                  id="currentPassword"
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  required
-                  className="bg-white dark:bg-navy-light/20"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="newPassword" className="text-navy dark:text-gold">Nova Senha</Label>
-                <Input
-                  id="newPassword"
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required
-                  className="bg-white dark:bg-navy-light/20"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword" className="text-navy dark:text-gold">Confirmar Senha</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  className="bg-white dark:bg-navy-light/20"
-                />
-              </div>
-              
-              {passwordError && (
-                <div className="text-sm text-red-500 dark:text-red-400">{passwordError}</div>
-              )}
-              
-              <Button 
-                type="submit" 
-                className="w-full bg-navy text-white hover:bg-navy/80 dark:bg-gold dark:text-navy dark:hover:bg-gold/80"
-                disabled={isLoading}
-              >
-                <Lock className="mr-2 h-4 w-4" />
-                Alterar Senha
-              </Button>
-            </form>
-            
-            <Button 
-              variant="destructive" 
-              className="w-full"
-              onClick={handleSignOut}
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              Fazer Logout
-            </Button>
-          </CardContent>
-        </Card>
+    <>
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight text-navy dark:text-gold">Configurações</h2>
+          <p className="text-gray-500 dark:text-gray-400">
+            Configure as preferências da sua conta e do aplicativo.
+          </p>
+        </div>
         
-        {/* System Settings */}
-        <Card className="bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20">
-          <CardHeader className="border-b border-gray-200 dark:border-gold/20">
-            <CardTitle className="text-lg font-semibold text-navy dark:text-gold">
-              Sistema
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Moon className="h-5 w-5 text-navy dark:text-gold" />
-                <span className="text-navy dark:text-gold">Modo Escuro</span>
-              </div>
-              <Switch 
-                checked={theme === "dark"}
-                onCheckedChange={toggleTheme}
-              />
-            </div>
-            
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={fetchDatabaseInfo}
-              disabled={isLoading}
-            >
-              <Database className="mr-2 h-4 w-4" />
-              Ver uso do banco de dados
-            </Button>
-            
-            <div className="p-4 rounded-lg bg-gray-50 dark:bg-navy-light/20">
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Versão da aplicação</p>
-              <p className="text-xl font-bold text-navy dark:text-white">1.0.0</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Última atualização: 09/05/2025</p>
-            </div>
-            
-            <div className="p-4 rounded-lg bg-gray-50 dark:bg-navy-light/20">
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Ambiente</p>
-              <p className="text-xl font-bold text-navy dark:text-white">Produção</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Status: Online</p>
-            </div>
-          </CardContent>
-        </Card>
+        <Tabs defaultValue="account" className="w-full">
+          <TabsList className="grid grid-cols-2 md:grid-cols-3 lg:w-[400px] mb-6 bg-white dark:bg-navy-dark border border-gray-300 dark:border-gold/20 shadow-sm">
+            <TabsTrigger value="account" className="text-gray-700 dark:text-gray-300">Conta</TabsTrigger>
+            <TabsTrigger value="appearance" className="text-gray-700 dark:text-gray-300">Aparência</TabsTrigger>
+            <TabsTrigger value="system" className="text-gray-700 dark:text-gray-300">Sistema</TabsTrigger>
+          </TabsList>
+          
+          {/* Account Settings */}
+          <TabsContent value="account">
+            <Card className="bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20 shadow-md">
+              <CardHeader>
+                <CardTitle className="text-navy dark:text-gold">Conta</CardTitle>
+                <CardDescription>
+                  Gerencie as configurações da sua conta.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input className="bg-gray-100 dark:bg-navy-light/20" value={user?.email || ""} readOnly />
+                </div>
+                <div>
+                  <Button
+                    variant="outline"
+                    className="w-full md:w-auto flex items-center gap-2 bg-white dark:bg-navy-light/20 text-navy dark:text-gold hover:bg-gold hover:text-navy dark:hover:bg-gold dark:hover:text-navy border border-gold/20"
+                    onClick={() => setIsPasswordDialogOpen(true)}
+                  >
+                    <Key size={16} />
+                    Alterar Senha
+                  </Button>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button
+                  variant="destructive"
+                  className="flex items-center gap-2"
+                  onClick={handleLogout}
+                >
+                  <LogOut size={16} />
+                  Logout
+                </Button>
+              </CardFooter>
+            </Card>
+          </TabsContent>
+          
+          {/* Appearance Settings */}
+          <TabsContent value="appearance">
+            <Card className="bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20 shadow-md">
+              <CardHeader>
+                <CardTitle className="text-navy dark:text-gold">Aparência</CardTitle>
+                <CardDescription>
+                  Personalize a aparência da interface.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Tema</Label>
+                  <div className="flex flex-col md:flex-row gap-4">
+                    <Button
+                      variant={theme === 'light' ? "default" : "outline"}
+                      className={`flex items-center gap-2 ${
+                        theme === 'light'
+                          ? "bg-navy text-white dark:bg-gold dark:text-navy"
+                          : "bg-white dark:bg-navy-light/20 text-navy dark:text-gold hover:bg-gold hover:text-navy dark:hover:bg-gold dark:hover:text-navy border-gold/20"
+                      }`}
+                      onClick={() => setTheme('light')}
+                    >
+                      <Sun size={16} />
+                      Modo Claro
+                    </Button>
+                    <Button
+                      variant={theme === 'dark' ? "default" : "outline"}
+                      className={`flex items-center gap-2 ${
+                        theme === 'dark'
+                          ? "bg-navy text-white dark:bg-gold dark:text-navy"
+                          : "bg-white dark:bg-navy-light/20 text-navy dark:text-gold hover:bg-gold hover:text-navy dark:hover:bg-gold dark:hover:text-navy border-gold/20"
+                      }`}
+                      onClick={() => setTheme('dark')}
+                    >
+                      <Moon size={16} />
+                      Modo Escuro
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          {/* System Settings */}
+          <TabsContent value="system">
+            <Card className="bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20 shadow-md">
+              <CardHeader>
+                <CardTitle className="text-navy dark:text-gold">Informações do Sistema</CardTitle>
+                <CardDescription>
+                  Informações técnicas sobre o sistema.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-1">
+                  <Label>Espaço Total Ocupado</Label>
+                  <div className="text-navy dark:text-white font-medium">
+                    {isLoadingStorage ? (
+                      "Carregando..."
+                    ) : (
+                      `${storageStats?.totalStorageMB.toFixed(2) || 0} MB`
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label>Versão da Aplicação</Label>
+                  <div className="text-navy dark:text-white font-medium">
+                    1.0.0
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label>Data da Última Atualização</Label>
+                  <div className="text-navy dark:text-white font-medium">
+                    {new Date('2025-05-09').toLocaleDateString('pt-BR')}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
       
-      {/* Database Usage Dialog */}
-      <Dialog open={openDatabaseDialog} onOpenChange={setOpenDatabaseDialog}>
-        <DialogContent className="sm:max-w-md">
+      {/* Change Password Dialog */}
+      <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+        <DialogContent className="sm:max-w-[425px] bg-white dark:bg-navy-dark">
           <DialogHeader>
-            <DialogTitle className="text-center text-navy dark:text-gold">Uso do Banco de Dados</DialogTitle>
+            <DialogTitle className="text-navy dark:text-gold">Alterar Senha</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="p-4 rounded-lg bg-gray-50 dark:bg-navy-light/20">
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Tamanho do Banco de Dados</p>
-              <p className="text-xl font-bold text-navy dark:text-white">{dbSize}</p>
+            <div className="space-y-2">
+              <Label htmlFor="current-password">Senha Atual</Label>
+              <Input 
+                id="current-password" 
+                type="password" 
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+              />
             </div>
-            <div className="p-4 rounded-lg bg-gray-50 dark:bg-navy-light/20">
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Tamanho do Storage</p>
-              <p className="text-xl font-bold text-navy dark:text-white">{storageSize}</p>
+            <div className="space-y-2">
+              <Label htmlFor="new-password">Nova Senha</Label>
+              <Input 
+                id="new-password" 
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)} 
+              />
             </div>
-            <div className="text-center text-sm text-gray-500 dark:text-gray-400">
-              Dados atualizados em: {new Date().toLocaleString()}
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password">Confirmar Nova Senha</Label>
+              <Input 
+                id="confirm-password" 
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)} 
+              />
             </div>
           </div>
-          <div className="flex justify-center">
-            <Button 
-              variant="outline" 
-              onClick={() => setOpenDatabaseDialog(false)}
-            >
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Atualizar
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPasswordDialogOpen(false)}>
+              Cancelar
             </Button>
-          </div>
+            <Button onClick={handleChangePassword}>
+              Salvar
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
-};
+}

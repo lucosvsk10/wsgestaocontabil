@@ -100,12 +100,6 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
       to: "/admin/polls"
     },
     { 
-      icon: <Wrench size={20} />, 
-      label: "Ferramentas", 
-      active: getIsActive("/admin/tools"),
-      to: "/admin/tools"
-    },
-    { 
       icon: <Calculator size={20} />, 
       label: "Simulações IRPF", 
       active: getIsActive("/admin/tax-simulations"),

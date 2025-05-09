@@ -14,6 +14,8 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: Error | null; data: any | null }>;
   signOut: () => Promise<{ error: Error | null }>;
   refreshUserData: () => Promise<void>;
+  setUser: (user: User | null) => void;
+  setUserData: (userData: UserData | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -24,7 +26,9 @@ const AuthContext = createContext<AuthContextType>({
   isAdmin: false,
   signIn: async () => ({ error: null, data: null }),
   signOut: async () => ({ error: null }),
-  refreshUserData: async () => {}
+  refreshUserData: async () => {},
+  setUser: () => {},
+  setUserData: () => {}
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -136,7 +140,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         isAdmin,
         signIn,
         signOut,
-        refreshUserData
+        refreshUserData,
+        setUser,
+        setUserData
       }}
     >
       {children}
