@@ -1,24 +1,18 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import ThemeToggle from "@/components/ThemeToggle";
 import { BellIcon, UserCircle } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { useNavigation } from "@/components/navbar/hooks/useNavigation";
 import { Link } from "react-router-dom";
-
 const AdminHeader = () => {
-  const { user } = useAuth();
-  const { handleLogout } = useNavigation();
-  
-  return (
-    <header className="bg-white dark:bg-navy-medium border-b border-gray-200 dark:border-navy-lighter/30 py-3 px-4 flex items-center justify-between">
+  const {
+    user
+  } = useAuth();
+  const {
+    handleLogout
+  } = useNavigation();
+  return <header className="bg-white dark:bg-navy-medium border-b border-gray-200 dark:border-navy-lighter/30 py-3 px-4 flex items-center justify-between">
       <h1 className="text-xl font-medium text-navy dark:text-gold">Área Administrativa</h1>
       
       <div className="flex items-center space-x-3">
@@ -26,10 +20,7 @@ const AdminHeader = () => {
         <ThemeToggle />
         
         {/* Notifications */}
-        <Button variant="ghost" size="icon" className="relative" aria-label="Notificações">
-          <BellIcon className="h-5 w-5" />
-          <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500"></span>
-        </Button>
+        
         
         {/* User menu */}
         <DropdownMenu>
@@ -52,8 +43,6 @@ const AdminHeader = () => {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-    </header>
-  );
+    </header>;
 };
-
 export default AdminHeader;
