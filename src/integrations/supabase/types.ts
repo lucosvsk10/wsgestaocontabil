@@ -382,6 +382,57 @@ export type Database = {
         }
         Relationships: []
       }
+      tax_simulations: {
+        Row: {
+          data_criacao: string | null
+          dependentes: number | null
+          educacao: number | null
+          email: string | null
+          id: string
+          imposto_estimado: number
+          inss: number
+          nome: string | null
+          outras_deducoes: number | null
+          rendimento_bruto: number
+          saude: number | null
+          telefone: string | null
+          tipo_simulacao: string
+          user_id: string | null
+        }
+        Insert: {
+          data_criacao?: string | null
+          dependentes?: number | null
+          educacao?: number | null
+          email?: string | null
+          id?: string
+          imposto_estimado: number
+          inss: number
+          nome?: string | null
+          outras_deducoes?: number | null
+          rendimento_bruto: number
+          saude?: number | null
+          telefone?: string | null
+          tipo_simulacao: string
+          user_id?: string | null
+        }
+        Update: {
+          data_criacao?: string | null
+          dependentes?: number | null
+          educacao?: number | null
+          email?: string | null
+          id?: string
+          imposto_estimado?: number
+          inss?: number
+          nome?: string | null
+          outras_deducoes?: number | null
+          rendimento_bruto?: number
+          saude?: number | null
+          telefone?: string | null
+          tipo_simulacao?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           created_at: string | null

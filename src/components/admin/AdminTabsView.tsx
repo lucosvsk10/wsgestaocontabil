@@ -1,88 +1,62 @@
+import { DocumentManager } from "./DocumentManager";
+import { UserTable } from "./UserTable";
+import { PollsTabView } from "./polls/PollsTabView";
+import { PollResults } from "./polls/PollResults";
+import TaxSimulationResults from "./TaxSimulationResults";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { User, FileText, ChartBar, ChartPie, Calculator } from "lucide-react";
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserList } from "@/components/admin/UserList";
-import { CreateUser } from "@/components/admin/CreateUser";
-import { StorageStats } from "@/components/admin/StorageStats";
-import { UserType } from "@/types/admin";
-import { PollsTabView } from "@/components/admin/polls/PollsTabView";
-
-interface AdminTabsViewProps {
-  supabaseUsers: any[];
-  users: UserType[];
-  isLoadingUsers: boolean;
-  isLoadingAuthUsers: boolean;
-  handleDocumentButtonClick: (userId: string) => void;
-  setSelectedUserForPasswordChange: (user: UserType) => void;
-  passwordForm: any;
-  refreshUsers: () => void;
-  createUser: (data: any) => void;
-  isCreatingUser: boolean;
+export interface AdminTabsViewProps {
+  activeTab?: string;
+  onTabChange?: (tab: string) => void;
 }
 
-export const AdminTabsView = ({
-  supabaseUsers,
-  users,
-  isLoadingUsers,
-  isLoadingAuthUsers,
-  handleDocumentButtonClick,
-  setSelectedUserForPasswordChange,
-  passwordForm,
-  refreshUsers,
-  createUser,
-  isCreatingUser
-}: AdminTabsViewProps) => {
+export function AdminTabsView({ activeTab, onTabChange }: AdminTabsViewProps) {
   return (
-    <Tabs defaultValue="users" className="space-y-6">
-      <TabsList className="grid grid-cols-4 mb-4 bg-white dark:bg-navy-dark border border-gold/20">
-        <TabsTrigger 
-          value="users" 
-          className="text-navy dark:text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
-        >
-          Lista de Usuários
-        </TabsTrigger>
-        <TabsTrigger 
-          value="create-user" 
-          className="text-navy dark:text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
-        >
-          Criar Usuário
-        </TabsTrigger>
-        <TabsTrigger 
-          value="polls" 
-          className="text-navy dark:text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
-        >
-          Enquetes
-        </TabsTrigger>
-        <TabsTrigger 
-          value="storage" 
-          className="text-navy dark:text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
-        >
-          Armazenamento
-        </TabsTrigger>
-      </TabsList>
-      
-      <TabsContent value="users" className="space-y-6">
-        <UserList 
-          supabaseUsers={supabaseUsers} 
-          users={users} 
-          isLoading={isLoadingUsers || isLoadingAuthUsers} 
-          setSelectedUserId={handleDocumentButtonClick} 
-          setSelectedUserForPasswordChange={setSelectedUserForPasswordChange} 
-          passwordForm={passwordForm} 
-          refreshUsers={refreshUsers} 
-        />
-      </TabsContent>
-      
-      <TabsContent value="create-user" className="bg-white dark:bg-navy-dark border border-gold/20 rounded-lg p-6 shadow-md">
-        <CreateUser createUser={createUser} isCreatingUser={isCreatingUser} />
-      </TabsContent>
-      
-      <TabsContent value="polls" className="bg-white dark:bg-navy-dark border border-gold/20 rounded-lg p-6 shadow-md">
-        <PollsTabView />
-      </TabsContent>
-      
-      <TabsContent value="storage" className="bg-white dark:bg-navy-dark border border-gold/20 rounded-lg p-6 shadow-md">
-        <StorageStats />
-      </TabsContent>
-    </Tabs>
+    <div className="w-full">
+      <Tabs defaultValue={activeTab || "documents"} onValueChange={onTabChange}>
+        <div className="border-b border-gray-200 dark:border-gray-800">
+          <TabsList className="h-10 w-full md:w-auto flex overflow-x-auto">
+            <TabsTrigger value="documents" className="flex-none">
+              <FileText className="mr-2 h-4 w-4" />
+              Documentos
+            </TabsTrigger>
+            <TabsTrigger value="users" className="flex-none">
+              <User className="mr-2 h-4 w-4" />
+              Usuários
+            </TabsTrigger>
+            <TabsTrigger value="polls" className="flex-none">
+              <ChartBar className="mr-2 h-4 w-4" />
+              Enquetes
+            </TabsTrigger>
+            <TabsTrigger value="poll-results" className="flex-none">
+              <ChartPie className="mr-2 h-4 w-4" />
+              Resultados de Enquetes
+            </TabsTrigger>
+            <TabsTrigger value="tax-simulations" className="flex-none">
+              <Calculator className="mr-2 h-4 w-4" />
+              Simulações IRPF
+            </TabsTrigger>
+          </TabsList>
+        </div>
+        <div className="mt-4">
+          <TabsContent value="documents" className="space-y-4">
+            <DocumentManager />
+          </TabsContent>
+          <TabsContent value="users" className="space-y-4">
+            <UserTable />
+          </TabsContent>
+          <TabsContent value="polls" className="space-y-4">
+            <PollsTabView />
+          </TabsContent>
+          <TabsContent value="poll-results" className="space-y-4">
+            <PollResults />
+          </TabsContent>
+          <TabsContent value="tax-simulations" className="space-y-4">
+            <TaxSimulationResults />
+          </TabsContent>
+        </div>
+      </Tabs>
+    </div>
   );
-};
+}

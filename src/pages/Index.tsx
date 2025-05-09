@@ -15,6 +15,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import TaxCalculatorCard from '@/components/TaxCalculatorCard';
 
 const Index = () => {
   useEffect(() => {
@@ -52,6 +53,19 @@ const Index = () => {
       <Navbar />
       <main>
         <Hero />
+        
+        {/* Tax Calculator Card */}
+        <section className="py-12 px-4">
+          <div className="container mx-auto">
+            <h2 className="text-2xl md:text-3xl font-bold text-navy dark:text-gold text-center mb-8">
+              Ferramentas para você
+            </h2>
+            <div className="max-w-md mx-auto">
+              <TaxCalculatorCard />
+            </div>
+          </div>
+        </section>
+        
         <About />
         <BusinessNews />
         <AccountingSection />

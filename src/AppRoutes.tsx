@@ -10,6 +10,7 @@ import ClientDashboard from "./pages/ClientDashboard";
 import PollPage from "./pages/PollPage";
 import NumericalPollPage from "./pages/NumericalPollPage";
 import FormPollPage from "./pages/FormPollPage";
+import TaxCalculator from "./pages/TaxCalculator";
 import { checkIsAdmin } from "./utils/auth/userChecks";
 
 const AppRoutes = () => {
@@ -26,6 +27,7 @@ const AppRoutes = () => {
       <Route path="/enquete/:id" element={<PollPage />} />
       <Route path="/enquete-numerica/:id" element={<NumericalPollPage />} />
       <Route path="/formulario/:id" element={<FormPollPage />} />
+      <Route path="/simulador-irpf" element={<TaxCalculator />} />
       
       {/* Rota protegida para área de administrador */}
       <Route path="/admin" element={
