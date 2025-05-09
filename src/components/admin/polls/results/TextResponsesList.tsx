@@ -1,48 +1,37 @@
 
-import { format } from "date-fns";
+import React from "react";
 import { FormResponse } from "@/types/polls";
 
 interface TextResponsesListProps {
   responses: FormResponse[];
   questionId: string;
-  limit?: number;
 }
 
-export const TextResponsesList = ({ 
-  responses, 
-  questionId, 
-  limit = 5 
-}: TextResponsesListProps) => {
-  const filteredResponses = responses
-    .filter(r => r.question_id === questionId)
-    .slice(0, limit);
-
+export const TextResponsesList: React.FC<TextResponsesListProps> = ({ responses, questionId }) => {
+  // Filter responses for this question
+  const questionResponses = responses.filter(r => r.question_id === questionId);
+  
+  if (questionResponses.length === 0) {
+    return <p className="text-center py-4">Nenhuma resposta para esta pergunta.</p>;
+  }
+  
   return (
-    <div className="border rounded-md p-4">
-      <p className="text-sm text-muted-foreground mb-4">
-        {responses.filter(r => r.question_id === questionId).length} respostas de texto recebidas. 
-        Respostas de texto não são exibidas em gráficos.
-      </p>
+    <div className="space-y-3 mt-4">
+      <h4 className="text-sm font-medium">Respostas de texto ({questionResponses.length})</h4>
       <div className="space-y-2">
-        <p className="font-medium">Últimas respostas:</p>
-        {filteredResponses.length > 0 ? (
-          filteredResponses.map(response => (
-            <div 
-              key={response.id} 
-              className="p-2 border rounded bg-orange-50/50 dark:bg-navy-light/20"
-            >
-              <p className="text-sm">{response.response_value}</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {response.user_name || 'Anônimo'} - 
-                {format(new Date(response.created_at), " dd/MM/yyyy HH:mm")}
-              </p>
+        {questionResponses.map((response, idx) => (
+          <div 
+            key={idx} 
+            className="p-3 rounded-md bg-muted/30 border border-border"
+          >
+            <div className="flex justify-between items-start mb-1">
+              <span className="text-sm font-medium">
+                {response.user_name || 'Anônimo'}
+              </span>
             </div>
-          ))
-        ) : (
-          <p className="text-sm italic text-muted-foreground">
-            Nenhuma resposta encontrada para esta pergunta.
-          </p>
-        )}
+            <p className="text-sm whitespace-pre-wrap">{response.response_value}</p>
+          </div>
+        ))}
       </div>
     </div>
   );

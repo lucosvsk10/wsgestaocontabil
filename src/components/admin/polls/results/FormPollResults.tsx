@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { FormattedFormResults } from "@/types/polls";
 import { PollResultsHeader } from "./PollResultsHeader";
 import { FormQuestionResult } from "./FormQuestionResult";
+import { IndividualResponses } from "./IndividualResponses";
 
 interface FormPollResultsProps {
   results: FormattedFormResults;
@@ -31,6 +32,9 @@ export const FormPollResults = ({ results }: FormPollResultsProps) => {
                 />
               );
             })}
+            
+            {/* Individual responses section */}
+            <IndividualResponses type="form" results={results} />
           </div>
         )}
       </CardContent>

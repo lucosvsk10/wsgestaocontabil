@@ -1,6 +1,6 @@
 
 import { FormQuestion, FormResponse } from "@/types/polls";
-import { OptionDistributionChart, ChartDataItem } from "./OptionDistributionChart";
+import { OptionDistributionChart } from "./OptionDistributionChart";
 import { TextResponsesList } from "./TextResponsesList";
 
 interface FormQuestionResultProps {
@@ -27,7 +27,7 @@ export const FormQuestionResult = ({
                       question.question_type === 'scale';
   
   // Prepare chart data if applicable
-  const chartData: ChartDataItem[] = hasChartData 
+  const chartData = hasChartData 
     ? Object.entries(stat.responseDistribution).map(([label, count]) => ({
         name: label,
         value: count,

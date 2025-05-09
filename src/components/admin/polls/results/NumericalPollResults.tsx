@@ -2,7 +2,8 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { FormattedNumericalResults } from "@/types/polls";
 import { PollResultsHeader } from "./PollResultsHeader";
-import { OptionDistributionChart, ChartDataItem } from "./OptionDistributionChart";
+import { OptionDistributionChart } from "./OptionDistributionChart";
+import { IndividualResponses } from "./IndividualResponses";
 
 interface NumericalPollResultsProps {
   results: FormattedNumericalResults;
@@ -47,6 +48,9 @@ export const NumericalPollResults = ({ results }: NumericalPollResultsProps) => 
                 )}
               </div>
             ))}
+            
+            {/* Individual responses section */}
+            <IndividualResponses type="numerical" results={results} />
           </div>
         )}
       </CardContent>
