@@ -1,11 +1,10 @@
 
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { AuthUser } from "@/components/admin/types/userTable";
 
 export const useUserProfileData = (refreshUsers: () => void) => {
-  const { toast } = useToast();
   const [isEditingUser, setIsEditingUser] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
   const [nameError, setNameError] = useState<string | null>(null);
