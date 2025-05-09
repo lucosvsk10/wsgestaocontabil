@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useTheme } from "@/contexts/ThemeContext";
 import AdminSidebar from "./AdminSidebar";
@@ -21,7 +22,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
   useEffect(() => {
     setSidebarOpen(!isMobile);
   }, [isMobile]);
-  return <div className="min-h-screen bg-[#F5F5F5] dark:bg-navy-deeper text-[#212121] dark:text-[#E0E0E0] flex overflow-hidden">
+  return <div className="min-h-screen bg-[#F9FAFB] dark:bg-navy-deeper text-[#212121] dark:text-[#E0E0E0] flex overflow-hidden">
       {/* Mobile sidebar toggle button */}
       {isMobile && <Button variant="ghost" size="icon" className="fixed top-4 left-4 z-50 bg-white dark:bg-navy-medium shadow-md" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}>
           {sidebarOpen ? <X size={20} /> : <MenuIcon size={20} />}
@@ -33,7 +34,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
       {/* Main content */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
         <AdminHeader />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-navy-dark">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-[#F9FAFB] dark:bg-navy-dark">
           {children}
         </main>
       </div>
