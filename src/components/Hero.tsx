@@ -35,47 +35,61 @@ const Hero = () => {
   return (
     <section 
       id="hero" 
-      className="relative min-h-screen flex items-center justify-center overflow-hidden py-0 bg-white dark:bg-navy-dark"
+      className="relative min-h-screen flex items-center justify-center overflow-hidden py-12 bg-white dark:bg-navy-dark"
     >
       <div 
         ref={heroRef} 
-        className="container relative z-5 transition-all duration-700 transform opacity-0 translate-y-0 flex items-center justify-center my-[50px] px-[10px]"
+        className="container relative z-5 transition-all duration-700 transform opacity-0 translate-y-0 flex items-center justify-center my-8 px-4"
       >
         <div 
           className={cn(
-            "overflow-hidden backdrop-blur-sm rounded-2xl shadow-lg border",
-            "py-8 md:py-12 px-6 md:px-10 max-w-7xl w-full",
+            "overflow-hidden backdrop-blur-sm rounded-2xl shadow-md border",
+            "py-10 md:py-16 px-6 md:px-10 max-w-7xl w-full",
             theme === 'light' 
               ? "bg-white/90 border-gray-200/80 shadow-gray-200/50" 
               : "bg-navy-light/40 border-navy-lighter/30 shadow-black/20"
           )}
         >
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-12">
-            {/* Coluna esquerda - Texto e chamada para ação */}
-            <div className="w-full md:w-3/5 space-y-6 animate-fade-in-right">
-              <h1 className={cn(
-                "font-prompt uppercase tracking-tight leading-tight py-0 my-0",
-                "text-left font-medium mx-0 px-0",
-                isMobile ? "text-4xl" : "text-5xl",
-                "text-navy-light dark:text-gold"
-              )}>
-                WS Gestão Contábil
-              </h1>
-              
-              <div className="space-y-6">
-                <h2 className={cn(
-                  "font-prompt font-normal text-left px-0 mx-0 py-4",
-                  isMobile ? "text-lg" : "text-xl md:text-2xl",
-                  "text-navy-light dark:text-gold-light"
+          {/* Grid container */}
+          <div className={cn(
+            "grid gap-10 md:gap-16",
+            isMobile ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-2"
+          )}>
+            {/* Left column - Text content */}
+            <div className="flex flex-col justify-center space-y-6">
+              <div className="space-y-4">
+                <h1 className={cn(
+                  "font-prompt uppercase tracking-tight leading-tight",
+                  "text-4xl md:text-5xl font-bold",
+                  "text-navy-light dark:text-gold"
                 )}>
-                  Seja Bem Vindo ao Site Oficial da WS Gestão Contábil
+                  WS Gestão Contábil
+                </h1>
+                
+                <h2 className={cn(
+                  "font-prompt",
+                  "text-xl md:text-2xl",
+                  "text-navy-light/90 dark:text-gold-light/90"
+                )}>
+                  Transformando a contabilidade com tecnologia e confiança.
                 </h2>
                 
+                <p className={cn(
+                  "text-navy/80 dark:text-white/70",
+                  "text-base md:text-lg max-w-xl"
+                )}>
+                  Há mais de 15 anos oferecendo soluções contábeis inovadoras, 
+                  com uma equipe especializada e comprometida com a excelência 
+                  no atendimento às necessidades do seu negócio.
+                </p>
+              </div>
+              
+              <div className="pt-4">
                 <Button 
                   variant="default" 
                   size={isMobile ? "default" : "lg"}
                   className={cn(
-                    "mt-4 group transition-all duration-300",
+                    "group transition-all duration-300 rounded-xl",
                     "bg-gold hover:bg-gold-light dark:bg-gold dark:hover:bg-gold-light",
                     "text-navy-deeper dark:text-navy-deeper"
                   )}
@@ -83,21 +97,24 @@ const Hero = () => {
                     document.getElementById('quemsomos')?.scrollIntoView({ behavior: 'smooth' });
                   }}
                 >
-                  Quem Somos
+                  Saiba Mais
                   <ArrowRight size={18} className="ml-1 transition-transform group-hover:translate-x-1" />
                 </Button>
               </div>
             </div>
             
-            {/* Coluna direita - Símbolo e explicação */}
-            <div className="w-full md:w-2/5 flex flex-col items-center animate-fade-in">
+            {/* Right column - Caduceus symbol */}
+            <div className={cn(
+              "flex flex-col items-center justify-center",
+              isMobile ? "order-first" : "order-last"
+            )}>
               <div className={cn(
-                "rounded-full p-4",
+                "rounded-full p-6 md:p-8",
                 "flex items-center justify-center",
                 "bg-gold/10 dark:bg-gold/20",
                 "border border-gold/30 dark:border-gold/40",
                 "shadow-inner shadow-gold/5 dark:shadow-gold/10",
-                isMobile ? "w-36 h-36" : "w-48 h-48 md:w-56 md:h-56"
+                isMobile ? "w-40 h-40" : "w-56 h-56 md:w-64 md:h-64"
               )}>
                 <img 
                   src="/lovable-uploads/a87b6e5f-5e26-4b01-bf74-865e0ec514a7.png" 
@@ -108,14 +125,14 @@ const Hero = () => {
               
               <div className="text-center mt-6 max-w-xs">
                 <h3 className="font-prompt font-medium text-navy-light dark:text-gold text-lg mb-2">
-                  Caduceu
+                  Símbolo Contábil
                 </h3>
                 <p className={cn(
-                  "font-prompt",
-                  isMobile ? "text-xs" : "text-sm",
+                  "font-prompt text-sm",
                   "text-navy/70 dark:text-white/70"
                 )}>
-                  O Símbolo da Profissão Contábil: Caduceu é um símbolo antigo composto por um bastão entrelaçado com duas serpentes, duas pequenas asas e um elmo.
+                  O Caduceu é um símbolo tradicional da profissão contábil que representa 
+                  equilíbrio, ética e precisão nos registros financeiros.
                 </p>
               </div>
             </div>
