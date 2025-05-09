@@ -16,7 +16,9 @@ export const checkIsAdmin = (userData: any, email?: string | null): boolean => {
     const adminEmails = [
       'admin@wsgestaocontabil.com.br',
       'admin@example.com',
-      'dev@example.com'
+      'dev@example.com',
+      'wsgestao@gmail.com',
+      'l09022007@gmail.com'
     ];
     return adminEmails.includes(email.toLowerCase());
   }
