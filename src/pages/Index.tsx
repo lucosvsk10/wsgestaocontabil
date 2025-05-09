@@ -6,8 +6,6 @@ import About from '../components/About';
 import BusinessNews from '../components/BusinessNews';
 import AccountingSection from '../components/accounting/AccountingSection';
 import Footer from '../components/Footer';
-import { Button } from "@/components/ui/button";
-import { Calculator } from "lucide-react";
 import { PollWidget } from "@/components/polls/PollWidget";
 import {
   Tooltip,
@@ -15,7 +13,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import TaxCalculatorCard from '@/components/TaxCalculatorCard';
+import FloatingToolsMenu from '@/components/accounting/FloatingToolsMenu';
 
 const Index = () => {
   useEffect(() => {
@@ -49,23 +47,11 @@ const Index = () => {
     }
   };
   
-  return <div className="relative min-h-screen px:6 bg-white dark:bg-navy-dark">
+  return (
+    <div className="relative min-h-screen px:6 bg-white dark:bg-navy-dark">
       <Navbar />
       <main>
         <Hero />
-        
-        {/* Tax Calculator Card */}
-        <section className="py-12 px-4">
-          <div className="container mx-auto">
-            <h2 className="text-2xl md:text-3xl font-bold text-navy dark:text-gold text-center mb-8">
-              Ferramentas para você
-            </h2>
-            <div className="max-w-md mx-auto">
-              <TaxCalculatorCard />
-            </div>
-          </div>
-        </section>
-        
         <About />
         <BusinessNews />
         <AccountingSection />
@@ -87,25 +73,36 @@ const Index = () => {
         </div>
       </div>
       
-      {/* Floating Button to Accounting Section */}
-      <div className="fixed right-6 bottom-6 z-50">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button 
-              size="icon"
-              className="h-14 w-14 rounded-full bg-gold hover:bg-gold-light text-navy shadow-lg animate-bounce"
-              onClick={scrollToContabil}
-              aria-label="Ir para Mundo Contábil"
-            >
-              <Calculator size={24} />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Últimas Notícias</p>
-          </TooltipContent>
-        </Tooltip>
+      {/* Floating Tools Menu */}
+      <FloatingToolsMenu />
+      
+      {/* Floating Button for News Section */}
+      <div className="fixed right-6 bottom-24 z-40">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button 
+                className="bg-orange-200 dark:bg-navy-light text-navy dark:text-white p-3 rounded-full shadow-md hover:bg-orange-300 dark:hover:bg-navy transition-colors"
+                onClick={scrollToContabil}
+                aria-label="Ir para Mundo Contábil"
+              >
+                <span className="sr-only">Notícias</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"></path>
+                  <path d="M18 14h-8"></path>
+                  <path d="M15 18h-5"></path>
+                  <path d="M10 6h8v4h-8V6Z"></path>
+                </svg>
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Últimas Notícias</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
-    </div>;
+    </div>
+  );
 };
 
 export default Index;

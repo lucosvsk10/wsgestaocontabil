@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
@@ -174,25 +173,9 @@ const TaxCalculator = () => {
   const COLORS = ["#efc349", "#2f3c58", "#8aa3bd"];
 
   return (
-    <div className="bg-white dark:bg-navy-dark min-h-screen">
-      <Navbar />
-      
-      <main className="container py-10 px-4">
+    <div className="bg-inherit">
+      <div className="px-4">
         <div className="max-w-4xl mx-auto">
-          <div className="mb-8 text-center">
-            <h1 className="text-3xl md:text-4xl font-bold text-navy dark:text-gold mb-4">
-              Simulador de Imposto de Renda
-            </h1>
-            <p className="text-navy/70 dark:text-white/70">
-              Faça uma simulação rápida do seu Imposto de Renda e descubra se terá restituição ou valor a pagar.
-            </p>
-            <div className="mt-4 p-3 bg-yellow-50 dark:bg-navy-light/20 border border-gold/30 rounded-md">
-              <p className="text-sm text-navy/80 dark:text-white/80 font-medium">
-                Esta simulação é apenas estimativa e não substitui o cálculo oficial da Receita Federal.
-              </p>
-            </div>
-          </div>
-          
           <Card className="mb-8">
             <CardContent className="pt-6">
               <Form {...form}>
@@ -518,9 +501,7 @@ const TaxCalculator = () => {
             </div>
           )}
         </div>
-      </main>
-      
-      <Footer />
+      </div>
     </div>
   );
 };

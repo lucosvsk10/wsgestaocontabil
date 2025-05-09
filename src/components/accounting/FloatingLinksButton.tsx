@@ -40,7 +40,16 @@ const FloatingLinksButton = ({ links }: FloatingLinksButtonProps) => {
             ))}
           </div>
         </div>
-      ) : null}
+      ) : (
+        <Button 
+          size="icon"
+          className="h-14 w-14 rounded-full bg-gold hover:bg-gold-light text-navy shadow-lg animate-bounce"
+          onClick={() => setIsFloatingButtonOpen(true)}
+          aria-label="Links Rápidos"
+        >
+          <Plus size={24} />
+        </Button>
+      )}
     </div>
   );
 };
