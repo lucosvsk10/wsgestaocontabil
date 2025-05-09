@@ -60,7 +60,7 @@ const CardTitle = React.forwardRef<
         "font-semibold leading-none tracking-tight",
         isAdmin
           ? "text-gray-800 dark:text-gold"
-          : "text-gray-800 dark:text-gold",
+          : "text-gray-800 dark:text-white", // Changed dark mode color to white for h3 tags in cards
         className
       )}
       {...props}

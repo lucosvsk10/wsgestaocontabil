@@ -107,7 +107,7 @@ export const SettingsView = () => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold mb-6 text-navy dark:text-gold">Configurações</h2>
+      <h2 className="text-2xl font-bold mb-6 text-navy dark:text-white">Configurações</h2>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Account Settings */}
