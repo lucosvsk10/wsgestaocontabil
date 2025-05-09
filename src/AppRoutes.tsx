@@ -32,7 +32,7 @@ const AppRoutes = () => {
       {/* Admin routes */}
       <Route path="/admin" element={
         <PrivateRoute requiredRole="admin">
-          <AdminDashboard activeTab="users" />
+          <AdminDashboard activeTab="dashboard" />
         </PrivateRoute>
       } />
       
@@ -42,9 +42,9 @@ const AppRoutes = () => {
         </PrivateRoute>
       } />
       
-      <Route path="/admin/documents" element={
+      <Route path="/admin/user-documents/:userId" element={
         <PrivateRoute requiredRole="admin">
-          <AdminDashboard activeTab="documents" />
+          <AdminDashboard activeTab="user-documents" />
         </PrivateRoute>
       } />
       
@@ -54,9 +54,9 @@ const AppRoutes = () => {
         </PrivateRoute>
       } />
       
-      <Route path="/admin/poll-results" element={
+      <Route path="/admin/tools" element={
         <PrivateRoute requiredRole="admin">
-          <AdminDashboard activeTab="poll-results" />
+          <AdminDashboard activeTab="tools" />
         </PrivateRoute>
       } />
       

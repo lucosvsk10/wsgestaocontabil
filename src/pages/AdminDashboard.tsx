@@ -1,29 +1,36 @@
 
 import { useState, useEffect } from "react";
-import { useDocumentManagement } from "@/hooks/useDocumentManagement";
+import { useParams, useNavigate } from "react-router-dom";
+import { useDocumentManager } from "@/hooks/document/useDocumentManager";
 import { useUserManagement } from "@/hooks/useUserManagement";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { UserType } from "@/types/admin";
 import { AdminTabsView } from "@/components/admin/AdminTabsView";
 import { AdminPasswordChangeModal } from "@/components/admin/AdminPasswordChangeModal";
 import AdminLayout from "@/components/admin/layout/AdminLayout";
 
-// Schema para alteração de senha
-const passwordSchema = z.object({
-  password: z.string().min(6, {
-    message: "A senha deve ter pelo menos 6 caracteres"
-  })
-});
-
 interface AdminDashboardProps {
-  activeTab?: string;
+  activeTab: string;
 }
 
-const AdminDashboard = ({ activeTab = "users" }: AdminDashboardProps) => {
+const AdminDashboard = ({ activeTab = "dashboard" }: AdminDashboardProps) => {
   // Estado para controlar se a página já carregou
   const [isInitialized, setIsInitialized] = useState(false);
+  const { userId } = useParams<{ userId: string }>();
+  const navigate = useNavigate();
+
+  const {
+    users,
+    supabaseUsers,
+    isLoadingUsers,
+    isLoadingAuthUsers,
+    isCreatingUser,
+    createUser,
+    selectedUserForPasswordChange,
+    setSelectedUserForPasswordChange,
+    isChangingPassword,
+    changeUserPassword,
+    fetchAuthUsers,
+    fetchUsers
+  } = useUserManagement();
 
   const {
     documents,
@@ -44,33 +51,10 @@ const AdminDashboard = ({ activeTab = "users" }: AdminDashboardProps) => {
     handleFileChange,
     handleUpload,
     handleDeleteDocument
-  } = useDocumentManagement();
-
-  const {
-    users,
-    supabaseUsers,
-    isLoadingUsers,
-    isLoadingAuthUsers,
-    isCreatingUser,
-    createUser,
-    selectedUserForPasswordChange,
-    setSelectedUserForPasswordChange,
-    isChangingPassword,
-    changeUserPassword,
-    fetchAuthUsers,
-    fetchUsers
-  } = useUserManagement();
+  } = useDocumentManager(users, supabaseUsers);
 
   // Categorias de documentos
   const documentCategories = ["Imposto de Renda", "Documentações", "Certidões"];
-
-  // Form para alteração de senha
-  const passwordForm = useForm<z.infer<typeof passwordSchema>>({
-    resolver: zodResolver(passwordSchema),
-    defaultValues: {
-      password: ""
-    }
-  });
 
   // Estado para controlar o modal de alteração de senha
   const [passwordChangeModalOpen, setPasswordChangeModalOpen] = useState(false);
@@ -91,8 +75,15 @@ const AdminDashboard = ({ activeTab = "users" }: AdminDashboardProps) => {
 
   // Function to handle document button click
   const handleDocumentButtonClick = (userId: string) => {
-    setSelectedUserId(userId);
+    navigate(`/admin/user-documents/${userId}`);
   };
+
+  // Register user-documents param for user documents page
+  useEffect(() => {
+    if (activeTab === "user-documents" && userId) {
+      setSelectedUserId(userId);
+    }
+  }, [activeTab, userId, setSelectedUserId]);
 
   return (
     <AdminLayout>
@@ -105,11 +96,10 @@ const AdminDashboard = ({ activeTab = "users" }: AdminDashboardProps) => {
           isLoadingUsers={isLoadingUsers} 
           isLoadingAuthUsers={isLoadingAuthUsers} 
           handleDocumentButtonClick={handleDocumentButtonClick} 
-          setSelectedUserForPasswordChange={(user: UserType) => {
+          setSelectedUserForPasswordChange={(user) => {
             setSelectedUserForPasswordChange(user);
             setPasswordChangeModalOpen(true);
           }}
-          passwordForm={passwordForm} 
           refreshUsers={refreshUsers} 
           createUser={createUser} 
           isCreatingUser={isCreatingUser} 
@@ -138,7 +128,6 @@ const AdminDashboard = ({ activeTab = "users" }: AdminDashboardProps) => {
           setSelectedUserForPasswordChange={setSelectedUserForPasswordChange} 
           changeUserPassword={changeUserPassword} 
           isChangingPassword={isChangingPassword} 
-          passwordForm={passwordForm} 
           passwordChangeModalOpen={passwordChangeModalOpen} 
           setPasswordChangeModalOpen={setPasswordChangeModalOpen} 
         />

@@ -5,10 +5,10 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   LayoutDashboard, 
   Users, 
-  FileText, 
   PieChart,
   Calculator, 
-  Settings 
+  Settings,
+  ToolIcon
 } from "lucide-react";
 
 interface SidebarItemProps {
@@ -94,22 +94,16 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
       to: "/admin/users"
     },
     { 
-      icon: <FileText size={20} />, 
-      label: "Documentos", 
-      active: getIsActive("/admin/documents"),
-      to: "/admin/documents"
-    },
-    { 
       icon: <PieChart size={20} />, 
       label: "Enquetes", 
       active: getIsActive("/admin/polls"),
       to: "/admin/polls"
     },
     { 
-      icon: <PieChart size={20} />, 
-      label: "Resultados", 
-      active: getIsActive("/admin/poll-results"),
-      to: "/admin/poll-results"
+      icon: <ToolIcon size={20} />, 
+      label: "Ferramentas", 
+      active: getIsActive("/admin/tools"),
+      to: "/admin/tools"
     },
     { 
       icon: <Calculator size={20} />, 

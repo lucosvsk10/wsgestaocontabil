@@ -1,16 +1,17 @@
 
-import { DocumentManager } from "./DocumentManager";
-import { UserTable } from "./UserTable";
+import { UserList } from "./UserList";
 import { PollsTabView } from "./polls/PollsTabView";
-import { PollResults } from "./polls/PollResults";
+import { UserDocumentView } from "./UserDocumentView";
 import TaxSimulationResults from "./TaxSimulationResults";
 import { UserType } from "@/types/admin";
 import { Poll } from "@/types/polls";
-import { UserList } from "./UserList";
+import { AdminDashboardView } from "./dashboard/AdminDashboardView";
+import { SettingsView } from "./settings/SettingsView";
+import { AdminToolsView } from "./tools/AdminToolsView";
 
 export interface AdminTabsViewProps {
   activeTab?: string;
-  // Props para UserTable
+  // Props para UserList
   users?: UserType[];
   supabaseUsers?: any[];
   userInfoList?: any[];
@@ -81,6 +82,15 @@ export function AdminTabsView({
   return (
     <div className="w-full">
       <div className="mt-4">
+        {/* Tab Content - Dashboard */}
+        {activeTab === "dashboard" && (
+          <AdminDashboardView 
+            users={users || []}
+            supabaseUsers={supabaseUsers || []}
+            documents={documents || []}
+          />
+        )}
+
         {/* Tab Content - Users */}
         {activeTab === "users" && (
           <div className="space-y-4">
@@ -98,30 +108,12 @@ export function AdminTabsView({
           </div>
         )}
 
-        {/* Tab Content - Documents */}
-        {activeTab === "documents" && (
-          <div className="space-y-4">
-            <DocumentManager 
-              selectedUserId={selectedUserId} 
-              documentName={documentName || ""} 
-              setDocumentName={setDocumentName || (() => {})} 
-              documentCategory={documentCategory || ""} 
-              setDocumentCategory={setDocumentCategory || (() => {})} 
-              documentObservations={documentObservations || ""} 
-              setDocumentObservations={setDocumentObservations || (() => {})} 
-              handleFileChange={handleFileChange || (() => {})} 
-              handleUpload={handleUpload || (async () => {})} 
-              isUploading={isUploading || false} 
-              documents={documents || []} 
-              isLoadingDocuments={isLoadingDocuments || false} 
-              handleDeleteDocument={handleDeleteDocument || (async () => {})} 
-              documentCategories={documentCategories || []} 
-              expirationDate={expirationDate} 
-              setExpirationDate={setExpirationDate || (() => {})} 
-              noExpiration={noExpiration || false} 
-              setNoExpiration={setNoExpiration || (() => {})} 
-            />
-          </div>
+        {/* Tab Content - User Documents */}
+        {activeTab === "user-documents" && (
+          <UserDocumentView 
+            users={users || []} 
+            supabaseUsers={supabaseUsers || []} 
+          />
         )}
 
         {/* Tab Content - Polls */}
@@ -131,10 +123,10 @@ export function AdminTabsView({
           </div>
         )}
 
-        {/* Tab Content - Poll Results */}
-        {activeTab === "poll-results" && (
+        {/* Tab Content - Tools */}
+        {activeTab === "tools" && (
           <div className="space-y-4">
-            <PollResults selectedPoll={selectedPoll || null} />
+            <AdminToolsView />
           </div>
         )}
 
@@ -148,10 +140,7 @@ export function AdminTabsView({
         {/* Tab Content - Settings */}
         {activeTab === "settings" && (
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Configurações do Sistema</h2>
-            <p className="text-gray-500 dark:text-gray-400">
-              Configurações gerais do sistema serão adicionadas aqui.
-            </p>
+            <SettingsView />
           </div>
         )}
       </div>

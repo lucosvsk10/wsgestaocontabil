@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "./utils/dateUtils";
+import { useNavigate } from "react-router-dom";
 import type { UserTableProps } from "./types/userTable";
 
 export const UserTable = ({
@@ -18,6 +19,7 @@ export const UserTable = ({
   isAdminSection = false
 }: UserTableProps) => {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>(null);
+  const navigate = useNavigate();
   
   const getUserInfo = (authUserId: string) => {
     return userInfoList.find(u => u.id === authUserId) || null;
@@ -52,6 +54,11 @@ export const UserTable = ({
       return nameB.localeCompare(nameA);
     }
   });
+
+  // Handle document button click
+  const handleDocumentButtonClick = (userId: string) => {
+    navigate(`/admin/user-documents/${userId}`);
+  };
 
   return (
     <div>
@@ -100,12 +107,12 @@ export const UserTable = ({
                     {!isAdminSection && (
                       <TableCell>
                         <div className="flex flex-wrap space-x-2 gap-y-2">
-                          {showDocumentButton && setSelectedUserId && (
+                          {showDocumentButton && (
                             <Button 
                               variant="outline" 
                               size="sm" 
-                              className="flex items-center gap-1 bg-orange-300/80 dark:bg-navy-light/80 text-navy dark:text-white hover:bg-gold hover:text-navy border-gold/20" 
-                              onClick={() => setSelectedUserId(authUser.id)}
+                              className="flex items-center gap-1 bg-orange-300/80 dark:bg-navy-light/80 text-navy dark:text-white hover:bg-gold hover:text-navy dark:hover:bg-gold dark:hover:text-navy border-gold/20" 
+                              onClick={() => handleDocumentButtonClick(authUser.id)}
                               aria-label={`Ver documentos de ${authUser.user_metadata?.name || authUser.email || "usuário"}`}
                             >
                               <FileText size={14} />
@@ -116,7 +123,7 @@ export const UserTable = ({
                             <Button
                               variant="outline"
                               size="sm"
-                              className="flex items-center gap-1 bg-orange-300/80 dark:bg-navy-light/80 text-navy dark:text-white hover:bg-gold hover:text-navy border-gold/20"
+                              className="flex items-center gap-1 bg-orange-300/80 dark:bg-navy-light/80 text-navy dark:text-white hover:bg-gold hover:text-navy dark:hover:bg-gold dark:hover:text-navy border-gold/20"
                               onClick={() => {
                                 setSelectedUserForPasswordChange(userInfo);
                                 passwordForm.reset();
@@ -133,7 +140,6 @@ export const UserTable = ({
                             className="flex items-center gap-1 bg-orange-300/80 dark:bg-navy-light/80 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white dark:hover:bg-red-600 dark:hover:text-white border-gold/20"
                             onClick={() => {
                               // Delete user action would go here
-                              // For now just call refresh
                               if (confirm('Deseja realmente excluir este usuário?')) {
                                 refreshUsers();
                               }
