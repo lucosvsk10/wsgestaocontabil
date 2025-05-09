@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useDocumentManagement } from "@/hooks/useDocumentManagement";
 import { useUserManagement } from "@/hooks/useUserManagement";
@@ -111,12 +112,57 @@ const AdminDashboard = () => {
         <div className="bg-white dark:bg-navy-dark p-6 rounded-lg shadow-md border border-gold/20">
           <h1 className="text-white :text-gold font-thin text-xl mb-6">Painel de Administração</h1>
           
-          {showDocumentManager ? <AdminDocumentView selectedUserId={selectedUserId} documentName={documentName} setDocumentName={setDocumentName} documentCategory={documentCategory} setDocumentCategory={setDocumentCategory} documentObservations={documentObservations} setDocumentObservations={setDocumentObservations} handleFileChange={handleFileChange} handleUpload={handleUpload} isUploading={isUploading} documents={documents} isLoadingDocuments={isLoadingDocuments} handleDeleteDocument={handleDeleteDocument} documentCategories={documentCategories} expirationDate={expirationDate} setExpirationDate={setExpirationDate} noExpiration={noExpiration} setNoExpiration={setNoExpiration} handleBackToUserList={handleBackToUserList} userName={getSelectedUserName()} /> : <AdminTabsView supabaseUsers={supabaseUsers} users={users} isLoadingUsers={isLoadingUsers} isLoadingAuthUsers={isLoadingAuthUsers} handleDocumentButtonClick={handleDocumentButtonClick} setSelectedUserForPasswordChange={(user: UserType) => {
-          setSelectedUserForPasswordChange(user);
-          setPasswordChangeModalOpen(true);
-        }} passwordForm={passwordForm} refreshUsers={refreshUsers} createUser={createUser} isCreatingUser={isCreatingUser} />}
+          {showDocumentManager ? (
+            <AdminDocumentView 
+              selectedUserId={selectedUserId} 
+              documentName={documentName} 
+              setDocumentName={setDocumentName} 
+              documentCategory={documentCategory} 
+              setDocumentCategory={setDocumentCategory} 
+              documentObservations={documentObservations} 
+              setDocumentObservations={setDocumentObservations} 
+              handleFileChange={handleFileChange} 
+              handleUpload={handleUpload} 
+              isUploading={isUploading} 
+              documents={documents} 
+              isLoadingDocuments={isLoadingDocuments} 
+              handleDeleteDocument={handleDeleteDocument} 
+              documentCategories={documentCategories} 
+              expirationDate={expirationDate} 
+              setExpirationDate={setExpirationDate} 
+              noExpiration={noExpiration} 
+              setNoExpiration={setNoExpiration} 
+              handleBackToUserList={handleBackToUserList} 
+              userName={getSelectedUserName()} 
+            />
+          ) : (
+            <AdminTabsView 
+              supabaseUsers={supabaseUsers} 
+              users={users} 
+              userInfoList={users}
+              isLoadingUsers={isLoadingUsers} 
+              isLoadingAuthUsers={isLoadingAuthUsers} 
+              handleDocumentButtonClick={handleDocumentButtonClick} 
+              setSelectedUserForPasswordChange={(user: UserType) => {
+                setSelectedUserForPasswordChange(user);
+                setPasswordChangeModalOpen(true);
+              }}
+              passwordForm={passwordForm} 
+              refreshUsers={refreshUsers} 
+              createUser={createUser} 
+              isCreatingUser={isCreatingUser} 
+            />
+          )}
           
-          <AdminPasswordChangeModal selectedUserForPasswordChange={selectedUserForPasswordChange} setSelectedUserForPasswordChange={setSelectedUserForPasswordChange} changeUserPassword={changeUserPassword} isChangingPassword={isChangingPassword} passwordForm={passwordForm} passwordChangeModalOpen={passwordChangeModalOpen} setPasswordChangeModalOpen={setPasswordChangeModalOpen} />
+          <AdminPasswordChangeModal 
+            selectedUserForPasswordChange={selectedUserForPasswordChange} 
+            setSelectedUserForPasswordChange={setSelectedUserForPasswordChange} 
+            changeUserPassword={changeUserPassword} 
+            isChangingPassword={isChangingPassword} 
+            passwordForm={passwordForm} 
+            passwordChangeModalOpen={passwordChangeModalOpen} 
+            setPasswordChangeModalOpen={setPasswordChangeModalOpen} 
+          />
         </div>
       </div>
       <Footer />
