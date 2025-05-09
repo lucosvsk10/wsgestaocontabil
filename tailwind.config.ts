@@ -21,7 +21,8 @@ export default {
 		extend: {
 			fontFamily: {
 				anton: ['Anton', 'sans-serif'],
-				prompt: ['Prompt', 'sans-serif']
+				prompt: ['Prompt', 'sans-serif'],
+				roboto: ['Roboto', 'system-ui', 'sans-serif']
 			},
 			colors: {
 				border: 'hsl(var(--border))',
@@ -84,6 +85,19 @@ export default {
                 // Add the new background color
                 page: {
                     DEFAULT: '#393532'
+                },
+                // Admin colors for light and dark mode
+                admin: {
+                    light: {
+                        bg: '#F5F5F5',
+                        text: '#212121',
+                        element: '#FFFFFF'
+                    },
+                    dark: {
+                        bg: '#121212',
+                        text: '#E0E0E0',
+                        element: '#1E1E1E'
+                    }
                 }
 			},
 			borderRadius: {

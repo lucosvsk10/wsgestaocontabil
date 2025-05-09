@@ -1,3 +1,4 @@
+
 import { useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
@@ -8,6 +9,7 @@ import Footer from '../components/Footer';
 import { PollWidget } from "@/components/polls/PollWidget";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import FloatingToolsMenu from '@/components/accounting/FloatingToolsMenu';
+
 const Index = () => {
   useEffect(() => {
     const handleIntersection = (entries: IntersectionObserverEntry[]) => {
@@ -32,6 +34,7 @@ const Index = () => {
       });
     };
   }, []);
+  
   const scrollToContabil = () => {
     const contabilSection = document.getElementById('contabil');
     if (contabilSection) {
@@ -40,6 +43,7 @@ const Index = () => {
       });
     }
   };
+  
   return <div className="relative min-h-screen px:6 bg-white dark:bg-navy-dark">
       <Navbar />
       <main>
@@ -67,20 +71,7 @@ const Index = () => {
       
       {/* Floating Tools Menu */}
       <FloatingToolsMenu />
-      
-      {/* Floating Button for News Section */}
-      <div className="fixed right-6 bottom-24 z-40">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Últimas Notícias</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
     </div>;
 };
+
 export default Index;

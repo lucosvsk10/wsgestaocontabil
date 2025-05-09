@@ -5,15 +5,18 @@ import { cn } from "@/lib/utils"
 
 const Card = React.forwardRef<
   HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => {
+  React.HTMLAttributes<HTMLDivElement> & { isAdmin?: boolean }
+>(({ className, isAdmin = false, ...props }, ref) => {
   const isMobile = useIsMobile();
   
   return (
     <div
       ref={ref}
       className={cn(
-        "rounded-lg border bg-white dark:bg-navy-dark text-navy dark:text-white shadow-sm",
+        "rounded-lg border shadow-sm",
+        isAdmin 
+          ? "bg-white dark:bg-[#1E1E1E] text-[#212121] dark:text-[#E0E0E0] border-gray-200 dark:border-gray-800" 
+          : "bg-white dark:bg-navy-dark text-navy dark:text-white border-gold/20 dark:border-gold/20",
         isMobile ? "aspect-[4/3]" : "aspect-auto",
         className
       )}
@@ -25,8 +28,8 @@ Card.displayName = "Card"
 
 const CardHeader = React.forwardRef<
   HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => {
+  React.HTMLAttributes<HTMLDivElement> & { isAdmin?: boolean }
+>(({ className, isAdmin = false, ...props }, ref) => {
   const isMobile = useIsMobile();
   
   return (
@@ -45,8 +48,8 @@ CardHeader.displayName = "CardHeader"
 
 const CardTitle = React.forwardRef<
   HTMLParagraphElement,
-  React.HTMLAttributes<HTMLHeadingElement>
->(({ className, ...props }, ref) => {
+  React.HTMLAttributes<HTMLHeadingElement> & { isAdmin?: boolean }
+>(({ className, isAdmin = false, ...props }, ref) => {
   const isMobile = useIsMobile();
   
   return (
@@ -54,7 +57,10 @@ const CardTitle = React.forwardRef<
       ref={ref}
       className={cn(
         isMobile ? "text-xl" : "text-2xl",
-        "font-semibold leading-none tracking-tight text-navy dark:text-gold",
+        "font-semibold leading-none tracking-tight",
+        isAdmin
+          ? "text-[#212121] dark:text-[#E0E0E0]"
+          : "text-navy dark:text-gold",
         className
       )}
       {...props}
@@ -65,11 +71,17 @@ CardTitle.displayName = "CardTitle"
 
 const CardDescription = React.forwardRef<
   HTMLParagraphElement,
-  React.HTMLAttributes<HTMLParagraphElement>
->(({ className, ...props }, ref) => (
+  React.HTMLAttributes<HTMLParagraphElement> & { isAdmin?: boolean }
+>(({ className, isAdmin = false, ...props }, ref) => (
   <p
     ref={ref}
-    className={cn("text-sm text-navy/70 dark:text-white/70", className)}
+    className={cn(
+      "text-sm",
+      isAdmin
+        ? "text-[#212121]/70 dark:text-[#E0E0E0]/70"
+        : "text-navy/70 dark:text-white/70", 
+      className
+    )}
     {...props}
   />
 ))
