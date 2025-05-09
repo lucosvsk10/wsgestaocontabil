@@ -12,8 +12,8 @@ import { Poll } from "@/types/polls";
 export interface AdminTabsViewProps {
   activeTab?: string;
   onTabChange?: (tab: string) => void;
-  // Props necessárias para UserTable
-  users?: any[];
+  // Props para UserTable
+  users?: UserType[];
   supabaseUsers?: any[];
   userInfoList?: any[];
   isLoadingUsers?: boolean;
@@ -24,6 +24,25 @@ export interface AdminTabsViewProps {
   refreshUsers?: () => void;
   createUser?: (data: any) => Promise<void>;
   isCreatingUser?: boolean;
+  // Props para DocumentManager
+  selectedUserId?: string | null;
+  documentName?: string;
+  setDocumentName?: (name: string) => void;
+  documentCategory?: string;
+  setDocumentCategory?: (category: string) => void;
+  documentObservations?: string;
+  setDocumentObservations?: (observations: string) => void;
+  handleFileChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleUpload?: (e: React.FormEvent) => Promise<void>;
+  isUploading?: boolean;
+  documents?: any[];
+  isLoadingDocuments?: boolean;
+  handleDeleteDocument?: (documentId: string) => Promise<void>;
+  documentCategories?: string[];
+  expirationDate?: Date | null;
+  setExpirationDate?: (date: Date | null) => void;
+  noExpiration?: boolean;
+  setNoExpiration?: (value: boolean) => void;
   // Props para PollResults
   selectedPoll?: Poll | null;
 }
@@ -42,20 +61,38 @@ export function AdminTabsView({
   refreshUsers,
   createUser,
   isCreatingUser,
+  selectedUserId,
+  documentName,
+  setDocumentName,
+  documentCategory,
+  setDocumentCategory,
+  documentObservations,
+  setDocumentObservations,
+  handleFileChange,
+  handleUpload,
+  isUploading,
+  documents,
+  isLoadingDocuments,
+  handleDeleteDocument,
+  documentCategories,
+  expirationDate,
+  setExpirationDate,
+  noExpiration,
+  setNoExpiration,
   selectedPoll
 }: AdminTabsViewProps) {
   return (
     <div className="w-full">
-      <Tabs defaultValue={activeTab || "documents"} onValueChange={onTabChange}>
+      <Tabs defaultValue={activeTab || "users"} onValueChange={onTabChange}>
         <div className="border-b border-gray-200 dark:border-gray-800">
           <TabsList className="h-10 w-full md:w-auto flex overflow-x-auto">
-            <TabsTrigger value="documents" className="flex-none">
-              <FileText className="mr-2 h-4 w-4" />
-              Documentos
-            </TabsTrigger>
             <TabsTrigger value="users" className="flex-none">
               <User className="mr-2 h-4 w-4" />
               Usuários
+            </TabsTrigger>
+            <TabsTrigger value="documents" className="flex-none">
+              <FileText className="mr-2 h-4 w-4" />
+              Documentos
             </TabsTrigger>
             <TabsTrigger value="polls" className="flex-none">
               <ChartBar className="mr-2 h-4 w-4" />
@@ -72,28 +109,6 @@ export function AdminTabsView({
           </TabsList>
         </div>
         <div className="mt-4">
-          <TabsContent value="documents" className="space-y-4">
-            <DocumentManager 
-              selectedUserId={null} 
-              documentName="" 
-              setDocumentName={() => {}} 
-              documentCategory="" 
-              setDocumentCategory={() => {}} 
-              documentObservations="" 
-              setDocumentObservations={() => {}} 
-              handleFileChange={() => {}} 
-              handleUpload={async () => {}} 
-              isUploading={false} 
-              documents={[]} 
-              isLoadingDocuments={false} 
-              handleDeleteDocument={async () => {}} 
-              documentCategories={[]} 
-              expirationDate={null} 
-              setExpirationDate={() => {}} 
-              noExpiration={false} 
-              setNoExpiration={() => {}} 
-            />
-          </TabsContent>
           <TabsContent value="users" className="space-y-4">
             {users && supabaseUsers && (
               <UserTable 
@@ -106,6 +121,28 @@ export function AdminTabsView({
                 refreshUsers={refreshUsers || (() => {})} 
               />
             )}
+          </TabsContent>
+          <TabsContent value="documents" className="space-y-4">
+            <DocumentManager 
+              selectedUserId={selectedUserId} 
+              documentName={documentName || ""} 
+              setDocumentName={setDocumentName || (() => {})} 
+              documentCategory={documentCategory || ""} 
+              setDocumentCategory={setDocumentCategory || (() => {})} 
+              documentObservations={documentObservations || ""} 
+              setDocumentObservations={setDocumentObservations || (() => {})} 
+              handleFileChange={handleFileChange || (() => {})} 
+              handleUpload={handleUpload || (async () => {})} 
+              isUploading={isUploading || false} 
+              documents={documents || []} 
+              isLoadingDocuments={isLoadingDocuments || false} 
+              handleDeleteDocument={handleDeleteDocument || (async () => {})} 
+              documentCategories={documentCategories || []} 
+              expirationDate={expirationDate} 
+              setExpirationDate={setExpirationDate || (() => {})} 
+              noExpiration={noExpiration || false} 
+              setNoExpiration={setNoExpiration || (() => {})} 
+            />
           </TabsContent>
           <TabsContent value="polls" className="space-y-4">
             <PollsTabView />
