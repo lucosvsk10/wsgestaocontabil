@@ -1,4 +1,6 @@
 
+import { Session } from '@supabase/supabase-js';
+
 export interface Document {
   id: string;
   user_id: string;
