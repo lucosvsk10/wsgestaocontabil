@@ -8,7 +8,7 @@ import {
   PieChart,
   Calculator, 
   Settings,
-  ToolIcon
+  Tool
 } from "lucide-react";
 
 interface SidebarItemProps {
@@ -100,7 +100,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
       to: "/admin/polls"
     },
     { 
-      icon: <ToolIcon size={20} />, 
+      icon: <Tool size={20} />, 
       label: "Ferramentas", 
       active: getIsActive("/admin/tools"),
       to: "/admin/tools"

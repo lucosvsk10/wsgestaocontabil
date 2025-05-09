@@ -6,6 +6,7 @@ import { useUserManagement } from "@/hooks/useUserManagement";
 import { AdminTabsView } from "@/components/admin/AdminTabsView";
 import { AdminPasswordChangeModal } from "@/components/admin/AdminPasswordChangeModal";
 import AdminLayout from "@/components/admin/layout/AdminLayout";
+import { useForm } from "react-hook-form";
 
 interface AdminDashboardProps {
   activeTab: string;
@@ -16,6 +17,14 @@ const AdminDashboard = ({ activeTab = "dashboard" }: AdminDashboardProps) => {
   const [isInitialized, setIsInitialized] = useState(false);
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
+  
+  // Create a password form with react-hook-form
+  const passwordForm = useForm({
+    defaultValues: {
+      newPassword: '',
+      confirmPassword: ''
+    }
+  });
 
   const {
     users,
@@ -100,6 +109,7 @@ const AdminDashboard = ({ activeTab = "dashboard" }: AdminDashboardProps) => {
             setSelectedUserForPasswordChange(user);
             setPasswordChangeModalOpen(true);
           }}
+          passwordForm={passwordForm}
           refreshUsers={refreshUsers} 
           createUser={createUser} 
           isCreatingUser={isCreatingUser} 
@@ -128,6 +138,7 @@ const AdminDashboard = ({ activeTab = "dashboard" }: AdminDashboardProps) => {
           setSelectedUserForPasswordChange={setSelectedUserForPasswordChange} 
           changeUserPassword={changeUserPassword} 
           isChangingPassword={isChangingPassword} 
+          passwordForm={passwordForm} 
           passwordChangeModalOpen={passwordChangeModalOpen} 
           setPasswordChangeModalOpen={setPasswordChangeModalOpen} 
         />

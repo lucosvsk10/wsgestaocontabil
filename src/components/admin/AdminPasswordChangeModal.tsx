@@ -7,7 +7,7 @@ interface AdminPasswordChangeModalProps {
   setSelectedUserForPasswordChange: (user: UserType | null) => void;
   changeUserPassword: (data: any) => void;
   isChangingPassword: boolean;
-  passwordForm: any;
+  passwordForm?: any;
   passwordChangeModalOpen: boolean;
   setPasswordChangeModalOpen: (value: boolean) => void;
 }
@@ -17,7 +17,7 @@ export const AdminPasswordChangeModal = ({
   setSelectedUserForPasswordChange,
   changeUserPassword,
   isChangingPassword,
-  passwordForm,
+  passwordForm = {},
   passwordChangeModalOpen,
   setPasswordChangeModalOpen
 }: AdminPasswordChangeModalProps) => {

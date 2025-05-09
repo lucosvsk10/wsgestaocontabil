@@ -32,11 +32,11 @@ export const UserDocumentView = ({ users, supabaseUsers }: UserDocumentViewProps
     setDocumentCategory,
     documentObservations,
     setDocumentObservations,
-    isLoadingDocuments,
     expirationDate,
     setExpirationDate,
     noExpiration,
     setNoExpiration,
+    isLoadingDocuments,
     handleFileChange,
     handleUpload,
     handleDeleteDocument
