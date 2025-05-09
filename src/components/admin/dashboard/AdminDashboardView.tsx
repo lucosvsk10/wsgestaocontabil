@@ -49,7 +49,7 @@ export const AdminDashboardView = ({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatisticsCard
               icon={<Users className="h-8 w-8" />}
-              title="🧑‍💼 Clientes ativos"
+              title="Clientes ativos"
               value={clientUsers.length}
               iconBgClass="bg-blue-100 dark:bg-blue-900/30"
               iconColor="text-blue-600 dark:text-blue-400"
@@ -57,7 +57,7 @@ export const AdminDashboardView = ({
             
             <StatisticsCard
               icon={<FileText className="h-8 w-8" />}
-              title="📄 Documentos"
+              title="Documentos"
               value={totalDocumentsCount}
               iconBgClass="bg-green-100 dark:bg-green-900/30"
               iconColor="text-green-600 dark:text-green-400"
@@ -65,7 +65,7 @@ export const AdminDashboardView = ({
             
             <StatisticsCard
               icon={<PieChart className="h-8 w-8" />}
-              title="🧠 Enquetes criadas"
+              title="Enquetes criadas"
               value={pollCount}
               iconBgClass="bg-purple-100 dark:bg-purple-900/30"
               iconColor="text-purple-600 dark:text-purple-400"
@@ -73,7 +73,7 @@ export const AdminDashboardView = ({
             
             <StatisticsCard
               icon={<Clock className="h-8 w-8" />}
-              title="⏱️ Último login"
+              title="Último login"
               value={lastLogin || "Não disponível"}
               iconBgClass="bg-amber-100 dark:bg-amber-900/30"
               iconColor="text-amber-600 dark:text-amber-400"
