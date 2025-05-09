@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useStorageStats } from "@/hooks/useStorageStats";
@@ -16,6 +16,7 @@ export const useDashboardData = (supabaseUsers: any[]) => {
   const { 
     storageStats, 
     isLoading: isLoadingStorage, 
+    error: storageError,
     fetchStorageStats 
   } = useStorageStats();
   
@@ -40,31 +41,45 @@ export const useDashboardData = (supabaseUsers: any[]) => {
   }, [user]);
   
   // Fetch total documents count
+  const fetchTotalDocuments = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const { count, error } = await supabase
+        .from('documents')
+        .select('*', { count: 'exact', head: true });
+      
+      if (error) throw error;
+      setTotalDocumentsCount(count || 0);
+    } catch (error) {
+      console.error("Error fetching total documents:", error);
+      setTotalDocumentsCount(0);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+  
+  // Fetch initial data
   useEffect(() => {
-    const fetchTotalDocuments = async () => {
+    fetchTotalDocuments();
+    fetchStorageStats();
+    
+    // Also fetch poll count and recent documents
+    const fetchPolls = async () => {
       try {
-        setIsLoading(true);
         const { count, error } = await supabase
-          .from('documents')
+          .from('polls')
           .select('*', { count: 'exact', head: true });
         
         if (error) throw error;
-        setTotalDocumentsCount(count || 0);
+        setPollCount(count || 0);
       } catch (error) {
-        console.error("Error fetching total documents:", error);
-        setTotalDocumentsCount(0);
-      } finally {
-        setIsLoading(false);
+        console.error("Error fetching polls:", error);
+        setPollCount(0);
       }
     };
     
-    fetchTotalDocuments();
-  }, []);
-  
-  // Fetch storage stats
-  useEffect(() => {
-    fetchStorageStats();
-  }, [fetchStorageStats]);
+    fetchPolls();
+  }, [fetchTotalDocuments, fetchStorageStats]);
   
   // Fetch recent documents
   useEffect(() => {
@@ -92,6 +107,7 @@ export const useDashboardData = (supabaseUsers: any[]) => {
         setRecentDocuments(enrichedDocs);
       } catch (error) {
         console.error("Error fetching recent documents:", error);
+        setRecentDocuments([]);
       } finally {
         setIsLoading(false);
       }
@@ -102,24 +118,6 @@ export const useDashboardData = (supabaseUsers: any[]) => {
     }
   }, [supabaseUsers]);
   
-  // Fetch poll count
-  useEffect(() => {
-    const fetchPolls = async () => {
-      try {
-        const { count, error } = await supabase
-          .from('polls')
-          .select('*', { count: 'exact', head: true });
-        
-        if (error) throw error;
-        setPollCount(count || 0);
-      } catch (error) {
-        console.error("Error fetching polls:", error);
-      }
-    };
-    
-    fetchPolls();
-  }, []);
-
   // Format date for display
   const formatDate = (dateStr: string) => {
     if (!dateStr) return 'Data desconhecida';
@@ -154,6 +152,11 @@ export const useDashboardData = (supabaseUsers: any[]) => {
     }
   };
 
+  const refreshData = useCallback(() => {
+    fetchTotalDocuments();
+    fetchStorageStats();
+  }, [fetchTotalDocuments, fetchStorageStats]);
+
   return {
     lastLogin,
     totalDocumentsCount,
@@ -161,6 +164,8 @@ export const useDashboardData = (supabaseUsers: any[]) => {
     recentDocuments,
     formatRecentDate,
     storageStats,
+    storageError,
+    refreshData,
     isLoading: isLoading || isLoadingStorage
   };
 };

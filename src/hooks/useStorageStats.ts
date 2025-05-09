@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -25,7 +25,7 @@ export const useStorageStats = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchStorageStats = async () => {
+  const fetchStorageStats = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     
@@ -48,7 +48,10 @@ export const useStorageStats = () => {
             const data = await response.json();
             setStorageStats(data);
             setIsLoading(false);
-            return;
+            return; // Exit function early if edge function succeeds
+          } else {
+            console.warn('Edge function response not OK:', response.status);
+            // Continue to fallback method
           }
         } catch (edgeFnError) {
           console.error('Error calling storage-stats edge function:', edgeFnError);
@@ -103,29 +106,40 @@ export const useStorageStats = () => {
         };
       });
       
-      setStorageStats({
+      const stats = {
         totalStorageBytes: totalBytes,
         totalStorageKB: totalKB,
         totalStorageMB: totalMB,
         userStorage
-      });
+      };
+      
+      setStorageStats(stats);
     } catch (error: any) {
       console.error('Erro ao obter estatísticas de armazenamento:', error);
-      setError(error.message);
+      setError(error.message || 'Erro desconhecido ao buscar estatísticas de armazenamento');
+      
+      // Set fallback empty data to prevent infinite loading
+      setStorageStats({
+        totalStorageBytes: 0,
+        totalStorageKB: 0,
+        totalStorageMB: 0,
+        userStorage: []
+      });
+      
       toast({
         variant: "destructive",
         title: "Erro ao obter estatísticas de armazenamento",
-        description: error.message
+        description: error.message || 'Tente novamente mais tarde'
       });
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
 
-  // Auto-fetch on mount
+  // Only auto-fetch on mount
   useEffect(() => {
     fetchStorageStats();
-  }, []);
+  }, [fetchStorageStats]);
 
   return {
     storageStats,
