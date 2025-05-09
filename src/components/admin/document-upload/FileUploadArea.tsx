@@ -1,36 +1,41 @@
 
-import React, { useState } from "react";
-import { Upload } from "lucide-react";
+import { UploadCloud } from "lucide-react";
+import React from "react";
+
 interface FileUploadAreaProps {
   handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
-export const FileUploadArea = ({
-  handleFileChange
-}: FileUploadAreaProps) => {
-  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setSelectedFileName(e.target.files[0].name);
-      handleFileChange(e);
-    }
-  };
-  return <div className="space-y-2">
-      <label htmlFor="fileInput" className="text-sm font-medium text-gray-700 dark:text-[#e9aa91]">
-        Arquivo
+
+export const FileUploadArea = ({ handleFileChange }: FileUploadAreaProps) => {
+  return (
+    <div className="mt-2">
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+        Arquivo do Documento
       </label>
-      <div className="flex items-center justify-center w-full">
-        <label htmlFor="fileInput" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 dark:border-gold/20 rounded-lg cursor-pointer transition-colors bg-gray-50 hover:bg-gray-100 dark:bg-navy-dark dark:hover:bg-navy-light/10">
-          <div className="flex flex-col items-center justify-center pt-5 pb-6">
-            <Upload className="w-8 h-8 mb-2 text-gray-400 dark:text-gold/60" />
-            <p className="mb-2 text-sm text-gray-600 dark:text-[#e9aa91]">
-              <span className="font-semibold">Clique para enviar</span> ou arraste e solte
-            </p>
-            {selectedFileName ? <p className="text-xs text-gray-700 dark:text-white bg-gray-200/80 dark:bg-[#46413d]/80 px-2 py-1 rounded">
-                {selectedFileName}
-              </p> : <p className="text-xs text-gray-500 dark:text-[#e9aa91]/60">PDF, DOCX, JPG, PNG (max. 10MB)</p>}
+      <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed border-gray-300 dark:border-gold/20 dark:hover:border-gold/40 rounded-lg cursor-pointer bg-gray-50 dark:bg-navy-light/20 hover:bg-gray-100 dark:hover:bg-navy-light/30 transition-all duration-200">
+        <div className="space-y-1 text-center">
+          <UploadCloud className="mx-auto h-12 w-12 text-gray-400 dark:text-gold/70" />
+          <div className="flex text-sm text-gray-600 dark:text-gray-300">
+            <label
+              htmlFor="file-upload"
+              className="relative cursor-pointer rounded-md font-medium text-navy dark:text-gold hover:text-navy-light dark:hover:text-gold-light focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-navy dark:focus-within:ring-gold/50"
+            >
+              <span>Upload um arquivo</span>
+              <input
+                id="file-upload"
+                name="file-upload"
+                type="file"
+                className="sr-only"
+                onChange={handleFileChange}
+              />
+            </label>
+            <p className="pl-1">ou arraste e solte</p>
           </div>
-          <input id="fileInput" type="file" className="hidden" onChange={handleFileSelect} required />
-        </label>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            PDF, DOC, DOCX, XLS, XLSX, JPG, PNG até 10MB
+          </p>
+        </div>
       </div>
-    </div>;
+    </div>
+  );
 };

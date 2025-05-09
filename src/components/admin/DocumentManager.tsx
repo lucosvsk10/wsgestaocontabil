@@ -52,12 +52,12 @@ export const DocumentManager = ({
 
   if (!selectedUserId) {
     return (
-      <Card className="bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20 shadow-md">
+      <Card className="bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20 shadow-lg">
         <CardContent className="pt-6">
-          <Alert className="border-gray-300 dark:border-gold/20 bg-orange-50 dark:bg-navy-light/80">
+          <Alert className="border-gray-300 dark:border-gold/20 bg-orange-50 dark:bg-navy-light/10 text-navy dark:text-white">
             <AlertCircle className="h-4 w-4 text-orange-500 dark:text-gold" />
-            <AlertTitle className="text-gray-800 dark:text-gold">Nenhum usuário selecionado</AlertTitle>
-            <AlertDescription className="text-gray-700 dark:text-white">
+            <AlertTitle className="text-gray-800 dark:text-gold font-medium">Nenhum usuário selecionado</AlertTitle>
+            <AlertDescription className="text-gray-700 dark:text-gray-200">
               Selecione um usuário na lista para gerenciar seus documentos.
             </AlertDescription>
           </Alert>
@@ -68,32 +68,32 @@ export const DocumentManager = ({
 
   return (
     <Tabs defaultValue="upload" value={activeTab} onValueChange={setActiveTab}>
-      <TabsList className="mb-4 border border-gray-300 dark:border-gold/20 bg-gray-50 dark:bg-navy-light shadow-sm">
+      <TabsList className="mb-4 border border-gray-300 dark:border-gold/20 bg-gray-50 dark:bg-navy-light/10 shadow-sm overflow-hidden">
         <TabsTrigger 
           value="upload" 
-          className="text-gray-700 dark:text-white data-[state=active]:bg-navy data-[state=active]:text-white dark:data-[state=active]:bg-gold dark:data-[state=active]:text-navy"
+          className="text-gray-700 dark:text-white data-[state=active]:bg-navy data-[state=active]:text-white dark:data-[state=active]:bg-gold dark:data-[state=active]:text-navy transition-colors"
         >
           Enviar documento
         </TabsTrigger>
         <TabsTrigger 
           value="manage" 
-          className="text-gray-700 dark:text-white data-[state=active]:bg-navy data-[state=active]:text-white dark:data-[state=active]:bg-gold dark:data-[state=active]:text-navy"
+          className="text-gray-700 dark:text-white data-[state=active]:bg-navy data-[state=active]:text-white dark:data-[state=active]:bg-gold dark:data-[state=active]:text-navy transition-colors"
         >
           Gerenciar documentos
         </TabsTrigger>
       </TabsList>
       
-      <TabsContent value="upload" className="bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20 rounded-lg shadow-md p-4">
+      <TabsContent value="upload" className="bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20 rounded-lg shadow-lg p-6">
         <div className="grid grid-cols-1 gap-6">
-          <Alert variant="default" className="border-orange-200 dark:border-gold/20 bg-orange-50 dark:bg-navy-light/80">
+          <Alert variant="default" className="border-orange-200 dark:border-gold/20 bg-orange-50 dark:bg-navy-light/10 text-navy dark:text-white">
             <HelpCircle className="h-4 w-4 text-orange-500 dark:text-gold" />
-            <AlertTitle className="text-gray-800 dark:text-gold">Dica</AlertTitle>
-            <AlertDescription className="text-gray-700 dark:text-white">
+            <AlertTitle className="text-gray-800 dark:text-gold font-medium">Dica</AlertTitle>
+            <AlertDescription className="text-gray-700 dark:text-gray-200">
               Para documentos na categoria "Impostos", você pode especificar se é Imposto de Renda ou outros tipos de impostos.
             </AlertDescription>
           </Alert>
           
-          <div className="w-full px-4 py-2">
+          <div className="w-full">
             <DocumentUpload 
               onUpload={handleUpload} 
               isUploading={isUploading} 
@@ -103,7 +103,7 @@ export const DocumentManager = ({
               setDocumentCategory={setDocumentCategory} 
               documentObservations={documentObservations} 
               setDocumentObservations={setDocumentObservations} 
-              documentCategories={["Impostos", "Folha de Pagamento", "Documentações", "Certidões"]} 
+              documentCategories={documentCategories} 
               handleFileChange={handleFileChange} 
               expirationDate={expirationDate} 
               setExpirationDate={setExpirationDate} 
@@ -114,7 +114,7 @@ export const DocumentManager = ({
         </div>
       </TabsContent>
       
-      <TabsContent value="manage" className="bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20 rounded-lg shadow-md">
+      <TabsContent value="manage" className="bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20 rounded-lg shadow-lg">
         <DocumentList 
           documents={documents} 
           isLoading={isLoadingDocuments} 

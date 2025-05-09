@@ -62,13 +62,13 @@ export const UserDocumentView = ({ users, supabaseUsers }: UserDocumentViewProps
 
   if (!userId) {
     return (
-      <Card className="px-0 bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20 shadow-md">
-        <CardContent className="p-6">
+      <Card className="px-0 bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20 shadow-lg">
+        <CardContent className="p-8">
           <div className="text-center">
-            <p className="text-gray-600 dark:text-gray-400">Nenhum usuário selecionado</p>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">Nenhum usuário selecionado</p>
             <Button 
               variant="outline" 
-              className="mt-4"
+              className="mt-2 bg-white dark:bg-navy-light/30 border-gold/20 dark:text-gold hover:bg-gold/10 dark:hover:bg-gold/20 hover:text-navy dark:hover:text-navy"
               onClick={handleBackToUserList}
             >
               <ArrowLeft size={16} className="mr-2" />
@@ -81,7 +81,7 @@ export const UserDocumentView = ({ users, supabaseUsers }: UserDocumentViewProps
   }
 
   return (
-    <Card className="px-0 bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20 shadow-md">
+    <Card className="px-0 bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20 shadow-lg">
       <CardHeader className="border-b border-gray-200 dark:border-gold/20 px-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
@@ -89,7 +89,7 @@ export const UserDocumentView = ({ users, supabaseUsers }: UserDocumentViewProps
               variant="outline" 
               size="sm" 
               onClick={handleBackToUserList} 
-              className="flex items-center gap-1 bg-white dark:bg-navy-light/80 text-navy dark:text-gold hover:bg-gold hover:text-navy dark:hover:bg-gold dark:hover:text-navy border border-gold/20 shadow-sm mb-2"
+              className="flex items-center gap-1 bg-white dark:bg-navy-light/30 text-navy dark:text-gold hover:bg-gold hover:text-navy dark:hover:bg-gold dark:hover:text-navy border border-gold/20 shadow-sm mb-3"
             >
               <ArrowLeft size={16} />
               Voltar para lista de usuários

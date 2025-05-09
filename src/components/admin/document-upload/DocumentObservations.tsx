@@ -1,28 +1,32 @@
 
-import React from "react";
 import { Textarea } from "@/components/ui/textarea";
+import React from "react";
+
 interface DocumentObservationsProps {
   documentObservations: string;
-  setDocumentObservations: (value: string) => void;
+  setDocumentObservations: (observations: string) => void;
 }
+
 export const DocumentObservations = ({
   documentObservations,
-  setDocumentObservations
+  setDocumentObservations,
 }: DocumentObservationsProps) => {
-  return <div className="space-y-2">
-      <label htmlFor="observations" className="text-sm font-medium text-gray-700 dark:text-[#e9aa91]">
-        Observações
+  return (
+    <div>
+      <label
+        htmlFor="document-observations"
+        className="block text-sm font-medium text-gray-700 dark:text-gray-200"
+      >
+        Observações (opcional)
       </label>
-      <Textarea 
-        id="observations" 
-        placeholder="Observações sobre o documento (opcional)" 
-        value={documentObservations} 
-        onChange={e => setDocumentObservations(e.target.value)} 
-        rows={3} 
-        className="border-gray-300 dark:border-gold/20 text-gray-800 dark:text-white focus-visible:ring-navy/30 dark:focus-visible:ring-gold/30 bg-white dark:bg-navy-dark shadow-sm" 
+      <Textarea
+        id="document-observations"
+        value={documentObservations}
+        onChange={(e) => setDocumentObservations(e.target.value)}
+        className="mt-1 block w-full border-gray-300 dark:border-gold/20 focus:ring-navy dark:focus:ring-gold/50 focus:border-navy dark:focus:border-gold/50 sm:text-sm rounded-md dark:bg-navy-dark dark:text-white dark:placeholder-gray-400"
+        rows={3}
+        placeholder="Adicione observações relevantes sobre o documento, como notas ou comentários específicos"
       />
-      <p className="text-xs text-gray-500 dark:text-[#e9aa91]/70">
-        Adicione instruções ou informações relevantes sobre o documento
-      </p>
-    </div>;
+    </div>
+  );
 };

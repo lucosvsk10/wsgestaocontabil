@@ -1,29 +1,25 @@
 
-import React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 interface DocumentNameInputProps {
   documentName: string;
-  setDocumentName: (value: string) => void;
+  setDocumentName: (name: string) => void;
 }
 
-export const DocumentNameInput = ({
-  documentName,
-  setDocumentName
-}: DocumentNameInputProps) => {
+export const DocumentNameInput = ({ documentName, setDocumentName }: DocumentNameInputProps) => {
   return (
-    <div className="space-y-2">
-      <Label htmlFor="documentName" className="text-sm font-medium text-gray-700 dark:text-[#e9aa91]">
+    <div>
+      <Label htmlFor="document-name" className="text-gray-700 dark:text-gray-200">
         Nome do Documento
       </Label>
-      <Input 
-        id="documentName" 
-        placeholder="Nome do documento" 
-        value={documentName} 
-        onChange={e => setDocumentName(e.target.value)} 
-        required 
-        className="border-gray-300 dark:border-gold/20 text-gray-800 dark:text-white focus-visible:ring-navy/30 dark:focus-visible:ring-gold/30 bg-white dark:bg-navy-dark shadow-sm" 
+      <Input
+        id="document-name"
+        value={documentName}
+        onChange={(e) => setDocumentName(e.target.value)}
+        className="mt-1 border-gray-300 dark:border-gold/20 focus:ring-navy dark:focus:ring-gold/50 focus:border-navy dark:focus:border-gold/50 dark:bg-navy-dark dark:text-white dark:placeholder-gray-400"
+        placeholder="Declaração de IR 2023"
+        required
       />
     </div>
   );

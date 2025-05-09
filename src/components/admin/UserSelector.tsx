@@ -94,21 +94,21 @@ export const UserSelector = ({
   };
 
   return (
-    <Card className="md:col-span-1 bg-orange-200 dark:bg-navy-dark border border-gold/20">
-      <CardHeader>
+    <Card className="md:col-span-1 bg-orange-200 dark:bg-navy-dark border border-gold/20 shadow-lg">
+      <CardHeader className="border-b border-gold/10 dark:border-gold/20">
         <CardTitle className="text-navy dark:text-gold">Seleção de Usuário</CardTitle>
       </CardHeader>
-      <CardContent className="py-0 my-0">
+      <CardContent className="py-4">
         {isLoadingUsers ? (
           <div className="flex justify-center py-4">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gold"></div>
           </div>
         ) : (
           <>
-            <p className="text-navy dark:text-white">
+            <p className="text-navy dark:text-white mb-4">
               Selecione um usuário para gerenciar seus documentos
             </p>
-            <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 mt-4">
+            <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gold/20 scrollbar-track-transparent">
               {users.map(user => (
                 <Button 
                   key={user.id} 
@@ -116,7 +116,7 @@ export const UserSelector = ({
                   className={`w-full justify-start text-left ${
                     selectedUserId === user.id 
                       ? 'bg-gold text-navy hover:bg-gold-light' 
-                      : 'bg-orange-300/50 dark:bg-navy-light/50 text-navy dark:text-white hover:bg-gold/50 dark:hover:bg-gold/50 hover:text-navy dark:hover:text-navy border-gold/20'
+                      : 'bg-orange-300/50 dark:bg-navy-light/30 text-navy dark:text-white hover:bg-gold/50 dark:hover:bg-gold/50 hover:text-navy dark:hover:text-navy border-gold/20'
                   }`}
                   onClick={() => handleSelectUser(user)}
                   disabled={processingUserId === user.id}
@@ -138,7 +138,7 @@ export const UserSelector = ({
                 </Button>
               ))}
               {users.length === 0 && (
-                <p className="text-navy dark:text-white">
+                <p className="text-navy dark:text-white py-4 text-center bg-orange-100/50 dark:bg-navy-light/20 rounded-md border border-orange-200/50 dark:border-gold/10">
                   Nenhum usuário encontrado
                 </p>
               )}
