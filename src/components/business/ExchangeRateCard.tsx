@@ -1,59 +1,48 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowDown, ArrowUp, TrendingUp, DollarSign, Euro, RefreshCw } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from '@/hooks/use-mobile';
-
 interface ExchangeRate {
   code: string;
   name: string;
   rate: number;
   change: number;
 }
-
 interface ExchangeRateCardProps {
   exchangeRates: ExchangeRate[];
   onRefresh: () => void;
   isRefreshing: boolean;
 }
-
-const ExchangeRateCard = ({ exchangeRates, onRefresh, isRefreshing }: ExchangeRateCardProps) => {
+const ExchangeRateCard = ({
+  exchangeRates,
+  onRefresh,
+  isRefreshing
+}: ExchangeRateCardProps) => {
   const isMobile = useIsMobile();
-  
   const formatCurrency = (value: number): string => {
     return value.toFixed(4);
   };
-
-  return (
-    <Card className="bg-white/70 dark:bg-navy border-gold/30 text-navy dark:text-white">
+  return <Card className="bg-white/70 dark:bg-navy border-gold/30 text-navy dark:text-white">
       <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
         <div>
           <CardTitle className="flex items-center gap-2 text-xl md:text-2xl">
             <TrendingUp className="text-gold" />
-            <span>Cotações do Dia</span>
+            <span className="font-extralight">Cotações do Dia</span>
           </CardTitle>
           <CardDescription className="text-navy/70 dark:text-white/70">
             Atualizado em {new Date().toLocaleDateString('pt-BR')}
           </CardDescription>
         </div>
-        <Button 
-          variant="outline" 
-          size="icon" 
-          onClick={onRefresh} 
-          disabled={isRefreshing}
-          className="border-gold/30 text-gold hover:text-white bg-white/50 dark:bg-gold-dark"
-        >
+        <Button variant="outline" size="icon" onClick={onRefresh} disabled={isRefreshing} className="border-gold/30 text-gold hover:text-white bg-white/50 dark:bg-gold-dark">
           <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
           <span className="sr-only">Atualizar cotações</span>
         </Button>
       </CardHeader>
       <CardContent>
-        {isMobile ? (
-          <div className="space-y-4">
-            {exchangeRates.map(rate => (
-              <div key={rate.code} className="p-4 bg-white/50 dark:bg-navy-light/50 rounded-lg border border-gold/10">
+        {isMobile ? <div className="space-y-4">
+            {exchangeRates.map(rate => <div key={rate.code} className="p-4 bg-white/50 dark:bg-navy-light/50 rounded-lg border border-gold/10">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     {rate.code.includes('USD') && <DollarSign className="w-4 h-4 text-gold" />}
@@ -69,11 +58,8 @@ const ExchangeRateCard = ({ exchangeRates, onRefresh, isRefreshing }: ExchangeRa
                   </span>
                 </div>
                 <div className="text-lg font-semibold">{formatCurrency(rate.rate)}</div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <Table>
+              </div>)}
+          </div> : <Table>
             <TableHeader>
               <TableRow className="border-gold/20">
                 <TableHead className="text-gold">Moeda</TableHead>
@@ -82,8 +68,7 @@ const ExchangeRateCard = ({ exchangeRates, onRefresh, isRefreshing }: ExchangeRa
               </TableRow>
             </TableHeader>
             <TableBody>
-              {exchangeRates.map(rate => (
-                <TableRow key={rate.code} className="border-gold/10">
+              {exchangeRates.map(rate => <TableRow key={rate.code} className="border-gold/10">
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
                       {rate.code.includes('USD') && <DollarSign className="w-4 h-4 text-gold" />}
@@ -99,14 +84,10 @@ const ExchangeRateCard = ({ exchangeRates, onRefresh, isRefreshing }: ExchangeRa
                       {Math.abs(rate.change * 100).toFixed(2)}%
                     </div>
                   </TableCell>
-                </TableRow>
-              ))}
+                </TableRow>)}
             </TableBody>
-          </Table>
-        )}
+          </Table>}
       </CardContent>
-    </Card>
-  );
+    </Card>;
 };
-
 export default ExchangeRateCard;

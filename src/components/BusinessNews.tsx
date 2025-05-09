@@ -1,24 +1,20 @@
-
 import { useEffect, useState } from 'react';
 import ExchangeRateCard from './business/ExchangeRateCard';
 import NewsCard from './business/NewsCard';
 import LoadingState from './business/LoadingState';
 import ErrorState from './business/ErrorState';
-
 interface ExchangeRate {
   code: string;
   name: string;
   rate: number;
   change: number;
 }
-
 interface NewsItem {
   title: string;
   description: string;
   url: string;
   publishedAt: string;
 }
-
 const BusinessNews = () => {
   const [exchangeRates, setExchangeRates] = useState<ExchangeRate[]>([]);
   const [news, setNews] = useState<NewsItem[]>([]);
@@ -26,7 +22,6 @@ const BusinessNews = () => {
   const [refreshingRates, setRefreshingRates] = useState(false);
   const [refreshingNews, setRefreshingNews] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const fetchExchangeRates = async () => {
     try {
       const baseDate = new Date();
@@ -56,14 +51,12 @@ const BusinessNews = () => {
       setRefreshingRates(false);
     }
   };
-
   const fetchNews = async () => {
     try {
       const baseDate = new Date();
       const topics = ['tecnologia', 'commodities', 'juros', 'economia', 'varejo', 'mercado financeiro', 'investimentos'];
       const randomTopic1 = topics[Math.floor(Math.random() * topics.length)];
       const randomTopic2 = topics[Math.floor(Math.random() * topics.length)];
-      
       const mockNews: NewsItem[] = [{
         title: `Mercado reage a dados econômicos do dia ${baseDate.getDate()}/${baseDate.getMonth() + 1}`,
         description: `Analistas apontam tendências positivas para o setor de ${randomTopic1} e ${randomTopic2} nesta semana.`,
@@ -80,7 +73,6 @@ const BusinessNews = () => {
         url: 'https://www.infomoney.com.br/mercados/',
         publishedAt: baseDate.toISOString()
       }];
-      
       setNews(mockNews);
     } catch (err) {
       console.error('Error fetching news:', err);
@@ -89,17 +81,14 @@ const BusinessNews = () => {
       setRefreshingNews(false);
     }
   };
-
   const handleRefreshRates = () => {
     setRefreshingRates(true);
     fetchExchangeRates();
   };
-
   const handleRefreshNews = () => {
     setRefreshingNews(true);
     fetchNews();
   };
-
   useEffect(() => {
     const loadInitialData = async () => {
       try {
@@ -113,44 +102,29 @@ const BusinessNews = () => {
       }
     };
     loadInitialData();
-
     const intervalId = setInterval(() => {
       fetchExchangeRates();
       fetchNews();
     }, 86400000);
     return () => clearInterval(intervalId);
   }, []);
-
   if (loading) {
     return <LoadingState />;
   }
-
   if (error) {
     return <ErrorState error={error} />;
   }
-
-  return (
-    <section id="noticias" className="py-8 md:py-16 bg-orange-200 dark:bg-navy-dark">
+  return <section id="noticias" className="py-8 md:py-16 bg-orange-200 dark:bg-navy-dark">
       <div className="container mx-auto px-4 md:px-6">
-        <h2 className="text-3xl md:text-4xl text-navy-light dark:text-gold text-center mb-8 font-bold">
+        <h2 className="text-3xl md:text-4xl text-navy-light dark:text-gold text-center mb-8 font-light">
           Notícias do Mundo de Negócios
         </h2>
         
         <div className="grid grid-cols-1 gap-6 md:gap-8">
-          <ExchangeRateCard 
-            exchangeRates={exchangeRates}
-            onRefresh={handleRefreshRates}
-            isRefreshing={refreshingRates}
-          />
-          <NewsCard 
-            news={news}
-            onRefresh={handleRefreshNews}
-            isRefreshing={refreshingNews}
-          />
+          <ExchangeRateCard exchangeRates={exchangeRates} onRefresh={handleRefreshRates} isRefreshing={refreshingRates} />
+          <NewsCard news={news} onRefresh={handleRefreshNews} isRefreshing={refreshingNews} />
         </div>
       </div>
-    </section>
-  );
+    </section>;
 };
-
 export default BusinessNews;
