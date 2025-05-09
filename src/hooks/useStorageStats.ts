@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -30,28 +30,85 @@ export const useStorageStats = () => {
     setError(null);
     
     try {
+      // First, try to get storage stats through the edge function for accurate data
       const session = await supabase.auth.getSession();
       const accessToken = session.data.session?.access_token;
       
-      if (!accessToken) {
-        throw new Error("Você precisa estar logado para acessar as estatísticas de armazenamento");
+      if (accessToken) {
+        try {
+          const response = await fetch(`https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/storage-stats`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`
+            }
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            setStorageStats(data);
+            setIsLoading(false);
+            return;
+          }
+        } catch (edgeFnError) {
+          console.error('Error calling storage-stats edge function:', edgeFnError);
+          // Continue to fallback method if edge function fails
+        }
       }
       
-      const response = await fetch(`https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/storage-stats`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
+      // Fallback: Calculate from documents table if edge function failed
+      const { data: documents, error: docError } = await supabase
+        .from('documents')
+        .select('size');
+      
+      if (docError) throw docError;
+      
+      // Calculate total storage
+      const totalBytes = documents.reduce((sum, doc) => sum + (doc.size || 0), 0);
+      const totalKB = Math.round(totalBytes / 1024 * 100) / 100;
+      const totalMB = Math.round(totalBytes / (1024 * 1024) * 100) / 100;
+      
+      // Get per-user stats
+      const { data: userDocs, error: userError } = await supabase
+        .from('documents')
+        .select('user_id, size');
+      
+      if (userError) throw userError;
+      
+      // Group by user_id
+      const userStorageMap: Record<string, number> = {};
+      userDocs.forEach(doc => {
+        if (doc.user_id && doc.size) {
+          userStorageMap[doc.user_id] = (userStorageMap[doc.user_id] || 0) + doc.size;
         }
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Erro ao obter estatísticas de armazenamento");
-      }
-
-      const data = await response.json();
-      setStorageStats(data);
+      
+      // Get user info
+      const { data: users, error: usersError } = await supabase
+        .from('users')
+        .select('id, name, email');
+      
+      if (usersError) throw usersError;
+      
+      // Build user storage data
+      const userStorage: UserStorageData[] = Object.entries(userStorageMap).map(([userId, size]) => {
+        const user = users.find(u => u.id === userId);
+        return {
+          userId,
+          name: user?.name,
+          email: user?.email,
+          sizeBytes: size,
+          sizeKB: Math.round(size / 1024 * 100) / 100,
+          sizeMB: Math.round(size / (1024 * 1024) * 100) / 100
+        };
+      });
+      
+      setStorageStats({
+        totalStorageBytes: totalBytes,
+        totalStorageKB: totalKB,
+        totalStorageMB: totalMB,
+        userStorage
+      });
     } catch (error: any) {
       console.error('Erro ao obter estatísticas de armazenamento:', error);
       setError(error.message);
@@ -64,6 +121,11 @@ export const useStorageStats = () => {
       setIsLoading(false);
     }
   };
+
+  // Auto-fetch on mount
+  useEffect(() => {
+    fetchStorageStats();
+  }, []);
 
   return {
     storageStats,

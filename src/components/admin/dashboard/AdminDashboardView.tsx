@@ -6,6 +6,7 @@ import { formatDate } from "../utils/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { useStorageStats } from "@/hooks/useStorageStats";
 
 interface AdminDashboardViewProps {
   users: any[];
@@ -20,16 +21,19 @@ export const AdminDashboardView = ({
 }: AdminDashboardViewProps) => {
   const { user } = useAuth();
   const [lastLogin, setLastLogin] = useState<string>("");
-  const [totalStorage, setTotalStorage] = useState<string>("Calculando...");
   const [isLoading, setIsLoading] = useState(false);
   const [recentDocuments, setRecentDocuments] = useState<any[]>([]);
   const [pollCount, setPollCount] = useState<number>(0);
+  const [totalDocumentsCount, setTotalDocumentsCount] = useState<number>(0);
   
   // Get non-admin users (clients)
   const clientUsers = supabaseUsers.filter(authUser => {
     const userInfo = users.find(u => u.id === authUser.id);
     return !['fiscal', 'contabil', 'geral'].includes(userInfo?.role || '');
   });
+  
+  // Use the storage stats hook to get accurate storage information
+  const { storageStats, isLoading: isLoadingStorage, error: storageError, fetchStorageStats } = useStorageStats();
   
   // Get last login date for current user
   useEffect(() => {
@@ -51,32 +55,32 @@ export const AdminDashboardView = ({
     }
   }, [user]);
   
-  // Fetch storage size information
+  // Fetch total documents count
   useEffect(() => {
-    const fetchStorageSize = async () => {
+    const fetchTotalDocuments = async () => {
       try {
         setIsLoading(true);
-        // This is a placeholder. In a real implementation, you would need to
-        // fetch this data from your backend or Supabase Functions
-        // For now, we'll calculate an approximate size based on documents
-        const estimatedSizePerDoc = 2; // 2MB per document on average
-        const estimatedTotalSize = documents.length * estimatedSizePerDoc;
+        const { count, error } = await supabase
+          .from('documents')
+          .select('*', { count: 'exact', head: true });
         
-        if (estimatedTotalSize < 1000) {
-          setTotalStorage(`${estimatedTotalSize} MB`);
-        } else {
-          setTotalStorage(`${(estimatedTotalSize / 1000).toFixed(2)} GB`);
-        }
+        if (error) throw error;
+        setTotalDocumentsCount(count || 0);
       } catch (error) {
-        console.error("Error fetching storage size:", error);
-        setTotalStorage("Erro ao calcular");
+        console.error("Error fetching total documents:", error);
+        setTotalDocumentsCount(0);
       } finally {
         setIsLoading(false);
       }
     };
     
-    fetchStorageSize();
-  }, [documents]);
+    fetchTotalDocuments();
+  }, []);
+  
+  // Fetch storage stats
+  useEffect(() => {
+    fetchStorageStats();
+  }, [fetchStorageStats]);
   
   // Fetch recent documents
   useEffect(() => {
@@ -153,7 +157,7 @@ export const AdminDashboardView = ({
     <div className="space-y-6">
       <h2 className="text-2xl font-bold mb-6 text-navy dark:text-gold">Dashboard</h2>
       
-      {isLoading ? (
+      {isLoading && isLoadingStorage ? (
         <div className="flex justify-center py-8">
           <LoadingSpinner />
         </div>
@@ -184,7 +188,7 @@ export const AdminDashboardView = ({
                   📄 Documentos
                 </CardTitle>
                 <p className="text-3xl font-bold mt-2 text-navy dark:text-white">
-                  {documents.length}
+                  {totalDocumentsCount}
                 </p>
               </CardContent>
             </Card>
@@ -233,11 +237,13 @@ export const AdminDashboardView = ({
                 </div>
                 <div className="p-4 rounded-lg bg-gray-50 dark:bg-navy-light/20">
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total de documentos</p>
-                  <p className="text-xl font-bold text-navy dark:text-white">{documents.length}</p>
+                  <p className="text-xl font-bold text-navy dark:text-white">{totalDocumentsCount}</p>
                 </div>
                 <div className="p-4 rounded-lg bg-gray-50 dark:bg-navy-light/20">
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Espaço utilizado</p>
-                  <p className="text-xl font-bold text-navy dark:text-white">{totalStorage}</p>
+                  <p className="text-xl font-bold text-navy dark:text-white">
+                    {storageStats ? `${storageStats.totalStorageMB.toFixed(2)} MB` : 'Calculando...'}
+                  </p>
                 </div>
                 <div className="p-4 rounded-lg bg-gray-50 dark:bg-navy-light/20">
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Versão da aplicação</p>

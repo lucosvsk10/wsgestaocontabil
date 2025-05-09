@@ -7,6 +7,7 @@ import { AdminTabsView } from "@/components/admin/AdminTabsView";
 import { AdminPasswordChangeModal } from "@/components/admin/AdminPasswordChangeModal";
 import AdminLayout from "@/components/admin/layout/AdminLayout";
 import { useForm } from "react-hook-form";
+import { useUsersFetch } from "@/hooks/useUsersFetch";
 
 interface AdminDashboardProps {
   activeTab: string;
@@ -40,6 +41,8 @@ const AdminDashboard = ({ activeTab = "dashboard" }: AdminDashboardProps) => {
     fetchAuthUsers,
     fetchUsers
   } = useUserManagement();
+
+  const { refreshUsers } = useUsersFetch();
 
   const {
     documents,
@@ -76,11 +79,6 @@ const AdminDashboard = ({ activeTab = "dashboard" }: AdminDashboardProps) => {
       setIsInitialized(true);
     }
   }, [isInitialized, fetchUsers, fetchAuthUsers]);
-
-  const refreshUsers = () => {
-    fetchUsers();
-    fetchAuthUsers();
-  };
 
   // Function to handle document button click
   const handleDocumentButtonClick = (userId: string) => {
