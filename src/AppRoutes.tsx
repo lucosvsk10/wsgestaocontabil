@@ -30,12 +30,15 @@ const AppRoutes = () => {
       <Route path="/simulador-irpf" element={<TaxCalculator />} />
       
       {/* Admin routes */}
-      <Route path="/admin/*" element={
+      <Route path="/admin" element={
         <PrivateRoute requiredRole="admin">
           <AdminDashboard />
         </PrivateRoute>
       } />
-      
+
+      {/* Manter compatibilidade com rotas antigas */}
+      <Route path="/admin-dashboard" element={<Navigate to="/admin" replace />} />
+
       {/* Client routes */}
       <Route path="/client/*" element={
         <PrivateRoute>

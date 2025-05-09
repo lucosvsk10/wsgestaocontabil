@@ -1,5 +1,5 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { 
@@ -7,8 +7,8 @@ import {
   Users, 
   FileText, 
   PieChart, 
-  Settings, 
-  Calculator 
+  Calculator, 
+  Settings 
 } from "lucide-react";
 
 interface SidebarItemProps {
@@ -16,7 +16,7 @@ interface SidebarItemProps {
   label: string;
   active: boolean;
   onClick?: () => void;
-  to?: string;
+  to: string;
 }
 
 const SidebarItem: React.FC<SidebarItemProps> = ({ 
@@ -24,7 +24,7 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
   label, 
   active, 
   onClick, 
-  to = "#" 
+  to 
 }) => {
   return (
     <Link
@@ -53,7 +53,10 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
   const location = useLocation();
   const isMobile = useIsMobile();
   
-  // Close sidebar when clicking outside on mobile
+  // Estado para rastrear a aba ativa
+  const [activeTab, setActiveTab] = useState("");
+  
+  // Fecha a barra lateral quando clica fora em dispositivos móveis
   useEffect(() => {
     if (isMobile) {
       const handleClickOutside = (e: MouseEvent) => {
@@ -68,49 +71,66 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
     }
   }, [isMobile, onClose, open]);
   
-  // Handle route changes
+  // Lidar com mudanças de rota
   useEffect(() => {
     if (isMobile && open) {
       onClose();
     }
-  }, [location.pathname, isMobile, onClose, open]);
+    
+    // Extrair o tab do pathname ou searchParams
+    const path = location.pathname;
+    const searchParams = new URLSearchParams(location.search);
+    const tabParam = searchParams.get("tab");
+    
+    if (tabParam) {
+      setActiveTab(tabParam);
+    } else if (path === "/admin" || path === "/admin/") {
+      setActiveTab("users");
+    }
+  }, [location.pathname, location.search, isMobile, onClose, open]);
 
   const sidebarItems = [
     { 
       icon: <LayoutDashboard size={20} />, 
       label: "Dashboard", 
-      active: location.pathname === "/admin" || location.pathname === "/admin-dashboard",
-      to: "/admin-dashboard"
+      active: activeTab === "users" || location.pathname === "/admin" || location.pathname === "/admin/",
+      to: "/admin?tab=users"
     },
     { 
       icon: <Users size={20} />, 
       label: "Usuários", 
-      active: location.pathname.includes("users"),
-      to: "/admin-dashboard?tab=users"
+      active: activeTab === "users",
+      to: "/admin?tab=users"
     },
     { 
       icon: <FileText size={20} />, 
       label: "Documentos", 
-      active: location.pathname.includes("documents"),
-      to: "/admin-dashboard?tab=documents" 
+      active: activeTab === "documents",
+      to: "/admin?tab=documents"
     },
     { 
       icon: <PieChart size={20} />, 
       label: "Enquetes", 
-      active: location.pathname.includes("polls"),
-      to: "/admin-dashboard?tab=polls"
+      active: activeTab === "polls",
+      to: "/admin?tab=polls"
+    },
+    { 
+      icon: <PieChart size={20} />, 
+      label: "Resultados", 
+      active: activeTab === "poll-results",
+      to: "/admin?tab=poll-results"
     },
     { 
       icon: <Calculator size={20} />, 
-      label: "Ferramentas", 
-      active: location.pathname.includes("tools"),
-      to: "/admin-dashboard?tab=tax-simulations"
+      label: "Simulações IRPF", 
+      active: activeTab === "tax-simulations",
+      to: "/admin?tab=tax-simulations"
     },
     { 
       icon: <Settings size={20} />, 
       label: "Configurações", 
-      active: location.pathname.includes("settings"),
-      to: "#"
+      active: activeTab === "settings",
+      to: "/admin?tab=settings"
     }
   ];
 
