@@ -25,12 +25,12 @@ export const useNavigation = () => {
       // Create logout notification before signing out
       await notifyLogout();
       
-      const { error } = await signOut();
+      const result = await signOut();
       
-      if (error) {
+      if (result.error) {
         toast({
           title: "Erro ao fazer logout",
-          description: error.message,
+          description: result.error.message,
           variant: "destructive"
         });
       } else {

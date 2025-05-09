@@ -27,11 +27,13 @@ export interface UserData {
 
 export interface AuthContextType {
   user: any | null;
+  session: Session | null;
   userData: UserData | null;
   isLoading: boolean;
   isAdmin: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null; data: any | null }>;
   signOut: () => Promise<{ error: Error | null }>;
+  refreshUserData: () => Promise<void>;
   setUser: (user: any | null) => void;
   setUserData: (userData: UserData | null) => void;
 }

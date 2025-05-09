@@ -2,14 +2,18 @@
 import { createContext, useState, useContext, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
+import { checkIsAdmin } from "@/utils/auth/userChecks";
+import { UserData } from "@/utils/auth/types";
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
-  userData: any | null;
+  userData: UserData | null;
+  isAdmin: boolean;
+  signIn: (email: string, password: string) => Promise<{ error: Error | null; data: any | null }>;
+  signOut: () => Promise<{ error: Error | null }>;
   refreshUserData: () => Promise<void>;
-  signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -17,8 +21,10 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   isLoading: true,
   userData: null,
-  refreshUserData: async () => {},
-  signOut: async () => {}
+  isAdmin: false,
+  signIn: async () => ({ error: null, data: null }),
+  signOut: async () => ({ error: null }),
+  refreshUserData: async () => {}
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -31,7 +37,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [userData, setUserData] = useState<any | null>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
+
+  // Determine if user has admin role
+  const isAdmin = checkIsAdmin(userData, user?.email);
 
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange(
@@ -82,15 +91,38 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
+  const signIn = async (email: string, password: string) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) {
+        return { error, data: null };
+      }
+      
+      return { error: null, data };
+    } catch (error: any) {
+      return { error, data: null };
+    }
+  };
+
   const signOut = async () => {
     try {
-      await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        return { error };
+      }
+      
       setUser(null);
       setSession(null);
       setUserData(null);
-    } catch (error) {
-      console.error("Error signing out:", error);
-      throw error;
+      
+      return { error: null };
+    } catch (error: any) {
+      return { error };
     }
   };
 
@@ -101,8 +133,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         session,
         isLoading,
         userData,
-        refreshUserData,
-        signOut
+        isAdmin,
+        signIn,
+        signOut,
+        refreshUserData
       }}
     >
       {children}
