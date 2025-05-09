@@ -12,7 +12,7 @@ const AdminHeader = () => {
   const {
     handleLogout
   } = useNavigation();
-  return <header className="bg-white dark:bg-navy-medium border-b border-gray-200 dark:border-navy-lighter/30 py-3 px-4 flex items-center justify-between">
+  return <header className="border-b border-gray-200 dark:border-navy-lighter/30 py-3 px-4 flex items-center justify-between bg-navy-dark">
       <h1 className="text-xl font-medium text-navy dark:text-gold">Área Administrativa</h1>
       
       <div className="flex items-center space-x-3">
