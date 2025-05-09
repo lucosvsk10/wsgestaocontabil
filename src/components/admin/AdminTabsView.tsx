@@ -1,4 +1,3 @@
-
 import { UserList } from "./UserList";
 import { PollsTabView } from "./polls/PollsTabView";
 import { UserDocumentView } from "./UserDocumentView";
@@ -8,7 +7,6 @@ import { Poll } from "@/types/polls";
 import { AdminDashboardView } from "./dashboard/AdminDashboardView";
 import { SettingsView } from "./settings/SettingsView";
 import { AdminToolsView } from "./tools/AdminToolsView";
-
 export interface AdminTabsViewProps {
   activeTab?: string;
   // Props para UserList
@@ -45,9 +43,8 @@ export interface AdminTabsViewProps {
   // Props para PollResults
   selectedPoll?: Poll | null;
 }
-
-export function AdminTabsView({ 
-  activeTab, 
+export function AdminTabsView({
+  activeTab,
   users,
   supabaseUsers,
   userInfoList,
@@ -79,71 +76,38 @@ export function AdminTabsView({
   setNoExpiration,
   selectedPoll
 }: AdminTabsViewProps) {
-  return (
-    <div className="w-full">
-      <div className="mt-4">
+  return <div className="w-full">
+      <div className="mt-4 bg-navy-dark">
         {/* Tab Content - Dashboard */}
-        {activeTab === "dashboard" && (
-          <AdminDashboardView 
-            users={users || []}
-            supabaseUsers={supabaseUsers || []}
-            documents={documents || []}
-          />
-        )}
+        {activeTab === "dashboard" && <AdminDashboardView users={users || []} supabaseUsers={supabaseUsers || []} documents={documents || []} />}
 
         {/* Tab Content - Users */}
-        {activeTab === "users" && (
-          <div className="space-y-4">
-            {users && supabaseUsers && (
-              <UserList 
-                supabaseUsers={supabaseUsers} 
-                users={users} 
-                isLoading={isLoadingUsers || isLoadingAuthUsers} 
-                setSelectedUserId={handleDocumentButtonClick || (() => {})} 
-                setSelectedUserForPasswordChange={setSelectedUserForPasswordChange || (() => {})} 
-                passwordForm={passwordForm || {}} 
-                refreshUsers={refreshUsers || (() => {})} 
-              />
-            )}
-          </div>
-        )}
+        {activeTab === "users" && <div className="space-y-4 bg-navy-dark">
+            {users && supabaseUsers && <UserList supabaseUsers={supabaseUsers} users={users} isLoading={isLoadingUsers || isLoadingAuthUsers} setSelectedUserId={handleDocumentButtonClick || (() => {})} setSelectedUserForPasswordChange={setSelectedUserForPasswordChange || (() => {})} passwordForm={passwordForm || {}} refreshUsers={refreshUsers || (() => {})} />}
+          </div>}
 
         {/* Tab Content - User Documents */}
-        {activeTab === "user-documents" && (
-          <UserDocumentView 
-            users={users || []} 
-            supabaseUsers={supabaseUsers || []} 
-          />
-        )}
+        {activeTab === "user-documents" && <UserDocumentView users={users || []} supabaseUsers={supabaseUsers || []} />}
 
         {/* Tab Content - Polls */}
-        {activeTab === "polls" && (
-          <div className="space-y-4">
+        {activeTab === "polls" && <div className="space-y-4">
             <PollsTabView />
-          </div>
-        )}
+          </div>}
 
         {/* Tab Content - Tools */}
-        {activeTab === "tools" && (
-          <div className="space-y-4">
+        {activeTab === "tools" && <div className="space-y-4">
             <AdminToolsView />
-          </div>
-        )}
+          </div>}
 
         {/* Tab Content - Tax Simulations */}
-        {activeTab === "tax-simulations" && (
-          <div className="space-y-4">
+        {activeTab === "tax-simulations" && <div className="space-y-4">
             <TaxSimulationResults />
-          </div>
-        )}
+          </div>}
 
         {/* Tab Content - Settings */}
-        {activeTab === "settings" && (
-          <div className="space-y-4">
+        {activeTab === "settings" && <div className="space-y-4">
             <SettingsView />
-          </div>
-        )}
+          </div>}
       </div>
-    </div>
-  );
+    </div>;
 }

@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserType } from "@/types/admin";
 import { UserTable } from "./UserTable";
@@ -11,7 +10,6 @@ import { UserCreationDialog } from "./components/UserCreationDialog";
 import { UserFormData } from "./CreateUser";
 import { useUserCreation } from "@/hooks/useUserCreation";
 import { useToast } from "@/hooks/use-toast";
-
 interface AuthUser {
   id: string;
   email: string;
@@ -20,7 +18,6 @@ interface AuthUser {
     name?: string;
   };
 }
-
 interface UserListProps {
   supabaseUsers: AuthUser[];
   users: UserType[];
@@ -30,7 +27,6 @@ interface UserListProps {
   passwordForm: any;
   refreshUsers: () => void;
 }
-
 export const UserList = ({
   supabaseUsers,
   users,
@@ -42,12 +38,22 @@ export const UserList = ({
 }: UserListProps) => {
   // User creation dialog state
   const [isUserCreationDialogOpen, setIsUserCreationDialogOpen] = useState(false);
-  const { isCreatingUser, createUser } = useUserCreation(refreshUsers);
-  const { toast } = useToast();
-  
+  const {
+    isCreatingUser,
+    createUser
+  } = useUserCreation(refreshUsers);
+  const {
+    toast
+  } = useToast();
+
   // Storage stats
-  const { storageStats, isLoading: isLoadingStorage, error, fetchStorageStats } = useStorageStats();
-  
+  const {
+    storageStats,
+    isLoading: isLoadingStorage,
+    error,
+    fetchStorageStats
+  } = useStorageStats();
+
   // Fetch storage stats when component mounts
   useEffect(() => {
     fetchStorageStats();
@@ -81,7 +87,6 @@ export const UserList = ({
     }
     return isAdminUser(authUser.id, authUser.email);
   });
-  
   const clientUsers = supabaseUsers.filter(authUser => {
     // Verificar julia@gmail.com explicitamente para garantir que não apareça como cliente
     if (authUser.email === "julia@gmail.com") {
@@ -102,16 +107,11 @@ export const UserList = ({
   const storageLimitMB = 100;
   const usedStorageMB = storageStats?.totalStorageMB || 0;
   const remainingStorageMB = Math.max(0, storageLimitMB - usedStorageMB);
-
-  return (
-    <Card className="px-0 bg-white dark:bg-navy-medium border border-gray-200 dark:border-navy-lighter/30 shadow-md">
-      <CardHeader className="rounded-full bg-white dark:bg-navy-deeper">
+  return <Card className="px-0 border border-gray-200 dark:border-navy-lighter/30 shadow-md bg-navy-dark">
+      <CardHeader className="rounded-full bg-navy-dark">
         <div className="flex justify-between items-center">
           <CardTitle className="text-navy dark:text-gold bg-transparent text-2xl font-normal">LISTA DE USUARIOS</CardTitle>
-          <Button
-            onClick={() => setIsUserCreationDialogOpen(true)}
-            className="bg-navy hover:bg-navy-light text-white dark:bg-gold dark:hover:bg-gold-light dark:text-navy"
-          >
+          <Button onClick={() => setIsUserCreationDialogOpen(true)} className="bg-navy hover:bg-navy-light text-white dark:bg-gold dark:hover:bg-gold-light dark:text-navy">
             <Plus className="mr-2 h-4 w-4" /> Novo Usuário
           </Button>
         </div>
@@ -122,26 +122,20 @@ export const UserList = ({
         <div className="bg-white/5 dark:bg-navy-deeper rounded-lg p-4 shadow-sm">
           <h3 className="text-lg font-semibold text-navy dark:text-gold mb-3">Estatísticas de Armazenamento</h3>
           
-          {isLoadingStorage ? (
-            <div className="flex justify-center py-4">
+          {isLoadingStorage ? <div className="flex justify-center py-4">
               <LoadingSpinner />
-            </div>
-          ) : error ? (
-            <div className="text-red-500 text-center py-2">
+            </div> : error ? <div className="text-red-500 text-center py-2">
               Erro ao carregar estatísticas: {error}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            </div> : <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-white dark:bg-navy-medium rounded p-3 border border-gray-200 dark:border-navy-lighter/30">
                 <p className="text-sm text-gray-500 dark:text-gray-400">Espaço Utilizado</p>
                 <p className="text-lg font-semibold text-navy dark:text-white">
                   {usedStorageMB.toFixed(2)} MB de {storageLimitMB} MB
                 </p>
                 <div className="w-full bg-gray-200 dark:bg-navy-lighter rounded-full h-2.5 mt-2">
-                  <div 
-                    className="bg-blue-600 dark:bg-gold h-2.5 rounded-full" 
-                    style={{ width: `${Math.min(100, (usedStorageMB / storageLimitMB) * 100)}%` }}
-                  ></div>
+                  <div className="bg-blue-600 dark:bg-gold h-2.5 rounded-full" style={{
+                width: `${Math.min(100, usedStorageMB / storageLimitMB * 100)}%`
+              }}></div>
                 </div>
               </div>
               
@@ -158,50 +152,21 @@ export const UserList = ({
                   {remainingStorageMB.toFixed(2)} MB restantes
                 </p>
               </div>
-            </div>
-          )}
+            </div>}
         </div>
       </CardContent>
 
-      <CardContent className="rounded-full bg-white dark:bg-navy-medium space-y-6">
-        {isLoading ? (
-          <LoadingSpinner />
-        ) : (
-          <>
+      <CardContent className="rounded-full space-y-6 bg-navy-dark">
+        {isLoading ? <LoadingSpinner /> : <>
             {/* Seção de Clientes */}
-            <UserTable 
-              users={clientUsers} 
-              userInfoList={users} 
-              title="Clientes" 
-              setSelectedUserId={setSelectedUserId} 
-              setSelectedUserForPasswordChange={setSelectedUserForPasswordChange} 
-              passwordForm={passwordForm} 
-              refreshUsers={refreshUsers} 
-              showDocumentButton={true} 
-              isAdminSection={false} 
-            />
+            <UserTable users={clientUsers} userInfoList={users} title="Clientes" setSelectedUserId={setSelectedUserId} setSelectedUserForPasswordChange={setSelectedUserForPasswordChange} passwordForm={passwordForm} refreshUsers={refreshUsers} showDocumentButton={true} isAdminSection={false} />
 
             {/* Seção de Administradores */}
-            <UserTable 
-              users={adminUsers} 
-              userInfoList={users} 
-              title="Administradores" 
-              setSelectedUserForPasswordChange={setSelectedUserForPasswordChange} 
-              passwordForm={passwordForm} 
-              refreshUsers={refreshUsers} 
-              isAdminSection={true} 
-            />
-          </>
-        )}
+            <UserTable users={adminUsers} userInfoList={users} title="Administradores" setSelectedUserForPasswordChange={setSelectedUserForPasswordChange} passwordForm={passwordForm} refreshUsers={refreshUsers} isAdminSection={true} />
+          </>}
       </CardContent>
 
       {/* User Creation Dialog */}
-      <UserCreationDialog
-        isOpen={isUserCreationDialogOpen}
-        onClose={() => setIsUserCreationDialogOpen(false)}
-        onSubmit={handleUserCreation}
-        isCreating={isCreatingUser}
-      />
-    </Card>
-  );
+      <UserCreationDialog isOpen={isUserCreationDialogOpen} onClose={() => setIsUserCreationDialogOpen(false)} onSubmit={handleUserCreation} isCreating={isCreatingUser} />
+    </Card>;
 };
