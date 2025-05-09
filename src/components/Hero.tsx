@@ -3,8 +3,8 @@ import { useEffect, useRef } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
-import { ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ArrowRight, BarChart3, Shield, Users } from 'lucide-react';
 
 const Hero = () => {
   const heroRef = useRef<HTMLDivElement>(null);
@@ -48,15 +48,22 @@ const Hero = () => {
           )}
         >
           {/* Grid layout - two columns on desktop, stacked on mobile */}
-          <div className={cn(
-            "grid gap-8 md:gap-12 lg:gap-16",
-            isMobile ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-2"
-          )}>
-            {/* Left column - Text content */}
-            <div className="flex flex-col justify-center space-y-6">
+          <div className="grid gap-8 md:gap-12 lg:gap-16 grid-cols-1 lg:grid-cols-2">
+            
+            {/* Left column - Content and CTA */}
+            <div className={cn(
+              "flex flex-col justify-center space-y-8",
+              isMobile && "text-center"
+            )}>
               <div className="space-y-4">
-                <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
-                  WS GESTÃO CONTÁBIL
+                <h1 className={cn(
+                  "text-4xl md:text-5xl font-extrabold tracking-tight",
+                  "bg-gradient-to-r",
+                  theme === 'light'
+                    ? "from-gold via-gold-dark to-gold text-transparent bg-clip-text"
+                    : "from-gold-light via-gold to-gold-dark text-transparent bg-clip-text"
+                )}>
+                  Bem-vindo à WS GESTÃO CONTÁBIL
                 </h1>
                 
                 <h2 className={cn(
@@ -64,25 +71,57 @@ const Hero = () => {
                   "text-foreground/90",
                   "font-prompt"
                 )}>
-                  Transformando a contabilidade com tecnologia e confiança.
+                  Soluções contábeis modernas para transformar sua empresa
                 </h2>
-                
-                <p className={cn(
-                  "text-base md:text-lg mt-2 max-w-xl",
-                  "text-foreground/70"
-                )}>
-                  Há mais de 15 anos oferecendo soluções contábeis inovadoras e 
-                  personalizadas, com uma equipe especializada e comprometida com 
-                  a excelência no atendimento às necessidades do seu negócio.
-                </p>
               </div>
               
-              <div className="pt-6">
+              {/* Feature highlights with icons */}
+              <div className={cn(
+                "grid grid-cols-1 md:grid-cols-3 gap-4",
+                isMobile && "place-items-center"
+              )}>
+                <div className={cn(
+                  "flex items-center space-x-3",
+                  isMobile && "justify-center"
+                )}>
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gold/20 flex items-center justify-center">
+                    <BarChart3 className="h-5 w-5 text-gold" />
+                  </div>
+                  <span className="text-foreground/80">Relatórios automatizados</span>
+                </div>
+                
+                <div className={cn(
+                  "flex items-center space-x-3",
+                  isMobile && "justify-center"
+                )}>
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gold/20 flex items-center justify-center">
+                    <Shield className="h-5 w-5 text-gold" />
+                  </div>
+                  <span className="text-foreground/80">Segurança de dados garantida</span>
+                </div>
+                
+                <div className={cn(
+                  "flex items-center space-x-3",
+                  isMobile && "justify-center"
+                )}>
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gold/20 flex items-center justify-center">
+                    <Users className="h-5 w-5 text-gold" />
+                  </div>
+                  <span className="text-foreground/80">Atendimento personalizado</span>
+                </div>
+              </div>
+              
+              {/* CTA Buttons */}
+              <div className={cn(
+                "flex gap-4 mt-4 pt-4",
+                isMobile ? "flex-col" : "flex-row"
+              )}>
                 <Button 
                   className={cn(
-                    "group transition-all duration-300 rounded-xl",
+                    "transition-all duration-300 rounded-xl",
                     "bg-gold hover:bg-gold-light text-navy-deeper",
-                    "text-base px-6 py-2 font-medium"
+                    "text-base px-6 py-2 font-medium",
+                    isMobile && "w-full"
                   )}
                   onClick={() => {
                     document.getElementById('quemsomos')?.scrollIntoView({
@@ -91,42 +130,57 @@ const Hero = () => {
                   }}
                 >
                   Saiba Mais
-                  <ArrowRight size={18} className="ml-1.5 transition-transform group-hover:translate-x-1" />
+                  <ArrowRight size={18} className="ml-1.5" />
+                </Button>
+                
+                <Button 
+                  className={cn(
+                    "transition-all duration-300 rounded-xl",
+                    "bg-transparent border border-gold text-gold hover:bg-gold/10",
+                    "text-base px-6 py-2 font-medium",
+                    isMobile && "w-full"
+                  )}
+                  onClick={() => {
+                    document.getElementById('contato')?.scrollIntoView({
+                      behavior: 'smooth'
+                    });
+                  }}
+                >
+                  Fale Conosco
                 </Button>
               </div>
             </div>
             
-            {/* Right column - Caduceus symbol */}
+            {/* Right column - Illustration and quote */}
             <div className={cn(
               "flex flex-col items-center justify-center",
-              isMobile ? "order-first mb-8" : "order-last"
+              isMobile ? "order-first mb-6" : "order-last"
             )}>
               <div className={cn(
-                "rounded-full p-6 md:p-8",
-                "flex items-center justify-center",
+                "rounded-full p-8 md:p-10",
+                "flex items-center justify-center max-w-[320px]",
                 "bg-gold/10 dark:bg-gold/15",
                 "border border-gold/30 dark:border-gold/25",
-                "shadow-inner shadow-gold/5 dark:shadow-gold/10",
-                isMobile ? "w-40 h-40" : "w-56 h-56 md:w-64 md:h-64"
+                "shadow-inner shadow-gold/5 dark:shadow-gold/10"
               )}>
                 <img 
                   src="/lovable-uploads/a87b6e5f-5e26-4b01-bf74-865e0ec514a7.png" 
-                  alt="Caduceu - Símbolo da Contabilidade" 
-                  className="w-full h-full object-contain p-3"
+                  alt="Símbolo da Contabilidade" 
+                  className="w-full h-full object-contain animate-fade-in"
                 />
               </div>
               
-              <div className="text-center mt-6 max-w-xs">
-                <h3 className="font-prompt font-medium text-foreground text-lg mb-2">
-                  Símbolo Contábil
-                </h3>
-                <p className={cn(
-                  "text-sm",
-                  "text-muted-foreground dark:text-white/60"
+              {/* Quote */}
+              <div className="text-center mt-8 max-w-sm mx-auto">
+                <blockquote className={cn(
+                  "text-lg italic font-prompt",
+                  "text-gold dark:text-gold-light"
                 )}>
-                  O Caduceu representa equilíbrio, ética e precisão nos registros 
-                  financeiros, valores fundamentais na nossa prática contábil.
-                </p>
+                  "A contabilidade não é apenas números, é estratégia para crescer com segurança."
+                </blockquote>
+                <div className="mt-2 text-sm text-muted-foreground">
+                  — Equipe WS Contábil
+                </div>
               </div>
             </div>
           </div>
