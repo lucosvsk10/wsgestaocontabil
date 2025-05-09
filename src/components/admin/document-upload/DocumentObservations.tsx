@@ -15,7 +15,7 @@ export const DocumentObservations = ({
     <div>
       <label
         htmlFor="document-observations"
-        className="block text-sm font-medium text-gray-700 dark:text-gray-200"
+        className="block text-sm font-medium text-gray-700 dark:text-gold/90"
       >
         Observações (opcional)
       </label>
@@ -23,7 +23,7 @@ export const DocumentObservations = ({
         id="document-observations"
         value={documentObservations}
         onChange={(e) => setDocumentObservations(e.target.value)}
-        className="mt-1 block w-full border-gray-300 dark:border-gold/20 focus:ring-navy dark:focus:ring-gold/50 focus:border-navy dark:focus:border-gold/50 sm:text-sm rounded-md dark:bg-navy-dark dark:text-white dark:placeholder-gray-400"
+        className="mt-1 block w-full border-gray-300 dark:border-gold/30 focus:ring-navy dark:focus:ring-gold/70 focus:border-navy dark:focus:border-gold/70 sm:text-sm rounded-md dark:bg-navy-dark/80 dark:text-white dark:placeholder-gray-300"
         rows={3}
         placeholder="Adicione observações relevantes sobre o documento, como notas ou comentários específicos"
       />

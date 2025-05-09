@@ -47,9 +47,9 @@ export const DocumentUpload = ({
   };
 
   return (
-    <Card className="w-full max-w-4xl mx-auto border border-gray-200 dark:border-gold/20 bg-white dark:bg-navy-dark rounded-lg shadow-lg overflow-hidden">
-      <CardHeader className="space-y-1 text-center my-0 rounded-t-md pb-3 bg-gray-50 dark:bg-navy-light/10 border-b border-gray-200 dark:border-gold/20">
-        <CardTitle className="text-navy dark:text-gold font-medium text-2xl tracking-wide">ENVIAR DOCUMENTO</CardTitle>
+    <Card className="w-full max-w-4xl mx-auto border border-gray-200 dark:border-gold/30 bg-white dark:bg-navy-dark/90 rounded-lg shadow-lg overflow-hidden">
+      <CardHeader className="space-y-1 text-center my-0 rounded-t-md pb-3 bg-gray-50 dark:bg-navy-light/20 border-b border-gray-200 dark:border-gold/30">
+        <CardTitle className="text-navy dark:text-gold/90 font-medium text-2xl tracking-wide">ENVIAR DOCUMENTO</CardTitle>
       </CardHeader>
       <CardContent className="pt-6">
         <form onSubmit={handleFormSubmit} className="space-y-6">
@@ -69,7 +69,7 @@ export const DocumentUpload = ({
 
           <Button 
             type="submit" 
-            className="w-full bg-navy hover:bg-navy/90 dark:bg-gold dark:hover:bg-gold-light dark:text-navy text-white font-medium shadow-md transition-colors py-2.5"
+            className="w-full bg-navy hover:bg-navy/90 dark:bg-gold/90 dark:hover:bg-gold dark:text-navy text-white font-medium shadow-md transition-colors py-2.5"
             disabled={isUploading}
           >
             {isUploading ? (
