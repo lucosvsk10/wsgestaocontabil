@@ -1,4 +1,3 @@
-
 import { useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
@@ -7,14 +6,8 @@ import BusinessNews from '../components/BusinessNews';
 import AccountingSection from '../components/accounting/AccountingSection';
 import Footer from '../components/Footer';
 import { PollWidget } from "@/components/polls/PollWidget";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import FloatingToolsMenu from '@/components/accounting/FloatingToolsMenu';
-
 const Index = () => {
   useEffect(() => {
     const handleIntersection = (entries: IntersectionObserverEntry[]) => {
@@ -39,16 +32,15 @@ const Index = () => {
       });
     };
   }, []);
-  
   const scrollToContabil = () => {
     const contabilSection = document.getElementById('contabil');
     if (contabilSection) {
-      contabilSection.scrollIntoView({ behavior: 'smooth' });
+      contabilSection.scrollIntoView({
+        behavior: 'smooth'
+      });
     }
   };
-  
-  return (
-    <div className="relative min-h-screen px:6 bg-white dark:bg-navy-dark">
+  return <div className="relative min-h-screen px:6 bg-white dark:bg-navy-dark">
       <Navbar />
       <main>
         <Hero />
@@ -81,19 +73,7 @@ const Index = () => {
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <button 
-                className="bg-orange-200 dark:bg-navy-light text-navy dark:text-white p-3 rounded-full shadow-md hover:bg-orange-300 dark:hover:bg-navy transition-colors"
-                onClick={scrollToContabil}
-                aria-label="Ir para Mundo Contábil"
-              >
-                <span className="sr-only">Notícias</span>
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"></path>
-                  <path d="M18 14h-8"></path>
-                  <path d="M15 18h-5"></path>
-                  <path d="M10 6h8v4h-8V6Z"></path>
-                </svg>
-              </button>
+              
             </TooltipTrigger>
             <TooltipContent>
               <p>Últimas Notícias</p>
@@ -101,8 +81,6 @@ const Index = () => {
           </Tooltip>
         </TooltipProvider>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
