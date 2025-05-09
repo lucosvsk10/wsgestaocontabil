@@ -12,6 +12,7 @@ export const PollWidget = () => {
   const [activePoll, setActivePoll] = useState<Poll | null>(null);
   const [loading, setLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(true);
+  const [hasVoted, setHasVoted] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -24,16 +25,16 @@ export const PollWidget = () => {
           .select("*")
           .order("created_at", { ascending: false });
           
-        // If user is not logged in, only show public polls
+        // Se o usuário não estiver logado, mostrar apenas enquetes públicas
         if (!user) {
           query = query.eq("is_public", true);
         }
         
-        // Only show polls that haven't expired
+        // Mostrar apenas enquetes não expiradas
         const now = new Date().toISOString();
         query = query.or(`expires_at.gt.${now},expires_at.is.null`);
         
-        // Limit to 1
+        // Limitar a 1 resultado
         query = query.limit(1);
         
         const { data, error } = await query;
@@ -41,49 +42,24 @@ export const PollWidget = () => {
         if (error) throw error;
         
         if (data && data.length > 0) {
-          // Check if user has already voted
+          // Primeiro, vamos obter a enquete potencial
+          const potentialPoll = data[0];
+          
+          // Agora, verificamos se o usuário já votou
+          let userHasVoted = false;
+          
           if (user) {
-            // For standard poll
-            if (data[0].poll_type === 'standard_options') {
-              const { data: responseData, error: responseError } = await supabase
-                .from("poll_responses")
-                .select("id")
-                .eq("poll_id", data[0].id)
-                .eq("user_id", user.id)
-                .limit(1);
-                
-              if (!responseError && (!responseData || responseData.length === 0)) {
-                setActivePoll(data[0]);
-              }
-            } 
-            // For numerical poll
-            else if (data[0].poll_type === 'numerical') {
-              const { data: responseData, error: responseError } = await supabase
-                .from("numerical_responses")
-                .select("id")
-                .eq("poll_id", data[0].id)
-                .eq("user_id", user.id)
-                .limit(1);
-                
-              if (!responseError && (!responseData || responseData.length === 0)) {
-                setActivePoll(data[0]);
-              }
-            }
-            // For form poll
-            else if (data[0].poll_type === 'form') {
-              const { data: responseData, error: responseError } = await supabase
-                .from("form_responses")
-                .select("id")
-                .eq("poll_id", data[0].id)
-                .eq("user_id", user.id)
-                .limit(1);
-                
-              if (!responseError && (!responseData || responseData.length === 0)) {
-                setActivePoll(data[0]);
-              }
-            }
-          } else if (data[0].is_public) {
-            setActivePoll(data[0]);
+            userHasVoted = await checkIfUserVoted(potentialPoll.id, user.id, potentialPoll.poll_type);
+          } else {
+            // Para usuários não logados, não podemos verificar, então sempre mostramos a enquete pública
+            userHasVoted = false;
+          }
+          
+          if (!userHasVoted) {
+            setActivePoll(potentialPoll);
+          } else {
+            setHasVoted(true);
+            setActivePoll(null);
           }
         }
       } catch (error) {
@@ -95,8 +71,8 @@ export const PollWidget = () => {
 
     fetchActivePolls();
     
-    // Set up a realtime subscription for polls
-    const subscription = supabase
+    // Configurar uma assinatura em tempo real para mudanças nas enquetes
+    const pollsSubscription = supabase
       .channel('poll-changes')
       .on('postgres_changes', { 
         event: '*', 
@@ -107,10 +83,99 @@ export const PollWidget = () => {
       })
       .subscribe();
       
+    // Configurar uma assinatura em tempo real para respostas de enquetes
+    const responsesSubscription = supabase
+      .channel('poll-responses-changes')
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'poll_responses',
+        filter: user ? `user_id=eq.${user.id}` : undefined
+      }, () => {
+        fetchActivePolls();
+      })
+      .subscribe();
+      
+    // Configurar uma assinatura em tempo real para respostas numéricas
+    const numericalResponsesSubscription = supabase
+      .channel('numerical-responses-changes')
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'numerical_responses',
+        filter: user ? `user_id=eq.${user.id}` : undefined
+      }, () => {
+        fetchActivePolls();
+      })
+      .subscribe();
+      
+    // Configurar uma assinatura em tempo real para respostas de formulários
+    const formResponsesSubscription = supabase
+      .channel('form-responses-changes')
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'form_responses',
+        filter: user ? `user_id=eq.${user.id}` : undefined
+      }, () => {
+        fetchActivePolls();
+      })
+      .subscribe();
+      
     return () => {
-      subscription.unsubscribe();
+      pollsSubscription.unsubscribe();
+      responsesSubscription.unsubscribe();
+      numericalResponsesSubscription.unsubscribe();
+      formResponsesSubscription.unsubscribe();
     };
   }, [user]);
+
+  // Função para verificar se o usuário já votou em uma enquete específica
+  const checkIfUserVoted = async (pollId: string, userId: string, pollType: string) => {
+    try {
+      // Para enquetes padrão (standard_options)
+      if (pollType === 'standard_options') {
+        const { data: responseData, error: responseError } = await supabase
+          .from("poll_responses")
+          .select("id")
+          .eq("poll_id", pollId)
+          .eq("user_id", userId)
+          .limit(1);
+          
+        if (responseError) throw responseError;
+        return responseData && responseData.length > 0;
+      } 
+      // Para enquetes numéricas
+      else if (pollType === 'numerical') {
+        const { data: responseData, error: responseError } = await supabase
+          .from("numerical_responses")
+          .select("id")
+          .eq("poll_id", pollId)
+          .eq("user_id", userId)
+          .limit(1);
+          
+        if (responseError) throw responseError;
+        return responseData && responseData.length > 0;
+      }
+      // Para formulários
+      else if (pollType === 'form') {
+        const { data: responseData, error: responseError } = await supabase
+          .from("form_responses")
+          .select("id")
+          .eq("poll_id", pollId)
+          .eq("user_id", userId)
+          .limit(1);
+          
+        if (responseError) throw responseError;
+        return responseData && responseData.length > 0;
+      }
+
+      return false;
+    } catch (error) {
+      console.error("Error checking if user voted:", error);
+      return false;
+    }
+  };
 
   const handleNavigateToVote = () => {
     if (activePoll) {
@@ -121,6 +186,9 @@ export const PollWidget = () => {
       } else if (activePoll.poll_type === 'form') {
         navigate(`/formulario/${activePoll.id}`);
       }
+      
+      // Esconde o widget após clicar para votar
+      setIsVisible(false);
     }
   };
 
@@ -128,7 +196,7 @@ export const PollWidget = () => {
     setIsVisible(false);
   };
 
-  if (loading || !activePoll || !isVisible) {
+  if (loading || !activePoll || !isVisible || hasVoted) {
     return null;
   }
 

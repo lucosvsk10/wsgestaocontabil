@@ -1,6 +1,9 @@
 
 import React from "react";
 import { FormResponse } from "@/types/polls";
+import { Badge } from "@/components/ui/badge";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface TextResponsesListProps {
   responses: FormResponse[];
@@ -8,7 +11,7 @@ interface TextResponsesListProps {
 }
 
 export const TextResponsesList: React.FC<TextResponsesListProps> = ({ responses, questionId }) => {
-  // Filter responses for this question
+  // Filtrar respostas para esta pergunta
   const questionResponses = responses.filter(r => r.question_id === questionId);
   
   if (questionResponses.length === 0) {
@@ -28,6 +31,12 @@ export const TextResponsesList: React.FC<TextResponsesListProps> = ({ responses,
               <span className="text-sm font-medium">
                 {response.user_name || 'Anônimo'}
               </span>
+              <Badge variant="outline" className="text-xs">
+                {formatDistanceToNow(new Date(response.created_at), {
+                  addSuffix: true,
+                  locale: ptBR
+                })}
+              </Badge>
             </div>
             <p className="text-sm whitespace-pre-wrap">{response.response_value}</p>
           </div>
