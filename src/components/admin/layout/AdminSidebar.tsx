@@ -1,12 +1,12 @@
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   LayoutDashboard, 
   Users, 
   FileText, 
-  PieChart, 
+  PieChart,
   Calculator, 
   Settings 
 } from "lucide-react";
@@ -15,16 +15,16 @@ interface SidebarItemProps {
   icon: React.ReactNode;
   label: string;
   active: boolean;
-  onClick?: () => void;
   to: string;
+  onClick?: () => void;
 }
 
 const SidebarItem: React.FC<SidebarItemProps> = ({ 
   icon, 
   label, 
   active, 
-  onClick, 
-  to 
+  to,
+  onClick 
 }) => {
   return (
     <Link
@@ -32,11 +32,11 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
       className={`flex items-center space-x-2 px-4 py-3 rounded-md transition-colors ${
         active 
           ? "bg-gold/10 text-navy dark:text-gold" 
-          : "hover:bg-gray-100 dark:hover:bg-[#2a2a2a]"
+          : "hover:bg-gray-100 dark:hover:bg-[#2a2a2a] text-gray-700 dark:text-gray-300"
       }`}
       onClick={onClick}
     >
-      <div className="text-navy dark:text-gold">
+      <div className={active ? "text-navy dark:text-gold" : "text-gray-500 dark:text-gray-400"}>
         {icon}
       </div>
       <span className="font-medium">{label}</span>
@@ -52,9 +52,6 @@ interface AdminSidebarProps {
 const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
   const location = useLocation();
   const isMobile = useIsMobile();
-  
-  // Estado para rastrear a aba ativa
-  const [activeTab, setActiveTab] = useState("");
   
   // Fecha a barra lateral quando clica fora em dispositivos móveis
   useEffect(() => {
@@ -76,61 +73,55 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
     if (isMobile && open) {
       onClose();
     }
-    
-    // Extrair o tab do pathname ou searchParams
-    const path = location.pathname;
-    const searchParams = new URLSearchParams(location.search);
-    const tabParam = searchParams.get("tab");
-    
-    if (tabParam) {
-      setActiveTab(tabParam);
-    } else if (path === "/admin" || path === "/admin/") {
-      setActiveTab("users");
-    }
-  }, [location.pathname, location.search, isMobile, onClose, open]);
+  }, [location.pathname, isMobile, onClose, open]);
+  
+  // Determine which route is active
+  const getIsActive = (path: string): boolean => {
+    return location.pathname === path;
+  };
 
   const sidebarItems = [
     { 
       icon: <LayoutDashboard size={20} />, 
       label: "Dashboard", 
-      active: activeTab === "users" || location.pathname === "/admin" || location.pathname === "/admin/",
-      to: "/admin?tab=users"
+      active: getIsActive("/admin") || getIsActive("/admin/"),
+      to: "/admin"
     },
     { 
       icon: <Users size={20} />, 
       label: "Usuários", 
-      active: activeTab === "users",
-      to: "/admin?tab=users"
+      active: getIsActive("/admin/users"),
+      to: "/admin/users"
     },
     { 
       icon: <FileText size={20} />, 
       label: "Documentos", 
-      active: activeTab === "documents",
-      to: "/admin?tab=documents"
+      active: getIsActive("/admin/documents"),
+      to: "/admin/documents"
     },
     { 
       icon: <PieChart size={20} />, 
       label: "Enquetes", 
-      active: activeTab === "polls",
-      to: "/admin?tab=polls"
+      active: getIsActive("/admin/polls"),
+      to: "/admin/polls"
     },
     { 
       icon: <PieChart size={20} />, 
       label: "Resultados", 
-      active: activeTab === "poll-results",
-      to: "/admin?tab=poll-results"
+      active: getIsActive("/admin/poll-results"),
+      to: "/admin/poll-results"
     },
     { 
       icon: <Calculator size={20} />, 
       label: "Simulações IRPF", 
-      active: activeTab === "tax-simulations",
-      to: "/admin?tab=tax-simulations"
+      active: getIsActive("/admin/tax-simulations"),
+      to: "/admin/tax-simulations"
     },
     { 
       icon: <Settings size={20} />, 
       label: "Configurações", 
-      active: activeTab === "settings",
-      to: "/admin?tab=settings"
+      active: getIsActive("/admin/settings"),
+      to: "/admin/settings"
     }
   ];
 
@@ -174,7 +165,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
                   }`}
                   title={item.label}
                 >
-                  <Link to={item.to} className="text-navy dark:text-gold">
+                  <Link to={item.to} className={item.active ? "text-navy dark:text-gold" : "text-gray-500 dark:text-gray-400"}>
                     {item.icon}
                   </Link>
                 </div>

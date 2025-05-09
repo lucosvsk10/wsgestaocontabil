@@ -19,7 +19,7 @@ const AdminHeader = () => {
   
   return (
     <header className="bg-white dark:bg-[#1E1E1E] border-b border-gray-200 dark:border-gray-800 py-3 px-4 flex items-center justify-between">
-      <h1 className="text-xl font-medium">Área Administrativa</h1>
+      <h1 className="text-xl font-medium text-navy dark:text-gold">Área Administrativa</h1>
       
       <div className="flex items-center space-x-3">
         {/* Theme toggle */}

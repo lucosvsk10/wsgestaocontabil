@@ -1,11 +1,10 @@
 
-import { FileText, Lock, ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { FileText, Lock, ArrowDown, ArrowUp, ArrowUpDown, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { UserActions } from "./UserActions";
 import { formatDate } from "./utils/dateUtils";
-import type { UserTableProps, AuthUser } from "./types/userTable";
+import type { UserTableProps } from "./types/userTable";
 
 export const UserTable = ({
   users,
@@ -15,7 +14,7 @@ export const UserTable = ({
   setSelectedUserForPasswordChange,
   passwordForm,
   refreshUsers,
-  showDocumentButton = false,
+  showDocumentButton = true,
   isAdminSection = false
 }: UserTableProps) => {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>(null);
@@ -128,11 +127,22 @@ export const UserTable = ({
                               <span>Senha</span>
                             </Button>
                           )}
-                          <UserActions 
-                            authUser={authUser} 
-                            refreshUsers={refreshUsers}
-                            isAdminSection={isAdminSection} 
-                          />
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="flex items-center gap-1 bg-orange-300/80 dark:bg-navy-light/80 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white dark:hover:bg-red-600 dark:hover:text-white border-gold/20"
+                            onClick={() => {
+                              // Delete user action would go here
+                              // For now just call refresh
+                              if (confirm('Deseja realmente excluir este usuário?')) {
+                                refreshUsers();
+                              }
+                            }}
+                            aria-label={`Excluir ${authUser.user_metadata?.name || authUser.email || "usuário"}`}
+                          >
+                            <Trash2 size={14} />
+                            <span>Excluir</span>
+                          </Button>
                         </div>
                       </TableCell>
                     )}

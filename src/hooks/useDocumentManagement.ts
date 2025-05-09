@@ -1,9 +1,11 @@
+
 import { useState, useEffect } from "react";
 import { useDocumentFetch } from "./useDocumentFetch";
 import { useDocumentDelete } from "./useDocumentDelete";
 import { useDocumentUpload } from "./useDocumentUpload";
 import { useUserManagement } from "@/hooks/useUserManagement";
 import { triggerExpiredDocumentsCleanup } from "@/utils/documents/documentCleanup";
+import { supabase } from "@/integrations/supabase/client";
 
 export const useDocumentManagement = () => {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
@@ -49,19 +51,41 @@ export const useDocumentManagement = () => {
     await deleteDocument(documentId, selectedUserId);
   };
   
-  // Corrigido: useEffect que estava causando loop infinito
-  // Agora verificamos se selectedUserId existe e usamos uma dependência estável
+  // Effect to fetch documents when selectedUserId changes
   useEffect(() => {
     if (selectedUserId) {
       fetchUserDocuments(selectedUserId);
       
-      // Run cleanup of expired documents when loading documents for a user
-      // This helps keep the database clean without needing a separate cron job
+      // Run cleanup of expired documents
       triggerExpiredDocumentsCleanup().catch(error => {
         console.error("Error during expired documents cleanup:", error);
       });
+
+      // Adicionar canal de tempo real para esse usuário específico
+      const channel = supabase
+        .channel(`admin-documents-${selectedUserId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',  // Monitorar todos os eventos (INSERT, UPDATE, DELETE)
+            schema: 'public',
+            table: 'documents',
+            filter: `user_id=eq.${selectedUserId}`,
+          },
+          (payload) => {
+            console.log("Mudança detectada em documentos:", payload);
+            // Atualizar a lista de documentos
+            fetchUserDocuments(selectedUserId);
+          }
+        )
+        .subscribe();
+      
+      // Limpar inscrição quando o componente desmontar ou o usuário mudar
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
-  }, [selectedUserId]);
+  }, [selectedUserId, fetchUserDocuments]);
 
   return {
     documents,

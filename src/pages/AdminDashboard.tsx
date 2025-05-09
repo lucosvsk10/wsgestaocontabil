@@ -9,7 +9,6 @@ import { UserType } from "@/types/admin";
 import { AdminTabsView } from "@/components/admin/AdminTabsView";
 import { AdminPasswordChangeModal } from "@/components/admin/AdminPasswordChangeModal";
 import AdminLayout from "@/components/admin/layout/AdminLayout";
-import { useSearchParams, useNavigate } from "react-router-dom";
 
 // Schema para alteração de senha
 const passwordSchema = z.object({
@@ -18,22 +17,13 @@ const passwordSchema = z.object({
   })
 });
 
-const AdminDashboard = () => {
-  // Obter parâmetros de URL
-  const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const tabParam = searchParams.get("tab");
-  
+interface AdminDashboardProps {
+  activeTab?: string;
+}
+
+const AdminDashboard = ({ activeTab = "users" }: AdminDashboardProps) => {
   // Estado para controlar se a página já carregou
   const [isInitialized, setIsInitialized] = useState(false);
-  const [activeTab, setActiveTab] = useState(tabParam || "users");
-
-  // Atualizar URL quando a aba mudar
-  useEffect(() => {
-    if (activeTab) {
-      setSearchParams({ tab: activeTab });
-    }
-  }, [activeTab, setSearchParams]);
 
   const {
     documents,
@@ -94,13 +84,6 @@ const AdminDashboard = () => {
     }
   }, [isInitialized, fetchUsers, fetchAuthUsers]);
 
-  useEffect(() => {
-    // Sincronizar activeTab com o parâmetro de URL
-    if (tabParam && tabParam !== activeTab) {
-      setActiveTab(tabParam);
-    }
-  }, [tabParam, activeTab]);
-
   const refreshUsers = () => {
     fetchUsers();
     fetchAuthUsers();
@@ -109,13 +92,6 @@ const AdminDashboard = () => {
   // Function to handle document button click
   const handleDocumentButtonClick = (userId: string) => {
     setSelectedUserId(userId);
-    setActiveTab("documents");
-  };
-
-  // Handler para mudança de tab que atualiza a URL
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
-    navigate(`/admin?tab=${tab}`);
   };
 
   return (
@@ -123,7 +99,6 @@ const AdminDashboard = () => {
       <div className="bg-white dark:bg-[#1E1E1E] p-6 rounded-lg shadow-md border border-gold/20">          
         <AdminTabsView 
           activeTab={activeTab}
-          onTabChange={handleTabChange}
           supabaseUsers={supabaseUsers} 
           users={users} 
           userInfoList={users}

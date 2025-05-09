@@ -4,13 +4,12 @@ import { UserTable } from "./UserTable";
 import { PollsTabView } from "./polls/PollsTabView";
 import { PollResults } from "./polls/PollResults";
 import TaxSimulationResults from "./TaxSimulationResults";
-import { TabsContent } from "../ui/tabs";
 import { UserType } from "@/types/admin";
 import { Poll } from "@/types/polls";
+import { UserList } from "./UserList";
 
 export interface AdminTabsViewProps {
   activeTab?: string;
-  onTabChange?: (tab: string) => void;
   // Props para UserTable
   users?: UserType[];
   supabaseUsers?: any[];
@@ -48,7 +47,6 @@ export interface AdminTabsViewProps {
 
 export function AdminTabsView({ 
   activeTab, 
-  onTabChange,
   users,
   supabaseUsers,
   userInfoList,
@@ -87,11 +85,11 @@ export function AdminTabsView({
         {activeTab === "users" && (
           <div className="space-y-4">
             {users && supabaseUsers && (
-              <UserTable 
-                users={supabaseUsers} 
-                userInfoList={userInfoList || []} 
-                title="Usuários" 
-                setSelectedUserId={handleDocumentButtonClick} 
+              <UserList 
+                supabaseUsers={supabaseUsers} 
+                users={users} 
+                isLoading={isLoadingUsers || isLoadingAuthUsers} 
+                setSelectedUserId={handleDocumentButtonClick || (() => {})} 
                 setSelectedUserForPasswordChange={setSelectedUserForPasswordChange || (() => {})} 
                 passwordForm={passwordForm || {}} 
                 refreshUsers={refreshUsers || (() => {})} 

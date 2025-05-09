@@ -32,10 +32,46 @@ const AppRoutes = () => {
       {/* Admin routes */}
       <Route path="/admin" element={
         <PrivateRoute requiredRole="admin">
-          <AdminDashboard />
+          <AdminDashboard activeTab="users" />
         </PrivateRoute>
       } />
-
+      
+      <Route path="/admin/users" element={
+        <PrivateRoute requiredRole="admin">
+          <AdminDashboard activeTab="users" />
+        </PrivateRoute>
+      } />
+      
+      <Route path="/admin/documents" element={
+        <PrivateRoute requiredRole="admin">
+          <AdminDashboard activeTab="documents" />
+        </PrivateRoute>
+      } />
+      
+      <Route path="/admin/polls" element={
+        <PrivateRoute requiredRole="admin">
+          <AdminDashboard activeTab="polls" />
+        </PrivateRoute>
+      } />
+      
+      <Route path="/admin/poll-results" element={
+        <PrivateRoute requiredRole="admin">
+          <AdminDashboard activeTab="poll-results" />
+        </PrivateRoute>
+      } />
+      
+      <Route path="/admin/tax-simulations" element={
+        <PrivateRoute requiredRole="admin">
+          <AdminDashboard activeTab="tax-simulations" />
+        </PrivateRoute>
+      } />
+      
+      <Route path="/admin/settings" element={
+        <PrivateRoute requiredRole="admin">
+          <AdminDashboard activeTab="settings" />
+        </PrivateRoute>
+      } />
+      
       {/* Manter compatibilidade com rotas antigas */}
       <Route path="/admin-dashboard" element={<Navigate to="/admin" replace />} />
 
