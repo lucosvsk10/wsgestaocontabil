@@ -4,7 +4,13 @@ import { UserType } from "@/types/admin";
 import { UserTable } from "./UserTable";
 import { LoadingSpinner } from "../common/LoadingSpinner";
 import { useStorageStats } from "@/hooks/useStorageStats";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import { UserCreationDialog } from "./components/UserCreationDialog";
+import { UserFormData } from "./CreateUser";
+import { useUserCreation } from "@/hooks/useUserCreation";
+import { useToast } from "@/hooks/use-toast";
 
 interface AuthUser {
   id: string;
@@ -34,6 +40,11 @@ export const UserList = ({
   passwordForm,
   refreshUsers
 }: UserListProps) => {
+  // User creation dialog state
+  const [isUserCreationDialogOpen, setIsUserCreationDialogOpen] = useState(false);
+  const { isCreatingUser, createUser } = useUserCreation(refreshUsers);
+  const { toast } = useToast();
+  
   // Storage stats
   const { storageStats, isLoading: isLoadingStorage, error, fetchStorageStats } = useStorageStats();
   
@@ -41,6 +52,16 @@ export const UserList = ({
   useEffect(() => {
     fetchStorageStats();
   }, []);
+
+  // Handle user creation submission
+  const handleUserCreation = async (data: UserFormData) => {
+    try {
+      await createUser(data);
+      setIsUserCreationDialogOpen(false);
+    } catch (error) {
+      console.error("Error creating user:", error);
+    }
+  };
 
   // Verificar se o usuário é admin
   const isAdminUser = (authUserId: string, email: string | null) => {
@@ -85,7 +106,15 @@ export const UserList = ({
   return (
     <Card className="px-0 bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20 shadow-md">
       <CardHeader className="rounded-full bg-white dark:bg-navy-dark">
-        <CardTitle className="text-navy dark:text-gold bg-transparent text-center text-2xl font-normal">LISTA DE USUARIOS</CardTitle>
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-navy dark:text-gold bg-transparent text-2xl font-normal">LISTA DE USUARIOS</CardTitle>
+          <Button
+            onClick={() => setIsUserCreationDialogOpen(true)}
+            className="bg-navy hover:bg-navy-light text-white dark:bg-gold dark:hover:bg-gold-light dark:text-navy"
+          >
+            <Plus className="mr-2 h-4 w-4" /> Novo Usuário
+          </Button>
+        </div>
       </CardHeader>
 
       {/* Storage Statistics */}
@@ -165,6 +194,14 @@ export const UserList = ({
           </>
         )}
       </CardContent>
+
+      {/* User Creation Dialog */}
+      <UserCreationDialog
+        isOpen={isUserCreationDialogOpen}
+        onClose={() => setIsUserCreationDialogOpen(false)}
+        onSubmit={handleUserCreation}
+        isCreating={isCreatingUser}
+      />
     </Card>
   );
 };
