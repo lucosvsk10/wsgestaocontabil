@@ -86,12 +86,13 @@ const Hero = () => {
               </div>
             </div>
             
-            {/* Right column - Visual element - Updated to show only caduceus with caption */}
-            <div className="flex flex-col items-center justify-center">
-              <img src="/lovable-uploads/a87b6e5f-5e26-4b01-bf74-865e0ec514a7.png" alt="Símbolo da Contabilidade" className="text-[100px] md:text-[10px] text-primary animate-fade-in object-cover" />
-              <p className="text-sm text-muted-foreground mt-4 text-center">
-                Símbolo da contabilidade, representando equilíbrio e sabedoria nos negócios.
-              </p>
+            {/* Right column - Visual element */}
+            <div className="flex justify-center">
+              <div className="bg-muted/20 rounded-xl p-6">
+                <div className={cn("rounded-full p-8 md:p-10", "flex items-center justify-center max-w-[320px]", "bg-primary/10", "border border-primary/20", "shadow-inner shadow-primary/5")}>
+                  <img src="/lovable-uploads/a87b6e5f-5e26-4b01-bf74-865e0ec514a7.png" alt="Símbolo da Contabilidade" className="w-full h-full object-contain animate-fade-in" />
+                </div>
+              </div>
             </div>
           </div>
         </div>
