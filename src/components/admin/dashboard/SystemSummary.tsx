@@ -11,13 +11,13 @@ export const SystemSummary = ({
   storageUsed,
   appVersion
 }: SystemSummaryProps) => {
-  return <Card className="border border-gray-200 dark:border-navy-lighter/30 bg-navy-dark">
-      <CardHeader className="border-b border-gray-200 dark:border-navy-lighter/30 bg-navy-dark rounded-xl">
+  return <Card className="bg-white dark:bg-navy-medium border border-gray-200 dark:border-navy-lighter/30">
+      <CardHeader className="border-b border-gray-200 dark:border-navy-lighter/30 bg-navy-dark">
         <CardTitle className="text-lg font-semibold text-navy dark:text-gold">
           Resumo do Sistema
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-4 bg-navy-dark rounded-full">
+      <CardContent className="p-4 bg-navy-dark">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="p-4 rounded-lg bg-navy-dark">
             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total de clientes</p>

@@ -107,8 +107,8 @@ export const UserList = ({
   const storageLimitMB = 100;
   const usedStorageMB = storageStats?.totalStorageMB || 0;
   const remainingStorageMB = Math.max(0, storageLimitMB - usedStorageMB);
-  return <Card className="bg-navy-dark rounded-xl">
-      <CardHeader className="bg-navy-dark rounded-none">
+  return <Card className="bg-navy-dark">
+      <CardHeader className="rounded-full bg-navy-dark">
         <div className="flex justify-between items-center">
           <CardTitle className="bg-transparent font-semibold text-2xl text-slate-300">LISTA DE USUARIOS</CardTitle>
           <Button onClick={() => setIsUserCreationDialogOpen(true)} className="bg-navy hover:bg-navy-light text-white dark:bg-gold dark:hover:bg-gold-light dark:text-navy">
@@ -118,7 +118,7 @@ export const UserList = ({
       </CardHeader>
 
       {/* Storage Statistics */}
-      <CardContent className="border-b border-gray-200 dark:border-navy-lighter/30 mb-4 pb-4 bg-navy-dark rounded-none">
+      <CardContent className="border-b border-gray-200 dark:border-navy-lighter/30 mb-4 pb-4  bg-navy-dark">
         <div className="rounded-lg p-4 shadow-sm bg-navy-dark">
           <h3 className="mb-3 text-lg font-extralight text-gray-400">Estatísticas de Armazenamento</h3>
           

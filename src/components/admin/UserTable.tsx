@@ -44,8 +44,8 @@ export const UserTable = ({
       refreshUsers();
     }
   };
-  return <div className="bg-navy-dark">
-      <h3 className="text-xl mb-3 font-normal text-gray-400 my-[10px] py-[20px]">{title}</h3>
+  return <div>
+      <h3 className="text-xl mb-3 font-normal text-gray-400">{title}</h3>
       <div className="overflow-x-auto">
         <Table>
           <UserTableHeader isAdminSection={isAdminSection} sortDirection={sortDirection} toggleSort={toggleSort} />
