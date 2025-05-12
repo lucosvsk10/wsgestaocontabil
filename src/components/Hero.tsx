@@ -31,7 +31,7 @@ const Hero = () => {
   return <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden py-12 bg-background">
       <div ref={heroRef} className="container relative z-5 transition-all duration-700 transform opacity-0 translate-y-10 my-px py-[10px] mx-0 px-[45px]">
         <div className="flex justify-center items-center">
-          <div className="grid md:grid-cols-2 items-center gap-10 mx-[10px] py-0 my-0 px-[10px] -mt-10">
+          <div className="grid md:grid-cols-2 items-center gap-10 my-0 -mt-10 px-[160px] mx-0 py-[15px]">
             {/* Left column - Content */}
             <div className="flex flex-col">
               <h1 className="text-4xl md:text-5xl font-extrabold text-primary">
