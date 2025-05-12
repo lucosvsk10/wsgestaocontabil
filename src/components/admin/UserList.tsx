@@ -107,7 +107,7 @@ export const UserList = ({
   const storageLimitMB = 100;
   const usedStorageMB = storageStats?.totalStorageMB || 0;
   const remainingStorageMB = Math.max(0, storageLimitMB - usedStorageMB);
-  return <Card className="px-0 border border-gray-200 dark:border-navy-lighter/30 shadow-md bg-inherit">
+  return <Card className="px-0 border border-gray-200 dark:border-navy-lighter/30 shadow-md bg-navy-dark">
       <CardHeader className="rounded-full bg-navy-dark">
         <div className="flex justify-between items-center">
           <CardTitle className="bg-transparent font-semibold text-2xl text-slate-300">LISTA DE USUARIOS</CardTitle>
@@ -156,7 +156,7 @@ export const UserList = ({
         </div>
       </CardContent>
 
-      <CardContent className="rounded-full space-y-6 bg-navy-dark">
+      <CardContent className="space-y-6 bg-navy-dark rounded-none">
         {isLoading ? <LoadingSpinner /> : <>
             {/* Seção de Clientes */}
             <UserTable users={clientUsers} userInfoList={users} title="Clientes" setSelectedUserId={setSelectedUserId} setSelectedUserForPasswordChange={setSelectedUserForPasswordChange} passwordForm={passwordForm} refreshUsers={refreshUsers} showDocumentButton={true} isAdminSection={false} />
