@@ -108,7 +108,7 @@ export const UserList = ({
   const usedStorageMB = storageStats?.totalStorageMB || 0;
   const remainingStorageMB = Math.max(0, storageLimitMB - usedStorageMB);
   return <Card className="bg-navy-dark">
-      <CardHeader className="rounded-full bg-navy-dark">
+      <CardHeader className="bg-navy-dark rounded-none">
         <div className="flex justify-between items-center">
           <CardTitle className="bg-transparent font-semibold text-2xl text-slate-300">LISTA DE USUARIOS</CardTitle>
           <Button onClick={() => setIsUserCreationDialogOpen(true)} className="bg-navy hover:bg-navy-light text-white dark:bg-gold dark:hover:bg-gold-light dark:text-navy">
