@@ -118,7 +118,7 @@ export const UserList = ({
       </CardHeader>
 
       {/* Storage Statistics */}
-      <CardContent className="border-b border-gray-200 dark:border-navy-lighter/30 mb-4 pb-4  bg-navy-dark">
+      <CardContent className="border-b border-gray-200 dark:border-navy-lighter/30 mb-4 pb-4 bg-navy-dark rounded-none">
         <div className="rounded-lg p-4 shadow-sm bg-navy-dark">
           <h3 className="mb-3 text-lg font-extralight text-gray-400">Estatísticas de Armazenamento</h3>
           
@@ -156,7 +156,7 @@ export const UserList = ({
         </div>
       </CardContent>
 
-      <CardContent className="space-y-6 bg-navy-dark rounded-full">
+      <CardContent className="space-y-6 bg-navy-dark rounded-none">
         {isLoading ? <LoadingSpinner /> : <>
             {/* Seção de Clientes */}
             <UserTable users={clientUsers} userInfoList={users} title="Clientes" setSelectedUserId={setSelectedUserId} setSelectedUserForPasswordChange={setSelectedUserForPasswordChange} passwordForm={passwordForm} refreshUsers={refreshUsers} showDocumentButton={true} isAdminSection={false} />

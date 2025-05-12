@@ -82,7 +82,7 @@ export function AdminTabsView({
         {activeTab === "dashboard" && <AdminDashboardView users={users || []} supabaseUsers={supabaseUsers || []} documents={documents || []} />}
 
         {/* Tab Content - Users */}
-        {activeTab === "users" && <div className="space-y-4 bg-navy-dark">
+        {activeTab === "users" && <div className="bg-navy-dark">
             {users && supabaseUsers && <UserList supabaseUsers={supabaseUsers} users={users} isLoading={isLoadingUsers || isLoadingAuthUsers} setSelectedUserId={handleDocumentButtonClick || (() => {})} setSelectedUserForPasswordChange={setSelectedUserForPasswordChange || (() => {})} passwordForm={passwordForm || {}} refreshUsers={refreshUsers || (() => {})} />}
           </div>}
 
