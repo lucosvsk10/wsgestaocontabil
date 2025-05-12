@@ -119,7 +119,7 @@ export const UserList = ({
 
       {/* Storage Statistics */}
       <CardContent className="border-b border-gray-200 dark:border-navy-lighter/30 mb-4 pb-4">
-        <div className="bg-white/5 dark:bg-navy-deeper rounded-lg p-4 shadow-sm">
+        <div className="rounded-lg p-4 shadow-sm bg-navy-dark">
           <h3 className="text-lg font-semibold text-navy dark:text-gold mb-3">Estatísticas de Armazenamento</h3>
           
           {isLoadingStorage ? <div className="flex justify-center py-4">
