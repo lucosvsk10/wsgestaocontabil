@@ -23,8 +23,7 @@ const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/" element={<Index />} />
-      {/* Redirect /login to home */}
-      <Route path="/login" element={<Navigate to="/" replace />} />
+      <Route path="/login" element={<ClientLogin />} />
       <Route path="/enquete/:id" element={<PollPage />} />
       <Route path="/enquete-numerica/:id" element={<NumericalPollPage />} />
       <Route path="/formulario/:id" element={<FormPollPage />} />

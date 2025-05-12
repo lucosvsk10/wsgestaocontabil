@@ -28,18 +28,8 @@ const Hero = () => {
       }
     };
   }, []);
-
-  // Function to handle external link for "Saiba Mais"
-  const handleSaibaMaisClick = () => {
-    window.open('https://g.co/kgs/d2UwXh3', '_blank');
-  };
-
-  // Function to handle WhatsApp link
-  const handleContatoClick = () => {
-    window.open('https://wa.me/5582999324884', '_blank');
-  };
-  return <section id="hero" className="relative min-h-[100vh] flex items-center justify-center overflow-hidden py-6 bg-background">
-      <div ref={heroRef} className="container relative z-5 transition-all duration-700 transform opacity-0 translate-y-10 my-px py-[4px] mx-0 px-[20px] h-[115px]">
+  return <section id="hero" className="relative min-h-[110vh] flex items-center justify-center overflow-hidden py-28 bg-background">
+      <div ref={heroRef} className="container relative z-5 transition-all duration-700 transform opacity-0 translate-y-10 my-px py-[4px] mx-0 px-[20px]">
         <div className="flex justify-center items-center">
           <div className="grid md:grid-cols-2 items-center gap-4 my-0 -mt-4 px-[150px] mx-0 py-[8px]">
             {/* Left column - Content */}
@@ -85,11 +75,19 @@ const Hero = () => {
               
               {/* CTA Buttons */}
               <div className="flex flex-wrap gap-3 mt-7">
-                <Button className="bg-primary text-white px-4 py-1.5 text-sm rounded-xl font-semibold hover:opacity-90" onClick={handleSaibaMaisClick}>
+                <Button className="bg-primary text-white px-4 py-1.5 text-sm rounded-xl font-semibold hover:opacity-90" onClick={() => {
+                document.getElementById('quemsomos')?.scrollIntoView({
+                  behavior: 'smooth'
+                });
+              }}>
                   Saiba Mais
                 </Button>
                 
-                <Button variant="outline" className="border border-primary text-primary px-4 py-1.5 text-sm rounded-xl hover:bg-primary/10" onClick={handleContatoClick}>
+                <Button variant="outline" className="border border-primary text-primary px-4 py-1.5 text-sm rounded-xl hover:bg-primary/10" onClick={() => {
+                document.getElementById('contato')?.scrollIntoView({
+                  behavior: 'smooth'
+                });
+              }}>
                   Fale com um especialista
                 </Button>
               </div>
