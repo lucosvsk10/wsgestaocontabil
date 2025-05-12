@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import ThemeToggle from "@/components/ThemeToggle";
 import { BellIcon, UserCircle } from "lucide-react";
@@ -6,7 +5,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Button } from "@/components/ui/button";
 import { useNavigation } from "@/components/navbar/hooks/useNavigation";
 import { Link } from "react-router-dom";
-
 const AdminHeader = () => {
   const {
     user
@@ -14,9 +12,8 @@ const AdminHeader = () => {
   const {
     handleLogout
   } = useNavigation();
-  
   return <header className="border-b border-gray-200 dark:border-navy-lighter/30 py-3 px-4 flex items-center justify-between bg-white shadow-sm dark:bg-navy-dark">
-      <h1 className="text-xl font-medium text-gray-800 dark:text-gold">Área Administrativa</h1>
+      <h1 className="text-xl text-gray-800 dark:text-gold font-extralight">Área Administrativa</h1>
       
       <div className="flex items-center space-x-3">
         {/* Theme toggle */}
@@ -48,5 +45,4 @@ const AdminHeader = () => {
       </div>
     </header>;
 };
-
 export default AdminHeader;

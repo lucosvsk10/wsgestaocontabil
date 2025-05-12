@@ -1,9 +1,7 @@
-
 import { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { LayoutDashboard, Users, PieChart, Calculator, Settings, Wrench } from "lucide-react";
-
 interface SidebarItemProps {
   icon: React.ReactNode;
   label: string;
@@ -11,7 +9,6 @@ interface SidebarItemProps {
   to: string;
   onClick?: () => void;
 }
-
 const SidebarItem: React.FC<SidebarItemProps> = ({
   icon,
   label,
@@ -26,12 +23,10 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
       <span className="font-medium">{label}</span>
     </Link>;
 };
-
 interface AdminSidebarProps {
   open: boolean;
   onClose: () => void;
 }
-
 const AdminSidebar: React.FC<AdminSidebarProps> = ({
   open,
   onClose
@@ -64,7 +59,6 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const getIsActive = (path: string): boolean => {
     return location.pathname === path;
   };
-
   const sidebarItems = [{
     icon: <LayoutDashboard size={20} />,
     label: "Dashboard",
@@ -96,11 +90,10 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
     active: getIsActive("/admin/settings"),
     to: "/admin/settings"
   }];
-
   return <aside data-sidebar="true" className={`w-64 bg-white shadow-md dark:bg-[#1E1E1E] border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-300 ease-in-out ${open ? "translate-x-0" : "-translate-x-full md:translate-x-0 md:w-16"} ${isMobile ? "fixed inset-y-0 z-40 shadow-xl" : ""}`}>
       {/* Logo area */}
       <div className="h-16 border-b border-gray-200 dark:border-gray-800 flex items-center justify-center bg-white dark:bg-navy-dark">
-        <h1 className={`font-bold text-blue-700 dark:text-gold text-lg ${!open && !isMobile ? "hidden" : ""}`}>
+        <h1 className="font-extralight text-base">
           WS Gestão
         </h1>
         {!open && !isMobile && <span className="font-bold text-blue-700 dark:text-gold text-lg">WS</span>}
@@ -127,5 +120,4 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
       </div>
     </aside>;
 };
-
 export default AdminSidebar;
