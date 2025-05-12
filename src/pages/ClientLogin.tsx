@@ -1,4 +1,3 @@
-
 import { useState, FormEvent } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,7 +10,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useNotifications } from "@/hooks/useNotifications";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-
 const ClientLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,7 +27,6 @@ const ClientLogin = () => {
   const {
     notifyLogin
   } = useNotifications();
-  
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -68,7 +65,6 @@ const ClientLogin = () => {
       setIsLoading(false);
     }
   };
-  
   return <div className="min-h-screen flex flex-col bg-orange-100 dark:bg-navy-dark">
       <Navbar />
       <div className="flex-grow flex items-center justify-center p-4 py-[80px]">
@@ -117,5 +113,4 @@ const ClientLogin = () => {
       <Footer />
     </div>;
 };
-
 export default ClientLogin;
