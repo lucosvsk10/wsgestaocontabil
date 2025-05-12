@@ -127,7 +127,7 @@ export const UserList = ({
             </div> : error ? <div className="text-red-500 text-center py-2">
               Erro ao carregar estatísticas: {error}
             </div> : <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-white dark:bg-navy-medium rounded p-3 border border-gray-200 dark:border-navy-lighter/30">
+              <div className="rounded p-3 border border-gray-200 dark:border-navy-lighter/30 bg-navy-dark">
                 <p className="text-sm text-gray-500 dark:text-gray-400">Espaço Utilizado</p>
                 <p className="text-lg font-semibold text-navy dark:text-white">
                   {usedStorageMB.toFixed(2)} MB de {storageLimitMB} MB
@@ -139,14 +139,14 @@ export const UserList = ({
                 </div>
               </div>
               
-              <div className="bg-white dark:bg-navy-medium rounded p-3 border border-gray-200 dark:border-navy-lighter/30">
+              <div className="rounded p-3 border border-gray-200 dark:border-navy-lighter/30 bg-navy-dark">
                 <p className="text-sm text-gray-500 dark:text-gray-400">Total de Documentos</p>
                 <p className="text-lg font-semibold text-navy dark:text-white">
                   {totalDocuments} arquivos
                 </p>
               </div>
               
-              <div className="bg-white dark:bg-navy-medium rounded p-3 border border-gray-200 dark:border-navy-lighter/30">
+              <div className="rounded p-3 border border-gray-200 dark:border-navy-lighter/30 bg-navy-dark">
                 <p className="text-sm text-gray-500 dark:text-gray-400">Espaço Disponível</p>
                 <p className="text-lg font-semibold text-navy dark:text-white">
                   {remainingStorageMB.toFixed(2)} MB restantes
