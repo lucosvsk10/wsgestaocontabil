@@ -4,13 +4,15 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Building, FileChart, Users, FileText } from 'lucide-react';
+import { Building, FileHeart, Users, FileText } from 'lucide-react';
+
 const Hero = () => {
   const heroRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
   const {
     theme
   } = useTheme();
+
   useEffect(() => {
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) {
@@ -20,15 +22,18 @@ const Hero = () => {
     }, {
       threshold: 0.1
     });
+
     if (heroRef.current) {
       observer.observe(heroRef.current);
     }
+
     return () => {
       if (heroRef.current) {
         observer.unobserve(heroRef.current);
       }
     };
   }, []);
+
   return <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden py-12 bg-background">
       <div ref={heroRef} className="container relative z-5 transition-all duration-700 transform opacity-0 translate-y-10 my-px py-[10px] mx-0 px-[45px]">
         <div className="flex justify-center items-center">
@@ -49,28 +54,28 @@ const Hero = () => {
                   <div className="bg-primary/10 p-2 rounded-full text-primary w-10 h-10 flex items-center justify-center">
                     <Building className="h-5 w-5" />
                   </div>
-                  <span className="text-sm md:text-base font-medium text-foreground">Abertura, alteração e baixa de empresas</span>
+                  <span className="text-sm md:text-base font-medium text-foreground">ABERTURA, ALTERAÇÃO E BAIXA DE EMPRESAS</span>
                 </div>
                 
                 <div className="flex items-center space-x-3">
                   <div className="bg-primary/10 p-2 rounded-full text-primary w-10 h-10 flex items-center justify-center">
-                    <FileChart className="h-5 w-5" />
+                    <FileHeart className="h-5 w-5" />
                   </div>
-                  <span className="text-sm md:text-base font-medium text-foreground">Planejamento tributário inteligente</span>
+                  <span className="text-sm md:text-base font-medium text-foreground">PLANEJAMENTO TRIBUTÁRIO INTELIGENTE</span>
                 </div>
                 
                 <div className="flex items-center space-x-3">
                   <div className="bg-primary/10 p-2 rounded-full text-primary w-10 h-10 flex items-center justify-center">
                     <Users className="h-5 w-5" />
                   </div>
-                  <span className="text-sm md:text-base font-medium text-foreground">Gestão empresarial</span>
+                  <span className="text-sm md:text-base font-medium text-foreground">GESTÃO EMPRESARIAL</span>
                 </div>
                 
                 <div className="flex items-center space-x-3">
                   <div className="bg-primary/10 p-2 rounded-full text-primary w-10 h-10 flex items-center justify-center">
                     <FileText className="h-5 w-5" />
                   </div>
-                  <span className="text-sm md:text-base font-medium text-foreground">Assessoria trabalhista</span>
+                  <span className="text-sm md:text-base font-medium text-foreground">ASSESSORIA TRABALHISTA</span>
                 </div>
               </div>
               
@@ -110,4 +115,5 @@ const Hero = () => {
       </div>
     </section>;
 };
+
 export default Hero;
