@@ -38,7 +38,7 @@ const Hero = () => {
                 WS GESTÃO CONTÁBIL
               </h1>
               
-              <p className="text-lg mt-4 leading-relaxed text-gold-light">
+              <p className="text-lg mt-4 leading-relaxed font-thin text-gold-dark">
                 Soluções eficientes e personalizadas para sua empresa prosperar
               </p>
               
