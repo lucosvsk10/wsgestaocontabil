@@ -1,9 +1,10 @@
+
 import { useEffect, useRef } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { BarChart3, FileText, Users } from 'lucide-react';
+import { Building, FileChart, Users, FileText } from 'lucide-react';
 const Hero = () => {
   const heroRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
@@ -46,23 +47,30 @@ const Hero = () => {
               <div className="flex flex-col gap-3 mt-6">
                 <div className="flex items-center space-x-3">
                   <div className="bg-primary/10 p-2 rounded-full text-primary w-10 h-10 flex items-center justify-center">
-                    <BarChart3 className="h-5 w-5" />
+                    <Building className="h-5 w-5" />
+                  </div>
+                  <span className="text-sm md:text-base font-medium text-foreground">Abertura, alteração e baixa de empresas</span>
+                </div>
+                
+                <div className="flex items-center space-x-3">
+                  <div className="bg-primary/10 p-2 rounded-full text-primary w-10 h-10 flex items-center justify-center">
+                    <FileChart className="h-5 w-5" />
                   </div>
                   <span className="text-sm md:text-base font-medium text-foreground">Planejamento tributário inteligente</span>
                 </div>
                 
                 <div className="flex items-center space-x-3">
                   <div className="bg-primary/10 p-2 rounded-full text-primary w-10 h-10 flex items-center justify-center">
-                    <FileText className="h-5 w-5" />
+                    <Users className="h-5 w-5" />
                   </div>
-                  <span className="text-sm md:text-base font-medium text-foreground">Documentos sempre disponíveis</span>
+                  <span className="text-sm md:text-base font-medium text-foreground">Gestão empresarial</span>
                 </div>
                 
                 <div className="flex items-center space-x-3">
                   <div className="bg-primary/10 p-2 rounded-full text-primary w-10 h-10 flex items-center justify-center">
-                    <Users className="h-5 w-5" />
+                    <FileText className="h-5 w-5" />
                   </div>
-                  <span className="text-sm md:text-base font-medium text-foreground">Atendimento com especialistas</span>
+                  <span className="text-sm md:text-base font-medium text-foreground">Assessoria trabalhista</span>
                 </div>
               </div>
               
