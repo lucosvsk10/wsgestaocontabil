@@ -110,7 +110,7 @@ export const UserList = ({
   return <Card className="px-0 border border-gray-200 dark:border-navy-lighter/30 shadow-md bg-navy-dark">
       <CardHeader className="rounded-full bg-navy-dark">
         <div className="flex justify-between items-center">
-          <CardTitle className="text-navy dark:text-gold bg-transparent text-2xl font-normal">LISTA DE USUARIOS</CardTitle>
+          <CardTitle className="bg-transparent font-semibold text-2xl text-slate-300">LISTA DE USUARIOS</CardTitle>
           <Button onClick={() => setIsUserCreationDialogOpen(true)} className="bg-navy hover:bg-navy-light text-white dark:bg-gold dark:hover:bg-gold-light dark:text-navy">
             <Plus className="mr-2 h-4 w-4" /> Novo Usuário
           </Button>
@@ -120,7 +120,7 @@ export const UserList = ({
       {/* Storage Statistics */}
       <CardContent className="border-b border-gray-200 dark:border-navy-lighter/30 mb-4 pb-4">
         <div className="rounded-lg p-4 shadow-sm bg-navy-dark">
-          <h3 className="text-lg font-semibold text-navy dark:text-gold mb-3">Estatísticas de Armazenamento</h3>
+          <h3 className="mb-3 text-lg font-extralight text-gray-400">Estatísticas de Armazenamento</h3>
           
           {isLoadingStorage ? <div className="flex justify-center py-4">
               <LoadingSpinner />
