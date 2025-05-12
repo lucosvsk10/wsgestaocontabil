@@ -88,7 +88,7 @@ const Hero = () => {
             
             {/* Right column - Visual element */}
             <div className="flex justify-center">
-              <div className="bg-muted/20 rounded-xl p-6">
+              <div className="rounded-xl p-6 bg-inherit">
                 <div className={cn("rounded-full p-8 md:p-10", "flex items-center justify-center max-w-[320px]", "bg-primary/10", "border border-primary/20", "shadow-inner shadow-primary/5")}>
                   <img src="/lovable-uploads/a87b6e5f-5e26-4b01-bf74-865e0ec514a7.png" alt="Símbolo da Contabilidade" className="w-full h-full object-contain animate-fade-in" />
                 </div>
