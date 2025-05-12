@@ -1,18 +1,15 @@
-
 import { useEffect, useRef } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Building, FileHeart, Users, FileText } from 'lucide-react';
-
 const Hero = () => {
   const heroRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
   const {
     theme
   } = useTheme();
-
   useEffect(() => {
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) {
@@ -22,18 +19,15 @@ const Hero = () => {
     }, {
       threshold: 0.1
     });
-
     if (heroRef.current) {
       observer.observe(heroRef.current);
     }
-
     return () => {
       if (heroRef.current) {
         observer.unobserve(heroRef.current);
       }
     };
   }, []);
-
   return <section id="hero" className="relative min-h-[60vh] flex items-center justify-center overflow-hidden py-6 bg-background">
       <div ref={heroRef} className="container relative z-5 transition-all duration-700 transform opacity-0 translate-y-10 my-px py-[4px] mx-0 px-[20px]">
         <div className="flex justify-center items-center">
@@ -115,5 +109,4 @@ const Hero = () => {
       </div>
     </section>;
 };
-
 export default Hero;
