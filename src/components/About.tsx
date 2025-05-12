@@ -1,28 +1,24 @@
-
 import { useEffect, useRef } from 'react';
-import { Building, ChartBar, Briefcase, Users } from 'lucide-react';
-
+import { Check, Clock, Award, BarChart } from 'lucide-react';
 const services = [{
-  title: "Abertura, alteração e baixa de empresas",
-  description: "Suporte completo para formalização, modificação e encerramento de empresas junto aos órgãos competentes.",
-  icon: <Building className="w-10 h-10 text-gold" />
+  title: "Contabilidade Empresarial",
+  description: "Registros contábeis de acordo com a legislação vigente e emissão de demonstrações financeiras.",
+  icon: <BarChart className="w-10 h-10 text-gold" />
 }, {
-  title: "Planejamento tributário inteligente",
-  description: "Estratégias legais para redução da carga tributária e otimização dos recursos financeiros da sua empresa.",
-  icon: <ChartBar className="w-10 h-10 text-gold" />
+  title: "Consultoria Fiscal",
+  description: "Análise e planejamento tributário para sua empresa otimizar custos e estar em conformidade com a legislação.",
+  icon: <Award className="w-10 h-10 text-gold" />
 }, {
-  title: "Gestão empresarial",
-  description: "Consultoria para tomada de decisões estratégicas e aprimoramento dos processos gerenciais da sua empresa.",
-  icon: <Briefcase className="w-10 h-10 text-gold" />
+  title: "Departamento Pessoal",
+  description: "Gerenciamento de obrigações trabalhistas, folha de pagamento e processos de admissão e demissão.",
+  icon: <Check className="w-10 h-10 text-gold" />
 }, {
-  title: "Assessoria trabalhista",
-  description: "Gerenciamento completo das obrigações trabalhistas, folha de pagamento e processos de admissão e demissão.",
-  icon: <Users className="w-10 h-10 text-gold" />
+  title: "Assessoria Empresarial",
+  description: "Suporte completo para abertura, alterações e encerramento de empresas junto aos órgãos competentes.",
+  icon: <Clock className="w-10 h-10 text-gold" />
 }];
-
 const About = () => {
   const serviceRefs = useRef<(HTMLDivElement | null)[]>([]);
-  
   useEffect(() => {
     const observer = new IntersectionObserver(entries => {
       entries.forEach((entry, index) => {
@@ -35,18 +31,15 @@ const About = () => {
     }, {
       threshold: 0.1
     });
-    
     serviceRefs.current.forEach(ref => {
       if (ref) observer.observe(ref);
     });
-    
     return () => {
       serviceRefs.current.forEach(ref => {
         if (ref) observer.unobserve(ref);
       });
     };
   }, []);
-
   return <>
       <section id="servicos" className="py-20 bg-orange-200 dark:bg-navy-dark">
         <div className="container mx-auto px-6">
@@ -108,5 +101,4 @@ const About = () => {
       </section>
     </>;
 };
-
 export default About;
