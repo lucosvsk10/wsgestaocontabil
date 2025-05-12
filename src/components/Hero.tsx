@@ -96,7 +96,7 @@ const Hero = () => {
             {/* Right column - Visual element */}
             <div className="flex flex-col items-center justify-center">
               <div className="flex flex-col items-center bg-inherit">
-                <div className={cn("rounded-full p-6 md:p-8", "flex items-center justify-center max-w-[240px]", "bg-primary/10", "border border-primary/20", "shadow-inner shadow-primary/5")}>
+                <div className="">
                   <img src="/lovable-uploads/a87b6e5f-5e26-4b01-bf74-865e0ec514a7.png" alt="Símbolo da Contabilidade" className="w-full h-full object-contain animate-fade-in" />
                 </div>
                 <p className="text-xs text-muted-foreground mt-3 text-center italic px-[70px]">
