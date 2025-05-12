@@ -1,18 +1,15 @@
-
 import { useEffect, useRef } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { BarChart3, FileText, Users } from 'lucide-react';
-
 const Hero = () => {
   const heroRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
   const {
     theme
   } = useTheme();
-
   useEffect(() => {
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) {
@@ -31,7 +28,6 @@ const Hero = () => {
       }
     };
   }, []);
-
   return <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden py-12 bg-background">
       <div ref={heroRef} className="container relative z-5 transition-all duration-700 transform opacity-0 translate-y-10 my-px py-[10px] mx-0 px-[45px]">
         <div className="flex justify-center items-center">
@@ -42,7 +38,7 @@ const Hero = () => {
                 WS GESTÃO CONTÁBIL
               </h1>
               
-              <p className="text-lg text-muted-foreground mt-4 leading-relaxed">
+              <p className="text-lg mt-4 leading-relaxed text-gold-light">
                 Soluções eficientes e personalizadas para sua empresa prosperar
               </p>
               
@@ -106,5 +102,4 @@ const Hero = () => {
       </div>
     </section>;
 };
-
 export default Hero;
