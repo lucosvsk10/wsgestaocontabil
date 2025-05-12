@@ -1,16 +1,15 @@
-
 import { useEffect, useRef } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { BarChart3, FileText, Users } from 'lucide-react';
-
 const Hero = () => {
   const heroRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
-  const { theme } = useTheme();
-  
+  const {
+    theme
+  } = useTheme();
   useEffect(() => {
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) {
@@ -20,22 +19,18 @@ const Hero = () => {
     }, {
       threshold: 0.1
     });
-    
     if (heroRef.current) {
       observer.observe(heroRef.current);
     }
-    
     return () => {
       if (heroRef.current) {
         observer.unobserve(heroRef.current);
       }
     };
   }, []);
-  
-  return (
-    <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden py-12 bg-background">
-      <div ref={heroRef} className="container relative z-5 transition-all duration-700 transform opacity-0 translate-y-10 my-8 px-4">
-        <div className={cn("py-16 px-6 md:px-12 bg-background text-foreground max-w-7xl mx-auto")}>
+  return <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden py-12 bg-background">
+      <div ref={heroRef} className="container relative z-5 transition-all duration-700 transform opacity-0 translate-y-10 my-px py-[10px] mx-0 px-[45px]">
+        <div className="">
           <div className="grid md:grid-cols-2 items-center gap-10">
             {/* Left column - Content */}
             <div className="flex flex-col">
@@ -73,26 +68,19 @@ const Hero = () => {
               
               {/* CTA Buttons */}
               <div className="flex flex-wrap gap-4 mt-6">
-                <Button 
-                  className="bg-primary text-white px-5 py-2 rounded-xl font-semibold hover:opacity-90"
-                  onClick={() => {
-                    document.getElementById('quemsomos')?.scrollIntoView({
-                      behavior: 'smooth'
-                    });
-                  }}
-                >
+                <Button className="bg-primary text-white px-5 py-2 rounded-xl font-semibold hover:opacity-90" onClick={() => {
+                document.getElementById('quemsomos')?.scrollIntoView({
+                  behavior: 'smooth'
+                });
+              }}>
                   Saiba Mais
                 </Button>
                 
-                <Button 
-                  variant="outline" 
-                  className="border border-primary text-primary px-5 py-2 rounded-xl hover:bg-primary/10"
-                  onClick={() => {
-                    document.getElementById('contato')?.scrollIntoView({
-                      behavior: 'smooth'
-                    });
-                  }}
-                >
+                <Button variant="outline" className="border border-primary text-primary px-5 py-2 rounded-xl hover:bg-primary/10" onClick={() => {
+                document.getElementById('contato')?.scrollIntoView({
+                  behavior: 'smooth'
+                });
+              }}>
                   Fale com um especialista
                 </Button>
               </div>
@@ -101,24 +89,14 @@ const Hero = () => {
             {/* Right column - Visual element */}
             <div className="flex justify-center">
               <div className="bg-muted/20 rounded-xl p-6">
-                <div className={cn("rounded-full p-8 md:p-10", 
-                     "flex items-center justify-center max-w-[320px]", 
-                     "bg-primary/10",
-                     "border border-primary/20",
-                     "shadow-inner shadow-primary/5")}>
-                  <img 
-                    src="/lovable-uploads/a87b6e5f-5e26-4b01-bf74-865e0ec514a7.png" 
-                    alt="Símbolo da Contabilidade" 
-                    className="w-full h-full object-contain animate-fade-in" 
-                  />
+                <div className={cn("rounded-full p-8 md:p-10", "flex items-center justify-center max-w-[320px]", "bg-primary/10", "border border-primary/20", "shadow-inner shadow-primary/5")}>
+                  <img src="/lovable-uploads/a87b6e5f-5e26-4b01-bf74-865e0ec514a7.png" alt="Símbolo da Contabilidade" className="w-full h-full object-contain animate-fade-in" />
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </section>
-  );
+    </section>;
 };
-
 export default Hero;
