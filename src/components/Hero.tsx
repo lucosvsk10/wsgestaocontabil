@@ -1,15 +1,16 @@
+
 import { useEffect, useRef } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { ArrowRight, BarChart3, Shield, Users } from 'lucide-react';
+import { BarChart3, FileText, Users } from 'lucide-react';
+
 const Hero = () => {
   const heroRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
-  const {
-    theme
-  } = useTheme();
+  const { theme } = useTheme();
+  
   useEffect(() => {
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) {
@@ -19,97 +20,105 @@ const Hero = () => {
     }, {
       threshold: 0.1
     });
+    
     if (heroRef.current) {
       observer.observe(heroRef.current);
     }
+    
     return () => {
       if (heroRef.current) {
         observer.unobserve(heroRef.current);
       }
     };
   }, []);
-  return <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden py-12 bg-background">
+  
+  return (
+    <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden py-12 bg-background">
       <div ref={heroRef} className="container relative z-5 transition-all duration-700 transform opacity-0 translate-y-10 my-8 px-4">
-        <div className={cn("overflow-hidden backdrop-blur-sm rounded-2xl shadow-md border max-w-7xl mx-auto", "py-12 md:py-16 px-6 md:px-10 w-full", theme === 'light' ? "bg-white/90 border-gray-200/80 shadow-gray-200/50" : "bg-navy-light/30 border-navy-lighter/30 shadow-black/20")}>
-          {/* Grid layout - two columns on desktop, stacked on mobile */}
-          <div className="grid gap-8 md:gap-12 lg:gap-16 grid-cols-1 lg:grid-cols-2">
-            
-            {/* Left column - Content and CTA */}
-            <div className={cn("flex flex-col justify-center space-y-8", isMobile && "text-center")}>
-              <div className="space-y-4">
-                <h1 className="font-semibold text-5xl text-gold-dark">Bem-vindo à WS GESTÃO CONTÁBIL
-
+        <div className={cn("py-16 px-6 md:px-12 bg-background text-foreground max-w-7xl mx-auto")}>
+          <div className="grid md:grid-cols-2 items-center gap-10">
+            {/* Left column - Content */}
+            <div className="flex flex-col">
+              <h1 className="text-4xl md:text-5xl font-extrabold text-primary">
+                WS GESTÃO CONTÁBIL
               </h1>
-                
-                <h2 className={cn("text-xl md:text-2xl mt-3", "text-foreground/90", "font-prompt")}>
-                  Soluções contábeis modernas para transformar sua empresa
-                </h2>
-              </div>
+              
+              <p className="text-lg text-muted-foreground mt-4 leading-relaxed">
+                Soluções eficientes e personalizadas para sua empresa prosperar
+              </p>
               
               {/* Feature highlights with icons */}
-              <div className={cn("grid grid-cols-1 md:grid-cols-3 gap-4", isMobile && "place-items-center")}>
-                <div className={cn("flex items-center space-x-3", isMobile && "justify-center")}>
-                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gold/20 flex items-center justify-center">
-                    <BarChart3 className="h-5 w-5 text-gold" />
+              <div className="flex flex-col gap-3 mt-6">
+                <div className="flex items-center space-x-3">
+                  <div className="bg-primary/10 p-2 rounded-full text-primary w-10 h-10 flex items-center justify-center">
+                    <BarChart3 className="h-5 w-5" />
                   </div>
-                  <span className="text-foreground/80">Relatórios automatizados</span>
+                  <span className="text-sm md:text-base font-medium text-foreground">Planejamento tributário inteligente</span>
                 </div>
                 
-                <div className={cn("flex items-center space-x-3", isMobile && "justify-center")}>
-                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gold/20 flex items-center justify-center">
-                    <Shield className="h-5 w-5 text-gold" />
+                <div className="flex items-center space-x-3">
+                  <div className="bg-primary/10 p-2 rounded-full text-primary w-10 h-10 flex items-center justify-center">
+                    <FileText className="h-5 w-5" />
                   </div>
-                  <span className="text-foreground/80">Segurança de dados garantida</span>
+                  <span className="text-sm md:text-base font-medium text-foreground">Documentos sempre disponíveis</span>
                 </div>
                 
-                <div className={cn("flex items-center space-x-3", isMobile && "justify-center")}>
-                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gold/20 flex items-center justify-center">
-                    <Users className="h-5 w-5 text-gold" />
+                <div className="flex items-center space-x-3">
+                  <div className="bg-primary/10 p-2 rounded-full text-primary w-10 h-10 flex items-center justify-center">
+                    <Users className="h-5 w-5" />
                   </div>
-                  <span className="text-foreground/80">Atendimento personalizado</span>
+                  <span className="text-sm md:text-base font-medium text-foreground">Atendimento com especialistas</span>
                 </div>
               </div>
               
               {/* CTA Buttons */}
-              <div className={cn("flex gap-4 mt-4 pt-4", isMobile ? "flex-col" : "flex-row")}>
-                <Button className={cn("transition-all duration-300 rounded-xl", "bg-gold hover:bg-gold-light text-navy-deeper", "text-base px-6 py-2 font-medium", isMobile && "w-full")} onClick={() => {
-                document.getElementById('quemsomos')?.scrollIntoView({
-                  behavior: 'smooth'
-                });
-              }}>
+              <div className="flex flex-wrap gap-4 mt-6">
+                <Button 
+                  className="bg-primary text-white px-5 py-2 rounded-xl font-semibold hover:opacity-90"
+                  onClick={() => {
+                    document.getElementById('quemsomos')?.scrollIntoView({
+                      behavior: 'smooth'
+                    });
+                  }}
+                >
                   Saiba Mais
-                  <ArrowRight size={18} className="ml-1.5" />
                 </Button>
                 
-                <Button className={cn("transition-all duration-300 rounded-xl", "bg-transparent border border-gold text-gold hover:bg-gold/10", "text-base px-6 py-2 font-medium", isMobile && "w-full")} onClick={() => {
-                document.getElementById('contato')?.scrollIntoView({
-                  behavior: 'smooth'
-                });
-              }}>
-                  Fale Conosco
+                <Button 
+                  variant="outline" 
+                  className="border border-primary text-primary px-5 py-2 rounded-xl hover:bg-primary/10"
+                  onClick={() => {
+                    document.getElementById('contato')?.scrollIntoView({
+                      behavior: 'smooth'
+                    });
+                  }}
+                >
+                  Fale com um especialista
                 </Button>
               </div>
             </div>
             
-            {/* Right column - Illustration and quote */}
-            <div className={cn("flex flex-col items-center justify-center", isMobile ? "order-first mb-6" : "order-last")}>
-              <div className={cn("rounded-full p-8 md:p-10", "flex items-center justify-center max-w-[320px]", "bg-gold/10 dark:bg-gold/15", "border border-gold/30 dark:border-gold/25", "shadow-inner shadow-gold/5 dark:shadow-gold/10")}>
-                <img src="/lovable-uploads/a87b6e5f-5e26-4b01-bf74-865e0ec514a7.png" alt="Símbolo da Contabilidade" className="w-full h-full object-contain animate-fade-in" />
-              </div>
-              
-              {/* Quote */}
-              <div className="text-center mt-8 max-w-sm mx-auto">
-                <blockquote className={cn("text-lg italic font-prompt", "text-gold dark:text-gold-light")}>
-                  "A contabilidade não é apenas números, é estratégia para crescer com segurança."
-                </blockquote>
-                <div className="mt-2 text-sm text-muted-foreground">
-                  — Equipe WS Contábil
+            {/* Right column - Visual element */}
+            <div className="flex justify-center">
+              <div className="bg-muted/20 rounded-xl p-6">
+                <div className={cn("rounded-full p-8 md:p-10", 
+                     "flex items-center justify-center max-w-[320px]", 
+                     "bg-primary/10",
+                     "border border-primary/20",
+                     "shadow-inner shadow-primary/5")}>
+                  <img 
+                    src="/lovable-uploads/a87b6e5f-5e26-4b01-bf74-865e0ec514a7.png" 
+                    alt="Símbolo da Contabilidade" 
+                    className="w-full h-full object-contain animate-fade-in" 
+                  />
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </section>;
+    </section>
+  );
 };
+
 export default Hero;
