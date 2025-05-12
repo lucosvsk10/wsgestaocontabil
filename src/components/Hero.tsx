@@ -34,54 +34,54 @@ const Hero = () => {
     };
   }, []);
 
-  return <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden py-12 bg-background">
-      <div ref={heroRef} className="container relative z-5 transition-all duration-700 transform opacity-0 translate-y-10 my-px py-[10px] mx-0 px-[45px]">
+  return <section id="hero" className="relative min-h-[70vh] flex items-center justify-center overflow-hidden py-8 bg-background">
+      <div ref={heroRef} className="container relative z-5 transition-all duration-700 transform opacity-0 translate-y-10 my-px py-[8px] mx-0 px-[30px]">
         <div className="flex justify-center items-center">
-          <div className="grid md:grid-cols-2 items-center gap-10 my-0 -mt-10 px-[160px] mx-0 py-[15px]">
+          <div className="grid md:grid-cols-2 items-center gap-6 my-0 -mt-6 px-[100px] mx-0 py-[10px]">
             {/* Left column - Content */}
             <div className="flex flex-col">
-              <h1 className="text-4xl md:text-5xl font-extrabold text-primary">
+              <h1 className="text-3xl md:text-4xl font-extrabold text-primary">
                 WS GESTÃO CONTÁBIL
               </h1>
               
-              <p className="text-lg mt-4 leading-relaxed font-thin text-gold-dark">
+              <p className="text-base mt-2 leading-relaxed font-thin text-gold-dark">
                 Soluções eficientes e personalizadas para sua empresa prosperar
               </p>
               
               {/* Feature highlights with icons */}
-              <div className="flex flex-col gap-3 mt-6">
+              <div className="flex flex-col gap-2 mt-4">
                 <div className="flex items-center space-x-3">
-                  <div className="bg-primary/10 p-2 rounded-full text-primary w-10 h-10 flex items-center justify-center">
-                    <Building className="h-5 w-5" />
+                  <div className="bg-primary/10 p-1.5 rounded-full text-primary w-8 h-8 flex items-center justify-center">
+                    <Building className="h-4 w-4" />
                   </div>
-                  <span className="text-sm md:text-base font-medium text-foreground">ABERTURA, ALTERAÇÃO E BAIXA DE EMPRESAS</span>
+                  <span className="text-xs md:text-sm font-medium text-foreground">ABERTURA, ALTERAÇÃO E BAIXA DE EMPRESAS</span>
                 </div>
                 
                 <div className="flex items-center space-x-3">
-                  <div className="bg-primary/10 p-2 rounded-full text-primary w-10 h-10 flex items-center justify-center">
-                    <FileHeart className="h-5 w-5" />
+                  <div className="bg-primary/10 p-1.5 rounded-full text-primary w-8 h-8 flex items-center justify-center">
+                    <FileHeart className="h-4 w-4" />
                   </div>
-                  <span className="text-sm md:text-base font-medium text-foreground">PLANEJAMENTO TRIBUTÁRIO INTELIGENTE</span>
+                  <span className="text-xs md:text-sm font-medium text-foreground">PLANEJAMENTO TRIBUTÁRIO INTELIGENTE</span>
                 </div>
                 
                 <div className="flex items-center space-x-3">
-                  <div className="bg-primary/10 p-2 rounded-full text-primary w-10 h-10 flex items-center justify-center">
-                    <Users className="h-5 w-5" />
+                  <div className="bg-primary/10 p-1.5 rounded-full text-primary w-8 h-8 flex items-center justify-center">
+                    <Users className="h-4 w-4" />
                   </div>
-                  <span className="text-sm md:text-base font-medium text-foreground">GESTÃO EMPRESARIAL</span>
+                  <span className="text-xs md:text-sm font-medium text-foreground">GESTÃO EMPRESARIAL</span>
                 </div>
                 
                 <div className="flex items-center space-x-3">
-                  <div className="bg-primary/10 p-2 rounded-full text-primary w-10 h-10 flex items-center justify-center">
-                    <FileText className="h-5 w-5" />
+                  <div className="bg-primary/10 p-1.5 rounded-full text-primary w-8 h-8 flex items-center justify-center">
+                    <FileText className="h-4 w-4" />
                   </div>
-                  <span className="text-sm md:text-base font-medium text-foreground">ASSESSORIA TRABALHISTA</span>
+                  <span className="text-xs md:text-sm font-medium text-foreground">ASSESSORIA TRABALHISTA</span>
                 </div>
               </div>
               
               {/* CTA Buttons */}
-              <div className="flex flex-wrap gap-4 mt-6">
-                <Button className="bg-primary text-white px-5 py-2 rounded-xl font-semibold hover:opacity-90" onClick={() => {
+              <div className="flex flex-wrap gap-3 mt-4">
+                <Button className="bg-primary text-white px-4 py-1.5 text-sm rounded-xl font-semibold hover:opacity-90" onClick={() => {
                 document.getElementById('quemsomos')?.scrollIntoView({
                   behavior: 'smooth'
                 });
@@ -89,7 +89,7 @@ const Hero = () => {
                   Saiba Mais
                 </Button>
                 
-                <Button variant="outline" className="border border-primary text-primary px-5 py-2 rounded-xl hover:bg-primary/10" onClick={() => {
+                <Button variant="outline" className="border border-primary text-primary px-4 py-1.5 text-sm rounded-xl hover:bg-primary/10" onClick={() => {
                 document.getElementById('contato')?.scrollIntoView({
                   behavior: 'smooth'
                 });
@@ -102,10 +102,10 @@ const Hero = () => {
             {/* Right column - Visual element */}
             <div className="flex flex-col items-center justify-center">
               <div className="flex flex-col items-center bg-inherit">
-                <div className={cn("rounded-full p-8 md:p-10", "flex items-center justify-center max-w-[320px]", "bg-primary/10", "border border-primary/20", "shadow-inner shadow-primary/5")}>
+                <div className={cn("rounded-full p-6 md:p-8", "flex items-center justify-center max-w-[240px]", "bg-primary/10", "border border-primary/20", "shadow-inner shadow-primary/5")}>
                   <img src="/lovable-uploads/a87b6e5f-5e26-4b01-bf74-865e0ec514a7.png" alt="Símbolo da Contabilidade" className="w-full h-full object-contain animate-fade-in" />
                 </div>
-                <p className="text-sm text-muted-foreground mt-4 text-center italic px-[100px]">
+                <p className="text-xs text-muted-foreground mt-3 text-center italic px-[70px]">
                   O caduceu é um símbolo da contabilidade, representando a sabedoria, o conhecimento e a proteção do comércio e das riquezas, características do profissional contábil.
                 </p>
               </div>
