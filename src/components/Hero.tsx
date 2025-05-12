@@ -1,18 +1,15 @@
-
 import { useEffect, useRef } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { BarChart3, FileText, Users } from 'lucide-react';
-
 const Hero = () => {
   const heroRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
   const {
     theme
   } = useTheme();
-  
   useEffect(() => {
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) {
@@ -22,18 +19,15 @@ const Hero = () => {
     }, {
       threshold: 0.1
     });
-    
     if (heroRef.current) {
       observer.observe(heroRef.current);
     }
-    
     return () => {
       if (heroRef.current) {
         observer.unobserve(heroRef.current);
       }
     };
   }, []);
-  
   return <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden py-12 bg-background">
       <div ref={heroRef} className="container relative z-5 transition-all duration-700 transform opacity-0 translate-y-10 my-px py-[10px] mx-0 px-[45px]">
         <div className="">
@@ -94,11 +88,7 @@ const Hero = () => {
             
             {/* Right column - Visual element - Updated to show only caduceus with caption */}
             <div className="flex flex-col items-center justify-center">
-              <img 
-                src="/lovable-uploads/a87b6e5f-5e26-4b01-bf74-865e0ec514a7.png" 
-                alt="Símbolo da Contabilidade" 
-                className="text-[100px] md:text-[140px] text-primary animate-fade-in"
-              />
+              <img src="/lovable-uploads/a87b6e5f-5e26-4b01-bf74-865e0ec514a7.png" alt="Símbolo da Contabilidade" className="text-[100px] md:text-[10px] text-primary animate-fade-in object-cover" />
               <p className="text-sm text-muted-foreground mt-4 text-center">
                 Símbolo da contabilidade, representando equilíbrio e sabedoria nos negócios.
               </p>
@@ -108,5 +98,4 @@ const Hero = () => {
       </div>
     </section>;
 };
-
 export default Hero;
