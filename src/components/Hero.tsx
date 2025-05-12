@@ -1,15 +1,18 @@
+
 import { useEffect, useRef } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Building, FileHeart, Users, FileText } from 'lucide-react';
+
 const Hero = () => {
   const heroRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
   const {
     theme
   } = useTheme();
+
   useEffect(() => {
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) {
@@ -19,19 +22,22 @@ const Hero = () => {
     }, {
       threshold: 0.1
     });
+
     if (heroRef.current) {
       observer.observe(heroRef.current);
     }
+
     return () => {
       if (heroRef.current) {
         observer.unobserve(heroRef.current);
       }
     };
   }, []);
-  return <section id="hero" className="relative min-h-[70vh] flex items-center justify-center overflow-hidden py-8 bg-background">
-      <div ref={heroRef} className="container relative z-5 transition-all duration-700 transform opacity-0 translate-y-10 my-px py-[8px] mx-0 px-[30px]">
+
+  return <section id="hero" className="relative min-h-[60vh] flex items-center justify-center overflow-hidden py-6 bg-background">
+      <div ref={heroRef} className="container relative z-5 transition-all duration-700 transform opacity-0 translate-y-10 my-px py-[4px] mx-0 px-[20px]">
         <div className="flex justify-center items-center">
-          <div className="grid md:grid-cols-2 items-center gap-6 my-0 -mt-6 px-[100px] mx-0 py-[10px]">
+          <div className="grid md:grid-cols-2 items-center gap-4 my-0 -mt-4 px-[50px] mx-0 py-[8px]">
             {/* Left column - Content */}
             <div className="flex flex-col">
               <h1 className="text-3xl md:text-4xl font-extrabold text-primary">
@@ -95,11 +101,11 @@ const Hero = () => {
             
             {/* Right column - Visual element */}
             <div className="flex flex-col items-center justify-center">
-              <div className="flex flex-col items-center bg-inherit">
-                <div className="">
+              <div className="flex flex-col items-center bg-inherit max-w-[250px] md:max-w-[300px]">
+                <div className="w-[70%] md:w-[80%]">
                   <img src="/lovable-uploads/a87b6e5f-5e26-4b01-bf74-865e0ec514a7.png" alt="Símbolo da Contabilidade" className="w-full h-full object-contain animate-fade-in" />
                 </div>
-                <p className="text-xs text-muted-foreground mt-3 text-center italic px-[70px]">
+                <p className="text-xs text-muted-foreground mt-2 text-center italic px-[20px]">
                   O caduceu é um símbolo da contabilidade, representando a sabedoria, o conhecimento e a proteção do comércio e das riquezas, características do profissional contábil.
                 </p>
               </div>
@@ -109,4 +115,5 @@ const Hero = () => {
       </div>
     </section>;
 };
+
 export default Hero;
