@@ -37,7 +37,7 @@ const Hero = () => {
             {/* Left column - Content and CTA */}
             <div className={cn("flex flex-col justify-center space-y-8", isMobile && "text-center")}>
               <div className="space-y-4">
-                <h1 className="text-4xl text-color font-extrabold">Bem-vindo à WS GESTÃO CONTÁBIL
+                <h1 className="font-semibold text-5xl text-gold-dark">Bem-vindo à WS GESTÃO CONTÁBIL
 
               </h1>
                 
