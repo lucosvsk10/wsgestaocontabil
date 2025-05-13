@@ -65,10 +65,10 @@ const ClientLogin = () => {
       setIsLoading(false);
     }
   };
-  return <div className="min-h-screen flex flex-col bg-orange-100 dark:bg-navy-deeper">
+  return <div className="min-h-screen flex flex-col bg-orange-100 dark:bg-navy-dark">
       <Navbar />
       <div className="flex-grow flex items-center justify-center p-4 py-[80px]">
-        <Card className="w-full max-w-md border-gold/20 dark:border-gold/30 dark:bg-navy-medium dark:shadow-lg dark:shadow-black/20">
+        <Card className="w-full max-w-md border-gold/20 dark:border-gold/30 dark:bg-navy-dark dark:shadow-lg dark:shadow-black/20">
           <CardHeader className="space-y-1 flex flex-col items-center">
             <CardTitle className="text-2xl text-center text-navy dark:text-gold font-normal">LOGIN</CardTitle>
             <CardDescription className="text-center dark:text-gray-300">
