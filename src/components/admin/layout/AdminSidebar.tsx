@@ -4,6 +4,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { LayoutDashboard, Users, PieChart, Calculator, Settings, Wrench, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/contexts/ThemeContext";
+
 interface SidebarItemProps {
   icon: React.ReactNode;
   label: string;
@@ -11,6 +12,7 @@ interface SidebarItemProps {
   to: string;
   onClick?: () => void;
 }
+
 const SidebarItem: React.FC<SidebarItemProps> = ({
   icon,
   label,
@@ -25,10 +27,12 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
       <span className="font-medium">{label}</span>
     </Link>;
 };
+
 interface AdminSidebarProps {
   open: boolean;
   onClose: () => void;
 }
+
 const AdminSidebar: React.FC<AdminSidebarProps> = ({
   open,
   onClose
@@ -64,42 +68,63 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const getIsActive = (path: string): boolean => {
     return location.pathname === path;
   };
-  const sidebarItems = [{
-    icon: <LayoutDashboard size={20} />,
-    label: "Dashboard",
-    active: getIsActive("/admin") || getIsActive("/admin/"),
-    to: "/admin"
-  }, {
-    icon: <Users size={20} />,
-    label: "Usuários",
-    active: getIsActive("/admin/users"),
-    to: "/admin/users"
-  }, {
-    icon: <PieChart size={20} />,
-    label: "Enquetes",
-    active: getIsActive("/admin/polls"),
-    to: "/admin/polls"
-  }, {
-    icon: <Wrench size={20} />,
-    label: "Ferramentas",
-    active: getIsActive("/admin/tools"),
-    to: "/admin/tools"
-  }, {
-    icon: <Calculator size={20} />,
-    label: "Simulações IRPF",
-    active: getIsActive("/admin/tax-simulations"),
-    to: "/admin/tax-simulations"
-  }, {
-    icon: <Settings size={20} />,
-    label: "Configurações",
-    active: getIsActive("/admin/settings"),
-    to: "/admin/settings"
-  }];
+
+  const sidebarItems = [
+    {
+      icon: <LayoutDashboard size={20} />,
+      label: "Dashboard",
+      active: getIsActive("/admin") || getIsActive("/admin/"),
+      to: "/admin"
+    },
+    {
+      icon: <Users size={20} />,
+      label: "Usuários",
+      active: getIsActive("/admin/users"),
+      to: "/admin/users"
+    },
+    {
+      icon: <PieChart size={20} />,
+      label: "Enquetes",
+      active: getIsActive("/admin/polls"),
+      to: "/admin/polls"
+    },
+    {
+      icon: <Wrench size={20} />,
+      label: "Ferramentas",
+      active: getIsActive("/admin/tools"),
+      to: "/admin/tools"
+    },
+    {
+      icon: <Calculator size={20} />,
+      label: "Simulações IRPF",
+      active: getIsActive("/admin/tax-simulations"),
+      to: "/admin/tax-simulations"
+    },
+    {
+      icon: <Settings size={20} />,
+      label: "Configurações",
+      active: getIsActive("/admin/settings"),
+      to: "/admin/settings"
+    }
+  ];
+
   return <aside data-sidebar="true" className={`w-64 bg-white shadow-md dark:bg-[#1E1E1E] border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-300 ease-in-out ${open ? "translate-x-0" : "-translate-x-0 md:translate-x-0 md:w-16"} ${isMobile ? "fixed inset-y-0 z-40 shadow-xl" : ""}`}>
       {/* Logo area */}
       <div className="h-16 border-b border-navy-dark dark:border-navy-dark flex items-center justify-between px-4 bg-white dark:bg-navy-dark">
         <Link to="/" className="flex items-center justify-center">
-          {open || theme === 'light' ? <img src={theme === 'light' ? "/lovable-uploads/f7fdf0cf-f16c-4df7-a92c-964aadea9539.png" : "/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png"} alt="WS Gestão Contábil" className={`transition-all duration-300 ${open ? "h-8" : "h-8 mx-auto"}`} /> : <img src="/lovable-uploads/bcea8996-0432-42ea-994e-b00bd1f74262.png" alt="WS Gestão Contábil" className="h-8 mx-auto" />}
+          {open ? 
+            <img 
+              src={theme === 'light' ? "/lovable-uploads/f7fdf0cf-f16c-4df7-a92c-964aadea9539.png" : "/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png"} 
+              alt="WS Gestão Contábil" 
+              className="h-8" 
+            /> 
+            : 
+            <img 
+              src={theme === 'light' ? "/lovable-uploads/f7fdf0cf-f16c-4df7-a92c-964aadea9539.png" : "/lovable-uploads/e91c611c-b52b-4110-ac92-4791ef391ad4.png"} 
+              alt="WS Gestão Contábil" 
+              className="h-8 mx-auto" 
+            />
+          }
         </Link>
       </div>
       
@@ -122,4 +147,5 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
       </div>
     </aside>;
 };
+
 export default AdminSidebar;
