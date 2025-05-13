@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNotifications } from "@/hooks/useNotifications";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+
 const ClientLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -107,7 +108,7 @@ const ClientLogin = () => {
           </CardContent>
           <CardFooter className="flex flex-col space-y-2">
             <div className="text-center text-sm text-navy dark:text-gray-300">
-              Não possui uma conta? <span className="dark:text-gold hover:underline">Entre em contato.</span>
+              Não possui uma conta? <a href="https://wa.me/82999324884" target="_blank" rel="noopener noreferrer" className="dark:text-gold hover:underline text-blue-600">Entre em contato.</a>
             </div>
           </CardFooter>
         </Card>
@@ -115,4 +116,5 @@ const ClientLogin = () => {
       <Footer />
     </div>;
 };
+
 export default ClientLogin;
