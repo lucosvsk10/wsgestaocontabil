@@ -15,7 +15,7 @@ const AdminHeader = () => {
   } = useNavigation();
   return <header className="border-b border-gray-200 dark:border-navy-lighter/30 py-4 px-6 flex items-center justify-between bg-white shadow-md dark:bg-navy-dark">
       <div className="flex items-center">
-        <img src="/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png" alt="WS Gestão Contábil" className="h-8 w-auto mr-4 hidden md:block" />
+        
         
       </div>
       
