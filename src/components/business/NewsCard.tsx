@@ -25,7 +25,7 @@ const NewsCard = ({
       year: 'numeric'
     });
   };
-  return <Card className="bg-white/70 dark:bg-navy border-gold/30 text-navy dark:text-white">
+  return <Card className="bg-white/70 dark:bg-navy-dark border-gold/30 text-navy dark:text-white">
       <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
         <div>
           <CardTitle className="flex items-center gap-2 text-xl md:text-2xl">
