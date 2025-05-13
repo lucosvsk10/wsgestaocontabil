@@ -37,7 +37,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
             <MenuIcon size={20} />
           </Button>}
         
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-[#F9FAFB] dark:bg-navy-darker">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-[#F9FAFB] dark:bg-navy-dark">
           {children}
         </main>
       </div>
