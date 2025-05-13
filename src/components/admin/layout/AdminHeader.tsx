@@ -1,3 +1,4 @@
+
 import { useAuth } from "@/contexts/AuthContext";
 import ThemeToggle from "@/components/ThemeToggle";
 import { UserCircle } from "lucide-react";
@@ -5,7 +6,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Button } from "@/components/ui/button";
 import { useNavigation } from "@/components/navbar/hooks/useNavigation";
 import { Link } from "react-router-dom";
-import NotificationHeader from "@/components/notifications/NotificationHeader";
+
 const AdminHeader = () => {
   const {
     user
@@ -22,9 +23,6 @@ const AdminHeader = () => {
       <div className="flex items-center space-x-4">
         {/* Theme toggle */}
         <ThemeToggle />
-        
-        {/* Notifications */}
-        <NotificationHeader />
         
         {/* User menu */}
         <DropdownMenu>
@@ -49,4 +47,5 @@ const AdminHeader = () => {
       </div>
     </header>;
 };
+
 export default AdminHeader;

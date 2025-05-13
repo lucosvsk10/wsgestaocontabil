@@ -19,7 +19,7 @@ const buttonVariants = cva(
           "bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-navy-medium dark:text-white dark:hover:bg-navy-lighter/80",
         ghost: "hover:bg-gray-100 hover:text-blue-700 dark:hover:bg-navy-lighter dark:hover:text-white",
         link: "text-blue-600 underline-offset-4 hover:underline dark:text-gold",
-        document: "bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-navy-medium dark:text-white dark:hover:bg-navy-lighter/90 border border-blue-200 dark:border-gold/20",
+        document: "bg-gold/20 text-navy hover:bg-gold/30 dark:bg-navy-medium dark:text-white dark:hover:bg-navy-lighter/90 border border-gold/40 dark:border-gold/20",
         admin: "bg-blue-600 text-white hover:bg-blue-700 dark:bg-gold dark:text-navy-deeper dark:hover:bg-gold-light shadow-sm"
       },
       size: {
