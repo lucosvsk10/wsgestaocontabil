@@ -123,18 +123,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
       </nav>
       
       {/* Footer with expand button for collapsed state */}
-      <div className="p-2 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-navy-dark">
-        {/* Show expand button when sidebar is collapsed on desktop */}
-        {!open && !isMobile && <Button variant="ghost" size="sm" onClick={onClose} className="w-full flex justify-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white">
-            <ChevronRight size={18} />
-            <span className="sr-only">Expandir menu</span>
-          </Button>}
-        
-        {/* Copyright text when expanded */}
-        {(open || isMobile) && <div className="text-xs text-gray-500 dark:text-gray-400">
-            WS Gestão Contábil © {new Date().getFullYear()}
-          </div>}
-      </div>
+      
     </aside>;
 };
 export default AdminSidebar;
