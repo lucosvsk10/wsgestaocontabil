@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import ThemeToggle from "@/components/ThemeToggle";
 import { UserCircle } from "lucide-react";
@@ -7,22 +6,17 @@ import { Button } from "@/components/ui/button";
 import { useNavigation } from "@/components/navbar/hooks/useNavigation";
 import { Link } from "react-router-dom";
 import NotificationHeader from "@/components/notifications/NotificationHeader";
-
 const AdminHeader = () => {
-  const { user } = useAuth();
-  const { handleLogout } = useNavigation();
-  
-  return (
-    <header className="border-b border-gray-200 dark:border-navy-lighter/30 py-4 px-6 flex items-center justify-between bg-white shadow-md dark:bg-navy-dark">
+  const {
+    user
+  } = useAuth();
+  const {
+    handleLogout
+  } = useNavigation();
+  return <header className="border-b border-gray-200 dark:border-navy-lighter/30 py-4 px-6 flex items-center justify-between bg-white shadow-md dark:bg-navy-dark">
       <div className="flex items-center">
-        <img 
-          src="/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png" 
-          alt="WS Gestão Contábil" 
-          className="h-8 w-auto mr-4 hidden md:block" 
-        />
-        <h1 className="text-xl font-semibold text-navy dark:text-gold">
-          WS GESTÃO CONTÁBIL | Área Administrativa
-        </h1>
+        <img src="/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png" alt="WS Gestão Contábil" className="h-8 w-auto mr-4 hidden md:block" />
+        
       </div>
       
       <div className="flex items-center space-x-4">
@@ -53,8 +47,6 @@ const AdminHeader = () => {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-    </header>
-  );
+    </header>;
 };
-
 export default AdminHeader;
