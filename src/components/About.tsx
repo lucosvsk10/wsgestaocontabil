@@ -84,7 +84,7 @@ const About = () => {
             <div className="w-full md:w-1/2 flex justify-center">
               <div className="relative max-w-md">
                 <div className="aspect-w-16 aspect-h-9 rounded-xl overflow-hidden border-2 border-gold/30 shadow-lg">
-                  <div className="w-full h-full bg-white/50 dark:bg-navy-light flex items-center justify-center">
+                  <div className="w-full h-full bg-white/50 dark:bg-navy-dark flex items-center justify-center">
                     <div className="text-center p-8">
                       <h3 className="text-2xl font-bold text-navy-light dark:text-gold mb-4">Nossa Missão</h3>
                       <p className="text-navy dark:text-white/80">
