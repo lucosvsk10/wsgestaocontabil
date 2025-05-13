@@ -1,9 +1,9 @@
 
-import { useState, FormEvent } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { Icons } from '@/components/icons/Icons';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -15,12 +15,12 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Mail } from 'lucide-react';
 
 const ClientLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const { signIn } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -75,7 +75,7 @@ const ClientLogin = () => {
   };
 
   return (
-    <div className="flex justify-center items-center min-h-screen w-full px-4 bg-white dark:bg-navy-dark">
+    <div className="flex justify-center items-center min-h-screen w-full px-4 bg-gray-50 dark:bg-navy-dark">
       <div className="w-full max-w-md">
         {/* Login Logo/Header */}
         <div className="flex justify-center mb-6">
@@ -86,7 +86,7 @@ const ClientLogin = () => {
           />
         </div>
 
-        <Card className="shadow-md border-gray-200 rounded-2xl bg-white dark:border-gold/20 dark:bg-navy-deeper">
+        <Card className="shadow-lg border-gray-200 dark:border-gold/20 rounded-2xl dark:bg-navy-deeper">
           <CardHeader className="space-y-1 pb-2">
             <CardTitle className="text-2xl font-semibold text-center text-navy dark:text-gold">
               Acesso ao Sistema
@@ -114,7 +114,7 @@ const ClientLogin = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="exemplo@email.com"
-                    className="pl-10 bg-white border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl dark:bg-navy-light/20 dark:border-navy-lighter"
+                    className="pl-10 bg-white dark:bg-navy-light/20 border-gray-300 dark:border-navy-lighter focus:ring-2 focus:ring-blue-500 dark:focus:ring-gold/40 rounded-xl"
                   />
                 </div>
               </div>
@@ -133,39 +133,23 @@ const ClientLogin = () => {
                     Esqueceu a senha?
                   </a>
                 </div>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="******"
-                    className="pl-10 bg-white border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl dark:bg-navy-light/20 dark:border-navy-lighter"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-gold"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-5 w-5" />
-                    ) : (
-                      <Eye className="h-5 w-5" />
-                    )}
-                  </button>
-                </div>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="******"
+                  className="bg-white dark:bg-navy-light/20 border-gray-300 dark:border-navy-lighter focus:ring-2 focus:ring-blue-500 dark:focus:ring-gold/40 rounded-xl"
+                />
               </div>
               <Button 
                 type="submit" 
                 disabled={loading}
-                className="w-full h-11 text-white bg-blue-600 hover:bg-blue-700 dark:bg-gold dark:text-navy dark:hover:bg-gold-light font-medium rounded-xl transition-all duration-200 shadow-sm"
+                className="w-full h-11 text-white bg-blue-600 hover:bg-blue-700 dark:bg-gold dark:text-navy dark:hover:bg-gold-light font-medium rounded-xl transition-all duration-200 shadow-md"
               >
                 {loading ? (
                   <>
-                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                    <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
                     <span>Entrando...</span>
                   </>
                 ) : 'Entrar'}

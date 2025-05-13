@@ -10,17 +10,17 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-blue-600 text-white hover:bg-blue-700 shadow-sm dark:bg-gold dark:text-navy-deeper dark:hover:bg-gold-light",
+        default: "bg-blue-600 text-white hover:bg-blue-700 dark:bg-gold dark:text-navy-deeper dark:hover:bg-gold-light",
         destructive:
-          "bg-red-500 text-white hover:bg-red-600 shadow-sm dark:bg-destructive dark:text-destructive-foreground dark:hover:bg-destructive/90",
+          "bg-red-500 text-white hover:bg-red-600 dark:bg-destructive dark:text-destructive-foreground dark:hover:bg-destructive/90",
         outline:
-          "border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 hover:text-blue-700 shadow-sm dark:border-navy-lighter dark:bg-navy-medium dark:hover:bg-navy-lighter dark:hover:text-white",
+          "border border-gray-300 bg-white hover:bg-gray-100 hover:text-blue-700 dark:border-navy-lighter dark:bg-navy-medium dark:hover:bg-navy-lighter dark:hover:text-white",
         secondary:
-          "bg-gray-100 text-gray-900 hover:bg-gray-200 shadow-sm dark:bg-navy-medium dark:text-white dark:hover:bg-navy-lighter/80",
-        ghost: "hover:bg-gray-100 text-gray-700 hover:text-blue-700 dark:hover:bg-navy-lighter dark:hover:text-white",
+          "bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-navy-medium dark:text-white dark:hover:bg-navy-lighter/80",
+        ghost: "hover:bg-gray-100 hover:text-blue-700 dark:hover:bg-navy-lighter dark:hover:text-white",
         link: "text-blue-600 underline-offset-4 hover:underline dark:text-gold",
-        document: "bg-blue-50 text-blue-700 hover:bg-blue-100 shadow-sm dark:bg-navy-medium dark:text-white dark:hover:bg-navy-lighter/90 border border-blue-200 dark:border-gold/20",
-        admin: "bg-blue-600 text-white hover:bg-blue-700 shadow-sm dark:bg-gold dark:text-navy-deeper dark:hover:bg-gold-light"
+        document: "bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-navy-medium dark:text-white dark:hover:bg-navy-lighter/90 border border-blue-200 dark:border-gold/20",
+        admin: "bg-blue-600 text-white hover:bg-blue-700 dark:bg-gold dark:text-navy-deeper dark:hover:bg-gold-light"
       },
       size: {
         default: "h-10 px-4 py-2",
