@@ -15,7 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Mail } from 'lucide-react';
+import { Mail, Lock } from 'lucide-react';
 
 const ClientLogin = () => {
   const [email, setEmail] = useState('');
@@ -133,14 +133,19 @@ const ClientLogin = () => {
                     Esqueceu a senha?
                   </a>
                 </div>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="******"
-                  className="bg-white dark:bg-navy-light/20 border-gray-300 dark:border-navy-lighter focus:ring-2 focus:ring-blue-500 dark:focus:ring-gold/40 rounded-xl"
-                />
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <Lock className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="******"
+                    className="pl-10 bg-white dark:bg-navy-light/20 border-gray-300 dark:border-navy-lighter focus:ring-2 focus:ring-blue-500 dark:focus:ring-gold/40 rounded-xl"
+                  />
+                </div>
               </div>
               <Button 
                 type="submit" 
@@ -175,7 +180,7 @@ const ClientLogin = () => {
                   href="#" 
                   className="font-medium text-blue-600 hover:text-blue-500 dark:text-gold/80 dark:hover:text-gold transition-colors"
                 >
-                  Contate o administrador
+                  Entre em contato - WhatsApp: 82999324884
                 </a>
               </p>
             </div>
