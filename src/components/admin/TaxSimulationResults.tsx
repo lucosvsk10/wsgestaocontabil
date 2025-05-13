@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { format } from "date-fns";
@@ -198,20 +197,20 @@ const TaxSimulationResults = () => {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-navy dark:text-gold">
+          <h2 className="text-2xl font-semibold text-navy dark:text-gold">
             Simulações de Imposto de Renda
           </h2>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground dark:text-gray-300">
             Visualize todas as simulações feitas pelos usuários
           </p>
         </div>
         
         <div className="relative max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground dark:text-gray-400" />
           <Input
             type="search"
             placeholder="Buscar por nome, email..."
-            className="pl-8"
+            className="pl-8 bg-white dark:bg-navy-medium border-gray-200 dark:border-navy-lighter/30 rounded-lg"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -219,11 +218,11 @@ const TaxSimulationResults = () => {
       </div>
       
       {filteredSimulations.length === 0 ? (
-        <Card>
+        <Card className="border-gray-200 dark:border-navy-lighter/30 shadow-md dark:bg-navy-medium">
           <CardContent className="flex flex-col items-center justify-center py-10">
-            <ChartPie className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-lg font-medium mb-2">Nenhuma simulação encontrada</p>
-            <p className="text-muted-foreground text-center max-w-md">
+            <ChartPie className="h-12 w-12 text-muted-foreground dark:text-gray-400 mb-4" />
+            <p className="text-lg font-medium mb-2 dark:text-white">Nenhuma simulação encontrada</p>
+            <p className="text-muted-foreground dark:text-gray-300 text-center max-w-md">
               {searchTerm ? 
                 "Nenhuma simulação corresponde aos termos de busca." : 
                 "Ainda não há simulações de imposto de renda registradas."}
@@ -232,30 +231,30 @@ const TaxSimulationResults = () => {
         </Card>
       ) : (
         <div className="space-y-6">
-          <Card>
+          <Card className="border-gray-200 dark:border-navy-lighter/30 shadow-md dark:bg-navy-medium">
             <CardHeader className="pb-3">
-              <CardTitle>Resumo</CardTitle>
-              <CardDescription>
+              <CardTitle className="dark:text-gold">Resumo</CardTitle>
+              <CardDescription className="dark:text-gray-300">
                 Total de {filteredSimulations.length} simulação(ões) encontrada(s)
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-muted/50 rounded-lg p-4 text-center">
-                  <p className="text-sm font-medium mb-1">A Pagar</p>
+                <div className="bg-gray-50 dark:bg-navy-dark rounded-xl p-4 text-center border border-gray-100 dark:border-navy-lighter/20 shadow-sm">
+                  <p className="text-sm font-medium mb-1 dark:text-gray-300">A Pagar</p>
                   <p className="text-xl font-bold text-red-500 dark:text-red-400">
                     {filteredSimulations.filter(s => s.tipo_simulacao === "a pagar").length}
                   </p>
                 </div>
-                <div className="bg-muted/50 rounded-lg p-4 text-center">
-                  <p className="text-sm font-medium mb-1">Restituição</p>
+                <div className="bg-gray-50 dark:bg-navy-dark rounded-xl p-4 text-center border border-gray-100 dark:border-navy-lighter/20 shadow-sm">
+                  <p className="text-sm font-medium mb-1 dark:text-gray-300">Restituição</p>
                   <p className="text-xl font-bold text-green-500 dark:text-green-400">
                     {filteredSimulations.filter(s => s.tipo_simulacao === "restituição").length}
                   </p>
                 </div>
-                <div className="bg-muted/50 rounded-lg p-4 text-center">
-                  <p className="text-sm font-medium mb-1">Valor Médio</p>
-                  <p className="text-xl font-bold">
+                <div className="bg-gray-50 dark:bg-navy-dark rounded-xl p-4 text-center border border-gray-100 dark:border-navy-lighter/20 shadow-sm">
+                  <p className="text-sm font-medium mb-1 dark:text-gray-300">Valor Médio</p>
+                  <p className="text-xl font-bold dark:text-white">
                     {currencyFormat(
                       filteredSimulations.reduce((acc, sim) => acc + sim.imposto_estimado, 0) / 
                       filteredSimulations.length
@@ -266,19 +265,19 @@ const TaxSimulationResults = () => {
             </CardContent>
           </Card>
 
-          <div className="overflow-x-auto rounded-md border">
+          <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-navy-lighter/30 shadow-md">
             <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Contato</TableHead>
-                  <TableHead>Rendimento</TableHead>
-                  <TableHead>Deduções</TableHead>
-                  <TableHead>Resultado</TableHead>
+              <TableHeader className="bg-gray-50 dark:bg-navy-dark">
+                <TableRow className="hover:bg-gray-100 dark:hover:bg-navy-medium/50">
+                  <TableHead className="dark:text-gray-300">Data</TableHead>
+                  <TableHead className="dark:text-gray-300">Nome</TableHead>
+                  <TableHead className="dark:text-gray-300">Contato</TableHead>
+                  <TableHead className="dark:text-gray-300">Rendimento</TableHead>
+                  <TableHead className="dark:text-gray-300">Deduções</TableHead>
+                  <TableHead className="dark:text-gray-300">Resultado</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
+              <TableBody className="dark:bg-navy-medium">
                 {filteredSimulations.map((simulation) => {
                   const totalDeducoes = 
                     simulation.inss + 
@@ -288,19 +287,19 @@ const TaxSimulationResults = () => {
                     simulation.outras_deducoes;
                   
                   return (
-                    <TableRow key={simulation.id}>
-                      <TableCell>
+                    <TableRow key={simulation.id} className="hover:bg-gray-50 dark:hover:bg-navy-darker/50">
+                      <TableCell className="dark:text-gray-300">
                         {formatDate(simulation.data_criacao)}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
-                            <User className="h-4 w-4" />
+                          <div className="h-8 w-8 rounded-full bg-gray-100 dark:bg-navy-dark flex items-center justify-center border border-gray-200 dark:border-navy-lighter/30">
+                            <User className="h-4 w-4 text-navy dark:text-gold" />
                           </div>
-                          <div className="font-medium">
+                          <div className="font-medium dark:text-white">
                             {getUserName(simulation)}
                             {simulation.user_id && (
-                              <span className="ml-1 text-xs px-1 py-0.5 rounded-sm bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                              <span className="ml-1 text-xs px-1 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200">
                                 Cliente
                               </span>
                             )}
@@ -308,18 +307,18 @@ const TaxSimulationResults = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="text-sm">
+                        <div className="text-sm dark:text-gray-300">
                           <p>{getUserEmail(simulation)}</p>
                           {simulation.telefone && <p>{simulation.telefone}</p>}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="dark:text-gray-300">
                         {currencyFormat(simulation.rendimento_bruto)}
                       </TableCell>
                       <TableCell>
-                        <div className="text-sm">
+                        <div className="text-sm dark:text-gray-300">
                           <p>Total: {currencyFormat(totalDeducoes)}</p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-muted-foreground dark:text-gray-400">
                             INSS: {currencyFormat(simulation.inss)}, 
                             Saúde: {currencyFormat(simulation.saude)}, 
                             Educação: {currencyFormat(simulation.educacao)}

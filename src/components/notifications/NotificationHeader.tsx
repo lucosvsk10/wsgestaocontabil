@@ -1,52 +1,53 @@
 
-import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabaseClient";
-import { Bell } from "lucide-react";
+import { useState, useEffect } from 'react';
+import { Bell } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { useAuth } from "@/contexts/AuthContext";
-import type { Notification } from "@/types/notifications";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuItem
+} from '@/components/ui/dropdown-menu';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabaseClient';
+import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { Notification } from '@/types/notifications';
 
 const NotificationHeader = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
   const { user } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!user?.id) return;
-    
-    // Fetch notifications on mount
-    fetchNotifications();
-    
-    // Set up real-time listener
-    const channel = supabase
-      .channel('admin_notifications')
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'notifications',
-        filter: `user_id=eq.${user.id}` 
-      }, () => {
-        fetchNotifications();
-      })
-      .subscribe();
-    
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user?.id]);
+    if (user) {
+      fetchNotifications();
+      
+      // Set up realtime subscription
+      const subscription = supabase
+        .channel('notifications_changes')
+        .on('postgres_changes', { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`
+        }, () => {
+          fetchNotifications();
+        })
+        .subscribe();
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    }
+  }, [user]);
 
   const fetchNotifications = async () => {
-    if (!user?.id) return;
+    if (!user) return;
     
     try {
       const { data, error } = await supabase
@@ -58,10 +59,22 @@ const NotificationHeader = () => {
         
       if (error) throw error;
       
-      setNotifications(data || []);
-      setUnreadCount(data?.length || 0);
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
+      if (data) {
+        setNotifications(data);
+        // Count unread for badge
+        const unread = data.filter(n => !n.read_at).length;
+        setUnreadCount(unread);
+      }
+    } catch (error: any) {
+      console.error('Error fetching notifications:', error.message);
+    }
+  };
+
+  const formatNotificationDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), "dd/MM 'às' HH:mm", { locale: ptBR });
+    } catch {
+      return "";
     }
   };
 
@@ -69,48 +82,61 @@ const NotificationHeader = () => {
     try {
       const { error } = await supabase
         .from('notifications')
-        .delete()
+        .update({ read_at: new Date().toISOString() })
         .eq('id', notificationId);
-      
+        
       if (error) throw error;
       
-      setNotifications(prev => prev.filter(n => n.id !== notificationId));
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      // Update local state
+      setNotifications(prevNotifications => 
+        prevNotifications.map(n => 
+          n.id === notificationId ? { ...n, read_at: new Date().toISOString() } : n
+        )
+      );
       
-      toast({
-        description: "Notificação removida com sucesso",
-      });
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-      toast({
-        variant: "destructive",
-        description: "Erro ao remover notificação",
-      });
+      // Update unread count
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (error: any) {
+      console.error('Error marking notification as read:', error.message);
     }
   };
 
-  const clearAllNotifications = async () => {
-    if (!user?.id) return;
+  const markAllAsRead = async () => {
+    if (!user || notifications.length === 0) return;
     
     try {
+      const unreadIds = notifications.filter(n => !n.read_at).map(n => n.id);
+      
+      if (unreadIds.length === 0) return;
+      
       const { error } = await supabase
         .from('notifications')
-        .delete()
-        .eq('user_id', user.id);
-      
+        .update({ read_at: new Date().toISOString() })
+        .in('id', unreadIds);
+        
       if (error) throw error;
       
-      setNotifications([]);
+      // Update local state
+      setNotifications(prevNotifications => 
+        prevNotifications.map(n => ({
+          ...n, 
+          read_at: n.read_at || new Date().toISOString()
+        }))
+      );
+      
+      // Reset unread count
       setUnreadCount(0);
       
       toast({
-        description: "Todas as notificações foram removidas",
+        title: "Notificações",
+        description: "Todas as notificações foram marcadas como lidas.",
       });
-    } catch (error) {
-      console.error('Error clearing notifications:', error);
+    } catch (error: any) {
+      console.error('Error marking all notifications as read:', error.message);
       toast({
+        title: "Erro",
+        description: "Não foi possível marcar as notificações como lidas.",
         variant: "destructive",
-        description: "Erro ao remover notificações",
       });
     }
   };
@@ -118,87 +144,69 @@ const NotificationHeader = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="relative h-8 w-8 rounded-full"
-        >
-          <Bell className="h-5 w-5 text-navy-light dark:text-gold" />
+        <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-full border border-gray-200 dark:border-navy-lighter/50 hover:bg-gray-100 dark:hover:bg-navy-medium">
+          <Bell className="h-5 w-5 text-navy dark:text-gold" />
           {unreadCount > 0 && (
-            <Badge 
-              className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-gold dark:bg-gold text-navy flex items-center justify-center p-0"
-              aria-label={`${unreadCount} notificações não lidas`}
-            >
-              {unreadCount > 9 ? '9+' : unreadCount}
-            </Badge>
+            <span className="absolute top-0 right-0 h-4 w-4 rounded-full bg-red-500 text-[10px] font-semibold text-white flex items-center justify-center">
+              {unreadCount}
+            </span>
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent 
-        align="end" 
-        className="w-80 dark:bg-navy-medium dark:border-navy-lighter/30 p-0 overflow-hidden"
-      >
-        <div className="px-4 py-3 border-b dark:border-navy-lighter/30 flex items-center justify-between">
-          <h4 className="font-medium text-navy dark:text-gold">Notificações</h4>
-          {notifications.length > 0 && (
+      <DropdownMenuContent align="end" className="w-80 dark:bg-navy-medium border border-gray-200 dark:border-navy-lighter/30 shadow-lg rounded-xl">
+        <div className="flex items-center justify-between p-3">
+          <DropdownMenuLabel className="text-navy dark:text-gold font-medium">Notificações</DropdownMenuLabel>
+          {unreadCount > 0 && (
             <Button 
               variant="ghost" 
               size="sm" 
-              onClick={clearAllNotifications}
-              className="text-sm text-navy-light dark:text-gold hover:text-navy dark:hover:text-gold-light"
+              onClick={markAllAsRead}
+              className="h-8 px-2 text-xs text-navy dark:text-gold hover:bg-gray-100 dark:hover:bg-navy-lighter"
             >
-              Limpar tudo
+              Marcar todas como lidas
             </Button>
           )}
         </div>
+        <DropdownMenuSeparator className="dark:bg-navy-lighter/30" />
         
-        <div className={cn("max-h-[300px] overflow-auto", notifications.length === 0 && "py-8")}>
-          {notifications.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-4 text-center">
-              <Bell className="h-12 w-12 text-muted-foreground mb-2 opacity-20" />
-              <p className="text-muted-foreground">Nenhuma notificação</p>
-            </div>
-          ) : (
-            notifications.map((notification) => (
+        {notifications.length === 0 ? (
+          <div className="p-4 text-center text-muted-foreground dark:text-gray-400">
+            Você não tem notificações.
+          </div>
+        ) : (
+          <div className="max-h-[300px] overflow-auto">
+            {notifications.map((notification) => (
               <DropdownMenuItem 
-                key={notification.id} 
-                className="px-4 py-3 cursor-default flex gap-3 items-start dark:hover:bg-navy-lighter focus:bg-gray-100 dark:focus:bg-navy-lighter"
+                key={notification.id}
+                className={`p-3 focus:bg-gray-100 dark:focus:bg-navy-lighter cursor-default ${!notification.read_at ? 'bg-blue-50 dark:bg-navy-lighter/30' : ''}`}
+                onSelect={() => markAsRead(notification.id)}
               >
-                <div className={cn(
-                  "h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 bg-gray-100 dark:bg-navy-light/20", 
-                  notification.type === "document" ? "text-blue-500" : "text-gold"
-                )}>
-                  <Bell size={14} />
-                </div>
-                <div className="flex-1 space-y-1">
-                  <p className="text-sm text-navy-dark dark:text-gold-light line-clamp-2">
+                <div className="flex flex-col w-full">
+                  <div className="flex justify-between items-start mb-1">
+                    <span className={`text-sm font-medium ${!notification.read_at ? 'text-navy dark:text-gold' : 'text-gray-700 dark:text-gray-300'}`}>
+                      {notification.type === 'document' ? 'Documento' : 
+                       notification.type === 'login' ? 'Login' : 
+                       notification.type === 'system' ? 'Sistema' : 'Notificação'}
+                    </span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      {formatNotificationDate(notification.created_at)}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
                     {notification.message}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(notification.created_at).toLocaleString('pt-BR', {
-                      day: '2-digit',
-                      month: '2-digit', 
-                      hour: '2-digit', 
-                      minute: '2-digit'
-                    })}
-                  </p>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0 rounded-full opacity-50 hover:opacity-100"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    markAsRead(notification.id);
-                  }}
-                >
-                  &times;
-                </Button>
               </DropdownMenuItem>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )}
+        
+        <DropdownMenuSeparator className="dark:bg-navy-lighter/30" />
+        <DropdownMenuItem 
+          className="p-2 text-center text-sm text-navy dark:text-gold hover:bg-gray-100 dark:hover:bg-navy-lighter focus:bg-gray-100 dark:focus:bg-navy-lighter"
+        >
+          Ver todas as notificações
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

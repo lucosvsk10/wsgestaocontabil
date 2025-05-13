@@ -9,19 +9,23 @@ import { Link } from "react-router-dom";
 import NotificationHeader from "@/components/notifications/NotificationHeader";
 
 const AdminHeader = () => {
-  const {
-    user
-  } = useAuth();
-  const {
-    handleLogout
-  } = useNavigation();
+  const { user } = useAuth();
+  const { handleLogout } = useNavigation();
   
-  return <header className="border-b border-gray-200 dark:border-navy-lighter/30 py-3 px-4 flex items-center justify-between bg-white shadow-md dark:bg-navy-dark">
-      <h1 className="text-xl font-semibold text-navy dark:text-gold">
-        WS GESTÃO CONTÁBIL | Área Administrativa
-      </h1>
+  return (
+    <header className="border-b border-gray-200 dark:border-navy-lighter/30 py-4 px-6 flex items-center justify-between bg-white shadow-md dark:bg-navy-dark">
+      <div className="flex items-center">
+        <img 
+          src="/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png" 
+          alt="WS Gestão Contábil" 
+          className="h-8 w-auto mr-4 hidden md:block" 
+        />
+        <h1 className="text-xl font-semibold text-navy dark:text-gold">
+          WS GESTÃO CONTÁBIL | Área Administrativa
+        </h1>
+      </div>
       
-      <div className="flex items-center space-x-3">
+      <div className="flex items-center space-x-4">
         {/* Theme toggle */}
         <ThemeToggle />
         
@@ -31,25 +35,26 @@ const AdminHeader = () => {
         {/* User menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative h-8 w-8 rounded-full">
+            <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-full border border-gray-200 dark:border-navy-lighter/50 hover:bg-gray-100 dark:hover:bg-navy-medium">
               <UserCircle className="h-6 w-6 text-navy dark:text-gold" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 dark:bg-navy-medium dark:border-navy-lighter/30 shadow-md">
-            <div className="px-2 py-1.5 text-sm font-medium text-navy-dark dark:text-white">
+          <DropdownMenuContent align="end" className="w-56 dark:bg-navy-medium border border-gray-200 dark:border-navy-lighter/30 shadow-lg rounded-xl">
+            <div className="px-3 py-2 text-sm font-medium text-navy-dark dark:text-white">
               {user?.email || "Usuário"}
             </div>
             <DropdownMenuSeparator className="dark:bg-navy-lighter/30" />
-            <DropdownMenuItem asChild className="dark:text-white dark:focus:bg-navy-lighter focus:bg-gray-100 focus:text-navy-dark">
-              <Link to="/">Voltar ao site</Link>
+            <DropdownMenuItem asChild className="dark:text-white hover:bg-gray-100 dark:hover:bg-navy-lighter focus:bg-gray-100 focus:text-navy-dark">
+              <Link to="/" className="flex items-center">Voltar ao site</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleLogout} className="dark:text-white dark:focus:bg-navy-lighter focus:bg-gray-100 focus:text-navy-dark">
-              Sair
+            <DropdownMenuItem onClick={handleLogout} className="dark:text-white hover:bg-gray-100 dark:hover:bg-navy-lighter focus:bg-gray-100 focus:text-navy-dark">
+              <span className="flex items-center">Sair</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-    </header>;
+    </header>
+  );
 };
 
 export default AdminHeader;
