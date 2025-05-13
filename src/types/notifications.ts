@@ -5,4 +5,5 @@ export interface Notification {
   message: string;
   type: string | null;
   created_at: string;
+  read_at?: string | null;
 }

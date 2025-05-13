@@ -1,7 +1,11 @@
+
 import { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { LayoutDashboard, Users, PieChart, Calculator, Settings, Wrench } from "lucide-react";
+import { LayoutDashboard, Users, PieChart, Calculator, Settings, Wrench, ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useTheme } from "@/contexts/ThemeContext";
+
 interface SidebarItemProps {
   icon: React.ReactNode;
   label: string;
@@ -9,6 +13,7 @@ interface SidebarItemProps {
   to: string;
   onClick?: () => void;
 }
+
 const SidebarItem: React.FC<SidebarItemProps> = ({
   icon,
   label,
@@ -23,16 +28,19 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
       <span className="font-medium">{label}</span>
     </Link>;
 };
+
 interface AdminSidebarProps {
   open: boolean;
   onClose: () => void;
 }
+
 const AdminSidebar: React.FC<AdminSidebarProps> = ({
   open,
   onClose
 }) => {
   const location = useLocation();
   const isMobile = useIsMobile();
+  const { theme } = useTheme();
 
   // Fecha a barra lateral quando clica fora em dispositivos móveis
   useEffect(() => {
@@ -59,44 +67,72 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const getIsActive = (path: string): boolean => {
     return location.pathname === path;
   };
-  const sidebarItems = [{
-    icon: <LayoutDashboard size={20} />,
-    label: "Dashboard",
-    active: getIsActive("/admin") || getIsActive("/admin/"),
-    to: "/admin"
-  }, {
-    icon: <Users size={20} />,
-    label: "Usuários",
-    active: getIsActive("/admin/users"),
-    to: "/admin/users"
-  }, {
-    icon: <PieChart size={20} />,
-    label: "Enquetes",
-    active: getIsActive("/admin/polls"),
-    to: "/admin/polls"
-  }, {
-    icon: <Wrench size={20} />,
-    label: "Ferramentas",
-    active: getIsActive("/admin/tools"),
-    to: "/admin/tools"
-  }, {
-    icon: <Calculator size={20} />,
-    label: "Simulações IRPF",
-    active: getIsActive("/admin/tax-simulations"),
-    to: "/admin/tax-simulations"
-  }, {
-    icon: <Settings size={20} />,
-    label: "Configurações",
-    active: getIsActive("/admin/settings"),
-    to: "/admin/settings"
-  }];
-  return <aside data-sidebar="true" className={`w-64 bg-white shadow-md dark:bg-[#1E1E1E] border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-300 ease-in-out ${open ? "translate-x-0" : "-translate-x-full md:translate-x-0 md:w-16"} ${isMobile ? "fixed inset-y-0 z-40 shadow-xl" : ""}`}>
+  
+  const sidebarItems = [
+    {
+      icon: <LayoutDashboard size={20} />,
+      label: "Dashboard",
+      active: getIsActive("/admin") || getIsActive("/admin/"),
+      to: "/admin"
+    }, 
+    {
+      icon: <Users size={20} />,
+      label: "Usuários",
+      active: getIsActive("/admin/users"),
+      to: "/admin/users"
+    }, 
+    {
+      icon: <PieChart size={20} />,
+      label: "Enquetes",
+      active: getIsActive("/admin/polls"),
+      to: "/admin/polls"
+    }, 
+    {
+      icon: <Wrench size={20} />,
+      label: "Ferramentas",
+      active: getIsActive("/admin/tools"),
+      to: "/admin/tools"
+    }, 
+    {
+      icon: <Calculator size={20} />,
+      label: "Simulações IRPF",
+      active: getIsActive("/admin/tax-simulations"),
+      to: "/admin/tax-simulations"
+    }, 
+    {
+      icon: <Settings size={20} />,
+      label: "Configurações",
+      active: getIsActive("/admin/settings"),
+      to: "/admin/settings"
+    }
+  ];
+  
+  return (
+    <aside data-sidebar="true" className={`w-64 bg-white shadow-md dark:bg-[#1E1E1E] border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-300 ease-in-out ${open ? "translate-x-0" : "-translate-x-full md:translate-x-0 md:w-16"} ${isMobile ? "fixed inset-y-0 z-40 shadow-xl" : ""}`}>
       {/* Logo area */}
-      <div className="h-16 border-b border-gray-200 dark:border-gray-800 flex items-center justify-center bg-white dark:bg-navy-dark">
-        <h1 className="font-extralight text-base">
-          WS Gestão
-        </h1>
-        {!open && !isMobile && <span className="font-bold text-blue-700 dark:text-gold text-lg">WS</span>}
+      <div className="h-16 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-4 bg-white dark:bg-navy-dark">
+        <Link to="/" className="flex items-center justify-center">
+          <img 
+            src={theme === 'light' 
+              ? "/lovable-uploads/f7fdf0cf-f16c-4df7-a92c-964aadea9539.png" 
+              : "/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png"} 
+            alt="WS Gestão Contábil" 
+            className={`transition-all duration-300 ${open ? "h-8" : "h-8 mx-auto"}`}
+          />
+        </Link>
+        
+        {/* Toggle button for desktop */}
+        {!isMobile && (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={onClose} 
+            className={`h-8 w-8 rounded-full text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white ${open ? "block" : "hidden"}`}
+          >
+            <ChevronLeft size={18} />
+            <span className="sr-only">Recolher menu</span>
+          </Button>
+        )}
       </div>
       
       {/* Navigation */}
@@ -112,12 +148,30 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
         </ul>
       </nav>
       
-      {/* Footer */}
-      <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-navy-dark">
-        {open || isMobile ? <div className="text-xs text-gray-500 dark:text-gray-400">
+      {/* Footer with expand button for collapsed state */}
+      <div className="p-2 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-navy-dark">
+        {/* Show expand button when sidebar is collapsed on desktop */}
+        {!open && !isMobile && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="w-full flex justify-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white"
+          >
+            <ChevronRight size={18} />
+            <span className="sr-only">Expandir menu</span>
+          </Button>
+        )}
+        
+        {/* Copyright text when expanded */}
+        {(open || isMobile) && (
+          <div className="text-xs text-gray-500 dark:text-gray-400">
             WS Gestão Contábil © {new Date().getFullYear()}
-          </div> : null}
+          </div>
+        )}
       </div>
-    </aside>;
+    </aside>
+  );
 };
+
 export default AdminSidebar;
