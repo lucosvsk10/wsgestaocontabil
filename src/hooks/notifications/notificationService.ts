@@ -1,66 +1,60 @@
 
-import { Notification } from "@/types/notifications";
 import { supabase } from "@/lib/supabaseClient";
-
-export interface NotificationCountResult {
-  count: number;
-  hasUnread: boolean;
-}
+import { Notification } from "@/types/notifications";
 
 export const fetchNotifications = async (userId: string): Promise<Notification[]> => {
-  const { data, error } = await supabase
-    .from('notifications')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
+  try {
+    const { data, error } = await supabase
+      .from("notifications")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(20);
 
-  if (error) {
-    console.error('Error fetching notifications:', error);
-    throw error;
-  }
+    if (error) {
+      throw error;
+    }
 
-  return data || [];
-};
-
-export const markAsRead = async (notificationId: string): Promise<void> => {
-  const { error } = await supabase
-    .from('notifications')
-    .update({ read_at: new Date().toISOString() })
-    .eq('id', notificationId);
-
-  if (error) {
-    console.error('Error marking notification as read:', error);
-    throw error;
+    return data as Notification[];
+  } catch (error) {
+    console.error("Error fetching notifications:", error);
+    return [];
   }
 };
 
-export const markAllAsRead = async (userId: string): Promise<void> => {
-  const { error } = await supabase
-    .from('notifications')
-    .update({ read_at: new Date().toISOString() })
-    .eq('user_id', userId)
-    .is('read_at', null);
+export const markAsRead = async (notificationId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from("notifications")
+      .update({ read_at: new Date().toISOString() })
+      .eq("id", notificationId);
 
-  if (error) {
-    console.error('Error marking all notifications as read:', error);
-    throw error;
+    if (error) {
+      throw error;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error marking notification as read:", error);
+    return false;
   }
 };
 
-export const getUnreadCount = async (userId: string): Promise<NotificationCountResult> => {
-  const { data, error, count } = await supabase
-    .from('notifications')
-    .select('id', { count: 'exact' })
-    .eq('user_id', userId)
-    .is('read_at', null);
+export const markAllAsRead = async (userId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from("notifications")
+      .update({ read_at: new Date().toISOString() })
+      .eq("user_id", userId)
+      .is("read_at", null);
 
-  if (error) {
-    console.error('Error counting unread notifications:', error);
-    throw error;
+    if (error) {
+      throw error;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error marking all notifications as read:", error);
+    return false;
   }
-
-  return {
-    count: count || 0,
-    hasUnread: (count || 0) > 0
-  };
 };
