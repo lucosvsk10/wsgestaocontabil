@@ -25,7 +25,7 @@ export const useNotifications = () => {
 
       if (error) throw error;
 
-      setNotifications(data || []);
+      setNotifications(data as Notification[] || []);
       setHasNewNotifications(data?.some(n => n.read_at === null) || false);
     } catch (error) {
       console.error("Error fetching notifications:", error);
@@ -110,7 +110,7 @@ export const useNotifications = () => {
     if (!user?.id) return;
     
     try {
-      const newNotification = {
+      const newNotification: Notification = {
         id: uuidv4(),
         user_id: user.id,
         message,
