@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDocumentManager } from "@/hooks/document/useDocumentManager";
@@ -94,7 +95,7 @@ const AdminDashboard = ({
     }
   }, [activeTab, userId, setSelectedUserId]);
   return <AdminLayout>
-      <div className="p-6 rounded-lg shadow-md border border-gray-200 dark:border-navy-lighter/30 bg-navy-dark">          
+      <div className="p-6 rounded-lg shadow-sm border border-gray-200 dark:border-navy-lighter/30 bg-white dark:bg-navy-dark">          
         <AdminTabsView activeTab={activeTab} supabaseUsers={supabaseUsers} users={users} userInfoList={users} isLoadingUsers={isLoadingUsers} isLoadingAuthUsers={isLoadingAuthUsers} handleDocumentButtonClick={handleDocumentButtonClick} setSelectedUserForPasswordChange={user => {
         setSelectedUserForPasswordChange(user);
         setPasswordChangeModalOpen(true);

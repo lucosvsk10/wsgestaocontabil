@@ -31,17 +31,17 @@ export const AdminToolsView: React.FC = () => {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-6 text-navy dark:text-gold">Ferramentas</h2>
+      <h2 className="text-2xl font-bold mb-6 text-blue-700 dark:text-gold">Ferramentas</h2>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {tools.map((tool, index) => (
           <Card key={index} className="bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20 hover:shadow-md transition-shadow">
             <CardHeader>
               <div className="flex items-center gap-3">
-                <div className="rounded-full bg-gray-100 dark:bg-gray-800 p-3">
+                <div className="rounded-full bg-blue-50 dark:bg-gray-800 p-3">
                   {tool.icon}
                 </div>
-                <CardTitle className="text-lg font-medium text-navy dark:text-gold">
+                <CardTitle className="text-lg font-medium text-blue-700 dark:text-gold">
                   {tool.title}
                 </CardTitle>
               </div>
@@ -52,7 +52,7 @@ export const AdminToolsView: React.FC = () => {
               </CardDescription>
               <Button 
                 variant="outline" 
-                className="w-full bg-navy/10 text-navy hover:bg-navy hover:text-white dark:bg-gold/10 dark:text-gold dark:hover:bg-gold dark:hover:text-navy"
+                className="w-full bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-gold/10 dark:text-gold dark:hover:bg-gold dark:hover:text-navy"
                 onClick={tool.action}
               >
                 Acessar

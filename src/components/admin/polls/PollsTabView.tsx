@@ -24,30 +24,30 @@ export const PollsTabView = () => {
   return (
     <Tabs defaultValue="create" className="space-y-4">
       <TabsList className="grid w-full grid-cols-3">
-        <TabsTrigger value="create" className="text-navy dark:text-white">
+        <TabsTrigger value="create" className="text-blue-700 dark:text-white">
           Criar nova enquete
         </TabsTrigger>
-        <TabsTrigger value="manage" className="text-navy dark:text-white">
+        <TabsTrigger value="manage" className="text-blue-700 dark:text-white">
           Gerenciar enquetes
         </TabsTrigger>
-        <TabsTrigger value="results" className="text-navy dark:text-white">
+        <TabsTrigger value="results" className="text-blue-700 dark:text-white">
           Resultados de enquetes
         </TabsTrigger>
       </TabsList>
 
       <TabsContent value="create">
-        <div className="p-4 bg-white dark:bg-navy-dark border border-gold/20 rounded-lg">
-          <h3 className="text-xl font-medium mb-4 text-navy dark:text-gold">Criar Nova Enquete</h3>
+        <div className="p-4 bg-white dark:bg-navy-dark border border-blue-100 dark:border-gold/20 rounded-lg shadow-sm">
+          <h3 className="text-xl font-medium mb-4 text-blue-700 dark:text-gold">Criar Nova Enquete</h3>
           
           <Tabs value={pollTypeTab} onValueChange={setPollTypeTab} className="mb-6">
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="standard" className="text-navy dark:text-white">
+              <TabsTrigger value="standard" className="text-blue-700 dark:text-white">
                 Enquete Padrão
               </TabsTrigger>
-              <TabsTrigger value="numerical" className="text-navy dark:text-white">
+              <TabsTrigger value="numerical" className="text-blue-700 dark:text-white">
                 Formulário Numeral
               </TabsTrigger>
-              <TabsTrigger value="form" className="text-navy dark:text-white">
+              <TabsTrigger value="form" className="text-blue-700 dark:text-white">
                 Formulário Completo
               </TabsTrigger>
             </TabsList>
@@ -68,8 +68,8 @@ export const PollsTabView = () => {
       </TabsContent>
 
       <TabsContent value="manage">
-        <div className="p-4 bg-white dark:bg-navy-dark border border-gold/20 rounded-lg">
-          <h3 className="text-xl font-medium mb-4 text-navy dark:text-gold">Gerenciar Enquetes</h3>
+        <div className="p-4 bg-white dark:bg-navy-dark border border-blue-100 dark:border-gold/20 rounded-lg shadow-sm">
+          <h3 className="text-xl font-medium mb-4 text-blue-700 dark:text-gold">Gerenciar Enquetes</h3>
           <ManagePolls 
             refreshTrigger={refreshTrigger} 
             onViewResults={handleViewResults}
@@ -79,8 +79,8 @@ export const PollsTabView = () => {
       </TabsContent>
 
       <TabsContent value="results">
-        <div className="p-4 bg-white dark:bg-navy-dark border border-gold/20 rounded-lg">
-          <h3 className="text-xl font-medium mb-4 text-navy dark:text-gold">Resultados de Enquetes</h3>
+        <div className="p-4 bg-white dark:bg-navy-dark border border-blue-100 dark:border-gold/20 rounded-lg shadow-sm">
+          <h3 className="text-xl font-medium mb-4 text-blue-700 dark:text-gold">Resultados de Enquetes</h3>
           <PollResults selectedPoll={selectedPoll} />
         </div>
       </TabsContent>

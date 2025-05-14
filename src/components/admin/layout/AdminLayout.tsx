@@ -28,7 +28,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
     setSidebarOpen(!isMobile);
   }, [isMobile]);
 
-  return <div className="min-h-screen bg-[#F9FAFB] dark:bg-navy-deeper text-[#212121] dark:text-[#E0E0E0] flex overflow-hidden">
+  return <div className="min-h-screen bg-gray-50 dark:bg-navy-deeper text-gray-800 dark:text-[#E0E0E0] flex overflow-hidden">
       {/* Sidebar */}
       <AdminSidebar open={sidebarOpen} onClose={toggleSidebar} />
       
@@ -47,7 +47,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
           {sidebarOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
         </Button>
         
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-[#F9FAFB] dark:bg-navy-dark">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-gray-50 dark:bg-navy-dark">
           {children}
         </main>
       </div>
