@@ -108,11 +108,11 @@ export const UserList = ({
   const storageLimitMB = 100;
   const usedStorageMB = storageStats?.totalStorageMB || 0;
   const remainingStorageMB = Math.max(0, storageLimitMB - usedStorageMB);
-  return <Card className="bg-white dark:bg-navy-dark">
+  return <Card className="bg-white dark:bg-navy-dark border border-gray-200 dark:border-navy-lighter/30">
       <CardHeader className="bg-white dark:bg-navy-dark rounded">
         <div className="flex justify-between items-center">
-          <CardTitle className="bg-transparent font-semibold text-2xl text-blue-700 dark:text-slate-300">Lista de Usuários</CardTitle>
-          <Button onClick={() => setIsUserCreationDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-gold dark:hover:bg-gold-light dark:text-navy">
+          <CardTitle className="bg-transparent font-semibold text-2xl text-navy-dark dark:text-slate-300">Lista de Usuários</CardTitle>
+          <Button onClick={() => setIsUserCreationDialogOpen(true)} className="bg-navy-dark hover:bg-navy text-white dark:bg-gold dark:hover:bg-gold-light dark:text-navy">
             <Plus className="mr-2 h-4 w-4" /> Novo Usuário
           </Button>
         </div>
@@ -121,7 +121,7 @@ export const UserList = ({
       {/* Storage Statistics */}
       <CardContent className="border-b border-gray-200 dark:border-navy-lighter/30 mb-4 pb-4 bg-white dark:bg-navy-dark">
         <div className="rounded-lg p-4 shadow-sm bg-blue-50 dark:bg-navy-dark">
-          <h3 className="mb-3 text-lg font-semibold text-blue-800 dark:text-gray-400">Estatísticas de Armazenamento</h3>
+          <h3 className="mb-3 text-lg font-semibold text-navy-dark dark:text-gray-400">Estatísticas de Armazenamento</h3>
           
           {isLoadingStorage ? <div className="flex justify-center py-4">
               <LoadingSpinner />
@@ -130,7 +130,7 @@ export const UserList = ({
             </div> : <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="rounded p-3 border border-blue-100 dark:border-navy-lighter/30 bg-white dark:bg-navy-dark">
                 <p className="text-sm text-gray-500 dark:text-gray-400">Espaço Utilizado</p>
-                <p className="text-lg font-semibold text-blue-700 dark:text-white">
+                <p className="text-lg font-semibold text-navy-dark dark:text-white">
                   {usedStorageMB.toFixed(2)} MB de {storageLimitMB} MB
                 </p>
                 <div className="w-full bg-gray-200 dark:bg-navy-lighter rounded-full h-2.5 mt-2">
@@ -142,14 +142,14 @@ export const UserList = ({
               
               <div className="rounded p-3 border border-blue-100 dark:border-navy-lighter/30 bg-white dark:bg-navy-dark">
                 <p className="text-sm text-gray-500 dark:text-gray-400">Total de Documentos</p>
-                <p className="text-lg font-semibold text-blue-700 dark:text-white">
+                <p className="text-lg font-semibold text-navy-dark dark:text-white">
                   {totalDocuments} arquivos
                 </p>
               </div>
               
               <div className="rounded p-3 border border-blue-100 dark:border-navy-lighter/30 bg-white dark:bg-navy-dark">
                 <p className="text-sm text-gray-500 dark:text-gray-400">Espaço Disponível</p>
-                <p className="text-lg font-semibold text-blue-700 dark:text-white">
+                <p className="text-lg font-semibold text-navy-dark dark:text-white">
                   {remainingStorageMB.toFixed(2)} MB restantes
                 </p>
               </div>

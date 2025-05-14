@@ -22,7 +22,7 @@ export const UserActions = ({ authUser, refreshUsers, isAdminSection = false }: 
       <div className="flex items-center gap-2">
         <Button 
           variant="outline" 
-          className="bg-orange-300/80 dark:bg-navy-light/80 text-red-500 dark:text-red-400 border-gold/20 hover:bg-red-500 hover:text-white dark:hover:bg-red-500 dark:hover:text-white" 
+          className="bg-white border-red-300 text-red-500 hover:bg-red-50 hover:text-red-700 dark:bg-navy-light/80 dark:text-red-400 dark:hover:bg-red-500 dark:hover:text-white" 
           size="icon"
           onClick={() => setDeleteUserDialog(true)}
         >

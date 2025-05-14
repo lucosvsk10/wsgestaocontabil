@@ -31,7 +31,7 @@ export const AdminToolsView: React.FC = () => {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-6 text-blue-700 dark:text-gold">Ferramentas</h2>
+      <h2 className="text-2xl font-bold mb-6 text-navy-dark dark:text-gold">Ferramentas</h2>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {tools.map((tool, index) => (
@@ -41,18 +41,18 @@ export const AdminToolsView: React.FC = () => {
                 <div className="rounded-full bg-blue-50 dark:bg-gray-800 p-3">
                   {tool.icon}
                 </div>
-                <CardTitle className="text-lg font-medium text-blue-700 dark:text-gold">
+                <CardTitle className="text-lg font-medium text-navy-dark dark:text-gold">
                   {tool.title}
                 </CardTitle>
               </div>
             </CardHeader>
             <CardContent>
-              <CardDescription className="mb-4 text-gray-600 dark:text-gray-300">
+              <CardDescription className="mb-4 text-gray-500 dark:text-gray-300">
                 {tool.description}
               </CardDescription>
               <Button 
                 variant="outline" 
-                className="w-full bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-gold/10 dark:text-gold dark:hover:bg-gold dark:hover:text-navy"
+                className="w-full bg-white text-navy-dark hover:bg-blue-50 border-blue-300 dark:bg-gold/10 dark:text-gold dark:hover:bg-gold dark:hover:text-navy"
                 onClick={tool.action}
               >
                 Acessar

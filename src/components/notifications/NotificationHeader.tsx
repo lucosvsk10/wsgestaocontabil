@@ -62,7 +62,8 @@ const NotificationHeader = () => {
       if (data) {
         const typedData = data.map(item => ({
           ...item,
-          read_at: item.read_at || null
+          read_at: item.read_at || null,
+          type: item.type || null
         })) as Notification[];
         
         setNotifications(typedData);

@@ -36,7 +36,7 @@ export const UserRow = ({
   };
 
   return (
-    <TableRow key={authUser.id} className="border-gold/20 hover:bg-orange-300/50 dark:hover:bg-navy-light/50">
+    <TableRow key={authUser.id} className="border-gold/20 hover:bg-orange-300/20 dark:hover:bg-navy-light/50">
       {!isAdminSection && (
         <TableCell>
           <div className="flex items-center gap-2">
@@ -55,8 +55,8 @@ export const UserRow = ({
           </div>
         </TableCell>
       )}
-      <TableCell>{authUser.email || "Sem email"}</TableCell>
-      <TableCell>{formatDate(authUser.created_at)}</TableCell>
+      <TableCell className="text-gray-500 dark:text-white">{authUser.email || "Sem email"}</TableCell>
+      <TableCell className="text-gray-500 dark:text-white">{formatDate(authUser.created_at)}</TableCell>
       {!isAdminSection && (
         <TableCell>
           <div className="flex flex-wrap space-x-2 gap-y-2">
@@ -64,7 +64,7 @@ export const UserRow = ({
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="flex items-center gap-1 bg-orange-300/80 dark:bg-navy-light/80 text-navy dark:text-white hover:bg-gold hover:text-navy dark:hover:bg-gold dark:hover:text-navy border-gold/20" 
+                className="flex items-center gap-1 bg-white border-blue-300 text-navy-dark hover:bg-blue-50 dark:bg-navy-light/80 dark:text-white dark:hover:bg-gold dark:hover:text-navy" 
                 onClick={() => handleDocumentButtonClick(authUser.id)}
                 aria-label={`Ver documentos de ${authUser.user_metadata?.name || authUser.email || "usuário"}`}
               >
@@ -76,7 +76,7 @@ export const UserRow = ({
               <Button
                 variant="outline"
                 size="sm"
-                className="flex items-center gap-1 bg-orange-300/80 dark:bg-navy-light/80 text-navy dark:text-white hover:bg-gold hover:text-navy dark:hover:bg-gold dark:hover:text-navy border-gold/20"
+                className="flex items-center gap-1 bg-white border-blue-300 text-navy-dark hover:bg-blue-50 dark:bg-navy-light/80 dark:text-white dark:hover:bg-gold dark:hover:text-navy"
                 onClick={onChangePassword}
                 aria-label={`Alterar senha de ${authUser.user_metadata?.name || authUser.email || "usuário"}`}
               >
@@ -87,7 +87,7 @@ export const UserRow = ({
             <Button 
               variant="outline" 
               size="sm" 
-              className="flex items-center gap-1 bg-orange-300/80 dark:bg-navy-light/80 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white dark:hover:bg-red-600 dark:hover:text-white border-gold/20"
+              className="flex items-center gap-1 bg-white border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700 dark:bg-navy-light/80 dark:text-red-400 dark:hover:bg-red-600 dark:hover:text-white"
               onClick={onDelete}
               aria-label={`Excluir ${authUser.user_metadata?.name || authUser.email || "usuário"}`}
             >

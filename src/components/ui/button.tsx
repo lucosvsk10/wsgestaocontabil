@@ -10,7 +10,7 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-blue-600 text-white hover:bg-blue-700 dark:bg-gold dark:text-navy-deeper dark:hover:bg-gold-light shadow-sm",
+        default: "bg-navy-dark text-white hover:bg-navy-light dark:bg-gold dark:text-navy-deeper dark:hover:bg-gold-light shadow-sm",
         destructive:
           "bg-red-500 text-white hover:bg-red-600 dark:bg-destructive dark:text-destructive-foreground dark:hover:bg-destructive/90",
         outline:
@@ -20,7 +20,7 @@ const buttonVariants = cva(
         ghost: "hover:bg-gray-100 hover:text-blue-700 dark:hover:bg-navy-lighter dark:hover:text-white",
         link: "text-blue-600 underline-offset-4 hover:underline dark:text-gold",
         document: "bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-navy-medium dark:text-white dark:hover:bg-navy-lighter/90 border border-blue-200 dark:border-gold/20",
-        admin: "bg-blue-600 text-white hover:bg-blue-700 dark:bg-gold dark:text-navy-deeper dark:hover:bg-gold-light shadow-sm"
+        admin: "bg-navy-dark text-white hover:bg-navy-light dark:bg-gold dark:text-navy-deeper dark:hover:bg-gold-light shadow-sm"
       },
       size: {
         default: "h-10 px-4 py-2",
