@@ -9,6 +9,69 @@ export const currencyFormat = (value: number): string => {
   }).format(value);
 };
 
+// Constantes para o cálculo do IRPF (valores 2024)
+export const TAX_CONSTANTS = {
+  FAIXAS_IRPF: [
+    { limite: 2259.20, aliquota: 0, deducao: 0 },
+    { limite: 2826.65, aliquota: 0.075, deducao: 169.44 },
+    { limite: 3751.05, aliquota: 0.15, deducao: 381.44 },
+    { limite: 4664.68, aliquota: 0.225, deducao: 662.77 },
+    { limite: Infinity, aliquota: 0.275, deducao: 896.00 }
+  ],
+  DEDUCAO_POR_DEPENDENTE: 2275.08,
+  LIMITE_EDUCACAO: 3561.50,
+  DESCONTO_SIMPLIFICADO_PERCENTUAL: 0.2,
+  DESCONTO_SIMPLIFICADO_TETO: 16754.34,
+  ISENCAO_APOSENTADOS_65: 24751.74
+};
+
+// Tipos para os dados do cálculo
+export interface TaxFormInput {
+  rendimentosTributaveis: number;
+  rendimentosIsentos: number;
+  contribuicaoPrevidenciaria: number;
+  despesasMedicas: number;
+  despesasEducacao: number;
+  pensaoAlimenticia: number;
+  livroCaixa: number;
+  numeroDependentes: number;
+  impostoRetidoFonte: number;
+  ehAposentado65: boolean;
+  tipoDeclaracao: 'completa' | 'simplificada';
+}
+
+export interface TaxResult {
+  baseDeCalculo: {
+    completa: number;
+    simplificada: number;
+  };
+  descontoSimplificado: number;
+  descontoCompleto: number;
+  impostoDevido: {
+    completo: number;
+    simplificado: number;
+  };
+  declaracaoRecomendada: 'completa' | 'simplificada';
+  saldoImposto: number;
+  tipoSaldo: 'pagar' | 'restituir' | 'zero';
+  impostoFaixas: {
+    faixa: number;
+    valorImposto: number;
+    baseCalculo: number;
+    aliquota: number;
+  }[];
+  detalhamentoDeducoes: {
+    dependentes: number;
+    previdencia: number;
+    saude: number;
+    educacao: number;
+    pensao: number;
+    livroCaixa: number;
+    total: number;
+  };
+  impostoRetidoFonte: number;
+}
+
 /**
  * Calcula o imposto de renda baseado nas faixas de tributação progressivas
  * Usando valores de 2024
@@ -16,35 +79,156 @@ export const currencyFormat = (value: number): string => {
 export const calculateTaxBrackets = (baseCalculo: number): number => {
   let imposto = 0;
   
-  // Faixas de tributação do IRPF (valores de 2024)
-  // Até R$ 2.259,20 - Isento
-  // De R$ 2.259,21 até R$ 2.826,65 - 7,5%
-  // De R$ 2.826,66 até R$ 3.751,05 - 15%
-  // De R$ 3.751,06 até R$ 4.664,68 - 22,5%
-  // Acima de R$ 4.664,68 - 27,5%
-  
-  const mensal = baseCalculo / 12; // Convertendo para valor mensal para aplicar as faixas
-  
-  if (mensal <= 2259.20) {
-    // Isento
-    return 0;
-  }
-  
-  // Calcula o imposto devido para cada faixa
+  // Cálculo por mês conforme tabela progressiva
+  const mensal = baseCalculo / 12;
   let impostoMensal = 0;
   
-  if (mensal <= 2826.65) {
-    impostoMensal = (mensal - 2259.20) * 0.075;
-  } else if (mensal <= 3751.05) {
-    impostoMensal = (2826.65 - 2259.20) * 0.075 + (mensal - 2826.65) * 0.15;
-  } else if (mensal <= 4664.68) {
-    impostoMensal = (2826.65 - 2259.20) * 0.075 + (3751.05 - 2826.65) * 0.15 + (mensal - 3751.05) * 0.225;
-  } else {
-    impostoMensal = (2826.65 - 2259.20) * 0.075 + (3751.05 - 2826.65) * 0.15 + (4664.68 - 3751.05) * 0.225 + (mensal - 4664.68) * 0.275;
+  // Encontra a faixa aplicável
+  const faixa = TAX_CONSTANTS.FAIXAS_IRPF.find((f, i, faixas) => {
+    // Se é a última faixa ou o valor está abaixo do limite da próxima faixa
+    return i === faixas.length - 1 || mensal <= f.limite;
+  });
+  
+  if (faixa && mensal > 0) {
+    impostoMensal = (mensal * faixa.aliquota) - faixa.deducao;
   }
+  
+  // Imposto mensal não pode ser negativo
+  impostoMensal = Math.max(0, impostoMensal);
   
   // Multiplicando por 12 para obter o valor anual
   imposto = impostoMensal * 12;
   
   return imposto;
+};
+
+/**
+ * Calcula o imposto por faixas detalhadamente para visualização
+ */
+export const calculateTaxByBrackets = (baseCalculo: number) => {
+  const mensal = baseCalculo / 12;
+  const faixasImposto = [];
+  
+  // Calcula progressivamente por faixa
+  for (let i = 0; i < TAX_CONSTANTS.FAIXAS_IRPF.length; i++) {
+    const faixaAtual = TAX_CONSTANTS.FAIXAS_IRPF[i];
+    const faixaAnterior = i > 0 ? TAX_CONSTANTS.FAIXAS_IRPF[i - 1] : { limite: 0, aliquota: 0 };
+    
+    // Valor que se encaixa nesta faixa
+    let valorNaFaixa = 0;
+    
+    if (mensal > faixaAnterior.limite) {
+      valorNaFaixa = Math.min(mensal, faixaAtual.limite) - faixaAnterior.limite;
+      
+      if (valorNaFaixa > 0 && faixaAtual.aliquota > 0) {
+        faixasImposto.push({
+          faixa: i + 1,
+          baseCalculo: valorNaFaixa * 12,
+          aliquota: faixaAtual.aliquota,
+          valorImposto: valorNaFaixa * faixaAtual.aliquota * 12
+        });
+      }
+    }
+    
+    // Se já processamos todo o valor, podemos parar
+    if (mensal <= faixaAtual.limite) break;
+  }
+  
+  return faixasImposto;
+};
+
+/**
+ * Retorna o valor máximo de dedução para educação com base no número de dependentes
+ */
+export const getLimiteEducacao = (numeroDependentes: number): number => {
+  // O limite é por pessoa (declarante + dependentes)
+  return TAX_CONSTANTS.LIMITE_EDUCACAO * (numeroDependentes + 1);
+};
+
+/**
+ * Calcula o resultado completo do imposto de renda com todas as regras aplicáveis
+ */
+export const calculateFullTaxResult = (input: TaxFormInput): TaxResult => {
+  // Calcular deduções para modelo completo
+  const deducaoDependentes = input.numeroDependentes * TAX_CONSTANTS.DEDUCAO_POR_DEPENDENTE;
+  const deducaoEducacaoLimitada = Math.min(input.despesasEducacao, getLimiteEducacao(input.numeroDependentes));
+  
+  // Calcular total de deduções no modelo completo
+  const totalDeducoesCompleto = 
+    input.contribuicaoPrevidenciaria + 
+    input.despesasMedicas + 
+    deducaoEducacaoLimitada + 
+    input.pensaoAlimenticia + 
+    input.livroCaixa +
+    deducaoDependentes;
+  
+  // Aplicar isenção para aposentados acima de 65 anos
+  let rendimentosTributaveisAjustados = input.rendimentosTributaveis;
+  if (input.ehAposentado65) {
+    rendimentosTributaveisAjustados = Math.max(0, input.rendimentosTributaveis - TAX_CONSTANTS.ISENCAO_APOSENTADOS_65);
+  }
+  
+  // Base de cálculo para modelo completo
+  const baseCalculoCompleta = Math.max(0, rendimentosTributaveisAjustados - totalDeducoesCompleto);
+  
+  // Cálculo do desconto simplificado (20% limitado ao teto)
+  const descontoSimplificadoCalculado = Math.min(
+    rendimentosTributaveisAjustados * TAX_CONSTANTS.DESCONTO_SIMPLIFICADO_PERCENTUAL, 
+    TAX_CONSTANTS.DESCONTO_SIMPLIFICADO_TETO
+  );
+  
+  // Base de cálculo para modelo simplificado
+  const baseCalculoSimplificada = Math.max(0, rendimentosTributaveisAjustados - descontoSimplificadoCalculado);
+  
+  // Cálculo do imposto devido em ambos os modelos
+  const impostoDevidoCompleto = calculateTaxBrackets(baseCalculoCompleta);
+  const impostoDevidoSimplificado = calculateTaxBrackets(baseCalculoSimplificada);
+  
+  // Determinar qual modelo é mais vantajoso
+  const declaracaoRecomendada = impostoDevidoCompleto <= impostoDevidoSimplificado ? 'completa' : 'simplificada';
+  
+  // Imposto final de acordo com o modelo escolhido pelo usuário
+  const impostoFinal = input.tipoDeclaracao === 'completa' ? impostoDevidoCompleto : impostoDevidoSimplificado;
+  
+  // Saldo do imposto (a pagar ou a restituir)
+  const saldoImposto = impostoFinal - input.impostoRetidoFonte;
+  
+  // Determinar se é a pagar ou a restituir
+  let tipoSaldo: 'pagar' | 'restituir' | 'zero' = 'zero';
+  if (saldoImposto > 0) {
+    tipoSaldo = 'pagar';
+  } else if (saldoImposto < 0) {
+    tipoSaldo = 'restituir';
+  }
+
+  // Calcular detalhamento por faixas para o modelo escolhido
+  const baseCalculoFinal = input.tipoDeclaracao === 'completa' ? baseCalculoCompleta : baseCalculoSimplificada;
+  const impostoFaixas = calculateTaxByBrackets(baseCalculoFinal);
+  
+  return {
+    baseDeCalculo: {
+      completa: baseCalculoCompleta,
+      simplificada: baseCalculoSimplificada
+    },
+    descontoSimplificado: descontoSimplificadoCalculado,
+    descontoCompleto: totalDeducoesCompleto,
+    impostoDevido: {
+      completo: impostoDevidoCompleto,
+      simplificado: impostoDevidoSimplificado
+    },
+    declaracaoRecomendada,
+    saldoImposto: Math.abs(saldoImposto),
+    tipoSaldo,
+    impostoFaixas,
+    detalhamentoDeducoes: {
+      dependentes: deducaoDependentes,
+      previdencia: input.contribuicaoPrevidenciaria,
+      saude: input.despesasMedicas,
+      educacao: deducaoEducacaoLimitada,
+      pensao: input.pensaoAlimenticia,
+      livroCaixa: input.livroCaixa,
+      total: totalDeducoesCompleto
+    },
+    impostoRetidoFonte: input.impostoRetidoFonte
+  };
 };
