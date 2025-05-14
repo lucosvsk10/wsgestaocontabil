@@ -1,92 +1,124 @@
-
 import { TAX_CONSTANTS } from './constants';
 import { TaxFormInput, TaxResult } from './types';
 import { calculateTaxBrackets, calculateTaxByBrackets, getLimiteEducacao } from './calculations';
 
 /**
- * Calcula o resultado completo do imposto de renda com todas as regras aplicáveis
+ * Calcula a base de cálculo para a declaração completa, considerando todas as deduções permitidas.
  */
-export const calculateFullTaxResult = (formData: TaxFormInput): TaxResult => {
-  // Calcular deduções para modelo completo
-  const deducaoDependentes = formData.numeroDependentes * TAX_CONSTANTS.DEDUCAO_POR_DEPENDENTE;
-  const deducaoEducacaoLimitada = Math.min(formData.despesasEducacao, getLimiteEducacao(formData.numeroDependentes));
+const calculateBaseForCompleteDeclaration = (data: TaxFormInput): number => {
+  let base = data.rendimentosTributaveis;
   
-  // Calcular total de deduções no modelo completo
-  const totalDeducoesCompleto = 
-    formData.contribuicaoPrevidenciaria + 
-    formData.despesasMedicas + 
-    deducaoEducacaoLimitada + 
-    formData.pensaoAlimenticia + 
-    formData.livroCaixa +
-    deducaoDependentes;
+  // Dedução de contribuições previdenciárias
+  base -= data.contribuicaoPrevidenciaria;
   
-  // Aplicar isenção para aposentados acima de 65 anos
-  let rendimentosTributaveisAjustados = formData.rendimentosTributaveis;
-  if (formData.ehAposentado65) {
-    rendimentosTributaveisAjustados = Math.max(0, formData.rendimentosTributaveis - TAX_CONSTANTS.ISENCAO_APOSENTADOS_65);
-  }
+  // Dedução de despesas médicas
+  base -= data.despesasMedicas;
   
-  // Base de cálculo para modelo completo
-  const baseCalculoCompleta = Math.max(0, rendimentosTributaveisAjustados - totalDeducoesCompleto);
+  // Dedução de despesas com educação, respeitando o limite
+  base -= Math.min(data.despesasEducacao, getLimiteEducacao(data.numeroDependentes));
   
-  // Cálculo do desconto simplificado (20% limitado ao teto)
-  const descontoSimplificadoCalculado = Math.min(
-    rendimentosTributaveisAjustados * TAX_CONSTANTS.DESCONTO_SIMPLIFICADO_PERCENTUAL, 
-    TAX_CONSTANTS.DESCONTO_SIMPLIFICADO_TETO
-  );
+  // Dedução por dependentes
+  base -= data.numeroDependentes * TAX_CONSTANTS.DEDUCAO_POR_DEPENDENTE;
   
-  // Base de cálculo para modelo simplificado
-  const baseCalculoSimplificada = Math.max(0, rendimentosTributaveisAjustados - descontoSimplificadoCalculado);
-  
-  // Cálculo do imposto devido em ambos os modelos
-  const impostoDevidoCompleto = calculateTaxBrackets(baseCalculoCompleta);
-  const impostoDevidoSimplificado = calculateTaxBrackets(baseCalculoSimplificada);
-  
-  // Determinar qual modelo é mais vantajoso
-  const declaracaoRecomendada = impostoDevidoCompleto <= impostoDevidoSimplificado ? 'completa' : 'simplificada';
-  
-  // Imposto final de acordo com o modelo escolhido pelo usuário
-  const impostoFinal = formData.tipoDeclaracao === 'completa' ? impostoDevidoCompleto : impostoDevidoSimplificado;
-  
-  // Saldo do imposto (a pagar ou a restituir)
-  const saldoImposto = impostoFinal - formData.impostoRetidoFonte;
-  
-  // Determinar se é a pagar ou a restituir
-  let tipoSaldo: 'pagar' | 'restituir' | 'zero' = 'zero';
-  if (saldoImposto > 0) {
-    tipoSaldo = 'pagar';
-  } else if (saldoImposto < 0) {
-    tipoSaldo = 'restituir';
-  }
+  // Dedução de pensão alimentícia
+  base -= data.pensaoAlimenticia;
 
-  // Calcular detalhamento por faixas para o modelo escolhido
-  const baseCalculoFinal = formData.tipoDeclaracao === 'completa' ? baseCalculoCompleta : baseCalculoSimplificada;
-  const impostoFaixas = calculateTaxByBrackets(baseCalculoFinal);
+  // Dedução do livro caixa
+  base -= data.livroCaixa;
+  
+  // Isenção para maiores de 65 anos
+  if (data.ehAposentado65) {
+    base = Math.max(0, base - TAX_CONSTANTS.ISENCAO_APOSENTADOS_65);
+  }
+  
+  return Math.max(0, base); // Garante que a base não seja negativa
+};
+
+/**
+ * Calcula o desconto simplificado, limitado a 20% dos rendimentos tributáveis ou ao teto estabelecido.
+ */
+const calculateSimplifiedDiscount = (rendimentosTributaveis: number): number => {
+  const desconto = rendimentosTributaveis * TAX_CONSTANTS.DESCONTO_SIMPLIFICADO_PERCENTUAL;
+  return Math.min(desconto, TAX_CONSTANTS.DESCONTO_SIMPLIFICADO_TETO);
+};
+
+/**
+ * Calcula o total de deduções permitidas na declaração completa.
+ */
+const calculateDeductions = (data: TaxFormInput): number => {
+  let total = 0;
+  
+  total += data.contribuicaoPrevidenciaria;
+  total += data.despesasMedicas;
+  total += Math.min(data.despesasEducacao, getLimiteEducacao(data.numeroDependentes));
+  total += data.numeroDependentes * TAX_CONSTANTS.DEDUCAO_POR_DEPENDENTE;
+  total += data.pensaoAlimenticia;
+  total += data.livroCaixa;
+  
+  return total;
+};
+
+// Add the calculateTaxes export
+export const calculateTaxes = (data: TaxFormInput): TaxResult => {
+  // Calculate base income after deductions
+  const baseDeCalcCompleta = calculateBaseForCompleteDeclaration(data);
+  const descontoSimplificado = calculateSimplifiedDiscount(data.rendimentosTributaveis);
+  const baseDeCalcSimplificada = Math.max(0, data.rendimentosTributaveis - descontoSimplificado);
+
+  // Calculate tax for both declaration types
+  const impostoDevidoCompleto = calculateTaxBrackets(baseDeCalcCompleta);
+  const impostoDevidoSimplificado = calculateTaxBrackets(baseDeCalcSimplificada);
+
+  // Choose recommended declaration type
+  const declaracaoRecomendada = 
+    impostoDevidoCompleto <= impostoDevidoSimplificado ? 'completa' : 'simplificada';
+
+  // Calculate tax by brackets for detailed view
+  const impostoFaixas = calculateTaxByBrackets(
+    data.tipoDeclaracao === 'completa' ? baseDeCalcCompleta : baseDeCalcSimplificada
+  );
+
+  // Calculate final tax amount after withholding
+  const impostoDevido = {
+    completo: impostoDevidoCompleto,
+    simplificado: impostoDevidoSimplificado,
+  };
+  
+  const saldoImposto = (data.tipoDeclaracao === 'completa' ? 
+    impostoDevidoCompleto : impostoDevidoSimplificado) - data.impostoRetidoFonte;
+
+  // Determine saldo type
+  let tipoSaldo: 'pagar' | 'restituir' | 'zero' = 'zero';
+  if (saldoImposto > 0) tipoSaldo = 'pagar';
+  else if (saldoImposto < 0) tipoSaldo = 'restituir';
+
+  // Detailed deductions
+  const valorDeducaoDependentes = data.numeroDependentes * TAX_CONSTANTS.DEDUCAO_POR_DEPENDENTE;
+  
+  const detalhamentoDeducoes = {
+    dependentes: valorDeducaoDependentes,
+    previdencia: data.contribuicaoPrevidenciaria,
+    saude: data.despesasMedicas,
+    educacao: Math.min(data.despesasEducacao, 
+      getLimiteEducacao(data.numeroDependentes)),
+    pensao: data.pensaoAlimenticia,
+    livroCaixa: data.livroCaixa,
+    total: calculateDeductions(data),
+  };
   
   return {
     baseDeCalculo: {
-      completa: baseCalculoCompleta,
-      simplificada: baseCalculoSimplificada
+      completa: baseDeCalcCompleta,
+      simplificada: baseDeCalcSimplificada,
     },
-    descontoSimplificado: descontoSimplificadoCalculado,
-    descontoCompleto: totalDeducoesCompleto,
-    impostoDevido: {
-      completo: impostoDevidoCompleto,
-      simplificado: impostoDevidoSimplificado
-    },
+    descontoSimplificado,
+    descontoCompleto: detalhamentoDeducoes.total,
+    impostoDevido,
     declaracaoRecomendada,
-    saldoImposto: Math.abs(saldoImposto),
+    saldoImposto,
     tipoSaldo,
     impostoFaixas,
-    detalhamentoDeducoes: {
-      dependentes: deducaoDependentes,
-      previdencia: formData.contribuicaoPrevidenciaria,
-      saude: formData.despesasMedicas,
-      educacao: deducaoEducacaoLimitada,
-      pensao: formData.pensaoAlimenticia,
-      livroCaixa: formData.livroCaixa,
-      total: totalDeducoesCompleto
-    },
-    impostoRetidoFonte: formData.impostoRetidoFonte
+    detalhamentoDeducoes,
+    impostoRetidoFonte: data.impostoRetidoFonte,
   };
 };

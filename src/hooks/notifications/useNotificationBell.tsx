@@ -1,8 +1,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { fetchNotifications, markAsRead, markAllAsRead } from "./notificationService";
 import { Notification } from "@/types/notifications";
+import { NotificationService } from "./notificationService";
 
 export const useNotificationBell = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -11,6 +11,7 @@ export const useNotificationBell = () => {
   const [isLoading, setIsLoading] = useState(false);
   
   const { user } = useAuth();
+  const notificationService = new NotificationService();
 
   const countUnread = (notifs: Notification[]) => {
     return notifs.filter(n => !n.read_at).length;
@@ -26,9 +27,22 @@ export const useNotificationBell = () => {
     setIsLoading(true);
     
     try {
-      const fetched = await fetchNotifications(user.id);
-      setNotifications(fetched);
-      setUnreadCount(countUnread(fetched));
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Ensure all notification objects have the necessary fields
+      const typedNotifications: Notification[] = data.map(notification => ({
+        ...notification,
+        read_at: notification.read_at || null
+      }));
+
+      setNotifications(typedNotifications);
+      setUnreadCount(countUnread(typedNotifications));
     } catch (error) {
       console.error("Error refreshing notifications:", error);
     } finally {
@@ -39,7 +53,7 @@ export const useNotificationBell = () => {
   const handleMarkAsRead = async (notificationId: string) => {
     if (!user) return;
     
-    const success = await markAsRead(notificationId);
+    const success = await notificationService.markAsRead(notificationId);
     
     if (success) {
       setNotifications(prev => 
@@ -56,7 +70,7 @@ export const useNotificationBell = () => {
   const handleMarkAllAsRead = async () => {
     if (!user) return;
     
-    const success = await markAllAsRead(user.id);
+    const success = await notificationService.markAllAsRead(user.id);
     
     if (success) {
       setNotifications(prev => 
@@ -83,3 +97,5 @@ export const useNotificationBell = () => {
     refreshNotifications
   };
 };
+
+import { supabase } from '@/lib/supabaseClient';

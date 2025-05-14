@@ -1,4 +1,3 @@
-
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
@@ -6,16 +5,17 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { InfoCircledIcon, ExclamationTriangleIcon } from "@radix-ui/react-icons";
-import { TaxFormValues } from "@/types/taxCalculator";
+import { TaxFormValues, TaxResult } from "@/utils/tax/types";
 
 interface ResultsStepProps {
-  taxResult: any;
+  taxResult: TaxResult;
   formData: TaxFormValues;
   user: any;
   formatCurrency: (value: number) => string;
+  onRestart: () => void;
 }
 
-export const ResultsStep = ({ taxResult, formData, user, formatCurrency }: ResultsStepProps) => {
+export const ResultsStep = ({ taxResult, formData, user, formatCurrency, onRestart }: ResultsStepProps) => {
   const navigate = useNavigate();
 
   if (!taxResult) return null;

@@ -9,8 +9,8 @@ import { IncomeStep } from './IncomeStep';
 import { DeductionsStep } from './DeductionsStep';
 import { ResultsStep } from './ResultsStep';
 import { TaxCalculatorProps } from '@/types/taxCalculator';
-import { TaxFormInput, TaxResult } from '@/utils/tax/types';
-import { calculateTaxes } from '@/utils/tax/taxService';
+import { TaxFormInput, TaxResult, TaxFormValues } from '@/utils/tax/types';
+import { calculateTaxes } from '@/utils/tax/calculations';
 
 // Define the form schema
 const createTaxFormSchema = (isLoggedIn: boolean) => {
@@ -52,7 +52,7 @@ export const TaxCalculatorForm: React.FC<TaxCalculatorProps> = ({ onComplete }) 
   const isLoggedIn = !!user;
 
   // Create form with schema based on login status
-  const methods = useForm<TaxFormInput & { nome?: string, email?: string, telefone?: string }>({
+  const methods = useForm<TaxFormValues>({
     resolver: zodResolver(createTaxFormSchema(isLoggedIn)),
     defaultValues: {
       rendimentosTributaveis: 0,
@@ -73,7 +73,7 @@ export const TaxCalculatorForm: React.FC<TaxCalculatorProps> = ({ onComplete }) 
     }
   });
   
-  const onSubmit = (data: TaxFormInput & { nome?: string, email?: string, telefone?: string }) => {
+  const onSubmit = (data: TaxFormValues) => {
     if (activeStep < 2) {
       setActiveStep(activeStep + 1);
       return;
@@ -108,7 +108,14 @@ export const TaxCalculatorForm: React.FC<TaxCalculatorProps> = ({ onComplete }) 
       <FormProvider {...methods}>
         <form onSubmit={methods.handleSubmit(onSubmit)} className="space-y-8">
           {activeStep === 0 && <IncomeStep isLoggedIn={isLoggedIn} />}
-          {activeStep === 1 && <DeductionsStep />}
+          {activeStep === 1 && (
+            <DeductionsStep 
+              control={methods.control} 
+              errors={methods.formState.errors} 
+              taxResult={taxResult} 
+              formData={methods.getValues()}
+            />
+          )}
           {activeStep === 2 && (
             <div className="flex justify-end space-x-4">
               <button
@@ -128,7 +135,10 @@ export const TaxCalculatorForm: React.FC<TaxCalculatorProps> = ({ onComplete }) 
           )}
           {activeStep === 3 && taxResult && (
             <ResultsStep 
-              taxResult={taxResult} 
+              taxResult={taxResult}
+              formData={methods.getValues()}
+              user={user}
+              formatCurrency={(value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
               onRestart={restartForm} 
             />
           )}

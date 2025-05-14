@@ -12,6 +12,9 @@ export interface TaxFormInput {
   ehAposentado65: boolean;
   tipoDeclaracao: "completa" | "simplificada";
   previdenciaPrivada?: number;
+  nome?: string;
+  email?: string;
+  telefone?: string;
 }
 
 export interface TaxResult {
@@ -52,3 +55,5 @@ export interface TaxBracket {
   aliquota: number;
   valorImposto: number;
 }
+
+export type TaxFormValues = TaxFormInput;

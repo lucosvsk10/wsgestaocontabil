@@ -108,6 +108,45 @@ export const useNotifications = () => {
     }
   };
 
+  // Add the missing clearNotifications method
+  const clearNotifications = async () => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', user.id);
+        
+      if (error) throw error;
+      
+      setNotifications([]);
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Error clearing notifications:', error);
+    }
+  };
+
+  // Add createNotification method
+  const createNotification = async (message: string, type: string = 'info') => {
+    if (!user) return null;
+    
+    try {
+      const notification = await notificationService.createNotification(user.id, message, type);
+      if (notification) {
+        setNotifications(prev => [notification, ...prev]);
+        setUnreadCount(prev => prev + 1);
+      }
+      return notification;
+    } catch (error) {
+      console.error('Error creating notification:', error);
+      return null;
+    }
+  };
+
+  // Add computed property for hasNewNotifications
+  const hasNewNotifications = unreadCount > 0;
+
   useEffect(() => {
     if (user) {
       fetchNotifications();
@@ -141,6 +180,9 @@ export const useNotifications = () => {
     markAsRead,
     markAllAsRead,
     removeNotification,
+    clearNotifications,
+    createNotification,
+    hasNewNotifications,
     notificationService
   };
 };

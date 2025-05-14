@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
-import { TaxFormValues } from "@/types/taxCalculator";
+import { TaxFormValues } from "@/utils/tax/types";
 
 interface DeductionsStepProps {
   control: Control<TaxFormValues>;

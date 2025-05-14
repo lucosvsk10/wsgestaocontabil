@@ -23,4 +23,10 @@ export interface TaxCalculationParams {
   // Tax calculator specific parameters
 }
 
+export type TaxFormValues = TaxFormInput & {
+  nome?: string;
+  email?: string;
+  telefone?: string;
+};
+
 export type { TaxFormInput, TaxResult };
