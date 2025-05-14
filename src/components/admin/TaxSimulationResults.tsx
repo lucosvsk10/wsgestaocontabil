@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { format, parseISO } from "date-fns";
@@ -13,7 +12,6 @@ import {
   ChartPie, 
   Search, 
   User, 
-  Filter, 
   FileText, 
   Download, 
   BarChart2,
@@ -62,24 +60,7 @@ import {
 } from "recharts";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-
-interface TaxSimulation {
-  id: string;
-  user_id: string | null;
-  rendimento_bruto: number;
-  inss: number;
-  educacao: number;
-  saude: number;
-  dependentes: number;
-  outras_deducoes: number;
-  imposto_estimado: number;
-  tipo_simulacao: string;
-  data_criacao: string;
-  nome: string | null;
-  email: string | null;
-  telefone: string | null;
-  observacoes?: string;
-}
+import { TaxSimulation } from "@/types/taxSimulation";
 
 interface UserDetails {
   [key: string]: {
@@ -110,23 +91,19 @@ const TaxSimulationResults = () => {
   
   const { toast } = useToast();
 
-  // Chart data for analytics tab
   const chartData = useMemo(() => {
     if (!simulations.length) return [];
     
-    // Declaration type distribution
     const typeDistribution = [
       { name: 'Completa', value: simulations.filter(s => s.tipo_simulacao.includes('completa')).length },
       { name: 'Simplificada', value: simulations.filter(s => s.tipo_simulacao.includes('simplificada')).length }
     ];
     
-    // Tax result distribution
     const resultDistribution = [
       { name: 'A Pagar', value: simulations.filter(s => s.tipo_simulacao === 'a pagar').length },
       { name: 'Restituição', value: simulations.filter(s => s.tipo_simulacao === 'restituição').length }
     ];
     
-    // Income range distribution
     const incomeRanges = [
       { range: 'Até 50 mil', count: 0 },
       { range: '50-100 mil', count: 0 },
@@ -164,10 +141,8 @@ const TaxSimulationResults = () => {
 
   useEffect(() => {
     if (simulations.length > 0) {
-      // Apply filters
       let results = [...simulations];
       
-      // Search filter
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
         results = results.filter(sim => {
@@ -188,7 +163,6 @@ const TaxSimulationResults = () => {
         });
       }
       
-      // Time filter
       if (timeFilter !== "all") {
         const now = new Date();
         const past = new Date();
@@ -214,7 +188,6 @@ const TaxSimulationResults = () => {
         });
       }
       
-      // Type filter
       if (typeFilter !== "all") {
         results = results.filter(sim => {
           if (typeFilter === "pagar") return sim.tipo_simulacao === "a pagar";
@@ -223,7 +196,6 @@ const TaxSimulationResults = () => {
         });
       }
       
-      // Sort results
       results.sort((a, b) => {
         const aValue = a[sortConfig.key as keyof TaxSimulation];
         const bValue = b[sortConfig.key as keyof TaxSimulation];
@@ -240,9 +212,8 @@ const TaxSimulationResults = () => {
             : bValue - aValue;
         }
         
-        // Default to date sorting
-        const aDate = new Date(a.data_criacao).getTime();
-        const bDate = new Date(b.data_criacao).getTime();
+        const aDate = new Date(a.data_criacao || '').getTime();
+        const bDate = new Date(b.data_criacao || '').getTime();
         return sortConfig.direction === 'asc' ? aDate - bDate : bDate - aDate;
       });
       
@@ -253,10 +224,7 @@ const TaxSimulationResults = () => {
   const fetchSimulations = async () => {
     try {
       setLoading(true);
-      const {
-        data,
-        error
-      } = await supabase.from("tax_simulations").select("*").order("data_criacao", {
+      const { data, error } = await supabase.from("tax_simulations").select("*").order("data_criacao", {
         ascending: false
       });
       if (error) {
@@ -266,7 +234,6 @@ const TaxSimulationResults = () => {
         setSimulations(data);
         setFilteredSimulations(data);
 
-        // Buscar detalhes dos usuários
         const userIds = [...new Set(data.map(sim => sim.user_id).filter(Boolean))];
         fetchUserDetails(userIds as string[]);
       }
@@ -285,10 +252,7 @@ const TaxSimulationResults = () => {
   const fetchUserDetails = async (userIds: string[]) => {
     if (userIds.length === 0) return;
     try {
-      const {
-        data,
-        error
-      } = await supabase.from("users").select("id, name, email").in("id", userIds);
+      const { data, error } = await supabase.from("users").select("id, name, email").in("id", userIds);
       if (error) {
         throw error;
       }
@@ -366,7 +330,6 @@ const TaxSimulationResults = () => {
         
       if (error) throw error;
       
-      // Update local state
       setSimulations(prevSimulations => 
         prevSimulations.map(sim => 
           sim.id === selectedSimulation.id 
@@ -395,21 +358,18 @@ const TaxSimulationResults = () => {
     try {
       const doc = new jsPDF();
       
-      // Add header
       doc.setFont("helvetica", "bold");
       doc.setFontSize(18);
-      doc.setTextColor(11, 19, 32); // Cor navy
+      doc.setTextColor(11, 19, 32);
       doc.text("WS Gestão Contábil", 105, 20, { align: "center" });
       
       doc.setFontSize(14);
       doc.text("Relatório de Simulação de IRPF", 105, 30, { align: "center" });
       
-      // Add simulation info
       doc.setFont("helvetica", "normal");
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
       
-      // User info
       doc.setFont("helvetica", "bold");
       doc.text("Informações do Contribuinte", 20, 45);
       doc.setFont("helvetica", "normal");
@@ -422,9 +382,8 @@ const TaxSimulationResults = () => {
       if (simulation.telefone) {
         doc.text(`Telefone: ${simulation.telefone}`, 20, 71);
       }
-      doc.text(`Data da simulação: ${formatDate(simulation.data_criacao)}`, 20, 79);
+      doc.text(`Data da simulação: ${formatDate(simulation.data_criacao || '')}`, 20, 79);
       
-      // Simulation details
       doc.setFont("helvetica", "bold");
       doc.text("Detalhes da Declaração", 20, 95);
       doc.setFont("helvetica", "normal");
@@ -432,36 +391,26 @@ const TaxSimulationResults = () => {
       doc.text(`Tipo de declaração: ${simulation.tipo_simulacao}`, 20, 105);
       doc.text(`Rendimento bruto anual: ${currencyFormat(simulation.rendimento_bruto)}`, 20, 113);
       doc.text(`Contribuição INSS: ${currencyFormat(simulation.inss)}`, 20, 121);
-      doc.text(`Despesas com educação: ${currencyFormat(simulation.educacao)}`, 20, 129);
-      doc.text(`Despesas médicas: ${currencyFormat(simulation.saude)}`, 20, 137);
-      doc.text(`Dependentes: ${simulation.dependentes} (${currencyFormat(simulation.dependentes * 2275.08)})`, 20, 145);
-      doc.text(`Outras deduções: ${currencyFormat(simulation.outras_deducoes)}`, 20, 153);
+      doc.text(`Despesas com educação: ${currencyFormat(simulation.educacao || 0)}`, 20, 129);
+      doc.text(`Despesas médicas: ${currencyFormat(simulation.saude || 0)}`, 20, 137);
+      doc.text(`Dependentes: ${simulation.dependentes} (${currencyFormat((simulation.dependentes || 0) * 2275.08)})`, 20, 145);
+      doc.text(`Outras deduções: ${currencyFormat(simulation.outras_deducoes || 0)}`, 20, 153);
       
-      // Total deductions
-      const totalDeducoes = simulation.inss + simulation.educacao + simulation.saude + simulation.dependentes * 2275.08 + simulation.outras_deducoes;
+      const totalDeducoes = simulation.inss + (simulation.educacao || 0) + (simulation.saude || 0) + ((simulation.dependentes || 0) * 2275.08) + (simulation.outras_deducoes || 0);
       
       doc.setFont("helvetica", "bold");
       doc.text(`Total de deduções: ${currencyFormat(totalDeducoes)}`, 20, 165);
       
-      // Result
       doc.setFont("helvetica", "bold");
-      doc.text("Resultado", 20, 180);
-      doc.setFont("helvetica", "normal");
-      
-      doc.text(`Base de cálculo: ${currencyFormat(simulation.rendimento_bruto - totalDeducoes)}`, 20, 190);
-      
-      doc.setFont("helvetica", "bold");
-      const resultColor = simulation.tipo_simulacao === 'a pagar' ? [220, 50, 50] : [0, 150, 50]; // Vermelho ou Verde
+      const resultColor = simulation.tipo_simulacao === 'a pagar' ? [220, 50, 50] : [0, 150, 50];
       doc.setTextColor(resultColor[0], resultColor[1], resultColor[2]);
       doc.text(`Imposto ${simulation.tipo_simulacao}: ${currencyFormat(simulation.imposto_estimado)}`, 20, 200);
       
-      // Footer
       doc.setTextColor(100, 100, 100);
       doc.setFontSize(10);
       doc.setFont("helvetica", "italic");
       doc.text("Este documento é apenas uma simulação e não substitui a declaração oficial do IRPF.", 105, 280, { align: "center" });
       
-      // Save PDF
       doc.save(`simulacao-irpf-${userName.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().slice(0, 10)}.pdf`);
       
       toast({
@@ -489,7 +438,6 @@ const TaxSimulationResults = () => {
         return;
       }
       
-      // Prepare CSV header
       const headers = [
         "ID",
         "Nome",
@@ -508,37 +456,34 @@ const TaxSimulationResults = () => {
         "Imposto Estimado"
       ];
       
-      // Prepare CSV rows
       const csvData = filteredSimulations.map(sim => {
-        const valorDependentes = sim.dependentes * 2275.08;
-        const totalDeducoes = sim.inss + sim.educacao + sim.saude + valorDependentes + sim.outras_deducoes;
+        const valorDependentes = (sim.dependentes || 0) * 2275.08;
+        const totalDeducoes = sim.inss + (sim.educacao || 0) + (sim.saude || 0) + valorDependentes + (sim.outras_deducoes || 0);
         
         return [
           sim.id,
           getUserName(sim),
           getUserEmail(sim),
           sim.telefone || "N/A",
-          formatDate(sim.data_criacao),
+          formatDate(sim.data_criacao || ''),
           sim.tipo_simulacao,
           sim.rendimento_bruto,
           sim.inss,
-          sim.educacao,
-          sim.saude,
-          sim.dependentes,
+          sim.educacao || 0,
+          sim.saude || 0,
+          sim.dependentes || 0,
           valorDependentes,
-          sim.outras_deducoes,
+          sim.outras_deducoes || 0,
           totalDeducoes,
           sim.imposto_estimado
         ];
       });
       
-      // Combine header and rows
       const csvContent = [
         headers.join(","),
         ...csvData.map(row => row.join(","))
       ].join("\n");
       
-      // Create download link
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -546,7 +491,6 @@ const TaxSimulationResults = () => {
       link.setAttribute("download", `simulacoes-irpf-${new Date().toISOString().slice(0, 10)}.csv`);
       document.body.appendChild(link);
       
-      // Trigger download and cleanup
       link.click();
       document.body.removeChild(link);
       
@@ -605,7 +549,6 @@ const TaxSimulationResults = () => {
         </TabsList>
         
         <TabsContent value="list" className="space-y-6">
-          {/* Filters and Search */}
           <div className="flex flex-col md:flex-row gap-4">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground dark:text-gray-400" />
@@ -729,12 +672,16 @@ const TaxSimulationResults = () => {
                   </TableHeader>
                   <TableBody className="dark:bg-navy-medium">
                     {filteredSimulations.map(simulation => {
-                  const totalDeducoes = simulation.inss + simulation.educacao + simulation.saude + simulation.dependentes * 2275.08 + simulation.outras_deducoes;
-                  return <TableRow key={simulation.id} className="hover:bg-gray-50 dark:hover:bg-navy-dark">
+                      const totalDeducoes = simulation.inss + 
+                                          (simulation.educacao || 0) + 
+                                          (simulation.saude || 0) + 
+                                          ((simulation.dependentes || 0) * 2275.08) + 
+                                          (simulation.outras_deducoes || 0);
+                      return <TableRow key={simulation.id} className="hover:bg-gray-50 dark:hover:bg-navy-dark">
                           <TableCell className="dark:text-gray-300">
                             <div className="flex items-center gap-2">
                               <Calendar className="h-4 w-4 text-navy dark:text-gray-400" />
-                              {formatDate(simulation.data_criacao)}
+                              {formatDate(simulation.data_criacao || '')}
                             </div>
                           </TableCell>
                           <TableCell>
@@ -763,8 +710,8 @@ const TaxSimulationResults = () => {
                               <p>Total: {currencyFormat(totalDeducoes)}</p>
                               <p className="text-xs text-muted-foreground dark:text-gray-400">
                                 INSS: {currencyFormat(simulation.inss)}, 
-                                Saúde: {currencyFormat(simulation.saude)}, 
-                                Educação: {currencyFormat(simulation.educacao)}
+                                Saúde: {currencyFormat(simulation.saude || 0)}, 
+                                Educação: {currencyFormat(simulation.educacao || 0)}
                               </p>
                             </div>
                           </TableCell>
@@ -803,14 +750,18 @@ const TaxSimulationResults = () => {
                             </DropdownMenu>
                           </TableCell>
                         </TableRow>;
-                })}
+                    })}
                   </TableBody>
                   <TableFooter className="bg-gray-50 dark:bg-navy-dark">
                     <TableRow>
                       <TableCell colSpan={3} className="dark:text-white">Total</TableCell>
                       <TableCell className="dark:text-white">
                         {currencyFormat(filteredSimulations.reduce((acc, sim) => {
-                          const totalDeductions = sim.inss + sim.educacao + sim.saude + sim.dependentes * 2275.08 + sim.outras_deducoes;
+                          const totalDeductions = sim.inss + 
+                                              (sim.educacao || 0) + 
+                                              (sim.saude || 0) + 
+                                              ((sim.dependentes || 0) * 2275.08) + 
+                                              (sim.outras_deducoes || 0);
                           return acc + totalDeductions;
                         }, 0))}
                       </TableCell>
@@ -827,7 +778,6 @@ const TaxSimulationResults = () => {
         
         <TabsContent value="analytics" className="space-y-6">
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            {/* Distribution charts */}
             <Card className="border-gray-200 dark:border-navy-lighter/30 shadow-md dark:bg-navy-dark">
               <CardHeader>
                 <CardTitle className="dark:text-gold">Distribuição por Modelo de Declaração</CardTitle>
@@ -837,7 +787,7 @@ const TaxSimulationResults = () => {
               </CardHeader>
               <CardContent>
                 <div className="w-full h-[300px]">
-                  {chartData.typeDistribution && (
+                  {chartData && 'typeDistribution' in chartData && (
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
@@ -872,7 +822,7 @@ const TaxSimulationResults = () => {
               </CardHeader>
               <CardContent>
                 <div className="w-full h-[300px]">
-                  {chartData.resultDistribution && (
+                  {chartData && 'resultDistribution' in chartData && (
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
@@ -897,7 +847,6 @@ const TaxSimulationResults = () => {
               </CardContent>
             </Card>
             
-            {/* Bar chart for income distribution */}
             <Card className="border-gray-200 dark:border-navy-lighter/30 shadow-md dark:bg-navy-dark xl:col-span-2">
               <CardHeader>
                 <CardTitle className="dark:text-gold">Distribuição por Faixa de Renda</CardTitle>
@@ -907,7 +856,7 @@ const TaxSimulationResults = () => {
               </CardHeader>
               <CardContent>
                 <div className="w-full h-[300px]">
-                  {chartData.incomeRanges && (
+                  {chartData && 'incomeRanges' in chartData && (
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={chartData.incomeRanges}>
                         <CartesianGrid strokeDasharray="3 3" />
@@ -926,7 +875,6 @@ const TaxSimulationResults = () => {
         </TabsContent>
       </Tabs>
       
-      {/* Simulation Details Dialog */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
           {selectedSimulation && (
@@ -936,7 +884,7 @@ const TaxSimulationResults = () => {
                   Detalhes da Simulação
                 </DialogTitle>
                 <DialogDescription className="dark:text-gray-300">
-                  Simulação realizada em {formatDate(selectedSimulation.data_criacao)}
+                  Simulação realizada em {formatDate(selectedSimulation.data_criacao || '')}
                 </DialogDescription>
               </DialogHeader>
               
@@ -1002,29 +950,29 @@ const TaxSimulationResults = () => {
                     </div>
                     <div className="bg-gray-50 dark:bg-navy-dark rounded-lg p-4">
                       <p className="text-sm text-muted-foreground dark:text-gray-400">Despesas com Saúde:</p>
-                      <p className="font-medium dark:text-white">{currencyFormat(selectedSimulation.saude)}</p>
+                      <p className="font-medium dark:text-white">{currencyFormat(selectedSimulation.saude || 0)}</p>
                     </div>
                     <div className="bg-gray-50 dark:bg-navy-dark rounded-lg p-4">
                       <p className="text-sm text-muted-foreground dark:text-gray-400">Despesas com Educação:</p>
-                      <p className="font-medium dark:text-white">{currencyFormat(selectedSimulation.educacao)}</p>
+                      <p className="font-medium dark:text-white">{currencyFormat(selectedSimulation.educacao || 0)}</p>
                     </div>
                     <div className="bg-gray-50 dark:bg-navy-dark rounded-lg p-4">
                       <p className="text-sm text-muted-foreground dark:text-gray-400">Dependentes:</p>
-                      <p className="font-medium dark:text-white">{selectedSimulation.dependentes} ({currencyFormat(selectedSimulation.dependentes * 2275.08)})</p>
+                      <p className="font-medium dark:text-white">{selectedSimulation.dependentes} ({currencyFormat((selectedSimulation.dependentes || 0) * 2275.08)})</p>
                     </div>
                     <div className="bg-gray-50 dark:bg-navy-dark rounded-lg p-4">
                       <p className="text-sm text-muted-foreground dark:text-gray-400">Outras Deduções:</p>
-                      <p className="font-medium dark:text-white">{currencyFormat(selectedSimulation.outras_deducoes)}</p>
+                      <p className="font-medium dark:text-white">{currencyFormat(selectedSimulation.outras_deducoes || 0)}</p>
                     </div>
                     <div className="bg-gray-50 dark:bg-navy-dark rounded-lg p-4">
                       <p className="text-sm text-muted-foreground dark:text-gray-400">Total de Deduções:</p>
                       <p className="font-medium dark:text-white">
                         {currencyFormat(
                           selectedSimulation.inss + 
-                          selectedSimulation.saude + 
-                          selectedSimulation.educacao + 
-                          (selectedSimulation.dependentes * 2275.08) + 
-                          selectedSimulation.outras_deducoes
+                          (selectedSimulation.saude || 0) + 
+                          (selectedSimulation.educacao || 0) + 
+                          ((selectedSimulation.dependentes || 0) * 2275.08) + 
+                          (selectedSimulation.outras_deducoes || 0)
                         )}
                       </p>
                     </div>
@@ -1067,7 +1015,6 @@ const TaxSimulationResults = () => {
         </DialogContent>
       </Dialog>
       
-      {/* Observations Dialog */}
       <Dialog open={isObservationsOpen} onOpenChange={setIsObservationsOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
