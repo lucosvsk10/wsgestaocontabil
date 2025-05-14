@@ -25,7 +25,8 @@ export const fetchUserNotifications = async (userId: string): Promise<Notificati
   // Make sure to include read_at field for each notification
   return (data || []).map(notification => ({
     ...notification,
-    read_at: notification.read_at || null
+    read_at: notification.read_at || null,
+    type: notification.type || null
   })) as Notification[];
 };
 
