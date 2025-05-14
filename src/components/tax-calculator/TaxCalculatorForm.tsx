@@ -11,7 +11,7 @@ import { StepIndicator } from "./StepIndicator";
 import { IncomeStep } from "./IncomeStep";
 import { DeductionsStep } from "./DeductionsStep";
 import { ResultsStep } from "./ResultsStep";
-import { calculateFullTaxResult, currencyFormat } from "@/utils/taxCalculations";
+import { calculateFullTaxResult, currencyFormat } from "@/utils/tax";
 import { mapTaxFormToSupabase } from "@/utils/formDataMappers";
 import { formSchema, TaxFormValues, TaxFormInput } from "@/types/taxCalculator";
 
