@@ -13,11 +13,11 @@ export const StorageUsageSummary = ({
   isLoading 
 }: StorageUsageSummaryProps) => {
   return (
-    <div className="text-center p-6 bg-white/5 dark:bg-navy-medium rounded-lg border border-gray-200 dark:border-navy-lighter/30 shadow-md">
-      <h3 className="text-lg font-semibold text-navy dark:text-gold mb-3">
+    <div className="text-center p-6 bg-white dark:bg-navy-medium rounded-lg border border-gray-200 dark:border-navy-lighter/30 shadow-md">
+      <h3 className="text-lg font-semibold text-navy-dark dark:text-gold mb-3">
         Uso Total de Armazenamento
       </h3>
-      <p className="text-3xl font-bold text-navy dark:text-gold/90">
+      <p className="text-3xl font-bold text-navy-dark dark:text-gold/90">
         {isLoading ? "Calculando..." : formatSize(totalStorageBytes)}
       </p>
     </div>

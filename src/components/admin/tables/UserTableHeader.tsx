@@ -23,9 +23,9 @@ export const UserTableHeader = ({
   
   return (
     <TableHeader>
-      <TableRow className="border-gold/20">
+      <TableRow className="border-gray-200 dark:border-gold/20">
         {!isAdminSection && (
-          <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">
+          <TableHead className="text-navy-dark dark:text-gold font-medium uppercase tracking-wider">
             <div className="flex items-center gap-2">
               <span>Nome</span>
               <Button
@@ -40,10 +40,10 @@ export const UserTableHeader = ({
             </div>
           </TableHead>
         )}
-        <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Email</TableHead>
-        <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Data de Cadastro</TableHead>
+        <TableHead className="text-navy-dark dark:text-gold font-medium uppercase tracking-wider">Email</TableHead>
+        <TableHead className="text-navy-dark dark:text-gold font-medium uppercase tracking-wider">Data de Cadastro</TableHead>
         {!isAdminSection && (
-          <TableHead className="text-navy dark:text-gold font-medium uppercase tracking-wider">Ações</TableHead>
+          <TableHead className="text-navy-dark dark:text-gold font-medium uppercase tracking-wider">Ações</TableHead>
         )}
       </TableRow>
     </TableHeader>
