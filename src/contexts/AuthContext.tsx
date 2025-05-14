@@ -1,7 +1,9 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Session } from '@supabase/supabase-js';
+import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabaseClient';
 import { AuthContextType, UserData } from '@/utils/auth/types';
+import { checkIsAdmin } from '@/utils/auth/userChecks';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -123,7 +125,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         isAdmin,
         signIn,
         signOut,
-        refreshUserData
+        refreshUserData,
+        setUser,
+        setUserData
       }}
     >
       {children}

@@ -1,4 +1,3 @@
-
 /**
  * Check if user is an administrator
  * @param userData User data from database
