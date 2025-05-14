@@ -10,7 +10,72 @@ import { DeductionsStep } from './DeductionsStep';
 import { ResultsStep } from './ResultsStep';
 import { TaxCalculatorProps } from '@/types/taxCalculator';
 import { TaxFormInput, TaxResult, TaxFormValues } from '@/utils/tax/types';
-import { calculateTaxes } from '@/utils/tax/calculations';
+import { calculateTaxBrackets, calculateTaxByBrackets } from '@/utils/tax/calculations';
+
+// Function to calculate tax results based on form data
+const calculateTaxes = (data: TaxFormInput): TaxResult => {
+  // Calculate base for complete declaration
+  const totalDeductions = data.contribuicaoPrevidenciaria + 
+                        Math.min(data.despesasEducacao, 3561.50 * (data.numeroDependentes + 1)) +
+                        data.despesasMedicas + 
+                        (data.numeroDependentes * 2275.08) +
+                        data.pensaoAlimenticia +
+                        data.livroCaixa;
+  
+  // Complete declaration base calculation
+  const baseCompleta = Math.max(0, data.rendimentosTributaveis - totalDeductions);
+  
+  // Simplified declaration base calculation (20% discount up to R$ 16.754,34)
+  const descontoSimplificado = Math.min(data.rendimentosTributaveis * 0.2, 16754.34);
+  const baseSimplificada = Math.max(0, data.rendimentosTributaveis - descontoSimplificado);
+  
+  // Calculate tax for both methods
+  const impostoCompleto = calculateTaxBrackets(baseCompleta);
+  const impostoSimplificado = calculateTaxBrackets(baseSimplificada);
+  
+  // Determine which method is better
+  const declaracaoRecomendada = impostoCompleto <= impostoSimplificado ? 'completa' : 'simplificada';
+  
+  // Calculate balance (to pay or to be refunded)
+  const impostoFinal = declaracaoRecomendada === 'completa' ? impostoCompleto : impostoSimplificado;
+  const saldoImposto = impostoFinal - data.impostoRetidoFonte;
+  
+  let tipoSaldo: 'pagar' | 'restituir' | 'zero' = 'zero';
+  if (saldoImposto > 0) tipoSaldo = 'pagar';
+  else if (saldoImposto < 0) tipoSaldo = 'restituir';
+  
+  // Generate tax brackets breakdown
+  const impostoFaixas = calculateTaxByBrackets(
+    declaracaoRecomendada === 'completa' ? baseCompleta : baseSimplificada
+  );
+  
+  return {
+    baseDeCalculo: {
+      completa: baseCompleta,
+      simplificada: baseSimplificada
+    },
+    descontoSimplificado,
+    descontoCompleto: totalDeductions,
+    impostoDevido: {
+      completo: impostoCompleto,
+      simplificado: impostoSimplificado
+    },
+    declaracaoRecomendada,
+    saldoImposto,
+    tipoSaldo,
+    impostoFaixas,
+    detalhamentoDeducoes: {
+      dependentes: data.numeroDependentes * 2275.08,
+      previdencia: data.contribuicaoPrevidenciaria,
+      saude: data.despesasMedicas,
+      educacao: Math.min(data.despesasEducacao, 3561.50 * (data.numeroDependentes + 1)),
+      pensao: data.pensaoAlimenticia,
+      livroCaixa: data.livroCaixa,
+      total: totalDeductions
+    },
+    impostoRetidoFonte: data.impostoRetidoFonte
+  };
+};
 
 // Define the form schema
 const createTaxFormSchema = (isLoggedIn: boolean) => {

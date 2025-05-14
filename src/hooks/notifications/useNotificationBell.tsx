@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Notification } from "@/types/notifications";
 import { NotificationService } from "./notificationService";
+import { supabase } from '@/lib/supabaseClient';
 
 export const useNotificationBell = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -97,5 +98,3 @@ export const useNotificationBell = () => {
     refreshNotifications
   };
 };
-
-import { supabase } from '@/lib/supabaseClient';

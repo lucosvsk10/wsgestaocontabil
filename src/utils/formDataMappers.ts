@@ -9,6 +9,7 @@ export function mapTaxFormToSupabase(formData: any): any {
     email: formData.email || null,
     telefone: formData.telefone || null,
     rendimento_bruto: formData.rendimentos_tributaveis || 0,
+    rendimentos_isentos: formData.rendimentos_isentos || 0,
     inss: formData.contribuicao_previdenciaria || 0,
     educacao: formData.despesas_educacao || 0,
     saude: formData.despesas_medicas || 0,
