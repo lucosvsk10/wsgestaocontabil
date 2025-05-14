@@ -441,27 +441,31 @@ const TaxSimulationResults = () => {
       </div>
       
       <SimulationTabsView activeTab={activeTab} onTabChange={setActiveTab}>
-        <TabsContent value="list" className="space-y-6">
-          <SimulationContent 
-            filteredSimulations={filteredSimulations}
-            searchTerm={searchTerm}
-            timeFilter={timeFilter}
-            typeFilter={typeFilter}
-            sortConfig={sortConfig}
-            userDetails={userDetails}
-            onSearchChange={setSearchTerm}
-            onTimeFilterChange={setTimeFilter}
-            onTypeFilterChange={setTypeFilter}
-            onRequestSort={requestSort}
-            onViewDetails={viewDetails}
-            onGeneratePDF={generatePDF}
-            onOpenObservations={openObservations}
-          />
-        </TabsContent>
+        {activeTab === "list" && (
+          <div className="space-y-6">
+            <SimulationContent 
+              filteredSimulations={filteredSimulations}
+              searchTerm={searchTerm}
+              timeFilter={timeFilter}
+              typeFilter={typeFilter}
+              sortConfig={sortConfig}
+              userDetails={userDetails}
+              onSearchChange={setSearchTerm}
+              onTimeFilterChange={setTimeFilter}
+              onTypeFilterChange={setTypeFilter}
+              onRequestSort={requestSort}
+              onViewDetails={viewDetails}
+              onGeneratePDF={generatePDF}
+              onOpenObservations={openObservations}
+            />
+          </div>
+        )}
         
-        <TabsContent value="analytics" className="space-y-6">
-          <AnalyticsCharts simulations={simulations} />
-        </TabsContent>
+        {activeTab === "analytics" && (
+          <div className="space-y-6">
+            <AnalyticsCharts simulations={simulations} />
+          </div>
+        )}
       </SimulationTabsView>
       
       <SimulationDetailsDialog

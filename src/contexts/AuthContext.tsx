@@ -1,36 +1,23 @@
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { Session } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
+import { AuthContextType, UserData } from '@/utils/auth/types';
 
-import { createContext, useState, useContext, useEffect, ReactNode } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Session, User } from "@supabase/supabase-js";
-import { checkIsAdmin } from "@/utils/auth/userChecks";
-import { UserData } from "@/utils/auth/types";
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-interface AuthContextType {
-  user: User | null;
-  session: Session | null;
-  isLoading: boolean;
-  userData: UserData | null;
-  isAdmin: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null; data: any | null }>;
-  signOut: () => Promise<{ error: Error | null }>;
-  refreshUserData: () => Promise<void>;
-}
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  session: null,
-  isLoading: true,
-  userData: null,
-  isAdmin: false,
-  signIn: async () => ({ error: null, data: null }),
-  signOut: async () => ({ error: null }),
-  refreshUserData: async () => {}
-});
-
-export const useAuth = () => useContext(AuthContext);
+// Alias para compatibilidade
+export const useAuthContext = useAuth;
 
 interface AuthProviderProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {

@@ -1,170 +1,100 @@
-
-import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { v4 as uuidv4 } from 'uuid';
+import { useState, useCallback } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabaseClient";
 import { useToast } from "@/hooks/use-toast";
-import { useNotifications } from "@/hooks/useNotifications";
-import { callEdgeFunction } from "@/utils/edgeFunctions";
+import { Document as DocumentType } from "@/utils/auth/types";
+import { v4 as uuidv4 } from 'uuid';
 
-interface DocumentUploadProps {
-  selectedUserId: string;
-  documentName: string;
-  documentCategory: string;
-  documentObservations: string;
-  selectedFile: File | null;
-  expirationDate: Date | null;
-  noExpiration: boolean;
+interface DocumentMetadata {
+  name: string;
+  category: string;
+  observations?: string;
+  expires_at?: string | null;
 }
 
-interface UserData {
-  supabaseUsers: any[];
-  userProfiles: any[];
-}
-
-interface NotifyDocumentResponse {
-  success: boolean;
-  notification?: any;
-  error?: string;
-}
-
-export const useDocumentUploader = (fetchUserDocuments: (userId: string) => Promise<void>) => {
-  const [isUploading, setIsUploading] = useState(false);
+export const useDocumentUploader = () => {
+  const [uploading, setUploading] = useState(false);
+  const { user } = useAuth();
   const { toast } = useToast();
-  const { notifyNewDocument } = useNotifications();
   
-  const notifyNewDocumentViaEdgeFunction = async (userId: string, documentName: string) => {
-    try {
-      console.log(`Chamando edge function para notificação do usuário ${userId} sobre documento: ${documentName}`);
-      
-      const result = await callEdgeFunction<NotifyDocumentResponse>('notify_new_document', {
-        user_id: userId,
-        document_name: documentName
-      });
-      
-      if (result.success) {
-        console.log("Notificação salva:", result.notification);
-      } else {
-        throw new Error(result.error || "Erro desconhecido ao criar notificação");
-      }
-      
-      return result;
-    } catch (error: any) {
-      console.error('Erro ao criar notificação:', error);
-      throw error;
-    }
-  };
-  
-  const uploadDocument = async (
-    e: React.FormEvent,
-    documentData: DocumentUploadProps,
-    userData: UserData
-  ) => {
-    e.preventDefault();
-    
-    const {
-      selectedUserId,
-      documentName,
-      documentCategory,
-      documentObservations,
-      selectedFile,
-      expirationDate,
-      noExpiration
-    } = documentData;
-    
-    if (!selectedFile || !documentName || !documentCategory || !selectedUserId) {
+  const { createNotification } = useNotifications();
+
+  const uploadDocument = async (file: File, metadata: DocumentMetadata) => {
+    if (!user) {
       toast({
-        title: "Erro",
-        description: "Por favor, preencha todos os campos obrigatórios.",
-        variant: "destructive"
+        title: "Não autenticado",
+        description: "Você precisa estar logado para enviar documentos.",
+        variant: "destructive",
       });
-      return;
+      return false;
     }
-    
+
+    setUploading(true);
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${uuidv4()}.${fileExt}`;
+    const filePath = `${user.id}/${fileName}`;
+
     try {
-      setIsUploading(true);
-      
-      // Calculate expiration date if applicable
-      let expiresAt = null;
-      if (!noExpiration && expirationDate) {
-        expiresAt = expirationDate.toISOString();
-      }
-      
-      // Generate a unique filename to prevent collisions
-      const fileExt = selectedFile.name.split('.').pop();
-      const fileName = `${uuidv4()}.${fileExt}`;
-      const fileKey = `${selectedUserId}/${fileName}`;
-      
-      // Upload file to storage
-      const { data: fileData, error: uploadError } = await supabase.storage
+      const { data, error: uploadError } = await supabase.storage
         .from('documents')
-        .upload(fileKey, selectedFile);
-      
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
       if (uploadError) {
         throw uploadError;
       }
-      
-      // Get file URL
-      const { data: { publicUrl } } = supabase.storage
+
+      const file_url = `https://nadtoitgkukzbghtbohm.supabase.co/storage/v1/object/public/documents/${filePath}`;
+
+      const { error: dbError } = await supabase
         .from('documents')
-        .getPublicUrl(fileKey);
-      
-      // Create document record in the database
-      const { data: documentData, error: documentError } = await supabase
-        .from('documents')
-        .insert([
-          {
-            user_id: selectedUserId,
-            name: documentName,
-            category: documentCategory,
-            observations: documentObservations,
-            file_url: publicUrl,
-            storage_key: fileKey,
-            original_filename: selectedFile.name,
-            size: selectedFile.size,
-            filename: fileName,
-            type: selectedFile.type,
-            expires_at: expiresAt
-          }
-        ])
-        .select()
-        .single();
-      
-      if (documentError) {
-        throw documentError;
+        .insert<DocumentType>({
+          id: uuidv4(),
+          user_id: user.id,
+          name: metadata.name,
+          filename: fileName,
+          original_filename: file.name,
+          category: metadata.category,
+          file_url: file_url,
+          observations: metadata.observations,
+          uploaded_at: new Date().toISOString(),
+          expires_at: metadata.expires_at,
+          storage_key: filePath,
+          size: file.size,
+          type: file.type,
+        });
+
+      if (dbError) {
+        // Delete the file from storage if DB insert fails
+        await supabase.storage.from('documents').remove([filePath]);
+        throw dbError;
       }
-      
-      // Create a notification for the user about the new document using edge function
-      try {
-        console.log(`Tentando criar notificação para o usuário ${selectedUserId} sobre documento: ${documentName}`);
-        const notificationResult = await notifyNewDocumentViaEdgeFunction(selectedUserId, documentName);
-        console.log("Notificação salva:", notificationResult);
-      } catch (notifError) {
-        console.error('Erro ao criar notificação:', notifError);
-        // Não interrompemos o fluxo por causa de erro na notificação
-      }
-      
-      // Refresh documents list
-      await fetchUserDocuments(selectedUserId);
+
+      // Aqui está a correção - use createNotification em vez de notifyNewDocument
+      await createNotification(`Novo documento enviado: ${metadata.name}`, "document");
       
       toast({
-        title: "Sucesso",
-        description: "Documento enviado com sucesso!"
+        title: "Sucesso!",
+        description: `${metadata.name} enviado com sucesso.`,
       });
-      
+      setUploading(false);
+      return true;
     } catch (error: any) {
-      console.error("Erro no upload:", error);
+      console.error("Erro ao enviar o documento:", error);
       toast({
-        title: "Erro no upload",
-        description: error.message || "Ocorreu um erro ao enviar o documento.",
-        variant: "destructive"
+        title: "Erro!",
+        description: `Falha ao enviar ${file.name}: ${error.message || error}`,
+        variant: "destructive",
       });
-    } finally {
-      setIsUploading(false);
+      setUploading(false);
+      return false;
     }
   };
-  
+
   return {
-    isUploading,
-    uploadDocument
+    uploading,
+    uploadDocument,
   };
 };
