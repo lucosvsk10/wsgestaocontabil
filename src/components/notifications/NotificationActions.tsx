@@ -1,6 +1,6 @@
 
 import { Button } from '@/components/ui/button';
-import { DropdownMenuLabel, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { DropdownMenuLabel, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 
 interface NotificationActionsProps {
   unreadCount: number;
