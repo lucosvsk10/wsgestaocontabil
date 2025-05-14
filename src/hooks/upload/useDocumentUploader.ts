@@ -1,9 +1,11 @@
+
 import { useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabaseClient";
 import { useToast } from "@/hooks/use-toast";
 import { Document as DocumentType } from "@/utils/auth/types";
 import { v4 as uuidv4 } from 'uuid';
+import { useNotifications } from "@/hooks/useNotifications";
 
 interface DocumentMetadata {
   name: string;
@@ -16,7 +18,6 @@ export const useDocumentUploader = () => {
   const [uploading, setUploading] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
-  
   const { createNotification } = useNotifications();
 
   const uploadDocument = async (file: File, metadata: DocumentMetadata) => {
@@ -72,7 +73,6 @@ export const useDocumentUploader = () => {
         throw dbError;
       }
 
-      // Aqui está a correção - use createNotification em vez de notifyNewDocument
       await createNotification(`Novo documento enviado: ${metadata.name}`, "document");
       
       toast({

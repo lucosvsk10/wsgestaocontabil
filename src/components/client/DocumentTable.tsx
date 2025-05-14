@@ -26,7 +26,7 @@ export const DocumentTable = ({
 }: DocumentTableProps) => {
   const { user } = useAuth();
   const isMobile = useIsMobile();
-  const { loadingDocumentIds, handleDownload } = useDocumentActions();
+  const { loadingDocumentIds, handleDownload, markAsViewed } = useDocumentActions();
   
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState("");

@@ -1,4 +1,3 @@
-
 /**
  * Formata um valor para o formato de moeda brasileira (R$)
  */
@@ -37,7 +36,8 @@ export interface TaxFormInput {
   numeroDependentes: number;
   impostoRetidoFonte: number;
   ehAposentado65: boolean;
-  tipoDeclaracao: 'completa' | 'simplificada';
+  tipoDeclaracao: "completa" | "simplificada";
+  previdenciaPrivada?: number;
 }
 
 export interface TaxResult {
@@ -148,24 +148,24 @@ export const getLimiteEducacao = (numeroDependentes: number): number => {
 /**
  * Calcula o resultado completo do imposto de renda com todas as regras aplicáveis
  */
-export const calculateFullTaxResult = (input: TaxFormInput): TaxResult => {
+export const calculateFullTaxResult = (formData: TaxFormInput) => {
   // Calcular deduções para modelo completo
-  const deducaoDependentes = input.numeroDependentes * TAX_CONSTANTS.DEDUCAO_POR_DEPENDENTE;
-  const deducaoEducacaoLimitada = Math.min(input.despesasEducacao, getLimiteEducacao(input.numeroDependentes));
+  const deducaoDependentes = formData.numeroDependentes * TAX_CONSTANTS.DEDUCAO_POR_DEPENDENTE;
+  const deducaoEducacaoLimitada = Math.min(formData.despesasEducacao, getLimiteEducacao(formData.numeroDependentes));
   
   // Calcular total de deduções no modelo completo
   const totalDeducoesCompleto = 
-    input.contribuicaoPrevidenciaria + 
-    input.despesasMedicas + 
+    formData.contribuicaoPrevidenciaria + 
+    formData.despesasMedicas + 
     deducaoEducacaoLimitada + 
-    input.pensaoAlimenticia + 
-    input.livroCaixa +
+    formData.pensaoAlimenticia + 
+    formData.livroCaixa +
     deducaoDependentes;
   
   // Aplicar isenção para aposentados acima de 65 anos
-  let rendimentosTributaveisAjustados = input.rendimentosTributaveis;
-  if (input.ehAposentado65) {
-    rendimentosTributaveisAjustados = Math.max(0, input.rendimentosTributaveis - TAX_CONSTANTS.ISENCAO_APOSENTADOS_65);
+  let rendimentosTributaveisAjustados = formData.rendimentosTributaveis;
+  if (formData.ehAposentado65) {
+    rendimentosTributaveisAjustados = Math.max(0, formData.rendimentosTributaveis - TAX_CONSTANTS.ISENCAO_APOSENTADOS_65);
   }
   
   // Base de cálculo para modelo completo
@@ -188,10 +188,10 @@ export const calculateFullTaxResult = (input: TaxFormInput): TaxResult => {
   const declaracaoRecomendada = impostoDevidoCompleto <= impostoDevidoSimplificado ? 'completa' : 'simplificada';
   
   // Imposto final de acordo com o modelo escolhido pelo usuário
-  const impostoFinal = input.tipoDeclaracao === 'completa' ? impostoDevidoCompleto : impostoDevidoSimplificado;
+  const impostoFinal = formData.tipoDeclaracao === 'completa' ? impostoDevidoCompleto : impostoDevidoSimplificado;
   
   // Saldo do imposto (a pagar ou a restituir)
-  const saldoImposto = impostoFinal - input.impostoRetidoFonte;
+  const saldoImposto = impostoFinal - formData.impostoRetidoFonte;
   
   // Determinar se é a pagar ou a restituir
   let tipoSaldo: 'pagar' | 'restituir' | 'zero' = 'zero';
@@ -202,7 +202,7 @@ export const calculateFullTaxResult = (input: TaxFormInput): TaxResult => {
   }
 
   // Calcular detalhamento por faixas para o modelo escolhido
-  const baseCalculoFinal = input.tipoDeclaracao === 'completa' ? baseCalculoCompleta : baseCalculoSimplificada;
+  const baseCalculoFinal = formData.tipoDeclaracao === 'completa' ? baseCalculoCompleta : baseCalculoSimplificada;
   const impostoFaixas = calculateTaxByBrackets(baseCalculoFinal);
   
   return {
@@ -222,13 +222,13 @@ export const calculateFullTaxResult = (input: TaxFormInput): TaxResult => {
     impostoFaixas,
     detalhamentoDeducoes: {
       dependentes: deducaoDependentes,
-      previdencia: input.contribuicaoPrevidenciaria,
-      saude: input.despesasMedicas,
+      previdencia: formData.contribuicaoPrevidenciaria,
+      saude: formData.despesasMedicas,
       educacao: deducaoEducacaoLimitada,
-      pensao: input.pensaoAlimenticia,
-      livroCaixa: input.livroCaixa,
+      pensao: formData.pensaoAlimenticia,
+      livroCaixa: formData.livroCaixa,
       total: totalDeducoesCompleto
     },
-    impostoRetidoFonte: input.impostoRetidoFonte
+    impostoRetidoFonte: formData.impostoRetidoFonte
   };
 };

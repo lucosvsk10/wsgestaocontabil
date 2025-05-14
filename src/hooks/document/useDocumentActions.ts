@@ -4,8 +4,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabaseClient";
 import { Document } from "@/utils/auth/types";
 import { useToast } from "@/hooks/use-toast";
-
-// Atualize a importação de useNotifications
 import { useNotifications } from "@/hooks/useNotifications";
 
 interface DocumentMetadata {
@@ -17,10 +15,49 @@ interface DocumentMetadata {
 }
 
 export const useDocumentActions = () => {
+  const [loadingDocumentIds, setLoadingDocumentIds] = useState<Set<string>>(new Set());
   const { user } = useAuth();
   const { toast } = useToast();
-  
   const { createNotification } = useNotifications();
+
+  // Baixar documento
+  const handleDownload = async (document: Document) => {
+    if (!user) {
+      toast({
+        title: "Erro",
+        description: "Usuário não autenticado.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoadingDocumentIds((prev) => new Set(prev).add(document.id));
+
+    try {
+      window.open(document.file_url, '_blank');
+      
+      // Marcar como visualizado
+      await markAsViewed(document.id);
+      
+      toast({
+        title: "Sucesso",
+        description: "Documento aberto em nova aba.",
+      });
+    } catch (error: any) {
+      console.error("Erro ao baixar documento:", error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao baixar documento.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingDocumentIds((prev) => {
+        const updated = new Set(prev);
+        updated.delete(document.id);
+        return updated;
+      });
+    }
+  };
 
   // Marcar documento como lido
   const markAsViewed = async (documentId: string) => {
@@ -48,14 +85,13 @@ export const useDocumentActions = () => {
         .from("visualized_documents")
         .upsert(
           { user_id: user.id, document_id: documentId, viewed_at: new Date().toISOString() },
-          { onConflict: ['user_id', 'document_id'], ignoreDuplicates: false }
+          { onConflict: 'user_id,document_id', ignoreDuplicates: false }
         );
 
       if (error) {
         throw error;
       }
 
-      // Aqui está a correção - use createNotification em vez de markDocumentNotificationAsRead
       await createNotification(`Documento ${document?.name || 'desconhecido'} visualizado`, "document");
       
       toast({
@@ -95,6 +131,8 @@ export const useDocumentActions = () => {
   }, []);
 
   return {
+    loadingDocumentIds,
+    handleDownload,
     getDocumentViews,
     markAsViewed,
   };

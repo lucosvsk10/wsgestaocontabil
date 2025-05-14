@@ -27,44 +27,54 @@ export const useDocumentUpload = (fetchUserDocuments: (userId: string) => Promis
   } = useDocumentMetadata();
 
   // Document upload hook
-  const { isUploading, uploadDocument } = useDocumentUploader(fetchUserDocuments);
+  const { uploading, uploadDocument } = useDocumentUploader();
 
   // Wrapper function for handleUpload that includes the required parameters
   const handleUpload = async (
     e: React.FormEvent,
     selectedUserId: string,
-    supabaseUsers: any[],
-    users: UserType[]
+    supabaseUsers: any[]
   ) => {
-    await uploadDocument(
-      e,
-      {
-        selectedUserId,
-        documentName,
-        documentCategory,
-        documentObservations,
-        selectedFile,
-        expirationDate,
-        noExpiration
-      },
-      {
-        supabaseUsers,
-        userProfiles: users
+    e.preventDefault();
+    
+    if (!selectedFile) {
+      console.error("No file selected");
+      return;
+    }
+    
+    // Calculate expiration date based on user selection
+    const finalExpirationDate = noExpiration ? null : expirationDate?.toISOString();
+    
+    // Prepare metadata
+    const metadata = {
+      name: documentName,
+      category: documentCategory,
+      observations: documentObservations,
+      expires_at: finalExpirationDate,
+    };
+    
+    // Upload the document
+    const success = await uploadDocument(selectedFile, metadata);
+    
+    if (success) {
+      // Refresh documents list
+      if (fetchUserDocuments) {
+        await fetchUserDocuments(selectedUserId);
       }
-    );
-
-    // Reset form after successful upload
-    setSelectedFile(null);
-    setDocumentName("");
-    setDocumentObservations("");
-    setExpirationDate(null);
-    setNoExpiration(false);
-    const fileInput = document.getElementById('fileInput') as HTMLInputElement;
-    if (fileInput) fileInput.value = "";
+      
+      // Reset form after successful upload
+      setSelectedFile(null);
+      setDocumentName("");
+      setDocumentObservations("");
+      setExpirationDate(null);
+      setNoExpiration(false);
+      const fileInput = document.getElementById('fileInput') as HTMLInputElement;
+      if (fileInput) fileInput.value = "";
+    }
   };
 
   return {
-    isUploading,
+    isUploading: uploading,
     documentName,
     setDocumentName,
     documentCategory,
