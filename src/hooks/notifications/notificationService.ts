@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Notification } from "@/types/notifications";
 
@@ -6,7 +5,7 @@ import { Notification } from "@/types/notifications";
  * Fetches all notifications for a user
  * @param userId User ID to fetch notifications for
  */
-export const fetchUserNotifications = async (userId: string) => {
+export const fetchUserNotifications = async (userId: string): Promise<Notification[]> => {
   if (!userId) throw new Error("User ID is required");
   
   console.log("Buscando notificações para o usuário:", userId);
@@ -22,7 +21,12 @@ export const fetchUserNotifications = async (userId: string) => {
   }
   
   console.log(`${data?.length || 0} notificações encontradas`);
-  return data || [];
+  
+  // Make sure to include read_at field for each notification
+  return (data || []).map(notification => ({
+    ...notification,
+    read_at: notification.read_at || null
+  })) as Notification[];
 };
 
 /**

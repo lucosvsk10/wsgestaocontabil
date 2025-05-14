@@ -33,10 +33,19 @@ export const useNotifications = () => {
       const data = await fetchUserNotifications(user.id);
       console.log("Notificações carregadas:", data?.length || 0);
       
-      setNotifications(data || []);
+      // Ensure all notifications have the read_at property
+      const notificationsWithReadAt = data?.map(notification => ({
+        ...notification,
+        read_at: notification.read_at || null
+      })) || [];
+      
+      setNotifications(notificationsWithReadAt);
       
       // Check if there are any document notifications that haven't been read yet
-      const hasUnreadDocNotifications = data?.some(notif => notif.type === 'Novo Documento') || false;
+      const hasUnreadDocNotifications = notificationsWithReadAt?.some(notif => 
+        notif.type === 'Novo Documento' && !notif.read_at
+      ) || false;
+      
       setHasNewNotifications(hasUnreadDocNotifications);
       console.log("Há novas notificações de documentos?", hasUnreadDocNotifications);
     } catch (error) {

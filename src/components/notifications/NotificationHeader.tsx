@@ -60,7 +60,11 @@ const NotificationHeader = () => {
       if (error) throw error;
       
       if (data) {
-        const typedData = data as Notification[];
+        const typedData = data.map(item => ({
+          ...item,
+          read_at: item.read_at || null
+        })) as Notification[];
+        
         setNotifications(typedData);
         // Count unread for badge
         const unread = typedData.filter(n => !n.read_at).length;
