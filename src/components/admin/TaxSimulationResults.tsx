@@ -126,6 +126,7 @@ const TaxSimulationResults = () => {
       console.error("Erro ao buscar detalhes dos usuários:", error);
     }
   };
+  
   const formatDate = (dateString: string) => {
     try {
       return format(new Date(dateString), "dd/MM/yyyy 'às' HH:mm", {
@@ -135,23 +136,27 @@ const TaxSimulationResults = () => {
       return "Data inválida";
     }
   };
+  
   const getUserName = (simulation: TaxSimulation) => {
     if (simulation.user_id && userDetails[simulation.user_id]?.name) {
       return userDetails[simulation.user_id].name;
     }
     return simulation.nome || "Anônimo";
   };
+  
   const getUserEmail = (simulation: TaxSimulation) => {
     if (simulation.user_id && userDetails[simulation.user_id]?.email) {
       return userDetails[simulation.user_id].email;
     }
     return simulation.email || "N/A";
   };
+  
   if (loading) {
     return <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
       </div>;
   }
+  
   return <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between gap-4">
         <div>
