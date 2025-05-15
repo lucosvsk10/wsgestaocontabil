@@ -1,139 +1,161 @@
 
-import { useState, useCallback } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/lib/supabaseClient";
-import { Document } from "@/utils/auth/types";
+import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { Document } from "@/utils/auth/types";
+import { useAuth } from "@/contexts/AuthContext";
+import { downloadDocument } from "@/utils/documents/documentManagement";
+import { hasDocumentAccess } from "@/utils/auth/userChecks";
+import { supabase } from "@/integrations/supabase/client";
 import { useNotifications } from "@/hooks/useNotifications";
 
-interface DocumentMetadata {
-  name: string;
-  category: string;
-  subcategory?: string;
-  observations?: string;
-  expires_at?: string | null;
-}
-
+/**
+ * Hook for document-related actions like download and marking as viewed
+ */
 export const useDocumentActions = () => {
-  const [loadingDocumentIds, setLoadingDocumentIds] = useState<Set<string>>(new Set());
-  const { user } = useAuth();
   const { toast } = useToast();
-  const { createNotification } = useNotifications();
+  const { user } = useAuth();
+  const [loadingDocumentIds, setLoadingDocumentIds] = useState<Set<string>>(new Set());
+  const { markDocumentNotificationAsRead } = useNotifications();
 
-  // Baixar documento
-  const handleDownload = async (document: Document) => {
-    if (!user) {
+  /**
+   * Mark a document as viewed
+   * @param docItem Document to mark as viewed
+   */
+  const markAsViewed = async (docItem: Document) => {
+    // If already viewed, no need to update
+    if (docItem.viewed) return;
+    
+    try {
+      setLoadingDocumentIds(prev => new Set([...prev, docItem.id]));
+      
+      // Insert record in visualized_documents table
+      const { error: viewError } = await supabase
+        .from('visualized_documents')
+        .insert({
+          user_id: user?.id,
+          document_id: docItem.id,
+        })
+        .select()
+        .single();
+        
+      if (viewError) throw viewError;
+      
+      // Also update viewed flag in documents table for consistency
+      const { error } = await supabase
+        .from('documents')
+        .update({ viewed: true, viewed_at: new Date().toISOString() })
+        .eq('id', docItem.id);
+        
+      if (error) throw error;
+      
+    } catch (error: any) {
+      console.error('Error marking document as viewed:', error);
       toast({
-        title: "Erro",
-        description: "Usuário não autenticado.",
         variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível marcar o documento como visualizado."
+      });
+    } finally {
+      setLoadingDocumentIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(docItem.id);
+        return newSet;
+      });
+    }
+  };
+
+  /**
+   * Download a document
+   * @param docItem Document to download
+   */
+  const handleDownload = async (docItem: Document): Promise<void> => {
+    if (!user?.id) {
+      toast({
+        variant: "destructive",
+        title: "Erro de autenticação",
+        description: "Usuário não autenticado. Por favor, faça login novamente."
       });
       return;
     }
-
-    setLoadingDocumentIds((prev) => new Set(prev).add(document.id));
-
+    
     try {
-      window.open(document.file_url, '_blank');
+      setLoadingDocumentIds(prev => new Set([...prev, docItem.id]));
       
-      // Marcar como visualizado
-      await markAsViewed(document.id);
+      // Check if document belongs to authenticated user
+      if (!hasDocumentAccess(user.id, docItem.user_id, docItem.storage_key)) {
+        throw new Error("Você não tem permissão para baixar este documento.");
+      }
       
-      toast({
-        title: "Sucesso",
-        description: "Documento aberto em nova aba.",
-      });
+      let storagePath = "";
+      
+      // If we have storage_key, use it as base to build the path
+      if (docItem.storage_key) {
+        // Verify storage_key starts with user ID for security
+        if (!docItem.storage_key.startsWith(`${user.id}/`)) {
+          throw new Error("Caminho de armazenamento inválido para este usuário.");
+        }
+        storagePath = docItem.storage_key;
+      } else {
+        // Fallback to build a path based on user ID and filename
+        const filename = docItem.filename || docItem.original_filename || docItem.name;
+        storagePath = `${user.id}/${filename}`;
+        console.warn("Using alternative path for download:", storagePath);
+      }
+      
+      console.log('Attempting to download document with path:', storagePath);
+      
+      // Download file from storage
+      const { data, error } = await downloadDocument(storagePath, user.id);
+      
+      if (error) {
+        console.error("Supabase download error:", error);
+        throw new Error(`Error downloading document: ${error.message}`);
+      }
+      
+      if (data) {
+        // Create blob URL and start download
+        const url = URL.createObjectURL(data);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = docItem.filename || docItem.original_filename || docItem.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        toast({
+          title: "Sucesso",
+          description: "Documento baixado com sucesso!"
+        });
+        
+        // Only mark as viewed AFTER successful download
+        await markAsViewed(docItem);
+        
+        // Mark notification related to this document as read
+        await markDocumentNotificationAsRead(docItem.id);
+      } else {
+        throw new Error("Arquivo não encontrado no storage.");
+      }
     } catch (error: any) {
-      console.error("Erro ao baixar documento:", error);
+      console.error('Erro ao baixar documento:', error);
       toast({
-        title: "Erro",
-        description: error.message || "Erro ao baixar documento.",
         variant: "destructive",
+        title: "Erro ao baixar documento",
+        description: error.message || "Ocorreu um erro ao tentar baixar o documento."
       });
     } finally {
-      setLoadingDocumentIds((prev) => {
-        const updated = new Set(prev);
-        updated.delete(document.id);
-        return updated;
+      setLoadingDocumentIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(docItem.id);
+        return newSet;
       });
     }
   };
-
-  // Marcar documento como lido
-  const markAsViewed = async (documentId: string) => {
-    if (!user) {
-      toast({
-        title: "Erro",
-        description: "Usuário não autenticado.",
-        variant: "destructive",
-      });
-      return false;
-    }
-
-    try {
-      const { data: document, error: documentError } = await supabase
-        .from("documents")
-        .select("*")
-        .eq("id", documentId)
-        .single();
-
-      if (documentError) {
-        throw documentError;
-      }
-
-      const { error } = await supabase
-        .from("visualized_documents")
-        .upsert(
-          { user_id: user.id, document_id: documentId, viewed_at: new Date().toISOString() },
-          { onConflict: 'user_id,document_id', ignoreDuplicates: false }
-        );
-
-      if (error) {
-        throw error;
-      }
-
-      await createNotification(`Documento ${document?.name || 'desconhecido'} visualizado`, "document");
-      
-      toast({
-        title: "Sucesso",
-        description: "Documento marcado como visualizado.",
-      });
-      return true;
-    } catch (error: any) {
-      console.error("Erro ao marcar documento como visualizado:", error);
-      toast({
-        title: "Erro",
-        description: error.message,
-        variant: "destructive",
-      });
-      return false;
-    }
-  };
-
-  // Função para obter o número de visualizações de um documento
-  const getDocumentViews = useCallback(async (documentId: string): Promise<number> => {
-    try {
-      const { count, error } = await supabase
-        .from('visualized_documents')
-        .select('*', { count: 'exact', head: false })
-        .eq('document_id', documentId);
-
-      if (error) {
-        console.error("Erro ao obter número de visualizações:", error);
-        return 0;
-      }
-
-      return count || 0;
-    } catch (error) {
-      console.error("Erro ao obter número de visualizações:", error);
-      return 0;
-    }
-  }, []);
 
   return {
     loadingDocumentIds,
-    handleDownload,
-    getDocumentViews,
+    setLoadingDocumentIds,
     markAsViewed,
+    handleDownload
   };
 };

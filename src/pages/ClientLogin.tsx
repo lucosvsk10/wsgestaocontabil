@@ -26,7 +26,7 @@ const ClientLogin = () => {
     toast
   } = useToast();
   const {
-    createNotification
+    notifyLogin
   } = useNotifications();
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -49,7 +49,7 @@ const ClientLogin = () => {
       } else {
         // Create login notification after successful login
         console.log("Login bem-sucedido, criando notificação");
-        await createNotification("Login realizado com sucesso", "login");
+        await notifyLogin();
         toast({
           title: "Login realizado com sucesso",
           description: "Bem vindo de volta!"

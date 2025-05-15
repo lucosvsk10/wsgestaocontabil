@@ -8,7 +8,7 @@ export const useNavigation = () => {
   const navigate = useNavigate();
   const { signOut, isAdmin } = useAuth();
   const { toast } = useToast();
-  const { createNotification } = useNotifications();
+  const { notifyLogin, notifyLogout } = useNotifications();
   
   // Navigate to appropriate dashboard based on user role
   const navigateToDashboard = () => {
@@ -23,7 +23,7 @@ export const useNavigation = () => {
   const handleLogout = async () => {
     try {
       // Create logout notification before signing out
-      await createNotification("Você saiu da sua conta.", "logout");
+      await notifyLogout();
       
       const result = await signOut();
       

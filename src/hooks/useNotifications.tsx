@@ -1,104 +1,182 @@
 
-import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { Notification } from '@/types/notifications';
-import { NotificationService } from './notifications/notificationService';
+import { useState, useEffect, useCallback } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { Notification } from "@/types/notifications";
+import { 
+  fetchUserNotifications, 
+  deleteAllUserNotifications,
+  createLoginNotification,
+  createLogoutNotification,
+  createDocumentNotification,
+  markDocumentNotificationsAsRead
+} from "./notifications/notificationService";
+import { useNotificationSubscription } from "./notifications/useNotificationSubscription";
+import { callEdgeFunction } from "@/utils/edgeFunctions";
+
+export type { Notification };
 
 export const useNotifications = () => {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
-  
+  const { toast } = useToast();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [hasNewNotifications, setHasNewNotifications] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch notifications
   const fetchNotifications = useCallback(async () => {
-    if (!user) return;
-    
-    setIsLoading(true);
+    if (!user?.id) return;
+
     try {
-      const notificationsData = await NotificationService.fetchNotifications(user.id);
-      setNotifications(notificationsData);
-      setUnreadCount(notificationsData.filter(n => n.read_at === null).length);
+      setIsLoading(true);
+      console.log("Carregando notificações para o usuário:", user.id);
+      const data = await fetchUserNotifications(user.id);
+      console.log("Notificações carregadas:", data?.length || 0);
+      
+      // Ensure all notifications have the read_at property
+      const notificationsWithReadAt = data?.map(notification => ({
+        ...notification,
+        read_at: notification.read_at || null
+      })) || [];
+      
+      setNotifications(notificationsWithReadAt);
+      
+      // Check if there are any document notifications that haven't been read yet
+      const hasUnreadDocNotifications = notificationsWithReadAt?.some(notif => 
+        notif.type === 'Novo Documento' && !notif.read_at
+      ) || false;
+      
+      setHasNewNotifications(hasUnreadDocNotifications);
+      console.log("Há novas notificações de documentos?", hasUnreadDocNotifications);
     } catch (error) {
-      console.error("Failed to fetch notifications:", error);
+      console.error('Erro ao carregar notificações:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [user]);
-  
-  useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
-  
-  const createNotification = async (message: string, type?: string) => {
-    if (!user) return null;
+  }, [user?.id]);
+
+  // Clear notifications
+  const clearNotifications = async () => {
+    if (!user?.id) return;
     
-    const result = await NotificationService.createNotification(user.id, message, type || null);
-    fetchNotifications();
-    return result;
-  };
-  
-  const markAsRead = async (notificationId: string) => {
-    if (!user) return false;
-    
-    const success = await NotificationService.markAsRead(notificationId);
-    if (success) {
-      setNotifications(prev => 
-        prev.map(n => n.id === notificationId ? { ...n, read_at: new Date().toISOString() } : n)
-      );
-      setUnreadCount(prev => Math.max(0, prev - 1));
-    }
-    return success;
-  };
-  
-  const markAllAsRead = async () => {
-    if (!user) return false;
-    
-    const success = await NotificationService.markAllAsRead(user.id);
-    if (success) {
-      const now = new Date().toISOString();
-      setNotifications(prev => 
-        prev.map(n => n.read_at === null ? { ...n, read_at: now } : n)
-      );
-      setUnreadCount(0);
-    }
-    return success;
-  };
-  
-  const deleteNotification = async (notificationId: string) => {
-    if (!user) return false;
-    
-    const success = await NotificationService.deleteNotification(notificationId);
-    if (success) {
-      setNotifications(prev => prev.filter(n => n.id !== notificationId));
-      setUnreadCount(prev => {
-        const notif = notifications.find(n => n.id === notificationId);
-        return notif && notif.read_at === null ? prev - 1 : prev;
+    try {
+      console.log("Limpando todas as notificações para o usuário:", user.id);
+      await deleteAllUserNotifications(user.id);
+      setNotifications([]);
+      setHasNewNotifications(false);
+      
+      toast({
+        title: "Histórico limpo",
+        description: "O histórico de notificações foi limpo"
+      });
+      console.log("Histórico de notificações limpo com sucesso");
+    } catch (error) {
+      console.error('Erro ao limpar notificações:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível limpar o histórico de notificações"
       });
     }
-    return success;
   };
-  
-  const clearAllNotifications = async () => {
-    if (!user) return false;
-    
-    const success = await NotificationService.clearAllNotifications(user.id);
-    if (success) {
-      setNotifications([]);
-      setUnreadCount(0);
+
+  // Create login notification
+  const notifyLogin = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      console.log("Criando notificação de login para o usuário:", user.id);
+      await createLoginNotification(user.id);
+    } catch (error) {
+      console.error('Erro ao criar notificação de login:', error);
     }
-    return success;
-  };
-  
+  }, [user?.id]);
+
+  // Create logout notification
+  const notifyLogout = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      console.log("Criando notificação de logout para o usuário:", user.id);
+      await createLogoutNotification(user.id);
+    } catch (error) {
+      console.error('Erro ao criar notificação de logout:', error);
+    }
+  }, [user?.id]);
+
+  // Create document notification via edge function
+  const notifyNewDocument = useCallback(async (userId: string, documentName: string) => {
+    if (!userId) throw new Error("ID do usuário é necessário para criar notificação");
+    try {
+      console.log(`Chamando edge function para notificação do usuário ${userId} sobre documento: ${documentName}`);
+      
+      interface NotifyDocumentResponse {
+        success: boolean;
+        notification?: any;
+        error?: string;
+      }
+
+      const result = await callEdgeFunction<NotifyDocumentResponse>('notify_new_document', {
+        user_id: userId,
+        document_name: documentName
+      });
+      
+      if (result.success) {
+        console.log("Notificação salva:", result.notification);
+        return result.notification;
+      } else {
+        throw new Error(result.error || "Erro desconhecido ao criar notificação");
+      }
+    } catch (error) {
+      console.error('Erro ao criar notificação:', error);
+      throw error;
+    }
+  }, []);
+
+  // Mark document notifications as read
+  const markDocumentNotificationAsRead = useCallback(async (documentId?: string) => {
+    if (!user?.id) return;
+    try {
+      console.log("Marcando notificação de documento como lida para o usuário:", user.id);
+      await markDocumentNotificationsAsRead(user.id, documentId);
+      await fetchNotifications(); // Refresh notifications after marking as read
+      console.log("Notificação marcada como lida e lista atualizada");
+    } catch (error) {
+      console.error('Erro ao marcar notificação como lida:', error);
+    }
+  }, [user?.id, fetchNotifications]);
+
+  // Callback handler for real-time subscription
+  const handleNewNotification = useCallback((newNotification: Notification) => {
+    console.log("Nova notificação recebida em tempo real:", newNotification);
+    setNotifications(prev => [newNotification, ...prev]);
+    if (newNotification.type === 'Novo Documento') {
+      setHasNewNotifications(true);
+      console.log("Novo indicador de documento não lido definido como true");
+    }
+  }, []);
+
+  // Setup real-time notification subscription
+  useNotificationSubscription({
+    userId: user?.id,
+    onNewNotification: handleNewNotification
+  });
+
+  // Initial load of notifications
+  useEffect(() => {
+    if (user?.id) {
+      console.log("Carregando notificações iniciais para o usuário:", user.id);
+      fetchNotifications();
+    }
+  }, [user?.id, fetchNotifications]);
+
   return {
     notifications,
-    unreadCount,
+    hasNewNotifications,
     isLoading,
-    createNotification,
-    markAsRead,
-    markAllAsRead,
-    deleteNotification,
-    clearAllNotifications,
-    hasNewNotifications: unreadCount > 0,
-    clearNotifications: clearAllNotifications
+    clearNotifications,
+    refreshNotifications: fetchNotifications,
+    notifyLogin,
+    notifyLogout,
+    notifyNewDocument,
+    markDocumentNotificationAsRead
   };
 };

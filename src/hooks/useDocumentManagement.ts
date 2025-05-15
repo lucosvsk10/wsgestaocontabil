@@ -1,121 +1,113 @@
 
-import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabaseClient';
-import { useAuth } from '@/contexts/AuthContext';
-import { Document } from '@/types/document';
-import { toast } from '@/hooks/use-toast';
+import { useState, useEffect } from "react";
+import { useDocumentFetch } from "./useDocumentFetch";
+import { useDocumentDelete } from "./useDocumentDelete";
+import { useDocumentUpload } from "./useDocumentUpload";
+import { useUserManagement } from "@/hooks/useUserManagement";
+import { triggerExpiredDocumentsCleanup } from "@/utils/documents/documentCleanup";
+import { supabase } from "@/integrations/supabase/client";
 
 export const useDocumentManagement = () => {
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const { user } = useAuth();
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const { supabaseUsers, users } = useUserManagement();
   
-  const fetchDocuments = async (userId: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const { data, error } = await supabase
-        .from('documents')
-        .select('*')
-        .eq('user_id', userId)
-        .order('uploaded_at', { ascending: false });
-      
-      if (error) throw error;
-      
-      setDocuments(data || []);
-    } catch (err) {
-      console.error('Error fetching documents:', err);
-      setError('Failed to load documents.');
-    } finally {
-      setLoading(false);
-    }
+  const {
+    documents,
+    isLoadingDocuments,
+    fetchUserDocuments
+  } = useDocumentFetch();
+  
+  const {
+    handleDeleteDocument: deleteDocument
+  } = useDocumentDelete(fetchUserDocuments);
+  
+  const {
+    isUploading,
+    documentName,
+    setDocumentName,
+    documentCategory,
+    setDocumentCategory,
+    documentObservations,
+    setDocumentObservations,
+    selectedFile,
+    setSelectedFile,
+    expirationDate,
+    setExpirationDate,
+    noExpiration,
+    setNoExpiration,
+    handleFileChange,
+    handleUpload
+  } = useDocumentUpload(fetchUserDocuments);
+  
+  // Wrapper function for handleUpload that includes the required parameters
+  const uploadHandleUpload = async (e: React.FormEvent) => {
+    if (!selectedUserId) return;
+    
+    await handleUpload(e, selectedUserId, supabaseUsers, users);
   };
   
+  // Wrapper for handleDeleteDocument to include selectedUserId
+  const handleDeleteDocument = async (documentId: string) => {
+    await deleteDocument(documentId, selectedUserId);
+  };
+  
+  // Effect to fetch documents when selectedUserId changes
   useEffect(() => {
-    if (user) {
-      fetchDocuments(user.id);
-    }
-  }, [user]);
-  
-  const deleteDocument = async (documentId: string) => {
-    try {
-      const { error } = await supabase
-        .from('documents')
-        .delete()
-        .eq('id', documentId);
-        
-      if (error) throw error;
+    if (selectedUserId) {
+      fetchUserDocuments(selectedUserId);
       
-      // Update local state
-      setDocuments(prev => prev.filter(doc => doc.id !== documentId));
-      
-      toast({
-        title: "Documento excluído",
-        description: "O documento foi removido com sucesso.",
+      // Run cleanup of expired documents
+      triggerExpiredDocumentsCleanup().catch(error => {
+        console.error("Error during expired documents cleanup:", error);
       });
-      
-      return true;
-    } catch (err) {
-      console.error('Error deleting document:', err);
-      
-      toast({
-        title: "Erro ao excluir",
-        description: "Não foi possível excluir o documento.",
-        variant: "destructive",
-      });
-      
-      return false;
-    }
-  };
-  
-  const markDocumentAsViewed = async (documentId: string) => {
-    try {
-      // Check if user exists
-      if (!user) {
-        throw new Error("User not authenticated");
-      }
 
-      const { error } = await supabase
-        .from('documents')
-        .update({ viewed: true, viewed_at: new Date().toISOString() })
-        .eq('id', documentId);
-      
-      if (error) throw error;
-      
-      // Update local state
-      setDocuments(prev => 
-        prev.map(doc => 
-          doc.id === documentId ? { ...doc, viewed: true, viewed_at: new Date().toISOString() } : doc
+      // Adicionar canal de tempo real para esse usuário específico
+      const channel = supabase
+        .channel(`admin-documents-${selectedUserId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',  // Monitorar todos os eventos (INSERT, UPDATE, DELETE)
+            schema: 'public',
+            table: 'documents',
+            filter: `user_id=eq.${selectedUserId}`,
+          },
+          (payload) => {
+            console.log("Mudança detectada em documentos:", payload);
+            // Atualizar a lista de documentos
+            fetchUserDocuments(selectedUserId);
+          }
         )
-      );
+        .subscribe();
       
-      // Also log the view in visualized_documents table
-      const { error: visualError } = await supabase
-        .from('visualized_documents')
-        .insert({
-          user_id: user.id,
-          document_id: documentId
-        });
-      
-      if (visualError) {
-        console.error('Error logging document view:', visualError);
-      }
-      
-      return true;
-    } catch (err) {
-      console.error('Error marking document as viewed:', err);
-      return false;
+      // Limpar inscrição quando o componente desmontar ou o usuário mudar
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
-  };
-  
+  }, [selectedUserId, fetchUserDocuments]);
+
   return {
     documents,
-    loading,
-    error,
-    deleteDocument,
-    markDocumentAsViewed,
-    fetchDocuments,
+    selectedUserId,
+    setSelectedUserId,
+    isUploading,
+    documentName,
+    setDocumentName,
+    documentCategory,
+    setDocumentCategory,
+    documentObservations,
+    setDocumentObservations,
+    selectedFile,
+    setSelectedFile,
+    isLoadingDocuments,
+    expirationDate,
+    setExpirationDate,
+    noExpiration,
+    setNoExpiration,
+    fetchUserDocuments,
+    handleFileChange,
+    handleUpload: uploadHandleUpload,
+    handleDeleteDocument
   };
 };

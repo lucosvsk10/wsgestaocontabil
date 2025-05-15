@@ -19,8 +19,7 @@ export const useDocumentManager = (users: any[], supabaseUsers: any[]) => {
   
   const {
     loadingDocumentIds,
-    handleDownload,
-    markAsViewed
+    handleDownload
   } = useDocumentActions();
   
   // Uso do hook de exclusão de documentos
@@ -48,7 +47,7 @@ export const useDocumentManager = (users: any[], supabaseUsers: any[]) => {
   const uploadHandleUpload = async (e: React.FormEvent) => {
     if (!selectedUserId) return;
     
-    await handleUpload(e, selectedUserId, supabaseUsers);
+    await handleUpload(e, selectedUserId, supabaseUsers, users as UserType[]);
   };
   
   // Wrapper for handleDeleteDocument to include selectedUserId
