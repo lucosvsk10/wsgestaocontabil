@@ -11,18 +11,8 @@ export class NotificationService {
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching notifications:', error);
-        return [];
-      }
-
-      // Ensure all notifications have the read_at field
-      const notificationsWithReadAt = data.map(notification => ({
-        ...notification,
-        read_at: notification.read_at || null
-      }));
-
-      return notificationsWithReadAt as Notification[];
+      if (error) throw error;
+      return data || [];
     } catch (error) {
       console.error('Error fetching notifications:', error);
       return [];
@@ -33,15 +23,10 @@ export class NotificationService {
     try {
       const { error } = await supabase
         .from('notifications')
-        .update({ 
-          read_at: new Date().toISOString() 
-        })
+        .update({ read_at: new Date().toISOString() })
         .eq('id', notificationId);
 
-      if (error) {
-        console.error('Error marking notification as read:', error);
-        return false;
-      }
+      if (error) throw error;
       return true;
     } catch (error) {
       console.error('Error marking notification as read:', error);
@@ -53,16 +38,11 @@ export class NotificationService {
     try {
       const { error } = await supabase
         .from('notifications')
-        .update({ 
-          read_at: new Date().toISOString() 
-        })
+        .update({ read_at: new Date().toISOString() })
         .eq('user_id', userId)
         .is('read_at', null);
 
-      if (error) {
-        console.error('Error marking all notifications as read:', error);
-        return false;
-      }
+      if (error) throw error;
       return true;
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
@@ -72,23 +52,22 @@ export class NotificationService {
 
   async createNotification(userId: string, message: string, type: string = 'info'): Promise<Notification | null> {
     try {
+      const notification = {
+        user_id: userId,
+        message,
+        type,
+        created_at: new Date().toISOString(),
+        read_at: null
+      };
+
       const { data, error } = await supabase
         .from('notifications')
-        .insert({
-          user_id: userId,
-          message,
-          type,
-          created_at: new Date().toISOString(),
-          read_at: null
-        })
+        .insert(notification)
         .select()
         .single();
 
-      if (error) {
-        console.error('Error creating notification:', error);
-        return null;
-      }
-      return data as Notification;
+      if (error) throw error;
+      return data;
     } catch (error) {
       console.error('Error creating notification:', error);
       return null;
@@ -102,10 +81,7 @@ export class NotificationService {
         .delete()
         .eq('id', notificationId);
 
-      if (error) {
-        console.error('Error removing notification:', error);
-        return false;
-      }
+      if (error) throw error;
       return true;
     } catch (error) {
       console.error('Error removing notification:', error);
@@ -120,10 +96,7 @@ export class NotificationService {
         .delete()
         .eq('user_id', userId);
 
-      if (error) {
-        console.error('Error clearing notifications:', error);
-        return false;
-      }
+      if (error) throw error;
       return true;
     } catch (error) {
       console.error('Error clearing notifications:', error);
@@ -131,5 +104,3 @@ export class NotificationService {
     }
   }
 }
-
-export const notificationService = new NotificationService();
