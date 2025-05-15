@@ -107,10 +107,10 @@ export const TaxFormProvider: React.FC<TaxFormProviderProps> = ({
       return;
     }
     
-    return calculateAndSaveResult(data);
+    await calculateAndSaveResult(data);
   };
 
-  const value = {
+  const value: TaxFormContextType = {
     activeStep,
     taxResult,
     handleStepAdvance,

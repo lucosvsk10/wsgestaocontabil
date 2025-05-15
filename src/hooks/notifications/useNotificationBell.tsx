@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Notification } from '@/types/notifications';
-import { notificationService } from "./notificationService";
+import { NotificationService } from "./notificationService";
 
 export const useNotificationBell = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -16,7 +16,7 @@ export const useNotificationBell = () => {
       
       setIsLoading(true);
       try {
-        const data = await notificationService.getNotifications(user.id);
+        const data = await NotificationService.fetchNotifications(user.id);
         setNotifications(data);
         setUnreadCount(data.filter(n => n.read_at === null).length);
       } catch (error) {
@@ -32,7 +32,7 @@ export const useNotificationBell = () => {
   }, [user]);
   
   const markAsRead = async (notificationId: string) => {
-    const success = await notificationService.markAsRead(notificationId);
+    const success = await NotificationService.markAsRead(notificationId);
     if (success) {
       setNotifications(prev => 
         prev.map(n => 
@@ -48,7 +48,7 @@ export const useNotificationBell = () => {
   const markAllAsRead = async () => {
     if (!user?.id) return;
     
-    const success = await notificationService.markAllAsRead(user.id);
+    const success = await NotificationService.markAllAsRead(user.id);
     if (success) {
       setNotifications(prev => 
         prev.map(n => ({ ...n, read_at: n.read_at || new Date().toISOString() }))
