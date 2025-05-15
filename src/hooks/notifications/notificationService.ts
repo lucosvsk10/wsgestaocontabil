@@ -3,31 +3,29 @@ import { supabase } from '@/lib/supabaseClient';
 import { Notification } from '@/types/notifications';
 
 export class NotificationService {
-  async createNotification(userId: string, message: string, type: string = 'info'): Promise<Notification | null> {
+  async getNotifications(userId: string): Promise<Notification[]> {
     try {
-      const notificationData = {
-        user_id: userId,
-        message,
-        type,
-        created_at: new Date().toISOString(),
-        read_at: null
-      };
-
       const { data, error } = await supabase
         .from('notifications')
-        .insert(notificationData)
-        .select()
-        .single();
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error creating notification:', error);
-        return null;
+        console.error('Error fetching notifications:', error);
+        return [];
       }
 
-      return data;
+      // Ensure all notifications have the read_at field
+      const notificationsWithReadAt = data.map(notification => ({
+        ...notification,
+        read_at: notification.read_at || null
+      }));
+
+      return notificationsWithReadAt as Notification[];
     } catch (error) {
-      console.error('Exception creating notification:', error);
-      return null;
+      console.error('Error fetching notifications:', error);
+      return [];
     }
   }
 
@@ -44,10 +42,9 @@ export class NotificationService {
         console.error('Error marking notification as read:', error);
         return false;
       }
-
       return true;
     } catch (error) {
-      console.error('Exception marking notification as read:', error);
+      console.error('Error marking notification as read:', error);
       return false;
     }
   }
@@ -66,15 +63,39 @@ export class NotificationService {
         console.error('Error marking all notifications as read:', error);
         return false;
       }
-
       return true;
     } catch (error) {
-      console.error('Exception marking all notifications as read:', error);
+      console.error('Error marking all notifications as read:', error);
       return false;
     }
   }
 
-  async deleteNotification(notificationId: string): Promise<boolean> {
+  async createNotification(userId: string, message: string, type: string = 'info'): Promise<Notification | null> {
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: userId,
+          message,
+          type,
+          created_at: new Date().toISOString(),
+          read_at: null
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating notification:', error);
+        return null;
+      }
+      return data as Notification;
+    } catch (error) {
+      console.error('Error creating notification:', error);
+      return null;
+    }
+  }
+
+  async removeNotification(notificationId: string): Promise<boolean> {
     try {
       const { error } = await supabase
         .from('notifications')
@@ -82,14 +103,33 @@ export class NotificationService {
         .eq('id', notificationId);
 
       if (error) {
-        console.error('Error deleting notification:', error);
+        console.error('Error removing notification:', error);
         return false;
       }
-
       return true;
     } catch (error) {
-      console.error('Exception deleting notification:', error);
+      console.error('Error removing notification:', error);
+      return false;
+    }
+  }
+
+  async clearNotifications(userId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Error clearing notifications:', error);
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error('Error clearing notifications:', error);
       return false;
     }
   }
 }
+
+export const notificationService = new NotificationService();

@@ -10,72 +10,10 @@ import { DeductionsStep } from './DeductionsStep';
 import { ResultsStep } from './ResultsStep';
 import { TaxCalculatorProps } from '@/types/taxCalculator';
 import { TaxFormInput, TaxResult, TaxFormValues } from '@/utils/tax/types';
-import { calculateTaxBrackets, calculateTaxByBrackets } from '@/utils/tax/calculations';
-
-// Function to calculate tax results based on form data
-const calculateTaxes = (data: TaxFormInput): TaxResult => {
-  // Calculate base for complete declaration
-  const totalDeductions = data.contribuicaoPrevidenciaria + 
-                        Math.min(data.despesasEducacao, 3561.50 * (data.numeroDependentes + 1)) +
-                        data.despesasMedicas + 
-                        (data.numeroDependentes * 2275.08) +
-                        data.pensaoAlimenticia +
-                        data.livroCaixa;
-  
-  // Complete declaration base calculation
-  const baseCompleta = Math.max(0, data.rendimentosTributaveis - totalDeductions);
-  
-  // Simplified declaration base calculation (20% discount up to R$ 16.754,34)
-  const descontoSimplificado = Math.min(data.rendimentosTributaveis * 0.2, 16754.34);
-  const baseSimplificada = Math.max(0, data.rendimentosTributaveis - descontoSimplificado);
-  
-  // Calculate tax for both methods
-  const impostoCompleto = calculateTaxBrackets(baseCompleta);
-  const impostoSimplificado = calculateTaxBrackets(baseSimplificada);
-  
-  // Determine which method is better
-  const declaracaoRecomendada = impostoCompleto <= impostoSimplificado ? 'completa' : 'simplificada';
-  
-  // Calculate balance (to pay or to be refunded)
-  const impostoFinal = declaracaoRecomendada === 'completa' ? impostoCompleto : impostoSimplificado;
-  const saldoImposto = impostoFinal - data.impostoRetidoFonte;
-  
-  let tipoSaldo: 'pagar' | 'restituir' | 'zero' = 'zero';
-  if (saldoImposto > 0) tipoSaldo = 'pagar';
-  else if (saldoImposto < 0) tipoSaldo = 'restituir';
-  
-  // Generate tax brackets breakdown
-  const impostoFaixas = calculateTaxByBrackets(
-    declaracaoRecomendada === 'completa' ? baseCompleta : baseSimplificada
-  );
-  
-  return {
-    baseDeCalculo: {
-      completa: baseCompleta,
-      simplificada: baseSimplificada
-    },
-    descontoSimplificado,
-    descontoCompleto: totalDeductions,
-    impostoDevido: {
-      completo: impostoCompleto,
-      simplificado: impostoSimplificado
-    },
-    declaracaoRecomendada,
-    saldoImposto,
-    tipoSaldo,
-    impostoFaixas,
-    detalhamentoDeducoes: {
-      dependentes: data.numeroDependentes * 2275.08,
-      previdencia: data.contribuicaoPrevidenciaria,
-      saude: data.despesasMedicas,
-      educacao: Math.min(data.despesasEducacao, 3561.50 * (data.numeroDependentes + 1)),
-      pensao: data.pensaoAlimenticia,
-      livroCaixa: data.livroCaixa,
-      total: totalDeductions
-    },
-    impostoRetidoFonte: data.impostoRetidoFonte
-  };
-};
+import { calculateTaxes } from '@/utils/tax/taxService';
+import { useNotifications } from '@/hooks/useNotifications';
+import { supabase } from '@/lib/supabaseClient';
+import { toast } from '@/hooks/use-toast';
 
 // Define the form schema
 const createTaxFormSchema = (isLoggedIn: boolean) => {
@@ -114,6 +52,7 @@ export const TaxCalculatorForm: React.FC<TaxCalculatorProps> = ({ onComplete }) 
   const [activeStep, setActiveStep] = useState(0);
   const [taxResult, setTaxResult] = useState<TaxResult | null>(null);
   const { user } = useAuth();
+  const { createNotification } = useNotifications();
   const isLoggedIn = !!user;
 
   // Create form with schema based on login status
@@ -138,7 +77,64 @@ export const TaxCalculatorForm: React.FC<TaxCalculatorProps> = ({ onComplete }) 
     }
   });
   
-  const onSubmit = (data: TaxFormValues) => {
+  const saveSimulation = async (data: TaxFormValues, result: TaxResult) => {
+    try {
+      const simulationData = {
+        user_id: user?.id || null,
+        nome: data.nome || null,
+        email: data.email || null,
+        telefone: data.telefone || null,
+        rendimento_bruto: data.rendimentosTributaveis,
+        rendimentos_isentos: data.rendimentosIsentos,
+        inss: data.contribuicaoPrevidenciaria,
+        educacao: data.despesasEducacao,
+        saude: data.despesasMedicas,
+        dependentes: data.numeroDependentes,
+        outras_deducoes: data.pensaoAlimenticia + data.livroCaixa,
+        imposto_estimado: result.saldoImposto,
+        tipo_simulacao: result.tipoSaldo === 'pagar' ? 'a pagar' : 'restituição',
+        observacoes: ''
+      };
+
+      const { error } = await supabase.from('tax_simulations').insert(simulationData);
+
+      if (error) {
+        console.error('Erro ao salvar simulação:', error);
+        toast({
+          title: "Erro ao salvar simulação",
+          description: "Não foi possível salvar sua simulação. Por favor, tente novamente.",
+          variant: "destructive"
+        });
+        return false;
+      }
+
+      // Criar notificação se o usuário estiver logado
+      if (user) {
+        createNotification(
+          `Nova simulação de IRPF: ${result.tipoSaldo === 'pagar' ? 'Imposto a pagar' : 'Restituição'} de ${Math.abs(result.saldoImposto).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`,
+          'tax'
+        );
+      }
+
+      toast({
+        title: "Simulação salva com sucesso",
+        description: "Sua simulação de IRPF foi armazenada e pode ser consultada posteriormente.",
+        variant: "default"
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Erro ao salvar simulação:', error);
+      toast({
+        title: "Erro ao salvar simulação",
+        description: "Ocorreu um erro ao processar sua solicitação.",
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
+  
+  const onSubmit = async (data: TaxFormValues) => {
     if (activeStep < 2) {
       setActiveStep(activeStep + 1);
       return;
@@ -147,6 +143,10 @@ export const TaxCalculatorForm: React.FC<TaxCalculatorProps> = ({ onComplete }) 
     // Calculate tax result
     const result = calculateTaxes(data);
     setTaxResult(result);
+    
+    // Save the simulation
+    await saveSimulation(data, result);
+    
     setActiveStep(3); // Move to results step
     
     if (onComplete) {
@@ -168,36 +168,41 @@ export const TaxCalculatorForm: React.FC<TaxCalculatorProps> = ({ onComplete }) 
 
   return (
     <div className="w-full">
-      <StepIndicator activeStep={activeStep} />
+      <div className="p-6 bg-gray-50 dark:bg-navy-dark border-b border-gray-200 dark:border-navy-lighter/30">
+        <StepIndicator activeStep={activeStep} />
+      </div>
       
       <FormProvider {...methods}>
-        <form onSubmit={methods.handleSubmit(onSubmit)} className="space-y-8">
+        <form onSubmit={methods.handleSubmit(onSubmit)} className="p-6">
           {activeStep === 0 && <IncomeStep isLoggedIn={isLoggedIn} />}
+          
           {activeStep === 1 && (
             <DeductionsStep 
-              control={methods.control} 
-              errors={methods.formState.errors} 
-              taxResult={taxResult} 
+              control={methods.control}
+              errors={methods.formState.errors}
+              taxResult={taxResult}
               formData={methods.getValues()}
             />
           )}
+          
           {activeStep === 2 && (
-            <div className="flex justify-end space-x-4">
+            <div className="flex justify-between mt-8">
               <button
                 type="button"
                 onClick={handlePrevious}
-                className="px-4 py-2 bg-gray-200 text-gray-800 dark:bg-navy-lighter dark:text-white rounded"
+                className="px-6 py-2 bg-gray-200 text-gray-800 dark:bg-navy-lighter dark:text-white rounded-2xl hover:shadow-md transition-all"
               >
                 Voltar
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-gold hover:bg-gold/90 text-navy rounded"
+                className="px-8 py-2 bg-gold hover:bg-gold/90 text-navy rounded-2xl hover:shadow-md transition-all"
               >
                 Calcular
               </button>
             </div>
           )}
+          
           {activeStep === 3 && taxResult && (
             <ResultsStep 
               taxResult={taxResult}

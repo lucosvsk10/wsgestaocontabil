@@ -1,10 +1,11 @@
+
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { InfoCircledIcon, ExclamationTriangleIcon } from "@radix-ui/react-icons";
+import { InfoCircledIcon, ExclamationTriangleIcon, ArrowRightIcon } from "@radix-ui/react-icons";
 import { TaxFormValues, TaxResult } from "@/utils/tax/types";
 
 interface ResultsStepProps {
@@ -34,9 +35,9 @@ export const ResultsStep = ({ taxResult, formData, user, formatCurrency, onResta
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="border-gray-200 dark:border-navy-lighter/30 shadow-md dark:bg-navy-dark">
-          <CardHeader>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="border-gray-200 dark:border-navy-lighter/30 shadow-lg dark:bg-navy-deeper">
+          <CardHeader className="pb-2">
             <CardTitle className="text-navy dark:text-gold">Resumo</CardTitle>
             <CardDescription className="dark:text-gray-300">
               Modelo de declaração: {tipoDeclaracao === 'completa' ? 'Completa' : 'Simplificada'}
@@ -75,8 +76,8 @@ export const ResultsStep = ({ taxResult, formData, user, formatCurrency, onResta
                    formatCurrency(0)}
                 </span>
                 <Badge className={`ml-2 ${
-                  tipoSaldo === 'pagar' ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200' : 
-                  tipoSaldo === 'restituir' ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200' : 
+                  tipoSaldo === 'pagar' ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200 border-red-300' : 
+                  tipoSaldo === 'restituir' ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200 border-green-300' : 
                   'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
                 }`}>
                   {tipoSaldo === 'pagar' ? 'A pagar' : 
@@ -88,8 +89,8 @@ export const ResultsStep = ({ taxResult, formData, user, formatCurrency, onResta
           </CardContent>
         </Card>
 
-        <Card className="border-gray-200 dark:border-navy-lighter/30 shadow-md dark:bg-navy-dark">
-          <CardHeader>
+        <Card className="border-gray-200 dark:border-navy-lighter/30 shadow-lg dark:bg-navy-deeper">
+          <CardHeader className="pb-2">
             <CardTitle className="text-navy dark:text-gold">Deduções</CardTitle>
             <CardDescription className="dark:text-gray-300">
               {tipoDeclaracao === 'completa' ? 'Detalhamento das deduções' : 'Desconto simplificado'}
@@ -140,8 +141,8 @@ export const ResultsStep = ({ taxResult, formData, user, formatCurrency, onResta
         </Card>
       </div>
 
-      <Card className="border-gray-200 dark:border-navy-lighter/30 shadow-md dark:bg-navy-dark">
-        <CardHeader>
+      <Card className="border-gray-200 dark:border-navy-lighter/30 shadow-lg dark:bg-navy-deeper">
+        <CardHeader className="pb-2">
           <CardTitle className="text-navy dark:text-gold">Detalhamento por Faixas</CardTitle>
           <CardDescription className="dark:text-gray-300">
             Cálculo progressivo do imposto por faixas de renda
@@ -167,7 +168,7 @@ export const ResultsStep = ({ taxResult, formData, user, formatCurrency, onResta
                     <td className="py-2 px-4 dark:text-white">{formatCurrency(faixa.valorImposto)}</td>
                   </tr>
                 ))}
-                <tr className="bg-gray-50 dark:bg-navy-dark">
+                <tr className="bg-gray-50 dark:bg-navy">
                   <td className="py-2 px-4 font-medium dark:text-white">Total</td>
                   <td className="py-2 px-4 dark:text-white">{formatCurrency(taxResult.baseDeCalculo[tipoDeclaracao === 'completa' ? 'completa' : 'simplificada'])}</td>
                   <td className="py-2 px-4 dark:text-white">-</td>
@@ -180,7 +181,7 @@ export const ResultsStep = ({ taxResult, formData, user, formatCurrency, onResta
       </Card>
 
       <div className="flex flex-col space-y-4">
-        <Alert className="bg-blue-50 dark:bg-navy-lighter border-blue-200 dark:border-navy-light">
+        <Alert className="rounded-xl border bg-blue-50 dark:bg-navy-lighter border-blue-200 dark:border-navy-light">
           <InfoCircledIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
           <AlertTitle className="text-blue-800 dark:text-blue-300">Importante</AlertTitle>
           <AlertDescription className="text-blue-700 dark:text-blue-200">
@@ -189,7 +190,7 @@ export const ResultsStep = ({ taxResult, formData, user, formatCurrency, onResta
         </Alert>
 
         {!user && (
-          <Alert className="bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/30">
+          <Alert className="rounded-xl border bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/30">
             <ExclamationTriangleIcon className="h-4 w-4 text-amber-600 dark:text-amber-400" />
             <AlertTitle className="text-amber-800 dark:text-amber-300">Crie uma conta</AlertTitle>
             <AlertDescription className="text-amber-700 dark:text-amber-200">
@@ -203,6 +204,24 @@ export const ResultsStep = ({ taxResult, formData, user, formatCurrency, onResta
             </AlertDescription>
           </Alert>
         )}
+      </div>
+      
+      <div className="flex justify-between">
+        <Button 
+          variant="outline" 
+          onClick={onRestart}
+          className="rounded-2xl border-gray-300 dark:border-navy-lighter hover:bg-gray-100 dark:hover:bg-navy-lighter"
+        >
+          Iniciar nova simulação
+        </Button>
+        
+        <Button 
+          onClick={() => navigate('/')}
+          className="rounded-2xl bg-gold hover:bg-gold/90 text-navy"
+        >
+          Voltar para a página inicial
+          <ArrowRightIcon className="ml-2 h-4 w-4" />
+        </Button>
       </div>
     </div>
   );

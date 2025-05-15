@@ -1,6 +1,7 @@
+
 import { supabase } from '@/lib/supabaseClient';
 import { TaxFormInput, TaxResult } from './types';
-import { calculateTaxBrackets } from './calculations';
+import { calculateTaxes as calculateTaxesFunc } from './calculations';
 
 export class TaxService {
   async saveTaxSimulation(userId: string, formData: TaxFormInput, result: TaxResult) {
@@ -98,4 +99,4 @@ export class TaxService {
 /**
  * Calculates tax results based on form data
  */
-export { calculateTaxBrackets as calculateTaxes } from './calculations';
+export const calculateTaxes = calculateTaxesFunc;

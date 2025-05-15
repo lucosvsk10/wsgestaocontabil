@@ -19,7 +19,6 @@ export interface TaxSimulation {
 }
 
 export interface TaxFormSubmission {
-  // Define TaxFormSubmission since it's used in formDataMappers.ts
   user_id?: string;
   nome?: string;
   email?: string;

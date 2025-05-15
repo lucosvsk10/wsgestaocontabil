@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { useFormContext } from 'react-hook-form';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   FormField,
   FormItem,
@@ -11,14 +12,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { currencyFormat } from '@/utils/taxCalculations';
 
 interface IncomeStepProps {
   isLoggedIn: boolean;
 }
 
 export const IncomeStep: React.FC<IncomeStepProps> = ({ isLoggedIn }) => {
-  const { control, register, watch, setValue } = useFormContext();
+  const { control, setValue } = useFormContext();
   
   // Format currency input
   const formatCurrency = (value: string) => {
@@ -53,177 +53,207 @@ export const IncomeStep: React.FC<IncomeStepProps> = ({ isLoggedIn }) => {
   };
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-semibold dark:text-gold">Informações Pessoais e Rendimentos</h2>
-      
-      {/* Personal information fields - required only if not logged in */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormField
-          control={control}
-          name="nome"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className={isLoggedIn ? "" : "required"}>Nome</FormLabel>
-              <FormControl>
-                <Input 
-                  placeholder={isLoggedIn ? "Nome (opcional)" : "Nome (obrigatório)"} 
-                  {...field} 
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
-        <FormField
-          control={control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email (opcional)</FormLabel>
-              <FormControl>
-                <Input placeholder="seuemail@exemplo.com" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
-        <FormField
-          control={control}
-          name="telefone"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Telefone (opcional)</FormLabel>
-              <FormControl>
-                <Input placeholder="(00) 00000-0000" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
-      
-      <hr className="border-gray-200 dark:border-navy-lighter" />
-      
-      <h3 className="text-lg font-medium dark:text-gold">Rendimentos</h3>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormField
-          control={control}
-          name="rendimentosTributaveis"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="required">Rendimentos Tributáveis</FormLabel>
-              <FormControl>
-                <Input 
-                  placeholder="R$ 0,00" 
-                  {...field}
-                  value={field.value ? formatCurrency(field.value.toString()) : ''}
-                  onChange={(e) => handleCurrencyChange(e, 'rendimentosTributaveis')}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
-        <FormField
-          control={control}
-          name="rendimentosIsentos"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Rendimentos Isentos</FormLabel>
-              <FormControl>
-                <Input 
-                  placeholder="R$ 0,00" 
-                  {...field}
-                  value={field.value ? formatCurrency(field.value.toString()) : ''}
-                  onChange={(e) => handleCurrencyChange(e, 'rendimentosIsentos')}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
-        <FormField
-          control={control}
-          name="impostoRetidoFonte"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Imposto Retido na Fonte</FormLabel>
-              <FormControl>
-                <Input 
-                  placeholder="R$ 0,00" 
-                  {...field}
-                  value={field.value ? formatCurrency(field.value.toString()) : ''}
-                  onChange={(e) => handleCurrencyChange(e, 'impostoRetidoFonte')}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
-      
-      <FormField
-        control={control}
-        name="ehAposentado65"
-        render={({ field }) => (
-          <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md p-4 bg-gray-50 dark:bg-navy-dark">
-            <FormControl>
-              <Checkbox
-                checked={field.value}
-                onCheckedChange={field.onChange}
-              />
-            </FormControl>
-            <div className="space-y-1 leading-none">
-              <FormLabel>Aposentado(a) com 65 anos ou mais</FormLabel>
-            </div>
-          </FormItem>
-        )}
-      />
-      
-      <FormField
-        control={control}
-        name="tipoDeclaracao"
-        render={({ field }) => (
-          <FormItem className="space-y-3">
-            <FormLabel>Tipo de Declaração</FormLabel>
-            <FormControl>
-              <RadioGroup
-                onValueChange={field.onChange}
-                defaultValue={field.value}
-                className="flex flex-col space-y-1"
-              >
-                <FormItem className="flex items-center space-x-3 space-y-0">
-                  <FormControl>
-                    <RadioGroupItem value="completa" />
-                  </FormControl>
-                  <FormLabel className="font-normal">
-                    Completa (todas as deduções)
+    <div className="space-y-8">
+      <Card className="border border-gray-200 dark:border-navy-lighter/30 shadow-md bg-white dark:bg-navy-deeper">
+        <CardContent className="p-6">
+          <h2 className="text-xl font-semibold dark:text-gold mb-4">Informações Pessoais</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={control}
+              name="nome"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className={isLoggedIn ? "" : "after:content-['*'] after:ml-1 after:text-red-500"}>
+                    Nome Completo
                   </FormLabel>
-                </FormItem>
-                <FormItem className="flex items-center space-x-3 space-y-0">
                   <FormControl>
-                    <RadioGroupItem value="simplificada" />
+                    <Input 
+                      placeholder={isLoggedIn ? "Nome (opcional)" : "Nome (obrigatório)"} 
+                      {...field}
+                      className="rounded-xl border-gray-300 dark:border-navy-lighter focus:border-gold/70 focus:ring-gold/10" 
+                    />
                   </FormControl>
-                  <FormLabel className="font-normal">
-                    Simplificada (desconto padrão)
-                  </FormLabel>
+                  <FormMessage />
                 </FormItem>
-              </RadioGroup>
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+              )}
+            />
+            
+            <FormField
+              control={control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email (opcional)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="seuemail@exemplo.com" 
+                      {...field}
+                      className="rounded-xl border-gray-300 dark:border-navy-lighter focus:border-gold/70 focus:ring-gold/10" 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={control}
+              name="telefone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Telefone (opcional)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="(00) 00000-0000" 
+                      {...field}
+                      className="rounded-xl border-gray-300 dark:border-navy-lighter focus:border-gold/70 focus:ring-gold/10" 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card className="border border-gray-200 dark:border-navy-lighter/30 shadow-md bg-white dark:bg-navy-deeper">
+        <CardContent className="p-6">
+          <h2 className="text-xl font-semibold dark:text-gold mb-4">Rendimentos</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={control}
+              name="rendimentosTributaveis"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="after:content-['*'] after:ml-1 after:text-red-500">
+                    Rendimentos Tributáveis
+                  </FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="R$ 0,00" 
+                      {...field}
+                      value={field.value ? formatCurrency(field.value.toString()) : ''}
+                      onChange={(e) => handleCurrencyChange(e, 'rendimentosTributaveis')}
+                      className="rounded-xl border-gray-300 dark:border-navy-lighter focus:border-gold/70 focus:ring-gold/10" 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={control}
+              name="rendimentosIsentos"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Rendimentos Isentos</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="R$ 0,00" 
+                      {...field}
+                      value={field.value ? formatCurrency(field.value.toString()) : ''}
+                      onChange={(e) => handleCurrencyChange(e, 'rendimentosIsentos')}
+                      className="rounded-xl border-gray-300 dark:border-navy-lighter focus:border-gold/70 focus:ring-gold/10" 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={control}
+              name="impostoRetidoFonte"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Imposto Retido na Fonte</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="R$ 0,00" 
+                      {...field}
+                      value={field.value ? formatCurrency(field.value.toString()) : ''}
+                      onChange={(e) => handleCurrencyChange(e, 'impostoRetidoFonte')}
+                      className="rounded-xl border-gray-300 dark:border-navy-lighter focus:border-gold/70 focus:ring-gold/10" 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={control}
+              name="ehAposentado65"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md p-4 bg-gray-50 dark:bg-navy-dark">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      className="data-[state=checked]:bg-gold data-[state=checked]:border-gold"
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>Aposentado(a) com 65 anos ou mais</FormLabel>
+                  </div>
+                </FormItem>
+              )}
+            />
+          </div>
+          
+          <div className="mt-6">
+            <FormField
+              control={control}
+              name="tipoDeclaracao"
+              render={({ field }) => (
+                <FormItem className="space-y-3">
+                  <FormLabel>Tipo de Declaração</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      className="flex flex-col space-y-3"
+                    >
+                      <FormItem className="flex items-center space-x-3 space-y-0 rounded-md p-4 bg-gray-50 dark:bg-navy-dark border border-gray-200 dark:border-navy-lighter">
+                        <FormControl>
+                          <RadioGroupItem 
+                            value="completa" 
+                            className="border-gray-400 text-gold data-[state=checked]:border-gold data-[state=checked]:bg-gold"
+                          />
+                        </FormControl>
+                        <FormLabel className="font-medium cursor-pointer">
+                          Completa (todas as deduções)
+                        </FormLabel>
+                      </FormItem>
+                      <FormItem className="flex items-center space-x-3 space-y-0 rounded-md p-4 bg-gray-50 dark:bg-navy-dark border border-gray-200 dark:border-navy-lighter">
+                        <FormControl>
+                          <RadioGroupItem 
+                            value="simplificada" 
+                            className="border-gray-400 text-gold data-[state=checked]:border-gold data-[state=checked]:bg-gold"
+                          />
+                        </FormControl>
+                        <FormLabel className="font-medium cursor-pointer">
+                          Simplificada (desconto padrão)
+                        </FormLabel>
+                      </FormItem>
+                    </RadioGroup>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </CardContent>
+      </Card>
       
       <div className="flex justify-end">
         <button
           type="submit"
-          className="px-4 py-2 bg-gold hover:bg-gold/90 text-navy rounded"
+          className="px-8 py-2 bg-gold hover:bg-gold/90 text-navy font-medium rounded-2xl hover:shadow-md transition-all"
         >
           Próximo
         </button>

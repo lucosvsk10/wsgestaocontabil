@@ -1,100 +1,112 @@
 
-import { useState, useEffect, useCallback } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { Notification } from "@/types/notifications";
-import { NotificationService } from "./notificationService";
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/contexts/AuthContext';
+import { notificationService } from './notificationService';
+import { Notification } from '@/types/notifications';
 
-export const useNotificationBell = () => {
+export function useNotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [isOpen, setIsOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  
+  const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
-  const notificationService = new NotificationService();
 
-  const countUnread = (notifs: Notification[]) => {
-    return notifs.filter(n => !n.read_at).length;
-  };
+  const fetchNotifications = useCallback(async () => {
+    if (!user) {
+      setNotifications([]);
+      setIsLoading(false);
+      return;
+    }
 
-  const toggleOpen = () => {
-    setIsOpen(!isOpen);
-  };
-
-  const refreshNotifications = useCallback(async () => {
-    if (!user) return;
-    
-    setIsLoading(true);
-    
     try {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      // Ensure all notification objects have the necessary fields
-      const typedNotifications: Notification[] = data.map(notification => ({
+      setIsLoading(true);
+      const data = await notificationService.getNotifications(user.id);
+      
+      // Ensure all notifications have the read_at field
+      const notificationsWithReadAt = data.map(notification => ({
         ...notification,
         read_at: notification.read_at || null
       }));
-
-      setNotifications(typedNotifications);
-      setUnreadCount(countUnread(typedNotifications));
+      
+      setNotifications(notificationsWithReadAt);
     } catch (error) {
-      console.error("Error refreshing notifications:", error);
+      console.error('Error fetching notifications:', error);
     } finally {
       setIsLoading(false);
     }
   }, [user]);
 
-  const handleMarkAsRead = async (notificationId: string) => {
+  // Calculate unread count
+  const unreadCount = notifications.filter(n => !n.read_at).length;
+  const hasNewNotifications = unreadCount > 0;
+
+  // Mark a notification as read
+  const markAsRead = async (notificationId: string) => {
     if (!user) return;
     
     const success = await notificationService.markAsRead(notificationId);
-    
     if (success) {
-      setNotifications(prev => 
-        prev.map(n => 
-          n.id === notificationId 
-            ? { ...n, read_at: new Date().toISOString() } 
-            : n
-        )
-      );
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      setNotifications(notifications.map(n => 
+        n.id === notificationId 
+          ? { ...n, read_at: new Date().toISOString() } 
+          : n
+      ));
     }
   };
 
-  const handleMarkAllAsRead = async () => {
+  // Mark all notifications as read
+  const markAllAsRead = async () => {
     if (!user) return;
     
     const success = await notificationService.markAllAsRead(user.id);
-    
     if (success) {
-      setNotifications(prev => 
-        prev.map(n => ({ ...n, read_at: n.read_at || new Date().toISOString() }))
-      );
-      setUnreadCount(0);
+      setNotifications(notifications.map(n => 
+        !n.read_at ? { ...n, read_at: new Date().toISOString() } : n
+      ));
     }
   };
 
-  useEffect(() => {
-    if (user) {
-      refreshNotifications();
+  // Remove a notification
+  const removeNotification = async (notificationId: string) => {
+    if (!user) return;
+    
+    const success = await notificationService.removeNotification(notificationId);
+    if (success) {
+      setNotifications(notifications.filter(n => n.id !== notificationId));
     }
-  }, [user, refreshNotifications]);
+  };
+
+  // Subscribe to real-time updates
+  useEffect(() => {
+    if (!user) return;
+
+    fetchNotifications();
+
+    const subscription = supabase
+      .channel('notifications-bell')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${user.id}`,
+      }, () => {
+        fetchNotifications();
+      })
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [user, fetchNotifications]);
 
   return {
     notifications,
     unreadCount,
-    isOpen,
     isLoading,
-    toggleOpen,
-    handleMarkAsRead,
-    handleMarkAllAsRead,
-    refreshNotifications
+    hasNewNotifications,
+    fetchNotifications,
+    markAsRead,
+    markAllAsRead,
+    removeNotification,
+    notificationService,
   };
-};
+}

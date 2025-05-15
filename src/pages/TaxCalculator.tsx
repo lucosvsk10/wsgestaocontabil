@@ -1,11 +1,9 @@
 
 import { useState } from "react";
-import { StepIndicator } from "@/components/tax-calculator/StepIndicator";
+import { Card, CardContent } from "@/components/ui/card";
 import TaxCalculatorForm from "@/components/tax-calculator/TaxCalculatorForm";
 
 const TaxCalculator = () => {
-  const [step, setStep] = useState(1);
-
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="max-w-4xl mx-auto">
@@ -16,8 +14,11 @@ const TaxCalculator = () => {
           </p>
         </div>
 
-        <StepIndicator step={step} />
-        <TaxCalculatorForm />
+        <Card className="border border-gray-200 dark:border-navy-lighter/30 shadow-lg dark:bg-navy-deeper overflow-hidden">
+          <CardContent className="p-0">
+            <TaxCalculatorForm />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
