@@ -1,78 +1,61 @@
 
-import { supabase } from "@/lib/supabaseClient";
-import { Notification } from "@/types/notifications";
+import { SupabaseClient } from '@supabase/supabase-js';
+import { Notification } from '@/types/notifications';
+
+export interface CreateNotificationParams {
+  user_id: string;
+  message: string;
+  type?: string | null;
+}
 
 export class NotificationService {
-  async getNotifications(userId: string): Promise<Notification[]> {
-    const { data, error } = await supabase
+  private supabase: SupabaseClient;
+
+  constructor(supabase: SupabaseClient) {
+    this.supabase = supabase;
+  }
+
+  async getNotifications(userId: string) {
+    return this.supabase
       .from('notifications')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
-    
-    if (error) {
-      console.error("Error fetching notifications:", error);
-      return [];
-    }
-    
-    return data as Notification[];
   }
-  
-  async markAsRead(notificationId: string): Promise<boolean> {
-    const { error } = await supabase
+
+  async createNotification(params: CreateNotificationParams) {
+    return this.supabase
       .from('notifications')
-      .update({ read_at: new Date().toISOString() })
-      .eq('id', notificationId);
-    
-    if (error) {
-      console.error("Error marking notification as read:", error);
-      return false;
-    }
-    
-    return true;
-  }
-  
-  async markAllAsRead(userId: string): Promise<boolean> {
-    const { error } = await supabase
-      .from('notifications')
-      .update({ read_at: new Date().toISOString() })
-      .eq('user_id', userId)
-      .is('read_at', null);
-    
-    if (error) {
-      console.error("Error marking all notifications as read:", error);
-      return false;
-    }
-    
-    return true;
-  }
-  
-  async createNotification(
-    userId: string, 
-    message: string, 
-    type: string = "default"
-  ): Promise<Notification | null> {
-    const notification = {
-      user_id: userId,
-      message,
-      type,
-      created_at: new Date().toISOString(),
-      read_at: null
-    };
-    
-    const { data, error } = await supabase
-      .from('notifications')
-      .insert(notification)
+      .insert({
+        user_id: params.user_id,
+        message: params.message,
+        type: params.type || null,
+        read_at: null
+      })
       .select()
       .single();
-    
-    if (error) {
-      console.error("Error creating notification:", error);
-      return null;
-    }
-    
-    return data as Notification;
+  }
+
+  async markAsRead(notificationId: string) {
+    return this.supabase
+      .from('notifications')
+      .update({
+        read_at: new Date().toISOString()
+      })
+      .eq('id', notificationId);
+  }
+
+  async deleteNotification(notificationId: string) {
+    return this.supabase
+      .from('notifications')
+      .delete()
+      .eq('id', notificationId);
+  }
+
+  async deleteAllNotifications(userId: string) {
+    return this.supabase
+      .from('notifications')
+      .delete()
+      .eq('user_id', userId);
   }
 }
-
-export const notificationService = new NotificationService();

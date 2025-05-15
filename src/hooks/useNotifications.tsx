@@ -1,136 +1,164 @@
 
 import { useState, useEffect, useCallback } from 'react';
+import { Notification } from '@/types/notifications';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
-import { Notification } from '@/types/notifications';
 import { NotificationService } from './notifications/notificationService';
 
-export function useNotifications() {
+const notificationService = new NotificationService(supabase);
+
+export const useNotifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
-  const notificationService = new NotificationService();
 
   const fetchNotifications = useCallback(async () => {
     if (!user) {
       setNotifications([]);
+      setUnreadCount(0);
       setIsLoading(false);
       return;
     }
 
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      const data = await notificationService.getNotifications(user.id);
+      const { data, error } = await notificationService.getNotifications(user.id);
       
-      // Ensure all notifications have the read_at field
-      const notificationsWithReadAt = data.map(notification => ({
-        ...notification,
-        read_at: notification.read_at || null
-      }));
+      if (error) {
+        console.error('Error fetching notifications:', error);
+        return;
+      }
       
-      setNotifications(notificationsWithReadAt);
+      if (data) {
+        setNotifications(data);
+        const unread = data.filter(n => n.read_at === null).length;
+        setUnreadCount(unread);
+      }
     } catch (error) {
-      console.error('Error fetching notifications:', error);
+      console.error('Error in fetchNotifications:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [user, notificationService]);
+  }, [user]);
 
-  // Calculate unread count
-  const unreadCount = notifications.filter(n => !n.read_at).length;
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
 
-  // Mark a notification as read
-  const markAsRead = async (notificationId: string) => {
-    if (!user) return;
-    
-    const success = await notificationService.markAsRead(notificationId);
-    if (success) {
-      setNotifications(notifications.map(n => 
-        n.id === notificationId 
-          ? { ...n, read_at: new Date().toISOString() } 
-          : n
-      ));
-    }
-  };
-
-  // Mark all notifications as read
-  const markAllAsRead = async () => {
-    if (!user) return;
-    
-    const success = await notificationService.markAllAsRead(user.id);
-    if (success) {
-      setNotifications(notifications.map(n => 
-        !n.read_at ? { ...n, read_at: new Date().toISOString() } : n
-      ));
-    }
-  };
-
-  // Create a new notification
-  const createNotification = async (message: string, type: string = 'info') => {
+  const createNotification = useCallback(async (
+    message: string, 
+    type: string = null
+  ) => {
     if (!user) return null;
-    
-    const newNotification = await notificationService.createNotification(user.id, message, type);
-    if (newNotification) {
-      setNotifications([newNotification, ...notifications]);
-      return newNotification;
+
+    try {
+      const { data, error } = await notificationService.createNotification({
+        user_id: user.id,
+        message,
+        type
+      });
+      
+      if (error) {
+        console.error('Error creating notification:', error);
+        return null;
+      }
+      
+      if (data) {
+        await fetchNotifications();
+        return data;
+      }
+    } catch (error) {
+      console.error('Error in createNotification:', error);
     }
     return null;
-  };
-
-  // Remove a notification
-  const removeNotification = async (notificationId: string) => {
-    if (!user) return;
-    
-    const success = await notificationService.removeNotification(notificationId);
-    if (success) {
-      setNotifications(notifications.filter(n => n.id !== notificationId));
-    }
-  };
-
-  // Clear all notifications
-  const clearNotifications = async () => {
-    if (!user) return;
-    
-    const success = await notificationService.clearNotifications(user.id);
-    if (success) {
-      setNotifications([]);
-    }
-  };
-
-  // Subscribe to real-time updates
-  useEffect(() => {
-    if (!user) return;
-
-    fetchNotifications();
-
-    const subscription = supabase
-      .channel('notifications-channel')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'notifications',
-        filter: `user_id=eq.${user.id}`,
-      }, () => {
-        fetchNotifications();
-      })
-      .subscribe();
-
-    return () => {
-      subscription.unsubscribe();
-    };
   }, [user, fetchNotifications]);
+
+  const markAsRead = useCallback(async (notificationId: string) => {
+    if (!user) return false;
+
+    try {
+      const { error } = await notificationService.markAsRead(notificationId);
+      
+      if (error) {
+        console.error('Error marking notification as read:', error);
+        return false;
+      }
+      
+      await fetchNotifications();
+      return true;
+    } catch (error) {
+      console.error('Error in markAsRead:', error);
+      return false;
+    }
+  }, [user, fetchNotifications]);
+
+  const markAllAsRead = useCallback(async () => {
+    if (!user || notifications.length === 0) return false;
+
+    try {
+      // For each unread notification, mark it as read
+      const unreadNotifications = notifications.filter(n => n.read_at === null);
+      const promises = unreadNotifications.map(notification => 
+        notificationService.markAsRead(notification.id)
+      );
+      
+      await Promise.all(promises);
+      await fetchNotifications();
+      return true;
+    } catch (error) {
+      console.error('Error in markAllAsRead:', error);
+      return false;
+    }
+  }, [user, notifications, fetchNotifications]);
+
+  const deleteNotification = useCallback(async (notificationId: string) => {
+    if (!user) return false;
+
+    try {
+      const { error } = await notificationService.deleteNotification(notificationId);
+      
+      if (error) {
+        console.error('Error deleting notification:', error);
+        return false;
+      }
+      
+      await fetchNotifications();
+      return true;
+    } catch (error) {
+      console.error('Error in deleteNotification:', error);
+      return false;
+    }
+  }, [user, fetchNotifications]);
+
+  const clearAllNotifications = useCallback(async () => {
+    if (!user || notifications.length === 0) return false;
+
+    try {
+      const { error } = await notificationService.deleteAllNotifications(user.id);
+      
+      if (error) {
+        console.error('Error clearing notifications:', error);
+        return false;
+      }
+      
+      await fetchNotifications();
+      return true;
+    } catch (error) {
+      console.error('Error in clearAllNotifications:', error);
+      return false;
+    }
+  }, [user, notifications, fetchNotifications]);
 
   return {
     notifications,
     unreadCount,
     isLoading,
-    fetchNotifications,
+    createNotification,
     markAsRead,
     markAllAsRead,
-    removeNotification,
-    createNotification,
-    clearNotifications,
-    notificationService,
-    hasNewNotifications: unreadCount > 0
+    deleteNotification,
+    clearAllNotifications,
+    refresh: fetchNotifications
   };
-}
+};

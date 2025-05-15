@@ -15,6 +15,7 @@ export interface TaxFormInput {
   nome?: string;
   email?: string;
   telefone?: string;
+  user?: any;
 }
 
 export interface TaxResult {
