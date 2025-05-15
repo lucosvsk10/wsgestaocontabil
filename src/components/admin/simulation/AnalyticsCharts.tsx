@@ -1,162 +1,194 @@
 
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { 
-  PieChart, 
-  Pie, 
-  Cell, 
-  Legend, 
-  ResponsiveContainer,
+import { useMemo } from "react";
+import { TaxSimulation } from "@/types/taxSimulation";
+import { currencyFormat } from "@/utils/taxCalculations";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
   BarChart,
   Bar,
   XAxis,
   YAxis,
+  CartesianGrid,
   Tooltip,
-  CartesianGrid
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line,
+  Legend,
 } from "recharts";
-import { TaxSimulation } from "@/types/taxSimulation";
-import { useMemo } from "react";
 
 interface AnalyticsChartsProps {
   simulations: TaxSimulation[];
 }
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A569BD'];
-
 export const AnalyticsCharts = ({ simulations }: AnalyticsChartsProps) => {
-  const chartData = useMemo(() => {
-    if (!simulations.length) return {
-      typeDistribution: [],
-      resultDistribution: [],
-      incomeRanges: []
-    };
+  const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+  
+  const pieChartData = useMemo(() => {
+    const aPagarCount = simulations.filter(s => s.tipo_simulacao === 'a pagar').length;
+    const restituicaoCount = simulations.filter(s => s.tipo_simulacao === 'restituição').length;
     
-    const typeDistribution = [
-      { name: 'Completa', value: simulations.filter(s => s.tipo_simulacao.includes('completa')).length },
-      { name: 'Simplificada', value: simulations.filter(s => s.tipo_simulacao.includes('simplificada')).length }
+    return [
+      { name: 'A pagar', value: aPagarCount },
+      { name: 'Restituição', value: restituicaoCount },
     ];
+  }, [simulations]);
+  
+  const monthlyData = useMemo(() => {
+    // Inicializa um objeto com todos os meses zerados
+    const months: Record<string, number> = {};
+    monthNames.forEach((month, index) => {
+      months[String(index).padStart(2, '0')] = 0;
+    });
     
-    const resultDistribution = [
-      { name: 'A Pagar', value: simulations.filter(s => s.tipo_simulacao === 'a pagar').length },
-      { name: 'Restituição', value: simulations.filter(s => s.tipo_simulacao === 'restituição').length }
-    ];
+    // Conta simulações por mês
+    simulations.forEach(sim => {
+      const month = new Date(sim.data_criacao).getMonth();
+      const monthKey = String(month).padStart(2, '0');
+      months[monthKey] = (months[monthKey] || 0) + 1;
+    });
     
-    const incomeRanges = [
-      { range: 'Até 50 mil', count: 0 },
-      { range: '50-100 mil', count: 0 },
-      { range: '100-200 mil', count: 0 },
-      { range: '200+ mil', count: 0 }
+    // Converte para array para o gráfico
+    return Object.entries(months).map(([month, count]) => ({
+      month: monthNames[parseInt(month)],
+      count,
+    }));
+  }, [simulations, monthNames]);
+  
+  const incomeRanges = useMemo(() => {
+    const ranges = [
+      { range: "Até 30k", min: 0, max: 30000, count: 0 },
+      { range: "30k-60k", min: 30000, max: 60000, count: 0 },
+      { range: "60k-100k", min: 60000, max: 100000, count: 0 },
+      { range: "100k-150k", min: 100000, max: 150000, count: 0 },
+      { range: "Acima 150k", min: 150000, max: Infinity, count: 0 },
     ];
     
     simulations.forEach(sim => {
-      if (sim.rendimento_bruto < 50000) incomeRanges[0].count++;
-      else if (sim.rendimento_bruto < 100000) incomeRanges[1].count++;
-      else if (sim.rendimento_bruto < 200000) incomeRanges[2].count++;
-      else incomeRanges[3].count++;
+      const range = ranges.find(
+        r => sim.rendimento_bruto >= r.min && sim.rendimento_bruto < r.max
+      );
+      if (range) range.count++;
     });
     
-    return {
-      typeDistribution,
-      resultDistribution,
-      incomeRanges
-    };
+    return ranges;
   }, [simulations]);
-
+  
+  const COLORS = ['#F87171', '#34D399', '#60A5FA', '#A78BFA', '#F472B6'];
+  
   if (simulations.length === 0) {
-    return null;
+    return (
+      <Card className="border-gray-200 dark:border-navy-lighter/30 shadow-md">
+        <CardContent className="flex flex-col items-center justify-center py-10">
+          <p className="text-lg font-medium dark:text-white">
+            Nenhum dado disponível para análise
+          </p>
+          <p className="text-muted-foreground dark:text-gray-400">
+            Simulações de imposto ainda não foram realizadas
+          </p>
+        </CardContent>
+      </Card>
+    );
   }
-
+  
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-      <Card className="border-gray-200 dark:border-navy-lighter/30 shadow-md dark:bg-navy-dark">
-        <CardHeader>
-          <CardTitle className="dark:text-gold">Distribuição por Modelo de Declaração</CardTitle>
-          <CardDescription className="dark:text-gray-300">
-            Proporção de declarações com modelo completo vs simplificado
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="w-full h-[300px]">
-            {chartData && chartData.typeDistribution.length > 0 && (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="border-gray-200 dark:border-navy-lighter/30 shadow-md">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg dark:text-gold">Distribuição por Tipo</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={chartData.typeDistribution}
+                    data={pieChartData}
                     cx="50%"
                     cy="50%"
-                    labelLine={true}
+                    labelLine={false}
                     label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                     outerRadius={100}
                     fill="#8884d8"
                     dataKey="value"
                   >
-                    {chartData.typeDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    {pieChartData.map((entry, index) => (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={index === 0 ? '#ef4444' : '#10b981'} 
+                      />
                     ))}
                   </Pie>
-                  <Legend />
-                  <Tooltip formatter={(value) => [`${value} simulações`, 'Quantidade']} />
+                  <Tooltip 
+                    formatter={(value) => [`${value} simulações`, '']} 
+                  />
                 </PieChart>
               </ResponsiveContainer>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card className="border-gray-200 dark:border-navy-lighter/30 shadow-md dark:bg-navy-dark">
-        <CardHeader>
-          <CardTitle className="dark:text-gold">A Pagar vs Restituição</CardTitle>
-          <CardDescription className="dark:text-gray-300">
-            Quantidade de simulações com imposto a pagar ou a restituir
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="w-full h-[300px]">
-            {chartData && chartData.resultDistribution.length > 0 && (
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="border-gray-200 dark:border-navy-lighter/30 shadow-md">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg dark:text-gold">Simulações por Mês</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={chartData.resultDistribution}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={true}
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={100}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    <Cell fill="#FF8042" />
-                    <Cell fill="#00C49F" />
-                  </Pie>
-                  <Legend />
-                  <Tooltip formatter={(value) => [`${value} simulações`, 'Quantidade']} />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card className="border-gray-200 dark:border-navy-lighter/30 shadow-md dark:bg-navy-dark xl:col-span-2">
-        <CardHeader>
-          <CardTitle className="dark:text-gold">Distribuição por Faixa de Renda</CardTitle>
-          <CardDescription className="dark:text-gray-300">
-            Quantidade de simulações por faixa de rendimento anual
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="w-full h-[300px]">
-            {chartData && chartData.incomeRanges.length > 0 && (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData.incomeRanges}>
+                <BarChart data={monthlyData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="range" />
-                  <YAxis />
-                  <Tooltip formatter={(value) => [`${value} simulações`, 'Quantidade']} />
-                  <Legend />
-                  <Bar dataKey="count" name="Simulações" fill="#F5C441" />
+                  <XAxis 
+                    dataKey="month" 
+                    tick={{ fill: 'var(--foreground)' }}
+                  />
+                  <YAxis tick={{ fill: 'var(--foreground)' }} />
+                  <Tooltip
+                    contentStyle={{ 
+                      backgroundColor: 'var(--background)', 
+                      borderColor: 'var(--border)' 
+                    }}
+                    labelStyle={{ color: 'var(--foreground)' }}
+                    formatter={(value) => [`${value} simulações`, 'Quantidade']}
+                  />
+                  <Bar dataKey="count" fill="#F5C441" />
                 </BarChart>
               </ResponsiveContainer>
-            )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      
+      <Card className="border-gray-200 dark:border-navy-lighter/30 shadow-md">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg dark:text-gold">Simulações por Faixa de Rendimento</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={incomeRanges}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="range" 
+                  tick={{ fill: 'var(--foreground)' }}
+                />
+                <YAxis tick={{ fill: 'var(--foreground)' }} />
+                <Tooltip
+                  contentStyle={{ 
+                    backgroundColor: 'var(--background)', 
+                    borderColor: 'var(--border)' 
+                  }}
+                  labelStyle={{ color: 'var(--foreground)' }}
+                  formatter={(value) => [`${value} simulações`, 'Quantidade']}
+                />
+                <Bar dataKey="count" fill="#0b1320">
+                  {incomeRanges.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </CardContent>
       </Card>

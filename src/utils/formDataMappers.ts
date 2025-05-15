@@ -1,44 +1,42 @@
 
-import { TaxSimulation, TaxFormSubmission } from "@/types/taxSimulation";
+import { TaxFormInput, TaxResult } from "@/utils/tax/types";
+import { TaxSimulation } from "@/types/taxSimulation";
 
-// Mapeia do formato do formulário para o formato aceito pelo Supabase
-export function mapTaxFormToSupabase(formData: any): any {
+export const mapFormInputToApiData = (formData: TaxFormInput, result: TaxResult) => {
   return {
-    user_id: formData.user_id || null,
     nome: formData.nome || null,
     email: formData.email || null,
     telefone: formData.telefone || null,
-    rendimento_bruto: formData.rendimentos_tributaveis || 0,
-    rendimentos_isentos: formData.rendimentos_isentos || 0,
-    inss: formData.contribuicao_previdenciaria || 0,
-    educacao: formData.despesas_educacao || 0,
-    saude: formData.despesas_medicas || 0,
-    dependentes: formData.numeroDependentes || 0,
-    outras_deducoes: (formData.outras_deducoes || 0) + (formData.pensao_alimenticia || 0) + (formData.livro_caixa || 0),
-    imposto_estimado: formData.impostoDevido || 0,
-    tipo_simulacao: formData.tipoDeclaracaoRecomendada || formData.tipoDeclaracao || 'completa',
-    observacoes: formData.observacoes || null,
-    data_criacao: new Date().toISOString()
+    rendimento_bruto: formData.rendimentosTributaveis,
+    rendimentos_isentos: formData.rendimentosIsentos,
+    inss: formData.contribuicaoPrevidenciaria,
+    educacao: formData.despesasEducacao,
+    saude: formData.despesasMedicas,
+    dependentes: formData.numeroDependentes,
+    outras_deducoes: formData.pensaoAlimenticia + formData.livroCaixa,
+    imposto_estimado: result.saldoImposto,
+    tipo_simulacao: result.tipoSaldo === 'pagar' ? 'a pagar' : 'restituição',
+    data_criacao: new Date().toISOString(),
+    observacoes: ''
   };
-}
+};
 
-// Mapeia do formato do Supabase para o formato aceito pelo formulário
-export function mapSupabaseToTaxForm(dbData: TaxSimulation): any {
+export const getTaxSimulationFromApiData = (data: any): TaxSimulation => {
   return {
-    user_id: dbData.user_id || null,
-    nome: dbData.nome || null,
-    email: dbData.email || null,
-    telefone: dbData.telefone || null,
-    rendimentos_tributaveis: dbData.rendimento_bruto || 0,
-    rendimentos_isentos: dbData.rendimentos_isentos || 0,
-    contribuicao_previdenciaria: dbData.inss || 0,
-    despesas_educacao: dbData.educacao || 0,
-    despesas_medicas: dbData.saude || 0,
-    numeroDependentes: dbData.dependentes || 0,
-    outras_deducoes: dbData.outras_deducoes || 0,
-    impostoDevido: dbData.imposto_estimado || 0,
-    tipo_simulacao: dbData.tipo_simulacao || 'completa',
-    observacoes: dbData.observacoes || null,
-    data_criacao: dbData.data_criacao || new Date().toISOString()
+    id: data.id,
+    user_id: data.user_id,
+    nome: data.nome,
+    email: data.email,
+    telefone: data.telefone,
+    rendimento_bruto: data.rendimento_bruto,
+    inss: data.inss,
+    dependentes: data.dependentes,
+    educacao: data.educacao,
+    saude: data.saude,
+    outras_deducoes: data.outras_deducoes,
+    imposto_estimado: data.imposto_estimado,
+    tipo_simulacao: data.tipo_simulacao,
+    data_criacao: data.data_criacao,
+    observacoes: data.observacoes || null
   };
-}
+};

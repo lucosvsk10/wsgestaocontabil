@@ -1,112 +1,67 @@
 
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { notificationService } from './notificationService';
 import { Notification } from '@/types/notifications';
+import { notificationService } from "./notificationService";
 
-export function useNotificationBell() {
+export const useNotificationBell = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
-
-  const fetchNotifications = useCallback(async () => {
-    if (!user) {
-      setNotifications([]);
-      setIsLoading(false);
-      return;
-    }
-
-    try {
+  
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      if (!user?.id) return;
+      
       setIsLoading(true);
-      const data = await notificationService.getNotifications(user.id);
-      
-      // Ensure all notifications have the read_at field
-      const notificationsWithReadAt = data.map(notification => ({
-        ...notification,
-        read_at: notification.read_at || null
-      }));
-      
-      setNotifications(notificationsWithReadAt);
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-    } finally {
-      setIsLoading(false);
+      try {
+        const data = await notificationService.getNotifications(user.id);
+        setNotifications(data);
+        setUnreadCount(data.filter(n => n.read_at === null).length);
+      } catch (error) {
+        console.error("Error in useNotificationBell:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    if (user) {
+      fetchNotifications();
     }
   }, [user]);
-
-  // Calculate unread count
-  const unreadCount = notifications.filter(n => !n.read_at).length;
-  const hasNewNotifications = unreadCount > 0;
-
-  // Mark a notification as read
+  
   const markAsRead = async (notificationId: string) => {
-    if (!user) return;
-    
     const success = await notificationService.markAsRead(notificationId);
     if (success) {
-      setNotifications(notifications.map(n => 
-        n.id === notificationId 
-          ? { ...n, read_at: new Date().toISOString() } 
-          : n
-      ));
+      setNotifications(prev => 
+        prev.map(n => 
+          n.id === notificationId 
+            ? { ...n, read_at: new Date().toISOString() } 
+            : n
+        )
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
     }
   };
-
-  // Mark all notifications as read
+  
   const markAllAsRead = async () => {
-    if (!user) return;
+    if (!user?.id) return;
     
     const success = await notificationService.markAllAsRead(user.id);
     if (success) {
-      setNotifications(notifications.map(n => 
-        !n.read_at ? { ...n, read_at: new Date().toISOString() } : n
-      ));
+      setNotifications(prev => 
+        prev.map(n => ({ ...n, read_at: n.read_at || new Date().toISOString() }))
+      );
+      setUnreadCount(0);
     }
   };
-
-  // Remove a notification
-  const removeNotification = async (notificationId: string) => {
-    if (!user) return;
-    
-    const success = await notificationService.removeNotification(notificationId);
-    if (success) {
-      setNotifications(notifications.filter(n => n.id !== notificationId));
-    }
-  };
-
-  // Subscribe to real-time updates
-  useEffect(() => {
-    if (!user) return;
-
-    fetchNotifications();
-
-    const subscription = supabase
-      .channel('notifications-bell')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'notifications',
-        filter: `user_id=eq.${user.id}`,
-      }, () => {
-        fetchNotifications();
-      })
-      .subscribe();
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [user, fetchNotifications]);
-
+  
   return {
     notifications,
     unreadCount,
     isLoading,
-    hasNewNotifications,
-    fetchNotifications,
     markAsRead,
     markAllAsRead,
-    removeNotification,
-    notificationService,
   };
-}
+};

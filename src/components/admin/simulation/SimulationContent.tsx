@@ -1,24 +1,17 @@
 
-import { useState, useEffect } from "react";
+import { TaxSimulation } from "@/types/taxSimulation";
+import { UserDetails, SortConfig } from "./types";
 import { SimulationSummary } from "./SimulationSummary";
 import { SimulationFilters } from "./SimulationFilters";
 import { SimulationTable } from "./SimulationTable";
 import { EmptySimulations } from "./EmptySimulations";
-import { TaxSimulation } from "@/types/taxSimulation";
-
-interface UserDetails {
-  [key: string]: {
-    name: string | null;
-    email: string | null;
-  };
-}
 
 interface SimulationContentProps {
   filteredSimulations: TaxSimulation[];
   searchTerm: string;
   timeFilter: string;
   typeFilter: string;
-  sortConfig: {key: string, direction: string};
+  sortConfig: SortConfig;
   userDetails: UserDetails;
   onSearchChange: (value: string) => void;
   onTimeFilterChange: (value: string) => void;

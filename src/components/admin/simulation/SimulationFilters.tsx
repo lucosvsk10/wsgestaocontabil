@@ -1,7 +1,13 @@
 
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import { 
+  Select, 
+  SelectTrigger, 
+  SelectContent, 
+  SelectItem, 
+  SelectValue 
+} from "@/components/ui/select";
 
 interface SimulationFiltersProps {
   searchTerm: string;

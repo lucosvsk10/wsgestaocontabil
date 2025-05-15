@@ -1,45 +1,22 @@
 
-import { useState } from "react";
-import { format, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { 
-  Calendar, 
-  User, 
-  ArrowDownUp 
-} from "lucide-react";
+import { ChevronDown, ChevronUp, FileText, Eye, Pencil } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { 
   Table, 
   TableBody, 
   TableCell, 
   TableHead, 
   TableHeader, 
-  TableRow, 
-  TableFooter 
+  TableRow 
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
-import { currencyFormat } from "@/utils/taxCalculations";
 import { TaxSimulation } from "@/types/taxSimulation";
-
-interface UserDetails {
-  [key: string]: {
-    name: string | null;
-    email: string | null;
-  };
-}
+import { UserDetails, SortConfig } from "./types";
+import { currencyFormat } from "@/utils/taxCalculations";
 
 interface SimulationTableProps {
   filteredSimulations: TaxSimulation[];
   userDetails: UserDetails;
-  sortConfig: {key: string, direction: string};
+  sortConfig: SortConfig;
   onRequestSort: (key: string) => void;
   onViewDetails: (simulation: TaxSimulation) => void;
   onGeneratePDF: (simulation: TaxSimulation) => void;
@@ -55,172 +32,167 @@ export const SimulationTable = ({
   onGeneratePDF,
   onOpenObservations
 }: SimulationTableProps) => {
-  
-  const formatDate = (dateString: string) => {
-    try {
-      return format(parseISO(dateString), "dd/MM/yyyy 'às' HH:mm", {
-        locale: ptBR
-      });
-    } catch {
-      return "Data inválida";
-    }
-  };
-
-  const getUserName = (simulation: TaxSimulation) => {
-    if (simulation.user_id && userDetails[simulation.user_id]?.name) {
-      return userDetails[simulation.user_id].name;
-    }
-    return simulation.nome || "Anônimo";
-  };
-
-  const getUserEmail = (simulation: TaxSimulation) => {
-    if (simulation.user_id && userDetails[simulation.user_id]?.email) {
-      return userDetails[simulation.user_id].email;
-    }
-    return simulation.email || "N/A";
-  };
-
-  const getSortDirection = (key: string) => {
+  const getSortIcon = (key: string) => {
     if (sortConfig.key !== key) return null;
-    return sortConfig.direction === 'asc' ? '↑' : '↓';
+    return sortConfig.direction === 'asc' ? (
+      <ChevronUp className="h-4 w-4" />
+    ) : (
+      <ChevronDown className="h-4 w-4" />
+    );
   };
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-navy-lighter/30 shadow-md">
+    <div className="rounded-lg border border-gray-200 dark:border-navy-lighter/30 overflow-hidden">
       <Table>
-        <TableHeader className="bg-gray-50 dark:bg-navy-dark">
-          <TableRow className="hover:bg-gray-100 dark:hover:bg-navy-medium/50">
+        <TableHeader>
+          <TableRow className="bg-gray-50 dark:bg-navy-light/20">
             <TableHead 
-              className="dark:text-gray-300 cursor-pointer"
+              className="cursor-pointer hover:bg-gray-100 dark:hover:bg-navy-light/40 transition-colors w-[180px]"
               onClick={() => onRequestSort('data_criacao')}
             >
-              Data {getSortDirection('data_criacao')}
+              <div className="flex items-center gap-1">
+                Data
+                {getSortIcon('data_criacao')}
+              </div>
             </TableHead>
             <TableHead 
-              className="dark:text-gray-300 cursor-pointer"
+              className="cursor-pointer hover:bg-gray-100 dark:hover:bg-navy-light/40 transition-colors"
               onClick={() => onRequestSort('nome')}
             >
-              Nome {getSortDirection('nome')}
+              <div className="flex items-center gap-1">
+                Nome/Email
+                {getSortIcon('nome')}
+              </div>
             </TableHead>
             <TableHead 
-              className="dark:text-gray-300 cursor-pointer"
+              className="cursor-pointer hover:bg-gray-100 dark:hover:bg-navy-light/40 transition-colors hidden md:table-cell"
+              onClick={() => onRequestSort('tipo_simulacao')}
+            >
+              <div className="flex items-center gap-1">
+                Tipo
+                {getSortIcon('tipo_simulacao')}
+              </div>
+            </TableHead>
+            <TableHead 
+              className="cursor-pointer hover:bg-gray-100 dark:hover:bg-navy-light/40 transition-colors hidden md:table-cell"
               onClick={() => onRequestSort('rendimento_bruto')}
             >
-              Rendimento {getSortDirection('rendimento_bruto')}
+              <div className="flex items-center gap-1">
+                Rendimento
+                {getSortIcon('rendimento_bruto')}
+              </div>
             </TableHead>
-            <TableHead className="dark:text-gray-300">Deduções</TableHead>
             <TableHead 
-              className="dark:text-gray-300 cursor-pointer"
+              className="cursor-pointer hover:bg-gray-100 dark:hover:bg-navy-light/40 transition-colors"
               onClick={() => onRequestSort('imposto_estimado')}
             >
-              Resultado {getSortDirection('imposto_estimado')}
+              <div className="flex items-center gap-1">
+                Imposto
+                {getSortIcon('imposto_estimado')}
+              </div>
             </TableHead>
-            <TableHead className="dark:text-gray-300">Ações</TableHead>
+            <TableHead className="text-right">Ações</TableHead>
           </TableRow>
         </TableHeader>
-        <TableBody className="dark:bg-navy-medium">
-          {filteredSimulations.map(simulation => {
-            const totalDeducoes = simulation.inss + 
-                                (simulation.educacao || 0) + 
-                                (simulation.saude || 0) + 
-                                ((simulation.dependentes || 0) * 2275.08) + 
-                                (simulation.outras_deducoes || 0);
+        <TableBody>
+          {filteredSimulations.map((simulation) => {
+            const userName = 
+              simulation.user_id && userDetails[simulation.user_id]?.name
+                ? userDetails[simulation.user_id].name 
+                : simulation.nome || "Anônimo";
+                
+            const userEmail = 
+              simulation.user_id && userDetails[simulation.user_id]?.email
+                ? userDetails[simulation.user_id].email
+                : simulation.email || "";
+                
             return (
-              <TableRow key={simulation.id} className="hover:bg-gray-50 dark:hover:bg-navy-dark">
-                <TableCell className="dark:text-gray-300">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-navy dark:text-gray-400" />
-                    {formatDate(simulation.data_criacao || '')}
+              <TableRow key={simulation.id} className="group">
+                <TableCell className="font-medium">
+                  {new Date(simulation.data_criacao).toLocaleDateString('pt-BR')}
+                  <div className="text-xs text-muted-foreground dark:text-gray-400">
+                    {new Date(simulation.data_criacao).toLocaleTimeString('pt-BR', { 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    })}
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-full bg-gray-100 dark:bg-navy-dark flex items-center justify-center border border-gray-200 dark:border-navy-lighter/30">
-                      <User className="h-4 w-4 text-navy dark:text-gold" />
+                  <div className="font-medium">{userName}</div>
+                  {userEmail && (
+                    <div className="text-sm text-muted-foreground dark:text-gray-400">
+                      {userEmail}
                     </div>
-                    <div>
-                      <div className="font-medium dark:text-white">
-                        {getUserName(simulation)}
-                        {simulation.user_id && <Badge className="ml-1 bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200 text-xs hover:bg-blue-100">
-                            Cliente
-                          </Badge>}
-                      </div>
-                      <div className="text-xs text-muted-foreground dark:text-gray-400">
-                        {getUserEmail(simulation)}
-                      </div>
+                  )}
+                  {simulation.telefone && (
+                    <div className="text-sm text-muted-foreground dark:text-gray-400 md:hidden">
+                      Tel: {simulation.telefone}
                     </div>
-                  </div>
+                  )}
                 </TableCell>
-                <TableCell className="dark:text-gray-300">
+                <TableCell className="hidden md:table-cell">
+                  <span 
+                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                      simulation.tipo_simulacao === 'a pagar'
+                        ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                        : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                    }`}
+                  >
+                    {simulation.tipo_simulacao === 'a pagar' 
+                      ? 'A pagar' 
+                      : 'Restituição'
+                    }
+                  </span>
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
                   {currencyFormat(simulation.rendimento_bruto)}
                 </TableCell>
                 <TableCell>
-                  <div className="text-sm dark:text-gray-300">
-                    <p>Total: {currencyFormat(totalDeducoes)}</p>
-                    <p className="text-xs text-muted-foreground dark:text-gray-400">
-                      INSS: {currencyFormat(simulation.inss)}, 
-                      Saúde: {currencyFormat(simulation.saude || 0)}, 
-                      Educação: {currencyFormat(simulation.educacao || 0)}
-                    </p>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className={`font-medium ${simulation.tipo_simulacao === 'a pagar' ? 'text-red-500 dark:text-red-400' : 'text-green-500 dark:text-green-400'}`}>
+                  <span 
+                    className={`font-medium ${
+                      simulation.tipo_simulacao === 'a pagar'
+                        ? 'text-red-600 dark:text-red-400'
+                        : 'text-green-600 dark:text-green-400'
+                    }`}
+                  >
                     {currencyFormat(simulation.imposto_estimado)}
-                    <Badge className={`ml-1 text-xs ${
-                      simulation.tipo_simulacao === 'a pagar' 
-                        ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200 hover:bg-red-100' 
-                        : 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200 hover:bg-green-100'
-                    }`}>
-                      {simulation.tipo_simulacao}
-                    </Badge>
-                  </div>
+                  </span>
                 </TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <ArrowDownUp className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                      <DropdownMenuItem onClick={() => onViewDetails(simulation)}>
-                        Ver detalhes
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onGeneratePDF(simulation)}>
-                        Exportar PDF
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => onOpenObservations(simulation)}>
-                        Adicionar observações
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                <TableCell className="text-right">
+                  <div className="flex justify-end items-center gap-1 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onViewDetails(simulation)}
+                      className="h-8 w-8"
+                    >
+                      <Eye className="h-4 w-4" />
+                      <span className="sr-only">Ver detalhes</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onGeneratePDF(simulation)}
+                      className="h-8 w-8"
+                    >
+                      <FileText className="h-4 w-4" />
+                      <span className="sr-only">Gerar PDF</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onOpenObservations(simulation)}
+                      className="h-8 w-8"
+                    >
+                      <Pencil className="h-4 w-4" />
+                      <span className="sr-only">Adicionar observações</span>
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             );
           })}
         </TableBody>
-        <TableFooter className="bg-gray-50 dark:bg-navy-dark">
-          <TableRow>
-            <TableCell colSpan={3} className="dark:text-white">Total</TableCell>
-            <TableCell className="dark:text-white">
-              {currencyFormat(filteredSimulations.reduce((acc, sim) => {
-                const totalDeductions = sim.inss + 
-                                    (sim.educacao || 0) + 
-                                    (sim.saude || 0) + 
-                                    ((sim.dependentes || 0) * 2275.08) + 
-                                    (sim.outras_deducoes || 0);
-                return acc + totalDeductions;
-              }, 0))}
-            </TableCell>
-            <TableCell className="dark:text-white">
-              {currencyFormat(filteredSimulations.reduce((acc, sim) => acc + sim.imposto_estimado, 0))}
-            </TableCell>
-            <TableCell></TableCell>
-          </TableRow>
-        </TableFooter>
       </Table>
     </div>
   );

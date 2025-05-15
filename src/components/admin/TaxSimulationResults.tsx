@@ -1,8 +1,9 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { TaxSimulation } from "@/types/taxSimulation";
 
 // Importações dos componentes refatorados
@@ -12,14 +13,7 @@ import { SimulationContent } from "./simulation/SimulationContent";
 import { AnalyticsCharts } from "./simulation/AnalyticsCharts";
 import { SimulationDetailsDialog } from "./simulation/SimulationDetailsDialog";
 import { ObservationsDialog } from "./simulation/ObservationsDialog";
-
-// Tipos
-interface UserDetails {
-  [key: string]: {
-    name: string | null;
-    email: string | null;
-  };
-}
+import { UserDetails } from "./simulation/types";
 
 const TaxSimulationResults = () => {
   // Estado para armazenar dados
@@ -158,8 +152,8 @@ const TaxSimulationResults = () => {
         throw error;
       }
       if (data) {
-        setSimulations(data);
-        setFilteredSimulations(data);
+        setSimulations(data as TaxSimulation[]);
+        setFilteredSimulations(data as TaxSimulation[]);
 
         const userIds = [...new Set(data.map(sim => sim.user_id).filter(Boolean))];
         fetchUserDetails(userIds as string[]);
