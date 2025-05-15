@@ -15,6 +15,7 @@ interface TaxFormContextType {
   calculateAndSaveResult: (data: TaxFormValues) => Promise<TaxResult>;
   restartForm: () => boolean;
   methods: ReturnType<typeof useForm<TaxFormValues>>;
+  handleSubmit: (data: TaxFormValues) => Promise<void> | void;
 }
 
 // Create the context

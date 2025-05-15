@@ -1,61 +1,98 @@
 
-import { SupabaseClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
 import { Notification } from '@/types/notifications';
 
-export interface CreateNotificationParams {
-  user_id: string;
-  message: string;
-  type?: string | null;
-}
-
 export class NotificationService {
-  private supabase: SupabaseClient;
-
-  constructor(supabase: SupabaseClient) {
-    this.supabase = supabase;
-  }
-
-  async getNotifications(userId: string) {
-    return this.supabase
+  static async fetchNotifications(userId: string): Promise<Notification[]> {
+    const { data, error } = await supabase
       .from('notifications')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
+      
+    if (error) {
+      console.error('Error fetching notifications:', error);
+      return [];
+    }
+    
+    return data as Notification[];
   }
-
-  async createNotification(params: CreateNotificationParams) {
-    return this.supabase
+  
+  static async markAsRead(notificationId: string): Promise<boolean> {
+    const { error } = await supabase
       .from('notifications')
-      .insert({
-        user_id: params.user_id,
-        message: params.message,
-        type: params.type || null,
-        read_at: null
-      })
-      .select()
-      .single();
-  }
-
-  async markAsRead(notificationId: string) {
-    return this.supabase
-      .from('notifications')
-      .update({
-        read_at: new Date().toISOString()
-      })
+      .update({ read_at: new Date().toISOString() })
       .eq('id', notificationId);
+      
+    if (error) {
+      console.error('Error marking notification as read:', error);
+      return false;
+    }
+    
+    return true;
   }
-
-  async deleteNotification(notificationId: string) {
-    return this.supabase
+  
+  static async markAllAsRead(userId: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ read_at: new Date().toISOString() })
+      .eq('user_id', userId)
+      .is('read_at', null);
+      
+    if (error) {
+      console.error('Error marking all notifications as read:', error);
+      return false;
+    }
+    
+    return true;
+  }
+  
+  static async createNotification(userId: string, message: string, type: string = null): Promise<any> {
+    const { data, error } = await supabase
+      .from('notifications')
+      .insert([
+        { 
+          user_id: userId,
+          message,
+          type
+        }
+      ]);
+      
+    if (error) {
+      console.error('Error creating notification:', error);
+      return null;
+    }
+    
+    return data;
+  }
+  
+  static async deleteNotification(notificationId: string): Promise<boolean> {
+    const { error } = await supabase
       .from('notifications')
       .delete()
       .eq('id', notificationId);
+      
+    if (error) {
+      console.error('Error deleting notification:', error);
+      return false;
+    }
+    
+    return true;
   }
-
-  async deleteAllNotifications(userId: string) {
-    return this.supabase
+  
+  static async clearAllNotifications(userId: string): Promise<boolean> {
+    const { error } = await supabase
       .from('notifications')
       .delete()
       .eq('user_id', userId);
+      
+    if (error) {
+      console.error('Error clearing notifications:', error);
+      return false;
+    }
+    
+    return true;
   }
 }
+
+export default NotificationService;

@@ -1,129 +1,121 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { useToast } from '@/components/ui/use-toast';
-import { NotificationService } from '@/hooks/notifications/notificationService';
+import { useAuth } from '@/contexts/AuthContext';
+import { Document } from '@/types/document';
+import { toast } from '@/hooks/use-toast';
 
 export const useDocumentManagement = () => {
-  const [documents, setDocuments] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
-  const notificationService = new NotificationService();
-
-  const fetchDocuments = useCallback(async (userId?: string) => {
-    setIsLoading(true);
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
+  
+  const fetchDocuments = async (userId: string) => {
     try {
-      let query = supabase.from('documents').select('*');
+      setLoading(true);
+      setError(null);
       
-      if (userId) {
-        query = query.eq('user_id', userId);
-      }
-      
-      const { data, error } = await query.order('uploaded_at', { ascending: false });
+      const { data, error } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('user_id', userId)
+        .order('uploaded_at', { ascending: false });
       
       if (error) throw error;
       
       setDocuments(data || []);
-    } catch (error) {
-      console.error('Error fetching documents:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível carregar os documentos',
-        variant: 'destructive',
-      });
+    } catch (err) {
+      console.error('Error fetching documents:', err);
+      setError('Failed to load documents.');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  }, [toast]);
-
-  const downloadDocument = useCallback(async (fileUrl: string, fileName: string) => {
-    try {
-      const response = await fetch(fileUrl);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', fileName);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      
-      toast({
-        title: 'Sucesso',
-        description: 'Download iniciado com sucesso!',
-      });
-    } catch (error) {
-      console.error('Error downloading document:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível baixar o documento',
-        variant: 'destructive',
-      });
+  };
+  
+  useEffect(() => {
+    if (user) {
+      fetchDocuments(user.id);
     }
-  }, [toast]);
-
-  const deleteDocument = useCallback(async (documentId: string, userId: string) => {
+  }, [user]);
+  
+  const deleteDocument = async (documentId: string) => {
     try {
       const { error } = await supabase
         .from('documents')
         .delete()
         .eq('id', documentId);
+        
+      if (error) throw error;
+      
+      // Update local state
+      setDocuments(prev => prev.filter(doc => doc.id !== documentId));
+      
+      toast({
+        title: "Documento excluído",
+        description: "O documento foi removido com sucesso.",
+      });
+      
+      return true;
+    } catch (err) {
+      console.error('Error deleting document:', err);
+      
+      toast({
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir o documento.",
+        variant: "destructive",
+      });
+      
+      return false;
+    }
+  };
+  
+  const markDocumentAsViewed = async (documentId: string) => {
+    try {
+      // Check if user exists
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+
+      const { error } = await supabase
+        .from('documents')
+        .update({ viewed: true, viewed_at: new Date().toISOString() })
+        .eq('id', documentId);
       
       if (error) throw error;
       
-      // Send notification to user
-      await notificationService.createNotification(
-        userId,
-        'Um documento foi excluído da sua conta.',
-        'delete'
-      );
-      
-      return true;
-    } catch (error) {
-      console.error('Error deleting document:', error);
-      return false;
-    }
-  }, [notificationService]);
-
-  const markDocumentViewed = useCallback(async (documentId: string, userId: string) => {
-    try {
-      const { error } = await supabase
-        .from('visualized_documents')
-        .insert({
-          document_id: documentId,
-          user_id: userId
-        });
-      
-      if (error && error.code === '23505') {
-        // Unique violation - document already viewed by this user
-        return;
-      } else if (error) {
-        throw error;
-      }
-      
-      // Update document viewed status in UI
+      // Update local state
       setDocuments(prev => 
         prev.map(doc => 
-          doc.id === documentId ? { ...doc, viewed: true } : doc
+          doc.id === documentId ? { ...doc, viewed: true, viewed_at: new Date().toISOString() } : doc
         )
       );
-    } catch (error) {
-      console.error('Error marking document as viewed:', error);
+      
+      // Also log the view in visualized_documents table
+      const { error: visualError } = await supabase
+        .from('visualized_documents')
+        .insert({
+          user_id: user.id,
+          document_id: documentId
+        });
+      
+      if (visualError) {
+        console.error('Error logging document view:', visualError);
+      }
+      
+      return true;
+    } catch (err) {
+      console.error('Error marking document as viewed:', err);
+      return false;
     }
-  }, []);
-
-  useEffect(() => {
-    // This is an empty useEffect for initializing the component
-    // fetchDocuments will be called by the component using this hook
-  }, []);
-
+  };
+  
   return {
     documents,
-    isLoading,
-    fetchDocuments,
-    downloadDocument,
+    loading,
+    error,
     deleteDocument,
-    markDocumentViewed
+    markDocumentAsViewed,
+    fetchDocuments,
   };
 };
