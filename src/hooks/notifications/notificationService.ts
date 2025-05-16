@@ -41,10 +41,10 @@ export const createNotification = async (userId: string, message: string, type?:
   if (!userId || !message) throw new Error("User ID and message are required");
   
   console.log(`Criando notificação tipo "${type}" para usuário:`, userId);
-  const notification = {
+  const notification: Partial<Notification> = {
     user_id: userId,
     message,
-    type,
+    type: type || null,
     read_at: null
   };
   

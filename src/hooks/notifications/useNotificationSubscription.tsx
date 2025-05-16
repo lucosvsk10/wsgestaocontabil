@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { Notification } from "@/types/notifications";
 import { useToast } from "@/hooks/use-toast";
@@ -38,16 +38,22 @@ export const useNotificationSubscription = ({
           console.log("Nova notificação recebida:", payload);
           // Handle new notification
           const newNotification = payload.new as Notification;
-          onNewNotification(newNotification);
+          // Ensure notification has read_at and type fields
+          const completeNotification: Notification = {
+            ...newNotification,
+            read_at: newNotification.read_at || null,
+            type: newNotification.type || null
+          };
+          onNewNotification(completeNotification);
           
           // Show toast for new notification
           toast({
-            title: newNotification.type || "Notificação",
+            title: completeNotification.type || "Notificação",
             description: (
               <div className="flex flex-col space-y-1">
-                <p>{newNotification.message}</p>
+                <p>{completeNotification.message}</p>
                 <span className="text-xs text-gray-500">
-                  {formatDate(newNotification.created_at)}
+                  {formatDate(completeNotification.created_at)}
                 </span>
               </div>
             ) as ReactNode,
