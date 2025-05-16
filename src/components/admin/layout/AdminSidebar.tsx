@@ -110,9 +110,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
             <img src={theme === 'light' ? "/lovable-uploads/f7fdf0cf-f16c-4df7-a92c-964aadea9539.png" : "/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png"} alt="WS Gestão Contábil" className="h-8" /> 
             : 
             <img 
-              src={theme === 'light' 
-                ? "/lovable-uploads/cb878201-552e-4728-a814-1554857917b4.png" 
-                : "/lovable-uploads/e91c611c-b52b-4110-ac92-4791ef391ad4.png"} 
+              src="/lovable-uploads/83322e23-9ed8-4622-8631-8022a1d10c19.png"
               alt="WS Gestão Contábil" 
               className="h-8 mx-auto" 
             />
