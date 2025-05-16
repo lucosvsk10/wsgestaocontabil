@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Notification } from "@/types/notifications";
 
@@ -119,7 +120,7 @@ export const markDocumentNotificationsAsRead = async (userId: string, documentId
   
   let query = supabase
     .from('notifications')
-    .update({ type: 'document_read' })
+    .update({ read_at: new Date().toISOString() })
     .eq('user_id', userId)
     .eq('type', 'Novo Documento');
     

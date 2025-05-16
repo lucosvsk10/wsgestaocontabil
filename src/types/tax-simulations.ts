@@ -22,3 +22,23 @@ export interface UserDetails {
     email: string | null;
   };
 }
+
+export interface TaxFormValues {
+  rendimentoBruto: number;
+  inss: number;
+  educacao: number;
+  saude: number;
+  dependentes: number;
+  outrasDeducoes: number;
+  nome?: string;
+  email?: string;
+  telefone?: string;
+}
+
+export interface TaxResult {
+  total: number;
+  tipoSimulacao: string;
+  rendimentoBruto: number;
+  totalDeducoes: number;
+  impostoCalculado: number;
+}
