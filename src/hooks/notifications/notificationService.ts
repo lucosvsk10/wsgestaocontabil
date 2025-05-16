@@ -44,7 +44,8 @@ export const createNotification = async (userId: string, message: string, type?:
   const notification = {
     user_id: userId,
     message,
-    type
+    type,
+    read_at: null
   };
   
   const { data, error } = await supabase
