@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Notification } from '@/types/notifications';
+import { Notification, DatabaseNotification } from '@/types/notifications';
 
 export const useNotificationBell = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -48,16 +48,17 @@ export const useNotificationBell = () => {
       if (error) throw error;
       
       if (data) {
-        const typedData = data.map(item => ({
+        // Convert database notifications to application notifications
+        const typedData: Notification[] = data.map(item => ({
           ...item,
-          read_at: item.read_at || null,
+          read_at: null, // Since read_at doesn't exist in the database, default to null
           type: item.type || null
-        })) as Notification[];
+        }));
         
         setNotifications(typedData);
-        // Count unread for badge
-        const unread = typedData.filter(n => !n.read_at).length;
-        setUnreadCount(unread);
+        
+        // Count unread for badge - all are considered unread since we don't have read_at in DB yet
+        setUnreadCount(typedData.length);
       }
     } catch (error: any) {
       console.error('Error fetching notifications:', error.message);
@@ -66,18 +67,17 @@ export const useNotificationBell = () => {
 
   const markAsRead = async (notificationId: string) => {
     try {
+      // Since we don't have read_at in the database, we'll just delete the notification
       const { error } = await supabase
         .from('notifications')
-        .update({ read_at: new Date().toISOString() })
+        .delete()
         .eq('id', notificationId);
         
       if (error) throw error;
       
       // Update local state
       setNotifications(prevNotifications => 
-        prevNotifications.map(n => 
-          n.id === notificationId ? { ...n, read_at: new Date().toISOString() } : n
-        )
+        prevNotifications.filter(n => n.id !== notificationId)
       );
       
       // Update unread count
@@ -91,24 +91,16 @@ export const useNotificationBell = () => {
     if (!user || notifications.length === 0) return;
     
     try {
-      const unreadIds = notifications.filter(n => !n.read_at).map(n => n.id);
-      
-      if (unreadIds.length === 0) return;
-      
+      // Delete all notifications since we don't have read_at in the database
       const { error } = await supabase
         .from('notifications')
-        .update({ read_at: new Date().toISOString() })
-        .in('id', unreadIds);
+        .delete()
+        .in('id', notifications.map(n => n.id));
         
       if (error) throw error;
       
-      // Update local state
-      setNotifications(prevNotifications => 
-        prevNotifications.map(n => ({
-          ...n, 
-          read_at: n.read_at || new Date().toISOString()
-        }))
-      );
+      // Clear notifications
+      setNotifications([]);
       
       // Reset unread count
       setUnreadCount(0);

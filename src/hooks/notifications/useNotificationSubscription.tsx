@@ -1,7 +1,7 @@
 
 import { useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
-import { Notification } from "@/types/notifications";
+import { Notification, DatabaseNotification } from "@/types/notifications";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/utils/documentUtils";
 import { ReactNode } from 'react';
@@ -37,13 +37,15 @@ export const useNotificationSubscription = ({
         (payload) => {
           console.log("Nova notificação recebida:", payload);
           // Handle new notification
-          const newNotification = payload.new as Notification;
-          // Ensure notification has read_at and type fields
+          const dbNotification = payload.new as DatabaseNotification;
+          
+          // Convert to application notification
           const completeNotification: Notification = {
-            ...newNotification,
-            read_at: newNotification.read_at || null,
-            type: newNotification.type || null
+            ...dbNotification,
+            read_at: null, // Since read_at doesn't exist in the database, default to null
+            type: dbNotification.type || null
           };
+          
           onNewNotification(completeNotification);
           
           // Show toast for new notification
