@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -52,12 +53,12 @@ export const useDocumentManagement = (users: any[], supabaseUsers: any[]) => {
         
         if (data) {
           const url = URL.createObjectURL(data);
-          const a = document.createElement('a');
+          const a = document.createElement('a') as HTMLAnchorElement;
           a.href = url;
           a.download = document.filename || document.original_filename || document.name;
-          document.body.appendChild(a);
+          document.body ? document.body.appendChild(a) : document.appendChild(a);
           a.click();
-          document.body.removeChild(a);
+          document.body ? document.body.removeChild(a) : document.removeChild(a);
           URL.revokeObjectURL(url);
           
           toast({

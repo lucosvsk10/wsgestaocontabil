@@ -40,6 +40,7 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
       "Certidões": "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 border-purple-200 dark:border-purple-800",
       "Contratos": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800",
       "Notas Fiscais": "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 border-orange-200 dark:border-orange-800",
+      "Impostos": "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 border-red-200 dark:border-red-800",
     };
     
     return categoryColors[category] || "bg-gray-100 text-gray-800 dark:bg-gray-800/50 dark:text-gray-300 border-gray-200 dark:border-gray-700";
@@ -51,7 +52,6 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
     
     if (!fileType) return null;
     
-    let icon = null;
     let text = fileType;
     let color = "bg-gray-100 text-gray-800 dark:bg-gray-800/50 dark:text-gray-300 border-gray-200 dark:border-gray-700";
     
@@ -100,10 +100,11 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
         <TableHeader>
           <TableRow className="bg-gray-50 dark:bg-navy-deeper">
             <TableHead className="font-medium">Nome do documento</TableHead>
+            <TableHead className="font-medium">Nome original</TableHead>
             <TableHead className="font-medium">Categoria</TableHead>
-            <TableHead className="font-medium">Tipo</TableHead>
-            <TableHead className="font-medium">Tamanho</TableHead>
             <TableHead className="font-medium">Data de envio</TableHead>
+            <TableHead className="font-medium">Expiração</TableHead>
+            <TableHead className="font-medium">Observações</TableHead>
             <TableHead className="font-medium">Status</TableHead>
             <TableHead className="text-right pr-4 font-medium">Ações</TableHead>
           </TableRow>
@@ -134,19 +135,16 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
                   ) : (
                     <div className="w-4"></div>
                   )}
-                  {document.name || document.original_filename}
+                  {document.name || "Sem nome"}
                 </div>
+              </TableCell>
+              <TableCell className="text-sm text-gray-600 dark:text-gray-400">
+                {document.original_filename || "N/A"}
               </TableCell>
               <TableCell>
                 <Badge variant="outline" className={getCategoryColor(document.category)}>
                   {document.category}
                 </Badge>
-              </TableCell>
-              <TableCell>
-                {getFileTypeBadge(document)}
-              </TableCell>
-              <TableCell>
-                {document.size ? formatBytes(document.size) : "N/A"}
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-1">
@@ -169,6 +167,31 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
                 ) : (
                   <Badge variant="outline" className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-800">
                     Não expira
+                  </Badge>
+                )}
+              </TableCell>
+              <TableCell className="max-w-[150px] truncate">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger className="cursor-help">
+                      <span className="line-clamp-2 text-sm">{document.observations || "—"}</span>
+                    </TooltipTrigger>
+                    {document.observations && (
+                      <TooltipContent className="max-w-sm">
+                        <p>{document.observations}</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
+              </TableCell>
+              <TableCell>
+                {document.viewed ? (
+                  <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-green-200 dark:border-green-800">
+                    Visualizado
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800">
+                    Não visualizado
                   </Badge>
                 )}
               </TableCell>
