@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserType } from "@/types/admin";
 import { UserTable } from "./UserTable";
@@ -140,12 +139,7 @@ export const UserList = ({
                 </div>
               </div>
               
-              <div className="rounded p-3 border border-blue-100 dark:border-navy-lighter/30 bg-white dark:bg-navy-dark">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Total de Documentos</p>
-                <p className="text-lg font-semibold text-navy-dark dark:text-white">
-                  {totalDocuments} arquivos
-                </p>
-              </div>
+              
               
               <div className="rounded p-3 border border-blue-100 dark:border-navy-lighter/30 bg-white dark:bg-navy-dark">
                 <p className="text-sm text-gray-500 dark:text-gray-400">Espaço Disponível</p>
