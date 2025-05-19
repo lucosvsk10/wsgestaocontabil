@@ -51,7 +51,7 @@ const About = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {services.map((service, index) => <div key={index} ref={el => serviceRefs.current[index] = el} className="bg-white/50 dark:bg-navy/50 backdrop-blur-sm border border-gold/20 rounded-xl p-6 transition-all duration-500 fadein-on-scroll">
+            {services.map((service, index) => <div key={index} ref={el => serviceRefs.current[index] = el} className="backdrop-blur-sm border border-gold/20 rounded-xl p-6 transition-all duration-500 fadein-on-scroll bg-transparent">
                 <div className="mb-4">{service.icon}</div>
                 <h3 className="text-xl font-semibold text-navy dark:text-white mb-3">{service.title}</h3>
                 <p className="text-navy/70 dark:text-white/70">{service.description}</p>
