@@ -7,8 +7,7 @@ export interface UserType {
   created_at: string | null;
 }
 
-// Import the Document type from utils/auth/types.ts instead of redefining it
-import { Document } from "@/utils/auth/types";
-export type { Document };
+// Renomeando a interface Document para AppDocument para evitar colisão com o DOM Document
+import { Document as AppDocument } from "@/utils/auth/types";
+export type { AppDocument };
 
-// Document interface is removed to prevent conflict
