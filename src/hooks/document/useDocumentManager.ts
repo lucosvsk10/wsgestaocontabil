@@ -1,11 +1,8 @@
 
 import { useState, useEffect } from "react";
-import { useDocumentFetch } from "../useDocumentFetch";
-import { useDocumentActions } from "./useDocumentActions";
-import { useDocumentDelete } from "../useDocumentDelete";
-import { useDocumentUpload } from "../useDocumentUpload";
-import { triggerExpiredDocumentsCleanup } from "@/utils/documents/documentCleanup";
-import { UserType } from "@/types/admin";
+import { useDocumentFetch } from "@/hooks/useDocumentFetch";
+import { useDocumentDelete } from "@/hooks/useDocumentDelete";
+import { useDocumentUpload } from "@/hooks/useDocumentUpload";
 import { supabase } from "@/integrations/supabase/client";
 
 export const useDocumentManager = (users: any[], supabaseUsers: any[]) => {
@@ -18,12 +15,8 @@ export const useDocumentManager = (users: any[], supabaseUsers: any[]) => {
   } = useDocumentFetch();
   
   const {
-    loadingDocumentIds,
-    handleDownload
-  } = useDocumentActions();
-  
-  // Uso do hook de exclusão de documentos
-  const { handleDeleteDocument: deleteDocument } = useDocumentDelete(fetchUserDocuments);
+    handleDeleteDocument: deleteDocument
+  } = useDocumentDelete(fetchUserDocuments);
   
   const {
     isUploading,
@@ -47,11 +40,12 @@ export const useDocumentManager = (users: any[], supabaseUsers: any[]) => {
   const uploadHandleUpload = async (e: React.FormEvent) => {
     if (!selectedUserId) return;
     
-    await handleUpload(e, selectedUserId, supabaseUsers, users as UserType[]);
+    await handleUpload(e, selectedUserId, supabaseUsers, users);
   };
   
   // Wrapper for handleDeleteDocument to include selectedUserId
   const handleDeleteDocument = async (documentId: string) => {
+    if (!selectedUserId) return;
     await deleteDocument(documentId, selectedUserId);
   };
   
@@ -60,11 +54,6 @@ export const useDocumentManager = (users: any[], supabaseUsers: any[]) => {
     if (selectedUserId) {
       fetchUserDocuments(selectedUserId);
       
-      // Run cleanup of expired documents
-      triggerExpiredDocumentsCleanup().catch(error => {
-        console.error("Error during expired documents cleanup:", error);
-      });
-
       // Adicionar canal de tempo real para esse usuário específico
       const channel = supabase
         .channel(`admin-documents-${selectedUserId}`)
@@ -109,11 +98,9 @@ export const useDocumentManager = (users: any[], supabaseUsers: any[]) => {
     setExpirationDate,
     noExpiration,
     setNoExpiration,
-    loadingDocumentIds,
     fetchUserDocuments,
     handleFileChange,
     handleUpload: uploadHandleUpload,
-    handleDeleteDocument,
-    downloadDocument: handleDownload
+    handleDeleteDocument
   };
 };
