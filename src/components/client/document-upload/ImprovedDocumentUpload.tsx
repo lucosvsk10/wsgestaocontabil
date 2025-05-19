@@ -1,439 +1,500 @@
 
-import React, { useState, useCallback } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectItem, SelectTrigger, SelectValue, SelectContent } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Check, FileIcon, FileX, Loader2, UploadCloud, X } from "lucide-react";
-import { useDropzone } from "react-dropzone";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar as CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { v4 as uuidv4 } from 'uuid';
+import React, { useState, useCallback } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { format } from 'date-fns';
+import { Upload, FileUp, File, X, Calendar as CalendarIcon } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
 
-type FileWithPreview = {
+interface FileWithPreview extends File {
+  preview?: string;
   id: string;
-  file: File;
   name: string;
-  category: string;
-  observations: string;
-  expirationDate: Date | null;
-  noExpiration: boolean;
-};
+  documentName?: string;
+  documentCategory?: string;
+  documentObservations?: string;
+  expirationDate?: Date | null;
+}
 
 interface ImprovedDocumentUploadProps {
-  userName: string;
   userId: string;
-  documentCategories?: string[];
+  userName: string;
+  documentCategories: string[];
   multipleFiles?: boolean;
 }
 
 export const ImprovedDocumentUpload: React.FC<ImprovedDocumentUploadProps> = ({
-  userName,
   userId,
-  documentCategories = ["Imposto de Renda", "Documentações", "Certidões", "Contratos", "Notas Fiscais"],
+  userName,
+  documentCategories,
   multipleFiles = false
 }) => {
-  const [isUploading, setIsUploading] = useState<boolean>(false);
-  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
-  const [uploadQueue, setUploadQueue] = useState<FileWithPreview[]>([]);
+  const [files, setFiles] = useState<FileWithPreview[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [globalCategory, setGlobalCategory] = useState(documentCategories[0] || 'Documentações');
+  const [globalObservations, setGlobalObservations] = useState('');
+  const [noExpiration, setNoExpiration] = useState(false);
+  const [globalExpirationDate, setGlobalExpirationDate] = useState<Date | null>(null);
+  const [useGlobalSettings, setUseGlobalSettings] = useState(true);
   const { toast } = useToast();
-
+  
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    const newFiles = acceptedFiles.map((file) => ({
-      id: uuidv4(),
-      file,
-      name: file.name.split('.')[0] || "",
-      category: "",
-      observations: "",
-      expirationDate: null,
-      noExpiration: false,
-    }));
-
-    setUploadQueue((prev) => [...prev, ...newFiles]);
-  }, []);
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    multiple: multipleFiles,
-    accept: {
-      'application/pdf': ['.pdf'],
-      'image/*': ['.png', '.jpg', '.jpeg', '.gif'],
-      'application/msword': ['.doc'],
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-      'application/vnd.ms-excel': ['.xls'],
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
-    }
-  });
-
+    const newFiles = acceptedFiles.map(file => 
+      Object.assign(file, {
+        preview: URL.createObjectURL(file),
+        id: crypto.randomUUID(),
+        documentName: file.name.split('.')[0],
+        documentCategory: globalCategory,
+        documentObservations: globalObservations,
+        expirationDate: noExpiration ? null : globalExpirationDate,
+      })
+    ) as FileWithPreview[];
+    
+    setFiles(prev => [...prev, ...newFiles]);
+  }, [globalCategory, globalObservations, globalExpirationDate, noExpiration]);
+  
   const removeFile = (id: string) => {
-    setUploadQueue((prev) => prev.filter((f) => f.id !== id));
+    setFiles(files => {
+      const filteredFiles = files.filter(file => file.id !== id);
+      return filteredFiles;
+    });
   };
-
-  const updateFileName = (id: string, name: string) => {
-    setUploadQueue((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, name } : f))
-    );
+  
+  const updateFileField = (id: string, field: 'documentName' | 'documentCategory' | 'documentObservations', value: string) => {
+    setFiles(files => files.map(file => 
+      file.id === id 
+        ? { ...file, [field]: value } 
+        : file
+    ));
   };
-
-  const updateFileCategory = (id: string, category: string) => {
-    setUploadQueue((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, category } : f))
-    );
-  };
-
-  const updateFileObservations = (id: string, observations: string) => {
-    setUploadQueue((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, observations } : f))
-    );
-  };
-
+  
   const updateFileExpirationDate = (id: string, date: Date | null) => {
-    setUploadQueue((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, expirationDate: date } : f))
-    );
+    setFiles(files => files.map(file => 
+      file.id === id 
+        ? { ...file, expirationDate: date } 
+        : file
+    ));
+  };
+  
+  const applyGlobalSettingsToAll = () => {
+    setFiles(files => files.map(file => ({
+      ...file,
+      documentCategory: globalCategory,
+      documentObservations: globalObservations,
+      expirationDate: noExpiration ? null : globalExpirationDate,
+    })));
   };
 
-  const updateFileNoExpiration = (id: string, noExpiration: boolean) => {
-    setUploadQueue((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, noExpiration, expirationDate: noExpiration ? null : f.expirationDate } : f))
-    );
+  // Handle file input change
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      onDrop(Array.from(e.target.files));
+    }
+  };
+
+  // Handle file drop
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      onDrop(Array.from(e.dataTransfer.files));
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
   };
 
   const handleUpload = async () => {
-    // Validate required fields
-    const invalidFiles = uploadQueue.filter(
-      (f) => !f.name || !f.category
-    );
-
-    if (invalidFiles.length > 0) {
+    if (files.length === 0) {
       toast({
+        title: "Nenhum arquivo selecionado",
+        description: "Por favor, selecione pelo menos um arquivo para upload.",
         variant: "destructive",
-        title: "Campos obrigatórios",
-        description: "Nome e categoria são obrigatórios para todos os documentos.",
       });
       return;
     }
-
-    if (uploadQueue.length === 0) {
+    
+    // Validate file names
+    const filesWithoutNames = files.filter(file => !file.documentName);
+    if (filesWithoutNames.length > 0) {
       toast({
+        title: "Nome de documento faltando",
+        description: "Por favor, forneça um nome para todos os documentos.",
         variant: "destructive",
-        title: "Nenhum arquivo",
-        description: "Adicione pelo menos um arquivo para upload.",
       });
       return;
     }
-
+    
     setIsUploading(true);
-    setUploadProgress({});
-
+    
     try {
-      for (const fileItem of uploadQueue) {
-        try {
-          const fileExt = fileItem.file.name.split('.').pop();
-          const fileName = `${uuidv4()}.${fileExt}`;
-          const fileKey = `${userId}/${fileName}`;
+      // Upload files one by one
+      for (const file of files) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${crypto.randomUUID()}.${fileExt}`;
+        const filePath = `${userId}/${fileName}`;
+        
+        // Upload file to storage
+        const { error: storageError } = await supabase.storage
+          .from('documents')
+          .upload(filePath, file);
           
-          // Upload file to storage
-          setUploadProgress(prev => ({ ...prev, [fileItem.id]: 10 }));
+        if (storageError) throw storageError;
+        
+        // Get file URL
+        const { data: urlData } = supabase.storage
+          .from('documents')
+          .getPublicUrl(filePath);
           
-          const { data: fileData, error: uploadError } = await supabase.storage
-            .from('documents')
-            .upload(fileKey, fileItem.file);
-          
-          if (uploadError) throw uploadError;
-          
-          setUploadProgress(prev => ({ ...prev, [fileItem.id]: 50 }));
-          
-          // Get file URL
-          const { data: { publicUrl } } = supabase.storage
-            .from('documents')
-            .getPublicUrl(fileKey);
-          
-          setUploadProgress(prev => ({ ...prev, [fileItem.id]: 70 }));
-          
-          // Calculate expiration date if applicable
-          let expiresAt = null;
-          if (!fileItem.noExpiration && fileItem.expirationDate) {
-            expiresAt = fileItem.expirationDate.toISOString();
-          }
-          
-          // Create document record in the database
-          const { data: documentData, error: documentError } = await supabase
-            .from('documents')
-            .insert([
-              {
-                user_id: userId,
-                name: fileItem.name,
-                category: fileItem.category,
-                observations: fileItem.observations,
-                file_url: publicUrl,
-                storage_key: fileKey,
-                original_filename: fileItem.file.name,
-                size: fileItem.file.size,
-                filename: fileName,
-                type: fileItem.file.type,
-                expires_at: expiresAt
-              }
-            ])
-            .select()
-            .single();
-          
-          if (documentError) throw documentError;
-          
-          setUploadProgress(prev => ({ ...prev, [fileItem.id]: 100 }));
-        } catch (error: any) {
-          console.error(`Erro ao fazer upload do arquivo ${fileItem.name}:`, error);
-          toast({
-            variant: "destructive",
-            title: `Erro no upload de ${fileItem.name}`,
-            description: error.message || "Ocorreu um erro ao enviar o documento."
-          });
+        if (!urlData?.publicUrl) {
+          throw new Error('Erro ao obter URL pública do arquivo');
         }
+        
+        // Insert document record
+        const { error: dbError } = await supabase
+          .from('documents')
+          .insert({
+            user_id: userId,
+            name: file.documentName || file.name.split('.')[0],
+            original_filename: file.name,
+            filename: fileName,
+            category: file.documentCategory || globalCategory,
+            observations: file.documentObservations || globalObservations,
+            expires_at: (file.expirationDate || (!noExpiration && globalExpirationDate)) || null,
+            file_url: urlData.publicUrl,
+            storage_key: filePath,
+            size: file.size
+          });
+          
+        if (dbError) throw dbError;
       }
       
+      // Success toast
       toast({
-        title: "Upload concluído",
-        description: `${uploadQueue.length} documento(s) enviado(s) com sucesso.`
+        title: "Upload concluído com sucesso!",
+        description: `${files.length} documento(s) foi/foram enviado(s) para ${userName}.`,
       });
       
-      // Clear the upload queue after successful upload
-      setUploadQueue([]);
+      // Reset form
+      setFiles([]);
+      
     } catch (error: any) {
-      console.error("Erro no upload:", error);
+      console.error('Erro no upload:', error);
       toast({
-        variant: "destructive",
         title: "Erro no upload",
-        description: error.message || "Ocorreu um erro ao enviar os documentos."
+        description: error.message || "Ocorreu um erro ao fazer upload dos documentos.",
+        variant: "destructive",
       });
     } finally {
       setIsUploading(false);
     }
   };
-
-  const formatFileSize = (size: number) => {
-    if (size < 1024) return `${size} bytes`;
-    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
-    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
+  
   return (
-    <Card className="w-full border border-gray-200 dark:border-navy-lighter/30 bg-white dark:bg-navy-dark rounded-xl shadow-md overflow-hidden">
-      <CardHeader className="bg-gray-50 dark:bg-navy-deeper border-b border-gray-200 dark:border-navy-lighter/30 px-6 py-4">
-        <div className="flex flex-col">
-          <CardTitle className="text-navy dark:text-gold font-medium text-xl">
-            Enviar Documentos para {userName}
+    <div className="space-y-6">
+      <Card className="border border-gray-200 dark:border-gold/20 bg-white dark:bg-navy-dark shadow-md">
+        <CardHeader className="border-b border-gray-200 dark:border-gold/20 bg-gray-50 dark:bg-navy-deeper">
+          <CardTitle className="text-navy dark:text-gold text-xl font-museo flex items-center">
+            <Upload className="h-5 w-5 mr-2 text-navy dark:text-gold" />
+            Enviando documentos para {userName}
           </CardTitle>
-        </div>
-      </CardHeader>
-
-      <CardContent className="p-6 space-y-6">
-        {/* Drag & Drop Area */}
-        <div
-          {...getRootProps()}
-          className={cn(
-            "border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition-colors cursor-pointer",
-            isDragActive
-              ? "border-blue-500 bg-blue-50 dark:border-gold/40 dark:bg-navy-light/20"
-              : "border-gray-300 dark:border-navy-light/30 hover:border-blue-400 dark:hover:border-gold/40 hover:bg-gray-50 dark:hover:bg-navy-light/10"
-          )}
-        >
-          <input {...getInputProps()} />
-          <UploadCloud size={48} className="text-gray-400 dark:text-gray-500 mb-2" />
-          <p className="text-gray-600 dark:text-gray-300 mb-1 text-center">
-            {isDragActive ? "Solte os arquivos aqui..." : "Arraste e solte arquivos aqui ou clique para selecionar"}
-          </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-            PDF, DOC, DOCX, XLS, XLSX, JPG, PNG (max 10MB)
-          </p>
-        </div>
-
-        {/* File Queue */}
-        {uploadQueue.length > 0 && (
-          <Card className="border border-gray-200 dark:border-navy-lighter/30">
-            <CardHeader className="py-3 px-4 bg-gray-50 dark:bg-navy-deeper border-b border-gray-200 dark:border-navy-lighter/30">
-              <CardTitle className="text-sm font-medium flex items-center">
-                <FileIcon className="h-4 w-4 mr-2" />
-                Arquivos Selecionados ({uploadQueue.length})
-              </CardTitle>
-            </CardHeader>
-            <ScrollArea className="max-h-[350px]">
-              <CardContent className="p-4 space-y-4">
-                {uploadQueue.map((fileItem) => (
-                  <div
-                    key={fileItem.id}
-                    className="border border-gray-200 dark:border-navy-lighter/20 rounded-lg p-4 space-y-3"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <FileIcon size={18} className="text-blue-500 dark:text-blue-400" />
-                        <span className="text-sm font-medium truncate max-w-[180px]">
-                          {fileItem.file.name}
-                        </span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          ({formatFileSize(fileItem.file.size)})
-                        </span>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeFile(fileItem.id)}
-                        className="h-8 w-8 p-0 rounded-full"
-                      >
-                        <X size={16} className="text-red-500 dark:text-red-400" />
-                        <span className="sr-only">Remover arquivo</span>
-                      </Button>
+        </CardHeader>
+        
+        <CardContent className="p-6">
+          {/* Global settings for all files */}
+          {multipleFiles && (
+            <div className="mb-6 p-4 bg-gray-50 dark:bg-navy-light/10 rounded-lg border border-gray-200 dark:border-gold/20">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-navy dark:text-white">Configurações para todos os documentos</h3>
+                <Checkbox 
+                  id="useGlobalSettings" 
+                  checked={useGlobalSettings} 
+                  onCheckedChange={(checked) => setUseGlobalSettings(!!checked)} 
+                  className="text-navy dark:text-gold data-[state=checked]:bg-navy dark:data-[state=checked]:bg-gold data-[state=checked]:text-white"
+                />
+              </div>
+              
+              {useGlobalSettings && (
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="globalCategory" className="text-navy dark:text-gold">Categoria</Label>
+                    <Select 
+                      value={globalCategory} 
+                      onValueChange={setGlobalCategory}
+                    >
+                      <SelectTrigger className="bg-white dark:bg-navy/80 border-gray-300 dark:border-navy-lighter/50">
+                        <SelectValue placeholder="Selecione uma categoria" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {documentCategories.map(category => (
+                          <SelectItem key={category} value={category}>{category}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="globalObservations" className="text-navy dark:text-gold">Observações</Label>
+                    <Textarea 
+                      id="globalObservations"
+                      placeholder="Observações gerais para todos os documentos"
+                      value={globalObservations}
+                      onChange={(e) => setGlobalObservations(e.target.value)}
+                      className="bg-white dark:bg-navy/80 border-gray-300 dark:border-navy-lighter/50"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="noExpiration" 
+                        checked={noExpiration} 
+                        onCheckedChange={(checked) => setNoExpiration(!!checked)} 
+                        className="text-navy dark:text-gold data-[state=checked]:bg-navy dark:data-[state=checked]:bg-gold data-[state=checked]:text-white"
+                      />
+                      <Label htmlFor="noExpiration" className="text-sm text-navy dark:text-gold">
+                        Sem data de expiração
+                      </Label>
                     </div>
-
-                    {/* Progress Bar for Uploading */}
-                    {isUploading && uploadProgress[fileItem.id] !== undefined && (
-                      <div className="w-full bg-gray-200 dark:bg-navy-light/20 rounded-full h-2">
-                        <div
-                          className="bg-blue-500 dark:bg-gold h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${uploadProgress[fileItem.id]}%` }}
-                        />
+                    
+                    {!noExpiration && (
+                      <div>
+                        <Label htmlFor="expirationDate" className="text-navy dark:text-gold">Data de expiração</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              id="expirationDate"
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal bg-white dark:bg-navy/80 border-gray-300 dark:border-navy-lighter/50",
+                                !globalExpirationDate && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {globalExpirationDate ? format(globalExpirationDate, "PPP") : "Selecione uma data"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0">
+                            <Calendar
+                              mode="single"
+                              selected={globalExpirationDate || undefined}
+                              onSelect={setGlobalExpirationDate}
+                              initialFocus
+                              disabled={(date) => date < new Date()}
+                            />
+                          </PopoverContent>
+                        </Popover>
                       </div>
                     )}
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Document Name */}
-                      <div className="space-y-1">
-                        <Label htmlFor={`name-${fileItem.id}`} className="text-xs text-gray-500 dark:text-gray-400">
-                          Nome do Documento *
-                        </Label>
-                        <Input
-                          id={`name-${fileItem.id}`}
-                          value={fileItem.name}
-                          onChange={(e) => updateFileName(fileItem.id, e.target.value)}
-                          className="h-9"
-                          required
-                        />
-                      </div>
-
-                      {/* Document Category */}
-                      <div className="space-y-1">
-                        <Label htmlFor={`category-${fileItem.id}`} className="text-xs text-gray-500 dark:text-gray-400">
-                          Categoria *
-                        </Label>
-                        <Select
-                          value={fileItem.category}
-                          onValueChange={(value) => updateFileCategory(fileItem.id, value)}
-                        >
-                          <SelectTrigger id={`category-${fileItem.id}`} className="h-9">
-                            <SelectValue placeholder="Selecione uma categoria" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {documentCategories.map((category) => (
-                              <SelectItem key={category} value={category}>
-                                {category}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    {/* Document Observations */}
-                    <div className="space-y-1">
-                      <Label htmlFor={`observations-${fileItem.id}`} className="text-xs text-gray-500 dark:text-gray-400">
-                        Observações (opcional)
-                      </Label>
-                      <Textarea
-                        id={`observations-${fileItem.id}`}
-                        value={fileItem.observations}
-                        onChange={(e) => updateFileObservations(fileItem.id, e.target.value)}
-                        className="resize-none h-20"
-                        placeholder="Adicione observações relevantes sobre o documento"
-                      />
-                    </div>
-
-                    {/* Expiration Date */}
-                    <div className="space-y-1">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <Checkbox
-                          id={`no-expiration-${fileItem.id}`}
-                          checked={fileItem.noExpiration}
-                          onCheckedChange={(checked) => updateFileNoExpiration(fileItem.id, checked === true)}
-                          className="data-[state=checked]:bg-blue-500 dark:data-[state=checked]:bg-gold"
-                        />
-                        <label
-                          htmlFor={`no-expiration-${fileItem.id}`}
-                          className="text-sm font-medium text-gray-700 dark:text-gray-300 leading-none"
-                        >
-                          Este documento não tem data de expiração
-                        </label>
-                      </div>
-
-                      {!fileItem.noExpiration && (
-                        <div className="space-y-1">
-                          <Label htmlFor={`expiration-${fileItem.id}`} className="text-xs text-gray-500 dark:text-gray-400">
-                            Data de Expiração
-                          </Label>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button
-                                id={`expiration-${fileItem.id}`}
-                                variant="outline"
-                                className={cn(
-                                  "w-full justify-start text-left h-9",
-                                  !fileItem.expirationDate && "text-gray-500 dark:text-gray-400"
-                                )}
-                              >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {fileItem.expirationDate ? (
-                                  format(fileItem.expirationDate, "dd/MM/yyyy")
-                                ) : (
-                                  <span>Selecione uma data</span>
-                                )}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0 dark:bg-navy-deeper">
-                              <Calendar
-                                mode="single"
-                                selected={fileItem.expirationDate || undefined}
-                                onSelect={(date) => updateFileExpirationDate(fileItem.id, date)}
-                                disabled={(date) => date < new Date()}
-                                initialFocus
-                              />
-                            </PopoverContent>
-                          </Popover>
-                        </div>
-                      )}
-                    </div>
                   </div>
-                ))}
-              </CardContent>
-            </ScrollArea>
-          </Card>
-        )}
-
-        {/* Upload Button */}
-        <Button
-          onClick={handleUpload}
-          disabled={isUploading || uploadQueue.length === 0}
-          className="w-full bg-navy hover:bg-navy/90 dark:bg-gold/90 dark:hover:bg-gold dark:text-navy text-white font-medium shadow-md transition-colors py-2.5"
-        >
-          {isUploading ? (
-            <div className="flex items-center justify-center">
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Enviando Documentos...
-            </div>
-          ) : (
-            <div className="flex items-center justify-center">
-              <UploadCloud className="mr-2 h-5 w-5" />
-              Enviar {uploadQueue.length > 0 ? `${uploadQueue.length} Documento${uploadQueue.length > 1 ? 's' : ''}` : 'Documentos'}
+                  
+                  {files.length > 0 && (
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={applyGlobalSettingsToAll}
+                      className="w-full mt-4 border-navy dark:border-gold text-navy dark:text-gold hover:bg-navy hover:text-white dark:hover:bg-gold"
+                    >
+                      Aplicar configurações a todos os documentos
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
           )}
-        </Button>
-      </CardContent>
-    </Card>
+          
+          {/* Drop area */}
+          <div 
+            className="border-2 border-dashed border-gray-300 dark:border-gold/30 rounded-lg p-8 text-center hover:border-navy dark:hover:border-gold/50 transition-colors"
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+          >
+            <FileUp className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
+            
+            <div className="mt-4">
+              <h3 className="text-lg font-medium text-navy-dark dark:text-gold">
+                {multipleFiles ? 'Arraste vários arquivos ou clique para fazer upload' : 'Arraste um arquivo ou clique para fazer upload'}
+              </h3>
+              
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Formatos suportados: PDF, DOCX, JPG, PNG
+              </p>
+              
+              <div className="mt-4">
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  onClick={() => document.getElementById('fileInput')?.click()}
+                  className="bg-white dark:bg-navy-light/30 border-navy/20 dark:border-gold/20 text-navy dark:text-gold hover:bg-navy hover:text-white dark:hover:bg-gold dark:hover:text-navy"
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  Selecionar arquivo{multipleFiles ? 's' : ''}
+                </Button>
+                <input
+                  id="fileInput"
+                  type="file"
+                  className="hidden"
+                  onChange={handleFileChange}
+                  multiple={multipleFiles}
+                />
+              </div>
+            </div>
+          </div>
+          
+          {/* File list */}
+          {files.length > 0 && (
+            <div className="mt-6 space-y-4">
+              <h3 className="font-medium text-navy dark:text-gold">Arquivos selecionados ({files.length})</h3>
+              
+              <div className="space-y-4">
+                {files.map((file) => (
+                  <Card key={file.id} className="border border-gray-200 dark:border-navy-lighter/30">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center">
+                          <File className="h-5 w-5 text-navy dark:text-gold mr-2" />
+                          <span className="font-medium text-sm text-navy dark:text-white">{file.name}</span>
+                        </div>
+                        
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => removeFile(file.id)}
+                          className="h-8 w-8 p-0 text-red-500 dark:text-red-400 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor={`name-${file.id}`} className="text-navy dark:text-gold">Nome do documento</Label>
+                          <Input
+                            id={`name-${file.id}`}
+                            value={file.documentName || ''}
+                            onChange={(e) => updateFileField(file.id, 'documentName', e.target.value)}
+                            placeholder="Nome do documento"
+                            className="bg-white dark:bg-navy/80 border-gray-300 dark:border-navy-lighter/50"
+                            required
+                          />
+                        </div>
+                        
+                        {!useGlobalSettings && (
+                          <>
+                            <div>
+                              <Label htmlFor={`category-${file.id}`} className="text-navy dark:text-gold">Categoria</Label>
+                              <Select 
+                                value={file.documentCategory || documentCategories[0]} 
+                                onValueChange={(value) => updateFileField(file.id, 'documentCategory', value)}
+                              >
+                                <SelectTrigger className="bg-white dark:bg-navy/80 border-gray-300 dark:border-navy-lighter/50">
+                                  <SelectValue placeholder="Selecione uma categoria" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {documentCategories.map(category => (
+                                    <SelectItem key={category} value={category}>{category}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            
+                            <div>
+                              <Label htmlFor={`observations-${file.id}`} className="text-navy dark:text-gold">Observações</Label>
+                              <Textarea 
+                                id={`observations-${file.id}`}
+                                value={file.documentObservations || ''}
+                                onChange={(e) => updateFileField(file.id, 'documentObservations', e.target.value)}
+                                placeholder="Observações sobre este documento"
+                                className="bg-white dark:bg-navy/80 border-gray-300 dark:border-navy-lighter/50"
+                              />
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <div className="flex items-center space-x-2">
+                                <Checkbox 
+                                  id={`noExpiration-${file.id}`}
+                                  checked={file.expirationDate === null}
+                                  onCheckedChange={(checked) => updateFileExpirationDate(file.id, checked ? null : new Date())}
+                                  className="text-navy dark:text-gold data-[state=checked]:bg-navy dark:data-[state=checked]:bg-gold data-[state=checked]:text-white"
+                                />
+                                <Label htmlFor={`noExpiration-${file.id}`} className="text-sm text-navy dark:text-gold">
+                                  Sem data de expiração
+                                </Label>
+                              </div>
+                              
+                              {file.expirationDate !== null && (
+                                <div>
+                                  <Label htmlFor={`expiration-${file.id}`} className="text-navy dark:text-gold">Data de expiração</Label>
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <Button
+                                        id={`expiration-${file.id}`}
+                                        variant="outline"
+                                        className={cn(
+                                          "w-full justify-start text-left font-normal bg-white dark:bg-navy/80 border-gray-300 dark:border-navy-lighter/50",
+                                          !file.expirationDate && "text-muted-foreground"
+                                        )}
+                                      >
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {file.expirationDate ? format(file.expirationDate, "PPP") : "Selecione uma data"}
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0">
+                                      <Calendar
+                                        mode="single"
+                                        selected={file.expirationDate || undefined}
+                                        onSelect={(date) => updateFileExpirationDate(file.id, date)}
+                                        initialFocus
+                                        disabled={(date) => date < new Date()}
+                                      />
+                                    </PopoverContent>
+                                  </Popover>
+                                </div>
+                              )}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {files.length > 0 && (
+            <Button 
+              type="button" 
+              onClick={handleUpload} 
+              className="w-full mt-6 bg-navy hover:bg-navy/90 dark:bg-gold dark:hover:bg-gold/90 text-white dark:text-navy font-medium"
+              disabled={isUploading}
+            >
+              {isUploading ? (
+                <>
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  <Upload className="mr-2 h-4 w-4" />
+                  {files.length > 1 ? `Enviar ${files.length} documentos` : 'Enviar documento'}
+                </>
+              )}
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 };

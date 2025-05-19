@@ -1,7 +1,7 @@
 
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
-import { Document } from "@/types/admin";
+import { AppDocument } from "@/types/admin";
 
 // Função para formatar a data
 export const formatDate = (dateStr: string) => {
@@ -38,8 +38,8 @@ export const daysUntilExpiration = (expiresAt: string | null) => {
 };
 
 // Agrupar documentos por categoria
-export const getDocumentsByCategory = (allDocuments: Document[], categories: string[]) => {
-  const groupedDocuments: Record<string, Document[]> = {};
+export const getDocumentsByCategory = (allDocuments: AppDocument[], categories: string[]) => {
+  const groupedDocuments: Record<string, AppDocument[]> = {};
   
   categories.forEach(category => {
     // Inicializa a categoria com array vazio

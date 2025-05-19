@@ -1,8 +1,7 @@
-
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { AppDocument } from "@/types/admin";
+import { AppDocument, UserType } from "@/types/admin";
 
 export const useDocumentManagement = (users: any[], supabaseUsers: any[]) => {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
@@ -53,7 +52,7 @@ export const useDocumentManagement = (users: any[], supabaseUsers: any[]) => {
         
         if (data) {
           const url = URL.createObjectURL(data);
-          const a = window.document.createElement('a') as HTMLAnchorElement;
+          const a = window.document.createElement('a');
           a.href = url;
           a.download = document.filename || document.original_filename || document.name;
           window.document.body.appendChild(a);

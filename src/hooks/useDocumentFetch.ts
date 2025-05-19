@@ -1,12 +1,12 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Document } from "@/types/admin";
+import { AppDocument } from "@/types/admin";
 import { useToast } from "@/hooks/use-toast";
 
 export const useDocumentFetch = () => {
   const { toast } = useToast();
-  const [documents, setDocuments] = useState<Document[]>([]);
+  const [documents, setDocuments] = useState<AppDocument[]>([]);
   const [viewedDocuments, setViewedDocuments] = useState<Record<string, boolean>>({});
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
 
