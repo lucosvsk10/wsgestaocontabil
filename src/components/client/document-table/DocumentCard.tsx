@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Document } from "@/utils/auth/types";
+import { AppDocument } from "@/types/admin";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import {
@@ -10,13 +10,13 @@ import {
 } from "./card";
 
 interface DocumentCardProps {
-  doc: Document;
+  doc: AppDocument;
   formatDate: (dateStr: string) => string;
   isDocumentExpired: (expiresAt: string | null) => boolean;
   daysUntilExpiration: (expiresAt: string | null) => string | null;
   refreshDocuments: () => void;
   loadingDocumentIds: Set<string>;
-  handleDownload: (doc: Document) => Promise<void>;
+  handleDownload: (doc: AppDocument) => Promise<void>;
 }
 
 export const DocumentCard = ({

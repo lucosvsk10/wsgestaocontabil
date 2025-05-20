@@ -1,52 +1,40 @@
 
-import { Clock, Eye, EyeOff } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Document } from "@/utils/auth/types";
+import { Clock, Calendar } from "lucide-react";
+import { AppDocument } from "@/types/admin";
 
 interface DocumentCardMetadataProps {
-  doc: Document;
+  doc: AppDocument;
   formatDate: (dateStr: string) => string;
   isExpired: boolean;
   expirationText: string | null;
 }
 
-export const DocumentCardMetadata = ({ doc, formatDate, isExpired, expirationText }: DocumentCardMetadataProps) => {
+export const DocumentCardMetadata = ({ 
+  doc, 
+  formatDate, 
+  isExpired, 
+  expirationText 
+}: DocumentCardMetadataProps) => {
   return (
-    <div className="mt-auto space-y-2 text-sm">
-      <div className="flex items-center justify-between">
-        <span className="text-gray-600 dark:text-gray-300">Data de Envio:</span>
-        <span className="text-gray-800 dark:text-gray-100 font-medium">{formatDate(doc.uploaded_at)}</span>
+    <div className="mt-2 flex-1 space-y-2 text-sm">
+      <div className="flex items-center text-gray-600 dark:text-gray-400">
+        <Calendar size={14} className="mr-1" />
+        <span>Enviado em: {formatDate(doc.uploaded_at)}</span>
       </div>
       
-      <div className="flex items-center justify-between">
-        <span className="text-gray-600 dark:text-gray-300">Validade:</span>
-        <span className={cn(
-          "flex items-center",
-          isExpired
-            ? "text-red-600 dark:text-red-400" 
-            : "text-green-600 dark:text-green-400"
-        )}>
+      {doc.expires_at && (
+        <div className={`flex items-center ${isExpired ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}>
           <Clock size={14} className="mr-1" />
-          <span>{expirationText || "Sem expiração"}</span>
-        </span>
-      </div>
-      
-      <div className="flex items-center justify-between">
-        <span className="text-gray-600 dark:text-gray-300">Status:</span>
-        <div className="flex items-center">
-          {doc.viewed ? (
-            <span className="flex items-center text-green-600 dark:text-green-400">
-              <Eye size={14} className="mr-1" />
-              <span>Visualizado</span>
-            </span>
-          ) : (
-            <span className="flex items-center text-blue-600 dark:text-blue-400">
-              <EyeOff size={14} className="mr-1" />
-              <span>Não visualizado</span>
-            </span>
-          )}
+          <span>Validade: {expirationText}</span>
         </div>
-      </div>
+      )}
+      
+      {doc.observations && (
+        <div className="text-gray-600 dark:text-gray-300 mt-2">
+          <strong>Observações:</strong>
+          <p className="text-navy dark:text-white">{doc.observations}</p>
+        </div>
+      )}
     </div>
   );
 };

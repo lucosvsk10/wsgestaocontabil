@@ -1,18 +1,18 @@
 
 import React from "react";
-import { Document } from "@/utils/auth/types";
+import { AppDocument } from "@/types/admin";
 import { motion } from "framer-motion";
 import { DocumentCard } from "./DocumentCard";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface DocumentGridProps {
-  documents: Document[];
+  documents: AppDocument[];
   formatDate: (dateStr: string) => string;
   isDocumentExpired: (expiresAt: string | null) => boolean;
   daysUntilExpiration: (expiresAt: string | null) => string | null;
   refreshDocuments: () => void;
   loadingDocumentIds: Set<string>;
-  handleDownload: (doc: Document) => Promise<void>;
+  handleDownload: (doc: AppDocument) => Promise<void>;
 }
 
 export const DocumentGrid = ({

@@ -1,17 +1,16 @@
 
-import { Document } from "@/utils/auth/types";
+import { AppDocument } from "@/types/admin";
 import { DocumentActions } from "./DocumentActions";
 import { BellDot, Info } from "lucide-react";
 
 interface MobileDocumentCardProps {
-  doc: Document;
+  doc: AppDocument;
   formatDate: (dateStr: string) => string;
   isDocumentExpired: (expirationDate: string | null) => boolean;
   daysUntilExpiration: (expirationDate: string | null) => string | null;
   refreshDocuments: () => void;
   loadingDocumentIds: Set<string>;
-  setLoadingDocumentIds: React.Dispatch<React.SetStateAction<Set<string>>>;
-  handleDownload: (doc: Document) => Promise<void>;
+  handleDownload: (doc: AppDocument) => Promise<void>;
 }
 
 export const MobileDocumentCard = ({
@@ -21,7 +20,6 @@ export const MobileDocumentCard = ({
   daysUntilExpiration,
   refreshDocuments,
   loadingDocumentIds,
-  setLoadingDocumentIds,
   handleDownload
 }: MobileDocumentCardProps) => {
   const isExpired = isDocumentExpired(doc.expires_at);

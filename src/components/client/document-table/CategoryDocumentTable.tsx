@@ -1,10 +1,10 @@
 
-import { Document } from "@/utils/auth/types";
+import { AppDocument } from "@/types/admin";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { DocumentTable } from "@/components/client/DocumentTable";
 
 interface CategoryDocumentTableProps {
-  documents: Document[];
+  documents: AppDocument[];
   category: string;
   formatDate: (dateStr: string) => string;
   isDocumentExpired: (expirationDate: string | null) => boolean;
