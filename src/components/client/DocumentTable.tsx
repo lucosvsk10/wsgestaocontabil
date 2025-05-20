@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Document } from "@/utils/auth/types";
+import { AppDocument } from "@/types/admin";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDocumentActions } from "@/hooks/document/useDocumentActions";
@@ -10,7 +10,7 @@ import { DocumentEmptyState } from "./document-table/DocumentEmptyState";
 import { DocumentGrid } from "./document-table/DocumentGrid";
 
 interface DocumentTableProps {
-  documents: Document[];
+  documents: AppDocument[];
   formatDate: (dateStr: string) => string;
   isDocumentExpired: (expiresAt: string | null) => boolean;
   daysUntilExpiration: (expiresAt: string | null) => string | null;

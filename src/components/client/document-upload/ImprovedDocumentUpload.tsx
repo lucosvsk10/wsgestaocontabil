@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -160,6 +159,11 @@ export const ImprovedDocumentUpload: React.FC<ImprovedDocumentUploadProps> = ({
           throw new Error('Erro ao obter URL pública do arquivo');
         }
         
+        // Format the expiration date as ISO string if it exists
+        const expirationDate = (file.expirationDate || (!noExpiration && globalExpirationDate)) 
+          ? (file.expirationDate || globalExpirationDate)?.toISOString() 
+          : null;
+        
         // Insert document record
         const { error: dbError } = await supabase
           .from('documents')
@@ -170,7 +174,7 @@ export const ImprovedDocumentUpload: React.FC<ImprovedDocumentUploadProps> = ({
             filename: fileName,
             category: file.documentCategory || globalCategory,
             observations: file.documentObservations || globalObservations,
-            expires_at: (file.expirationDate || (!noExpiration && globalExpirationDate)) || null,
+            expires_at: expirationDate,
             file_url: urlData.publicUrl,
             storage_key: filePath,
             size: file.size

@@ -1,6 +1,6 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Document } from "@/types/admin";
+import { AppDocument } from "@/types/admin";
 import { CategoryDocumentTable } from "./document-table";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useState } from "react";
@@ -13,9 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
 
 interface DocumentTabsProps {
-  documents: Document[];
-  allDocuments: Document[];
-  documentsByCategory: Record<string, Document[]>;
+  documents: AppDocument[];
+  allDocuments: AppDocument[];
+  documentsByCategory: Record<string, AppDocument[]>;
   categories: string[];
   setSelectedCategory: (category: string | null) => void;
   formatDate: (dateStr: string) => string;
