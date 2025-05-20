@@ -146,19 +146,21 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
                 ) : (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <span className="sr-only">Abrir menu</span>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onDownload(document)}>
+                    <DropdownMenuContent align="end" className="bg-white dark:bg-navy-deeper border-gray-200 dark:border-navy-lighter/30">
+                      <DropdownMenuItem 
+                        onClick={() => onDownload(document)}
+                        className="cursor-pointer flex items-center text-navy dark:text-white hover:text-blue-600 dark:hover:text-blue-400"
+                      >
                         <Download className="mr-2 h-4 w-4" />
                         <span>Baixar</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem 
                         onClick={() => onDelete(document.id)}
-                        className="text-red-600 dark:text-red-400 focus:text-red-700 dark:focus:text-red-300"
+                        className="cursor-pointer flex items-center text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
                         <span>Excluir</span>
