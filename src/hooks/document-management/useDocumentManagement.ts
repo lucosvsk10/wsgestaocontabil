@@ -1,147 +1,157 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { AppDocument, UserType } from "@/types/admin";
+import { AppDocument } from "@/types/admin";
 
 export const useDocumentManagement = (users: any[], supabaseUsers: any[]) => {
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [documents, setDocuments] = useState<AppDocument[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
   const [loadingDocumentIds, setLoadingDocumentIds] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
-  // Function to fetch documents for a selected user
-  const fetchDocuments = useCallback(async (userId: string) => {
+  // Fetch documents function
+  const fetchUserDocuments = async (userId: string) => {
     if (!userId) return;
     
     setIsLoadingDocuments(true);
+    
     try {
       const { data, error } = await supabase
         .from('documents')
         .select('*')
         .eq('user_id', userId)
         .order('uploaded_at', { ascending: false });
-      
+        
       if (error) throw error;
       
       setDocuments(data || []);
     } catch (error: any) {
       console.error('Error fetching documents:', error);
       toast({
-        variant: "destructive",
         title: "Erro ao carregar documentos",
-        description: error.message
+        description: error.message || "Ocorreu um erro ao carregar os documentos.",
+        variant: "destructive"
       });
     } finally {
       setIsLoadingDocuments(false);
     }
-  }, [toast]);
+  };
 
-  // Handle document download
-  const handleDownload = async (document: AppDocument) => {
+  // Download document function
+  const handleDownload = async (doc: AppDocument) => {
+    if (!doc || !doc.id) return;
+    
     try {
-      setLoadingDocumentIds(prev => new Set([...prev, document.id]));
+      setLoadingDocumentIds(prev => new Set([...prev, doc.id]));
       
-      if (document.storage_key) {
-        // Download using storage_key
+      // If we already have a file_url, use it directly
+      if (doc.file_url) {
+        const response = await fetch(doc.file_url);
+        const blob = await response.blob();
+        
+        // Create download link
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = doc.original_filename || doc.filename || 'document';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+      } 
+      // Otherwise, get from storage
+      else if (doc.storage_key) {
         const { data, error } = await supabase.storage
           .from('documents')
-          .download(document.storage_key);
-        
+          .download(doc.storage_key);
+          
         if (error) throw error;
         
-        if (data) {
-          const url = URL.createObjectURL(data);
-          const a = window.document.createElement('a');
-          a.href = url;
-          a.download = document.filename || document.original_filename || document.name;
-          window.document.body.appendChild(a);
-          a.click();
-          window.document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-          
-          toast({
-            title: "Download concluído",
-            description: "O documento foi baixado com sucesso."
-          });
-          
-          return;
-        }
-      }
-
-      // Fallback to public URL
-      if (document.file_url) {
-        window.open(document.file_url, '_blank');
+        // Create download link
+        const url = window.URL.createObjectURL(data);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = doc.original_filename || doc.filename || 'document';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
       } else {
-        throw new Error("URL do documento não encontrada");
+        throw new Error('Nenhuma informação de arquivo disponível para download');
       }
+      
+      // Mark document as viewed if not already
+      if (!doc.viewed) {
+        await supabase
+          .from('documents')
+          .update({ 
+            viewed: true,
+            viewed_at: new Date().toISOString()
+          })
+          .eq('id', doc.id);
+      }
+      
     } catch (error: any) {
-      console.error('Erro ao baixar documento:', error);
+      console.error('Error downloading document:', error);
       toast({
-        variant: "destructive",
-        title: "Erro ao baixar documento",
-        description: error.message
+        title: "Erro ao baixar o documento",
+        description: error.message || "Ocorreu um erro ao baixar o documento.",
+        variant: "destructive"
       });
     } finally {
       setLoadingDocumentIds(prev => {
         const newSet = new Set(prev);
-        newSet.delete(document.id);
+        newSet.delete(doc.id);
         return newSet;
       });
     }
   };
-  
-  // Handle document deletion
+
+  // Delete document function
   const handleDeleteDocument = async (documentId: string) => {
-    if (!window.confirm("Tem certeza que deseja excluir este documento?")) {
-      return;
-    }
+    if (!documentId || !selectedUserId) return;
     
     try {
       setLoadingDocumentIds(prev => new Set([...prev, documentId]));
       
-      // Get the document details first
-      const { data, error: fetchError } = await supabase
-        .from('documents')
-        .select('*')
-        .eq('id', documentId)
-        .single();
+      // Find the document to get the storage key
+      const documentToDelete = documents.find(doc => doc.id === documentId);
       
-      if (fetchError) throw fetchError;
-      
-      // Delete from database
-      const { error: deleteError } = await supabase
-        .from('documents')
-        .delete()
-        .eq('id', documentId);
-      
-      if (deleteError) throw deleteError;
-      
-      // Delete from storage if we have storage_key
-      if (data && data.storage_key) {
+      if (documentToDelete?.storage_key) {
+        // Delete from storage first
         const { error: storageError } = await supabase.storage
           .from('documents')
-          .remove([data.storage_key]);
-        
+          .remove([documentToDelete.storage_key]);
+          
         if (storageError) {
-          console.error('Error deleting file from storage:', storageError);
-          // We continue anyway to keep the database clean
+          console.warn('Error deleting file from storage:', storageError);
+          // Continue with database deletion even if storage delete fails
         }
       }
       
-      // Update the documents list
-      setDocuments(docs => docs.filter(doc => doc.id !== documentId));
+      // Delete from database
+      const { error: dbError } = await supabase
+        .from('documents')
+        .delete()
+        .eq('id', documentId);
+        
+      if (dbError) throw dbError;
+      
+      // Update local state
+      setDocuments(documents.filter(doc => doc.id !== documentId));
       
       toast({
         title: "Documento excluído",
-        description: "O documento foi excluído com sucesso."
+        description: "O documento foi excluído com sucesso.",
       });
+      
     } catch (error: any) {
-      console.error('Erro ao excluir documento:', error);
+      console.error('Error deleting document:', error);
       toast({
-        variant: "destructive",
-        title: "Erro ao excluir documento",
-        description: error.message
+        title: "Erro ao excluir o documento",
+        description: error.message || "Ocorreu um erro ao excluir o documento.",
+        variant: "destructive"
       });
     } finally {
       setLoadingDocumentIds(prev => {
@@ -151,21 +161,15 @@ export const useDocumentManagement = (users: any[], supabaseUsers: any[]) => {
       });
     }
   };
-  
-  // Fetch documents when selected user changes
+
+  // Setup realtime subscription for documents
   useEffect(() => {
     if (selectedUserId) {
-      fetchDocuments(selectedUserId);
-    } else {
-      setDocuments([]);
-    }
-  }, [selectedUserId, fetchDocuments]);
-  
-  // Setup real-time subscription for document changes
-  useEffect(() => {
-    if (selectedUserId) {
+      fetchUserDocuments(selectedUserId);
+      
+      // Subscribe to realtime changes
       const channel = supabase
-        .channel(`documents-${selectedUserId}`)
+        .channel(`admin-documents-${selectedUserId}`)
         .on(
           'postgres_changes',
           {
@@ -174,26 +178,27 @@ export const useDocumentManagement = (users: any[], supabaseUsers: any[]) => {
             table: 'documents',
             filter: `user_id=eq.${selectedUserId}`,
           },
-          () => {
-            // Refresh the documents when there's a change
-            fetchDocuments(selectedUserId);
+          (payload) => {
+            console.log("Document change detected:", payload);
+            fetchUserDocuments(selectedUserId);
           }
         )
         .subscribe();
       
+      // Cleanup on unmount or when selectedUserId changes
       return () => {
         supabase.removeChannel(channel);
       };
     }
-  }, [selectedUserId, fetchDocuments]);
+  }, [selectedUserId]);
 
   return {
+    documents,
     selectedUserId,
     setSelectedUserId,
-    documents,
     isLoadingDocuments,
     loadingDocumentIds,
-    fetchDocuments,
+    fetchUserDocuments,
     handleDownload,
     handleDeleteDocument
   };
