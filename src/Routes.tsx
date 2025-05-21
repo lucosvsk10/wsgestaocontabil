@@ -1,58 +1,81 @@
-import React, { useContext } from 'react';
+
+import React from 'react';
 import {
   BrowserRouter,
-  Routes,
+  Routes as RouterRoutes,
   Route,
   Navigate,
 } from 'react-router-dom';
 import ClientDashboard from './pages/ClientDashboard';
-import ClientProfile from './pages/ClientProfile';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import AdminDashboard from './pages/AdminDashboard';
-import { AuthContext } from './contexts/AuthContext';
-import PollView from './pages/PollView';
-import PollCreation from './pages/PollCreation';
-import PollRespond from './pages/PollRespond';
+import { useAuth } from './contexts/AuthContext';
 import { AdminDocumentManagementView } from './components/admin/AdminDocumentManagementView';
+import AdminDashboard from './pages/AdminDashboard';
 
 const RequireAuth = ({ children }: { children?: React.ReactNode }) => {
-  const { user } = useContext(AuthContext);
+  const { user } = useAuth();
   return user ? <>{children}</> : <Navigate to="/login" />;
 };
 
-const Routes = () => {
-  const { user } = useContext(AuthContext);
+const AppRoutes = () => {
+  const { user } = useAuth();
 
   return (
     <BrowserRouter>
-      <Routes>
+      <RouterRoutes>
         {/* Public routes */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/" element={<Login />} />
+        <Route path="/login" element={<ClientLogin />} />
+        <Route path="/" element={<ClientLogin />} />
         
         {/* Private routes that require authentication */}
-        <Route element={<RequireAuth />}>
-          <Route path="/client-dashboard" element={<ClientDashboard />} />
-          <Route path="/client-profile" element={<ClientProfile />} />
-          <Route path="/admin" element={<AdminDashboard activeTab="dashboard" />} />
-          <Route path="/admin/users" element={<AdminDashboard activeTab="users" />} />
-          <Route path="/admin/user-create" element={<AdminDashboard activeTab="user-create" />} />
-          <Route path="/admin/user-documents/:userId" element={<AdminDashboard activeTab="user-documents" />} />
-          <Route path="/admin/documents" element={<AdminDocumentManagementView />} />
-          <Route path="/admin/polls" element={<AdminDashboard activeTab="polls" />} />
-          <Route path="/admin/simulator" element={<AdminDashboard activeTab="simulator" />} />
-          <Route path="/polls/view/:id" element={<PollView />} />
-          <Route path="/polls/create" element={<PollCreation />} />
-          <Route path="/polls/respond/:id" element={<PollRespond />} />
-        </Route>
+        <Route path="/client-dashboard" element={
+          <RequireAuth>
+            <ClientDashboard />
+          </RequireAuth>
+        } />
+        <Route path="/admin" element={
+          <RequireAuth>
+            <AdminDashboard activeTab="dashboard" />
+          </RequireAuth>
+        } />
+        <Route path="/admin/users" element={
+          <RequireAuth>
+            <AdminDashboard activeTab="users" />
+          </RequireAuth>
+        } />
+        <Route path="/admin/user-create" element={
+          <RequireAuth>
+            <AdminDashboard activeTab="user-create" />
+          </RequireAuth>
+        } />
+        <Route path="/admin/user-documents/:userId" element={
+          <RequireAuth>
+            <AdminDashboard activeTab="user-documents" />
+          </RequireAuth>
+        } />
+        <Route path="/admin/documents" element={
+          <RequireAuth>
+            <AdminDocumentManagementView />
+          </RequireAuth>
+        } />
+        <Route path="/admin/polls" element={
+          <RequireAuth>
+            <AdminDashboard activeTab="polls" />
+          </RequireAuth>
+        } />
+        <Route path="/admin/simulator" element={
+          <RequireAuth>
+            <AdminDashboard activeTab="simulator" />
+          </RequireAuth>
+        } />
         
         {/* Error route - matches any unmatched path */}
         <Route path="*" element={<Navigate to={user ? "/client-dashboard" : "/login"} replace />} />
-      </Routes>
+      </RouterRoutes>
     </BrowserRouter>
   );
 };
 
-export default Routes;
+// Importação para ClientLogin
+import ClientLogin from './pages/ClientLogin';
+
+export default AppRoutes;
