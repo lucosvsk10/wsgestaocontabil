@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useUserManagement } from "@/hooks/useUserManagement";
 import { useDocumentManagement } from "@/hooks/document-management/useDocumentManagement";
 import { AdminDocumentManager } from "./document-management/AdminDocumentManager";
+
 export const UserDocumentView = () => {
   const {
     userId
@@ -44,14 +46,17 @@ export const UserDocumentView = () => {
       }
     }
   }, [userId, setSelectedUserId, supabaseUsers]);
+  
   const handleBackToUserList = () => {
     navigate("/admin/users");
   };
+  
   if (isLoadingUsers) {
     return <div className="flex items-center justify-center h-64">
         <LoadingSpinner />
       </div>;
   }
+  
   if (!userId) {
     return <Card className="px-0 bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20 shadow-lg">
         <CardContent className="p-8">
@@ -65,6 +70,7 @@ export const UserDocumentView = () => {
         </CardContent>
       </Card>;
   }
+  
   return <Card className="px-0 bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20 shadow-lg">
       <CardHeader className="border-b border-gray-200 dark:border-gold/20 px-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -80,7 +86,16 @@ export const UserDocumentView = () => {
         </div>
       </CardHeader>
       <CardContent className="p-6">
-        <AdminDocumentManager userId={userId} userName={userName} userEmail={userEmail} documents={documents} isLoadingDocuments={isLoadingDocuments} loadingDocumentIds={loadingDocumentIds} handleDownload={handleDownload} handleDeleteDocument={handleDeleteDocument} />
+        <AdminDocumentManager 
+          userId={userId} 
+          userName={userName} 
+          userEmail={userEmail} 
+          documents={documents} 
+          isLoadingDocuments={isLoadingDocuments} 
+          loadingDocumentIds={loadingDocumentIds} 
+          handleDownload={handleDownload} 
+          handleDeleteDocument={handleDeleteDocument} 
+        />
       </CardContent>
     </Card>;
 };

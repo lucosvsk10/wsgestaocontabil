@@ -1,7 +1,9 @@
+
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Document } from "@/types/admin";
+import { useDocumentCategories } from "./useDocumentCategories";
 
 export const useDocumentManagement = (users: any[], supabaseUsers: any[]) => {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
@@ -9,6 +11,7 @@ export const useDocumentManagement = (users: any[], supabaseUsers: any[]) => {
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
   const [loadingDocumentIds, setLoadingDocumentIds] = useState<Set<string>>(new Set());
   const { toast } = useToast();
+  const { categories, fetchCategories } = useDocumentCategories();
 
   // Function to fetch documents for a selected user
   const fetchDocuments = useCallback(async (userId: string) => {
@@ -152,14 +155,24 @@ export const useDocumentManagement = (users: any[], supabaseUsers: any[]) => {
     }
   };
   
-  // Fetch documents when selected user changes
+  // Group documents by category
+  const documentsByCategory = useCallback(() => {
+    const result: Record<string, Document[]> = {};
+    categories.forEach(category => {
+      result[category.id] = documents.filter(doc => doc.category === category.id);
+    });
+    return result;
+  }, [documents, categories]);
+  
+  // Fetch documents and categories when selected user changes
   useEffect(() => {
     if (selectedUserId) {
       fetchDocuments(selectedUserId);
+      fetchCategories();
     } else {
       setDocuments([]);
     }
-  }, [selectedUserId, fetchDocuments]);
+  }, [selectedUserId, fetchDocuments, fetchCategories]);
   
   // Setup real-time subscription for document changes
   useEffect(() => {
@@ -191,6 +204,8 @@ export const useDocumentManagement = (users: any[], supabaseUsers: any[]) => {
     selectedUserId,
     setSelectedUserId,
     documents,
+    documentsByCategory,
+    categories,
     isLoadingDocuments,
     loadingDocumentIds,
     fetchDocuments,

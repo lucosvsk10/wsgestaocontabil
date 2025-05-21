@@ -1,415 +1,450 @@
 
-import React, { useState, useCallback } from "react";
-import { useDropzone } from "react-dropzone";
-import { Label } from "@/components/ui/label";
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { CalendarIcon, UploadCloud, X, Plus, File } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { v4 as uuidv4 } from "uuid";
+import { Card, CardContent } from "@/components/ui/card";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
+import { Calendar as CalendarIcon, Upload, Settings, Check } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { cn } from "@/lib/utils";
-import { callEdgeFunction } from "@/utils/edgeFunctions";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { CategoryManagementModal } from "./CategoryManagementModal";
+import { useDocumentCategories } from "@/hooks/document-management/useDocumentCategories";
 
 interface AdminDocumentUploadProps {
   userId: string;
-  documentCategories: string[];
+  onDocumentUploaded?: () => void;
 }
 
-interface FileWithPreview extends File {
-  preview?: string;
-  id: string;
-}
-
-export const AdminDocumentUpload: React.FC<AdminDocumentUploadProps> = ({
-  userId,
-  documentCategories
-}) => {
-  const { toast } = useToast();
-  const [files, setFiles] = useState<FileWithPreview[]>([]);
-  const [category, setCategory] = useState("");
-  const [subcategory, setSubcategory] = useState("");
-  const [observations, setObservations] = useState("");
+export const AdminDocumentUpload: React.FC<AdminDocumentUploadProps> = ({ userId, onDocumentUploaded }) => {
+  const [documentName, setDocumentName] = useState("");
+  const [documentCategory, setDocumentCategory] = useState("");
+  const [documentSubcategory, setDocumentSubcategory] = useState("");
+  const [documentObservations, setDocumentObservations] = useState("");
   const [expirationDate, setExpirationDate] = useState<Date | null>(null);
   const [noExpiration, setNoExpiration] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const { toast } = useToast();
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    const newFiles = acceptedFiles.map(file => 
-      Object.assign(file, {
-        preview: URL.createObjectURL(file),
-        id: uuidv4()
-      })
-    );
-    setFiles(prev => [...prev, ...newFiles]);
-  }, []);
+  // Gerenciamento de categorias
+  const {
+    categories,
+    isModalOpen,
+    setIsModalOpen,
+    addCategory,
+    updateCategory,
+    deleteCategory
+  } = useDocumentCategories();
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      'application/pdf': ['.pdf'],
-      'image/jpeg': ['.jpg', '.jpeg'],
-      'image/png': ['.png'],
-      'application/msword': ['.doc'],
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-      'application/vnd.ms-excel': ['.xls'],
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx']
-    },
-    multiple: true
-  });
+  // Convert files to an array
+  const filesArray = selectedFiles ? Array.from(selectedFiles) : [];
 
-  const removeFile = (fileId: string) => {
-    setFiles(files => {
-      const fileToRemove = files.find(file => file.id === fileId);
-      if (fileToRemove?.preview) {
-        URL.revokeObjectURL(fileToRemove.preview);
-      }
-      return files.filter(file => file.id !== fileId);
-    });
-  };
-  
-  const handleExpirationCheckChange = (checked: boolean) => {
-    setNoExpiration(checked);
-    if (checked) {
-      setExpirationDate(null);
+  // Função para lidar com o file drop
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (e.dataTransfer.files) {
+      setSelectedFiles(e.dataTransfer.files);
     }
   };
 
-  const notifyNewDocumentViaEdgeFunction = async (userId: string, documentName: string) => {
-    try {
-      console.log(`Chamando edge function para notificação do usuário ${userId} sobre documento: ${documentName}`);
-      
-      const result = await callEdgeFunction<any>('notify_new_document', {
-        user_id: userId,
-        document_name: documentName
-      });
-      
-      return result;
-    } catch (error: any) {
-      console.error('Erro ao criar notificação:', error);
-      throw error;
+  // Função para lidar com a seleção de arquivo
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setSelectedFiles(e.target.files);
     }
+  };
+
+  // Prevenção de comportamento padrão para eventos de arrastar
+  const preventDefaults = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const resetForm = () => {
+    setDocumentName("");
+    setDocumentCategory("");
+    setDocumentSubcategory("");
+    setDocumentObservations("");
+    setExpirationDate(null);
+    setNoExpiration(false);
+    setSelectedFiles(null);
+    
+    // Reset file input field
+    const fileInput = document.getElementById('fileInput') as HTMLInputElement;
+    if (fileInput) fileInput.value = "";
+    
+    setUploadProgress(0);
   };
 
   const handleUpload = async () => {
-    if (files.length === 0) {
+    if (!selectedFiles || !selectedFiles.length) {
       toast({
-        title: "Erro",
-        description: "Selecione pelo menos um arquivo para upload.",
-        variant: "destructive"
+        variant: "destructive",
+        title: "Nenhum arquivo selecionado",
+        description: "Por favor, selecione um arquivo para enviar."
       });
       return;
     }
 
-    if (!category) {
+    if (!documentName.trim()) {
       toast({
-        title: "Erro",
-        description: "A categoria é obrigatória.",
-        variant: "destructive"
+        variant: "destructive",
+        title: "Nome não definido",
+        description: "Por favor, forneça um nome para o documento."
       });
       return;
     }
 
-    setIsUploading(true);
+    if (!documentCategory) {
+      toast({
+        variant: "destructive",
+        title: "Categoria não selecionada",
+        description: "Por favor, selecione uma categoria para o documento."
+      });
+      return;
+    }
 
     try {
-      const uploadedDocuments = [];
+      setIsUploading(true);
+      setUploadProgress(10); // Iniciar progresso
 
-      for (const file of files) {
-        // Generate a unique filename
+      let successCount = 0;
+      const totalFiles = filesArray.length;
+      
+      for (let i = 0; i < filesArray.length; i++) {
+        const file = filesArray[i];
+        
+        // Gerar um nome de arquivo único
         const fileExt = file.name.split('.').pop();
-        const fileName = `${uuidv4()}.${fileExt}`;
-        const fileKey = `${userId}/${fileName}`;
+        const fileName = `${userId}/${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
+        const storageKey = `${userId}/${fileName}`;
         
-        // Upload file to storage
-        const { data: fileData, error: uploadError } = await supabase.storage
+        // Upload do arquivo para o Storage do Supabase
+        const { error: uploadError } = await supabase.storage
           .from('documents')
-          .upload(fileKey, file);
+          .upload(storageKey, file);
         
-        if (uploadError) {
-          throw uploadError;
+        if (uploadError) throw uploadError;
+        
+        setUploadProgress(30 + (i / totalFiles) * 40); // Progresso intermediário
+        
+        // Obter URL do arquivo
+        const { data: urlData } = await supabase.storage
+          .from('documents')
+          .createSignedUrl(storageKey, 31536000); // URL válida por 1 ano
+        
+        if (!urlData?.signedUrl) {
+          throw new Error('Não foi possível obter URL para o arquivo');
         }
         
-        // Get file public URL
-        const { data: { publicUrl } } = supabase.storage
-          .from('documents')
-          .getPublicUrl(fileKey);
-        
-        // Calculate expiration date if applicable
+        // Definir data de expiração
         let expiresAt = null;
         if (!noExpiration && expirationDate) {
           expiresAt = expirationDate.toISOString();
         }
         
-        // Create document record in the database
-        const { data: documentData, error: documentError } = await supabase
+        // Salvar registro na tabela de documentos
+        const docName = totalFiles > 1 ? 
+          `${documentName} (${i+1}/${totalFiles})` : documentName;
+        
+        const { error: dbError } = await supabase
           .from('documents')
-          .insert([
-            {
-              user_id: userId,
-              name: file.name.split('.')[0], // Use filename as document name by default
-              category: category,
-              subcategory: subcategory || null,
-              observations: observations || null,
-              file_url: publicUrl,
-              storage_key: fileKey,
-              original_filename: file.name,
-              size: file.size,
-              filename: fileName,
-              type: file.type,
-              expires_at: expiresAt
-            }
-          ])
-          .select()
-          .single();
+          .insert({
+            user_id: userId,
+            name: docName,
+            file_url: urlData.signedUrl,
+            storage_key: storageKey,
+            category: documentCategory,
+            subcategory: documentSubcategory || null,
+            observations: documentObservations || null,
+            expires_at: expiresAt,
+            original_filename: file.name,
+            size: file.size
+          });
         
-        if (documentError) {
-          throw documentError;
-        }
+        if (dbError) throw dbError;
+        successCount++;
         
-        uploadedDocuments.push(documentData);
-        
-        // Create a notification for the user about the new document
-        try {
-          await notifyNewDocumentViaEdgeFunction(userId, file.name.split('.')[0]);
-        } catch (notifError) {
-          console.error('Erro ao criar notificação:', notifError);
-          // Continue with the flow even if notification fails
-        }
+        setUploadProgress(70 + (i / totalFiles) * 30); // Progresso final
       }
       
-      // Success message
+      setUploadProgress(100);
+      
       toast({
-        title: "Sucesso",
-        description: `${files.length} documento${files.length > 1 ? 's' : ''} enviado${files.length > 1 ? 's' : ''} com sucesso!`
+        title: `${successCount} ${successCount === 1 ? 'documento enviado' : 'documentos enviados'}`,
+        description: "Upload concluído com sucesso."
       });
       
       // Reset form
-      setFiles([]);
-      setSubcategory("");
-      setObservations("");
-      setExpirationDate(null);
+      resetForm();
+      
+      // Notificar componente pai para atualizar a lista de documentos
+      if (onDocumentUploaded) {
+        onDocumentUploaded();
+      }
       
     } catch (error: any) {
-      console.error("Erro no upload:", error);
+      console.error('Erro no upload:', error);
       toast({
+        variant: "destructive",
         title: "Erro no upload",
-        description: error.message || "Ocorreu um erro ao enviar o documento.",
-        variant: "destructive"
+        description: error.message
       });
     } finally {
       setIsUploading(false);
     }
   };
 
+  // Renderização do indicador de progresso
+  const renderProgressBar = () => {
+    return (
+      <div className="w-full bg-gray-200 dark:bg-navy-light/30 rounded-full h-2 mt-4">
+        <div 
+          className="bg-gold h-2 rounded-full" 
+          style={{ width: `${uploadProgress}%` }}
+        ></div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
-      {/* File dropzone */}
-      <div className="space-y-2">
-        <Label className="text-navy-dark dark:text-gold font-medium">Arquivos</Label>
-        <div 
-          {...getRootProps()} 
-          className={cn(
-            "border-2 border-dashed rounded-lg p-6 cursor-pointer transition-all text-center",
-            isDragActive 
-              ? "border-gold/70 bg-gold/10" 
-              : "border-gray-300 dark:border-navy-lighter/40 hover:border-gold/40 dark:hover:border-gold/40 bg-gray-50 dark:bg-navy-deeper"
-          )}
-        >
-          <input {...getInputProps()} />
-          <div className="flex flex-col items-center justify-center space-y-2 py-4">
-            <UploadCloud className="h-12 w-12 text-gray-400 dark:text-gold/60" />
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              {isDragActive
-                ? "Solte os arquivos aqui..."
-                : "Arraste e solte arquivos aqui ou clique para selecionar"
-              }
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Suporta PDF, DOC, DOCX, XLS, XLSX, JPG, PNG até 10MB
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Selected files */}
-      {files.length > 0 && (
-        <div className="space-y-3">
-          <Label className="text-navy-dark dark:text-gold font-medium">Arquivos selecionados ({files.length})</Label>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {files.map(file => (
-              <div 
-                key={file.id} 
-                className="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-navy-lighter/40 bg-white dark:bg-navy-light/10"
-              >
-                <div className="flex items-center space-x-3 overflow-hidden">
-                  <File className="h-8 w-8 flex-shrink-0 text-navy-dark dark:text-gold" />
-                  <div className="truncate">
-                    <p className="truncate text-sm font-medium text-gray-800 dark:text-white">
-                      {file.name}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {(file.size / 1024).toFixed(1)} KB
-                    </p>
-                  </div>
+      <Card className="border-gray-200 dark:border-navy-lighter/30 shadow-sm">
+        <CardContent className="pt-6">
+          {/* Área de upload */}
+          <div 
+            className={`
+              border-2 border-dashed rounded-lg p-8 text-center cursor-pointer
+              ${isUploading ? 
+                'border-gold/50 bg-gold/5 dark:bg-gold/10' : 
+                'border-gray-300 dark:border-navy-lighter/50 hover:border-gold hover:bg-gold/5 dark:hover:bg-gold/10'}
+            `}
+            onDrop={handleDrop}
+            onDragOver={preventDefaults}
+            onDragEnter={preventDefaults}
+            onDragLeave={preventDefaults}
+            onClick={() => document.getElementById('fileInput')?.click()}
+          >
+            {isUploading ? (
+              <div className="flex flex-col items-center">
+                <LoadingSpinner />
+                <p className="mt-2 text-navy-dark dark:text-white">Enviando documento(s)...</p>
+                {renderProgressBar()}
+              </div>
+            ) : selectedFiles && selectedFiles.length > 0 ? (
+              <div>
+                <div className="mb-4 flex items-center justify-center">
+                  <Check className="h-10 w-10 text-green-500 dark:text-green-400" />
                 </div>
+                <h3 className="font-medium text-lg text-navy-dark dark:text-white mb-1">
+                  {selectedFiles.length} {selectedFiles.length === 1 ? 'arquivo selecionado' : 'arquivos selecionados'}
+                </h3>
+                <ul className="max-h-32 overflow-auto text-sm text-gray-600 dark:text-gray-300 mt-2">
+                  {filesArray.map((file, index) => (
+                    <li key={index} className="truncate">{file.name}</li>
+                  ))}
+                </ul>
+                <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                  Clique para selecionar outros arquivos
+                </p>
+              </div>
+            ) : (
+              <>
+                <Upload className="h-10 w-10 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                <h3 className="font-medium text-lg text-navy-dark dark:text-white">
+                  Arraste e solte arquivos aqui
+                </h3>
+                <p className="text-gray-500 dark:text-gray-400 mt-1">
+                  ou clique para selecionar
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">
+                  Suporta múltiplos arquivos
+                </p>
+              </>
+            )}
+            <Input 
+              id="fileInput"
+              type="file"
+              multiple
+              className="hidden"
+              onChange={handleFileChange}
+              disabled={isUploading}
+            />
+          </div>
+
+          {/* Formulário de metadados */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <div>
+              <Label htmlFor="documentName" className="text-gray-700 dark:text-gray-300">
+                Nome do Documento*
+              </Label>
+              <Input
+                id="documentName"
+                value={documentName}
+                onChange={(e) => setDocumentName(e.target.value)}
+                placeholder="Nome que será exibido para o cliente"
+                className="mt-1 border-gray-300 dark:border-navy-lighter/40 bg-white dark:bg-navy-light/20 dark:text-white"
+                disabled={isUploading}
+                required
+              />
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center">
+                <Label htmlFor="documentCategory" className="text-gray-700 dark:text-gray-300">
+                  Categoria*
+                </Label>
                 <Button 
-                  variant="ghost"
-                  size="sm"
-                  className="text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400"
-                  onClick={() => removeFile(file.id)}
+                  type="button" 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-8 text-gray-500 hover:text-navy dark:hover:text-gold"
+                  onClick={() => setIsModalOpen(true)}
                 >
-                  <X className="h-4 w-4" />
+                  <Settings className="h-4 w-4 mr-1" />
+                  Gerenciar
                 </Button>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+              <select
+                id="documentCategory"
+                value={documentCategory}
+                onChange={(e) => setDocumentCategory(e.target.value)}
+                className="mt-1 w-full rounded-md border-gray-300 dark:border-navy-lighter/40 bg-white dark:bg-navy-light/20 dark:text-white"
+                disabled={isUploading}
+                required
+              >
+                <option value="">Selecione uma categoria</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-      {/* Document details */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Category (required) */}
-        <div className="space-y-2">
-          <Label htmlFor="category" className="text-navy-dark dark:text-gold font-medium required">
-            Categoria
-          </Label>
-          <select
-            id="category"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 dark:border-navy-lighter/40 bg-white dark:bg-navy-deeper text-gray-900 dark:text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-navy dark:focus:ring-gold/50"
-            required
-          >
-            <option value="">Selecione uma categoria</option>
-            {documentCategories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
-        </div>
+            <div>
+              <Label htmlFor="documentSubcategory" className="text-gray-700 dark:text-gray-300">
+                Subcategoria (opcional)
+              </Label>
+              <Input
+                id="documentSubcategory"
+                value={documentSubcategory}
+                onChange={(e) => setDocumentSubcategory(e.target.value)}
+                placeholder="Ex: Termo de aceite, Contra-cheque, etc"
+                className="mt-1 border-gray-300 dark:border-navy-lighter/40 bg-white dark:bg-navy-light/20 dark:text-white"
+                disabled={isUploading}
+              />
+            </div>
 
-        {/* Subcategory (optional) */}
-        <div className="space-y-2">
-          <Label htmlFor="subcategory" className="text-navy-dark dark:text-gold font-medium">
-            Subcategoria (opcional)
-          </Label>
-          <Input
-            id="subcategory"
-            value={subcategory}
-            onChange={(e) => setSubcategory(e.target.value)}
-            placeholder="Ex: IRPF 2023, Contrato de Aluguel"
-            className="w-full dark:bg-navy-deeper dark:border-navy-lighter/40"
-          />
-        </div>
-      </div>
-
-      {/* Expiration date fields */}
-      <div className="space-y-4">
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="no-expiration"
-            checked={noExpiration}
-            onCheckedChange={handleExpirationCheckChange}
-            className="border-gray-300 dark:border-navy-lighter/40 data-[state=checked]:bg-navy data-[state=checked]:border-navy dark:data-[state=checked]:bg-gold dark:data-[state=checked]:border-gold"
-          />
-          <Label 
-            htmlFor="no-expiration"
-            className="text-sm font-medium text-gray-700 dark:text-gray-200"
-          >
-            Este documento não tem data de expiração
-          </Label>
-        </div>
-
-        {!noExpiration && (
-          <div className="space-y-2">
-            <Label 
-              htmlFor="expiration-date"
-              className="text-navy-dark dark:text-gold font-medium"
-            >
-              Data de Expiração (opcional)
-            </Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  id="expiration-date"
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal bg-white dark:bg-navy-deeper border-gray-300 dark:border-navy-lighter/40",
-                    !expirationDate && "text-gray-500 dark:text-gray-400"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4 text-navy-dark dark:text-gold" />
-                  {expirationDate ? (
-                    format(expirationDate, "dd/MM/yyyy", { locale: ptBR })
-                  ) : (
-                    <span>Selecionar data de expiração</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 bg-white dark:bg-navy-deeper border dark:border-navy-lighter/40">
-                <Calendar
-                  mode="single"
-                  selected={expirationDate || undefined}
-                  onSelect={setExpirationDate}
-                  initialFocus
-                  className="p-3 pointer-events-auto"
+            <div>
+              <Label htmlFor="documentExpiration" className="text-gray-700 dark:text-gray-300">
+                Data de Expiração (opcional)
+              </Label>
+              <div className="flex items-center mt-1 space-x-4">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal border-gray-300 dark:border-navy-lighter/40 bg-white dark:bg-navy-light/20",
+                        !expirationDate && !noExpiration && "text-gray-500 dark:text-gray-400"
+                      )}
+                      disabled={isUploading || noExpiration}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {expirationDate ? (
+                        format(expirationDate, "PPP", { locale: ptBR })
+                      ) : (
+                        "Selecione uma data"
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 bg-white dark:bg-navy-deeper">
+                    <Calendar
+                      mode="single"
+                      selected={expirationDate || undefined}
+                      onSelect={setExpirationDate}
+                      initialFocus
+                      disabled={(date) => date < new Date()}
+                      className="bg-white dark:bg-navy-deeper"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="flex items-center mt-2">
+                <input
+                  type="checkbox"
+                  id="noExpiration"
+                  checked={noExpiration}
+                  onChange={(e) => {
+                    setNoExpiration(e.target.checked);
+                    if (e.target.checked) setExpirationDate(null);
+                  }}
+                  className="rounded border-gray-300 dark:border-navy-lighter/40"
+                  disabled={isUploading}
                 />
-              </PopoverContent>
-            </Popover>
+                <label htmlFor="noExpiration" className="ml-2 text-sm text-gray-600 dark:text-gray-300">
+                  Sem data de expiração
+                </label>
+              </div>
+            </div>
+
+            <div className="md:col-span-2">
+              <Label htmlFor="documentObservations" className="text-gray-700 dark:text-gray-300">
+                Observações (opcional)
+              </Label>
+              <Textarea
+                id="documentObservations"
+                value={documentObservations}
+                onChange={(e) => setDocumentObservations(e.target.value)}
+                placeholder="Informações adicionais sobre o documento"
+                className="mt-1 border-gray-300 dark:border-navy-lighter/40 bg-white dark:bg-navy-light/20 dark:text-white"
+                disabled={isUploading}
+                rows={3}
+              />
+            </div>
           </div>
-        )}
-      </div>
 
-      {/* Observations (optional) */}
-      <div className="space-y-2">
-        <Label htmlFor="observations" className="text-navy-dark dark:text-gold font-medium">
-          Observações (opcional)
-        </Label>
-        <Textarea
-          id="observations"
-          value={observations}
-          onChange={(e) => setObservations(e.target.value)}
-          placeholder="Adicione informações importantes sobre os documentos"
-          className="w-full dark:bg-navy-deeper dark:border-navy-lighter/40"
-          rows={4}
-        />
-      </div>
+          <div className="mt-8 flex justify-end">
+            <Button
+              onClick={handleUpload}
+              disabled={isUploading || !selectedFiles || selectedFiles.length === 0 || !documentName || !documentCategory}
+              className="bg-gold hover:bg-gold/80 text-navy dark:text-navy-dark"
+            >
+              {isUploading ? (
+                <>
+                  <LoadingSpinner size="sm" className="mr-2" />
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Enviar {selectedFiles && selectedFiles.length > 1 ? `(${selectedFiles.length} arquivos)` : ''}
+                </>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Upload button */}
-      <div className="flex justify-end">
-        <Button
-          onClick={handleUpload}
-          disabled={isUploading || files.length === 0}
-          className="bg-navy-dark text-white hover:bg-navy dark:bg-gold dark:text-navy-dark dark:hover:bg-gold-light font-medium px-6"
-        >
-          {isUploading ? (
-            <>
-              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white dark:text-navy-dark" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Enviando...
-            </>
-          ) : (
-            <>
-              <UploadCloud className="h-4 w-4 mr-2" />
-              Enviar documentos
-            </>
-          )}
-        </Button>
-      </div>
+      {/* Modal para gerenciar categorias */}
+      <CategoryManagementModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        categories={categories}
+        isLoading={false}
+        onAdd={addCategory}
+        onUpdate={updateCategory}
+        onDelete={deleteCategory}
+      />
     </div>
   );
 };

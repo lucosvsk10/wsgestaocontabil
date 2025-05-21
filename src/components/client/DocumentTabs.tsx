@@ -1,9 +1,9 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Document } from "@/types/admin";
-import { CategoryDocumentTable } from "./document-table";
+import { Document, DocumentCategory } from "@/types/admin";
+import { CategoryDocumentTable } from "./document-table/CategoryDocumentTable";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { 
   Drawer, 
   DrawerContent, 
@@ -16,7 +16,7 @@ interface DocumentTabsProps {
   documents: Document[];
   allDocuments: Document[];
   documentsByCategory: Record<string, Document[]>;
-  categories: string[];
+  categories: DocumentCategory[];
   setSelectedCategory: (category: string | null) => void;
   formatDate: (dateStr: string) => string;
   isDocumentExpired: (expiresAt: string | null) => boolean;
@@ -38,11 +38,45 @@ export const DocumentTabs = ({
 }: DocumentTabsProps) => {
   const isMobile = useIsMobile();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  // Reorganizar categorias por número de documentos (das que têm mais para as que têm menos)
+  const sortedCategories = useMemo(() => {
+    return [...categories].sort((a, b) => {
+      const docsA = documentsByCategory[a.id]?.length || 0;
+      const docsB = documentsByCategory[b.id]?.length || 0;
+      return docsB - docsA;
+    });
+  }, [categories, documentsByCategory]);
+  
+  // Função para obter a cor da categoria selecionada
+  const getCategoryColor = (categoryId: string) => {
+    const category = categories.find(c => c.id === categoryId);
+    return category?.color || "#F5C441";
+  };
+
+  // Função para obter o nome da categoria
+  const getCategoryName = (categoryId: string) => {
+    const category = categories.find(c => c.id === categoryId);
+    return category?.name || "Categoria";
+  };
   
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
     setIsDrawerOpen(false);
   };
+
+  // Encontrar a primeira categoria com documentos se a atual não tiver ou não existir
+  useEffect(() => {
+    if (!activeCategory || !documentsByCategory[activeCategory] || documentsByCategory[activeCategory].length === 0) {
+      const firstCategoryWithDocs = sortedCategories.find(cat => 
+        documentsByCategory[cat.id] && documentsByCategory[cat.id].length > 0
+      );
+      
+      if (firstCategoryWithDocs) {
+        setSelectedCategory(firstCategoryWithDocs.id);
+      }
+    }
+  }, [activeCategory, documentsByCategory, sortedCategories, setSelectedCategory]);
 
   return isMobile ? (
     <div className="w-full">
@@ -51,28 +85,44 @@ export const DocumentTabs = ({
           <Button 
             variant="document" 
             className="w-full mb-4 justify-between font-medium text-white border-gold/20"
+            style={{
+              backgroundColor: getCategoryColor(activeCategory),
+              borderColor: `${getCategoryColor(activeCategory)}60`,
+            }}
           >
             <div className="flex items-center">
               <Menu className="mr-2 h-4 w-4" />
-              <span>{activeCategory}</span>
+              <span>{getCategoryName(activeCategory)}</span>
             </div>
           </Button>
         </DrawerTrigger>
         <DrawerContent className="bg-orange-100 dark:bg-[#2d2a28] border-t border-gold/20 p-4">
           <div className="max-w-md mx-auto">
             <div className="space-y-2">
-              {categories.map((category) => (
+              {sortedCategories.map((category) => (
                 <div 
-                  key={category}
+                  key={category.id}
                   className="relative"
                 >
                   <Button 
                     variant="document"
                     className="w-full justify-between text-navy dark:text-white"
-                    disabled={documentsByCategory[category].length === 0}
-                    onClick={() => handleCategoryChange(category)}
+                    style={{
+                      backgroundColor: category.id === activeCategory ? category.color || "#F5C441" : "transparent",
+                      color: category.id === activeCategory ? "#fff" : "inherit",
+                      borderColor: `${category.color || "#F5C441"}40`
+                    }}
+                    disabled={!documentsByCategory[category.id] || documentsByCategory[category.id].length === 0}
+                    onClick={() => handleCategoryChange(category.id)}
                   >
-                    <span>{category}</span>
+                    <div className="flex items-center">
+                      <span>{category.name}</span>
+                      {documentsByCategory[category.id]?.length > 0 && (
+                        <span className="ml-2 bg-white/20 rounded-full px-2 py-0.5 text-xs">
+                          {documentsByCategory[category.id].length}
+                        </span>
+                      )}
+                    </div>
                   </Button>
                 </div>
               ))}
@@ -81,11 +131,12 @@ export const DocumentTabs = ({
         </DrawerContent>
       </Drawer>
       
-      {categories.map((category) => (
-        <div key={category} className={category === activeCategory ? 'block' : 'hidden'}>
+      {sortedCategories.map((category) => (
+        <div key={category.id} className={category.id === activeCategory ? 'block' : 'hidden'}>
           <CategoryDocumentTable 
-            documents={documentsByCategory[category]}
-            category={category}
+            documents={documentsByCategory[category.id] || []}
+            category={category.name}
+            categoryColor={category.color}
             formatDate={formatDate}
             isDocumentExpired={isDocumentExpired}
             daysUntilExpiration={daysUntilExpiration}
@@ -102,23 +153,35 @@ export const DocumentTabs = ({
       className="w-full"
     >
       <TabsList className="mb-4 border-gold/20 bg-orange-200/60 dark:bg-[#2d2a28]">
-        {categories.map(category => (
+        {sortedCategories.map(category => (
           <TabsTrigger 
-            key={category} 
-            value={category}
-            disabled={documentsByCategory[category].length === 0}
-            className="relative text-navy dark:text-white data-[state=active]:bg-gold data-[state=active]:text-navy"
+            key={category.id} 
+            value={category.id}
+            disabled={!documentsByCategory[category.id] || documentsByCategory[category.id].length === 0}
+            className="relative text-navy dark:text-white"
+            style={{
+              "--tab-active-bg": category.color || "#F5C441",
+              "--tab-active-text": "#fff",
+            } as React.CSSProperties}
           >
-            {category}
+            <div className="flex items-center">
+              {category.name}
+              {documentsByCategory[category.id]?.length > 0 && (
+                <span className="ml-2 bg-gray-200/50 dark:bg-white/10 rounded-full px-2 py-0.5 text-xs">
+                  {documentsByCategory[category.id].length}
+                </span>
+              )}
+            </div>
           </TabsTrigger>
         ))}
       </TabsList>
       
-      {categories.map(category => (
-        <TabsContent key={category} value={category}>
+      {sortedCategories.map(category => (
+        <TabsContent key={category.id} value={category.id}>
           <CategoryDocumentTable 
-            documents={documentsByCategory[category]}
-            category={category}
+            documents={documentsByCategory[category.id] || []}
+            category={category.name}
+            categoryColor={category.color}
             formatDate={formatDate}
             isDocumentExpired={isDocumentExpired}
             daysUntilExpiration={daysUntilExpiration}
