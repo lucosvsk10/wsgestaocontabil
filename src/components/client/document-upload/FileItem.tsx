@@ -13,6 +13,7 @@ import { Calendar as CalendarIcon, File, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { FileItemProps } from '@/types/upload';
+import { Badge } from '@/components/ui/badge';
 
 export const FileItem: React.FC<FileItemProps> = ({
   file,
@@ -22,13 +23,23 @@ export const FileItem: React.FC<FileItemProps> = ({
   documentCategories,
   useGlobalSettings
 }) => {
+  // Determine file type icon and color
+  const getFileIcon = () => {
+    const extension = file.name.split('.').pop()?.toLowerCase();
+    
+    return <File className="h-5 w-5 text-navy dark:text-gold" />;
+  };
+  
   return (
-    <Card key={file.id} className="border border-gray-200 dark:border-navy-lighter/30">
+    <Card key={file.id} className="border border-gray-200 dark:border-navy-lighter/30 overflow-hidden">
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center">
-            <File className="h-5 w-5 text-navy dark:text-gold mr-2" />
-            <span className="font-medium text-sm text-navy dark:text-white">{file.name}</span>
+          <div className="flex items-center overflow-hidden">
+            {getFileIcon()}
+            <Badge variant="outline" className="ml-2 text-xs font-normal text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700">
+              {file.name.split('.').pop()?.toUpperCase()}
+            </Badge>
+            <span className="ml-2 font-medium text-sm text-navy dark:text-white truncate max-w-[200px]">{file.name}</span>
           </div>
           
           <Button 
@@ -36,7 +47,7 @@ export const FileItem: React.FC<FileItemProps> = ({
             variant="ghost" 
             size="sm" 
             onClick={() => removeFile(file.id)}
-            className="h-8 w-8 p-0 text-red-500 dark:text-red-400 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+            className="h-8 w-8 p-0 text-red-500 dark:text-red-400 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full"
           >
             <X className="h-4 w-4" />
           </Button>
@@ -50,7 +61,7 @@ export const FileItem: React.FC<FileItemProps> = ({
               value={file.documentName || ''}
               onChange={(e) => updateFileField(file.id, 'documentName', e.target.value)}
               placeholder="Nome do documento"
-              className="bg-white dark:bg-navy/80 border-gray-300 dark:border-navy-lighter/50"
+              className="bg-white dark:bg-navy/80 border-gray-300 dark:border-navy-lighter/50 mt-1"
               required
             />
           </div>
@@ -63,7 +74,7 @@ export const FileItem: React.FC<FileItemProps> = ({
                   value={file.documentCategory || documentCategories[0]} 
                   onValueChange={(value) => updateFileField(file.id, 'documentCategory', value)}
                 >
-                  <SelectTrigger className="bg-white dark:bg-navy/80 border-gray-300 dark:border-navy-lighter/50">
+                  <SelectTrigger className="bg-white dark:bg-navy/80 border-gray-300 dark:border-navy-lighter/50 mt-1">
                     <SelectValue placeholder="Selecione uma categoria" />
                   </SelectTrigger>
                   <SelectContent>
@@ -81,7 +92,8 @@ export const FileItem: React.FC<FileItemProps> = ({
                   value={file.documentObservations || ''}
                   onChange={(e) => updateFileField(file.id, 'documentObservations', e.target.value)}
                   placeholder="Observações sobre este documento"
-                  className="bg-white dark:bg-navy/80 border-gray-300 dark:border-navy-lighter/50"
+                  className="bg-white dark:bg-navy/80 border-gray-300 dark:border-navy-lighter/50 mt-1 resize-none"
+                  rows={2}
                 />
               </div>
               
@@ -107,22 +119,22 @@ export const FileItem: React.FC<FileItemProps> = ({
                           id={`expiration-${file.id}`}
                           variant="outline"
                           className={cn(
-                            "w-full justify-start text-left font-normal bg-white dark:bg-navy/80 border-gray-300 dark:border-navy-lighter/50",
+                            "w-full justify-start text-left font-normal bg-white dark:bg-navy/80 border-gray-300 dark:border-navy-lighter/50 mt-1",
                             !file.expirationDate && "text-muted-foreground"
                           )}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {file.expirationDate ? format(file.expirationDate, "PPP") : "Selecione uma data"}
+                          {file.expirationDate ? format(file.expirationDate, "dd/MM/yyyy") : "Selecione uma data"}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
+                      <PopoverContent className="w-auto p-0 bg-white dark:bg-navy-deeper">
                         <Calendar
                           mode="single"
                           selected={file.expirationDate || undefined}
                           onSelect={(date) => updateFileExpirationDate(file.id, date)}
                           initialFocus
                           disabled={(date) => date < new Date()}
-                          className="p-3 pointer-events-auto"
+                          className="rounded-md border border-gray-200 dark:border-navy-lighter/30"
                         />
                       </PopoverContent>
                     </Popover>

@@ -21,6 +21,7 @@ export const ImprovedDocumentUpload: React.FC<DocumentUploadProps> = ({
   const [noExpiration, setNoExpiration] = useState(false);
   const [globalExpirationDate, setGlobalExpirationDate] = useState<Date | null>(null);
   const [useGlobalSettings, setUseGlobalSettings] = useState(true);
+  const { toast } = useToast();
   
   const {
     files,
@@ -40,12 +41,16 @@ export const ImprovedDocumentUpload: React.FC<DocumentUploadProps> = ({
 
   const applyGlobalSettingsToAll = () => {
     baseApplyGlobalSettingsToAll(globalCategory, globalObservations, noExpiration, globalExpirationDate);
+    toast({
+      title: "Configurações aplicadas",
+      description: "As configurações globais foram aplicadas a todos os arquivos.",
+    });
   };
   
   return (
     <div className="space-y-6">
       <Card className="border border-gray-200 dark:border-gold/20 bg-white dark:bg-navy-dark shadow-md">
-        <CardHeader className="border-b border-gray-200 dark:border-gold/20 bg-gray-50 dark:bg-navy-deeper">
+        <CardHeader className="border-b border-gray-200 dark:border-gold/20 bg-gray-50 dark:bg-navy-deeper px-6 py-4">
           <CardTitle className="text-navy dark:text-gold text-xl font-museo flex items-center">
             <Upload className="h-5 w-5 mr-2 text-navy dark:text-gold" />
             Enviando documentos para {userName}
@@ -81,7 +86,10 @@ export const ImprovedDocumentUpload: React.FC<DocumentUploadProps> = ({
           {/* File list */}
           {files.length > 0 && (
             <div className="mt-6 space-y-4">
-              <h3 className="font-medium text-navy dark:text-gold">Arquivos selecionados ({files.length})</h3>
+              <h3 className="font-medium text-navy dark:text-gold flex items-center gap-2">
+                <FileIcon className="h-5 w-5 text-navy dark:text-gold" />
+                Arquivos selecionados ({files.length})
+              </h3>
               
               <div className="space-y-4">
                 {files.map((file) => (
@@ -103,13 +111,13 @@ export const ImprovedDocumentUpload: React.FC<DocumentUploadProps> = ({
             <Button 
               type="button" 
               onClick={handleUpload} 
-              className="w-full mt-6 bg-navy hover:bg-navy/90 dark:bg-gold dark:hover:bg-gold/90 text-white dark:text-navy font-medium"
+              className="w-full mt-6 bg-navy hover:bg-navy/90 dark:bg-gold dark:hover:bg-gold/90 text-white dark:text-navy font-medium shadow-md"
               disabled={isUploading}
             >
               {isUploading ? (
                 <>
                   <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
-                  Enviando...
+                  Enviando documentos...
                 </>
               ) : (
                 <>
@@ -124,3 +132,5 @@ export const ImprovedDocumentUpload: React.FC<DocumentUploadProps> = ({
     </div>
   );
 };
+
+import { FileIcon } from 'lucide-react';

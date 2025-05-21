@@ -52,7 +52,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
               to="/admin/polls" 
               className={({ isActive }) => `flex items-center px-4 py-3 text-sm rounded-md transition-colors ${isActive ? 'bg-navy-light dark:bg-navy-lighter text-gold' : 'hover:bg-navy-light dark:hover:bg-navy-lighter hover:text-gold'}`}
             >
-              {/* Ícone para Enquetes */}
+              <MessageSquare size={18} className="mr-3" />
               <span>Enquetes</span>
             </NavLink>
             
@@ -60,7 +60,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
               to="/admin/simulator" 
               className={({ isActive }) => `flex items-center px-4 py-3 text-sm rounded-md transition-colors ${isActive ? 'bg-navy-light dark:bg-navy-lighter text-gold' : 'hover:bg-navy-light dark:hover:bg-navy-lighter hover:text-gold'}`}
             >
-              {/* Ícone para Simulador */}
+              <HelpCircle size={18} className="mr-3" />
               <span>Simulador</span>
             </NavLink>
           </div>

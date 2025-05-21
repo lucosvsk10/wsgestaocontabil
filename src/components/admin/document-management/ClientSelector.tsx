@@ -29,7 +29,7 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
 
   return (
     <div className="w-full md:w-72">
-      <Label htmlFor="user-select" className="text-navy dark:text-gold mb-1 block">
+      <Label htmlFor="user-select" className="text-navy dark:text-gold mb-1 block font-medium">
         Selecione um cliente
       </Label>
       <Select
@@ -38,16 +38,16 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
       >
         <SelectTrigger 
           id="user-select" 
-          className="w-full bg-white dark:bg-navy-light/50 border-gray-300 dark:border-navy-lighter/50"
+          className="w-full bg-white dark:bg-navy-light/50 border-gray-300 dark:border-navy-lighter/50 focus:ring-2 focus:ring-gold/50"
         >
           <SelectValue placeholder="Selecione um cliente" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="bg-white dark:bg-navy-deeper border-gray-200 dark:border-navy-lighter/50">
           {combinedUsers.map(user => (
-            <SelectItem key={user.id} value={user.id}>
+            <SelectItem key={user.id} value={user.id} className="focus:bg-gray-100 dark:focus:bg-navy-light/50">
               <div className="flex flex-col">
                 <span className="font-medium">{user.name}</span>
-                <span className="text-xs text-gray-500">{user.email}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">{user.email}</span>
               </div>
             </SelectItem>
           ))}
