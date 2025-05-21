@@ -3,44 +3,29 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
-import { DocumentManager } from "@/components/admin/DocumentManager";
-import { useUserInfo } from "@/hooks/useUserInfo";
-import { useDocumentManager } from "@/hooks/document/useDocumentManager";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { useUserManagement } from "@/hooks/useUserManagement";
+import { useDocumentManagement } from "@/hooks/document-management/useDocumentManagement";
+import { AdminDocumentManager } from "./document-management/AdminDocumentManager";
 
-interface UserDocumentViewProps {
-  users: any[];
-  supabaseUsers: any[];
-}
-
-export const UserDocumentView = ({ users, supabaseUsers }: UserDocumentViewProps) => {
+export const UserDocumentView = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const [userName, setUserName] = useState<string>("");
   const [userEmail, setUserEmail] = useState<string>("");
-  const { getUserInfo } = useUserInfo();
   
-  const {
-    documents,
-    selectedUserId,
-    setSelectedUserId,
-    isUploading,
-    documentName,
-    setDocumentName,
-    documentCategory,
-    setDocumentCategory,
-    documentObservations,
-    setDocumentObservations,
-    expirationDate,
-    setExpirationDate,
-    noExpiration,
-    setNoExpiration,
+  const { users, supabaseUsers, isLoadingUsers } = useUserManagement();
+  
+  const { 
+    documents, 
+    selectedUserId, 
+    setSelectedUserId, 
     isLoadingDocuments,
-    handleFileChange,
-    handleUpload,
-    handleDeleteDocument
-  } = useDocumentManager(users, supabaseUsers);
+    loadingDocumentIds,
+    handleDownload,
+    handleDeleteDocument 
+  } = useDocumentManagement(users, supabaseUsers);
 
   // Effect to set the selected user ID when the component mounts
   useEffect(() => {
@@ -59,6 +44,14 @@ export const UserDocumentView = ({ users, supabaseUsers }: UserDocumentViewProps
   const handleBackToUserList = () => {
     navigate("/admin/users");
   };
+
+  if (isLoadingUsers) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
   if (!userId) {
     return (
@@ -95,31 +88,21 @@ export const UserDocumentView = ({ users, supabaseUsers }: UserDocumentViewProps
               Voltar para lista de usuários
             </Button>
             <CardTitle className="text-xl font-medium text-navy dark:text-gold">
-              Gerenciando documentos de: {userName} - {userEmail}
+              Gerenciando documentos de usuário
             </CardTitle>
           </div>
         </div>
       </CardHeader>
       <CardContent className="p-6">
-        <DocumentManager 
-          selectedUserId={selectedUserId} 
-          documentName={documentName} 
-          setDocumentName={setDocumentName} 
-          documentCategory={documentCategory} 
-          setDocumentCategory={setDocumentCategory} 
-          documentObservations={documentObservations} 
-          setDocumentObservations={setDocumentObservations} 
-          handleFileChange={handleFileChange} 
-          handleUpload={handleUpload} 
-          isUploading={isUploading} 
-          documents={documents} 
-          isLoadingDocuments={isLoadingDocuments} 
-          handleDeleteDocument={handleDeleteDocument} 
-          documentCategories={["Imposto de Renda", "Documentações", "Certidões"]} 
-          expirationDate={expirationDate} 
-          setExpirationDate={setExpirationDate} 
-          noExpiration={noExpiration} 
-          setNoExpiration={setNoExpiration} 
+        <AdminDocumentManager 
+          userId={userId}
+          userName={userName}
+          userEmail={userEmail}
+          documents={documents}
+          isLoadingDocuments={isLoadingDocuments}
+          loadingDocumentIds={loadingDocumentIds}
+          handleDownload={handleDownload}
+          handleDeleteDocument={handleDeleteDocument}
         />
       </CardContent>
     </Card>
