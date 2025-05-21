@@ -1,36 +1,28 @@
 
-import { BellDot, FileText } from "lucide-react";
-import { AppDocument } from "@/types/admin";
+import { Document } from "@/utils/auth/types";
+import { DocumentCardIcon } from "./DocumentCardIcon";
+import { DocumentCardBadges } from "./DocumentCardBadges";
 
 interface DocumentCardHeaderProps {
-  doc: AppDocument;
+  doc: Document;
   isExpired: boolean;
 }
 
 export const DocumentCardHeader = ({ doc, isExpired }: DocumentCardHeaderProps) => {
   return (
-    <div className="flex justify-between items-center mb-2">
-      <div className="text-navy dark:text-gold">
-        <FileText size={20} />
+    <div className="flex justify-between items-start mb-3">
+      <div className="flex items-center">
+        <DocumentCardIcon document={doc} />
+        <div className="ml-2">
+          <DocumentCardBadges isViewed={!!doc.viewed} isExpired={isExpired} />
+        </div>
       </div>
-      <div className="flex gap-1">
-        {!doc.viewed && (
-          <span className="text-xs px-2 py-1 rounded-full bg-blue-500 text-white flex items-center">
-            <BellDot size={12} className="mr-1" />
-            Novo
-          </span>
-        )}
-        {isExpired && (
-          <span className="text-xs px-2 py-1 rounded-full bg-red-500 text-white">
-            Expirado
-          </span>
-        )}
-        {doc.category && (
-          <span className="text-xs px-2 py-1 rounded-full bg-orange-100 dark:bg-navy-light/50 text-navy dark:text-gold">
-            {doc.category}
-          </span>
-        )}
-      </div>
+      
+      {isExpired && (
+        <div className="ml-2">
+          <DocumentCardBadges isViewed={!!doc.viewed} isExpired={isExpired} />
+        </div>
+      )}
     </div>
   );
 };

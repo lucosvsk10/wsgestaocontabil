@@ -1,66 +1,52 @@
 
-import { Clock, Info } from "lucide-react";
-import { AppDocument } from "@/types/admin";
-import { 
-  Tooltip, 
-  TooltipContent, 
-  TooltipProvider, 
-  TooltipTrigger 
-} from "@/components/ui/tooltip";
+import { Clock, Eye, EyeOff } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Document } from "@/utils/auth/types";
 
 interface DocumentCardMetadataProps {
-  doc: AppDocument;
+  doc: Document;
   formatDate: (dateStr: string) => string;
   isExpired: boolean;
   expirationText: string | null;
 }
 
-export const DocumentCardMetadata = ({ 
-  doc, 
-  formatDate, 
-  isExpired, 
-  expirationText 
-}: DocumentCardMetadataProps) => {
+export const DocumentCardMetadata = ({ doc, formatDate, isExpired, expirationText }: DocumentCardMetadataProps) => {
   return (
-    <div className="flex-1 mt-2 mb-4 space-y-2 text-sm text-gray-600 dark:text-gray-300">
-      {/* Upload date */}
-      <div>
-        Enviado em: {formatDate(doc.uploaded_at)}
+    <div className="mt-auto space-y-2 text-sm">
+      <div className="flex items-center justify-between">
+        <span className="text-gray-600 dark:text-gray-300">Data de Envio:</span>
+        <span className="text-gray-800 dark:text-gray-100 font-medium">{formatDate(doc.uploaded_at)}</span>
       </div>
       
-      {/* Expiration date */}
-      {doc.expires_at && (
-        <div className="flex items-center">
-          <span>Validade: </span>
-          <span className={`ml-1 flex items-center ${
-            isExpired
-              ? "text-red-600 dark:text-red-400" 
-              : "text-green-600 dark:text-green-400"
-          }`}>
-            <Clock size={14} className="inline mr-1" />
-            {expirationText}
-          </span>
-        </div>
-      )}
+      <div className="flex items-center justify-between">
+        <span className="text-gray-600 dark:text-gray-300">Validade:</span>
+        <span className={cn(
+          "flex items-center",
+          isExpired
+            ? "text-red-600 dark:text-red-400" 
+            : "text-green-600 dark:text-green-400"
+        )}>
+          <Clock size={14} className="mr-1" />
+          <span>{expirationText || "Sem expiração"}</span>
+        </span>
+      </div>
       
-      {/* Observations */}
-      {doc.observations && (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="flex items-center text-blue-600 dark:text-blue-400 cursor-help">
-                <Info size={14} className="mr-1" />
-                <span className="truncate">{doc.observations}</span>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent className="bg-orange-100 dark:bg-navy-dark border-gold/20 max-w-xs">
-              <p className="whitespace-normal break-words text-navy dark:text-white">
-                {doc.observations}
-              </p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      )}
+      <div className="flex items-center justify-between">
+        <span className="text-gray-600 dark:text-gray-300">Status:</span>
+        <div className="flex items-center">
+          {doc.viewed ? (
+            <span className="flex items-center text-green-600 dark:text-green-400">
+              <Eye size={14} className="mr-1" />
+              <span>Visualizado</span>
+            </span>
+          ) : (
+            <span className="flex items-center text-blue-600 dark:text-blue-400">
+              <EyeOff size={14} className="mr-1" />
+              <span>Não visualizado</span>
+            </span>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

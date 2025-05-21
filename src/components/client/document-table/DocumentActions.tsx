@@ -1,16 +1,16 @@
 
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { AppDocument } from "@/types/admin";
+import { Document } from "@/utils/auth/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { hasDocumentAccess } from "@/utils/auth/userChecks";
 
 interface DocumentActionsProps {
-  doc: AppDocument;
+  doc: Document;
   isDocumentExpired: (expiresAt: string | null) => boolean;
   refreshDocuments?: () => void;
   loadingDocumentIds?: Set<string>;
-  handleDownload: (doc: AppDocument) => Promise<void>;
+  handleDownload: (doc: Document) => Promise<void>;
 }
 
 export const DocumentActions = ({

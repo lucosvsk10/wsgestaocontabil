@@ -1,4 +1,6 @@
 
-export { DocumentCardHeader } from './DocumentCardHeader';
-export { DocumentCardMetadata } from './DocumentCardMetadata';
-export { DocumentCardActions } from './DocumentCardActions';
+export * from './DocumentCardBadges';
+export * from './DocumentCardHeader';
+export * from './DocumentCardIcon';
+export * from './DocumentCardMetadata';
+export * from './DocumentCardActions';

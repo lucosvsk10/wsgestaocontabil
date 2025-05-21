@@ -2,14 +2,14 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { AppDocument } from "@/types/admin";
+import { Document } from "@/types/admin";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDocumentActions } from "./useDocumentActions";
 
 export const useDocumentRealtime = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [newDocument, setNewDocument] = useState<AppDocument | null>(null);
+  const [newDocument, setNewDocument] = useState<Document | null>(null);
   
   // Usar o hook useDocumentActions para acessar handleDownload
   const { handleDownload } = useDocumentActions();
@@ -46,7 +46,7 @@ export const useDocumentRealtime = () => {
           console.log("Novo documento detectado:", payload);
           
           // Obter os dados do novo documento
-          const newDoc = payload.new as AppDocument;
+          const newDoc = payload.new as Document;
           
           // Atualizar estado com o novo documento
           setNewDocument(newDoc);

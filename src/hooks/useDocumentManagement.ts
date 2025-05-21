@@ -1,8 +1,8 @@
 
 import { useState, useEffect } from "react";
-import { useDocumentFetch } from "@/hooks/document/useDocumentFetch";
-import { useDocumentDelete } from "@/hooks/document/useDocumentDelete";
-import { useDocumentUpload } from "@/hooks/useDocumentUpload";
+import { useDocumentFetch } from "./useDocumentFetch";
+import { useDocumentDelete } from "./useDocumentDelete";
+import { useDocumentUpload } from "./useDocumentUpload";
 import { useUserManagement } from "@/hooks/useUserManagement";
 import { triggerExpiredDocumentsCleanup } from "@/utils/documents/documentCleanup";
 import { supabase } from "@/integrations/supabase/client";

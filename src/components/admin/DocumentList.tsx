@@ -4,13 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
-import { AppDocument } from "@/types/admin";
+import { Document } from "@/types/admin";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 
 interface DocumentListProps {
-  documents: AppDocument[];
+  documents: Document[];
   isLoading: boolean;
   handleDeleteDocument: (id: string) => Promise<void>;
 }
@@ -66,7 +66,7 @@ export const DocumentList = ({
   };
 
   // Function to download document 
-  const handleDownload = async (docItem: AppDocument) => {
+  const handleDownload = async (docItem: Document) => {
     try {
       setDownloadingIds(prev => new Set([...prev, docItem.id]));
       if (docItem.storage_key) {
