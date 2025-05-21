@@ -56,11 +56,7 @@ export const AdminDocumentManager: React.FC<AdminDocumentManagerProps> = ({
         <div className="py-6">
           <TabsContent value="upload" className="mt-0">
             <Card className="border border-gray-200 dark:border-navy-lighter/30 shadow-sm bg-transparent">
-              <CardHeader className="bg-gray-50 dark:bg-navy-light/10 border-b border-gray-200 dark:border-navy-lighter/30">
-                <CardTitle className="text-navy-dark dark:text-gold text-lg">
-                  Envio de documentos para {userName}
-                </CardTitle>
-              </CardHeader>
+              
               <CardContent className="p-6">
                 <AdminDocumentUpload userId={userId} documentCategories={documentCategories} />
               </CardContent>
