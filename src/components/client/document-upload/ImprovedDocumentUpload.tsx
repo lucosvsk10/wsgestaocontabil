@@ -39,7 +39,7 @@ interface ImprovedDocumentUploadProps {
 export const ImprovedDocumentUpload: React.FC<ImprovedDocumentUploadProps> = ({
   userName,
   userId,
-  documentCategories = ["Imposto de Renda", "Documentações", "Certidões", "Contratos", "Notas Fiscais"],
+  documentCategories = ["Imposto de Renda", "Documentações", "Certidões", "Contratos", "Notas Fiscais", "Impostos"],
   multipleFiles = false
 }) => {
   const [isUploading, setIsUploading] = useState<boolean>(false);

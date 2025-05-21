@@ -17,12 +17,6 @@ export const DocumentCardHeader = ({ doc, isExpired }: DocumentCardHeaderProps) 
           <DocumentCardBadges isViewed={!!doc.viewed} isExpired={isExpired} />
         </div>
       </div>
-      
-      {isExpired && (
-        <div className="ml-2">
-          <DocumentCardBadges isViewed={!!doc.viewed} isExpired={isExpired} />
-        </div>
-      )}
     </div>
   );
 };
