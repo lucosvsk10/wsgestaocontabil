@@ -17,6 +17,10 @@ const badgeVariants = cva(
           "bg-destructive text-destructive-foreground ring-destructive",
         outline:
           "text-foreground ring-border bg-background",
+        gold:
+          "bg-gold/20 text-gold ring-gold/30 dark:bg-gold/10 dark:text-gold/90 dark:ring-gold/20",
+        navy:
+          "bg-navy/20 text-navy ring-navy/30 dark:bg-navy/10 dark:text-navy/90 dark:ring-navy/20",
       },
     },
     defaultVariants: {

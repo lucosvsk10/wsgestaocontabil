@@ -15,7 +15,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Download, MoreHorizontal, Trash2, Eye, FileIcon } from "lucide-react";
+import { Download, MoreHorizontal, Trash2, Eye, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { AppDocument } from "@/types/admin";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
@@ -76,7 +76,7 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
   if (documents.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-center">
-        <FileIcon className="h-12 w-12 text-gray-400 dark:text-gray-600 mb-4" />
+        <FileText className="h-12 w-12 text-gray-400 dark:text-gray-600 mb-4" />
         <h3 className="font-medium text-lg text-gray-700 dark:text-gray-300">Nenhum documento encontrado</h3>
         <p className="text-gray-500 dark:text-gray-400 max-w-sm mt-1">
           Este cliente não possui documentos cadastrados. Use a aba "Upload de Documentos" para adicionar novos documentos.
@@ -109,7 +109,7 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
               <TableCell className="font-medium">
                 <div className="flex items-center">
                   <div className="mr-2 text-slate-400 flex-shrink-0">
-                    <FileIcon className="h-5 w-5" />
+                    <FileText className="h-5 w-5" />
                   </div>
                   <div className="overflow-hidden text-ellipsis">
                     <span className="block truncate max-w-[200px]" title={document.name}>{document.name}</span>

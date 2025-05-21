@@ -78,62 +78,86 @@ export const useFileUpload = (userId: string, userName: string) => {
     }
     
     setIsUploading(true);
+    const uploadedFiles: string[] = [];
+    const failedUploads: string[] = [];
     
     try {
       // Upload files one by one
       for (const file of files) {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${crypto.randomUUID()}.${fileExt}`;
-        const filePath = `${userId}/${fileName}`;
-        
-        // Upload file to storage
-        const { error: storageError } = await supabase.storage
-          .from('documents')
-          .upload(filePath, file);
+        try {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${crypto.randomUUID()}.${fileExt}`;
+          const filePath = `${userId}/${fileName}`;
           
-        if (storageError) throw storageError;
-        
-        // Get file URL
-        const { data: urlData } = supabase.storage
-          .from('documents')
-          .getPublicUrl(filePath);
+          // Upload file to storage
+          const { error: storageError } = await supabase.storage
+            .from('documents')
+            .upload(filePath, file);
+            
+          if (storageError) throw storageError;
           
-        if (!urlData?.publicUrl) {
-          throw new Error('Erro ao obter URL pública do arquivo');
+          // Get file URL
+          const { data: urlData } = supabase.storage
+            .from('documents')
+            .getPublicUrl(filePath);
+            
+          if (!urlData?.publicUrl) {
+            throw new Error('Erro ao obter URL pública do arquivo');
+          }
+          
+          // Format the expiration date as ISO string if it exists
+          const expirationDate = file.expirationDate 
+            ? file.expirationDate.toISOString() 
+            : null;
+          
+          // Insert document record
+          const { error: dbError } = await supabase
+            .from('documents')
+            .insert({
+              user_id: userId,
+              name: file.documentName || file.name.split('.')[0],
+              original_filename: file.name,
+              filename: fileName,
+              category: file.documentCategory,
+              observations: file.documentObservations,
+              expires_at: expirationDate,
+              file_url: urlData.publicUrl,
+              storage_key: filePath,
+              size: file.size
+            });
+            
+          if (dbError) throw dbError;
+          
+          uploadedFiles.push(file.name);
+        } catch (error) {
+          console.error(`Erro ao fazer upload do arquivo ${file.name}:`, error);
+          failedUploads.push(file.name);
         }
-        
-        // Format the expiration date as ISO string if it exists
-        const expirationDate = file.expirationDate 
-          ? file.expirationDate.toISOString() 
-          : null;
-        
-        // Insert document record
-        const { error: dbError } = await supabase
-          .from('documents')
-          .insert({
-            user_id: userId,
-            name: file.documentName || file.name.split('.')[0],
-            original_filename: file.name,
-            filename: fileName,
-            category: file.documentCategory,
-            observations: file.documentObservations,
-            expires_at: expirationDate,
-            file_url: urlData.publicUrl,
-            storage_key: filePath,
-            size: file.size
-          });
-          
-        if (dbError) throw dbError;
       }
       
       // Success toast
-      toast({
-        title: "Upload concluído com sucesso!",
-        description: `${files.length} documento(s) foi/foram enviado(s) para ${userName}.`,
-      });
+      if (uploadedFiles.length > 0) {
+        toast({
+          title: "Upload concluído com sucesso!",
+          description: `${uploadedFiles.length} documento(s) foi/foram enviado(s) para ${userName}.`,
+        });
+      }
       
-      // Reset form
-      setFiles([]);
+      // Alert for failed uploads if any
+      if (failedUploads.length > 0) {
+        toast({
+          title: "Alguns uploads falharam",
+          description: `${failedUploads.length} documento(s) não puderam ser enviados.`,
+          variant: "destructive",
+        });
+      }
+      
+      // Remove successful uploads from the files state
+      const successfulUploadIds = files
+        .filter(file => uploadedFiles.includes(file.name))
+        .map(file => file.id);
+      
+      setFiles(files => files.filter(file => !successfulUploadIds.includes(file.id)));
       
     } catch (error: any) {
       console.error('Erro no upload:', error);

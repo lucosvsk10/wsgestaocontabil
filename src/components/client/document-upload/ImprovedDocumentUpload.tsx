@@ -87,7 +87,7 @@ export const ImprovedDocumentUpload: React.FC<DocumentUploadProps> = ({
           {files.length > 0 && (
             <div className="mt-6 space-y-4">
               <h3 className="font-medium text-navy dark:text-gold flex items-center gap-2">
-                <FileIcon className="h-5 w-5 text-navy dark:text-gold" />
+                <FileText className="h-5 w-5 text-navy dark:text-gold" />
                 Arquivos selecionados ({files.length})
               </h3>
               
@@ -132,5 +132,3 @@ export const ImprovedDocumentUpload: React.FC<DocumentUploadProps> = ({
     </div>
   );
 };
-
-import { FileIcon } from 'lucide-react';

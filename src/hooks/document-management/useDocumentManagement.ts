@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -92,6 +93,11 @@ export const useDocumentManagement = (users: any[], supabaseUsers: any[]) => {
           .eq('id', doc.id);
       }
       
+      toast({
+        title: "Download iniciado",
+        description: "O documento será baixado em instantes.",
+      });
+      
     } catch (error: any) {
       console.error('Error downloading document:', error);
       toast({
@@ -111,6 +117,11 @@ export const useDocumentManagement = (users: any[], supabaseUsers: any[]) => {
   // Delete document function
   const handleDeleteDocument = async (documentId: string) => {
     if (!documentId || !selectedUserId) return;
+    
+    // Ask for confirmation
+    if (!confirm("Tem certeza que deseja excluir este documento?")) {
+      return;
+    }
     
     try {
       setLoadingDocumentIds(prev => new Set([...prev, documentId]));

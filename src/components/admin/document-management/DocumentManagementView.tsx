@@ -10,7 +10,7 @@ import { useDocumentManagement } from "@/hooks/document-management/useDocumentMa
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, FileText, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export const DocumentManagementView: React.FC = () => {
@@ -66,7 +66,10 @@ export const DocumentManagementView: React.FC = () => {
             </CardTitle>
             {selectedUserId && (
               <div className="p-4 bg-navy/5 dark:bg-gold/10 rounded-lg border border-navy/10 dark:border-gold/20 flex flex-col">
-                <h3 className="font-bold text-lg text-navy-dark dark:text-gold mb-1">{userName}</h3>
+                <div className="flex items-center mb-1">
+                  <User className="h-5 w-5 text-navy-dark dark:text-gold mr-2" />
+                  <h3 className="font-bold text-lg text-navy-dark dark:text-gold">{userName}</h3>
+                </div>
                 <p className="text-sm text-gray-600 dark:text-gray-300">{userEmail}</p>
               </div>
             )}
