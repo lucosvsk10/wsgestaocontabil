@@ -1,12 +1,11 @@
-
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { AppDocument } from "@/types/admin";
+import { Document } from "@/types/admin";
 
 export const useDocumentManagement = (users: any[], supabaseUsers: any[]) => {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const [documents, setDocuments] = useState<AppDocument[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
   const [loadingDocumentIds, setLoadingDocumentIds] = useState<Set<string>>(new Set());
   const { toast } = useToast();
@@ -39,7 +38,7 @@ export const useDocumentManagement = (users: any[], supabaseUsers: any[]) => {
   }, [toast]);
 
   // Handle document download
-  const handleDownload = async (document: AppDocument) => {
+  const handleDownload = async (document: Document) => {
     try {
       setLoadingDocumentIds(prev => new Set([...prev, document.id]));
       

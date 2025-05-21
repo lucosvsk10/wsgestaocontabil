@@ -17,15 +17,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Download, MoreHorizontal, Trash2, Eye, FileIcon } from "lucide-react";
 import { format } from "date-fns";
-import { AppDocument } from "@/types/admin";
+import { Document } from "@/types/admin";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { ptBR } from "date-fns/locale";
 
 interface DocumentTableProps {
-  documents: AppDocument[];
+  documents: Document[];
   isLoading: boolean;
   loadingDocumentIds: Set<string>;
-  onDownload: (document: AppDocument) => Promise<void>;
+  onDownload: (document: Document) => Promise<void>;
   onDelete: (documentId: string) => Promise<void>;
 }
 
