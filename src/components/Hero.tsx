@@ -1,15 +1,18 @@
+
 import { useEffect, useRef } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Building, FileHeart, Users, FileText } from 'lucide-react';
+
 const Hero = () => {
   const heroRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
   const {
     theme
   } = useTheme();
+  
   useEffect(() => {
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) {
@@ -19,16 +22,19 @@ const Hero = () => {
     }, {
       threshold: 0.1
     });
+    
     if (heroRef.current) {
       observer.observe(heroRef.current);
     }
+    
     return () => {
       if (heroRef.current) {
         observer.unobserve(heroRef.current);
       }
     };
   }, []);
-  return <section id="hero" className="relative min-h-[100vh] flex items-center justify-center overflow-hidden py-28 bg-deepNavy-90">
+  
+  return <section id="hero" className="relative min-h-[100vh] flex items-center justify-center overflow-hidden py-28 bg-background">
       <div ref={heroRef} className="container relative z-5 transition-all duration-700 transform opacity-0 translate-y-10 my-px py-[4px] mx-0 px-[20px]">
         <div className="flex justify-center items-center">
           <div className="grid md:grid-cols-2 items-center gap-4 my-0 -mt-4 px-[150px] mx-0 py-[8px]">
@@ -75,11 +81,18 @@ const Hero = () => {
               
               {/* CTA Buttons */}
               <div className="flex flex-wrap gap-3 mt-7">
-                <Button className="bg-primary text-white px-4 py-1.5 text-sm rounded-xl font-semibold hover:opacity-90" onClick={() => window.open('https://g.co/kgs/d2UwXh3', '_blank')}>
+                <Button 
+                  className="bg-primary text-white px-4 py-1.5 text-sm rounded-xl font-semibold hover:opacity-90" 
+                  onClick={() => window.open('https://g.co/kgs/d2UwXh3', '_blank')}
+                >
                   Saiba Mais
                 </Button>
                 
-                <Button variant="outline" className="border border-primary text-primary px-4 py-1.5 text-sm rounded-xl hover:bg-primary/10" onClick={() => window.open('https://wa.me/5582999324884', '_blank')}>
+                <Button 
+                  variant="outline" 
+                  className="border border-primary text-primary px-4 py-1.5 text-sm rounded-xl hover:bg-primary/10"
+                  onClick={() => window.open('https://wa.me/5582999324884', '_blank')}
+                >
                   Fale com um especialista
                 </Button>
               </div>
@@ -101,4 +114,5 @@ const Hero = () => {
       </div>
     </section>;
 };
+
 export default Hero;
