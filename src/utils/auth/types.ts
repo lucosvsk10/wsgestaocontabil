@@ -1,41 +1,19 @@
 
-import { Session } from '@supabase/supabase-js';
+import { Document as CommonDocument } from "@/types/common";
 
-export interface Document {
-  id: string;
-  user_id: string;
-  name: string;
-  filename?: string;
-  original_filename?: string;
-  category: string;
-  file_url: string;
-  observations?: string;
-  uploaded_at: string;
-  expires_at: string | null;
-  storage_key?: string;
-  size?: number;
-  type?: string;
-  viewed?: boolean;
-  viewed_at?: string;
-}
+// Estendendo o tipo Document para manter compatibilidade com código existente
+export interface Document extends CommonDocument {}
 
-export interface UserData {
+// Outros tipos existentes no arquivo
+export interface User {
   id: string;
-  email?: string;
+  email: string;
   name?: string;
   role?: string;
-  created_at?: string;
 }
 
-export interface AuthContextType {
-  user: any | null;
-  session: Session | null;
-  userData: UserData | null;
-  isLoading: boolean;
-  isAdmin: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null; data: any | null }>;
-  signOut: () => Promise<{ error: Error | null }>;
-  refreshUserData: () => Promise<void>;
-  setUser: (user: any | null) => void;
-  setUserData: (userData: UserData | null) => void;
+export interface AuthState {
+  user: User | null;
+  loading: boolean;
+  error: string | null;
 }

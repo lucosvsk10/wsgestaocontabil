@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from "react";
 import { 
   Table, 
@@ -22,11 +23,12 @@ import {
   FileIcon,
   ArrowUp,
   ArrowDown,
-  Search
+  Search,
+  Edit
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Document, DocumentCategory } from "@/types/admin";
+import { Document, DocumentCategory } from "@/types/common";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { Input } from "@/components/ui/input";
 
@@ -35,7 +37,8 @@ interface AdminDocumentTableProps {
   isLoading: boolean;
   loadingDocumentIds: Set<string>;
   onDownload: (document: Document) => Promise<void>;
-  onDelete: (documentId: string) => Promise<void>;
+  onDelete: (document: Document) => void;
+  onEdit: (document: Document) => void;
   sortOrder: "asc" | "desc";
   onToggleSort: () => void;
   categories: DocumentCategory[];
@@ -47,6 +50,7 @@ export const AdminDocumentTable: React.FC<AdminDocumentTableProps> = ({
   loadingDocumentIds,
   onDownload,
   onDelete,
+  onEdit,
   sortOrder,
   onToggleSort,
   categories
@@ -230,8 +234,12 @@ export const AdminDocumentTable: React.FC<AdminDocumentTableProps> = ({
                           <Download className="mr-2 h-4 w-4" />
                           <span>Baixar</span>
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onEdit(document)}>
+                          <Edit className="mr-2 h-4 w-4 text-blue-600 dark:text-blue-400" />
+                          <span>Editar</span>
+                        </DropdownMenuItem>
                         <DropdownMenuItem 
-                          onClick={() => onDelete(document.id)}
+                          onClick={() => onDelete(document)}
                           className="text-red-600 dark:text-red-400 focus:text-red-700 dark:focus:text-red-300"
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
@@ -288,8 +296,12 @@ export const AdminDocumentTable: React.FC<AdminDocumentTableProps> = ({
                         <Download className="mr-2 h-4 w-4" />
                         <span>Baixar</span>
                       </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onEdit(document)}>
+                        <Edit className="mr-2 h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <span>Editar</span>
+                      </DropdownMenuItem>
                       <DropdownMenuItem 
-                        onClick={() => onDelete(document.id)}
+                        onClick={() => onDelete(document)}
                         className="text-red-600 dark:text-red-400 focus:text-red-700 dark:focus:text-red-300"
                       >
                         <Trash2 className="mr-2 h-4 w-4" />

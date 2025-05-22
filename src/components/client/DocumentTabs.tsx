@@ -1,6 +1,6 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Document, DocumentCategory } from "@/types/admin";
+import { Document, DocumentCategory } from "@/types/common";
 import { CategoryDocumentTable } from "./document-table/CategoryDocumentTable";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useState, useMemo, useEffect } from "react";
@@ -135,7 +135,7 @@ export const DocumentTabs = ({
         <div key={category.id} className={category.id === activeCategory ? 'block' : 'hidden'}>
           <CategoryDocumentTable 
             documents={documentsByCategory[category.id] || []}
-            category={category.name}
+            category={category}
             categoryColor={category.color}
             formatDate={formatDate}
             isDocumentExpired={isDocumentExpired}
@@ -180,7 +180,7 @@ export const DocumentTabs = ({
         <TabsContent key={category.id} value={category.id}>
           <CategoryDocumentTable 
             documents={documentsByCategory[category.id] || []}
-            category={category.name}
+            category={category}
             categoryColor={category.color}
             formatDate={formatDate}
             isDocumentExpired={isDocumentExpired}

@@ -1,7 +1,8 @@
+
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Document } from "@/types/admin";
+import { Document, DocumentCategory } from "@/types/common";
 import { useDocumentCategories } from "./useDocumentCategories";
 
 export const useDocumentManagement = (users: any[], supabaseUsers: any[]) => {
@@ -93,11 +94,54 @@ export const useDocumentManagement = (users: any[], supabaseUsers: any[]) => {
     }
   };
   
+  // Handle document update
+  const handleUpdateDocument = async (document: Document) => {
+    if (!selectedUserId) return;
+    
+    try {
+      setLoadingDocumentIds(prev => new Set([...prev, document.id]));
+      
+      const { error } = await supabase
+        .from('documents')
+        .update({
+          name: document.name,
+          category: document.category,
+          subcategory: document.subcategory,
+          observations: document.observations,
+          expires_at: document.expires_at
+        })
+        .eq('id', document.id);
+      
+      if (error) throw error;
+      
+      // Update the local document list
+      setDocuments(docs => docs.map(doc => 
+        doc.id === document.id ? { ...doc, ...document } : doc
+      ));
+      
+      toast({
+        title: "Documento atualizado",
+        description: "As alterações foram salvas com sucesso."
+      });
+    } catch (error: any) {
+      console.error('Erro ao atualizar documento:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao atualizar documento",
+        description: error.message
+      });
+    } finally {
+      setLoadingDocumentIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(document.id);
+        return newSet;
+      });
+    }
+  };
+  
   // Handle document deletion
   const handleDeleteDocument = async (documentId: string) => {
-    if (!window.confirm("Tem certeza que deseja excluir este documento?")) {
-      return;
-    }
+    if (!selectedUserId) return;
     
     try {
       setLoadingDocumentIds(prev => new Set([...prev, documentId]));
@@ -209,6 +253,7 @@ export const useDocumentManagement = (users: any[], supabaseUsers: any[]) => {
     loadingDocumentIds,
     fetchDocuments,
     handleDownload,
+    handleUpdateDocument,
     handleDeleteDocument
   };
 };

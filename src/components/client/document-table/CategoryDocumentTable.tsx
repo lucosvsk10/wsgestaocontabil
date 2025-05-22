@@ -1,11 +1,12 @@
 
-import { Document, DocumentCategory } from "@/types/admin";
+import { Document, DocumentCategory } from "@/types/common";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { DocumentTable } from "@/components/client/DocumentTable";
 
 interface CategoryDocumentTableProps {
   documents: Document[];
-  category: DocumentCategory;
+  category: DocumentCategory | string;
+  categoryColor?: string;
   formatDate: (dateStr: string) => string;
   isDocumentExpired: (expirationDate: string | null) => boolean;
   daysUntilExpiration: (expirationDate: string | null) => string | null;
@@ -15,6 +16,7 @@ interface CategoryDocumentTableProps {
 export const CategoryDocumentTable = ({
   documents,
   category,
+  categoryColor,
   formatDate,
   isDocumentExpired,
   daysUntilExpiration,
@@ -22,18 +24,22 @@ export const CategoryDocumentTable = ({
 }: CategoryDocumentTableProps) => {
   const isMobile = useIsMobile();
   
+  // Determinar o nome e a cor da categoria
+  const categoryName = typeof category === 'string' ? category : category.name;
+  const color = categoryColor || (typeof category !== 'string' ? category.color : "#F5C441");
+  
   return (
     <div>
       <div className="flex items-center mb-4">
         <div 
           className="w-4 h-4 rounded-full mr-2"
-          style={{ backgroundColor: category.color || "#F5C441" }}
+          style={{ backgroundColor: color }}
         ></div>
         <h3 
           className="text-lg font-medium"
-          style={{ color: category.color || "#F5C441" }}
+          style={{ color: color }}
         >
-          {category.name}
+          {categoryName}
         </h3>
       </div>
       
@@ -43,7 +49,7 @@ export const CategoryDocumentTable = ({
         isDocumentExpired={isDocumentExpired}
         daysUntilExpiration={daysUntilExpiration}
         refreshDocuments={refreshDocuments}
-        categoryColor={category.color || "#F5C441"}
+        categoryColor={color}
       />
     </div>
   );

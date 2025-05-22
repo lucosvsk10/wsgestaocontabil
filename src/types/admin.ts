@@ -1,30 +1,10 @@
+import { Document as CommonDocument, DocumentCategory } from "./common";
 
-import { Document as AuthDocument } from "@/utils/auth/types";
+// Estendendo o tipo Document para manter compatibilidade com código existente
+export interface Document extends CommonDocument {}
 
-export interface Document extends AuthDocument {
-  id: string;
-  name: string;
-  original_filename?: string;
-  filename?: string;
-  file_url: string;
-  uploaded_at: string;
-  user_id: string;
-  storage_key?: string;
-  category: string; // ID da categoria
-  subcategory?: string;
-  observations?: string;
-  expires_at?: string | null;
-  viewed?: boolean;
-  size?: number;
-}
-
-export interface DocumentCategory {
-  id: string;
-  name: string;
-  color?: string;
-  created_at: string;
-  updated_at: string;
-}
+// Exportando CategoryDocument para manter compatibilidade
+export { DocumentCategory };
 
 // Outros tipos existentes...
 export type UserType = {
@@ -32,4 +12,5 @@ export type UserType = {
   email: string;
   name: string;
   role: string;
+  created_at?: string;
 };
