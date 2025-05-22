@@ -20,7 +20,7 @@ export const useDocumentCategories = () => {
       
       if (error) throw error;
       
-      setCategories(data || []);
+      setCategories(data as DocumentCategory[] || []);
     } catch (error: any) {
       console.error('Error fetching categories:', error);
       toast({
@@ -54,7 +54,7 @@ export const useDocumentCategories = () => {
       
       if (error) throw error;
       
-      setCategories(prev => [...prev, data]);
+      setCategories(prev => [...prev, data as DocumentCategory]);
       toast({
         title: "Categoria adicionada",
         description: `A categoria "${name}" foi adicionada com sucesso.`
@@ -93,7 +93,7 @@ export const useDocumentCategories = () => {
       
       if (error) throw error;
       
-      setCategories(prev => prev.map(c => c.id === id ? data : c));
+      setCategories(prev => prev.map(c => c.id === id ? data as DocumentCategory : c));
       toast({
         title: "Categoria atualizada",
         description: `A categoria foi atualizada com sucesso.`

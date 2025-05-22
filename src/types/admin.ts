@@ -10,7 +10,7 @@ export interface Document extends AuthDocument {
   uploaded_at: string;
   user_id: string;
   storage_key?: string;
-  category: string;
+  category: string; // ID da categoria
   subcategory?: string;
   observations?: string;
   expires_at?: string | null;

@@ -9,9 +9,33 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      document_categories: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
-          category: string
+          category: string | null
           expires_at: string | null
           file_url: string
           filename: string | null
@@ -29,7 +53,7 @@ export type Database = {
           viewed_at: string | null
         }
         Insert: {
-          category?: string
+          category?: string | null
           expires_at?: string | null
           file_url: string
           filename?: string | null
@@ -47,7 +71,7 @@ export type Database = {
           viewed_at?: string | null
         }
         Update: {
-          category?: string
+          category?: string | null
           expires_at?: string | null
           file_url?: string
           filename?: string | null
@@ -70,6 +94,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_document_category"
+            columns: ["category"]
+            isOneToOne: false
+            referencedRelation: "document_categories"
             referencedColumns: ["id"]
           },
         ]

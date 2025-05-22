@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from "react";
 import { 
   Table, 
@@ -71,7 +70,7 @@ export const AdminDocumentTable: React.FC<AdminDocumentTableProps> = ({
 
   const getCategoryName = useCallback((categoryId: string) => {
     const category = categories.find(cat => cat.id === categoryId);
-    return category?.name || categoryId;
+    return category?.name || "Sem categoria";
   }, [categories]);
 
   // Filtra documentos com base na pesquisa e categoria selecionada

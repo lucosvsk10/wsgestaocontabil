@@ -1,12 +1,11 @@
 
-import { Document } from "@/types/admin";
+import { Document, DocumentCategory } from "@/types/admin";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { DocumentTable } from "@/components/client/DocumentTable";
 
 interface CategoryDocumentTableProps {
   documents: Document[];
-  category: string;
-  categoryColor?: string;
+  category: DocumentCategory;
   formatDate: (dateStr: string) => string;
   isDocumentExpired: (expirationDate: string | null) => boolean;
   daysUntilExpiration: (expirationDate: string | null) => string | null;
@@ -16,7 +15,6 @@ interface CategoryDocumentTableProps {
 export const CategoryDocumentTable = ({
   documents,
   category,
-  categoryColor = "#F5C441", // Cor padrão se não for fornecida
   formatDate,
   isDocumentExpired,
   daysUntilExpiration,
@@ -29,13 +27,13 @@ export const CategoryDocumentTable = ({
       <div className="flex items-center mb-4">
         <div 
           className="w-4 h-4 rounded-full mr-2"
-          style={{ backgroundColor: categoryColor }}
+          style={{ backgroundColor: category.color || "#F5C441" }}
         ></div>
         <h3 
-          className={`text-lg font-medium`}
-          style={{ color: categoryColor }}
+          className="text-lg font-medium"
+          style={{ color: category.color || "#F5C441" }}
         >
-          {category}
+          {category.name}
         </h3>
       </div>
       
@@ -45,7 +43,7 @@ export const CategoryDocumentTable = ({
         isDocumentExpired={isDocumentExpired}
         daysUntilExpiration={daysUntilExpiration}
         refreshDocuments={refreshDocuments}
-        categoryColor={categoryColor}
+        categoryColor={category.color || "#F5C441"}
       />
     </div>
   );

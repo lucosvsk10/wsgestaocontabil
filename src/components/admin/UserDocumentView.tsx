@@ -8,8 +8,14 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useUserManagement } from "@/hooks/useUserManagement";
 import { useDocumentManagement } from "@/hooks/document-management/useDocumentManagement";
 import { AdminDocumentManager } from "./document-management/AdminDocumentManager";
+import { UserType } from "@/types/admin";
 
-export const UserDocumentView = () => {
+interface UserDocumentViewProps {
+  users?: UserType[];
+  supabaseUsers?: any[];
+}
+
+export const UserDocumentView = ({ users = [], supabaseUsers = [] }: UserDocumentViewProps) => {
   const {
     userId
   } = useParams<{
@@ -18,11 +24,6 @@ export const UserDocumentView = () => {
   const navigate = useNavigate();
   const [userName, setUserName] = useState<string>("");
   const [userEmail, setUserEmail] = useState<string>("");
-  const {
-    users,
-    supabaseUsers,
-    isLoadingUsers
-  } = useUserManagement();
   const {
     documents,
     selectedUserId,
@@ -50,12 +51,6 @@ export const UserDocumentView = () => {
   const handleBackToUserList = () => {
     navigate("/admin/users");
   };
-  
-  if (isLoadingUsers) {
-    return <div className="flex items-center justify-center h-64">
-        <LoadingSpinner />
-      </div>;
-  }
   
   if (!userId) {
     return <Card className="px-0 bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20 shadow-lg">

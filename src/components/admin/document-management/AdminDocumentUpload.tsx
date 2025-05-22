@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { CategoryManagementModal } from "./CategoryManagementModal";
 import { useDocumentCategories } from "@/hooks/document-management/useDocumentCategories";
+import { DocumentCategory } from "@/types/admin";
 
 interface AdminDocumentUploadProps {
   userId: string;
@@ -162,7 +163,7 @@ export const AdminDocumentUpload: React.FC<AdminDocumentUploadProps> = ({ userId
             name: docName,
             file_url: urlData.signedUrl,
             storage_key: storageKey,
-            category: documentCategory,
+            category: documentCategory, // Agora é o ID da categoria
             subcategory: documentSubcategory || null,
             observations: documentObservations || null,
             expires_at: expiresAt,

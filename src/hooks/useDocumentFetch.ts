@@ -58,7 +58,7 @@ export const useDocumentFetch = () => {
       const docsWithViewStatus = data?.map(doc => ({
         ...doc,
         viewed: viewedDocs ? !!viewedDocs[doc.id] : false
-      })) || [];
+      })) as Document[] || [];
       
       setDocuments(docsWithViewStatus);
     } catch (error: any) {

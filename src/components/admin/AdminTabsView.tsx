@@ -8,6 +8,7 @@ import { Poll } from "@/types/polls";
 import { AdminDashboardView } from "./dashboard/AdminDashboardView";
 import { SettingsView } from "./settings/SettingsView";
 import { AdminToolsView } from "./tools/AdminToolsView";
+
 export interface AdminTabsViewProps {
   activeTab?: string;
   // Props para UserList
@@ -44,6 +45,7 @@ export interface AdminTabsViewProps {
   // Props para PollResults
   selectedPoll?: Poll | null;
 }
+
 export function AdminTabsView({
   activeTab,
   users,
