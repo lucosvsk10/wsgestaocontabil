@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -7,7 +6,6 @@ import { AdminDocumentUpload } from "./AdminDocumentUpload";
 import { AdminDocumentTable } from "./AdminDocumentTable";
 import { UserInfo } from "./UserInfo";
 import { useDocumentCategories } from "@/hooks/document-management/useDocumentCategories";
-
 interface AdminDocumentManagerProps {
   userId: string;
   userName: string;
@@ -18,7 +16,6 @@ interface AdminDocumentManagerProps {
   handleDownload: (document: Document) => Promise<void>;
   handleDeleteDocument: (documentId: string) => Promise<void>;
 }
-
 export const AdminDocumentManager: React.FC<AdminDocumentManagerProps> = ({
   userId,
   userName,
@@ -31,23 +28,21 @@ export const AdminDocumentManager: React.FC<AdminDocumentManagerProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<string>("upload");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc"); // Default newest first
-  const { categories } = useDocumentCategories();
-
+  const {
+    categories
+  } = useDocumentCategories();
   const sortedDocuments = [...documents].sort((a, b) => {
     const dateA = new Date(a.uploaded_at).getTime();
     const dateB = new Date(b.uploaded_at).getTime();
     return sortOrder === "desc" ? dateB - dateA : dateA - dateB;
   });
-
   const toggleSortOrder = () => {
     setSortOrder(sortOrder === "desc" ? "asc" : "desc");
   };
-
   const handleDocumentUploaded = () => {
     // Muda para a aba de documentos após o upload
     setActiveTab("documents");
   };
-
   return <div className="space-y-6">
       <UserInfo userName={userName} userEmail={userEmail} />
       
@@ -74,24 +69,9 @@ export const AdminDocumentManager: React.FC<AdminDocumentManagerProps> = ({
           
           <TabsContent value="documents" className="mt-0">
             <Card className="border border-gray-200 dark:border-navy-lighter/30 bg-white dark:bg-navy-deeper shadow-sm">
-              <CardHeader className="bg-gray-50 dark:bg-navy-light/10 border-b border-gray-200 dark:border-navy-lighter/30">
-                <div className="flex justify-between items-center">
-                  <CardTitle className="text-navy-dark dark:text-gold text-lg">
-                    Documentos de {userName}
-                  </CardTitle>
-                </div>
-              </CardHeader>
+              
               <CardContent className="p-6">
-                <AdminDocumentTable 
-                  documents={sortedDocuments} 
-                  isLoading={isLoadingDocuments} 
-                  loadingDocumentIds={loadingDocumentIds} 
-                  onDownload={handleDownload} 
-                  onDelete={handleDeleteDocument} 
-                  sortOrder={sortOrder} 
-                  onToggleSort={toggleSortOrder}
-                  categories={categories}
-                />
+                <AdminDocumentTable documents={sortedDocuments} isLoading={isLoadingDocuments} loadingDocumentIds={loadingDocumentIds} onDownload={handleDownload} onDelete={handleDeleteDocument} sortOrder={sortOrder} onToggleSort={toggleSortOrder} categories={categories} />
               </CardContent>
             </Card>
           </TabsContent>
