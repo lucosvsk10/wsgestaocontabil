@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,19 +8,20 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-
 export const SettingsView = () => {
-  const { toast } = useToast();
-  const { theme, setTheme } = useTheme();
-  const { user, signOut } = useAuth();
+  const {
+    toast
+  } = useToast();
+  const {
+    theme,
+    setTheme
+  } = useTheme();
+  const {
+    user,
+    signOut
+  } = useAuth();
   const [openDatabaseDialog, setOpenDatabaseDialog] = useState(false);
   const [dbSize, setDbSize] = useState("Calculando...");
   const [storageSize, setStorageSize] = useState("Calculando...");
@@ -30,28 +30,25 @@ export const SettingsView = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
-
   const handleSignOut = async () => {
     try {
       await signOut();
       toast({
         title: "Logout realizado",
-        description: "Você foi desconectado com sucesso.",
+        description: "Você foi desconectado com sucesso."
       });
     } catch (error) {
       console.error("Erro ao fazer logout:", error);
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Não foi possível realizar o logout.",
+        description: "Não foi possível realizar o logout."
       });
     }
   };
-
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark");
   };
-
   const fetchDatabaseInfo = async () => {
     try {
       setIsLoading(true);
@@ -65,35 +62,31 @@ export const SettingsView = () => {
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Não foi possível obter informações do banco de dados.",
+        description: "Não foi possível obter informações do banco de dados."
       });
     } finally {
       setIsLoading(false);
     }
   };
-
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordError("");
-    
     if (newPassword !== confirmPassword) {
       setPasswordError("As senhas não conferem.");
       return;
     }
-    
     try {
       setIsLoading(true);
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword,
+      const {
+        error
+      } = await supabase.auth.updateUser({
+        password: newPassword
       });
-      
       if (error) throw error;
-      
       toast({
         title: "Senha alterada",
-        description: "Sua senha foi alterada com sucesso.",
+        description: "Sua senha foi alterada com sucesso."
       });
-      
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -104,9 +97,7 @@ export const SettingsView = () => {
       setIsLoading(false);
     }
   };
-
-  return (
-    <div className="space-y-6">
+  return <div className="space-y-6">
       <h2 className="text-2xl font-bold mb-6 text-navy dark:text-white">Configurações</h2>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -122,59 +113,28 @@ export const SettingsView = () => {
             <form onSubmit={handleChangePassword} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="currentPassword" className="text-navy dark:text-gold">Senha Atual</Label>
-                <Input
-                  id="currentPassword"
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  required
-                  className="bg-white dark:bg-navy-light/20"
-                />
+                <Input id="currentPassword" type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} required className="bg-white dark:bg-navy-light/20" />
               </div>
               
               <div className="space-y-2">
                 <Label htmlFor="newPassword" className="text-navy dark:text-gold">Nova Senha</Label>
-                <Input
-                  id="newPassword"
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required
-                  className="bg-white dark:bg-navy-light/20"
-                />
+                <Input id="newPassword" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required className="bg-white dark:bg-navy-light/20" />
               </div>
               
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword" className="text-navy dark:text-gold">Confirmar Senha</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  className="bg-white dark:bg-navy-light/20"
-                />
+                <Input id="confirmPassword" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required className="bg-white dark:bg-navy-light/20" />
               </div>
               
-              {passwordError && (
-                <div className="text-sm text-red-500 dark:text-red-400">{passwordError}</div>
-              )}
+              {passwordError && <div className="text-sm text-red-500 dark:text-red-400">{passwordError}</div>}
               
-              <Button 
-                type="submit" 
-                className="w-full bg-navy text-white hover:bg-navy/80 dark:bg-gold dark:text-navy dark:hover:bg-gold/80"
-                disabled={isLoading}
-              >
+              <Button type="submit" className="w-full bg-navy text-white hover:bg-navy/80 dark:bg-gold dark:text-navy dark:hover:bg-gold/80" disabled={isLoading}>
                 <Lock className="mr-2 h-4 w-4" />
                 Alterar Senha
               </Button>
             </form>
             
-            <Button 
-              variant="destructive" 
-              className="w-full"
-              onClick={handleSignOut}
-            >
+            <Button variant="destructive" className="w-full" onClick={handleSignOut}>
               <LogOut className="mr-2 h-4 w-4" />
               Fazer Logout
             </Button>
@@ -194,26 +154,18 @@ export const SettingsView = () => {
                 <Moon className="h-5 w-5 text-navy dark:text-gold" />
                 <span className="text-navy dark:text-gold">Modo Escuro</span>
               </div>
-              <Switch 
-                checked={theme === "dark"}
-                onCheckedChange={toggleTheme}
-              />
+              <Switch checked={theme === "dark"} onCheckedChange={toggleTheme} />
             </div>
             
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={fetchDatabaseInfo}
-              disabled={isLoading}
-            >
+            <Button variant="outline" className="w-full" onClick={fetchDatabaseInfo} disabled={isLoading}>
               <Database className="mr-2 h-4 w-4" />
               Ver uso do banco de dados
             </Button>
             
             <div className="p-4 rounded-lg bg-gray-50 dark:bg-navy-light/20">
               <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Versão da aplicação</p>
-              <p className="text-xl font-bold text-navy dark:text-white">1.0.0</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Última atualização: 09/05/2025</p>
+              <p className="text-xl font-bold text-navy dark:text-white">1.1.0</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Última atualização: 22/05/2025</p>
             </div>
             
             <div className="p-4 rounded-lg bg-gray-50 dark:bg-navy-light/20">
@@ -245,16 +197,12 @@ export const SettingsView = () => {
             </div>
           </div>
           <div className="flex justify-center">
-            <Button 
-              variant="outline" 
-              onClick={() => setOpenDatabaseDialog(false)}
-            >
+            <Button variant="outline" onClick={() => setOpenDatabaseDialog(false)}>
               <RefreshCw className="mr-2 h-4 w-4" />
               Atualizar
             </Button>
           </div>
         </DialogContent>
       </Dialog>
-    </div>
-  );
+    </div>;
 };
