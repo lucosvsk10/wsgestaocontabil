@@ -48,14 +48,13 @@
   }
 
   .dark {
-    /* Novo fundo escuro #020817 */
-    --background: 222 84% 5%;
+    --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
 
-    --card: 222 84% 5%;
+    --card: 222.2 84% 4.9%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222 84% 5%;
+    --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
 
     --primary: 210 40% 98%;
@@ -76,8 +75,7 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
-    
-    --sidebar-background: 222 84% 5%;
+    --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
     --sidebar-primary-foreground: 0 0% 100%;
@@ -99,42 +97,12 @@
   }
 
   body {
-    @apply bg-white dark:bg-deepNavy text-navy dark:text-white font-prompt overflow-x-hidden;
+    @apply bg-white dark:bg-navy-dark text-navy dark:text-white font-prompt overflow-x-hidden;
   }
 
   img {
     @apply max-w-full;
   }
-}
-
-/* Estilização para o modo escuro */
-.dark .card,
-.dark .dropdown-menu,
-.dark .dialog,
-.dark .popover,
-.dark .sidebar,
-.dark .sheet,
-.dark .table,
-.dark .tabs,
-.dark .hover-card,
-.dark .command,
-.dark .select,
-.dark .alert-dialog {
-  @apply border border-gold/30 bg-deepNavy/60 backdrop-blur-sm;
-}
-
-.dark .button {
-  @apply border border-gold/40 bg-transparent text-white hover:bg-gold/10;
-}
-
-.dark .button-primary {
-  @apply bg-gold text-deepNavy hover:bg-gold-light;
-}
-
-.dark .input,
-.dark .textarea,
-.dark .select {
-  @apply border-gold/30 bg-deepNavy/60 text-white focus:border-gold/60;
 }
 
 .nav-link {

@@ -89,13 +89,6 @@ export default {
                 page: {
                     DEFAULT: '#393532'
                 },
-                // Novo fundo escuro para o modo noturno
-                deepNavy: {
-                    DEFAULT: '#020817',
-                    50: 'rgba(2, 8, 23, 0.5)',
-                    80: 'rgba(2, 8, 23, 0.8)',
-                    90: 'rgba(2, 8, 23, 0.9)',
-                },
                 // Admin colors for light and dark mode
                 admin: {
                     light: {
@@ -104,9 +97,9 @@ export default {
                         element: '#FFFFFF'
                     },
                     dark: {
-                        bg: '#020817',
+                        bg: '#0c1b33',
                         text: '#E0E0E0',
-                        element: '#050f24'
+                        element: '#11243d'
                     }
                 }
 			},

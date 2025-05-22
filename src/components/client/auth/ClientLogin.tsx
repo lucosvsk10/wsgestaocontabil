@@ -75,7 +75,7 @@ const ClientLogin = () => {
   };
 
   return (
-    <div className="flex justify-center items-center min-h-screen w-full px-4 bg-gray-50 dark:bg-deepNavy">
+    <div className="flex justify-center items-center min-h-screen w-full px-4 bg-gray-50 dark:bg-navy-dark">
       <div className="w-full max-w-md">
         {/* Login Logo/Header */}
         <div className="flex justify-center mb-6">
@@ -86,12 +86,12 @@ const ClientLogin = () => {
           />
         </div>
 
-        <Card className="shadow-lg border-gray-200 dark:border-gold/30 rounded-2xl dark:bg-deepNavy/60 dark:backdrop-blur-sm">
+        <Card className="shadow-lg border-gray-200 dark:border-gold/20 rounded-2xl dark:bg-navy-deeper">
           <CardHeader className="space-y-1 pb-2">
             <CardTitle className="text-2xl font-semibold text-center text-navy dark:text-gold">
               Acesso ao Sistema
             </CardTitle>
-            <CardDescription className="text-center text-gray-500 dark:text-gray-300">
+            <CardDescription className="text-center text-gray-500 dark:text-gray-400">
               Digite seu email e senha para acessar sua conta
             </CardDescription>
           </CardHeader>
@@ -106,7 +106,7 @@ const ClientLogin = () => {
                 </Label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-400 dark:text-gold/60" />
+                    <Mail className="h-5 w-5 text-gray-400" />
                   </div>
                   <Input
                     id="email"
@@ -114,7 +114,7 @@ const ClientLogin = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="exemplo@email.com"
-                    className="pl-10 bg-white dark:bg-deepNavy/60 border-gray-300 dark:border-gold/30 focus:ring-2 focus:ring-blue-500 dark:focus:ring-gold/40 rounded-xl"
+                    className="pl-10 bg-white dark:bg-navy-light/20 border-gray-300 dark:border-navy-lighter focus:ring-2 focus:ring-blue-500 dark:focus:ring-gold/40 rounded-xl"
                   />
                 </div>
               </div>
@@ -135,7 +135,7 @@ const ClientLogin = () => {
                 </div>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400 dark:text-gold/60" />
+                    <Lock className="h-5 w-5 text-gray-400" />
                   </div>
                   <Input
                     id="password"
@@ -143,14 +143,14 @@ const ClientLogin = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="******"
-                    className="pl-10 bg-white dark:bg-deepNavy/60 border-gray-300 dark:border-gold/30 focus:ring-2 focus:ring-blue-500 dark:focus:ring-gold/40 rounded-xl"
+                    className="pl-10 bg-white dark:bg-navy-light/20 border-gray-300 dark:border-navy-lighter focus:ring-2 focus:ring-blue-500 dark:focus:ring-gold/40 rounded-xl"
                   />
                 </div>
               </div>
               <Button 
                 type="submit" 
                 disabled={loading}
-                className="w-full h-11 text-white bg-blue-600 hover:bg-blue-700 dark:bg-transparent dark:border dark:border-gold/40 dark:text-white dark:hover:bg-gold/10 font-medium rounded-xl transition-all duration-200 shadow-md"
+                className="w-full h-11 text-white bg-blue-600 hover:bg-blue-700 dark:bg-gold dark:text-navy dark:hover:bg-gold-light font-medium rounded-xl transition-all duration-200 shadow-md"
               >
                 {loading ? (
                   <>
@@ -164,10 +164,10 @@ const ClientLogin = () => {
           <CardFooter className="flex flex-col space-y-4 pt-0">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-gray-300 dark:border-gold/30" />
+                <span className="w-full border-t border-gray-300 dark:border-navy-lighter" />
               </div>
               <div className="relative flex justify-center text-xs">
-                <span className="bg-white dark:bg-deepNavy px-2 text-gray-500 dark:text-gray-400">
+                <span className="bg-white dark:bg-navy-deeper px-2 text-gray-500 dark:text-gray-400">
                   ou
                 </span>
               </div>

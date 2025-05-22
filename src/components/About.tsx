@@ -1,4 +1,3 @@
-
 import { useEffect, useRef } from 'react';
 import { Check, Clock, Award, BarChart } from 'lucide-react';
 const services = [{
@@ -42,7 +41,7 @@ const About = () => {
     };
   }, []);
   return <>
-      <section id="servicos" className="py-20 bg-orange-200 dark:bg-deepNavy">
+      <section id="servicos" className="py-20 bg-orange-200 dark:bg-navy-dark">
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-3xl text-navy-light dark:text-gold mb-4 font-light md:text-4xl">Nossos Serviços</h2>
@@ -52,7 +51,7 @@ const About = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {services.map((service, index) => <div key={index} ref={el => serviceRefs.current[index] = el} className="backdrop-blur-sm border border-gold/20 rounded-xl p-6 transition-all duration-500 fadein-on-scroll bg-white/90 dark:bg-deepNavy/60 dark:border-gold/30">
+            {services.map((service, index) => <div key={index} ref={el => serviceRefs.current[index] = el} className="backdrop-blur-sm border border-gold/20 rounded-xl p-6 transition-all duration-500 fadein-on-scroll bg-navy-dark">
                 <div className="mb-4">{service.icon}</div>
                 <h3 className="text-xl font-semibold text-navy dark:text-white mb-3">{service.title}</h3>
                 <p className="text-navy/70 dark:text-white/70">{service.description}</p>
@@ -61,7 +60,7 @@ const About = () => {
         </div>
       </section>
 
-      <section id="sobre" className="py-20 bg-orange-200 dark:bg-deepNavy">
+      <section id="sobre" className="py-20 bg-orange-200 dark:bg-navy-dark">
         <div className="container mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-12">
             <div className="w-full md:w-1/2">
@@ -85,7 +84,7 @@ const About = () => {
             <div className="w-full md:w-1/2 flex justify-center">
               <div className="relative max-w-md">
                 <div className="aspect-w-16 aspect-h-9 rounded-xl overflow-hidden border-2 border-gold/30 shadow-lg">
-                  <div className="w-full h-full bg-white/50 dark:bg-deepNavy/60 dark:backdrop-blur-sm flex items-center justify-center">
+                  <div className="w-full h-full bg-white/50 dark:bg-navy-dark flex items-center justify-center">
                     <div className="text-center p-8">
                       <h3 className="text-2xl font-bold text-navy-light dark:text-gold mb-4">Nossa Missão</h3>
                       <p className="text-navy dark:text-white/80">
