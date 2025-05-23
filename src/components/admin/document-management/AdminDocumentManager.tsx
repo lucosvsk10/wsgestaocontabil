@@ -14,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { useDocumentCategories } from "@/hooks/document-management/useDocumentCategories";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { convertToCommonCategories } from "@/utils/document/documentTypeUtils";
+
 interface AdminDocumentManagerProps {
   userId: string;
   userName: string;
@@ -24,6 +26,7 @@ interface AdminDocumentManagerProps {
   handleDownload: (document: Document) => Promise<void>;
   handleDeleteDocument: (documentId: string) => Promise<void>;
 }
+
 export const AdminDocumentManager: React.FC<AdminDocumentManagerProps> = ({
   userId,
   userName,
@@ -52,6 +55,10 @@ export const AdminDocumentManager: React.FC<AdminDocumentManagerProps> = ({
   const {
     categories
   } = useDocumentCategories();
+  
+  // Convert to common category type for compatibility
+  const commonCategories = convertToCommonCategories(categories);
+  
   const sortedDocuments = [...documents].sort((a, b) => {
     const dateA = new Date(a.uploaded_at).getTime();
     const dateB = new Date(b.uploaded_at).getTime();
@@ -178,7 +185,7 @@ export const AdminDocumentManager: React.FC<AdminDocumentManagerProps> = ({
               <CardContent className="p-6 pt-0">
                 <div className="hidden md:block">
                   {Object.entries(documentsByCategory).filter(([_, docs]) => docs.length > 0).map(([categoryId, docs]) => {
-                  const category = categories.find(c => c.id === categoryId);
+                  const category = commonCategories.find(c => c.id === categoryId);
                   if (!category) return null;
                   return <DocumentCategoryGroup key={categoryId} category={category} documents={docs} loadingDocumentIds={loadingDocumentIds} onDownload={handleDownload} onEdit={handleEditDocument} onDelete={handleConfirmDelete} />;
                 })}
@@ -187,8 +194,8 @@ export const AdminDocumentManager: React.FC<AdminDocumentManagerProps> = ({
                   id: "uncategorized",
                   name: "Sem categoria",
                   color: "#6B7280",
-                  created_at: "",
-                  updated_at: ""
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
                 }} documents={uncategorizedDocuments} loadingDocumentIds={loadingDocumentIds} onDownload={handleDownload} onEdit={handleEditDocument} onDelete={handleConfirmDelete} />}
                   
                   {sortedDocuments.length === 0 && !isLoadingDocuments && <div className="text-center py-8 text-gray-500 dark:text-gray-400">
@@ -197,7 +204,7 @@ export const AdminDocumentManager: React.FC<AdminDocumentManagerProps> = ({
                 </div>
                 
                 <div className="md:hidden">
-                  <AdminDocumentTable documents={sortedDocuments} isLoading={isLoadingDocuments} loadingDocumentIds={loadingDocumentIds} onDownload={handleDownload} onDelete={handleConfirmDelete} onEdit={handleEditDocument} sortOrder={sortOrder} onToggleSort={toggleSortOrder} categories={categories} />
+                  <AdminDocumentTable documents={sortedDocuments} isLoading={isLoadingDocuments} loadingDocumentIds={loadingDocumentIds} onDownload={handleDownload} onDelete={handleConfirmDelete} onEdit={handleEditDocument} sortOrder={sortOrder} onToggleSort={toggleSortOrder} categories={commonCategories} />
                 </div>
               </CardContent>
             </Card>
@@ -206,7 +213,7 @@ export const AdminDocumentManager: React.FC<AdminDocumentManagerProps> = ({
       </Tabs>
       
       {/* Diálogo de edição de documento */}
-      <EditDocumentDialog open={isEditDialogOpen} document={editingDocument} categories={categories} onClose={() => {
+      <EditDocumentDialog open={isEditDialogOpen} document={editingDocument} categories={commonCategories} onClose={() => {
       setIsEditDialogOpen(false);
       setEditingDocument(null);
     }} onSave={handleSaveDocument} />

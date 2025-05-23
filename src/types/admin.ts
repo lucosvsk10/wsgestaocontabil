@@ -29,7 +29,7 @@ export type Document = {
   user_id: string;
   name: string;
   file_url: string;
-  storage_key: string;
+  storage_key?: string; // Changed to optional to match common.ts
   category: string;
   subcategory?: string | null;
   observations?: string | null;
@@ -47,6 +47,6 @@ export interface DocumentCategory {
   id: string;
   name: string;
   color?: string;
-  created_at?: string;
+  created_at: string; // Changed from optional to required
   updated_at: string;
 }

@@ -12,6 +12,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { convertToAdminDocuments } from "@/utils/document/documentTypeUtils";
 
 export const DocumentManagementView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("upload");
@@ -43,6 +44,9 @@ export const DocumentManagementView: React.FC = () => {
       </div>
     );
   }
+  
+  // Convert documents to admin document type for compatibility
+  const adminDocuments = convertToAdminDocuments(documents);
   
   return (
     <Card className="border border-gray-200 dark:border-navy-lighter/30 bg-white dark:bg-navy-dark">
@@ -121,7 +125,7 @@ export const DocumentManagementView: React.FC = () => {
               
               <TabsContent value="documents" className="mt-0">
                 <DocumentTable 
-                  documents={documents} 
+                  documents={adminDocuments}
                   isLoading={isLoadingDocuments}
                   loadingDocumentIds={loadingDocumentIds}
                   onDownload={handleDownload}

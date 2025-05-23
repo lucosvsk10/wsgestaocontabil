@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DocumentTabs } from "@/components/client/DocumentTabs";
@@ -18,6 +17,7 @@ import { motion } from "framer-motion";
 import { useDocumentCategories } from "@/hooks/document-management/useDocumentCategories";
 import { Document } from "@/types/admin";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { convertToCommonCategories } from "@/utils/document/documentTypeUtils";
 
 const ClientDashboard = () => {
   const {
@@ -44,6 +44,9 @@ const ClientDashboard = () => {
       fetchUserDocuments(user.id);
     }
   });
+
+  // Convert categories to common category type for compatibility
+  const commonCategories = convertToCommonCategories(categories);
 
   // Agrupar documentos por categoria
   const getDocumentsByCategory = (docs: Document[], cats: typeof categories) => {
@@ -179,7 +182,7 @@ const ClientDashboard = () => {
                       documents={[]} 
                       allDocuments={documents} 
                       documentsByCategory={documentsByCategory} 
-                      categories={categories} 
+                      categories={commonCategories} 
                       setSelectedCategory={setSelectedCategory} 
                       formatDate={formatDate} 
                       isDocumentExpired={isDocumentExpired} 

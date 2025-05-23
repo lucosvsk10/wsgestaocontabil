@@ -1,4 +1,3 @@
-
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Document } from "@/utils/auth/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -13,7 +12,6 @@ interface DesktopDocumentTableProps {
   daysUntilExpiration: (expirationDate: string | null) => string | null;
   refreshDocuments: () => void;
   loadingDocumentIds: Set<string>;
-  setLoadingDocumentIds: React.Dispatch<React.SetStateAction<Set<string>>>;
   handleDownload: (doc: Document) => Promise<void>;
 }
 

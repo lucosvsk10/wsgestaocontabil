@@ -1,4 +1,3 @@
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Document, DocumentCategory } from "@/types/common";
 import { CategoryDocumentTable } from "./document-table/CategoryDocumentTable";
@@ -11,6 +10,7 @@ import {
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
+import { convertToAdminDocuments } from "@/utils/document/documentTypeUtils";
 
 interface DocumentTabsProps {
   documents: Document[];
@@ -131,19 +131,22 @@ export const DocumentTabs = ({
         </DrawerContent>
       </Drawer>
       
-      {sortedCategories.map((category) => (
-        <div key={category.id} className={category.id === activeCategory ? 'block' : 'hidden'}>
-          <CategoryDocumentTable 
-            documents={documentsByCategory[category.id] || []}
-            category={category}
-            categoryColor={category.color}
-            formatDate={formatDate}
-            isDocumentExpired={isDocumentExpired}
-            daysUntilExpiration={daysUntilExpiration}
-            refreshDocuments={refreshDocuments}
-          />
-        </div>
-      ))}
+      {sortedCategories.map((category) => {
+        const adminDocuments = convertToAdminDocuments(documentsByCategory[category.id] || []);
+        return (
+          <div key={category.id} className={category.id === activeCategory ? 'block' : 'hidden'}>
+            <CategoryDocumentTable 
+              documents={adminDocuments}
+              category={category}
+              categoryColor={category.color}
+              formatDate={formatDate}
+              isDocumentExpired={isDocumentExpired}
+              daysUntilExpiration={daysUntilExpiration}
+              refreshDocuments={refreshDocuments}
+            />
+          </div>
+        );
+      })}
     </div>
   ) : (
     <Tabs 
@@ -176,19 +179,22 @@ export const DocumentTabs = ({
         ))}
       </TabsList>
       
-      {sortedCategories.map(category => (
-        <TabsContent key={category.id} value={category.id}>
-          <CategoryDocumentTable 
-            documents={documentsByCategory[category.id] || []}
-            category={category}
-            categoryColor={category.color}
-            formatDate={formatDate}
-            isDocumentExpired={isDocumentExpired}
-            daysUntilExpiration={daysUntilExpiration}
-            refreshDocuments={refreshDocuments}
-          />
-        </TabsContent>
-      ))}
+      {sortedCategories.map(category => {
+        const adminDocuments = convertToAdminDocuments(documentsByCategory[category.id] || []);
+        return (
+          <TabsContent key={category.id} value={category.id}>
+            <CategoryDocumentTable 
+              documents={adminDocuments}
+              category={category}
+              categoryColor={category.color}
+              formatDate={formatDate}
+              isDocumentExpired={isDocumentExpired}
+              daysUntilExpiration={daysUntilExpiration}
+              refreshDocuments={refreshDocuments}
+            />
+          </TabsContent>
+        );
+      })}
     </Tabs>
   );
 };

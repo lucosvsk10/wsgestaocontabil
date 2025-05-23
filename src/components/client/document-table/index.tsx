@@ -50,6 +50,8 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
       isDocumentExpired={isDocumentExpired}
       daysUntilExpiration={daysUntilExpiration}
       refreshDocuments={refreshDocuments}
+      loadingDocumentIds={loadingDocumentIds}
+      handleDownload={handleDownload}
     />
   );
 };
