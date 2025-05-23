@@ -41,7 +41,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
         <Button 
           variant="secondary" 
           size="icon" 
-          className="fixed bottom-4 left-4 z-50 bg-white dark:bg-transparent dark:border-gold dark:border-opacity-30 shadow-md rounded-full border border-[#e6e6e6] dark:border-gold dark:border-opacity-30 h-10 w-10" 
+          className="fixed bottom-4 left-4 z-50 bg-white shadow-md rounded-full border border-[#e6e6e6] h-10 w-10 dark:border-gold dark:border-opacity-30 dark:bg-transparent" 
           onClick={toggleSidebar}
           aria-label={sidebarOpen ? "Recolher menu lateral" : "Expandir menu lateral"}
         >

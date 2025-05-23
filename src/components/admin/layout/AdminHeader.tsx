@@ -16,7 +16,7 @@ const AdminHeader = () => {
   } = useNavigation();
   
   return (
-    <header className="py-4 px-6 flex items-center justify-between bg-white shadow-sm dark:bg-deepNavy dark:shadow-none border-b border-[#e6e6e6] dark:border-transparent">
+    <header className="py-4 px-6 flex items-center justify-between bg-white shadow-sm dark:bg-deepNavy dark:shadow-none">
       <div className="flex items-center">
         {/* Conteúdo à esquerda */}
       </div>
@@ -32,7 +32,7 @@ const AdminHeader = () => {
               <UserCircle className="h-6 w-6 text-[#020817] dark:text-gold" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-deepNavy dark:border-gold dark:border-opacity-30 border border-[#e6e6e6] shadow-lg rounded-lg dark:backdrop-blur-sm">
+          <DropdownMenuContent align="end" className="w-56 bg-white shadow-lg rounded-lg border border-[#e6e6e6] dark:bg-deepNavy dark:border-gold dark:border-opacity-30 dark:backdrop-blur-sm">
             <div className="px-3 py-2 text-sm font-medium text-[#020817] dark:text-white">
               {user?.email || "Usuário"}
             </div>

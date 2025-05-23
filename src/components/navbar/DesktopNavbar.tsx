@@ -29,20 +29,20 @@ const DesktopNavbar = ({ handleLogout, navigateToDashboard }: DesktopNavbarProps
         <>
           {!shouldHideAccountButton && (
             <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center text-gold-dark hover:text-gold-dark/80 dark:text-gold dark:hover:text-gold/80 transition-colors duration-300">
+              <DropdownMenuTrigger className="flex items-center text-[#efc349] hover:text-[#d6a932] dark:text-gold dark:hover:text-gold/80 transition-colors duration-300">
                 <UserCircle size={20} className="mr-1" />
                 <span className="text-sm font-medium uppercase tracking-wider">CONTA</span>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-orange-200 dark:bg-navy-dark border-gold/20">
+              <DropdownMenuContent align="end" className="bg-white shadow-lg rounded-lg border border-[#e6e6e6] dark:bg-navy-dark dark:border-gold/20">
                 <DropdownMenuItem 
-                  className="text-gold-dark hover:text-gold dark:text-gold dark:hover:text-gold-light cursor-pointer"
+                  className="text-[#020817] hover:bg-gray-100 dark:text-gold dark:hover:text-gold-light cursor-pointer dark:hover:bg-navy-light"
                   onClick={navigateToDashboard}
                 >
                   <FileText size={16} className="mr-2" />
                   <span className="text-sm font-medium uppercase tracking-wider">MEUS DOCS</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem 
-                  className="text-gold-dark hover:text-gold dark:text-gold dark:hover:text-gold-light cursor-pointer"
+                  className="text-[#020817] hover:bg-gray-100 dark:text-gold dark:hover:text-gold-light cursor-pointer dark:hover:bg-navy-light"
                   onClick={handleLogout}
                 >
                   <LogOut size={16} className="mr-2" />
@@ -55,7 +55,7 @@ const DesktopNavbar = ({ handleLogout, navigateToDashboard }: DesktopNavbarProps
           {isOnDashboardPage && (
             <button 
               onClick={handleLogout} 
-              className="flex items-center text-gold-dark hover:text-gold dark:text-gold dark:hover:text-gold-light transition-colors duration-300"
+              className="flex items-center text-[#efc349] hover:text-[#d6a932] dark:text-gold dark:hover:text-gold-light transition-colors duration-300"
             >
               <LogOut size={20} className="mr-1" />
               <span className="text-sm font-medium uppercase tracking-wider">Sair</span>
@@ -63,7 +63,7 @@ const DesktopNavbar = ({ handleLogout, navigateToDashboard }: DesktopNavbarProps
           )}
         </>
       ) : (
-        <Link to="/login" className="flex items-center text-gold-dark hover:text-gold dark:text-gold dark:hover:text-gold-light transition-colors duration-300">
+        <Link to="/login" className="flex items-center text-[#efc349] hover:text-[#d6a932] dark:text-gold dark:hover:text-gold-light transition-colors duration-300">
           <UserCircle size={20} className="mr-1" />
           <span className="text-sm font-medium uppercase tracking-wider">Login</span>
         </Link>
@@ -72,20 +72,20 @@ const DesktopNavbar = ({ handleLogout, navigateToDashboard }: DesktopNavbarProps
       {/* Service links in the requested order */}
       {!shouldHideNavLinks && (
         <>
-          <a href="#servicos" className="nav-link text-sm font-prompt font-medium uppercase tracking-wider text-gold-dark dark:text-gold">
+          <a href="#servicos" className="nav-link text-sm font-prompt font-medium uppercase tracking-wider text-[#020817] dark:text-gold">
             Serviços
           </a>
-          <a href="#sobre" className="nav-link text-sm font-prompt font-medium uppercase tracking-wider text-gold-dark dark:text-gold">
+          <a href="#sobre" className="nav-link text-sm font-prompt font-medium uppercase tracking-wider text-[#020817] dark:text-gold">
             Sobre
           </a>
-          <a href="#contabil" className="nav-link text-sm font-prompt font-medium uppercase tracking-wider text-gold-dark dark:text-gold">
+          <a href="#contabil" className="nav-link text-sm font-prompt font-medium uppercase tracking-wider text-[#020817] dark:text-gold">
             Contábil
           </a>
         </>
       )}
       
       {/* Instagram link always at the end */}
-      <a href="https://www.instagram.com/ws_gestao_contabil?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer" className="text-gold-dark hover:text-gold dark:text-gold dark:hover:text-gold-light transition-colors duration-300" aria-label="Instagram">
+      <a href="https://www.instagram.com/ws_gestao_contabil?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer" className="text-[#efc349] hover:text-[#d6a932] dark:text-gold dark:hover:text-gold-light transition-colors duration-300" aria-label="Instagram">
         <Instagram size={20} />
       </a>
     </nav>

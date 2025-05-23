@@ -38,7 +38,7 @@ const Index = () => {
   }, []);
   
   return (
-    <div className="relative min-h-screen px:6 bg-[#FFF1DE] dark:bg-deepNavy">
+    <div className="relative min-h-screen bg-[#FFF1DE] dark:bg-deepNavy">
       <Navbar />
       <main>
         <Hero />

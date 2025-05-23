@@ -10,7 +10,7 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-[#020817] text-white hover:bg-[#0f172a] dark:border dark:border-gold dark:border-opacity-40 dark:bg-transparent dark:text-[#d9d9d9] dark:hover:bg-gold/10 shadow-sm",
+        default: "bg-[#020817] text-white hover:bg-[#0f172a] shadow-sm dark:border dark:border-gold dark:border-opacity-40 dark:bg-transparent dark:text-[#d9d9d9] dark:hover:bg-gold/10",
         destructive:
           "bg-red-500 text-white hover:bg-red-600 dark:bg-transparent dark:border dark:border-red-500/70 dark:text-red-400 dark:hover:bg-red-900/20",
         outline:
@@ -20,7 +20,7 @@ const buttonVariants = cva(
         ghost: "hover:bg-[#f3f4f6] hover:text-[#020817] dark:hover:bg-gold/10 dark:hover:text-[#d9d9d9]",
         link: "text-[#2563eb] underline-offset-4 hover:underline dark:text-gold",
         document: "bg-blue-50 text-[#2563eb] hover:bg-blue-100 dark:bg-transparent dark:border dark:border-gold dark:border-opacity-40 dark:text-[#d9d9d9] dark:hover:bg-gold/10",
-        admin: "bg-[#020817] text-white hover:bg-[#0f172a] dark:border dark:border-gold dark:border-opacity-40 dark:bg-transparent dark:text-[#d9d9d9] dark:hover:bg-gold/10 shadow-sm"
+        admin: "bg-[#020817] text-white hover:bg-[#0f172a] shadow-sm dark:border dark:border-gold dark:border-opacity-40 dark:bg-transparent dark:text-[#d9d9d9] dark:hover:bg-gold/10"
       },
       size: {
         default: "h-10 px-4 py-2",
