@@ -22,9 +22,7 @@ export default {
 			fontFamily: {
 				anton: ['Anton', 'sans-serif'],
 				prompt: ['Prompt', 'sans-serif'],
-				roboto: ['Roboto', 'system-ui', 'sans-serif'],
-				museo: ['Museo Moderno', 'sans-serif'],
-				bebas: ['Bebas Neue', 'sans-serif']
+				roboto: ['Roboto', 'system-ui', 'sans-serif']
 			},
 			colors: {
 				border: 'hsl(var(--border))',
@@ -107,7 +105,7 @@ export default {
                     },
                     dark: {
                         bg: '#020817',
-                        text: '#d9d9d9',
+                        text: '#E0E0E0',
                         element: '#050f24'
                     }
                 }

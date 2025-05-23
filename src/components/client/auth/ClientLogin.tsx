@@ -86,9 +86,9 @@ const ClientLogin = () => {
           />
         </div>
 
-        <Card className="shadow-lg border-gray-200 dark:border-gold/30 rounded-2xl dark:bg-transparent dark:backdrop-blur-sm">
+        <Card className="shadow-lg border-gray-200 dark:border-gold/30 rounded-2xl dark:bg-deepNavy/60 dark:backdrop-blur-sm">
           <CardHeader className="space-y-1 pb-2">
-            <CardTitle className="text-2xl font-semibold text-center text-navy dark:text-gold font-museo">
+            <CardTitle className="text-2xl font-semibold text-center text-navy dark:text-gold">
               Acesso ao Sistema
             </CardTitle>
             <CardDescription className="text-center text-gray-500 dark:text-gray-300">
@@ -114,7 +114,7 @@ const ClientLogin = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="exemplo@email.com"
-                    className="pl-10 bg-white dark:bg-transparent dark:border-gold/30 focus:ring-2 focus:ring-blue-500 dark:focus:ring-gold/40 rounded-xl"
+                    className="pl-10 bg-white dark:bg-deepNavy/60 border-gray-300 dark:border-gold/30 focus:ring-2 focus:ring-blue-500 dark:focus:ring-gold/40 rounded-xl"
                   />
                 </div>
               </div>
@@ -143,7 +143,7 @@ const ClientLogin = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="******"
-                    className="pl-10 bg-white dark:bg-transparent dark:border-gold/30 focus:ring-2 focus:ring-blue-500 dark:focus:ring-gold/40 rounded-xl"
+                    className="pl-10 bg-white dark:bg-deepNavy/60 border-gray-300 dark:border-gold/30 focus:ring-2 focus:ring-blue-500 dark:focus:ring-gold/40 rounded-xl"
                   />
                 </div>
               </div>

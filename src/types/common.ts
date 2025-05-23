@@ -1,25 +1,30 @@
 
-// Tipo centralizado de DocumentCategory
+/**
+ * Tipos comuns compartilhados entre diferentes partes da aplicação
+ */
+
 export interface DocumentCategory {
   id: string;
   name: string;
   color?: string;
-  created_at?: string;
-  icon_name?: string;
+  created_at: string;
+  updated_at: string;
 }
 
-// Tipo centralizado de Document
 export interface Document {
   id: string;
   name: string;
-  category: string;
-  filename: string;
-  url: string;
-  user_id: string;
-  uploaded_at: string;
-  expires_at?: string;
   original_filename?: string;
-  size?: number;
-  viewed?: boolean;
+  filename?: string;
+  file_url: string;
+  uploaded_at: string;
+  user_id: string;
+  storage_key?: string;
+  category: string; // ID da categoria
+  categoryObject?: DocumentCategory; // Objeto da categoria para facilitar acesso
+  subcategory?: string;
   observations?: string;
+  expires_at?: string | null;
+  viewed?: boolean;
+  size?: number;
 }

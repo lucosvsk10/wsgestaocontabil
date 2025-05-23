@@ -1,113 +1,116 @@
 
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Document } from "@/utils/auth/types";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DocumentActions } from "./DocumentActions";
-import { Badge } from "@/components/ui/badge";
-import { Calendar, Eye, EyeOff } from "lucide-react";
+import { BellDot, Clock, Info } from "lucide-react";
 
 interface DesktopDocumentTableProps {
   documents: Document[];
+  category?: string;
   formatDate: (dateStr: string) => string;
-  isDocumentExpired: (expiresAt: string | null) => boolean;
-  daysUntilExpiration: (expiresAt: string | null) => string | null;
-  loadingDocumentIds?: Set<string>;
-  handleDownload?: (doc: Document) => Promise<void>;
+  isDocumentExpired: (expirationDate: string | null) => boolean;
+  daysUntilExpiration: (expirationDate: string | null) => string | null;
   refreshDocuments: () => void;
-  categoryColor?: string; // Adicionar a tipagem para categoryColor
+  loadingDocumentIds: Set<string>;
+  setLoadingDocumentIds: React.Dispatch<React.SetStateAction<Set<string>>>;
+  handleDownload: (doc: Document) => Promise<void>;
 }
 
 export const DesktopDocumentTable = ({
   documents,
+  category,
   formatDate,
   isDocumentExpired,
   daysUntilExpiration,
-  loadingDocumentIds = new Set(),
-  handleDownload,
   refreshDocuments,
-  categoryColor
+  loadingDocumentIds,
+  handleDownload,
 }: DesktopDocumentTableProps) => {
   return (
-    <div className="overflow-x-auto">
-      <Table className="border-collapse w-full">
-        <TableHeader className="dark:bg-deepNavy">
-          <TableRow className={`border-b ${categoryColor ? `dark:border-[${categoryColor}]/30` : 'dark:border-gold/30'}`}>
-            <TableHead className="dark:text-gold whitespace-nowrap w-8">#</TableHead>
-            <TableHead className="dark:text-gold">Nome</TableHead>
-            <TableHead className="dark:text-gold">Enviado em</TableHead>
-            <TableHead className="dark:text-gold">Status</TableHead>
-            <TableHead className="dark:text-gold">Validade</TableHead>
-            <TableHead className="dark:text-gold text-right">Ações</TableHead>
+    <Table>
+      <TableHeader className="bg-orange-200/60 dark:bg-navy-light/30">
+        <TableRow>
+          <TableHead className="text-navy dark:text-gold font-extralight">Nome do Documento</TableHead>
+          <TableHead className="text-navy dark:text-gold font-extralight">Validade</TableHead>
+          <TableHead className="text-navy dark:text-gold font-extralight">Observações</TableHead>
+          <TableHead className="text-navy dark:text-gold font-extralight">Ações</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {documents.length > 0 ? (
+          documents.map(doc => (
+            <TableRow 
+              key={doc.id} 
+              className={`${
+                isDocumentExpired(doc.expires_at) 
+                  ? "bg-red-100/20 dark:bg-red-900/20 border-red-200/30 dark:border-red-900/30"
+                  : !doc.viewed
+                    ? "bg-blue-100/20 dark:bg-blue-900/20 border-blue-200/50 dark:border-blue-700/50"
+                    : "border-gold/10 hover:bg-orange-200/50 dark:hover:bg-navy-light/20"
+              }`}
+            >
+              <TableCell className="font-medium text-navy dark:text-white">
+                <div className="flex items-center">
+                  {!doc.viewed && <BellDot size={16} className="text-blue-500 dark:text-blue-400 mr-2" />}
+                  {doc.name}
+                  {!doc.viewed && (
+                    <span className="ml-2 text-xs px-2 py-1 rounded-full bg-blue-500/80 text-white">
+                      Novo
+                    </span>
+                  )}
+                </div>
+              </TableCell>
+              <TableCell>
+                <span className={`flex items-center gap-1 ${
+                  isDocumentExpired(doc.expires_at) 
+                    ? "text-red-600 dark:text-red-400" 
+                    : "text-green-600 dark:text-green-400"
+                }`}>
+                  <Clock size={14} />
+                  {daysUntilExpiration(doc.expires_at)}
+                </span>
+              </TableCell>
+              <TableCell>
+                {doc.observations ? (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center text-blue-600 dark:text-blue-400 cursor-help">
+                          <Info size={14} className="mr-1" />
+                          <span className="truncate max-w-[150px]">{doc.observations}</span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent className="bg-orange-100 dark:bg-navy-dark border-gold/20">
+                        <p className="max-w-[300px] whitespace-normal break-words text-navy dark:text-white">
+                          {doc.observations}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : (
+                  <span className="text-gray-500 dark:text-gray-400 text-sm">Nenhuma</span>
+                )}
+              </TableCell>
+              <TableCell>
+                <DocumentActions 
+                  doc={doc}
+                  isDocumentExpired={isDocumentExpired}
+                  refreshDocuments={refreshDocuments}
+                  loadingDocumentIds={loadingDocumentIds}
+                  handleDownload={handleDownload}
+                />
+              </TableCell>
+            </TableRow>
+          ))
+        ) : (
+          <TableRow>
+            <TableCell colSpan={4} className="text-center py-4 text-gray-500 dark:text-gray-400">
+              Não existem documentos {category ? `na categoria ${category}` : ''}
+            </TableCell>
           </TableRow>
-        </TableHeader>
-        <TableBody>
-          {documents.map((doc, index) => {
-            const isExpired = isDocumentExpired(doc.expires_at || null);
-            const expireDays = daysUntilExpiration(doc.expires_at || null);
-            
-            return (
-              <TableRow 
-                key={doc.id} 
-                className={`dark:hover:bg-deepNavy/50 ${isExpired ? 'dark:bg-red-900/10' : 'dark:bg-transparent'} ${categoryColor ? `dark:border-[${categoryColor}]/10` : 'dark:border-gold/10'}`}
-              >
-                <TableCell className="font-medium">{index + 1}</TableCell>
-                <TableCell className="flex items-center gap-2">
-                  <span className="text-base font-medium dark:text-gray-200">
-                    {doc.name}
-                  </span>
-                  {doc.viewed !== undefined && (
-                    doc.viewed ? 
-                      <Eye className="h-4 w-4 text-gray-400 dark:text-gray-500" /> : 
-                      <Badge variant="secondary" className="dark:bg-gold dark:text-deepNavy text-xs">Novo</Badge>
-                  )}
-                </TableCell>
-                <TableCell className="dark:text-gray-300 whitespace-nowrap">
-                  {formatDate(doc.uploaded_at)}
-                </TableCell>
-                <TableCell>
-                  {doc.viewed !== undefined && (
-                    doc.viewed ? 
-                      <Badge variant="outline" className="dark:border-gray-500 dark:text-gray-400">Visualizado</Badge> : 
-                      <Badge variant="secondary" className="dark:bg-gold dark:text-deepNavy">Não visualizado</Badge>
-                  )}
-                </TableCell>
-                <TableCell>
-                  {doc.expires_at ? (
-                    <>
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3 text-gray-400 dark:text-gray-400" />
-                        <span className="text-sm dark:text-gray-300">{formatDate(doc.expires_at)}</span>
-                      </div>
-                      {expireDays && (
-                        <Badge 
-                          className={`mt-1 text-xs ${
-                            isExpired 
-                              ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300' 
-                              : Number(expireDays) <= 30 
-                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300'
-                              : 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
-                          }`}
-                        >
-                          {isExpired ? 'Expirado' : `Expira em ${expireDays} dias`}
-                        </Badge>
-                      )}
-                    </>
-                  ) : (
-                    <span className="text-sm text-gray-400 dark:text-gray-500">Sem validade</span>
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  <DocumentActions 
-                    document={doc} 
-                    isLoading={loadingDocumentIds.has(doc.id)}
-                    onDownload={handleDownload ? () => handleDownload(doc) : undefined}
-                    refreshDocuments={refreshDocuments}
-                  />
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
-    </div>
+        )}
+      </TableBody>
+    </Table>
   );
 };
