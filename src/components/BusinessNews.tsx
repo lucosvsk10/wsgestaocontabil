@@ -114,7 +114,7 @@ const BusinessNews = () => {
   if (error) {
     return <ErrorState error={error} />;
   }
-  return <section id="noticias" className="py-8 md:py-16 bg-orange-200 dark:bg-navy-dark">
+  return <section id="noticias" className="py-8 md:py-16 bg-deepNavy-80">
       <div className="container mx-auto px-4 md:px-6">
         <h2 className="text-3xl md:text-4xl text-navy-light dark:text-gold text-center mb-8 font-light">
           Notícias do Mundo de Negócios

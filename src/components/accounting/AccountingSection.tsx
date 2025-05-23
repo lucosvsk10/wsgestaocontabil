@@ -32,7 +32,7 @@ const AccountingSection = () => {
   useEffect(() => {
     // We're using sample data initially, but this would be an API call in production
   }, []);
-  return <section id="contabil" className="py-16 bg-orange-200 dark:bg-navy-dark px-6 fadein-on-scroll">
+  return <section id="contabil" className="py-16 px-6 fadein-on-scroll bg-deepNavy-80">
       <div className="container mx-auto">
         <h2 className="text-navy-light dark:text-gold mb-12 text-center text-3xl font-light">Mundo Contábil</h2>
         
