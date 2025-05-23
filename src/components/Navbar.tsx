@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Menu, UserCircle } from 'lucide-react';
 import Logo from './navbar/Logo';
@@ -10,7 +9,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import NotificationBell from './notifications/NotificationBell';
-
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -18,9 +16,11 @@ const Navbar = () => {
     handleLogout,
     navigateToDashboard
   } = useNavigation();
-  const { user, isAdmin } = useAuth();
+  const {
+    user,
+    isAdmin
+  } = useAuth();
   const isMobile = useIsMobile();
-  
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
@@ -28,55 +28,33 @@ const Navbar = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-  
-  return (
-    <header className="bg-white dark:bg-navy-dark text-navy dark:text-gold">
+  return <header className="text-navy dark:text-gold bg-deepNavy-80">
       <div className={`container mx-auto flex items-center justify-between ${isMobile ? 'px-4 py-3' : 'px-[28px] py-[19px]'}`}>
         <Logo />
         <div className="flex items-center gap-4">
           <ThemeToggle />
           
           {/* Notifications - show ONLY for logged-in non-admin users */}
-          {user && !isAdmin && (
-            <NotificationBell />
-          )}
+          {user && !isAdmin && <NotificationBell />}
           
           {/* Account Button for Mobile */}
-          {isMobile && user && (
-            <button
-              onClick={navigateToDashboard}
-              className="text-gold-dark hover:text-gold dark:text-gold dark:hover:text-gold-light focus:outline-none transition-colors"
-              aria-label="Conta"
-            >
+          {isMobile && user && <button onClick={navigateToDashboard} className="text-gold-dark hover:text-gold dark:text-gold dark:hover:text-gold-light focus:outline-none transition-colors" aria-label="Conta">
               <UserCircle size={24} />
-            </button>
-          )}
+            </button>}
           
           {/* Login Button for Mobile */}
-          {isMobile && !user && (
-            <Link 
-              to="/login"
-              className="text-gold-dark hover:text-gold dark:text-gold dark:hover:text-gold-light focus:outline-none transition-colors"
-              aria-label="Login"
-            >
+          {isMobile && !user && <Link to="/login" className="text-gold-dark hover:text-gold dark:text-gold dark:hover:text-gold-light focus:outline-none transition-colors" aria-label="Login">
               <UserCircle size={24} />
-            </Link>
-          )}
+            </Link>}
           
           <DesktopNavbar handleLogout={handleLogout} navigateToDashboard={navigateToDashboard} />
-          <button 
-            className="md:hidden text-gold-dark hover:text-gold dark:text-gold dark:hover:text-gold-light focus:outline-none transition-colors" 
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
-            aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
-          >
+          <button className="md:hidden text-gold-dark hover:text-gold dark:text-gold dark:hover:text-gold-light focus:outline-none transition-colors" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}>
             <Menu size={24} />
           </button>
         </div>
       </div>
 
       <MobileNavbar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} handleLogout={handleLogout} navigateToDashboard={navigateToDashboard} />
-    </header>
-  );
+    </header>;
 };
-
 export default Navbar;
