@@ -143,7 +143,7 @@ export const AdminDocumentManager: React.FC<AdminDocumentManagerProps> = ({
           </TabsContent>
           
           <TabsContent value="documents" className="mt-0">
-            <Card className="border border-gray-200 dark:border-navy-lighter/30 bg-white dark:bg-navy-deeper shadow-sm">
+            <Card className="border border-gray-200 dark:border-navy-lighter/30 shadow-sm bg-deepNavy-90">
               <CardHeader className="pb-3">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                   
