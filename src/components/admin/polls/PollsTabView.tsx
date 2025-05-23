@@ -31,7 +31,7 @@ export const PollsTabView = () => {
 
       <TabsContent value="create">
         <div className="p-4 bg-white dark:bg-transparent border border-blue-100 dark:border-gold dark:border-opacity-20 rounded-lg shadow-sm">
-          <h3 className="text-xl font-medium mb-4 text-navy-dark dark:text-gold">Criar Nova Enquete</h3>
+          
           
           <Tabs value={pollTypeTab} onValueChange={setPollTypeTab} className="mb-6">
             <TabsList className="grid w-full grid-cols-3 bg-deepNavy-80">
