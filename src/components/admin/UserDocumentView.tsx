@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
-import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useUserManagement } from "@/hooks/useUserManagement";
 import { useDocumentManagement } from "@/hooks/document-management/useDocumentManagement";
@@ -53,11 +52,11 @@ export const UserDocumentView = ({ users = [], supabaseUsers = [] }: UserDocumen
   };
   
   if (!userId) {
-    return <Card className="px-0 bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20 shadow-lg">
+    return <Card className="px-0 bg-white dark:bg-transparent border border-gray-200 dark:border-gold dark:border-opacity-20 shadow-lg">
         <CardContent className="p-8">
           <div className="text-center">
-            <p className="text-gray-600 dark:text-gray-300 mb-4">Nenhum usuário selecionado</p>
-            <Button variant="outline" className="mt-2 bg-white dark:bg-navy-light/30 border-gold/20 dark:text-gold hover:bg-gold/10 dark:hover:bg-gold/20 hover:text-navy dark:hover:text-navy" onClick={handleBackToUserList}>
+            <p className="text-gray-600 dark:text-[#d9d9d9] mb-4">Nenhum usuário selecionado</p>
+            <Button variant="outline" className="mt-2 bg-white dark:bg-transparent dark:border-gold dark:border-opacity-20 dark:text-gold hover:bg-gold/10 dark:hover:bg-gold/20 hover:text-navy dark:hover:text-gold" onClick={handleBackToUserList}>
               <ArrowLeft size={16} className="mr-2" />
               Voltar para lista de usuários
             </Button>
@@ -66,11 +65,11 @@ export const UserDocumentView = ({ users = [], supabaseUsers = [] }: UserDocumen
       </Card>;
   }
   
-  return <Card className="px-0 bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20 shadow-lg">
-      <CardHeader className="border-b border-gray-200 dark:border-gold/20 px-6">
+  return <Card className="px-0 bg-white dark:bg-transparent border border-gray-200 dark:border-gold dark:border-opacity-20 shadow-lg">
+      <CardHeader className="border-b border-gray-200 dark:border-gold dark:border-opacity-20 px-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <Button variant="outline" size="sm" onClick={handleBackToUserList} className="flex items-center gap-1 bg-white dark:bg-navy-light/30 text-navy dark:text-gold hover:bg-gold hover:text-navy dark:hover:bg-gold dark:hover:text-navy border border-gold/20 shadow-sm mb-3">
+            <Button variant="outline" size="sm" onClick={handleBackToUserList} className="flex items-center gap-1 bg-white dark:bg-transparent dark:text-gold hover:bg-gold hover:text-navy dark:hover:bg-gold/20 dark:hover:text-navy border border-gold/20 shadow-sm mb-3">
               <ArrowLeft size={16} />
               Voltar para lista de usuários
             </Button>

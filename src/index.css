@@ -48,7 +48,7 @@
   }
 
   .dark {
-    /* Novo fundo escuro #020817 */
+    /* Fundo escuro #020817 */
     --background: 222 84% 5%;
     --foreground: 0 0% 85%; /* #d9d9d9 */
 
@@ -214,3 +214,31 @@
   display: none !important;
 }
 
+/* Adicionando estilos específicos para o modo escuro nas páginas administrativas */
+.dark .admin-card {
+  @apply bg-transparent border border-gold border-opacity-30 rounded-lg;
+}
+
+.dark .admin-header {
+  @apply bg-deepNavy border-none text-gold;
+}
+
+.dark .admin-input {
+  @apply bg-transparent border-gold border-opacity-30 text-white;
+}
+
+.dark .admin-button {
+  @apply bg-transparent border border-gold border-opacity-40 text-[#d9d9d9] hover:bg-gold/10;
+}
+
+.dark .admin-table {
+  @apply bg-transparent text-[#d9d9d9];
+}
+
+.dark .admin-table th {
+  @apply text-gold border-gold border-opacity-20;
+}
+
+.dark .admin-table td {
+  @apply border-gold border-opacity-10;
+}

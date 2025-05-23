@@ -27,17 +27,18 @@ export const DocumentGrid = ({
   categoryColor
 }: DocumentGridProps) => {
   const isMobile = useIsMobile();
-  const isTablet = !isMobile && window.innerWidth < 1024;
   
-  // Get columns count based on screen size
-  const getColumnCount = () => {
-    if (isMobile) return 1;
-    if (isTablet) return 2;
-    return 3;
-  };
+  // Grid columns based on screen size
+  const gridClasses = isMobile 
+    ? "grid-cols-1" 
+    : window.innerWidth < 1024 
+      ? "grid-cols-2" 
+      : window.innerWidth < 1280 
+        ? "grid-cols-3" 
+        : "grid-cols-4";
   
   return (
-    <div className={`grid grid-cols-1 md:grid-cols-${getColumnCount()} lg:grid-cols-3 xl:grid-cols-4 gap-6`}>
+    <div className={`grid ${gridClasses} gap-6`}>
       {documents.map((doc, index) => (
         <motion.div
           key={doc.id}

@@ -49,6 +49,7 @@ export const CategoryDocumentTable = ({
         isDocumentExpired={isDocumentExpired}
         daysUntilExpiration={daysUntilExpiration}
         refreshDocuments={refreshDocuments}
+        // Passamos a cor da categoria como uma propriedade separada
         categoryColor={color}
       />
     </div>

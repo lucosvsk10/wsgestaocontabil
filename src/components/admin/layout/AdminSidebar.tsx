@@ -23,8 +23,8 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
 }) => {
   return <Link to={to} className={`flex items-center space-x-2 px-4 py-3 rounded-md transition-colors ${active 
     ? "bg-blue-50 text-blue-700 dark:bg-gold/10 dark:text-gold" 
-    : "hover:bg-gray-100 dark:hover:bg-[#2a2a2a] text-gray-700 dark:text-gray-300"}`} onClick={onClick}>
-      <div className={active ? "text-blue-700 dark:text-gold" : "text-gray-500 dark:text-gray-400"}>
+    : "hover:bg-gray-100 dark:hover:bg-gold/10 text-gray-700 dark:text-[#d9d9d9]"}`} onClick={onClick}>
+      <div className={active ? "text-blue-700 dark:text-gold" : "text-gray-500 dark:text-[#d9d9d9]"}>
         {icon}
       </div>
       <span className="font-medium">{label}</span>
@@ -102,9 +102,9 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
     to: "/admin/settings"
   }];
   
-  return <aside data-sidebar="true" className={`w-64 bg-white shadow-md dark:bg-[#1E1E1E] border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-300 ease-in-out ${open ? "translate-x-0" : "-translate-x-0 md:translate-x-0 md:w-16"} ${isMobile ? "fixed inset-y-0 z-40 shadow-xl" : ""}`}>
+  return <aside data-sidebar="true" className={`w-64 shadow-md dark:bg-deepNavy border-r border-gray-200 dark:border-gold dark:border-opacity-20 flex flex-col transition-all duration-300 ease-in-out ${open ? "translate-x-0" : "-translate-x-0 md:translate-x-0 md:w-16"} ${isMobile ? "fixed inset-y-0 z-40 shadow-xl" : ""}`}>
       {/* Logo area */}
-      <div className="h-16 border-b border-gray-200 dark:border-navy-dark flex items-center justify-between px-4 bg-white dark:bg-navy-dark">
+      <div className="h-16 border-b border-gray-200 dark:border-gold dark:border-opacity-20 flex items-center justify-between px-4 bg-white dark:bg-deepNavy">
         <Link to="/" className="flex items-center justify-center">
           {open ? 
             <img src={theme === 'light' 
@@ -125,11 +125,11 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
       </div>
       
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-4 px-3 bg-white dark:bg-navy-dark">
+      <nav className="flex-1 overflow-y-auto py-4 px-3 dark:bg-deepNavy">
         <ul className="space-y-1">
           {sidebarItems.map(item => <li key={item.label}>
-              {open || isMobile ? <SidebarItem icon={item.icon} label={item.label} active={item.active} to={item.to} /> : <div className={`flex justify-center p-3 rounded-md transition-colors ${item.active ? "bg-blue-50 dark:bg-gold/10" : "hover:bg-gray-100 dark:hover:bg-[#2a2a2a]"}`} title={item.label}>
-                  <Link to={item.to} className={item.active ? "text-blue-700 dark:text-gold" : "text-gray-500 dark:text-gray-400"}>
+              {open || isMobile ? <SidebarItem icon={item.icon} label={item.label} active={item.active} to={item.to} /> : <div className={`flex justify-center p-3 rounded-md transition-colors ${item.active ? "bg-blue-50 dark:bg-gold/10" : "hover:bg-gray-100 dark:hover:bg-gold/10"}`} title={item.label}>
+                  <Link to={item.to} className={item.active ? "text-blue-700 dark:text-gold" : "text-gray-500 dark:text-[#d9d9d9]"}>
                     {item.icon}
                   </Link>
                 </div>}

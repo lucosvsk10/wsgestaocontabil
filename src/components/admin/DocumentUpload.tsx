@@ -47,8 +47,8 @@ export const DocumentUpload = ({
   };
 
   return (
-    <Card className="w-full max-w-4xl mx-auto border border-gray-200 dark:border-gold/30 bg-white dark:bg-transparent rounded-lg shadow-lg overflow-hidden">
-      <CardHeader className="space-y-1 text-center my-0 rounded-t-md pb-3 bg-gray-50 dark:bg-transparent border-b border-gray-200 dark:border-gold/30">
+    <Card className="w-full max-w-4xl mx-auto border border-gray-200 dark:border-gold dark:border-opacity-30 bg-white dark:bg-transparent rounded-lg shadow-lg overflow-hidden">
+      <CardHeader className="space-y-1 text-center my-0 rounded-t-md pb-3 bg-gray-50 dark:bg-transparent border-b border-gray-200 dark:border-gold dark:border-opacity-30">
         <CardTitle className="text-navy dark:text-gold font-medium text-2xl tracking-wide">ENVIAR DOCUMENTO</CardTitle>
       </CardHeader>
       <CardContent className="pt-6">
@@ -69,7 +69,7 @@ export const DocumentUpload = ({
 
           <Button 
             type="submit" 
-            className="w-full bg-navy hover:bg-navy/90 dark:bg-transparent dark:border-gold/40 dark:text-[#d9d9d9] dark:hover:bg-gold/10 font-medium shadow-md transition-colors py-2.5"
+            className="w-full bg-navy hover:bg-navy/90 dark:bg-transparent dark:border-gold dark:border-opacity-40 dark:text-[#d9d9d9] dark:hover:bg-gold/10 font-medium shadow-md transition-colors py-2.5"
             disabled={isUploading}
           >
             {isUploading ? (

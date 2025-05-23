@@ -8,9 +8,11 @@ import { AdminPasswordChangeModal } from "@/components/admin/AdminPasswordChange
 import AdminLayout from "@/components/admin/layout/AdminLayout";
 import { useForm } from "react-hook-form";
 import { useUsersFetch } from "@/hooks/useUsersFetch";
+
 interface AdminDashboardProps {
   activeTab: string;
 }
+
 const AdminDashboard = ({
   activeTab = "dashboard"
 }: AdminDashboardProps) => {
@@ -30,6 +32,7 @@ const AdminDashboard = ({
       confirmPassword: ''
     }
   });
+  
   const {
     users,
     supabaseUsers,
@@ -44,9 +47,11 @@ const AdminDashboard = ({
     fetchAuthUsers,
     fetchUsers
   } = useUserManagement();
+  
   const {
     refreshUsers
   } = useUsersFetch();
+  
   const {
     documents,
     selectedUserId,
@@ -94,15 +99,58 @@ const AdminDashboard = ({
       setSelectedUserId(userId);
     }
   }, [activeTab, userId, setSelectedUserId]);
-  return <AdminLayout>
-      <div className="p-6 rounded-lg shadow-sm border border-gray-200 dark:border-navy-lighter/30 bg-white dark:bg-navy-dark">          
-        <AdminTabsView activeTab={activeTab} supabaseUsers={supabaseUsers} users={users} userInfoList={users} isLoadingUsers={isLoadingUsers} isLoadingAuthUsers={isLoadingAuthUsers} handleDocumentButtonClick={handleDocumentButtonClick} setSelectedUserForPasswordChange={user => {
-        setSelectedUserForPasswordChange(user);
-        setPasswordChangeModalOpen(true);
-      }} passwordForm={passwordForm} refreshUsers={refreshUsers} createUser={createUser} isCreatingUser={isCreatingUser} selectedUserId={selectedUserId} documentName={documentName} setDocumentName={setDocumentName} documentCategory={documentCategory} setDocumentCategory={setDocumentCategory} documentObservations={documentObservations} setDocumentObservations={setDocumentObservations} handleFileChange={handleFileChange} handleUpload={handleUpload} isUploading={isUploading} documents={documents} isLoadingDocuments={isLoadingDocuments} handleDeleteDocument={handleDeleteDocument} documentCategories={documentCategories} expirationDate={expirationDate} setExpirationDate={setExpirationDate} noExpiration={noExpiration} setNoExpiration={setNoExpiration} />
+  
+  return (
+    <AdminLayout>
+      <div className="rounded-lg shadow-sm border border-gray-200 dark:border-gold dark:border-opacity-30 bg-white dark:bg-transparent dark:backdrop-blur-sm p-6">          
+        <AdminTabsView 
+          activeTab={activeTab} 
+          supabaseUsers={supabaseUsers} 
+          users={users} 
+          userInfoList={users} 
+          isLoadingUsers={isLoadingUsers} 
+          isLoadingAuthUsers={isLoadingAuthUsers} 
+          handleDocumentButtonClick={handleDocumentButtonClick} 
+          setSelectedUserForPasswordChange={user => {
+            setSelectedUserForPasswordChange(user);
+            setPasswordChangeModalOpen(true);
+          }} 
+          passwordForm={passwordForm} 
+          refreshUsers={refreshUsers} 
+          createUser={createUser} 
+          isCreatingUser={isCreatingUser} 
+          selectedUserId={selectedUserId} 
+          documentName={documentName} 
+          setDocumentName={setDocumentName} 
+          documentCategory={documentCategory} 
+          setDocumentCategory={setDocumentCategory} 
+          documentObservations={documentObservations} 
+          setDocumentObservations={setDocumentObservations} 
+          handleFileChange={handleFileChange} 
+          handleUpload={handleUpload} 
+          isUploading={isUploading} 
+          documents={documents} 
+          isLoadingDocuments={isLoadingDocuments} 
+          handleDeleteDocument={handleDeleteDocument} 
+          documentCategories={documentCategories} 
+          expirationDate={expirationDate} 
+          setExpirationDate={setExpirationDate} 
+          noExpiration={noExpiration} 
+          setNoExpiration={setNoExpiration} 
+        />
         
-        <AdminPasswordChangeModal selectedUserForPasswordChange={selectedUserForPasswordChange} setSelectedUserForPasswordChange={setSelectedUserForPasswordChange} changeUserPassword={changeUserPassword} isChangingPassword={isChangingPassword} passwordForm={passwordForm} passwordChangeModalOpen={passwordChangeModalOpen} setPasswordChangeModalOpen={setPasswordChangeModalOpen} />
+        <AdminPasswordChangeModal 
+          selectedUserForPasswordChange={selectedUserForPasswordChange} 
+          setSelectedUserForPasswordChange={setSelectedUserForPasswordChange} 
+          changeUserPassword={changeUserPassword} 
+          isChangingPassword={isChangingPassword} 
+          passwordForm={passwordForm} 
+          passwordChangeModalOpen={passwordChangeModalOpen} 
+          setPasswordChangeModalOpen={setPasswordChangeModalOpen} 
+        />
       </div>
-    </AdminLayout>;
+    </AdminLayout>
+  );
 };
+
 export default AdminDashboard;

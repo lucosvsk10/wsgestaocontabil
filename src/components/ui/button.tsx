@@ -10,17 +10,17 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-navy-dark text-white hover:bg-navy-light dark:border dark:border-gold/40 dark:bg-transparent dark:text-[#d9d9d9] dark:hover:bg-gold/10 shadow-sm",
+        default: "bg-navy-dark text-white hover:bg-navy-light dark:border dark:border-gold dark:border-opacity-40 dark:bg-transparent dark:text-[#d9d9d9] dark:hover:bg-gold/10 shadow-sm",
         destructive:
           "bg-red-500 text-white hover:bg-red-600 dark:bg-transparent dark:border dark:border-red-500/70 dark:text-red-400 dark:hover:bg-red-900/20",
         outline:
-          "border border-blue-300 bg-white hover:bg-blue-50 hover:text-blue-700 dark:border-gold/40 dark:bg-transparent dark:text-[#d9d9d9] dark:hover:bg-gold/10",
+          "border border-blue-300 bg-white hover:bg-blue-50 hover:text-blue-700 dark:border-gold dark:border-opacity-40 dark:bg-transparent dark:text-[#d9d9d9] dark:hover:bg-gold/10",
         secondary:
-          "bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-transparent dark:border dark:border-gold/30 dark:text-[#d9d9d9] dark:hover:bg-gold/10",
+          "bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-transparent dark:border dark:border-gold dark:border-opacity-30 dark:text-[#d9d9d9] dark:hover:bg-gold/10",
         ghost: "hover:bg-gray-100 hover:text-blue-700 dark:hover:bg-gold/10 dark:hover:text-[#d9d9d9]",
         link: "text-blue-600 underline-offset-4 hover:underline dark:text-gold",
-        document: "bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-transparent dark:border dark:border-gold/40 dark:text-[#d9d9d9] dark:hover:bg-gold/10",
-        admin: "bg-navy-dark text-white hover:bg-navy-light dark:border dark:border-gold/40 dark:bg-transparent dark:text-[#d9d9d9] dark:hover:bg-gold/10 shadow-sm"
+        document: "bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-transparent dark:border dark:border-gold dark:border-opacity-40 dark:text-[#d9d9d9] dark:hover:bg-gold/10",
+        admin: "bg-navy-dark text-white hover:bg-navy-light dark:border dark:border-gold dark:border-opacity-40 dark:bg-transparent dark:text-[#d9d9d9] dark:hover:bg-gold/10 shadow-sm"
       },
       size: {
         default: "h-10 px-4 py-2",

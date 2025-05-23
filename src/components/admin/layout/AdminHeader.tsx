@@ -14,10 +14,9 @@ const AdminHeader = () => {
   const {
     handleLogout
   } = useNavigation();
-  return <header className="border-b border-gray-200 dark:border-gold/30 py-4 px-6 flex items-center justify-between bg-white shadow-md dark:bg-deepNavy dark:shadow-none">
+  return <header className="py-4 px-6 flex items-center justify-between bg-white shadow-md dark:bg-deepNavy dark:shadow-none border-b border-gray-200 dark:border-transparent">
       <div className="flex items-center">
-        
-        
+        {/* Conteúdo à esquerda */}
       </div>
       
       <div className="flex items-center space-x-4">
@@ -27,11 +26,11 @@ const AdminHeader = () => {
         {/* User menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-full border border-gray-200 dark:border-gold/40 hover:bg-gray-100 dark:hover:bg-gold/10">
+            <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-full border border-gray-200 dark:border-gold dark:border-opacity-40 hover:bg-gray-100 dark:hover:bg-gold/10">
               <UserCircle className="h-6 w-6 text-navy dark:text-gold" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 dark:bg-deepNavy/90 dark:backdrop-blur-sm dark:border-gold/30 border border-gray-200 shadow-lg rounded-xl">
+          <DropdownMenuContent align="end" className="w-56 dark:bg-deepNavy dark:border-gold dark:border-opacity-30 border border-gray-200 shadow-lg rounded-lg dark:backdrop-blur-sm">
             <div className="px-3 py-2 text-sm font-medium text-navy-dark dark:text-white">
               {user?.email || "Usuário"}
             </div>

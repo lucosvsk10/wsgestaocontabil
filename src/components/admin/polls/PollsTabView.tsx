@@ -24,30 +24,30 @@ export const PollsTabView = () => {
   return (
     <Tabs defaultValue="create" className="space-y-4">
       <TabsList className="grid w-full grid-cols-3 bg-gray-100 dark:bg-navy-deeper">
-        <TabsTrigger value="create" className="text-navy-dark dark:text-white data-[state=active]:bg-white data-[state=active]:text-navy-dark dark:data-[state=active]:bg-navy-medium">
+        <TabsTrigger value="create" className="text-navy-dark dark:text-[#d9d9d9] data-[state=active]:bg-white data-[state=active]:text-navy-dark dark:data-[state=active]:bg-transparent dark:data-[state=active]:border-b-2 dark:data-[state=active]:border-gold dark:data-[state=active]:text-gold">
           Criar nova enquete
         </TabsTrigger>
-        <TabsTrigger value="manage" className="text-navy-dark dark:text-white data-[state=active]:bg-white data-[state=active]:text-navy-dark dark:data-[state=active]:bg-navy-medium">
+        <TabsTrigger value="manage" className="text-navy-dark dark:text-[#d9d9d9] data-[state=active]:bg-white data-[state=active]:text-navy-dark dark:data-[state=active]:bg-transparent dark:data-[state=active]:border-b-2 dark:data-[state=active]:border-gold dark:data-[state=active]:text-gold">
           Gerenciar enquetes
         </TabsTrigger>
-        <TabsTrigger value="results" className="text-navy-dark dark:text-white data-[state=active]:bg-white data-[state=active]:text-navy-dark dark:data-[state=active]:bg-navy-medium">
+        <TabsTrigger value="results" className="text-navy-dark dark:text-[#d9d9d9] data-[state=active]:bg-white data-[state=active]:text-navy-dark dark:data-[state=active]:bg-transparent dark:data-[state=active]:border-b-2 dark:data-[state=active]:border-gold dark:data-[state=active]:text-gold">
           Resultados de enquetes
         </TabsTrigger>
       </TabsList>
 
       <TabsContent value="create">
-        <div className="p-4 bg-white dark:bg-navy-dark border border-blue-100 dark:border-gold/20 rounded-lg shadow-sm">
+        <div className="p-4 bg-white dark:bg-transparent border border-blue-100 dark:border-gold dark:border-opacity-20 rounded-lg shadow-sm">
           <h3 className="text-xl font-medium mb-4 text-navy-dark dark:text-gold">Criar Nova Enquete</h3>
           
           <Tabs value={pollTypeTab} onValueChange={setPollTypeTab} className="mb-6">
             <TabsList className="grid w-full grid-cols-3 bg-gray-100 dark:bg-navy-deeper">
-              <TabsTrigger value="standard" className="text-navy-dark dark:text-white data-[state=active]:bg-white data-[state=active]:text-navy-dark dark:data-[state=active]:bg-navy-medium">
+              <TabsTrigger value="standard" className="text-navy-dark dark:text-[#d9d9d9] data-[state=active]:bg-white data-[state=active]:text-navy-dark dark:data-[state=active]:bg-transparent dark:data-[state=active]:border-b-2 dark:data-[state=active]:border-gold dark:data-[state=active]:text-gold">
                 Enquete Padrão
               </TabsTrigger>
-              <TabsTrigger value="numerical" className="text-navy-dark dark:text-white data-[state=active]:bg-white data-[state=active]:text-navy-dark dark:data-[state=active]:bg-navy-medium">
+              <TabsTrigger value="numerical" className="text-navy-dark dark:text-[#d9d9d9] data-[state=active]:bg-white data-[state=active]:text-navy-dark dark:data-[state=active]:bg-transparent dark:data-[state=active]:border-b-2 dark:data-[state=active]:border-gold dark:data-[state=active]:text-gold">
                 Formulário Numeral
               </TabsTrigger>
-              <TabsTrigger value="form" className="text-navy-dark dark:text-white data-[state=active]:bg-white data-[state=active]:text-navy-dark dark:data-[state=active]:bg-navy-medium">
+              <TabsTrigger value="form" className="text-navy-dark dark:text-[#d9d9d9] data-[state=active]:bg-white data-[state=active]:text-navy-dark dark:data-[state=active]:bg-transparent dark:data-[state=active]:border-b-2 dark:data-[state=active]:border-gold dark:data-[state=active]:text-gold">
                 Formulário Completo
               </TabsTrigger>
             </TabsList>
@@ -68,7 +68,7 @@ export const PollsTabView = () => {
       </TabsContent>
 
       <TabsContent value="manage">
-        <div className="p-4 bg-white dark:bg-navy-dark border border-blue-100 dark:border-gold/20 rounded-lg shadow-sm">
+        <div className="p-4 bg-white dark:bg-transparent border border-blue-100 dark:border-gold dark:border-opacity-20 rounded-lg shadow-sm">
           <h3 className="text-xl font-medium mb-4 text-navy-dark dark:text-gold">Gerenciar Enquetes</h3>
           <ManagePolls 
             refreshTrigger={refreshTrigger} 
@@ -79,7 +79,7 @@ export const PollsTabView = () => {
       </TabsContent>
 
       <TabsContent value="results">
-        <div className="p-4 bg-white dark:bg-navy-dark border border-blue-100 dark:border-gold/20 rounded-lg shadow-sm">
+        <div className="p-4 bg-white dark:bg-transparent border border-blue-100 dark:border-gold dark:border-opacity-20 rounded-lg shadow-sm">
           <h3 className="text-xl font-medium mb-4 text-navy-dark dark:text-gold">Resultados de Enquetes</h3>
           <PollResults selectedPoll={selectedPoll} />
         </div>
