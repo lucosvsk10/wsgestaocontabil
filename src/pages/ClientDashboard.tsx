@@ -149,7 +149,7 @@ const ClientDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-orange-100 dark:bg-navy-dark">
+    <div className="min-h-screen flex flex-col bg-[#FFF1DE] dark:bg-navy-dark">
       <Navbar />
       <motion.div 
         initial="hidden"
@@ -158,9 +158,9 @@ const ClientDashboard = () => {
         className={`container mx-auto p-4 flex-grow ${isMobile ? 'px-2' : 'px-4'} py-6`}
       >
         <motion.div variants={itemVariants}>
-          <Card className="border-gold/20 bg-white dark:bg-navy-dark shadow-sm">
+          <Card className="border-[#e6e6e6] dark:border-gold/20 bg-white dark:bg-navy-dark shadow-sm">
             <CardHeader className="rounded-full bg-white dark:bg-navy-dark">
-              <CardTitle className="flex items-center justify-between font-extralight text-navy dark:text-gold text-2xl">
+              <CardTitle className="flex items-center justify-between font-extralight text-[#020817] dark:text-gold text-2xl">
                 {selectedCategory && categories.find(c => c.id === selectedCategory) 
                   ? `Documentos - ${categories.find(c => c.id === selectedCategory)?.name}` 
                   : 'Meus Documentos'
@@ -180,7 +180,7 @@ const ClientDashboard = () => {
                       allDocuments={documents} 
                       documentsByCategory={documentsByCategory} 
                       categories={categories} 
-                      setSelectedCategory={handleCategoryChange} 
+                      setSelectedCategory={setSelectedCategory} 
                       formatDate={formatDate} 
                       isDocumentExpired={isDocumentExpired} 
                       daysUntilExpiration={daysUntilExpiration} 

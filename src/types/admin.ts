@@ -1,19 +1,39 @@
-import { Document as CommonDocument, DocumentCategory } from "./common";
 
-// Estendendo o tipo Document para manter compatibilidade com código existente
-export interface Document extends CommonDocument {}
+// Export types
+import { type DocumentViewStatus } from './document';
 
-// Corrigir a re-exportação usando 'export type'
-export type { Document } from './common';
+export type UserRole = 'admin' | 'user' | 'guest';
 
-// Exportando CategoryDocument para manter compatibilidade
-export { DocumentCategory };
-
-// Outros tipos existentes...
-export type UserType = {
+export interface UserData {
   id: string;
-  email: string;
   name: string;
-  role: string;
-  created_at?: string;
+  email: string;
+  role: UserRole;
+  created_at: string;
+  last_login?: string;
+}
+
+// Use export type to avoid conflict with DOM's Document
+export type Document = {
+  id: string;
+  user_id: string;
+  name: string;
+  file_url: string;
+  storage_key: string;
+  category: string;
+  subcategory?: string | null;
+  observations?: string | null;
+  expires_at?: string | null;
+  uploaded_at: string;
+  viewed_at?: string | null;
+  original_filename?: string;
+  size?: number;
+  view_status?: DocumentViewStatus;
 };
+
+export interface DocumentCategory {
+  id: string;
+  name: string;
+  color?: string;
+  created_at?: string;
+}

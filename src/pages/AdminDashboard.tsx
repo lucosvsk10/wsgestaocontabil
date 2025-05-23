@@ -102,7 +102,7 @@ const AdminDashboard = ({
   
   return (
     <AdminLayout>
-      <div className="rounded-lg shadow-sm border border-gray-200 dark:border-gold dark:border-opacity-30 bg-white dark:bg-transparent dark:backdrop-blur-sm p-6">          
+      <div className="rounded-lg shadow-sm border border-[#e6e6e6] dark:border-gold dark:border-opacity-30 bg-white dark:bg-transparent dark:backdrop-blur-sm p-6">          
         <AdminTabsView 
           activeTab={activeTab} 
           supabaseUsers={supabaseUsers} 

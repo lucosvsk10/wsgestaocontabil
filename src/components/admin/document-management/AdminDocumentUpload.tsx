@@ -15,11 +15,12 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { CategoryManagementModal } from "./CategoryManagementModal";
 import { useDocumentCategories } from "@/hooks/document-management/useDocumentCategories";
-import { DocumentCategory } from "@/types/admin";
+
 interface AdminDocumentUploadProps {
   userId: string;
   onDocumentUploaded?: () => void;
 }
+
 export const AdminDocumentUpload: React.FC<AdminDocumentUploadProps> = ({
   userId,
   onDocumentUploaded
@@ -70,6 +71,7 @@ export const AdminDocumentUpload: React.FC<AdminDocumentUploadProps> = ({
     e.preventDefault();
     e.stopPropagation();
   };
+  
   const resetForm = () => {
     setDocumentName("");
     setDocumentCategory("");
@@ -84,6 +86,7 @@ export const AdminDocumentUpload: React.FC<AdminDocumentUploadProps> = ({
     if (fileInput) fileInput.value = "";
     setUploadProgress(0);
   };
+  
   const handleUpload = async () => {
     if (!selectedFiles || !selectedFiles.length) {
       toast({
@@ -109,6 +112,7 @@ export const AdminDocumentUpload: React.FC<AdminDocumentUploadProps> = ({
       });
       return;
     }
+    
     try {
       setIsUploading(true);
       setUploadProgress(10); // Iniciar progresso
@@ -193,76 +197,121 @@ export const AdminDocumentUpload: React.FC<AdminDocumentUploadProps> = ({
 
   // Renderização do indicador de progresso
   const renderProgressBar = () => {
-    return <div className="w-full bg-gray-200 dark:bg-navy-light/30 rounded-full h-2 mt-4">
-        <div className="bg-gold h-2 rounded-full" style={{
-        width: `${uploadProgress}%`
-      }}></div>
-      </div>;
+    return (
+      <div className="w-full bg-gray-200 dark:bg-navy-light/30 rounded-full h-2 mt-4">
+        <div 
+          className="bg-[#efc349] dark:bg-gold h-2 rounded-full" 
+          style={{width: `${uploadProgress}%`}}
+        ></div>
+      </div>
+    );
   };
-  return <div className="space-y-6">
-      <Card className="border-gray-200 dark:border-navy-lighter/30 shadow-sm">
+  
+  return (
+    <div className="space-y-6">
+      <Card className="border-[#e6e6e6] dark:border-navy-lighter/30 shadow-sm">
         <CardContent className="pt-6">
           {/* Área de upload */}
-          <div className={`
+          <div 
+            className={`
               border-2 border-dashed rounded-lg p-8 text-center cursor-pointer
-              ${isUploading ? 'border-gold/50 bg-gold/5 dark:bg-gold/10' : 'border-gray-300 dark:border-navy-lighter/50 hover:border-gold hover:bg-gold/5 dark:hover:bg-gold/10'}
-            `} onDrop={handleDrop} onDragOver={preventDefaults} onDragEnter={preventDefaults} onDragLeave={preventDefaults} onClick={() => document.getElementById('fileInput')?.click()}>
-            {isUploading ? <div className="flex flex-col items-center">
+              ${isUploading 
+                ? 'border-[#efc349]/50 bg-[#efc349]/5 dark:bg-gold/10' 
+                : 'border-gray-300 dark:border-navy-lighter/50 hover:border-[#efc349] hover:bg-[#efc349]/5 dark:hover:bg-gold/10'}
+            `} 
+            onDrop={handleDrop} 
+            onDragOver={preventDefaults} 
+            onDragEnter={preventDefaults} 
+            onDragLeave={preventDefaults} 
+            onClick={() => document.getElementById('fileInput')?.click()}
+          >
+            {isUploading ? (
+              <div className="flex flex-col items-center">
                 <LoadingSpinner />
-                <p className="mt-2 text-navy-dark dark:text-white">Enviando documento(s)...</p>
+                <p className="mt-2 text-[#020817] dark:text-white">Enviando documento(s)...</p>
                 {renderProgressBar()}
-              </div> : selectedFiles && selectedFiles.length > 0 ? <div>
+              </div>
+            ) : selectedFiles && selectedFiles.length > 0 ? (
+              <div>
                 <div className="mb-4 flex items-center justify-center">
                   <Check className="h-10 w-10 text-green-500 dark:text-green-400" />
                 </div>
-                <h3 className="font-medium text-lg text-navy-dark dark:text-white mb-1">
+                <h3 className="font-medium text-lg text-[#020817] dark:text-white mb-1">
                   {selectedFiles.length} {selectedFiles.length === 1 ? 'arquivo selecionado' : 'arquivos selecionados'}
                 </h3>
-                <ul className="max-h-32 overflow-auto text-sm text-gray-600 dark:text-gray-300 mt-2">
-                  {filesArray.map((file, index) => <li key={index} className="truncate">{file.name}</li>)}
+                <ul className="max-h-32 overflow-auto text-sm text-[#6b7280] dark:text-gray-300 mt-2">
+                  {filesArray.map((file, index) => (
+                    <li key={index} className="truncate">{file.name}</li>
+                  ))}
                 </ul>
-                <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                <p className="mt-3 text-xs text-[#6b7280] dark:text-gray-400">
                   Clique para selecionar outros arquivos
                 </p>
-              </div> : <>
+              </div>
+            ) : (
+              <>
                 <Upload className="h-10 w-10 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
-                <h3 className="font-medium text-lg text-navy-dark dark:text-white">
+                <h3 className="font-medium text-lg text-[#020817] dark:text-white">
                   Arraste e solte arquivos aqui
                 </h3>
-                <p className="text-gray-500 dark:text-gray-400 mt-1">
+                <p className="text-[#6b7280] dark:text-gray-400 mt-1">
                   ou clique para selecionar
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">
+                <p className="text-xs text-[#6b7280] dark:text-gray-400 mt-4">
                   Suporta múltiplos arquivos
                 </p>
-              </>}
+              </>
+            )}
             <Input id="fileInput" type="file" multiple className="hidden" onChange={handleFileChange} disabled={isUploading} />
           </div>
 
           {/* Formulário de metadados */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
             <div>
-              <Label htmlFor="documentName" className="text-gray-700 dark:text-gray-300">
+              <Label htmlFor="documentName" className="text-[#020817] dark:text-gray-300">
                 Nome do Documento*
               </Label>
-              <Input id="documentName" value={documentName} onChange={e => setDocumentName(e.target.value)} placeholder="Nome que será exibido para o cliente" className="mt-1 border-gray-300 dark:border-navy-lighter/40 bg-white dark:bg-navy-light/20 dark:text-white" disabled={isUploading} required />
+              <Input 
+                id="documentName" 
+                value={documentName} 
+                onChange={e => setDocumentName(e.target.value)} 
+                placeholder="Nome que será exibido para o cliente" 
+                className="mt-1 border-[#e6e6e6] dark:border-navy-lighter/40 bg-white dark:bg-navy-light/20 dark:text-white" 
+                disabled={isUploading} 
+                required 
+              />
             </div>
 
             <div>
               <div className="flex justify-between items-center">
-                <Label htmlFor="documentCategory" className="text-gray-700 dark:text-gray-300">
+                <Label htmlFor="documentCategory" className="text-[#020817] dark:text-gray-300">
                   Categoria*
                 </Label>
-                <Button type="button" variant="ghost" size="sm" className="h-8 text-gray-500 hover:text-navy dark:hover:text-gold" onClick={() => setIsModalOpen(true)}>
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-8 text-[#6b7280] hover:text-[#020817] dark:hover:text-gold" 
+                  onClick={() => setIsModalOpen(true)}
+                >
                   <Settings className="h-4 w-4 mr-1" />
                   Gerenciar
                 </Button>
               </div>
-              <select id="documentCategory" value={documentCategory} onChange={e => setDocumentCategory(e.target.value)} className="mt-1 w-full rounded-md border-gray-300 dark:border-navy-lighter/40 bg-white dark:bg-navy-light/20 dark:text-white" disabled={isUploading} required>
+              <select 
+                id="documentCategory" 
+                value={documentCategory} 
+                onChange={e => setDocumentCategory(e.target.value)} 
+                className="mt-1 w-full rounded-md border-[#e6e6e6] dark:border-navy-lighter/40 bg-white dark:bg-navy-light/20 text-[#020817] dark:text-white" 
+                disabled={isUploading} 
+                required
+              >
                 <option value="">Selecione uma categoria</option>
-                {categories.map(category => <option key={category.id} value={category.id}>
+                {categories.map(category => (
+                  <option key={category.id} value={category.id}>
                     {category.name}
-                  </option>)}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -312,20 +361,37 @@ export const AdminDocumentUpload: React.FC<AdminDocumentUploadProps> = ({
           </div>
 
           <div className="mt-8 flex justify-end">
-            <Button onClick={handleUpload} disabled={isUploading || !selectedFiles || selectedFiles.length === 0 || !documentName || !documentCategory} className="bg-gold hover:bg-gold/80 text-zinc-200">
-              {isUploading ? <>
+            <Button 
+              onClick={handleUpload} 
+              disabled={isUploading || !selectedFiles || selectedFiles.length === 0 || !documentName || !documentCategory} 
+              className="bg-[#020817] hover:bg-[#0f172a] text-white dark:bg-transparent dark:border dark:border-gold dark:text-[#d9d9d9] dark:hover:bg-gold/10"
+            >
+              {isUploading ? (
+                <>
                   <LoadingSpinner size="sm" className="mr-2" />
                   Enviando...
-                </> : <>
+                </>
+              ) : (
+                <>
                   <Upload className="mr-2 h-4 w-4" />
                   Enviar {selectedFiles && selectedFiles.length > 1 ? `(${selectedFiles.length} arquivos)` : ''}
-                </>}
+                </>
+              )}
             </Button>
           </div>
         </CardContent>
       </Card>
 
       {/* Modal para gerenciar categorias */}
-      <CategoryManagementModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} categories={categories} isLoading={false} onAdd={addCategory} onUpdate={updateCategory} onDelete={deleteCategory} />
-    </div>;
+      <CategoryManagementModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        categories={categories} 
+        isLoading={false} 
+        onAdd={addCategory} 
+        onUpdate={updateCategory} 
+        onDelete={deleteCategory} 
+      />
+    </div>
+  );
 };

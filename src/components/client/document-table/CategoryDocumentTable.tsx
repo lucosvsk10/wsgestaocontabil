@@ -1,57 +1,76 @@
 
-import { Document, DocumentCategory } from "@/types/common";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { DocumentTable } from "@/components/client/DocumentTable";
+import React from 'react';
+import { Document } from '@/types/admin';
+import { DocumentTable } from './index';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
 interface CategoryDocumentTableProps {
+  title: string;
   documents: Document[];
-  category: DocumentCategory | string;
-  categoryColor?: string;
   formatDate: (dateStr: string) => string;
-  isDocumentExpired: (expirationDate: string | null) => boolean;
-  daysUntilExpiration: (expirationDate: string | null) => string | null;
+  isDocumentExpired: (expirationDate: string) => boolean;
+  daysUntilExpiration: (expirationDate: string) => string;
   refreshDocuments: () => void;
+  categoryColor?: string;
 }
 
-export const CategoryDocumentTable = ({
+export const CategoryDocumentTable: React.FC<CategoryDocumentTableProps> = ({
+  title,
   documents,
-  category,
-  categoryColor,
   formatDate,
   isDocumentExpired,
   daysUntilExpiration,
-  refreshDocuments
-}: CategoryDocumentTableProps) => {
-  const isMobile = useIsMobile();
-  
-  // Determinar o nome e a cor da categoria
-  const categoryName = typeof category === 'string' ? category : category.name;
-  const color = categoryColor || (typeof category !== 'string' ? category.color : "#F5C441");
-  
+  refreshDocuments,
+  categoryColor
+}) => {
+  if (!documents || documents.length === 0) {
+    return (
+      <Card className="mb-6 border border-[#e6e6e6] dark:border-gold/30 bg-white dark:bg-transparent">
+        <CardHeader className="py-3 flex flex-row items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div 
+              className="w-3 h-3 rounded-full" 
+              style={{ backgroundColor: categoryColor || '#efc349' }}
+            ></div>
+            <h3 className="text-lg font-medium text-[#020817] dark:text-gold">{title}</h3>
+          </div>
+          <span className="text-sm text-[#6b7280] dark:text-[#d9d9d9]">
+            0 documentos
+          </span>
+        </CardHeader>
+        <CardContent className="py-4">
+          <div className="text-center py-8 text-[#6b7280] dark:text-gray-400">
+            Nenhum documento nesta categoria
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <div className="dark:bg-transparent">
-      <div className="flex items-center mb-4">
-        <div 
-          className="w-4 h-4 rounded-full mr-2"
-          style={{ backgroundColor: color }}
-        ></div>
-        <h3 
-          className="text-lg font-medium"
-          style={{ color: color }}
-        >
-          {categoryName}
-        </h3>
-      </div>
-      
-      <DocumentTable 
-        documents={documents}
-        formatDate={formatDate}
-        isDocumentExpired={isDocumentExpired}
-        daysUntilExpiration={daysUntilExpiration}
-        refreshDocuments={refreshDocuments}
-        // Passamos a cor da categoria como uma propriedade separada
-        categoryColor={color}
-      />
-    </div>
+    <Card className="mb-6 border border-[#e6e6e6] dark:border-gold/30 bg-white dark:bg-transparent">
+      <CardHeader className="py-3 flex flex-row items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div 
+            className="w-3 h-3 rounded-full" 
+            style={{ backgroundColor: categoryColor || '#efc349' }}
+          ></div>
+          <h3 className="text-lg font-medium text-[#020817] dark:text-gold">{title}</h3>
+        </div>
+        <span className="text-sm text-[#6b7280] dark:text-[#d9d9d9]">
+          {documents.length} documento{documents.length !== 1 ? 's' : ''}
+        </span>
+      </CardHeader>
+      <CardContent className="py-4">
+        <DocumentTable 
+          documents={documents} 
+          formatDate={formatDate}
+          isDocumentExpired={isDocumentExpired}
+          daysUntilExpiration={daysUntilExpiration}
+          refreshDocuments={refreshDocuments}
+          categoryColor={categoryColor}
+        />
+      </CardContent>
+    </Card>
   );
 };
