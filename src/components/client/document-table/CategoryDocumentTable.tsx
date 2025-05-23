@@ -29,7 +29,7 @@ export const CategoryDocumentTable = ({
   const color = categoryColor || (typeof category !== 'string' ? category.color : "#F5C441");
   
   return (
-    <div>
+    <div className="dark:bg-transparent">
       <div className="flex items-center mb-4">
         <div 
           className="w-4 h-4 rounded-full mr-2"

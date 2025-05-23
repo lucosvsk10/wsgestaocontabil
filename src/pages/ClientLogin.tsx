@@ -70,15 +70,15 @@ const ClientLogin = () => {
   return <div className="min-h-screen flex flex-col bg-orange-100 dark:bg-deepNavy">
       <Navbar />
       <div className="flex-grow flex items-center justify-center p-4 py-[80px]">
-        <Card className="w-full max-w-md border-gray-200 dark:border-gold/30 dark:bg-deepNavy/60 dark:backdrop-blur-sm">
+        <Card className="w-full max-w-md border-gray-200 dark:border-gold/30 dark:bg-transparent backdrop-blur-sm">
           <CardHeader className="space-y-1 flex flex-col items-center">
             <CardTitle className="text-2xl text-center text-navy dark:text-gold font-normal">LOGIN</CardTitle>
-            <CardDescription className="text-center text-gray-600 dark:text-gray-300">
+            <CardDescription className="text-center text-gray-600 dark:text-[#d9d9d9]">
               Entre com seu email e senha
             </CardDescription>
           </CardHeader>
           <CardContent className="">
-            {error && <Alert variant="destructive" className="mb-4 dark:bg-red-900/40 dark:border-red-800 dark:text-red-100">
+            {error && <Alert variant="destructive" className="mb-4 dark:bg-transparent dark:border-red-800 dark:text-red-100">
                 <AlertTitle>Erro</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
               </Alert>}
@@ -88,27 +88,27 @@ const ClientLogin = () => {
                   <label htmlFor="email" className="text-sm font-medium leading-none text-navy dark:text-gold">
                     Email
                   </label>
-                  <Input id="email" type="email" placeholder="email@example.com" value={email} onChange={e => setEmail(e.target.value)} required className="bg-white dark:bg-deepNavy/60 dark:border-gold/30 dark:text-white dark:placeholder-gray-400 dark:focus:border-gold" />
+                  <Input id="email" type="email" placeholder="email@example.com" value={email} onChange={e => setEmail(e.target.value)} required className="bg-white dark:bg-transparent dark:border-gold/30 dark:text-[#d9d9d9] dark:placeholder-gray-400 dark:focus:border-gold" />
                 </div>
                 <div className="grid gap-2">
                   <label htmlFor="password" className="text-sm font-medium leading-none text-navy dark:text-gold">
                     Senha
                   </label>
                   <div className="relative">
-                    <Input id="password" type={showPassword ? "text" : "password"} placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required className="bg-white dark:bg-deepNavy/60 dark:border-gold/30 dark:text-white dark:placeholder-gray-400 dark:focus:border-gold" />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:dark:text-gold transition-colors">
+                    <Input id="password" type={showPassword ? "text" : "password"} placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required className="bg-white dark:bg-transparent dark:border-gold/30 dark:text-[#d9d9d9] dark:placeholder-gray-400 dark:focus:border-gold" />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-[#d9d9d9] hover:dark:text-gold transition-colors">
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
                 </div>
-                <Button type="submit" className="w-full dark:bg-transparent dark:border dark:border-gold/40 dark:text-white dark:hover:bg-gold/10 transition-all" disabled={isLoading}>
+                <Button type="submit" className="w-full dark:bg-transparent dark:border dark:border-gold/40 dark:text-[#d9d9d9] dark:hover:bg-gold/10 transition-all" disabled={isLoading}>
                   {isLoading ? "Entrando..." : "Entrar"}
                 </Button>
               </div>
             </form>
           </CardContent>
           <CardFooter className="flex flex-col space-y-2">
-            <div className="text-center text-sm text-navy dark:text-gray-300">
+            <div className="text-center text-sm text-navy dark:text-[#d9d9d9]">
               Não possui uma conta? <a href="https://wa.me/82999324884" target="_blank" rel="noopener noreferrer" className="dark:text-gold hover:underline text-blue-600">Entre em contato.</a>
             </div>
           </CardFooter>

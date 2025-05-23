@@ -96,7 +96,7 @@ export const DocumentTabs = ({
             </div>
           </Button>
         </DrawerTrigger>
-        <DrawerContent className="bg-orange-100 dark:bg-[#2d2a28] border-t border-gold/20 p-4">
+        <DrawerContent className="bg-orange-100 dark:bg-deepNavy border-t border-gold/20 p-4">
           <div className="max-w-md mx-auto">
             <div className="space-y-2">
               {sortedCategories.map((category) => (
@@ -106,7 +106,7 @@ export const DocumentTabs = ({
                 >
                   <Button 
                     variant="document"
-                    className="w-full justify-between text-navy dark:text-white"
+                    className="w-full justify-between text-navy dark:text-[#d9d9d9]"
                     style={{
                       backgroundColor: category.id === activeCategory ? category.color || "#F5C441" : "transparent",
                       color: category.id === activeCategory ? "#fff" : "inherit",
@@ -152,13 +152,13 @@ export const DocumentTabs = ({
       onValueChange={handleCategoryChange}
       className="w-full"
     >
-      <TabsList className="mb-4 border-gold/20 bg-orange-200/60 dark:bg-[#2d2a28]">
+      <TabsList className="mb-4 border-gold/20 bg-orange-200/60 dark:bg-transparent dark:border dark:border-gold/30">
         {sortedCategories.map(category => (
           <TabsTrigger 
             key={category.id} 
             value={category.id}
             disabled={!documentsByCategory[category.id] || documentsByCategory[category.id].length === 0}
-            className="relative text-navy dark:text-white"
+            className="relative text-navy dark:text-[#d9d9d9] dark:data-[state=active]:text-deepNavy"
             style={{
               "--tab-active-bg": category.color || "#F5C441",
               "--tab-active-text": "#fff",

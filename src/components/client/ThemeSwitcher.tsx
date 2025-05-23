@@ -16,7 +16,7 @@ export const ThemeSwitcher = () => {
             variant="ghost"
             size="sm"
             onClick={toggleTheme}
-            className="rounded-full w-10 h-10 p-0"
+            className="rounded-full w-10 h-10 p-0 dark:border dark:border-gold/30"
             aria-label={theme === 'dark' ? 'Alternar para modo claro' : 'Alternar para modo escuro'}
           >
             <motion.div
@@ -25,11 +25,11 @@ export const ThemeSwitcher = () => {
               transition={{ duration: 0.5, type: "spring", stiffness: 100 }}
               className="flex items-center justify-center"
             >
-              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+              {theme === 'dark' ? <Sun size={18} className="text-gold" /> : <Moon size={18} />}
             </motion.div>
           </Button>
         </TooltipTrigger>
-        <TooltipContent>
+        <TooltipContent className="dark:bg-transparent dark:border-gold/30 dark:text-[#d9d9d9]">
           <p>{theme === 'dark' ? 'Mudar para modo claro' : 'Mudar para modo escuro'}</p>
         </TooltipContent>
       </Tooltip>

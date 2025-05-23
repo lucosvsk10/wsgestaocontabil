@@ -17,6 +17,7 @@ interface DocumentCardProps {
   refreshDocuments: () => void;
   loadingDocumentIds: Set<string>;
   handleDownload: (doc: Document) => Promise<void>;
+  categoryColor?: string;
 }
 
 export const DocumentCard = ({
@@ -26,7 +27,8 @@ export const DocumentCard = ({
   daysUntilExpiration,
   refreshDocuments,
   loadingDocumentIds,
-  handleDownload
+  handleDownload,
+  categoryColor
 }: DocumentCardProps) => {
   const isExpired = isDocumentExpired(doc.expires_at);
   const expirationText = daysUntilExpiration(doc.expires_at);
@@ -41,19 +43,20 @@ export const DocumentCard = ({
         "p-5 rounded-lg border shadow-sm transition-all duration-200 flex flex-col h-full", 
         isHovered ? "shadow-md transform scale-[1.02]" : "",
         isExpired
-          ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-900/30" 
+          ? "bg-red-50 dark:bg-transparent dark:border-red-500/30 border-red-200" 
           : !doc.viewed
-            ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700/50"
-            : "bg-white dark:bg-navy-light/20 border-gray-200 dark:border-gold/20"
+            ? "bg-blue-50 dark:bg-transparent dark:border-blue-500/30 border-blue-200"
+            : "bg-white dark:bg-transparent border-gray-200 dark:border-gold/30"
       )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      style={categoryColor ? { borderColor: `${categoryColor}60` } : {}}
     >
       {/* Card Header with Icon and Status */}
       <DocumentCardHeader doc={doc} isExpired={isExpired} />
       
       {/* Document Title */}
-      <h3 className="font-medium text-navy dark:text-white text-lg mb-2 line-clamp-2">
+      <h3 className="font-medium text-navy dark:text-[#d9d9d9] text-lg mb-2 line-clamp-2">
         {doc.name}
       </h3>
       

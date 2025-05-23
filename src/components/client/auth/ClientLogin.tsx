@@ -86,12 +86,12 @@ const ClientLogin = () => {
           />
         </div>
 
-        <Card className="shadow-lg border-gray-200 dark:border-gold/30 rounded-2xl dark:bg-deepNavy/60 dark:backdrop-blur-sm">
+        <Card className="shadow-lg border-gray-200 dark:border-gold/30 rounded-lg dark:bg-transparent backdrop-blur-sm">
           <CardHeader className="space-y-1 pb-2">
             <CardTitle className="text-2xl font-semibold text-center text-navy dark:text-gold">
               Acesso ao Sistema
             </CardTitle>
-            <CardDescription className="text-center text-gray-500 dark:text-gray-300">
+            <CardDescription className="text-center text-gray-500 dark:text-[#d9d9d9]">
               Digite seu email e senha para acessar sua conta
             </CardDescription>
           </CardHeader>
@@ -100,13 +100,13 @@ const ClientLogin = () => {
               <div className="space-y-2">
                 <Label 
                   htmlFor="email" 
-                  className="text-sm font-medium text-navy dark:text-white"
+                  className="text-sm font-medium text-navy dark:text-[#d9d9d9]"
                 >
                   Email
                 </Label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-400 dark:text-gold/60" />
+                    <Mail className="h-5 w-5 text-gray-400 dark:text-gold" />
                   </div>
                   <Input
                     id="email"
@@ -114,7 +114,7 @@ const ClientLogin = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="exemplo@email.com"
-                    className="pl-10 bg-white dark:bg-deepNavy/60 border-gray-300 dark:border-gold/30 focus:ring-2 focus:ring-blue-500 dark:focus:ring-gold/40 rounded-xl"
+                    className="pl-10 bg-white dark:bg-transparent border-gray-300 dark:border-gold/30 focus:ring-2 focus:ring-blue-500 dark:focus:ring-gold/40 rounded-lg"
                   />
                 </div>
               </div>
@@ -122,7 +122,7 @@ const ClientLogin = () => {
                 <div className="flex items-center justify-between">
                   <Label 
                     htmlFor="password" 
-                    className="text-sm font-medium text-navy dark:text-white"
+                    className="text-sm font-medium text-navy dark:text-[#d9d9d9]"
                   >
                     Senha
                   </Label>
@@ -135,7 +135,7 @@ const ClientLogin = () => {
                 </div>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400 dark:text-gold/60" />
+                    <Lock className="h-5 w-5 text-gray-400 dark:text-gold" />
                   </div>
                   <Input
                     id="password"
@@ -143,14 +143,14 @@ const ClientLogin = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="******"
-                    className="pl-10 bg-white dark:bg-deepNavy/60 border-gray-300 dark:border-gold/30 focus:ring-2 focus:ring-blue-500 dark:focus:ring-gold/40 rounded-xl"
+                    className="pl-10 bg-white dark:bg-transparent border-gray-300 dark:border-gold/30 focus:ring-2 focus:ring-blue-500 dark:focus:ring-gold/40 rounded-lg"
                   />
                 </div>
               </div>
               <Button 
                 type="submit" 
                 disabled={loading}
-                className="w-full h-11 text-white bg-blue-600 hover:bg-blue-700 dark:bg-transparent dark:border dark:border-gold/40 dark:text-white dark:hover:bg-gold/10 font-medium rounded-xl transition-all duration-200 shadow-md"
+                className="w-full h-11 text-white bg-blue-600 hover:bg-blue-700 dark:bg-transparent dark:border dark:border-gold/40 dark:text-[#d9d9d9] dark:hover:bg-gold/10 font-medium rounded-lg transition-all duration-200 shadow-md"
               >
                 {loading ? (
                   <>
@@ -167,14 +167,14 @@ const ClientLogin = () => {
                 <span className="w-full border-t border-gray-300 dark:border-gold/30" />
               </div>
               <div className="relative flex justify-center text-xs">
-                <span className="bg-white dark:bg-deepNavy px-2 text-gray-500 dark:text-gray-400">
+                <span className="bg-white dark:bg-deepNavy px-2 text-gray-500 dark:text-[#d9d9d9]">
                   ou
                 </span>
               </div>
             </div>
 
             <div className="text-center">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-gray-500 dark:text-[#d9d9d9]">
                 Não possui uma conta?{' '}
                 <a 
                   href="#" 
@@ -187,7 +187,7 @@ const ClientLogin = () => {
           </CardFooter>
         </Card>
 
-        <p className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
+        <p className="mt-8 text-center text-sm text-gray-500 dark:text-[#d9d9d9]">
           © {new Date().getFullYear()} WS Gestão Contábil. Todos os direitos reservados.
         </p>
       </div>

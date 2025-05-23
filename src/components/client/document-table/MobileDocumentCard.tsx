@@ -30,10 +30,10 @@ export const MobileDocumentCard = ({
   return (
     <div className={`p-3 rounded-lg border ${
       isExpired
-        ? "bg-red-100/20 dark:bg-red-900/20 border-red-200/30 dark:border-red-900/30" 
+        ? "bg-red-100/20 dark:bg-transparent dark:border-red-500/30 border-red-200/30" 
         : !doc.viewed
-          ? "bg-blue-100/20 dark:bg-blue-900/20 border-blue-200/50 dark:border-blue-700/50"
-          : "bg-orange-200/60 dark:bg-navy-light/20 border-gold/20"
+          ? "bg-blue-100/20 dark:bg-transparent dark:border-blue-500/30 border-blue-200/50"
+          : "bg-orange-200/60 dark:bg-transparent dark:border-gold/30"
     }`}>
       <div className="flex items-center justify-between mb-2">
         <div className="font-medium text-navy dark:text-gold flex items-center">
@@ -41,14 +41,14 @@ export const MobileDocumentCard = ({
           {doc.name}
         </div>
         {!doc.viewed && (
-          <span className="text-xs px-2 py-1 rounded-full bg-blue-500/80 text-white">
+          <span className="text-xs px-2 py-1 rounded-full bg-blue-500/80 text-white dark:bg-transparent dark:border dark:border-blue-500/30 dark:text-blue-400">
             Novo
           </span>
         )}
       </div>
       
       <div className="grid grid-cols-1 gap-2 text-sm mb-3">
-        <div className="text-gray-600 dark:text-gray-300">
+        <div className="text-gray-600 dark:text-[#d9d9d9]">
           Validade: 
           <span className={
             isExpired
@@ -62,11 +62,11 @@ export const MobileDocumentCard = ({
       
       {doc.observations && (
         <div className="mb-3 text-sm">
-          <div className="text-gray-600 dark:text-gray-300 flex items-center">
+          <div className="text-gray-600 dark:text-[#d9d9d9] flex items-center">
             <Info size={14} className="mr-1" />
             <span>Observações:</span>
           </div>
-          <p className="text-navy dark:text-white text-sm ml-5">{doc.observations}</p>
+          <p className="text-navy dark:text-[#d9d9d9] text-sm ml-5">{doc.observations}</p>
         </div>
       )}
       

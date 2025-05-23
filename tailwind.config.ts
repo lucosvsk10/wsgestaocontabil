@@ -105,7 +105,7 @@ export default {
                     },
                     dark: {
                         bg: '#020817',
-                        text: '#E0E0E0',
+                        text: '#d9d9d9',
                         element: '#050f24'
                     }
                 }

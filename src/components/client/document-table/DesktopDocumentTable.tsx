@@ -29,7 +29,7 @@ export const DesktopDocumentTable = ({
 }: DesktopDocumentTableProps) => {
   return (
     <Table>
-      <TableHeader className="bg-orange-200/60 dark:bg-navy-light/30">
+      <TableHeader className="bg-orange-200/60 dark:bg-transparent dark:border-b dark:border-gold/30">
         <TableRow>
           <TableHead className="text-navy dark:text-gold font-extralight">Nome do Documento</TableHead>
           <TableHead className="text-navy dark:text-gold font-extralight">Validade</TableHead>
@@ -44,18 +44,18 @@ export const DesktopDocumentTable = ({
               key={doc.id} 
               className={`${
                 isDocumentExpired(doc.expires_at) 
-                  ? "bg-red-100/20 dark:bg-red-900/20 border-red-200/30 dark:border-red-900/30"
+                  ? "bg-red-100/20 dark:bg-transparent dark:border-red-500/30 border-red-200/30"
                   : !doc.viewed
-                    ? "bg-blue-100/20 dark:bg-blue-900/20 border-blue-200/50 dark:border-blue-700/50"
-                    : "border-gold/10 hover:bg-orange-200/50 dark:hover:bg-navy-light/20"
+                    ? "bg-blue-100/20 dark:bg-transparent dark:border-blue-500/30 border-blue-200/50"
+                    : "border-gold/10 hover:bg-orange-200/50 dark:border-gold/20 dark:hover:bg-deepNavy/40"
               }`}
             >
-              <TableCell className="font-medium text-navy dark:text-white">
+              <TableCell className="font-medium text-navy dark:text-[#d9d9d9]">
                 <div className="flex items-center">
                   {!doc.viewed && <BellDot size={16} className="text-blue-500 dark:text-blue-400 mr-2" />}
                   {doc.name}
                   {!doc.viewed && (
-                    <span className="ml-2 text-xs px-2 py-1 rounded-full bg-blue-500/80 text-white">
+                    <span className="ml-2 text-xs px-2 py-1 rounded-full bg-blue-500/80 text-white dark:bg-transparent dark:border dark:border-blue-500/30 dark:text-blue-400">
                       Novo
                     </span>
                   )}
@@ -81,8 +81,8 @@ export const DesktopDocumentTable = ({
                           <span className="truncate max-w-[150px]">{doc.observations}</span>
                         </div>
                       </TooltipTrigger>
-                      <TooltipContent className="bg-orange-100 dark:bg-navy-dark border-gold/20">
-                        <p className="max-w-[300px] whitespace-normal break-words text-navy dark:text-white">
+                      <TooltipContent className="bg-orange-100 dark:bg-deepNavy dark:border-gold/30">
+                        <p className="max-w-[300px] whitespace-normal break-words text-navy dark:text-[#d9d9d9]">
                           {doc.observations}
                         </p>
                       </TooltipContent>

@@ -52,12 +52,12 @@ export const DocumentManager = ({
 
   if (!selectedUserId) {
     return (
-      <Card className="bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20 shadow-lg">
+      <Card className="bg-white dark:bg-transparent border border-gray-200 dark:border-gold/30 shadow-lg">
         <CardContent className="pt-6">
-          <Alert className="border-gray-300 dark:border-gold/20 bg-orange-50 dark:bg-navy-light/10 text-navy dark:text-white">
+          <Alert className="border-gray-300 dark:border-gold/20 bg-orange-50 dark:bg-transparent text-navy dark:text-[#d9d9d9]">
             <AlertCircle className="h-4 w-4 text-orange-500 dark:text-gold" />
             <AlertTitle className="text-gray-800 dark:text-gold font-medium">Nenhum usuário selecionado</AlertTitle>
-            <AlertDescription className="text-gray-700 dark:text-gray-200">
+            <AlertDescription className="text-gray-700 dark:text-[#d9d9d9]">
               Selecione um usuário na lista para gerenciar seus documentos.
             </AlertDescription>
           </Alert>
@@ -68,27 +68,27 @@ export const DocumentManager = ({
 
   return (
     <Tabs defaultValue="upload" value={activeTab} onValueChange={setActiveTab}>
-      <TabsList className="mb-4 border border-gray-300 dark:border-gold/20 bg-gray-50 dark:bg-navy-light/10 shadow-sm overflow-hidden">
+      <TabsList className="mb-4 border border-gray-300 dark:border-gold/20 bg-gray-50 dark:bg-transparent shadow-sm overflow-hidden">
         <TabsTrigger 
           value="upload" 
-          className="text-gray-700 dark:text-white data-[state=active]:bg-navy data-[state=active]:text-white dark:data-[state=active]:bg-gold dark:data-[state=active]:text-navy transition-colors"
+          className="text-gray-700 dark:text-[#d9d9d9] data-[state=active]:bg-navy data-[state=active]:text-white dark:data-[state=active]:bg-gold dark:data-[state=active]:text-deepNavy transition-colors"
         >
           Enviar documento
         </TabsTrigger>
         <TabsTrigger 
           value="manage" 
-          className="text-gray-700 dark:text-white data-[state=active]:bg-navy data-[state=active]:text-white dark:data-[state=active]:bg-gold dark:data-[state=active]:text-navy transition-colors"
+          className="text-gray-700 dark:text-[#d9d9d9] data-[state=active]:bg-navy data-[state=active]:text-white dark:data-[state=active]:bg-gold dark:data-[state=active]:text-deepNavy transition-colors"
         >
           Gerenciar documentos
         </TabsTrigger>
       </TabsList>
       
-      <TabsContent value="upload" className="bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20 rounded-lg shadow-lg p-6">
+      <TabsContent value="upload" className="bg-white dark:bg-transparent border border-gray-200 dark:border-gold/30 rounded-lg shadow-lg p-6">
         <div className="grid grid-cols-1 gap-6">
-          <Alert variant="default" className="border-orange-200 dark:border-gold/20 bg-orange-50 dark:bg-navy-light/10 text-navy dark:text-white">
+          <Alert variant="default" className="border-orange-200 dark:border-gold/20 bg-orange-50 dark:bg-transparent text-navy dark:text-[#d9d9d9]">
             <HelpCircle className="h-4 w-4 text-orange-500 dark:text-gold" />
             <AlertTitle className="text-gray-800 dark:text-gold font-medium">Dica</AlertTitle>
-            <AlertDescription className="text-gray-700 dark:text-gray-200">
+            <AlertDescription className="text-gray-700 dark:text-[#d9d9d9]">
               Para documentos na categoria "Impostos", você pode especificar se é Imposto de Renda ou outros tipos de impostos.
             </AlertDescription>
           </Alert>
@@ -114,7 +114,7 @@ export const DocumentManager = ({
         </div>
       </TabsContent>
       
-      <TabsContent value="manage" className="bg-white dark:bg-navy-dark border border-gray-200 dark:border-gold/20 rounded-lg shadow-lg">
+      <TabsContent value="manage" className="bg-white dark:bg-transparent border border-gray-200 dark:border-gold/30 rounded-lg shadow-lg">
         <DocumentList 
           documents={documents} 
           isLoading={isLoadingDocuments} 

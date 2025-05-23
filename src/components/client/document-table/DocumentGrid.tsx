@@ -13,6 +13,7 @@ interface DocumentGridProps {
   refreshDocuments: () => void;
   loadingDocumentIds: Set<string>;
   handleDownload: (doc: Document) => Promise<void>;
+  categoryColor?: string;
 }
 
 export const DocumentGrid = ({
@@ -22,7 +23,8 @@ export const DocumentGrid = ({
   daysUntilExpiration,
   refreshDocuments,
   loadingDocumentIds,
-  handleDownload
+  handleDownload,
+  categoryColor
 }: DocumentGridProps) => {
   const isMobile = useIsMobile();
   const isTablet = !isMobile && window.innerWidth < 1024;
@@ -51,6 +53,7 @@ export const DocumentGrid = ({
             refreshDocuments={refreshDocuments}
             loadingDocumentIds={loadingDocumentIds}
             handleDownload={handleDownload}
+            categoryColor={categoryColor}
           />
         </motion.div>
       ))}

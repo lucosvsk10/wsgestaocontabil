@@ -50,41 +50,41 @@
   .dark {
     /* Novo fundo escuro #020817 */
     --background: 222 84% 5%;
-    --foreground: 210 40% 98%;
+    --foreground: 0 0% 85%; /* #d9d9d9 */
 
     --card: 222 84% 5%;
-    --card-foreground: 210 40% 98%;
+    --card-foreground: 0 0% 85%;  /* #d9d9d9 */
 
     --popover: 222 84% 5%;
-    --popover-foreground: 210 40% 98%;
+    --popover-foreground: 0 0% 85%;  /* #d9d9d9 */
 
     --primary: 210 40% 98%;
     --primary-foreground: 222.2 47.4% 11.2%;
 
     --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary-foreground: 0 0% 85%;  /* #d9d9d9 */
 
     --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted-foreground: 0 0% 85%;  /* #d9d9d9 */
 
     --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent-foreground: 0 0% 85%;  /* #d9d9d9 */
 
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 85%;  /* #d9d9d9 */
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --border: 43 87% 60%; /* #efc349 */
+    --input: 43 87% 60%; /* #efc349 */
+    --ring: 43 87% 60%; /* #efc349 */
     
     --sidebar-background: 222 84% 5%;
-    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-foreground: 0 0% 85%;  /* #d9d9d9 */
     --sidebar-primary: 224.3 76.3% 48%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent-foreground: 0 0% 85%;  /* #d9d9d9 */
+    --sidebar-border: 43 87% 60%; /* #efc349 */
+    --sidebar-ring: 43 87% 60%; /* #efc349 */
   }
 }
 
@@ -99,7 +99,7 @@
   }
 
   body {
-    @apply bg-white dark:bg-deepNavy text-navy dark:text-white font-prompt overflow-x-hidden;
+    @apply bg-white dark:bg-deepNavy text-navy dark:text-[#d9d9d9] font-prompt overflow-x-hidden;
   }
 
   img {
@@ -120,7 +120,7 @@
 .dark .command,
 .dark .select,
 .dark .alert-dialog {
-  @apply border border-gold/30 bg-deepNavy/60 backdrop-blur-sm;
+  @apply border border-gold/30 bg-transparent backdrop-blur-sm rounded-lg;
 }
 
 .dark .button {
@@ -134,7 +134,7 @@
 .dark .input,
 .dark .textarea,
 .dark .select {
-  @apply border-gold/30 bg-deepNavy/60 text-white focus:border-gold/60;
+  @apply border-gold/30 bg-transparent text-white focus:border-gold/60;
 }
 
 .nav-link {
@@ -213,3 +213,4 @@
 #lovable-badge {
   display: none !important;
 }
+

@@ -40,7 +40,7 @@ export const DocumentActions = ({
       title={isPermissionDenied ? "Você não tem permissão para baixar este documento" : 
              !user ? "Faça login para baixar" : 
              isDocumentExpired(doc.expires_at) ? "Documento expirado" : "Baixar documento"}
-      className="flex-1 bg-orange-200/70 dark:bg-navy-light/30 border-gold/20 text-navy dark:text-gold hover:bg-gold/70 hover:text-navy dark:hover:bg-gold/70 dark:hover:text-navy flex items-center justify-center gap-1"
+      className="flex-1 bg-orange-200/70 dark:bg-transparent dark:border-gold/30 text-navy dark:text-gold hover:bg-gold/70 hover:text-navy dark:hover:bg-gold/10 dark:hover:text-gold flex items-center justify-center gap-1"
     >
       <Download size={14} />
       <span className="truncate">{doc.filename || doc.original_filename || "Baixar"}</span>

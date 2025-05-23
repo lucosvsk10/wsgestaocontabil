@@ -6,26 +6,26 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-navy-dark text-white hover:bg-navy-light dark:border dark:border-gold/40 dark:bg-transparent dark:text-white dark:hover:bg-gold/10 shadow-sm",
+        default: "bg-navy-dark text-white hover:bg-navy-light dark:border dark:border-gold/40 dark:bg-transparent dark:text-[#d9d9d9] dark:hover:bg-gold/10 shadow-sm",
         destructive:
           "bg-red-500 text-white hover:bg-red-600 dark:bg-transparent dark:border dark:border-red-500/70 dark:text-red-400 dark:hover:bg-red-900/20",
         outline:
-          "border border-blue-300 bg-white hover:bg-blue-50 hover:text-blue-700 dark:border-gold/40 dark:bg-transparent dark:text-white dark:hover:bg-gold/10",
+          "border border-blue-300 bg-white hover:bg-blue-50 hover:text-blue-700 dark:border-gold/40 dark:bg-transparent dark:text-[#d9d9d9] dark:hover:bg-gold/10",
         secondary:
-          "bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-transparent dark:border dark:border-gold/30 dark:text-white dark:hover:bg-gold/10",
-        ghost: "hover:bg-gray-100 hover:text-blue-700 dark:hover:bg-gold/10 dark:hover:text-white",
+          "bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-transparent dark:border dark:border-gold/30 dark:text-[#d9d9d9] dark:hover:bg-gold/10",
+        ghost: "hover:bg-gray-100 hover:text-blue-700 dark:hover:bg-gold/10 dark:hover:text-[#d9d9d9]",
         link: "text-blue-600 underline-offset-4 hover:underline dark:text-gold",
-        document: "bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-transparent dark:border dark:border-gold/40 dark:text-white dark:hover:bg-gold/10",
-        admin: "bg-navy-dark text-white hover:bg-navy-light dark:border dark:border-gold/40 dark:bg-transparent dark:text-white dark:hover:bg-gold/10 shadow-sm"
+        document: "bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-transparent dark:border dark:border-gold/40 dark:text-[#d9d9d9] dark:hover:bg-gold/10",
+        admin: "bg-navy-dark text-white hover:bg-navy-light dark:border dark:border-gold/40 dark:bg-transparent dark:text-[#d9d9d9] dark:hover:bg-gold/10 shadow-sm"
       },
       size: {
         default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-lg px-3",
-        lg: "h-11 rounded-xl px-8",
+        sm: "h-9 rounded-md px-3",
+        lg: "h-11 rounded-md px-8",
         icon: "h-10 w-10",
       },
     },
