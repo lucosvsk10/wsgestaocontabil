@@ -16,7 +16,7 @@ export const ThemeSwitcher = () => {
             variant="ghost"
             size="sm"
             onClick={toggleTheme}
-            className="rounded-full w-10 h-10 p-0"
+            className="rounded-full w-10 h-10 p-0 dark:text-gold"
             aria-label={theme === 'dark' ? 'Alternar para modo claro' : 'Alternar para modo escuro'}
           >
             <motion.div

@@ -1,9 +1,8 @@
 
-import React from "react";
 import { Document } from "@/utils/auth/types";
-import { motion } from "framer-motion";
-import { DocumentCard } from "./DocumentCard";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { DocumentCard } from "./DocumentCard";
+import { DesktopDocumentTable } from "./DesktopDocumentTable";
 
 interface DocumentGridProps {
   documents: Document[];
@@ -11,8 +10,9 @@ interface DocumentGridProps {
   isDocumentExpired: (expiresAt: string | null) => boolean;
   daysUntilExpiration: (expiresAt: string | null) => string | null;
   refreshDocuments: () => void;
-  loadingDocumentIds: Set<string>;
-  handleDownload: (doc: Document) => Promise<void>;
+  loadingDocumentIds?: Set<string>;
+  handleDownload?: (doc: Document) => Promise<void>;
+  categoryColor?: string; // Adicionar a tipagem para categoryColor
 }
 
 export const DocumentGrid = ({
@@ -21,39 +21,38 @@ export const DocumentGrid = ({
   isDocumentExpired,
   daysUntilExpiration,
   refreshDocuments,
-  loadingDocumentIds,
-  handleDownload
+  loadingDocumentIds = new Set(),
+  handleDownload,
+  categoryColor
 }: DocumentGridProps) => {
   const isMobile = useIsMobile();
-  const isTablet = !isMobile && window.innerWidth < 1024;
-  
-  // Get columns count based on screen size
-  const getColumnCount = () => {
-    if (isMobile) return 1;
-    if (isTablet) return 2;
-    return 3;
-  };
-  
-  return (
-    <div className={`grid grid-cols-1 md:grid-cols-${getColumnCount()} lg:grid-cols-3 xl:grid-cols-4 gap-6`}>
-      {documents.map((doc, index) => (
-        <motion.div
+
+  return isMobile ? (
+    <div className="grid grid-cols-1 gap-4">
+      {documents.map(doc => (
+        <DocumentCard
           key={doc.id}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: index * 0.1 }}
-        >
-          <DocumentCard
-            doc={doc}
-            formatDate={formatDate}
-            isDocumentExpired={isDocumentExpired}
-            daysUntilExpiration={daysUntilExpiration}
-            refreshDocuments={refreshDocuments}
-            loadingDocumentIds={loadingDocumentIds}
-            handleDownload={handleDownload}
-          />
-        </motion.div>
+          document={doc}
+          formatDate={formatDate}
+          isExpired={isDocumentExpired(doc.expires_at || null)}
+          daysUntilExpiration={daysUntilExpiration(doc.expires_at || null)}
+          isLoading={loadingDocumentIds.has(doc.id)}
+          onDownload={handleDownload ? () => handleDownload(doc) : undefined}
+          refreshDocuments={refreshDocuments}
+          categoryColor={categoryColor} // Passar a cor da categoria
+        />
       ))}
     </div>
+  ) : (
+    <DesktopDocumentTable
+      documents={documents}
+      formatDate={formatDate}
+      isDocumentExpired={isDocumentExpired}
+      daysUntilExpiration={daysUntilExpiration}
+      loadingDocumentIds={loadingDocumentIds}
+      handleDownload={handleDownload}
+      refreshDocuments={refreshDocuments}
+      categoryColor={categoryColor} // Passar a cor da categoria
+    />
   );
 };

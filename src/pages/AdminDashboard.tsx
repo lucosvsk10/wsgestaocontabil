@@ -95,7 +95,7 @@ const AdminDashboard = ({
     }
   }, [activeTab, userId, setSelectedUserId]);
   return <AdminLayout>
-      <div className="p-6 rounded-lg shadow-sm border border-gray-200 dark:border-navy-lighter/30 bg-white dark:bg-navy-dark">          
+      <div className="p-6 rounded-lg shadow-sm border border-gold/20 dark:bg-transparent">          
         <AdminTabsView activeTab={activeTab} supabaseUsers={supabaseUsers} users={users} userInfoList={users} isLoadingUsers={isLoadingUsers} isLoadingAuthUsers={isLoadingAuthUsers} handleDocumentButtonClick={handleDocumentButtonClick} setSelectedUserForPasswordChange={user => {
         setSelectedUserForPasswordChange(user);
         setPasswordChangeModalOpen(true);

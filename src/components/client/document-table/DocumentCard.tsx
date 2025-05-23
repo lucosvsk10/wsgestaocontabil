@@ -1,76 +1,76 @@
 
 import { useState } from "react";
 import { Document } from "@/utils/auth/types";
-import { motion } from "framer-motion";
-import { cn } from "@/lib/utils";
-import {
-  DocumentCardHeader,
-  DocumentCardMetadata,
-  DocumentCardActions
-} from "./card";
+import { DocumentCardHeader } from "./card/DocumentCardHeader";
+import { DocumentCardMetadata } from "./card/DocumentCardMetadata";
+import { DocumentCardActions } from "./card/DocumentCardActions";
+import { DocumentCardBadges } from "./card/DocumentCardBadges";
+import { DocumentCardIcon } from "./card/DocumentCardIcon";
+import { Card } from "@/components/ui/card";
 
 interface DocumentCardProps {
-  doc: Document;
+  document: Document;
   formatDate: (dateStr: string) => string;
-  isDocumentExpired: (expiresAt: string | null) => boolean;
-  daysUntilExpiration: (expiresAt: string | null) => string | null;
+  isExpired: boolean;
+  daysUntilExpiration: string | null;
+  isLoading?: boolean;
+  onDownload?: () => Promise<void>;
   refreshDocuments: () => void;
-  loadingDocumentIds: Set<string>;
-  handleDownload: (doc: Document) => Promise<void>;
+  categoryColor?: string; // Adicionar a tipagem para categoryColor
 }
 
 export const DocumentCard = ({
-  doc,
+  document,
   formatDate,
-  isDocumentExpired,
+  isExpired,
   daysUntilExpiration,
+  isLoading = false,
+  onDownload,
   refreshDocuments,
-  loadingDocumentIds,
-  handleDownload
+  categoryColor
 }: DocumentCardProps) => {
-  const isExpired = isDocumentExpired(doc.expires_at);
-  const expirationText = daysUntilExpiration(doc.expires_at);
-  const [isHovered, setIsHovered] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  
+  const toggleExpand = () => setExpanded(!expanded);
   
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className={cn(
-        "p-5 rounded-lg border shadow-sm transition-all duration-200 flex flex-col h-full", 
-        isHovered ? "shadow-md transform scale-[1.02]" : "",
-        isExpired
-          ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-900/30" 
-          : !doc.viewed
-            ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700/50"
-            : "bg-white dark:bg-navy-light/20 border-gray-200 dark:border-gold/20"
-      )}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+    <Card 
+      className={`rounded-xl overflow-hidden dark:border ${categoryColor ? `dark:border-[${categoryColor}]/30` : 'dark:border-gold/30'} hover:shadow-md transition-all dark:bg-deepNavy dark:hover:border-gold/40`}
     >
-      {/* Card Header with Icon and Status */}
-      <DocumentCardHeader doc={doc} isExpired={isExpired} />
-      
-      {/* Document Title */}
-      <h3 className="font-medium text-navy dark:text-white text-lg mb-2 line-clamp-2">
-        {doc.name}
-      </h3>
-      
-      {/* Document Metadata */}
-      <DocumentCardMetadata 
-        doc={doc} 
-        formatDate={formatDate} 
-        isExpired={isExpired} 
-        expirationText={expirationText} 
-      />
-      
-      {/* Actions */}
-      <DocumentCardActions
-        doc={doc}
-        loadingDocumentIds={loadingDocumentIds}
-        handleDownload={handleDownload}
-      />
-    </motion.div>
+      <div className="flex p-4 gap-4">
+        <DocumentCardIcon category={document.category} />
+        
+        <div className="flex-1 min-w-0 space-y-2">
+          <DocumentCardHeader 
+            name={document.name} 
+            isViewed={document.viewed} 
+            toggleExpand={toggleExpand}
+            expanded={expanded}
+          />
+          
+          <DocumentCardBadges
+            isExpired={isExpired}
+            daysUntilExpiration={daysUntilExpiration}
+            isViewed={document.viewed}
+          />
+          
+          {expanded && (
+            <DocumentCardMetadata
+              uploadDate={formatDate(document.uploaded_at)}
+              expiryDate={document.expires_at ? formatDate(document.expires_at) : null}
+              observations={document.observations}
+              filename={document.original_filename || document.filename}
+            />
+          )}
+          
+          <DocumentCardActions
+            document={document}
+            isLoading={isLoading}
+            onDownload={onDownload}
+            refreshDocuments={refreshDocuments}
+          />
+        </div>
+      </div>
+    </Card>
   );
 };

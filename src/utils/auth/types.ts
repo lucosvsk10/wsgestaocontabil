@@ -17,3 +17,12 @@ export interface AuthState {
   loading: boolean;
   error: string | null;
 }
+
+// Adicionando o tipo UserData que estava faltando
+export interface UserData {
+  id: string;
+  email: string;
+  name?: string;
+  role?: string;
+  created_at?: string;
+}

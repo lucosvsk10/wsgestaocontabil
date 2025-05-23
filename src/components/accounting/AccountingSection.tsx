@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Newspaper, Link, FileText } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import NewsCarousel from './NewsCarousel';
-import LinksGrid from './LinksGrid';
+import LinksGrid from '../LinksGrid';
 import FloatingLinksButton from './FloatingLinksButton';
 import { sampleNews, usefulLinks, declarationsLinks } from './accountingData';
 import { NewsItem } from './types';
@@ -32,9 +33,9 @@ const AccountingSection = () => {
   useEffect(() => {
     // We're using sample data initially, but this would be an API call in production
   }, []);
-  return <section id="contabil" className="py-16 px-6 fadein-on-scroll bg-deepNavy-80">
+  return <section id="contabil" className="py-16 px-6 fadein-on-scroll bg-deepNavy">
       <div className="container mx-auto">
-        <h2 className="text-navy-light dark:text-gold mb-12 text-center text-3xl font-light">Mundo Contábil</h2>
+        <h2 className="text-navy-light dark:text-gold mb-12 text-center text-3xl font-museo font-light">Mundo Contábil</h2>
         
         <Tabs defaultValue="news" className="w-full max-w-4xl mx-auto">
           <TabsList className={`${isMobile ? 'flex flex-col w-full gap-2 h-auto bg-transparent' : 'grid w-full grid-cols-3 mb-8'}`}>

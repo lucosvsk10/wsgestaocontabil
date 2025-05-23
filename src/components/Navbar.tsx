@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Menu, UserCircle } from 'lucide-react';
 import Logo from './navbar/Logo';
@@ -28,7 +29,7 @@ const Navbar = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-  return <header className="text-navy dark:text-gold bg-deepNavy-80">
+  return <header className="text-navy dark:text-gold bg-deepNavy">
       <div className={`container mx-auto flex items-center justify-between ${isMobile ? 'px-4 py-3' : 'px-[28px] py-[19px]'}`}>
         <Logo />
         <div className="flex items-center gap-4">

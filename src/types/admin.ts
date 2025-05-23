@@ -1,10 +1,11 @@
-import { Document as CommonDocument, DocumentCategory } from "./common";
+
+import { Document as CommonDocument } from "./common";
 
 // Estendendo o tipo Document para manter compatibilidade com código existente
 export interface Document extends CommonDocument {}
 
-// Exportando CategoryDocument para manter compatibilidade
-export { DocumentCategory };
+// Reexportando o tipo DocumentCategory corretamente
+export type { DocumentCategory } from "./common";
 
 // Outros tipos existentes...
 export type UserType = {

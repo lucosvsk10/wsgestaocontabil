@@ -1,56 +1,82 @@
 
-import { Document, DocumentCategory } from "@/types/common";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { DocumentTable } from "@/components/client/DocumentTable";
+import { useState, useEffect } from 'react';
+import { Document } from '@/utils/auth/types';
+import { DocumentTable } from '../DocumentTable';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface CategoryDocumentTableProps {
+  categoryName: string;
+  categoryColor?: string; // Cor associada à categoria
   documents: Document[];
-  category: DocumentCategory | string;
-  categoryColor?: string;
   formatDate: (dateStr: string) => string;
-  isDocumentExpired: (expirationDate: string | null) => boolean;
-  daysUntilExpiration: (expirationDate: string | null) => string | null;
+  isDocumentExpired: (expirationDate: string) => boolean;
+  daysUntilExpiration: (expirationDate: string) => string;
   refreshDocuments: () => void;
+  initiallyExpanded?: boolean;
 }
 
 export const CategoryDocumentTable = ({
+  categoryName,
+  categoryColor = '#efc349', // Cor padrão dourada se não for fornecida
   documents,
-  category,
-  categoryColor,
   formatDate,
   isDocumentExpired,
   daysUntilExpiration,
-  refreshDocuments
+  refreshDocuments,
+  initiallyExpanded = true
 }: CategoryDocumentTableProps) => {
   const isMobile = useIsMobile();
-  
-  // Determinar o nome e a cor da categoria
-  const categoryName = typeof category === 'string' ? category : category.name;
-  const color = categoryColor || (typeof category !== 'string' ? category.color : "#F5C441");
-  
+  const [isExpanded, setIsExpanded] = useState(initiallyExpanded);
+  const [expandedValue, setExpandedValue] = useState<string>(initiallyExpanded ? 'item-1' : '');
+
+  // Ajusta o estado expandido quando a prop initiallyExpanded muda
+  useEffect(() => {
+    setIsExpanded(initiallyExpanded);
+    setExpandedValue(initiallyExpanded ? 'item-1' : '');
+  }, [initiallyExpanded]);
+
+  const handleAccordionChange = (value: string) => {
+    setExpandedValue(value);
+    setIsExpanded(value === 'item-1');
+  };
+
   return (
-    <div>
-      <div className="flex items-center mb-4">
-        <div 
-          className="w-4 h-4 rounded-full mr-2"
-          style={{ backgroundColor: color }}
-        ></div>
-        <h3 
-          className="text-lg font-medium"
-          style={{ color: color }}
-        >
-          {categoryName}
-        </h3>
-      </div>
-      
-      <DocumentTable 
-        documents={documents}
-        formatDate={formatDate}
-        isDocumentExpired={isDocumentExpired}
-        daysUntilExpiration={daysUntilExpiration}
-        refreshDocuments={refreshDocuments}
-        categoryColor={color}
-      />
+    <div className="mb-8">
+      <Accordion
+        type="single"
+        collapsible
+        value={expandedValue}
+        onValueChange={handleAccordionChange}
+        className={`rounded-xl overflow-hidden ${isMobile ? 'border dark:border-gold/30' : ''}`}
+      >
+        <AccordionItem value="item-1" className="border-0">
+          <AccordionTrigger 
+            className={`px-4 py-3 text-lg font-medium dark:bg-deepNavy dark:text-gold ${
+              isMobile ? '' : 'dark:border dark:border-gold/30 rounded-t-xl'
+            }`}
+            style={{ 
+              borderLeft: categoryColor ? `4px solid ${categoryColor}` : '4px solid #efc349',
+              paddingLeft: '16px'
+            }}
+          >
+            {categoryName} <span className="ml-2 text-gray-500 dark:text-gray-400">({documents.length})</span>
+          </AccordionTrigger>
+          
+          <AccordionContent className={`p-0 ${isMobile ? '' : 'dark:border-x dark:border-b dark:border-gold/30 rounded-b-xl'}`}>
+            <div className="p-4 dark:bg-deepNavy">
+              <DocumentTable 
+                documents={documents} 
+                formatDate={formatDate} 
+                isDocumentExpired={isDocumentExpired} 
+                daysUntilExpiration={daysUntilExpiration} 
+                refreshDocuments={refreshDocuments}
+                categoryColor={categoryColor}
+              />
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </div>
   );
 };

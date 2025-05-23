@@ -21,7 +21,7 @@ const ThemeToggle = () => {
             variant="ghost"
             size="sm"
             onClick={toggleTheme}
-            className="rounded-full w-9 h-9 p-0"
+            className="rounded-full w-9 h-9 p-0 dark:text-gold"
             aria-label={theme === 'dark' ? 'Mudar para modo claro' : 'Mudar para modo escuro'}
           >
             {theme === 'dark' ? (

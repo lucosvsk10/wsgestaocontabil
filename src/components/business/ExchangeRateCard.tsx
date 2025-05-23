@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -24,31 +25,31 @@ const ExchangeRateCard = ({
   const formatCurrency = (value: number): string => {
     return value.toFixed(4);
   };
-  return <Card className="border-gold/30 text-navy dark:text-white bg-deepNavy-90">
+  return <Card className="border-gold/30 text-navy dark:text-white bg-transparent dark:backdrop-blur-sm">
       <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
         <div>
-          <CardTitle className="flex items-center gap-2 text-xl md:text-2xl">
+          <CardTitle className="flex items-center gap-2 text-xl md:text-2xl font-museo">
             <TrendingUp className="text-gold" />
             <span className="font-extralight">Cotações do Dia</span>
           </CardTitle>
-          <CardDescription className="text-navy/70 dark:text-white/70">
+          <CardDescription className="text-navy/70 dark:text-gray-300">
             Atualizado em {new Date().toLocaleDateString('pt-BR')}
           </CardDescription>
         </div>
-        <Button variant="outline" size="icon" onClick={onRefresh} disabled={isRefreshing} className="border-gold/30 text-gold hover:text-white bg-white/50 dark:bg-gold-dark">
+        <Button variant="outline" size="icon" onClick={onRefresh} disabled={isRefreshing} className="border-gold/30 text-gold hover:text-white bg-white/50 dark:bg-transparent">
           <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
           <span className="sr-only">Atualizar cotações</span>
         </Button>
       </CardHeader>
       <CardContent>
         {isMobile ? <div className="space-y-4">
-            {exchangeRates.map(rate => <div key={rate.code} className="p-4 bg-white/50 dark:bg-navy-light/50 rounded-lg border border-gold/10">
+            {exchangeRates.map(rate => <div key={rate.code} className="p-4 bg-white/50 dark:bg-transparent dark:border dark:border-gold/10 rounded-lg">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     {rate.code.includes('USD') && <DollarSign className="w-4 h-4 text-gold" />}
                     {rate.code.includes('EUR') && <Euro className="w-4 h-4 text-gold" />}
                     {rate.code.includes('BRL/') && <span className="text-gold font-bold">R$</span>}
-                    <span className="font-medium">{rate.name}</span>
+                    <span className="font-medium dark:text-gray-200">{rate.name}</span>
                   </div>
                   <span className={rate.change >= 0 ? "text-green-400" : "text-red-400"}>
                     <div className="flex items-center gap-1">
@@ -57,7 +58,7 @@ const ExchangeRateCard = ({
                     </div>
                   </span>
                 </div>
-                <div className="text-lg font-semibold">{formatCurrency(rate.rate)}</div>
+                <div className="text-lg font-semibold dark:text-gray-200">{formatCurrency(rate.rate)}</div>
               </div>)}
           </div> : <Table>
             <TableHeader>
