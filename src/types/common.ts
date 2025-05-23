@@ -27,4 +27,6 @@ export interface Document {
   expires_at?: string | null;
   viewed?: boolean;
   size?: number;
+  viewed_at?: string | null;
+  view_status?: string;
 }

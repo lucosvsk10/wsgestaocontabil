@@ -12,6 +12,8 @@ export interface DocumentTableProps {
   daysUntilExpiration: (expirationDate: string) => string;
   refreshDocuments: () => void;
   categoryColor?: string;
+  loadingDocumentIds?: Set<string>;
+  handleDownload?: (document: Document) => Promise<void>;
 }
 
 export const DocumentTable: React.FC<DocumentTableProps> = ({
@@ -20,7 +22,9 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
   isDocumentExpired,
   daysUntilExpiration,
   refreshDocuments,
-  categoryColor
+  categoryColor,
+  loadingDocumentIds = new Set(),
+  handleDownload = async () => {}
 }) => {
   const isMobile = useIsMobile();
 
@@ -33,6 +37,8 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
         daysUntilExpiration={daysUntilExpiration}
         refreshDocuments={refreshDocuments}
         categoryColor={categoryColor}
+        loadingDocumentIds={loadingDocumentIds}
+        handleDownload={handleDownload}
       />
     );
   }
@@ -44,7 +50,6 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
       isDocumentExpired={isDocumentExpired}
       daysUntilExpiration={daysUntilExpiration}
       refreshDocuments={refreshDocuments}
-      categoryColor={categoryColor}
     />
   );
 };

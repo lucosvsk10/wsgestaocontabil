@@ -1,28 +1,12 @@
 
-export interface DocumentFormData {
+// Document view statuses
+export type DocumentViewStatus = 'unread' | 'read' | 'acknowledged';
+
+export interface DocumentFile {
+  id: string;
   name: string;
-  category: string;
-  observations: string;
-  file: File | null;
-  expirationDate: Date | null;
-  noExpiration: boolean;
-}
-
-export interface DocumentDisplayOptions {
-  isLoading: boolean;
-  showCategory?: boolean;
-  showObservations?: boolean;
-  showExpirationDate?: boolean;
-  showActions?: boolean;
-}
-
-export interface DocumentSortOptions {
-  field: 'name' | 'category' | 'uploaded_at' | 'expires_at';
-  direction: 'asc' | 'desc';
-}
-
-export interface DocumentFilterOptions {
-  category?: string | null;
-  expirationStatus?: 'all' | 'active' | 'expired';
-  search?: string;
+  url: string;
+  type: string;
+  size: number;
+  uploaded_at: string;
 }

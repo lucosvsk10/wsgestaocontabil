@@ -1,3 +1,4 @@
+
 import { Document as CommonDocument } from "@/types/common";
 
 // Estendendo o tipo Document para manter compatibilidade com código existente

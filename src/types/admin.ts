@@ -1,6 +1,6 @@
 
 // Export types
-import { type DocumentViewStatus } from './document';
+import { DocumentViewStatus } from "@/types/document";
 
 export type UserRole = 'admin' | 'user' | 'guest';
 
@@ -12,6 +12,16 @@ export interface UserData {
   created_at: string;
   last_login?: string;
 }
+
+// Define UserType for use throughout admin components
+export type UserType = {
+  id: string;
+  user_id?: string;
+  name?: string;
+  email?: string;
+  role?: string;
+  created_at?: string;
+};
 
 // Use export type to avoid conflict with DOM's Document
 export type Document = {
@@ -27,8 +37,10 @@ export type Document = {
   uploaded_at: string;
   viewed_at?: string | null;
   original_filename?: string;
+  filename?: string;
   size?: number;
   view_status?: DocumentViewStatus;
+  viewed?: boolean;
 };
 
 export interface DocumentCategory {
@@ -36,4 +48,5 @@ export interface DocumentCategory {
   name: string;
   color?: string;
   created_at?: string;
+  updated_at: string;
 }
