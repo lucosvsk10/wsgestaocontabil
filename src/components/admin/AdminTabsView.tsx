@@ -79,7 +79,7 @@ export function AdminTabsView({
   setNoExpiration,
   selectedPoll
 }: AdminTabsViewProps) {
-  return <div className="w-full bg-white dark:bg-transparent dark:text-[#d9d9d9] rounded-lg">
+  return <div className="w-full bg-white border border-[#e6e6e6] rounded-lg shadow-sm dark:bg-transparent dark:border-gold dark:border-opacity-30 dark:text-[#d9d9d9]">
       <div className="mt-4 bg-white dark:bg-transparent">
         {/* Tab Content - Dashboard */}
         {activeTab === "dashboard" && <AdminDashboardView users={users || []} supabaseUsers={supabaseUsers || []} documents={documents || []} />}

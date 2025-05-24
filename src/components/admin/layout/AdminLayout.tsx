@@ -29,7 +29,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
   }, [isMobile]);
 
   return (
-    <div className="min-h-screen bg-[#FFF1DE] dark:bg-deepNavy flex overflow-hidden">
+    <div className="min-h-screen bg-[#FFF1DE] flex overflow-hidden dark:bg-deepNavy">
       {/* Sidebar */}
       <AdminSidebar open={sidebarOpen} onClose={toggleSidebar} />
       
@@ -41,13 +41,13 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
         <Button 
           variant="secondary" 
           size="icon" 
-          className="fixed bottom-4 left-4 z-50 bg-white shadow-md rounded-full border border-[#e6e6e6] h-10 w-10 dark:border-gold dark:border-opacity-30 dark:bg-transparent" 
+          className="fixed bottom-4 left-4 z-50 bg-white shadow-sm rounded-full border border-[#e6e6e6] h-10 w-10 dark:border-gold dark:border-opacity-30 dark:bg-transparent" 
           onClick={toggleSidebar}
           aria-label={sidebarOpen ? "Recolher menu lateral" : "Expandir menu lateral"}
         >
           {sidebarOpen ? 
-            <ChevronLeft size={20} className="text-[#020817] dark:text-gold" /> : 
-            <ChevronRight size={20} className="text-[#020817] dark:text-gold" />
+            <ChevronLeft size={20} className="text-[#efc349] dark:text-gold" /> : 
+            <ChevronRight size={20} className="text-[#efc349] dark:text-gold" />
           }
         </Button>
         

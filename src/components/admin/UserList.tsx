@@ -114,20 +114,20 @@ export const UserList = ({
   const remainingStorageMB = Math.max(0, storageLimitMB - usedStorageMB);
 
   return (
-    <Card className="border border-[#e6e6e6] bg-white shadow-sm rounded-lg">
-      <CardHeader className="border-b border-[#e6e6e6] bg-white rounded-t-lg">
+    <Card className="border border-[#e6e6e6] bg-white shadow-sm rounded-lg dark:border-gold dark:border-opacity-30 dark:bg-transparent dark:backdrop-blur-sm">
+      <CardHeader className="border-b border-[#e6e6e6] bg-white rounded-t-lg dark:border-gold/30 dark:bg-transparent">
         <div className="flex justify-between items-center">
-          <CardTitle className="text-2xl font-semibold text-[#020817]">Lista de Usuários</CardTitle>
-          <Button onClick={() => setIsUserCreationDialogOpen(true)} className="bg-[#020817] hover:bg-[#0f172a] text-white">
-            <Plus className="mr-2 h-4 w-4" /> Novo Usuário
+          <CardTitle className="text-2xl font-semibold text-[#020817] dark:text-gold">Lista de Usuários</CardTitle>
+          <Button onClick={() => setIsUserCreationDialogOpen(true)} className="bg-[#020817] hover:bg-[#0f172a] text-white dark:bg-gold dark:text-deepNavy dark:hover:bg-gold/90">
+            <Plus className="mr-2 h-4 w-4 text-[#efc349] dark:text-deepNavy" /> Novo Usuário
           </Button>
         </div>
       </CardHeader>
 
       {/* Storage Statistics */}
-      <CardContent className="border-b border-[#e6e6e6] mb-4 pb-4">
-        <div className="rounded-lg p-4 shadow-sm bg-white">
-          <h3 className="mb-3 text-lg font-semibold text-[#020817]">Estatísticas de Armazenamento</h3>
+      <CardContent className="border-b border-[#e6e6e6] mb-4 pb-4 dark:border-gold/30">
+        <div className="rounded-lg p-4 shadow-sm bg-white border border-[#e6e6e6] dark:bg-transparent dark:border-gold/30">
+          <h3 className="mb-3 text-lg font-semibold text-[#020817] dark:text-gold">Estatísticas de Armazenamento</h3>
           
           {isLoadingStorage ? (
             <div className="flex justify-center py-4">
@@ -139,22 +139,22 @@ export const UserList = ({
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="rounded p-3 border border-[#e6e6e6] bg-white shadow-sm">
-                <p className="text-sm text-[#6b7280]">Espaço Utilizado</p>
-                <p className="text-lg font-semibold text-[#020817]">
+              <div className="rounded p-3 border border-[#e6e6e6] bg-white shadow-sm dark:border-gold/30 dark:bg-transparent">
+                <p className="text-sm text-[#6b7280] dark:text-white/70">Espaço Utilizado</p>
+                <p className="text-lg font-semibold text-[#020817] dark:text-white">
                   {usedStorageMB.toFixed(2)} MB de {storageLimitMB} MB
                 </p>
-                <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2 dark:bg-navy-light">
                   <div 
-                    className="bg-[#2563eb] h-2.5 rounded-full" 
+                    className="bg-[#2563eb] h-2.5 rounded-full dark:bg-gold" 
                     style={{width: `${Math.min(100, usedStorageMB / storageLimitMB * 100)}%`}}
                   ></div>
                 </div>
               </div>
               
-              <div className="rounded p-3 border border-[#e6e6e6] bg-white shadow-sm">
-                <p className="text-sm text-[#6b7280]">Espaço Disponível</p>
-                <p className="text-lg font-semibold text-[#020817]">
+              <div className="rounded p-3 border border-[#e6e6e6] bg-white shadow-sm dark:border-gold/30 dark:bg-transparent">
+                <p className="text-sm text-[#6b7280] dark:text-white/70">Espaço Disponível</p>
+                <p className="text-lg font-semibold text-[#020817] dark:text-white">
                   {remainingStorageMB.toFixed(2)} MB restantes
                 </p>
               </div>

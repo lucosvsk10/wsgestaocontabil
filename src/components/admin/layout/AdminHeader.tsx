@@ -16,7 +16,7 @@ const AdminHeader = () => {
   } = useNavigation();
   
   return (
-    <header className="py-4 px-6 flex items-center justify-between bg-white shadow-sm dark:bg-deepNavy dark:shadow-none">
+    <header className="py-4 px-6 flex items-center justify-between bg-white border-b border-[#e6e6e6] dark:bg-deepNavy dark:shadow-none dark:border-gold/30">
       <div className="flex items-center">
         {/* Conteúdo à esquerda */}
       </div>
@@ -28,19 +28,19 @@ const AdminHeader = () => {
         {/* User menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-full border border-[#e6e6e6] dark:border-gold dark:border-opacity-40 hover:bg-gray-100 dark:hover:bg-gold/10">
-              <UserCircle className="h-6 w-6 text-[#020817] dark:text-gold" />
+            <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-full border border-[#e6e6e6] hover:bg-gray-50 dark:border-gold dark:border-opacity-40 dark:hover:bg-gold/10">
+              <UserCircle className="h-6 w-6 text-[#efc349] dark:text-gold" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 bg-white shadow-lg rounded-lg border border-[#e6e6e6] dark:bg-deepNavy dark:border-gold dark:border-opacity-30 dark:backdrop-blur-sm">
+          <DropdownMenuContent align="end" className="w-56 bg-white shadow-sm rounded-lg border border-[#e6e6e6] dark:bg-deepNavy dark:border-gold dark:border-opacity-30 dark:backdrop-blur-sm">
             <div className="px-3 py-2 text-sm font-medium text-[#020817] dark:text-white">
               {user?.email || "Usuário"}
             </div>
             <DropdownMenuSeparator className="bg-[#e6e6e6] dark:bg-gold/30" />
-            <DropdownMenuItem asChild className="text-[#020817] dark:text-white hover:bg-gray-100 dark:hover:bg-gold/10 focus:bg-gray-100 focus:text-[#020817]">
+            <DropdownMenuItem asChild className="text-[#020817] hover:bg-gray-50 focus:bg-gray-50 focus:text-[#020817] dark:text-white dark:hover:bg-gold/10">
               <Link to="/" className="flex items-center">Voltar ao site</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleLogout} className="text-[#020817] dark:text-white hover:bg-gray-100 dark:hover:bg-gold/10 focus:bg-gray-100 focus:text-[#020817]">
+            <DropdownMenuItem onClick={handleLogout} className="text-[#020817] hover:bg-gray-50 focus:bg-gray-50 focus:text-[#020817] dark:text-white dark:hover:bg-gold/10">
               <span className="flex items-center">Sair</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
