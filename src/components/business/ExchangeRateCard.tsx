@@ -1,93 +1,64 @@
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowDown, ArrowUp, TrendingUp, DollarSign, Euro, RefreshCw } from 'lucide-react';
-import { Button } from "@/components/ui/button";
-import { useIsMobile } from '@/hooks/use-mobile';
+
+import React from 'react';
+import { RefreshCw, DollarSign } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
 interface ExchangeRate {
   code: string;
   name: string;
   rate: number;
   change: number;
 }
+
 interface ExchangeRateCardProps {
   exchangeRates: ExchangeRate[];
   onRefresh: () => void;
   isRefreshing: boolean;
 }
-const ExchangeRateCard = ({
-  exchangeRates,
-  onRefresh,
-  isRefreshing
-}: ExchangeRateCardProps) => {
-  const isMobile = useIsMobile();
-  const formatCurrency = (value: number): string => {
-    return value.toFixed(4);
-  };
-  return <Card className="border-gold/30 text-navy dark:text-white bg-deepNavy-90">
-      <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-        <div>
-          <CardTitle className="flex items-center gap-2 text-xl md:text-2xl">
-            <TrendingUp className="text-gold" />
-            <span className="font-extralight">Cotações do Dia</span>
-          </CardTitle>
-          <CardDescription className="text-navy/70 dark:text-white/70">
-            Atualizado em {new Date().toLocaleDateString('pt-BR')}
-          </CardDescription>
+
+const ExchangeRateCard = ({ exchangeRates, onRefresh, isRefreshing }: ExchangeRateCardProps) => {
+  return (
+    <div className="bg-white dark:bg-deepNavy/60 border border-[#e6e6e6] dark:border-gold/30 rounded-xl p-6 shadow-sm">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <DollarSign className="h-6 w-6 text-[#efc349]" />
+          <h3 className="text-xl font-semibold text-[#020817] dark:text-gold">Cotações</h3>
         </div>
-        <Button variant="outline" size="icon" onClick={onRefresh} disabled={isRefreshing} className="border-gold/30 text-gold hover:text-white bg-white/50 dark:bg-gold-dark">
+        <Button
+          onClick={onRefresh}
+          disabled={isRefreshing}
+          variant="outline"
+          size="sm"
+          className="border-[#e6e6e6] dark:border-gold/30"
+        >
           <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          <span className="sr-only">Atualizar cotações</span>
+          Atualizar
         </Button>
-      </CardHeader>
-      <CardContent>
-        {isMobile ? <div className="space-y-4">
-            {exchangeRates.map(rate => <div key={rate.code} className="p-4 bg-white/50 dark:bg-navy-light/50 rounded-lg border border-gold/10">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    {rate.code.includes('USD') && <DollarSign className="w-4 h-4 text-gold" />}
-                    {rate.code.includes('EUR') && <Euro className="w-4 h-4 text-gold" />}
-                    {rate.code.includes('BRL/') && <span className="text-gold font-bold">R$</span>}
-                    <span className="font-medium">{rate.name}</span>
-                  </div>
-                  <span className={rate.change >= 0 ? "text-green-400" : "text-red-400"}>
-                    <div className="flex items-center gap-1">
-                      {rate.change >= 0 ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
-                      {Math.abs(rate.change * 100).toFixed(2)}%
-                    </div>
-                  </span>
-                </div>
-                <div className="text-lg font-semibold">{formatCurrency(rate.rate)}</div>
-              </div>)}
-          </div> : <Table>
-            <TableHeader>
-              <TableRow className="border-gold/20">
-                <TableHead className="text-gold">Moeda</TableHead>
-                <TableHead className="text-gold">Valor</TableHead>
-                <TableHead className="text-gold">Variação</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {exchangeRates.map(rate => <TableRow key={rate.code} className="border-gold/10">
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      {rate.code.includes('USD') && <DollarSign className="w-4 h-4 text-gold" />}
-                      {rate.code.includes('EUR') && <Euro className="w-4 h-4 text-gold" />}
-                      {rate.code.includes('BRL/') && <span className="text-gold font-bold">R$</span>}
-                      {rate.name}
-                    </div>
-                  </TableCell>
-                  <TableCell>{formatCurrency(rate.rate)}</TableCell>
-                  <TableCell className={rate.change >= 0 ? "text-green-400" : "text-red-400"}>
-                    <div className="flex items-center gap-1">
-                      {rate.change >= 0 ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
-                      {Math.abs(rate.change * 100).toFixed(2)}%
-                    </div>
-                  </TableCell>
-                </TableRow>)}
-            </TableBody>
-          </Table>}
-      </CardContent>
-    </Card>;
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {exchangeRates.map((rate, index) => (
+          <div
+            key={index}
+            className="bg-white dark:bg-deepNavy/40 border border-[#e6e6e6] dark:border-gold/20 rounded-lg p-4"
+          >
+            <div className="text-sm text-[#6b7280] dark:text-white/70 mb-1">{rate.name}</div>
+            <div className="text-lg font-bold text-[#020817] dark:text-white">{rate.code}</div>
+            <div className="text-2xl font-bold text-[#020817] dark:text-gold">
+              R$ {rate.rate.toFixed(2)}
+            </div>
+            <div className={`text-sm font-medium ${
+              rate.change >= 0 
+                ? 'text-green-600 dark:text-green-400' 
+                : 'text-red-600 dark:text-red-400'
+            }`}>
+              {rate.change >= 0 ? '+' : ''}{(rate.change * 100).toFixed(2)}%
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 };
+
 export default ExchangeRateCard;

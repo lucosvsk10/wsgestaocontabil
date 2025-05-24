@@ -33,7 +33,7 @@ const Navbar = () => {
   }, []);
   
   return (
-    <header className={`bg-[#FFF1DE] text-[#020817] dark:text-gold dark:bg-deepNavy-80 transition-all duration-300 ${isScrolled ? 'shadow-sm' : ''}`}>
+    <header className={`bg-[#FFF1DE] text-[#020817] dark:text-gold dark:bg-deepNavy-80 transition-all duration-300`}>
       <div className={`container mx-auto flex items-center justify-between ${isMobile ? 'px-4 py-3' : 'px-[28px] py-[19px]'}`}>
         <Logo />
         <div className="flex items-center gap-4">
@@ -43,17 +43,17 @@ const Navbar = () => {
           {user && !isAdmin && <NotificationBell />}
           
           {/* Account Button for Mobile */}
-          {isMobile && user && <button onClick={navigateToDashboard} className="text-[#efc349] hover:text-[#d6a932] dark:text-gold dark:hover:text-gold-light focus:outline-none transition-colors" aria-label="Conta">
+          {isMobile && user && <button onClick={navigateToDashboard} className="text-[#020817] hover:text-[#efc349] dark:text-gold dark:hover:text-gold-light focus:outline-none transition-colors" aria-label="Conta">
               <UserCircle size={24} />
             </button>}
           
           {/* Login Button for Mobile */}
-          {isMobile && !user && <Link to="/login" className="text-[#efc349] hover:text-[#d6a932] dark:text-gold dark:hover:text-gold-light focus:outline-none transition-colors" aria-label="Login">
+          {isMobile && !user && <Link to="/login" className="text-[#020817] hover:text-[#efc349] dark:text-gold dark:hover:text-gold-light focus:outline-none transition-colors" aria-label="Login">
               <UserCircle size={24} />
             </Link>}
           
           <DesktopNavbar handleLogout={handleLogout} navigateToDashboard={navigateToDashboard} />
-          <button className="md:hidden text-[#efc349] hover:text-[#d6a932] dark:text-gold dark:hover:text-gold-light focus:outline-none transition-colors" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}>
+          <button className="md:hidden text-[#020817] hover:text-[#efc349] dark:text-gold dark:hover:text-gold-light focus:outline-none transition-colors" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}>
             <Menu size={24} />
           </button>
         </div>

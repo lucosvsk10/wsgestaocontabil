@@ -1,76 +1,136 @@
-import { useState, useEffect } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Newspaper, Link, FileText } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
+
+import { useEffect, useRef } from 'react';
+import { Calculator, FileText, TrendingUp, Users, Building, Shield } from 'lucide-react';
 import NewsCarousel from './NewsCarousel';
-import LinksGrid from './LinksGrid';
-import FloatingLinksButton from './FloatingLinksButton';
-import { sampleNews, usefulLinks, declarationsLinks } from './accountingData';
-import { NewsItem } from './types';
+import { Button } from '@/components/ui/button';
+
 const AccountingSection = () => {
-  const [newsData, setNewsData] = useState(sampleNews);
-  const [isNewsLoading, setIsNewsLoading] = useState(false);
-  const isMobile = useIsMobile();
+  const sectionRef = useRef<HTMLDivElement>(null);
 
-  // Function to refresh news data
-  const refreshNews = () => {
-    setIsNewsLoading(true);
-
-    // Simulate API call with setTimeout
-    setTimeout(() => {
-      // This would be replaced with actual API fetch in production
-      const updatedNews = [...sampleNews].map(news => ({
-        ...news,
-        date: ["Hoje", "Ontem", "2 dias atrás", "3 dias atrás", "4 dias atrás"][Math.floor(Math.random() * 5)]
-      }));
-      setNewsData(updatedNews);
-      setIsNewsLoading(false);
-    }, 1000);
-  };
-
-  // Initial load
   useEffect(() => {
-    // We're using sample data initially, but this would be an API call in production
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('opacity-100');
+          entry.target.classList.remove('opacity-0', 'translate-y-10');
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => {
+      if (sectionRef.current) {
+        observer.unobserve(sectionRef.current);
+      }
+    };
   }, []);
-  return <section id="contabil" className="py-16 px-6 fadein-on-scroll bg-deepNavy-80">
-      <div className="container mx-auto">
-        <h2 className="text-navy-light dark:text-gold mb-12 text-center text-3xl font-light">Mundo Contábil</h2>
-        
-        <Tabs defaultValue="news" className="w-full max-w-4xl mx-auto">
-          <TabsList className={`${isMobile ? 'flex flex-col w-full gap-2 h-auto bg-transparent' : 'grid w-full grid-cols-3 mb-8'}`}>
-            <TabsTrigger value="news" className="flex items-center gap-2 data-[state=active]:bg-gold data-[state=active]:text-navy w-full">
-              <Newspaper size={16} />
-              <span>Notícias Contábeis</span>
-            </TabsTrigger>
-            <TabsTrigger value="links" className="flex items-center gap-2 data-[state=active]:bg-gold data-[state=active]:text-navy w-full">
-              <Link size={16} />
-              <span>Links Úteis</span>
-            </TabsTrigger>
-            <TabsTrigger value="declarations" className="flex items-center gap-2 data-[state=active]:bg-gold data-[state=active]:text-navy w-full">
-              <FileText size={16} />
-              <span>Declarações</span>
-            </TabsTrigger>
-          </TabsList>
-          
-          {/* News Carousel Tab */}
-          <TabsContent value="news">
-            <NewsCarousel newsData={newsData} isNewsLoading={isNewsLoading} refreshNews={refreshNews} />
-          </TabsContent>
-          
-          {/* Useful Links Tab */}
-          <TabsContent value="links">
-            <LinksGrid links={usefulLinks} />
-          </TabsContent>
-          
-          {/* Declarations Tab */}
-          <TabsContent value="declarations">
-            <LinksGrid links={declarationsLinks} columns="grid-cols-1 md:grid-cols-2 gap-4" />
-          </TabsContent>
-          
-          {/* Floating Button */}
-          <FloatingLinksButton links={usefulLinks} />
-        </Tabs>
+
+  const features = [
+    {
+      icon: <Calculator className="w-8 h-8 text-[#efc349]" />,
+      title: "Planejamento Tributário",
+      description: "Otimização fiscal personalizada para sua empresa"
+    },
+    {
+      icon: <FileText className="w-8 h-8 text-[#efc349]" />,
+      title: "Escrituração Contábil",
+      description: "Registros precisos e conformes com a legislação"
+    },
+    {
+      icon: <TrendingUp className="w-8 h-8 text-[#efc349]" />,
+      title: "Relatórios Gerenciais",
+      description: "Análises detalhadas para tomada de decisão"
+    },
+    {
+      icon: <Users className="w-8 h-8 text-[#efc349]" />,
+      title: "Departamento Pessoal",
+      description: "Gestão completa de recursos humanos"
+    },
+    {
+      icon: <Building className="w-8 h-8 text-[#efc349]" />,
+      title: "Abertura de Empresas",
+      description: "Suporte completo para formalização"
+    },
+    {
+      icon: <Shield className="w-8 h-8 text-[#efc349]" />,
+      title: "Conformidade Legal",
+      description: "Mantemos sua empresa sempre em dia"
+    }
+  ];
+
+  return (
+    <section id="contabil" className="py-20 bg-[#FFF1DE] dark:bg-deepNavy">
+      <div className="container mx-auto px-6">
+        <div 
+          ref={sectionRef}
+          className="transition-all duration-700 transform opacity-0 translate-y-10"
+        >
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl text-[#020817] dark:text-gold mb-4 font-light">
+              Mundo Contábil
+            </h2>
+            <p className="text-[#6b7280] dark:text-white/80 max-w-3xl mx-auto">
+              Explore nosso universo de soluções contábeis especializadas, 
+              desenvolvidas para impulsionar o crescimento sustentável do seu negócio.
+            </p>
+          </div>
+
+          {/* Features Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
+            {features.map((feature, index) => (
+              <div 
+                key={index}
+                className="bg-white dark:bg-deepNavy/60 border border-[#e6e6e6] dark:border-gold/30 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-300"
+              >
+                <div className="mb-4">{feature.icon}</div>
+                <h3 className="text-xl font-semibold text-[#020817] dark:text-white mb-3">
+                  {feature.title}
+                </h3>
+                <p className="text-[#6b7280] dark:text-white/70">
+                  {feature.description}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* Call to Action */}
+          <div className="bg-white dark:bg-deepNavy/60 border border-[#e6e6e6] dark:border-gold/30 rounded-xl p-8 text-center shadow-sm">
+            <h3 className="text-2xl font-bold text-[#020817] dark:text-gold mb-4">
+              Pronto para transformar sua gestão contábil?
+            </h3>
+            <p className="text-[#6b7280] dark:text-white/80 mb-6 max-w-2xl mx-auto">
+              Entre em contato conosco e descubra como podemos ajudar sua empresa 
+              a alcançar novos patamares de eficiência e conformidade.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button 
+                className="bg-[#020817] text-white hover:bg-[#0f172a] dark:bg-gold dark:text-deepNavy dark:hover:bg-gold/90"
+                onClick={() => window.open('https://wa.me/5582999324884', '_blank')}
+              >
+                Fale Conosco
+              </Button>
+              <Button 
+                variant="outline"
+                className="border-[#e6e6e6] text-[#020817] hover:bg-gray-50 dark:border-gold/30 dark:text-gold dark:hover:bg-gold/10"
+                onClick={() => window.open('https://g.co/kgs/d2UwXh3', '_blank')}
+              >
+                Saiba Mais
+              </Button>
+            </div>
+          </div>
+
+          {/* News Carousel */}
+          <div className="mt-16">
+            <NewsCarousel />
+          </div>
+        </div>
       </div>
-    </section>;
+    </section>
+  );
 };
+
 export default AccountingSection;

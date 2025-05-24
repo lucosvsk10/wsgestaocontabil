@@ -1,64 +1,66 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Newspaper, RefreshCw } from 'lucide-react';
-import { Button } from "@/components/ui/button";
+
+import React from 'react';
+import { RefreshCw, Newspaper } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
 interface NewsItem {
   title: string;
   description: string;
   url: string;
   publishedAt: string;
 }
+
 interface NewsCardProps {
   news: NewsItem[];
   onRefresh: () => void;
   isRefreshing: boolean;
 }
-const NewsCard = ({
-  news,
-  onRefresh,
-  isRefreshing
-}: NewsCardProps) => {
-  const formatDate = (dateStr: string): string => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  };
-  return <Card className="border-gold/30 text-navy dark:text-white bg-deepNavy-90">
-      <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-        <div>
-          <CardTitle className="flex items-center gap-2 text-xl md:text-2xl">
-            <Newspaper className="text-gold" />
-            <span className="text-base font-light">Últimas Notícias</span>
-          </CardTitle>
-          <CardDescription className="text-navy/70 dark:text-white/70">
-            Notícias atualizadas diariamente
-          </CardDescription>
+
+const NewsCard = ({ news, onRefresh, isRefreshing }: NewsCardProps) => {
+  return (
+    <div className="bg-white dark:bg-deepNavy/60 border border-[#e6e6e6] dark:border-gold/30 rounded-xl p-6 shadow-sm">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <Newspaper className="h-6 w-6 text-[#efc349]" />
+          <h3 className="text-xl font-semibold text-[#020817] dark:text-gold">Notícias</h3>
         </div>
-        <Button variant="outline" size="icon" onClick={onRefresh} disabled={isRefreshing} className="border-gold/30 text-gold hover:text-white bg-white/50 dark:bg-gold-dark">
+        <Button
+          onClick={onRefresh}
+          disabled={isRefreshing}
+          variant="outline"
+          size="sm"
+          className="border-[#e6e6e6] dark:border-gold/30"
+        >
           <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          <span className="sr-only">Atualizar notícias</span>
+          Atualizar
         </Button>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-6">
-          {news.map((item, index) => <div key={index} className="border-b border-gold/10 pb-4 last:border-0">
-              <h3 className="text-base md:text-lg font-medium text-navy-light dark:text-gold mb-2">{item.title}</h3>
-              <p className="text-sm md:text-base text-navy/80 dark:text-white/80 mb-2">
-                {item.description}
-              </p>
-              <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2">
-                <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-purple hover:text-purple-400 text-sm transition-colors duration-300">
-                  Ler mais
-                </a>
-                <span className="text-navy/60 dark:text-white/60 text-sm">
-                  {formatDate(item.publishedAt)}
-                </span>
-              </div>
-            </div>)}
-        </div>
-      </CardContent>
-    </Card>;
+      </div>
+      
+      <div className="space-y-4">
+        {news.map((item, index) => (
+          <div
+            key={index}
+            className="bg-white dark:bg-deepNavy/40 border border-[#e6e6e6] dark:border-gold/20 rounded-lg p-4"
+          >
+            <h4 className="text-lg font-semibold text-[#020817] dark:text-white mb-2">
+              {item.title}
+            </h4>
+            <p className="text-[#6b7280] dark:text-white/70 mb-3">
+              {item.description}
+            </p>
+            <a
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#2563eb] dark:text-[#60a5fa] hover:underline text-sm font-medium"
+            >
+              Leia mais →
+            </a>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 };
+
 export default NewsCard;

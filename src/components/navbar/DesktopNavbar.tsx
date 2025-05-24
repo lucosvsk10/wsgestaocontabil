@@ -29,7 +29,7 @@ const DesktopNavbar = ({ handleLogout, navigateToDashboard }: DesktopNavbarProps
         <>
           {!shouldHideAccountButton && (
             <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center text-[#efc349] hover:text-[#d6a932] dark:text-gold dark:hover:text-gold/80 transition-colors duration-300">
+              <DropdownMenuTrigger className="flex items-center text-[#020817] hover:text-[#efc349] dark:text-gold dark:hover:text-gold/80 transition-colors duration-300">
                 <UserCircle size={20} className="mr-1" />
                 <span className="text-sm font-medium uppercase tracking-wider">CONTA</span>
               </DropdownMenuTrigger>
@@ -55,7 +55,7 @@ const DesktopNavbar = ({ handleLogout, navigateToDashboard }: DesktopNavbarProps
           {isOnDashboardPage && (
             <button 
               onClick={handleLogout} 
-              className="flex items-center text-[#efc349] hover:text-[#d6a932] dark:text-gold dark:hover:text-gold-light transition-colors duration-300"
+              className="flex items-center text-[#020817] hover:text-[#efc349] dark:text-gold dark:hover:text-gold-light transition-colors duration-300"
             >
               <LogOut size={20} className="mr-1" />
               <span className="text-sm font-medium uppercase tracking-wider">Sair</span>
@@ -63,7 +63,7 @@ const DesktopNavbar = ({ handleLogout, navigateToDashboard }: DesktopNavbarProps
           )}
         </>
       ) : (
-        <Link to="/login" className="flex items-center text-[#efc349] hover:text-[#d6a932] dark:text-gold dark:hover:text-gold-light transition-colors duration-300">
+        <Link to="/login" className="flex items-center text-[#020817] hover:text-[#efc349] dark:text-gold dark:hover:text-gold-light transition-colors duration-300">
           <UserCircle size={20} className="mr-1" />
           <span className="text-sm font-medium uppercase tracking-wider">Login</span>
         </Link>
@@ -85,7 +85,7 @@ const DesktopNavbar = ({ handleLogout, navigateToDashboard }: DesktopNavbarProps
       )}
       
       {/* Instagram link always at the end */}
-      <a href="https://www.instagram.com/ws_gestao_contabil?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer" className="text-[#efc349] hover:text-[#d6a932] dark:text-gold dark:hover:text-gold-light transition-colors duration-300" aria-label="Instagram">
+      <a href="https://www.instagram.com/ws_gestao_contabil?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer" className="text-[#020817] hover:text-[#efc349] dark:text-gold dark:hover:text-gold-light transition-colors duration-300" aria-label="Instagram">
         <Instagram size={20} />
       </a>
     </nav>
