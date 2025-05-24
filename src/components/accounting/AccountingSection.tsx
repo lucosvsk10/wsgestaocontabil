@@ -1,11 +1,15 @@
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Calculator, FileText, TrendingUp, Users, Building, Shield } from 'lucide-react';
 import NewsCarousel from './NewsCarousel';
 import { Button } from '@/components/ui/button';
+import { sampleNews } from './accountingData';
+import { NewsItem } from './types';
 
 const AccountingSection = () => {
   const sectionRef = useRef<HTMLDivElement>(null);
+  const [newsData, setNewsData] = useState<NewsItem[]>(sampleNews);
+  const [isNewsLoading, setIsNewsLoading] = useState(false);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -28,6 +32,15 @@ const AccountingSection = () => {
       }
     };
   }, []);
+
+  const refreshNews = () => {
+    setIsNewsLoading(true);
+    // Simulate API call delay
+    setTimeout(() => {
+      setNewsData([...sampleNews]);
+      setIsNewsLoading(false);
+    }, 1000);
+  };
 
   const features = [
     {
@@ -125,7 +138,11 @@ const AccountingSection = () => {
 
           {/* News Carousel */}
           <div className="mt-16">
-            <NewsCarousel />
+            <NewsCarousel 
+              newsData={newsData}
+              isNewsLoading={isNewsLoading}
+              refreshNews={refreshNews}
+            />
           </div>
         </div>
       </div>
