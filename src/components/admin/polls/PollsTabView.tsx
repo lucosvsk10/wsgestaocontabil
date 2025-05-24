@@ -21,32 +21,31 @@ export const PollsTabView = () => {
     setSelectedPoll(poll);
   };
   
-  return <Tabs defaultValue="create" className="space-y-4">
-      <TabsList className="grid w-full grid-cols-3 bg-white border border-[#e6e6e6] shadow-sm dark:bg-deepNavy-80">
-        <TabsTrigger value="create" className="text-[#020817] data-[state=active]:bg-[#020817] data-[state=active]:text-white dark:text-[#d9d9d9] dark:data-[state=active]:bg-transparent dark:data-[state=active]:border-b-2 dark:data-[state=active]:border-gold dark:data-[state=active]:text-gold">
+  return (
+    <Tabs defaultValue="create" className="space-y-4">
+      <TabsList className="grid w-full grid-cols-3 bg-white border border-[#e6e6e6] shadow-sm dark:bg-transparent dark:border dark:border-[#efc349]">
+        <TabsTrigger value="create" className="text-[#020817] data-[state=active]:bg-[#020817] data-[state=active]:text-white dark:text-[#d9d9d9] dark:data-[state=active]:bg-transparent dark:data-[state=active]:border-b-2 dark:data-[state=active]:border-[#efc349] dark:data-[state=active]:text-[#efc349]">
           Criar nova enquete
         </TabsTrigger>
-        <TabsTrigger value="manage" className="text-[#020817] data-[state=active]:bg-[#020817] data-[state=active]:text-white dark:text-[#d9d9d9] dark:data-[state=active]:bg-transparent dark:data-[state=active]:border-b-2 dark:data-[state=active]:border-gold dark:data-[state=active]:text-gold">
+        <TabsTrigger value="manage" className="text-[#020817] data-[state=active]:bg-[#020817] data-[state=active]:text-white dark:text-[#d9d9d9] dark:data-[state=active]:bg-transparent dark:data-[state=active]:border-b-2 dark:data-[state=active]:border-[#efc349] dark:data-[state=active]:text-[#efc349]">
           Gerenciar enquetes
         </TabsTrigger>
-        <TabsTrigger value="results" className="text-[#020817] data-[state=active]:bg-[#020817] data-[state=active]:text-white dark:text-[#d9d9d9] dark:data-[state=active]:bg-transparent dark:data-[state=active]:border-b-2 dark:data-[state=active]:border-gold dark:data-[state=active]:text-gold">
+        <TabsTrigger value="results" className="text-[#020817] data-[state=active]:bg-[#020817] data-[state=active]:text-white dark:text-[#d9d9d9] dark:data-[state=active]:bg-transparent dark:data-[state=active]:border-b-2 dark:data-[state=active]:border-[#efc349] dark:data-[state=active]:text-[#efc349]">
           Resultados de enquetes
         </TabsTrigger>
       </TabsList>
 
       <TabsContent value="create">
-        <div className="p-4 bg-white border border-[#e6e6e6] rounded-lg shadow-sm dark:bg-transparent dark:border-gold dark:border-opacity-30">
-          
-          
+        <div className="p-4 bg-white border border-[#e6e6e6] rounded-lg shadow-sm dark:bg-transparent dark:border dark:border-[#efc349]">
           <Tabs value={pollTypeTab} onValueChange={setPollTypeTab} className="mb-6">
-            <TabsList className="grid w-full grid-cols-3 bg-white border border-[#e6e6e6] shadow-sm dark:bg-deepNavy-80">
-              <TabsTrigger value="standard" className="text-[#020817] data-[state=active]:bg-[#020817] data-[state=active]:text-white dark:text-[#d9d9d9] dark:data-[state=active]:bg-transparent dark:data-[state=active]:border-b-2 dark:data-[state=active]:border-gold dark:data-[state=active]:text-gold">
+            <TabsList className="grid w-full grid-cols-3 bg-white border border-[#e6e6e6] shadow-sm dark:bg-transparent dark:border dark:border-[#efc349]">
+              <TabsTrigger value="standard" className="text-[#020817] data-[state=active]:bg-[#020817] data-[state=active]:text-white dark:text-[#d9d9d9] dark:data-[state=active]:bg-transparent dark:data-[state=active]:border-b-2 dark:data-[state=active]:border-[#efc349] dark:data-[state=active]:text-[#efc349]">
                 Enquete Padrão
               </TabsTrigger>
-              <TabsTrigger value="numerical" className="text-[#020817] data-[state=active]:bg-[#020817] data-[state=active]:text-white dark:text-[#d9d9d9] dark:data-[state=active]:bg-transparent dark:data-[state=active]:border-b-2 dark:data-[state=active]:border-gold dark:data-[state=active]:text-gold">
+              <TabsTrigger value="numerical" className="text-[#020817] data-[state=active]:bg-[#020817] data-[state=active]:text-white dark:text-[#d9d9d9] dark:data-[state=active]:bg-transparent dark:data-[state=active]:border-b-2 dark:data-[state=active]:border-[#efc349] dark:data-[state=active]:text-[#efc349]">
                 Formulário Numeral
               </TabsTrigger>
-              <TabsTrigger value="form" className="text-[#020817] data-[state=active]:bg-[#020817] data-[state=active]:text-white dark:text-[#d9d9d9] dark:data-[state=active]:bg-transparent dark:data-[state=active]:border-b-2 dark:data-[state=active]:border-gold dark:data-[state=active]:text-gold">
+              <TabsTrigger value="form" className="text-[#020817] data-[state=active]:bg-[#020817] data-[state=active]:text-white dark:text-[#d9d9d9] dark:data-[state=active]:bg-transparent dark:data-[state=active]:border-b-2 dark:data-[state=active]:border-[#efc349] dark:data-[state=active]:text-[#efc349]">
                 Formulário Completo
               </TabsTrigger>
             </TabsList>
@@ -67,17 +66,18 @@ export const PollsTabView = () => {
       </TabsContent>
 
       <TabsContent value="manage">
-        <div className="p-4 bg-white border border-[#e6e6e6] rounded-lg shadow-sm dark:bg-transparent dark:border-gold dark:border-opacity-30">
-          <h3 className="text-xl font-medium mb-4 text-[#020817] dark:text-gold">Gerenciar Enquetes</h3>
+        <div className="p-4 bg-white border border-[#e6e6e6] rounded-lg shadow-sm dark:bg-transparent dark:border dark:border-[#efc349]">
+          <h3 className="text-xl font-medium mb-4 text-[#020817] dark:text-[#efc349]">Gerenciar Enquetes</h3>
           <ManagePolls refreshTrigger={refreshTrigger} onViewResults={handleViewResults} onPollDeleted={handlePollCreated} />
         </div>
       </TabsContent>
 
       <TabsContent value="results">
-        <div className="p-4 bg-white border border-[#e6e6e6] rounded-lg shadow-sm dark:bg-transparent dark:border-gold dark:border-opacity-30">
-          <h3 className="text-xl font-medium mb-4 text-[#020817] dark:text-gold">Resultados de Enquetes</h3>
+        <div className="p-4 bg-white border border-[#e6e6e6] rounded-lg shadow-sm dark:bg-transparent dark:border dark:border-[#efc349]">
+          <h3 className="text-xl font-medium mb-4 text-[#020817] dark:text-[#efc349]">Resultados de Enquetes</h3>
           <PollResults selectedPoll={selectedPoll} />
         </div>
       </TabsContent>
-    </Tabs>;
+    </Tabs>
+  );
 };
