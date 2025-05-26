@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useToast } from "@/hooks/use-toast";
@@ -8,15 +7,15 @@ import EmptyState from "./tax-simulations/EmptyState";
 import SimulationsSummary from "./tax-simulations/SimulationsSummary";
 import SimulationsTable from "./tax-simulations/SimulationsTable";
 import SearchFilter from "./tax-simulations/SearchFilter";
-
 const TaxSimulationResults = () => {
   const [simulations, setSimulations] = useState<TaxSimulation[]>([]);
   const [filteredSimulations, setFilteredSimulations] = useState<TaxSimulation[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [userDetails, setUserDetails] = useState<UserDetails>({});
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   useEffect(() => {
     fetchSimulations();
     const subscription = supabase.channel('tax_simulations_changes').on('postgres_changes', {
@@ -30,7 +29,6 @@ const TaxSimulationResults = () => {
       subscription.unsubscribe();
     };
   }, []);
-
   useEffect(() => {
     if (simulations.length > 0) {
       const results = simulations.filter(sim => {
@@ -49,7 +47,6 @@ const TaxSimulationResults = () => {
       setFilteredSimulations(results);
     }
   }, [searchTerm, simulations, userDetails]);
-
   const fetchSimulations = async () => {
     try {
       setLoading(true);
@@ -81,7 +78,6 @@ const TaxSimulationResults = () => {
       setLoading(false);
     }
   };
-
   const fetchUserDetails = async (userIds: string[]) => {
     if (userIds.length === 0) return;
     try {
@@ -106,30 +102,25 @@ const TaxSimulationResults = () => {
       console.error("Erro ao buscar detalhes dos usuários:", error);
     }
   };
-
   const getUserName = (simulation: TaxSimulation) => {
     if (simulation.user_id && userDetails[simulation.user_id]?.name) {
       return userDetails[simulation.user_id].name;
     }
     return simulation.nome || "Anônimo";
   };
-
   const getUserEmail = (simulation: TaxSimulation) => {
     if (simulation.user_id && userDetails[simulation.user_id]?.email) {
       return userDetails[simulation.user_id].email;
     }
     return simulation.email || "N/A";
   };
-
   if (loading) {
     return <LoadingState />;
   }
-
-  return (
-    <div className="space-y-8">
+  return <div className="space-y-8">
       <div className="flex flex-col md:flex-row justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-[#020817] dark:text-[#efc349] mb-4">
+          <h1 className="text-3xl text-[#020817] dark:text-[#efc349] mb-4 font-extralight">
             Simulações de Imposto de Renda
           </h1>
           <p className="text-gray-600 dark:text-white/70">
@@ -140,19 +131,10 @@ const TaxSimulationResults = () => {
         <SearchFilter searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
       </div>
       
-      {filteredSimulations.length === 0 ? (
-        <EmptyState searchTerm={searchTerm} />
-      ) : (
-        <div className="space-y-8">
+      {filteredSimulations.length === 0 ? <EmptyState searchTerm={searchTerm} /> : <div className="space-y-8">
           <SimulationsSummary simulations={filteredSimulations} />
-          <SimulationsTable 
-            simulations={filteredSimulations}
-            getUserName={getUserName}
-            getUserEmail={getUserEmail}
-          />
-        </div>
-      )}
-    </div>
-  );
+          <SimulationsTable simulations={filteredSimulations} getUserName={getUserName} getUserEmail={getUserEmail} />
+        </div>}
+    </div>;
 };
 export default TaxSimulationResults;
