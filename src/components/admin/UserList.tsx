@@ -130,7 +130,7 @@ export const UserList = ({
           </div> : <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-3">
               <p className="text-sm text-[#6b7280] dark:text-white/70">Espaço Utilizado</p>
-              <p className="text-2xl font-bold text-[#020817] dark:text-white">
+              <p className="text-2xl text-[#020817] dark:text-white font-thin">
                 {usedStorageMB.toFixed(2)} MB de {storageLimitMB} MB
               </p>
               <div className="w-full bg-gray-200 rounded-full h-3 mt-3 dark:bg-gray-700">
@@ -142,7 +142,7 @@ export const UserList = ({
             
             <div className="space-y-3">
               <p className="text-sm text-[#6b7280] dark:text-white/70">Espaço Disponível</p>
-              <p className="text-2xl font-bold text-[#020817] dark:text-white">
+              <p className="text-2xl text-[#020817] dark:text-white font-extralight">
                 {remainingStorageMB.toFixed(2)} MB restantes
               </p>
             </div>
