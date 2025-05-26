@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { LogOut, Lock, Database, RefreshCw, Moon } from "lucide-react";
@@ -10,11 +9,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-
 export const SettingsView = () => {
-  const { toast } = useToast();
-  const { theme, setTheme } = useTheme();
-  const { user, signOut } = useAuth();
+  const {
+    toast
+  } = useToast();
+  const {
+    theme,
+    setTheme
+  } = useTheme();
+  const {
+    user,
+    signOut
+  } = useAuth();
   const [openDatabaseDialog, setOpenDatabaseDialog] = useState(false);
   const [dbSize, setDbSize] = useState("Calculando...");
   const [storageSize, setStorageSize] = useState("Calculando...");
@@ -23,7 +29,6 @@ export const SettingsView = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
-  
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -40,11 +45,9 @@ export const SettingsView = () => {
       });
     }
   };
-  
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark");
   };
-  
   const fetchDatabaseInfo = async () => {
     try {
       setIsLoading(true);
@@ -62,7 +65,6 @@ export const SettingsView = () => {
       setIsLoading(false);
     }
   };
-  
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordError("");
@@ -72,7 +74,9 @@ export const SettingsView = () => {
     }
     try {
       setIsLoading(true);
-      const { error } = await supabase.auth.updateUser({
+      const {
+        error
+      } = await supabase.auth.updateUser({
         password: newPassword
       });
       if (error) throw error;
@@ -90,11 +94,9 @@ export const SettingsView = () => {
       setIsLoading(false);
     }
   };
-  
-  return (
-    <div className="space-y-12">
+  return <div className="space-y-12">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-[#020817] dark:text-[#efc349] mb-4">Configurações</h1>
+        <h1 className="text-3xl text-[#020817] dark:text-[#efc349] mb-4 font-extralight">Configurações</h1>
         <p className="text-gray-600 dark:text-white/70">Gerencie suas configurações pessoais e do sistema</p>
       </div>
       
@@ -110,57 +112,28 @@ export const SettingsView = () => {
           <form onSubmit={handleChangePassword} className="space-y-8">
             <div className="space-y-3">
               <Label htmlFor="currentPassword" className="text-[#020817] dark:text-white font-medium">Senha Atual</Label>
-              <Input 
-                id="currentPassword" 
-                type="password" 
-                value={currentPassword} 
-                onChange={e => setCurrentPassword(e.target.value)} 
-                required 
-                className="transition-all duration-300"
-              />
+              <Input id="currentPassword" type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} required className="transition-all duration-300" />
             </div>
             
             <div className="space-y-3">
               <Label htmlFor="newPassword" className="text-[#020817] dark:text-white font-medium">Nova Senha</Label>
-              <Input 
-                id="newPassword" 
-                type="password" 
-                value={newPassword} 
-                onChange={e => setNewPassword(e.target.value)} 
-                required 
-                className="transition-all duration-300"
-              />
+              <Input id="newPassword" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required className="transition-all duration-300" />
             </div>
             
             <div className="space-y-3">
               <Label htmlFor="confirmPassword" className="text-[#020817] dark:text-white font-medium">Confirmar Senha</Label>
-              <Input 
-                id="confirmPassword" 
-                type="password" 
-                value={confirmPassword} 
-                onChange={e => setConfirmPassword(e.target.value)} 
-                required 
-                className="transition-all duration-300"
-              />
+              <Input id="confirmPassword" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required className="transition-all duration-300" />
             </div>
             
             {passwordError && <div className="text-sm text-red-500 dark:text-red-400 p-3 rounded-lg">{passwordError}</div>}
             
-            <Button 
-              type="submit" 
-              className="w-full transition-all duration-300 hover:scale-105" 
-              disabled={isLoading}
-            >
+            <Button type="submit" className="w-full transition-all duration-300 hover:scale-105" disabled={isLoading}>
               <Lock className="mr-2 h-4 w-4" />
               Alterar Senha
             </Button>
           </form>
           
-          <Button 
-            variant="destructive" 
-            className="w-full transition-all duration-300 hover:scale-105" 
-            onClick={handleSignOut}
-          >
+          <Button variant="destructive" className="w-full transition-all duration-300 hover:scale-105" onClick={handleSignOut}>
             <LogOut className="mr-2 h-4 w-4" />
             Fazer Logout
           </Button>
@@ -179,19 +152,10 @@ export const SettingsView = () => {
                 <Moon className="h-5 w-5 text-[#020817] dark:text-[#efc349]" />
                 <span className="text-[#020817] dark:text-white font-medium">Modo Escuro</span>
               </div>
-              <Switch 
-                checked={theme === "dark"} 
-                onCheckedChange={toggleTheme} 
-                className="data-[state=checked]:bg-[#efc349]"
-              />
+              <Switch checked={theme === "dark"} onCheckedChange={toggleTheme} className="data-[state=checked]:bg-[#efc349]" />
             </div>
             
-            <Button 
-              variant="outline" 
-              className="w-full transition-all duration-300 hover:scale-105" 
-              onClick={fetchDatabaseInfo} 
-              disabled={isLoading}
-            >
+            <Button variant="outline" className="w-full transition-all duration-300 hover:scale-105" onClick={fetchDatabaseInfo} disabled={isLoading}>
               <Database className="mr-2 h-4 w-4" />
               Ver uso do banco de dados
             </Button>
@@ -233,17 +197,12 @@ export const SettingsView = () => {
             </div>
           </div>
           <div className="flex justify-center">
-            <Button 
-              variant="outline" 
-              onClick={() => setOpenDatabaseDialog(false)} 
-              className="transition-all duration-300 hover:scale-105"
-            >
+            <Button variant="outline" onClick={() => setOpenDatabaseDialog(false)} className="transition-all duration-300 hover:scale-105">
               <RefreshCw className="mr-2 h-4 w-4" />
               Atualizar
             </Button>
           </div>
         </DialogContent>
       </Dialog>
-    </div>
-  );
+    </div>;
 };
