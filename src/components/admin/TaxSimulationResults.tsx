@@ -126,13 +126,13 @@ const TaxSimulationResults = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between gap-4">
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row justify-between gap-6">
         <div>
-          <h2 className="text-2xl font-semibold text-navy dark:text-gold">
+          <h1 className="text-3xl font-bold text-[#020817] dark:text-[#efc349] mb-4">
             Simulações de Imposto de Renda
-          </h2>
-          <p className="text-muted-foreground dark:text-gray-300">
+          </h1>
+          <p className="text-gray-600 dark:text-white/70">
             Visualize todas as simulações feitas pelos usuários
           </p>
         </div>
@@ -143,7 +143,7 @@ const TaxSimulationResults = () => {
       {filteredSimulations.length === 0 ? (
         <EmptyState searchTerm={searchTerm} />
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-8">
           <SimulationsSummary simulations={filteredSimulations} />
           <SimulationsTable 
             simulations={filteredSimulations}

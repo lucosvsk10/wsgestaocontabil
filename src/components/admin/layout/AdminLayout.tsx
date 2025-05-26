@@ -49,7 +49,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
           }
         </Button>
         
-        <main className="flex-1 overflow-y-auto p-8 bg-[#FFF1DE] dark:bg-[#020817] space-y-8">
+        <main className="flex-1 overflow-y-auto p-8 space-y-8">
           {children}
         </main>
       </div>

@@ -79,13 +79,14 @@ export function AdminTabsView({
   setNoExpiration,
   selectedPoll
 }: AdminTabsViewProps) {
-  return <div className="w-full bg-white border border-[#e6e6e6] rounded-lg shadow-sm dark:bg-transparent dark:border-gold dark:border-opacity-30 dark:text-[#d9d9d9]">
-      <div className="mt-4 bg-white dark:bg-transparent">
+  return (
+    <div className="w-full">
+      <div className="mt-4">
         {/* Tab Content - Dashboard */}
         {activeTab === "dashboard" && <AdminDashboardView users={users || []} supabaseUsers={supabaseUsers || []} documents={documents || []} />}
 
         {/* Tab Content - Users */}
-        {activeTab === "users" && <div className="space-y-4 dark:bg-transparent">
+        {activeTab === "users" && <div className="space-y-8">
             {users && supabaseUsers && <UserList supabaseUsers={supabaseUsers} users={users} isLoading={isLoadingUsers || isLoadingAuthUsers} setSelectedUserId={handleDocumentButtonClick || (() => {})} setSelectedUserForPasswordChange={setSelectedUserForPasswordChange || (() => {})} passwordForm={passwordForm || {}} refreshUsers={refreshUsers || (() => {})} />}
           </div>}
 
@@ -93,24 +94,25 @@ export function AdminTabsView({
         {activeTab === "user-documents" && <UserDocumentView users={users || []} supabaseUsers={supabaseUsers || []} />}
 
         {/* Tab Content - Polls */}
-        {activeTab === "polls" && <div className="space-y-4">
+        {activeTab === "polls" && <div className="space-y-8">
             <PollsTabView />
           </div>}
 
         {/* Tab Content - Tools */}
-        {activeTab === "tools" && <div className="space-y-4">
+        {activeTab === "tools" && <div className="space-y-8">
             <AdminToolsView />
           </div>}
 
         {/* Tab Content - Tax Simulations */}
-        {activeTab === "tax-simulations" && <div className="space-y-4">
+        {activeTab === "tax-simulations" && <div className="space-y-8">
             <TaxSimulationResults />
           </div>}
 
         {/* Tab Content - Settings */}
-        {activeTab === "settings" && <div className="space-y-4">
+        {activeTab === "settings" && <div className="space-y-8">
             <SettingsView />
           </div>}
       </div>
-    </div>;
+    </div>
+  );
 }

@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useUserManagement } from "@/hooks/useUserManagement";
 import { useDocumentManagement } from "@/hooks/document-management/useDocumentManagement";
 import { AdminDocumentManager } from "./document-management/AdminDocumentManager";
@@ -51,12 +50,12 @@ export const UserDocumentView = ({ users = [], supabaseUsers = [] }: UserDocumen
   if (!userId) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="text-center space-y-6">
+        <div className="text-center space-y-8">
           <div className="w-16 h-16 mx-auto bg-gray-100 dark:bg-[#efc349]/10 rounded-full flex items-center justify-center">
             <ArrowLeft className="w-8 h-8 text-gray-400 dark:text-[#efc349]" />
           </div>
           <div>
-            <h3 className="text-lg font-medium text-[#020817] dark:text-white mb-2">Nenhum usuário selecionado</h3>
+            <h3 className="text-xl font-medium text-[#020817] dark:text-white mb-3">Nenhum usuário selecionado</h3>
             <p className="text-gray-500 dark:text-white/70">Selecione um usuário para gerenciar seus documentos</p>
           </div>
           <Button 
@@ -86,24 +85,22 @@ export const UserDocumentView = ({ users = [], supabaseUsers = [] }: UserDocumen
         </Button>
         <div>
           <h1 className="text-3xl font-bold text-[#020817] dark:text-[#efc349]">Documentos do Usuário</h1>
-          <p className="text-gray-600 dark:text-white/70 mt-1">Gerencie os documentos de {userName}</p>
+          <p className="text-gray-600 dark:text-white/70 mt-2">Gerencie os documentos de {userName}</p>
         </div>
       </div>
 
-      <Card className="border-0 shadow-none dark:bg-transparent dark:border dark:border-[#efc349]/20">
-        <CardContent className="p-8">
-          <AdminDocumentManager 
-            userId={userId} 
-            userName={userName} 
-            userEmail={userEmail} 
-            documents={documents} 
-            isLoadingDocuments={isLoadingDocuments} 
-            loadingDocumentIds={loadingDocumentIds} 
-            handleDownload={handleDownload} 
-            handleDeleteDocument={handleDeleteDocument} 
-          />
-        </CardContent>
-      </Card>
+      <div className="p-8 space-y-8">
+        <AdminDocumentManager 
+          userId={userId} 
+          userName={userName} 
+          userEmail={userEmail} 
+          documents={documents} 
+          isLoadingDocuments={isLoadingDocuments} 
+          loadingDocumentIds={loadingDocumentIds} 
+          handleDownload={handleDownload} 
+          handleDeleteDocument={handleDeleteDocument} 
+        />
+      </div>
     </div>
   );
 };

@@ -114,86 +114,87 @@ export const UserList = ({
   const remainingStorageMB = Math.max(0, storageLimitMB - usedStorageMB);
 
   return (
-    <div className="space-y-8">
-      <Card className="border border-[#e6e6e6] bg-white shadow-sm rounded-lg dark:border-[#efc349] dark:bg-transparent dark:shadow-none">
-        <CardHeader className="bg-white rounded-t-lg dark:bg-transparent">
-          <div className="flex justify-between items-center">
-            <CardTitle className="text-2xl font-semibold text-[#020817] dark:text-[#efc349]">Lista de Usuários</CardTitle>
-            <Button onClick={() => setIsUserCreationDialogOpen(true)} className="bg-[#020817] hover:bg-[#0f172a] text-white dark:bg-transparent dark:border dark:border-[#efc349] dark:text-[#efc349] dark:hover:bg-transparent">
-              <Plus className="mr-2 h-4 w-4" /> Novo Usuário
-            </Button>
-          </div>
-        </CardHeader>
+    <div className="space-y-12">
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold text-[#020817] dark:text-[#efc349] mb-4">Lista de Usuários</h1>
+          <p className="text-gray-600 dark:text-white/70">Gerencie todos os usuários do sistema</p>
+        </div>
+        <Button 
+          onClick={() => setIsUserCreationDialogOpen(true)} 
+          className="transition-all duration-300 hover:scale-105"
+        >
+          <Plus className="mr-2 h-4 w-4" /> 
+          Novo Usuário
+        </Button>
+      </div>
 
-        {/* Storage Statistics */}
-        <CardContent className="pt-6">
-          <div className="rounded-lg p-6 shadow-sm bg-white border border-[#e6e6e6] dark:bg-transparent dark:border-[#efc349] dark:shadow-none mb-8">
-            <h3 className="mb-4 text-lg font-semibold text-[#020817] dark:text-[#efc349]">Estatísticas de Armazenamento</h3>
-            
-            {isLoadingStorage ? (
-              <div className="flex justify-center py-8">
-                <LoadingSpinner />
-              </div>
-            ) : error ? (
-              <div className="text-red-500 text-center py-4">
-                Erro ao carregar estatísticas: {error}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="rounded-lg p-4 border border-[#e6e6e6] bg-white shadow-sm dark:border-[#efc349] dark:bg-transparent dark:shadow-none">
-                  <p className="text-sm text-[#6b7280] dark:text-white/70">Espaço Utilizado</p>
-                  <p className="text-lg font-semibold text-[#020817] dark:text-white">
-                    {usedStorageMB.toFixed(2)} MB de {storageLimitMB} MB
-                  </p>
-                  <div className="w-full bg-gray-200 rounded-full h-2.5 mt-3 dark:bg-gray-600">
-                    <div 
-                      className="bg-[#2563eb] h-2.5 rounded-full dark:bg-[#efc349]" 
-                      style={{width: `${Math.min(100, usedStorageMB / storageLimitMB * 100)}%`}}
-                    ></div>
-                  </div>
-                </div>
-                
-                <div className="rounded-lg p-4 border border-[#e6e6e6] bg-white shadow-sm dark:border-[#efc349] dark:bg-transparent dark:shadow-none">
-                  <p className="text-sm text-[#6b7280] dark:text-white/70">Espaço Disponível</p>
-                  <p className="text-lg font-semibold text-[#020817] dark:text-white">
-                    {remainingStorageMB.toFixed(2)} MB restantes
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {isLoading ? (
+      {/* Storage Statistics */}
+      <div className="p-8 space-y-6 bg-white dark:bg-transparent rounded-xl border border-gray-100 dark:border-none">
+        <h3 className="text-xl font-semibold text-[#020817] dark:text-[#efc349]">Estatísticas de Armazenamento</h3>
+        
+        {isLoadingStorage ? (
+          <div className="flex justify-center py-8">
             <LoadingSpinner />
-          ) : (
-            <div className="space-y-8">
-              {/* Seção de Clientes */}
-              <UserTable 
-                users={clientUsers} 
-                userInfoList={users} 
-                title="Clientes" 
-                setSelectedUserId={setSelectedUserId} 
-                setSelectedUserForPasswordChange={setSelectedUserForPasswordChange} 
-                passwordForm={passwordForm} 
-                refreshUsers={refreshUsers} 
-                showDocumentButton={true} 
-                isAdminSection={false} 
-              />
-
-              {/* Seção de Administradores */}
-              <UserTable 
-                users={adminUsers} 
-                userInfoList={users} 
-                title="Administradores" 
-                setSelectedUserForPasswordChange={setSelectedUserForPasswordChange} 
-                passwordForm={passwordForm} 
-                refreshUsers={refreshUsers} 
-                isAdminSection={true} 
-              />
+          </div>
+        ) : error ? (
+          <div className="text-red-500 text-center py-4">
+            Erro ao carregar estatísticas: {error}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-3">
+              <p className="text-sm text-[#6b7280] dark:text-white/70">Espaço Utilizado</p>
+              <p className="text-2xl font-bold text-[#020817] dark:text-white">
+                {usedStorageMB.toFixed(2)} MB de {storageLimitMB} MB
+              </p>
+              <div className="w-full bg-gray-200 rounded-full h-3 mt-3 dark:bg-gray-700">
+                <div 
+                  className="bg-[#2563eb] h-3 rounded-full dark:bg-[#efc349] transition-all duration-300" 
+                  style={{width: `${Math.min(100, usedStorageMB / storageLimitMB * 100)}%`}}
+                ></div>
+              </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+            
+            <div className="space-y-3">
+              <p className="text-sm text-[#6b7280] dark:text-white/70">Espaço Disponível</p>
+              <p className="text-2xl font-bold text-[#020817] dark:text-white">
+                {remainingStorageMB.toFixed(2)} MB restantes
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {isLoading ? (
+        <LoadingSpinner />
+      ) : (
+        <div className="space-y-12">
+          {/* Seção de Clientes */}
+          <UserTable 
+            users={clientUsers} 
+            userInfoList={users} 
+            title="Clientes" 
+            setSelectedUserId={setSelectedUserId} 
+            setSelectedUserForPasswordChange={setSelectedUserForPasswordChange} 
+            passwordForm={passwordForm} 
+            refreshUsers={refreshUsers} 
+            showDocumentButton={true} 
+            isAdminSection={false} 
+          />
+
+          {/* Seção de Administradores */}
+          <UserTable 
+            users={adminUsers} 
+            userInfoList={users} 
+            title="Administradores" 
+            setSelectedUserForPasswordChange={setSelectedUserForPasswordChange} 
+            passwordForm={passwordForm} 
+            refreshUsers={refreshUsers} 
+            isAdminSection={true} 
+          />
+        </div>
+      )}
 
       {/* User Creation Dialog */}
       <UserCreationDialog 
