@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 interface SystemSummaryProps {
   clientsCount: number;
@@ -14,7 +13,7 @@ export const SystemSummary = ({
 }: SystemSummaryProps) => {
   return <Card className="bg-white dark:bg-deepNavy/60 border border-gray-200 dark:border-gold/30 dark:backdrop-blur-sm">
       <CardHeader className="border-b border-gray-200 dark:border-gold/30 bg-white dark:bg-deepNavy/80">
-        <CardTitle className="text-lg font-semibold text-navy-dark dark:text-gold">
+        <CardTitle className="text-lg text-navy-dark dark:text-gold font-extralight">
           Resumo do Sistema
         </CardTitle>
       </CardHeader>

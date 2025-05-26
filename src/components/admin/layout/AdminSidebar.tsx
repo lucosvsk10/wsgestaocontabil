@@ -21,7 +21,7 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
       <div className={`transition-all duration-300 ${active ? "text-[#efc349] scale-110" : "text-gray-500 dark:text-white/70 group-hover:text-[#efc349] group-hover:scale-105"}`}>
         {icon}
       </div>
-      <span className="font-medium text-sm tracking-wide">{label}</span>
+      <span className="tracking-wide text-sm font-extralight">{label}</span>
     </Link>;
 };
 interface AdminSidebarProps {

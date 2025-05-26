@@ -21,7 +21,7 @@ export const StatisticsCard = ({
             {icon}
           </div>
         </div>
-        <CardTitle className="text-lg font-semibold text-navy-dark dark:text-gold">
+        <CardTitle className="text-lg text-navy-dark dark:text-gold font-extralight">
           {title}
         </CardTitle>
         <p className="font-bold mt-2 text-gray-700 dark:text-white text-base">

@@ -15,7 +15,7 @@ export const RecentDocumentsTable = ({
 }: RecentDocumentsTableProps) => {
   return <Card className="bg-white dark:bg-navy-medium border border-gray-200 dark:border-navy-lighter/30">
       <CardHeader className="border-b border-gray-200 dark:border-navy-lighter/30 bg-inherit">
-        <CardTitle className="text-lg font-semibold text-navy dark:text-gold">
+        <CardTitle className="text-lg text-navy dark:text-gold font-extralight">
           Últimos documentos enviados
         </CardTitle>
       </CardHeader>
