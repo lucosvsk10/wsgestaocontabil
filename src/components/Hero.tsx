@@ -44,7 +44,7 @@ const Hero = () => {
                 WS GESTÃO CONTÁBIL
               </h1>
               
-              <p className="text-base mt-2 leading-relaxed font-thin text-gold-dark">
+              <p className="text-base mt-2 leading-relaxed font-thin text-[#46413d] dark:text-gold-dark">
                 Soluções eficientes e personalizadas para sua empresa prosperar
               </p>
               
@@ -102,7 +102,13 @@ const Hero = () => {
             <div className="flex flex-col items-center justify-center">
               <div className="flex flex-col items-center bg-inherit max-w-[250px] md:max-w-[300px]">
                 <div className="w-[70%] md:w-[80%]">
-                  <img src="/lovable-uploads/a87b6e5f-5e26-4b01-bf74-865e0ec514a7.png" alt="Símbolo da Contabilidade" className="w-full h-full object-contain animate-fade-in" />
+                  <img 
+                    src={theme === 'light' 
+                      ? "/lovable-uploads/99f722e6-cc97-4cb4-8141-6a28a446db88.png" 
+                      : "/lovable-uploads/1eaf9486-7e70-4235-adbf-53d8043d5b91.png"} 
+                    alt="Símbolo da Contabilidade" 
+                    className="w-full h-full object-contain animate-fade-in" 
+                  />
                 </div>
                 <p className="text-xs text-muted-foreground mt-2 text-center italic px-[20px]">
                   O caduceu é um símbolo da contabilidade, representando a sabedoria, o conhecimento e a proteção do comércio e das riquezas, características do profissional contábil.
