@@ -98,7 +98,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
       {/* Logo area */}
       <div className="h-20 flex items-center justify-center px-6 border-b border-gray-100 dark:border-[#020817]">
         <Link to="/" className="flex items-center justify-center transition-all duration-300 hover:scale-105">
-          {open ? <img src={theme === 'light' ? "/lovable-uploads/f7fdf0cf-f16c-4df7-a92c-964aadea9539.png" : "/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png"} alt="WS Gestão Contábil" className="h-10" /> : <img src={theme === 'light' ? "/lovable-uploads/83322e23-9ed8-4622-8631-8022a1d10c19.png" : "/lovable-uploads/ed055b1a-ba3e-4890-b78d-1d83e85b592b.png"} alt="WS Gestão Contábil" className="h-10" />}
+          {open ? <img src={theme === 'light' ? "/lovable-uploads/f7fdf0cf-f16c-4df7-a92c-964aadea9539.png" : "/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png"} alt="WS Gestão Contábil" className="h-8 right-11" /> : <img src={theme === 'light' ? "/lovable-uploads/83322e23-9ed8-4622-8631-8022a1d10c19.png" : "/lovable-uploads/ed055b1a-ba3e-4890-b78d-1d83e85b592b.png"} alt="WS Gestão Contábil" className="h-10" />}
         </Link>
       </div>
       
