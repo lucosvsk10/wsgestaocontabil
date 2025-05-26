@@ -10,17 +10,17 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-[#020817] text-white hover:bg-[#0f172a] shadow-sm dark:border dark:border-gold dark:border-opacity-40 dark:bg-transparent dark:text-[#d9d9d9] dark:hover:bg-gold/10",
+        default: "bg-[#020817] text-white hover:bg-[#0f172a] shadow-sm dark:bg-transparent dark:border dark:border-[#efc349] dark:text-[#efc349] dark:hover:bg-transparent",
         destructive:
-          "bg-red-500 text-white hover:bg-red-600 dark:bg-transparent dark:border dark:border-red-500/70 dark:text-red-400 dark:hover:bg-red-900/20",
+          "bg-red-500 text-white hover:bg-red-600 dark:bg-transparent dark:border dark:border-red-500/70 dark:text-red-400 dark:hover:bg-transparent",
         outline:
-          "border border-[#e6e6e6] bg-white hover:bg-gray-50 hover:text-[#020817] dark:border-gold dark:border-opacity-40 dark:bg-transparent dark:text-[#d9d9d9] dark:hover:bg-gold/10",
+          "border border-[#e6e6e6] bg-white hover:bg-gray-50 hover:text-[#020817] dark:border-[#efc349] dark:bg-transparent dark:text-[#efc349] dark:hover:bg-transparent",
         secondary:
-          "bg-[#f3f4f6] text-[#020817] hover:bg-[#e5e7eb] dark:bg-transparent dark:border dark:border-gold dark:border-opacity-30 dark:text-[#d9d9d9] dark:hover:bg-gold/10",
-        ghost: "hover:bg-[#f3f4f6] hover:text-[#020817] dark:hover:bg-gold/10 dark:hover:text-[#d9d9d9]",
-        link: "text-[#2563eb] underline-offset-4 hover:underline dark:text-gold",
-        document: "bg-blue-50 text-[#2563eb] hover:bg-blue-100 dark:bg-transparent dark:border dark:border-gold dark:border-opacity-40 dark:text-[#d9d9d9] dark:hover:bg-gold/10",
-        admin: "bg-[#020817] text-white hover:bg-[#0f172a] shadow-sm dark:border dark:border-gold dark:border-opacity-40 dark:bg-transparent dark:text-[#d9d9d9] dark:hover:bg-gold/10"
+          "bg-[#f3f4f6] text-[#020817] hover:bg-[#e5e7eb] dark:bg-transparent dark:border dark:border-[#efc349] dark:text-[#efc349] dark:hover:bg-transparent",
+        ghost: "hover:bg-[#f3f4f6] hover:text-[#020817] dark:hover:bg-transparent dark:hover:text-[#efc349]",
+        link: "text-[#2563eb] underline-offset-4 hover:underline dark:text-[#efc349]",
+        document: "bg-blue-50 text-[#2563eb] hover:bg-blue-100 dark:bg-transparent dark:border dark:border-[#efc349] dark:text-[#efc349] dark:hover:bg-transparent",
+        admin: "bg-[#020817] text-white hover:bg-[#0f172a] shadow-sm dark:bg-transparent dark:border dark:border-[#efc349] dark:text-[#efc349] dark:hover:bg-transparent"
       },
       size: {
         default: "h-10 px-4 py-2",

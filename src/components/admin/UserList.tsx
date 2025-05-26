@@ -114,86 +114,86 @@ export const UserList = ({
   const remainingStorageMB = Math.max(0, storageLimitMB - usedStorageMB);
 
   return (
-    <Card className="border border-[#e6e6e6] bg-white shadow-sm rounded-lg dark:border dark:border-[#efc349] dark:bg-transparent">
-      <CardHeader className="border-b border-[#e6e6e6] bg-white rounded-t-lg dark:border-[#efc349] dark:bg-transparent">
-        <div className="flex justify-between items-center">
-          <CardTitle className="text-2xl font-semibold text-[#020817] dark:text-[#efc349]">Lista de Usuários</CardTitle>
-          <Button onClick={() => setIsUserCreationDialogOpen(true)} className="bg-[#020817] hover:bg-[#0f172a] text-white dark:bg-transparent dark:border dark:border-[#efc349] dark:text-[#efc349] dark:hover:bg-[#efc349] dark:hover:text-[#020817]">
-            <Plus className="mr-2 h-4 w-4 text-[#efc349] dark:text-[#efc349]" /> Novo Usuário
-          </Button>
-        </div>
-      </CardHeader>
+    <div className="space-y-8">
+      <Card className="border border-[#e6e6e6] bg-white shadow-sm rounded-lg dark:border-[#efc349] dark:bg-transparent dark:shadow-none">
+        <CardHeader className="bg-white rounded-t-lg dark:bg-transparent">
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-2xl font-semibold text-[#020817] dark:text-[#efc349]">Lista de Usuários</CardTitle>
+            <Button onClick={() => setIsUserCreationDialogOpen(true)} className="bg-[#020817] hover:bg-[#0f172a] text-white dark:bg-transparent dark:border dark:border-[#efc349] dark:text-[#efc349] dark:hover:bg-transparent">
+              <Plus className="mr-2 h-4 w-4" /> Novo Usuário
+            </Button>
+          </div>
+        </CardHeader>
 
-      {/* Storage Statistics */}
-      <CardContent className="border-b border-[#e6e6e6] mb-4 pb-4 dark:border-[#efc349]">
-        <div className="rounded-lg p-4 shadow-sm bg-white border border-[#e6e6e6] dark:bg-transparent dark:border dark:border-[#efc349]">
-          <h3 className="mb-3 text-lg font-semibold text-[#020817] dark:text-[#efc349]">Estatísticas de Armazenamento</h3>
-          
-          {isLoadingStorage ? (
-            <div className="flex justify-center py-4">
-              <LoadingSpinner />
-            </div>
-          ) : error ? (
-            <div className="text-red-500 text-center py-2">
-              Erro ao carregar estatísticas: {error}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="rounded p-3 border border-[#e6e6e6] bg-white shadow-sm dark:border dark:border-[#efc349] dark:bg-transparent">
-                <p className="text-sm text-[#6b7280] dark:text-white/70">Espaço Utilizado</p>
-                <p className="text-lg font-semibold text-[#020817] dark:text-white">
-                  {usedStorageMB.toFixed(2)} MB de {storageLimitMB} MB
-                </p>
-                <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2 dark:bg-gray-600">
-                  <div 
-                    className="bg-[#2563eb] h-2.5 rounded-full dark:bg-[#efc349]" 
-                    style={{width: `${Math.min(100, usedStorageMB / storageLimitMB * 100)}%`}}
-                  ></div>
+        {/* Storage Statistics */}
+        <CardContent className="pt-6">
+          <div className="rounded-lg p-6 shadow-sm bg-white border border-[#e6e6e6] dark:bg-transparent dark:border-[#efc349] dark:shadow-none mb-8">
+            <h3 className="mb-4 text-lg font-semibold text-[#020817] dark:text-[#efc349]">Estatísticas de Armazenamento</h3>
+            
+            {isLoadingStorage ? (
+              <div className="flex justify-center py-8">
+                <LoadingSpinner />
+              </div>
+            ) : error ? (
+              <div className="text-red-500 text-center py-4">
+                Erro ao carregar estatísticas: {error}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="rounded-lg p-4 border border-[#e6e6e6] bg-white shadow-sm dark:border-[#efc349] dark:bg-transparent dark:shadow-none">
+                  <p className="text-sm text-[#6b7280] dark:text-white/70">Espaço Utilizado</p>
+                  <p className="text-lg font-semibold text-[#020817] dark:text-white">
+                    {usedStorageMB.toFixed(2)} MB de {storageLimitMB} MB
+                  </p>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5 mt-3 dark:bg-gray-600">
+                    <div 
+                      className="bg-[#2563eb] h-2.5 rounded-full dark:bg-[#efc349]" 
+                      style={{width: `${Math.min(100, usedStorageMB / storageLimitMB * 100)}%`}}
+                    ></div>
+                  </div>
+                </div>
+                
+                <div className="rounded-lg p-4 border border-[#e6e6e6] bg-white shadow-sm dark:border-[#efc349] dark:bg-transparent dark:shadow-none">
+                  <p className="text-sm text-[#6b7280] dark:text-white/70">Espaço Disponível</p>
+                  <p className="text-lg font-semibold text-[#020817] dark:text-white">
+                    {remainingStorageMB.toFixed(2)} MB restantes
+                  </p>
                 </div>
               </div>
-              
-              <div className="rounded p-3 border border-[#e6e6e6] bg-white shadow-sm dark:border dark:border-[#efc349] dark:bg-transparent">
-                <p className="text-sm text-[#6b7280] dark:text-white/70">Espaço Disponível</p>
-                <p className="text-lg font-semibold text-[#020817] dark:text-white">
-                  {remainingStorageMB.toFixed(2)} MB restantes
-                </p>
-              </div>
+            )}
+          </div>
+
+          {isLoading ? (
+            <LoadingSpinner />
+          ) : (
+            <div className="space-y-8">
+              {/* Seção de Clientes */}
+              <UserTable 
+                users={clientUsers} 
+                userInfoList={users} 
+                title="Clientes" 
+                setSelectedUserId={setSelectedUserId} 
+                setSelectedUserForPasswordChange={setSelectedUserForPasswordChange} 
+                passwordForm={passwordForm} 
+                refreshUsers={refreshUsers} 
+                showDocumentButton={true} 
+                isAdminSection={false} 
+              />
+
+              {/* Seção de Administradores */}
+              <UserTable 
+                users={adminUsers} 
+                userInfoList={users} 
+                title="Administradores" 
+                setSelectedUserForPasswordChange={setSelectedUserForPasswordChange} 
+                passwordForm={passwordForm} 
+                refreshUsers={refreshUsers} 
+                isAdminSection={true} 
+              />
             </div>
           )}
-        </div>
-      </CardContent>
-
-      <CardContent className="space-y-6">
-        {isLoading ? (
-          <LoadingSpinner />
-        ) : (
-          <>
-            {/* Seção de Clientes */}
-            <UserTable 
-              users={clientUsers} 
-              userInfoList={users} 
-              title="Clientes" 
-              setSelectedUserId={setSelectedUserId} 
-              setSelectedUserForPasswordChange={setSelectedUserForPasswordChange} 
-              passwordForm={passwordForm} 
-              refreshUsers={refreshUsers} 
-              showDocumentButton={true} 
-              isAdminSection={false} 
-            />
-
-            {/* Seção de Administradores */}
-            <UserTable 
-              users={adminUsers} 
-              userInfoList={users} 
-              title="Administradores" 
-              setSelectedUserForPasswordChange={setSelectedUserForPasswordChange} 
-              passwordForm={passwordForm} 
-              refreshUsers={refreshUsers} 
-              isAdminSection={true} 
-            />
-          </>
-        )}
-      </CardContent>
+        </CardContent>
+      </Card>
 
       {/* User Creation Dialog */}
       <UserCreationDialog 
@@ -202,6 +202,6 @@ export const UserList = ({
         onSubmit={handleUserCreation} 
         isCreating={isCreatingUser} 
       />
-    </Card>
+    </div>
   );
 };
