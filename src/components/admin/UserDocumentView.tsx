@@ -15,14 +15,11 @@ interface UserDocumentViewProps {
 }
 
 export const UserDocumentView = ({ users = [], supabaseUsers = [] }: UserDocumentViewProps) => {
-  const {
-    userId
-  } = useParams<{
-    userId: string;
-  }>();
+  const { userId } = useParams<{ userId: string; }>();
   const navigate = useNavigate();
   const [userName, setUserName] = useState<string>("");
   const [userEmail, setUserEmail] = useState<string>("");
+  
   const {
     documents,
     selectedUserId,
@@ -53,47 +50,60 @@ export const UserDocumentView = ({ users = [], supabaseUsers = [] }: UserDocumen
   
   if (!userId) {
     return (
-      <Card className="px-0 bg-white border border-[#e6e6e6] shadow-sm dark:bg-transparent dark:border-[#efc349] dark:shadow-none">
-        <CardContent className="p-8">
-          <div className="text-center">
-            <p className="text-[#6b7280] mb-6 dark:text-white">Nenhum usuário selecionado</p>
-            <Button variant="outline" className="mt-4 bg-white border-[#e6e6e6] hover:bg-gray-50 text-[#020817] dark:bg-transparent dark:border-[#efc349] dark:text-[#efc349] dark:hover:bg-transparent" onClick={handleBackToUserList}>
-              <ArrowLeft size={16} className="mr-2" />
-              Voltar para lista de usuários
-            </Button>
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="text-center space-y-6">
+          <div className="w-16 h-16 mx-auto bg-gray-100 dark:bg-[#efc349]/10 rounded-full flex items-center justify-center">
+            <ArrowLeft className="w-8 h-8 text-gray-400 dark:text-[#efc349]" />
           </div>
-        </CardContent>
-      </Card>
+          <div>
+            <h3 className="text-lg font-medium text-[#020817] dark:text-white mb-2">Nenhum usuário selecionado</h3>
+            <p className="text-gray-500 dark:text-white/70">Selecione um usuário para gerenciar seus documentos</p>
+          </div>
+          <Button 
+            variant="outline" 
+            onClick={handleBackToUserList}
+            className="transition-all duration-300 hover:scale-105"
+          >
+            <ArrowLeft size={16} className="mr-2" />
+            Voltar para lista de usuários
+          </Button>
+        </div>
+      </div>
     );
   }
   
   return (
-    <Card className="px-0 bg-white border border-[#e6e6e6] shadow-sm dark:bg-transparent dark:border-[#efc349] dark:shadow-none">
-      <CardHeader className="px-8 py-6 bg-white dark:bg-transparent">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-          <div>
-            <Button variant="outline" size="sm" onClick={handleBackToUserList} className="flex items-center gap-2 bg-white border-[#e6e6e6] hover:bg-gray-50 text-[#020817] mb-4 dark:bg-transparent dark:border-[#efc349] dark:text-[#efc349] dark:hover:bg-transparent">
-              <ArrowLeft size={16} />
-              Voltar para lista de usuários
-            </Button>
-            <CardTitle className="text-xl text-[#020817] font-medium dark:text-[#efc349]">
-              Gerenciando documentos de usuário
-            </CardTitle>
-          </div>
+    <div className="space-y-8">
+      <div className="flex items-center space-x-4">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={handleBackToUserList} 
+          className="flex items-center gap-2 transition-all duration-300 hover:scale-105 dark:hover:bg-[#efc349]/10"
+        >
+          <ArrowLeft size={16} />
+          Voltar
+        </Button>
+        <div>
+          <h1 className="text-3xl font-bold text-[#020817] dark:text-[#efc349]">Documentos do Usuário</h1>
+          <p className="text-gray-600 dark:text-white/70 mt-1">Gerencie os documentos de {userName}</p>
         </div>
-      </CardHeader>
-      <CardContent className="p-8">
-        <AdminDocumentManager 
-          userId={userId} 
-          userName={userName} 
-          userEmail={userEmail} 
-          documents={documents} 
-          isLoadingDocuments={isLoadingDocuments} 
-          loadingDocumentIds={loadingDocumentIds} 
-          handleDownload={handleDownload} 
-          handleDeleteDocument={handleDeleteDocument} 
-        />
-      </CardContent>
-    </Card>
+      </div>
+
+      <Card className="border-0 shadow-none dark:bg-transparent dark:border dark:border-[#efc349]/20">
+        <CardContent className="p-8">
+          <AdminDocumentManager 
+            userId={userId} 
+            userName={userName} 
+            userEmail={userEmail} 
+            documents={documents} 
+            isLoadingDocuments={isLoadingDocuments} 
+            loadingDocumentIds={loadingDocumentIds} 
+            handleDownload={handleDownload} 
+            handleDeleteDocument={handleDeleteDocument} 
+          />
+        </CardContent>
+      </Card>
+    </div>
   );
 };

@@ -23,58 +23,81 @@ export const PollsTabView = () => {
   
   return (
     <div className="space-y-8">
-      <Tabs defaultValue="create" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 bg-white border border-[#e6e6e6] shadow-sm dark:bg-transparent dark:border-[#efc349] dark:shadow-none">
-          <TabsTrigger value="create" className="text-[#020817] data-[state=active]:bg-[#020817] data-[state=active]:text-white dark:text-white dark:data-[state=active]:bg-transparent dark:data-[state=active]:border-b-2 dark:data-[state=active]:border-[#efc349] dark:data-[state=active]:text-[#efc349]">
-            Criar nova enquete
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-[#020817] dark:text-[#efc349] mb-2">Gestão de Enquetes</h1>
+        <p className="text-gray-600 dark:text-white/70">Crie, gerencie e visualize resultados das enquetes</p>
+      </div>
+
+      <Tabs defaultValue="create" className="space-y-8">
+        <TabsList className="grid w-full grid-cols-3 bg-gray-50 dark:bg-transparent dark:border dark:border-[#efc349]/30 rounded-xl p-1">
+          <TabsTrigger 
+            value="create" 
+            className="text-[#020817] data-[state=active]:bg-white data-[state=active]:text-[#020817] data-[state=active]:shadow-sm dark:text-white/80 dark:data-[state=active]:bg-[#efc349]/10 dark:data-[state=active]:text-[#efc349] dark:data-[state=active]:border-[#efc349]/30 transition-all duration-300 rounded-lg"
+          >
+            Criar Enquete
           </TabsTrigger>
-          <TabsTrigger value="manage" className="text-[#020817] data-[state=active]:bg-[#020817] data-[state=active]:text-white dark:text-white dark:data-[state=active]:bg-transparent dark:data-[state=active]:border-b-2 dark:data-[state=active]:border-[#efc349] dark:data-[state=active]:text-[#efc349]">
-            Gerenciar enquetes
+          <TabsTrigger 
+            value="manage" 
+            className="text-[#020817] data-[state=active]:bg-white data-[state=active]:text-[#020817] data-[state=active]:shadow-sm dark:text-white/80 dark:data-[state=active]:bg-[#efc349]/10 dark:data-[state=active]:text-[#efc349] dark:data-[state=active]:border-[#efc349]/30 transition-all duration-300 rounded-lg"
+          >
+            Gerenciar
           </TabsTrigger>
-          <TabsTrigger value="results" className="text-[#020817] data-[state=active]:bg-[#020817] data-[state=active]:text-white dark:text-white dark:data-[state=active]:bg-transparent dark:data-[state=active]:border-b-2 dark:data-[state=active]:border-[#efc349] dark:data-[state=active]:text-[#efc349]">
-            Resultados de enquetes
+          <TabsTrigger 
+            value="results" 
+            className="text-[#020817] data-[state=active]:bg-white data-[state=active]:text-[#020817] data-[state=active]:shadow-sm dark:text-white/80 dark:data-[state=active]:bg-[#efc349]/10 dark:data-[state=active]:text-[#efc349] dark:data-[state=active]:border-[#efc349]/30 transition-all duration-300 rounded-lg"
+          >
+            Resultados
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="create">
-          <div className="p-6 bg-white border border-[#e6e6e6] rounded-lg shadow-sm dark:bg-transparent dark:border-[#efc349] dark:shadow-none">
-            <Tabs value={pollTypeTab} onValueChange={setPollTypeTab} className="mb-8">
-              <TabsList className="grid w-full grid-cols-3 bg-white border border-[#e6e6e6] shadow-sm dark:bg-transparent dark:border-[#efc349] dark:shadow-none">
-                <TabsTrigger value="standard" className="text-[#020817] data-[state=active]:bg-[#020817] data-[state=active]:text-white dark:text-white dark:data-[state=active]:bg-transparent dark:data-[state=active]:border-b-2 dark:data-[state=active]:border-[#efc349] dark:data-[state=active]:text-[#efc349]">
+        <TabsContent value="create" className="space-y-6">
+          <div className="bg-white dark:bg-transparent border border-gray-100 dark:border-[#efc349]/20 rounded-xl p-8">
+            <Tabs value={pollTypeTab} onValueChange={setPollTypeTab} className="space-y-6">
+              <TabsList className="grid w-full grid-cols-3 bg-gray-50 dark:bg-transparent dark:border dark:border-[#efc349]/30 rounded-xl p-1">
+                <TabsTrigger 
+                  value="standard" 
+                  className="text-[#020817] data-[state=active]:bg-white data-[state=active]:text-[#020817] data-[state=active]:shadow-sm dark:text-white/80 dark:data-[state=active]:bg-[#efc349]/10 dark:data-[state=active]:text-[#efc349] transition-all duration-300 rounded-lg"
+                >
                   Enquete Padrão
                 </TabsTrigger>
-                <TabsTrigger value="numerical" className="text-[#020817] data-[state=active]:bg-[#020817] data-[state=active]:text-white dark:text-white dark:data-[state=active]:bg-transparent dark:data-[state=active]:border-b-2 dark:data-[state=active]:border-[#efc349] dark:data-[state=active]:text-[#efc349]">
+                <TabsTrigger 
+                  value="numerical" 
+                  className="text-[#020817] data-[state=active]:bg-white data-[state=active]:text-[#020817] data-[state=active]:shadow-sm dark:text-white/80 dark:data-[state=active]:bg-[#efc349]/10 dark:data-[state=active]:text-[#efc349] transition-all duration-300 rounded-lg"
+                >
                   Formulário Numeral
                 </TabsTrigger>
-                <TabsTrigger value="form" className="text-[#020817] data-[state=active]:bg-[#020817] data-[state=active]:text-white dark:text-white dark:data-[state=active]:bg-transparent dark:data-[state=active]:border-b-2 dark:data-[state=active]:border-[#efc349] dark:data-[state=active]:text-[#efc349]">
+                <TabsTrigger 
+                  value="form" 
+                  className="text-[#020817] data-[state=active]:bg-white data-[state=active]:text-[#020817] data-[state=active]:shadow-sm dark:text-white/80 dark:data-[state=active]:bg-[#efc349]/10 dark:data-[state=active]:text-[#efc349] transition-all duration-300 rounded-lg"
+                >
                   Formulário Completo
                 </TabsTrigger>
               </TabsList>
               
-              <TabsContent value="standard" className="mt-6">
+              <TabsContent value="standard">
                 <CreatePollForm onPollCreated={handlePollCreated} />
               </TabsContent>
               
-              <TabsContent value="numerical" className="mt-6">
+              <TabsContent value="numerical">
                 <CreateNumericalPollForm onPollCreated={handlePollCreated} />
               </TabsContent>
               
-              <TabsContent value="form" className="mt-6">
+              <TabsContent value="form">
                 <CreateFormPollForm onPollCreated={handlePollCreated} />
               </TabsContent>
             </Tabs>
           </div>
         </TabsContent>
 
-        <TabsContent value="manage">
-          <div className="p-6 bg-white border border-[#e6e6e6] rounded-lg shadow-sm dark:bg-transparent dark:border-[#efc349] dark:shadow-none">
+        <TabsContent value="manage" className="space-y-6">
+          <div className="bg-white dark:bg-transparent border border-gray-100 dark:border-[#efc349]/20 rounded-xl p-8">
             <h3 className="text-xl font-medium mb-6 text-[#020817] dark:text-[#efc349]">Gerenciar Enquetes</h3>
             <ManagePolls refreshTrigger={refreshTrigger} onViewResults={handleViewResults} onPollDeleted={handlePollCreated} />
           </div>
         </TabsContent>
 
-        <TabsContent value="results">
-          <div className="p-6 bg-white border border-[#e6e6e6] rounded-lg shadow-sm dark:bg-transparent dark:border-[#efc349] dark:shadow-none">
+        <TabsContent value="results" className="space-y-6">
+          <div className="bg-white dark:bg-transparent border border-gray-100 dark:border-[#efc349]/20 rounded-xl p-8">
             <h3 className="text-xl font-medium mb-6 text-[#020817] dark:text-[#efc349]">Resultados de Enquetes</h3>
             <PollResults selectedPoll={selectedPoll} />
           </div>

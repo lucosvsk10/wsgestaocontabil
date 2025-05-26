@@ -14,9 +14,7 @@ interface AdminLayoutProps {
 const AdminLayout: React.FC<AdminLayoutProps> = ({
   children
 }) => {
-  const {
-    theme
-  } = useTheme();
+  const { theme } = useTheme();
   const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
 
@@ -37,21 +35,21 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
         <AdminHeader />
         
-        {/* Sidebar toggle button - visible all times */}
+        {/* Sidebar toggle button */}
         <Button 
-          variant="secondary" 
+          variant="ghost" 
           size="icon" 
-          className="fixed bottom-6 left-6 z-50 bg-white shadow-lg rounded-full border border-[#e6e6e6] h-12 w-12 dark:bg-transparent dark:border-[#efc349] dark:shadow-none" 
+          className="fixed bottom-8 left-8 z-50 rounded-full w-12 h-12 transition-all duration-300 ease-in-out hover:scale-105 bg-white/10 border border-[#e6e6e6] hover:bg-gray-50 dark:bg-transparent dark:border-[#efc349] dark:hover:bg-[#efc349]/10 dark:backdrop-blur-sm" 
           onClick={toggleSidebar}
           aria-label={sidebarOpen ? "Recolher menu lateral" : "Expandir menu lateral"}
         >
           {sidebarOpen ? 
-            <ChevronLeft size={20} className="text-[#efc349]" /> : 
-            <ChevronRight size={20} className="text-[#efc349]" />
+            <ChevronLeft size={20} className="text-[#020817] dark:text-[#efc349]" /> : 
+            <ChevronRight size={20} className="text-[#020817] dark:text-[#efc349]" />
           }
         </Button>
         
-        <main className="flex-1 overflow-y-auto p-8 bg-[#FFF1DE] dark:bg-[#020817]">
+        <main className="flex-1 overflow-y-auto p-8 bg-[#FFF1DE] dark:bg-[#020817] space-y-8">
           {children}
         </main>
       </div>

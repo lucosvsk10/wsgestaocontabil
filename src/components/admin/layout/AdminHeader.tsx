@@ -8,15 +8,11 @@ import { useNavigation } from "@/components/navbar/hooks/useNavigation";
 import { Link } from "react-router-dom";
 
 const AdminHeader = () => {
-  const {
-    user
-  } = useAuth();
-  const {
-    handleLogout
-  } = useNavigation();
+  const { user } = useAuth();
+  const { handleLogout } = useNavigation();
   
   return (
-    <header className="py-6 px-8 flex items-center justify-between bg-white dark:bg-[#020817]">
+    <header className="py-6 px-8 flex items-center justify-between bg-white dark:bg-[#020817] border-b border-gray-100 dark:border-[#efc349]/10">
       <div className="flex items-center">
         {/* Conteúdo à esquerda */}
       </div>
@@ -28,20 +24,30 @@ const AdminHeader = () => {
         {/* User menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-full border border-[#e6e6e6] hover:bg-gray-50 dark:border-[#efc349] dark:hover:bg-transparent dark:bg-transparent">
-              <UserCircle className="h-6 w-6 text-[#efc349]" />
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="relative h-12 w-12 rounded-full transition-all duration-300 ease-in-out hover:scale-105 border border-gray-200 hover:border-gray-300 dark:border-[#efc349]/30 dark:hover:border-[#efc349] dark:hover:bg-[#efc349]/10"
+            >
+              <UserCircle className="h-6 w-6 text-gray-600 dark:text-[#efc349]" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 bg-white shadow-lg rounded-lg border border-[#e6e6e6] dark:bg-transparent dark:border-[#efc349]">
-            <div className="px-4 py-3 text-sm font-medium text-[#020817] dark:text-white">
+          <DropdownMenuContent 
+            align="end" 
+            className="w-64 bg-white dark:bg-[#020817] border border-gray-200 dark:border-[#efc349]/30 shadow-xl dark:shadow-none rounded-xl backdrop-blur-sm"
+          >
+            <div className="px-4 py-3 text-sm font-medium text-[#020817] dark:text-white border-b border-gray-100 dark:border-[#efc349]/20">
               {user?.email || "Usuário"}
             </div>
-            <DropdownMenuSeparator className="bg-[#e6e6e6] dark:bg-[#efc349]/30" />
-            <DropdownMenuItem asChild className="text-[#020817] hover:bg-gray-50 focus:bg-gray-50 focus:text-[#020817] dark:text-white dark:hover:bg-transparent">
-              <Link to="/" className="flex items-center">Voltar ao site</Link>
+            <DropdownMenuSeparator className="bg-gray-100 dark:bg-[#efc349]/20" />
+            <DropdownMenuItem asChild className="text-[#020817] hover:bg-gray-50 focus:bg-gray-50 dark:text-white dark:hover:bg-[#efc349]/10 dark:focus:bg-[#efc349]/10 transition-all duration-300">
+              <Link to="/" className="flex items-center px-4 py-2">Voltar ao site</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleLogout} className="text-[#020817] hover:bg-gray-50 focus:bg-gray-50 focus:text-[#020817] dark:text-white dark:hover:bg-transparent">
-              <span className="flex items-center">Sair</span>
+            <DropdownMenuItem 
+              onClick={handleLogout} 
+              className="text-[#020817] hover:bg-gray-50 focus:bg-gray-50 dark:text-white dark:hover:bg-[#efc349]/10 dark:focus:bg-[#efc349]/10 transition-all duration-300"
+            >
+              <span className="flex items-center px-4 py-2">Sair</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
