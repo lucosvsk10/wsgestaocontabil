@@ -22,9 +22,7 @@ export default {
 			fontFamily: {
 				anton: ['Anton', 'sans-serif'],
 				prompt: ['Prompt', 'sans-serif'],
-				roboto: ['Roboto', 'system-ui', 'sans-serif'],
-				'museo-moderno': ['Museo Moderno', 'system-ui', 'sans-serif'],
-				'bebas-neue': ['Bebas Neue', 'system-ui', 'sans-serif']
+				roboto: ['Roboto', 'system-ui', 'sans-serif']
 			},
 			colors: {
 				border: 'hsl(var(--border))',
@@ -87,27 +85,30 @@ export default {
 				purple: {
 					DEFAULT: '#9333ea'
 				},
-				page: {
-					DEFAULT: '#393532'
-				},
-				// Premium admin colors
-				admin: {
-					dark: {
-						bg: '#020817',
-						card: '#0b0f1c',
-						border: '#efc349',
-						primary: '#ffffff',
-						secondary: '#b3b3b3',
-						accent: '#efc349'
-					}
-				},
-				// Novo fundo escuro para o modo noturno
-				deepNavy: {
-					DEFAULT: '#020817',
-					50: 'rgba(2, 8, 23, 0.5)',
-					80: 'rgba(2, 8, 23, 0.8)',
-					90: 'rgba(2, 8, 23, 0.9)',
-				}
+                // Add the new background color
+                page: {
+                    DEFAULT: '#393532'
+                },
+                // Novo fundo escuro para o modo noturno
+                deepNavy: {
+                    DEFAULT: '#020817',
+                    50: 'rgba(2, 8, 23, 0.5)',
+                    80: 'rgba(2, 8, 23, 0.8)',
+                    90: 'rgba(2, 8, 23, 0.9)',
+                },
+                // Admin colors for light and dark mode
+                admin: {
+                    light: {
+                        bg: '#F5F5F5',
+                        text: '#212121',
+                        element: '#FFFFFF'
+                    },
+                    dark: {
+                        bg: '#020817',
+                        text: '#d9d9d9',
+                        element: '#050f24'
+                    }
+                }
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
