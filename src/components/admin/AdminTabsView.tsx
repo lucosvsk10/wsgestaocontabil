@@ -1,3 +1,4 @@
+
 import { AdminDashboard } from "./dashboard/AdminDashboard";
 import { UsersView } from "./users/UsersView";
 import { StorageView } from "./storage/StorageView";
@@ -40,6 +41,8 @@ interface AdminTabsViewProps {
   setExpirationDate: (date: Date | null) => void;
   noExpiration: boolean;
   setNoExpiration: (noExpiration: boolean) => void;
+  handleBackToUserList?: () => void;
+  userName?: string;
 }
 
 export const AdminTabsView = ({
@@ -72,7 +75,9 @@ export const AdminTabsView = ({
   expirationDate,
   setExpirationDate,
   noExpiration,
-  setNoExpiration
+  setNoExpiration,
+  handleBackToUserList,
+  userName
 }: AdminTabsViewProps) => {
   const tabComponents = {
     dashboard: <AdminDashboard users={users} supabaseUsers={supabaseUsers} documents={documents} />,
@@ -113,6 +118,8 @@ export const AdminTabsView = ({
       setExpirationDate={setExpirationDate}
       noExpiration={noExpiration}
       setNoExpiration={setNoExpiration}
+      handleBackToUserList={handleBackToUserList || (() => {})}
+      userName={userName || ""}
     />
   };
 
