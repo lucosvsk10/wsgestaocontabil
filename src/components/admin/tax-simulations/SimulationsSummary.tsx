@@ -1,20 +1,16 @@
-
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TaxSimulation } from "@/types/tax-simulations";
 import { currencyFormat } from "@/utils/taxCalculations";
-
 interface SimulationsSummaryProps {
   simulations: TaxSimulation[];
 }
-
 const SimulationsSummary = ({
   simulations
 }: SimulationsSummaryProps) => {
-  return (
-    <Card className="border-[#e6e6e6] dark:border-navy-lighter/30 shadow-md bg-white dark:bg-deepNavy-90">
+  return <Card className="border-[#e6e6e6] dark:border-navy-lighter/30 shadow-md bg-white dark:bg-deepNavy-90">
       <CardHeader className="pb-3">
-        <CardTitle className="text-[#020817] dark:text-gold">Resumo</CardTitle>
+        <CardTitle className="text-[#020817] dark:text-gold font-thin text-xl">Resumo</CardTitle>
         <CardDescription className="text-[#6b7280] dark:text-gray-300">
           Total de {simulations.length} simulação(ões) encontrada(s)
         </CardDescription>
@@ -41,8 +37,6 @@ const SimulationsSummary = ({
           </div>
         </div>
       </CardContent>
-    </Card>
-  );
+    </Card>;
 };
-
 export default SimulationsSummary;

@@ -120,7 +120,7 @@ const TaxSimulationResults = () => {
   return <div className="space-y-8">
       <div className="flex flex-col md:flex-row justify-between gap-6">
         <div>
-          <h1 className="text-3xl text-[#020817] dark:text-[#efc349] mb-4 font-extralight">
+          <h1 className="text-3xl text-[#020817] dark:text-[#efc349] mb-4 font-thin">
             Simulações de Imposto de Renda
           </h1>
           <p className="text-gray-600 dark:text-white/70">
