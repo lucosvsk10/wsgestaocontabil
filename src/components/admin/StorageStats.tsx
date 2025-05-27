@@ -9,7 +9,7 @@ import { StorageDetailsTable } from "./storage/StorageDetailsTable";
 import { formatSize } from "@/utils/storage/formatSize";
 
 export const StorageStats = () => {
-  const { storageStats, isLoading, error, fetchStorageStats } = useStorageStats();
+  const { storageStats, isLoading, fetchStorageStats } = useStorageStats();
 
   useEffect(() => {
     fetchStorageStats();
@@ -27,10 +27,6 @@ export const StorageStats = () => {
           <div className="flex justify-center my-8">
             <LoadingSpinner />
           </div>
-        ) : error ? (
-          <div className="text-red-500 dark:text-red-400 text-center my-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800/40">
-            {error}
-          </div>
         ) : storageStats ? (
           <div className="space-y-8">
             {/* Total storage usage */}
@@ -41,10 +37,7 @@ export const StorageStats = () => {
             />
 
             {/* Chart */}
-            <StorageDistributionChart 
-              storageData={storageStats.userStorage}
-              formatSize={formatSize}
-            />
+            <StorageDistributionChart />
 
             {/* Table */}
             <StorageDetailsTable 

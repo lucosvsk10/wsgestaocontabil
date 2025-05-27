@@ -4,7 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { HardDrive, FileText, Users, Download, Search, Filter, Pie, BarChart3, Calendar } from "lucide-react";
+import { HardDrive, FileText, Users, Download, Search, Filter, PieChart, BarChart3, Calendar } from "lucide-react";
 import { useStorageStats } from "@/hooks/useStorageStats";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { useState } from "react";
@@ -149,7 +149,7 @@ export const StorageView = () => {
           <Card className="bg-white dark:bg-[#0b0f1c] border-none shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-[#020817] dark:text-[#efc349] font-extralight">
-                <Pie className="h-5 w-5" />
+                <PieChart className="h-5 w-5" />
                 Distribuição por Categoria
               </CardTitle>
             </CardHeader>
