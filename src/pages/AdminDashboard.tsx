@@ -79,7 +79,7 @@ const AdminDashboard = ({ activeTab: initialActiveTab = "dashboard" }: AdminDash
     }
 
     try {
-      await changeUserPassword(selectedUserForPasswordChange.id, data.newPassword);
+      await changeUserPassword(data);
       toast({
         title: "Sucesso",
         description: "Senha alterada com sucesso"
@@ -143,17 +143,7 @@ const AdminDashboard = ({ activeTab: initialActiveTab = "dashboard" }: AdminDash
         {renderContent()}
         
         {selectedUserForPasswordChange && (
-          <PasswordChangeForm
-            isOpen={!!selectedUserForPasswordChange}
-            onClose={() => {
-              setSelectedUserForPasswordChange(null);
-              passwordForm.reset();
-            }}
-            onSubmit={handlePasswordSubmit}
-            isChanging={isChangingPassword}
-            form={passwordForm}
-            userName={selectedUserForPasswordChange.name || selectedUserForPasswordChange.email || "Usuário"}
-          />
+          <PasswordChangeForm />
         )}
       </div>
     </AdminLayout>
