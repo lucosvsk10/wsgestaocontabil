@@ -106,7 +106,7 @@ export const AdminDashboard = ({
         <Card className="bg-white dark:bg-[#0b0f1c] border border-gray-200 dark:border-[#efc349]/30">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-[#020817] dark:text-[#efc349]">
+              <h3 className="text-lg text-[#020817] dark:text-[#efc349] font-extralight">
                 Documentos Recentes
               </h3>
               <FileText className="h-5 w-5 text-gray-400 dark:text-[#efc349]" />
@@ -133,7 +133,7 @@ export const AdminDashboard = ({
         <Card className="bg-white dark:bg-[#0b0f1c] border border-gray-200 dark:border-[#efc349]/30">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-[#020817] dark:text-[#efc349]">
+              <h3 className="text-lg text-[#020817] dark:text-[#efc349] font-extralight">
                 Informações do Sistema
               </h3>
               <Bell className="h-5 w-5 text-gray-400 dark:text-[#efc349]" />
@@ -176,7 +176,7 @@ export const AdminDashboard = ({
       {/* Quick Actions */}
       <Card className="bg-white dark:bg-[#0b0f1c] border border-gray-200 dark:border-[#efc349]/30">
         <CardContent className="p-6">
-          <h3 className="text-lg font-semibold text-[#020817] dark:text-[#efc349] mb-4">
+          <h3 className="text-lg text-[#020817] dark:text-[#efc349] mb-4 font-extralight">
             Ações Rápidas
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
