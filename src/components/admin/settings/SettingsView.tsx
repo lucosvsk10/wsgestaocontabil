@@ -163,14 +163,14 @@ export const SettingsView = () => {
             <div className="grid grid-cols-1 gap-6">
               <div className="p-6 rounded-xl bg-gray-50 dark:bg-transparent space-y-3">
                 <p className="text-sm font-medium text-gray-500 dark:text-white/70">Versão da aplicação</p>
-                <p className="text-2xl font-bold text-[#020817] dark:text-white">1.1.0</p>
-                <p className="text-xs text-gray-500 dark:text-white/50">Última atualização: 22/05/2025</p>
+                <p className="text-2xl font-bold text-[#020817] dark:text-white">2.0.0</p>
+                <p className="text-xs text-gray-500 dark:text-white/50">Última atualização: 27/05/2025</p>
               </div>
               
               <div className="p-6 rounded-xl bg-gray-50 dark:bg-transparent space-y-3">
                 <p className="text-sm font-medium text-gray-500 dark:text-white/70">Ambiente</p>
                 <p className="text-2xl font-bold text-[#020817] dark:text-white">Produção</p>
-                <p className="text-xs text-gray-500 dark:text-white/50">Status: Online</p>
+                <p className="text-xs text-gray-500 dark:text-white/50">Status: OFFline</p>
               </div>
             </div>
           </div>
