@@ -5,10 +5,10 @@ import { useNavigate } from 'react-router-dom';
 export const AdminToolsView: React.FC = () => {
   const navigate = useNavigate();
   const tools = [{
-    title: "Simulador de IRPF",
-    description: "Calculadora para simulação de imposto de renda.",
+    title: "Simulações Tributárias",
+    description: "Calculadoras de IRPF, INSS e Pró-Labore.",
     icon: <Calculator className="h-12 w-12 text-green-600 dark:text-green-400" />,
-    action: () => navigate('/simulador-irpf')
+    action: () => navigate('/admin/simulations')
   }, {
     title: "Gerador de Enquetes",
     description: "Crie enquetes para seus clientes.",

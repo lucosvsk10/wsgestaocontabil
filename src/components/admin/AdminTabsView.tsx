@@ -1,56 +1,51 @@
-
-import { UserList } from "./UserList";
-import { PollsTabView } from "./polls/PollsTabView";
-import { UserDocumentView } from "./UserDocumentView";
-import TaxSimulationResults from "./TaxSimulationResults";
+import { AdminDashboard } from "./dashboard/AdminDashboard";
+import { UsersView } from "./users/UsersView";
 import { StorageView } from "./storage/StorageView";
-import { UserType } from "@/types/admin";
-import { Poll } from "@/types/polls";
-import { AdminDashboardView } from "./dashboard/AdminDashboardView";
-import { SettingsView } from "./settings/SettingsView";
+import { PollsTabView } from "./polls/PollsTabView";
+import { SimulationsView } from "./simulations/SimulationsView";
 import { AdminToolsView } from "./tools/AdminToolsView";
+import TaxSimulationResults from "./TaxSimulationResults";
+import { SettingsView } from "./settings/SettingsView";
+import { AdminDocumentView } from "./AdminDocumentView";
+import { UseFormReturn } from "react-hook-form";
 
-export interface AdminTabsViewProps {
-  activeTab?: string;
-  // Props para UserList
-  users?: UserType[];
-  supabaseUsers?: any[];
-  userInfoList?: any[];
-  isLoadingUsers?: boolean;
-  isLoadingAuthUsers?: boolean;
-  handleDocumentButtonClick?: (userId: string) => void;
-  setSelectedUserForPasswordChange?: (user: UserType) => void;
-  passwordForm?: any;
-  refreshUsers?: () => void;
-  createUser?: (data: any) => Promise<void>;
-  isCreatingUser?: boolean;
-  // Props para DocumentManager
-  selectedUserId?: string | null;
-  documentName?: string;
-  setDocumentName?: (name: string) => void;
-  documentCategory?: string;
-  setDocumentCategory?: (category: string) => void;
-  documentObservations?: string;
-  setDocumentObservations?: (observations: string) => void;
-  handleFileChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  handleUpload?: (e: React.FormEvent) => Promise<void>;
-  isUploading?: boolean;
-  documents?: any[];
-  isLoadingDocuments?: boolean;
-  handleDeleteDocument?: (documentId: string) => Promise<void>;
-  documentCategories?: string[];
-  expirationDate?: Date | null;
-  setExpirationDate?: (date: Date | null) => void;
-  noExpiration?: boolean;
-  setNoExpiration?: (value: boolean) => void;
-  // Props para PollResults
-  selectedPoll?: Poll | null;
+interface AdminTabsViewProps {
+  activeTab: string;
+  supabaseUsers: any[];
+  users: any[];
+  userInfoList: any[];
+  isLoadingUsers: boolean;
+  isLoadingAuthUsers: boolean;
+  handleDocumentButtonClick: (userId: string) => void;
+  setSelectedUserForPasswordChange: (user: any) => void;
+  passwordForm: UseFormReturn<any, any, undefined>;
+  refreshUsers: () => void;
+  createUser: (data: any) => Promise<void>;
+  isCreatingUser: boolean;
+  selectedUserId: string | undefined;
+  documentName: string;
+  setDocumentName: (name: string) => void;
+  documentCategory: string;
+  setDocumentCategory: (category: string) => void;
+  documentObservations: string;
+  setDocumentObservations: (observations: string) => void;
+  handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
+  handleUpload: () => Promise<void>;
+  isUploading: boolean;
+  documents: any[];
+  isLoadingDocuments: boolean;
+  handleDeleteDocument: (documentId: string) => Promise<void>;
+  documentCategories: string[];
+  expirationDate: Date | null;
+  setExpirationDate: (date: Date | null) => void;
+  noExpiration: boolean;
+  setNoExpiration: (noExpiration: boolean) => void;
 }
 
-export function AdminTabsView({
+export const AdminTabsView = ({
   activeTab,
-  users,
   supabaseUsers,
+  users,
   userInfoList,
   isLoadingUsers,
   isLoadingAuthUsers,
@@ -77,48 +72,53 @@ export function AdminTabsView({
   expirationDate,
   setExpirationDate,
   noExpiration,
-  setNoExpiration,
-  selectedPoll
-}: AdminTabsViewProps) {
+  setNoExpiration
+}: AdminTabsViewProps) => {
+  const tabComponents = {
+    dashboard: <AdminDashboard users={users} supabaseUsers={supabaseUsers} documents={documents} />,
+    users: <UsersView 
+      users={userInfoList}
+      supabaseUsers={supabaseUsers}
+      isLoadingUsers={isLoadingUsers}
+      isLoadingAuthUsers={isLoadingAuthUsers}
+      handleDocumentButtonClick={handleDocumentButtonClick}
+      setSelectedUserForPasswordChange={setSelectedUserForPasswordChange}
+      passwordForm={passwordForm}
+      refreshUsers={refreshUsers}
+      createUser={createUser}
+      isCreatingUser={isCreatingUser}
+    />,
+    storage: <StorageView />,
+    polls: <PollsTabView />,
+    simulations: <SimulationsView />,
+    tools: <AdminToolsView />,
+    "tax-simulations": <TaxSimulationResults />,
+    settings: <SettingsView />,
+    "user-documents": <AdminDocumentView 
+      selectedUserId={selectedUserId}
+      documentName={documentName}
+      setDocumentName={setDocumentName}
+      documentCategory={documentCategory}
+      setDocumentCategory={setDocumentCategory}
+      documentObservations={documentObservations}
+      setDocumentObservations={setDocumentObservations}
+      handleFileChange={handleFileChange}
+      handleUpload={handleUpload}
+      isUploading={isUploading}
+      documents={documents}
+      isLoadingDocuments={isLoadingDocuments}
+      handleDeleteDocument={handleDeleteDocument}
+      documentCategories={documentCategories}
+      expirationDate={expirationDate}
+      setExpirationDate={setExpirationDate}
+      noExpiration={noExpiration}
+      setNoExpiration={setNoExpiration}
+    />
+  };
+
   return (
-    <div className="w-full">
-      <div className="mt-4">
-        {/* Tab Content - Dashboard */}
-        {activeTab === "dashboard" && <AdminDashboardView users={users || []} supabaseUsers={supabaseUsers || []} documents={documents || []} />}
-
-        {/* Tab Content - Users */}
-        {activeTab === "users" && <div className="space-y-8">
-            {users && supabaseUsers && <UserList supabaseUsers={supabaseUsers} users={users} isLoading={isLoadingUsers || isLoadingAuthUsers} setSelectedUserId={handleDocumentButtonClick || (() => {})} setSelectedUserForPasswordChange={setSelectedUserForPasswordChange || (() => {})} passwordForm={passwordForm || {}} refreshUsers={refreshUsers || (() => {})} />}
-          </div>}
-
-        {/* Tab Content - User Documents */}
-        {activeTab === "user-documents" && <UserDocumentView users={users || []} supabaseUsers={supabaseUsers || []} />}
-
-        {/* Tab Content - Storage */}
-        {activeTab === "storage" && <div className="space-y-8">
-            <StorageView />
-          </div>}
-
-        {/* Tab Content - Polls */}
-        {activeTab === "polls" && <div className="space-y-8">
-            <PollsTabView />
-          </div>}
-
-        {/* Tab Content - Tools */}
-        {activeTab === "tools" && <div className="space-y-8">
-            <AdminToolsView />
-          </div>}
-
-        {/* Tab Content - Tax Simulations */}
-        {activeTab === "tax-simulations" && <div className="space-y-8">
-            <TaxSimulationResults />
-          </div>}
-
-        {/* Tab Content - Settings */}
-        {activeTab === "settings" && <div className="space-y-8">
-            <SettingsView />
-          </div>}
-      </div>
+    <div className="min-h-screen bg-white dark:bg-[#020817]">
+      {tabComponents[activeTab as keyof typeof tabComponents] || tabComponents.dashboard}
     </div>
   );
-}
+};
