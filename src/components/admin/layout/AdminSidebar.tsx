@@ -112,9 +112,9 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
     },
     {
       icon: <Calculator size={20} />,
-      label: "Simulações IRPF",
-      active: getIsActive("/admin/tax-simulations"),
-      to: "/admin/tax-simulations"
+      label: "Simulações",
+      active: getIsActive("/admin/simulations"),
+      to: "/admin/simulations"
     },
     {
       icon: <Settings size={20} />,

@@ -66,9 +66,9 @@ const AppRoutes = () => {
         </PrivateRoute>
       } />
       
-      <Route path="/admin/tax-simulations" element={
+      <Route path="/admin/simulations" element={
         <PrivateRoute requiredRole="admin">
-          <AdminDashboard activeTab="tax-simulations" />
+          <AdminDashboard activeTab="simulations" />
         </PrivateRoute>
       } />
       
@@ -80,6 +80,7 @@ const AppRoutes = () => {
       
       {/* Manter compatibilidade com rotas antigas */}
       <Route path="/admin-dashboard" element={<Navigate to="/admin" replace />} />
+      <Route path="/admin/tax-simulations" element={<Navigate to="/admin/simulations" replace />} />
 
       {/* Client routes */}
       <Route path="/client/*" element={

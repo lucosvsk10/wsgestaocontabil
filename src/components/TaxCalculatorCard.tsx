@@ -8,32 +8,33 @@ const TaxCalculatorCard = () => {
   const navigate = useNavigate();
   
   return (
-    <Card className="border-gold/30 overflow-hidden bg-white dark:bg-navy-dark hover:shadow-lg transition-all duration-300">
-      <CardHeader className="bg-gold/10 dark:bg-navy-light/10 pb-2">
-        <CardTitle className="text-navy dark:text-gold text-xl font-medium">
-          Simulador de Imposto de Renda
+    <Card className="border-[#efc349]/30 overflow-hidden bg-white dark:bg-transparent hover:shadow-lg transition-all duration-300">
+      <CardHeader className="bg-[#efc349]/10 dark:bg-[#efc349]/10 pb-2">
+        <CardTitle className="text-[#020817] dark:text-[#efc349] text-xl font-extralight">
+          Simulador de Imposto de Renda 2025
         </CardTitle>
-        <CardDescription>
-          Calcule uma estimativa do seu IR e saiba se terá imposto a pagar ou restituição
+        <CardDescription className="font-extralight">
+          Calcule uma estimativa do seu IR e saiba se terá imposto a pagar ou estará isento
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-4">
-        <p className="text-navy/80 dark:text-white/80 text-sm mb-4">
-          Utilize nossa ferramenta para simular o cálculo do seu Imposto de Renda.
-          Uma forma simples de se planejar financeiramente.
+        <p className="text-[#020817]/80 dark:text-white/80 text-sm mb-4 font-extralight">
+          Utilize nossa ferramenta atualizada para simular o cálculo do seu Imposto de Renda 2025.
+          Uma forma simples e confiável de se planejar financeiramente.
         </p>
-        <ul className="text-sm text-navy/70 dark:text-white/70 list-disc list-inside space-y-1">
-          <li>Cálculo rápido e simplificado</li>
-          <li>Estimativa de restituição ou valor a pagar</li>
-          <li>Gráficos e resultados detalhados</li>
+        <ul className="text-sm text-[#020817]/70 dark:text-white/70 list-disc list-inside space-y-1 font-extralight">
+          <li>Cálculo baseado nas regras oficiais da Receita Federal</li>
+          <li>Estimativa precisa de imposto devido ou isenção</li>
+          <li>Interface moderna e responsiva</li>
+          <li>Resultados detalhados por faixas de tributação</li>
         </ul>
       </CardContent>
       <CardFooter>
         <Button 
           onClick={() => navigate("/simulador-irpf")}
-          className="w-full flex items-center justify-center gap-2"
+          className="w-full flex items-center justify-center gap-2 font-extralight"
         >
-          Simular IRPF <ArrowRight size={18} />
+          Simular IRPF 2025 <ArrowRight size={18} />
         </Button>
       </CardFooter>
     </Card>

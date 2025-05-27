@@ -2,7 +2,7 @@
 import { UserList } from "./UserList";
 import { PollsTabView } from "./polls/PollsTabView";
 import { UserDocumentView } from "./UserDocumentView";
-import TaxSimulationResults from "./TaxSimulationResults";
+import { SimulationsView } from "./simulations/SimulationsView";
 import { StorageView } from "./storage/StorageView";
 import { UserType } from "@/types/admin";
 import { Poll } from "@/types/polls";
@@ -109,9 +109,9 @@ export function AdminTabsView({
             <AdminToolsView />
           </div>}
 
-        {/* Tab Content - Tax Simulations */}
-        {activeTab === "tax-simulations" && <div className="space-y-8">
-            <TaxSimulationResults />
+        {/* Tab Content - Simulations */}
+        {activeTab === "simulations" && <div className="space-y-8">
+            <SimulationsView />
           </div>}
 
         {/* Tab Content - Settings */}
