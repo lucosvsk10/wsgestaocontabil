@@ -34,7 +34,7 @@ export const AdminToolsView: React.FC = () => {
               </div>
             </div>
             <div className="space-y-3">
-              <h3 className="text-xl font-medium text-[#020817] dark:text-[#efc349]">
+              <h3 className="text-xl text-[#020817] dark:text-[#efc349] font-thin">
                 {tool.title}
               </h3>
               <p className="text-gray-500 dark:text-white/70">
