@@ -1,5 +1,5 @@
 
-import { AdminDashboard } from "./AdminDashboard";
+import { ModernAdminDashboard } from "./ModernAdminDashboard";
 
 interface AdminDashboardViewProps {
   users: any[];
@@ -13,7 +13,7 @@ export const AdminDashboardView = ({
   documents
 }: AdminDashboardViewProps) => {
   return (
-    <AdminDashboard 
+    <ModernAdminDashboard 
       users={users} 
       supabaseUsers={supabaseUsers} 
       documents={documents} 
