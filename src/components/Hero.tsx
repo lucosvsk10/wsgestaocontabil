@@ -1,18 +1,15 @@
-
 import { useEffect, useRef } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Building, FileHeart, Users, FileText } from 'lucide-react';
-
 const Hero = () => {
   const heroRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
   const {
     theme
   } = useTheme();
-  
   useEffect(() => {
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) {
@@ -22,19 +19,16 @@ const Hero = () => {
     }, {
       threshold: 0.1
     });
-    
     if (heroRef.current) {
       observer.observe(heroRef.current);
     }
-    
     return () => {
       if (heroRef.current) {
         observer.unobserve(heroRef.current);
       }
     };
   }, []);
-  
-  return <section id="hero" className="relative min-h-[100vh] flex items-center justify-center overflow-hidden py-28 bg-background">
+  return <section id="hero" className="relative min-h-[100vh] flex items-center justify-center overflow-hidden bg-background py-[80px]">
       <div ref={heroRef} className="container relative z-5 transition-all duration-700 transform opacity-0 translate-y-10 my-px py-[4px] mx-0 px-[20px]">
         <div className="flex justify-center items-center">
           <div className="grid md:grid-cols-2 items-center gap-4 my-0 -mt-4 px-[150px] mx-0 py-[8px]">
@@ -81,18 +75,11 @@ const Hero = () => {
               
               {/* CTA Buttons */}
               <div className="flex flex-wrap gap-3 mt-7">
-                <Button 
-                  className="bg-primary text-white px-4 py-1.5 text-sm rounded-xl font-semibold hover:opacity-90" 
-                  onClick={() => window.open('https://g.co/kgs/d2UwXh3', '_blank')}
-                >
+                <Button className="bg-primary text-white px-4 py-1.5 text-sm rounded-xl font-semibold hover:opacity-90" onClick={() => window.open('https://g.co/kgs/d2UwXh3', '_blank')}>
                   Saiba Mais
                 </Button>
                 
-                <Button 
-                  variant="outline" 
-                  className="border border-primary text-primary px-4 py-1.5 text-sm rounded-xl hover:bg-primary/10"
-                  onClick={() => window.open('https://wa.me/5582999324884', '_blank')}
-                >
+                <Button variant="outline" className="border border-primary text-primary px-4 py-1.5 text-sm rounded-xl hover:bg-primary/10" onClick={() => window.open('https://wa.me/5582999324884', '_blank')}>
                   Fale com um especialista
                 </Button>
               </div>
@@ -102,13 +89,7 @@ const Hero = () => {
             <div className="flex flex-col items-center justify-center">
               <div className="flex flex-col items-center bg-inherit max-w-[250px] md:max-w-[300px]">
                 <div className="w-[70%] md:w-[80%]">
-                  <img 
-                    src={theme === 'light' 
-                      ? "/lovable-uploads/99f722e6-cc97-4cb4-8141-6a28a446db88.png" 
-                      : "/lovable-uploads/1eaf9486-7e70-4235-adbf-53d8043d5b91.png"} 
-                    alt="Símbolo da Contabilidade" 
-                    className="w-full h-full object-contain animate-fade-in" 
-                  />
+                  <img src={theme === 'light' ? "/lovable-uploads/99f722e6-cc97-4cb4-8141-6a28a446db88.png" : "/lovable-uploads/1eaf9486-7e70-4235-adbf-53d8043d5b91.png"} alt="Símbolo da Contabilidade" className="w-full h-full object-contain animate-fade-in" />
                 </div>
                 <p className="text-xs text-muted-foreground mt-2 text-center italic px-[20px]">
                   O caduceu é um símbolo da contabilidade, representando a sabedoria, o conhecimento e a proteção do comércio e das riquezas, características do profissional contábil.
@@ -120,5 +101,4 @@ const Hero = () => {
       </div>
     </section>;
 };
-
 export default Hero;
