@@ -62,7 +62,7 @@ export const AdminDashboard = ({
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl text-[#020817] dark:text-[#efc349] mb-2 font-extralight">Dashboard </h1>
+          <h1 className="text-3xl text-[#020817] dark:text-[#efc349] mb-2 font-thin">Dashboard </h1>
           <p className="text-gray-600 dark:text-[#b3b3b3]">
             Visão geral do sistema e atividades recentes
           </p>
