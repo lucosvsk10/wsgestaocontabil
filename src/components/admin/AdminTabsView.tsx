@@ -3,6 +3,7 @@ import { UserList } from "./UserList";
 import { PollsTabView } from "./polls/PollsTabView";
 import { UserDocumentView } from "./UserDocumentView";
 import TaxSimulationResults from "./TaxSimulationResults";
+import { StorageView } from "./storage/StorageView";
 import { UserType } from "@/types/admin";
 import { Poll } from "@/types/polls";
 import { AdminDashboardView } from "./dashboard/AdminDashboardView";
@@ -92,6 +93,11 @@ export function AdminTabsView({
 
         {/* Tab Content - User Documents */}
         {activeTab === "user-documents" && <UserDocumentView users={users || []} supabaseUsers={supabaseUsers || []} />}
+
+        {/* Tab Content - Storage */}
+        {activeTab === "storage" && <div className="space-y-8">
+            <StorageView />
+          </div>}
 
         {/* Tab Content - Polls */}
         {activeTab === "polls" && <div className="space-y-8">
