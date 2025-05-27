@@ -93,35 +93,12 @@ const AdminDashboard = ({
     navigate(`/admin/user-documents/${userId}`);
   };
 
-  // Function to handle back to user list
-  const handleBackToUserList = () => {
-    navigate('/admin/users');
-  };
-
-  // Get user name for document view
-  const getUserName = (userId: string | undefined) => {
-    if (!userId) return "";
-    const user = users.find(u => u.id === userId) || supabaseUsers.find(u => u.id === userId);
-    return user?.name || user?.email?.split('@')[0] || "Usuário";
-  };
-
   // Register user-documents param for user documents page
   useEffect(() => {
     if (activeTab === "user-documents" && userId) {
       setSelectedUserId(userId);
     }
   }, [activeTab, userId, setSelectedUserId]);
-
-  // Wrapper for handleFileChange to match expected signature
-  const handleFileChangeWrapper = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    return handleFileChange(e);
-  };
-
-  // Wrapper for handleUpload to match expected signature  
-  const handleUploadWrapper = async () => {
-    const fakeEvent = new Event('submit') as any;
-    return handleUpload(fakeEvent);
-  };
   
   return (
     <AdminLayout>
@@ -148,8 +125,8 @@ const AdminDashboard = ({
         setDocumentCategory={setDocumentCategory} 
         documentObservations={documentObservations} 
         setDocumentObservations={setDocumentObservations} 
-        handleFileChange={handleFileChangeWrapper} 
-        handleUpload={handleUploadWrapper} 
+        handleFileChange={handleFileChange} 
+        handleUpload={handleUpload} 
         isUploading={isUploading} 
         documents={documents} 
         isLoadingDocuments={isLoadingDocuments} 
@@ -158,9 +135,7 @@ const AdminDashboard = ({
         expirationDate={expirationDate} 
         setExpirationDate={setExpirationDate} 
         noExpiration={noExpiration} 
-        setNoExpiration={setNoExpiration}
-        handleBackToUserList={handleBackToUserList}
-        userName={getUserName(selectedUserId)}
+        setNoExpiration={setNoExpiration} 
       />
       
       <AdminPasswordChangeModal 

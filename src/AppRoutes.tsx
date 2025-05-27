@@ -1,3 +1,4 @@
+
 import { Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -68,12 +69,6 @@ const AppRoutes = () => {
       <Route path="/admin/tax-simulations" element={
         <PrivateRoute requiredRole="admin">
           <AdminDashboard activeTab="tax-simulations" />
-        </PrivateRoute>
-      } />
-
-      <Route path="/admin/simulations" element={
-        <PrivateRoute requiredRole="admin">
-          <AdminDashboard activeTab="simulations" />
         </PrivateRoute>
       } />
       
