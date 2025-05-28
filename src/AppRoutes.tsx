@@ -11,6 +11,8 @@ import PollPage from "./pages/PollPage";
 import NumericalPollPage from "./pages/NumericalPollPage";
 import FormPollPage from "./pages/FormPollPage";
 import TaxCalculator from "./pages/TaxCalculator";
+import INSSCalculator from "./pages/INSSCalculator";
+import ProLaboreCalculator from "./pages/ProLaboreCalculator";
 import { checkIsAdmin } from "./utils/auth/userChecks";
 
 const AppRoutes = () => {
@@ -28,6 +30,8 @@ const AppRoutes = () => {
       <Route path="/enquete-numerica/:id" element={<NumericalPollPage />} />
       <Route path="/formulario/:id" element={<FormPollPage />} />
       <Route path="/simulador-irpf" element={<TaxCalculator />} />
+      <Route path="/calculadora-inss" element={<INSSCalculator />} />
+      <Route path="/simulador-prolabore" element={<ProLaboreCalculator />} />
       
       {/* Admin routes */}
       <Route path="/admin" element={
@@ -69,6 +73,12 @@ const AppRoutes = () => {
       <Route path="/admin/simulations" element={
         <PrivateRoute requiredRole="admin">
           <AdminDashboard activeTab="simulations" />
+        </PrivateRoute>
+      } />
+      
+      <Route path="/admin/announcements" element={
+        <PrivateRoute requiredRole="admin">
+          <AdminDashboard activeTab="announcements" />
         </PrivateRoute>
       } />
       

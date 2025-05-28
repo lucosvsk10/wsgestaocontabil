@@ -1,76 +1,163 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Eye, Trash2, Archive, Search, Calendar, User, Calculator } from 'lucide-react';
+import { Eye, Trash2, Archive, Search, Calendar, User, Calculator, Download, Copy } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { currencyFormat } from '@/utils/taxCalculations';
+import { supabase } from '@/lib/supabaseClient';
+import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface Simulation {
   id: string;
-  user_name: string | null;
-  simulation_type: 'IRPF' | 'INSS' | 'Pró-labore';
-  date: string;
-  total_income: number;
-  total_deductions: number;
-  tax_due: number;
-  effective_rate: number;
-  details: any;
+  user_id: string | null;
+  nome: string | null;
+  email: string | null;
+  telefone: string | null;
+  tipo_simulacao: string;
+  data_criacao: string;
+  rendimento_bruto: number;
+  inss: number;
+  educacao: number;
+  saude: number;
+  dependentes: number;
+  outras_deducoes: number;
+  imposto_estimado: number;
 }
 
-// Mock data - será substituído por dados reais do Supabase
-const mockSimulations: Simulation[] = [
-  {
-    id: '1',
-    user_name: 'João Silva',
-    simulation_type: 'IRPF',
-    date: '2024-12-20T10:30:00Z',
-    total_income: 120000,
-    total_deductions: 25000,
-    tax_due: 15600,
-    effective_rate: 13.0,
-    details: {}
-  },
-  {
-    id: '2',
-    user_name: null,
-    simulation_type: 'IRPF',
-    date: '2024-12-19T15:45:00Z',
-    total_income: 85000,
-    total_deductions: 18000,
-    tax_due: 8450,
-    effective_rate: 9.9,
-    details: {}
-  }
-];
-
 export const SimulationsView: React.FC = () => {
-  const [searchTerm, setSearchTerm] = React.useState('');
-  const [filteredSimulations, setFilteredSimulations] = React.useState(mockSimulations);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [simulations, setSimulations] = useState<Simulation[]>([]);
+  const [filteredSimulations, setFilteredSimulations] = useState<Simulation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedSimulation, setSelectedSimulation] = useState<Simulation | null>(null);
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const { toast } = useToast();
 
-  React.useEffect(() => {
-    const filtered = mockSimulations.filter(sim => 
-      (sim.user_name?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      sim.simulation_type.toLowerCase().includes(searchTerm.toLowerCase())
+  useEffect(() => {
+    fetchSimulations();
+  }, []);
+
+  useEffect(() => {
+    const filtered = simulations.filter(sim => 
+      (sim.nome?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (sim.email?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      sim.tipo_simulacao.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredSimulations(filtered);
-  }, [searchTerm]);
+  }, [searchTerm, simulations]);
+
+  const fetchSimulations = async () => {
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('tax_simulations')
+        .select('*')
+        .order('data_criacao', { ascending: false });
+      
+      if (error) throw error;
+      
+      setSimulations(data || []);
+      setFilteredSimulations(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar simulações:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar as simulações.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
   };
 
   const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'IRPF': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
-      case 'INSS': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
-      case 'Pró-labore': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300';
+    switch (type.toLowerCase()) {
+      case 'irpf': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
+      case 'inss': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
+      case 'pró-labore': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300';
       default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300';
     }
   };
+
+  const openDetails = (simulation: Simulation) => {
+    setSelectedSimulation(simulation);
+    setDetailsModalOpen(true);
+  };
+
+  const copySimulationData = (simulation: Simulation) => {
+    const totalDeducoes = simulation.inss + simulation.educacao + simulation.saude + 
+                         (simulation.dependentes * 2275.08) + simulation.outras_deducoes;
+
+    const texto = `
+Simulação ${simulation.tipo_simulacao.toUpperCase()} - ${formatDate(simulation.data_criacao)}
+===============================================
+${simulation.nome ? `Nome: ${simulation.nome}` : 'Usuário Anônimo'}
+${simulation.email ? `Email: ${simulation.email}` : ''}
+${simulation.telefone ? `Telefone: ${simulation.telefone}` : ''}
+
+DADOS FINANCEIROS:
+Rendimento Bruto: ${currencyFormat(simulation.rendimento_bruto)}
+INSS: ${currencyFormat(simulation.inss)}
+Educação: ${currencyFormat(simulation.educacao)}
+Saúde: ${currencyFormat(simulation.saude)}
+Dependentes: ${simulation.dependentes} (${currencyFormat(simulation.dependentes * 2275.08)})
+Outras Deduções: ${currencyFormat(simulation.outras_deducoes)}
+Total de Deduções: ${currencyFormat(totalDeducoes)}
+
+RESULTADO:
+${simulation.tipo_simulacao === 'IRPF' ? 'Imposto' : 'Contribuição'}: ${currencyFormat(simulation.imposto_estimado)}
+    `;
+
+    navigator.clipboard.writeText(texto);
+    toast({
+      title: "Copiado!",
+      description: "Dados da simulação copiados para a área de transferência."
+    });
+  };
+
+  const deleteSimulation = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('tax_simulations')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      setSimulations(prev => prev.filter(sim => sim.id !== id));
+      toast({
+        title: "Sucesso",
+        description: "Simulação excluída com sucesso."
+      });
+    } catch (error) {
+      console.error('Erro ao excluir simulação:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir a simulação.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <Calculator className="h-12 w-12 text-[#efc349] mx-auto mb-4 animate-spin" />
+          <p className="text-[#020817] dark:text-white font-extralight">Carregando simulações...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 p-6">
@@ -78,10 +165,10 @@ export const SimulationsView: React.FC = () => {
       <div className="space-y-4">
         <div>
           <h1 className="text-3xl text-[#020817] dark:text-[#efc349] mb-4 font-extralight">
-            Simulações Fiscais
+            Histórico de Simulações
           </h1>
           <p className="text-gray-600 dark:text-white/70 font-extralight">
-            Histórico de todas as simulações realizadas pelos usuários
+            Visualize todas as simulações realizadas pelos usuários
           </p>
         </div>
 
@@ -90,10 +177,10 @@ export const SimulationsView: React.FC = () => {
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
-              placeholder="Buscar por nome ou tipo..."
+              placeholder="Buscar por nome, email ou tipo..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30"
+              className="pl-10 bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30 font-extralight"
             />
           </div>
           
@@ -106,9 +193,21 @@ export const SimulationsView: React.FC = () => {
             </div>
             <div className="text-center">
               <div className="text-2xl font-extralight text-blue-600 dark:text-blue-400">
-                {filteredSimulations.filter(s => s.simulation_type === 'IRPF').length}
+                {filteredSimulations.filter(s => s.tipo_simulacao.toLowerCase() === 'irpf').length}
               </div>
               <div className="text-gray-600 dark:text-white/70">IRPF</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-extralight text-green-600 dark:text-green-400">
+                {filteredSimulations.filter(s => s.tipo_simulacao.toLowerCase() === 'inss').length}
+              </div>
+              <div className="text-gray-600 dark:text-white/70">INSS</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-extralight text-purple-600 dark:text-purple-400">
+                {filteredSimulations.filter(s => s.tipo_simulacao.toLowerCase() === 'pró-labore').length}
+              </div>
+              <div className="text-gray-600 dark:text-white/70">Pró-labore</div>
             </div>
           </div>
         </div>
@@ -127,16 +226,16 @@ export const SimulationsView: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-gray-500 dark:text-white/60" />
                     <span className="text-sm font-extralight text-[#020817] dark:text-white">
-                      {simulation.user_name || 'Usuário Anônimo'}
+                      {simulation.nome || 'Usuário Anônimo'}
                     </span>
                   </div>
-                  <Badge className={`${getTypeColor(simulation.simulation_type)} font-extralight`}>
-                    {simulation.simulation_type}
+                  <Badge className={`${getTypeColor(simulation.tipo_simulacao)} font-extralight`}>
+                    {simulation.tipo_simulacao.toUpperCase()}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-white/60">
                   <Calendar className="h-3 w-3" />
-                  <span className="font-extralight">{formatDate(simulation.date)}</span>
+                  <span className="font-extralight">{formatDate(simulation.data_criacao)}</span>
                 </div>
               </div>
             </CardHeader>
@@ -147,28 +246,24 @@ export const SimulationsView: React.FC = () => {
                 <div className="space-y-1">
                   <div className="text-gray-600 dark:text-white/70 font-extralight">Rendimentos</div>
                   <div className="text-[#020817] dark:text-white font-extralight">
-                    {currencyFormat(simulation.total_income)}
+                    {currencyFormat(simulation.rendimento_bruto)}
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-gray-600 dark:text-white/70 font-extralight">Deduções</div>
-                  <div className="text-[#020817] dark:text-white font-extralight">
-                    {currencyFormat(simulation.total_deductions)}
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <div className="text-gray-600 dark:text-white/70 font-extralight">Imposto Devido</div>
-                  <div className="text-red-600 dark:text-red-400 font-extralight">
-                    {currencyFormat(simulation.tax_due)}
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <div className="text-gray-600 dark:text-white/70 font-extralight">Alíquota Efetiva</div>
+                  <div className="text-gray-600 dark:text-white/70 font-extralight">Resultado</div>
                   <div className="text-[#020817] dark:text-[#efc349] font-extralight">
-                    {simulation.effective_rate.toFixed(1)}%
+                    {currencyFormat(simulation.imposto_estimado)}
                   </div>
                 </div>
               </div>
+
+              {/* Contact Info */}
+              {(simulation.email || simulation.telefone) && (
+                <div className="text-xs text-gray-500 dark:text-white/60 font-extralight">
+                  {simulation.email && <p>{simulation.email}</p>}
+                  {simulation.telefone && <p>{simulation.telefone}</p>}
+                </div>
+              )}
 
               {/* Actions */}
               <div className="flex gap-2 pt-2">
@@ -176,6 +271,7 @@ export const SimulationsView: React.FC = () => {
                   variant="outline"
                   size="sm"
                   className="flex-1 h-8 text-xs font-extralight border-[#efc349]/30 hover:bg-[#efc349]/10"
+                  onClick={() => openDetails(simulation)}
                 >
                   <Eye className="h-3 w-3 mr-1" />
                   Detalhes
@@ -183,14 +279,16 @@ export const SimulationsView: React.FC = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-8 text-xs font-extralight border-yellow-500/30 hover:bg-yellow-500/10"
+                  className="h-8 text-xs font-extralight border-blue-500/30 hover:bg-blue-500/10"
+                  onClick={() => copySimulationData(simulation)}
                 >
-                  <Archive className="h-3 w-3" />
+                  <Copy className="h-3 w-3" />
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   className="h-8 text-xs font-extralight border-red-500/30 hover:bg-red-500/10 text-red-600 dark:text-red-400"
+                  onClick={() => deleteSimulation(simulation.id)}
                 >
                   <Trash2 className="h-3 w-3" />
                 </Button>
@@ -214,6 +312,107 @@ export const SimulationsView: React.FC = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Details Modal */}
+      <Dialog open={detailsModalOpen} onOpenChange={setDetailsModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl text-[#020817] dark:text-[#efc349] font-extralight">
+              Detalhes da Simulação
+            </DialogTitle>
+            <DialogDescription className="font-extralight">
+              Informações completas da simulação
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedSimulation && (
+            <div className="space-y-6 py-4">
+              {/* User Info */}
+              <div className="bg-[#efc349]/10 rounded-lg p-4 border border-[#efc349]/30">
+                <h3 className="font-extralight text-[#020817] dark:text-[#efc349] mb-3">Informações do Usuário</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="font-extralight">Nome:</span>
+                    <span className="font-extralight">{selectedSimulation.nome || 'Não informado'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-extralight">Email:</span>
+                    <span className="font-extralight">{selectedSimulation.email || 'Não informado'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-extralight">Telefone:</span>
+                    <span className="font-extralight">{selectedSimulation.telefone || 'Não informado'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-extralight">Data:</span>
+                    <span className="font-extralight">{formatDate(selectedSimulation.data_criacao)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Financial Data */}
+              <div className="bg-gray-50 dark:bg-[#020817]/50 rounded-lg p-4">
+                <h3 className="font-extralight text-[#020817] dark:text-[#efc349] mb-3">Dados Financeiros</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="font-extralight">Rendimento Bruto:</span>
+                    <span className="font-extralight">{currencyFormat(selectedSimulation.rendimento_bruto)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-extralight">INSS:</span>
+                    <span className="font-extralight">{currencyFormat(selectedSimulation.inss)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-extralight">Educação:</span>
+                    <span className="font-extralight">{currencyFormat(selectedSimulation.educacao)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-extralight">Saúde:</span>
+                    <span className="font-extralight">{currencyFormat(selectedSimulation.saude)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-extralight">Dependentes:</span>
+                    <span className="font-extralight">{selectedSimulation.dependentes} ({currencyFormat(selectedSimulation.dependentes * 2275.08)})</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-extralight">Outras Deduções:</span>
+                    <span className="font-extralight">{currencyFormat(selectedSimulation.outras_deducoes)}</span>
+                  </div>
+                  <div className="border-t border-gray-200 dark:border-[#efc349]/30 pt-2">
+                    <div className="flex justify-between text-lg">
+                      <span className="font-extralight text-[#020817] dark:text-[#efc349]">
+                        {selectedSimulation.tipo_simulacao === 'IRPF' ? 'Imposto' : 'Contribuição'}:
+                      </span>
+                      <span className="font-extralight text-[#020817] dark:text-[#efc349]">
+                        {currencyFormat(selectedSimulation.imposto_estimado)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2">
+                <Button 
+                  onClick={() => copySimulationData(selectedSimulation)}
+                  className="flex-1 bg-[#020817] dark:bg-transparent border border-[#efc349] text-white dark:text-[#efc349] hover:bg-[#020817]/90 dark:hover:bg-[#efc349]/10 font-extralight"
+                >
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copiar Dados
+                </Button>
+                <Button 
+                  onClick={() => window.print()}
+                  variant="outline"
+                  className="flex-1 border-[#efc349]/30 hover:bg-[#efc349]/10 font-extralight"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Imprimir
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

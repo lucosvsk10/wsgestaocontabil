@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Calculator, FileText, PieChart } from 'lucide-react';
+import { Calculator, FileText, PieChart, Building2, CreditCard } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export const AdminToolsView: React.FC = () => {
@@ -15,16 +15,34 @@ export const AdminToolsView: React.FC = () => {
       action: () => navigate('/simulador-irpf')
     },
     {
+      title: "Calculadora de INSS",
+      description: "Calcule contribuições do INSS por categoria.",
+      icon: <CreditCard className="h-12 w-12 text-blue-600 dark:text-blue-400" />,
+      action: () => navigate('/calculadora-inss')
+    },
+    {
+      title: "Simulador de Pró-labore",
+      description: "Simule valores líquidos de pró-labore.",
+      icon: <Building2 className="h-12 w-12 text-purple-600 dark:text-purple-400" />,
+      action: () => navigate('/simulador-prolabore')
+    },
+    {
       title: "Gerador de Enquetes",
       description: "Crie enquetes para seus clientes.",
-      icon: <PieChart className="h-12 w-12 text-blue-600 dark:text-blue-400" />,
+      icon: <PieChart className="h-12 w-12 text-orange-600 dark:text-orange-400" />,
       action: () => navigate('/admin/polls')
     },
     {
       title: "Gerenciador de Documentos",
       description: "Gerencie documentos por cliente.",
-      icon: <FileText className="h-12 w-12 text-purple-600 dark:text-purple-400" />,
+      icon: <FileText className="h-12 w-12 text-indigo-600 dark:text-indigo-400" />,
       action: () => navigate('/admin/users')
+    },
+    {
+      title: "Histórico de Simulações",
+      description: "Visualize todas as simulações realizadas.",
+      icon: <Calculator className="h-12 w-12 text-red-600 dark:text-red-400" />,
+      action: () => navigate('/admin/simulations')
     }
   ];
 
@@ -37,7 +55,7 @@ export const AdminToolsView: React.FC = () => {
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {tools.map((tool, index) => (
-          <div key={index} className="p-8 text-center space-y-6 transition-all duration-300 hover:scale-105 group bg-white dark:bg-transparent rounded-xl border border-gray-100 dark:border-none hover:shadow-lg dark:hover:shadow-none">
+          <div key={index} className="p-8 text-center space-y-6 transition-all duration-300 hover:scale-105 group bg-white dark:bg-transparent rounded-xl border border-gray-100 dark:border-[#efc349]/20 hover:shadow-lg dark:hover:shadow-none">
             <div className="flex items-center justify-center">
               <div className="rounded-full bg-gray-50 dark:bg-[#efc349]/10 p-6 group-hover:scale-110 transition-all duration-300">
                 {tool.icon}
@@ -53,7 +71,7 @@ export const AdminToolsView: React.FC = () => {
             </div>
             <Button 
               variant="outline" 
-              className="w-full transition-all duration-300 hover:scale-105 font-extralight" 
+              className="w-full transition-all duration-300 hover:scale-105 font-extralight border-[#efc349]/30 hover:bg-[#efc349]/10" 
               onClick={tool.action}
             >
               Acessar
