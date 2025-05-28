@@ -1,36 +1,29 @@
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter } from "react-router-dom";
-import AppRoutes from "./AppRoutes";
-import { Toaster } from "./components/ui/toaster";
-import { ThemeProvider } from "./contexts/ThemeContext";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "./contexts/AuthContext";
-import React from 'react';
+import { ThemeProvider } from "./contexts/ThemeContext";
+import { Toaster } from "./components/ui/sonner";
+import AppRoutes from "./AppRoutes";
+import AnnouncementsContainer from "./components/announcements/AnnouncementsContainer";
 
-// Create a client
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      gcTime: 1000 * 60 * 10, // 10 minutes
-    },
-  },
-});
+const queryClient = new QueryClient();
 
 function App() {
   return (
-    <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <AuthProvider>
-            <BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <AuthProvider>
+          <ThemeProvider defaultTheme="system" storageKey="ws-gestao-theme">
+            <div className="min-h-screen bg-[#FFF1DE] dark:bg-[#020817]">
               <AppRoutes />
+              <AnnouncementsContainer />
               <Toaster />
-            </BrowserRouter>
-          </AuthProvider>
-        </ThemeProvider>
-      </QueryClientProvider>
-    </React.StrictMode>
+            </div>
+          </ThemeProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 }
 

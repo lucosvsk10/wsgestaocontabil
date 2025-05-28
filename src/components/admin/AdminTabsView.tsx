@@ -1,4 +1,3 @@
-
 import { UserList } from "./UserList";
 import { PollsTabView } from "./polls/PollsTabView";
 import { UserDocumentView } from "./UserDocumentView";
@@ -9,6 +8,7 @@ import { Poll } from "@/types/polls";
 import { AdminDashboardView } from "./dashboard/AdminDashboardView";
 import { SettingsView } from "./settings/SettingsView";
 import { AdminToolsView } from "./tools/AdminToolsView";
+import { AnnouncementsView } from "./announcements/AnnouncementsView";
 
 export interface AdminTabsViewProps {
   activeTab?: string;
@@ -112,6 +112,11 @@ export function AdminTabsView({
         {/* Tab Content - Simulations */}
         {activeTab === "simulations" && <div className="space-y-8">
             <SimulationsView />
+          </div>}
+
+        {/* Tab Content - Announcements */}
+        {activeTab === "announcements" && <div className="space-y-8">
+            <AnnouncementsView />
           </div>}
 
         {/* Tab Content - Settings */}
