@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -10,32 +9,27 @@ import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { useState } from "react";
 import { StorageDistributionChart } from "./StorageDistributionChart";
 import { StorageUsageList } from "./StorageUsageList";
-
 export const StorageView = () => {
-  const { storageStats, isLoading } = useStorageStats();
+  const {
+    storageStats,
+    isLoading
+  } = useStorageStats();
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("usage");
   const [filterType, setFilterType] = useState("all");
-
   const formatSize = (bytes: number) => {
     if (bytes === 0) return '0 B';
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
     return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
   };
-
-  const usedPercentage = storageStats ? (storageStats.totalStorageMB / 100) * 100 : 0;
-
+  const usedPercentage = storageStats ? storageStats.totalStorageMB / 100 * 100 : 0;
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-[#fdfdfd] dark:bg-[#020817] flex items-center justify-center">
+    return <div className="min-h-screen bg-[#fdfdfd] dark:bg-[#020817] flex items-center justify-center">
         <LoadingSpinner />
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="min-h-screen bg-[#fdfdfd] dark:bg-[#020817] p-8">
+  return <div className="min-h-screen bg-[#fdfdfd] dark:bg-[#020817] p-8">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -57,7 +51,7 @@ export const StorageView = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="bg-white dark:bg-[#0b0f1c] border-none shadow-sm">
             <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-[#020817] dark:text-[#efc349] font-extralight">
+              <CardTitle className="flex items-center gap-2 text-[#020817] dark:text-[#efc349] font-extralight text-lg">
                 <HardDrive className="h-5 w-5" />
                 Espaço Utilizado
               </CardTitle>
@@ -77,7 +71,7 @@ export const StorageView = () => {
 
           <Card className="bg-white dark:bg-[#0b0f1c] border-none shadow-sm">
             <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-[#020817] dark:text-[#efc349] font-extralight">
+              <CardTitle className="flex items-center gap-2 text-[#020817] dark:text-[#efc349] font-extralight text-lg">
                 <FileText className="h-5 w-5" />
                 Total de Documentos
               </CardTitle>
@@ -94,7 +88,7 @@ export const StorageView = () => {
 
           <Card className="bg-white dark:bg-[#0b0f1c] border-none shadow-sm">
             <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-[#020817] dark:text-[#efc349] font-extralight">
+              <CardTitle className="flex items-center gap-2 text-[#020817] dark:text-[#efc349] font-extralight text-lg">
                 <Users className="h-5 w-5" />
                 Usuários Ativos
               </CardTitle>
@@ -114,12 +108,7 @@ export const StorageView = () => {
         <div className="flex flex-col md:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Buscar por usuário..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-white dark:bg-[#0b0f1c] border-gray-200 dark:border-[#efc349]/30"
-            />
+            <Input placeholder="Buscar por usuário..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 bg-white dark:bg-[#0b0f1c] border-gray-200 dark:border-[#efc349]/30" />
           </div>
           <Select value={sortBy} onValueChange={setSortBy}>
             <SelectTrigger className="w-full md:w-48 bg-white dark:bg-[#0b0f1c] border-gray-200 dark:border-[#efc349]/30">
@@ -166,15 +155,10 @@ export const StorageView = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <StorageUsageList 
-                userStorage={storageStats?.userStorage || []}
-                searchTerm={searchTerm}
-                sortBy={sortBy}
-              />
+              <StorageUsageList userStorage={storageStats?.userStorage || []} searchTerm={searchTerm} sortBy={sortBy} />
             </CardContent>
           </Card>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
