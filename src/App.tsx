@@ -5,6 +5,7 @@ import AppRoutes from "./AppRoutes";
 import { Toaster } from "./components/ui/toaster";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AuthProvider } from "./contexts/AuthContext";
+import { AnnouncementsContainer } from "./components/announcements/AnnouncementsContainer";
 import React from 'react';
 
 // Create a client
@@ -25,6 +26,7 @@ function App() {
           <AuthProvider>
             <BrowserRouter>
               <AppRoutes />
+              <AnnouncementsContainer />
               <Toaster />
             </BrowserRouter>
           </AuthProvider>

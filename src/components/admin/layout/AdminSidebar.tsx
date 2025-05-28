@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { LayoutDashboard, Users, PieChart, Calculator, Settings, Wrench, X, HardDrive } from "lucide-react";
+import { LayoutDashboard, Users, PieChart, Calculator, Settings, Wrench, X, HardDrive, Megaphone } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
 
@@ -115,6 +115,12 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
       label: "Simulações",
       active: getIsActive("/admin/simulations"),
       to: "/admin/simulations"
+    },
+    {
+      icon: <Megaphone size={20} />,
+      label: "Anúncios",
+      active: getIsActive("/admin/announcements"),
+      to: "/admin/announcements"
     },
     {
       icon: <Settings size={20} />,
