@@ -14,16 +14,10 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const [theme, setThemeState] = useState<Theme>('dark');
   
-  // Check for system preference
+  // Initialize theme on app load - default to dark
   useEffect(() => {
-    const checkSystemPreference = () => {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      return prefersDark ? 'dark' : 'light';
-    };
-    
-    // Initialize theme from localStorage or use dark as default
     const savedTheme = localStorage.getItem('theme') as Theme | null;
-    const initialTheme = savedTheme || 'dark'; // Changed default to dark
+    const initialTheme = savedTheme || 'dark'; // Always default to dark
     setThemeState(initialTheme);
     
     // Apply the theme to the document

@@ -1,43 +1,20 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, AlertCircle, CheckCircle } from 'lucide-react';
-import { FiscalEvent } from '@/types/client';
+import { Calendar, Clock, AlertTriangle, CheckCircle } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { useClientData } from '@/hooks/client/useClientData';
+import { Badge } from '@/components/ui/badge';
 
 export const FiscalCalendarSection = () => {
+  const { user } = useAuth();
   const { fiscalEvents, fetchFiscalEvents } = useClientData();
 
   useEffect(() => {
-    fetchFiscalEvents();
-  }, [fetchFiscalEvents]);
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'upcoming':
-        return <Clock className="w-4 h-4 text-blue-500" />;
-      case 'today':
-        return <AlertCircle className="w-4 h-4 text-orange-500" />;
-      case 'overdue':
-        return <AlertCircle className="w-4 h-4 text-red-500" />;
-      default:
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
+    if (user?.id) {
+      fetchFiscalEvents();
     }
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'upcoming':
-        return <Badge variant="outline" className="text-blue-600 border-blue-300 font-extralight">Em breve</Badge>;
-      case 'today':
-        return <Badge variant="outline" className="text-orange-600 border-orange-300 font-extralight">Hoje</Badge>;
-      case 'overdue':
-        return <Badge variant="destructive" className="font-extralight">Vencido</Badge>;
-      default:
-        return <Badge variant="default" className="font-extralight">Concluído</Badge>;
-    }
-  };
+  }, [user?.id, fetchFiscalEvents]);
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('pt-BR', {
@@ -47,51 +24,115 @@ export const FiscalCalendarSection = () => {
     });
   };
 
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'upcoming':
+        return <Clock className="w-4 h-4 text-blue-500" />;
+      case 'today':
+        return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
+      case 'overdue':
+        return <AlertTriangle className="w-4 h-4 text-red-500" />;
+      case 'completed':
+        return <CheckCircle className="w-4 h-4 text-green-500" />;
+      default:
+        return <Clock className="w-4 h-4 text-gray-500" />;
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'upcoming':
+        return <Badge variant="outline" className="font-extralight text-blue-600">Próximo</Badge>;
+      case 'today':
+        return <Badge variant="destructive" className="font-extralight">Hoje</Badge>;
+      case 'overdue':
+        return <Badge variant="destructive" className="font-extralight">Atrasado</Badge>;
+      case 'completed':
+        return <Badge variant="secondary" className="font-extralight text-green-600">Concluído</Badge>;
+      default:
+        return <Badge variant="outline" className="font-extralight">Pendente</Badge>;
+    }
+  };
+
+  const getCardColors = (status: string) => {
+    switch (status) {
+      case 'today':
+        return 'border-yellow-200 dark:border-yellow-500/30 bg-yellow-50 dark:bg-yellow-900/20';
+      case 'overdue':
+        return 'border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-900/20';
+      case 'completed':
+        return 'border-green-200 dark:border-green-500/30 bg-green-50 dark:bg-green-900/20';
+      default:
+        return 'border-[#e6e6e6] dark:border-[#efc349]/30 bg-white dark:bg-transparent';
+    }
+  };
+
   return (
-    <Card className="bg-white dark:bg-[#0b1320] border-gray-200 dark:border-[#efc349]/30">
-      <CardHeader>
-        <CardTitle className="flex items-center text-[#020817] dark:text-[#efc349] font-extralight text-xl">
-          <Calendar className="mr-2 h-5 w-5" />
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-extralight text-[#020817] dark:text-[#efc349]">
           Agenda Fiscal
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {fiscalEvents.length === 0 ? (
-          <div className="text-center py-8 text-gray-500 dark:text-gray-400 font-extralight">
-            Nenhum evento fiscal encontrado
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {fiscalEvents.map((event) => (
-              <div
-                key={event.id}
-                className="p-4 rounded-lg border border-gray-200 dark:border-[#efc349]/30 bg-gray-50 dark:bg-[#0b1320]/50"
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    {getStatusIcon(event.status)}
-                    <h3 className="font-extralight text-[#020817] dark:text-white">
-                      {event.title}
-                    </h3>
+        </h2>
+        <Badge variant="outline" className="font-extralight">
+          {fiscalEvents.length} {fiscalEvents.length === 1 ? 'evento' : 'eventos'}
+        </Badge>
+      </div>
+
+      {fiscalEvents.length === 0 ? (
+        <Card className="border border-[#e6e6e6] dark:border-[#efc349]/30 bg-white dark:bg-transparent">
+          <CardContent className="py-12 text-center">
+            <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
+            <p className="text-gray-600 dark:text-gray-400 font-extralight mb-2">
+              Nenhum evento fiscal programado
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-500 font-extralight">
+              Eventos fiscais importantes aparecerão aqui
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {fiscalEvents.map((event) => (
+            <Card 
+              key={event.id} 
+              className={`border ${getCardColors(event.status)} transition-all hover:shadow-md`}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-[#efc349]/10">
+                      <Calendar className="w-5 h-5 text-[#efc349]" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg font-extralight text-[#020817] dark:text-[#efc349]">
+                        {event.title}
+                      </CardTitle>
+                      <div className="flex items-center gap-2 mt-1">
+                        {getStatusIcon(event.status)}
+                        <p className="text-sm text-gray-600 dark:text-gray-400 font-extralight">
+                          {formatDate(event.date)}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  {getStatusBadge(event.status)}
+                  <div className="flex flex-col items-end gap-2">
+                    {getStatusBadge(event.status)}
+                    <Badge variant="outline" className="font-extralight text-xs">
+                      {event.category}
+                    </Badge>
+                  </div>
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-300 font-extralight mb-2">
+              </CardHeader>
+              
+              <CardContent>
+                <p className="text-[#020817] dark:text-white font-extralight leading-relaxed">
                   {event.description}
                 </p>
-                <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
-                  <span className="font-extralight">
-                    Data: {formatDate(event.date)}
-                  </span>
-                  <span className="font-extralight">
-                    Categoria: {event.category}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
   );
 };

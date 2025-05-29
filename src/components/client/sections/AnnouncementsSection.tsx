@@ -1,17 +1,21 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Megaphone, AlertTriangle } from 'lucide-react';
-import { ClientAnnouncement } from '@/types/client';
+import { Button } from '@/components/ui/button';
+import { Megaphone, ExternalLink, Clock } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { useClientData } from '@/hooks/client/useClientData';
+import { Badge } from '@/components/ui/badge';
 
 export const AnnouncementsSection = () => {
+  const { user } = useAuth();
   const { announcements, fetchAnnouncements } = useClientData();
 
   useEffect(() => {
-    fetchAnnouncements();
-  }, [fetchAnnouncements]);
+    if (user?.id) {
+      fetchAnnouncements();
+    }
+  }, [user?.id, fetchAnnouncements]);
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('pt-BR', {
@@ -23,71 +27,108 @@ export const AnnouncementsSection = () => {
     });
   };
 
-  const isExpired = (expiresAt?: string) => {
+  const isExpired = (expiresAt: string | null) => {
     if (!expiresAt) return false;
     return new Date(expiresAt) < new Date();
   };
 
+  const getThemeColors = (theme: string) => {
+    switch (theme) {
+      case 'info':
+        return 'border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-900/20';
+      case 'warning':
+        return 'border-yellow-200 dark:border-yellow-500/30 bg-yellow-50 dark:bg-yellow-900/20';
+      case 'success':
+        return 'border-green-200 dark:border-green-500/30 bg-green-50 dark:bg-green-900/20';
+      case 'danger':
+        return 'border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-900/20';
+      default:
+        return 'border-[#e6e6e6] dark:border-[#efc349]/30 bg-white dark:bg-transparent';
+    }
+  };
+
   return (
-    <Card className="bg-white dark:bg-[#0b1320] border-gray-200 dark:border-[#efc349]/30">
-      <CardHeader>
-        <CardTitle className="flex items-center text-[#020817] dark:text-[#efc349] font-extralight text-xl">
-          <Megaphone className="mr-2 h-5 w-5" />
-          Comunicados Recebidos
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {announcements.length === 0 ? (
-          <div className="text-center py-8 text-gray-500 dark:text-gray-400 font-extralight">
-            Nenhum comunicado encontrado
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {announcements.map((announcement) => (
-              <div
-                key={announcement.id}
-                className="p-4 rounded-lg border border-gray-200 dark:border-[#efc349]/30 bg-gray-50 dark:bg-[#0b1320]/50"
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    {announcement.theme === 'urgent' && (
-                      <AlertTriangle className="w-4 h-4 text-red-500" />
-                    )}
-                    <h3 className="font-extralight text-[#020817] dark:text-white">
-                      {announcement.title}
-                    </h3>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-extralight text-[#020817] dark:text-[#efc349]">
+          Comunicados
+        </h2>
+        <Badge variant="outline" className="font-extralight">
+          {announcements.length} {announcements.length === 1 ? 'comunicado' : 'comunicados'}
+        </Badge>
+      </div>
+
+      {announcements.length === 0 ? (
+        <Card className="border border-[#e6e6e6] dark:border-[#efc349]/30 bg-white dark:bg-transparent">
+          <CardContent className="py-12 text-center">
+            <Megaphone className="w-12 h-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
+            <p className="text-gray-600 dark:text-gray-400 font-extralight mb-2">
+              Nenhum comunicado disponível
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-500 font-extralight">
+              Comunicados importantes aparecerão aqui
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {announcements.map((announcement) => (
+            <Card 
+              key={announcement.id} 
+              className={`border ${getThemeColors(announcement.theme)} transition-all hover:shadow-md`}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-[#efc349]/10">
+                      <Megaphone className="w-5 h-5 text-[#efc349]" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg font-extralight text-[#020817] dark:text-[#efc349]">
+                        {announcement.title}
+                      </CardTitle>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Clock className="w-4 h-4 text-gray-500" />
+                        <p className="text-sm text-gray-600 dark:text-gray-400 font-extralight">
+                          {formatDate(announcement.created_at)}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    {announcement.theme === 'urgent' && (
-                      <Badge variant="destructive" className="text-xs font-extralight">
-                        Urgente
-                      </Badge>
-                    )}
-                    {isExpired(announcement.expires_at) && (
-                      <Badge variant="secondary" className="text-xs font-extralight">
-                        Expirado
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-                <p className="text-sm text-gray-600 dark:text-gray-300 font-extralight mb-2">
-                  {announcement.message}
-                </p>
-                <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
-                  <span className="font-extralight">
-                    Enviado em: {formatDate(announcement.created_at)}
-                  </span>
-                  {announcement.expires_at && (
-                    <span className="font-extralight">
-                      Expira em: {formatDate(announcement.expires_at)}
-                    </span>
+                  {isExpired(announcement.expires_at) && (
+                    <Badge variant="secondary" className="font-extralight">
+                      Expirado
+                    </Badge>
                   )}
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+              </CardHeader>
+              
+              <CardContent className="space-y-4">
+                <p className="text-[#020817] dark:text-white font-extralight leading-relaxed">
+                  {announcement.message}
+                </p>
+
+                {announcement.expires_at && !isExpired(announcement.expires_at) && (
+                  <div className="text-sm text-gray-600 dark:text-gray-400 font-extralight">
+                    <Clock className="w-4 h-4 inline mr-1" />
+                    Válido até: {formatDate(announcement.expires_at)}
+                  </div>
+                )}
+
+                {announcement.action_button_text && announcement.action_button_url && (
+                  <Button 
+                    className="bg-transparent border border-[#efc349] text-[#020817] dark:text-[#efc349] hover:bg-[#efc349]/10 font-extralight"
+                    onClick={() => window.open(announcement.action_button_url, '_blank')}
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    {announcement.action_button_text}
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
   );
 };

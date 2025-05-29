@@ -1,18 +1,30 @@
 
 export interface TaxSimulation {
   id: string;
+  user_id: string;
   tipo_simulacao: string;
   rendimento_bruto: number;
-  imposto_estimado: number;
   inss: number;
-  dependentes: number;
-  saude: number;
   educacao: number;
+  saude: number;
+  dependentes: number;
   outras_deducoes: number;
+  imposto_estimado: number;
   data_criacao: string;
   nome?: string;
   email?: string;
   telefone?: string;
+}
+
+export interface ClientAnnouncement {
+  id: string;
+  title: string;
+  message: string;
+  created_at: string;
+  expires_at: string | null;
+  theme: string;
+  action_button_text?: string;
+  action_button_url?: string;
 }
 
 export interface FiscalEvent {
@@ -20,7 +32,7 @@ export interface FiscalEvent {
   title: string;
   date: string;
   description: string;
-  status: 'upcoming' | 'today' | 'overdue';
+  status: 'upcoming' | 'today' | 'overdue' | 'completed';
   category: string;
 }
 
@@ -35,15 +47,4 @@ export interface CompanyData {
   address: string;
   phone: string;
   email: string;
-}
-
-export interface ClientAnnouncement {
-  id: string;
-  title: string;
-  message: string;
-  created_at: string;
-  expires_at?: string;
-  theme: string; // Changed from 'normal' | 'urgent' to string to match database
-  action_button_text?: string;
-  action_button_url?: string;
 }
