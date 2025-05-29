@@ -1,6 +1,7 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DocumentTabs } from "@/components/client/DocumentTabs";
+import { ClientNavigation } from "@/components/client/ClientNavigation";
 import { EmptyDocuments } from "@/components/client/EmptyDocuments";
 import { EmptyCategory } from "@/components/client/EmptyCategory";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,12 +21,8 @@ import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { convertToCommonCategories } from "@/utils/document/documentTypeUtils";
 
 const ClientDashboard = () => {
-  const {
-    user
-  } = useAuth();
-  const {
-    toast
-  } = useToast();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const isMobile = useIsMobile();
   const {
@@ -152,7 +149,7 @@ const ClientDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FFF1DE] dark:bg-navy-dark">
+    <div className={`min-h-screen flex flex-col bg-[#FFF1DE] dark:bg-[#0b1320] ${isMobile ? 'pb-20' : ''}`}>
       <Navbar />
       <motion.div 
         initial="hidden"
@@ -161,41 +158,30 @@ const ClientDashboard = () => {
         className={`container mx-auto p-4 flex-grow ${isMobile ? 'px-2' : 'px-4'} py-6`}
       >
         <motion.div variants={itemVariants}>
-          <Card className="border-[#e6e6e6] dark:border-gold/20 bg-white dark:bg-navy-dark shadow-sm">
-            <CardHeader className="rounded-full bg-white dark:bg-navy-dark">
-              <CardTitle className="flex items-center justify-between font-extralight text-[#020817] dark:text-gold text-2xl">
-                {selectedCategory && categories.find(c => c.id === selectedCategory) 
-                  ? `Documentos - ${categories.find(c => c.id === selectedCategory)?.name}` 
-                  : 'Meus Documentos'
-                }
+          <Card className="border-[#e6e6e6] dark:border-[#efc349]/20 bg-white dark:bg-[#0b1320] shadow-sm">
+            <CardHeader className="bg-white dark:bg-[#0b1320]">
+              <CardTitle className="flex items-center justify-between font-extralight text-[#020817] dark:text-[#efc349] text-2xl">
+                Painel do Cliente
               </CardTitle>
             </CardHeader>
-            <CardContent className="bg-white dark:bg-navy-dark rounded-full">
+            <CardContent className="bg-white dark:bg-[#0b1320]">
               {isLoadingDocuments || isLoadingCategories ? (
                 <div className="flex justify-center py-8">
                   <LoadingSpinner />
                 </div>
-              ) : documents.length > 0 && categories.length > 0 ? (
-                selectedCategory ? (
-                  <div className={`${isMobile ? 'overflow-x-auto' : ''}`}>
-                    <DocumentTabs 
-                      documents={[]} 
-                      allDocuments={documents} 
-                      documentsByCategory={documentsByCategory} 
-                      categories={commonCategories} 
-                      setSelectedCategory={setSelectedCategory} 
-                      formatDate={formatDate} 
-                      isDocumentExpired={isDocumentExpired} 
-                      daysUntilExpiration={daysUntilExpiration} 
-                      refreshDocuments={() => fetchUserDocuments(user?.id || '')} 
-                      activeCategory={selectedCategory} 
-                    />
-                  </div>
-                ) : (
-                  <EmptyCategory />
-                )
               ) : (
-                <EmptyDocuments />
+                <ClientNavigation
+                  documents={[]} 
+                  allDocuments={documents} 
+                  documentsByCategory={documentsByCategory} 
+                  categories={commonCategories} 
+                  setSelectedCategory={setSelectedCategory} 
+                  formatDate={formatDate} 
+                  isDocumentExpired={isDocumentExpired} 
+                  daysUntilExpiration={daysUntilExpiration} 
+                  refreshDocuments={() => fetchUserDocuments(user?.id || '')} 
+                  activeCategory={selectedCategory || ''}
+                />
               )}
             </CardContent>
           </Card>

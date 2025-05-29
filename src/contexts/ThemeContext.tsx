@@ -12,7 +12,7 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
-  const [theme, setThemeState] = useState<Theme>('light');
+  const [theme, setThemeState] = useState<Theme>('dark');
   
   // Check for system preference
   useEffect(() => {
@@ -21,9 +21,9 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
       return prefersDark ? 'dark' : 'light';
     };
     
-    // Initialize theme from localStorage or use system preference
+    // Initialize theme from localStorage or use dark as default
     const savedTheme = localStorage.getItem('theme') as Theme | null;
-    const initialTheme = savedTheme || checkSystemPreference();
+    const initialTheme = savedTheme || 'dark'; // Changed default to dark
     setThemeState(initialTheme);
     
     // Apply the theme to the document
