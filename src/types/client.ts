@@ -38,6 +38,7 @@ export interface FiscalEvent {
 
 export interface CompanyData {
   id: string;
+  user_id: string;
   name: string;
   cnpj: string;
   opening_date: string;
