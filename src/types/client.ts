@@ -43,7 +43,7 @@ export interface ClientAnnouncement {
   message: string;
   created_at: string;
   expires_at?: string;
-  theme: 'normal' | 'urgent';
+  theme: string; // Changed from 'normal' | 'urgent' to string to match database
   action_button_text?: string;
   action_button_url?: string;
 }

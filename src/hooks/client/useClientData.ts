@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -44,7 +43,20 @@ export const useClientData = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setAnnouncements(data || []);
+      
+      // Map database data to ClientAnnouncement interface
+      const mappedAnnouncements: ClientAnnouncement[] = (data || []).map(announcement => ({
+        id: announcement.id,
+        title: announcement.title,
+        message: announcement.message,
+        created_at: announcement.created_at,
+        expires_at: announcement.expires_at,
+        theme: announcement.theme,
+        action_button_text: announcement.action_button_text,
+        action_button_url: announcement.action_button_url
+      }));
+      
+      setAnnouncements(mappedAnnouncements);
     } catch (error) {
       console.error('Error fetching announcements:', error);
     }
