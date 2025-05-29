@@ -32,5 +32,6 @@ export interface CreateAnnouncementData {
   position: 'bottom_right' | 'top_fixed';
   action_button_text?: string | null;
   action_button_url?: string | null;
+  is_active?: boolean;
   expires_at?: Date | null;
 }

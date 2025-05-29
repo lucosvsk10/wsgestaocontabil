@@ -47,7 +47,18 @@ export const AnnouncementsView = () => {
   const toggleAnnouncementStatus = (announcement: Announcement) => {
     updateAnnouncement({
       id: announcement.id,
-      data: { ...announcement, is_active: !announcement.is_active }
+      data: { 
+        title: announcement.title,
+        message: announcement.message,
+        target_type: announcement.target_type,
+        target_user_id: announcement.target_user_id,
+        theme: announcement.theme,
+        position: announcement.position,
+        action_button_text: announcement.action_button_text,
+        action_button_url: announcement.action_button_url,
+        is_active: !announcement.is_active,
+        expires_at: announcement.expires_at ? new Date(announcement.expires_at) : null
+      }
     });
   };
 
