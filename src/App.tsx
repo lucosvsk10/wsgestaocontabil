@@ -1,41 +1,38 @@
 
-import { BrowserRouter as Router } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
-import { ThemeProvider } from './contexts/ThemeContext';
-import { Toaster } from './components/ui/toaster';
-import AppRoutes from './AppRoutes';
-import { useEffect } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter } from "react-router-dom";
+import AppRoutes from "./AppRoutes";
+import { Toaster } from "./components/ui/toaster";
+import { ThemeProvider } from "./contexts/ThemeContext";
+import { AuthProvider } from "./contexts/AuthContext";
+import { AnnouncementsContainer } from "./components/announcements/AnnouncementsContainer";
+import React from 'react';
 
 // Create a client
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5, // 5 minutes
-      retry: 1,
+      gcTime: 1000 * 60 * 10, // 10 minutes
     },
   },
 });
 
 function App() {
-  useEffect(() => {
-    // Force dark mode on app load
-    document.documentElement.classList.add('dark');
-  }, []);
-
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <AuthProvider>
-          <Router>
-            <div className="min-h-screen bg-[#fdfdfd] dark:bg-[#020817]">
+    <React.StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <AuthProvider>
+            <BrowserRouter>
               <AppRoutes />
+              <AnnouncementsContainer />
               <Toaster />
-            </div>
-          </Router>
-        </AuthProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+            </BrowserRouter>
+          </AuthProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </React.StrictMode>
   );
 }
 
