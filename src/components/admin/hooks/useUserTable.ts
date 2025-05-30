@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const useUserTable = (refreshUsers: () => void, setSelectedUserForPasswordChange: (user: any) => void) => {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [selectedUserForPasswordChange, setSelectedUserForPasswordChangeLocal] = useState<any>(null);
+  const [selectedUserForPasswordChangeLocal, setSelectedUserForPasswordChangeLocal] = useState<any>(null);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const { toast } = useToast();
 

@@ -74,8 +74,10 @@ export const UserList = ({
       <PasswordChangeModal
         open={showPasswordModal}
         onOpenChange={setShowPasswordModal}
-        selectedUser={selectedUserForPasswordChange}
-        onSuccess={handlePasswordChangeSuccess}
+        selectedUserForPasswordChange={selectedUserForPasswordChange}
+        setSelectedUserForPasswordChange={setSelectedUserForPasswordChange}
+        changeUserPassword={() => {}}
+        isChangingPassword={false}
         passwordForm={passwordForm}
       />
 

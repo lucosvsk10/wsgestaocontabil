@@ -3,7 +3,6 @@ import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components
 import { UserRow } from "./tables/UserRow";
 import { EmptyTableMessage } from "./tables/EmptyTableMessage";
 import { UserTableHeader } from "./tables/UserTableHeader";
-import { useUserTable } from "./hooks/useUserTable";
 
 interface UserTableProps {
   supabaseUsers: any[];
@@ -24,13 +23,6 @@ export const UserTable = ({
   onEditName,
   onManageCompany
 }: UserTableProps) => {
-  const {
-    adminUsers,
-    clientUsers,
-    handleEditName,
-    handleDeleteUser
-  } = useUserTable(() => {}, () => {});
-
   if (isLoading) {
     return <div className="text-center py-4">Carregando usuários...</div>;
   }
