@@ -13,16 +13,15 @@ import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from '@/contexts/AuthContext';
 
 const ProLaboreCalculator = () => {
-  const [valorPretendido, setValorPretendido] = useState('');
+  const [valorProLabore, setValorProLabore] = useState('');
   const [regimeTributario, setRegimeTributario] = useState('');
-  const [aliquotaINSS, setAliquotaINSS] = useState('');
   const [resultado, setResultado] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
   const calcularProLabore = () => {
-    const valor = parseFloat(valorPretendido);
+    const valor = parseFloat(valorProLabore);
     
     if (!valor || valor <= 0) {
       toast({
@@ -33,68 +32,69 @@ const ProLaboreCalculator = () => {
       return;
     }
 
-    if (!regimeTributario || !aliquotaINSS) {
+    if (!regimeTributario) {
       toast({
         title: "Erro", 
-        description: "Por favor, preencha todos os campos.",
+        description: "Por favor, selecione o regime tributário.",
         variant: "destructive"
       });
       return;
     }
 
-    // Cálculo INSS sobre pró-labore
-    const aliquota = parseFloat(aliquotaINSS);
-    const inssRetido = valor * (aliquota / 100);
-    const tetoINSS = 908.85; // Teto INSS 2025
-    const inssReal = Math.min(inssRetido, tetoINSS);
+    let inss = 0;
+    let irrf = 0;
+    let totalDescontos = 0;
+    let valorLiquido = 0;
+    let observacoes = '';
 
-    // IRRF sobre pró-labore (se aplicável)
-    let irrfRetido = 0;
-    const baseIRRF = valor - inssReal;
+    // Cálculo INSS sobre pró-labore (sempre 11% para sócios)
+    const tetoINSS = 7786.02;
+    const baseINSS = Math.min(valor, tetoINSS);
+    inss = baseINSS * 0.11;
+
+    // Cálculo IRRF progressivo
+    const baseIRRF = valor - inss;
     
-    if (baseIRRF > 2259.20) { // Faixa isenta IRRF 2025
-      if (baseIRRF <= 2826.65) {
-        irrfRetido = (baseIRRF * 0.075) - 169.44;
-      } else if (baseIRRF <= 3751.05) {
-        irrfRetido = (baseIRRF * 0.15) - 381.44;
-      } else if (baseIRRF <= 4664.68) {
-        irrfRetido = (baseIRRF * 0.225) - 662.77;
-      } else {
-        irrfRetido = (baseIRRF * 0.275) - 896.00;
+    // Tabela IRRF 2025
+    const faixasIRRF = [
+      { min: 0, max: 2259.20, aliquota: 0, deducao: 0 },
+      { min: 2259.21, max: 2826.65, aliquota: 7.5, deducao: 169.44 },
+      { min: 2826.66, max: 3751.05, aliquota: 15, deducao: 381.44 },
+      { min: 3751.06, max: 4664.68, aliquota: 22.5, deducao: 662.77 },
+      { min: 4664.69, max: Infinity, aliquota: 27.5, deducao: 896.00 }
+    ];
+
+    // Encontrar faixa IRRF
+    for (const faixa of faixasIRRF) {
+      if (baseIRRF >= faixa.min && baseIRRF <= faixa.max) {
+        irrf = Math.max(0, (baseIRRF * faixa.aliquota / 100) - faixa.deducao);
+        break;
       }
-      irrfRetido = Math.max(0, irrfRetido);
     }
 
-    // Impostos adicionais conforme regime
-    let impostosAdicionais = 0;
-    let descricaoImpostos = '';
+    totalDescontos = inss + irrf;
+    valorLiquido = valor - totalDescontos;
 
-    switch (regimeTributario) {
-      case 'Simples Nacional':
-        descricaoImpostos = 'Não há impostos adicionais no Simples Nacional';
-        break;
-      case 'Lucro Presumido':
-        impostosAdicionais = valor * 0.11; // PIS/COFINS
-        descricaoImpostos = 'PIS/COFINS sobre pró-labore';
-        break;
-      case 'Lucro Real':
-        impostosAdicionais = valor * 0.0975; // PIS/COFINS
-        descricaoImpostos = 'PIS/COFINS sobre pró-labore';
-        break;
+    // Observações específicas por regime
+    if (regimeTributario === 'Simples Nacional') {
+      observacoes = 'No Simples Nacional, o pró-labore não está sujeito ao DAS, apenas INSS e IRRF.';
+    } else if (regimeTributario === 'Lucro Presumido') {
+      observacoes = 'No Lucro Presumido, além dos descontos no pró-labore, a empresa recolhe INSS patronal (20%).';
+    } else if (regimeTributario === 'Lucro Real') {
+      observacoes = 'No Lucro Real, além dos descontos no pró-labore, a empresa recolhe INSS patronal (20%).';
     }
-
-    const valorLiquido = valor - inssReal - irrfRetido - impostosAdicionais;
 
     const resultadoCalculo = {
       valorBruto: valor,
       regimeTributario,
-      aliquotaINSS: aliquota,
-      inssRetido: inssReal,
-      irrfRetido,
-      impostosAdicionais,
-      descricaoImpostos,
+      descontos: {
+        inss,
+        irrf
+      },
+      totalDescontos,
       valorLiquido,
-      percentualDesconto: ((valor - valorLiquido) / valor * 100).toFixed(2)
+      percentualDesconto: (totalDescontos / valor * 100).toFixed(2),
+      observacoes
     };
 
     setResultado(resultadoCalculo);
@@ -109,12 +109,12 @@ const ProLaboreCalculator = () => {
         user_id: user?.id || null,
         tipo_simulacao: 'Pró-labore',
         rendimento_bruto: resultado.valorBruto,
-        inss: resultado.inssRetido,
-        imposto_estimado: resultado.valorBruto - resultado.valorLiquido,
+        inss: resultado.descontos.inss,
+        imposto_estimado: resultado.descontos.irrf,
         educacao: 0,
         saude: 0,
         dependentes: 0,
-        outras_deducoes: resultado.impostosAdicionais
+        outras_deducoes: 0
       });
 
       toast({
@@ -137,15 +137,15 @@ const ProLaboreCalculator = () => {
     if (!resultado) return;
 
     const texto = `
-Simulação Pró-labore 2025
-========================
+Cálculo Pró-labore 2025
+======================
 Valor Bruto: ${resultado.valorBruto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
 Regime: ${resultado.regimeTributario}
-INSS Retido: ${resultado.inssRetido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-IRRF Retido: ${resultado.irrfRetido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-Impostos Adicionais: ${resultado.impostosAdicionais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+INSS (11%): ${resultado.descontos.inss.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+IRRF: ${resultado.descontos.irrf.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+Total Descontos: ${resultado.totalDescontos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
 Valor Líquido: ${resultado.valorLiquido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-Desconto Total: ${resultado.percentualDesconto}%
+${resultado.observacoes ? `\nObservações: ${resultado.observacoes}` : ''}
     `;
 
     navigator.clipboard.writeText(texto);
@@ -153,6 +153,10 @@ Desconto Total: ${resultado.percentualDesconto}%
       title: "Copiado!",
       description: "Resultado copiado para a área de transferência."
     });
+  };
+
+  const imprimir = () => {
+    window.print();
   };
 
   return (
@@ -171,7 +175,7 @@ Desconto Total: ${resultado.percentualDesconto}%
             </h1>
           </div>
           <p className="text-lg font-extralight text-gray-600 dark:text-white/70 max-w-2xl mx-auto">
-            Calcule o valor líquido do seu pró-labore considerando todos os descontos
+            Calcule os descontos sobre pró-labore de sócios e administradores
           </p>
         </div>
 
@@ -184,24 +188,24 @@ Desconto Total: ${resultado.percentualDesconto}%
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="valor" className="font-extralight">Valor Pretendido (R$)</Label>
+                <Label htmlFor="valor" className="font-extralight">Valor do Pró-labore (R$)</Label>
                 <Input
                   id="valor"
                   type="number"
-                  value={valorPretendido}
-                  onChange={(e) => setValorPretendido(e.target.value)}
+                  value={valorProLabore}
+                  onChange={(e) => setValorProLabore(e.target.value)}
                   placeholder="Ex: 5000"
                   className="bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30 font-extralight"
                 />
                 <p className="text-xs text-gray-600 dark:text-white/60 font-extralight">
-                  Valor bruto desejado para o pró-labore
+                  Informe o valor mensal do pró-labore
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="regime" className="font-extralight">Regime Tributário</Label>
+                <Label htmlFor="regime" className="font-extralight">Regime Tributário da Empresa</Label>
                 <Select value={regimeTributario} onValueChange={setRegimeTributario}>
                   <SelectTrigger className="bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30 font-extralight">
                     <SelectValue placeholder="Selecione o regime" />
@@ -213,23 +217,7 @@ Desconto Total: ${resultado.percentualDesconto}%
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-gray-600 dark:text-white/60 font-extralight">
-                  Regime tributário da empresa
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="inss" className="font-extralight">Alíquota INSS (%)</Label>
-                <Select value={aliquotaINSS} onValueChange={setAliquotaINSS}>
-                  <SelectTrigger className="bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30 font-extralight">
-                    <SelectValue placeholder="Selecione a alíquota" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="11">11% (Padrão)</SelectItem>
-                    <SelectItem value="20">20% (Contribuição ampliada)</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-gray-600 dark:text-white/60 font-extralight">
-                  Alíquota de INSS do sócio
+                  Escolha o regime tributário da empresa
                 </p>
               </div>
             </div>
@@ -269,23 +257,23 @@ Desconto Total: ${resultado.percentualDesconto}%
                     </div>
                     <div className="space-y-2">
                       <p className="text-sm font-extralight text-gray-600 dark:text-white/70">
-                        Regime
+                        INSS (11%)
                       </p>
                       <p className="text-lg font-extralight text-[#020817] dark:text-white">
-                        {resultado.regimeTributario}
+                        {resultado.descontos.inss.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                       </p>
                     </div>
                     <div className="space-y-2">
                       <p className="text-sm font-extralight text-gray-600 dark:text-white/70">
-                        INSS Retido
+                        IRRF
                       </p>
-                      <p className="text-lg font-extralight text-red-600 dark:text-red-400">
-                        -{resultado.inssRetido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      <p className="text-lg font-extralight text-[#020817] dark:text-white">
+                        {resultado.descontos.irrf.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                       </p>
                     </div>
                     <div className="space-y-2">
                       <p className="text-sm font-extralight text-gray-600 dark:text-white/70">
-                        Desconto Total
+                        % Desconto
                       </p>
                       <p className="text-lg font-extralight text-[#020817] dark:text-[#efc349]">
                         {resultado.percentualDesconto}%
@@ -297,10 +285,18 @@ Desconto Total: ${resultado.percentualDesconto}%
                     <p className="text-sm font-extralight text-gray-600 dark:text-white/70 mb-2">
                       Valor Líquido
                     </p>
-                    <p className="text-4xl font-extralight text-green-600 dark:text-green-400">
+                    <p className="text-4xl font-extralight text-[#020817] dark:text-[#efc349]">
                       {resultado.valorLiquido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                     </p>
                   </div>
+
+                  {resultado.observacoes && (
+                    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                      <p className="text-sm font-extralight text-blue-800 dark:text-blue-200">
+                        <strong>Observações:</strong> {resultado.observacoes}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -318,7 +314,7 @@ Desconto Total: ${resultado.percentualDesconto}%
                     Copiar Resultado
                   </Button>
                   <Button
-                    onClick={() => window.print()}
+                    onClick={imprimir}
                     variant="outline"
                     className="font-extralight border-[#efc349]/30 hover:bg-[#efc349]/10"
                   >

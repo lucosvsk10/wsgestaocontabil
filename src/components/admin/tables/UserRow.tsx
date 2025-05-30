@@ -2,7 +2,7 @@
 import { formatDate } from "../utils/dateUtils";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { FileText, Lock, Trash2, Edit, Building } from "lucide-react";
+import { FileText, Lock, Trash2, Edit } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { AuthUser } from "../types/userTable";
 import { UserType } from "@/types/admin";
@@ -15,7 +15,6 @@ interface UserRowProps {
   onEditName: () => void;
   onChangePassword: () => void;
   onDelete: () => void;
-  onManageCompany?: () => void;
   showDocumentButton?: boolean;
 }
 
@@ -27,7 +26,6 @@ export const UserRow = ({
   onEditName,
   onChangePassword,
   onDelete,
-  onManageCompany,
   showDocumentButton = true
 }: UserRowProps) => {
   const navigate = useNavigate();
@@ -74,16 +72,6 @@ export const UserRow = ({
                 <span>Documentos</span>
               </Button>
             )}
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-1 bg-white border-green-300 text-green-600 hover:bg-green-50 dark:bg-navy-light/80 dark:text-green-400 dark:hover:bg-green-600 dark:hover:text-white"
-              onClick={onManageCompany}
-              aria-label={`Gerenciar empresa de ${authUser.user_metadata?.name || authUser.email || "usuário"}`}
-            >
-              <Building size={14} />
-              <span>Empresa</span>
-            </Button>
             {userInfo && (
               <Button
                 variant="outline"

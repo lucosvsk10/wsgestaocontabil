@@ -41,34 +41,69 @@ const INSSCalculator = () => {
       return;
     }
 
-    // Faixas INSS 2025
-    const faixas = [
+    let inssDevido = 0;
+    let faixaAplicada = '';
+    let aliquotaEfetiva = 0;
+    let observacoes = '';
+
+    // Faixas INSS 2025 para CLT
+    const faixasCLT = [
       { min: 0, max: 1412.00, aliquota: 7.5 },
       { min: 1412.01, max: 2666.68, aliquota: 9.0 },
       { min: 2666.69, max: 4000.03, aliquota: 12.0 },
       { min: 4000.04, max: 7786.02, aliquota: 14.0 }
     ];
 
-    let inssDevido = 0;
-    let faixaAplicada = '';
-    let aliquotaEfetiva = 0;
-
-    // Cálculo progressivo
-    for (const faixa of faixas) {
-      if (salario > faixa.min) {
-        const baseCalculo = Math.min(salario, faixa.max) - (faixa.min - 0.01);
-        inssDevido += baseCalculo * (faixa.aliquota / 100);
-        
-        if (salario <= faixa.max) {
-          faixaAplicada = `${faixa.min.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} a ${faixa.max.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`;
-          break;
+    if (tipoContribuinte === 'CLT') {
+      // Cálculo progressivo para CLT
+      for (const faixa of faixasCLT) {
+        if (salario > faixa.min) {
+          const baseCalculo = Math.min(salario, faixa.max) - (faixa.min - 0.01);
+          inssDevido += baseCalculo * (faixa.aliquota / 100);
+          
+          if (salario <= faixa.max) {
+            faixaAplicada = `${faixa.min.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} a ${faixa.max.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`;
+            break;
+          }
         }
       }
-    }
 
-    if (salario > 7786.02) {
-      faixaAplicada = 'Acima do teto';
-      inssDevido = 908.85; // Valor máximo INSS 2025
+      if (salario > 7786.02) {
+        faixaAplicada = 'Acima do teto';
+        inssDevido = 908.85; // Valor máximo INSS 2025
+      }
+    } 
+    else if (tipoContribuinte === 'Autônomo') {
+      // Contribuinte Individual (20% sobre salário de contribuição)
+      const salarioContribuicao = Math.min(salario, 7786.02);
+      inssDevido = salarioContribuicao * 0.20;
+      faixaAplicada = 'Contribuinte Individual - 20%';
+      observacoes = 'Alíquota de 20% sobre o salário de contribuição escolhido.';
+    }
+    else if (tipoContribuinte === 'MEI') {
+      // MEI tem contribuição fixa
+      if (salario <= 81000) { // Limite anual MEI 2025
+        inssDevido = 70.60; // Valor fixo mensal MEI 2025 (5% sobre salário mínimo)
+        faixaAplicada = 'MEI - Contribuição fixa';
+        observacoes = 'Valor fixo mensal para MEI: 5% do salário mínimo + R$1,00 de ICMS.';
+      } else {
+        toast({
+          title: "Erro",
+          description: "Faturamento acima do limite MEI. Considere outro regime.",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+    else if (tipoContribuinte === 'Facultativo') {
+      // Facultativo: 20% ou 11% com restrições
+      const salarioContribuicao = Math.min(salario, 7786.02);
+      const contribuicaoNormal = salarioContribuicao * 0.20;
+      const contribuicaoReduzida = 1412.00 * 0.11; // 11% sobre salário mínimo
+      
+      inssDevido = contribuicaoNormal;
+      faixaAplicada = 'Facultativo - 20%';
+      observacoes = `Opção 1: ${contribuicaoNormal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (20% - aposentadoria por tempo de contribuição). Opção 2: ${contribuicaoReduzida.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (11% - apenas aposentadoria por idade).`;
     }
 
     aliquotaEfetiva = (inssDevido / salario) * 100;
@@ -79,7 +114,8 @@ const INSSCalculator = () => {
       faixaAplicada,
       valorContribuicao: inssDevido,
       baseCalculo: Math.min(salario, 7786.02),
-      aliquotaEfetiva: aliquotaEfetiva.toFixed(2)
+      aliquotaEfetiva: aliquotaEfetiva.toFixed(2),
+      observacoes
     };
 
     setResultado(resultadoCalculo);
@@ -130,6 +166,7 @@ Faixa: ${resultado.faixaAplicada}
 Base de Cálculo: ${resultado.baseCalculo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
 Contribuição INSS: ${resultado.valorContribuicao.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
 Alíquota Efetiva: ${resultado.aliquotaEfetiva}%
+${resultado.observacoes ? `\nObservações: ${resultado.observacoes}` : ''}
     `;
 
     navigator.clipboard.writeText(texto);
@@ -195,9 +232,9 @@ Alíquota Efetiva: ${resultado.aliquotaEfetiva}%
                     <SelectValue placeholder="Selecione o tipo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="CLT">CLT</SelectItem>
-                    <SelectItem value="Autônomo">Autônomo</SelectItem>
-                    <SelectItem value="MEI">MEI</SelectItem>
+                    <SelectItem value="CLT">CLT (Empregado)</SelectItem>
+                    <SelectItem value="Autônomo">Autônomo/Contribuinte Individual</SelectItem>
+                    <SelectItem value="MEI">MEI (Microempreendedor Individual)</SelectItem>
                     <SelectItem value="Facultativo">Facultativo</SelectItem>
                   </SelectContent>
                 </Select>
@@ -274,6 +311,14 @@ Alíquota Efetiva: ${resultado.aliquotaEfetiva}%
                       {resultado.valorContribuicao.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                     </p>
                   </div>
+
+                  {resultado.observacoes && (
+                    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                      <p className="text-sm font-extralight text-blue-800 dark:text-blue-200">
+                        <strong>Observações:</strong> {resultado.observacoes}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
