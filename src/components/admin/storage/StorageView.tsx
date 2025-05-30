@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -9,27 +10,96 @@ import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { useState } from "react";
 import { StorageDistributionChart } from "./StorageDistributionChart";
 import { StorageUsageList } from "./StorageUsageList";
+import { useToast } from "@/hooks/use-toast";
+
 export const StorageView = () => {
-  const {
-    storageStats,
-    isLoading
-  } = useStorageStats();
+  const { storageStats, isLoading } = useStorageStats();
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("usage");
   const [filterType, setFilterType] = useState("all");
+  const { toast } = useToast();
+
   const formatSize = (bytes: number) => {
     if (bytes === 0) return '0 B';
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
     return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
   };
+
   const usedPercentage = storageStats ? storageStats.totalStorageMB / 100 * 100 : 0;
+
+  const handleExportReport = () => {
+    if (!storageStats) {
+      toast({
+        title: "Erro",
+        description: "Dados de armazenamento não disponíveis",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Criar dados do relatório
+      const reportData = {
+        timestamp: new Date().toISOString(),
+        totalStorage: {
+          bytes: storageStats.totalStorageBytes,
+          mb: storageStats.totalStorageMB.toFixed(2),
+          percentage: usedPercentage.toFixed(1)
+        },
+        userStorage: storageStats.userStorage.map(user => ({
+          userId: user.userId,
+          name: user.name || 'Usuário sem nome',
+          email: user.email || 'Sem email',
+          sizeBytes: user.sizeBytes,
+          sizeMB: user.sizeMB.toFixed(2)
+        })),
+        summary: {
+          totalUsers: storageStats.userStorage.length,
+          activeUsers: storageStats.userStorage.filter(u => u.sizeBytes > 0).length,
+          averageUsage: storageStats.userStorage.length > 0 ? 
+            (storageStats.totalStorageMB / storageStats.userStorage.length).toFixed(2) : '0'
+        }
+      };
+
+      // Converter para JSON e criar blob
+      const jsonString = JSON.stringify(reportData, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      
+      // Criar URL e baixar
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `relatorio-armazenamento-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Sucesso",
+        description: "Relatório exportado com sucesso!"
+      });
+    } catch (error) {
+      console.error('Erro ao exportar relatório:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao exportar relatório",
+        variant: "destructive"
+      });
+    }
+  };
+
   if (isLoading) {
-    return <div className="min-h-screen bg-[#fdfdfd] dark:bg-[#020817] flex items-center justify-center">
+    return (
+      <div className="min-h-screen bg-[#fdfdfd] dark:bg-[#020817] flex items-center justify-center">
         <LoadingSpinner />
-      </div>;
+      </div>
+    );
   }
-  return <div className="min-h-screen bg-[#fdfdfd] dark:bg-[#020817] p-8">
+
+  return (
+    <div className="min-h-screen bg-[#fdfdfd] dark:bg-[#020817] p-8">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -41,7 +111,10 @@ export const StorageView = () => {
               Monitore o uso de espaço e gerencie documentos do sistema
             </p>
           </div>
-          <Button className="bg-[#020817] border border-[#efc349] text-white dark:bg-transparent dark:border-[#efc349] dark:text-[#efc349] hover:bg-[#0f172a] dark:hover:bg-[#efc349]/10">
+          <Button 
+            onClick={handleExportReport}
+            className="bg-[#020817] border border-[#efc349] text-white dark:bg-transparent dark:border-[#efc349] dark:text-[#efc349] hover:bg-[#0f172a] dark:hover:bg-[#efc349]/10"
+          >
             <Download className="mr-2 h-4 w-4" />
             Exportar Relatório
           </Button>
@@ -108,7 +181,12 @@ export const StorageView = () => {
         <div className="flex flex-col md:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input placeholder="Buscar por usuário..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 bg-white dark:bg-[#0b0f1c] border-gray-200 dark:border-[#efc349]/30" />
+            <Input 
+              placeholder="Buscar por usuário..." 
+              value={searchTerm} 
+              onChange={(e) => setSearchTerm(e.target.value)} 
+              className="pl-10 bg-white dark:bg-[#0b0f1c] border-gray-200 dark:border-[#efc349]/30" 
+            />
           </div>
           <Select value={sortBy} onValueChange={setSortBy}>
             <SelectTrigger className="w-full md:w-48 bg-white dark:bg-[#0b0f1c] border-gray-200 dark:border-[#efc349]/30">
@@ -155,10 +233,15 @@ export const StorageView = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <StorageUsageList userStorage={storageStats?.userStorage || []} searchTerm={searchTerm} sortBy={sortBy} />
+              <StorageUsageList 
+                userStorage={storageStats?.userStorage || []} 
+                searchTerm={searchTerm} 
+                sortBy={sortBy} 
+              />
             </CardContent>
           </Card>
         </div>
       </div>
-    </div>;
+    </div>
+  );
 };

@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
+import { CreateEventDialog } from './CreateEventDialog';
 
 interface FiscalEvent {
   id: string;
@@ -33,6 +34,37 @@ export const AgendaView = () => {
 
       if (error) throw error;
       return data as FiscalEvent[];
+    }
+  });
+
+  const createEventMutation = useMutation({
+    mutationFn: async (eventData: {
+      title: string;
+      description: string;
+      date: string;
+      category: string;
+      status: string;
+    }) => {
+      const { error } = await supabase
+        .from('fiscal_events')
+        .insert([eventData]);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['fiscal-events'] });
+      setShowCreateDialog(false);
+      toast({
+        title: 'Sucesso',
+        description: 'Evento fiscal criado com sucesso!'
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Erro',
+        description: 'Erro ao criar evento: ' + error.message,
+        variant: 'destructive'
+      });
     }
   });
 
@@ -72,13 +104,13 @@ export const AgendaView = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'upcoming':
-        return <Badge variant="outline" className="font-extralight text-blue-600">Próximo</Badge>;
+        return <Badge variant="outline" className="font-extralight text-blue-600 border-blue-600">Próximo</Badge>;
       case 'today':
         return <Badge variant="destructive" className="font-extralight">Hoje</Badge>;
       case 'overdue':
         return <Badge variant="destructive" className="font-extralight">Atrasado</Badge>;
       case 'completed':
-        return <Badge variant="secondary" className="font-extralight text-green-600">Concluído</Badge>;
+        return <Badge variant="secondary" className="font-extralight text-green-600 border-green-600">Concluído</Badge>;
       default:
         return <Badge variant="outline" className="font-extralight">Pendente</Badge>;
     }
@@ -93,10 +125,10 @@ export const AgendaView = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-extralight text-gray-900 dark:text-white">
+          <h1 className="text-3xl font-extralight text-gray-900 dark:text-[#efc349]">
             Gerenciar Agenda Fiscal
           </h1>
           <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
@@ -133,7 +165,7 @@ export const AgendaView = () => {
                     </CardTitle>
                     <div className="flex items-center gap-2">
                       {getStatusBadge(event.status)}
-                      <Badge variant="outline" className="text-xs font-extralight">
+                      <Badge variant="outline" className="text-xs font-extralight border-gray-300 dark:border-[#efc349]/30">
                         {event.category}
                       </Badge>
                     </div>
@@ -142,7 +174,7 @@ export const AgendaView = () => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-gray-600 dark:text-gray-300 hover:text-[#efc349]"
+                      className="text-gray-600 dark:text-gray-300 hover:text-[#efc349] hover:bg-[#efc349]/10"
                     >
                       <Edit className="w-4 h-4" />
                     </Button>
@@ -150,7 +182,7 @@ export const AgendaView = () => {
                       variant="ghost"
                       size="sm"
                       onClick={() => deleteEventMutation.mutate(event.id)}
-                      className="text-red-600 hover:text-red-700"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -171,6 +203,13 @@ export const AgendaView = () => {
           ))
         )}
       </div>
+
+      <CreateEventDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+        onCreateEvent={(eventData) => createEventMutation.mutate(eventData)}
+        isCreating={createEventMutation.isPending}
+      />
     </div>
   );
 };
