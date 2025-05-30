@@ -15,7 +15,6 @@ interface UserAuth {
   email?: string;
   user_metadata?: {
     name?: string;
-    role?: string;
   };
 }
 
@@ -50,7 +49,7 @@ export const SendAnnouncementModal = ({ open, onOpenChange }: SendAnnouncementMo
       if (error) throw error;
       
       // Filtrar apenas usuários que não são admin
-      const clientUsers = data.users.filter((user: UserAuth) => {
+      const clientUsers = data.users.filter(user => {
         const role = user.user_metadata?.role || 'client';
         return role === 'client';
       });
