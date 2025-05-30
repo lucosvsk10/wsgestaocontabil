@@ -1,21 +1,24 @@
 
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calculator, Copy, FileText, Printer } from "lucide-react";
+import { Calculator, Copy, Printer, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { supabase } from "@/lib/supabaseClient";
+import { useAuth } from '@/contexts/AuthContext';
 
 const INSSCalculator = () => {
   const [salarioBruto, setSalarioBruto] = useState('');
   const [tipoContribuinte, setTipoContribuinte] = useState('');
   const [resultado, setResultado] = useState<any>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const calcularINSS = () => {
     const salario = parseFloat(salarioBruto);
@@ -80,23 +83,38 @@ const INSSCalculator = () => {
     };
 
     setResultado(resultadoCalculo);
-    salvarSimulacao(resultadoCalculo);
   };
 
-  const salvarSimulacao = async (dados: any) => {
+  const salvarSimulacao = async () => {
+    if (!resultado) return;
+    
+    setIsSaving(true);
     try {
       await supabase.from('tax_simulations').insert({
+        user_id: user?.id || null,
         tipo_simulacao: 'INSS',
-        rendimento_bruto: dados.salarioBruto,
-        inss: dados.valorContribuicao,
-        imposto_estimado: dados.valorContribuicao,
+        rendimento_bruto: resultado.salarioBruto,
+        inss: resultado.valorContribuicao,
+        imposto_estimado: resultado.valorContribuicao,
         educacao: 0,
         saude: 0,
         dependentes: 0,
         outras_deducoes: 0
       });
+
+      toast({
+        title: "Simulação salva!",
+        description: "Sua simulação foi salva com sucesso.",
+      });
     } catch (error) {
       console.error('Erro ao salvar simulação:', error);
+      toast({
+        title: "Erro ao salvar",
+        description: "Não foi possível salvar a simulação.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -126,158 +144,173 @@ Alíquota Efetiva: ${resultado.aliquotaEfetiva}%
   };
 
   return (
-    <div className="min-h-screen bg-[#FFF1DE] dark:bg-[#020817]">
+    <div className="min-h-screen bg-[#fdfdfd] dark:bg-[#020817] py-8 px-4">
       <Navbar />
       
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl text-[#020817] dark:text-[#efc349] mb-4 font-extralight">
+      <div className="max-w-4xl mx-auto space-y-8 mt-8">
+        {/* Header */}
+        <div className="text-center space-y-4">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <div className="p-3 rounded-full bg-[#efc349]/10">
+              <Calculator className="h-8 w-8 text-[#efc349]" />
+            </div>
+            <h1 className="text-4xl font-extralight text-[#020817] dark:text-[#efc349]">
               Calculadora de INSS 2025
             </h1>
-            <p className="text-[#020817]/80 dark:text-white/80 font-extralight">
-              Calcule sua contribuição para o INSS de forma simples e precisa
-            </p>
           </div>
+          <p className="text-lg font-extralight text-gray-600 dark:text-white/70 max-w-2xl mx-auto">
+            Calcule sua contribuição para o INSS de forma simples e precisa
+          </p>
+        </div>
 
-          <div className="grid lg:grid-cols-2 gap-8">
-            {/* Formulário */}
-            <Card className="border-[#efc349]/30 bg-white dark:bg-transparent">
+        {/* Calculator Form */}
+        <Card className="bg-white/50 dark:bg-transparent backdrop-blur-sm border-gray-100 dark:border-[#efc349]/20">
+          <CardHeader>
+            <CardTitle className="text-2xl font-extralight text-[#020817] dark:text-[#efc349] flex items-center gap-2">
+              <Calculator className="h-6 w-6" />
+              Dados para Cálculo
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="salario" className="font-extralight">Salário Bruto (R$)</Label>
+                <Input
+                  id="salario"
+                  type="number"
+                  value={salarioBruto}
+                  onChange={(e) => setSalarioBruto(e.target.value)}
+                  placeholder="Ex: 3000"
+                  className="bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30 font-extralight"
+                />
+                <p className="text-xs text-gray-600 dark:text-white/60 font-extralight">
+                  Informe seu salário bruto mensal
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="tipo" className="font-extralight">Tipo de Contribuinte</Label>
+                <Select value={tipoContribuinte} onValueChange={setTipoContribuinte}>
+                  <SelectTrigger className="bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30 font-extralight">
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CLT">CLT</SelectItem>
+                    <SelectItem value="Autônomo">Autônomo</SelectItem>
+                    <SelectItem value="MEI">MEI</SelectItem>
+                    <SelectItem value="Facultativo">Facultativo</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-600 dark:text-white/60 font-extralight">
+                  Escolha sua categoria de contribuinte
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-center pt-4">
+              <Button 
+                onClick={calcularINSS}
+                size="lg"
+                className="min-w-[200px] font-extralight bg-[#020817] dark:bg-transparent dark:border dark:border-[#efc349] text-white dark:text-[#efc349] hover:bg-[#0f172a] dark:hover:bg-[#efc349]/10"
+              >
+                Calcular INSS
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Results */}
+        {resultado && (
+          <div className="space-y-6">
+            {/* Main Result */}
+            <Card className="bg-white/50 dark:bg-transparent backdrop-blur-sm border-gray-100 dark:border-[#efc349]/20">
               <CardHeader>
-                <CardTitle className="text-[#020817] dark:text-[#efc349] font-extralight flex items-center gap-2">
-                  <Calculator size={24} />
-                  Dados para Cálculo
+                <CardTitle className="text-2xl font-extralight text-[#020817] dark:text-[#efc349] text-center">
+                  Resultado do Cálculo
                 </CardTitle>
-                <CardDescription className="font-extralight">
-                  Preencha os campos abaixo para calcular sua contribuição
-                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <Label htmlFor="salario" className="font-extralight">Salário Bruto (R$)</Label>
-                  <Input
-                    id="salario"
-                    type="number"
-                    value={salarioBruto}
-                    onChange={(e) => setSalarioBruto(e.target.value)}
-                    placeholder="Ex: 3000"
-                    className="mt-1 bg-white dark:bg-transparent border-[#efc349]/30"
-                  />
-                  <p className="text-xs text-[#020817]/60 dark:text-white/60 mt-1 font-extralight">
-                    Informe seu salário bruto mensal
-                  </p>
-                </div>
-
-                <div>
-                  <Label htmlFor="tipo" className="font-extralight">Tipo de Contribuinte</Label>
-                  <Select value={tipoContribuinte} onValueChange={setTipoContribuinte}>
-                    <SelectTrigger className="bg-white dark:bg-transparent border-[#efc349]/30">
-                      <SelectValue placeholder="Selecione o tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="CLT">CLT</SelectItem>
-                      <SelectItem value="Autônomo">Autônomo</SelectItem>
-                      <SelectItem value="MEI">MEI</SelectItem>
-                      <SelectItem value="Facultativo">Facultativo</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-[#020817]/60 dark:text-white/60 mt-1 font-extralight">
-                    Escolha sua categoria de contribuinte
-                  </p>
-                </div>
-
-                <Button 
-                  onClick={calcularINSS}
-                  className="w-full bg-[#020817] dark:bg-transparent border border-[#efc349] text-white dark:text-[#efc349] hover:bg-[#020817]/90 dark:hover:bg-[#efc349]/10 font-extralight"
-                >
-                  Calcular INSS
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Resultado */}
-            {resultado && (
-              <Card className="border-[#efc349]/30 bg-white dark:bg-transparent">
-                <CardHeader>
-                  <CardTitle className="text-[#020817] dark:text-[#efc349] font-extralight">
-                    Resultado do Cálculo
-                  </CardTitle>
-                  <CardDescription className="font-extralight">
-                    Sua contribuição do INSS calculada
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="bg-[#efc349]/10 rounded-lg p-4 border border-[#efc349]/30">
-                    <h3 className="text-lg font-extralight text-[#020817] dark:text-[#efc349] mb-3">
-                      Resumo da Contribuição
-                    </h3>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-[#020817]/70 dark:text-white/70 font-extralight">Salário Bruto:</span>
-                        <span className="text-[#020817] dark:text-white font-extralight">
-                          {resultado.salarioBruto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-[#020817]/70 dark:text-white/70 font-extralight">Tipo:</span>
-                        <span className="text-[#020817] dark:text-white font-extralight">
-                          {resultado.tipoContribuinte}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-[#020817]/70 dark:text-white/70 font-extralight">Faixa:</span>
-                        <span className="text-[#020817] dark:text-white font-extralight">
-                          {resultado.faixaAplicada}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-[#020817]/70 dark:text-white/70 font-extralight">Base de Cálculo:</span>
-                        <span className="text-[#020817] dark:text-white font-extralight">
-                          {resultado.baseCalculo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                        </span>
-                      </div>
-                      <div className="border-t border-[#efc349]/30 pt-2">
-                        <div className="flex justify-between text-lg">
-                          <span className="text-[#020817] dark:text-[#efc349] font-extralight">Contribuição INSS:</span>
-                          <span className="text-[#020817] dark:text-[#efc349] font-extralight">
-                            {resultado.valorContribuicao.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-[#020817]/70 dark:text-white/70 font-extralight">Alíquota Efetiva:</span>
-                          <span className="text-[#020817] dark:text-white font-extralight">
-                            {resultado.aliquotaEfetiva}%
-                          </span>
-                        </div>
-                      </div>
+              <CardContent>
+                <div className="text-center space-y-6">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="space-y-2">
+                      <p className="text-sm font-extralight text-gray-600 dark:text-white/70">
+                        Salário Bruto
+                      </p>
+                      <p className="text-lg font-extralight text-[#020817] dark:text-white">
+                        {resultado.salarioBruto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-sm font-extralight text-gray-600 dark:text-white/70">
+                        Tipo
+                      </p>
+                      <p className="text-lg font-extralight text-[#020817] dark:text-white">
+                        {resultado.tipoContribuinte}
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-sm font-extralight text-gray-600 dark:text-white/70">
+                        Faixa
+                      </p>
+                      <p className="text-sm font-extralight text-[#020817] dark:text-white">
+                        {resultado.faixaAplicada}
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-sm font-extralight text-gray-600 dark:text-white/70">
+                        Alíquota Efetiva
+                      </p>
+                      <p className="text-lg font-extralight text-[#020817] dark:text-[#efc349]">
+                        {resultado.aliquotaEfetiva}%
+                      </p>
                     </div>
                   </div>
 
-                  <div className="flex gap-2">
-                    <Button 
-                      onClick={copiarResultado}
-                      variant="outline" 
-                      size="sm"
-                      className="flex-1 border-[#efc349]/30 hover:bg-[#efc349]/10 font-extralight"
-                    >
-                      <Copy size={16} className="mr-1" />
-                      Copiar
-                    </Button>
-                    <Button 
-                      onClick={imprimir}
-                      variant="outline" 
-                      size="sm"
-                      className="flex-1 border-[#efc349]/30 hover:bg-[#efc349]/10 font-extralight"
-                    >
-                      <Printer size={16} className="mr-1" />
-                      Imprimir
-                    </Button>
+                  <div className="py-6">
+                    <p className="text-sm font-extralight text-gray-600 dark:text-white/70 mb-2">
+                      Contribuição INSS
+                    </p>
+                    <p className="text-4xl font-extralight text-[#020817] dark:text-[#efc349]">
+                      {resultado.valorContribuicao.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </p>
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Actions */}
+            <Card className="bg-white/50 dark:bg-transparent backdrop-blur-sm border-gray-100 dark:border-[#efc349]/20">
+              <CardContent className="pt-6">
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Button
+                    onClick={copiarResultado}
+                    variant="outline"
+                    className="font-extralight border-[#efc349]/30 hover:bg-[#efc349]/10"
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copiar Resultado
+                  </Button>
+                  <Button
+                    onClick={imprimir}
+                    variant="outline"
+                    className="font-extralight border-[#efc349]/30 hover:bg-[#efc349]/10"
+                  >
+                    <Printer className="h-4 w-4 mr-2" />
+                    Imprimir
+                  </Button>
+                  <Button
+                    onClick={salvarSimulacao}
+                    disabled={isSaving}
+                    className="font-extralight bg-[#020817] dark:bg-transparent dark:border dark:border-[#efc349] text-white dark:text-[#efc349] hover:bg-[#0f172a] dark:hover:bg-[#efc349]/10"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    {isSaving ? "Salvando..." : "Salvar Simulação"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </div>
+        )}
       </div>
 
       <Footer />
