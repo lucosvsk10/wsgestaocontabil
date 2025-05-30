@@ -81,7 +81,11 @@ export const AdminTabsView = ({
       <Tabs value={activeTab} className="h-full">
         {/* Dashboard Tab */}
         <TabsContent value="dashboard" className="h-full">
-          <AdminDashboardView />
+          <AdminDashboardView 
+            users={users}
+            supabaseUsers={supabaseUsers}
+            documents={documents}
+          />
         </TabsContent>
 
         {/* Users Tab */}
@@ -99,26 +103,7 @@ export const AdminTabsView = ({
 
         {/* User Documents Tab */}
         <TabsContent value="user-documents" className="h-full">
-          <DocumentManagementView 
-            selectedUserId={selectedUserId} 
-            documentName={documentName} 
-            setDocumentName={setDocumentName} 
-            documentCategory={documentCategory} 
-            setDocumentCategory={setDocumentCategory} 
-            documentObservations={documentObservations} 
-            setDocumentObservations={setDocumentObservations} 
-            handleFileChange={handleFileChange} 
-            handleUpload={handleUpload} 
-            isUploading={isUploading} 
-            documents={documents} 
-            isLoadingDocuments={isLoadingDocuments} 
-            handleDeleteDocument={handleDeleteDocument} 
-            documentCategories={documentCategories} 
-            expirationDate={expirationDate} 
-            setExpirationDate={setExpirationDate} 
-            noExpiration={noExpiration} 
-            setNoExpiration={setNoExpiration} 
-          />
+          <DocumentManagementView />
         </TabsContent>
 
         {/* Storage Tab */}

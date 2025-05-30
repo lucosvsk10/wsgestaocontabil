@@ -99,6 +99,21 @@ const AdminDashboard = ({
       setSelectedUserId(userId);
     }
   }, [activeTab, userId, setSelectedUserId]);
+
+  // Wrapper para handleUpload que não precisa de parâmetros
+  const handleUploadWrapper = () => {
+    if (handleUpload) {
+      // Criar um evento fake para o handleUpload
+      const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
+      handleUpload(fakeEvent);
+    }
+  };
+
+  // Converter Date para string para expirationDate
+  const expirationDateString = expirationDate ? expirationDate.toISOString().split('T')[0] : '';
+  const setExpirationDateFromString = (dateString: string) => {
+    setExpirationDate(dateString ? new Date(dateString) : null);
+  };
   
   return (
     <AdminLayout>
@@ -126,14 +141,14 @@ const AdminDashboard = ({
         documentObservations={documentObservations} 
         setDocumentObservations={setDocumentObservations} 
         handleFileChange={handleFileChange} 
-        handleUpload={handleUpload} 
+        handleUpload={handleUploadWrapper} 
         isUploading={isUploading} 
         documents={documents} 
         isLoadingDocuments={isLoadingDocuments} 
         handleDeleteDocument={handleDeleteDocument} 
         documentCategories={documentCategories} 
-        expirationDate={expirationDate} 
-        setExpirationDate={setExpirationDate} 
+        expirationDate={expirationDateString} 
+        setExpirationDate={setExpirationDateFromString} 
         noExpiration={noExpiration} 
         setNoExpiration={setNoExpiration} 
       />
