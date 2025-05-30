@@ -62,12 +62,13 @@ export const useClientData = () => {
       // Atualizar status baseado na data
       const today = new Date().toISOString().split('T')[0];
       const eventsWithStatus = data?.map(event => {
+        const eventStatus = event.status as 'upcoming' | 'today' | 'overdue' | 'completed';
         if (event.date === today) {
-          return { ...event, status: 'today' };
-        } else if (event.date < today && event.status !== 'completed') {
-          return { ...event, status: 'overdue' };
+          return { ...event, status: 'today' as const };
+        } else if (event.date < today && eventStatus !== 'completed') {
+          return { ...event, status: 'overdue' as const };
         }
-        return event;
+        return { ...event, status: eventStatus };
       }) || [];
 
       setFiscalEvents(eventsWithStatus);

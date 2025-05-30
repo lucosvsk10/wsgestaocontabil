@@ -34,6 +34,8 @@ export interface FiscalEvent {
   description: string;
   status: 'upcoming' | 'today' | 'overdue' | 'completed';
   category: string;
+  created_at?: string;
+  created_by?: string;
 }
 
 export interface CompanyData {

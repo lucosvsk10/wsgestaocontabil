@@ -1,7 +1,7 @@
 
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { AdminDashboardView } from "./dashboard/AdminDashboardView";
-import { UserTable } from "./UserTable";
+import { UserList } from "./UserList";
 import { StorageView } from "./storage/StorageView";
 import { PollsTabView } from "./polls/PollsTabView";
 import { AdminToolsView } from "./tools/AdminToolsView";
@@ -86,18 +86,14 @@ export const AdminTabsView = ({
 
         {/* Users Tab */}
         <TabsContent value="users" className="h-full">
-          <UserTable 
+          <UserList 
             supabaseUsers={supabaseUsers} 
             users={users} 
-            userInfoList={userInfoList} 
-            isLoadingUsers={isLoadingUsers} 
-            isLoadingAuthUsers={isLoadingAuthUsers} 
-            handleDocumentButtonClick={handleDocumentButtonClick} 
+            isLoading={isLoadingUsers || isLoadingAuthUsers}
+            setSelectedUserId={() => {}}
             setSelectedUserForPasswordChange={setSelectedUserForPasswordChange} 
             passwordForm={passwordForm} 
             refreshUsers={refreshUsers} 
-            createUser={createUser} 
-            isCreatingUser={isCreatingUser} 
           />
         </TabsContent>
 
