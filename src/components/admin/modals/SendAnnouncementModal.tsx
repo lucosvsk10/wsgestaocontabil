@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -10,9 +9,9 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Megaphone, Send, Loader2 } from 'lucide-react';
 
-interface User {
+interface UserAuth {
   id: string;
-  email: string;
+  email?: string;
   user_metadata?: {
     name?: string;
   };
@@ -27,7 +26,7 @@ export const SendAnnouncementModal = ({ open, onOpenChange }: SendAnnouncementMo
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<UserAuth[]>([]);
   const [formData, setFormData] = useState({
     title: '',
     message: '',

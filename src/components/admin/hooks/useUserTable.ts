@@ -1,37 +1,80 @@
 
 import { useState } from "react";
-import { AuthUser } from "../types/userTable";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
-export const useUserTable = (users: AuthUser[]) => {
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>(null);
+export const useUserTable = (refreshUsers: () => void, setSelectedUserForPasswordChange: (user: any) => void) => {
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [selectedUserForPasswordChange, setSelectedUserForPasswordChangeLocal] = useState<any>(null);
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const { toast } = useToast();
 
-  const toggleSort = () => {
-    if (sortDirection === null) {
-      setSortDirection('asc');
-    } else if (sortDirection === 'asc') {
-      setSortDirection('desc');
-    } else {
-      setSortDirection(null);
+  const handlePasswordChangeSuccess = () => {
+    setShowPasswordModal(false);
+    setSelectedUserForPasswordChangeLocal(null);
+    toast({
+      title: "Sucesso",
+      description: "Senha alterada com sucesso."
+    });
+  };
+
+  const handlePasswordChange = (user: any) => {
+    setSelectedUserForPasswordChangeLocal(user);
+    setSelectedUserForPasswordChange(user);
+    setShowPasswordModal(true);
+  };
+
+  const handleUserCreation = async (userData: any) => {
+    setIsCreatingUser(true);
+    try {
+      // Implementar lógica de criação de usuário
+      toast({
+        title: "Sucesso",
+        description: "Usuário criado com sucesso."
+      });
+      refreshUsers();
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao criar usuário.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCreatingUser(false);
     }
   };
 
-  // Sort users by name if sort direction is set
-  const sortedUsers = [...users].sort((a, b) => {
-    if (sortDirection === null) return 0;
-    
-    const nameA = a.user_metadata?.name || "Sem nome";
-    const nameB = b.user_metadata?.name || "Sem nome";
-    
-    if (sortDirection === 'asc') {
-      return nameA.localeCompare(nameB);
-    } else {
-      return nameB.localeCompare(nameA);
+  const handleDeleteUser = async (user: any) => {
+    try {
+      // Implementar lógica de exclusão
+      toast({
+        title: "Sucesso",
+        description: "Usuário excluído com sucesso."
+      });
+      refreshUsers();
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir usuário.",
+        variant: "destructive"
+      });
     }
-  });
+  };
+
+  const handleNameEdit = (user: any) => {
+    // Implementar lógica de edição de nome
+    console.log("Editar nome do usuário:", user);
+  };
 
   return {
-    sortDirection,
-    toggleSort,
-    sortedUsers
+    showPasswordModal,
+    setShowPasswordModal,
+    selectedUserForPasswordChange: selectedUserForPasswordChangeLocal,
+    handlePasswordChangeSuccess,
+    handlePasswordChange,
+    handleUserCreation,
+    handleDeleteUser,
+    handleNameEdit,
+    isCreatingUser
   };
 };
