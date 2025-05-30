@@ -66,7 +66,7 @@ export const ClientDashboardContent = ({
               Área do Cliente
             </CardTitle>
             <p className="text-sm text-gray-600 dark:text-gray-300 font-extralight mt-2">
-              Gerencie seus documentos, simulações e acompanhe comunicados importantes
+              Acesse seus documentos, simulações e mantenha-se atualizado com comunicados importantes
             </p>
           </CardHeader>
           <CardContent className="bg-white dark:bg-[#0b1320] p-6">
