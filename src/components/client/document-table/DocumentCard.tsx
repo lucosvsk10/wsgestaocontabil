@@ -39,24 +39,34 @@ export const DocumentCard = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
+      whileHover={{ scale: 1.02 }}
       className={cn(
-        "p-5 rounded-lg border shadow-sm transition-all duration-200 flex flex-col h-full", 
-        isHovered ? "shadow-md transform scale-[1.02]" : "",
+        "relative p-6 rounded-2xl border shadow-lg transition-all duration-300 flex flex-col h-full overflow-hidden",
+        "bg-white/80 dark:bg-[#0b1320]/80 backdrop-blur-sm",
         isExpired
-          ? "bg-red-50 dark:bg-transparent dark:border-red-500/30 border-red-200" 
+          ? "border-red-300/50 dark:border-red-500/30 shadow-red-100/50 dark:shadow-red-900/20" 
           : !doc.viewed
-            ? "bg-blue-50 dark:bg-transparent dark:border-blue-500/30 border-blue-200"
-            : "bg-white dark:bg-transparent border-gray-200 dark:border-gold/30"
+            ? "border-blue-300/50 dark:border-blue-500/30 shadow-blue-100/50 dark:shadow-blue-900/20"
+            : "border-[#efc349]/30 dark:border-[#efc349]/20 shadow-[#efc349]/10"
       )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      style={categoryColor ? { borderColor: `${categoryColor}60` } : {}}
     >
+      {/* Gradient overlay */}
+      <div className={cn(
+        "absolute inset-0 opacity-5 transition-opacity duration-300",
+        isExpired
+          ? "bg-gradient-to-br from-red-500 to-red-600"
+          : !doc.viewed
+            ? "bg-gradient-to-br from-blue-500 to-blue-600"
+            : "bg-gradient-to-br from-[#efc349] to-[#d4a017]"
+      )} />
+      
       {/* Card Header with Icon and Status */}
       <DocumentCardHeader doc={doc} isExpired={isExpired} />
       
       {/* Document Title */}
-      <h3 className="font-medium text-navy dark:text-[#d9d9d9] text-lg mb-2 line-clamp-2">
+      <h3 className="font-medium text-[#020817] dark:text-[#d9d9d9] text-lg mb-3 line-clamp-2 relative z-10">
         {doc.name}
       </h3>
       

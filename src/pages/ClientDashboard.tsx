@@ -1,6 +1,5 @@
 
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { useClientDashboardLogic } from "@/components/client/dashboard/ClientDashboardContainer";
 import { ClientDashboardContent } from "@/components/client/dashboard/ClientDashboardContent";
 
@@ -19,7 +18,7 @@ const ClientDashboard = () => {
   } = useClientDashboardLogic();
 
   return (
-    <div className={`min-h-screen flex flex-col bg-[#FFF1DE] dark:bg-[#0b1320] ${isMobile ? 'pb-20' : ''}`}>
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#FFF1DE] to-[#FAE8C8] dark:from-[#0b1320] dark:to-[#1a2332]">
       <Navbar />
       <ClientDashboardContent
         isLoadingDocuments={isLoadingDocuments}
@@ -32,7 +31,7 @@ const ClientDashboard = () => {
         fetchUserDocuments={fetchUserDocuments}
         userId={user?.id || ''}
       />
-      <Footer />
+      {/* Footer oculto apenas nesta rota */}
     </div>
   );
 };

@@ -1,6 +1,5 @@
 
 import { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FileText, Calculator, Megaphone, Calendar, Building } from 'lucide-react';
 import { DocumentTabs } from './DocumentTabs';
 import { SimulationsSection } from './sections/SimulationsSection';
@@ -37,99 +36,87 @@ export const ClientNavigation = ({
   const [activeTab, setActiveTab] = useState('documents');
   const isMobile = useIsMobile();
 
+  const tabs = [
+    { id: 'documents', label: 'Documentos', icon: FileText },
+    { id: 'simulations', label: 'Simulações', icon: Calculator },
+    { id: 'announcements', label: 'Comunicados', icon: Megaphone },
+    { id: 'calendar', label: 'Agenda', icon: Calendar },
+    { id: 'company', label: 'Empresa', icon: Building }
+  ];
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'documents':
+        return (
+          <DocumentTabs
+            documents={documents}
+            allDocuments={allDocuments}
+            documentsByCategory={documentsByCategory}
+            categories={categories}
+            setSelectedCategory={setSelectedCategory}
+            formatDate={formatDate}
+            isDocumentExpired={isDocumentExpired}
+            daysUntilExpiration={daysUntilExpiration}
+            refreshDocuments={refreshDocuments}
+            activeCategory={activeCategory}
+          />
+        );
+      case 'simulations':
+        return <SimulationsSection />;
+      case 'announcements':
+        return <AnnouncementsSection />;
+      case 'calendar':
+        return <FiscalCalendarSection />;
+      case 'company':
+        return <CompanyDataSection />;
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className={`grid w-full ${isMobile ? 'grid-cols-3' : 'grid-cols-5'} bg-white dark:bg-[#0b1320] border border-gray-200 dark:border-[#efc349]/30`}>
-          <TabsTrigger value="documents" className="font-extralight text-[#020817] dark:text-[#efc349] data-[state=active]:bg-[#efc349] data-[state=active]:text-[#020817]">
-            <FileText className="w-4 h-4 mr-1" />
-            {isMobile ? 'Docs' : 'Documentos'}
-          </TabsTrigger>
-          <TabsTrigger value="simulations" className="font-extralight text-[#020817] dark:text-[#efc349] data-[state=active]:bg-[#efc349] data-[state=active]:text-[#020817]">
-            <Calculator className="w-4 h-4 mr-1" />
-            {isMobile ? 'Sim' : 'Simulações'}
-          </TabsTrigger>
-          <TabsTrigger value="announcements" className="font-extralight text-[#020817] dark:text-[#efc349] data-[state=active]:bg-[#efc349] data-[state=active]:text-[#020817]">
-            <Megaphone className="w-4 h-4 mr-1" />
-            {isMobile ? 'Com' : 'Comunicados'}
-          </TabsTrigger>
-          {!isMobile && (
-            <>
-              <TabsTrigger value="calendar" className="font-extralight text-[#020817] dark:text-[#efc349] data-[state=active]:bg-[#efc349] data-[state=active]:text-[#020817]">
-                <Calendar className="w-4 h-4 mr-1" />
-                Agenda
-              </TabsTrigger>
-              <TabsTrigger value="company" className="font-extralight text-[#020817] dark:text-[#efc349] data-[state=active]:bg-[#efc349] data-[state=active]:text-[#020817]">
-                <Building className="w-4 h-4 mr-1" />
-                Empresa
-              </TabsTrigger>
-            </>
-          )}
-        </TabsList>
+      {/* Content Area */}
+      <div className="min-h-[60vh]">
+        {renderContent()}
+      </div>
 
-        <div className="mt-6">
-          <TabsContent value="documents" className="space-y-0">
-            <DocumentTabs
-              documents={documents}
-              allDocuments={allDocuments}
-              documentsByCategory={documentsByCategory}
-              categories={categories}
-              setSelectedCategory={setSelectedCategory}
-              formatDate={formatDate}
-              isDocumentExpired={isDocumentExpired}
-              daysUntilExpiration={daysUntilExpiration}
-              refreshDocuments={refreshDocuments}
-              activeCategory={activeCategory}
-            />
-          </TabsContent>
-
-          <TabsContent value="simulations" className="space-y-0">
-            <SimulationsSection />
-          </TabsContent>
-
-          <TabsContent value="announcements" className="space-y-0">
-            <AnnouncementsSection />
-          </TabsContent>
-
-          <TabsContent value="calendar" className="space-y-0">
-            <FiscalCalendarSection />
-          </TabsContent>
-
-          <TabsContent value="company" className="space-y-0">
-            <CompanyDataSection />
-          </TabsContent>
+      {/* Fixed Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-[#0b1320]/95 backdrop-blur-md border-t border-[#efc349]/20 z-50">
+        <div className="grid grid-cols-5 h-20">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex flex-col items-center justify-center gap-1 transition-all duration-300 ${
+                  isActive
+                    ? 'text-[#efc349] bg-[#efc349]/10'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-[#efc349] hover:bg-[#efc349]/5'
+                }`}
+              >
+                <Icon 
+                  size={20} 
+                  className={`transition-transform duration-300 ${
+                    isActive ? 'scale-110' : 'scale-100'
+                  }`}
+                />
+                <span className={`text-xs font-medium transition-all duration-300 ${
+                  isActive ? 'font-semibold' : 'font-normal'
+                }`}>
+                  {tab.label}
+                </span>
+                {isActive && (
+                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-[#efc349] rounded-b-full" />
+                )}
+              </button>
+            );
+          })}
         </div>
-
-        {/* Mobile bottom tabs for calendar and company */}
-        {isMobile && (
-          <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#0b1320] border-t border-gray-200 dark:border-[#efc349]/30 p-2 z-40">
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => setActiveTab('calendar')}
-                className={`p-3 rounded-lg flex items-center justify-center font-extralight transition-colors ${
-                  activeTab === 'calendar'
-                    ? 'bg-[#efc349] text-[#020817]'
-                    : 'text-[#020817] dark:text-[#efc349] hover:bg-[#efc349]/10'
-                }`}
-              >
-                <Calendar className="w-4 h-4 mr-1" />
-                Agenda
-              </button>
-              <button
-                onClick={() => setActiveTab('company')}
-                className={`p-3 rounded-lg flex items-center justify-center font-extralight transition-colors ${
-                  activeTab === 'company'
-                    ? 'bg-[#efc349] text-[#020817]'
-                    : 'text-[#020817] dark:text-[#efc349] hover:bg-[#efc349]/10'
-                }`}
-              >
-                <Building className="w-4 h-4 mr-1" />
-                Empresa
-              </button>
-            </div>
-          </div>
-        )}
-      </Tabs>
+      </div>
     </div>
   );
 };

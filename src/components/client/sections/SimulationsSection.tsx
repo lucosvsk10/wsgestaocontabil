@@ -1,152 +1,121 @@
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Calculator, FileText, Eye, Download } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useClientData } from '@/hooks/client/useClientData';
-import { Badge } from '@/components/ui/badge';
+import { useClientData } from "@/hooks/client/useClientData";
+import { useEffect } from "react";
+import { motion } from "framer-motion";
+import { Calculator, TrendingUp, DollarSign, Calendar } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { formatCurrency } from "@/utils/formatters";
 
 export const SimulationsSection = () => {
-  const { user } = useAuth();
-  const { simulations, fetchSimulations } = useClientData();
+  const { simulations, fetchSimulations, isLoading } = useClientData();
 
   useEffect(() => {
-    if (user?.id) {
-      fetchSimulations();
-    }
-  }, [user?.id, fetchSimulations]);
+    fetchSimulations();
+  }, [fetchSimulations]);
 
-  const getSimulationIcon = (type: string) => {
-    switch (type) {
-      case 'IRPF':
-        return <Calculator className="w-5 h-5" />;
-      case 'INSS':
-        return <FileText className="w-5 h-5" />;
-      case 'Pró-labore':
-        return <Eye className="w-5 h-5" />;
-      default:
-        return <Calculator className="w-5 h-5" />;
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { 
+      opacity: 1,
+      transition: { staggerChildren: 0.1 }
     }
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value);
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
   };
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('pt-BR');
-  };
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#efc349]"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-extralight text-[#020817] dark:text-[#efc349]">
-          Simulações Realizadas
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="space-y-6"
+    >
+      <div className="flex items-center gap-3 mb-6">
+        <div className="p-2 bg-gradient-to-r from-[#efc349] to-[#d4a017] rounded-xl">
+          <Calculator className="w-5 h-5 text-[#0b1320]" />
+        </div>
+        <h2 className="text-2xl font-light text-[#020817] dark:text-[#efc349]">
+          Minhas Simulações
         </h2>
-        <Button 
-          className="bg-transparent border border-[#efc349] text-[#020817] dark:text-[#efc349] hover:bg-[#efc349]/10 font-extralight"
-          onClick={() => window.open('/simulador-irpf', '_blank')}
-        >
-          <Calculator className="w-4 h-4 mr-2" />
-          Nova Simulação
-        </Button>
       </div>
 
       {simulations.length === 0 ? (
-        <Card className="border border-[#e6e6e6] dark:border-[#efc349]/30 bg-white dark:bg-transparent">
-          <CardContent className="py-12 text-center">
-            <Calculator className="w-12 h-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
-            <p className="text-gray-600 dark:text-gray-400 font-extralight mb-4">
-              Nenhuma simulação encontrada
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-500 font-extralight">
-              Realize simulações fiscais para visualizá-las aqui
-            </p>
-          </CardContent>
-        </Card>
+        <motion.div variants={itemVariants}>
+          <Card className="border border-[#efc349]/20 bg-white/80 dark:bg-[#0b1320]/80 backdrop-blur-sm">
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <Calculator className="w-16 h-16 text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-600 dark:text-gray-300 mb-2">
+                Nenhuma simulação encontrada
+              </h3>
+              <p className="text-gray-500 dark:text-gray-400 text-center">
+                Suas simulações de IRPF, INSS e Pró-labore aparecerão aqui
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {simulations.map((simulation) => (
-            <Card 
-              key={simulation.id} 
-              className="border border-[#e6e6e6] dark:border-[#efc349]/30 bg-white dark:bg-transparent hover:shadow-md transition-shadow"
-            >
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-[#efc349]/10">
-                      {getSimulationIcon(simulation.tipo_simulacao)}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {simulations.map((simulation, index) => (
+            <motion.div key={simulation.id} variants={itemVariants}>
+              <Card className="border border-[#efc349]/20 bg-white/80 dark:bg-[#0b1320]/80 backdrop-blur-sm hover:shadow-lg transition-all duration-300">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg font-medium text-[#020817] dark:text-[#efc349] flex items-center gap-2">
+                      <TrendingUp className="w-5 h-5" />
+                      {simulation.tipo_simulacao}
+                    </CardTitle>
+                    <Badge variant="outline" className="text-xs">
+                      {new Date(simulation.data_criacao).toLocaleDateString('pt-BR')}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Rendimento Bruto</p>
+                      <p className="font-medium text-[#020817] dark:text-white">
+                        {formatCurrency(simulation.rendimento_bruto)}
+                      </p>
                     </div>
                     <div>
-                      <CardTitle className="text-lg font-extralight text-[#020817] dark:text-[#efc349]">
-                        {simulation.tipo_simulacao}
-                      </CardTitle>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 font-extralight">
-                        {formatDate(simulation.data_criacao)}
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Imposto Estimado</p>
+                      <p className="font-medium text-green-600 dark:text-green-400">
+                        {formatCurrency(simulation.imposto_estimado)}
                       </p>
                     </div>
                   </div>
-                  <Badge variant="outline" className="font-extralight">
-                    {simulation.tipo_simulacao === 'a pagar' ? 'A Pagar' : 'Restituição'}
-                  </Badge>
-                </div>
-              </CardHeader>
-              
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-gray-600 dark:text-gray-400 font-extralight">Rendimento Bruto</p>
-                    <p className="font-extralight text-[#020817] dark:text-white">
-                      {formatCurrency(simulation.rendimento_bruto)}
-                    </p>
+                  
+                  {simulation.nome && (
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Nome</p>
+                      <p className="font-medium text-[#020817] dark:text-white">{simulation.nome}</p>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center gap-2 pt-2">
+                    <Calendar className="w-4 h-4 text-gray-500" />
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      {new Date(simulation.data_criacao).toLocaleString('pt-BR')}
+                    </span>
                   </div>
-                  <div>
-                    <p className="text-gray-600 dark:text-gray-400 font-extralight">Imposto Estimado</p>
-                    <p className="font-extralight text-[#020817] dark:text-white">
-                      {formatCurrency(simulation.imposto_estimado)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600 dark:text-gray-400 font-extralight">INSS</p>
-                    <p className="font-extralight text-[#020817] dark:text-white">
-                      {formatCurrency(simulation.inss)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600 dark:text-gray-400 font-extralight">Outras Deduções</p>
-                    <p className="font-extralight text-[#020817] dark:text-white">
-                      {formatCurrency(simulation.outras_deducoes)}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    className="flex-1 border-[#efc349]/30 hover:bg-[#efc349]/10 font-extralight"
-                  >
-                    <Eye className="w-4 h-4 mr-1" />
-                    Detalhes
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    className="flex-1 border-[#efc349]/30 hover:bg-[#efc349]/10 font-extralight"
-                  >
-                    <Download className="w-4 h-4 mr-1" />
-                    Exportar
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </motion.div>
           ))}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 };
