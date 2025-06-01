@@ -1,12 +1,11 @@
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClientNavigation } from "../ClientNavigation";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { formatDate, isDocumentExpired, daysUntilExpiration } from "@/utils/documentUtils";
 import { motion } from "framer-motion";
 import { Document } from "@/types/admin";
 import { DocumentCategory } from "@/types/common";
-import { FileText, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 interface ClientDashboardContentProps {
   isLoadingDocuments: boolean;
@@ -59,12 +58,12 @@ export const ClientDashboardContent = ({
       variants={containerVariants}
       className="flex-grow pb-24"
     >
-      <div className="container mx-auto px-4 py-6 max-w-6xl">
+      <div className="container mx-auto px-4 py-6 max-w-7xl">
         <motion.div variants={itemVariants} className="mb-8">
-          <div className="bg-white/80 dark:bg-[#0b1320]/80 backdrop-blur-sm border border-[#efc349]/20 rounded-2xl shadow-lg">
+          <div className="bg-white/80 dark:bg-[#0b1320]/80 backdrop-blur-sm border border-[#efc349]/20 rounded-2xl shadow-xl">
             <div className="p-6 border-b border-[#efc349]/10">
               <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 bg-gradient-to-r from-[#efc349] to-[#d4a017] rounded-xl">
+                <div className="p-3 bg-gradient-to-r from-[#efc349] to-[#d4a017] rounded-xl shadow-lg">
                   <Sparkles className="w-6 h-6 text-[#0b1320]" />
                 </div>
                 <div>

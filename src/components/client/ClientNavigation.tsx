@@ -82,7 +82,7 @@ export const ClientNavigation = ({
       </div>
 
       {/* Fixed Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-[#0b1320]/95 backdrop-blur-md border-t border-[#efc349]/20 z-50">
+      <div className="fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-[#0b1320]/95 backdrop-blur-md border-t border-[#efc349]/20 z-50 shadow-lg">
         <div className="grid grid-cols-5 h-20">
           {tabs.map((tab) => {
             const Icon = tab.icon;
