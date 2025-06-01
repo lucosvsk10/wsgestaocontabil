@@ -2,7 +2,7 @@
 import { useClientData } from "@/hooks/client/useClientData";
 import { useEffect } from "react";
 import { motion } from "framer-motion";
-import { Calendar, Clock, AlertTriangle, CheckCircle2, CircleDot } from "lucide-react";
+import { Calendar, Clock, AlertCircle, CheckCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -28,40 +28,27 @@ export const FiscalCalendarSection = () => {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'completed':
-        return <CheckCircle2 className="w-5 h-5 text-green-500" />;
       case 'overdue':
-        return <AlertTriangle className="w-5 h-5 text-red-500" />;
+        return <AlertCircle className="w-5 h-5 text-red-400" />;
       case 'today':
-        return <CircleDot className="w-5 h-5 text-yellow-500" />;
+        return <Clock className="w-5 h-5 text-yellow-400" />;
+      case 'upcoming':
+        return <CheckCircle className="w-5 h-5 text-blue-400" />;
       default:
-        return <Clock className="w-5 h-5 text-blue-500" />;
+        return <Calendar className="w-5 h-5 text-gray-400" />;
     }
   };
 
-  const getStatusText = (status: string) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'completed':
-        return 'Concluído';
       case 'overdue':
-        return 'Atrasado';
+        return <Badge variant="destructive">Atrasado</Badge>;
       case 'today':
-        return 'Hoje';
+        return <Badge className="bg-yellow-600 text-white">Hoje</Badge>;
+      case 'upcoming':
+        return <Badge className="bg-blue-600 text-white">Próximo</Badge>;
       default:
-        return 'Pendente';
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'border-green-500 text-green-600';
-      case 'overdue':
-        return 'border-red-500 text-red-600';
-      case 'today':
-        return 'border-yellow-500 text-yellow-600';
-      default:
-        return 'border-blue-500 text-blue-600';
+        return <Badge variant="outline">-</Badge>;
     }
   };
 
@@ -81,23 +68,23 @@ export const FiscalCalendarSection = () => {
       className="space-y-6"
     >
       <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 bg-gradient-to-r from-[#efc349] to-[#d4a017] rounded-xl">
-          <Calendar className="w-5 h-5 text-[#0b1320]" />
+        <div className="p-3 bg-gradient-to-r from-[#efc349] to-[#d4a017] rounded-xl">
+          <Calendar className="w-6 h-6 text-[#0b1320]" />
         </div>
-        <h2 className="text-2xl font-light text-[#020817] dark:text-[#efc349]">
-          Agenda Fiscal
+        <h2 className="text-2xl font-light text-[#efc349] tracking-wide">
+          AGENDA FISCAL
         </h2>
       </div>
 
       {fiscalEvents.length === 0 ? (
         <motion.div variants={itemVariants}>
-          <Card className="border border-[#efc349]/20 bg-white/80 dark:bg-[#0b1320]/80 backdrop-blur-sm">
-            <CardContent className="flex flex-col items-center justify-center py-12">
+          <Card className="border border-[#efc349]/20 bg-[#1a2633]/80 backdrop-blur-sm">
+            <CardContent className="flex flex-col items-center justify-center py-16">
               <Calendar className="w-16 h-16 text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-600 dark:text-gray-300 mb-2">
-                Nenhum evento fiscal encontrado
+              <h3 className="text-lg font-medium text-gray-300 mb-2">
+                Nenhum evento encontrado
               </h3>
-              <p className="text-gray-500 dark:text-gray-400 text-center">
+              <p className="text-gray-400 text-center">
                 Eventos e obrigações fiscais aparecerão aqui
               </p>
             </CardContent>
@@ -107,39 +94,30 @@ export const FiscalCalendarSection = () => {
         <div className="space-y-4">
           {fiscalEvents.map((event, index) => (
             <motion.div key={event.id} variants={itemVariants}>
-              <Card className="border border-[#efc349]/20 bg-white/80 dark:bg-[#0b1320]/80 backdrop-blur-sm hover:shadow-lg transition-all duration-300">
+              <Card className="border border-[#efc349]/20 bg-[#1a2633]/80 backdrop-blur-sm hover:shadow-lg hover:border-[#efc349]/40 transition-all duration-300">
                 <CardHeader className="pb-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg font-medium text-[#efc349] flex items-center gap-2">
                       {getStatusIcon(event.status)}
-                      <div>
-                        <CardTitle className="text-lg font-medium text-[#020817] dark:text-[#efc349]">
-                          {event.title}
-                        </CardTitle>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                          {event.category}
-                        </p>
-                      </div>
-                    </div>
-                    <Badge 
-                      variant="outline" 
-                      className={`text-xs ${getStatusColor(event.status)}`}
-                    >
-                      {getStatusText(event.status)}
-                    </Badge>
+                      {event.title}
+                    </CardTitle>
+                    {getStatusBadge(event.status)}
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                <CardContent className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-gray-400" />
+                    <span className="text-gray-200">
+                      {new Date(event.date).toLocaleDateString('pt-BR')}
+                    </span>
+                    <Badge variant="outline" className="text-xs border-gray-500 text-gray-300">
+                      {event.category}
+                    </Badge>
+                  </div>
+                  
+                  <p className="text-gray-300 leading-relaxed">
                     {event.description}
                   </p>
-                  
-                  <div className="flex items-center gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
-                    <Calendar className="w-4 h-4 text-gray-500" />
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      Vencimento: {new Date(event.date).toLocaleDateString('pt-BR')}
-                    </span>
-                  </div>
                 </CardContent>
               </Card>
             </motion.div>

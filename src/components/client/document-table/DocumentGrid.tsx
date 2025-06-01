@@ -28,17 +28,11 @@ export const DocumentGrid = ({
 }: DocumentGridProps) => {
   const isMobile = useIsMobile();
   
-  // Grid columns based on screen size
-  const gridClasses = isMobile 
-    ? "grid-cols-1" 
-    : window.innerWidth < 1024 
-      ? "grid-cols-2" 
-      : window.innerWidth < 1280 
-        ? "grid-cols-3" 
-        : "grid-cols-4";
-  
   return (
-    <div className={`grid ${gridClasses} gap-6`}>
+    <div className={cn(
+      "grid gap-6",
+      isMobile ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+    )}>
       {documents.map((doc, index) => (
         <motion.div
           key={doc.id}
