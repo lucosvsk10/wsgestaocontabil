@@ -7,7 +7,6 @@ import { AnnouncementsSection } from './sections/AnnouncementsSection';
 import { FiscalCalendarSection } from './sections/FiscalCalendarSection';
 import { CompanyDataSection } from './sections/CompanyDataSection';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { cn } from '@/lib/utils';
 
 interface ClientNavigationProps {
   documents: any[];
@@ -76,15 +75,15 @@ export const ClientNavigation = ({
   };
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-120px)]">
+    <div className="space-y-6">
       {/* Content Area */}
-      <div className="flex-1 pb-24">
+      <div className="min-h-[60vh]">
         {renderContent()}
       </div>
 
       {/* Fixed Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-[#0b1320]/95 dark:bg-[#0b1320]/95 backdrop-blur-md border-t border-[#efc349]/20 z-50">
-        <div className="grid grid-cols-5 h-20 max-w-7xl mx-auto">
+      <div className="fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-[#0b1320]/95 backdrop-blur-md border-t border-[#efc349]/20 z-50">
+        <div className="grid grid-cols-5 h-20">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -93,24 +92,21 @@ export const ClientNavigation = ({
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  "flex flex-col items-center justify-center gap-1 transition-all duration-300 relative",
+                className={`flex flex-col items-center justify-center gap-1 transition-all duration-300 ${
                   isActive
-                    ? "text-[#efc349] bg-[#efc349]/10"
-                    : "text-gray-400 dark:text-gray-400 hover:text-[#efc349] hover:bg-[#efc349]/5"
-                )}
+                    ? 'text-[#efc349] bg-[#efc349]/10'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-[#efc349] hover:bg-[#efc349]/5'
+                }`}
               >
                 <Icon 
                   size={20} 
-                  className={cn(
-                    "transition-transform duration-300",
-                    isActive ? "scale-110" : "scale-100"
-                  )}
+                  className={`transition-transform duration-300 ${
+                    isActive ? 'scale-110' : 'scale-100'
+                  }`}
                 />
-                <span className={cn(
-                  "text-xs transition-all duration-300",
-                  isActive ? "font-semibold" : "font-normal"
-                )}>
+                <span className={`text-xs font-medium transition-all duration-300 ${
+                  isActive ? 'font-semibold' : 'font-normal'
+                }`}>
                   {tab.label}
                 </span>
                 {isActive && (
