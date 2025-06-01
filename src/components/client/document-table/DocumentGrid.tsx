@@ -4,6 +4,7 @@ import { Document } from "@/utils/auth/types";
 import { motion } from "framer-motion";
 import { DocumentCard } from "./DocumentCard";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 interface DocumentGridProps {
   documents: Document[];
