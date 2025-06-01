@@ -31,7 +31,6 @@ const ClientDashboard = () => {
         fetchUserDocuments={fetchUserDocuments}
         userId={user?.id || ''}
       />
-      {/* Footer oculto apenas nesta rota */}
     </div>
   );
 };
