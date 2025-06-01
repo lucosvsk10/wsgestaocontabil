@@ -34,7 +34,7 @@ export const DocumentGrid = ({
     "grid gap-6",
     isMobile 
       ? "grid-cols-1" 
-      : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+      : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
   );
   
   return (
@@ -44,7 +44,7 @@ export const DocumentGrid = ({
           key={doc.id}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: index * 0.1 }}
+          transition={{ duration: 0.3, delay: index * 0.05 }}
         >
           <DocumentCard
             doc={doc}

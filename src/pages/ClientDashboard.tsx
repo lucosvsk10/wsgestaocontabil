@@ -18,7 +18,7 @@ const ClientDashboard = () => {
   } = useClientDashboardLogic();
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#FFF1DE] to-[#FAE8C8] dark:from-[#0b1320] dark:to-[#1a2332]">
+    <div className="min-h-screen flex flex-col bg-[#020817]">
       <Navbar />
       <ClientDashboardContent
         isLoadingDocuments={isLoadingDocuments}
