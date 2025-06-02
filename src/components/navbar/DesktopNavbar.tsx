@@ -33,7 +33,7 @@ const DesktopNavbar = ({
                 </DropdownMenuItem>
                 <DropdownMenuItem className="text-[#020817] hover:bg-gray-100 dark:text-gold dark:hover:text-gold-light cursor-pointer dark:hover:bg-navy-light" onClick={handleLogout}>
                   <LogOut size={16} className="mr-2" />
-                  <span className="text-sm font-medium uppercase tracking-wider">SAIR</span>
+                  <span className="text-sm uppercase tracking-wider font-extralight">SAIR</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>}
