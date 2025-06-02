@@ -66,6 +66,12 @@ export const DocumentTable = ({
     }
   });
 
+  const handleClearFilters = () => {
+    setSearchQuery("");
+    setStatusFilter("all");
+    setSortBy("date-desc");
+  };
+
   return (
     <div className="space-y-6">
       {/* Search and Filters */}
@@ -76,6 +82,7 @@ export const DocumentTable = ({
         setStatusFilter={setStatusFilter}
         sortBy={sortBy}
         setSortBy={setSortBy}
+        onClearFilters={handleClearFilters}
       />
 
       {/* Results Summary */}
