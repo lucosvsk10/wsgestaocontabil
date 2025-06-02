@@ -38,7 +38,7 @@ export const AdminDashboard = ({
     title: "Total Documentos",
     value: totalDocumentsCount,
     icon: <FileText className="h-6 w-6" />,
-    link: "/admin/user-documents",
+    link: "/admin/storage",
     color: "green"
   }, {
     title: "Enquetes Criadas",
@@ -50,7 +50,7 @@ export const AdminDashboard = ({
     title: "Armazenamento",
     value: storageStats ? `${storageStats.totalStorageMB.toFixed(1)}MB` : "Calculando...",
     icon: <HardDrive className="h-6 w-6" />,
-    link: "/admin/settings",
+    link: "/admin/storage",
     color: "orange"
   }];
   if (isLoading) {
@@ -62,7 +62,7 @@ export const AdminDashboard = ({
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl text-[#020817] dark:text-[#efc349] mb-2 font-thin">Dashboard </h1>
+          <h1 className="text-3xl text-[#020817] dark:text-[#efc349] mb-2 font-extralight">Dashboard</h1>
           <p className="text-gray-600 dark:text-[#b3b3b3]">
             Visão geral do sistema e atividades recentes
           </p>
@@ -112,19 +112,25 @@ export const AdminDashboard = ({
               <FileText className="h-5 w-5 text-gray-400 dark:text-[#efc349]" />
             </div>
             <div className="space-y-3">
-              {recentDocuments.slice(0, 5).map((doc, index) => <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-[#efc349]/20 last:border-0">
-                  <div>
-                    <p className="text-sm font-medium text-[#020817] dark:text-[#f4f4f4] truncate">
-                      {doc.name}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-[#b3b3b3]">
-                      {formatRecentDate(doc.created_at)}
-                    </p>
-                  </div>
-                  <span className="text-xs px-2 py-1 rounded-full bg-gray-100 dark:bg-[#efc349]/20 text-gray-600 dark:text-[#efc349]">
-                    {doc.category}
-                  </span>
-                </div>)}
+              {recentDocuments.slice(0, 5).map((doc, index) => {
+              // Encontrar o usuário correto pelo user_id
+              const user = supabaseUsers.find(u => u.id === doc.user_id);
+              const userName = user?.user_metadata?.name || user?.email || 'Usuário desconhecido';
+              return <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-[#efc349]/20 last:border-0">
+                    <div>
+                      <p className="text-sm font-medium text-[#020817] dark:text-[#f4f4f4] truncate">
+                        {doc.name}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-[#b3b3b3]">
+                        {userName} • {formatRecentDate(doc.uploaded_at)}
+                      </p>
+                    </div>
+                    
+                  </div>;
+            })}
+              {recentDocuments.length === 0 && <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+                  Nenhum documento recente encontrado
+                </p>}
             </div>
           </CardContent>
         </Card>
@@ -184,11 +190,11 @@ export const AdminDashboard = ({
               <Users className="h-4 w-4 mr-2" />
               Adicionar Usuário
             </Button>
-            <Button onClick={() => navigate("/admin/polls")} variant="outline" className="h-12 justify-start border-gray-200 dark:border-[#efc349]/30 hover:border-[#efc349] dark:hover:bg-[#efc349]/10">
+            <Button onClick={() => navigate("/admin/polls")} variant="outline" className="h-12 justify-start border-gray-200 dark:border-[#efc349]/30 hover:border-[#efc349] dark:hover:bg-[efc349]/10">
               <PieChart className="h-4 w-4 mr-2" />
               Nova Enquete
             </Button>
-            <Button onClick={() => navigate("/admin/tax-simulations")} variant="outline" className="h-12 justify-start border-gray-200 dark:border-[#efc349]/30 hover:border-[#efc349] dark:hover:bg-[#efc349]/10">
+            <Button onClick={() => navigate("/admin/simulations")} variant="outline" className="h-12 justify-start border-gray-200 dark:border-[#efc349]/30 hover:border-[#efc349] dark:hover:bg-[#efc349]/10">
               <Calendar className="h-4 w-4 mr-2" />
               Simulação IRPF
             </Button>
@@ -197,8 +203,6 @@ export const AdminDashboard = ({
       </Card>
 
       {/* Floating Action Button */}
-      <Button onClick={() => navigate("/admin/users")} className="fixed bottom-8 right-8 h-14 w-14 rounded-full bg-[#efc349] hover:bg-[#d4a73a] text-[#020817] shadow-lg z-50" size="icon">
-        <Plus className="h-6 w-6" />
-      </Button>
+      
     </div>;
 };

@@ -1,121 +1,155 @@
 
-import { useClientData } from "@/hooks/client/useClientData";
-import { useEffect } from "react";
-import { motion } from "framer-motion";
-import { Calculator, TrendingUp, DollarSign, Calendar } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { formatCurrency } from "@/utils/formatters";
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Calculator, ExternalLink, Eye, FileText } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useClientData } from '@/hooks/client/useClientData';
+import { Badge } from '@/components/ui/badge';
 
 export const SimulationsSection = () => {
-  const { simulations, fetchSimulations, isLoading } = useClientData();
+  const { user } = useAuth();
+  const { simulations, fetchSimulations } = useClientData();
 
   useEffect(() => {
-    fetchSimulations();
-  }, [fetchSimulations]);
+    if (user?.id) {
+      fetchSimulations();
+    }
+  }, [user?.id, fetchSimulations]);
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { 
-      opacity: 1,
-      transition: { staggerChildren: 0.1 }
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+
+  const getSimulationTypeLabel = (type: string) => {
+    const types = {
+      'irpf': 'IRPF',
+      'inss': 'INSS',
+      'prolabore': 'Pró-labore'
+    };
+    return types[type as keyof typeof types] || type;
+  };
+
+  const getSimulationIcon = (type: string) => {
+    switch (type) {
+      case 'irpf':
+        return <FileText className="w-5 h-5 text-[#efc349]" />;
+      case 'inss':
+        return <Calculator className="w-5 h-5 text-[#efc349]" />;
+      case 'prolabore':
+        return <ExternalLink className="w-5 h-5 text-[#efc349]" />;
+      default:
+        return <Calculator className="w-5 h-5 text-[#efc349]" />;
     }
   };
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#efc349]"></div>
-      </div>
-    );
-  }
-
   return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="space-y-6"
-    >
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 bg-gradient-to-r from-[#efc349] to-[#d4a017] rounded-xl">
-          <Calculator className="w-5 h-5 text-[#0b1320]" />
-        </div>
-        <h2 className="text-2xl font-light text-[#020817] dark:text-[#efc349]">
-          Minhas Simulações
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-extralight text-[#020817] dark:text-[#efc349]">
+          Simulações Realizadas
         </h2>
+        <Badge variant="outline" className="font-extralight">
+          {simulations.length} {simulations.length === 1 ? 'simulação' : 'simulações'}
+        </Badge>
       </div>
 
       {simulations.length === 0 ? (
-        <motion.div variants={itemVariants}>
-          <Card className="border border-[#efc349]/20 bg-white/80 dark:bg-[#0b1320]/80 backdrop-blur-sm">
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Calculator className="w-16 h-16 text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-600 dark:text-gray-300 mb-2">
-                Nenhuma simulação encontrada
-              </h3>
-              <p className="text-gray-500 dark:text-gray-400 text-center">
-                Suas simulações de IRPF, INSS e Pró-labore aparecerão aqui
-              </p>
-            </CardContent>
-          </Card>
-        </motion.div>
+        <Card className="border border-[#e6e6e6] dark:border-[#efc349]/30 bg-white dark:bg-transparent">
+          <CardContent className="py-12 text-center">
+            <Calculator className="w-12 h-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
+            <p className="text-gray-600 dark:text-gray-400 font-extralight mb-2">
+              Nenhuma simulação realizada
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-500 font-extralight">
+              Suas simulações de impostos aparecerão aqui
+            </p>
+          </CardContent>
+        </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {simulations.map((simulation, index) => (
-            <motion.div key={simulation.id} variants={itemVariants}>
-              <Card className="border border-[#efc349]/20 bg-white/80 dark:bg-[#0b1320]/80 backdrop-blur-sm hover:shadow-lg transition-all duration-300">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg font-medium text-[#020817] dark:text-[#efc349] flex items-center gap-2">
-                      <TrendingUp className="w-5 h-5" />
-                      {simulation.tipo_simulacao}
-                    </CardTitle>
-                    <Badge variant="outline" className="text-xs">
-                      {new Date(simulation.data_criacao).toLocaleDateString('pt-BR')}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Rendimento Bruto</p>
-                      <p className="font-medium text-[#020817] dark:text-white">
-                        {formatCurrency(simulation.rendimento_bruto)}
-                      </p>
+        <div className="space-y-4">
+          {simulations.map((simulation) => (
+            <Card 
+              key={simulation.id} 
+              className="border border-[#e6e6e6] dark:border-[#efc349]/30 bg-white dark:bg-transparent transition-all hover:shadow-md"
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-[#efc349]/10">
+                      {getSimulationIcon(simulation.tipo_simulacao)}
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Imposto Estimado</p>
-                      <p className="font-medium text-green-600 dark:text-green-400">
-                        {formatCurrency(simulation.imposto_estimado)}
+                      <CardTitle className="text-lg font-extralight text-[#020817] dark:text-[#efc349]">
+                        Simulação de {getSimulationTypeLabel(simulation.tipo_simulacao)}
+                      </CardTitle>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 font-extralight">
+                        {formatDate(simulation.data_criacao)}
                       </p>
                     </div>
                   </div>
-                  
-                  {simulation.nome && (
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Nome</p>
-                      <p className="font-medium text-[#020817] dark:text-white">{simulation.nome}</p>
-                    </div>
-                  )}
-                  
-                  <div className="flex items-center gap-2 pt-2">
-                    <Calendar className="w-4 h-4 text-gray-500" />
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      {new Date(simulation.data_criacao).toLocaleString('pt-BR')}
-                    </span>
+                  <Badge variant="outline" className="font-extralight">
+                    {getSimulationTypeLabel(simulation.tipo_simulacao)}
+                  </Badge>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600 dark:text-gray-400 font-extralight">Rendimento Bruto:</span>
+                    <p className="font-extralight text-[#020817] dark:text-white">
+                      {formatCurrency(simulation.rendimento_bruto)}
+                    </p>
                   </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+                  <div>
+                    <span className="text-gray-600 dark:text-gray-400 font-extralight">INSS:</span>
+                    <p className="font-extralight text-[#020817] dark:text-white">
+                      {formatCurrency(simulation.inss)}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600 dark:text-gray-400 font-extralight">Imposto Estimado:</span>
+                    <p className="font-extralight text-[#020817] dark:text-white">
+                      {formatCurrency(simulation.imposto_estimado)}
+                    </p>
+                  </div>
+                </div>
+
+                {simulation.dependentes > 0 && (
+                  <div className="text-sm">
+                    <span className="text-gray-600 dark:text-gray-400 font-extralight">Dependentes:</span>
+                    <p className="font-extralight text-[#020817] dark:text-white">
+                      {simulation.dependentes}
+                    </p>
+                  </div>
+                )}
+
+                <Button 
+                  variant="outline"
+                  className="w-full border-[#efc349] text-[#020817] dark:text-[#efc349] hover:bg-[#efc349]/10 font-extralight"
+                >
+                  <Eye className="w-4 h-4 mr-2" />
+                  Ver Detalhes
+                </Button>
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}
-    </motion.div>
+    </div>
   );
 };

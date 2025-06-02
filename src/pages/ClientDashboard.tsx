@@ -1,5 +1,6 @@
 
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import { useClientDashboardLogic } from "@/components/client/dashboard/ClientDashboardContainer";
 import { ClientDashboardContent } from "@/components/client/dashboard/ClientDashboardContent";
 
@@ -18,7 +19,7 @@ const ClientDashboard = () => {
   } = useClientDashboardLogic();
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#020817]">
+    <div className={`min-h-screen flex flex-col bg-[#FFF1DE] dark:bg-[#0b1320] ${isMobile ? 'pb-20' : ''}`}>
       <Navbar />
       <ClientDashboardContent
         isLoadingDocuments={isLoadingDocuments}
@@ -31,6 +32,7 @@ const ClientDashboard = () => {
         fetchUserDocuments={fetchUserDocuments}
         userId={user?.id || ''}
       />
+      <Footer />
     </div>
   );
 };

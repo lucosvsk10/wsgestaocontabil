@@ -1,151 +1,138 @@
 
-import { useClientData } from "@/hooks/client/useClientData";
-import { useEffect } from "react";
-import { motion } from "framer-motion";
-import { Calendar, Clock, AlertTriangle, CheckCircle2, CircleDot } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Calendar, Clock, AlertTriangle, CheckCircle } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useClientData } from '@/hooks/client/useClientData';
+import { Badge } from '@/components/ui/badge';
 
 export const FiscalCalendarSection = () => {
-  const { fiscalEvents, fetchFiscalEvents, isLoading } = useClientData();
+  const { user } = useAuth();
+  const { fiscalEvents, fetchFiscalEvents } = useClientData();
 
   useEffect(() => {
-    fetchFiscalEvents();
-  }, [fetchFiscalEvents]);
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { 
-      opacity: 1,
-      transition: { staggerChildren: 0.1 }
+    if (user?.id) {
+      fetchFiscalEvents();
     }
-  };
+  }, [user?.id, fetchFiscalEvents]);
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 }
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'completed':
-        return <CheckCircle2 className="w-5 h-5 text-green-500" />;
-      case 'overdue':
-        return <AlertTriangle className="w-5 h-5 text-red-500" />;
+      case 'upcoming':
+        return <Clock className="w-4 h-4 text-blue-500" />;
       case 'today':
-        return <CircleDot className="w-5 h-5 text-yellow-500" />;
+        return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
+      case 'overdue':
+        return <AlertTriangle className="w-4 h-4 text-red-500" />;
+      case 'completed':
+        return <CheckCircle className="w-4 h-4 text-green-500" />;
       default:
-        return <Clock className="w-5 h-5 text-blue-500" />;
+        return <Clock className="w-4 h-4 text-gray-500" />;
     }
   };
 
-  const getStatusText = (status: string) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'completed':
-        return 'Concluído';
-      case 'overdue':
-        return 'Atrasado';
+      case 'upcoming':
+        return <Badge variant="outline" className="font-extralight text-blue-600">Próximo</Badge>;
       case 'today':
-        return 'Hoje';
+        return <Badge variant="destructive" className="font-extralight">Hoje</Badge>;
+      case 'overdue':
+        return <Badge variant="destructive" className="font-extralight">Atrasado</Badge>;
+      case 'completed':
+        return <Badge variant="secondary" className="font-extralight text-green-600">Concluído</Badge>;
       default:
-        return 'Pendente';
+        return <Badge variant="outline" className="font-extralight">Pendente</Badge>;
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getCardColors = (status: string) => {
     switch (status) {
-      case 'completed':
-        return 'border-green-500 text-green-600';
-      case 'overdue':
-        return 'border-red-500 text-red-600';
       case 'today':
-        return 'border-yellow-500 text-yellow-600';
+        return 'border-yellow-200 dark:border-yellow-500/30 bg-yellow-50 dark:bg-yellow-900/20';
+      case 'overdue':
+        return 'border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-900/20';
+      case 'completed':
+        return 'border-green-200 dark:border-green-500/30 bg-green-50 dark:bg-green-900/20';
       default:
-        return 'border-blue-500 text-blue-600';
+        return 'border-[#e6e6e6] dark:border-[#efc349]/30 bg-white dark:bg-transparent';
     }
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#efc349]"></div>
-      </div>
-    );
-  }
 
   return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="space-y-6"
-    >
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 bg-gradient-to-r from-[#efc349] to-[#d4a017] rounded-xl">
-          <Calendar className="w-5 h-5 text-[#0b1320]" />
-        </div>
-        <h2 className="text-2xl font-light text-[#020817] dark:text-[#efc349]">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-extralight text-[#020817] dark:text-[#efc349]">
           Agenda Fiscal
         </h2>
+        <Badge variant="outline" className="font-extralight">
+          {fiscalEvents.length} {fiscalEvents.length === 1 ? 'evento' : 'eventos'}
+        </Badge>
       </div>
 
       {fiscalEvents.length === 0 ? (
-        <motion.div variants={itemVariants}>
-          <Card className="border border-[#efc349]/20 bg-white/80 dark:bg-[#0b1320]/80 backdrop-blur-sm">
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Calendar className="w-16 h-16 text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-600 dark:text-gray-300 mb-2">
-                Nenhum evento fiscal encontrado
-              </h3>
-              <p className="text-gray-500 dark:text-gray-400 text-center">
-                Eventos e obrigações fiscais aparecerão aqui
-              </p>
-            </CardContent>
-          </Card>
-        </motion.div>
+        <Card className="border border-[#e6e6e6] dark:border-[#efc349]/30 bg-white dark:bg-transparent">
+          <CardContent className="py-12 text-center">
+            <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
+            <p className="text-gray-600 dark:text-gray-400 font-extralight mb-2">
+              Nenhum evento fiscal programado
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-500 font-extralight">
+              Eventos fiscais importantes aparecerão aqui
+            </p>
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-4">
-          {fiscalEvents.map((event, index) => (
-            <motion.div key={event.id} variants={itemVariants}>
-              <Card className="border border-[#efc349]/20 bg-white/80 dark:bg-[#0b1320]/80 backdrop-blur-sm hover:shadow-lg transition-all duration-300">
-                <CardHeader className="pb-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      {getStatusIcon(event.status)}
-                      <div>
-                        <CardTitle className="text-lg font-medium text-[#020817] dark:text-[#efc349]">
-                          {event.title}
-                        </CardTitle>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                          {event.category}
+          {fiscalEvents.map((event) => (
+            <Card 
+              key={event.id} 
+              className={`border ${getCardColors(event.status)} transition-all hover:shadow-md`}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-[#efc349]/10">
+                      <Calendar className="w-5 h-5 text-[#efc349]" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg font-extralight text-[#020817] dark:text-[#efc349]">
+                        {event.title}
+                      </CardTitle>
+                      <div className="flex items-center gap-2 mt-1">
+                        {getStatusIcon(event.status)}
+                        <p className="text-sm text-gray-600 dark:text-gray-400 font-extralight">
+                          {formatDate(event.date)}
                         </p>
                       </div>
                     </div>
-                    <Badge 
-                      variant="outline" 
-                      className={`text-xs ${getStatusColor(event.status)}`}
-                    >
-                      {getStatusText(event.status)}
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    {getStatusBadge(event.status)}
+                    <Badge variant="outline" className="font-extralight text-xs">
+                      {event.category}
                     </Badge>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-                    {event.description}
-                  </p>
-                  
-                  <div className="flex items-center gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
-                    <Calendar className="w-4 h-4 text-gray-500" />
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      Vencimento: {new Date(event.date).toLocaleDateString('pt-BR')}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+                </div>
+              </CardHeader>
+              
+              <CardContent>
+                <p className="text-[#020817] dark:text-white font-extralight leading-relaxed">
+                  {event.description}
+                </p>
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}
-    </motion.div>
+    </div>
   );
 };
