@@ -38,36 +38,54 @@ export const ClientNavigation = ({
   const isMobile = useIsMobile();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className={`grid w-full ${isMobile ? 'grid-cols-3' : 'grid-cols-5'} bg-white dark:bg-[#0b1320] border border-gray-200 dark:border-[#efc349]/30`}>
-          <TabsTrigger value="documents" className="font-extralight text-[#020817] dark:text-[#efc349] data-[state=active]:bg-[#efc349] data-[state=active]:text-[#020817]">
-            <FileText className="w-4 h-4 mr-1" />
+        <TabsList className={cn(
+          "grid w-full bg-[#1a1f2e] border border-[#2a3441] rounded-xl p-1",
+          isMobile ? 'grid-cols-3' : 'grid-cols-5'
+        )}>
+          <TabsTrigger 
+            value="documents" 
+            className="data-[state=active]:bg-[#F5C441] data-[state=active]:text-black text-white hover:text-[#F5C441] transition-colors"
+          >
+            <FileText className="w-4 h-4 mr-2" />
             {isMobile ? 'Docs' : 'Documentos'}
           </TabsTrigger>
-          <TabsTrigger value="simulations" className="font-extralight text-[#020817] dark:text-[#efc349] data-[state=active]:bg-[#efc349] data-[state=active]:text-[#020817]">
-            <Calculator className="w-4 h-4 mr-1" />
+          <TabsTrigger 
+            value="simulations" 
+            className="data-[state=active]:bg-[#F5C441] data-[state=active]:text-black text-white hover:text-[#F5C441] transition-colors"
+          >
+            <Calculator className="w-4 h-4 mr-2" />
             {isMobile ? 'Sim' : 'Simulações'}
           </TabsTrigger>
-          <TabsTrigger value="announcements" className="font-extralight text-[#020817] dark:text-[#efc349] data-[state=active]:bg-[#efc349] data-[state=active]:text-[#020817]">
-            <Megaphone className="w-4 h-4 mr-1" />
+          <TabsTrigger 
+            value="announcements" 
+            className="data-[state=active]:bg-[#F5C441] data-[state=active]:text-black text-white hover:text-[#F5C441] transition-colors"
+          >
+            <Megaphone className="w-4 h-4 mr-2" />
             {isMobile ? 'Com' : 'Comunicados'}
           </TabsTrigger>
           {!isMobile && (
             <>
-              <TabsTrigger value="calendar" className="font-extralight text-[#020817] dark:text-[#efc349] data-[state=active]:bg-[#efc349] data-[state=active]:text-[#020817]">
-                <Calendar className="w-4 h-4 mr-1" />
+              <TabsTrigger 
+                value="calendar" 
+                className="data-[state=active]:bg-[#F5C441] data-[state=active]:text-black text-white hover:text-[#F5C441] transition-colors"
+              >
+                <Calendar className="w-4 h-4 mr-2" />
                 Agenda
               </TabsTrigger>
-              <TabsTrigger value="company" className="font-extralight text-[#020817] dark:text-[#efc349] data-[state=active]:bg-[#efc349] data-[state=active]:text-[#020817]">
-                <Building className="w-4 h-4 mr-1" />
+              <TabsTrigger 
+                value="company" 
+                className="data-[state=active]:bg-[#F5C441] data-[state=active]:text-black text-white hover:text-[#F5C441] transition-colors"
+              >
+                <Building className="w-4 h-4 mr-2" />
                 Empresa
               </TabsTrigger>
             </>
           )}
         </TabsList>
 
-        <div className="mt-6">
+        <div className="mt-8">
           <TabsContent value="documents" className="space-y-0">
             <DocumentTabs
               documents={documents}
@@ -102,28 +120,30 @@ export const ClientNavigation = ({
 
         {/* Mobile bottom tabs for calendar and company */}
         {isMobile && (
-          <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#0b1320] border-t border-gray-200 dark:border-[#efc349]/30 p-2 z-40">
-            <div className="grid grid-cols-2 gap-2">
+          <div className="fixed bottom-0 left-0 right-0 bg-[#1a1f2e] border-t border-[#2a3441] p-4 z-40">
+            <div className="grid grid-cols-2 gap-4">
               <button
                 onClick={() => setActiveTab('calendar')}
-                className={`p-3 rounded-lg flex items-center justify-center font-extralight transition-colors ${
+                className={cn(
+                  "p-3 rounded-lg flex items-center justify-center font-medium transition-colors",
                   activeTab === 'calendar'
-                    ? 'bg-[#efc349] text-[#020817]'
-                    : 'text-[#020817] dark:text-[#efc349] hover:bg-[#efc349]/10'
-                }`}
+                    ? 'bg-[#F5C441] text-black'
+                    : 'text-white hover:text-[#F5C441] hover:bg-[#F5C441]/10'
+                )}
               >
-                <Calendar className="w-4 h-4 mr-1" />
+                <Calendar className="w-4 h-4 mr-2" />
                 Agenda
               </button>
               <button
                 onClick={() => setActiveTab('company')}
-                className={`p-3 rounded-lg flex items-center justify-center font-extralight transition-colors ${
+                className={cn(
+                  "p-3 rounded-lg flex items-center justify-center font-medium transition-colors",
                   activeTab === 'company'
-                    ? 'bg-[#efc349] text-[#020817]'
-                    : 'text-[#020817] dark:text-[#efc349] hover:bg-[#efc349]/10'
-                }`}
+                    ? 'bg-[#F5C441] text-black'
+                    : 'text-white hover:text-[#F5C441] hover:bg-[#F5C441]/10'
+                )}
               >
-                <Building className="w-4 h-4 mr-1" />
+                <Building className="w-4 h-4 mr-2" />
                 Empresa
               </button>
             </div>
@@ -133,3 +153,8 @@ export const ClientNavigation = ({
     </div>
   );
 };
+
+// Helper function
+function cn(...classes: (string | undefined | null | false)[]): string {
+  return classes.filter(Boolean).join(' ');
+}
