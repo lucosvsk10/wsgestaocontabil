@@ -29,7 +29,7 @@ const DesktopNavbar = ({
               <DropdownMenuContent align="end" className="shadow-lg rounded-lg border border-[#e6e6e6] dark:border-gold/20 bg-transparent">
                 <DropdownMenuItem className="text-[#020817] hover:bg-gray-100 dark:text-gold dark:hover:text-gold-light cursor-pointer dark:hover:bg-navy-light" onClick={navigateToDashboard}>
                   <FileText size={16} className="mr-2" />
-                  <span className="text-sm font-medium uppercase tracking-wider">MEUS DOCS</span>
+                  <span className="text-sm uppercase tracking-wider font-extralight">MINHA ÁREA</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem className="text-[#020817] hover:bg-gray-100 dark:text-gold dark:hover:text-gold-light cursor-pointer dark:hover:bg-navy-light" onClick={handleLogout}>
                   <LogOut size={16} className="mr-2" />
