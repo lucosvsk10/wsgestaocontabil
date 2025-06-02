@@ -1,325 +1,318 @@
 
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { motion } from "framer-motion";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calculator, Copy, Printer } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
-import { supabase } from "@/lib/supabaseClient";
+import { Button } from "@/components/ui/button";
+import { Calculator, DollarSign, Minus, Plus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 const ProLaboreCalculator = () => {
-  const [valorPretendido, setValorPretendido] = useState('');
-  const [regimeTributario, setRegimeTributario] = useState('');
-  const [aliquotaINSS, setAliquotaINSS] = useState('');
+  const [valorBruto, setValorBruto] = useState("");
   const [resultado, setResultado] = useState<any>(null);
-  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
 
   const calcularProLabore = () => {
-    const valor = parseFloat(valorPretendido);
+    setLoading(true);
     
-    if (!valor || valor <= 0) {
-      toast({
-        title: "Erro",
-        description: "Por favor, informe um valor válido.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!regimeTributario || !aliquotaINSS) {
-      toast({
-        title: "Erro", 
-        description: "Por favor, preencha todos os campos.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Cálculo INSS sobre pró-labore
-    const aliquota = parseFloat(aliquotaINSS);
-    const inssRetido = valor * (aliquota / 100);
-    const tetoINSS = 908.85; // Teto INSS 2025
-    const inssReal = Math.min(inssRetido, tetoINSS);
-
-    // IRRF sobre pró-labore (se aplicável)
-    let irrfRetido = 0;
-    const baseIRRF = valor - inssReal;
+    const valor = parseFloat(valorBruto) || 0;
     
-    if (baseIRRF > 2259.20) { // Faixa isenta IRRF 2025
-      if (baseIRRF <= 2826.65) {
-        irrfRetido = (baseIRRF * 0.075) - 169.44;
-      } else if (baseIRRF <= 3751.05) {
-        irrfRetido = (baseIRRF * 0.15) - 381.44;
-      } else if (baseIRRF <= 4664.68) {
-        irrfRetido = (baseIRRF * 0.225) - 662.77;
-      } else {
-        irrfRetido = (baseIRRF * 0.275) - 896.00;
-      }
-      irrfRetido = Math.max(0, irrfRetido);
+    // Valores 2024
+    const salarioMinimo = 1412.00;
+    const tetoINSS = 7786.02;
+    
+    // Calcular INSS (11% limitado ao teto)
+    const baseINSS = Math.min(valor, tetoINSS);
+    const inss = baseINSS * 0.11;
+    
+    // Calcular IRRF
+    const baseIRRF = valor - inss;
+    let irrf = 0;
+    let aliquotaIRRF = 0;
+    
+    // Tabela IRRF mensal 2024
+    if (baseIRRF <= 2112.00) {
+      irrf = 0;
+      aliquotaIRRF = 0;
+    } else if (baseIRRF <= 2826.65) {
+      irrf = (baseIRRF * 0.075) - 158.40;
+      aliquotaIRRF = 7.5;
+    } else if (baseIRRF <= 3751.05) {
+      irrf = (baseIRRF * 0.15) - 370.40;
+      aliquotaIRRF = 15;
+    } else if (baseIRRF <= 4664.68) {
+      irrf = (baseIRRF * 0.225) - 651.73;
+      aliquotaIRRF = 22.5;
+    } else {
+      irrf = (baseIRRF * 0.275) - 884.96;
+      aliquotaIRRF = 27.5;
     }
-
-    // Impostos adicionais conforme regime
-    let impostosAdicionais = 0;
-    let descricaoImpostos = '';
-
-    switch (regimeTributario) {
-      case 'Simples Nacional':
-        descricaoImpostos = 'Não há impostos adicionais no Simples Nacional';
-        break;
-      case 'Lucro Presumido':
-        impostosAdicionais = valor * 0.11; // PIS/COFINS
-        descricaoImpostos = 'PIS/COFINS sobre pró-labore';
-        break;
-      case 'Lucro Real':
-        impostosAdicionais = valor * 0.0975; // PIS/COFINS
-        descricaoImpostos = 'PIS/COFINS sobre pró-labore';
-        break;
-    }
-
-    const valorLiquido = valor - inssReal - irrfRetido - impostosAdicionais;
-
-    const resultadoCalculo = {
+    
+    irrf = Math.max(irrf, 0);
+    
+    const valorLiquido = valor - inss - irrf;
+    const totalDescontos = inss + irrf;
+    
+    setResultado({
       valorBruto: valor,
-      regimeTributario,
-      aliquotaINSS: aliquota,
-      inssRetido: inssReal,
-      irrfRetido,
-      impostosAdicionais,
-      descricaoImpostos,
+      inss,
+      irrf,
+      aliquotaIRRF,
+      totalDescontos,
       valorLiquido,
-      percentualDesconto: ((valor - valorLiquido) / valor * 100).toFixed(2)
-    };
-
-    setResultado(resultadoCalculo);
-    salvarSimulacao(resultadoCalculo);
-  };
-
-  const salvarSimulacao = async (dados: any) => {
-    try {
-      await supabase.from('tax_simulations').insert({
-        tipo_simulacao: 'Pró-labore',
-        rendimento_bruto: dados.valorBruto,
-        inss: dados.inssRetido,
-        imposto_estimado: dados.valorBruto - dados.valorLiquido,
-        educacao: 0,
-        saude: 0,
-        dependentes: 0,
-        outras_deducoes: dados.impostosAdicionais
-      });
-    } catch (error) {
-      console.error('Erro ao salvar simulação:', error);
-    }
-  };
-
-  const copiarResultado = () => {
-    if (!resultado) return;
-
-    const texto = `
-Simulação Pró-labore 2025
-========================
-Valor Bruto: ${resultado.valorBruto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-Regime: ${resultado.regimeTributario}
-INSS Retido: ${resultado.inssRetido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-IRRF Retido: ${resultado.irrfRetido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-Impostos Adicionais: ${resultado.impostosAdicionais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-Valor Líquido: ${resultado.valorLiquido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-Desconto Total: ${resultado.percentualDesconto}%
-    `;
-
-    navigator.clipboard.writeText(texto);
-    toast({
-      title: "Copiado!",
-      description: "Resultado copiado para a área de transferência."
+      tetoINSS,
+      salarioMinimo
     });
+    
+    setLoading(false);
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+
+  const resetForm = () => {
+    setValorBruto("");
+    setResultado(null);
   };
 
   return (
-    <div className="min-h-screen bg-[#FFF1DE] dark:bg-[#020817]">
+    <div className="min-h-screen bg-[#020817] text-white font-extralight">
       <Navbar />
       
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="max-w-4xl mx-auto"
+        >
+          {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-4xl text-[#020817] dark:text-[#efc349] mb-4 font-extralight">
-              Simulador de Pró-labore 2025
+            <h1 className="text-4xl md:text-5xl font-extralight text-[#efc349] mb-4">
+              Simulação Pró-labore 2024
             </h1>
-            <p className="text-[#020817]/80 dark:text-white/80 font-extralight">
-              Calcule o valor líquido do seu pró-labore considerando todos os descontos
+            <p className="text-xl text-gray-300 font-extralight">
+              Calcule os descontos e valor líquido do seu pró-labore
             </p>
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Formulário */}
-            <Card className="border-[#efc349]/30 bg-white dark:bg-transparent">
+            <Card className="bg-[#0b1320] border-[#efc349]/20">
               <CardHeader>
-                <CardTitle className="text-[#020817] dark:text-[#efc349] font-extralight flex items-center gap-2">
-                  <Calculator size={24} />
+                <CardTitle className="text-[#efc349] font-extralight flex items-center">
+                  <Calculator className="w-6 h-6 mr-2" />
                   Dados para Simulação
                 </CardTitle>
-                <CardDescription className="font-extralight">
-                  Preencha os campos para calcular seu pró-labore líquido
-                </CardDescription>
               </CardHeader>
+              
               <CardContent className="space-y-6">
                 <div>
-                  <Label htmlFor="valor" className="font-extralight">Valor Pretendido (R$)</Label>
+                  <Label htmlFor="valorBruto" className="text-white font-extralight flex items-center">
+                    <DollarSign className="w-4 h-4 mr-1" />
+                    Valor Bruto do Pró-labore (R$)
+                  </Label>
                   <Input
-                    id="valor"
+                    id="valorBruto"
                     type="number"
-                    value={valorPretendido}
-                    onChange={(e) => setValorPretendido(e.target.value)}
-                    placeholder="Ex: 5000"
-                    className="mt-1 bg-white dark:bg-transparent border-[#efc349]/30"
+                    placeholder="5000.00"
+                    value={valorBruto}
+                    onChange={(e) => setValorBruto(e.target.value)}
+                    className="bg-[#020817] border-[#efc349]/30 text-white mt-1"
                   />
-                  <p className="text-xs text-[#020817]/60 dark:text-white/60 mt-1 font-extralight">
-                    Valor bruto desejado para o pró-labore
+                  <p className="text-xs text-gray-400 mt-1">
+                    Valor mínimo: R$ 1.412,00 (salário mínimo)
                   </p>
                 </div>
 
-                <div>
-                  <Label htmlFor="regime" className="font-extralight">Regime Tributário</Label>
-                  <Select value={regimeTributario} onValueChange={setRegimeTributario}>
-                    <SelectTrigger className="bg-white dark:bg-transparent border-[#efc349]/30">
-                      <SelectValue placeholder="Selecione o regime" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Simples Nacional">Simples Nacional</SelectItem>
-                      <SelectItem value="Lucro Presumido">Lucro Presumido</SelectItem>
-                      <SelectItem value="Lucro Real">Lucro Real</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-[#020817]/60 dark:text-white/60 mt-1 font-extralight">
-                    Regime tributário da empresa
-                  </p>
+                <div className="bg-[#020817] rounded-lg p-4">
+                  <h3 className="text-white font-medium mb-2">Informações Importantes:</h3>
+                  <ul className="text-sm text-gray-300 space-y-1 font-extralight">
+                    <li>• INSS: 11% limitado ao teto de R$ 7.786,02</li>
+                    <li>• IRRF: Tabela progressiva mensal</li>
+                    <li>• Valor mínimo: 1 salário mínimo</li>
+                    <li>• Isento de FGTS</li>
+                  </ul>
                 </div>
 
-                <div>
-                  <Label htmlFor="inss" className="font-extralight">Alíquota INSS (%)</Label>
-                  <Select value={aliquotaINSS} onValueChange={setAliquotaINSS}>
-                    <SelectTrigger className="bg-white dark:bg-transparent border-[#efc349]/30">
-                      <SelectValue placeholder="Selecione a alíquota" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="11">11% (Padrão)</SelectItem>
-                      <SelectItem value="20">20% (Contribuição ampliada)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-[#020817]/60 dark:text-white/60 mt-1 font-extralight">
-                    Alíquota de INSS do sócio
-                  </p>
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={calcularProLabore}
+                    disabled={loading || !valorBruto || parseFloat(valorBruto) < 1412}
+                    className="flex-1 bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817] font-extralight"
+                  >
+                    {loading ? "Calculando..." : "Simular Pró-labore"}
+                  </Button>
+                  
+                  <Button 
+                    onClick={resetForm}
+                    variant="outline"
+                    className="border-[#efc349]/30 text-[#efc349] hover:bg-[#efc349]/10"
+                  >
+                    Limpar
+                  </Button>
                 </div>
-
-                <Button 
-                  onClick={calcularProLabore}
-                  className="w-full bg-[#020817] dark:bg-transparent border border-[#efc349] text-white dark:text-[#efc349] hover:bg-[#020817]/90 dark:hover:bg-[#efc349]/10 font-extralight"
-                >
-                  Calcular Pró-labore
-                </Button>
               </CardContent>
             </Card>
 
             {/* Resultado */}
             {resultado && (
-              <Card className="border-[#efc349]/30 bg-white dark:bg-transparent">
-                <CardHeader>
-                  <CardTitle className="text-[#020817] dark:text-[#efc349] font-extralight">
-                    Resultado da Simulação
-                  </CardTitle>
-                  <CardDescription className="font-extralight">
-                    Breakdown completo do seu pró-labore
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="bg-[#efc349]/10 rounded-lg p-4 border border-[#efc349]/30">
-                    <h3 className="text-lg font-extralight text-[#020817] dark:text-[#efc349] mb-3">
-                      Resumo Financeiro
-                    </h3>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-[#020817]/70 dark:text-white/70 font-extralight">Valor Bruto:</span>
-                        <span className="text-[#020817] dark:text-white font-extralight">
-                          {resultado.valorBruto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-[#020817]/70 dark:text-white/70 font-extralight">Regime:</span>
-                        <span className="text-[#020817] dark:text-white font-extralight">
-                          {resultado.regimeTributario}
-                        </span>
-                      </div>
-                      <div className="border-t border-[#efc349]/30 pt-2">
-                        <h4 className="font-extralight text-[#020817] dark:text-[#efc349] mb-2">Descontos:</h4>
-                        <div className="flex justify-between">
-                          <span className="text-[#020817]/70 dark:text-white/70 font-extralight">INSS Retido:</span>
-                          <span className="text-red-600 dark:text-red-400 font-extralight">
-                            -{resultado.inssRetido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                <Card className="bg-[#0b1320] border-[#efc349]/20">
+                  <CardHeader>
+                    <CardTitle className="text-[#efc349] font-extralight">
+                      Resultado da Simulação
+                    </CardTitle>
+                  </CardHeader>
+                  
+                  <CardContent className="space-y-4">
+                    {/* Resumo Principal */}
+                    <div className="bg-[#020817] rounded-lg p-4">
+                      <h3 className="text-lg font-medium text-white mb-3">Resumo</h3>
+                      
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-400 flex items-center">
+                            <Plus className="w-4 h-4 mr-1 text-green-400" />
+                            Valor Bruto:
+                          </span>
+                          <span className="text-white font-medium text-lg">
+                            {formatCurrency(resultado.valorBruto)}
                           </span>
                         </div>
-                        {resultado.irrfRetido > 0 && (
+
+                        <div className="border-t border-[#efc349]/20 pt-3">
                           <div className="flex justify-between">
-                            <span className="text-[#020817]/70 dark:text-white/70 font-extralight">IRRF Retido:</span>
-                            <span className="text-red-600 dark:text-red-400 font-extralight">
-                              -{resultado.irrfRetido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                            <span className="text-gray-400 flex items-center">
+                              <Minus className="w-4 h-4 mr-1 text-red-400" />
+                              INSS (11%):
+                            </span>
+                            <span className="text-red-400">
+                              -{formatCurrency(resultado.inss)}
                             </span>
                           </div>
-                        )}
-                        {resultado.impostosAdicionais > 0 && (
-                          <div className="flex justify-between">
-                            <span className="text-[#020817]/70 dark:text-white/70 font-extralight">{resultado.descricaoImpostos}:</span>
-                            <span className="text-red-600 dark:text-red-400 font-extralight">
-                              -{resultado.impostosAdicionais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                          
+                          <div className="flex justify-between mt-2">
+                            <span className="text-gray-400 flex items-center">
+                              <Minus className="w-4 h-4 mr-1 text-red-400" />
+                              IRRF ({resultado.aliquotaIRRF}%):
+                            </span>
+                            <span className="text-red-400">
+                              -{formatCurrency(resultado.irrf)}
                             </span>
                           </div>
-                        )}
+                        </div>
+
+                        <div className="border-t-2 border-[#efc349] pt-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-400 font-medium">Valor Líquido:</span>
+                            <span className="text-2xl font-bold text-[#efc349]">
+                              {formatCurrency(resultado.valorLiquido)}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="border-t border-[#efc349]/30 pt-2">
-                        <div className="flex justify-between text-lg">
-                          <span className="text-[#020817] dark:text-[#efc349] font-extralight">Valor Líquido:</span>
-                          <span className="text-green-600 dark:text-green-400 font-extralight">
-                            {resultado.valorLiquido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </div>
+
+                    {/* Detalhamento dos Descontos */}
+                    <div className="bg-[#020817] rounded-lg p-4">
+                      <h3 className="text-lg font-medium text-white mb-3">Detalhamento</h3>
+                      
+                      <div className="space-y-3 text-sm">
+                        <div>
+                          <div className="flex justify-between mb-1">
+                            <span className="text-gray-400">INSS:</span>
+                            <Badge className="bg-blue-600 hover:bg-blue-700">11%</Badge>
+                          </div>
+                          <p className="text-xs text-gray-500">
+                            Base: {formatCurrency(Math.min(resultado.valorBruto, resultado.tetoINSS))}
+                          </p>
+                        </div>
+
+                        <div>
+                          <div className="flex justify-between mb-1">
+                            <span className="text-gray-400">IRRF:</span>
+                            <Badge className="bg-purple-600 hover:bg-purple-700">
+                              {resultado.aliquotaIRRF}%
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-gray-500">
+                            Base: {formatCurrency(resultado.valorBruto - resultado.inss)}
+                          </p>
+                        </div>
+
+                        <div className="border-t border-[#efc349]/20 pt-2">
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Total de Descontos:</span>
+                            <span className="text-white font-medium">
+                              {formatCurrency(resultado.totalDescontos)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Comparativo Anual */}
+                    <div className="bg-[#020817] rounded-lg p-4">
+                      <h3 className="text-lg font-medium text-white mb-3">Projeção Anual</h3>
+                      
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Pró-labore Bruto (12 meses):</span>
+                          <span className="text-white">
+                            {formatCurrency(resultado.valorBruto * 12)}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-[#020817]/70 dark:text-white/70 font-extralight">Desconto Total:</span>
-                          <span className="text-[#020817] dark:text-white font-extralight">
-                            {resultado.percentualDesconto}%
+                          <span className="text-gray-400">Total INSS (12 meses):</span>
+                          <span className="text-red-400">
+                            -{formatCurrency(resultado.inss * 12)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Total IRRF (12 meses):</span>
+                          <span className="text-red-400">
+                            -{formatCurrency(resultado.irrf * 12)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between border-t border-[#efc349]/20 pt-2">
+                          <span className="text-gray-400 font-medium">Líquido Anual:</span>
+                          <span className="text-[#efc349] font-bold">
+                            {formatCurrency(resultado.valorLiquido * 12)}
                           </span>
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex gap-2">
-                    <Button 
-                      onClick={copiarResultado}
-                      variant="outline" 
-                      size="sm"
-                      className="flex-1 border-[#efc349]/30 hover:bg-[#efc349]/10 font-extralight"
-                    >
-                      <Copy size={16} className="mr-1" />
-                      Copiar
-                    </Button>
-                    <Button 
-                      onClick={() => window.print()}
-                      variant="outline" 
-                      size="sm"
-                      className="flex-1 border-[#efc349]/30 hover:bg-[#efc349]/10 font-extralight"
-                    >
-                      <Printer size={16} className="mr-1" />
-                      Imprimir
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                    {/* Observações */}
+                    <div className="bg-[#020817] rounded-lg p-4">
+                      <h3 className="text-lg font-medium text-white mb-3">Observações</h3>
+                      <ul className="text-xs text-gray-400 space-y-1 font-extralight">
+                        <li>• Pró-labore não tem incidência de FGTS</li>
+                        <li>• Valor mínimo obrigatório: 1 salário mínimo</li>
+                        <li>• INSS limitado ao teto: R$ {formatCurrency(resultado.tetoINSS)}</li>
+                        <li>• Cálculo baseado na tabela 2024</li>
+                      </ul>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
             )}
           </div>
-        </div>
+        </motion.div>
       </div>
-
+      
       <Footer />
     </div>
   );

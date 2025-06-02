@@ -1,62 +1,75 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-type Theme = 'light' | 'dark';
+type Theme = 'dark' | 'light' | 'system';
 
-interface ThemeContextType {
+type ThemeProviderProps = {
+  children: React.ReactNode;
+  defaultTheme?: Theme;
+  storageKey?: string;
+};
+
+type ThemeProviderState = {
   theme: Theme;
-  toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
-}
+};
 
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+const initialState: ThemeProviderState = {
+  theme: 'dark', // Modo escuro como padrão
+  setTheme: () => null,
+};
 
-export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
-  const [theme, setThemeState] = useState<Theme>('dark');
-  
-  // Initialize theme on app load - default to dark
+const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
+
+export function ThemeProvider({
+  children,
+  defaultTheme = 'dark', // Modo escuro como padrão
+  storageKey = 'vite-ui-theme',
+  ...props
+}: ThemeProviderProps) {
+  const [theme, setTheme] = useState<Theme>(() => {
+    // Verificar se há tema salvo no localStorage, senão usar 'dark' como padrão
+    return (localStorage.getItem(storageKey) as Theme) || defaultTheme;
+  });
+
   useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') as Theme | null;
-    const initialTheme = savedTheme || 'dark'; // Always default to dark
-    setThemeState(initialTheme);
-    
-    // Apply the theme to the document
-    if (initialTheme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, []);
+    const root = window.document.documentElement;
 
-  // Set theme helper function
-  const setTheme = (newTheme: Theme) => {
-    setThemeState(newTheme);
-    localStorage.setItem('theme', newTheme);
-    
-    if (newTheme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  };
+    root.classList.remove('light', 'dark');
 
-  // Toggle theme function
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
+    if (theme === 'system') {
+      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)')
+        .matches
+        ? 'dark'
+        : 'light';
+
+      root.classList.add(systemTheme);
+      return;
+    }
+
+    root.classList.add(theme);
+  }, [theme]);
+
+  const value = {
+    theme,
+    setTheme: (theme: Theme) => {
+      localStorage.setItem(storageKey, theme);
+      setTheme(theme);
+    },
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
+    <ThemeProviderContext.Provider {...props} value={value}>
       {children}
-    </ThemeContext.Provider>
+    </ThemeProviderContext.Provider>
   );
-};
+}
 
 export const useTheme = () => {
-  const context = useContext(ThemeContext);
-  if (context === undefined) {
+  const context = useContext(ThemeProviderContext);
+
+  if (context === undefined)
     throw new Error('useTheme must be used within a ThemeProvider');
-  }
+
   return context;
 };

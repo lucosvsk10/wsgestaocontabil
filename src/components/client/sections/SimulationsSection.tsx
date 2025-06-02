@@ -1,32 +1,39 @@
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Calculator, FileText, Eye, Download } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useClientData } from '@/hooks/client/useClientData';
-import { Badge } from '@/components/ui/badge';
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Calculator, Eye, FileText, Download } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { TaxSimulation } from "@/types/client";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const SimulationsSection = () => {
   const { user } = useAuth();
-  const { simulations, fetchSimulations } = useClientData();
+  const [simulations, setSimulations] = useState<TaxSimulation[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user?.id) {
-      fetchSimulations();
-    }
-  }, [user?.id, fetchSimulations]);
+    fetchSimulations();
+  }, [user]);
 
-  const getSimulationIcon = (type: string) => {
-    switch (type) {
-      case 'IRPF':
-        return <Calculator className="w-5 h-5" />;
-      case 'INSS':
-        return <FileText className="w-5 h-5" />;
-      case 'Pró-labore':
-        return <Eye className="w-5 h-5" />;
-      default:
-        return <Calculator className="w-5 h-5" />;
+  const fetchSimulations = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('tax_simulations')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('data_criacao', { ascending: false });
+
+      if (error) throw error;
+      setSimulations(data || []);
+    } catch (error) {
+      console.error('Erro ao buscar simulações:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -37,116 +44,122 @@ export const SimulationsSection = () => {
     }).format(value);
   };
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('pt-BR');
+  const getSimulationType = (tipo: string) => {
+    switch (tipo) {
+      case 'irpf': return 'IRPF';
+      case 'inss': return 'INSS';
+      case 'prolabore': return 'Pró-labore';
+      default: return tipo;
+    }
   };
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-extralight text-[#020817] dark:text-[#efc349]">
-          Simulações Realizadas
-        </h2>
-        <Button 
-          className="bg-transparent border border-[#efc349] text-[#020817] dark:text-[#efc349] hover:bg-[#efc349]/10 font-extralight"
-          onClick={() => window.open('/simulador-irpf', '_blank')}
-        >
-          <Calculator className="w-4 h-4 mr-2" />
-          Nova Simulação
-        </Button>
-      </div>
+  if (loading) {
+    return (
+      <Card className="bg-[#0b1320] border-[#efc349]/20">
+        <CardContent className="p-6">
+          <div className="animate-pulse space-y-4">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-20 bg-[#020817] rounded"></div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
-      {simulations.length === 0 ? (
-        <Card className="border border-[#e6e6e6] dark:border-[#efc349]/30 bg-white dark:bg-transparent">
-          <CardContent className="py-12 text-center">
-            <Calculator className="w-12 h-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
-            <p className="text-gray-600 dark:text-gray-400 font-extralight mb-4">
-              Nenhuma simulação encontrada
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-500 font-extralight">
-              Realize simulações fiscais para visualizá-las aqui
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {simulations.map((simulation) => (
-            <Card 
-              key={simulation.id} 
-              className="border border-[#e6e6e6] dark:border-[#efc349]/30 bg-white dark:bg-transparent hover:shadow-md transition-shadow"
+  return (
+    <Card className="bg-[#0b1320] border-[#efc349]/20">
+      <CardHeader>
+        <CardTitle className="text-[#efc349] font-extralight flex items-center">
+          <Calculator className="w-6 h-6 mr-2" />
+          Minhas Simulações
+        </CardTitle>
+      </CardHeader>
+      
+      <CardContent>
+        {simulations.length === 0 ? (
+          <div className="text-center py-8 text-gray-400">
+            <Calculator className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <p className="font-extralight">Nenhuma simulação realizada</p>
+            <Button 
+              className="mt-4 bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817]"
+              onClick={() => window.open('/simulador-irpf', '_blank')}
             >
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-[#efc349]/10">
-                      {getSimulationIcon(simulation.tipo_simulacao)}
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg font-extralight text-[#020817] dark:text-[#efc349]">
-                        {simulation.tipo_simulacao}
-                      </CardTitle>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 font-extralight">
-                        {formatDate(simulation.data_criacao)}
-                      </p>
-                    </div>
+              Fazer primeira simulação
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {simulations.map((simulation, index) => (
+              <motion.div
+                key={simulation.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.1 }}
+                className="bg-[#020817] border border-[#efc349]/20 rounded-lg p-4 hover:border-[#efc349]/40 transition-all"
+              >
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h3 className="font-semibold text-white text-lg">
+                      {getSimulationType(simulation.tipo_simulacao)}
+                    </h3>
+                    <p className="text-gray-400 font-extralight">
+                      {new Date(simulation.data_criacao).toLocaleDateString('pt-BR')}
+                    </p>
                   </div>
-                  <Badge variant="outline" className="font-extralight">
-                    {simulation.tipo_simulacao === 'a pagar' ? 'A Pagar' : 'Restituição'}
+                  <Badge className="bg-green-600 hover:bg-green-700 text-white">
+                    Concluída
                   </Badge>
                 </div>
-              </CardHeader>
-              
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 text-sm">
                   <div>
-                    <p className="text-gray-600 dark:text-gray-400 font-extralight">Rendimento Bruto</p>
-                    <p className="font-extralight text-[#020817] dark:text-white">
+                    <span className="text-gray-400">Rendimento Bruto:</span>
+                    <p className="text-white font-medium">
                       {formatCurrency(simulation.rendimento_bruto)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-600 dark:text-gray-400 font-extralight">Imposto Estimado</p>
-                    <p className="font-extralight text-[#020817] dark:text-white">
-                      {formatCurrency(simulation.imposto_estimado)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600 dark:text-gray-400 font-extralight">INSS</p>
-                    <p className="font-extralight text-[#020817] dark:text-white">
+                    <span className="text-gray-400">INSS:</span>
+                    <p className="text-white font-medium">
                       {formatCurrency(simulation.inss)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-600 dark:text-gray-400 font-extralight">Outras Deduções</p>
-                    <p className="font-extralight text-[#020817] dark:text-white">
-                      {formatCurrency(simulation.outras_deducoes)}
+                    <span className="text-gray-400">Dependentes:</span>
+                    <p className="text-white font-medium">{simulation.dependentes}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-400">Imposto Estimado:</span>
+                    <p className="text-white font-medium">
+                      {formatCurrency(simulation.imposto_estimado)}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex gap-2 pt-2">
+                <div className="flex gap-2">
                   <Button 
                     size="sm" 
                     variant="outline"
-                    className="flex-1 border-[#efc349]/30 hover:bg-[#efc349]/10 font-extralight"
+                    className="border-[#efc349]/30 text-[#efc349] hover:bg-[#efc349]/10"
                   >
                     <Eye className="w-4 h-4 mr-1" />
-                    Detalhes
+                    Ver detalhes
                   </Button>
                   <Button 
                     size="sm" 
                     variant="outline"
-                    className="flex-1 border-[#efc349]/30 hover:bg-[#efc349]/10 font-extralight"
+                    className="border-[#efc349]/30 text-[#efc349] hover:bg-[#efc349]/10"
                   >
                     <Download className="w-4 h-4 mr-1" />
-                    Exportar
+                    Baixar PDF
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-    </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
