@@ -1,8 +1,6 @@
 
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { useClientDashboardLogic } from "@/components/client/dashboard/ClientDashboardContainer";
-import { ClientDashboardContent } from "@/components/client/dashboard/ClientDashboardContent";
+import { ClientLobbyView } from "@/components/client/lobby/ClientLobbyView";
 
 const ClientDashboard = () => {
   const {
@@ -20,8 +18,7 @@ const ClientDashboard = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#020817]">
-      <Navbar />
-      <ClientDashboardContent
+      <ClientLobbyView
         isLoadingDocuments={isLoadingDocuments}
         isLoadingCategories={isLoadingCategories}
         documents={documents}
@@ -31,8 +28,8 @@ const ClientDashboard = () => {
         setSelectedCategory={setSelectedCategory}
         fetchUserDocuments={fetchUserDocuments}
         userId={user?.id || ''}
+        isMobile={isMobile}
       />
-      <Footer />
     </div>
   );
 };

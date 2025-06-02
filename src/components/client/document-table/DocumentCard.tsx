@@ -5,8 +5,7 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Download, FileText, Calendar, Eye, EyeOff } from "lucide-react";
-import { useDocumentActions } from "@/hooks/document/useDocumentActions";
+import { Download, FileText, Calendar, Eye, EyeOff, Clock } from "lucide-react";
 
 interface DocumentCardProps {
   doc: Document;
@@ -24,14 +23,27 @@ export const DocumentCard = ({
   formatDate,
   isDocumentExpired,
   daysUntilExpiration,
-  refreshDocuments,
   loadingDocumentIds,
-  handleDownload,
-  categoryColor
+  handleDownload
 }: DocumentCardProps) => {
   const isExpired = isDocumentExpired(doc.expires_at);
   const expirationText = daysUntilExpiration(doc.expires_at);
   const [isHovered, setIsHovered] = useState(false);
+  
+  // Get file type from filename
+  const getFileType = (filename: string) => {
+    const extension = filename?.split('.').pop()?.toLowerCase();
+    switch (extension) {
+      case 'pdf': return 'PDF';
+      case 'xls':
+      case 'xlsx': return 'XLS';
+      case 'doc':
+      case 'docx': return 'DOC';
+      default: return 'FILE';
+    }
+  };
+
+  const fileType = getFileType(doc.filename || doc.original_filename || '');
   
   return (
     <motion.div
@@ -46,6 +58,69 @@ export const DocumentCard = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
+      {/* File Type Icon */}
+      <div className="flex items-center justify-center w-16 h-16 bg-[#F5C441]/10 rounded-lg mb-4 mx-auto">
+        <FileText className="w-8 h-8 text-[#F5C441]" />
+      </div>
+
+      {/* File Type Badge */}
+      <div className="text-center mb-3">
+        <Badge variant="outline" className="text-[#F5C441] border-[#F5C441]/30 bg-[#F5C441]/5">
+          📄 {fileType}
+        </Badge>
+      </div>
+
+      {/* Document Title */}
+      <h3 className="text-white font-semibold text-center mb-4 line-clamp-2 min-h-[3rem] flex items-center justify-center">
+        {doc.name}
+      </h3>
+
+      {/* Document Details */}
+      <div className="space-y-3 mb-6 text-sm">
+        {/* Date Sent */}
+        <div className="flex items-center justify-between text-gray-400">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4" />
+            <span>Data de envio:</span>
+          </div>
+          <span className="text-white font-medium">
+            {formatDate(doc.uploaded_at)}
+          </span>
+        </div>
+
+        {/* Validity */}
+        <div className="flex items-center justify-between text-gray-400">
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4" />
+            <span>Validade:</span>
+          </div>
+          <span className={cn(
+            "font-medium",
+            isExpired ? "text-red-400" : expirationText?.includes('dias') ? "text-yellow-400" : "text-green-400"
+          )}>
+            {expirationText || "Sem expiração"}
+          </span>
+        </div>
+
+        {/* View Status */}
+        <div className="flex items-center justify-between text-gray-400">
+          <div className="flex items-center gap-2">
+            {doc.viewed ? (
+              <Eye className="w-4 h-4 text-green-400" />
+            ) : (
+              <EyeOff className="w-4 h-4 text-blue-400" />
+            )}
+            <span>Status:</span>
+          </div>
+          <span className={cn(
+            "font-medium",
+            doc.viewed ? "text-green-400" : "text-blue-400"
+          )}>
+            {doc.viewed ? "Visualizado" : "Não visualizado"}
+          </span>
+        </div>
+      </div>
+
       {/* Status Badge */}
       <div className="absolute top-4 right-4">
         {!doc.viewed ? (
@@ -54,62 +129,9 @@ export const DocumentCard = ({
           </Badge>
         ) : (
           <Badge variant="outline" className="text-green-400 border-green-400 text-xs px-2 py-1">
-            <Eye className="w-3 h-3 mr-1" />
             Visualizado
           </Badge>
         )}
-      </div>
-
-      {/* Document Icon and Type */}
-      <div className="flex items-start gap-4 mb-4">
-        <div className="bg-[#F5C441]/10 p-3 rounded-lg">
-          <FileText className="w-6 h-6 text-[#F5C441]" />
-        </div>
-        <div className="flex-1">
-          <h3 className="text-white font-semibold text-lg mb-1 pr-8 line-clamp-2">
-            {doc.name}
-          </h3>
-          <p className="text-gray-400 text-sm uppercase tracking-wide">
-            CERTIDÕES
-          </p>
-        </div>
-      </div>
-
-      {/* Document Details */}
-      <div className="space-y-3 mb-6">
-        <div className="flex items-center gap-2 text-sm">
-          <Calendar className="w-4 h-4 text-gray-400" />
-          <span className="text-gray-400">Data de Envio:</span>
-          <span className="text-white font-medium">
-            {formatDate(doc.uploaded_at)}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2 text-sm">
-          <Calendar className="w-4 h-4 text-gray-400" />
-          <span className="text-gray-400">Validade:</span>
-          <span className={cn(
-            "font-medium",
-            isExpired ? "text-red-400" : "text-green-400"
-          )}>
-            {expirationText || "Sem expiração"}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2 text-sm">
-          {doc.viewed ? (
-            <Eye className="w-4 h-4 text-green-400" />
-          ) : (
-            <EyeOff className="w-4 h-4 text-blue-400" />
-          )}
-          <span className="text-gray-400">Status:</span>
-          <span className={cn(
-            "font-medium",
-            doc.viewed ? "text-green-400" : "text-blue-400"
-          )}>
-            {doc.viewed ? "Visualizado" : "Não visualizado"}
-          </span>
-        </div>
       </div>
 
       {/* Download Button */}
