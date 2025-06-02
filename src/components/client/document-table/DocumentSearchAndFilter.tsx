@@ -17,8 +17,10 @@ interface DocumentSearchAndFilterProps {
   setSearchQuery: (query: string) => void;
   statusFilter: string;
   setStatusFilter: (status: string) => void;
-  dateFilter: string;
-  setDateFilter: (date: string) => void;
+  dateFilter?: string;
+  setDateFilter?: (date: string) => void;
+  sortBy?: string;
+  setSortBy?: (sort: string) => void;
   onClearFilters: () => void;
 }
 
@@ -29,6 +31,8 @@ export const DocumentSearchAndFilter = ({
   setStatusFilter,
   dateFilter,
   setDateFilter,
+  sortBy,
+  setSortBy,
   onClearFilters
 }: DocumentSearchAndFilterProps) => {
   const isMobile = useIsMobile();
@@ -64,13 +68,30 @@ export const DocumentSearchAndFilter = ({
           </Select>
           
           {/* Date Filter */}
-          <Input
-            type="date"
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-            className="w-[160px] bg-[#0b1320] border-[#2a3441] text-white"
-            placeholder="dd/mm/yyyy"
-          />
+          {setDateFilter && (
+            <Input
+              type="date"
+              value={dateFilter || ""}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="w-[160px] bg-[#0b1320] border-[#2a3441] text-white"
+              placeholder="dd/mm/yyyy"
+            />
+          )}
+
+          {/* Sort Filter */}
+          {setSortBy && (
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-[160px] bg-[#0b1320] border-[#2a3441] text-white">
+                <SelectValue placeholder="Ordenar por" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#1a1f2e] border-[#2a3441] text-white">
+                <SelectItem value="date-desc">Mais recentes</SelectItem>
+                <SelectItem value="date-asc">Mais antigos</SelectItem>
+                <SelectItem value="name-asc">Nome A-Z</SelectItem>
+                <SelectItem value="name-desc">Nome Z-A</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
           
           {/* Clear Filters Button */}
           <Button
