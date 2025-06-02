@@ -39,7 +39,7 @@ export const DocumentsSection = ({
   };
   return <Card className="bg-[#0b1320] border-[#efc349]/20">
       <CardHeader>
-        <CardTitle className="text-[#efc349] font-extralight flex items-center">
+        <CardTitle className="text-[#efc349] font-extralight flex items-center py-[10px]">
           <FileText className="w-6 h-6 mr-2" />
           Documentos
         </CardTitle>
