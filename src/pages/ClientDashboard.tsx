@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -15,7 +14,6 @@ import { useDocumentActions } from "@/hooks/document/useDocumentActions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText, Calculator, Bell, Calendar, Building2 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
-
 const ClientDashboard = () => {
   const {
     user,
@@ -29,76 +27,51 @@ const ClientDashboard = () => {
     commonCategories,
     documentsByCategory
   } = useClientDashboardLogic();
-
-  const { handleDownload } = useDocumentActions();
+  const {
+    handleDownload
+  } = useDocumentActions();
   const [activeTab, setActiveTab] = useState("documents");
-
   const refreshDocuments = () => {
     if (user?.id) {
       fetchUserDocuments(user.id);
     }
   };
-
-  return (
-    <div className="min-h-screen bg-[#020817]">
+  return <div className="min-h-screen bg-[#020817]">
       <Navbar />
       <ClientDashboardLayout>
         <WelcomeHeader />
         
-        <QuickStats 
-          documentsCount={documents.length}
-          simulationsCount={0} // Will be fetched in SimulationsSection
-          announcementsCount={0} // Will be fetched in AnnouncementsSection  
-          upcomingEvents={0} // Will be fetched in FiscalCalendarSection
-        />
+        <QuickStats documentsCount={documents.length} simulationsCount={0} // Will be fetched in SimulationsSection
+      announcementsCount={0} // Will be fetched in AnnouncementsSection  
+      upcomingEvents={0} // Will be fetched in FiscalCalendarSection
+      />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 bg-[#0b1320] border border-[#efc349]/20 mb-6">
-            <TabsTrigger 
-              value="documents" 
-              className="text-white data-[state=active]:bg-[#efc349] data-[state=active]:text-[#020817] font-extralight"
-            >
+          <TabsList className="grid w-full grid-cols-5 border border-[#efc349]/20 mb-6 bg-transparent">
+            <TabsTrigger value="documents" className="text-white data-[state=active]:bg-[#efc349] data-[state=active]:text-[#020817] font-extralight">
               <FileText className="w-4 h-4 mr-1" />
               {isMobile ? 'Docs' : 'Documentos'}
             </TabsTrigger>
-            <TabsTrigger 
-              value="simulations"
-              className="text-white data-[state=active]:bg-[#efc349] data-[state=active]:text-[#020817] font-extralight"
-            >
+            <TabsTrigger value="simulations" className="text-white data-[state=active]:bg-[#efc349] data-[state=active]:text-[#020817] font-extralight">
               <Calculator className="w-4 h-4 mr-1" />
               {isMobile ? 'Sim' : 'Simulações'}
             </TabsTrigger>
-            <TabsTrigger 
-              value="announcements"
-              className="text-white data-[state=active]:bg-[#efc349] data-[state=active]:text-[#020817] font-extralight"
-            >
+            <TabsTrigger value="announcements" className="text-white data-[state=active]:bg-[#efc349] data-[state=active]:text-[#020817] font-extralight">
               <Bell className="w-4 h-4 mr-1" />
               {isMobile ? 'Com' : 'Comunicados'}
             </TabsTrigger>
-            <TabsTrigger 
-              value="calendar"
-              className="text-white data-[state=active]:bg-[#efc349] data-[state=active]:text-[#020817] font-extralight"
-            >
+            <TabsTrigger value="calendar" className="text-white data-[state=active]:bg-[#efc349] data-[state=active]:text-[#020817] font-extralight">
               <Calendar className="w-4 h-4 mr-1" />
               {isMobile ? 'Agenda' : 'Agenda'}
             </TabsTrigger>
-            <TabsTrigger 
-              value="company"
-              className="text-white data-[state=active]:bg-[#efc349] data-[state=active]:text-[#020817] font-extralight"
-            >
+            <TabsTrigger value="company" className="text-white data-[state=active]:bg-[#efc349] data-[state=active]:text-[#020817] font-extralight">
               <Building2 className="w-4 h-4 mr-1" />
               {isMobile ? 'Empresa' : 'Empresa'}
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="documents">
-            <DocumentsSection
-              documents={documents}
-              documentsByCategory={documentsByCategory}
-              categories={commonCategories}
-              onDownload={handleDownload}
-              refreshDocuments={refreshDocuments}
-            />
+            <DocumentsSection documents={documents} documentsByCategory={documentsByCategory} categories={commonCategories} onDownload={handleDownload} refreshDocuments={refreshDocuments} />
           </TabsContent>
 
           <TabsContent value="simulations">
@@ -119,8 +92,6 @@ const ClientDashboard = () => {
         </Tabs>
       </ClientDashboardLayout>
       <Footer />
-    </div>
-  );
+    </div>;
 };
-
 export default ClientDashboard;

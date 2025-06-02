@@ -1,18 +1,20 @@
-
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { Building2, User } from "lucide-react";
-
 export const WelcomeHeader = () => {
-  const { user, userData } = useAuth();
-  
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: -20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6 }}
-      className="bg-gradient-to-r from-[#0b1320] to-[#1a2332] border border-[#efc349]/20 rounded-lg p-6 mb-8"
-    >
+  const {
+    user,
+    userData
+  } = useAuth();
+  return <motion.div initial={{
+    opacity: 0,
+    y: -20
+  }} animate={{
+    opacity: 1,
+    y: 0
+  }} transition={{
+    duration: 0.6
+  }} className="bg-gradient-to-r from-[#0b1320] to-[#1a2332] border border-[#efc349]/20 rounded-lg p-6 mb-8 bg-transparent">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-extralight text-[#efc349] mb-2">
@@ -28,6 +30,5 @@ export const WelcomeHeader = () => {
           </div>
         </div>
       </div>
-    </motion.div>
-  );
+    </motion.div>;
 };
