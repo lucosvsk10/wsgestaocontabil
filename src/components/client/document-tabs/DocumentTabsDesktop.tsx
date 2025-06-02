@@ -1,8 +1,11 @@
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState, useMemo } from "react";
 import { Document, DocumentCategory } from "@/types/common";
-import { CategoryDocumentTable } from "../document-table/CategoryDocumentTable";
-import { convertToAdminDocuments } from "@/utils/document/documentTypeUtils";
+import { DocumentGrid } from "../document-table/DocumentGrid";
+import { DocumentSearchAndFilter } from "../document-table/DocumentSearchAndFilter";
+import { CategoryTabs } from "../document-table/CategoryTabs";
+import { useDocumentActions } from "@/hooks/document/useDocumentActions";
+import { motion } from "framer-motion";
 
 interface DocumentTabsDesktopProps {
   documentsByCategory: Record<string, Document[]>;
@@ -25,52 +28,92 @@ export const DocumentTabsDesktop = ({
   daysUntilExpiration,
   refreshDocuments
 }: DocumentTabsDesktopProps) => {
-  return (
-    <Tabs 
-      value={activeCategory}
-      onValueChange={onCategoryChange}
-      className="w-full"
-    >
-      <TabsList className="mb-4 border-gold/20 bg-orange-200/60 dark:bg-transparent dark:border dark:border-gold/30">
-        {categories.map(category => (
-          <TabsTrigger 
-            key={category.id} 
-            value={category.id}
-            disabled={!documentsByCategory[category.id] || documentsByCategory[category.id].length === 0}
-            className="relative text-navy dark:text-[#d9d9d9] dark:data-[state=active]:text-deepNavy"
-            style={{
-              "--tab-active-bg": category.color || "#F5C441",
-              "--tab-active-text": "#fff",
-            } as React.CSSProperties}
-          >
-            <div className="flex items-center">
-              {category.name}
-              {documentsByCategory[category.id]?.length > 0 && (
-                <span className="ml-2 bg-gray-200/50 dark:bg-white/10 rounded-full px-2 py-0.5 text-xs">
-                  {documentsByCategory[category.id].length}
-                </span>
-              )}
-            </div>
-          </TabsTrigger>
-        ))}
-      </TabsList>
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("");
+  
+  const { loadingDocumentIds, handleDownload } = useDocumentActions();
+
+  // Filter documents based on search, status, and date
+  const filteredDocuments = useMemo(() => {
+    const categoryDocuments = documentsByCategory[activeCategory] || [];
+    
+    return categoryDocuments.filter(doc => {
+      // Search filter
+      if (searchQuery && !doc.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return false;
+      }
       
-      {categories.map(category => {
-        const adminDocuments = convertToAdminDocuments(documentsByCategory[category.id] || []);
-        return (
-          <TabsContent key={category.id} value={category.id}>
-            <CategoryDocumentTable 
-              documents={adminDocuments}
-              category={category}
-              categoryColor={category.color}
-              formatDate={formatDate}
-              isDocumentExpired={isDocumentExpired}
-              daysUntilExpiration={daysUntilExpiration}
-              refreshDocuments={refreshDocuments}
-            />
-          </TabsContent>
-        );
-      })}
-    </Tabs>
+      // Status filter
+      if (statusFilter !== "all") {
+        if (statusFilter === "new" && doc.viewed) return false;
+        if (statusFilter === "viewed" && !doc.viewed) return false;
+        if (statusFilter === "expired" && !isDocumentExpired(doc.expires_at)) return false;
+        if (statusFilter === "active" && isDocumentExpired(doc.expires_at)) return false;
+      }
+      
+      // Date filter
+      if (dateFilter) {
+        const docDate = new Date(doc.uploaded_at).toISOString().split('T')[0];
+        if (docDate !== dateFilter) return false;
+      }
+      
+      return true;
+    });
+  }, [documentsByCategory, activeCategory, searchQuery, statusFilter, dateFilter, isDocumentExpired]);
+
+  const handleClearFilters = () => {
+    setSearchQuery("");
+    setStatusFilter("all");
+    setDateFilter("");
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-6"
+    >
+      {/* Category Tabs */}
+      <CategoryTabs
+        categories={categories}
+        documentsByCategory={documentsByCategory}
+        activeCategory={activeCategory}
+        onCategoryChange={onCategoryChange}
+      />
+
+      {/* Search and Filters */}
+      <DocumentSearchAndFilter
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        dateFilter={dateFilter}
+        setDateFilter={setDateFilter}
+        onClearFilters={handleClearFilters}
+      />
+
+      {/* Documents Grid */}
+      {filteredDocuments.length > 0 ? (
+        <DocumentGrid
+          documents={filteredDocuments}
+          formatDate={formatDate}
+          isDocumentExpired={isDocumentExpired}
+          daysUntilExpiration={daysUntilExpiration}
+          refreshDocuments={refreshDocuments}
+          loadingDocumentIds={loadingDocumentIds}
+          handleDownload={handleDownload}
+        />
+      ) : (
+        <div className="text-center py-12">
+          <p className="text-gray-400 text-lg">
+            {searchQuery || statusFilter !== "all" || dateFilter
+              ? "Nenhum documento encontrado com os filtros aplicados."
+              : "Nenhum documento encontrado nesta categoria."}
+          </p>
+        </div>
+      )}
+    </motion.div>
   );
 };

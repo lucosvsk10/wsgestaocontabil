@@ -5,8 +5,7 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Download, FileText, Calendar, Eye, EyeOff } from "lucide-react";
-import { useDocumentActions } from "@/hooks/document/useDocumentActions";
+import { Download, Calendar, Eye, EyeOff } from "lucide-react";
 
 interface DocumentCardProps {
   doc: Document;
@@ -54,25 +53,16 @@ export const DocumentCard = ({
           </Badge>
         ) : (
           <Badge variant="outline" className="text-green-400 border-green-400 text-xs px-2 py-1">
-            <Eye className="w-3 h-3 mr-1" />
             Visualizado
           </Badge>
         )}
       </div>
 
-      {/* Document Icon and Type */}
-      <div className="flex items-start gap-4 mb-4">
-        <div className="bg-[#F5C441]/10 p-3 rounded-lg">
-          <FileText className="w-6 h-6 text-[#F5C441]" />
-        </div>
-        <div className="flex-1">
-          <h3 className="text-white font-semibold text-lg mb-1 pr-8 line-clamp-2">
-            {doc.name}
-          </h3>
-          <p className="text-gray-400 text-sm uppercase tracking-wide">
-            CERTIDÕES
-          </p>
-        </div>
+      {/* Document Name */}
+      <div className="mb-4 pr-8">
+        <h3 className="text-white font-bold text-lg mb-1 line-clamp-2">
+          {doc.name}
+        </h3>
       </div>
 
       {/* Document Details */}

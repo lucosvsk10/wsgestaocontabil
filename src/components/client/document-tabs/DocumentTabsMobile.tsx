@@ -1,15 +1,11 @@
 
-import { useState } from 'react';
-import { 
-  Drawer, 
-  DrawerContent, 
-  DrawerTrigger 
-} from "@/components/ui/drawer";
-import { Button } from "@/components/ui/button";
-import { Menu } from "lucide-react";
+import { useState, useMemo } from "react";
 import { Document, DocumentCategory } from "@/types/common";
-import { CategoryDocumentTable } from "../document-table/CategoryDocumentTable";
-import { convertToAdminDocuments } from "@/utils/document/documentTypeUtils";
+import { DocumentGrid } from "../document-table/DocumentGrid";
+import { DocumentSearchAndFilter } from "../document-table/DocumentSearchAndFilter";
+import { CategoryTabs } from "../document-table/CategoryTabs";
+import { useDocumentActions } from "@/hooks/document/useDocumentActions";
+import { motion } from "framer-motion";
 
 interface DocumentTabsMobileProps {
   documentsByCategory: Record<string, Document[]>;
@@ -32,92 +28,92 @@ export const DocumentTabsMobile = ({
   daysUntilExpiration,
   refreshDocuments
 }: DocumentTabsMobileProps) => {
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("");
+  
+  const { loadingDocumentIds, handleDownload } = useDocumentActions();
 
-  const getCategoryColor = (categoryId: string) => {
-    const category = categories.find(c => c.id === categoryId);
-    return category?.color || "#F5C441";
-  };
+  // Filter documents based on search, status, and date
+  const filteredDocuments = useMemo(() => {
+    const categoryDocuments = documentsByCategory[activeCategory] || [];
+    
+    return categoryDocuments.filter(doc => {
+      // Search filter
+      if (searchQuery && !doc.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return false;
+      }
+      
+      // Status filter
+      if (statusFilter !== "all") {
+        if (statusFilter === "new" && doc.viewed) return false;
+        if (statusFilter === "viewed" && !doc.viewed) return false;
+        if (statusFilter === "expired" && !isDocumentExpired(doc.expires_at)) return false;
+        if (statusFilter === "active" && isDocumentExpired(doc.expires_at)) return false;
+      }
+      
+      // Date filter
+      if (dateFilter) {
+        const docDate = new Date(doc.uploaded_at).toISOString().split('T')[0];
+        if (docDate !== dateFilter) return false;
+      }
+      
+      return true;
+    });
+  }, [documentsByCategory, activeCategory, searchQuery, statusFilter, dateFilter, isDocumentExpired]);
 
-  const getCategoryName = (categoryId: string) => {
-    const category = categories.find(c => c.id === categoryId);
-    return category?.name || "Categoria";
-  };
-
-  const handleCategoryChange = (category: string) => {
-    onCategoryChange(category);
-    setIsDrawerOpen(false);
+  const handleClearFilters = () => {
+    setSearchQuery("");
+    setStatusFilter("all");
+    setDateFilter("");
   };
 
   return (
-    <div className="w-full">
-      <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-        <DrawerTrigger asChild>
-          <Button 
-            variant="document" 
-            className="w-full mb-4 justify-between font-medium text-white border-gold/20"
-            style={{
-              backgroundColor: getCategoryColor(activeCategory),
-              borderColor: `${getCategoryColor(activeCategory)}60`,
-            }}
-          >
-            <div className="flex items-center">
-              <Menu className="mr-2 h-4 w-4" />
-              <span>{getCategoryName(activeCategory)}</span>
-            </div>
-          </Button>
-        </DrawerTrigger>
-        <DrawerContent className="bg-orange-100 dark:bg-deepNavy border-t border-gold/20 p-4">
-          <div className="max-w-md mx-auto">
-            <div className="space-y-2">
-              {categories.map((category) => (
-                <div 
-                  key={category.id}
-                  className="relative"
-                >
-                  <Button 
-                    variant="document"
-                    className="w-full justify-between text-navy dark:text-[#d9d9d9]"
-                    style={{
-                      backgroundColor: category.id === activeCategory ? category.color || "#F5C441" : "transparent",
-                      color: category.id === activeCategory ? "#fff" : "inherit",
-                      borderColor: `${category.color || "#F5C441"}40`
-                    }}
-                    disabled={!documentsByCategory[category.id] || documentsByCategory[category.id].length === 0}
-                    onClick={() => handleCategoryChange(category.id)}
-                  >
-                    <div className="flex items-center">
-                      <span>{category.name}</span>
-                      {documentsByCategory[category.id]?.length > 0 && (
-                        <span className="ml-2 bg-white/20 rounded-full px-2 py-0.5 text-xs">
-                          {documentsByCategory[category.id].length}
-                        </span>
-                      )}
-                    </div>
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </DrawerContent>
-      </Drawer>
-      
-      {categories.map((category) => {
-        const adminDocuments = convertToAdminDocuments(documentsByCategory[category.id] || []);
-        return (
-          <div key={category.id} className={category.id === activeCategory ? 'block' : 'hidden'}>
-            <CategoryDocumentTable 
-              documents={adminDocuments}
-              category={category}
-              categoryColor={category.color}
-              formatDate={formatDate}
-              isDocumentExpired={isDocumentExpired}
-              daysUntilExpiration={daysUntilExpiration}
-              refreshDocuments={refreshDocuments}
-            />
-          </div>
-        );
-      })}
-    </div>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-4 pb-20" // Added bottom padding for mobile nav
+    >
+      {/* Category Tabs */}
+      <CategoryTabs
+        categories={categories}
+        documentsByCategory={documentsByCategory}
+        activeCategory={activeCategory}
+        onCategoryChange={onCategoryChange}
+      />
+
+      {/* Search and Filters */}
+      <DocumentSearchAndFilter
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        dateFilter={dateFilter}
+        setDateFilter={setDateFilter}
+        onClearFilters={handleClearFilters}
+      />
+
+      {/* Documents Grid */}
+      {filteredDocuments.length > 0 ? (
+        <DocumentGrid
+          documents={filteredDocuments}
+          formatDate={formatDate}
+          isDocumentExpired={isDocumentExpired}
+          daysUntilExpiration={daysUntilExpiration}
+          refreshDocuments={refreshDocuments}
+          loadingDocumentIds={loadingDocumentIds}
+          handleDownload={handleDownload}
+        />
+      ) : (
+        <div className="text-center py-12">
+          <p className="text-gray-400 text-lg">
+            {searchQuery || statusFilter !== "all" || dateFilter
+              ? "Nenhum documento encontrado com os filtros aplicados."
+              : "Nenhum documento encontrado nesta categoria."}
+          </p>
+        </div>
+      )}
+    </motion.div>
   );
 };

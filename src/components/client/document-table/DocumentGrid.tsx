@@ -4,6 +4,7 @@ import { Document } from "@/utils/auth/types";
 import { motion } from "framer-motion";
 import { DocumentCard } from "./DocumentCard";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 interface DocumentGridProps {
   documents: Document[];
@@ -57,8 +58,3 @@ export const DocumentGrid = ({
     </div>
   );
 };
-
-// Helper function - ensure cn is imported from utils
-function cn(...classes: (string | undefined | null | false)[]): string {
-  return classes.filter(Boolean).join(' ');
-}

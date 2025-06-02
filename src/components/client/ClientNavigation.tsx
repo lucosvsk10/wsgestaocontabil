@@ -40,50 +40,46 @@ export const ClientNavigation = ({
   return (
     <div className="space-y-8">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className={cn(
-          "grid w-full bg-[#1a1f2e] border border-[#2a3441] rounded-xl p-1",
-          isMobile ? 'grid-cols-3' : 'grid-cols-5'
-        )}>
-          <TabsTrigger 
-            value="documents" 
-            className="data-[state=active]:bg-[#F5C441] data-[state=active]:text-black text-white hover:text-[#F5C441] transition-colors"
-          >
-            <FileText className="w-4 h-4 mr-2" />
-            {isMobile ? 'Docs' : 'Documentos'}
-          </TabsTrigger>
-          <TabsTrigger 
-            value="simulations" 
-            className="data-[state=active]:bg-[#F5C441] data-[state=active]:text-black text-white hover:text-[#F5C441] transition-colors"
-          >
-            <Calculator className="w-4 h-4 mr-2" />
-            {isMobile ? 'Sim' : 'Simulações'}
-          </TabsTrigger>
-          <TabsTrigger 
-            value="announcements" 
-            className="data-[state=active]:bg-[#F5C441] data-[state=active]:text-black text-white hover:text-[#F5C441] transition-colors"
-          >
-            <Megaphone className="w-4 h-4 mr-2" />
-            {isMobile ? 'Com' : 'Comunicados'}
-          </TabsTrigger>
-          {!isMobile && (
-            <>
-              <TabsTrigger 
-                value="calendar" 
-                className="data-[state=active]:bg-[#F5C441] data-[state=active]:text-black text-white hover:text-[#F5C441] transition-colors"
-              >
-                <Calendar className="w-4 h-4 mr-2" />
-                Agenda
-              </TabsTrigger>
-              <TabsTrigger 
-                value="company" 
-                className="data-[state=active]:bg-[#F5C441] data-[state=active]:text-black text-white hover:text-[#F5C441] transition-colors"
-              >
-                <Building className="w-4 h-4 mr-2" />
-                Empresa
-              </TabsTrigger>
-            </>
-          )}
-        </TabsList>
+        {/* Desktop Tabs */}
+        {!isMobile && (
+          <TabsList className="grid w-full grid-cols-5 bg-[#1a1f2e] border border-[#2a3441] rounded-xl p-1">
+            <TabsTrigger 
+              value="documents" 
+              className="data-[state=active]:bg-[#F5C441] data-[state=active]:text-black text-white hover:text-[#F5C441] transition-colors"
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              Documentos
+            </TabsTrigger>
+            <TabsTrigger 
+              value="simulations" 
+              className="data-[state=active]:bg-[#F5C441] data-[state=active]:text-black text-white hover:text-[#F5C441] transition-colors"
+            >
+              <Calculator className="w-4 h-4 mr-2" />
+              Simulações
+            </TabsTrigger>
+            <TabsTrigger 
+              value="announcements" 
+              className="data-[state=active]:bg-[#F5C441] data-[state=active]:text-black text-white hover:text-[#F5C441] transition-colors"
+            >
+              <Megaphone className="w-4 h-4 mr-2" />
+              Comunicados
+            </TabsTrigger>
+            <TabsTrigger 
+              value="calendar" 
+              className="data-[state=active]:bg-[#F5C441] data-[state=active]:text-black text-white hover:text-[#F5C441] transition-colors"
+            >
+              <Calendar className="w-4 h-4 mr-2" />
+              Agenda
+            </TabsTrigger>
+            <TabsTrigger 
+              value="company" 
+              className="data-[state=active]:bg-[#F5C441] data-[state=active]:text-black text-white hover:text-[#F5C441] transition-colors"
+            >
+              <Building className="w-4 h-4 mr-2" />
+              Empresa
+            </TabsTrigger>
+          </TabsList>
+        )}
 
         <div className="mt-8">
           <TabsContent value="documents" className="space-y-0">
@@ -118,33 +114,69 @@ export const ClientNavigation = ({
           </TabsContent>
         </div>
 
-        {/* Mobile bottom tabs for calendar and company */}
+        {/* Mobile Bottom Navigation */}
         {isMobile && (
-          <div className="fixed bottom-0 left-0 right-0 bg-[#1a1f2e] border-t border-[#2a3441] p-4 z-40">
-            <div className="grid grid-cols-2 gap-4">
+          <div className="fixed bottom-0 left-0 right-0 bg-[#1a1f2e] border-t border-[#2a3441] z-40">
+            <div className="grid grid-cols-5 gap-1 p-2">
+              <button
+                onClick={() => setActiveTab('documents')}
+                className={cn(
+                  "flex flex-col items-center justify-center p-2 rounded-lg transition-colors text-xs",
+                  activeTab === 'documents'
+                    ? 'bg-[#F5C441] text-black'
+                    : 'text-white hover:text-[#F5C441] hover:bg-[#F5C441]/10'
+                )}
+              >
+                <FileText className="w-5 h-5 mb-1" />
+                <span className="text-[10px] leading-none">Docs</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('simulations')}
+                className={cn(
+                  "flex flex-col items-center justify-center p-2 rounded-lg transition-colors text-xs",
+                  activeTab === 'simulations'
+                    ? 'bg-[#F5C441] text-black'
+                    : 'text-white hover:text-[#F5C441] hover:bg-[#F5C441]/10'
+                )}
+              >
+                <Calculator className="w-5 h-5 mb-1" />
+                <span className="text-[10px] leading-none">Sim</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('announcements')}
+                className={cn(
+                  "flex flex-col items-center justify-center p-2 rounded-lg transition-colors text-xs",
+                  activeTab === 'announcements'
+                    ? 'bg-[#F5C441] text-black'
+                    : 'text-white hover:text-[#F5C441] hover:bg-[#F5C441]/10'
+                )}
+              >
+                <Megaphone className="w-5 h-5 mb-1" />
+                <span className="text-[10px] leading-none">Com</span>
+              </button>
               <button
                 onClick={() => setActiveTab('calendar')}
                 className={cn(
-                  "p-3 rounded-lg flex items-center justify-center font-medium transition-colors",
+                  "flex flex-col items-center justify-center p-2 rounded-lg transition-colors text-xs",
                   activeTab === 'calendar'
                     ? 'bg-[#F5C441] text-black'
                     : 'text-white hover:text-[#F5C441] hover:bg-[#F5C441]/10'
                 )}
               >
-                <Calendar className="w-4 h-4 mr-2" />
-                Agenda
+                <Calendar className="w-5 h-5 mb-1" />
+                <span className="text-[10px] leading-none">Agenda</span>
               </button>
               <button
                 onClick={() => setActiveTab('company')}
                 className={cn(
-                  "p-3 rounded-lg flex items-center justify-center font-medium transition-colors",
+                  "flex flex-col items-center justify-center p-2 rounded-lg transition-colors text-xs",
                   activeTab === 'company'
                     ? 'bg-[#F5C441] text-black'
                     : 'text-white hover:text-[#F5C441] hover:bg-[#F5C441]/10'
                 )}
               >
-                <Building className="w-4 h-4 mr-2" />
-                Empresa
+                <Building className="w-5 h-5 mb-1" />
+                <span className="text-[10px] leading-none">Empresa</span>
               </button>
             </div>
           </div>
