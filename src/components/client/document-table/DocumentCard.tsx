@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Download, FileText, Calendar, Eye, EyeOff, Clock } from "lucide-react";
+import { Download, Calendar, Eye, EyeOff, Clock } from "lucide-react";
 
 interface DocumentCardProps {
   doc: Document;
@@ -29,22 +29,7 @@ export const DocumentCard = ({
   const isExpired = isDocumentExpired(doc.expires_at);
   const expirationText = daysUntilExpiration(doc.expires_at);
   const [isHovered, setIsHovered] = useState(false);
-  
-  // Get file type from filename
-  const getFileType = (filename: string) => {
-    const extension = filename?.split('.').pop()?.toLowerCase();
-    switch (extension) {
-      case 'pdf': return 'PDF';
-      case 'xls':
-      case 'xlsx': return 'XLS';
-      case 'doc':
-      case 'docx': return 'DOC';
-      default: return 'FILE';
-    }
-  };
 
-  const fileType = getFileType(doc.filename || doc.original_filename || '');
-  
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -58,20 +43,21 @@ export const DocumentCard = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* File Type Icon */}
-      <div className="flex items-center justify-center w-16 h-16 bg-[#F5C441]/10 rounded-lg mb-4 mx-auto">
-        <FileText className="w-8 h-8 text-[#F5C441]" />
-      </div>
-
-      {/* File Type Badge */}
-      <div className="text-center mb-3">
-        <Badge variant="outline" className="text-[#F5C441] border-[#F5C441]/30 bg-[#F5C441]/5">
-          📄 {fileType}
-        </Badge>
+      {/* Status Badge */}
+      <div className="absolute top-4 right-4">
+        {!doc.viewed ? (
+          <Badge className="bg-blue-600 text-white text-xs px-2 py-1">
+            Novo
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="text-green-400 border-green-400 text-xs px-2 py-1">
+            Visualizado
+          </Badge>
+        )}
       </div>
 
       {/* Document Title */}
-      <h3 className="text-white font-semibold text-center mb-4 line-clamp-2 min-h-[3rem] flex items-center justify-center">
+      <h3 className="text-white font-semibold text-lg mb-4 pr-16 line-clamp-2">
         {doc.name}
       </h3>
 
@@ -119,19 +105,6 @@ export const DocumentCard = ({
             {doc.viewed ? "Visualizado" : "Não visualizado"}
           </span>
         </div>
-      </div>
-
-      {/* Status Badge */}
-      <div className="absolute top-4 right-4">
-        {!doc.viewed ? (
-          <Badge className="bg-blue-600 text-white text-xs px-2 py-1">
-            Novo
-          </Badge>
-        ) : (
-          <Badge variant="outline" className="text-green-400 border-green-400 text-xs px-2 py-1">
-            Visualizado
-          </Badge>
-        )}
       </div>
 
       {/* Download Button */}
