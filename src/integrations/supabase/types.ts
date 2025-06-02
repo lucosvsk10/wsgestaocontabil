@@ -89,90 +89,6 @@ export type Database = {
         }
         Relationships: []
       }
-      client_announcements: {
-        Row: {
-          action_button_text: string | null
-          action_button_url: string | null
-          created_at: string
-          created_by: string
-          expires_at: string | null
-          id: string
-          message: string
-          theme: string
-          title: string
-        }
-        Insert: {
-          action_button_text?: string | null
-          action_button_url?: string | null
-          created_at?: string
-          created_by: string
-          expires_at?: string | null
-          id?: string
-          message: string
-          theme?: string
-          title: string
-        }
-        Update: {
-          action_button_text?: string | null
-          action_button_url?: string | null
-          created_at?: string
-          created_by?: string
-          expires_at?: string | null
-          id?: string
-          message?: string
-          theme?: string
-          title?: string
-        }
-        Relationships: []
-      }
-      company_data: {
-        Row: {
-          accountant_contact: string
-          accountant_name: string
-          address: string
-          cnpj: string
-          created_at: string
-          email: string
-          id: string
-          name: string
-          opening_date: string
-          phone: string
-          tax_regime: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          accountant_contact: string
-          accountant_name: string
-          address: string
-          cnpj: string
-          created_at?: string
-          email: string
-          id?: string
-          name: string
-          opening_date: string
-          phone: string
-          tax_regime: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          accountant_contact?: string
-          accountant_name?: string
-          address?: string
-          cnpj?: string
-          created_at?: string
-          email?: string
-          id?: string
-          name?: string
-          opening_date?: string
-          phone?: string
-          tax_regime?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       document_categories: {
         Row: {
           color: string | null
@@ -268,39 +184,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      fiscal_events: {
-        Row: {
-          category: string
-          created_at: string
-          created_by: string | null
-          date: string
-          description: string | null
-          id: string
-          status: string
-          title: string
-        }
-        Insert: {
-          category?: string
-          created_at?: string
-          created_by?: string | null
-          date: string
-          description?: string | null
-          id?: string
-          status?: string
-          title: string
-        }
-        Update: {
-          category?: string
-          created_at?: string
-          created_by?: string | null
-          date?: string
-          description?: string | null
-          id?: string
-          status?: string
-          title?: string
-        }
-        Relationships: []
       }
       form_questions: {
         Row: {

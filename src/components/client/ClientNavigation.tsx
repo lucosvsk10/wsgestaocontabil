@@ -38,50 +38,36 @@ export const ClientNavigation = ({
   const isMobile = useIsMobile();
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        {/* Desktop Tabs */}
-        {!isMobile && (
-          <TabsList className="grid w-full grid-cols-5 bg-[#1a1f2e] border border-[#2a3441] rounded-xl p-1">
-            <TabsTrigger 
-              value="documents" 
-              className="data-[state=active]:bg-[#F5C441] data-[state=active]:text-black text-white hover:text-[#F5C441] transition-colors"
-            >
-              <FileText className="w-4 h-4 mr-2" />
-              Documentos
-            </TabsTrigger>
-            <TabsTrigger 
-              value="simulations" 
-              className="data-[state=active]:bg-[#F5C441] data-[state=active]:text-black text-white hover:text-[#F5C441] transition-colors"
-            >
-              <Calculator className="w-4 h-4 mr-2" />
-              Simulações
-            </TabsTrigger>
-            <TabsTrigger 
-              value="announcements" 
-              className="data-[state=active]:bg-[#F5C441] data-[state=active]:text-black text-white hover:text-[#F5C441] transition-colors"
-            >
-              <Megaphone className="w-4 h-4 mr-2" />
-              Comunicados
-            </TabsTrigger>
-            <TabsTrigger 
-              value="calendar" 
-              className="data-[state=active]:bg-[#F5C441] data-[state=active]:text-black text-white hover:text-[#F5C441] transition-colors"
-            >
-              <Calendar className="w-4 h-4 mr-2" />
-              Agenda
-            </TabsTrigger>
-            <TabsTrigger 
-              value="company" 
-              className="data-[state=active]:bg-[#F5C441] data-[state=active]:text-black text-white hover:text-[#F5C441] transition-colors"
-            >
-              <Building className="w-4 h-4 mr-2" />
-              Empresa
-            </TabsTrigger>
-          </TabsList>
-        )}
+        <TabsList className={`grid w-full ${isMobile ? 'grid-cols-3' : 'grid-cols-5'} bg-white dark:bg-[#0b1320] border border-gray-200 dark:border-[#efc349]/30`}>
+          <TabsTrigger value="documents" className="font-extralight text-[#020817] dark:text-[#efc349] data-[state=active]:bg-[#efc349] data-[state=active]:text-[#020817]">
+            <FileText className="w-4 h-4 mr-1" />
+            {isMobile ? 'Docs' : 'Documentos'}
+          </TabsTrigger>
+          <TabsTrigger value="simulations" className="font-extralight text-[#020817] dark:text-[#efc349] data-[state=active]:bg-[#efc349] data-[state=active]:text-[#020817]">
+            <Calculator className="w-4 h-4 mr-1" />
+            {isMobile ? 'Sim' : 'Simulações'}
+          </TabsTrigger>
+          <TabsTrigger value="announcements" className="font-extralight text-[#020817] dark:text-[#efc349] data-[state=active]:bg-[#efc349] data-[state=active]:text-[#020817]">
+            <Megaphone className="w-4 h-4 mr-1" />
+            {isMobile ? 'Com' : 'Comunicados'}
+          </TabsTrigger>
+          {!isMobile && (
+            <>
+              <TabsTrigger value="calendar" className="font-extralight text-[#020817] dark:text-[#efc349] data-[state=active]:bg-[#efc349] data-[state=active]:text-[#020817]">
+                <Calendar className="w-4 h-4 mr-1" />
+                Agenda
+              </TabsTrigger>
+              <TabsTrigger value="company" className="font-extralight text-[#020817] dark:text-[#efc349] data-[state=active]:bg-[#efc349] data-[state=active]:text-[#020817]">
+                <Building className="w-4 h-4 mr-1" />
+                Empresa
+              </TabsTrigger>
+            </>
+          )}
+        </TabsList>
 
-        <div className="mt-8">
+        <div className="mt-6">
           <TabsContent value="documents" className="space-y-0">
             <DocumentTabs
               documents={documents}
@@ -114,69 +100,31 @@ export const ClientNavigation = ({
           </TabsContent>
         </div>
 
-        {/* Mobile Bottom Navigation */}
+        {/* Mobile bottom tabs for calendar and company */}
         {isMobile && (
-          <div className="fixed bottom-0 left-0 right-0 bg-[#1a1f2e] border-t border-[#2a3441] z-40">
-            <div className="grid grid-cols-5 gap-1 p-2">
-              <button
-                onClick={() => setActiveTab('documents')}
-                className={cn(
-                  "flex flex-col items-center justify-center p-2 rounded-lg transition-colors text-xs",
-                  activeTab === 'documents'
-                    ? 'bg-[#F5C441] text-black'
-                    : 'text-white hover:text-[#F5C441] hover:bg-[#F5C441]/10'
-                )}
-              >
-                <FileText className="w-5 h-5 mb-1" />
-                <span className="text-[10px] leading-none">Docs</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('simulations')}
-                className={cn(
-                  "flex flex-col items-center justify-center p-2 rounded-lg transition-colors text-xs",
-                  activeTab === 'simulations'
-                    ? 'bg-[#F5C441] text-black'
-                    : 'text-white hover:text-[#F5C441] hover:bg-[#F5C441]/10'
-                )}
-              >
-                <Calculator className="w-5 h-5 mb-1" />
-                <span className="text-[10px] leading-none">Sim</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('announcements')}
-                className={cn(
-                  "flex flex-col items-center justify-center p-2 rounded-lg transition-colors text-xs",
-                  activeTab === 'announcements'
-                    ? 'bg-[#F5C441] text-black'
-                    : 'text-white hover:text-[#F5C441] hover:bg-[#F5C441]/10'
-                )}
-              >
-                <Megaphone className="w-5 h-5 mb-1" />
-                <span className="text-[10px] leading-none">Com</span>
-              </button>
+          <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#0b1320] border-t border-gray-200 dark:border-[#efc349]/30 p-2 z-40">
+            <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => setActiveTab('calendar')}
-                className={cn(
-                  "flex flex-col items-center justify-center p-2 rounded-lg transition-colors text-xs",
+                className={`p-3 rounded-lg flex items-center justify-center font-extralight transition-colors ${
                   activeTab === 'calendar'
-                    ? 'bg-[#F5C441] text-black'
-                    : 'text-white hover:text-[#F5C441] hover:bg-[#F5C441]/10'
-                )}
+                    ? 'bg-[#efc349] text-[#020817]'
+                    : 'text-[#020817] dark:text-[#efc349] hover:bg-[#efc349]/10'
+                }`}
               >
-                <Calendar className="w-5 h-5 mb-1" />
-                <span className="text-[10px] leading-none">Agenda</span>
+                <Calendar className="w-4 h-4 mr-1" />
+                Agenda
               </button>
               <button
                 onClick={() => setActiveTab('company')}
-                className={cn(
-                  "flex flex-col items-center justify-center p-2 rounded-lg transition-colors text-xs",
+                className={`p-3 rounded-lg flex items-center justify-center font-extralight transition-colors ${
                   activeTab === 'company'
-                    ? 'bg-[#F5C441] text-black'
-                    : 'text-white hover:text-[#F5C441] hover:bg-[#F5C441]/10'
-                )}
+                    ? 'bg-[#efc349] text-[#020817]'
+                    : 'text-[#020817] dark:text-[#efc349] hover:bg-[#efc349]/10'
+                }`}
               >
-                <Building className="w-5 h-5 mb-1" />
-                <span className="text-[10px] leading-none">Empresa</span>
+                <Building className="w-4 h-4 mr-1" />
+                Empresa
               </button>
             </div>
           </div>
@@ -185,8 +133,3 @@ export const ClientNavigation = ({
     </div>
   );
 };
-
-// Helper function
-function cn(...classes: (string | undefined | null | false)[]): string {
-  return classes.filter(Boolean).join(' ');
-}

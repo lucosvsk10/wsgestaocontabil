@@ -1,25 +1,22 @@
 
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calculator, Copy, Printer, Save } from "lucide-react";
+import { Calculator, Copy, Printer } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { supabase } from "@/lib/supabaseClient";
-import { useAuth } from '@/contexts/AuthContext';
 
 const ProLaboreCalculator = () => {
   const [valorPretendido, setValorPretendido] = useState('');
   const [regimeTributario, setRegimeTributario] = useState('');
   const [aliquotaINSS, setAliquotaINSS] = useState('');
   const [resultado, setResultado] = useState<any>(null);
-  const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
-  const { user } = useAuth();
 
   const calcularProLabore = () => {
     const valor = parseFloat(valorPretendido);
@@ -98,38 +95,23 @@ const ProLaboreCalculator = () => {
     };
 
     setResultado(resultadoCalculo);
+    salvarSimulacao(resultadoCalculo);
   };
 
-  const salvarSimulacao = async () => {
-    if (!resultado) return;
-    
-    setIsSaving(true);
+  const salvarSimulacao = async (dados: any) => {
     try {
       await supabase.from('tax_simulations').insert({
-        user_id: user?.id || null,
         tipo_simulacao: 'Pró-labore',
-        rendimento_bruto: resultado.valorBruto,
-        inss: resultado.inssRetido,
-        imposto_estimado: resultado.valorBruto - resultado.valorLiquido,
+        rendimento_bruto: dados.valorBruto,
+        inss: dados.inssRetido,
+        imposto_estimado: dados.valorBruto - dados.valorLiquido,
         educacao: 0,
         saude: 0,
         dependentes: 0,
-        outras_deducoes: resultado.impostosAdicionais
-      });
-
-      toast({
-        title: "Simulação salva!",
-        description: "Sua simulação foi salva com sucesso.",
+        outras_deducoes: dados.impostosAdicionais
       });
     } catch (error) {
       console.error('Erro ao salvar simulação:', error);
-      toast({
-        title: "Erro ao salvar",
-        description: "Não foi possível salvar a simulação.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -156,188 +138,186 @@ Desconto Total: ${resultado.percentualDesconto}%
   };
 
   return (
-    <div className="min-h-screen bg-[#fdfdfd] dark:bg-[#020817] py-8 px-4">
+    <div className="min-h-screen bg-[#FFF1DE] dark:bg-[#020817]">
       <Navbar />
       
-      <div className="max-w-4xl mx-auto space-y-8 mt-8">
-        {/* Header */}
-        <div className="text-center space-y-4">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="p-3 rounded-full bg-[#efc349]/10">
-              <Calculator className="h-8 w-8 text-[#efc349]" />
-            </div>
-            <h1 className="text-4xl font-extralight text-[#020817] dark:text-[#efc349]">
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl text-[#020817] dark:text-[#efc349] mb-4 font-extralight">
               Simulador de Pró-labore 2025
             </h1>
+            <p className="text-[#020817]/80 dark:text-white/80 font-extralight">
+              Calcule o valor líquido do seu pró-labore considerando todos os descontos
+            </p>
           </div>
-          <p className="text-lg font-extralight text-gray-600 dark:text-white/70 max-w-2xl mx-auto">
-            Calcule o valor líquido do seu pró-labore considerando todos os descontos
-          </p>
-        </div>
 
-        {/* Calculator Form */}
-        <Card className="bg-white/50 dark:bg-transparent backdrop-blur-sm border-gray-100 dark:border-[#efc349]/20">
-          <CardHeader>
-            <CardTitle className="text-2xl font-extralight text-[#020817] dark:text-[#efc349] flex items-center gap-2">
-              <Calculator className="h-6 w-6" />
-              Dados para Simulação
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="valor" className="font-extralight">Valor Pretendido (R$)</Label>
-                <Input
-                  id="valor"
-                  type="number"
-                  value={valorPretendido}
-                  onChange={(e) => setValorPretendido(e.target.value)}
-                  placeholder="Ex: 5000"
-                  className="bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30 font-extralight"
-                />
-                <p className="text-xs text-gray-600 dark:text-white/60 font-extralight">
-                  Valor bruto desejado para o pró-labore
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="regime" className="font-extralight">Regime Tributário</Label>
-                <Select value={regimeTributario} onValueChange={setRegimeTributario}>
-                  <SelectTrigger className="bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30 font-extralight">
-                    <SelectValue placeholder="Selecione o regime" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Simples Nacional">Simples Nacional</SelectItem>
-                    <SelectItem value="Lucro Presumido">Lucro Presumido</SelectItem>
-                    <SelectItem value="Lucro Real">Lucro Real</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-gray-600 dark:text-white/60 font-extralight">
-                  Regime tributário da empresa
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="inss" className="font-extralight">Alíquota INSS (%)</Label>
-                <Select value={aliquotaINSS} onValueChange={setAliquotaINSS}>
-                  <SelectTrigger className="bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30 font-extralight">
-                    <SelectValue placeholder="Selecione a alíquota" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="11">11% (Padrão)</SelectItem>
-                    <SelectItem value="20">20% (Contribuição ampliada)</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-gray-600 dark:text-white/60 font-extralight">
-                  Alíquota de INSS do sócio
-                </p>
-              </div>
-            </div>
-
-            <div className="flex justify-center pt-4">
-              <Button 
-                onClick={calcularProLabore}
-                size="lg"
-                className="min-w-[200px] font-extralight bg-[#020817] dark:bg-transparent dark:border dark:border-[#efc349] text-white dark:text-[#efc349] hover:bg-[#0f172a] dark:hover:bg-[#efc349]/10"
-              >
-                Calcular Pró-labore
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Results */}
-        {resultado && (
-          <div className="space-y-6">
-            {/* Main Result */}
-            <Card className="bg-white/50 dark:bg-transparent backdrop-blur-sm border-gray-100 dark:border-[#efc349]/20">
+          <div className="grid lg:grid-cols-2 gap-8">
+            {/* Formulário */}
+            <Card className="border-[#efc349]/30 bg-white dark:bg-transparent">
               <CardHeader>
-                <CardTitle className="text-2xl font-extralight text-[#020817] dark:text-[#efc349] text-center">
-                  Resultado da Simulação
+                <CardTitle className="text-[#020817] dark:text-[#efc349] font-extralight flex items-center gap-2">
+                  <Calculator size={24} />
+                  Dados para Simulação
                 </CardTitle>
+                <CardDescription className="font-extralight">
+                  Preencha os campos para calcular seu pró-labore líquido
+                </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="text-center space-y-6">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="space-y-2">
-                      <p className="text-sm font-extralight text-gray-600 dark:text-white/70">
-                        Valor Bruto
-                      </p>
-                      <p className="text-lg font-extralight text-[#020817] dark:text-white">
-                        {resultado.valorBruto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-sm font-extralight text-gray-600 dark:text-white/70">
-                        Regime
-                      </p>
-                      <p className="text-lg font-extralight text-[#020817] dark:text-white">
-                        {resultado.regimeTributario}
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-sm font-extralight text-gray-600 dark:text-white/70">
-                        INSS Retido
-                      </p>
-                      <p className="text-lg font-extralight text-red-600 dark:text-red-400">
-                        -{resultado.inssRetido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-sm font-extralight text-gray-600 dark:text-white/70">
-                        Desconto Total
-                      </p>
-                      <p className="text-lg font-extralight text-[#020817] dark:text-[#efc349]">
-                        {resultado.percentualDesconto}%
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="py-6">
-                    <p className="text-sm font-extralight text-gray-600 dark:text-white/70 mb-2">
-                      Valor Líquido
-                    </p>
-                    <p className="text-4xl font-extralight text-green-600 dark:text-green-400">
-                      {resultado.valorLiquido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                    </p>
-                  </div>
+              <CardContent className="space-y-6">
+                <div>
+                  <Label htmlFor="valor" className="font-extralight">Valor Pretendido (R$)</Label>
+                  <Input
+                    id="valor"
+                    type="number"
+                    value={valorPretendido}
+                    onChange={(e) => setValorPretendido(e.target.value)}
+                    placeholder="Ex: 5000"
+                    className="mt-1 bg-white dark:bg-transparent border-[#efc349]/30"
+                  />
+                  <p className="text-xs text-[#020817]/60 dark:text-white/60 mt-1 font-extralight">
+                    Valor bruto desejado para o pró-labore
+                  </p>
                 </div>
+
+                <div>
+                  <Label htmlFor="regime" className="font-extralight">Regime Tributário</Label>
+                  <Select value={regimeTributario} onValueChange={setRegimeTributario}>
+                    <SelectTrigger className="bg-white dark:bg-transparent border-[#efc349]/30">
+                      <SelectValue placeholder="Selecione o regime" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Simples Nacional">Simples Nacional</SelectItem>
+                      <SelectItem value="Lucro Presumido">Lucro Presumido</SelectItem>
+                      <SelectItem value="Lucro Real">Lucro Real</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-[#020817]/60 dark:text-white/60 mt-1 font-extralight">
+                    Regime tributário da empresa
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="inss" className="font-extralight">Alíquota INSS (%)</Label>
+                  <Select value={aliquotaINSS} onValueChange={setAliquotaINSS}>
+                    <SelectTrigger className="bg-white dark:bg-transparent border-[#efc349]/30">
+                      <SelectValue placeholder="Selecione a alíquota" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="11">11% (Padrão)</SelectItem>
+                      <SelectItem value="20">20% (Contribuição ampliada)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-[#020817]/60 dark:text-white/60 mt-1 font-extralight">
+                    Alíquota de INSS do sócio
+                  </p>
+                </div>
+
+                <Button 
+                  onClick={calcularProLabore}
+                  className="w-full bg-[#020817] dark:bg-transparent border border-[#efc349] text-white dark:text-[#efc349] hover:bg-[#020817]/90 dark:hover:bg-[#efc349]/10 font-extralight"
+                >
+                  Calcular Pró-labore
+                </Button>
               </CardContent>
             </Card>
 
-            {/* Actions */}
-            <Card className="bg-white/50 dark:bg-transparent backdrop-blur-sm border-gray-100 dark:border-[#efc349]/20">
-              <CardContent className="pt-6">
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button
-                    onClick={copiarResultado}
-                    variant="outline"
-                    className="font-extralight border-[#efc349]/30 hover:bg-[#efc349]/10"
-                  >
-                    <Copy className="h-4 w-4 mr-2" />
-                    Copiar Resultado
-                  </Button>
-                  <Button
-                    onClick={() => window.print()}
-                    variant="outline"
-                    className="font-extralight border-[#efc349]/30 hover:bg-[#efc349]/10"
-                  >
-                    <Printer className="h-4 w-4 mr-2" />
-                    Imprimir
-                  </Button>
-                  <Button
-                    onClick={salvarSimulacao}
-                    disabled={isSaving}
-                    className="font-extralight bg-[#020817] dark:bg-transparent dark:border dark:border-[#efc349] text-white dark:text-[#efc349] hover:bg-[#0f172a] dark:hover:bg-[#efc349]/10"
-                  >
-                    <Save className="h-4 w-4 mr-2" />
-                    {isSaving ? "Salvando..." : "Salvar Simulação"}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Resultado */}
+            {resultado && (
+              <Card className="border-[#efc349]/30 bg-white dark:bg-transparent">
+                <CardHeader>
+                  <CardTitle className="text-[#020817] dark:text-[#efc349] font-extralight">
+                    Resultado da Simulação
+                  </CardTitle>
+                  <CardDescription className="font-extralight">
+                    Breakdown completo do seu pró-labore
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="bg-[#efc349]/10 rounded-lg p-4 border border-[#efc349]/30">
+                    <h3 className="text-lg font-extralight text-[#020817] dark:text-[#efc349] mb-3">
+                      Resumo Financeiro
+                    </h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-[#020817]/70 dark:text-white/70 font-extralight">Valor Bruto:</span>
+                        <span className="text-[#020817] dark:text-white font-extralight">
+                          {resultado.valorBruto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[#020817]/70 dark:text-white/70 font-extralight">Regime:</span>
+                        <span className="text-[#020817] dark:text-white font-extralight">
+                          {resultado.regimeTributario}
+                        </span>
+                      </div>
+                      <div className="border-t border-[#efc349]/30 pt-2">
+                        <h4 className="font-extralight text-[#020817] dark:text-[#efc349] mb-2">Descontos:</h4>
+                        <div className="flex justify-between">
+                          <span className="text-[#020817]/70 dark:text-white/70 font-extralight">INSS Retido:</span>
+                          <span className="text-red-600 dark:text-red-400 font-extralight">
+                            -{resultado.inssRetido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                          </span>
+                        </div>
+                        {resultado.irrfRetido > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-[#020817]/70 dark:text-white/70 font-extralight">IRRF Retido:</span>
+                            <span className="text-red-600 dark:text-red-400 font-extralight">
+                              -{resultado.irrfRetido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                            </span>
+                          </div>
+                        )}
+                        {resultado.impostosAdicionais > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-[#020817]/70 dark:text-white/70 font-extralight">{resultado.descricaoImpostos}:</span>
+                            <span className="text-red-600 dark:text-red-400 font-extralight">
+                              -{resultado.impostosAdicionais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="border-t border-[#efc349]/30 pt-2">
+                        <div className="flex justify-between text-lg">
+                          <span className="text-[#020817] dark:text-[#efc349] font-extralight">Valor Líquido:</span>
+                          <span className="text-green-600 dark:text-green-400 font-extralight">
+                            {resultado.valorLiquido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-[#020817]/70 dark:text-white/70 font-extralight">Desconto Total:</span>
+                          <span className="text-[#020817] dark:text-white font-extralight">
+                            {resultado.percentualDesconto}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={copiarResultado}
+                      variant="outline" 
+                      size="sm"
+                      className="flex-1 border-[#efc349]/30 hover:bg-[#efc349]/10 font-extralight"
+                    >
+                      <Copy size={16} className="mr-1" />
+                      Copiar
+                    </Button>
+                    <Button 
+                      onClick={() => window.print()}
+                      variant="outline" 
+                      size="sm"
+                      className="flex-1 border-[#efc349]/30 hover:bg-[#efc349]/10 font-extralight"
+                    >
+                      <Printer size={16} className="mr-1" />
+                      Imprimir
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       <Footer />

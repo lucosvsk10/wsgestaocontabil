@@ -57,36 +57,39 @@ export const ClientDashboardContent = ({
       initial="hidden"
       animate="visible"
       variants={containerVariants}
-      className="flex-grow p-4 md:p-6 lg:p-8 bg-[#020817]"
+      className="container mx-auto p-4 flex-grow px-2 md:px-4 py-6"
     >
-      <motion.div variants={itemVariants} className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
-            Área do Cliente
-          </h1>
-          <p className="text-gray-400 text-lg">
-            Gerencie seus documentos e acompanhe comunicados importantes
-          </p>
-        </div>
-
-        {isLoadingDocuments || isLoadingCategories ? (
-          <div className="flex justify-center py-12">
-            <LoadingSpinner />
-          </div>
-        ) : (
-          <ClientNavigation
-            documents={[]} 
-            allDocuments={documents} 
-            documentsByCategory={documentsByCategory} 
-            categories={commonCategories} 
-            setSelectedCategory={setSelectedCategory} 
-            formatDate={formatDate} 
-            isDocumentExpired={isDocumentExpired} 
-            daysUntilExpiration={daysUntilExpiration} 
-            refreshDocuments={() => fetchUserDocuments(userId)} 
-            activeCategory={selectedCategory || ''}
-          />
-        )}
+      <motion.div variants={itemVariants}>
+        <Card className="border-[#e6e6e6] dark:border-[#efc349]/20 bg-white dark:bg-[#0b1320] shadow-sm">
+          <CardHeader className="bg-white dark:bg-[#0b1320] border-b border-[#e6e6e6] dark:border-[#efc349]/20">
+            <CardTitle className="flex items-center justify-between font-extralight text-[#020817] dark:text-[#efc349] text-3xl">
+              Área do Cliente
+            </CardTitle>
+            <p className="text-sm text-gray-600 dark:text-gray-300 font-extralight mt-2">
+              Gerencie seus documentos, simulações e acompanhe comunicados importantes
+            </p>
+          </CardHeader>
+          <CardContent className="bg-white dark:bg-[#0b1320] p-6">
+            {isLoadingDocuments || isLoadingCategories ? (
+              <div className="flex justify-center py-12">
+                <LoadingSpinner />
+              </div>
+            ) : (
+              <ClientNavigation
+                documents={[]} 
+                allDocuments={documents} 
+                documentsByCategory={documentsByCategory} 
+                categories={commonCategories} 
+                setSelectedCategory={setSelectedCategory} 
+                formatDate={formatDate} 
+                isDocumentExpired={isDocumentExpired} 
+                daysUntilExpiration={daysUntilExpiration} 
+                refreshDocuments={() => fetchUserDocuments(userId)} 
+                activeCategory={selectedCategory || ''}
+              />
+            )}
+          </CardContent>
+        </Card>
       </motion.div>
     </motion.div>
   );

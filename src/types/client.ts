@@ -34,13 +34,10 @@ export interface FiscalEvent {
   description: string;
   status: 'upcoming' | 'today' | 'overdue' | 'completed';
   category: string;
-  created_at?: string;
-  created_by?: string;
 }
 
 export interface CompanyData {
   id: string;
-  user_id: string;
   name: string;
   cnpj: string;
   opening_date: string;
