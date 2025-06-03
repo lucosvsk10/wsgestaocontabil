@@ -10,6 +10,7 @@ import { AdminDashboardView } from "./dashboard/AdminDashboardView";
 import { SettingsView } from "./settings/SettingsView";
 import { AdminToolsView } from "./tools/AdminToolsView";
 import { AnnouncementsView } from "./announcements/AnnouncementsView";
+import { AgendaView } from "./agenda/AgendaView";
 
 export interface AdminTabsViewProps {
   activeTab?: string;
@@ -97,7 +98,7 @@ export function AdminTabsView({
 
         {/* Tab Content - Storage */}
         {activeTab === "storage" && <div className="space-y-8">
-            <StorageView />
+            <StorageView documents={documents || []} users={users || []} />
           </div>}
 
         {/* Tab Content - Polls */}
@@ -118,6 +119,11 @@ export function AdminTabsView({
         {/* Tab Content - Announcements */}
         {activeTab === "announcements" && <div className="space-y-8">
             <AnnouncementsView />
+          </div>}
+
+        {/* Tab Content - Agenda */}
+        {activeTab === "agenda" && <div className="space-y-8">
+            <AgendaView />
           </div>}
 
         {/* Tab Content - Settings */}

@@ -71,13 +71,13 @@ export const StorageView = ({ documents, users }: StorageViewProps) => {
           if (!categoryMap.has(category)) {
             categoryMap.set(category, {
               name: category,
-              value: 0,
+              value: size,
               color: doc.document_categories?.color || '#6B7280'
             });
+          } else {
+            const categoryData = categoryMap.get(category);
+            categoryData.value += size;
           }
-          
-          const categoryData = categoryMap.get(category);
-          categoryData.value += size;
         });
 
         setStorageData(Array.from(userStorageMap.values()));
@@ -95,7 +95,7 @@ export const StorageView = ({ documents, users }: StorageViewProps) => {
     setIsExporting(true);
     try {
       // Create CSV content
-      const csvHeader = 'Usuário,Email,Total de Documentos,Tamanho Total (MB),Última Atividade\n';
+      const csvHeader = 'Usuário,Total de Documentos,Tamanho Total (MB),Última Atividade\n';
       const csvRows = storageData.map(user => {
         const latestDoc = user.documents.sort((a: any, b: any) => 
           new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
@@ -104,7 +104,7 @@ export const StorageView = ({ documents, users }: StorageViewProps) => {
         const sizeInMB = (user.totalSize / (1024 * 1024)).toFixed(2);
         const lastActivity = latestDoc ? new Date(latestDoc.uploaded_at).toLocaleDateString('pt-BR') : 'N/A';
         
-        return `${user.userName},"",${user.documentCount},${sizeInMB},${lastActivity}`;
+        return `${user.userName},${user.documentCount},${sizeInMB},${lastActivity}`;
       }).join('\n');
 
       const csvContent = csvHeader + csvRows;
@@ -159,11 +159,24 @@ export const StorageView = ({ documents, users }: StorageViewProps) => {
       </div>
 
       {/* Storage Summary */}
-      <StorageUsageSummary 
-        totalSize={formatSize(totalStorage)}
-        totalDocuments={documents.length}
-        totalUsers={users.length}
-      />
+      <div className="text-center p-6 bg-white dark:bg-[#0b1320] rounded-lg border border-[#e6e6e6] dark:border-[#efc349]/20 shadow-md">
+        <h3 className="text-lg font-extralight text-[#020817] dark:text-[#efc349] mb-3">
+          Uso Total de Armazenamento
+        </h3>
+        <p className="text-3xl font-extralight text-[#020817] dark:text-white">
+          {formatSize(totalStorage)}
+        </p>
+        <div className="grid grid-cols-2 gap-4 mt-4">
+          <div>
+            <p className="text-sm text-gray-600 dark:text-gray-300 font-extralight">Total de Documentos</p>
+            <p className="text-xl font-extralight text-[#020817] dark:text-white">{documents.length}</p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-600 dark:text-gray-300 font-extralight">Total de Usuários</p>
+            <p className="text-xl font-extralight text-[#020817] dark:text-white">{users.length}</p>
+          </div>
+        </div>
+      </div>
 
       {/* Charts and Lists */}
       <div className="grid gap-6 md:grid-cols-2">
@@ -185,7 +198,7 @@ export const StorageView = ({ documents, users }: StorageViewProps) => {
             </CardTitle>
           </CardHeader>
           <CardContent className="bg-white dark:bg-[#0b1320]">
-            <StorageUsageList data={storageData} />
+            <StorageUsageList userStorage={storageData} searchTerm="" sortBy="usage" />
           </CardContent>
         </Card>
       </div>
@@ -198,7 +211,7 @@ export const StorageView = ({ documents, users }: StorageViewProps) => {
           </CardTitle>
         </CardHeader>
         <CardContent className="bg-white dark:bg-[#0b1320]">
-          <StorageDetailsTable data={storageData} />
+          <StorageDetailsTable storageData={storageData} formatSize={formatSize} />
         </CardContent>
       </Card>
     </div>

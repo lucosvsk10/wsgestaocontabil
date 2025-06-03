@@ -52,7 +52,7 @@ export const AdminDashboard = ({ users, supabaseUsers, documents }: AdminDashboa
         <StatisticsCard
           title="Total de Usuários"
           value={statistics.totalUsers}
-          icon={Users}
+          icon={<Users />}
           trend={{ value: "+12%", isPositive: true }}
         />
         <Button
@@ -63,7 +63,7 @@ export const AdminDashboard = ({ users, supabaseUsers, documents }: AdminDashboa
           <StatisticsCard
             title="Total de Documentos"
             value={statistics.totalDocuments}
-            icon={FileText}
+            icon={<FileText />}
             trend={{ value: "+8%", isPositive: true }}
           />
         </Button>
@@ -75,14 +75,14 @@ export const AdminDashboard = ({ users, supabaseUsers, documents }: AdminDashboa
           <StatisticsCard
             title="Armazenamento"
             value={statistics.storageUsed}
-            icon={HardDrive}
+            icon={<HardDrive />}
             trend={{ value: "+5%", isPositive: true }}
           />
         </Button>
         <StatisticsCard
           title="Eventos Agenda"
           value={statistics.fiscalEvents}
-          icon={Calendar}
+          icon={<Calendar />}
           trend={{ value: "+3%", isPositive: true }}
         />
       </div>
@@ -100,11 +100,7 @@ export const AdminDashboard = ({ users, supabaseUsers, documents }: AdminDashboa
           </CardContent>
         </Card>
 
-        <SystemSummary 
-          users={users}
-          documents={documents}
-          statistics={statistics}
-        />
+        <SystemSummary statistics={statistics} />
       </div>
     </div>
   );
