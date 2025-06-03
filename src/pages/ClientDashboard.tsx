@@ -1,7 +1,5 @@
 
 import { useState } from "react";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { useClientDashboardLogic } from "@/components/client/dashboard/ClientDashboardContainer";
 import { ClientDashboardLayout } from "@/components/client/dashboard/ClientDashboardLayout";
 import { WelcomeHeader } from "@/components/client/dashboard/WelcomeHeader";
@@ -65,8 +63,7 @@ const ClientDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#fdfdfd] dark:bg-[#020817]">
-      <Navbar />
+    <div className="min-h-screen bg-[#FFF1DE] dark:bg-[#020817]">
       <ClientDashboardLayout activeTab={activeTab} setActiveTab={setActiveTab}>
         <WelcomeHeader />
         <QuickStats 
@@ -77,7 +74,6 @@ const ClientDashboard = () => {
         />
         {renderContent()}
       </ClientDashboardLayout>
-      <Footer />
     </div>
   );
 };
