@@ -64,9 +64,7 @@ export const DocumentsSection = ({
           </Select>
 
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="bg-white dark:bg-[#020817] border-gray-200 dark:border-[#efc349]/30 text-[#020817] dark:text-white">
-              <SelectValue placeholder="Categoria" />
-            </SelectTrigger>
+            
             <SelectContent className="bg-white dark:bg-[#020817] border-gray-200 dark:border-[#efc349]/30">
               <SelectItem value="all">Todas as categorias</SelectItem>
               {categories.map(category => <SelectItem key={category.id} value={category.id}>
@@ -75,9 +73,7 @@ export const DocumentsSection = ({
             </SelectContent>
           </Select>
 
-          <Button onClick={clearFilters} variant="outline" className="border-gray-200 dark:border-[#efc349]/30 text-[#020817] dark:text-[#efc349] hover:bg-gray-100 dark:hover:bg-[#efc349]/10">
-            Limpar filtros
-          </Button>
+          
         </div>
       </CardHeader>
       
