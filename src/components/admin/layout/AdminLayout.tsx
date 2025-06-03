@@ -25,7 +25,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen bg-[#FFF1DE] dark:bg-[#020817] flex overflow-hidden">
       {/* Sidebar */}
-      <AdminSidebar open={sidebarOpen} />
+      <AdminSidebar open={sidebarOpen} onOpenChange={setSidebarOpen} />
       
       {/* Main content */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden">

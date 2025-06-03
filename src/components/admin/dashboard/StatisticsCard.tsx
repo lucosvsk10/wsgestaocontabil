@@ -1,32 +1,45 @@
+
 import { ReactNode } from "react";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
+
 interface StatisticsCardProps {
   icon: ReactNode;
   title: string;
   value: string | number;
-  iconBgClass: string;
-  iconColor: string;
+  trend?: {
+    value: string;
+    isPositive: boolean;
+  };
 }
+
 export const StatisticsCard = ({
   icon,
   title,
   value,
-  iconBgClass,
-  iconColor
+  trend
 }: StatisticsCardProps) => {
-  return <Card className="border border-gray-200 dark:border-navy-lighter/30 bg-transparent">
+  return (
+    <Card className="border-[#e6e6e6] dark:border-[#efc349]/20 bg-white dark:bg-[#0b1320] hover:shadow-lg transition-shadow">
       <CardContent className="p-6 flex flex-col items-center text-center">
-        <div className={`rounded-full ${iconBgClass} p-3 mb-2`}>
-          <div className={`h-8 w-8 ${iconColor}`}>
+        <div className="rounded-full bg-[#efc349]/10 p-3 mb-4">
+          <div className="h-8 w-8 text-[#efc349]">
             {icon}
           </div>
         </div>
-        <CardTitle className="text-lg text-navy-dark dark:text-gold font-extralight">
+        <CardTitle className="text-lg text-[#020817] dark:text-[#efc349] font-extralight mb-2">
           {title}
         </CardTitle>
-        <p className="font-bold mt-2 text-gray-700 dark:text-white text-base">
+        <p className="font-extralight mt-2 text-[#020817] dark:text-white text-2xl">
           {value}
         </p>
+        {trend && (
+          <div className={`flex items-center gap-1 mt-2 text-sm font-extralight ${
+            trend.isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+          }`}>
+            <span>{trend.value}</span>
+          </div>
+        )}
       </CardContent>
-    </Card>;
+    </Card>
+  );
 };
