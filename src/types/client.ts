@@ -1,50 +1,31 @@
 
-export interface TaxSimulation {
-  id: string;
-  user_id: string;
-  tipo_simulacao: string;
-  rendimento_bruto: number;
-  inss: number;
-  educacao: number;
-  saude: number;
-  dependentes: number;
-  outras_deducoes: number;
-  imposto_estimado: number;
-  data_criacao: string;
-  nome?: string;
-  email?: string;
-  telefone?: string;
-}
-
-export interface ClientAnnouncement {
-  id: string;
-  title: string;
-  message: string;
-  created_at: string;
-  expires_at: string | null;
-  theme: string;
-  action_button_text?: string;
-  action_button_url?: string;
-}
-
 export interface FiscalEvent {
   id: string;
   title: string;
+  description: string | null;
   date: string;
-  description: string;
-  status: 'upcoming' | 'today' | 'overdue' | 'completed';
   category: string;
+  status: 'upcoming' | 'today' | 'overdue' | 'completed';
+  created_at: string;
+  created_by: string | null;
+}
+
+export interface Announcement {
+  id: string;
+  title: string;
+  content: string;
+  created_at: string;
+  expires_at?: string;
+  priority: 'low' | 'medium' | 'high';
+  published: boolean;
 }
 
 export interface CompanyData {
   id: string;
   name: string;
   cnpj: string;
-  opening_date: string;
-  tax_regime: string;
-  accountant_name: string;
-  accountant_contact: string;
   address: string;
-  phone: string;
-  email: string;
+  tax_regime: string;
+  created_at: string;
+  updated_at: string;
 }

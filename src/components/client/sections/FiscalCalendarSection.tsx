@@ -31,7 +31,7 @@ export const FiscalCalendarSection = () => {
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
         
-        let status = event.status;
+        let status: 'upcoming' | 'today' | 'overdue' | 'completed' = event.status as 'upcoming' | 'today' | 'overdue' | 'completed';
         if (eventDate.toDateString() === today.toDateString()) {
           status = 'today';
         } else if (eventDate < today && status !== 'completed') {
@@ -40,7 +40,7 @@ export const FiscalCalendarSection = () => {
           status = 'upcoming';
         }
         
-        return { ...event, status };
+        return { ...event, status } as FiscalEvent;
       });
       
       setEvents(updatedEvents);
