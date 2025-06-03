@@ -12,18 +12,11 @@ export interface UserStorageData {
   sizeMB: number;
 }
 
-export interface CategoryDistribution {
-  name: string;
-  value: number;
-  color: string;
-}
-
 export interface StorageStats {
   totalStorageBytes: number;
   totalStorageKB: number;
   totalStorageMB: number;
   userStorage: UserStorageData[];
-  categoryDistribution: CategoryDistribution[];
 }
 
 export const useStorageStats = () => {
@@ -69,12 +62,7 @@ export const useStorageStats = () => {
       // Fallback: Calculate from documents table if edge function failed
       const { data: documents, error: docError } = await supabase
         .from('documents')
-        .select(`
-          size,
-          user_id,
-          category,
-          document_categories!inner(name, color)
-        `);
+        .select('size');
       
       if (docError) throw docError;
       
@@ -117,34 +105,12 @@ export const useStorageStats = () => {
           sizeMB: Math.round(size / (1024 * 1024) * 100) / 100
         };
       });
-
-      // Calculate category distribution
-      const categoryMap = new Map();
-      documents.forEach(doc => {
-        const categoryName = doc.document_categories?.name || 'Outros';
-        const categoryColor = doc.document_categories?.color || '#6B7280';
-        const size = doc.size || 0;
-        
-        if (!categoryMap.has(categoryName)) {
-          categoryMap.set(categoryName, {
-            name: categoryName,
-            value: size,
-            color: categoryColor
-          });
-        } else {
-          const categoryData = categoryMap.get(categoryName);
-          categoryData.value += size;
-        }
-      });
-
-      const categoryDistribution: CategoryDistribution[] = Array.from(categoryMap.values());
       
       const stats = {
         totalStorageBytes: totalBytes,
         totalStorageKB: totalKB,
         totalStorageMB: totalMB,
-        userStorage,
-        categoryDistribution
+        userStorage
       };
       
       setStorageStats(stats);
@@ -157,8 +123,7 @@ export const useStorageStats = () => {
         totalStorageBytes: 0,
         totalStorageKB: 0,
         totalStorageMB: 0,
-        userStorage: [],
-        categoryDistribution: []
+        userStorage: []
       });
       
       toast({

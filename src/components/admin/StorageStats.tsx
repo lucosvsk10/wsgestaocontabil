@@ -15,15 +15,6 @@ export const StorageStats = () => {
     fetchStorageStats();
   }, []);
 
-  // Create default chart data when no storage stats are available
-  const defaultChartData = [
-    { name: "Sem dados", value: 0, color: "#6B7280" }
-  ];
-
-  const chartData = storageStats?.categoryDistribution && storageStats.categoryDistribution.length > 0 
-    ? storageStats.categoryDistribution 
-    : defaultChartData;
-
   return (
     <Card className="px-0 bg-white dark:bg-navy-medium border border-gray-200 dark:border-navy-lighter/30 shadow-lg">
       <CardHeader className="rounded-t-lg bg-white dark:bg-navy-deeper border-b border-gray-200 dark:border-navy-lighter/30">
@@ -46,7 +37,7 @@ export const StorageStats = () => {
             />
 
             {/* Chart */}
-            <StorageDistributionChart data={chartData} />
+            <StorageDistributionChart />
 
             {/* Table */}
             <StorageDetailsTable 

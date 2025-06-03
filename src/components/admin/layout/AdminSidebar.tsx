@@ -1,41 +1,35 @@
 
+import { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { 
-  LayoutDashboard, 
-  Users, 
-  FileText, 
-  HardDrive, 
-  Megaphone, 
-  BarChart3, 
-  Settings,
-  Calendar,
-  X
-} from "lucide-react";
+import { LayoutDashboard, Users, PieChart, Calculator, Settings, Wrench, X, HardDrive, Megaphone, Calendar } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
 
 interface SidebarItemProps {
   icon: React.ReactNode;
   label: string;
-  path: string;
   active: boolean;
+  to: string;
+  onClick?: () => void;
 }
 
 const SidebarItem: React.FC<SidebarItemProps> = ({
   icon,
   label,
-  path,
-  active
+  active,
+  to,
+  onClick
 }) => {
   return (
     <Link 
-      to={path}
+      to={to} 
       className={`flex items-center space-x-4 px-6 py-4 rounded-lg transition-all duration-300 ease-in-out group ${
         active 
           ? "bg-[#efc349]/10 text-[#efc349] border-l-4 border-[#efc349]" 
           : "text-gray-700 dark:text-white/80 hover:bg-gray-100 dark:hover:bg-[#efc349]/5 hover:text-[#020817] dark:hover:text-[#efc349]"
-      }`}
+      }`} 
+      onClick={onClick}
     >
       <div className={`transition-all duration-300 ${
         active 
@@ -51,54 +45,94 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
 
 interface AdminSidebarProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onClose: () => void;
 }
 
-const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onOpenChange }) => {
+const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
   const location = useLocation();
   const isMobile = useIsMobile();
   const { theme } = useTheme();
+
+  // Close sidebar on outside click for mobile
+  useEffect(() => {
+    if (isMobile && open) {
+      const handleClickOutside = (e: MouseEvent) => {
+        const target = e.target as HTMLElement;
+        if (!target.closest('[data-sidebar="true"]') && !target.closest('[data-sidebar-toggle="true"]')) {
+          onClose();
+        }
+      };
+      
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
+    }
+  }, [isMobile, onClose, open]);
+
+  // Close sidebar on route change for mobile
+  useEffect(() => {
+    if (isMobile && open) {
+      onClose();
+    }
+  }, [location.pathname, isMobile, onClose, open]);
+
+  const getIsActive = (path: string): boolean => {
+    return location.pathname === path;
+  };
 
   const sidebarItems = [
     {
       icon: <LayoutDashboard size={20} />,
       label: "Dashboard",
-      path: "/admin"
+      active: getIsActive("/admin") || getIsActive("/admin/"),
+      to: "/admin"
     },
     {
       icon: <Users size={20} />,
       label: "Usuários",
-      path: "/admin/users"
-    },
-    {
-      icon: <FileText size={20} />,
-      label: "Documentos",
-      path: "/admin/document-management"
+      active: getIsActive("/admin/users"),
+      to: "/admin/users"
     },
     {
       icon: <HardDrive size={20} />,
       label: "Armazenamento",
-      path: "/admin/user-documents"
+      active: getIsActive("/admin/storage"),
+      to: "/admin/storage"
     },
     {
       icon: <Calendar size={20} />,
       label: "Agenda",
-      path: "/admin/agenda"
+      active: getIsActive("/admin/agenda"),
+      to: "/admin/agenda"
+    },
+    {
+      icon: <PieChart size={20} />,
+      label: "Enquetes",
+      active: getIsActive("/admin/polls"),
+      to: "/admin/polls"
+    },
+    {
+      icon: <Wrench size={20} />,
+      label: "Ferramentas",
+      active: getIsActive("/admin/tools"),
+      to: "/admin/tools"
+    },
+    {
+      icon: <Calculator size={20} />,
+      label: "Simulações",
+      active: getIsActive("/admin/simulations"),
+      to: "/admin/simulations"
     },
     {
       icon: <Megaphone size={20} />,
       label: "Anúncios",
-      path: "/admin/announcements"
-    },
-    {
-      icon: <BarChart3 size={20} />,
-      label: "Simulações",
-      path: "/admin/simulations"
+      active: getIsActive("/admin/announcements"),
+      to: "/admin/announcements"
     },
     {
       icon: <Settings size={20} />,
       label: "Configurações",
-      path: "/admin/settings"
+      active: getIsActive("/admin/settings"),
+      to: "/admin/settings"
     }
   ];
 
@@ -108,11 +142,12 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onOpenChange }) => {
       {isMobile && open && (
         <div 
           className="fixed inset-0 bg-black/50 z-40"
-          onClick={() => onOpenChange(false)}
+          onClick={onClose}
         />
       )}
       
       <aside 
+        data-sidebar="true" 
         className={`
           ${isMobile ? 'fixed' : 'relative'} 
           inset-y-0 left-0 z-50 
@@ -134,7 +169,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onOpenChange }) => {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => onOpenChange(false)}
+            onClick={onClose}
             className="absolute top-4 right-4 z-10 text-gray-500 dark:text-white/70 hover:text-[#efc349]"
           >
             <X size={20} />
@@ -143,7 +178,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onOpenChange }) => {
 
         {/* Logo area */}
         <div className="h-20 flex items-center justify-center px-6 border-b border-gray-100 dark:border-[#020817]">
-          <Link to="/admin" className="flex items-center justify-center transition-all duration-300 hover:scale-105">
+          <Link to="/" className="flex items-center justify-center transition-all duration-300 hover:scale-105">
             {(open || isMobile) ? (
               <img 
                 src={theme === 'light' 
@@ -174,25 +209,22 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onOpenChange }) => {
                 <SidebarItem 
                   icon={item.icon} 
                   label={item.label} 
-                  path={item.path}
-                  active={location.pathname === item.path || 
-                    (item.path === '/admin' && location.pathname === '/admin')}
+                  active={item.active} 
+                  to={item.to} 
                 />
               ) : (
                 <div 
                   className={`flex justify-center p-4 rounded-lg transition-all duration-300 hover:scale-110 ${
-                    location.pathname === item.path || 
-                    (item.path === '/admin' && location.pathname === '/admin')
+                    item.active 
                       ? "bg-[#efc349]/10 border-l-4 border-[#efc349]" 
                       : "hover:bg-gray-100 dark:hover:bg-[#efc349]/10"
                   }`} 
                   title={item.label}
                 >
                   <Link 
-                    to={item.path}
+                    to={item.to} 
                     className={`transition-colors duration-300 ${
-                      location.pathname === item.path || 
-                      (item.path === '/admin' && location.pathname === '/admin')
+                      item.active 
                         ? "text-[#efc349]" 
                         : "text-gray-500 dark:text-white/70 hover:text-[#efc349]"
                     }`}
