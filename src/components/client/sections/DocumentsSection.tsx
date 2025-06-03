@@ -48,9 +48,9 @@ export const DocumentsSection = ({
   };
 
   return (
-    <Card className="bg-[#0b1320] border-[#efc349]/20">
+    <Card className="bg-white dark:bg-[#0b1320] border-gray-200 dark:border-[#efc349]/20">
       <CardHeader>
-        <CardTitle className="text-[#efc349] font-extralight flex items-center py-[10px]">
+        <CardTitle className="text-[#020817] dark:text-[#efc349] font-extralight flex items-center py-[10px]">
           <FileText className="w-6 h-6 mr-2" />
           Documentos
         </CardTitle>
@@ -63,15 +63,15 @@ export const DocumentsSection = ({
               placeholder="Buscar documentos..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-[#020817] border-[#efc349]/30 text-white"
+              className="pl-10 bg-white dark:bg-[#020817] border-gray-200 dark:border-[#efc349]/30 text-[#020817] dark:text-white"
             />
           </div>
           
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="bg-[#020817] border-[#efc349]/30 text-white">
+            <SelectTrigger className="bg-white dark:bg-[#020817] border-gray-200 dark:border-[#efc349]/30 text-[#020817] dark:text-white">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
-            <SelectContent className="bg-[#020817] border-[#efc349]/30">
+            <SelectContent className="bg-white dark:bg-[#020817] border-gray-200 dark:border-[#efc349]/30">
               <SelectItem value="all">Todos os status</SelectItem>
               <SelectItem value="new">Novos</SelectItem>
               <SelectItem value="viewed">Visualizados</SelectItem>
@@ -80,10 +80,10 @@ export const DocumentsSection = ({
           </Select>
 
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="bg-[#020817] border-[#efc349]/30 text-white">
+            <SelectTrigger className="bg-white dark:bg-[#020817] border-gray-200 dark:border-[#efc349]/30 text-[#020817] dark:text-white">
               <SelectValue placeholder="Categoria" />
             </SelectTrigger>
-            <SelectContent className="bg-[#020817] border-[#efc349]/30">
+            <SelectContent className="bg-white dark:bg-[#020817] border-gray-200 dark:border-[#efc349]/30">
               <SelectItem value="all">Todas as categorias</SelectItem>
               {categories.map(category => (
                 <SelectItem key={category.id} value={category.id}>
@@ -96,7 +96,7 @@ export const DocumentsSection = ({
           <Button
             onClick={clearFilters}
             variant="outline"
-            className="border-[#efc349]/30 text-[#efc349] hover:bg-[#efc349]/10"
+            className="border-gray-200 dark:border-[#efc349]/30 text-[#020817] dark:text-[#efc349] hover:bg-gray-100 dark:hover:bg-[#efc349]/10"
           >
             Limpar filtros
           </Button>
@@ -115,7 +115,7 @@ export const DocumentsSection = ({
                 className={`${
                   selectedCategory === category.id 
                     ? "bg-[#efc349] text-[#020817]" 
-                    : "border-[#efc349]/30 text-[#efc349] hover:bg-[#efc349]/10"
+                    : "border-gray-200 dark:border-[#efc349]/30 text-[#020817] dark:text-[#efc349] hover:bg-gray-100 dark:hover:bg-[#efc349]/10"
                 }`}
                 onClick={() => setSelectedCategory(category.id)}
               >
@@ -135,14 +135,14 @@ export const DocumentsSection = ({
               transition={{ duration: 0.3, delay: index * 0.05 }}
               className={`p-4 rounded-lg border transition-all hover:border-[#efc349]/50 ${
                 isDocumentExpired(doc.expires_at)
-                  ? "bg-red-900/20 border-red-500/30"
+                  ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-500/30"
                   : !doc.viewed
-                  ? "bg-blue-900/20 border-blue-500/30"
-                  : "bg-[#020817] border-[#efc349]/20"
+                  ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-500/30"
+                  : "bg-white dark:bg-[#020817] border-gray-200 dark:border-[#efc349]/20"
               }`}
             >
               <div className="flex justify-between items-start mb-3">
-                <h3 className="font-semibold text-white text-lg">{doc.name}</h3>
+                <h3 className="font-semibold text-[#020817] dark:text-white text-lg">{doc.name}</h3>
                 <div className="flex gap-2">
                   {!doc.viewed && (
                     <Badge className="bg-blue-600 hover:bg-blue-700 text-white">
@@ -157,7 +157,7 @@ export const DocumentsSection = ({
                 </div>
               </div>
 
-              <div className="space-y-2 text-sm text-gray-300 mb-4">
+              <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300 mb-4">
                 <div className="flex items-center">
                   <Calendar className="w-4 h-4 mr-2" />
                   <span>Enviado: {formatDate(doc.uploaded_at)}</span>

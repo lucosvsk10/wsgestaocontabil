@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -44,7 +45,6 @@ export const useClientData = () => {
 
       if (error) throw error;
       
-      // Map database data to ClientAnnouncement interface
       const mappedAnnouncements: ClientAnnouncement[] = (data || []).map(announcement => ({
         id: announcement.id,
         title: announcement.title,
@@ -66,7 +66,6 @@ export const useClientData = () => {
     if (!user?.id) return;
     
     try {
-      // Mock data - in real implementation, this would come from a companies table
       const mockData: CompanyData = {
         id: user.id,
         name: "Empresa Exemplo LTDA",
@@ -77,7 +76,9 @@ export const useClientData = () => {
         accountant_contact: "(11) 9999-9999",
         address: "Rua Exemplo, 123 - São Paulo/SP",
         phone: "(11) 8888-8888",
-        email: user.email || ""
+        email: user.email || "",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
       setCompanyData(mockData);
     } catch (error) {
@@ -86,7 +87,6 @@ export const useClientData = () => {
   }, [user?.id, user?.email]);
 
   const fetchFiscalEvents = useCallback(async () => {
-    // Mock data - in real implementation, this would come from a fiscal_events table
     const mockEvents: FiscalEvent[] = [
       {
         id: '1',
@@ -94,7 +94,9 @@ export const useClientData = () => {
         date: '2024-01-20',
         description: 'Vencimento do DAS referente ao mês de dezembro/2023',
         status: 'upcoming',
-        category: 'Tributos'
+        category: 'Tributos',
+        created_at: new Date().toISOString(),
+        created_by: null
       },
       {
         id: '2', 
@@ -102,7 +104,9 @@ export const useClientData = () => {
         date: '2024-01-31',
         description: 'Entrega da declaração fiscal digital',
         status: 'today',
-        category: 'Declarações'
+        category: 'Declarações',
+        created_at: new Date().toISOString(),
+        created_by: null
       },
       {
         id: '3',
@@ -110,7 +114,9 @@ export const useClientData = () => {
         date: '2024-01-10',
         description: 'Envio do relatório contábil mensal',
         status: 'overdue',
-        category: 'Relatórios'
+        category: 'Relatórios',
+        created_at: new Date().toISOString(),
+        created_by: null
       }
     ];
     setFiscalEvents(mockEvents);
