@@ -1,42 +1,63 @@
 
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { formatSize } from "@/utils/storage/formatSize";
 
-const data = [
-  { name: 'IRPF', value: 45, color: '#efc349' },
-  { name: 'Contratos', value: 30, color: '#3b82f6' },
-  { name: 'Certidões', value: 15, color: '#10b981' },
-  { name: 'Outros', value: 10, color: '#f59e0b' },
-];
+interface StorageDistributionChartProps {
+  data: Array<{
+    name: string;
+    value: number;
+    color: string;
+  }>;
+}
 
-export const StorageDistributionChart = () => {
+export const StorageDistributionChart = ({ data }: StorageDistributionChartProps) => {
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64 text-gray-500 dark:text-gray-400 font-extralight">
+        Nenhum dado disponível
+      </div>
+    );
+  }
+
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0];
+      return (
+        <div className="bg-white dark:bg-[#0b1320] border border-[#e6e6e6] dark:border-[#efc349]/20 rounded-lg p-3 shadow-lg">
+          <p className="font-extralight text-[#020817] dark:text-white">
+            {data.name}: {formatSize(data.value)}
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
-    <div className="h-64">
-      <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
-          <Pie
-            data={data}
-            cx="50%"
-            cy="50%"
-            innerRadius={60}
-            outerRadius={100}
-            paddingAngle={5}
-            dataKey="value"
-          >
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.color} />
-            ))}
-          </Pie>
-          <Tooltip 
-            formatter={(value) => [`${value}%`, 'Uso']}
-            contentStyle={{
-              backgroundColor: 'var(--background)',
-              border: '1px solid var(--border)',
-              borderRadius: '8px'
-            }}
-          />
-          <Legend />
-        </PieChart>
-      </ResponsiveContainer>
-    </div>
+    <ResponsiveContainer width="100%" height={300}>
+      <PieChart>
+        <Pie
+          data={data}
+          cx="50%"
+          cy="50%"
+          labelLine={false}
+          outerRadius={80}
+          fill="#8884d8"
+          dataKey="value"
+        >
+          {data.map((entry, index) => (
+            <Cell key={`cell-${index}`} fill={entry.color} />
+          ))}
+        </Pie>
+        <Tooltip content={<CustomTooltip />} />
+        <Legend 
+          wrapperStyle={{ 
+            fontSize: '14px',
+            fontWeight: '200',
+            color: 'var(--foreground)'
+          }}
+        />
+      </PieChart>
+    </ResponsiveContainer>
   );
 };
