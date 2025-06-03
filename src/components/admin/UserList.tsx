@@ -177,21 +177,21 @@ export const UserList = ({
                 </TableCell>
                 {!isAdmin && <TableCell>
                     <div className="flex gap-2 flex-wrap">
-                      <Button size="sm" onClick={() => navigate(`/admin/user-documents/${user.id}`)} className="border-[#efc349] text-[#efc349]">
+                      <Button size="sm" className="bg-[#020817] border border-[#efc349] text-white dark:bg-transparent dark:border-[#efc349] dark:text-[#efc349] hover:bg-[#0f172a] dark:hover:bg-[#efc349]/10 font-extralight" onClick={() => navigate(`/admin/user-documents/${user.id}`)}>
                         <FileText className="h-4 w-4 mr-1" />
                         Documentos
                       </Button>
-                      <Button size="sm" onClick={() => {
+                      <Button size="sm" className="bg-[#020817] border border-[#efc349] text-white dark:bg-transparent dark:border-[#efc349] dark:text-[#efc349] hover:bg-[#0f172a] dark:hover:bg-[#efc349]/10 font-extralight" onClick={() => {
                   const userInfo = users.find(u => u.id === user.id);
                   if (userInfo) {
                     setSelectedUserForPasswordChange(userInfo);
                     passwordForm.reset();
                   }
-                }} className="border-[#efc349] text-[#efc349]">
+                }}>
                         <Lock className="h-4 w-4 mr-1" />
                         Senha
                       </Button>
-                      <Button size="sm" onClick={() => handleDeleteUser(user.id)} className="border-red-500 text-red-500">
+                      <Button size="sm" className="bg-[#020817] border border-red-400 text-white dark:bg-transparent dark:border-red-400 dark:text-red-400 hover:bg-red-600 dark:hover:bg-red-400/10 font-extralight" onClick={() => handleDeleteUser(user.id)}>
                         <Trash2 className="h-4 w-4 mr-1" />
                         Excluir
                       </Button>
