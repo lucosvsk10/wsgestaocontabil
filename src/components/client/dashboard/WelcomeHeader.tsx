@@ -14,13 +14,13 @@ export const WelcomeHeader = () => {
     y: 0
   }} transition={{
     duration: 0.6
-  }} className="bg-gradient-to-r from-[#0b1320] to-[#1a2332] border border-[#efc349]/20 rounded-lg p-6 mb-8 bg-transparent">
+  }} className="bg-navydark">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-extralight text-[#efc349] mb-2">
+          <h1 className="text-3xl font-extralight mb-2 text-slate-50">
             Bem-vindo, {userData?.name || user?.email?.split('@')[0]}
           </h1>
-          <p className="text-gray-300 font-extralight">
+          <p className="font-extralight text-gray-400">
             Gerencie seus documentos, simulações e acompanhe comunicados importantes
           </p>
         </div>
