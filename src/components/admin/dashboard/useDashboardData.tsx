@@ -85,11 +85,15 @@ export const useDashboardData = (supabaseUsers: any[]) => {
       try {
         setIsLoading(true);
         
-        // Buscar documentos com dados do usuário
+        // Buscar documentos recentes com dados do usuário
         const { data: documents, error: docsError } = await supabase
           .from('documents')
           .select(`
-            *,
+            id,
+            name,
+            uploaded_at,
+            category,
+            user_id,
             users!inner(
               id,
               name,
@@ -99,49 +103,56 @@ export const useDashboardData = (supabaseUsers: any[]) => {
           .order('uploaded_at', { ascending: false })
           .limit(5);
         
-        if (docsError) throw docsError;
+        if (docsError) {
+          console.error("Error fetching documents with users:", docsError);
+          // Fallback: buscar apenas documentos
+          const { data: fallbackDocs, error: fallbackError } = await supabase
+            .from('documents')
+            .select('id, name, uploaded_at, category, user_id')
+            .order('uploaded_at', { ascending: false })
+            .limit(5);
+          
+          if (fallbackError) throw fallbackError;
+          
+          // Enriquecer com dados dos usuários do supabaseUsers
+          const enrichedDocs = fallbackDocs?.map(doc => {
+            const userFromSupabase = supabaseUsers.find(u => u.id === doc.user_id);
+            const userFromAuth = supabaseUsers.find(u => u.id === doc.user_id);
+            
+            return {
+              ...doc,
+              userName: userFromSupabase?.user_metadata?.name || 
+                       userFromAuth?.email?.split('@')[0] || 
+                       'Usuário sem nome',
+              userEmail: userFromSupabase?.email || userFromAuth?.email || 'Sem email',
+              created_at: doc.uploaded_at // Para compatibilidade com o componente
+            };
+          }) || [];
+          
+          setRecentDocuments(enrichedDocs);
+          return;
+        }
         
-        // Enriquecer com dados dos usuários auth se necessário
+        // Mapear documentos com dados do usuário
         const enrichedDocs = documents?.map(doc => ({
           ...doc,
           userName: doc.users?.name || 'Usuário sem nome',
-          userEmail: doc.users?.email || 'Sem email'
+          userEmail: doc.users?.email || 'Sem email',
+          created_at: doc.uploaded_at // Para compatibilidade com o componente
         })) || [];
         
         setRecentDocuments(enrichedDocs);
       } catch (error) {
         console.error("Error fetching recent documents:", error);
-        
-        // Fallback: buscar apenas documentos e tentar mapear com supabaseUsers
-        try {
-          const { data, error } = await supabase
-            .from('documents')
-            .select('*, user_id')
-            .order('uploaded_at', { ascending: false })
-            .limit(5);
-          
-          if (error) throw error;
-          
-          const enrichedDocs = data?.map(doc => {
-            const user = supabaseUsers.find(u => u.id === doc.user_id);
-            return {
-              ...doc,
-              userName: user?.user_metadata?.name || user?.email?.split('@')[0] || 'Usuário sem nome',
-              userEmail: user?.email || 'Sem email'
-            };
-          }) || [];
-          
-          setRecentDocuments(enrichedDocs);
-        } catch (fallbackError) {
-          console.error("Error in fallback fetch:", fallbackError);
-          setRecentDocuments([]);
-        }
+        setRecentDocuments([]);
       } finally {
         setIsLoading(false);
       }
     };
     
-    fetchRecentDocuments();
+    if (supabaseUsers.length > 0) {
+      fetchRecentDocuments();
+    }
   }, [supabaseUsers]);
   
   // Format date for display
@@ -149,6 +160,8 @@ export const useDashboardData = (supabaseUsers: any[]) => {
     if (!dateStr) return 'Data desconhecida';
     try {
       const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return 'Data inválida';
+      
       return new Intl.DateTimeFormat('pt-BR', {
         day: '2-digit',
         month: '2-digit',
@@ -157,6 +170,7 @@ export const useDashboardData = (supabaseUsers: any[]) => {
         minute: '2-digit'
       }).format(date);
     } catch (error) {
+      console.error('Error formatting date:', error);
       return 'Data inválida';
     }
   };
@@ -166,6 +180,8 @@ export const useDashboardData = (supabaseUsers: any[]) => {
     if (!dateStr) return 'Data desconhecida';
     try {
       const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return 'Data inválida';
+      
       return new Intl.DateTimeFormat('pt-BR', {
         day: '2-digit',
         month: '2-digit',
@@ -174,6 +190,7 @@ export const useDashboardData = (supabaseUsers: any[]) => {
         minute: '2-digit'
       }).format(date);
     } catch (error) {
+      console.error('Error formatting recent date:', error);
       return 'Data inválida';
     }
   };

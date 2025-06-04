@@ -133,16 +133,19 @@ ${simulation.tipo_simulacao === 'IRPF' ? 'Imposto' : 'Contribuição'}: ${curren
       
       if (error) throw error;
       
+      // Atualizar o estado local removendo a simulação excluída
       setSimulations(prev => prev.filter(sim => sim.id !== id));
+      setFilteredSimulations(prev => prev.filter(sim => sim.id !== id));
+      
       toast({
         title: "Sucesso",
-        description: "Simulação excluída com sucesso."
+        description: "Simulação excluída com sucesso do banco de dados."
       });
     } catch (error) {
       console.error('Erro ao excluir simulação:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível excluir a simulação.",
+        description: "Não foi possível excluir a simulação do banco de dados.",
         variant: "destructive"
       });
     }

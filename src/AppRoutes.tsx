@@ -82,6 +82,12 @@ const AppRoutes = () => {
         </PrivateRoute>
       } />
       
+      <Route path="/admin/agenda" element={
+        <PrivateRoute requiredRole="admin">
+          <AdminDashboard activeTab="agenda" />
+        </PrivateRoute>
+      } />
+      
       <Route path="/admin/settings" element={
         <PrivateRoute requiredRole="admin">
           <AdminDashboard activeTab="settings" />
