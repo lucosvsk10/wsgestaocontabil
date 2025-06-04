@@ -50,7 +50,7 @@ export const AdminTabsView = ({ activeTab }: AdminTabsViewProps) => {
       throw new Error("As senhas não coincidem");
     }
     
-    await changeUserPassword(selectedUserForPasswordChange.id, data.password);
+    await changeUserPassword(data);
     setSelectedUserForPasswordChange(null);
     passwordForm.reset();
   };
@@ -58,7 +58,7 @@ export const AdminTabsView = ({ activeTab }: AdminTabsViewProps) => {
   const renderTabContent = () => {
     switch (activeTab) {
       case "dashboard":
-        return <AdminDashboardView />;
+        return <AdminDashboardView users={users} supabaseUsers={supabaseUsers} documents={[]} />;
       case "users":
         return (
           <UserList 
@@ -90,7 +90,7 @@ export const AdminTabsView = ({ activeTab }: AdminTabsViewProps) => {
       case "settings":
         return <SettingsView />;
       default:
-        return <AdminDashboardView />;
+        return <AdminDashboardView users={users} supabaseUsers={supabaseUsers} documents={[]} />;
     }
   };
 
@@ -99,15 +99,18 @@ export const AdminTabsView = ({ activeTab }: AdminTabsViewProps) => {
       {renderTabContent()}
       
       <AdminPasswordChangeModal
-        isOpen={!!selectedUserForPasswordChange}
-        onClose={() => {
-          setSelectedUserForPasswordChange(null);
-          passwordForm.reset();
+        selectedUserForPasswordChange={selectedUserForPasswordChange}
+        setSelectedUserForPasswordChange={setSelectedUserForPasswordChange}
+        changeUserPassword={handlePasswordChange}
+        isChangingPassword={isChangingPassword}
+        passwordForm={passwordForm}
+        passwordChangeModalOpen={!!selectedUserForPasswordChange}
+        setPasswordChangeModalOpen={(open) => {
+          if (!open) {
+            setSelectedUserForPasswordChange(null);
+            passwordForm.reset();
+          }
         }}
-        onSubmit={handlePasswordChange}
-        isLoading={isChangingPassword}
-        form={passwordForm}
-        user={selectedUserForPasswordChange}
       />
     </>
   );

@@ -102,41 +102,7 @@ const AdminDashboard = ({
   
   return (
     <AdminLayout>
-      <AdminTabsView 
-        activeTab={activeTab} 
-        supabaseUsers={supabaseUsers} 
-        users={users} 
-        userInfoList={users} 
-        isLoadingUsers={isLoadingUsers} 
-        isLoadingAuthUsers={isLoadingAuthUsers} 
-        handleDocumentButtonClick={handleDocumentButtonClick} 
-        setSelectedUserForPasswordChange={user => {
-          setSelectedUserForPasswordChange(user);
-          setPasswordChangeModalOpen(true);
-        }} 
-        passwordForm={passwordForm} 
-        refreshUsers={refreshUsers} 
-        createUser={createUser} 
-        isCreatingUser={isCreatingUser} 
-        selectedUserId={selectedUserId} 
-        documentName={documentName} 
-        setDocumentName={setDocumentName} 
-        documentCategory={documentCategory} 
-        setDocumentCategory={setDocumentCategory} 
-        documentObservations={documentObservations} 
-        setDocumentObservations={setDocumentObservations} 
-        handleFileChange={handleFileChange} 
-        handleUpload={handleUpload} 
-        isUploading={isUploading} 
-        documents={documents} 
-        isLoadingDocuments={isLoadingDocuments} 
-        handleDeleteDocument={handleDeleteDocument} 
-        documentCategories={documentCategories} 
-        expirationDate={expirationDate} 
-        setExpirationDate={setExpirationDate} 
-        noExpiration={noExpiration} 
-        setNoExpiration={setNoExpiration} 
-      />
+      <AdminTabsView activeTab={activeTab} />
       
       <AdminPasswordChangeModal 
         selectedUserForPasswordChange={selectedUserForPasswordChange} 
