@@ -38,7 +38,7 @@ export const DocumentsSection = ({
     setSelectedCategory("all");
   };
   return <Card className="bg-white dark:bg-[#0b1320] border-gray-200 dark:border-[#efc349]/20">
-      <CardHeader className="bg-deepNavy-90">
+      <CardHeader className="bg-transparent">
         <CardTitle className="text-[#020817] dark:text-[#efc349] font-extralight flex items-center py-[10px]">
           <FileText className="w-6 h-6 mr-2" />
           Documentos
@@ -77,7 +77,7 @@ export const DocumentsSection = ({
         </div>
       </CardHeader>
       
-      <CardContent className="bg-deepNavy-90">
+      <CardContent className="bg-transparent">
         {/* Tabs por categoria */}
         <div className="flex flex-wrap gap-2 mb-6">
           {categories.map(category => {
