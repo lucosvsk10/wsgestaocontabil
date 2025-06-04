@@ -4,6 +4,7 @@ import { PollsTabView } from "./polls/PollsTabView";
 import { UserDocumentView } from "./UserDocumentView";
 import { SimulationsView } from "./simulations/SimulationsView";
 import { StorageView } from "./storage/StorageView";
+import { FiscalCalendar } from "./FiscalCalendar";
 import { UserType } from "@/types/admin";
 import { Poll } from "@/types/polls";
 import { AdminDashboardView } from "./dashboard/AdminDashboardView";
@@ -25,7 +26,6 @@ export interface AdminTabsViewProps {
   refreshUsers?: () => void;
   createUser?: (data: any) => Promise<void>;
   isCreatingUser?: boolean;
-  // Props para DocumentManager
   selectedUserId?: string | null;
   documentName?: string;
   setDocumentName?: (name: string) => void;
@@ -44,7 +44,6 @@ export interface AdminTabsViewProps {
   setExpirationDate?: (date: Date | null) => void;
   noExpiration?: boolean;
   setNoExpiration?: (value: boolean) => void;
-  // Props para PollResults
   selectedPoll?: Poll | null;
 }
 
@@ -118,6 +117,11 @@ export function AdminTabsView({
         {/* Tab Content - Announcements */}
         {activeTab === "announcements" && <div className="space-y-8">
             <AnnouncementsView />
+          </div>}
+
+        {/* Tab Content - Fiscal Calendar */}
+        {activeTab === "agenda" && <div className="space-y-8">
+            <FiscalCalendar />
           </div>}
 
         {/* Tab Content - Settings */}

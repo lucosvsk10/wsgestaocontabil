@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -9,27 +10,95 @@ import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { useState } from "react";
 import { StorageDistributionChart } from "./StorageDistributionChart";
 import { StorageUsageList } from "./StorageUsageList";
+import { useToast } from "@/hooks/use-toast";
+
 export const StorageView = () => {
-  const {
-    storageStats,
-    isLoading
-  } = useStorageStats();
+  const { storageStats, isLoading } = useStorageStats();
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("usage");
   const [filterType, setFilterType] = useState("all");
+  const { toast } = useToast();
+
   const formatSize = (bytes: number) => {
     if (bytes === 0) return '0 B';
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
     return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
   };
-  const usedPercentage = storageStats ? storageStats.totalStorageMB / 100 * 100 : 0;
+
+  const usedPercentage = storageStats ? (storageStats.totalStorageMB / 100) * 100 : 0;
+
+  const handleExportReport = () => {
+    try {
+      if (!storageStats) {
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Dados de armazenamento não disponíveis para exportação"
+        });
+        return;
+      }
+
+      // Criar dados do relatório
+      const reportData = {
+        timestamp: new Date().toISOString(),
+        totalStorage: formatSize(storageStats.totalStorageBytes),
+        totalDocuments: storageStats.userStorage?.length || 0,
+        activeUsers: storageStats.userStorage?.filter(u => u.sizeBytes > 0).length || 0,
+        userStorage: storageStats.userStorage?.map(user => ({
+          userName: user.userName || 'Usuário sem nome',
+          userEmail: user.userEmail || 'Sem email',
+          documentsCount: user.documentsCount || 0,
+          totalSize: formatSize(user.sizeBytes || 0)
+        })) || []
+      };
+
+      // Gerar CSV
+      const csvHeader = 'Nome do Usuário,Email,Quantidade de Documentos,Tamanho Total\n';
+      const csvData = reportData.userStorage.map(user => 
+        `"${user.userName}","${user.userEmail}",${user.documentsCount},"${user.totalSize}"`
+      ).join('\n');
+      
+      const csvContent = csvHeader + csvData;
+      
+      // Criar e baixar arquivo
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      
+      if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `relatorio-armazenamento-${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        toast({
+          title: "Relatório exportado",
+          description: "O relatório de armazenamento foi baixado com sucesso"
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao exportar relatório:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro na exportação",
+        description: "Não foi possível exportar o relatório"
+      });
+    }
+  };
+
   if (isLoading) {
-    return <div className="min-h-screen bg-[#fdfdfd] dark:bg-[#020817] flex items-center justify-center">
+    return (
+      <div className="min-h-screen bg-[#fdfdfd] dark:bg-[#020817] flex items-center justify-center">
         <LoadingSpinner />
-      </div>;
+      </div>
+    );
   }
-  return <div className="min-h-screen bg-[#fdfdfd] dark:bg-[#020817] p-8">
+
+  return (
+    <div className="min-h-screen bg-[#fdfdfd] dark:bg-[#020817] p-8">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -41,7 +110,10 @@ export const StorageView = () => {
               Monitore o uso de espaço e gerencie documentos do sistema
             </p>
           </div>
-          <Button className="bg-[#020817] border border-[#efc349] text-white dark:bg-transparent dark:border-[#efc349] dark:text-[#efc349] hover:bg-[#0f172a] dark:hover:bg-[#efc349]/10">
+          <Button 
+            onClick={handleExportReport}
+            className="bg-[#020817] border border-[#efc349] text-white dark:bg-transparent dark:border-[#efc349] dark:text-[#efc349] hover:bg-[#0f172a] dark:hover:bg-[#efc349]/10"
+          >
             <Download className="mr-2 h-4 w-4" />
             Exportar Relatório
           </Button>
@@ -108,7 +180,12 @@ export const StorageView = () => {
         <div className="flex flex-col md:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input placeholder="Buscar por usuário..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 bg-white dark:bg-[#0b0f1c] border-gray-200 dark:border-[#efc349]/30" />
+            <Input 
+              placeholder="Buscar por usuário..." 
+              value={searchTerm} 
+              onChange={(e) => setSearchTerm(e.target.value)} 
+              className="pl-10 bg-white dark:bg-[#0b0f1c] border-gray-200 dark:border-[#efc349]/30" 
+            />
           </div>
           <Select value={sortBy} onValueChange={setSortBy}>
             <SelectTrigger className="w-full md:w-48 bg-white dark:bg-[#0b0f1c] border-gray-200 dark:border-[#efc349]/30">
@@ -155,10 +232,15 @@ export const StorageView = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <StorageUsageList userStorage={storageStats?.userStorage || []} searchTerm={searchTerm} sortBy={sortBy} />
+              <StorageUsageList 
+                userStorage={storageStats?.userStorage || []} 
+                searchTerm={searchTerm} 
+                sortBy={sortBy} 
+              />
             </CardContent>
           </Card>
         </div>
       </div>
-    </div>;
+    </div>
+  );
 };
