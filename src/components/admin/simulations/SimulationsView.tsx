@@ -36,7 +36,6 @@ export const SimulationsView: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedSimulation, setSelectedSimulation] = useState<Simulation | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -126,22 +125,13 @@ ${simulation.tipo_simulacao === 'IRPF' ? 'Imposto' : 'Contribuição'}: ${curren
   };
 
   const deleteSimulation = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta simulação? Esta ação não pode ser desfeita.')) {
-      return;
-    }
-    
     try {
-      setDeletingId(id);
-      
-      // Excluir do banco de dados
       const { error } = await supabase
         .from('tax_simulations')
         .delete()
         .eq('id', id);
       
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
       
       // Atualizar o estado local removendo a simulação excluída
       setSimulations(prev => prev.filter(sim => sim.id !== id));
@@ -149,17 +139,15 @@ ${simulation.tipo_simulacao === 'IRPF' ? 'Imposto' : 'Contribuição'}: ${curren
       
       toast({
         title: "Sucesso",
-        description: "Simulação excluída com sucesso!"
+        description: "Simulação excluída com sucesso do banco de dados."
       });
     } catch (error) {
       console.error('Erro ao excluir simulação:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível excluir a simulação. Tente novamente.",
+        description: "Não foi possível excluir a simulação do banco de dados.",
         variant: "destructive"
       });
-    } finally {
-      setDeletingId(null);
     }
   };
 
@@ -304,13 +292,8 @@ ${simulation.tipo_simulacao === 'IRPF' ? 'Imposto' : 'Contribuição'}: ${curren
                   size="sm"
                   className="h-8 text-xs font-extralight border-red-500/30 hover:bg-red-500/10 text-red-600 dark:text-red-400"
                   onClick={() => deleteSimulation(simulation.id)}
-                  disabled={deletingId === simulation.id}
                 >
-                  {deletingId === simulation.id ? (
-                    <div className="h-3 w-3 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
-                  ) : (
-                    <Trash2 className="h-3 w-3" />
-                  )}
+                  <Trash2 className="h-3 w-3" />
                 </Button>
               </div>
             </CardContent>

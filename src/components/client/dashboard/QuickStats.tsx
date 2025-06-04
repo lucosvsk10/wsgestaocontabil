@@ -1,62 +1,50 @@
 
 import { motion } from "framer-motion";
 import { FileText, Calculator, Bell, Calendar } from "lucide-react";
-import { useQuickStatsData } from "@/hooks/client/useQuickStatsData";
 
-export const QuickStats = () => {
-  const { stats, isLoading } = useQuickStatsData();
+interface QuickStatsProps {
+  documentsCount: number;
+  simulationsCount: number;
+  announcementsCount: number;
+  upcomingEvents: number;
+}
 
-  const statsData = [
+export const QuickStats = ({
+  documentsCount,
+  simulationsCount,
+  announcementsCount,
+  upcomingEvents
+}: QuickStatsProps) => {
+  const stats = [
     {
       icon: FileText,
       label: "Documentos",
-      value: stats.documentsCount,
+      value: documentsCount,
       color: "text-blue-400"
     },
     {
       icon: Calculator,
       label: "Simulações",
-      value: stats.simulationsCount,
+      value: simulationsCount,
       color: "text-green-400"
     },
     {
       icon: Bell,
       label: "Comunicados",
-      value: stats.announcementsCount,
+      value: announcementsCount,
       color: "text-yellow-400"
     },
     {
       icon: Calendar,
       label: "Eventos",
-      value: stats.upcomingEvents,
+      value: upcomingEvents,
       color: "text-purple-400"
     }
   ];
 
-  if (isLoading) {
-    return (
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        {statsData.map((_, index) => (
-          <div
-            key={index}
-            className="bg-white dark:bg-[#0b1320] border border-gray-200 dark:border-[#efc349]/20 rounded-lg p-6 animate-pulse"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-16 mb-2"></div>
-                <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-8"></div>
-              </div>
-              <div className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded"></div>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-      {statsData.map((stat, index) => (
+      {stats.map((stat, index) => (
         <motion.div
           key={index}
           initial={{ opacity: 0, y: 20 }}

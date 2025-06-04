@@ -1,117 +1,134 @@
 
-import { useParams } from "react-router-dom";
-import { AdminDashboardView } from "./dashboard/AdminDashboardView";
 import { UserList } from "./UserList";
-import { DocumentManagementView } from "./document-management/DocumentManagementView";
-import { StorageView } from "./storage/StorageView";
 import { PollsTabView } from "./polls/PollsTabView";
-import { AdminToolsView } from "./tools/AdminToolsView";
+import { UserDocumentView } from "./UserDocumentView";
 import { SimulationsView } from "./simulations/SimulationsView";
-import { AnnouncementsTabView } from "./announcements/AnnouncementsTabView";
+import { StorageView } from "./storage/StorageView";
 import { FiscalCalendar } from "./FiscalCalendar";
+import { UserType } from "@/types/admin";
+import { Poll } from "@/types/polls";
+import { AdminDashboardView } from "./dashboard/AdminDashboardView";
 import { SettingsView } from "./settings/SettingsView";
-import { CompanyDataView } from "./company/CompanyDataView";
-import { useUserManagement } from "@/hooks/useUserManagement";
-import { useUserCreation } from "@/hooks/useUserCreation";
-import { useForm } from "react-hook-form";
-import { AdminPasswordChangeModal } from "./AdminPasswordChangeModal";
+import { AdminToolsView } from "./tools/AdminToolsView";
+import { AnnouncementsView } from "./announcements/AnnouncementsView";
 
-interface AdminTabsViewProps {
-  activeTab: string;
+export interface AdminTabsViewProps {
+  activeTab?: string;
+  // Props para UserList
+  users?: UserType[];
+  supabaseUsers?: any[];
+  userInfoList?: any[];
+  isLoadingUsers?: boolean;
+  isLoadingAuthUsers?: boolean;
+  handleDocumentButtonClick?: (userId: string) => void;
+  setSelectedUserForPasswordChange?: (user: UserType) => void;
+  passwordForm?: any;
+  refreshUsers?: () => void;
+  createUser?: (data: any) => Promise<void>;
+  isCreatingUser?: boolean;
+  selectedUserId?: string | null;
+  documentName?: string;
+  setDocumentName?: (name: string) => void;
+  documentCategory?: string;
+  setDocumentCategory?: (category: string) => void;
+  documentObservations?: string;
+  setDocumentObservations?: (observations: string) => void;
+  handleFileChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleUpload?: (e: React.FormEvent) => Promise<void>;
+  isUploading?: boolean;
+  documents?: any[];
+  isLoadingDocuments?: boolean;
+  handleDeleteDocument?: (documentId: string) => Promise<void>;
+  documentCategories?: string[];
+  expirationDate?: Date | null;
+  setExpirationDate?: (date: Date | null) => void;
+  noExpiration?: boolean;
+  setNoExpiration?: (value: boolean) => void;
+  selectedPoll?: Poll | null;
 }
 
-export const AdminTabsView = ({ activeTab }: AdminTabsViewProps) => {
-  const { userId } = useParams();
-  const {
-    users,
-    supabaseUsers,
-    isLoadingUsers,
-    isLoadingAuthUsers,
-    isChangingPassword,
-    selectedUserForPasswordChange,
-    setSelectedUserForPasswordChange,
-    changeUserPassword,
-    refreshUsers
-  } = useUserManagement();
-
-  const { isCreatingUser, createUser } = useUserCreation(refreshUsers);
-  
-  const passwordForm = useForm({
-    defaultValues: {
-      password: "",
-      confirmPassword: ""
-    }
-  });
-
-  const handlePasswordChange = async (data: { password: string; confirmPassword: string }) => {
-    if (!selectedUserForPasswordChange) return;
-    
-    if (data.password !== data.confirmPassword) {
-      throw new Error("As senhas não coincidem");
-    }
-    
-    await changeUserPassword(data);
-    setSelectedUserForPasswordChange(null);
-    passwordForm.reset();
-  };
-
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case "dashboard":
-        return <AdminDashboardView users={users} supabaseUsers={supabaseUsers} documents={[]} />;
-      case "users":
-        return (
-          <UserList 
-            supabaseUsers={supabaseUsers}
-            users={users}
-            isLoading={isLoadingUsers || isLoadingAuthUsers}
-            setSelectedUserId={() => {}}
-            setSelectedUserForPasswordChange={setSelectedUserForPasswordChange}
-            passwordForm={passwordForm}
-            refreshUsers={refreshUsers}
-          />
-        );
-      case "user-documents":
-        return <DocumentManagementView />;
-      case "company-data":
-        return userId ? <CompanyDataView userId={userId} /> : <div>ID do usuário não encontrado</div>;
-      case "storage":
-        return <StorageView />;
-      case "polls":
-        return <PollsTabView />;
-      case "tools":
-        return <AdminToolsView />;
-      case "simulations":
-        return <SimulationsView />;
-      case "announcements":
-        return <AnnouncementsTabView />;
-      case "agenda":
-        return <FiscalCalendar />;
-      case "settings":
-        return <SettingsView />;
-      default:
-        return <AdminDashboardView users={users} supabaseUsers={supabaseUsers} documents={[]} />;
-    }
-  };
-
+export function AdminTabsView({
+  activeTab,
+  users,
+  supabaseUsers,
+  userInfoList,
+  isLoadingUsers,
+  isLoadingAuthUsers,
+  handleDocumentButtonClick,
+  setSelectedUserForPasswordChange,
+  passwordForm,
+  refreshUsers,
+  createUser,
+  isCreatingUser,
+  selectedUserId,
+  documentName,
+  setDocumentName,
+  documentCategory,
+  setDocumentCategory,
+  documentObservations,
+  setDocumentObservations,
+  handleFileChange,
+  handleUpload,
+  isUploading,
+  documents,
+  isLoadingDocuments,
+  handleDeleteDocument,
+  documentCategories,
+  expirationDate,
+  setExpirationDate,
+  noExpiration,
+  setNoExpiration,
+  selectedPoll
+}: AdminTabsViewProps) {
   return (
-    <>
-      {renderTabContent()}
-      
-      <AdminPasswordChangeModal
-        selectedUserForPasswordChange={selectedUserForPasswordChange}
-        setSelectedUserForPasswordChange={setSelectedUserForPasswordChange}
-        changeUserPassword={handlePasswordChange}
-        isChangingPassword={isChangingPassword}
-        passwordForm={passwordForm}
-        passwordChangeModalOpen={!!selectedUserForPasswordChange}
-        setPasswordChangeModalOpen={(open) => {
-          if (!open) {
-            setSelectedUserForPasswordChange(null);
-            passwordForm.reset();
-          }
-        }}
-      />
-    </>
+    <div className="w-full">
+      <div className="mt-4">
+        {/* Tab Content - Dashboard */}
+        {activeTab === "dashboard" && <AdminDashboardView users={users || []} supabaseUsers={supabaseUsers || []} documents={documents || []} />}
+
+        {/* Tab Content - Users */}
+        {activeTab === "users" && <div className="space-y-8">
+            {users && supabaseUsers && <UserList supabaseUsers={supabaseUsers} users={users} isLoading={isLoadingUsers || isLoadingAuthUsers} setSelectedUserId={handleDocumentButtonClick || (() => {})} setSelectedUserForPasswordChange={setSelectedUserForPasswordChange || (() => {})} passwordForm={passwordForm || {}} refreshUsers={refreshUsers || (() => {})} />}
+          </div>}
+
+        {/* Tab Content - User Documents */}
+        {activeTab === "user-documents" && <UserDocumentView users={users || []} supabaseUsers={supabaseUsers || []} />}
+
+        {/* Tab Content - Storage */}
+        {activeTab === "storage" && <div className="space-y-8">
+            <StorageView />
+          </div>}
+
+        {/* Tab Content - Polls */}
+        {activeTab === "polls" && <div className="space-y-8">
+            <PollsTabView />
+          </div>}
+
+        {/* Tab Content - Tools */}
+        {activeTab === "tools" && <div className="space-y-8">
+            <AdminToolsView />
+          </div>}
+
+        {/* Tab Content - Simulations */}
+        {activeTab === "simulations" && <div className="space-y-8">
+            <SimulationsView />
+          </div>}
+
+        {/* Tab Content - Announcements */}
+        {activeTab === "announcements" && <div className="space-y-8">
+            <AnnouncementsView />
+          </div>}
+
+        {/* Tab Content - Fiscal Calendar */}
+        {activeTab === "agenda" && <div className="space-y-8">
+            <FiscalCalendar />
+          </div>}
+
+        {/* Tab Content - Settings */}
+        {activeTab === "settings" && <div className="space-y-8">
+            <SettingsView />
+          </div>}
+      </div>
+    </div>
   );
-};
+}

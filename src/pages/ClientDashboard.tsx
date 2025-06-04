@@ -66,7 +66,12 @@ const ClientDashboard = () => {
     <div className="min-h-screen bg-[#FFF1DE] dark:bg-[#020817]">
       <ClientDashboardLayout activeTab={activeTab} setActiveTab={setActiveTab}>
         <WelcomeHeader />
-        <QuickStats />
+        <QuickStats 
+          documentsCount={documents.length} 
+          simulationsCount={0} 
+          announcementsCount={0} 
+          upcomingEvents={0} 
+        />
         {renderContent()}
       </ClientDashboardLayout>
     </div>
