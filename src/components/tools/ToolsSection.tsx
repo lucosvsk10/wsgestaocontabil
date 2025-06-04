@@ -1,47 +1,42 @@
-
 import { motion } from "framer-motion";
 import { Calculator, PiggyBank, FileText } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-
 const ToolsSection = () => {
   const navigate = useNavigate();
-
-  const tools = [
-    {
-      title: "Simulador IRPF",
-      description: "Calcule seu Imposto de Renda Pessoa Física com precisão",
-      icon: Calculator,
-      route: "/simulador-irpf",
-      color: "text-blue-600 dark:text-blue-400"
-    },
-    {
-      title: "Calculadora INSS",
-      description: "Simule suas contribuições do INSS de forma rápida",
-      icon: PiggyBank,
-      route: "/calculadora-inss",
-      color: "text-green-600 dark:text-green-400"
-    },
-    {
-      title: "Simulador Pró-labore",
-      description: "Calcule o pró-labore ideal para sua empresa",
-      icon: FileText,
-      route: "/simulador-prolabore",
-      color: "text-purple-600 dark:text-purple-400"
-    }
-  ];
-
-  return (
-    <section id="ferramentas" className="py-20 bg-white dark:bg-[#0b1320]">
+  const tools = [{
+    title: "Simulador IRPF",
+    description: "Calcule seu Imposto de Renda Pessoa Física com precisão",
+    icon: Calculator,
+    route: "/simulador-irpf",
+    color: "text-blue-600 dark:text-blue-400"
+  }, {
+    title: "Calculadora INSS",
+    description: "Simule suas contribuições do INSS de forma rápida",
+    icon: PiggyBank,
+    route: "/calculadora-inss",
+    color: "text-green-600 dark:text-green-400"
+  }, {
+    title: "Simulador Pró-labore",
+    description: "Calcule o pró-labore ideal para sua empresa",
+    icon: FileText,
+    route: "/simulador-prolabore",
+    color: "text-purple-600 dark:text-purple-400"
+  }];
+  return <section id="ferramentas" className="py-20 bg-transparent">
       <div className="container mx-auto px-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          viewport={{ once: true }}
-          className="text-center mb-16"
-        >
+        <motion.div initial={{
+        opacity: 0,
+        y: 20
+      }} whileInView={{
+        opacity: 1,
+        y: 0
+      }} transition={{
+        duration: 0.6
+      }} viewport={{
+        once: true
+      }} className="text-center mb-16">
           <h2 className="text-4xl font-extralight text-[#020817] dark:text-[#efc349] mb-6">
             FERRAMENTAS
           </h2>
@@ -52,14 +47,18 @@ const ToolsSection = () => {
         </motion.div>
 
         <div className="grid md:grid-cols-3 gap-8">
-          {tools.map((tool, index) => (
-            <motion.div
-              key={tool.title}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: index * 0.2 }}
-              viewport={{ once: true }}
-            >
+          {tools.map((tool, index) => <motion.div key={tool.title} initial={{
+          opacity: 0,
+          y: 30
+        }} whileInView={{
+          opacity: 1,
+          y: 0
+        }} transition={{
+          duration: 0.6,
+          delay: index * 0.2
+        }} viewport={{
+          once: true
+        }}>
               <Card className="h-full border-[#efc349]/30 bg-white dark:bg-[#0b1320] hover:shadow-lg transition-all duration-300 hover:border-[#efc349]/60">
                 <CardHeader className="text-center pb-4">
                   <div className="mx-auto mb-4 p-3 rounded-full bg-[#efc349]/10 dark:bg-[#efc349]/20 w-fit">
@@ -89,20 +88,14 @@ const ToolsSection = () => {
                     </div>
                   </div>
                   
-                  <Button 
-                    onClick={() => navigate(tool.route)}
-                    className="w-full bg-[#020817] dark:bg-transparent border border-[#efc349] text-white dark:text-[#efc349] hover:bg-[#020817]/90 dark:hover:bg-[#efc349]/10 font-extralight"
-                  >
+                  <Button onClick={() => navigate(tool.route)} className="w-full bg-[#020817] dark:bg-transparent border border-[#efc349] text-white dark:text-[#efc349] hover:bg-[#020817]/90 dark:hover:bg-[#efc349]/10 font-extralight">
                     Acessar Calculadora
                   </Button>
                 </CardContent>
               </Card>
-            </motion.div>
-          ))}
+            </motion.div>)}
         </div>
       </div>
-    </section>
-  );
+    </section>;
 };
-
 export default ToolsSection;
