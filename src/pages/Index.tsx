@@ -5,6 +5,7 @@ import Hero from '../components/Hero';
 import About from '../components/About';
 import BusinessNews from '../components/BusinessNews';
 import AccountingSection from '../components/accounting/AccountingSection';
+import ToolsSection from '../components/tools/ToolsSection';
 import Footer from '../components/Footer';
 import { PollWidget } from "@/components/polls/PollWidget";
 import FloatingToolsMenu from '@/components/accounting/FloatingToolsMenu';
@@ -45,6 +46,7 @@ const Index = () => {
         <About />
         <BusinessNews />
         <AccountingSection />
+        <ToolsSection />
       </main>
       <Footer />
       
@@ -59,6 +61,7 @@ const Index = () => {
           <a href="#sobre" className="w-3 h-3 rounded-full bg-[#efc349]/30 hover:bg-[#efc349] transition-colors duration-300" aria-label="Ir para sobre" />
           <a href="#noticias" className="w-3 h-3 rounded-full bg-[#efc349]/30 hover:bg-[#efc349] transition-colors duration-300" aria-label="Ir para notícias" />
           <a href="#contabil" className="w-3 h-3 rounded-full bg-[#efc349]/30 hover:bg-[#efc349] transition-colors duration-300" aria-label="Ir para contábil" />
+          <a href="#ferramentas" className="w-3 h-3 rounded-full bg-[#efc349]/30 hover:bg-[#efc349] transition-colors duration-300" aria-label="Ir para ferramentas" />
           <a href="#contato" className="w-3 h-3 rounded-full bg-[#efc349]/30 hover:bg-[#efc349] transition-colors duration-300" aria-label="Ir para contato" />
         </div>
       </div>
