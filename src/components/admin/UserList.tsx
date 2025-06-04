@@ -1,10 +1,11 @@
+
 import { useState, useEffect } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Lock, Trash2, Mail, Calendar, Settings, Search, Plus, Users, UserCheck, MoreHorizontal } from "lucide-react";
+import { FileText, Lock, Trash2, Mail, Calendar, Settings, Search, Plus, Users, UserCheck, Building } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { formatDate } from "./utils/dateUtils";
 import { LoadingSpinner } from "../common/LoadingSpinner";
@@ -222,9 +223,10 @@ export const UserList = ({
                         size="sm" 
                         variant="outline"
                         className="bg-transparent border border-[#efc349] text-[#020817] dark:text-[#efc349] hover:bg-[#efc349]/10 font-extralight"
+                        onClick={() => navigate(`/admin/company-data/${user.id}`)}
                       >
-                        <MoreHorizontal className="h-4 w-4 mr-1" />
-                        ...
+                        <Building className="h-4 w-4 mr-1" />
+                        Empresa
                       </Button>
                       <Button 
                         size="sm" 
