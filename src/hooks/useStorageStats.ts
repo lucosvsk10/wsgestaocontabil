@@ -5,11 +5,14 @@ import { useToast } from "@/hooks/use-toast";
 
 export interface UserStorageData {
   userId: string;
+  userName: string | null;
+  userEmail: string | null;
   name: string | null;
   email: string | null;
   sizeBytes: number;
   sizeKB: number;
   sizeMB: number;
+  documentsCount: number;
 }
 
 export interface StorageStats {
@@ -62,7 +65,7 @@ export const useStorageStats = () => {
       // Fallback: Calculate from documents table if edge function failed
       const { data: documents, error: docError } = await supabase
         .from('documents')
-        .select('size');
+        .select('user_id, size');
       
       if (docError) throw docError;
       
@@ -71,18 +74,22 @@ export const useStorageStats = () => {
       const totalKB = Math.round(totalBytes / 1024 * 100) / 100;
       const totalMB = Math.round(totalBytes / (1024 * 1024) * 100) / 100;
       
-      // Get per-user stats
+      // Get per-user stats with document counts
       const { data: userDocs, error: userError } = await supabase
         .from('documents')
         .select('user_id, size');
       
       if (userError) throw userError;
       
-      // Group by user_id
-      const userStorageMap: Record<string, number> = {};
+      // Group by user_id and count documents
+      const userStorageMap: Record<string, { size: number; count: number }> = {};
       userDocs.forEach(doc => {
         if (doc.user_id && doc.size) {
-          userStorageMap[doc.user_id] = (userStorageMap[doc.user_id] || 0) + doc.size;
+          if (!userStorageMap[doc.user_id]) {
+            userStorageMap[doc.user_id] = { size: 0, count: 0 };
+          }
+          userStorageMap[doc.user_id].size += doc.size;
+          userStorageMap[doc.user_id].count += 1;
         }
       });
       
@@ -94,15 +101,18 @@ export const useStorageStats = () => {
       if (usersError) throw usersError;
       
       // Build user storage data
-      const userStorage: UserStorageData[] = Object.entries(userStorageMap).map(([userId, size]) => {
+      const userStorage: UserStorageData[] = Object.entries(userStorageMap).map(([userId, data]) => {
         const user = users.find(u => u.id === userId);
         return {
           userId,
+          userName: user?.name || 'Usuário sem nome',
+          userEmail: user?.email || 'Sem email',
           name: user?.name,
           email: user?.email,
-          sizeBytes: size,
-          sizeKB: Math.round(size / 1024 * 100) / 100,
-          sizeMB: Math.round(size / (1024 * 1024) * 100) / 100
+          sizeBytes: data.size,
+          sizeKB: Math.round(data.size / 1024 * 100) / 100,
+          sizeMB: Math.round(data.size / (1024 * 1024) * 100) / 100,
+          documentsCount: data.count
         };
       });
       

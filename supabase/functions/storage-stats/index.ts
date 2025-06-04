@@ -113,8 +113,8 @@ serve(async (req) => {
 
     const authUsers = authData.users;
 
-    // Calcular uso de armazenamento por usuário
-    const storageByUser: Record<string, { size: number; name: string | null; email: string | null }> = {};
+    // Calcular uso de armazenamento por usuário com contagem de documentos
+    const storageByUser: Record<string, { size: number; name: string | null; email: string | null; count: number }> = {};
     
     documents.forEach(doc => {
       if (!doc.user_id || !doc.size) return;
@@ -126,21 +126,26 @@ serve(async (req) => {
         storageByUser[doc.user_id] = {
           size: 0,
           name: user?.name || authUser?.user_metadata?.name || null,
-          email: user?.email || authUser?.email || null
+          email: user?.email || authUser?.email || null,
+          count: 0
         };
       }
       
       storageByUser[doc.user_id].size += doc.size || 0;
+      storageByUser[doc.user_id].count += 1;
     });
 
     // Transformar em array para facilitar o uso no frontend
     const storageStats = Object.entries(storageByUser).map(([userId, data]) => ({
       userId,
+      userName: data.name || 'Usuário sem nome',
+      userEmail: data.email || 'Sem email',
       name: data.name,
       email: data.email,
       sizeBytes: data.size,
       sizeKB: Math.round(data.size / 1024 * 100) / 100,
-      sizeMB: Math.round(data.size / (1024 * 1024) * 100) / 100
+      sizeMB: Math.round(data.size / (1024 * 1024) * 100) / 100,
+      documentsCount: data.count
     }));
 
     // Calcular o uso total
