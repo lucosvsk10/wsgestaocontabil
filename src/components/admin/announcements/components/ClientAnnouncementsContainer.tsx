@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +11,7 @@ import { Bell, Plus, Edit, Trash2, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ClientAnnouncement {
   id: string;
@@ -39,6 +39,7 @@ export const ClientAnnouncementsContainer = () => {
     expires_at: ""
   });
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchAnnouncements();
@@ -66,10 +67,20 @@ export const ClientAnnouncementsContainer = () => {
   };
 
   const handleSave = async () => {
+    if (!user?.id) {
+      toast({
+        title: "Erro",
+        description: "Usuário não autenticado.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       const dataToSave = {
         ...formData,
-        expires_at: formData.expires_at || null
+        expires_at: formData.expires_at || null,
+        created_by: user.id
       };
 
       if (editingAnnouncement) {

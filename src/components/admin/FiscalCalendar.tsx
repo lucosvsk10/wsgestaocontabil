@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,7 +49,14 @@ const FiscalCalendar = () => {
         .order('date', { ascending: true });
 
       if (error) throw error;
-      setEvents(data || []);
+      
+      // Map the data to ensure status is properly typed
+      const typedEvents: FiscalEvent[] = (data || []).map(event => ({
+        ...event,
+        status: event.status as 'upcoming' | 'today' | 'overdue' | 'completed'
+      }));
+      
+      setEvents(typedEvents);
     } catch (error) {
       console.error('Erro ao buscar eventos:', error);
       toast({

@@ -1,10 +1,9 @@
-
 import { UserList } from "./UserList";
 import { PollsTabView } from "./polls/PollsTabView";
 import { UserDocumentView } from "./UserDocumentView";
 import { SimulationsView } from "./simulations/SimulationsView";
 import { StorageView } from "./storage/StorageView";
-import { FiscalCalendar } from "./FiscalCalendar";
+import FiscalCalendar from "./FiscalCalendar";
 import { UserType } from "@/types/admin";
 import { Poll } from "@/types/polls";
 import { AdminDashboardView } from "./dashboard/AdminDashboardView";
