@@ -10,25 +10,25 @@ export const QuickStats = () => {
   const statsData = [
     {
       title: "Documentos",
-      value: loading ? "..." : stats.documents,
+      value: loading ? "..." : stats.documentsCount,
       icon: FileText,
       color: "text-blue-500"
     },
     {
       title: "Simulações",
-      value: loading ? "..." : stats.simulations,
+      value: loading ? "..." : stats.simulationsCount,
       icon: Calculator,
       color: "text-green-500"
     },
     {
       title: "Agenda",
-      value: loading ? "..." : stats.events,
+      value: loading ? "..." : stats.upcomingEvents,
       icon: Calendar,
       color: "text-purple-500"
     },
     {
       title: "Avisos",
-      value: loading ? "..." : stats.announcements,
+      value: loading ? "..." : stats.announcementsCount,
       icon: MessageSquare,
       color: "text-orange-500"
     }
