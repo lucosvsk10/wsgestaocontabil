@@ -1,69 +1,86 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, Instagram, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-interface CarouselItem {
+interface ClientItem {
   id: string;
-  title: string;
-  description: string;
-  image_url: string;
-  button_text?: string;
-  button_url?: string;
+  name: string;
+  logo_url: string;
+  instagram_url?: string;
   order_index: number;
   active: boolean;
 }
 
 const CarouselManager = () => {
-  const [items, setItems] = useState<CarouselItem[]>([]);
+  const [clients, setClients] = useState<ClientItem[]>([
+    {
+      id: "1",
+      name: "Empresa Exemplo 1",
+      logo_url: "/lovable-uploads/cb878201-552e-4728-a814-1554857917b4.png",
+      instagram_url: "https://instagram.com/empresa1",
+      order_index: 0,
+      active: true
+    }
+  ]);
+  
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<CarouselItem | null>(null);
+  const [editingClient, setEditingClient] = useState<ClientItem | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    image_url: "",
-    button_text: "",
-    button_url: "",
+    name: "",
+    logo_url: "",
+    instagram_url: "",
     active: true
   });
+
+  // Carregar dados do localStorage
+  useEffect(() => {
+    const savedClients = localStorage.getItem('carousel_clients');
+    if (savedClients) {
+      setClients(JSON.parse(savedClients));
+    }
+  }, []);
+
+  // Salvar no localStorage sempre que houver mudanças
+  useEffect(() => {
+    localStorage.setItem('carousel_clients', JSON.stringify(clients));
+  }, [clients]);
 
   const handleSave = async () => {
     setIsLoading(true);
     try {
-      // Simulação de salvamento - será implementado quando a tabela existir
-      const newItem: CarouselItem = {
-        id: Date.now().toString(),
+      const newClient: ClientItem = {
+        id: editingClient?.id || Date.now().toString(),
         ...formData,
-        order_index: items.length
+        order_index: editingClient?.order_index || clients.length
       };
 
-      if (editingItem) {
-        setItems(prev => prev.map(item => 
-          item.id === editingItem.id ? { ...newItem, id: editingItem.id } : item
+      if (editingClient) {
+        setClients(prev => prev.map(client => 
+          client.id === editingClient.id ? newClient : client
         ));
       } else {
-        setItems(prev => [...prev, newItem]);
+        setClients(prev => [...prev, newClient]);
       }
 
       toast({
         title: "Sucesso",
-        description: `Item ${editingItem ? 'atualizado' : 'criado'} com sucesso!`,
+        description: `Cliente ${editingClient ? 'atualizado' : 'adicionado'} com sucesso!`,
       });
 
       handleCloseDialog();
     } catch (error) {
       toast({
         title: "Erro",
-        description: "Erro ao salvar item do carrossel.",
+        description: "Erro ao salvar cliente.",
         variant: "destructive"
       });
     } finally {
@@ -73,117 +90,137 @@ const CarouselManager = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      setItems(prev => prev.filter(item => item.id !== id));
+      setClients(prev => prev.filter(client => client.id !== id));
 
       toast({
         title: "Sucesso",
-        description: "Item excluído com sucesso!",
+        description: "Cliente removido com sucesso!",
       });
     } catch (error) {
       toast({
         title: "Erro",
-        description: "Erro ao excluir item.",
+        description: "Erro ao remover cliente.",
         variant: "destructive"
       });
     }
   };
 
-  const handleEdit = (item: CarouselItem) => {
-    setEditingItem(item);
+  const handleEdit = (client: ClientItem) => {
+    setEditingClient(client);
     setFormData({
-      title: item.title,
-      description: item.description,
-      image_url: item.image_url,
-      button_text: item.button_text || "",
-      button_url: item.button_url || "",
-      active: item.active
+      name: client.name,
+      logo_url: client.logo_url,
+      instagram_url: client.instagram_url || "",
+      active: client.active
     });
     setIsDialogOpen(true);
   };
 
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
-    setEditingItem(null);
+    setEditingClient(null);
     setFormData({
-      title: "",
-      description: "",
-      image_url: "",
-      button_text: "",
-      button_url: "",
+      name: "",
+      logo_url: "",
+      instagram_url: "",
       active: true
     });
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setFormData(prev => ({ ...prev, logo_url: result }));
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-extralight text-[#020817] dark:text-[#efc349]">
-          Gerenciar Carrossel
+          Gerenciar Carrossel de Clientes
         </h2>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817]">
               <Plus className="w-4 h-4 mr-2" />
-              Novo Item
+              Novo Cliente
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>
-                {editingItem ? 'Editar' : 'Novo'} Item do Carrossel
+                {editingClient ? 'Editar' : 'Novo'} Cliente
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="title">Título</Label>
+                <Label htmlFor="name">Nome da Empresa</Label>
                 <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="Título do slide"
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Nome da empresa"
                 />
               </div>
+              
               <div>
-                <Label htmlFor="description">Descrição</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Descrição do slide"
-                />
+                <Label htmlFor="logo">Logo da Empresa</Label>
+                <div className="space-y-2">
+                  <Input
+                    id="logo_file"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                  <Button 
+                    type="button"
+                    variant="outline"
+                    onClick={() => document.getElementById('logo_file')?.click()}
+                    className="w-full"
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload da Logo
+                  </Button>
+                  <Input
+                    id="logo_url"
+                    value={formData.logo_url}
+                    onChange={(e) => setFormData(prev => ({ ...prev, logo_url: e.target.value }))}
+                    placeholder="Ou cole a URL da imagem"
+                  />
+                </div>
+                {formData.logo_url && (
+                  <div className="mt-2">
+                    <img 
+                      src={formData.logo_url} 
+                      alt="Preview"
+                      className="max-h-20 w-auto object-contain"
+                    />
+                  </div>
+                )}
               </div>
+              
               <div>
-                <Label htmlFor="image_url">URL da Imagem</Label>
+                <Label htmlFor="instagram_url">Instagram (opcional)</Label>
                 <Input
-                  id="image_url"
-                  value={formData.image_url}
-                  onChange={(e) => setFormData(prev => ({ ...prev, image_url: e.target.value }))}
-                  placeholder="https://exemplo.com/imagem.jpg"
+                  id="instagram_url"
+                  value={formData.instagram_url}
+                  onChange={(e) => setFormData(prev => ({ ...prev, instagram_url: e.target.value }))}
+                  placeholder="https://instagram.com/empresa"
                 />
               </div>
-              <div>
-                <Label htmlFor="button_text">Texto do Botão (opcional)</Label>
-                <Input
-                  id="button_text"
-                  value={formData.button_text}
-                  onChange={(e) => setFormData(prev => ({ ...prev, button_text: e.target.value }))}
-                  placeholder="Saiba mais"
-                />
-              </div>
-              <div>
-                <Label htmlFor="button_url">URL do Botão (opcional)</Label>
-                <Input
-                  id="button_url"
-                  value={formData.button_url}
-                  onChange={(e) => setFormData(prev => ({ ...prev, button_url: e.target.value }))}
-                  placeholder="https://exemplo.com"
-                />
-              </div>
+              
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={handleCloseDialog}>
                   Cancelar
                 </Button>
-                <Button onClick={handleSave} disabled={isLoading}>
+                <Button onClick={handleSave} disabled={isLoading || !formData.name || !formData.logo_url}>
                   {isLoading ? 'Salvando...' : 'Salvar'}
                 </Button>
               </div>
@@ -192,45 +229,42 @@ const CarouselManager = () => {
         </Dialog>
       </div>
 
-      <div className="text-center py-8">
-        <p className="text-gray-600 dark:text-gray-300">
-          Funcionalidade do carrossel será implementada após configuração do banco de dados.
-        </p>
-      </div>
-
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {items.map((item) => (
-          <Card key={item.id} className="bg-white dark:bg-transparent border-[#efc349]/20">
+        {clients.map((client) => (
+          <Card key={client.id} className="bg-white dark:bg-transparent border-[#efc349]/20">
             <CardHeader>
-              <div className="aspect-video bg-gray-200 dark:bg-gray-700 rounded-md overflow-hidden">
-                {item.image_url && (
+              <div className="aspect-video bg-gray-200 dark:bg-gray-700 rounded-md overflow-hidden flex items-center justify-center">
+                {client.logo_url && (
                   <img 
-                    src={item.image_url} 
-                    alt={item.title}
-                    className="w-full h-full object-cover"
+                    src={client.logo_url} 
+                    alt={client.name}
+                    className="max-h-full max-w-full object-contain"
                   />
                 )}
               </div>
             </CardHeader>
             <CardContent>
               <h3 className="font-medium text-[#020817] dark:text-[#efc349] mb-2">
-                {item.title}
+                {client.name}
               </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-                {item.description}
-              </p>
+              {client.instagram_url && (
+                <div className="flex items-center text-sm text-gray-600 dark:text-gray-300 mb-4">
+                  <Instagram className="w-4 h-4 mr-1" />
+                  Instagram
+                </div>
+              )}
               <div className="flex justify-end gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleEdit(item)}
+                  onClick={() => handleEdit(client)}
                 >
                   <Edit className="w-4 h-4" />
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleDelete(item.id)}
+                  onClick={() => handleDelete(client.id)}
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>

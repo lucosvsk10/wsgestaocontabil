@@ -1,9 +1,8 @@
+
 import { useState } from "react";
 import { motion } from "framer-motion";
 import SimpleNavbar from "@/components/calculators/SimpleNavbar";
 import ResultActions from "@/components/calculators/ResultActions";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -318,13 +317,16 @@ const INSSCalculator = () => {
                     </div>
                   </CardContent>
                 </Card>
+                
+                <ResultActions 
+                  resultData={resultado}
+                  calculatorType="inss"
+                />
               </motion.div>
             )}
           </div>
         </motion.div>
       </div>
-      
-      <Footer />
     </div>
   );
 };

@@ -1,80 +1,59 @@
 
 import { motion } from "framer-motion";
-import { FileText, Calculator, Bell, Calendar } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { FileText, Calculator, Calendar, MessageSquare } from "lucide-react";
 import { useQuickStatsData } from "@/hooks/client/useQuickStatsData";
 
 export const QuickStats = () => {
   const { stats, loading } = useQuickStatsData();
 
-  const quickStats = [
+  const statsData = [
     {
+      title: "Documentos",
+      value: loading ? "..." : stats.documents,
       icon: FileText,
-      label: "Documentos",
-      value: stats.documentsCount,
-      color: "text-blue-400"
+      color: "text-blue-500"
     },
     {
+      title: "Simulações",
+      value: loading ? "..." : stats.simulations,
       icon: Calculator,
-      label: "Simulações",
-      value: stats.simulationsCount,
-      color: "text-green-400"
+      color: "text-green-500"
     },
     {
-      icon: Bell,
-      label: "Comunicados",
-      value: stats.announcementsCount,
-      color: "text-yellow-400"
-    },
-    {
+      title: "Agenda",
+      value: loading ? "..." : stats.events,
       icon: Calendar,
-      label: "Eventos",
-      value: stats.upcomingEvents,
-      color: "text-purple-400"
+      color: "text-purple-500"
+    },
+    {
+      title: "Avisos",
+      value: loading ? "..." : stats.announcements,
+      icon: MessageSquare,
+      color: "text-orange-500"
     }
   ];
 
-  if (loading) {
-    return (
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        {quickStats.map((_, index) => (
-          <div
-            key={index}
-            className="bg-white dark:bg-[#0b1320] border border-gray-200 dark:border-[#efc349]/20 rounded-lg p-6 animate-pulse"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16 mb-2"></div>
-                <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-12"></div>
-              </div>
-              <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded"></div>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-      {quickStats.map((stat, index) => (
+      {statsData.map((stat, index) => (
         <motion.div
-          key={index}
+          key={stat.title}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: index * 0.1 }}
-          className="bg-white dark:bg-[#0b1320] border border-gray-200 dark:border-[#efc349]/20 rounded-lg p-6"
         >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-extralight text-gray-600 dark:text-gray-300">
-                {stat.label}
-              </p>
-              <p className="text-2xl font-extralight text-[#020817] dark:text-white mt-1">
-                {stat.value}
-              </p>
-            </div>
-            <stat.icon className={`w-8 h-8 ${stat.color}`} />
-          </div>
+          <Card className="bg-[#0b1320] border-[#efc349]/20 hover:border-[#efc349]/40 transition-all">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-400 text-sm font-extralight">{stat.title}</p>
+                  <p className="text-2xl font-bold text-white">{stat.value}</p>
+                </div>
+                <stat.icon className={`w-8 h-8 ${stat.color}`} />
+              </div>
+            </CardContent>
+          </Card>
         </motion.div>
       ))}
     </div>

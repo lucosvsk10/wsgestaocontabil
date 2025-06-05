@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Calculator, Eye, FileText, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { TaxSimulation } from "@/types/client";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/contexts/AuthContext";
 
 export const SimulationsSection = () => {
@@ -16,19 +16,46 @@ export const SimulationsSection = () => {
 
   useEffect(() => {
     fetchSimulations();
+    
+    // Subscription para atualizações em tempo real
+    const subscription = supabase
+      .channel('user_tax_simulations')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'tax_simulations',
+        filter: `user_id=eq.${user?.id}`
+      }, () => {
+        fetchSimulations();
+      })
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [user]);
 
   const fetchSimulations = async () => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     
     try {
+      console.log("Buscando simulações para usuário:", user.id);
+      
       const { data, error } = await supabase
         .from('tax_simulations')
         .select('*')
         .eq('user_id', user.id)
         .order('data_criacao', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro ao buscar simulações:", error);
+        throw error;
+      }
+      
+      console.log("Simulações encontradas para o usuário:", data);
       setSimulations(data || []);
     } catch (error) {
       console.error('Erro ao buscar simulações:', error);

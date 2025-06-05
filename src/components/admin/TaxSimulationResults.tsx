@@ -7,28 +7,33 @@ import EmptyState from "./tax-simulations/EmptyState";
 import SimulationsSummary from "./tax-simulations/SimulationsSummary";
 import SimulationsTable from "./tax-simulations/SimulationsTable";
 import SearchFilter from "./tax-simulations/SearchFilter";
+
 const TaxSimulationResults = () => {
   const [simulations, setSimulations] = useState<TaxSimulation[]>([]);
   const [filteredSimulations, setFilteredSimulations] = useState<TaxSimulation[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [userDetails, setUserDetails] = useState<UserDetails>({});
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
+
   useEffect(() => {
     fetchSimulations();
-    const subscription = supabase.channel('tax_simulations_changes').on('postgres_changes', {
-      event: 'INSERT',
-      schema: 'public',
-      table: 'tax_simulations'
-    }, () => {
-      fetchSimulations();
-    }).subscribe();
+    const subscription = supabase
+      .channel('tax_simulations_changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'tax_simulations'
+      }, () => {
+        fetchSimulations();
+      })
+      .subscribe();
+
     return () => {
       subscription.unsubscribe();
     };
   }, []);
+
   useEffect(() => {
     if (simulations.length > 0) {
       const results = simulations.filter(sim => {
@@ -47,25 +52,31 @@ const TaxSimulationResults = () => {
       setFilteredSimulations(results);
     }
   }, [searchTerm, simulations, userDetails]);
+
   const fetchSimulations = async () => {
     try {
       setLoading(true);
-      const {
-        data,
-        error
-      } = await supabase.from("tax_simulations").select("*").order("data_criacao", {
-        ascending: false
-      });
+      const { data, error } = await supabase
+        .from("tax_simulations")
+        .select("*")
+        .order("data_criacao", { ascending: false });
+
       if (error) {
+        console.error("Erro ao buscar simulações:", error);
         throw error;
       }
+
+      console.log("Simulações encontradas:", data);
+      
       if (data) {
         setSimulations(data);
         setFilteredSimulations(data);
 
         // Buscar detalhes dos usuários
         const userIds = [...new Set(data.map(sim => sim.user_id).filter(Boolean))];
-        fetchUserDetails(userIds as string[]);
+        if (userIds.length > 0) {
+          fetchUserDetails(userIds as string[]);
+        }
       }
     } catch (error) {
       console.error("Erro ao buscar simulações:", error);
@@ -78,13 +89,11 @@ const TaxSimulationResults = () => {
       setLoading(false);
     }
   };
+
   const fetchUserDetails = async (userIds: string[]) => {
     if (userIds.length === 0) return;
     try {
-      const {
-        data,
-        error
-      } = await supabase.from("users").select("id, name, email").in("id", userIds);
+      const { data, error } = await supabase.from("users").select("id, name, email").in("id", userIds);
       if (error) {
         throw error;
       }
@@ -102,22 +111,27 @@ const TaxSimulationResults = () => {
       console.error("Erro ao buscar detalhes dos usuários:", error);
     }
   };
+
   const getUserName = (simulation: TaxSimulation) => {
     if (simulation.user_id && userDetails[simulation.user_id]?.name) {
       return userDetails[simulation.user_id].name;
     }
     return simulation.nome || "Anônimo";
   };
+
   const getUserEmail = (simulation: TaxSimulation) => {
     if (simulation.user_id && userDetails[simulation.user_id]?.email) {
       return userDetails[simulation.user_id].email;
     }
     return simulation.email || "N/A";
   };
+
   if (loading) {
     return <LoadingState />;
   }
-  return <div className="space-y-8">
+
+  return (
+    <div className="space-y-8">
       <div className="flex flex-col md:flex-row justify-between gap-6">
         <div>
           <h1 className="text-3xl text-[#020817] dark:text-[#efc349] mb-4 font-thin">
@@ -131,10 +145,20 @@ const TaxSimulationResults = () => {
         <SearchFilter searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
       </div>
       
-      {filteredSimulations.length === 0 ? <EmptyState searchTerm={searchTerm} /> : <div className="space-y-8">
+      {filteredSimulations.length === 0 ? (
+        <EmptyState searchTerm={searchTerm} />
+      ) : (
+        <div className="space-y-8">
           <SimulationsSummary simulations={filteredSimulations} />
-          <SimulationsTable simulations={filteredSimulations} getUserName={getUserName} getUserEmail={getUserEmail} />
-        </div>}
-    </div>;
+          <SimulationsTable 
+            simulations={filteredSimulations} 
+            getUserName={getUserName} 
+            getUserEmail={getUserEmail} 
+          />
+        </div>
+      )}
+    </div>
+  );
 };
+
 export default TaxSimulationResults;
