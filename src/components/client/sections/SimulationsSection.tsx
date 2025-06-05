@@ -3,35 +3,55 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calculator, Eye, FileText, Download } from "lucide-react";
+import { Calculator, Eye, FileText, Download, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { TaxSimulation } from "@/types/client";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 export const SimulationsSection = () => {
   const { user } = useAuth();
-  const [simulations, setSimulations] = useState<TaxSimulation[]>([]);
+  const { toast } = useToast();
+  const [simulations, setSimulations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchSimulations();
     
     // Subscription para atualizações em tempo real
-    const subscription = supabase
-      .channel('user_tax_simulations')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'tax_simulations',
-        filter: `user_id=eq.${user?.id}`
-      }, () => {
-        fetchSimulations();
-      })
-      .subscribe();
+    const channels = [
+      supabase
+        .channel('user_tax_simulations')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'tax_simulations',
+          filter: `user_id=eq.${user?.id}`
+        }, () => fetchSimulations()),
+      
+      supabase
+        .channel('user_inss_simulations')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'inss_simulations',
+          filter: `user_id=eq.${user?.id}`
+        }, () => fetchSimulations()),
+        
+      supabase
+        .channel('user_prolabore_simulations')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'prolabore_simulations',
+          filter: `user_id=eq.${user?.id}`
+        }, () => fetchSimulations())
+    ];
+
+    channels.forEach(channel => channel.subscribe());
 
     return () => {
-      subscription.unsubscribe();
+      channels.forEach(channel => supabase.removeChannel(channel));
     };
   }, [user]);
 
@@ -44,23 +64,87 @@ export const SimulationsSection = () => {
     try {
       console.log("Buscando simulações para usuário:", user.id);
       
-      const { data, error } = await supabase
-        .from('tax_simulations')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('data_criacao', { ascending: false });
+      // Buscar todas as simulações do usuário
+      const [taxSims, inssSims, prolaboreSims] = await Promise.all([
+        supabase
+          .from('tax_simulations')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('data_criacao', { ascending: false }),
+        
+        supabase
+          .from('inss_simulations')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false }),
+          
+        supabase
+          .from('prolabore_simulations')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+      ]);
 
-      if (error) {
-        console.error("Erro ao buscar simulações:", error);
-        throw error;
-      }
-      
-      console.log("Simulações encontradas para o usuário:", data);
-      setSimulations(data || []);
+      // Combinar todas as simulações com tipo identificado
+      const allSimulations = [
+        ...(taxSims.data || []).map(sim => ({ ...sim, simulationType: 'irpf' })),
+        ...(inssSims.data || []).map(sim => ({ ...sim, simulationType: 'inss' })),
+        ...(prolaboreSims.data || []).map(sim => ({ ...sim, simulationType: 'prolabore' }))
+      ];
+
+      // Ordenar por data de criação
+      allSimulations.sort((a, b) => {
+        const dateA = new Date(a.data_criacao || a.created_at);
+        const dateB = new Date(b.data_criacao || b.created_at);
+        return dateB.getTime() - dateA.getTime();
+      });
+
+      console.log("Simulações encontradas para o usuário:", allSimulations);
+      setSimulations(allSimulations);
     } catch (error) {
       console.error('Erro ao buscar simulações:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteSimulation = async (simulation: any) => {
+    try {
+      let tableName;
+      switch (simulation.simulationType) {
+        case 'irpf':
+          tableName = 'tax_simulations';
+          break;
+        case 'inss':
+          tableName = 'inss_simulations';
+          break;
+        case 'prolabore':
+          tableName = 'prolabore_simulations';
+          break;
+        default:
+          throw new Error('Tipo de simulação não reconhecido');
+      }
+
+      const { error } = await supabase
+        .from(tableName)
+        .delete()
+        .eq('id', simulation.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Simulação excluída com sucesso"
+      });
+
+      fetchSimulations(); // Recarregar a lista
+    } catch (error) {
+      console.error('Erro ao excluir simulação:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir a simulação",
+        variant: "destructive"
+      });
     }
   };
 
@@ -71,12 +155,38 @@ export const SimulationsSection = () => {
     }).format(value);
   };
 
-  const getSimulationType = (tipo: string) => {
-    switch (tipo) {
+  const getSimulationType = (simulation: any) => {
+    switch (simulation.simulationType) {
       case 'irpf': return 'IRPF';
       case 'inss': return 'INSS';
       case 'prolabore': return 'Pró-labore';
-      default: return tipo;
+      default: return 'Simulação';
+    }
+  };
+
+  const getSimulationMainValue = (simulation: any) => {
+    switch (simulation.simulationType) {
+      case 'irpf':
+        return formatCurrency(simulation.imposto_estimado || 0);
+      case 'inss':
+        return formatCurrency(simulation.contribuicao || 0);
+      case 'prolabore':
+        return formatCurrency(simulation.valor_liquido || 0);
+      default:
+        return 'N/A';
+    }
+  };
+
+  const getSimulationDescription = (simulation: any) => {
+    switch (simulation.simulationType) {
+      case 'irpf':
+        return `Rend. Bruto: ${formatCurrency(simulation.rendimento_bruto)} - Imposto: ${formatCurrency(simulation.imposto_estimado)}`;
+      case 'inss':
+        return `${simulation.categoria} - ${simulation.aliquota}% - Contrib.: ${formatCurrency(simulation.contribuicao)}`;
+      case 'prolabore':
+        return `Bruto: ${formatCurrency(simulation.valor_bruto)} - Líquido: ${formatCurrency(simulation.valor_liquido)}`;
+      default:
+        return '';
     }
   };
 
@@ -108,60 +218,68 @@ export const SimulationsSection = () => {
           <div className="text-center py-8 text-gray-400">
             <Calculator className="w-12 h-12 mx-auto mb-4 opacity-50" />
             <p className="font-extralight">Nenhuma simulação realizada</p>
-            <Button 
-              className="mt-4 bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817]"
-              onClick={() => window.open('/simulador-irpf', '_blank')}
-            >
-              Fazer primeira simulação
-            </Button>
+            <div className="flex flex-col gap-2 mt-4">
+              <Button 
+                className="bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817]"
+                onClick={() => window.open('/simulador-irpf', '_blank')}
+              >
+                Simulador IRPF
+              </Button>
+              <Button 
+                className="bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817]"
+                onClick={() => window.open('/simulador-prolabore', '_blank')}
+              >
+                Simulador Pró-labore
+              </Button>
+              <Button 
+                className="bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817]"
+                onClick={() => window.open('/calculadora-inss', '_blank')}
+              >
+                Calculadora INSS
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="space-y-4">
             {simulations.map((simulation, index) => (
               <motion.div
-                key={simulation.id}
+                key={`${simulation.simulationType}-${simulation.id}`}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.1 }}
                 className="bg-[#020817] border border-[#efc349]/20 rounded-lg p-4 hover:border-[#efc349]/40 transition-all"
               >
                 <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <h3 className="font-semibold text-white text-lg">
-                      {getSimulationType(simulation.tipo_simulacao)}
-                    </h3>
-                    <p className="text-gray-400 font-extralight">
-                      {new Date(simulation.data_criacao).toLocaleDateString('pt-BR')}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-semibold text-white text-lg">
+                        {getSimulationType(simulation)}
+                      </h3>
+                      <Badge className="bg-green-600 hover:bg-green-700 text-white">
+                        Concluída
+                      </Badge>
+                    </div>
+                    <p className="text-gray-400 font-extralight text-sm">
+                      {new Date(simulation.data_criacao || simulation.created_at).toLocaleString('pt-BR')}
                     </p>
                   </div>
-                  <Badge className="bg-green-600 hover:bg-green-700 text-white">
-                    Concluída
-                  </Badge>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleDeleteSimulation(simulation)}
+                    className="border-red-500/30 text-red-500 hover:bg-red-500/10"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 text-sm">
-                  <div>
-                    <span className="text-gray-400">Rendimento Bruto:</span>
-                    <p className="text-white font-medium">
-                      {formatCurrency(simulation.rendimento_bruto)}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-gray-400">INSS:</span>
-                    <p className="text-white font-medium">
-                      {formatCurrency(simulation.inss)}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-gray-400">Dependentes:</span>
-                    <p className="text-white font-medium">{simulation.dependentes}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-400">Imposto Estimado:</span>
-                    <p className="text-white font-medium">
-                      {formatCurrency(simulation.imposto_estimado)}
-                    </p>
-                  </div>
+                <div className="mb-4">
+                  <p className="text-white font-medium text-xl mb-2">
+                    {getSimulationMainValue(simulation)}
+                  </p>
+                  <p className="text-gray-300 text-sm">
+                    {getSimulationDescription(simulation)}
+                  </p>
                 </div>
 
                 <div className="flex gap-2">

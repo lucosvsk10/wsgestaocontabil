@@ -27,7 +27,7 @@ export const QuickStats = () => {
       color: "text-purple-500"
     },
     {
-      title: "Avisos",
+      title: "Comunicados",
       value: loading ? "..." : stats.announcementsCount,
       icon: MessageSquare,
       color: "text-orange-500"

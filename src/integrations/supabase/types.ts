@@ -381,6 +381,42 @@ export type Database = {
           },
         ]
       }
+      inss_simulations: {
+        Row: {
+          aliquota: number
+          categoria: string
+          contribuicao: number
+          created_at: string
+          detalhes: string | null
+          id: string
+          tipo_facultativo: string | null
+          user_id: string | null
+          valor_base: number
+        }
+        Insert: {
+          aliquota?: number
+          categoria: string
+          contribuicao?: number
+          created_at?: string
+          detalhes?: string | null
+          id?: string
+          tipo_facultativo?: string | null
+          user_id?: string | null
+          valor_base?: number
+        }
+        Update: {
+          aliquota?: number
+          categoria?: string
+          contribuicao?: number
+          created_at?: string
+          detalhes?: string | null
+          id?: string
+          tipo_facultativo?: string | null
+          user_id?: string | null
+          valor_base?: number
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string | null
@@ -595,6 +631,42 @@ export type Database = {
         }
         Relationships: []
       }
+      prolabore_simulations: {
+        Row: {
+          aliquota_irrf: number
+          created_at: string
+          id: string
+          inss: number
+          irrf: number
+          total_descontos: number
+          user_id: string | null
+          valor_bruto: number
+          valor_liquido: number
+        }
+        Insert: {
+          aliquota_irrf?: number
+          created_at?: string
+          id?: string
+          inss?: number
+          irrf?: number
+          total_descontos?: number
+          user_id?: string | null
+          valor_bruto?: number
+          valor_liquido?: number
+        }
+        Update: {
+          aliquota_irrf?: number
+          created_at?: string
+          id?: string
+          inss?: number
+          irrf?: number
+          total_descontos?: number
+          user_id?: string | null
+          valor_bruto?: number
+          valor_liquido?: number
+        }
+        Relationships: []
+      }
       roles: {
         Row: {
           role: string
@@ -723,6 +795,10 @@ export type Database = {
       foldername: {
         Args: Record<PropertyKey, never> | { name: string }
         Returns: string
+      }
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
       }
       set_document_expiration: {
         Args: Record<PropertyKey, never>

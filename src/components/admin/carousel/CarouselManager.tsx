@@ -1,12 +1,18 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Edit, Trash2, Instagram, Upload } from "lucide-react";
+import { Trash2, Plus, Edit2, Instagram, Image } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface ClientItem {
   id: string;
@@ -18,145 +24,157 @@ interface ClientItem {
 }
 
 const CarouselManager = () => {
-  const [clients, setClients] = useState<ClientItem[]>([
-    {
-      id: "1",
-      name: "Empresa Exemplo 1",
-      logo_url: "/lovable-uploads/cb878201-552e-4728-a814-1554857917b4.png",
-      instagram_url: "https://instagram.com/empresa1",
-      order_index: 0,
-      active: true
-    }
-  ]);
-  
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingClient, setEditingClient] = useState<ClientItem | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  
+  // Estado local para clientes (sem banco de dados)
+  const [clients, setClients] = useState<ClientItem[]>(() => {
+    const stored = localStorage.getItem('carousel_clients');
+    return stored ? JSON.parse(stored) : [
+      {
+        id: "1",
+        name: "Empresa Exemplo 1",
+        logo_url: "/lovable-uploads/cb878201-552e-4728-a814-1554857917b4.png",
+        instagram_url: "https://instagram.com/empresa1",
+        order_index: 0,
+        active: true
+      },
+      {
+        id: "2", 
+        name: "Empresa Exemplo 2",
+        logo_url: "/lovable-uploads/cb878201-552e-4728-a814-1554857917b4.png",
+        instagram_url: "https://instagram.com/empresa2",
+        order_index: 1,
+        active: true
+      },
+      {
+        id: "3",
+        name: "Empresa Exemplo 3", 
+        logo_url: "/lovable-uploads/cb878201-552e-4728-a814-1554857917b4.png",
+        instagram_url: "https://instagram.com/empresa3",
+        order_index: 2,
+        active: true
+      }
+    ];
+  });
 
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [editingClient, setEditingClient] = useState<ClientItem | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     logo_url: "",
-    instagram_url: "",
-    active: true
+    instagram_url: ""
   });
 
-  // Carregar dados do localStorage
-  useEffect(() => {
-    const savedClients = localStorage.getItem('carousel_clients');
-    if (savedClients) {
-      setClients(JSON.parse(savedClients));
-    }
-  }, []);
-
-  // Salvar no localStorage sempre que houver mudanças
-  useEffect(() => {
-    localStorage.setItem('carousel_clients', JSON.stringify(clients));
-  }, [clients]);
-
-  const handleSave = async () => {
-    setIsLoading(true);
-    try {
-      const newClient: ClientItem = {
-        id: editingClient?.id || Date.now().toString(),
-        ...formData,
-        order_index: editingClient?.order_index || clients.length
-      };
-
-      if (editingClient) {
-        setClients(prev => prev.map(client => 
-          client.id === editingClient.id ? newClient : client
-        ));
-      } else {
-        setClients(prev => [...prev, newClient]);
-      }
-
-      toast({
-        title: "Sucesso",
-        description: `Cliente ${editingClient ? 'atualizado' : 'adicionado'} com sucesso!`,
-      });
-
-      handleCloseDialog();
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Erro ao salvar cliente.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
+  const saveToLocalStorage = (clientsData: ClientItem[]) => {
+    localStorage.setItem('carousel_clients', JSON.stringify(clientsData));
+    setClients(clientsData);
   };
 
-  const handleDelete = async (id: string) => {
-    try {
-      setClients(prev => prev.filter(client => client.id !== id));
-
-      toast({
-        title: "Sucesso",
-        description: "Cliente removido com sucesso!",
-      });
-    } catch (error) {
+  const handleAddClient = () => {
+    if (!formData.name || !formData.logo_url) {
       toast({
         title: "Erro",
-        description: "Erro ao remover cliente.",
+        description: "Nome e URL da logo são obrigatórios",
         variant: "destructive"
       });
+      return;
     }
+
+    const newClient: ClientItem = {
+      id: Date.now().toString(),
+      name: formData.name,
+      logo_url: formData.logo_url,
+      instagram_url: formData.instagram_url,
+      order_index: clients.length,
+      active: true
+    };
+
+    const updatedClients = [...clients, newClient];
+    saveToLocalStorage(updatedClients);
+    
+    setFormData({ name: "", logo_url: "", instagram_url: "" });
+    setIsAddDialogOpen(false);
+    
+    toast({
+      title: "Sucesso",
+      description: "Cliente adicionado ao carousel"
+    });
   };
 
-  const handleEdit = (client: ClientItem) => {
+  const handleEditClient = () => {
+    if (!editingClient || !formData.name || !formData.logo_url) {
+      toast({
+        title: "Erro",
+        description: "Nome e URL da logo são obrigatórios",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const updatedClients = clients.map(client =>
+      client.id === editingClient.id
+        ? { ...client, name: formData.name, logo_url: formData.logo_url, instagram_url: formData.instagram_url }
+        : client
+    );
+
+    saveToLocalStorage(updatedClients);
+    setEditingClient(null);
+    setFormData({ name: "", logo_url: "", instagram_url: "" });
+    
+    toast({
+      title: "Sucesso",
+      description: "Cliente atualizado"
+    });
+  };
+
+  const handleDeleteClient = (clientId: string) => {
+    const updatedClients = clients.filter(client => client.id !== clientId);
+    saveToLocalStorage(updatedClients);
+    
+    toast({
+      title: "Sucesso",
+      description: "Cliente removido do carousel"
+    });
+  };
+
+  const toggleClientStatus = (clientId: string) => {
+    const updatedClients = clients.map(client =>
+      client.id === clientId ? { ...client, active: !client.active } : client
+    );
+    saveToLocalStorage(updatedClients);
+  };
+
+  const openEditDialog = (client: ClientItem) => {
     setEditingClient(client);
     setFormData({
       name: client.name,
       logo_url: client.logo_url,
-      instagram_url: client.instagram_url || "",
-      active: client.active
+      instagram_url: client.instagram_url || ""
     });
-    setIsDialogOpen(true);
-  };
-
-  const handleCloseDialog = () => {
-    setIsDialogOpen(false);
-    setEditingClient(null);
-    setFormData({
-      name: "",
-      logo_url: "",
-      instagram_url: "",
-      active: true
-    });
-  };
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        setFormData(prev => ({ ...prev, logo_url: result }));
-      };
-      reader.readAsDataURL(file);
-    }
   };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-extralight text-[#020817] dark:text-[#efc349]">
-          Gerenciar Carrossel de Clientes
-        </h2>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <div>
+          <h1 className="text-3xl text-[#020817] dark:text-[#efc349] mb-4 font-thin">
+            Gerenciar Carousel de Clientes
+          </h1>
+          <p className="text-gray-600 dark:text-white/70">
+            Adicione, edite ou remova clientes do carousel da página inicial
+          </p>
+        </div>
+
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817]">
               <Plus className="w-4 h-4 mr-2" />
-              Novo Cliente
+              Adicionar Cliente
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle>
-                {editingClient ? 'Editar' : 'Novo'} Cliente
-              </DialogTitle>
+              <DialogTitle>Adicionar Novo Cliente</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
@@ -164,115 +182,149 @@ const CarouselManager = () => {
                 <Input
                   id="name"
                   value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="Nome da empresa"
                 />
               </div>
-              
               <div>
-                <Label htmlFor="logo">Logo da Empresa</Label>
-                <div className="space-y-2">
-                  <Input
-                    id="logo_file"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
-                  <Button 
-                    type="button"
-                    variant="outline"
-                    onClick={() => document.getElementById('logo_file')?.click()}
-                    className="w-full"
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Upload da Logo
-                  </Button>
-                  <Input
-                    id="logo_url"
-                    value={formData.logo_url}
-                    onChange={(e) => setFormData(prev => ({ ...prev, logo_url: e.target.value }))}
-                    placeholder="Ou cole a URL da imagem"
-                  />
-                </div>
-                {formData.logo_url && (
-                  <div className="mt-2">
-                    <img 
-                      src={formData.logo_url} 
-                      alt="Preview"
-                      className="max-h-20 w-auto object-contain"
-                    />
-                  </div>
-                )}
+                <Label htmlFor="logo_url">URL da Logo</Label>
+                <Input
+                  id="logo_url"
+                  value={formData.logo_url}
+                  onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })}
+                  placeholder="/lovable-uploads/..."
+                />
               </div>
-              
               <div>
-                <Label htmlFor="instagram_url">Instagram (opcional)</Label>
+                <Label htmlFor="instagram_url">URL do Instagram (opcional)</Label>
                 <Input
                   id="instagram_url"
                   value={formData.instagram_url}
-                  onChange={(e) => setFormData(prev => ({ ...prev, instagram_url: e.target.value }))}
+                  onChange={(e) => setFormData({ ...formData, instagram_url: e.target.value })}
                   placeholder="https://instagram.com/empresa"
                 />
               </div>
-              
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={handleCloseDialog}>
-                  Cancelar
-                </Button>
-                <Button onClick={handleSave} disabled={isLoading || !formData.name || !formData.logo_url}>
-                  {isLoading ? 'Salvando...' : 'Salvar'}
-                </Button>
-              </div>
+              <Button onClick={handleAddClient} className="w-full">
+                Adicionar
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {clients.map((client) => (
-          <Card key={client.id} className="bg-white dark:bg-transparent border-[#efc349]/20">
-            <CardHeader>
-              <div className="aspect-video bg-gray-200 dark:bg-gray-700 rounded-md overflow-hidden flex items-center justify-center">
-                {client.logo_url && (
-                  <img 
-                    src={client.logo_url} 
-                    alt={client.name}
-                    className="max-h-full max-w-full object-contain"
-                  />
-                )}
+          <Card key={client.id} className="bg-white dark:bg-[#0b1320] border-[#efc349]/20">
+            <CardHeader className="pb-3">
+              <div className="flex justify-between items-start">
+                <CardTitle className="text-lg text-[#020817] dark:text-white">
+                  {client.name}
+                </CardTitle>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openEditDialog(client)}
+                    className="border-[#efc349]/30 text-[#efc349] hover:bg-[#efc349]/10"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleDeleteClient(client.id)}
+                    className="border-red-500/30 text-red-500 hover:bg-red-500/10"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <h3 className="font-medium text-[#020817] dark:text-[#efc349] mb-2">
-                {client.name}
-              </h3>
+            
+            <CardContent className="space-y-4">
+              <div className="flex justify-center">
+                <img
+                  src={client.logo_url}
+                  alt={client.name}
+                  className="max-h-20 w-auto object-contain"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "/placeholder.svg";
+                  }}
+                />
+              </div>
+              
               {client.instagram_url && (
-                <div className="flex items-center text-sm text-gray-600 dark:text-gray-300 mb-4">
+                <div className="flex items-center justify-center text-sm text-gray-600 dark:text-gray-400">
                   <Instagram className="w-4 h-4 mr-1" />
-                  Instagram
+                  <a 
+                    href={client.instagram_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="hover:text-[#efc349] transition-colors"
+                  >
+                    Instagram
+                  </a>
                 </div>
               )}
-              <div className="flex justify-end gap-2">
+              
+              <div className="flex justify-center">
                 <Button
-                  variant="outline"
                   size="sm"
-                  onClick={() => handleEdit(client)}
+                  variant={client.active ? "default" : "outline"}
+                  onClick={() => toggleClientStatus(client.id)}
+                  className={client.active 
+                    ? "bg-green-600 hover:bg-green-700" 
+                    : "border-gray-400 text-gray-600 hover:bg-gray-100"
+                  }
                 >
-                  <Edit className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDelete(client.id)}
-                >
-                  <Trash2 className="w-4 h-4" />
+                  {client.active ? "Ativo" : "Inativo"}
                 </Button>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      {/* Dialog de Edição */}
+      <Dialog open={!!editingClient} onOpenChange={() => setEditingClient(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Cliente</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="edit_name">Nome da Empresa</Label>
+              <Input
+                id="edit_name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Nome da empresa"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit_logo_url">URL da Logo</Label>
+              <Input
+                id="edit_logo_url"
+                value={formData.logo_url}
+                onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })}
+                placeholder="/lovable-uploads/..."
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit_instagram_url">URL do Instagram (opcional)</Label>
+              <Input
+                id="edit_instagram_url"
+                value={formData.instagram_url}
+                onChange={(e) => setFormData({ ...formData, instagram_url: e.target.value })}
+                placeholder="https://instagram.com/empresa"
+              />
+            </div>
+            <Button onClick={handleEditClient} className="w-full">
+              Salvar Alterações
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

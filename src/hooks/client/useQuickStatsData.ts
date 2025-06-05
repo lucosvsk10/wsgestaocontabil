@@ -33,13 +33,26 @@ export const useQuickStatsData = () => {
 
       if (documentsError) throw documentsError;
 
-      // Buscar simulações do usuário
-      const { data: simulations, error: simulationsError } = await supabase
-        .from('tax_simulations')
-        .select('id')
-        .eq('user_id', user.id);
+      // Buscar simulações do usuário (todas as tipos)
+      const [taxSimulations, inssSimulations, prolaboreSimulations] = await Promise.all([
+        supabase
+          .from('tax_simulations')
+          .select('id')
+          .eq('user_id', user.id),
+        supabase
+          .from('inss_simulations')
+          .select('id')
+          .eq('user_id', user.id),
+        supabase
+          .from('prolabore_simulations')
+          .select('id')
+          .eq('user_id', user.id)
+      ]);
 
-      if (simulationsError) throw simulationsError;
+      const totalSimulations = 
+        (taxSimulations.data?.length || 0) + 
+        (inssSimulations.data?.length || 0) + 
+        (prolaboreSimulations.data?.length || 0);
 
       // Buscar comunicados ativos
       const { data: announcements, error: announcementsError } = await supabase
@@ -64,7 +77,7 @@ export const useQuickStatsData = () => {
 
       setStats({
         documentsCount: documents?.length || 0,
-        simulationsCount: simulations?.length || 0,
+        simulationsCount: totalSimulations,
         announcementsCount: announcements?.length || 0,
         upcomingEvents: events?.length || 0
       });
