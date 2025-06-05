@@ -14,6 +14,7 @@ import TaxCalculator from "./pages/TaxCalculator";
 import INSSCalculator from "./pages/INSSCalculator";
 import ProLaboreCalculator from "./pages/ProLaboreCalculator";
 import { checkIsAdmin } from "./utils/auth/userChecks";
+import { CompanyDataView } from "./components/admin/company/CompanyDataView";
 
 const AppRoutes = () => {
   const { userData, user } = useAuth();
@@ -49,6 +50,12 @@ const AppRoutes = () => {
       <Route path="/admin/user-documents/:userId" element={
         <PrivateRoute requiredRole="admin">
           <AdminDashboard activeTab="user-documents" />
+        </PrivateRoute>
+      } />
+
+      <Route path="/admin/company-data/:userId" element={
+        <PrivateRoute requiredRole="admin">
+          <CompanyDataView />
         </PrivateRoute>
       } />
       

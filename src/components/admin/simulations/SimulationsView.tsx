@@ -8,7 +8,7 @@ import { Eye, Trash2, Archive, Search, Calendar, User, Calculator, Download, Cop
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { currencyFormat } from '@/utils/taxCalculations';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
@@ -125,6 +125,10 @@ ${simulation.tipo_simulacao === 'IRPF' ? 'Imposto' : 'Contribuição'}: ${curren
   };
 
   const deleteSimulation = async (id: string) => {
+    if (!confirm('Deseja realmente excluir esta simulação? Esta ação não pode ser desfeita.')) {
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('tax_simulations')
@@ -139,13 +143,13 @@ ${simulation.tipo_simulacao === 'IRPF' ? 'Imposto' : 'Contribuição'}: ${curren
       
       toast({
         title: "Sucesso",
-        description: "Simulação excluída com sucesso do banco de dados."
+        description: "Simulação excluída com sucesso."
       });
     } catch (error) {
       console.error('Erro ao excluir simulação:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível excluir a simulação do banco de dados.",
+        description: "Não foi possível excluir a simulação.",
         variant: "destructive"
       });
     }
@@ -318,12 +322,12 @@ ${simulation.tipo_simulacao === 'IRPF' ? 'Imposto' : 'Contribuição'}: ${curren
 
       {/* Details Modal */}
       <Dialog open={detailsModalOpen} onOpenChange={setDetailsModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-[#0b1320] border-gray-200 dark:border-[#efc349]/30">
           <DialogHeader>
             <DialogTitle className="text-xl text-[#020817] dark:text-[#efc349] font-extralight">
               Detalhes da Simulação
             </DialogTitle>
-            <DialogDescription className="font-extralight">
+            <DialogDescription className="font-extralight text-gray-600 dark:text-white/70">
               Informações completas da simulação
             </DialogDescription>
           </DialogHeader>
