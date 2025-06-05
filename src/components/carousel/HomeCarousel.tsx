@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "@/integrations/supabase/client";
 
 interface CarouselItem {
   id: string;
@@ -17,16 +16,25 @@ interface CarouselItem {
 }
 
 const HomeCarousel = () => {
-  const [items, setItems] = useState<CarouselItem[]>([]);
+  // Dados de exemplo - serão substituídos pelos dados do banco quando disponível
+  const [items] = useState<CarouselItem[]>([
+    {
+      id: "1",
+      title: "WS Gestão Contábil",
+      description: "Seu parceiro em gestão contábil e fiscal",
+      image_url: "/lovable-uploads/cb878201-552e-4728-a814-1554857917b4.png",
+      button_text: "Saiba Mais",
+      button_url: "#sobre",
+      order_index: 0,
+      active: true
+    }
+  ]);
+  
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
   useEffect(() => {
-    fetchCarouselItems();
-  }, []);
-
-  useEffect(() => {
-    if (items.length === 0 || isPaused) return;
+    if (items.length === 0 || isPaused || items.length <= 1) return;
 
     const interval = setInterval(() => {
       setCurrentIndex((prevIndex) => 
@@ -36,21 +44,6 @@ const HomeCarousel = () => {
 
     return () => clearInterval(interval);
   }, [items.length, isPaused]);
-
-  const fetchCarouselItems = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('carousel_items')
-        .select('*')
-        .eq('active', true)
-        .order('order_index');
-
-      if (error) throw error;
-      setItems(data || []);
-    } catch (error) {
-      console.error('Erro ao buscar itens do carrossel:', error);
-    }
-  };
 
   const goToSlide = (index: number) => {
     setCurrentIndex(index);
@@ -118,7 +111,7 @@ const HomeCarousel = () => {
                         asChild
                         className="bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817] font-extralight"
                       >
-                        <a href={items[currentIndex]?.button_url} target="_blank" rel="noopener noreferrer">
+                        <a href={items[currentIndex]?.button_url}>
                           {items[currentIndex]?.button_text}
                         </a>
                       </Button>
@@ -130,35 +123,41 @@ const HomeCarousel = () => {
           </motion.div>
         </AnimatePresence>
 
-        {/* Navigation Arrows */}
-        <button
-          onClick={goToPrevious}
-          className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full p-2 transition-colors"
-        >
-          <ChevronLeft className="w-6 h-6 text-white" />
-        </button>
-
-        <button
-          onClick={goToNext}
-          className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full p-2 transition-colors"
-        >
-          <ChevronRight className="w-6 h-6 text-white" />
-        </button>
-
-        {/* Dots Indicator */}
-        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
-          {items.map((_, index) => (
+        {/* Navigation Arrows - only show if more than one item */}
+        {items.length > 1 && (
+          <>
             <button
-              key={index}
-              onClick={() => goToSlide(index)}
-              className={`w-3 h-3 rounded-full transition-colors ${
-                index === currentIndex 
-                  ? 'bg-[#efc349]' 
-                  : 'bg-white/50 hover:bg-white/70'
-              }`}
-            />
-          ))}
-        </div>
+              onClick={goToPrevious}
+              className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full p-2 transition-colors"
+            >
+              <ChevronLeft className="w-6 h-6 text-white" />
+            </button>
+
+            <button
+              onClick={goToNext}
+              className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full p-2 transition-colors"
+            >
+              <ChevronRight className="w-6 h-6 text-white" />
+            </button>
+          </>
+        )}
+
+        {/* Dots Indicator - only show if more than one item */}
+        {items.length > 1 && (
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+            {items.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => goToSlide(index)}
+                className={`w-3 h-3 rounded-full transition-colors ${
+                  index === currentIndex 
+                    ? 'bg-[#efc349]' 
+                    : 'bg-white/50 hover:bg-white/70'
+                }`}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

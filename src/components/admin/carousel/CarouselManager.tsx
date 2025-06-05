@@ -1,14 +1,13 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Edit, Trash2, Upload } from "lucide-react";
+import { Plus, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 
 interface CarouselItem {
   id: string;
@@ -37,45 +36,22 @@ const CarouselManager = () => {
     active: true
   });
 
-  useEffect(() => {
-    fetchCarouselItems();
-  }, []);
-
-  const fetchCarouselItems = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('carousel_items')
-        .select('*')
-        .order('order_index');
-
-      if (error) throw error;
-      setItems(data || []);
-    } catch (error) {
-      console.error('Erro ao buscar itens do carrossel:', error);
-    }
-  };
-
   const handleSave = async () => {
     setIsLoading(true);
     try {
-      const dataToSave = {
+      // Simulação de salvamento - será implementado quando a tabela existir
+      const newItem: CarouselItem = {
+        id: Date.now().toString(),
         ...formData,
-        order_index: editingItem ? editingItem.order_index : items.length
+        order_index: items.length
       };
 
       if (editingItem) {
-        const { error } = await supabase
-          .from('carousel_items')
-          .update(dataToSave)
-          .eq('id', editingItem.id);
-
-        if (error) throw error;
+        setItems(prev => prev.map(item => 
+          item.id === editingItem.id ? { ...newItem, id: editingItem.id } : item
+        ));
       } else {
-        const { error } = await supabase
-          .from('carousel_items')
-          .insert([dataToSave]);
-
-        if (error) throw error;
+        setItems(prev => [...prev, newItem]);
       }
 
       toast({
@@ -83,7 +59,6 @@ const CarouselManager = () => {
         description: `Item ${editingItem ? 'atualizado' : 'criado'} com sucesso!`,
       });
 
-      fetchCarouselItems();
       handleCloseDialog();
     } catch (error) {
       toast({
@@ -98,19 +73,12 @@ const CarouselManager = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('carousel_items')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      setItems(prev => prev.filter(item => item.id !== id));
 
       toast({
         title: "Sucesso",
         description: "Item excluído com sucesso!",
       });
-
-      fetchCarouselItems();
     } catch (error) {
       toast({
         title: "Erro",
@@ -222,6 +190,12 @@ const CarouselManager = () => {
             </div>
           </DialogContent>
         </Dialog>
+      </div>
+
+      <div className="text-center py-8">
+        <p className="text-gray-600 dark:text-gray-300">
+          Funcionalidade do carrossel será implementada após configuração do banco de dados.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
