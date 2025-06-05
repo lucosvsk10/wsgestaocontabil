@@ -1,6 +1,7 @@
-
 import { useState } from "react";
 import { motion } from "framer-motion";
+import SimpleNavbar from "@/components/calculators/SimpleNavbar";
+import ResultActions from "@/components/calculators/ResultActions";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -114,10 +115,10 @@ const INSSCalculator = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#020817] text-white font-extralight">
-      <Navbar />
+    <div className="min-h-screen bg-[#FFF1DE] dark:bg-[#020817] text-[#020817] dark:text-white font-extralight">
+      <SimpleNavbar title="Calculadora INSS 2024" />
       
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-[100px]">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

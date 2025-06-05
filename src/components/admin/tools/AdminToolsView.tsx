@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Calculator, FileText, PieChart, Building2, CreditCard } from 'lucide-react';
+import { Calculator, FileText, PieChart, Building2, CreditCard, Images } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export const AdminToolsView: React.FC = () => {
@@ -25,6 +25,12 @@ export const AdminToolsView: React.FC = () => {
       description: "Simule valores líquidos de pró-labore.",
       icon: <Building2 className="h-12 w-12 text-purple-600 dark:text-purple-400" />,
       action: () => navigate('/simulador-prolabore')
+    },
+    {
+      title: "Carrossel",
+      description: "Gerencie o carrossel da página principal.",
+      icon: <Images className="h-12 w-12 text-orange-600 dark:text-orange-400" />,
+      action: () => navigate('/admin/carousel')
     },
     {
       title: "Gerador de Enquetes",

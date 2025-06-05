@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import SimpleNavbar from "@/components/calculators/SimpleNavbar";
+import ResultActions from "@/components/calculators/ResultActions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Calculator, DollarSign, Users, Heart, GraduationCap, Home } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+
 const TaxCalculator = () => {
   const [formData, setFormData] = useState({
     rendimentoBruto: "",
@@ -91,32 +92,30 @@ const TaxCalculator = () => {
       currency: 'BRL'
     }).format(value);
   };
-  return <div className="min-h-screen bg-[#020817] text-white font-extralight">
-      <Navbar />
+  return (
+    <div className="min-h-screen bg-[#FFF1DE] dark:bg-[#020817] text-[#020817] dark:text-white font-extralight">
+      <SimpleNavbar title="Simulador IRPF 2024" />
       
       <div className="container mx-auto px-4 py-[100px]">
-        <motion.div initial={{
-        opacity: 0,
-        y: 20
-      }} animate={{
-        opacity: 1,
-        y: 0
-      }} transition={{
-        duration: 0.6
-      }} className="max-w-4xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="max-w-4xl mx-auto"
+        >
           {/* Header */}
           <div className="text-center mb-8">
             <h1 className="text-4xl md:text-5xl font-extralight text-[#efc349] mb-4">
               Simulador IRPF 2024
             </h1>
-            <p className="text-xl text-gray-300 font-extralight">
+            <p className="text-xl text-gray-600 dark:text-gray-300 font-extralight">
               Calcule seu Imposto de Renda com base na tabela oficial da Receita Federal
             </p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Formulário */}
-            <Card className="bg-[#0b1320] border-[#efc349]/20">
+            <Card className="bg-white/50 dark:bg-[#0b1320]/50 border-[#efc349]/20 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="text-[#efc349] font-extralight flex items-center">
                   <Calculator className="w-6 h-6 mr-2" />
@@ -181,16 +180,13 @@ const TaxCalculator = () => {
             </Card>
 
             {/* Resultado */}
-            {resultado && <motion.div initial={{
-            opacity: 0,
-            x: 20
-          }} animate={{
-            opacity: 1,
-            x: 0
-          }} transition={{
-            duration: 0.5
-          }}>
-                <Card className="bg-[#0b1320] border-[#efc349]/20">
+            {resultado && (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                <Card className="bg-white/50 dark:bg-[#0b1320]/50 border-[#efc349]/20 backdrop-blur-sm">
                   <CardHeader>
                     <CardTitle className="text-[#efc349] font-extralight">
                       Resultado do Cálculo
@@ -263,12 +259,18 @@ const TaxCalculator = () => {
                     </div>
                   </CardContent>
                 </Card>
-              </motion.div>}
+                
+                <ResultActions 
+                  resultData={resultado}
+                  calculatorType="irpf"
+                />
+              </motion.div>
+            )}
           </div>
         </motion.div>
       </div>
-      
-      <Footer />
-    </div>;
+    </div>
+  );
 };
+
 export default TaxCalculator;
