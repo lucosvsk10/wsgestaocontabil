@@ -94,8 +94,8 @@ export const SimulationsSection = () => {
 
       // Ordenar por data de criação
       allSimulations.sort((a, b) => {
-        const dateA = new Date(a.data_criacao || a.created_at);
-        const dateB = new Date(b.data_criacao || b.created_at);
+        const dateA = new Date(getCreatedDate(a));
+        const dateB = new Date(getCreatedDate(b));
         return dateB.getTime() - dateA.getTime();
       });
 
@@ -106,6 +106,11 @@ export const SimulationsSection = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Função helper para obter a data de criação
+  const getCreatedDate = (simulation: any) => {
+    return simulation.data_criacao || simulation.created_at;
   };
 
   const handleDeleteSimulation = async (simulation: any) => {
@@ -260,7 +265,7 @@ export const SimulationsSection = () => {
                       </Badge>
                     </div>
                     <p className="text-gray-400 font-extralight text-sm">
-                      {new Date(simulation.data_criacao || simulation.created_at).toLocaleString('pt-BR')}
+                      {new Date(getCreatedDate(simulation)).toLocaleString('pt-BR')}
                     </p>
                   </div>
                   <Button

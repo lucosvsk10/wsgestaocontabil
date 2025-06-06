@@ -207,16 +207,6 @@ const HomeCarousel = () => {
             </div>
           )}
         </div>
-
-        {/* Mobile responsive adjustments */}
-        <style jsx>{`
-          @media (max-width: 768px) {
-            .container {
-              padding-left: 1rem;
-              padding-right: 1rem;
-            }
-          }
-        `}</style>
       </div>
     </section>
   );
