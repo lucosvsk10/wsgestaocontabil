@@ -174,9 +174,9 @@ export const SimulationsSection = () => {
       case 'irpf':
         return formatCurrency(simulation.imposto_estimado || 0);
       case 'inss':
-        return formatCurrency(simulation.contribuicao || 0);
+        return formatCurrency(simulation.dados?.contribuicao || 0);
       case 'prolabore':
-        return formatCurrency(simulation.valor_liquido || 0);
+        return formatCurrency(simulation.dados?.valorLiquido || 0);
       default:
         return 'N/A';
     }
@@ -187,9 +187,9 @@ export const SimulationsSection = () => {
       case 'irpf':
         return `Rend. Bruto: ${formatCurrency(simulation.rendimento_bruto)} - Imposto: ${formatCurrency(simulation.imposto_estimado)}`;
       case 'inss':
-        return `${simulation.categoria} - ${simulation.aliquota}% - Contrib.: ${formatCurrency(simulation.contribuicao)}`;
+        return `${simulation.dados?.categoria} - ${simulation.dados?.aliquota}% - Contrib.: ${formatCurrency(simulation.dados?.contribuicao)}`;
       case 'prolabore':
-        return `Bruto: ${formatCurrency(simulation.valor_bruto)} - Líquido: ${formatCurrency(simulation.valor_liquido)}`;
+        return `Bruto: ${formatCurrency(simulation.dados?.valorBruto)} - Líquido: ${formatCurrency(simulation.dados?.valorLiquido)}`;
       default:
         return '';
     }

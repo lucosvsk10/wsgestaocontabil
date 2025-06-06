@@ -53,7 +53,7 @@ const ResultActions = ({ resultData, calculatorType }: ResultActionsProps) => {
             dependentes: resultData.dependentes || 0,
             outras_deducoes: resultData.outrasDeducoes || 0,
             imposto_estimado: resultData.impostoDevido || 0,
-            tipo_simulacao: 'irpf',
+            tipo_simulacao: 'IRPF',
             nome: user ? null : contactData.nome,
             email: user ? null : contactData.email,
             telefone: user ? null : contactData.telefone
@@ -64,12 +64,12 @@ const ResultActions = ({ resultData, calculatorType }: ResultActionsProps) => {
           tableName = 'prolabore_simulations';
           saveData = {
             user_id: user?.id || null,
-            valor_bruto: resultData.valorBruto || 0,
-            inss: resultData.inss || 0,
-            irrf: resultData.irrf || 0,
-            aliquota_irrf: resultData.aliquotaIRRF || 0,
-            valor_liquido: resultData.valorLiquido || 0,
-            total_descontos: resultData.totalDescontos || 0
+            dados: {
+              ...resultData,
+              contactData: user ? null : contactData,
+              tipo: 'prolabore',
+              timestamp: new Date().toISOString()
+            }
           };
           break;
 
@@ -77,12 +77,12 @@ const ResultActions = ({ resultData, calculatorType }: ResultActionsProps) => {
           tableName = 'inss_simulations';
           saveData = {
             user_id: user?.id || null,
-            categoria: resultData.categoria || '',
-            valor_base: resultData.valorBase || 0,
-            contribuicao: resultData.contribuicao || 0,
-            aliquota: resultData.aliquota || 0,
-            tipo_facultativo: resultData.tipoFacultativo || null,
-            detalhes: resultData.detalhes || ''
+            dados: {
+              ...resultData,
+              contactData: user ? null : contactData,
+              tipo: 'inss',
+              timestamp: new Date().toISOString()
+            }
           };
           break;
 

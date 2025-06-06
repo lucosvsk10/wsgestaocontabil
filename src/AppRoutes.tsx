@@ -1,3 +1,4 @@
+
 import { Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -106,10 +107,11 @@ const AppRoutes = () => {
       <Route path="/admin-dashboard" element={<Navigate to="/admin" replace />} />
       <Route path="/admin/tax-simulations" element={<Navigate to="/admin/simulations" replace />} />
       
+      {/* Rota corrigida do carousel */}
       <Route 
         path="/admin/carousel" 
         element={
-          <PrivateRoute>
+          <PrivateRoute requiredRole="admin">
             <AdminLayout>
               <CarouselManager />
             </AdminLayout>
