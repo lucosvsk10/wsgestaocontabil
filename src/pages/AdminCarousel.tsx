@@ -9,7 +9,7 @@ const AdminCarousel = () => {
   
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#FFF1DE] dark:bg-[#020817] flex items-center justify-center">
+      <div className="min-h-screen bg-white dark:bg-[#020817] flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-[#efc349]"></div>
       </div>
     );
@@ -20,7 +20,7 @@ const AdminCarousel = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#FFF1DE] dark:bg-[#020817]">
+    <div className="min-h-screen bg-white dark:bg-[#020817]">
       <AdminNavbar />
       <div className="container mx-auto px-4 py-8">
         <CarouselManager />

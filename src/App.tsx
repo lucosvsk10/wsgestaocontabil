@@ -29,7 +29,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
               <Route path="/client" element={<ClientDashboard />} />
-              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin" element={<AdminDashboard activeTab="dashboard" />} />
               <Route path="/admin/carousel" element={<AdminCarousel />} />
               <Route path="/simulador-irpf" element={<TaxCalculator />} />
               <Route path="/simulador-prolabore" element={<ProLaboreCalculator />} />
