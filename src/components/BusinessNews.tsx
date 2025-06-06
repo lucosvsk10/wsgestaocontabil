@@ -3,21 +3,18 @@ import ExchangeRateCard from './business/ExchangeRateCard';
 import NewsCard from './business/NewsCard';
 import LoadingState from './business/LoadingState';
 import ErrorState from './business/ErrorState';
-
 interface ExchangeRate {
   code: string;
   name: string;
   rate: number;
   change: number;
 }
-
 interface NewsItem {
   title: string;
   description: string;
   url: string;
   publishedAt: string;
 }
-
 const BusinessNews = () => {
   const [exchangeRates, setExchangeRates] = useState<ExchangeRate[]>([]);
   const [news, setNews] = useState<NewsItem[]>([]);
@@ -25,7 +22,6 @@ const BusinessNews = () => {
   const [refreshingRates, setRefreshingRates] = useState(false);
   const [refreshingNews, setRefreshingNews] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const fetchExchangeRates = async () => {
     try {
       const baseDate = new Date();
@@ -55,7 +51,6 @@ const BusinessNews = () => {
       setRefreshingRates(false);
     }
   };
-
   const fetchNews = async () => {
     try {
       const baseDate = new Date();
@@ -86,17 +81,14 @@ const BusinessNews = () => {
       setRefreshingNews(false);
     }
   };
-
   const handleRefreshRates = () => {
     setRefreshingRates(true);
     fetchExchangeRates();
   };
-
   const handleRefreshNews = () => {
     setRefreshingNews(true);
     fetchNews();
   };
-
   useEffect(() => {
     const loadInitialData = async () => {
       try {
@@ -109,29 +101,22 @@ const BusinessNews = () => {
         setLoading(false);
       }
     };
-
     loadInitialData();
-
     const intervalId = setInterval(() => {
       fetchExchangeRates();
       fetchNews();
     }, 86400000);
-
     return () => clearInterval(intervalId);
   }, []);
-
   if (loading) {
     return <LoadingState />;
   }
-
   if (error) {
     return <ErrorState error={error} />;
   }
-
-  return (
-    <section id="noticias" className="py-8 md:py-16 bg-[#FFF1DE] dark:bg-deepNavy-80">
+  return <section id="noticias" className="py-8 md:py-16 bg-[#FFF1DE] dark:bg-deepNavy-80">
       <div className="container mx-auto px-4 md:px-6">
-        <h2 className="text-3xl md:text-4xl text-[#020817] dark:text-gold text-center mb-8 font-light">
+        <h2 className="text-3xl text-[#020817] dark:text-gold text-center mb-8 font-light md:text-4xl">
           Notícias do Mundo de Negócios
         </h2>
         
@@ -140,8 +125,6 @@ const BusinessNews = () => {
           <NewsCard news={news} onRefresh={handleRefreshNews} isRefreshing={refreshingNews} />
         </div>
       </div>
-    </section>
-  );
+    </section>;
 };
-
 export default BusinessNews;
