@@ -1,55 +1,52 @@
-import { UserList } from "./UserList";
-import { PollsTabView } from "./polls/PollsTabView";
-import { UserDocumentView } from "./UserDocumentView";
-import { SimulationsView } from "./simulations/SimulationsView";
-import { StorageView } from "./storage/StorageView";
-import FiscalCalendar from "./FiscalCalendar";
-import { UserType } from "@/types/admin";
-import { Poll } from "@/types/polls";
 import { AdminDashboardView } from "./dashboard/AdminDashboardView";
-import { SettingsView } from "./settings/SettingsView";
+import UserManagementView from "./UserManagementView";
+import { StorageView } from "./storage/StorageView";
+import { PollsTabView } from "./polls/PollsTabView";
 import { AdminToolsView } from "./tools/AdminToolsView";
+import { AllSimulationsView } from "./simulations/AllSimulationsView";
 import { AnnouncementsView } from "./announcements/AnnouncementsView";
+import { FiscalCalendar } from "./FiscalCalendar";
+import { SettingsView } from "./settings/SettingsView";
+import { AdminDocumentView } from "./AdminDocumentView";
+import { UseFormReturn } from "react-hook-form";
 
-export interface AdminTabsViewProps {
-  activeTab?: string;
-  // Props para UserList
-  users?: UserType[];
-  supabaseUsers?: any[];
-  userInfoList?: any[];
-  isLoadingUsers?: boolean;
-  isLoadingAuthUsers?: boolean;
-  handleDocumentButtonClick?: (userId: string) => void;
-  setSelectedUserForPasswordChange?: (user: UserType) => void;
-  passwordForm?: any;
-  refreshUsers?: () => void;
-  createUser?: (data: any) => Promise<void>;
-  isCreatingUser?: boolean;
-  selectedUserId?: string | null;
-  documentName?: string;
-  setDocumentName?: (name: string) => void;
-  documentCategory?: string;
-  setDocumentCategory?: (category: string) => void;
-  documentObservations?: string;
-  setDocumentObservations?: (observations: string) => void;
-  handleFileChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  handleUpload?: (e: React.FormEvent) => Promise<void>;
-  isUploading?: boolean;
-  documents?: any[];
-  isLoadingDocuments?: boolean;
-  handleDeleteDocument?: (documentId: string) => Promise<void>;
-  documentCategories?: string[];
-  expirationDate?: Date | null;
-  setExpirationDate?: (date: Date | null) => void;
-  noExpiration?: boolean;
-  setNoExpiration?: (value: boolean) => void;
-  selectedPoll?: Poll | null;
+interface AdminTabsViewProps {
+  activeTab: string;
+  supabaseUsers: any[];
+  users: any[];
+  userInfoList: any[];
+  isLoadingUsers: boolean;
+  isLoadingAuthUsers: boolean;
+  handleDocumentButtonClick: (userId: string) => void;
+  setSelectedUserForPasswordChange: (user: any) => void;
+  passwordForm: UseFormReturn<any>;
+  refreshUsers: () => void;
+  createUser: (data: any) => Promise<void>;
+  isCreatingUser: boolean;
+  selectedUserId: string | undefined;
+  documentName: string;
+  setDocumentName: (name: string) => void;
+  documentCategory: string;
+  setDocumentCategory: (category: string) => void;
+  documentObservations: string;
+  setDocumentObservations: (observations: string) => void;
+  handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
+  handleUpload: () => Promise<void>;
+  isUploading: boolean;
+  documents: any[];
+  isLoadingDocuments: boolean;
+  handleDeleteDocument: (documentId: string) => Promise<void>;
+  documentCategories: string[];
+  expirationDate: Date | null;
+  setExpirationDate: (date: Date | null) => void;
+  noExpiration: boolean;
+  setNoExpiration: (noExpiration: boolean) => void;
 }
 
-export function AdminTabsView({
+const AdminTabsView = ({
   activeTab,
-  users,
   supabaseUsers,
+  users,
   userInfoList,
   isLoadingUsers,
   isLoadingAuthUsers,
@@ -76,58 +73,75 @@ export function AdminTabsView({
   expirationDate,
   setExpirationDate,
   noExpiration,
-  setNoExpiration,
-  selectedPoll
-}: AdminTabsViewProps) {
+  setNoExpiration
+}: AdminTabsViewProps) => {
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case "dashboard":
+        return <AdminDashboardView />;
+      case "users":
+        return (
+          <UserManagementView 
+            supabaseUsers={supabaseUsers}
+            users={users}
+            userInfoList={userInfoList}
+            isLoadingUsers={isLoadingUsers}
+            isLoadingAuthUsers={isLoadingAuthUsers}
+            handleDocumentButtonClick={handleDocumentButtonClick}
+            setSelectedUserForPasswordChange={setSelectedUserForPasswordChange}
+            passwordForm={passwordForm}
+            refreshUsers={refreshUsers}
+            createUser={createUser}
+            isCreatingUser={isCreatingUser}
+          />
+        );
+      case "storage":
+        return <StorageView />;
+      case "polls":
+        return <PollsTabView />;
+      case "tools":
+        return <AdminToolsView />;
+      case "simulations":
+        return <AllSimulationsView />;
+      case "announcements":
+        return <AnnouncementsView />;
+      case "agenda":
+        return <FiscalCalendar />;
+      case "settings":
+        return <SettingsView />;
+      case "user-documents":
+        return (
+          <AdminDocumentView 
+            selectedUserId={selectedUserId}
+            documentName={documentName}
+            setDocumentName={setDocumentName}
+            documentCategory={documentCategory}
+            setDocumentCategory={setDocumentCategory}
+            documentObservations={documentObservations}
+            setDocumentObservations={setDocumentObservations}
+            handleFileChange={handleFileChange}
+            handleUpload={handleUpload}
+            isUploading={isUploading}
+            documents={documents}
+            isLoadingDocuments={isLoadingDocuments}
+            handleDeleteDocument={handleDeleteDocument}
+            documentCategories={documentCategories}
+            expirationDate={expirationDate}
+            setExpirationDate={setExpirationDate}
+            noExpiration={noExpiration}
+            setNoExpiration={setNoExpiration}
+          />
+        );
+      default:
+        return <AdminDashboardView />;
+    }
+  };
+
   return (
-    <div className="w-full">
-      <div className="mt-4">
-        {/* Tab Content - Dashboard */}
-        {activeTab === "dashboard" && <AdminDashboardView users={users || []} supabaseUsers={supabaseUsers || []} documents={documents || []} />}
-
-        {/* Tab Content - Users */}
-        {activeTab === "users" && <div className="space-y-8">
-            {users && supabaseUsers && <UserList supabaseUsers={supabaseUsers} users={users} isLoading={isLoadingUsers || isLoadingAuthUsers} setSelectedUserId={handleDocumentButtonClick || (() => {})} setSelectedUserForPasswordChange={setSelectedUserForPasswordChange || (() => {})} passwordForm={passwordForm || {}} refreshUsers={refreshUsers || (() => {})} />}
-          </div>}
-
-        {/* Tab Content - User Documents */}
-        {activeTab === "user-documents" && <UserDocumentView users={users || []} supabaseUsers={supabaseUsers || []} />}
-
-        {/* Tab Content - Storage */}
-        {activeTab === "storage" && <div className="space-y-8">
-            <StorageView />
-          </div>}
-
-        {/* Tab Content - Polls */}
-        {activeTab === "polls" && <div className="space-y-8">
-            <PollsTabView />
-          </div>}
-
-        {/* Tab Content - Tools */}
-        {activeTab === "tools" && <div className="space-y-8">
-            <AdminToolsView />
-          </div>}
-
-        {/* Tab Content - Simulations */}
-        {activeTab === "simulations" && <div className="space-y-8">
-            <SimulationsView />
-          </div>}
-
-        {/* Tab Content - Announcements */}
-        {activeTab === "announcements" && <div className="space-y-8">
-            <AnnouncementsView />
-          </div>}
-
-        {/* Tab Content - Fiscal Calendar */}
-        {activeTab === "agenda" && <div className="space-y-8">
-            <FiscalCalendar />
-          </div>}
-
-        {/* Tab Content - Settings */}
-        {activeTab === "settings" && <div className="space-y-8">
-            <SettingsView />
-          </div>}
-      </div>
+    <div className="container mx-auto p-6">
+      {renderTabContent()}
     </div>
   );
-}
+};
+
+export default AdminTabsView;
