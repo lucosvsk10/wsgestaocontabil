@@ -33,7 +33,7 @@ export const useQuickStatsData = () => {
 
       if (documentsError) throw documentsError;
 
-      // Buscar simulações do usuário (todas as tipos)
+      // Buscar simulações do usuário (todas as tipos) - usando nova estrutura
       const [taxSimulations, inssSimulations, prolaboreSimulations] = await Promise.all([
         supabase
           .from('tax_simulations')

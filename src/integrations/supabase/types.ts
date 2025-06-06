@@ -383,37 +383,22 @@ export type Database = {
       }
       inss_simulations: {
         Row: {
-          aliquota: number
-          categoria: string
-          contribuicao: number
           created_at: string
-          detalhes: string | null
+          dados: Json
           id: string
-          tipo_facultativo: string | null
-          user_id: string | null
-          valor_base: number
+          user_id: string
         }
         Insert: {
-          aliquota?: number
-          categoria: string
-          contribuicao?: number
           created_at?: string
-          detalhes?: string | null
+          dados: Json
           id?: string
-          tipo_facultativo?: string | null
-          user_id?: string | null
-          valor_base?: number
+          user_id: string
         }
         Update: {
-          aliquota?: number
-          categoria?: string
-          contribuicao?: number
           created_at?: string
-          detalhes?: string | null
+          dados?: Json
           id?: string
-          tipo_facultativo?: string | null
-          user_id?: string | null
-          valor_base?: number
+          user_id?: string
         }
         Relationships: []
       }
@@ -633,37 +618,22 @@ export type Database = {
       }
       prolabore_simulations: {
         Row: {
-          aliquota_irrf: number
           created_at: string
+          dados: Json
           id: string
-          inss: number
-          irrf: number
-          total_descontos: number
-          user_id: string | null
-          valor_bruto: number
-          valor_liquido: number
+          user_id: string
         }
         Insert: {
-          aliquota_irrf?: number
           created_at?: string
+          dados: Json
           id?: string
-          inss?: number
-          irrf?: number
-          total_descontos?: number
-          user_id?: string | null
-          valor_bruto?: number
-          valor_liquido?: number
+          user_id: string
         }
         Update: {
-          aliquota_irrf?: number
           created_at?: string
+          dados?: Json
           id?: string
-          inss?: number
-          irrf?: number
-          total_descontos?: number
-          user_id?: string | null
-          valor_bruto?: number
-          valor_liquido?: number
+          user_id?: string
         }
         Relationships: []
       }
