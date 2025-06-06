@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calculator, Eye, Download, Trash2 } from "lucide-react";
+import { Calculator, Eye, FileText, Download, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/contexts/AuthContext";
@@ -174,9 +174,9 @@ export const SimulationsSection = () => {
       case 'irpf':
         return formatCurrency(simulation.imposto_estimado || 0);
       case 'inss':
-        return formatCurrency(simulation.dados?.contribuicao || 0);
+        return formatCurrency(simulation.contribuicao || 0);
       case 'prolabore':
-        return formatCurrency(simulation.dados?.valor_liquido || 0);
+        return formatCurrency(simulation.valor_liquido || 0);
       default:
         return 'N/A';
     }
@@ -187,11 +187,9 @@ export const SimulationsSection = () => {
       case 'irpf':
         return `Rend. Bruto: ${formatCurrency(simulation.rendimento_bruto)} - Imposto: ${formatCurrency(simulation.imposto_estimado)}`;
       case 'inss':
-        const dadosInss = simulation.dados || {};
-        return `${dadosInss.categoria} - ${dadosInss.aliquota}% - Contrib.: ${formatCurrency(dadosInss.contribuicao)}`;
+        return `${simulation.categoria} - ${simulation.aliquota}% - Contrib.: ${formatCurrency(simulation.contribuicao)}`;
       case 'prolabore':
-        const dadosProlabore = simulation.dados || {};
-        return `Bruto: ${formatCurrency(dadosProlabore.valor_bruto)} - Líquido: ${formatCurrency(dadosProlabore.valor_liquido)}`;
+        return `Bruto: ${formatCurrency(simulation.valor_bruto)} - Líquido: ${formatCurrency(simulation.valor_liquido)}`;
       default:
         return '';
     }
@@ -199,11 +197,11 @@ export const SimulationsSection = () => {
 
   if (loading) {
     return (
-      <Card className="bg-white dark:bg-[#0b1320] border-gray-200 dark:border-[#efc349]/20">
+      <Card className="bg-[#0b1320] border-[#efc349]/20">
         <CardContent className="p-6">
           <div className="animate-pulse space-y-4">
             {[1, 2, 3].map(i => (
-              <div key={i} className="h-20 bg-gray-100 dark:bg-[#020817] rounded"></div>
+              <div key={i} className="h-20 bg-[#020817] rounded"></div>
             ))}
           </div>
         </CardContent>
@@ -212,9 +210,9 @@ export const SimulationsSection = () => {
   }
 
   return (
-    <Card className="bg-white dark:bg-[#0b1320] border-gray-200 dark:border-[#efc349]/20">
+    <Card className="bg-[#0b1320] border-[#efc349]/20">
       <CardHeader>
-        <CardTitle className="text-[#020817] dark:text-[#efc349] font-extralight flex items-center">
+        <CardTitle className="text-[#efc349] font-extralight flex items-center">
           <Calculator className="w-6 h-6 mr-2" />
           Minhas Simulações
         </CardTitle>
@@ -222,7 +220,7 @@ export const SimulationsSection = () => {
       
       <CardContent>
         {simulations.length === 0 ? (
-          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+          <div className="text-center py-8 text-gray-400">
             <Calculator className="w-12 h-12 mx-auto mb-4 opacity-50" />
             <p className="font-extralight">Nenhuma simulação realizada</p>
             <div className="flex flex-col gap-2 mt-4">
@@ -254,19 +252,19 @@ export const SimulationsSection = () => {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.1 }}
-                className="bg-gray-50 dark:bg-[#020817] border border-gray-200 dark:border-[#efc349]/20 rounded-lg p-4 hover:border-[#efc349]/40 transition-all"
+                className="bg-[#020817] border border-[#efc349]/20 rounded-lg p-4 hover:border-[#efc349]/40 transition-all"
               >
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold text-[#020817] dark:text-white text-lg">
+                      <h3 className="font-semibold text-white text-lg">
                         {getSimulationType(simulation)}
                       </h3>
                       <Badge className="bg-green-600 hover:bg-green-700 text-white">
                         Concluída
                       </Badge>
                     </div>
-                    <p className="text-gray-500 dark:text-gray-400 font-extralight text-sm">
+                    <p className="text-gray-400 font-extralight text-sm">
                       {new Date(getCreatedDate(simulation)).toLocaleString('pt-BR')}
                     </p>
                   </div>
@@ -281,10 +279,10 @@ export const SimulationsSection = () => {
                 </div>
 
                 <div className="mb-4">
-                  <p className="text-[#020817] dark:text-white font-medium text-xl mb-2">
+                  <p className="text-white font-medium text-xl mb-2">
                     {getSimulationMainValue(simulation)}
                   </p>
-                  <p className="text-gray-600 dark:text-gray-300 text-sm">
+                  <p className="text-gray-300 text-sm">
                     {getSimulationDescription(simulation)}
                   </p>
                 </div>

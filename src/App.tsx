@@ -1,45 +1,39 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { ThemeProvider } from "@/components/theme/ThemeProvider";
-import Index from "./pages/Index";
-import Login from "./pages/Login.tsx";
-import ClientDashboard from "./pages/ClientDashboard";
-import AdminDashboard from "./pages/AdminDashboard";
-import AdminCarousel from "./pages/AdminCarousel";
-import TaxCalculator from "./pages/TaxCalculator";
-import ProLaboreCalculator from "./pages/ProLaboreCalculator";
-import INSSCalculator from "./pages/INSSCalculator";
+import { BrowserRouter } from "react-router-dom";
+import AppRoutes from "./AppRoutes";
+import { Toaster } from "./components/ui/toaster";
+import { ThemeProvider } from "./contexts/ThemeContext";
+import { AuthProvider } from "./contexts/AuthContext";
+import { AnnouncementsContainer } from "./components/announcements/AnnouncementsContainer";
+import React from 'react';
 
-const queryClient = new QueryClient();
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      gcTime: 1000 * 60 * 10, // 10 minutes
+    },
+  },
+});
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
-      <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/client" element={<ClientDashboard />} />
-              <Route path="/admin" element={<AdminDashboard activeTab="dashboard" />} />
-              <Route path="/admin/carousel" element={<AdminCarousel />} />
-              <Route path="/simulador-irpf" element={<TaxCalculator />} />
-              <Route path="/simulador-prolabore" element={<ProLaboreCalculator />} />
-              <Route path="/calculadora-inss" element={<INSSCalculator />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </AuthProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
-);
+function App() {
+  return (
+    <React.StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <AuthProvider>
+            <BrowserRouter>
+              <AppRoutes />
+              <AnnouncementsContainer />
+              <Toaster />
+            </BrowserRouter>
+          </AuthProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </React.StrictMode>
+  );
+}
 
 export default App;

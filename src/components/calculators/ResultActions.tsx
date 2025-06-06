@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -24,20 +25,6 @@ const ResultActions = ({ resultData, calculatorType }: ResultActionsProps) => {
     telefone: ""
   });
   const [saving, setSaving] = useState(false);
-
-  // Função para normalizar o tipo de simulação
-  const normalizeSimulationType = (type: string): string => {
-    switch (type.toLowerCase()) {
-      case 'irpf':
-        return 'IRPF';
-      case 'inss':
-        return 'INSS';
-      case 'prolabore':
-        return 'Prolabore';
-      default:
-        return 'IRPF';
-    }
-  };
 
   const handleSaveSimulation = async () => {
     if (!user && (!contactData.nome || !contactData.email)) {
@@ -66,7 +53,7 @@ const ResultActions = ({ resultData, calculatorType }: ResultActionsProps) => {
             dependentes: resultData.dependentes || 0,
             outras_deducoes: resultData.outrasDeducoes || 0,
             imposto_estimado: resultData.impostoDevido || 0,
-            tipo_simulacao: normalizeSimulationType('irpf'),
+            tipo_simulacao: 'irpf',
             nome: user ? null : contactData.nome,
             email: user ? null : contactData.email,
             telefone: user ? null : contactData.telefone
@@ -77,18 +64,12 @@ const ResultActions = ({ resultData, calculatorType }: ResultActionsProps) => {
           tableName = 'prolabore_simulations';
           saveData = {
             user_id: user?.id || null,
-            dados: {
-              valor_bruto: resultData.valorBruto || 0,
-              inss: resultData.inss || 0,
-              irrf: resultData.irrf || 0,
-              aliquota_irrf: resultData.aliquotaIRRF || 0,
-              valor_liquido: resultData.valorLiquido || 0,
-              total_descontos: resultData.totalDescontos || 0,
-              tipo_simulacao: normalizeSimulationType('prolabore'),
-              nome: user ? null : contactData.nome,
-              email: user ? null : contactData.email,
-              telefone: user ? null : contactData.telefone
-            }
+            valor_bruto: resultData.valorBruto || 0,
+            inss: resultData.inss || 0,
+            irrf: resultData.irrf || 0,
+            aliquota_irrf: resultData.aliquotaIRRF || 0,
+            valor_liquido: resultData.valorLiquido || 0,
+            total_descontos: resultData.totalDescontos || 0
           };
           break;
 
@@ -96,18 +77,12 @@ const ResultActions = ({ resultData, calculatorType }: ResultActionsProps) => {
           tableName = 'inss_simulations';
           saveData = {
             user_id: user?.id || null,
-            dados: {
-              categoria: resultData.categoria || '',
-              valor_base: resultData.valorBase || 0,
-              contribuicao: resultData.contribuicao || 0,
-              aliquota: resultData.aliquota || 0,
-              tipo_facultativo: resultData.tipoFacultativo || null,
-              detalhes: resultData.detalhes || '',
-              tipo_simulacao: normalizeSimulationType('inss'),
-              nome: user ? null : contactData.nome,
-              email: user ? null : contactData.email,
-              telefone: user ? null : contactData.telefone
-            }
+            categoria: resultData.categoria || '',
+            valor_base: resultData.valorBase || 0,
+            contribuicao: resultData.contribuicao || 0,
+            aliquota: resultData.aliquota || 0,
+            tipo_facultativo: resultData.tipoFacultativo || null,
+            detalhes: resultData.detalhes || ''
           };
           break;
 
