@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDocumentManager } from "@/hooks/document/useDocumentManager";
@@ -98,6 +99,15 @@ const AdminDashboard = ({
       setSelectedUserId(userId);
     }
   }, [activeTab, userId, setSelectedUserId]);
+
+  // Wrapper functions to handle the type issues
+  const handleFileChangeWrapper = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    await handleFileChange(e);
+  };
+
+  const handleUploadWrapper = async () => {
+    await handleUpload();
+  };
   
   return (
     <AdminLayout>
@@ -124,8 +134,8 @@ const AdminDashboard = ({
         setDocumentCategory={setDocumentCategory} 
         documentObservations={documentObservations} 
         setDocumentObservations={setDocumentObservations} 
-        handleFileChange={handleFileChange} 
-        handleUpload={handleUpload} 
+        handleFileChange={handleFileChangeWrapper} 
+        handleUpload={handleUploadWrapper} 
         isUploading={isUploading} 
         documents={documents} 
         isLoadingDocuments={isLoadingDocuments} 
