@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -63,7 +64,7 @@ export const SimulationsSection = () => {
     try {
       console.log("Buscando simulações para usuário:", user.id);
       
-      // Buscar todas as simulações do usuário das três tabelas
+      // Buscar todas as simulações do usuário
       const [taxSims, inssSims, prolaboreSims] = await Promise.all([
         supabase
           .from('tax_simulations')
@@ -84,28 +85,11 @@ export const SimulationsSection = () => {
           .order('created_at', { ascending: false })
       ]);
 
-      // Processar e combinar simulações
-      const processedTaxSims = (taxSims.data || []).map(sim => ({
-        ...sim,
-        simulationType: 'irpf',
-        created_at: sim.data_criacao
-      }));
-
-      const processedInssSims = (inssSims.data || []).map(sim => ({
-        ...sim,
-        simulationType: 'inss'
-      }));
-
-      const processedProlaboreSims = (prolaboreSims.data || []).map(sim => ({
-        ...sim,
-        simulationType: 'prolabore'
-      }));
-
-      // Combinar todas as simulações
+      // Combinar todas as simulações com tipo identificado
       const allSimulations = [
-        ...processedTaxSims,
-        ...processedInssSims,
-        ...processedProlaboreSims
+        ...(taxSims.data || []).map(sim => ({ ...sim, simulationType: 'irpf' })),
+        ...(inssSims.data || []).map(sim => ({ ...sim, simulationType: 'inss' })),
+        ...(prolaboreSims.data || []).map(sim => ({ ...sim, simulationType: 'prolabore' }))
       ];
 
       // Ordenar por data de criação
@@ -127,48 +111,6 @@ export const SimulationsSection = () => {
   // Função helper para obter a data de criação
   const getCreatedDate = (simulation: any) => {
     return simulation.data_criacao || simulation.created_at;
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value);
-  };
-
-  const getSimulationType = (simulation: any) => {
-    switch (simulation.simulationType) {
-      case 'irpf': return 'IRPF';
-      case 'inss': return 'INSS';
-      case 'prolabore': return 'Pró-labore';
-      default: return 'Simulação';
-    }
-  };
-
-  const getSimulationMainValue = (simulation: any) => {
-    switch (simulation.simulationType) {
-      case 'irpf':
-        return formatCurrency(simulation.imposto_estimado || 0);
-      case 'inss':
-        return formatCurrency(simulation.dados?.contribuicao || 0);
-      case 'prolabore':
-        return formatCurrency(simulation.dados?.valorLiquido || 0);
-      default:
-        return 'N/A';
-    }
-  };
-
-  const getSimulationDescription = (simulation: any) => {
-    switch (simulation.simulationType) {
-      case 'irpf':
-        return `Rendimento: ${formatCurrency(simulation.rendimento_bruto)} - Imposto: ${formatCurrency(simulation.imposto_estimado)}`;
-      case 'inss':
-        return `${simulation.dados?.categoria} - ${simulation.dados?.aliquota}% - Contribuição: ${formatCurrency(simulation.dados?.contribuicao)}`;
-      case 'prolabore':
-        return `Bruto: ${formatCurrency(simulation.dados?.valorBruto)} - Líquido: ${formatCurrency(simulation.dados?.valorLiquido)}`;
-      default:
-        return '';
-    }
   };
 
   const handleDeleteSimulation = async (simulation: any) => {
@@ -208,6 +150,48 @@ export const SimulationsSection = () => {
         description: "Não foi possível excluir a simulação",
         variant: "destructive"
       });
+    }
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+
+  const getSimulationType = (simulation: any) => {
+    switch (simulation.simulationType) {
+      case 'irpf': return 'IRPF';
+      case 'inss': return 'INSS';
+      case 'prolabore': return 'Pró-labore';
+      default: return 'Simulação';
+    }
+  };
+
+  const getSimulationMainValue = (simulation: any) => {
+    switch (simulation.simulationType) {
+      case 'irpf':
+        return formatCurrency(simulation.imposto_estimado || 0);
+      case 'inss':
+        return formatCurrency(simulation.dados?.contribuicao || 0);
+      case 'prolabore':
+        return formatCurrency(simulation.dados?.valorLiquido || 0);
+      default:
+        return 'N/A';
+    }
+  };
+
+  const getSimulationDescription = (simulation: any) => {
+    switch (simulation.simulationType) {
+      case 'irpf':
+        return `Rend. Bruto: ${formatCurrency(simulation.rendimento_bruto)} - Imposto: ${formatCurrency(simulation.imposto_estimado)}`;
+      case 'inss':
+        return `${simulation.dados?.categoria} - ${simulation.dados?.aliquota}% - Contrib.: ${formatCurrency(simulation.dados?.contribuicao)}`;
+      case 'prolabore':
+        return `Bruto: ${formatCurrency(simulation.dados?.valorBruto)} - Líquido: ${formatCurrency(simulation.dados?.valorLiquido)}`;
+      default:
+        return '';
     }
   };
 
