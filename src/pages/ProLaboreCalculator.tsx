@@ -82,7 +82,7 @@ const ProLaboreCalculator = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#FFF1DE] dark:bg-[#020817] text-[#020817] dark:text-white font-extralight print:bg-white">
+    <div className="min-h-screen bg-background text-foreground font-prompt print:bg-white">
       <div className="print:hidden">
         <SimpleNavbar title="Simulação Pró-labore 2024" />
       </div>
@@ -96,19 +96,19 @@ const ProLaboreCalculator = () => {
         >
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-4xl md:text-5xl font-extralight text-[#efc349] mb-4 print:text-[#020817] print:text-3xl">
+            <h1 className="text-4xl md:text-5xl font-extralight text-gold mb-4 print:text-foreground print:text-3xl">
               Simulação Pró-labore 2024
             </h1>
-            <p className="text-xl text-gray-300 font-extralight print:text-gray-600 print:text-base">
+            <p className="text-xl text-muted-foreground font-extralight print:text-gray-600 print:text-base">
               Calcule os descontos e valor líquido do seu pró-labore
             </p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Formulário */}
-            <Card className="bg-[#0b1320] border-[#efc349]/20 print:bg-white print:border-gray-300">
+            <Card className="print:bg-white print:border-gray-300">
               <CardHeader>
-                <CardTitle className="text-[#efc349] font-extralight flex items-center print:text-[#020817]">
+                <CardTitle className="font-extralight flex items-center print:text-foreground">
                   <Calculator className="w-6 h-6 mr-2" />
                   Dados para Simulação
                 </CardTitle>
@@ -116,7 +116,7 @@ const ProLaboreCalculator = () => {
               
               <CardContent className="space-y-6">
                 <div>
-                  <Label htmlFor="valorBruto" className="text-white font-extralight flex items-center print:text-black">
+                  <Label htmlFor="valorBruto" className="font-extralight flex items-center print:text-black">
                     <DollarSign className="w-4 h-4 mr-1" />
                     Valor Bruto do Pró-labore (R$)
                   </Label>
@@ -126,16 +126,16 @@ const ProLaboreCalculator = () => {
                     placeholder="5000.00"
                     value={valorBruto}
                     onChange={(e) => setValorBruto(e.target.value)}
-                    className="bg-[#020817] border-[#efc349]/30 text-white mt-1 print:bg-white print:border-gray-300 print:text-black"
+                    className="mt-1 print:bg-white print:border-gray-300 print:text-black"
                   />
-                  <p className="text-xs text-gray-400 mt-1 print:text-gray-600">
+                  <p className="text-xs text-muted-foreground mt-1 print:text-gray-600">
                     Valor mínimo: R$ 1.412,00 (salário mínimo)
                   </p>
                 </div>
 
-                <div className="bg-[#020817] rounded-lg p-4 print:bg-gray-50 print:border print:border-gray-300">
-                  <h3 className="text-white font-medium mb-2 print:text-black">Informações Importantes:</h3>
-                  <ul className="text-sm text-gray-300 space-y-1 font-extralight print:text-gray-600">
+                <div className="bg-muted rounded-lg p-4 print:bg-gray-50 print:border print:border-gray-300">
+                  <h3 className="text-foreground font-medium mb-2 print:text-black">Informações Importantes:</h3>
+                  <ul className="text-sm text-muted-foreground space-y-1 font-extralight print:text-gray-600">
                     <li>• INSS: 11% limitado ao teto de R$ 7.786,02</li>
                     <li>• IRRF: Tabela progressiva mensal</li>
                     <li>• Valor mínimo: 1 salário mínimo</li>
@@ -147,7 +147,7 @@ const ProLaboreCalculator = () => {
                   <Button 
                     onClick={calcularProLabore}
                     disabled={loading || !valorBruto || parseFloat(valorBruto) < 1412}
-                    className="flex-1 bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817] font-extralight"
+                    className="flex-1 bg-gold hover:bg-gold-dark text-background font-extralight"
                   >
                     {loading ? "Calculando..." : "Simular Pró-labore"}
                   </Button>
@@ -155,7 +155,7 @@ const ProLaboreCalculator = () => {
                   <Button 
                     onClick={resetForm}
                     variant="outline"
-                    className="border-[#efc349]/30 text-[#efc349] hover:bg-[#efc349]/10"
+                    className="hover:bg-muted"
                   >
                     Limpar
                   </Button>
@@ -170,55 +170,55 @@ const ProLaboreCalculator = () => {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5 }}
               >
-                <Card className="bg-[#0b1320] border-[#efc349]/20 print:bg-white print:border-gray-300">
+                <Card className="print:bg-white print:border-gray-300">
                   <CardHeader>
-                    <CardTitle className="text-[#efc349] font-extralight print:text-[#020817]">
+                    <CardTitle className="font-extralight print:text-foreground">
                       Resultado da Simulação
                     </CardTitle>
                   </CardHeader>
                   
                   <CardContent className="space-y-4">
                     {/* Resumo Principal */}
-                    <div className="bg-[#020817] rounded-lg p-4 print:bg-gray-50 print:border print:border-gray-300">
-                      <h3 className="text-lg font-medium text-white mb-3 print:text-black">Resumo</h3>
+                    <div className="bg-muted rounded-lg p-4 print:bg-gray-50 print:border print:border-gray-300">
+                      <h3 className="text-lg font-medium text-foreground mb-3 print:text-black">Resumo</h3>
                       
                       <div className="space-y-3">
                         <div className="flex justify-between items-center">
-                          <span className="text-gray-400 flex items-center print:text-gray-600">
-                            <Plus className="w-4 h-4 mr-1 text-green-400" />
+                          <span className="text-muted-foreground flex items-center print:text-gray-600">
+                            <Plus className="w-4 h-4 mr-1 text-green-500" />
                             Valor Bruto:
                           </span>
-                          <span className="text-white font-medium text-lg print:text-black">
+                          <span className="text-foreground font-medium text-lg print:text-black">
                             {formatCurrency(resultado.valorBruto)}
                           </span>
                         </div>
 
-                        <div className="border-t border-[#efc349]/20 pt-3 print:border-gray-300">
+                        <div className="border-t border-border pt-3 print:border-gray-300">
                           <div className="flex justify-between">
-                            <span className="text-gray-400 flex items-center print:text-gray-600">
-                              <Minus className="w-4 h-4 mr-1 text-red-400" />
+                            <span className="text-muted-foreground flex items-center print:text-gray-600">
+                              <Minus className="w-4 h-4 mr-1 text-red-500" />
                               INSS (11%):
                             </span>
-                            <span className="text-red-400 print:text-red-600">
+                            <span className="text-red-500 print:text-red-600">
                               -{formatCurrency(resultado.inss)}
                             </span>
                           </div>
                           
                           <div className="flex justify-between mt-2">
-                            <span className="text-gray-400 flex items-center print:text-gray-600">
-                              <Minus className="w-4 h-4 mr-1 text-red-400" />
+                            <span className="text-muted-foreground flex items-center print:text-gray-600">
+                              <Minus className="w-4 h-4 mr-1 text-red-500" />
                               IRRF ({resultado.aliquotaIRRF}%):
                             </span>
-                            <span className="text-red-400 print:text-red-600">
+                            <span className="text-red-500 print:text-red-600">
                               -{formatCurrency(resultado.irrf)}
                             </span>
                           </div>
                         </div>
 
-                        <div className="border-t-2 border-[#efc349] pt-3 print:border-[#020817]">
+                        <div className="border-t-2 border-gold pt-3 print:border-foreground">
                           <div className="flex justify-between items-center">
-                            <span className="text-gray-400 font-medium print:text-gray-600">Valor Líquido:</span>
-                            <span className="text-2xl font-bold text-[#efc349] print:text-[#020817]">
+                            <span className="text-muted-foreground font-medium print:text-gray-600">Valor Líquido:</span>
+                            <span className="text-2xl font-bold text-gold print:text-foreground">
                               {formatCurrency(resultado.valorLiquido)}
                             </span>
                           </div>
@@ -227,36 +227,36 @@ const ProLaboreCalculator = () => {
                     </div>
 
                     {/* Detalhamento dos Descontos */}
-                    <div className="bg-[#020817] rounded-lg p-4 print:bg-gray-50 print:border print:border-gray-300">
-                      <h3 className="text-lg font-medium text-white mb-3 print:text-black">Detalhamento</h3>
+                    <div className="bg-muted rounded-lg p-4 print:bg-gray-50 print:border print:border-gray-300">
+                      <h3 className="text-lg font-medium text-foreground mb-3 print:text-black">Detalhamento</h3>
                       
                       <div className="space-y-3 text-sm">
                         <div>
                           <div className="flex justify-between mb-1">
-                            <span className="text-gray-400 print:text-gray-600">INSS:</span>
-                            <Badge className="bg-blue-600 hover:bg-blue-700 print:bg-blue-100 print:text-blue-800 print:border print:border-blue-300">11%</Badge>
+                            <span className="text-muted-foreground print:text-gray-600">INSS:</span>
+                            <Badge className="bg-primary text-primary-foreground print:bg-blue-100 print:text-blue-800 print:border print:border-blue-300">11%</Badge>
                           </div>
-                          <p className="text-xs text-gray-500 print:text-gray-600">
+                          <p className="text-xs text-muted-foreground print:text-gray-600">
                             Base: {formatCurrency(Math.min(resultado.valorBruto, resultado.tetoINSS))}
                           </p>
                         </div>
 
                         <div>
                           <div className="flex justify-between mb-1">
-                            <span className="text-gray-400 print:text-gray-600">IRRF:</span>
-                            <Badge className="bg-purple-600 hover:bg-purple-700 print:bg-purple-100 print:text-purple-800 print:border print:border-purple-300">
+                            <span className="text-muted-foreground print:text-gray-600">IRRF:</span>
+                            <Badge className="bg-secondary text-secondary-foreground print:bg-purple-100 print:text-purple-800 print:border print:border-purple-300">
                               {resultado.aliquotaIRRF}%
                             </Badge>
                           </div>
-                          <p className="text-xs text-gray-500 print:text-gray-600">
+                          <p className="text-xs text-muted-foreground print:text-gray-600">
                             Base: {formatCurrency(resultado.valorBruto - resultado.inss)}
                           </p>
                         </div>
 
-                        <div className="border-t border-[#efc349]/20 pt-2 print:border-gray-300">
+                        <div className="border-t border-border pt-2 print:border-gray-300">
                           <div className="flex justify-between">
-                            <span className="text-gray-400 print:text-gray-600">Total de Descontos:</span>
-                            <span className="text-white font-medium print:text-black">
+                            <span className="text-muted-foreground print:text-gray-600">Total de Descontos:</span>
+                            <span className="text-foreground font-medium print:text-black">
                               {formatCurrency(resultado.totalDescontos)}
                             </span>
                           </div>
@@ -265,31 +265,31 @@ const ProLaboreCalculator = () => {
                     </div>
 
                     {/* Comparativo Anual */}
-                    <div className="bg-[#020817] rounded-lg p-4 print:bg-gray-50 print:border print:border-gray-300">
-                      <h3 className="text-lg font-medium text-white mb-3 print:text-black">Projeção Anual</h3>
+                    <div className="bg-muted rounded-lg p-4 print:bg-gray-50 print:border print:border-gray-300">
+                      <h3 className="text-lg font-medium text-foreground mb-3 print:text-black">Projeção Anual</h3>
                       
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-gray-400 print:text-gray-600">Pró-labore Bruto (12 meses):</span>
-                          <span className="text-white print:text-black">
+                          <span className="text-muted-foreground print:text-gray-600">Pró-labore Bruto (12 meses):</span>
+                          <span className="text-foreground print:text-black">
                             {formatCurrency(resultado.valorBruto * 12)}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-400 print:text-gray-600">Total INSS (12 meses):</span>
-                          <span className="text-red-400 print:text-red-600">
+                          <span className="text-muted-foreground print:text-gray-600">Total INSS (12 meses):</span>
+                          <span className="text-red-500 print:text-red-600">
                             -{formatCurrency(resultado.inss * 12)}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-400 print:text-gray-600">Total IRRF (12 meses):</span>
-                          <span className="text-red-400 print:text-red-600">
+                          <span className="text-muted-foreground print:text-gray-600">Total IRRF (12 meses):</span>
+                          <span className="text-red-500 print:text-red-600">
                             -{formatCurrency(resultado.irrf * 12)}
                           </span>
                         </div>
-                        <div className="flex justify-between border-t border-[#efc349]/20 pt-2 print:border-gray-300">
-                          <span className="text-gray-400 font-medium print:text-gray-600">Líquido Anual:</span>
-                          <span className="text-[#efc349] font-bold print:text-[#020817]">
+                        <div className="flex justify-between border-t border-border pt-2 print:border-gray-300">
+                          <span className="text-muted-foreground font-medium print:text-gray-600">Líquido Anual:</span>
+                          <span className="text-gold font-bold print:text-foreground">
                             {formatCurrency(resultado.valorLiquido * 12)}
                           </span>
                         </div>
@@ -297,9 +297,9 @@ const ProLaboreCalculator = () => {
                     </div>
 
                     {/* Observações */}
-                    <div className="bg-[#020817] rounded-lg p-4 print:bg-gray-50 print:border print:border-gray-300">
-                      <h3 className="text-lg font-medium text-white mb-3 print:text-black">Observações</h3>
-                      <ul className="text-xs text-gray-400 space-y-1 font-extralight print:text-gray-600">
+                    <div className="bg-muted rounded-lg p-4 print:bg-gray-50 print:border print:border-gray-300">
+                      <h3 className="text-lg font-medium text-foreground mb-3 print:text-black">Observações</h3>
+                      <ul className="text-xs text-muted-foreground space-y-1 font-extralight print:text-gray-600">
                         <li>• Pró-labore não tem incidência de FGTS</li>
                         <li>• Valor mínimo obrigatório: 1 salário mínimo</li>
                         <li>• INSS limitado ao teto: R$ {formatCurrency(resultado.tetoINSS)}</li>

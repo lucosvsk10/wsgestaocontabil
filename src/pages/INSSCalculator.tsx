@@ -114,7 +114,7 @@ const INSSCalculator = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#FFF1DE] dark:bg-[#020817] text-[#020817] dark:text-white font-extralight print:bg-white">
+    <div className="min-h-screen bg-background text-foreground font-prompt print:bg-white">
       <div className="print:hidden">
         <SimpleNavbar title="Calculadora INSS 2024" />
       </div>
@@ -128,36 +128,35 @@ const INSSCalculator = () => {
         >
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-4xl md:text-5xl font-extralight text-[#efc349] mb-4 print:text-[#020817] print:text-3xl">
+            <h1 className="text-4xl md:text-5xl font-extralight text-gold mb-4 print:text-foreground print:text-3xl">
               Calculadora INSS 2024
             </h1>
-            <p className="text-xl text-gray-300 font-extralight print:text-gray-600 print:text-base">
+            <p className="text-xl text-muted-foreground font-extralight print:text-gray-600 print:text-base">
               Calcule sua contribuição para o INSS conforme sua categoria
             </p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Formulário */}
-            <Card className="bg-[#0b1320] border-[#efc349]/20 print:bg-white print:border-gray-300">
+            <Card className="print:bg-white print:border-gray-300">
               <CardHeader>
-                <CardTitle className="text-[#efc349] font-extralight flex items-center print:text-[#020817]">
+                <CardTitle className="font-extralight flex items-center print:text-foreground">
                   <Calculator className="w-6 h-6 mr-2" />
                   Dados para Cálculo
                 </CardTitle>
               </CardHeader>
               
               <CardContent className="space-y-6">
-                {/* ... keep existing code (formulário inputs with print styles) */}
                 <div>
-                  <Label className="text-white font-extralight flex items-center print:text-black">
+                  <Label className="font-extralight flex items-center print:text-black">
                     <Briefcase className="w-4 h-4 mr-1" />
                     Categoria de Contribuinte
                   </Label>
                   <Select value={categoria} onValueChange={setCategoria}>
-                    <SelectTrigger className="bg-[#020817] border-[#efc349]/30 text-white mt-1 print:bg-white print:border-gray-300 print:text-black">
+                    <SelectTrigger className="mt-1 print:bg-white print:border-gray-300 print:text-black">
                       <SelectValue placeholder="Selecione sua categoria" />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#020817] border-[#efc349]/30 print:bg-white print:border-gray-300">
+                    <SelectContent>
                       <SelectItem value="clt">CLT (Empregado)</SelectItem>
                       <SelectItem value="autonomo">Autônomo</SelectItem>
                       <SelectItem value="mei">MEI (Microempreendedor Individual)</SelectItem>
@@ -168,14 +167,14 @@ const INSSCalculator = () => {
 
                 {categoria === "facultativo" && (
                   <div>
-                    <Label className="text-white font-extralight print:text-black">
+                    <Label className="font-extralight print:text-black">
                       Tipo de Contribuição Facultativa
                     </Label>
                     <Select value={tipoFacultativo} onValueChange={setTipoFacultativo}>
-                      <SelectTrigger className="bg-[#020817] border-[#efc349]/30 text-white mt-1 print:bg-white print:border-gray-300 print:text-black">
+                      <SelectTrigger className="mt-1 print:bg-white print:border-gray-300 print:text-black">
                         <SelectValue placeholder="Selecione o tipo" />
                       </SelectTrigger>
-                      <SelectContent className="bg-[#020817] border-[#efc349]/30 print:bg-white print:border-gray-300">
+                      <SelectContent>
                         <SelectItem value="baixa_renda">Plano Simplificado (5%)</SelectItem>
                         <SelectItem value="normal">Contribuição Normal (11%)</SelectItem>
                         <SelectItem value="completo">Contribuição Completa (20%)</SelectItem>
@@ -186,7 +185,7 @@ const INSSCalculator = () => {
 
                 {categoria && categoria !== "mei" && (
                   <div>
-                    <Label htmlFor="valor" className="text-white font-extralight flex items-center print:text-black">
+                    <Label htmlFor="valor" className="font-extralight flex items-center print:text-black">
                       <DollarSign className="w-4 h-4 mr-1" />
                       {categoria === "clt" ? "Salário Mensal (R$)" : 
                        categoria === "facultativo" ? "Valor de Contribuição (R$)" :
@@ -198,10 +197,10 @@ const INSSCalculator = () => {
                       placeholder={categoria === "clt" ? "3000.00" : "1412.00"}
                       value={valor}
                       onChange={(e) => setValor(e.target.value)}
-                      className="bg-[#020817] border-[#efc349]/30 text-white mt-1 print:bg-white print:border-gray-300 print:text-black"
+                      className="mt-1 print:bg-white print:border-gray-300 print:text-black"
                     />
                     {categoria === "clt" && (
-                      <p className="text-xs text-gray-400 mt-1 print:text-gray-600">
+                      <p className="text-xs text-muted-foreground mt-1 print:text-gray-600">
                         Teto INSS 2024: R$ 7.786,02
                       </p>
                     )}
@@ -209,8 +208,8 @@ const INSSCalculator = () => {
                 )}
 
                 {categoria === "mei" && (
-                  <div className="bg-[#020817] rounded-lg p-4 print:bg-gray-50 print:border print:border-gray-300">
-                    <p className="text-gray-300 font-extralight print:text-gray-600">
+                  <div className="bg-muted rounded-lg p-4 print:bg-gray-50 print:border print:border-gray-300">
+                    <p className="text-muted-foreground font-extralight print:text-gray-600">
                       <strong>MEI:</strong> Valor fixo mensal de 5% do salário mínimo.<br/>
                       Não é necessário informar valor de contribuição.
                     </p>
@@ -221,7 +220,7 @@ const INSSCalculator = () => {
                   <Button 
                     onClick={calcularINSS}
                     disabled={loading || !categoria || (categoria !== "mei" && !valor)}
-                    className="flex-1 bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817] font-extralight"
+                    className="flex-1 bg-gold hover:bg-gold-dark text-background font-extralight"
                   >
                     {loading ? "Calculando..." : "Calcular INSS"}
                   </Button>
@@ -229,7 +228,7 @@ const INSSCalculator = () => {
                   <Button 
                     onClick={resetForm}
                     variant="outline"
-                    className="border-[#efc349]/30 text-[#efc349] hover:bg-[#efc349]/10"
+                    className="hover:bg-muted"
                   >
                     Limpar
                   </Button>
@@ -244,22 +243,21 @@ const INSSCalculator = () => {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5 }}
               >
-                <Card className="bg-[#0b1320] border-[#efc349]/20 print:bg-white print:border-gray-300">
+                <Card className="print:bg-white print:border-gray-300">
                   <CardHeader>
-                    <CardTitle className="text-[#efc349] font-extralight print:text-[#020817]">
+                    <CardTitle className="font-extralight print:text-foreground">
                       Resultado do Cálculo
                     </CardTitle>
                   </CardHeader>
                   
                   <CardContent className="space-y-4">
-                    {/* ... keep existing code (resultado display with print styles) */}
-                    <div className="bg-[#020817] rounded-lg p-4 print:bg-gray-50 print:border print:border-gray-300">
-                      <h3 className="text-lg font-medium text-white mb-3 print:text-black">Contribuição INSS</h3>
+                    <div className="bg-muted rounded-lg p-4 print:bg-gray-50 print:border print:border-gray-300">
+                      <h3 className="text-lg font-medium text-foreground mb-3 print:text-black">Contribuição INSS</h3>
                       
                       <div className="space-y-3">
                         <div className="flex justify-between items-center">
-                          <span className="text-gray-400 print:text-gray-600">Categoria:</span>
-                          <Badge className="bg-blue-600 hover:bg-blue-700 print:bg-blue-100 print:text-blue-800 print:border print:border-blue-300">
+                          <span className="text-muted-foreground print:text-gray-600">Categoria:</span>
+                          <Badge className="bg-primary text-primary-foreground print:bg-blue-100 print:text-blue-800 print:border print:border-blue-300">
                             {resultado.categoria === "clt" ? "CLT" :
                              resultado.categoria === "autonomo" ? "Autônomo" :
                              resultado.categoria === "mei" ? "MEI" : "Facultativo"}
@@ -267,55 +265,55 @@ const INSSCalculator = () => {
                         </div>
 
                         <div className="flex justify-between">
-                          <span className="text-gray-400 print:text-gray-600">Alíquota:</span>
-                          <span className="text-white font-medium print:text-black">{resultado.aliquota}%</span>
+                          <span className="text-muted-foreground print:text-gray-600">Alíquota:</span>
+                          <span className="text-foreground font-medium print:text-black">{resultado.aliquota}%</span>
                         </div>
 
                         {resultado.categoria !== "mei" && (
                           <div className="flex justify-between">
-                            <span className="text-gray-400 print:text-gray-600">Valor Base:</span>
-                            <span className="text-white print:text-black">{formatCurrency(resultado.valorBase)}</span>
+                            <span className="text-muted-foreground print:text-gray-600">Valor Base:</span>
+                            <span className="text-foreground print:text-black">{formatCurrency(resultado.valorBase)}</span>
                           </div>
                         )}
 
-                        <div className="flex justify-between border-t border-[#efc349]/20 pt-3 print:border-gray-300">
-                          <span className="text-gray-400 print:text-gray-600">Contribuição Mensal:</span>
-                          <span className="text-2xl font-bold text-[#efc349] print:text-[#020817]">
+                        <div className="flex justify-between border-t border-border pt-3 print:border-gray-300">
+                          <span className="text-muted-foreground print:text-gray-600">Contribuição Mensal:</span>
+                          <span className="text-2xl font-bold text-gold print:text-foreground">
                             {formatCurrency(resultado.contribuicao)}
                           </span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="bg-[#020817] rounded-lg p-4 print:bg-gray-50 print:border print:border-gray-300">
-                      <h3 className="text-lg font-medium text-white mb-3 print:text-black">Detalhes</h3>
-                      <p className="text-gray-300 font-extralight text-sm print:text-gray-600">
+                    <div className="bg-muted rounded-lg p-4 print:bg-gray-50 print:border print:border-gray-300">
+                      <h3 className="text-lg font-medium text-foreground mb-3 print:text-black">Detalhes</h3>
+                      <p className="text-muted-foreground font-extralight text-sm print:text-gray-600">
                         {resultado.detalhes}
                       </p>
                     </div>
 
-                    <div className="bg-[#020817] rounded-lg p-4 print:bg-gray-50 print:border print:border-gray-300">
-                      <h3 className="text-lg font-medium text-white mb-3 print:text-black">Valores Anuais</h3>
+                    <div className="bg-muted rounded-lg p-4 print:bg-gray-50 print:border print:border-gray-300">
+                      <h3 className="text-lg font-medium text-foreground mb-3 print:text-black">Valores Anuais</h3>
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-gray-400 print:text-gray-600">Contribuição Anual:</span>
-                          <span className="text-white font-medium print:text-black">
+                          <span className="text-muted-foreground print:text-gray-600">Contribuição Anual:</span>
+                          <span className="text-foreground font-medium print:text-black">
                             {formatCurrency(resultado.contribuicao * 12)}
                           </span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="bg-[#020817] rounded-lg p-4 print:bg-gray-50 print:border print:border-gray-300">
-                      <h3 className="text-lg font-medium text-white mb-3 print:text-black">Referências 2024</h3>
+                    <div className="bg-muted rounded-lg p-4 print:bg-gray-50 print:border print:border-gray-300">
+                      <h3 className="text-lg font-medium text-foreground mb-3 print:text-black">Referências 2024</h3>
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-gray-400 print:text-gray-600">Salário Mínimo:</span>
-                          <span className="text-white print:text-black">{formatCurrency(resultado.salarioMinimo)}</span>
+                          <span className="text-muted-foreground print:text-gray-600">Salário Mínimo:</span>
+                          <span className="text-foreground print:text-black">{formatCurrency(resultado.salarioMinimo)}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-400 print:text-gray-600">Teto INSS:</span>
-                          <span className="text-white print:text-black">{formatCurrency(resultado.tetoINSS)}</span>
+                          <span className="text-muted-foreground print:text-gray-600">Teto INSS:</span>
+                          <span className="text-foreground print:text-black">{formatCurrency(resultado.tetoINSS)}</span>
                         </div>
                       </div>
                     </div>
