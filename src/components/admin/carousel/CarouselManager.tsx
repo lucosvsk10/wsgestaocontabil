@@ -158,7 +158,7 @@ const CarouselManager = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl text-[#020817] dark:text-[#efc349] mb-4 font-thin">
-            Gerenciar Carrossel de Clientes
+            Gerenciar Carousel de Clientes
           </h1>
           <p className="text-gray-600 dark:text-white/70">
             Adicione, edite ou remova clientes do carousel da página inicial
