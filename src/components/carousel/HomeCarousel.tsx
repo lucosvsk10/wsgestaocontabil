@@ -1,6 +1,8 @@
+
 import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Instagram, ExternalLink } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
+
 interface ClientItem {
   id: string;
   name: string;
@@ -9,10 +11,12 @@ interface ClientItem {
   order_index: number;
   active: boolean;
 }
+
 const HomeCarousel = () => {
   const [clients, setClients] = useState<ClientItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+
   useEffect(() => {
     // Carregar clientes do localStorage
     const loadClients = () => {
@@ -23,28 +27,56 @@ const HomeCarousel = () => {
         setClients(activeClients);
       } else {
         // Dados padrão se não houver no localStorage
-        setClients([{
-          id: "1",
-          name: "Empresa Exemplo 1",
-          logo_url: "/lovable-uploads/cb878201-552e-4728-a814-1554857917b4.png",
-          instagram_url: "https://instagram.com/empresa1",
-          order_index: 0,
-          active: true
-        }, {
-          id: "2",
-          name: "Empresa Exemplo 2",
-          logo_url: "/lovable-uploads/cb878201-552e-4728-a814-1554857917b4.png",
-          instagram_url: "https://instagram.com/empresa2",
-          order_index: 1,
-          active: true
-        }, {
-          id: "3",
-          name: "Empresa Exemplo 3",
-          logo_url: "/lovable-uploads/cb878201-552e-4728-a814-1554857917b4.png",
-          instagram_url: "https://instagram.com/empresa3",
-          order_index: 2,
-          active: true
-        }]);
+        setClients([
+          {
+            id: "1",
+            name: "Empresa Exemplo 1",
+            logo_url: "/lovable-uploads/cb878201-552e-4728-a814-1554857917b4.png",
+            instagram_url: "https://instagram.com/empresa1",
+            order_index: 0,
+            active: true
+          },
+          {
+            id: "2",
+            name: "Empresa Exemplo 2",
+            logo_url: "/lovable-uploads/cb878201-552e-4728-a814-1554857917b4.png",
+            instagram_url: "https://instagram.com/empresa2",
+            order_index: 1,
+            active: true
+          },
+          {
+            id: "3",
+            name: "Empresa Exemplo 3",
+            logo_url: "/lovable-uploads/cb878201-552e-4728-a814-1554857917b4.png",
+            instagram_url: "https://instagram.com/empresa3",
+            order_index: 2,
+            active: true
+          },
+          {
+            id: "4",
+            name: "Empresa Exemplo 4",
+            logo_url: "/lovable-uploads/cb878201-552e-4728-a814-1554857917b4.png",
+            instagram_url: "https://instagram.com/empresa4",
+            order_index: 3,
+            active: true
+          },
+          {
+            id: "5",
+            name: "Empresa Exemplo 5",
+            logo_url: "/lovable-uploads/cb878201-552e-4728-a814-1554857917b4.png",
+            instagram_url: "https://instagram.com/empresa5",
+            order_index: 4,
+            active: true
+          },
+          {
+            id: "6",
+            name: "Empresa Exemplo 6",
+            logo_url: "/lovable-uploads/cb878201-552e-4728-a814-1554857917b4.png",
+            instagram_url: "https://instagram.com/empresa6",
+            order_index: 5,
+            active: true
+          }
+        ]);
       }
     };
     loadClients();
@@ -56,161 +88,184 @@ const HomeCarousel = () => {
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
+
   useEffect(() => {
-    if (clients.length === 0 || isPaused || clients.length <= 1) return;
+    if (clients.length === 0 || isPaused || clients.length <= 4) return;
+    
     const interval = setInterval(() => {
-      setCurrentIndex(prevIndex => prevIndex === clients.length - 1 ? 0 : prevIndex + 1);
-    }, 5000);
+      setCurrentIndex(prevIndex => {
+        const maxIndex = Math.max(0, clients.length - 4);
+        return prevIndex >= maxIndex ? 0 : prevIndex + 1;
+      });
+    }, 4000);
+    
     return () => clearInterval(interval);
   }, [clients.length, isPaused]);
-  const goToSlide = (index: number) => {
-    setCurrentIndex(index);
-  };
+
   const goToPrevious = () => {
-    setCurrentIndex(currentIndex === 0 ? clients.length - 1 : currentIndex - 1);
+    setCurrentIndex(prevIndex => {
+      if (prevIndex <= 0) {
+        return Math.max(0, clients.length - 4);
+      }
+      return prevIndex - 1;
+    });
   };
+
   const goToNext = () => {
-    setCurrentIndex(currentIndex === clients.length - 1 ? 0 : currentIndex + 1);
+    setCurrentIndex(prevIndex => {
+      const maxIndex = Math.max(0, clients.length - 4);
+      return prevIndex >= maxIndex ? 0 : prevIndex + 1;
+    });
   };
+
   if (clients.length === 0) return null;
-  return <section className="relative w-full py-24 bg-gradient-to-b from-[#020817] via-[#0b1320] to-[#020817]" id="clientes">
+
+  // Se temos 4 ou menos clientes, mostrar todos sem carrossel
+  const shouldShowCarousel = clients.length > 4;
+  const visibleClients = shouldShowCarousel 
+    ? clients.slice(currentIndex, currentIndex + 4)
+    : clients;
+
+  // Se temos menos de 4 clientes visíveis no final, completar com os do início
+  if (shouldShowCarousel && visibleClients.length < 4) {
+    const remaining = 4 - visibleClients.length;
+    visibleClients.push(...clients.slice(0, remaining));
+  }
+
+  return (
+    <section className="relative w-full py-24 bg-[#FFF1DE] dark:bg-gradient-to-b dark:from-[#020817] dark:via-[#0b1320] dark:to-[#020817]" id="clientes">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-20">
-          <motion.div initial={{
-          opacity: 0,
-          y: 40
-        }} whileInView={{
-          opacity: 1,
-          y: 0
-        }} transition={{
-          duration: 0.8
-        }} className="mb-8">
+        <div className="text-center mb-16">
+          <motion.div 
+            initial={{ opacity: 0, y: 40 }} 
+            whileInView={{ opacity: 1, y: 0 }} 
+            transition={{ duration: 0.8 }} 
+            className="mb-8"
+          >
             <span className="inline-block px-4 py-2 bg-[#efc349]/10 border border-[#efc349]/20 rounded-full text-[#efc349] text-sm font-light mb-4">
               Nossos Parceiros
             </span>
-            <h2 className="text-5xl font-extralight text-white mb-6 leading-tight md:text-4xl">
+            <h2 className="text-5xl font-extralight text-[#020817] dark:text-white mb-6 leading-tight md:text-4xl">
               Clientes que <span className="text-[#efc349]">Confiam</span>
             </h2>
-            <p className="text-white/70 font-extralight max-w-3xl mx-auto leading-relaxed text-lg">
+            <p className="text-[#020817]/70 dark:text-white/70 font-extralight max-w-3xl mx-auto leading-relaxed text-lg">
               Empresas de diversos segmentos que escolheram nossa expertise em gestão contábil e empresarial
             </p>
           </motion.div>
         </div>
 
-        <div className="relative max-w-6xl mx-auto">
-          <div className="overflow-hidden rounded-3xl" onMouseEnter={() => setIsPaused(true)} onMouseLeave={() => setIsPaused(false)}>
-            <AnimatePresence mode="wait">
-              <motion.div key={currentIndex} initial={{
-              opacity: 0,
-              scale: 0.95,
-              rotateY: 10
-            }} animate={{
-              opacity: 1,
-              scale: 1,
-              rotateY: 0
-            }} exit={{
-              opacity: 0,
-              scale: 0.95,
-              rotateY: -10
-            }} transition={{
-              duration: 0.8,
-              ease: [0.25, 0.46, 0.45, 0.94]
-            }} className="relative bg-gradient-to-br from-white/10 via-white/5 to-transparent backdrop-blur-xl border border-[#efc349]/20 rounded-3xl p-16 min-h-[400px] group">
-                {/* Background pattern */}
-                <div className="absolute inset-0 opacity-50" style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23efc349' fill-opacity='0.03'%3E%3Ccircle cx='30' cy='30' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-              }}></div>
-                
-                {/* Glow effect */}
-                <div className="absolute inset-0 bg-gradient-radial from-[#efc349]/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                
-                <div className="relative z-10 flex flex-col items-center justify-center text-center space-y-8">
-                  <motion.div initial={{
-                  opacity: 0,
-                  y: 30
-                }} animate={{
-                  opacity: 1,
-                  y: 0
-                }} transition={{
-                  duration: 0.6,
-                  delay: 0.2
-                }} className="relative">
-                    <div className="absolute inset-0 bg-[#efc349]/20 blur-2xl rounded-full"></div>
-                    <img src={clients[currentIndex]?.logo_url} alt={clients[currentIndex]?.name} className="relative max-h-32 w-auto object-contain filter brightness-0 invert group-hover:filter group-hover:brightness-100 group-hover:invert-0 transition-all duration-500 transform group-hover:scale-110" onError={e => {
-                    (e.target as HTMLImageElement).src = "/placeholder.svg";
-                  }} />
-                  </motion.div>
-                  
-                  <motion.div initial={{
-                  opacity: 0,
-                  y: 20
-                }} animate={{
-                  opacity: 1,
-                  y: 0
-                }} transition={{
-                  duration: 0.6,
-                  delay: 0.4
-                }} className="space-y-4">
-                    <h3 className="text-3xl font-light text-white group-hover:text-[#efc349] transition-colors duration-300">
-                      {clients[currentIndex]?.name}
+        <div className="relative max-w-7xl mx-auto">
+          <div 
+            className="overflow-hidden"
+            onMouseEnter={() => setIsPaused(true)} 
+            onMouseLeave={() => setIsPaused(false)}
+          >
+            <motion.div
+              key={currentIndex}
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+            >
+              {visibleClients.map((client, index) => (
+                <motion.div
+                  key={`${client.id}-${currentIndex}-${index}`}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: index * 0.1 }}
+                  className="group relative"
+                >
+                  <div className="bg-white dark:bg-[#0b1320]/50 backdrop-blur-sm border border-gray-200/20 dark:border-[#efc349]/20 rounded-2xl p-8 h-64 flex flex-col items-center justify-center hover:shadow-lg dark:hover:shadow-2xl hover:shadow-[#efc349]/10 transition-all duration-300 hover:scale-105">
+                    {/* Logo */}
+                    <div className="relative mb-6 flex-1 flex items-center justify-center w-full">
+                      <img 
+                        src={client.logo_url} 
+                        alt={client.name}
+                        className="max-h-20 max-w-32 w-auto object-contain filter grayscale-0 transition-all duration-300"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = "/placeholder.svg";
+                        }}
+                      />
+                    </div>
+                    
+                    {/* Nome da empresa */}
+                    <h3 className="text-lg font-light text-[#020817] dark:text-white text-center mb-4 line-clamp-2">
+                      {client.name}
                     </h3>
                     
-                    {clients[currentIndex]?.instagram_url && <motion.a href={clients[currentIndex]?.instagram_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-[#efc349]/20 to-[#efc349]/10 hover:from-[#efc349]/30 hover:to-[#efc349]/20 border border-[#efc349]/30 rounded-full text-[#efc349] hover:text-white transition-all duration-300 group/link" whileHover={{
-                    scale: 1.05
-                  }} whileTap={{
-                    scale: 0.95
-                  }}>
-                        <Instagram className="w-5 h-5 group-hover/link:rotate-12 transition-transform duration-300" />
-                        <span className="font-light">Siga no Instagram</span>
-                        <ExternalLink className="w-4 h-4 opacity-60" />
-                      </motion.a>}
-                  </motion.div>
-                </div>
-              </motion.div>
-            </AnimatePresence>
+                    {/* Link do Instagram */}
+                    {client.instagram_url && (
+                      <a 
+                        href={client.instagram_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center space-x-2 px-4 py-2 bg-[#efc349]/10 hover:bg-[#efc349]/20 border border-[#efc349]/30 rounded-full text-[#efc349] hover:text-[#020817] dark:hover:text-[#020817] transition-all duration-300 text-sm font-light group/link"
+                      >
+                        <Instagram className="w-4 h-4 group-hover/link:rotate-12 transition-transform duration-300" />
+                        <span>Instagram</span>
+                        <ExternalLink className="w-3 h-3 opacity-60" />
+                      </a>
+                    )}
+                  </div>
+                </motion.div>
+              ))}
+            </motion.div>
           </div>
 
-          {/* Navigation Arrows - only show if more than one item */}
-          {clients.length > 1 && <>
-              <motion.button onClick={goToPrevious} className="absolute left-6 top-1/2 transform -translate-y-1/2 bg-[#efc349]/20 hover:bg-[#efc349]/40 backdrop-blur-sm rounded-full p-4 transition-all duration-300 shadow-xl border border-[#efc349]/30 group" whileHover={{
-            scale: 1.1
-          }} whileTap={{
-            scale: 0.9
-          }}>
-                <ChevronLeft className="w-6 h-6 text-[#efc349] group-hover:text-white transition-colors duration-300" />
-              </motion.button>
+          {/* Navigation Arrows - only show if we have carousel */}
+          {shouldShowCarousel && (
+            <>
+              <button
+                onClick={goToPrevious}
+                className="absolute left-4 lg:-left-16 top-1/2 transform -translate-y-1/2 bg-white dark:bg-[#efc349]/20 hover:bg-gray-50 dark:hover:bg-[#efc349]/40 backdrop-blur-sm rounded-full p-3 transition-all duration-300 shadow-lg border border-gray-200/20 dark:border-[#efc349]/30 group"
+                aria-label="Cliente anterior"
+              >
+                <ChevronLeft className="w-6 h-6 text-[#020817] dark:text-[#efc349] group-hover:text-[#efc349] dark:group-hover:text-white transition-colors duration-300" />
+              </button>
 
-              <motion.button onClick={goToNext} className="absolute right-6 top-1/2 transform -translate-y-1/2 bg-[#efc349]/20 hover:bg-[#efc349]/40 backdrop-blur-sm rounded-full p-4 transition-all duration-300 shadow-xl border border-[#efc349]/30 group" whileHover={{
-            scale: 1.1
-          }} whileTap={{
-            scale: 0.9
-          }}>
-                <ChevronRight className="w-6 h-6 text-[#efc349] group-hover:text-white transition-colors duration-300" />
-              </motion.button>
-            </>}
+              <button
+                onClick={goToNext}
+                className="absolute right-4 lg:-right-16 top-1/2 transform -translate-y-1/2 bg-white dark:bg-[#efc349]/20 hover:bg-gray-50 dark:hover:bg-[#efc349]/40 backdrop-blur-sm rounded-full p-3 transition-all duration-300 shadow-lg border border-gray-200/20 dark:border-[#efc349]/30 group"
+                aria-label="Próximo cliente"
+              >
+                <ChevronRight className="w-6 h-6 text-[#020817] dark:text-[#efc349] group-hover:text-[#efc349] dark:group-hover:text-white transition-colors duration-300" />
+              </button>
+            </>
+          )}
 
-          {/* Enhanced Dots Indicator */}
-          {clients.length > 1 && <div className="flex justify-center mt-12 space-x-3">
-              {clients.map((_, index) => <motion.button key={index} onClick={() => goToSlide(index)} className={`relative overflow-hidden rounded-full transition-all duration-300 ${index === currentIndex ? 'w-12 h-4 bg-[#efc349]' : 'w-4 h-4 bg-white/30 hover:bg-white/50'}`} whileHover={{
-            scale: 1.2
-          }} whileTap={{
-            scale: 0.9
-          }}>
-                  {index === currentIndex && <motion.div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent" animate={{
-              x: [-48, 48]
-            }} transition={{
-              duration: 2,
-              repeat: Infinity,
-              ease: "linear"
-            }} />}
-                </motion.button>)}
-            </div>}
+          {/* Dots Indicator - only show if we have carousel */}
+          {shouldShowCarousel && (
+            <div className="flex justify-center mt-12 space-x-2">
+              {Array.from({ length: Math.ceil(clients.length / 4) }).map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentIndex(index * 4)}
+                  className={`relative overflow-hidden rounded-full transition-all duration-300 ${
+                    Math.floor(currentIndex / 4) === index 
+                      ? 'w-8 h-3 bg-[#efc349]' 
+                      : 'w-3 h-3 bg-gray-300 dark:bg-white/30 hover:bg-gray-400 dark:hover:bg-white/50'
+                  }`}
+                  aria-label={`Ir para grupo ${index + 1}`}
+                >
+                  {Math.floor(currentIndex / 4) === index && (
+                    <motion.div 
+                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+                      animate={{ x: [-32, 32] }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                    />
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Additional decorative elements */}
+        {/* Decorative elements */}
         <div className="absolute top-20 left-10 w-20 h-20 bg-[#efc349]/5 rounded-full blur-xl"></div>
         <div className="absolute bottom-20 right-10 w-32 h-32 bg-[#efc349]/5 rounded-full blur-xl"></div>
       </div>
-    </section>;
+    </section>
+  );
 };
+
 export default HomeCarousel;
