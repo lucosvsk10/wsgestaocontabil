@@ -90,30 +90,40 @@ export const AllSimulationsView: React.FC = () => {
       }));
 
       // Processar simulações de INSS
-      const processedInssSims: AllSimulation[] = (inssSims.data || []).map(sim => ({
-        id: sim.id,
-        user_id: sim.user_id,
-        nome: sim.dados?.contactData?.nome || null,
-        email: sim.dados?.contactData?.email || null,
-        telefone: sim.dados?.contactData?.telefone || null,
-        tipo_simulacao: 'INSS',
-        data_criacao: sim.created_at,
-        dados: sim.dados,
-        table_source: 'inss_simulations'
-      }));
+      const processedInssSims: AllSimulation[] = (inssSims.data || []).map(sim => {
+        const dadosObj = typeof sim.dados === 'object' ? sim.dados as any : {};
+        const contactData = dadosObj.contactData || {};
+        
+        return {
+          id: sim.id,
+          user_id: sim.user_id,
+          nome: contactData.nome || null,
+          email: contactData.email || null,
+          telefone: contactData.telefone || null,
+          tipo_simulacao: 'INSS',
+          data_criacao: sim.created_at,
+          dados: sim.dados,
+          table_source: 'inss_simulations'
+        };
+      });
 
       // Processar simulações de Pró-labore
-      const processedProlaboreSims: AllSimulation[] = (prolaboreSims.data || []).map(sim => ({
-        id: sim.id,
-        user_id: sim.user_id,
-        nome: sim.dados?.contactData?.nome || null,
-        email: sim.dados?.contactData?.email || null,
-        telefone: sim.dados?.contactData?.telefone || null,
-        tipo_simulacao: 'Pró-labore',
-        data_criacao: sim.created_at,
-        dados: sim.dados,
-        table_source: 'prolabore_simulations'
-      }));
+      const processedProlaboreSims: AllSimulation[] = (prolaboreSims.data || []).map(sim => {
+        const dadosObj = typeof sim.dados === 'object' ? sim.dados as any : {};
+        const contactData = dadosObj.contactData || {};
+        
+        return {
+          id: sim.id,
+          user_id: sim.user_id,
+          nome: contactData.nome || null,
+          email: contactData.email || null,
+          telefone: contactData.telefone || null,
+          tipo_simulacao: 'Pró-labore',
+          data_criacao: sim.created_at,
+          dados: sim.dados,
+          table_source: 'prolabore_simulations'
+        };
+      });
 
       // Combinar todas as simulações e ordenar por data
       const allSimulations = [...processedTaxSims, ...processedInssSims, ...processedProlaboreSims];
@@ -147,13 +157,15 @@ export const AllSimulationsView: React.FC = () => {
   };
 
   const getMainValue = (simulation: AllSimulation) => {
+    const dadosObj = typeof simulation.dados === 'object' ? simulation.dados as any : {};
+    
     switch (simulation.tipo_simulacao) {
       case 'IRPF':
-        return currencyFormat(simulation.dados.imposto_estimado || 0);
+        return currencyFormat(dadosObj.imposto_estimado || 0);
       case 'INSS':
-        return currencyFormat(simulation.dados.contribuicao || 0);
+        return currencyFormat(dadosObj.contribuicao || 0);
       case 'Pró-labore':
-        return currencyFormat(simulation.dados.valorLiquido || 0);
+        return currencyFormat(dadosObj.valorLiquido || 0);
       default:
         return 'N/A';
     }

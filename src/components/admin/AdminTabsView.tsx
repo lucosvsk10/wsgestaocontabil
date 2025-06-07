@@ -1,3 +1,4 @@
+
 import { AdminDashboardView } from "./dashboard/AdminDashboardView";
 import UserManagementView from "./UserManagementView";
 import { StorageView } from "./storage/StorageView";
@@ -5,7 +6,7 @@ import { PollsTabView } from "./polls/PollsTabView";
 import { AdminToolsView } from "./tools/AdminToolsView";
 import { AllSimulationsView } from "./simulations/AllSimulationsView";
 import { AnnouncementsView } from "./announcements/AnnouncementsView";
-import { FiscalCalendar } from "./FiscalCalendar";
+import FiscalCalendar from "./FiscalCalendar";
 import { SettingsView } from "./settings/SettingsView";
 import { AdminDocumentView } from "./AdminDocumentView";
 import { UseFormReturn } from "react-hook-form";
@@ -78,7 +79,7 @@ const AdminTabsView = ({
   const renderTabContent = () => {
     switch (activeTab) {
       case "dashboard":
-        return <AdminDashboardView />;
+        return <AdminDashboardView users={users} supabaseUsers={supabaseUsers} documents={documents} />;
       case "users":
         return (
           <UserManagementView 
@@ -110,6 +111,9 @@ const AdminTabsView = ({
       case "settings":
         return <SettingsView />;
       case "user-documents":
+        const selectedUser = users.find(user => user.id === selectedUserId) || supabaseUsers.find(user => user.id === selectedUserId);
+        const userName = selectedUser?.name || selectedUser?.email || 'Usuário';
+        
         return (
           <AdminDocumentView 
             selectedUserId={selectedUserId}
@@ -130,10 +134,12 @@ const AdminTabsView = ({
             setExpirationDate={setExpirationDate}
             noExpiration={noExpiration}
             setNoExpiration={setNoExpiration}
+            handleBackToUserList={() => window.history.back()}
+            userName={userName}
           />
         );
       default:
-        return <AdminDashboardView />;
+        return <AdminDashboardView users={users} supabaseUsers={supabaseUsers} documents={documents} />;
     }
   };
 
