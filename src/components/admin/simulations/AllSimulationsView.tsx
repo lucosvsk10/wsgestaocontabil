@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Eye, Trash2, Archive, Search, Calendar, User, Calculator, Download, Copy } from 'lucide-react';
+import { Eye, Trash2, Search, Calendar, User, Calculator, Download, Copy } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { currencyFormat } from '@/utils/taxCalculations';
@@ -12,7 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
-interface Simulation {
+interface AllSimulation {
   id: string;
   user_id: string | null;
   nome: string | null;
@@ -20,26 +20,21 @@ interface Simulation {
   telefone: string | null;
   tipo_simulacao: string;
   data_criacao: string;
-  rendimento_bruto: number;
-  inss: number;
-  educacao: number;
-  saude: number;
-  dependentes: number;
-  outras_deducoes: number;
-  imposto_estimado: number;
+  dados: any;
+  table_source: 'tax_simulations' | 'inss_simulations' | 'prolabore_simulations';
 }
 
-export const SimulationsView: React.FC = () => {
+export const AllSimulationsView: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [simulations, setSimulations] = useState<Simulation[]>([]);
-  const [filteredSimulations, setFilteredSimulations] = useState<Simulation[]>([]);
+  const [simulations, setSimulations] = useState<AllSimulation[]>([]);
+  const [filteredSimulations, setFilteredSimulations] = useState<AllSimulation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedSimulation, setSelectedSimulation] = useState<Simulation | null>(null);
+  const [selectedSimulation, setSelectedSimulation] = useState<AllSimulation | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchSimulations();
+    fetchAllSimulations();
   }, []);
 
   useEffect(() => {
@@ -51,18 +46,91 @@ export const SimulationsView: React.FC = () => {
     setFilteredSimulations(filtered);
   }, [searchTerm, simulations]);
 
-  const fetchSimulations = async () => {
+  const fetchAllSimulations = async () => {
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
-        .from('tax_simulations')
-        .select('*')
-        .order('data_criacao', { ascending: false });
       
-      if (error) throw error;
+      // Buscar todas as simulações das três tabelas
+      const [taxSims, inssSims, prolaboreSims] = await Promise.all([
+        supabase
+          .from('tax_simulations')
+          .select('*')
+          .order('data_criacao', { ascending: false }),
+        
+        supabase
+          .from('inss_simulations')
+          .select('*')
+          .order('created_at', { ascending: false }),
+          
+        supabase
+          .from('prolabore_simulations')
+          .select('*')
+          .order('created_at', { ascending: false })
+      ]);
+
+      // Processar simulações de IRPF
+      const processedTaxSims: AllSimulation[] = (taxSims.data || []).map(sim => ({
+        id: sim.id,
+        user_id: sim.user_id,
+        nome: sim.nome,
+        email: sim.email,
+        telefone: sim.telefone,
+        tipo_simulacao: 'IRPF',
+        data_criacao: sim.data_criacao,
+        dados: {
+          rendimento_bruto: sim.rendimento_bruto,
+          inss: sim.inss,
+          educacao: sim.educacao,
+          saude: sim.saude,
+          dependentes: sim.dependentes,
+          outras_deducoes: sim.outras_deducoes,
+          imposto_estimado: sim.imposto_estimado
+        },
+        table_source: 'tax_simulations'
+      }));
+
+      // Processar simulações de INSS
+      const processedInssSims: AllSimulation[] = (inssSims.data || []).map(sim => {
+        const dadosObj = typeof sim.dados === 'object' ? sim.dados as any : {};
+        const contactData = dadosObj.contactData || {};
+        
+        return {
+          id: sim.id,
+          user_id: sim.user_id,
+          nome: contactData.nome || null,
+          email: contactData.email || null,
+          telefone: contactData.telefone || null,
+          tipo_simulacao: 'INSS',
+          data_criacao: sim.created_at,
+          dados: sim.dados,
+          table_source: 'inss_simulations'
+        };
+      });
+
+      // Processar simulações de Pró-labore
+      const processedProlaboreSims: AllSimulation[] = (prolaboreSims.data || []).map(sim => {
+        const dadosObj = typeof sim.dados === 'object' ? sim.dados as any : {};
+        const contactData = dadosObj.contactData || {};
+        
+        return {
+          id: sim.id,
+          user_id: sim.user_id,
+          nome: contactData.nome || null,
+          email: contactData.email || null,
+          telefone: contactData.telefone || null,
+          tipo_simulacao: 'Pró-labore',
+          data_criacao: sim.created_at,
+          dados: sim.dados,
+          table_source: 'prolabore_simulations'
+        };
+      });
+
+      // Combinar todas as simulações e ordenar por data
+      const allSimulations = [...processedTaxSims, ...processedInssSims, ...processedProlaboreSims];
+      allSimulations.sort((a, b) => new Date(b.data_criacao).getTime() - new Date(a.data_criacao).getTime());
       
-      setSimulations(data || []);
-      setFilteredSimulations(data || []);
+      setSimulations(allSimulations);
+      setFilteredSimulations(allSimulations);
     } catch (error) {
       console.error('Erro ao carregar simulações:', error);
       toast({
@@ -88,58 +156,41 @@ export const SimulationsView: React.FC = () => {
     }
   };
 
-  const openDetails = (simulation: Simulation) => {
+  const getMainValue = (simulation: AllSimulation) => {
+    const dadosObj = typeof simulation.dados === 'object' ? simulation.dados as any : {};
+    
+    switch (simulation.tipo_simulacao) {
+      case 'IRPF':
+        return currencyFormat(dadosObj.imposto_estimado || 0);
+      case 'INSS':
+        return currencyFormat(dadosObj.contribuicao || 0);
+      case 'Pró-labore':
+        return currencyFormat(dadosObj.valorLiquido || 0);
+      default:
+        return 'N/A';
+    }
+  };
+
+  const openDetails = (simulation: AllSimulation) => {
     setSelectedSimulation(simulation);
     setDetailsModalOpen(true);
   };
 
-  const copySimulationData = (simulation: Simulation) => {
-    const totalDeducoes = simulation.inss + simulation.educacao + simulation.saude + 
-                         (simulation.dependentes * 2275.08) + simulation.outras_deducoes;
-
-    const texto = `
-Simulação ${simulation.tipo_simulacao.toUpperCase()} - ${formatDate(simulation.data_criacao)}
-===============================================
-${simulation.nome ? `Nome: ${simulation.nome}` : 'Usuário Anônimo'}
-${simulation.email ? `Email: ${simulation.email}` : ''}
-${simulation.telefone ? `Telefone: ${simulation.telefone}` : ''}
-
-DADOS FINANCEIROS:
-Rendimento Bruto: ${currencyFormat(simulation.rendimento_bruto)}
-INSS: ${currencyFormat(simulation.inss)}
-Educação: ${currencyFormat(simulation.educacao)}
-Saúde: ${currencyFormat(simulation.saude)}
-Dependentes: ${simulation.dependentes} (${currencyFormat(simulation.dependentes * 2275.08)})
-Outras Deduções: ${currencyFormat(simulation.outras_deducoes)}
-Total de Deduções: ${currencyFormat(totalDeducoes)}
-
-RESULTADO:
-${simulation.tipo_simulacao === 'IRPF' ? 'Imposto' : 'Contribuição'}: ${currencyFormat(simulation.imposto_estimado)}
-    `;
-
-    navigator.clipboard.writeText(texto);
-    toast({
-      title: "Copiado!",
-      description: "Dados da simulação copiados para a área de transferência."
-    });
-  };
-
-  const deleteSimulation = async (id: string) => {
+  const deleteSimulation = async (simulation: AllSimulation) => {
     if (!confirm('Deseja realmente excluir esta simulação? Esta ação não pode ser desfeita.')) {
       return;
     }
 
     try {
       const { error } = await supabase
-        .from('tax_simulations')
+        .from(simulation.table_source)
         .delete()
-        .eq('id', id);
+        .eq('id', simulation.id);
       
       if (error) throw error;
       
-      // Atualizar o estado local removendo a simulação excluída
-      setSimulations(prev => prev.filter(sim => sim.id !== id));
-      setFilteredSimulations(prev => prev.filter(sim => sim.id !== id));
+      setSimulations(prev => prev.filter(sim => sim.id !== simulation.id));
+      setFilteredSimulations(prev => prev.filter(sim => sim.id !== simulation.id));
       
       toast({
         title: "Sucesso",
@@ -166,16 +217,27 @@ ${simulation.tipo_simulacao === 'IRPF' ? 'Imposto' : 'Contribuição'}: ${curren
     );
   }
 
+  const getSimulationCounts = () => {
+    return {
+      total: filteredSimulations.length,
+      irpf: filteredSimulations.filter(s => s.tipo_simulacao === 'IRPF').length,
+      inss: filteredSimulations.filter(s => s.tipo_simulacao === 'INSS').length,
+      prolabore: filteredSimulations.filter(s => s.tipo_simulacao === 'Pró-labore').length
+    };
+  };
+
+  const counts = getSimulationCounts();
+
   return (
     <div className="space-y-8 p-6">
       {/* Header */}
       <div className="space-y-4">
         <div>
           <h1 className="text-3xl text-[#020817] dark:text-[#efc349] mb-4 font-extralight">
-            Histórico de Simulações
+            Todas as Simulações
           </h1>
           <p className="text-gray-600 dark:text-white/70 font-extralight">
-            Visualize todas as simulações realizadas pelos usuários
+            Visualize todas as simulações realizadas pelos usuários (IRPF, INSS e Pró-labore)
           </p>
         </div>
 
@@ -194,25 +256,25 @@ ${simulation.tipo_simulacao === 'IRPF' ? 'Imposto' : 'Contribuição'}: ${curren
           <div className="flex gap-4 text-sm font-extralight">
             <div className="text-center">
               <div className="text-2xl font-extralight text-[#020817] dark:text-[#efc349]">
-                {filteredSimulations.length}
+                {counts.total}
               </div>
               <div className="text-gray-600 dark:text-white/70">Total</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-extralight text-blue-600 dark:text-blue-400">
-                {filteredSimulations.filter(s => s.tipo_simulacao.toLowerCase() === 'irpf').length}
+                {counts.irpf}
               </div>
               <div className="text-gray-600 dark:text-white/70">IRPF</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-extralight text-green-600 dark:text-green-400">
-                {filteredSimulations.filter(s => s.tipo_simulacao.toLowerCase() === 'inss').length}
+                {counts.inss}
               </div>
               <div className="text-gray-600 dark:text-white/70">INSS</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-extralight text-purple-600 dark:text-purple-400">
-                {filteredSimulations.filter(s => s.tipo_simulacao.toLowerCase() === 'pró-labore').length}
+                {counts.prolabore}
               </div>
               <div className="text-gray-600 dark:text-white/70">Pró-labore</div>
             </div>
@@ -224,7 +286,7 @@ ${simulation.tipo_simulacao === 'IRPF' ? 'Imposto' : 'Contribuição'}: ${curren
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {filteredSimulations.map((simulation) => (
           <Card 
-            key={simulation.id} 
+            key={`${simulation.table_source}-${simulation.id}`}
             className="bg-white dark:bg-transparent border-gray-100 dark:border-[#efc349]/20 hover:shadow-lg dark:hover:shadow-none transition-all duration-300 hover:scale-[1.02]"
           >
             <CardHeader className="pb-3">
@@ -248,19 +310,14 @@ ${simulation.tipo_simulacao === 'IRPF' ? 'Imposto' : 'Contribuição'}: ${curren
             </CardHeader>
 
             <CardContent className="space-y-4">
-              {/* Results Summary */}
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div className="space-y-1">
-                  <div className="text-gray-600 dark:text-white/70 font-extralight">Rendimentos</div>
-                  <div className="text-[#020817] dark:text-white font-extralight">
-                    {currencyFormat(simulation.rendimento_bruto)}
-                  </div>
+              {/* Main Value */}
+              <div className="text-center">
+                <div className="text-2xl font-extralight text-[#020817] dark:text-[#efc349] mb-1">
+                  {getMainValue(simulation)}
                 </div>
-                <div className="space-y-1">
-                  <div className="text-gray-600 dark:text-white/70 font-extralight">Resultado</div>
-                  <div className="text-[#020817] dark:text-[#efc349] font-extralight">
-                    {currencyFormat(simulation.imposto_estimado)}
-                  </div>
+                <div className="text-sm text-gray-600 dark:text-white/70 font-extralight">
+                  {simulation.tipo_simulacao === 'IRPF' ? 'Imposto Devido' : 
+                   simulation.tipo_simulacao === 'INSS' ? 'Contribuição' : 'Valor Líquido'}
                 </div>
               </div>
 
@@ -286,16 +343,8 @@ ${simulation.tipo_simulacao === 'IRPF' ? 'Imposto' : 'Contribuição'}: ${curren
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-8 text-xs font-extralight border-blue-500/30 hover:bg-blue-500/10"
-                  onClick={() => copySimulationData(simulation)}
-                >
-                  <Copy className="h-3 w-3" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
                   className="h-8 text-xs font-extralight border-red-500/30 hover:bg-red-500/10 text-red-600 dark:text-red-400"
-                  onClick={() => deleteSimulation(simulation.id)}
+                  onClick={() => deleteSimulation(simulation)}
                 >
                   <Trash2 className="h-3 w-3" />
                 </Button>
@@ -325,7 +374,7 @@ ${simulation.tipo_simulacao === 'IRPF' ? 'Imposto' : 'Contribuição'}: ${curren
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-[#0b1320] border-gray-200 dark:border-[#efc349]/30">
           <DialogHeader>
             <DialogTitle className="text-xl text-[#020817] dark:text-[#efc349] font-extralight">
-              Detalhes da Simulação
+              Detalhes da Simulação {selectedSimulation?.tipo_simulacao}
             </DialogTitle>
             <DialogDescription className="font-extralight text-gray-600 dark:text-white/70">
               Informações completas da simulação
@@ -334,10 +383,13 @@ ${simulation.tipo_simulacao === 'IRPF' ? 'Imposto' : 'Contribuição'}: ${curren
           
           {selectedSimulation && (
             <div className="space-y-6 py-4">
-              {/* User Info */}
               <div className="bg-[#efc349]/10 rounded-lg p-4 border border-[#efc349]/30">
-                <h3 className="font-extralight text-[#020817] dark:text-[#efc349] mb-3">Informações do Usuário</h3>
+                <h3 className="font-extralight text-[#020817] dark:text-[#efc349] mb-3">Informações Gerais</h3>
                 <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="font-extralight">Tipo:</span>
+                    <span className="font-extralight">{selectedSimulation.tipo_simulacao}</span>
+                  </div>
                   <div className="flex justify-between">
                     <span className="font-extralight">Nome:</span>
                     <span className="font-extralight">{selectedSimulation.nome || 'Não informado'}</span>
@@ -347,74 +399,17 @@ ${simulation.tipo_simulacao === 'IRPF' ? 'Imposto' : 'Contribuição'}: ${curren
                     <span className="font-extralight">{selectedSimulation.email || 'Não informado'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="font-extralight">Telefone:</span>
-                    <span className="font-extralight">{selectedSimulation.telefone || 'Não informado'}</span>
-                  </div>
-                  <div className="flex justify-between">
                     <span className="font-extralight">Data:</span>
                     <span className="font-extralight">{formatDate(selectedSimulation.data_criacao)}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Financial Data */}
               <div className="bg-gray-50 dark:bg-[#020817]/50 rounded-lg p-4">
-                <h3 className="font-extralight text-[#020817] dark:text-[#efc349] mb-3">Dados Financeiros</h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="font-extralight">Rendimento Bruto:</span>
-                    <span className="font-extralight">{currencyFormat(selectedSimulation.rendimento_bruto)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-extralight">INSS:</span>
-                    <span className="font-extralight">{currencyFormat(selectedSimulation.inss)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-extralight">Educação:</span>
-                    <span className="font-extralight">{currencyFormat(selectedSimulation.educacao)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-extralight">Saúde:</span>
-                    <span className="font-extralight">{currencyFormat(selectedSimulation.saude)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-extralight">Dependentes:</span>
-                    <span className="font-extralight">{selectedSimulation.dependentes} ({currencyFormat(selectedSimulation.dependentes * 2275.08)})</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-extralight">Outras Deduções:</span>
-                    <span className="font-extralight">{currencyFormat(selectedSimulation.outras_deducoes)}</span>
-                  </div>
-                  <div className="border-t border-gray-200 dark:border-[#efc349]/30 pt-2">
-                    <div className="flex justify-between text-lg">
-                      <span className="font-extralight text-[#020817] dark:text-[#efc349]">
-                        {selectedSimulation.tipo_simulacao === 'IRPF' ? 'Imposto' : 'Contribuição'}:
-                      </span>
-                      <span className="font-extralight text-[#020817] dark:text-[#efc349]">
-                        {currencyFormat(selectedSimulation.imposto_estimado)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-2">
-                <Button 
-                  onClick={() => copySimulationData(selectedSimulation)}
-                  className="flex-1 bg-[#020817] dark:bg-transparent border border-[#efc349] text-white dark:text-[#efc349] hover:bg-[#020817]/90 dark:hover:bg-[#efc349]/10 font-extralight"
-                >
-                  <Copy className="h-4 w-4 mr-2" />
-                  Copiar Dados
-                </Button>
-                <Button 
-                  onClick={() => window.print()}
-                  variant="outline"
-                  className="flex-1 border-[#efc349]/30 hover:bg-[#efc349]/10 font-extralight"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Imprimir
-                </Button>
+                <h3 className="font-extralight text-[#020817] dark:text-[#efc349] mb-3">Dados da Simulação</h3>
+                <pre className="text-xs text-gray-700 dark:text-white/80 font-mono whitespace-pre-wrap overflow-auto max-h-60">
+                  {JSON.stringify(selectedSimulation.dados, null, 2)}
+                </pre>
               </div>
             </div>
           )}

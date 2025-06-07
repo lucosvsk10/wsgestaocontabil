@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,49 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-interface BaseSimulation {
-  id: string;
-  user_id: string;
-  created_at?: string;
-  data_criacao?: string;
-  type: 'tax' | 'inss' | 'prolabore';
-}
-
-interface TaxSimulation extends BaseSimulation {
-  type: 'tax';
-  nome: string | null;
-  email: string | null;
-  telefone: string | null;
-  tipo_simulacao: string;
-  rendimento_bruto: number;
-  inss: number;
-  educacao: number;
-  saude: number;
-  dependentes: number;
-  outras_deducoes: number;
-  imposto_estimado: number;
-}
-
-interface INSSSimulation extends BaseSimulation {
-  type: 'inss';
-  dados: any;
-}
-
-interface ProlaboreSimulation extends BaseSimulation {
-  type: 'prolabore';
-  dados: any;
-}
-
-type UserSimulation = TaxSimulation | INSSSimulation | ProlaboreSimulation;
 
 export const SimulationsSection = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [simulations, setSimulations] = useState<UserSimulation[]>([]);
+  const [simulations, setSimulations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('all');
 
   useEffect(() => {
     fetchSimulations();
@@ -101,7 +63,7 @@ export const SimulationsSection = () => {
     try {
       console.log("Buscando simulações para usuário:", user.id);
       
-      // Buscar todas as simulações do usuário
+      // Buscar todas as simulações do usuário das três tabelas
       const [taxSims, inssSims, prolaboreSims] = await Promise.all([
         supabase
           .from('tax_simulations')
@@ -122,11 +84,28 @@ export const SimulationsSection = () => {
           .order('created_at', { ascending: false })
       ]);
 
-      // Combinar todas as simulações com tipo identificado
-      const allSimulations: UserSimulation[] = [
-        ...(taxSims.data || []).map(sim => ({ ...sim, type: 'tax' as const })),
-        ...(inssSims.data || []).map(sim => ({ ...sim, type: 'inss' as const })),
-        ...(prolaboreSims.data || []).map(sim => ({ ...sim, type: 'prolabore' as const }))
+      // Processar e combinar simulações
+      const processedTaxSims = (taxSims.data || []).map(sim => ({
+        ...sim,
+        simulationType: 'irpf',
+        created_at: sim.data_criacao
+      }));
+
+      const processedInssSims = (inssSims.data || []).map(sim => ({
+        ...sim,
+        simulationType: 'inss'
+      }));
+
+      const processedProlaboreSims = (prolaboreSims.data || []).map(sim => ({
+        ...sim,
+        simulationType: 'prolabore'
+      }));
+
+      // Combinar todas as simulações
+      const allSimulations = [
+        ...processedTaxSims,
+        ...processedInssSims,
+        ...processedProlaboreSims
       ];
 
       // Ordenar por data de criação
@@ -146,15 +125,57 @@ export const SimulationsSection = () => {
   };
 
   // Função helper para obter a data de criação
-  const getCreatedDate = (simulation: UserSimulation) => {
-    return simulation.data_criacao || simulation.created_at || '';
+  const getCreatedDate = (simulation: any) => {
+    return simulation.data_criacao || simulation.created_at;
   };
 
-  const handleDeleteSimulation = async (simulation: UserSimulation) => {
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+
+  const getSimulationType = (simulation: any) => {
+    switch (simulation.simulationType) {
+      case 'irpf': return 'IRPF';
+      case 'inss': return 'INSS';
+      case 'prolabore': return 'Pró-labore';
+      default: return 'Simulação';
+    }
+  };
+
+  const getSimulationMainValue = (simulation: any) => {
+    switch (simulation.simulationType) {
+      case 'irpf':
+        return formatCurrency(simulation.imposto_estimado || 0);
+      case 'inss':
+        return formatCurrency(simulation.dados?.contribuicao || 0);
+      case 'prolabore':
+        return formatCurrency(simulation.dados?.valorLiquido || 0);
+      default:
+        return 'N/A';
+    }
+  };
+
+  const getSimulationDescription = (simulation: any) => {
+    switch (simulation.simulationType) {
+      case 'irpf':
+        return `Rendimento: ${formatCurrency(simulation.rendimento_bruto)} - Imposto: ${formatCurrency(simulation.imposto_estimado)}`;
+      case 'inss':
+        return `${simulation.dados?.categoria} - ${simulation.dados?.aliquota}% - Contribuição: ${formatCurrency(simulation.dados?.contribuicao)}`;
+      case 'prolabore':
+        return `Bruto: ${formatCurrency(simulation.dados?.valorBruto)} - Líquido: ${formatCurrency(simulation.dados?.valorLiquido)}`;
+      default:
+        return '';
+    }
+  };
+
+  const handleDeleteSimulation = async (simulation: any) => {
     try {
       let tableName;
-      switch (simulation.type) {
-        case 'tax':
+      switch (simulation.simulationType) {
+        case 'irpf':
           tableName = 'tax_simulations';
           break;
         case 'inss':
@@ -189,65 +210,6 @@ export const SimulationsSection = () => {
       });
     }
   };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value);
-  };
-
-  const getSimulationType = (simulation: UserSimulation) => {
-    switch (simulation.type) {
-      case 'tax': return 'IRPF';
-      case 'inss': return 'INSS';
-      case 'prolabore': return 'Pró-labore';
-      default: return 'Simulação';
-    }
-  };
-
-  const getSimulationMainValue = (simulation: UserSimulation) => {
-    switch (simulation.type) {
-      case 'tax':
-        return formatCurrency((simulation as TaxSimulation).imposto_estimado || 0);
-      case 'inss':
-        return formatCurrency((simulation as INSSSimulation).dados?.contribuicao || 0);
-      case 'prolabore':
-        return formatCurrency((simulation as ProlaboreSimulation).dados?.valorLiquido || 0);
-      default:
-        return 'N/A';
-    }
-  };
-
-  const getSimulationDescription = (simulation: UserSimulation) => {
-    switch (simulation.type) {
-      case 'tax':
-        const taxSim = simulation as TaxSimulation;
-        return `Rend. Bruto: ${formatCurrency(taxSim.rendimento_bruto)} - Imposto: ${formatCurrency(taxSim.imposto_estimado)}`;
-      case 'inss':
-        const inssSim = simulation as INSSSimulation;
-        return `${inssSim.dados?.categoria || 'N/A'} - ${inssSim.dados?.aliquota || 0}% - Contrib.: ${formatCurrency(inssSim.dados?.contribuicao || 0)}`;
-      case 'prolabore':
-        const prolaboreSim = simulation as ProlaboreSimulation;
-        return `Bruto: ${formatCurrency(prolaboreSim.dados?.valorBruto || 0)} - Líquido: ${formatCurrency(prolaboreSim.dados?.valorLiquido || 0)}`;
-      default:
-        return '';
-    }
-  };
-
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'tax': return 'bg-blue-600 hover:bg-blue-700';
-      case 'inss': return 'bg-green-600 hover:bg-green-700';
-      case 'prolabore': return 'bg-purple-600 hover:bg-purple-700';
-      default: return 'bg-gray-600 hover:bg-gray-700';
-    }
-  };
-
-  const filteredSimulations = simulations.filter(sim => {
-    if (activeTab === 'all') return true;
-    return sim.type === activeTab;
-  });
 
   if (loading) {
     return (
@@ -299,80 +261,69 @@ export const SimulationsSection = () => {
             </div>
           </div>
         ) : (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-4 mb-6">
-              <TabsTrigger value="all" className="font-extralight">Todas</TabsTrigger>
-              <TabsTrigger value="tax" className="font-extralight">IRPF</TabsTrigger>
-              <TabsTrigger value="inss" className="font-extralight">INSS</TabsTrigger>
-              <TabsTrigger value="prolabore" className="font-extralight">Pró-labore</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value={activeTab}>
-              <div className="space-y-4">
-                {filteredSimulations.map((simulation, index) => (
-                  <motion.div
-                    key={`${simulation.type}-${simulation.id}`}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3, delay: index * 0.1 }}
-                    className="bg-[#020817] border border-[#efc349]/20 rounded-lg p-4 hover:border-[#efc349]/40 transition-all"
+          <div className="space-y-4">
+            {simulations.map((simulation, index) => (
+              <motion.div
+                key={`${simulation.simulationType}-${simulation.id}`}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.1 }}
+                className="bg-[#020817] border border-[#efc349]/20 rounded-lg p-4 hover:border-[#efc349]/40 transition-all"
+              >
+                <div className="flex justify-between items-start mb-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-semibold text-white text-lg">
+                        {getSimulationType(simulation)}
+                      </h3>
+                      <Badge className="bg-green-600 hover:bg-green-700 text-white">
+                        Concluída
+                      </Badge>
+                    </div>
+                    <p className="text-gray-400 font-extralight text-sm">
+                      {new Date(getCreatedDate(simulation)).toLocaleString('pt-BR')}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleDeleteSimulation(simulation)}
+                    className="border-red-500/30 text-red-500 hover:bg-red-500/10"
                   >
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold text-white text-lg">
-                            {getSimulationType(simulation)}
-                          </h3>
-                          <Badge className={`${getTypeColor(simulation.type)} text-white`}>
-                            Concluída
-                          </Badge>
-                        </div>
-                        <p className="text-gray-400 font-extralight text-sm">
-                          {new Date(getCreatedDate(simulation)).toLocaleString('pt-BR')}
-                        </p>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDeleteSimulation(simulation)}
-                        className="border-red-500/30 text-red-500 hover:bg-red-500/10"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
 
-                    <div className="mb-4">
-                      <p className="text-white font-medium text-xl mb-2">
-                        {getSimulationMainValue(simulation)}
-                      </p>
-                      <p className="text-gray-300 text-sm">
-                        {getSimulationDescription(simulation)}
-                      </p>
-                    </div>
+                <div className="mb-4">
+                  <p className="text-white font-medium text-xl mb-2">
+                    {getSimulationMainValue(simulation)}
+                  </p>
+                  <p className="text-gray-300 text-sm">
+                    {getSimulationDescription(simulation)}
+                  </p>
+                </div>
 
-                    <div className="flex gap-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        className="border-[#efc349]/30 text-[#efc349] hover:bg-[#efc349]/10"
-                      >
-                        <Eye className="w-4 h-4 mr-1" />
-                        Ver detalhes
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        className="border-[#efc349]/30 text-[#efc349] hover:bg-[#efc349]/10"
-                      >
-                        <Download className="w-4 h-4 mr-1" />
-                        Baixar PDF
-                      </Button>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </TabsContent>
-          </Tabs>
+                <div className="flex gap-2">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    className="border-[#efc349]/30 text-[#efc349] hover:bg-[#efc349]/10"
+                  >
+                    <Eye className="w-4 h-4 mr-1" />
+                    Ver detalhes
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    className="border-[#efc349]/30 text-[#efc349] hover:bg-[#efc349]/10"
+                  >
+                    <Download className="w-4 h-4 mr-1" />
+                    Baixar PDF
+                  </Button>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         )}
       </CardContent>
     </Card>
