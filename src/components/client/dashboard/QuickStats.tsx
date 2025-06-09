@@ -12,29 +12,25 @@ export const QuickStats = () => {
       title: "Documentos",
       value: loading ? "..." : stats.documentsCount,
       icon: FileText,
-      color: "text-[#efc349]",
-      bgColor: "bg-[#efc349]/10"
+      color: "text-blue-500"
     },
     {
       title: "Simulações",
       value: loading ? "..." : stats.simulationsCount,
       icon: Calculator,
-      color: "text-blue-500",
-      bgColor: "bg-blue-500/10"
+      color: "text-green-500"
     },
     {
       title: "Agenda",
       value: loading ? "..." : stats.upcomingEvents,
       icon: Calendar,
-      color: "text-purple-500",
-      bgColor: "bg-purple-500/10"
+      color: "text-purple-500"
     },
     {
       title: "Comunicados",
       value: loading ? "..." : stats.announcementsCount,
       icon: MessageSquare,
-      color: "text-green-500",
-      bgColor: "bg-green-500/10"
+      color: "text-orange-500"
     }
   ];
 
@@ -47,20 +43,14 @@ export const QuickStats = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: index * 0.1 }}
         >
-          <Card className="bg-white dark:bg-[#0b1320] border-[#e6e6e6] dark:border-[#efc349]/20 hover:border-[#efc349]/40 dark:hover:border-[#efc349]/50 transition-all duration-300 hover:shadow-lg dark:hover:shadow-[#efc349]/10">
-            <CardContent className="p-6">
+          <Card className="bg-[#0b1320] border-[#efc349]/20 hover:border-[#efc349]/40 transition-all">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-600 dark:text-gray-300 text-sm font-extralight mb-1">
-                    {stat.title}
-                  </p>
-                  <p className="text-2xl font-bold text-[#020817] dark:text-white">
-                    {stat.value}
-                  </p>
+                  <p className="text-gray-400 text-sm font-extralight">{stat.title}</p>
+                  <p className="text-2xl font-bold text-white">{stat.value}</p>
                 </div>
-                <div className={`w-12 h-12 ${stat.bgColor} rounded-lg flex items-center justify-center`}>
-                  <stat.icon className={`w-6 h-6 ${stat.color}`} />
-                </div>
+                <stat.icon className={`w-8 h-8 ${stat.color}`} />
               </div>
             </CardContent>
           </Card>

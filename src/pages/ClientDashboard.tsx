@@ -29,14 +29,6 @@ const ClientDashboard = () => {
     }
   };
 
-  // Create a wrapper function that finds the document by ID and calls handleDownload
-  const handleDownloadById = (documentId: string) => {
-    const document = documents.find(doc => doc.id === documentId);
-    if (document) {
-      handleDownload(document);
-    }
-  };
-
   const renderContent = () => {
     switch (activeTab) {
       case "documents":
@@ -45,7 +37,7 @@ const ClientDashboard = () => {
             documents={documents} 
             documentsByCategory={documentsByCategory} 
             categories={commonCategories} 
-            onDownload={handleDownloadById} 
+            onDownload={handleDownload} 
             refreshDocuments={refreshDocuments} 
           />
         );
@@ -63,7 +55,7 @@ const ClientDashboard = () => {
             documents={documents} 
             documentsByCategory={documentsByCategory} 
             categories={commonCategories} 
-            onDownload={handleDownloadById} 
+            onDownload={handleDownload} 
             refreshDocuments={refreshDocuments} 
           />
         );
@@ -73,15 +65,9 @@ const ClientDashboard = () => {
   return (
     <div className="min-h-screen bg-[#FFF1DE] dark:bg-[#020817]">
       <ClientDashboardLayout activeTab={activeTab} setActiveTab={setActiveTab}>
-        <div className="space-y-6">
-          <WelcomeHeader />
-          <QuickStats />
-          
-          {/* Conteúdo principal com fundo elegante */}
-          <div className="bg-white dark:bg-[#0b1320] border border-[#e6e6e6] dark:border-[#efc349]/20 rounded-2xl p-6 shadow-sm">
-            {renderContent()}
-          </div>
-        </div>
+        <WelcomeHeader />
+        <QuickStats />
+        {renderContent()}
       </ClientDashboardLayout>
     </div>
   );

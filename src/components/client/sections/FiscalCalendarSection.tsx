@@ -1,239 +1,153 @@
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Calendar, Clock, AlertTriangle, CheckCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, AlertTriangle, CheckCircle, Calendar as CalendarIcon } from "lucide-react";
+import { FiscalEvent } from "@/types/client";
+import { supabase } from "@/integrations/supabase/client";
 
 export const FiscalCalendarSection = () => {
-  // Mock data para eventos fiscais
-  const fiscalEvents = [
-    {
-      id: "1",
-      title: "DAS - Simples Nacional",
-      date: "2024-01-20",
-      description: "Vencimento do DAS referente ao mês de dezembro/2023",
-      status: "upcoming",
-      category: "Tributos",
-      priority: "high"
-    },
-    {
-      id: "2",
-      title: "DEFIS - Declaração EFD-ICMS/IPI",
-      date: "2024-01-31",
-      description: "Entrega da declaração fiscal digital",
-      status: "urgent",
-      category: "Declarações",
-      priority: "urgent"
-    },
-    {
-      id: "3",
-      title: "Relatório Mensal",
-      date: "2024-01-10",
-      description: "Envio do relatório contábil mensal",
-      status: "overdue",
-      category: "Relatórios",
-      priority: "high"
-    },
-    {
-      id: "4",
-      title: "SPED Fiscal",
-      date: "2024-02-15",
-      description: "Entrega do arquivo SPED Fiscal",
-      status: "upcoming",
-      category: "Declarações",
-      priority: "normal"
-    }
-  ];
+  const [events, setEvents] = useState<FiscalEvent[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "overdue":
-        return <AlertTriangle className="w-4 h-4 text-red-500" />;
-      case "urgent":
-        return <Clock className="w-4 h-4 text-orange-500" />;
-      case "completed":
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case "upcoming":
-      default:
-        return <CalendarIcon className="w-4 h-4 text-blue-500" />;
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  const fetchEvents = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('fiscal_events')
+        .select('*')
+        .order('date', { ascending: true });
+
+      if (error) throw error;
+      
+      // Atualizar status baseado na data
+      const updatedEvents = (data || []).map(event => {
+        const eventDate = new Date(event.date);
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
+        let status: 'upcoming' | 'today' | 'overdue' | 'completed' = event.status as 'upcoming' | 'today' | 'overdue' | 'completed';
+        if (eventDate.toDateString() === today.toDateString()) {
+          status = 'today';
+        } else if (eventDate < today && status !== 'completed') {
+          status = 'overdue';
+        } else if (eventDate >= tomorrow) {
+          status = 'upcoming';
+        }
+        
+        return { ...event, status } as FiscalEvent;
+      });
+      
+      setEvents(updatedEvents);
+    } catch (error) {
+      console.error('Erro ao buscar eventos:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getStatusColors = (status: string) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
-      case "overdue":
-        return {
-          bg: "bg-red-50 dark:bg-red-900/20",
-          border: "border-red-200 dark:border-red-700/30",
-          badge: "bg-red-100 text-red-800 dark:bg-red-800/20 dark:text-red-300"
-        };
-      case "urgent":
-        return {
-          bg: "bg-orange-50 dark:bg-orange-900/20",
-          border: "border-orange-200 dark:border-orange-700/30",
-          badge: "bg-orange-100 text-orange-800 dark:bg-orange-800/20 dark:text-orange-300"
-        };
-      case "completed":
-        return {
-          bg: "bg-green-50 dark:bg-green-900/20",
-          border: "border-green-200 dark:border-green-700/30",
-          badge: "bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-300"
-        };
-      case "upcoming":
-      default:
-        return {
-          bg: "bg-blue-50 dark:bg-blue-900/20",
-          border: "border-blue-200 dark:border-blue-700/30",
-          badge: "bg-blue-100 text-blue-800 dark:bg-blue-800/20 dark:text-blue-300"
-        };
+      case 'completed': return 'bg-green-600 hover:bg-green-700';
+      case 'today': return 'bg-blue-600 hover:bg-blue-700';
+      case 'overdue': return 'bg-red-600 hover:bg-red-700';
+      case 'upcoming': return 'bg-yellow-600 hover:bg-yellow-700';
+      default: return 'bg-gray-600 hover:bg-gray-700';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed': return <CheckCircle className="w-4 h-4" />;
+      case 'today': return <Clock className="w-4 h-4" />;
+      case 'overdue': return <AlertTriangle className="w-4 h-4" />;
+      case 'upcoming': return <Calendar className="w-4 h-4" />;
+      default: return <Calendar className="w-4 h-4" />;
     }
   };
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case "overdue":
-        return "Atrasado";
-      case "urgent":
-        return "Urgente";
-      case "completed":
-        return "Concluído";
-      case "upcoming":
-      default:
-        return "Próximo";
+      case 'completed': return 'Concluído';
+      case 'today': return 'Hoje';
+      case 'overdue': return 'Atrasado';
+      case 'upcoming': return 'Pendente';
+      default: return status;
     }
   };
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  };
-
-  // Estatísticas
-  const stats = {
-    total: fiscalEvents.length,
-    overdue: fiscalEvents.filter(e => e.status === "overdue").length,
-    urgent: fiscalEvents.filter(e => e.status === "urgent").length,
-    upcoming: fiscalEvents.filter(e => e.status === "upcoming").length
-  };
+  if (loading) {
+    return (
+      <Card className="bg-[#0b1320] border-[#efc349]/20">
+        <CardContent className="p-6">
+          <div className="animate-pulse space-y-4">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-16 bg-[#020817] rounded"></div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="space-y-6"
-    >
-      {/* Header da seção */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-[#efc349]/10 dark:bg-[#efc349]/20 rounded-lg flex items-center justify-center">
-            <Calendar className="w-5 h-5 text-[#efc349]" />
+    <Card className="bg-[#0b1320] border-[#efc349]/20">
+      <CardHeader>
+        <CardTitle className="text-[#efc349] font-extralight flex items-center">
+          <Calendar className="w-6 h-6 mr-2" />
+          Agenda Fiscal
+        </CardTitle>
+      </CardHeader>
+      
+      <CardContent>
+        {events.length === 0 ? (
+          <div className="text-center py-8 text-gray-400">
+            <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <p className="font-extralight">Nenhum evento agendado</p>
           </div>
-          <div>
-            <h2 className="text-2xl font-extralight text-[#020817] dark:text-white">
-              Agenda Fiscal
-            </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-300 font-extralight">
-              Acompanhe prazos e obrigações fiscais
-            </p>
-          </div>
-        </div>
-      </div>
+        ) : (
+          <div className="space-y-4">
+            {events.map((event, index) => (
+              <motion.div
+                key={event.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.1 }}
+                className="bg-[#020817] border border-[#efc349]/20 rounded-lg p-4 hover:border-[#efc349]/40 transition-all"
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="font-semibold text-white text-lg">
+                    {event.title}
+                  </h3>
+                  <Badge className={`${getStatusColor(event.status)} text-white flex items-center gap-1`}>
+                    {getStatusIcon(event.status)}
+                    {getStatusText(event.status)}
+                  </Badge>
+                </div>
 
-      {/* Estatísticas */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700/30">
-          <CardContent className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-blue-700 dark:text-blue-200">{stats.total}</p>
-              <p className="text-sm text-blue-600 dark:text-blue-300 font-extralight">Total</p>
-            </div>
-          </CardContent>
-        </Card>
+                <p className="text-gray-300 font-extralight mb-3">
+                  {event.description}
+                </p>
 
-        <Card className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700/30">
-          <CardContent className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-red-700 dark:text-red-200">{stats.overdue}</p>
-              <p className="text-sm text-red-600 dark:text-red-300 font-extralight">Atrasados</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-700/30">
-          <CardContent className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-orange-700 dark:text-orange-200">{stats.urgent}</p>
-              <p className="text-sm text-orange-600 dark:text-orange-300 font-extralight">Urgentes</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700/30">
-          <CardContent className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-green-700 dark:text-green-200">{stats.upcoming}</p>
-              <p className="text-sm text-green-600 dark:text-green-300 font-extralight">Próximos</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Lista de eventos */}
-      <div className="space-y-4">
-        {fiscalEvents.map((event, index) => {
-          const statusColors = getStatusColors(event.status);
-          
-          return (
-            <motion.div
-              key={event.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.1 }}
-            >
-              <Card className={`${statusColors.bg} ${statusColors.border} hover:shadow-lg transition-all duration-300`}>
-                <CardContent className="p-6">
-                  <div className="flex items-start space-x-4">
-                    <div className="flex-shrink-0 mt-1">
-                      {getStatusIcon(event.status)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h3 className="text-lg font-medium text-[#020817] dark:text-white mb-1">
-                            {event.title}
-                          </h3>
-                          <div className="flex items-center space-x-2">
-                            <Badge className={statusColors.badge}>
-                              {getStatusText(event.status)}
-                            </Badge>
-                            <Badge variant="outline" className="font-extralight">
-                              {event.category}
-                            </Badge>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-lg font-semibold text-[#020817] dark:text-white">
-                            {formatDate(event.date)}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <p className="text-gray-700 dark:text-gray-300 font-extralight">
-                        {event.description}
-                      </p>
-                    </div>
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center text-sm text-gray-400">
+                    <Calendar className="w-4 h-4 mr-1" />
+                    {new Date(event.date).toLocaleDateString('pt-BR')}
                   </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          );
-        })}
-      </div>
-    </motion.div>
+                  <Badge variant="outline" className="border-[#efc349]/30 text-[#efc349]">
+                    {event.category}
+                  </Badge>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
