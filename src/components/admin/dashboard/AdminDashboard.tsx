@@ -1,14 +1,17 @@
+
 import { Users, FileText, PieChart, Clock, HardDrive, Bell, Calendar, Plus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { useDashboardData } from "./useDashboardData";
+
 interface AdminDashboardProps {
   users: any[];
   supabaseUsers: any[];
   documents: any[];
 }
+
 export const AdminDashboard = ({
   users,
   supabaseUsers,
@@ -19,16 +22,15 @@ export const AdminDashboard = ({
     const userInfo = users.find(u => u.id === authUser.id);
     return !['fiscal', 'contabil', 'geral'].includes(userInfo?.role || '');
   });
+
   const {
-    lastLogin,
-    totalDocumentsCount,
-    pollCount,
-    recentDocuments,
+    stats,
+    loading,
     formatRecentDate,
-    storageStats,
     isLoading
-  } = useDashboardData(supabaseUsers);
-  const stats = [{
+  } = useDashboardData();
+
+  const statsData = [{
     title: "Clientes Ativos",
     value: clientUsers.length,
     icon: <Users className="h-6 w-6" />,
@@ -36,28 +38,30 @@ export const AdminDashboard = ({
     color: "blue"
   }, {
     title: "Total Documentos",
-    value: totalDocumentsCount,
+    value: stats.totalDocuments,
     icon: <FileText className="h-6 w-6" />,
     link: "/admin/storage",
     color: "green"
   }, {
     title: "Enquetes Criadas",
-    value: pollCount,
+    value: stats.pollCount,
     icon: <PieChart className="h-6 w-6" />,
     link: "/admin/polls",
     color: "purple"
   }, {
     title: "Armazenamento",
-    value: storageStats ? `${storageStats.totalStorageMB.toFixed(1)}MB` : "Calculando...",
+    value: stats.storageStats ? `${stats.storageStats.totalStorageMB.toFixed(1)}MB` : "Calculando...",
     icon: <HardDrive className="h-6 w-6" />,
     link: "/admin/storage",
     color: "orange"
   }];
+
   if (isLoading) {
     return <div className="flex justify-center items-center h-64">
         <LoadingSpinner />
       </div>;
   }
+
   return <div className="space-y-8 p-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -81,7 +85,7 @@ export const AdminDashboard = ({
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => <Card key={index} className="cursor-pointer transition-all duration-300 hover:scale-105 bg-white dark:bg-[#0b0f1c] border border-gray-200 dark:border-[#efc349]/30 hover:border-[#efc349] dark:hover:border-[#efc349]" onClick={() => navigate(stat.link)}>
+        {statsData.map((stat, index) => <Card key={index} className="cursor-pointer transition-all duration-300 hover:scale-105 bg-white dark:bg-[#0b0f1c] border border-gray-200 dark:border-[#efc349]/30 hover:border-[#efc349] dark:hover:border-[#efc349]" onClick={() => navigate(stat.link)}>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -112,7 +116,7 @@ export const AdminDashboard = ({
               <FileText className="h-5 w-5 text-gray-400 dark:text-[#efc349]" />
             </div>
             <div className="space-y-3">
-              {recentDocuments.slice(0, 5).map((doc, index) => <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-[#efc349]/20 last:border-0">
+              {stats.recentDocuments.slice(0, 5).map((doc, index) => <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-[#efc349]/20 last:border-0">
                   <div>
                     <p className="text-sm font-medium text-[#020817] dark:text-[#f4f4f4] truncate">
                       {doc.name}
@@ -126,7 +130,7 @@ export const AdminDashboard = ({
                   </div>
                   
                 </div>)}
-              {recentDocuments.length === 0 && <p className="text-sm text-gray-500 dark:text-[#b3b3b3] text-center py-4">
+              {stats.recentDocuments.length === 0 && <p className="text-sm text-gray-500 dark:text-[#b3b3b3] text-center py-4">
                   Nenhum documento recente encontrado
                 </p>}
             </div>
@@ -146,7 +150,7 @@ export const AdminDashboard = ({
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600 dark:text-[#b3b3b3]">Último Login</span>
                 <span className="text-sm font-medium text-[#020817] dark:text-[#f4f4f4]">
-                  {lastLogin || "Não disponível"}
+                  {stats.lastLogin || "Não disponível"}
                 </span>
               </div>
               <div className="flex justify-between items-center">
@@ -159,16 +163,16 @@ export const AdminDashboard = ({
                 <span className="text-sm text-gray-600 dark:text-[#b3b3b3]">Versão do Sistema</span>
                 <span className="text-sm font-medium text-[#020817] dark:text-[#f4f4f4]">1.0.0</span>
               </div>
-              {storageStats && <div>
+              {stats.storageStats && <div>
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-sm text-gray-600 dark:text-[#b3b3b3]">Armazenamento</span>
                     <span className="text-sm font-medium text-[#020817] dark:text-[#f4f4f4]">
-                      {storageStats.totalStorageMB.toFixed(1)}MB / 100MB
+                      {stats.storageStats.totalStorageMB.toFixed(1)}MB / 100MB
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 dark:bg-[#020817] rounded-full h-2">
                     <div className="bg-[#efc349] h-2 rounded-full transition-all duration-300" style={{
-                  width: `${Math.min(100, storageStats.totalStorageMB / 100 * 100)}%`
+                  width: `${Math.min(100, stats.storageStats.totalStorageMB / 100 * 100)}%`
                 }}></div>
                   </div>
                 </div>}
