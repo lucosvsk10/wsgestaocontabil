@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -154,10 +153,6 @@ export const SimulationsSection = () => {
   };
 
   const handleDeleteSimulation = async (simulation: UserSimulation) => {
-    if (!confirm('Deseja realmente excluir esta simulação? Esta ação não pode ser desfeita.')) {
-      return;
-    }
-
     try {
       let tableName;
       switch (simulation.type) {
@@ -181,16 +176,12 @@ export const SimulationsSection = () => {
 
       if (error) throw error;
 
-      // Atualizar estado local imediatamente
-      setSimulations(prev => prev.filter(sim => sim.id !== simulation.id));
-
       toast({
         title: "Sucesso",
         description: "Simulação excluída com sucesso"
       });
 
-      // Recarregar a lista como backup
-      await fetchSimulations();
+      fetchSimulations(); // Recarregar a lista
     } catch (error) {
       console.error('Erro ao excluir simulação:', error);
       toast({
