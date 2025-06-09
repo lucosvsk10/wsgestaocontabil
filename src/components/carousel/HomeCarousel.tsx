@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from "react";
-import { Instagram, ExternalLink } from "lucide-react";
-
+import { ChevronLeft, ChevronRight, Instagram, ExternalLink } from "lucide-react";
+import { motion } from "framer-motion";
 interface ClientItem {
   id: string;
   name: string;
@@ -10,11 +9,10 @@ interface ClientItem {
   order_index: number;
   active: boolean;
 }
-
 const HomeCarousel = () => {
   const [clients, setClients] = useState<ClientItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-
+  const [isPaused, setIsPaused] = useState(false);
   useEffect(() => {
     // Carregar clientes do localStorage
     const loadClients = () => {
@@ -22,7 +20,7 @@ const HomeCarousel = () => {
       if (stored) {
         const allClients = JSON.parse(stored);
         const activeClients = allClients.filter((client: ClientItem) => client.active);
-        setClients(activeClients.sort((a, b) => a.order_index - b.order_index));
+        setClients(activeClients);
       } else {
         // Dados padrão se não houver no localStorage
         setClients([{
@@ -70,7 +68,6 @@ const HomeCarousel = () => {
         }]);
       }
     };
-
     loadClients();
 
     // Listener para mudanças no localStorage
@@ -80,172 +77,142 @@ const HomeCarousel = () => {
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
-
-  // Auto-scroll do carrossel
   useEffect(() => {
-    if (clients.length === 0) return;
-
+    if (clients.length === 0 || isPaused || clients.length <= 4) return;
     const interval = setInterval(() => {
-      setCurrentIndex((prevIndex) => {
-        // No desktop, move 1 item por vez
-        // No mobile, move 1 item por vez também
-        return (prevIndex + 1) % clients.length;
+      setCurrentIndex(prevIndex => {
+        const maxIndex = Math.max(0, clients.length - 4);
+        return prevIndex >= maxIndex ? 0 : prevIndex + 1;
       });
-    }, 3000); // Troca a cada 3 segundos
-
+    }, 4000);
     return () => clearInterval(interval);
-  }, [clients.length]);
-
+  }, [clients.length, isPaused]);
+  const goToPrevious = () => {
+    setCurrentIndex(prevIndex => {
+      if (prevIndex <= 0) {
+        return Math.max(0, clients.length - 4);
+      }
+      return prevIndex - 1;
+    });
+  };
+  const goToNext = () => {
+    setCurrentIndex(prevIndex => {
+      const maxIndex = Math.max(0, clients.length - 4);
+      return prevIndex >= maxIndex ? 0 : prevIndex + 1;
+    });
+  };
   if (clients.length === 0) return null;
 
-  // Duplicar clientes para loop infinito suave
-  const extendedClients = [...clients, ...clients, ...clients];
+  // Se temos 4 ou menos clientes, mostrar todos sem carrossel
+  const shouldShowCarousel = clients.length > 4;
+  const visibleClients = shouldShowCarousel ? clients.slice(currentIndex, currentIndex + 4) : clients;
 
-  return (
-    <section className="relative w-full py-24 bg-[#FFF1DE] dark:bg-gradient-to-b dark:from-[#020817] dark:via-[#0b1320] dark:to-[#020817]" id="clientes">
+  // Se temos menos de 4 clientes visíveis no final, completar com os do início
+  if (shouldShowCarousel && visibleClients.length < 4) {
+    const remaining = 4 - visibleClients.length;
+    visibleClients.push(...clients.slice(0, remaining));
+  }
+  return <section className="relative w-full py-24 bg-[#FFF1DE] dark:bg-gradient-to-b dark:from-[#020817] dark:via-[#0b1320] dark:to-[#020817]" id="clientes">
       <div className="container mx-auto px-4">
-        {/* Header */}
         <div className="text-center mb-16">
-          <span className="inline-block px-4 py-2 bg-[#efc349]/10 border border-[#efc349]/20 rounded-full text-[#efc349] text-sm font-light mb-4">
-            Nossos Parceiros
-          </span>
-          <h2 className="text-5xl font-extralight text-[#020817] dark:text-white mb-6 leading-tight md:text-4xl">
-            Clientes que <span className="text-[#efc349]">Confiam</span>
-          </h2>
-          <p className="text-[#020817]/70 dark:text-white/70 font-extralight max-w-3xl mx-auto leading-relaxed text-lg">
-            Empresas de diversos segmentos que escolheram nossa expertise em gestão contábil e empresarial
-          </p>
+          <motion.div initial={{
+          opacity: 0,
+          y: 40
+        }} whileInView={{
+          opacity: 1,
+          y: 0
+        }} transition={{
+          duration: 0.8
+        }} className="mb-8">
+            <span className="inline-block px-4 py-2 bg-[#efc349]/10 border border-[#efc349]/20 rounded-full text-[#efc349] text-sm font-light mb-4">
+              Nossos Parceiros
+            </span>
+            <h2 className="text-5xl font-extralight text-[#020817] dark:text-white mb-6 leading-tight md:text-4xl">
+              Clientes que <span className="text-[#efc349]">Confiam</span>
+            </h2>
+            <p className="text-[#020817]/70 dark:text-white/70 font-extralight max-w-3xl mx-auto leading-relaxed text-lg">
+              Empresas de diversos segmentos que escolheram nossa expertise em gestão contábil e empresarial
+            </p>
+          </motion.div>
         </div>
 
-        {/* Carousel Container */}
-        <div className="relative max-w-7xl mx-auto overflow-hidden">
-          <div 
-            className="flex transition-transform duration-500 ease-in-out"
-            style={{
-              transform: `translateX(-${(currentIndex * 100) / 4}%)`,
-              width: `${(extendedClients.length * 100) / 4}%`
-            }}
-          >
-            {extendedClients.map((client, index) => (
-              <div 
-                key={`${client.id}-${Math.floor(index / clients.length)}`}
-                className="w-full px-2 sm:px-3 lg:px-4"
-                style={{ flex: `0 0 ${100/4}%` }} // 4 itens no desktop
-              >
-                <div className="bg-white dark:bg-[#0b1320] rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-[#efc349]/20 h-full flex flex-col justify-between min-h-[280px] transition-all duration-300 hover:shadow-xl hover:scale-[1.02]">
-                  {/* Logo Container */}
-                  <div className="flex items-center justify-center mb-6 h-24">
-                    <img 
-                      src={client.logo_url} 
-                      alt={client.name} 
-                      className="max-h-20 max-w-full w-auto object-contain" 
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = "/placeholder.svg";
-                      }} 
-                    />
-                  </div>
-                  
-                  {/* Client Name */}
-                  <h3 className="text-lg font-light text-[#020817] dark:text-white text-center mb-4 line-clamp-2 flex-grow">
-                    {client.name}
-                  </h3>
-                  
-                  {/* Instagram Link */}
-                  {client.instagram_url && (
-                    <div className="flex justify-center mt-auto">
-                      <a 
-                        href={client.instagram_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="inline-flex items-center space-x-2 px-4 py-2 bg-[#efc349]/10 hover:bg-[#efc349]/20 border border-[#efc349]/30 rounded-full text-[#efc349] hover:text-[#020817] dark:hover:text-[#020817] transition-all duration-300 text-sm font-light"
-                      >
-                        <Instagram className="w-4 h-4" />
+        <div className="relative max-w-7xl mx-auto">
+          <div className="overflow-hidden" onMouseEnter={() => setIsPaused(true)} onMouseLeave={() => setIsPaused(false)}>
+            <motion.div key={currentIndex} initial={{
+            opacity: 0,
+            x: 50
+          }} animate={{
+            opacity: 1,
+            x: 0
+          }} transition={{
+            duration: 0.5,
+            ease: "easeOut"
+          }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {visibleClients.map((client, index) => <motion.div key={`${client.id}-${currentIndex}-${index}`} initial={{
+              opacity: 0,
+              y: 20
+            }} animate={{
+              opacity: 1,
+              y: 0
+            }} transition={{
+              duration: 0.4,
+              delay: index * 0.1
+            }} className="group relative">
+                  <div className="bg-white dark:bg-[#0b1320] rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-[#efc349]/20 group h-full">
+                    {/* Logo */}
+                    <div className="relative mb-6 flex-1 flex items-center justify-center w-full">
+                      <img src={client.logo_url} alt={client.name} className="max-h-20 max-w-32 w-auto object-contain filter grayscale-0 transition-all duration-300" onError={e => {
+                    (e.target as HTMLImageElement).src = "/placeholder.svg";
+                  }} />
+                    </div>
+                    
+                    {/* Nome da empresa */}
+                    <h3 className="text-lg font-light text-[#020817] dark:text-white text-center mb-4 line-clamp-2">
+                      {client.name}
+                    </h3>
+                    
+                    {/* Link do Instagram */}
+                    {client.instagram_url && <a href={client.instagram_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center space-x-2 px-4 py-2 bg-[#efc349]/10 hover:bg-[#efc349]/20 border border-[#efc349]/30 rounded-full text-[#efc349] hover:text-[#020817] dark:hover:text-[#020817] transition-all duration-300 text-sm font-light group/link">
+                        <Instagram className="w-4 h-4 group-hover/link:rotate-12 transition-transform duration-300" />
                         <span>Instagram</span>
                         <ExternalLink className="w-3 h-3 opacity-60" />
-                      </a>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Responsive Mobile Version */}
-        <div className="block lg:hidden relative max-w-7xl mx-auto overflow-hidden mt-8">
-          <div 
-            className="flex transition-transform duration-500 ease-in-out"
-            style={{
-              transform: `translateX(-${(currentIndex * 100) / 2}%)`,
-              width: `${(extendedClients.length * 100) / 2}%`
-            }}
-          >
-            {extendedClients.map((client, index) => (
-              <div 
-                key={`mobile-${client.id}-${Math.floor(index / clients.length)}`}
-                className="w-full px-2"
-                style={{ flex: `0 0 ${100/2}%` }} // 2 itens no mobile
-              >
-                <div className="bg-white dark:bg-[#0b1320] rounded-2xl p-4 shadow-lg border border-gray-200 dark:border-[#efc349]/20 h-full flex flex-col justify-between min-h-[240px] transition-all duration-300 hover:shadow-xl">
-                  {/* Logo Container */}
-                  <div className="flex items-center justify-center mb-4 h-16">
-                    <img 
-                      src={client.logo_url} 
-                      alt={client.name} 
-                      className="max-h-14 max-w-full w-auto object-contain" 
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = "/placeholder.svg";
-                      }} 
-                    />
+                      </a>}
                   </div>
-                  
-                  {/* Client Name */}
-                  <h3 className="text-base font-light text-[#020817] dark:text-white text-center mb-3 line-clamp-2 flex-grow">
-                    {client.name}
-                  </h3>
-                  
-                  {/* Instagram Link */}
-                  {client.instagram_url && (
-                    <div className="flex justify-center mt-auto">
-                      <a 
-                        href={client.instagram_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="inline-flex items-center space-x-1 px-3 py-1.5 bg-[#efc349]/10 hover:bg-[#efc349]/20 border border-[#efc349]/30 rounded-full text-[#efc349] hover:text-[#020817] dark:hover:text-[#020817] transition-all duration-300 text-xs font-light"
-                      >
-                        <Instagram className="w-3 h-3" />
-                        <span>Instagram</span>
-                        <ExternalLink className="w-2 h-2 opacity-60" />
-                      </a>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
+                </motion.div>)}
+            </motion.div>
           </div>
-        </div>
 
-        {/* Indicators */}
-        <div className="flex justify-center mt-8 space-x-2">
-          {clients.map((_, index) => (
-            <button
-              key={index}
-              className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                index === currentIndex % clients.length
-                  ? 'bg-[#efc349] w-6'
-                  : 'bg-[#efc349]/30'
-              }`}
-              onClick={() => setCurrentIndex(index)}
-            />
-          ))}
+          {/* Navigation Arrows - only show if we have carousel */}
+          {shouldShowCarousel && <>
+              <button onClick={goToPrevious} className="absolute left-4 lg:-left-16 top-1/2 transform -translate-y-1/2 bg-white dark:bg-[#efc349]/20 hover:bg-gray-50 dark:hover:bg-[#efc349]/40 backdrop-blur-sm rounded-full p-3 transition-all duration-300 shadow-lg border border-gray-200/20 dark:border-[#efc349]/30 group" aria-label="Cliente anterior">
+                <ChevronLeft className="w-6 h-6 text-[#020817] dark:text-[#efc349] group-hover:text-[#efc349] dark:group-hover:text-white transition-colors duration-300" />
+              </button>
+
+              <button onClick={goToNext} className="absolute right-4 lg:-right-16 top-1/2 transform -translate-y-1/2 bg-white dark:bg-[#efc349]/20 hover:bg-gray-50 dark:hover:bg-[#efc349]/40 backdrop-blur-sm rounded-full p-3 transition-all duration-300 shadow-lg border border-gray-200/20 dark:border-[#efc349]/30 group" aria-label="Próximo cliente">
+                <ChevronRight className="w-6 h-6 text-[#020817] dark:text-[#efc349] group-hover:text-[#efc349] dark:group-hover:text-white transition-colors duration-300" />
+              </button>
+            </>}
+
+          {/* Dots Indicator - only show if we have carousel */}
+          {shouldShowCarousel && <div className="flex justify-center mt-12 space-x-2">
+              {Array.from({
+            length: Math.ceil(clients.length / 4)
+          }).map((_, index) => <button key={index} onClick={() => setCurrentIndex(index * 4)} className={`relative overflow-hidden rounded-full transition-all duration-300 ${Math.floor(currentIndex / 4) === index ? 'w-8 h-3 bg-[#efc349]' : 'w-3 h-3 bg-gray-300 dark:bg-white/30 hover:bg-gray-400 dark:hover:bg-white/50'}`} aria-label={`Ir para grupo ${index + 1}`}>
+                  {Math.floor(currentIndex / 4) === index && <motion.div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent" animate={{
+              x: [-32, 32]
+            }} transition={{
+              duration: 2,
+              repeat: Infinity,
+              ease: "linear"
+            }} />}
+                </button>)}
+            </div>}
         </div>
 
         {/* Decorative elements */}
         <div className="absolute top-20 left-10 w-20 h-20 bg-[#efc349]/5 rounded-full blur-xl"></div>
         <div className="absolute bottom-20 right-10 w-32 h-32 bg-[#efc349]/5 rounded-full blur-xl"></div>
       </div>
-    </section>
-  );
+    </section>;
 };
-
 export default HomeCarousel;
