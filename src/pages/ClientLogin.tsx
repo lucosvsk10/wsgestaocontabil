@@ -67,7 +67,7 @@ const ClientLogin = () => {
   };
   return <div className="min-h-screen flex flex-col bg-[#FFF1DE] dark:bg-deepNavy">
       <Navbar />
-      <div className="flex-grow flex items-center justify-center p-4 py-[100px]">
+      <div className="flex-grow flex items-center justify-center p-4 py-[180px]">
         <Card className="w-full max-w-md border-[#e6e6e6] dark:border-gold/30 bg-white dark:bg-transparent backdrop-blur-sm shadow-sm">
           <CardHeader className="space-y-1 flex flex-col items-center">
             <CardTitle className="text-2xl text-center text-[#020817] dark:text-gold font-normal">LOGIN</CardTitle>

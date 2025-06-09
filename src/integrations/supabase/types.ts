@@ -130,20 +130,13 @@ export type Database = {
           accountant_contact: string
           accountant_name: string
           address: string
-          client_status: string | null
           cnpj: string
           created_at: string
           email: string
           id: string
-          internal_observations: string | null
-          internal_responsible: string | null
-          internal_tags: string[] | null
-          last_federal_update: string | null
-          last_query_date: string | null
           name: string
           opening_date: string
           phone: string
-          registration_status: string | null
           tax_regime: string
           updated_at: string
           user_id: string
@@ -152,20 +145,13 @@ export type Database = {
           accountant_contact: string
           accountant_name: string
           address: string
-          client_status?: string | null
           cnpj: string
           created_at?: string
           email: string
           id?: string
-          internal_observations?: string | null
-          internal_responsible?: string | null
-          internal_tags?: string[] | null
-          last_federal_update?: string | null
-          last_query_date?: string | null
           name: string
           opening_date: string
           phone: string
-          registration_status?: string | null
           tax_regime: string
           updated_at?: string
           user_id: string
@@ -174,20 +160,13 @@ export type Database = {
           accountant_contact?: string
           accountant_name?: string
           address?: string
-          client_status?: string | null
           cnpj?: string
           created_at?: string
           email?: string
           id?: string
-          internal_observations?: string | null
-          internal_responsible?: string | null
-          internal_tags?: string[] | null
-          last_federal_update?: string | null
-          last_query_date?: string | null
           name?: string
           opening_date?: string
           phone?: string
-          registration_status?: string | null
           tax_regime?: string
           updated_at?: string
           user_id?: string
