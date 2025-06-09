@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from "react";
 import { Instagram, ExternalLink } from "lucide-react";
-import { motion } from "framer-motion";
 import {
   Carousel,
   CarouselContent,
@@ -29,7 +28,7 @@ const HomeCarousel = () => {
       if (stored) {
         const allClients = JSON.parse(stored);
         const activeClients = allClients.filter((client: ClientItem) => client.active);
-        setClients(activeClients);
+        setClients(activeClients.sort((a, b) => a.order_index - b.order_index));
       } else {
         // Dados padrão se não houver no localStorage
         setClients([{
@@ -93,86 +92,77 @@ const HomeCarousel = () => {
   return (
     <section className="relative w-full py-24 bg-[#FFF1DE] dark:bg-gradient-to-b dark:from-[#020817] dark:via-[#0b1320] dark:to-[#020817]" id="clientes">
       <div className="container mx-auto px-4">
+        {/* Header */}
         <div className="text-center mb-16">
-          <motion.div 
-            initial={{ opacity: 0, y: 40 }} 
-            whileInView={{ opacity: 1, y: 0 }} 
-            transition={{ duration: 0.8 }} 
-            className="mb-8"
-          >
-            <span className="inline-block px-4 py-2 bg-[#efc349]/10 border border-[#efc349]/20 rounded-full text-[#efc349] text-sm font-light mb-4">
-              Nossos Parceiros
-            </span>
-            <h2 className="text-5xl font-extralight text-[#020817] dark:text-white mb-6 leading-tight md:text-4xl">
-              Clientes que <span className="text-[#efc349]">Confiam</span>
-            </h2>
-            <p className="text-[#020817]/70 dark:text-white/70 font-extralight max-w-3xl mx-auto leading-relaxed text-lg">
-              Empresas de diversos segmentos que escolheram nossa expertise em gestão contábil e empresarial
-            </p>
-          </motion.div>
+          <span className="inline-block px-4 py-2 bg-[#efc349]/10 border border-[#efc349]/20 rounded-full text-[#efc349] text-sm font-light mb-4">
+            Nossos Parceiros
+          </span>
+          <h2 className="text-5xl font-extralight text-[#020817] dark:text-white mb-6 leading-tight md:text-4xl">
+            Clientes que <span className="text-[#efc349]">Confiam</span>
+          </h2>
+          <p className="text-[#020817]/70 dark:text-white/70 font-extralight max-w-3xl mx-auto leading-relaxed text-lg">
+            Empresas de diversos segmentos que escolheram nossa expertise em gestão contábil e empresarial
+          </p>
         </div>
 
+        {/* Carousel */}
         <div className="relative max-w-7xl mx-auto">
           <Carousel
             opts={{
               align: "start",
               loop: true,
+              slidesToScroll: 1,
             }}
             className="w-full"
           >
-            <CarouselContent className="-ml-2 md:-ml-4">
+            <CarouselContent className="-ml-4">
               {clients.map((client) => (
-                <CarouselItem key={client.id} className="pl-2 md:pl-4 basis-full sm:basis-1/2 lg:basis-1/4">
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4 }}
-                    className="group relative h-full"
-                  >
-                    <div className="bg-white dark:bg-[#0b1320] rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-[#efc349]/20 h-full flex flex-col">
-                      {/* Logo */}
-                      <div className="relative mb-6 flex-1 flex items-center justify-center w-full min-h-[80px]">
+                <CarouselItem key={client.id} className="pl-4 basis-full sm:basis-1/2 lg:basis-1/4">
+                  <div className="h-full">
+                    <div className="bg-white dark:bg-[#0b1320] rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-[#efc349]/20 h-full flex flex-col justify-between min-h-[280px] transition-all duration-300 hover:shadow-xl hover:scale-[1.02]">
+                      {/* Logo Container */}
+                      <div className="flex items-center justify-center mb-6 h-24">
                         <img 
                           src={client.logo_url} 
                           alt={client.name} 
-                          className="max-h-20 max-w-32 w-auto object-contain transition-all duration-300" 
+                          className="max-h-20 max-w-full w-auto object-contain" 
                           onError={(e) => {
                             (e.target as HTMLImageElement).src = "/placeholder.svg";
                           }} 
                         />
                       </div>
                       
-                      {/* Nome da empresa */}
-                      <h3 className="text-lg font-light text-[#020817] dark:text-white text-center mb-4 line-clamp-2">
+                      {/* Client Name */}
+                      <h3 className="text-lg font-light text-[#020817] dark:text-white text-center mb-4 line-clamp-2 flex-grow">
                         {client.name}
                       </h3>
                       
-                      {/* Link do Instagram */}
+                      {/* Instagram Link */}
                       {client.instagram_url && (
-                        <div className="flex justify-center">
+                        <div className="flex justify-center mt-auto">
                           <a 
                             href={client.instagram_url} 
                             target="_blank" 
                             rel="noopener noreferrer" 
-                            className="inline-flex items-center space-x-2 px-4 py-2 bg-[#efc349]/10 hover:bg-[#efc349]/20 border border-[#efc349]/30 rounded-full text-[#efc349] hover:text-[#020817] dark:hover:text-[#020817] transition-all duration-300 text-sm font-light group/link"
+                            className="inline-flex items-center space-x-2 px-4 py-2 bg-[#efc349]/10 hover:bg-[#efc349]/20 border border-[#efc349]/30 rounded-full text-[#efc349] hover:text-[#020817] dark:hover:text-[#020817] transition-all duration-300 text-sm font-light"
                           >
-                            <Instagram className="w-4 h-4 group-hover/link:rotate-12 transition-transform duration-300" />
+                            <Instagram className="w-4 h-4" />
                             <span>Instagram</span>
                             <ExternalLink className="w-3 h-3 opacity-60" />
                           </a>
                         </div>
                       )}
                     </div>
-                  </motion.div>
+                  </div>
                 </CarouselItem>
               ))}
             </CarouselContent>
             
-            {/* Navigation arrows - only show if we have more than 4 clients */}
+            {/* Navigation Arrows */}
             {clients.length > 4 && (
               <>
-                <CarouselPrevious className="absolute -left-4 lg:-left-12 top-1/2 -translate-y-1/2 bg-white dark:bg-[#efc349]/20 hover:bg-gray-50 dark:hover:bg-[#efc349]/40 backdrop-blur-sm border border-gray-200/20 dark:border-[#efc349]/30 text-[#020817] dark:text-[#efc349] hover:text-[#efc349] dark:hover:text-white" />
-                <CarouselNext className="absolute -right-4 lg:-right-12 top-1/2 -translate-y-1/2 bg-white dark:bg-[#efc349]/20 hover:bg-gray-50 dark:hover:bg-[#efc349]/40 backdrop-blur-sm border border-gray-200/20 dark:border-[#efc349]/30 text-[#020817] dark:text-[#efc349] hover:text-[#efc349] dark:hover:text-white" />
+                <CarouselPrevious className="absolute -left-4 lg:-left-12 top-1/2 -translate-y-1/2 bg-white dark:bg-[#0b1320] hover:bg-gray-50 dark:hover:bg-[#efc349]/20 border border-gray-200 dark:border-[#efc349]/30 text-[#020817] dark:text-[#efc349] hover:text-[#efc349] dark:hover:text-white h-12 w-12 shadow-lg" />
+                <CarouselNext className="absolute -right-4 lg:-right-12 top-1/2 -translate-y-1/2 bg-white dark:bg-[#0b1320] hover:bg-gray-50 dark:hover:bg-[#efc349]/20 border border-gray-200 dark:border-[#efc349]/30 text-[#020817] dark:text-[#efc349] hover:text-[#efc349] dark:hover:text-white h-12 w-12 shadow-lg" />
               </>
             )}
           </Carousel>
