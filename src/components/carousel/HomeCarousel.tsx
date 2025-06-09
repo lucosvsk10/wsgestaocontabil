@@ -160,8 +160,8 @@ const HomeCarousel = () => {
                             <span>Instagram</span>
                             <ExternalLink className="w-3 h-3 opacity-60" />
                           </a>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </div>
                   </motion.div>
                 </CarouselItem>
