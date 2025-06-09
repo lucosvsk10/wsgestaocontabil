@@ -15,6 +15,7 @@ interface DocumentTableProps {
   isDocumentExpired: (expiresAt: string | null) => boolean;
   daysUntilExpiration: (expiresAt: string | null) => string | null;
   refreshDocuments: () => void;
+  categories?: Array<{ id: string; name: string; color?: string; }>;
 }
 
 export const DocumentTable = ({ 
@@ -22,7 +23,8 @@ export const DocumentTable = ({
   formatDate, 
   isDocumentExpired, 
   daysUntilExpiration,
-  refreshDocuments
+  refreshDocuments,
+  categories = []
 }: DocumentTableProps) => {
   const { user } = useAuth();
   const isMobile = useIsMobile();
@@ -95,6 +97,7 @@ export const DocumentTable = ({
           refreshDocuments={refreshDocuments}
           loadingDocumentIds={loadingDocumentIds}
           handleDownload={handleDownload}
+          categories={categories}
         />
       ) : (
         <DocumentEmptyState searchQuery={searchQuery} />

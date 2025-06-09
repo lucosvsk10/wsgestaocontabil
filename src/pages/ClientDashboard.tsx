@@ -10,6 +10,7 @@ import { AnnouncementsSection } from "@/components/client/sections/Announcements
 import { FiscalCalendarSection } from "@/components/client/sections/FiscalCalendarSection";
 import { CompanyDataSection } from "@/components/client/sections/CompanyDataSection";
 import { useDocumentActions } from "@/hooks/document/useDocumentActions";
+import { DocumentTable } from "@/components/client/DocumentTable";
 
 const ClientDashboard = () => {
   const {
@@ -33,12 +34,23 @@ const ClientDashboard = () => {
     switch (activeTab) {
       case "documents":
         return (
-          <DocumentsSection 
-            documents={documents} 
-            documentsByCategory={documentsByCategory} 
-            categories={commonCategories} 
-            onDownload={handleDownload} 
-            refreshDocuments={refreshDocuments} 
+          <DocumentTable
+            documents={documents}
+            formatDate={(dateStr: string) => new Date(dateStr).toLocaleDateString('pt-BR')}
+            isDocumentExpired={(expiresAt: string | null) => {
+              if (!expiresAt) return false;
+              return new Date(expiresAt) < new Date();
+            }}
+            daysUntilExpiration={(expiresAt: string | null) => {
+              if (!expiresAt) return null;
+              const days = Math.ceil((new Date(expiresAt).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+              if (days < 0) return "Expirado";
+              if (days === 0) return "Expira hoje";
+              if (days === 1) return "Expira amanhã";
+              return `${days} dias`;
+            }}
+            refreshDocuments={refreshDocuments}
+            categories={commonCategories}
           />
         );
       case "simulations":
@@ -51,12 +63,23 @@ const ClientDashboard = () => {
         return <CompanyDataSection />;
       default:
         return (
-          <DocumentsSection 
-            documents={documents} 
-            documentsByCategory={documentsByCategory} 
-            categories={commonCategories} 
-            onDownload={handleDownload} 
-            refreshDocuments={refreshDocuments} 
+          <DocumentTable
+            documents={documents}
+            formatDate={(dateStr: string) => new Date(dateStr).toLocaleDateString('pt-BR')}
+            isDocumentExpired={(expiresAt: string | null) => {
+              if (!expiresAt) return false;
+              return new Date(expiresAt) < new Date();
+            }}
+            daysUntilExpiration={(expiresAt: string | null) => {
+              if (!expiresAt) return null;
+              const days = Math.ceil((new Date(expiresAt).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+              if (days < 0) return "Expirado";
+              if (days === 0) return "Expira hoje";
+              if (days === 1) return "Expira amanhã";
+              return `${days} dias`;
+            }}
+            refreshDocuments={refreshDocuments}
+            categories={commonCategories}
           />
         );
     }

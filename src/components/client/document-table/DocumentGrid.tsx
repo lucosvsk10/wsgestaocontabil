@@ -14,6 +14,7 @@ interface DocumentGridProps {
   loadingDocumentIds: Set<string>;
   handleDownload: (doc: Document) => Promise<void>;
   categoryColor?: string;
+  categories?: Array<{ id: string; name: string; color?: string; }>;
 }
 
 export const DocumentGrid = ({
@@ -24,7 +25,8 @@ export const DocumentGrid = ({
   refreshDocuments,
   loadingDocumentIds,
   handleDownload,
-  categoryColor
+  categoryColor,
+  categories = []
 }: DocumentGridProps) => {
   const isMobile = useIsMobile();
   
@@ -36,6 +38,13 @@ export const DocumentGrid = ({
       : window.innerWidth < 1280 
         ? "grid-cols-3" 
         : "grid-cols-4";
+
+  // Function to get category color for a document
+  const getCategoryColor = (doc: Document) => {
+    if (categoryColor) return categoryColor;
+    const category = categories.find(cat => cat.id === doc.category);
+    return category?.color || "#efc349";
+  };
   
   return (
     <div className={`grid ${gridClasses} gap-6`}>
@@ -54,7 +63,7 @@ export const DocumentGrid = ({
             refreshDocuments={refreshDocuments}
             loadingDocumentIds={loadingDocumentIds}
             handleDownload={handleDownload}
-            categoryColor={categoryColor}
+            categoryColor={getCategoryColor(doc)}
           />
         </motion.div>
       ))}
