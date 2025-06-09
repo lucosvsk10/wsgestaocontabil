@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Calculator, DollarSign, Users, Heart, GraduationCap, Home } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-
 const TaxCalculator = () => {
   const [formData, setFormData] = useState({
     rendimentoBruto: "",
@@ -23,14 +22,12 @@ const TaxCalculator = () => {
   });
   const [resultado, setResultado] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
   };
-
   const calcularIRPF = () => {
     setLoading(true);
     const rendimentoBruto = parseFloat(formData.rendimentoBruto) || 0;
@@ -73,7 +70,6 @@ const TaxCalculator = () => {
       impostoDevido = (33919.80 - 22847.76) * 0.075 + (45012.60 - 33919.80) * 0.15 + (55976.16 - 45012.60) * 0.225 + (baseCalculo - 55976.16) * 0.275;
       aliquotaEfetiva = 27.5;
     }
-
     const resultado = {
       rendimentoBruto,
       inss,
@@ -89,33 +85,33 @@ const TaxCalculator = () => {
     setResultado(resultado);
     setLoading(false);
   };
-
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
     }).format(value);
   };
-
-  return (
-    <div className="min-h-screen bg-background text-foreground font-prompt print:bg-white">
+  return <div className="min-h-screen bg-background text-foreground font-prompt print:bg-white">
       <div className="print:hidden">
         <SimpleNavbar title="Simulador IRPF 2024" />
       </div>
       
       <div className="container mx-auto px-4 py-[100px] print:py-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="max-w-4xl mx-auto"
-        >
+        <motion.div initial={{
+        opacity: 0,
+        y: 20
+      }} animate={{
+        opacity: 1,
+        y: 0
+      }} transition={{
+        duration: 0.6
+      }} className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-4xl md:text-5xl font-extralight text-gold mb-4 print:text-foreground print:text-3xl">
+            <h1 className="text-4xl font-extralight text-gold mb-4 print:text-foreground print:text-3xl md:text-4xl">
               Simulador IRPF 2024
             </h1>
-            <p className="text-xl text-muted-foreground font-extralight print:text-gray-600 print:text-base">
+            <p className="text-muted-foreground font-extralight print:text-gray-600 text-lg">
               Calcule seu Imposto de Renda com base na tabela oficial da Receita Federal
             </p>
           </div>
@@ -124,7 +120,7 @@ const TaxCalculator = () => {
             {/* Formulário */}
             <Card className="print:bg-white print:border-gray-300">
               <CardHeader>
-                <CardTitle className="font-extralight flex items-center print:text-foreground">
+                <CardTitle className="font-extralight flex items-center print:text-foreground text-base">
                   <Calculator className="w-6 h-6 mr-2" />
                   Dados para Cálculo
                 </CardTitle>
@@ -136,14 +132,7 @@ const TaxCalculator = () => {
                     <DollarSign className="w-4 h-4 mr-1" />
                     Rendimento Bruto Anual (R$)
                   </Label>
-                  <Input 
-                    id="rendimentoBruto" 
-                    type="number" 
-                    placeholder="100000.00" 
-                    value={formData.rendimentoBruto} 
-                    onChange={e => handleInputChange("rendimentoBruto", e.target.value)} 
-                    className="mt-1 print:bg-white print:border-gray-300 print:text-black" 
-                  />
+                  <Input id="rendimentoBruto" type="number" placeholder="100000.00" value={formData.rendimentoBruto} onChange={e => handleInputChange("rendimentoBruto", e.target.value)} className="mt-1 print:bg-white print:border-gray-300 print:text-black" />
                 </div>
 
                 <div>
@@ -151,14 +140,7 @@ const TaxCalculator = () => {
                     <Home className="w-4 h-4 mr-1" />
                     INSS Pago (R$)
                   </Label>
-                  <Input 
-                    id="inss" 
-                    type="number" 
-                    placeholder="7507.49" 
-                    value={formData.inss} 
-                    onChange={e => handleInputChange("inss", e.target.value)} 
-                    className="mt-1 print:bg-white print:border-gray-300 print:text-black" 
-                  />
+                  <Input id="inss" type="number" placeholder="7507.49" value={formData.inss} onChange={e => handleInputChange("inss", e.target.value)} className="mt-1 print:bg-white print:border-gray-300 print:text-black" />
                 </div>
 
                 <div>
@@ -166,14 +148,7 @@ const TaxCalculator = () => {
                     <Users className="w-4 h-4 mr-1" />
                     Número de Dependentes
                   </Label>
-                  <Input 
-                    id="dependentes" 
-                    type="number" 
-                    placeholder="0" 
-                    value={formData.dependentes} 
-                    onChange={e => handleInputChange("dependentes", e.target.value)} 
-                    className="mt-1 print:bg-white print:border-gray-300 print:text-black" 
-                  />
+                  <Input id="dependentes" type="number" placeholder="0" value={formData.dependentes} onChange={e => handleInputChange("dependentes", e.target.value)} className="mt-1 print:bg-white print:border-gray-300 print:text-black" />
                 </div>
 
                 <div>
@@ -181,14 +156,7 @@ const TaxCalculator = () => {
                     <GraduationCap className="w-4 h-4 mr-1" />
                     Gastos com Educação (R$)
                   </Label>
-                  <Input 
-                    id="educacao" 
-                    type="number" 
-                    placeholder="3561.50" 
-                    value={formData.educacao} 
-                    onChange={e => handleInputChange("educacao", e.target.value)} 
-                    className="mt-1 print:bg-white print:border-gray-300 print:text-black" 
-                  />
+                  <Input id="educacao" type="number" placeholder="3561.50" value={formData.educacao} onChange={e => handleInputChange("educacao", e.target.value)} className="mt-1 print:bg-white print:border-gray-300 print:text-black" />
                   <p className="text-xs text-muted-foreground mt-1 print:text-gray-600">Limite: R$ 3.561,50 por dependente</p>
                 </div>
 
@@ -197,14 +165,7 @@ const TaxCalculator = () => {
                     <Heart className="w-4 h-4 mr-1" />
                     Gastos com Saúde (R$)
                   </Label>
-                  <Input 
-                    id="saude" 
-                    type="number" 
-                    placeholder="5000.00" 
-                    value={formData.saude} 
-                    onChange={e => handleInputChange("saude", e.target.value)} 
-                    className="mt-1 print:bg-white print:border-gray-300 print:text-black" 
-                  />
+                  <Input id="saude" type="number" placeholder="5000.00" value={formData.saude} onChange={e => handleInputChange("saude", e.target.value)} className="mt-1 print:bg-white print:border-gray-300 print:text-black" />
                   <p className="text-xs text-muted-foreground mt-1 print:text-gray-600">Sem limite de valor</p>
                 </div>
 
@@ -212,22 +173,11 @@ const TaxCalculator = () => {
                   <Label htmlFor="outrasDeducoes" className="font-extralight print:text-black">
                     Outras Deduções (R$)
                   </Label>
-                  <Input 
-                    id="outrasDeducoes" 
-                    type="number" 
-                    placeholder="0.00" 
-                    value={formData.outrasDeducoes} 
-                    onChange={e => handleInputChange("outrasDeducoes", e.target.value)} 
-                    className="mt-1 print:bg-white print:border-gray-300 print:text-black" 
-                  />
+                  <Input id="outrasDeducoes" type="number" placeholder="0.00" value={formData.outrasDeducoes} onChange={e => handleInputChange("outrasDeducoes", e.target.value)} className="mt-1 print:bg-white print:border-gray-300 print:text-black" />
                 </div>
 
                 <div className="print:hidden">
-                  <Button 
-                    onClick={calcularIRPF} 
-                    disabled={loading || !formData.rendimentoBruto} 
-                    className="w-full bg-gold hover:bg-gold-dark text-background font-extralight"
-                  >
+                  <Button onClick={calcularIRPF} disabled={loading || !formData.rendimentoBruto} className="w-full bg-gold hover:bg-gold-dark text-background font-extralight">
                     {loading ? "Calculando..." : "Calcular IRPF"}
                   </Button>
                 </div>
@@ -235,12 +185,15 @@ const TaxCalculator = () => {
             </Card>
 
             {/* Resultado */}
-            {resultado && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5 }}
-              >
+            {resultado && <motion.div initial={{
+            opacity: 0,
+            x: 20
+          }} animate={{
+            opacity: 1,
+            x: 0
+          }} transition={{
+            duration: 0.5
+          }}>
                 <Card className="print:bg-white print:border-gray-300">
                   <CardHeader>
                     <CardTitle className="font-extralight print:text-foreground">
@@ -316,18 +269,12 @@ const TaxCalculator = () => {
                 </Card>
                 
                 <div className="print:hidden">
-                  <ResultActions 
-                    resultData={resultado}
-                    calculatorType="irpf"
-                  />
+                  <ResultActions resultData={resultado} calculatorType="irpf" />
                 </div>
-              </motion.div>
-            )}
+              </motion.div>}
           </div>
         </motion.div>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default TaxCalculator;
