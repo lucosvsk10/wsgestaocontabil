@@ -1,4 +1,3 @@
-
 export interface TaxSimulation {
   id: string;
   tipo_simulacao: string;
@@ -61,4 +60,23 @@ export interface CompanyData {
   accountant_contact: string;
   created_at: string;
   updated_at: string;
+  user_id: string;
+  registration_status?: string;
+  last_federal_update?: string;
+  last_query_date?: string;
+  internal_tags?: string[];
+  client_status?: string;
+  internal_observations?: string;
+  internal_responsible?: string;
+  // Novos campos da Receita Federal
+  fantasy_name?: string;
+  cadastral_situation?: string;
+  social_capital?: string;
+  main_activity?: string;
+  secondary_activities?: string;
+  number?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
 }
