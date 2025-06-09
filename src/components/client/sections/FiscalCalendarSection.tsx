@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Clock, AlertTriangle, CheckCircle } from "lucide-react";
+import { Calendar, Clock, AlertTriangle, CheckCircle, MapPin, Tag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { FiscalEvent } from "@/types/client";
 import { supabase } from "@/integrations/supabase/client";
@@ -83,11 +83,11 @@ export const FiscalCalendarSection = () => {
 
   if (loading) {
     return (
-      <Card className="bg-[#0b1320] border-[#efc349]/20">
+      <Card className="bg-white dark:bg-[#020817] border-gray-200 dark:border-[#efc349]/20">
         <CardContent className="p-6">
           <div className="animate-pulse space-y-4">
             {[1, 2, 3].map(i => (
-              <div key={i} className="h-16 bg-[#020817] rounded"></div>
+              <div key={i} className="h-20 bg-gray-200 dark:bg-[#0b1320] rounded-lg"></div>
             ))}
           </div>
         </CardContent>
@@ -96,19 +96,29 @@ export const FiscalCalendarSection = () => {
   }
 
   return (
-    <Card className="bg-[#0b1320] border-[#efc349]/20">
-      <CardHeader>
-        <CardTitle className="text-[#efc349] font-extralight flex items-center">
-          <Calendar className="w-6 h-6 mr-2" />
+    <Card className="bg-white dark:bg-[#020817] border-gray-200 dark:border-[#efc349]/20">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-[#020817] dark:text-[#efc349] font-extralight flex items-center text-2xl">
+          <Calendar className="w-6 h-6 mr-3" />
           Agenda Fiscal
+          <Badge variant="outline" className="ml-3 border-[#020817] dark:border-[#efc349]/30 text-[#020817] dark:text-[#efc349] font-extralight">
+            {events.length} {events.length === 1 ? 'evento' : 'eventos'}
+          </Badge>
         </CardTitle>
       </CardHeader>
       
-      <CardContent>
+      <CardContent className="px-6 pb-6">
         {events.length === 0 ? (
-          <div className="text-center py-8 text-gray-400">
-            <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p className="font-extralight">Nenhum evento agendado</p>
+          <div className="text-center py-12">
+            <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-[#0b1320] rounded-full flex items-center justify-center">
+              <Calendar className="w-8 h-8 text-gray-400 dark:text-gray-600" />
+            </div>
+            <h3 className="text-lg font-extralight text-[#020817] dark:text-white mb-2">
+              Nenhum evento agendado
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 font-extralight">
+              Aguardando novos eventos fiscais
+            </p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -118,30 +128,46 @@ export const FiscalCalendarSection = () => {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.1 }}
-                className="bg-[#020817] border border-[#efc349]/20 rounded-lg p-4 hover:border-[#efc349]/40 transition-all"
+                className="group bg-gray-50 dark:bg-[#0b1320] border border-gray-200 dark:border-[#efc349]/20 rounded-xl p-5 hover:border-gray-300 dark:hover:border-[#efc349]/40 transition-all duration-300 hover:shadow-md dark:hover:shadow-none"
               >
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-semibold text-white text-lg">
-                    {event.title}
-                  </h3>
-                  <Badge className={`${getStatusColor(event.status)} text-white flex items-center gap-1`}>
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-start space-x-4 flex-1">
+                    <div className="w-12 h-12 rounded-lg bg-white dark:bg-[#020817] border border-gray-200 dark:border-[#efc349]/30 flex items-center justify-center flex-shrink-0">
+                      <Calendar className="w-6 h-6 text-[#020817] dark:text-[#efc349]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-[#020817] dark:text-white text-lg mb-2 group-hover:text-[#020817] dark:group-hover:text-[#efc349] transition-colors">
+                        {event.title}
+                      </h3>
+                      <p className="text-gray-600 dark:text-gray-300 font-extralight text-sm leading-relaxed mb-3">
+                        {event.description}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge className={`${getStatusColor(event.status)} text-white flex items-center gap-2 px-3 py-1 flex-shrink-0`}>
                     {getStatusIcon(event.status)}
                     {getStatusText(event.status)}
                   </Badge>
                 </div>
 
-                <p className="text-gray-300 font-extralight mb-3">
-                  {event.description}
-                </p>
-
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center text-sm text-gray-400">
-                    <Calendar className="w-4 h-4 mr-1" />
-                    {new Date(event.date).toLocaleDateString('pt-BR')}
+                <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-[#efc349]/10">
+                  <div className="flex items-center space-x-6 text-sm">
+                    <div className="flex items-center text-gray-500 dark:text-gray-400">
+                      <Clock className="w-4 h-4 mr-2" />
+                      <span className="font-medium">
+                        {new Date(event.date).toLocaleDateString('pt-BR')}
+                      </span>
+                    </div>
+                    <div className="flex items-center text-gray-500 dark:text-gray-400">
+                      <Tag className="w-4 h-4 mr-2" />
+                      <Badge 
+                        variant="outline" 
+                        className="border-gray-300 dark:border-[#efc349]/30 text-[#020817] dark:text-[#efc349] font-extralight bg-white dark:bg-transparent"
+                      >
+                        {event.category}
+                      </Badge>
+                    </div>
                   </div>
-                  <Badge variant="outline" className="border-[#efc349]/30 text-[#efc349]">
-                    {event.category}
-                  </Badge>
                 </div>
               </motion.div>
             ))}
