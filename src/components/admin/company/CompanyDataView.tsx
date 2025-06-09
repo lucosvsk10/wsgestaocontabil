@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Building2, ArrowLeft, Save, Loader2, Search, Shield, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { CompanyData } from "@/types/client";
 
 interface ReceiptaData {
   razao_social: string;
