@@ -6,11 +6,7 @@ import CarouselCard from "./components/CarouselCard";
 
 const HomeCarousel = () => {
   const { clients } = useCarouselData();
-  const {
-    currentIndex,
-    isPaused,
-    setIsPaused
-  } = useCarouselAnimation({ clientsLength: clients.length });
+  const { isPaused, setIsPaused } = useCarouselAnimation({ clientsLength: clients.length });
 
   if (clients.length === 0) return null;
 
