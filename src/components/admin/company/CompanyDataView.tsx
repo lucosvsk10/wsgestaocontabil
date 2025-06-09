@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -166,13 +165,19 @@ export const CompanyDataView = () => {
 
     setSaving(true);
     try {
+      // Preparar dados para salvar, convertendo strings vazias para null nos campos de timestamp
+      const dataToSave = {
+        user_id: userId,
+        ...formData,
+        internal_tags: formData.internal_tags ? formData.internal_tags.split(',').map(tag => tag.trim()) : [],
+        // Converter strings vazias para null nos campos de timestamp
+        last_federal_update: formData.last_federal_update === "" ? null : formData.last_federal_update,
+        last_query_date: formData.last_query_date === "" ? null : formData.last_query_date
+      };
+
       const { error } = await supabase
         .from('company_data')
-        .upsert({
-          user_id: userId,
-          ...formData,
-          internal_tags: formData.internal_tags ? formData.internal_tags.split(',').map(tag => tag.trim()) : []
-        });
+        .upsert(dataToSave);
 
       if (error) throw error;
 
