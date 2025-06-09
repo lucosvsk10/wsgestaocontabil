@@ -8,53 +8,47 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Calculator, DollarSign, Minus, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-
 const ProLaboreCalculator = () => {
   const [valorBruto, setValorBruto] = useState("");
   const [resultado, setResultado] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-
   const calcularProLabore = () => {
     setLoading(true);
-    
     const valor = parseFloat(valorBruto) || 0;
-    
+
     // Valores 2024
     const salarioMinimo = 1412.00;
     const tetoINSS = 7786.02;
-    
+
     // Calcular INSS (11% limitado ao teto)
     const baseINSS = Math.min(valor, tetoINSS);
     const inss = baseINSS * 0.11;
-    
+
     // Calcular IRRF
     const baseIRRF = valor - inss;
     let irrf = 0;
     let aliquotaIRRF = 0;
-    
+
     // Tabela IRRF mensal 2024
     if (baseIRRF <= 2112.00) {
       irrf = 0;
       aliquotaIRRF = 0;
     } else if (baseIRRF <= 2826.65) {
-      irrf = (baseIRRF * 0.075) - 158.40;
+      irrf = baseIRRF * 0.075 - 158.40;
       aliquotaIRRF = 7.5;
     } else if (baseIRRF <= 3751.05) {
-      irrf = (baseIRRF * 0.15) - 370.40;
+      irrf = baseIRRF * 0.15 - 370.40;
       aliquotaIRRF = 15;
     } else if (baseIRRF <= 4664.68) {
-      irrf = (baseIRRF * 0.225) - 651.73;
+      irrf = baseIRRF * 0.225 - 651.73;
       aliquotaIRRF = 22.5;
     } else {
-      irrf = (baseIRRF * 0.275) - 884.96;
+      irrf = baseIRRF * 0.275 - 884.96;
       aliquotaIRRF = 27.5;
     }
-    
     irrf = Math.max(irrf, 0);
-    
     const valorLiquido = valor - inss - irrf;
     const totalDescontos = inss + irrf;
-    
     setResultado({
       valorBruto: valor,
       inss,
@@ -65,41 +59,39 @@ const ProLaboreCalculator = () => {
       tetoINSS,
       salarioMinimo
     });
-    
     setLoading(false);
   };
-
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
     }).format(value);
   };
-
   const resetForm = () => {
     setValorBruto("");
     setResultado(null);
   };
-
-  return (
-    <div className="min-h-screen bg-background text-foreground font-prompt print:bg-white">
+  return <div className="min-h-screen bg-background text-foreground font-prompt print:bg-white">
       <div className="print:hidden">
         <SimpleNavbar title="Simulação Pró-labore 2024" />
       </div>
       
       <div className="container mx-auto px-4 py-[100px] print:py-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="max-w-4xl mx-auto"
-        >
+        <motion.div initial={{
+        opacity: 0,
+        y: 20
+      }} animate={{
+        opacity: 1,
+        y: 0
+      }} transition={{
+        duration: 0.6
+      }} className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-4xl md:text-5xl font-extralight text-gold mb-4 print:text-foreground print:text-3xl">
+            <h1 className="text-4xl font-extralight text-gold mb-4 print:text-foreground print:text-3xl md:text-3xl">
               Simulação Pró-labore 2024
             </h1>
-            <p className="text-xl text-muted-foreground font-extralight print:text-gray-600 print:text-base">
+            <p className="text-muted-foreground font-extralight print:text-gray-600 text-lg">
               Calcule os descontos e valor líquido do seu pró-labore
             </p>
           </div>
@@ -120,14 +112,7 @@ const ProLaboreCalculator = () => {
                     <DollarSign className="w-4 h-4 mr-1" />
                     Valor Bruto do Pró-labore (R$)
                   </Label>
-                  <Input
-                    id="valorBruto"
-                    type="number"
-                    placeholder="5000.00"
-                    value={valorBruto}
-                    onChange={(e) => setValorBruto(e.target.value)}
-                    className="mt-1 print:bg-white print:border-gray-300 print:text-black"
-                  />
+                  <Input id="valorBruto" type="number" placeholder="5000.00" value={valorBruto} onChange={e => setValorBruto(e.target.value)} className="mt-1 print:bg-white print:border-gray-300 print:text-black" />
                   <p className="text-xs text-muted-foreground mt-1 print:text-gray-600">
                     Valor mínimo: R$ 1.412,00 (salário mínimo)
                   </p>
@@ -144,19 +129,11 @@ const ProLaboreCalculator = () => {
                 </div>
 
                 <div className="flex gap-2 print:hidden">
-                  <Button 
-                    onClick={calcularProLabore}
-                    disabled={loading || !valorBruto || parseFloat(valorBruto) < 1412}
-                    className="flex-1 bg-gold hover:bg-gold-dark text-background font-extralight"
-                  >
+                  <Button onClick={calcularProLabore} disabled={loading || !valorBruto || parseFloat(valorBruto) < 1412} className="flex-1 bg-gold hover:bg-gold-dark text-background font-extralight">
                     {loading ? "Calculando..." : "Simular Pró-labore"}
                   </Button>
                   
-                  <Button 
-                    onClick={resetForm}
-                    variant="outline"
-                    className="hover:bg-muted"
-                  >
+                  <Button onClick={resetForm} variant="outline" className="hover:bg-muted">
                     Limpar
                   </Button>
                 </div>
@@ -164,12 +141,15 @@ const ProLaboreCalculator = () => {
             </Card>
 
             {/* Resultado */}
-            {resultado && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5 }}
-              >
+            {resultado && <motion.div initial={{
+            opacity: 0,
+            x: 20
+          }} animate={{
+            opacity: 1,
+            x: 0
+          }} transition={{
+            duration: 0.5
+          }}>
                 <Card className="print:bg-white print:border-gray-300">
                   <CardHeader>
                     <CardTitle className="font-extralight print:text-foreground">
@@ -310,18 +290,12 @@ const ProLaboreCalculator = () => {
                 </Card>
                 
                 <div className="print:hidden">
-                  <ResultActions 
-                    resultData={resultado}
-                    calculatorType="prolabore"
-                  />
+                  <ResultActions resultData={resultado} calculatorType="prolabore" />
                 </div>
-              </motion.div>
-            )}
+              </motion.div>}
           </div>
         </motion.div>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default ProLaboreCalculator;
