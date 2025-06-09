@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -83,18 +82,52 @@ export const SimulationsView: React.FC = () => {
     try {
       setIsLoading(true);
       
-      // Buscar TODAS as simulações (sem filtro de usuário)
-      const [taxResult, inssResult, prolaboreResult] = await Promise.all([
-        supabase.from('tax_simulations').select('*').order('data_criacao', { ascending: false }),
-        supabase.from('inss_simulations').select('*').order('created_at', { ascending: false }),
-        supabase.from('prolabore_simulations').select('*').order('created_at', { ascending: false })
-      ]);
+      console.log('Buscando todas as simulações...');
+      
+      // Buscar simulações de IRPF
+      const { data: taxData, error: taxError } = await supabase
+        .from('tax_simulations')
+        .select('*')
+        .order('data_criacao', { ascending: false });
+      
+      if (taxError) {
+        console.error('Erro ao buscar simulações de IRPF:', taxError);
+      } else {
+        console.log('Simulações de IRPF encontradas:', taxData?.length || 0);
+      }
 
+      // Buscar simulações de INSS
+      const { data: inssData, error: inssError } = await supabase
+        .from('inss_simulations')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (inssError) {
+        console.error('Erro ao buscar simulações de INSS:', inssError);
+      } else {
+        console.log('Simulações de INSS encontradas:', inssData?.length || 0);
+      }
+
+      // Buscar simulações de Pró-labore
+      const { data: prolaboreData, error: prolaboreError } = await supabase
+        .from('prolabore_simulations')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (prolaboreError) {
+        console.error('Erro ao buscar simulações de Pró-labore:', prolaboreError);
+      } else {
+        console.log('Simulações de Pró-labore encontradas:', prolaboreData?.length || 0);
+      }
+
+      // Combinar todas as simulações
       const allSimulations: Simulation[] = [
-        ...(taxResult.data || []).map(sim => ({ ...sim, type: 'tax' as const })),
-        ...(inssResult.data || []).map(sim => ({ ...sim, type: 'inss' as const })),
-        ...(prolaboreResult.data || []).map(sim => ({ ...sim, type: 'prolabore' as const }))
+        ...(taxData || []).map(sim => ({ ...sim, type: 'tax' as const })),
+        ...(inssData || []).map(sim => ({ ...sim, type: 'inss' as const })),
+        ...(prolaboreData || []).map(sim => ({ ...sim, type: 'prolabore' as const }))
       ];
+
+      console.log('Total de simulações encontradas:', allSimulations.length);
 
       // Ordenar por data de criação
       allSimulations.sort((a, b) => {
