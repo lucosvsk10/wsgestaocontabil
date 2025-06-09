@@ -1,21 +1,22 @@
 
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Building2, ArrowLeft, Save, Download, Loader2 } from "lucide-react";
+import { Building2, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useReceiptaFederalAPI } from "@/hooks/company/useReceiptaFederalAPI";
 import SimpleNavbar from "@/components/calculators/SimpleNavbar";
+import { CompanyDataHeader } from "./CompanyDataHeader";
+import { CompanyBasicInfoFields } from "./CompanyBasicInfoFields";
+import { CompanyActivityFields } from "./CompanyActivityFields";
+import { CompanyAddressFields } from "./CompanyAddressFields";
+import { CompanyAdminFields } from "./CompanyAdminFields";
 
 export const CompanyDataView = () => {
   const { userId } = useParams();
-  const navigate = useNavigate();
   const { toast } = useToast();
   const { isAdmin } = useAuth();
   const { fetchCompanyData, loading: rfLoading } = useReceiptaFederalAPI();
@@ -232,349 +233,44 @@ export const CompanyDataView = () => {
 
         <Card className="bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30">
           <CardHeader>
-            <CardTitle className="text-[#020817] dark:text-[#efc349] font-extralight flex items-center justify-between">
-              <div className="flex items-center">
-                <Building2 className="w-6 h-6 mr-2" />
-                Informações da Empresa
-              </div>
-              {isAdmin && (
-                <Button
-                  onClick={handleImportFromRF}
-                  disabled={rfLoading || !formData.cnpj}
-                  variant="outline"
-                  className="border-[#efc349]/30 hover:bg-[#efc349]/10"
-                >
-                  {rfLoading ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Download className="h-4 w-4 mr-2" />
-                  )}
-                  Importar dados da RF
-                </Button>
-              )}
+            <CardTitle>
+              <CompanyDataHeader
+                isAdmin={isAdmin}
+                cnpj={formData.cnpj}
+                rfLoading={rfLoading}
+                onImportFromRF={handleImportFromRF}
+              />
             </CardTitle>
           </CardHeader>
 
           <CardContent className="space-y-6">
             {/* Informações Básicas */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="cnpj" className="text-[#020817] dark:text-white font-extralight">
-                  CNPJ *
-                </Label>
-                <Input
-                  id="cnpj"
-                  value={formData.cnpj}
-                  onChange={(e) => handleInputChange('cnpj', e.target.value)}
-                  className="bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30"
-                  disabled={!isAdmin}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-[#020817] dark:text-white font-extralight">
-                  Razão Social
-                </Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
-                  className="bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30"
-                  disabled={!isAdmin}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="fantasy_name" className="text-[#020817] dark:text-white font-extralight">
-                  Nome Fantasia
-                </Label>
-                <Input
-                  id="fantasy_name"
-                  value={formData.fantasy_name}
-                  onChange={(e) => handleInputChange('fantasy_name', e.target.value)}
-                  className="bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30"
-                  disabled={!isAdmin}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="cadastral_situation" className="text-[#020817] dark:text-white font-extralight">
-                  Situação Cadastral
-                </Label>
-                <Input
-                  id="cadastral_situation"
-                  value={formData.cadastral_situation}
-                  onChange={(e) => handleInputChange('cadastral_situation', e.target.value)}
-                  className="bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30"
-                  disabled={!isAdmin}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="opening_date" className="text-[#020817] dark:text-white font-extralight">
-                  Data de Abertura
-                </Label>
-                <Input
-                  id="opening_date"
-                  type="date"
-                  value={formData.opening_date}
-                  onChange={(e) => handleInputChange('opening_date', e.target.value)}
-                  className="bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30"
-                  disabled={!isAdmin}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="social_capital" className="text-[#020817] dark:text-white font-extralight">
-                  Capital Social
-                </Label>
-                <Input
-                  id="social_capital"
-                  value={formData.social_capital}
-                  onChange={(e) => handleInputChange('social_capital', e.target.value)}
-                  className="bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30"
-                  disabled={!isAdmin}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="tax_regime" className="text-[#020817] dark:text-white font-extralight">
-                  Regime Tributário
-                </Label>
-                <Input
-                  id="tax_regime"
-                  value={formData.tax_regime}
-                  onChange={(e) => handleInputChange('tax_regime', e.target.value)}
-                  className="bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30"
-                  disabled={!isAdmin}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="phone" className="text-[#020817] dark:text-white font-extralight">
-                  Telefone
-                </Label>
-                <Input
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
-                  className="bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30"
-                  disabled={!isAdmin}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-[#020817] dark:text-white font-extralight">
-                  E-mail
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  className="bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30"
-                  disabled={!isAdmin}
-                />
-              </div>
-            </div>
+            <CompanyBasicInfoFields
+              formData={formData}
+              isAdmin={isAdmin}
+              onInputChange={handleInputChange}
+            />
 
             {/* Atividades */}
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="main_activity" className="text-[#020817] dark:text-white font-extralight">
-                  Atividade Principal
-                </Label>
-                <Input
-                  id="main_activity"
-                  value={formData.main_activity}
-                  onChange={(e) => handleInputChange('main_activity', e.target.value)}
-                  className="bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30"
-                  disabled={!isAdmin}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="secondary_activities" className="text-[#020817] dark:text-white font-extralight">
-                  Atividades Secundárias
-                </Label>
-                <Textarea
-                  id="secondary_activities"
-                  value={formData.secondary_activities}
-                  onChange={(e) => handleInputChange('secondary_activities', e.target.value)}
-                  className="bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30"
-                  rows={3}
-                  disabled={!isAdmin}
-                />
-              </div>
-            </div>
+            <CompanyActivityFields
+              formData={formData}
+              isAdmin={isAdmin}
+              onInputChange={handleInputChange}
+            />
 
             {/* Endereço */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="address" className="text-[#020817] dark:text-white font-extralight">
-                  Logradouro
-                </Label>
-                <Input
-                  id="address"
-                  value={formData.address}
-                  onChange={(e) => handleInputChange('address', e.target.value)}
-                  className="bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30"
-                  disabled={!isAdmin}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="number" className="text-[#020817] dark:text-white font-extralight">
-                  Número
-                </Label>
-                <Input
-                  id="number"
-                  value={formData.number}
-                  onChange={(e) => handleInputChange('number', e.target.value)}
-                  className="bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30"
-                  disabled={!isAdmin}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="neighborhood" className="text-[#020817] dark:text-white font-extralight">
-                  Bairro
-                </Label>
-                <Input
-                  id="neighborhood"
-                  value={formData.neighborhood}
-                  onChange={(e) => handleInputChange('neighborhood', e.target.value)}
-                  className="bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30"
-                  disabled={!isAdmin}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="city" className="text-[#020817] dark:text-white font-extralight">
-                  Cidade
-                </Label>
-                <Input
-                  id="city"
-                  value={formData.city}
-                  onChange={(e) => handleInputChange('city', e.target.value)}
-                  className="bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30"
-                  disabled={!isAdmin}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="state" className="text-[#020817] dark:text-white font-extralight">
-                  UF
-                </Label>
-                <Input
-                  id="state"
-                  value={formData.state}
-                  onChange={(e) => handleInputChange('state', e.target.value)}
-                  className="bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30"
-                  disabled={!isAdmin}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="postal_code" className="text-[#020817] dark:text-white font-extralight">
-                  CEP
-                </Label>
-                <Input
-                  id="postal_code"
-                  value={formData.postal_code}
-                  onChange={(e) => handleInputChange('postal_code', e.target.value)}
-                  className="bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30"
-                  disabled={!isAdmin}
-                />
-              </div>
-            </div>
-
-            {/* Contador */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="accountant_name" className="text-[#020817] dark:text-white font-extralight">
-                  Nome do Contador
-                </Label>
-                <Input
-                  id="accountant_name"
-                  value={formData.accountant_name}
-                  onChange={(e) => handleInputChange('accountant_name', e.target.value)}
-                  className="bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30"
-                  disabled={!isAdmin}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="accountant_contact" className="text-[#020817] dark:text-white font-extralight">
-                  Contato do Contador
-                </Label>
-                <Input
-                  id="accountant_contact"
-                  value={formData.accountant_contact}
-                  onChange={(e) => handleInputChange('accountant_contact', e.target.value)}
-                  className="bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30"
-                  disabled={!isAdmin}
-                />
-              </div>
-            </div>
+            <CompanyAddressFields
+              formData={formData}
+              isAdmin={isAdmin}
+              onInputChange={handleInputChange}
+            />
 
             {/* Campos Administrativos - Apenas para Admin */}
             {isAdmin && (
-              <div className="border-t pt-6 space-y-6">
-                <h3 className="text-[#020817] dark:text-[#efc349] font-medium">Informações Administrativas</h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="client_status" className="text-[#020817] dark:text-white font-extralight">
-                      Status do Cliente
-                    </Label>
-                    <Input
-                      id="client_status"
-                      value={formData.client_status}
-                      onChange={(e) => handleInputChange('client_status', e.target.value)}
-                      className="bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="internal_responsible" className="text-[#020817] dark:text-white font-extralight">
-                      Responsável Interno
-                    </Label>
-                    <Input
-                      id="internal_responsible"
-                      value={formData.internal_responsible}
-                      onChange={(e) => handleInputChange('internal_responsible', e.target.value)}
-                      className="bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="internal_tags" className="text-[#020817] dark:text-white font-extralight">
-                      Tags Internas (separadas por vírgula)
-                    </Label>
-                    <Input
-                      id="internal_tags"
-                      value={formData.internal_tags}
-                      onChange={(e) => handleInputChange('internal_tags', e.target.value)}
-                      className="bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30"
-                      placeholder="tag1, tag2, tag3"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="internal_observations" className="text-[#020817] dark:text-white font-extralight">
-                    Observações Internas
-                  </Label>
-                  <Textarea
-                    id="internal_observations"
-                    value={formData.internal_observations}
-                    onChange={(e) => handleInputChange('internal_observations', e.target.value)}
-                    className="bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30"
-                    rows={4}
-                  />
-                </div>
-              </div>
+              <CompanyAdminFields
+                formData={formData}
+                onInputChange={handleInputChange}
+              />
             )}
 
             {isAdmin && (
