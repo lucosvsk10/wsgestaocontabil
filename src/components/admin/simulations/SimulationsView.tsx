@@ -83,6 +83,7 @@ export const SimulationsView: React.FC = () => {
     try {
       setIsLoading(true);
       
+      // Buscar TODAS as simulações (sem filtro de usuário)
       const [taxResult, inssResult, prolaboreResult] = await Promise.all([
         supabase.from('tax_simulations').select('*').order('data_criacao', { ascending: false }),
         supabase.from('inss_simulations').select('*').order('created_at', { ascending: false }),

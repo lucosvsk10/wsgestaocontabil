@@ -4,7 +4,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { FileText, Calculator, Calendar, MessageSquare } from "lucide-react";
 import { useQuickStatsData } from "@/hooks/client/useQuickStatsData";
 
-export const QuickStats = () => {
+interface QuickStatsProps {
+  onTabChange?: (tab: string) => void;
+}
+
+export const QuickStats = ({ onTabChange }: QuickStatsProps) => {
   const { stats, loading } = useQuickStatsData();
 
   const statsData = [
@@ -12,25 +16,29 @@ export const QuickStats = () => {
       title: "Documentos",
       value: loading ? "..." : stats.documentsCount,
       icon: FileText,
-      color: "text-blue-500"
+      color: "text-blue-500",
+      tab: "documents"
     },
     {
       title: "Simulações",
       value: loading ? "..." : stats.simulationsCount,
       icon: Calculator,
-      color: "text-green-500"
+      color: "text-green-500",
+      tab: "simulations"
     },
     {
       title: "Agenda",
       value: loading ? "..." : stats.upcomingEvents,
       icon: Calendar,
-      color: "text-purple-500"
+      color: "text-purple-500",
+      tab: "calendar"
     },
     {
       title: "Comunicados",
       value: loading ? "..." : stats.announcementsCount,
       icon: MessageSquare,
-      color: "text-orange-500"
+      color: "text-orange-500",
+      tab: "announcements"
     }
   ];
 
@@ -43,7 +51,10 @@ export const QuickStats = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: index * 0.1 }}
         >
-          <Card className="bg-[#0b1320] border-[#efc349]/20 hover:border-[#efc349]/40 transition-all">
+          <Card 
+            className="bg-[#0b1320] border-[#efc349]/20 hover:border-[#efc349]/40 transition-all cursor-pointer"
+            onClick={() => onTabChange?.(stat.tab)}
+          >
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>

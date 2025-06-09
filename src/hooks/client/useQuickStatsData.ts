@@ -63,15 +63,15 @@ export const useQuickStatsData = () => {
       if (announcementsError) throw announcementsError;
 
       // Buscar eventos fiscais próximos (próximos 30 dias)
+      const today = new Date();
       const thirtyDaysFromNow = new Date();
       thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
 
       const { data: events, error: eventsError } = await supabase
         .from('fiscal_events')
         .select('id')
-        .gte('date', new Date().toISOString().split('T')[0])
-        .lte('date', thirtyDaysFromNow.toISOString().split('T')[0])
-        .neq('status', 'completed');
+        .gte('date', today.toISOString().split('T')[0])
+        .lte('date', thirtyDaysFromNow.toISOString().split('T')[0]);
 
       if (eventsError) throw eventsError;
 

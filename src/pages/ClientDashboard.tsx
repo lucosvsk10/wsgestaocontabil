@@ -66,7 +66,7 @@ const ClientDashboard = () => {
     <div className="min-h-screen bg-[#FFF1DE] dark:bg-[#020817]">
       <ClientDashboardLayout activeTab={activeTab} setActiveTab={setActiveTab}>
         <WelcomeHeader />
-        <QuickStats />
+        <QuickStats onTabChange={setActiveTab} />
         {renderContent()}
       </ClientDashboardLayout>
     </div>
