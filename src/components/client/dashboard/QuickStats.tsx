@@ -1,7 +1,7 @@
 
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
-import { FileText, Calculator, Calendar, MessageSquare } from "lucide-react";
+import { FileText, Calculator, MessageSquare } from "lucide-react";
 import { useQuickStatsData } from "@/hooks/client/useQuickStatsData";
 
 interface QuickStatsProps {
@@ -27,13 +27,6 @@ export const QuickStats = ({ onTabChange }: QuickStatsProps) => {
       tab: "simulations"
     },
     {
-      title: "Agenda",
-      value: loading ? "..." : stats.upcomingEvents,
-      icon: Calendar,
-      color: "text-purple-500",
-      tab: "calendar"
-    },
-    {
       title: "Comunicados",
       value: loading ? "..." : stats.announcementsCount,
       icon: MessageSquare,
@@ -43,7 +36,7 @@ export const QuickStats = ({ onTabChange }: QuickStatsProps) => {
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
       {statsData.map((stat, index) => (
         <motion.div
           key={stat.title}
