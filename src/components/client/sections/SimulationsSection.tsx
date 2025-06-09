@@ -9,7 +9,6 @@ import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface BaseSimulation {
   id: string;
@@ -191,14 +190,6 @@ export const SimulationsSection = () => {
     }
   };
 
-  const handleDownloadPDF = (simulation: UserSimulation) => {
-    // Implementar geração de PDF
-    toast({
-      title: "Em desenvolvimento",
-      description: "A funcionalidade de download de PDF será implementada em breve",
-    });
-  };
-
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -246,101 +237,10 @@ export const SimulationsSection = () => {
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'tax': return 'bg-blue-600 hover:bg-blue-700 text-white';
-      case 'inss': return 'bg-green-600 hover:bg-green-700 text-white';
-      case 'prolabore': return 'bg-purple-600 hover:bg-purple-700 text-white';
-      default: return 'bg-gray-600 hover:bg-gray-700 text-white';
-    }
-  };
-
-  const renderSimulationDetails = (simulation: UserSimulation) => {
-    switch (simulation.type) {
-      case 'tax':
-        const taxSim = simulation as TaxSimulation;
-        return (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Nome</p>
-                <p className="font-medium text-gray-900 dark:text-white">{taxSim.nome || 'N/A'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Email</p>
-                <p className="font-medium text-gray-900 dark:text-white">{taxSim.email || 'N/A'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Tipo de Simulação</p>
-                <p className="font-medium text-gray-900 dark:text-white">{taxSim.tipo_simulacao}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Rendimento Bruto</p>
-                <p className="font-medium text-gray-900 dark:text-white">{formatCurrency(taxSim.rendimento_bruto)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">INSS</p>
-                <p className="font-medium text-gray-900 dark:text-white">{formatCurrency(taxSim.inss)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Dependentes</p>
-                <p className="font-medium text-gray-900 dark:text-white">{taxSim.dependentes}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Educação</p>
-                <p className="font-medium text-gray-900 dark:text-white">{formatCurrency(taxSim.educacao)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Saúde</p>
-                <p className="font-medium text-gray-900 dark:text-white">{formatCurrency(taxSim.saude)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Outras Deduções</p>
-                <p className="font-medium text-gray-900 dark:text-white">{formatCurrency(taxSim.outras_deducoes)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Imposto Estimado</p>
-                <p className="font-bold text-lg text-[#efc349]">{formatCurrency(taxSim.imposto_estimado)}</p>
-              </div>
-            </div>
-          </div>
-        );
-      case 'inss':
-        const inssSim = simulation as INSSSimulation;
-        return (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Categoria</p>
-                <p className="font-medium text-gray-900 dark:text-white">{inssSim.dados?.categoria || 'N/A'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Alíquota</p>
-                <p className="font-medium text-gray-900 dark:text-white">{inssSim.dados?.aliquota || 0}%</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Contribuição</p>
-                <p className="font-bold text-lg text-[#efc349]">{formatCurrency(inssSim.dados?.contribuicao || 0)}</p>
-              </div>
-            </div>
-          </div>
-        );
-      case 'prolabore':
-        const prolaboreSim = simulation as ProlaboreSimulation;
-        return (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Valor Bruto</p>
-                <p className="font-medium text-gray-900 dark:text-white">{formatCurrency(prolaboreSim.dados?.valorBruto || 0)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Valor Líquido</p>
-                <p className="font-bold text-lg text-[#efc349]">{formatCurrency(prolaboreSim.dados?.valorLiquido || 0)}</p>
-              </div>
-            </div>
-          </div>
-        );
-      default:
-        return <p>Detalhes não disponíveis</p>;
+      case 'tax': return 'bg-blue-600 hover:bg-blue-700';
+      case 'inss': return 'bg-green-600 hover:bg-green-700';
+      case 'prolabore': return 'bg-purple-600 hover:bg-purple-700';
+      default: return 'bg-gray-600 hover:bg-gray-700';
     }
   };
 
@@ -351,11 +251,11 @@ export const SimulationsSection = () => {
 
   if (loading) {
     return (
-      <Card className="bg-white dark:bg-[#0b1320] border-gray-200 dark:border-[#efc349]/20">
+      <Card className="bg-[#0b1320] border-[#efc349]/20">
         <CardContent className="p-6">
           <div className="animate-pulse space-y-4">
             {[1, 2, 3].map(i => (
-              <div key={i} className="h-20 bg-gray-200 dark:bg-[#020817] rounded"></div>
+              <div key={i} className="h-20 bg-[#020817] rounded"></div>
             ))}
           </div>
         </CardContent>
@@ -364,34 +264,34 @@ export const SimulationsSection = () => {
   }
 
   return (
-    <Card className="bg-white dark:bg-[#0b1320] border-gray-200 dark:border-[#efc349]/20">
-      <CardHeader className="bg-white dark:bg-[#0b1320]">
-        <CardTitle className="text-[#020817] dark:text-[#efc349] font-extralight flex items-center">
+    <Card className="bg-[#0b1320] border-[#efc349]/20">
+      <CardHeader>
+        <CardTitle className="text-[#efc349] font-extralight flex items-center">
           <Calculator className="w-6 h-6 mr-2" />
           Minhas Simulações
         </CardTitle>
       </CardHeader>
       
-      <CardContent className="bg-white dark:bg-[#0b1320]">
+      <CardContent>
         {simulations.length === 0 ? (
           <div className="text-center py-8 text-gray-400">
             <Calculator className="w-12 h-12 mx-auto mb-4 opacity-50" />
             <p className="font-extralight">Nenhuma simulação realizada</p>
             <div className="flex flex-col gap-2 mt-4">
               <Button 
-                className="bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817] font-extralight"
+                className="bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817]"
                 onClick={() => window.open('/simulador-irpf', '_blank')}
               >
                 Simulador IRPF
               </Button>
               <Button 
-                className="bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817] font-extralight"
+                className="bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817]"
                 onClick={() => window.open('/simulador-prolabore', '_blank')}
               >
                 Simulador Pró-labore
               </Button>
               <Button 
-                className="bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817] font-extralight"
+                className="bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817]"
                 onClick={() => window.open('/calculadora-inss', '_blank')}
               >
                 Calculadora INSS
@@ -400,11 +300,11 @@ export const SimulationsSection = () => {
           </div>
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-4 mb-6 bg-gray-100 dark:bg-[#020817]">
-              <TabsTrigger value="all" className="font-extralight text-[#020817] dark:text-white data-[state=active]:bg-[#efc349] data-[state=active]:text-[#020817]">Todas</TabsTrigger>
-              <TabsTrigger value="tax" className="font-extralight text-[#020817] dark:text-white data-[state=active]:bg-[#efc349] data-[state=active]:text-[#020817]">IRPF</TabsTrigger>
-              <TabsTrigger value="inss" className="font-extralight text-[#020817] dark:text-white data-[state=active]:bg-[#efc349] data-[state=active]:text-[#020817]">INSS</TabsTrigger>
-              <TabsTrigger value="prolabore" className="font-extralight text-[#020817] dark:text-white data-[state=active]:bg-[#efc349] data-[state=active]:text-[#020817]">Pró-labore</TabsTrigger>
+            <TabsList className="grid grid-cols-4 mb-6">
+              <TabsTrigger value="all" className="font-extralight">Todas</TabsTrigger>
+              <TabsTrigger value="tax" className="font-extralight">IRPF</TabsTrigger>
+              <TabsTrigger value="inss" className="font-extralight">INSS</TabsTrigger>
+              <TabsTrigger value="prolabore" className="font-extralight">Pró-labore</TabsTrigger>
             </TabsList>
 
             <TabsContent value={activeTab}>
@@ -415,19 +315,19 @@ export const SimulationsSection = () => {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.3, delay: index * 0.1 }}
-                    className="bg-gray-50 dark:bg-[#020817] border border-gray-200 dark:border-[#efc349]/20 rounded-lg p-4 hover:border-gray-300 dark:hover:border-[#efc349]/40 transition-all"
+                    className="bg-[#020817] border border-[#efc349]/20 rounded-lg p-4 hover:border-[#efc349]/40 transition-all"
                   >
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold text-[#020817] dark:text-white text-lg">
+                          <h3 className="font-semibold text-white text-lg">
                             {getSimulationType(simulation)}
                           </h3>
-                          <Badge className={getTypeColor(simulation.type)}>
+                          <Badge className={`${getTypeColor(simulation.type)} text-white`}>
                             Concluída
                           </Badge>
                         </div>
-                        <p className="text-gray-600 dark:text-gray-400 font-extralight text-sm">
+                        <p className="text-gray-400 font-extralight text-sm">
                           {new Date(getCreatedDate(simulation)).toLocaleString('pt-BR')}
                         </p>
                       </div>
@@ -435,48 +335,34 @@ export const SimulationsSection = () => {
                         size="sm"
                         variant="outline"
                         onClick={() => handleDeleteSimulation(simulation)}
-                        className="border-red-500/30 text-red-500 hover:bg-red-500/10 dark:border-red-400/30 dark:text-red-400 dark:hover:bg-red-400/10"
+                        className="border-red-500/30 text-red-500 hover:bg-red-500/10"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
 
                     <div className="mb-4">
-                      <p className="text-[#020817] dark:text-white font-medium text-xl mb-2">
+                      <p className="text-white font-medium text-xl mb-2">
                         {getSimulationMainValue(simulation)}
                       </p>
-                      <p className="text-gray-600 dark:text-gray-300 text-sm">
+                      <p className="text-gray-300 text-sm">
                         {getSimulationDescription(simulation)}
                       </p>
                     </div>
 
                     <div className="flex gap-2">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            className="border-[#efc349]/30 text-[#efc349] hover:bg-[#efc349]/10 dark:border-[#efc349]/30 dark:text-[#efc349] dark:hover:bg-[#efc349]/10"
-                          >
-                            <Eye className="w-4 h-4 mr-1" />
-                            Ver detalhes
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="bg-white dark:bg-[#0b1320] border-gray-200 dark:border-[#efc349]/30 max-w-2xl">
-                          <DialogHeader>
-                            <DialogTitle className="text-[#020817] dark:text-[#efc349]">
-                              Detalhes da Simulação - {getSimulationType(simulation)}
-                            </DialogTitle>
-                          </DialogHeader>
-                          {renderSimulationDetails(simulation)}
-                        </DialogContent>
-                      </Dialog>
-                      
                       <Button 
                         size="sm" 
                         variant="outline"
-                        onClick={() => handleDownloadPDF(simulation)}
-                        className="border-[#efc349]/30 text-[#efc349] hover:bg-[#efc349]/10 dark:border-[#efc349]/30 dark:text-[#efc349] dark:hover:bg-[#efc349]/10"
+                        className="border-[#efc349]/30 text-[#efc349] hover:bg-[#efc349]/10"
+                      >
+                        <Eye className="w-4 h-4 mr-1" />
+                        Ver detalhes
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        className="border-[#efc349]/30 text-[#efc349] hover:bg-[#efc349]/10"
                       >
                         <Download className="w-4 h-4 mr-1" />
                         Baixar PDF
