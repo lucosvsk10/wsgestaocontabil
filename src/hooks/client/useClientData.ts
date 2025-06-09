@@ -68,6 +68,7 @@ export const useClientData = () => {
     try {
       const mockData: CompanyData = {
         id: user.id,
+        user_id: user.id, // Added missing user_id
         name: "Empresa Exemplo LTDA",
         cnpj: "12.345.678/0001-90",
         opening_date: "2020-01-15",

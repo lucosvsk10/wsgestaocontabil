@@ -130,20 +130,30 @@ export type Database = {
           accountant_contact: string
           accountant_name: string
           address: string
+          cadastral_situation: string | null
+          city: string | null
           client_status: string | null
           cnpj: string
           created_at: string
           email: string
+          fantasy_name: string | null
           id: string
           internal_observations: string | null
           internal_responsible: string | null
           internal_tags: string[] | null
           last_federal_update: string | null
           last_query_date: string | null
+          main_activity: string | null
           name: string
+          neighborhood: string | null
+          number: string | null
           opening_date: string
           phone: string
+          postal_code: string | null
           registration_status: string | null
+          secondary_activities: string | null
+          social_capital: string | null
+          state: string | null
           tax_regime: string
           updated_at: string
           user_id: string
@@ -152,20 +162,30 @@ export type Database = {
           accountant_contact: string
           accountant_name: string
           address: string
+          cadastral_situation?: string | null
+          city?: string | null
           client_status?: string | null
           cnpj: string
           created_at?: string
           email: string
+          fantasy_name?: string | null
           id?: string
           internal_observations?: string | null
           internal_responsible?: string | null
           internal_tags?: string[] | null
           last_federal_update?: string | null
           last_query_date?: string | null
+          main_activity?: string | null
           name: string
+          neighborhood?: string | null
+          number?: string | null
           opening_date: string
           phone: string
+          postal_code?: string | null
           registration_status?: string | null
+          secondary_activities?: string | null
+          social_capital?: string | null
+          state?: string | null
           tax_regime: string
           updated_at?: string
           user_id: string
@@ -174,20 +194,30 @@ export type Database = {
           accountant_contact?: string
           accountant_name?: string
           address?: string
+          cadastral_situation?: string | null
+          city?: string | null
           client_status?: string | null
           cnpj?: string
           created_at?: string
           email?: string
+          fantasy_name?: string | null
           id?: string
           internal_observations?: string | null
           internal_responsible?: string | null
           internal_tags?: string[] | null
           last_federal_update?: string | null
           last_query_date?: string | null
+          main_activity?: string | null
           name?: string
+          neighborhood?: string | null
+          number?: string | null
           opening_date?: string
           phone?: string
+          postal_code?: string | null
           registration_status?: string | null
+          secondary_activities?: string | null
+          social_capital?: string | null
+          state?: string | null
           tax_regime?: string
           updated_at?: string
           user_id?: string
