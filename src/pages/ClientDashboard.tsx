@@ -65,9 +65,15 @@ const ClientDashboard = () => {
   return (
     <div className="min-h-screen bg-[#FFF1DE] dark:bg-[#020817]">
       <ClientDashboardLayout activeTab={activeTab} setActiveTab={setActiveTab}>
-        <WelcomeHeader />
-        <QuickStats />
-        {renderContent()}
+        <div className="space-y-6">
+          <WelcomeHeader />
+          <QuickStats />
+          
+          {/* Conteúdo principal com fundo elegante */}
+          <div className="bg-white dark:bg-[#0b1320] border border-[#e6e6e6] dark:border-[#efc349]/20 rounded-2xl p-6 shadow-sm">
+            {renderContent()}
+          </div>
+        </div>
       </ClientDashboardLayout>
     </div>
   );

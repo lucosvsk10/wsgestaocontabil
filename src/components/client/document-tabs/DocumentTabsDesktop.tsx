@@ -31,22 +31,22 @@ export const DocumentTabsDesktop = ({
       onValueChange={onCategoryChange}
       className="w-full"
     >
-      <TabsList className="mb-4 border-gold/20 bg-orange-200/60 dark:bg-transparent dark:border dark:border-gold/30">
+      <TabsList className="mb-6 bg-gray-100 dark:bg-[#0b1320] border border-[#e6e6e6] dark:border-[#efc349]/20 p-1 h-auto">
         {categories.map(category => (
           <TabsTrigger 
             key={category.id} 
             value={category.id}
             disabled={!documentsByCategory[category.id] || documentsByCategory[category.id].length === 0}
-            className="relative text-navy dark:text-[#d9d9d9] dark:data-[state=active]:text-deepNavy"
-            style={{
-              "--tab-active-bg": category.color || "#F5C441",
-              "--tab-active-text": "#fff",
-            } as React.CSSProperties}
+            className="relative text-[#020817] dark:text-gray-300 data-[state=active]:bg-[#efc349] data-[state=active]:text-[#020817] dark:data-[state=active]:bg-[#efc349] dark:data-[state=active]:text-[#020817] px-4 py-3 rounded-lg font-extralight transition-all duration-300 hover:bg-gray-200 dark:hover:bg-[#efc349]/10"
           >
-            <div className="flex items-center">
-              {category.name}
+            <div className="flex items-center space-x-2">
+              <div 
+                className="w-3 h-3 rounded-full" 
+                style={{ backgroundColor: category.color || "#efc349" }}
+              />
+              <span>{category.name}</span>
               {documentsByCategory[category.id]?.length > 0 && (
-                <span className="ml-2 bg-gray-200/50 dark:bg-white/10 rounded-full px-2 py-0.5 text-xs">
+                <span className="ml-2 bg-white/70 dark:bg-black/20 rounded-full px-2 py-0.5 text-xs font-medium">
                   {documentsByCategory[category.id].length}
                 </span>
               )}
