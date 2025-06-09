@@ -29,6 +29,14 @@ const ClientDashboard = () => {
     }
   };
 
+  // Create a wrapper function that finds the document by ID and calls handleDownload
+  const handleDownloadById = (documentId: string) => {
+    const document = documents.find(doc => doc.id === documentId);
+    if (document) {
+      handleDownload(document);
+    }
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case "documents":
@@ -37,7 +45,7 @@ const ClientDashboard = () => {
             documents={documents} 
             documentsByCategory={documentsByCategory} 
             categories={commonCategories} 
-            onDownload={handleDownload} 
+            onDownload={handleDownloadById} 
             refreshDocuments={refreshDocuments} 
           />
         );
@@ -55,7 +63,7 @@ const ClientDashboard = () => {
             documents={documents} 
             documentsByCategory={documentsByCategory} 
             categories={commonCategories} 
-            onDownload={handleDownload} 
+            onDownload={handleDownloadById} 
             refreshDocuments={refreshDocuments} 
           />
         );
