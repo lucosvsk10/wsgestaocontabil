@@ -1,14 +1,14 @@
-
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calculator, Eye, FileText, Download, Trash2 } from "lucide-react";
+import { Calculator, Eye, Download, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SimulationDetailModal } from "./SimulationDetailModal";
 
 interface BaseSimulation {
   id: string;
@@ -51,6 +51,8 @@ export const SimulationsSection = () => {
   const [simulations, setSimulations] = useState<UserSimulation[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
+  const [selectedSimulation, setSelectedSimulation] = useState<UserSimulation | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   useEffect(() => {
     fetchSimulations();
@@ -190,6 +192,25 @@ export const SimulationsSection = () => {
     }
   };
 
+  const handleViewDetails = (simulation: UserSimulation) => {
+    setSelectedSimulation(simulation);
+    setIsDetailModalOpen(true);
+  };
+
+  const handleDownloadPDF = (simulation?: UserSimulation) => {
+    const sim = simulation || selectedSimulation;
+    if (!sim) return;
+
+    // Implementação básica do download de PDF - pode ser expandida no futuro
+    toast({
+      title: "PDF em desenvolvimento",
+      description: "A funcionalidade de download de PDF será implementada em breve"
+    });
+    
+    // Aqui você pode implementar a geração real do PDF
+    console.log("Gerando PDF para simulação:", sim);
+  };
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -264,117 +285,128 @@ export const SimulationsSection = () => {
   }
 
   return (
-    <Card className="bg-[#0b1320] border-[#efc349]/20">
-      <CardHeader>
-        <CardTitle className="text-[#efc349] font-extralight flex items-center">
-          <Calculator className="w-6 h-6 mr-2" />
-          Minhas Simulações
-        </CardTitle>
-      </CardHeader>
-      
-      <CardContent>
-        {simulations.length === 0 ? (
-          <div className="text-center py-8 text-gray-400">
-            <Calculator className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p className="font-extralight">Nenhuma simulação realizada</p>
-            <div className="flex flex-col gap-2 mt-4">
-              <Button 
-                className="bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817]"
-                onClick={() => window.open('/simulador-irpf', '_blank')}
-              >
-                Simulador IRPF
-              </Button>
-              <Button 
-                className="bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817]"
-                onClick={() => window.open('/simulador-prolabore', '_blank')}
-              >
-                Simulador Pró-labore
-              </Button>
-              <Button 
-                className="bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817]"
-                onClick={() => window.open('/calculadora-inss', '_blank')}
-              >
-                Calculadora INSS
-              </Button>
+    <>
+      <Card className="bg-[#0b1320] border-[#efc349]/20">
+        <CardHeader>
+          <CardTitle className="text-[#efc349] font-extralight flex items-center">
+            <Calculator className="w-6 h-6 mr-2" />
+            Minhas Simulações
+          </CardTitle>
+        </CardHeader>
+        
+        <CardContent>
+          {simulations.length === 0 ? (
+            <div className="text-center py-8 text-gray-400">
+              <Calculator className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p className="font-extralight">Nenhuma simulação realizada</p>
+              <div className="flex flex-col gap-2 mt-4">
+                <Button 
+                  className="bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817]"
+                  onClick={() => window.open('/simulador-irpf', '_blank')}
+                >
+                  Simulador IRPF
+                </Button>
+                <Button 
+                  className="bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817]"
+                  onClick={() => window.open('/simulador-prolabore', '_blank')}
+                >
+                  Simulador Pró-labore
+                </Button>
+                <Button 
+                  className="bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817]"
+                  onClick={() => window.open('/calculadora-inss', '_blank')}
+                >
+                  Calculadora INSS
+                </Button>
+              </div>
             </div>
-          </div>
-        ) : (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-4 mb-6">
-              <TabsTrigger value="all" className="font-extralight">Todas</TabsTrigger>
-              <TabsTrigger value="tax" className="font-extralight">IRPF</TabsTrigger>
-              <TabsTrigger value="inss" className="font-extralight">INSS</TabsTrigger>
-              <TabsTrigger value="prolabore" className="font-extralight">Pró-labore</TabsTrigger>
-            </TabsList>
+          ) : (
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid grid-cols-4 mb-6">
+                <TabsTrigger value="all" className="font-extralight">Todas</TabsTrigger>
+                <TabsTrigger value="tax" className="font-extralight">IRPF</TabsTrigger>
+                <TabsTrigger value="inss" className="font-extralight">INSS</TabsTrigger>
+                <TabsTrigger value="prolabore" className="font-extralight">Pró-labore</TabsTrigger>
+              </TabsList>
 
-            <TabsContent value={activeTab}>
-              <div className="space-y-4">
-                {filteredSimulations.map((simulation, index) => (
-                  <motion.div
-                    key={`${simulation.type}-${simulation.id}`}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3, delay: index * 0.1 }}
-                    className="bg-[#020817] border border-[#efc349]/20 rounded-lg p-4 hover:border-[#efc349]/40 transition-all"
-                  >
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold text-white text-lg">
-                            {getSimulationType(simulation)}
-                          </h3>
-                          <Badge className={`${getTypeColor(simulation.type)} text-white`}>
-                            Concluída
-                          </Badge>
+              <TabsContent value={activeTab}>
+                <div className="space-y-4">
+                  {filteredSimulations.map((simulation, index) => (
+                    <motion.div
+                      key={`${simulation.type}-${simulation.id}`}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3, delay: index * 0.1 }}
+                      className="bg-[#020817] border border-[#efc349]/20 rounded-lg p-4 hover:border-[#efc349]/40 transition-all"
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-semibold text-white text-lg">
+                              {getSimulationType(simulation)}
+                            </h3>
+                            <Badge className={`${getTypeColor(simulation.type)} text-white`}>
+                              Concluída
+                            </Badge>
+                          </div>
+                          <p className="text-gray-400 font-extralight text-sm">
+                            {new Date(getCreatedDate(simulation)).toLocaleString('pt-BR')}
+                          </p>
                         </div>
-                        <p className="text-gray-400 font-extralight text-sm">
-                          {new Date(getCreatedDate(simulation)).toLocaleString('pt-BR')}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteSimulation(simulation)}
+                          className="border-red-500/30 text-red-500 hover:bg-red-500/10"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+
+                      <div className="mb-4">
+                        <p className="text-white font-medium text-xl mb-2">
+                          {getSimulationMainValue(simulation)}
+                        </p>
+                        <p className="text-gray-300 text-sm">
+                          {getSimulationDescription(simulation)}
                         </p>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDeleteSimulation(simulation)}
-                        className="border-red-500/30 text-red-500 hover:bg-red-500/10"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
 
-                    <div className="mb-4">
-                      <p className="text-white font-medium text-xl mb-2">
-                        {getSimulationMainValue(simulation)}
-                      </p>
-                      <p className="text-gray-300 text-sm">
-                        {getSimulationDescription(simulation)}
-                      </p>
-                    </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="border-[#efc349]/30 text-[#efc349] hover:bg-[#efc349]/10"
+                          onClick={() => handleViewDetails(simulation)}
+                        >
+                          <Eye className="w-4 h-4 mr-1" />
+                          Ver detalhes
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="border-[#efc349]/30 text-[#efc349] hover:bg-[#efc349]/10"
+                          onClick={() => handleDownloadPDF(simulation)}
+                        >
+                          <Download className="w-4 h-4 mr-1" />
+                          Baixar PDF
+                        </Button>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </TabsContent>
+            </Tabs>
+          )}
+        </CardContent>
+      </Card>
 
-                    <div className="flex gap-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        className="border-[#efc349]/30 text-[#efc349] hover:bg-[#efc349]/10"
-                      >
-                        <Eye className="w-4 h-4 mr-1" />
-                        Ver detalhes
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        className="border-[#efc349]/30 text-[#efc349] hover:bg-[#efc349]/10"
-                      >
-                        <Download className="w-4 h-4 mr-1" />
-                        Baixar PDF
-                      </Button>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </TabsContent>
-          </Tabs>
-        )}
-      </CardContent>
-    </Card>
+      <SimulationDetailModal
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        simulation={selectedSimulation}
+        onDownload={() => handleDownloadPDF()}
+      />
+    </>
   );
 };
