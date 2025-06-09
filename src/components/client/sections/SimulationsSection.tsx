@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calculator, Eye, Download, Trash2, FileText, DollarSign, Shield, TrendingUp } from "lucide-react";
+import { Calculator, Eye, Download, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/contexts/AuthContext";
@@ -270,61 +270,13 @@ export const SimulationsSection = () => {
     return sim.type === activeTab;
   });
 
-  const getSimulationIcon = (type: string) => {
-    switch (type) {
-      case 'tax': return <FileText className="w-6 h-6" />;
-      case 'inss': return <Shield className="w-6 h-6" />;
-      case 'prolabore': return <DollarSign className="w-6 h-6" />;
-      default: return <Calculator className="w-6 h-6" />;
-    }
-  };
-
-  const getSimulationGradient = (type: string) => {
-    switch (type) {
-      case 'tax': return 'from-blue-500/20 to-blue-600/5';
-      case 'inss': return 'from-green-500/20 to-green-600/5';
-      case 'prolabore': return 'from-purple-500/20 to-purple-600/5';
-      default: return 'from-gray-500/20 to-gray-600/5';
-    }
-  };
-
-  const simulationTypeConfig = {
-    tax: {
-      title: "IRPF",
-      description: "Imposto de Renda Pessoa Física",
-      icon: FileText,
-      color: "text-blue-500",
-      bgColor: "bg-blue-500/10",
-      borderColor: "border-blue-500/30",
-      gradient: "from-blue-500/20 to-blue-600/5"
-    },
-    inss: {
-      title: "INSS",
-      description: "Contribuição Previdenciária",
-      icon: Shield,
-      color: "text-green-500",
-      bgColor: "bg-green-500/10",
-      borderColor: "border-green-500/30",
-      gradient: "from-green-500/20 to-green-600/5"
-    },
-    prolabore: {
-      title: "Pró-labore",
-      description: "Remuneração de Sócios",
-      icon: DollarSign,
-      color: "text-purple-500",
-      bgColor: "bg-purple-500/10",
-      borderColor: "border-purple-500/30",
-      gradient: "from-purple-500/20 to-purple-600/5"
-    }
-  };
-
   if (loading) {
     return (
       <Card className="bg-[#0b1320] border-[#efc349]/20">
         <CardContent className="p-6">
           <div className="animate-pulse space-y-4">
             {[1, 2, 3].map(i => (
-              <div key={i} className="h-20 bg-[#020817] rounded-xl"></div>
+              <div key={i} className="h-20 bg-[#020817] rounded"></div>
             ))}
           </div>
         </CardContent>
@@ -334,142 +286,114 @@ export const SimulationsSection = () => {
 
   return (
     <>
-      <Card className="bg-[#0b1320] border-[#efc349]/20 overflow-hidden">
-        <CardHeader className="bg-gradient-to-r from-[#efc349]/10 to-transparent border-b border-[#efc349]/20">
+      <Card className="bg-[#0b1320] border-[#efc349]/20">
+        <CardHeader>
           <CardTitle className="text-[#efc349] font-extralight flex items-center">
-            <Calculator className="w-6 h-6 mr-3" />
+            <Calculator className="w-6 h-6 mr-2" />
             Minhas Simulações
-            <TrendingUp className="w-5 h-5 ml-2 opacity-70" />
           </CardTitle>
         </CardHeader>
         
-        <CardContent className="p-6">
+        <CardContent>
           {simulations.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="bg-gradient-to-br from-[#efc349]/10 to-transparent rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-6">
-                <Calculator className="w-12 h-12 text-[#efc349] opacity-70" />
-              </div>
-              <h3 className="text-xl font-extralight text-white mb-3">Nenhuma simulação realizada</h3>
-              <p className="text-gray-400 font-extralight mb-8">Comece criando sua primeira simulação</p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto">
-                {Object.entries(simulationTypeConfig).map(([type, config]) => (
-                  <Button 
-                    key={type}
-                    className={`${config.bgColor} ${config.borderColor} border text-white hover:bg-[#efc349]/10 transition-all duration-300 h-auto p-6 flex-col space-y-3`}
-                    onClick={() => {
-                      const urls = {
-                        tax: '/simulador-irpf',
-                        inss: '/calculadora-inss',
-                        prolabore: '/simulador-prolabore'
-                      };
-                      window.open(urls[type as keyof typeof urls], '_blank');
-                    }}
-                  >
-                    <config.icon className={`w-8 h-8 ${config.color}`} />
-                    <div className="text-center">
-                      <div className="font-light text-lg">{config.title}</div>
-                      <div className="text-sm text-gray-300 font-extralight">{config.description}</div>
-                    </div>
-                  </Button>
-                ))}
+            <div className="text-center py-8 text-gray-400">
+              <Calculator className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p className="font-extralight">Nenhuma simulação realizada</p>
+              <div className="flex flex-col gap-2 mt-4">
+                <Button 
+                  className="bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817]"
+                  onClick={() => window.open('/simulador-irpf', '_blank')}
+                >
+                  Simulador IRPF
+                </Button>
+                <Button 
+                  className="bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817]"
+                  onClick={() => window.open('/simulador-prolabore', '_blank')}
+                >
+                  Simulador Pró-labore
+                </Button>
+                <Button 
+                  className="bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817]"
+                  onClick={() => window.open('/calculadora-inss', '_blank')}
+                >
+                  Calculadora INSS
+                </Button>
               </div>
             </div>
           ) : (
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid grid-cols-4 mb-8 bg-[#020817]/50 border border-[#efc349]/20">
-                <TabsTrigger value="all" className="font-extralight data-[state=active]:bg-[#efc349] data-[state=active]:text-[#020817]">
-                  Todas
-                </TabsTrigger>
-                <TabsTrigger value="tax" className="font-extralight data-[state=active]:bg-blue-500 data-[state=active]:text-white">
-                  IRPF
-                </TabsTrigger>
-                <TabsTrigger value="inss" className="font-extralight data-[state=active]:bg-green-500 data-[state=active]:text-white">
-                  INSS
-                </TabsTrigger>
-                <TabsTrigger value="prolabore" className="font-extralight data-[state=active]:bg-purple-500 data-[state=active]:text-white">
-                  Pró-labore
-                </TabsTrigger>
+              <TabsList className="grid grid-cols-4 mb-6">
+                <TabsTrigger value="all" className="font-extralight">Todas</TabsTrigger>
+                <TabsTrigger value="tax" className="font-extralight">IRPF</TabsTrigger>
+                <TabsTrigger value="inss" className="font-extralight">INSS</TabsTrigger>
+                <TabsTrigger value="prolabore" className="font-extralight">Pró-labore</TabsTrigger>
               </TabsList>
 
               <TabsContent value={activeTab}>
-                <div className="space-y-6">
-                  {filteredSimulations.map((simulation, index) => {
-                    const config = simulationTypeConfig[simulation.type];
-                    return (
-                      <motion.div
-                        key={`${simulation.type}-${simulation.id}`}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.3, delay: index * 0.1 }}
-                        className={`bg-gradient-to-r ${config.gradient} border ${config.borderColor} rounded-xl p-6 hover:shadow-lg hover:shadow-[#efc349]/5 transition-all duration-300 hover:scale-[1.02]`}
-                      >
-                        <div className="flex justify-between items-start mb-4">
-                          <div className="flex items-center space-x-4">
-                            <div className={`${config.bgColor} p-3 rounded-xl border ${config.borderColor}`}>
-                              <config.icon className={`w-6 h-6 ${config.color}`} />
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-3 mb-1">
-                                <h3 className="font-light text-white text-xl">{config.title}</h3>
-                                <Badge className={`${config.bgColor} ${config.borderColor} border ${config.color} font-extralight`}>
-                                  Concluída
-                                </Badge>
-                              </div>
-                              <p className="text-gray-400 font-extralight text-sm">
-                                {new Date(getCreatedDate(simulation)).toLocaleString('pt-BR')}
-                              </p>
-                            </div>
+                <div className="space-y-4">
+                  {filteredSimulations.map((simulation, index) => (
+                    <motion.div
+                      key={`${simulation.type}-${simulation.id}`}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3, delay: index * 0.1 }}
+                      className="bg-[#020817] border border-[#efc349]/20 rounded-lg p-4 hover:border-[#efc349]/40 transition-all"
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-semibold text-white text-lg">
+                              {getSimulationType(simulation)}
+                            </h3>
+                            <Badge className={`${getTypeColor(simulation.type)} text-white`}>
+                              Concluída
+                            </Badge>
                           </div>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDeleteSimulation(simulation)}
-                            className="border-red-500/30 text-red-500 hover:bg-red-500/10 rounded-lg"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          <p className="text-gray-400 font-extralight text-sm">
+                            {new Date(getCreatedDate(simulation)).toLocaleString('pt-BR')}
+                          </p>
                         </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteSimulation(simulation)}
+                          className="border-red-500/30 text-red-500 hover:bg-red-500/10"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
 
-                        <div className="bg-[#020817]/30 rounded-lg p-4 mb-4 border border-[#efc349]/10">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-gray-300 text-sm font-extralight mb-1">Resultado Principal</p>
-                              <p className="text-2xl font-light text-[#efc349]">
-                                {getSimulationMainValue(simulation)}
-                              </p>
-                            </div>
-                            <TrendingUp className={`w-8 h-8 ${config.color} opacity-70`} />
-                          </div>
-                          <div className="mt-3 pt-3 border-t border-[#efc349]/10">
-                            <p className="text-gray-300 text-sm font-extralight">
-                              {getSimulationDescription(simulation)}
-                            </p>
-                          </div>
-                        </div>
+                      <div className="mb-4">
+                        <p className="text-white font-medium text-xl mb-2">
+                          {getSimulationMainValue(simulation)}
+                        </p>
+                        <p className="text-gray-300 text-sm">
+                          {getSimulationDescription(simulation)}
+                        </p>
+                      </div>
 
-                        <div className="flex gap-3">
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            className="flex-1 border-[#efc349]/30 text-[#efc349] hover:bg-[#efc349]/10 rounded-lg"
-                            onClick={() => handleViewDetails(simulation)}
-                          >
-                            <Eye className="w-4 h-4 mr-2" />
-                            Ver detalhes
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            className="flex-1 border-[#efc349]/30 text-[#efc349] hover:bg-[#efc349]/10 rounded-lg"
-                            onClick={() => handleDownloadPDF(simulation)}
-                          >
-                            <Download className="w-4 h-4 mr-2" />
-                            Baixar PDF
-                          </Button>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="border-[#efc349]/30 text-[#efc349] hover:bg-[#efc349]/10"
+                          onClick={() => handleViewDetails(simulation)}
+                        >
+                          <Eye className="w-4 h-4 mr-1" />
+                          Ver detalhes
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="border-[#efc349]/30 text-[#efc349] hover:bg-[#efc349]/10"
+                          onClick={() => handleDownloadPDF(simulation)}
+                        >
+                          <Download className="w-4 h-4 mr-1" />
+                          Baixar PDF
+                        </Button>
+                      </div>
+                    </motion.div>
+                  ))}
                 </div>
               </TabsContent>
             </Tabs>
