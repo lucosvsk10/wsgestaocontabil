@@ -16,6 +16,7 @@ interface DocumentCardProps {
   loadingDocumentIds: Set<string>;
   handleDownload: (doc: Document) => Promise<void>;
   categoryColor?: string;
+  categories?: Array<{ id: string; name: string; color?: string; }>;
 }
 
 export const DocumentCard = ({
@@ -26,11 +27,18 @@ export const DocumentCard = ({
   refreshDocuments,
   loadingDocumentIds,
   handleDownload,
-  categoryColor = "#efc349"
+  categoryColor = "#efc349",
+  categories = []
 }: DocumentCardProps) => {
   const isExpired = isDocumentExpired(doc.expires_at);
   const expirationText = daysUntilExpiration(doc.expires_at);
   const [isHovered, setIsHovered] = useState(false);
+  
+  // Get the actual category name
+  const getCategoryName = () => {
+    const category = categories.find(cat => cat.id === doc.category);
+    return category?.name || "Documento";
+  };
   
   return (
     <motion.div
@@ -38,7 +46,8 @@ export const DocumentCard = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
       className={cn(
-        "bg-[#1e293b] dark:bg-[#0b1320] border border-[#334155] dark:border-[#1d2633] rounded-lg overflow-hidden transition-all duration-200 flex flex-col h-full min-h-[200px]",
+        "bg-[#1e293b] dark:bg-[#0b1320] border border-[#334155] dark:border-[#1d2633] rounded-lg overflow-hidden transition-all duration-200 flex flex-col",
+        "w-full min-h-[280px] max-h-[320px]", // Fixed height range
         isHovered ? "shadow-lg transform scale-[1.02]" : ""
       )}
       style={{
@@ -55,7 +64,7 @@ export const DocumentCard = ({
               <FileText className="w-4 h-4" style={{ color: categoryColor }} />
             </div>
             <div className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide font-medium">
-              CERTIDÕES
+              {getCategoryName()}
             </div>
           </div>
           {doc.viewed ? (
@@ -126,11 +135,7 @@ export const DocumentCard = ({
         <Button
           onClick={() => handleDownload(doc)}
           disabled={loadingDocumentIds.has(doc.id)}
-          className="w-full bg-[#efc349] hover:bg-[#efc349]/90 text-black font-medium text-sm"
-          style={{
-            backgroundColor: categoryColor,
-            color: '#000000'
-          }}
+          className="w-full bg-[#020817] hover:bg-[#0f172a] text-white dark:bg-transparent dark:border dark:border-[#efc349] dark:text-white dark:hover:bg-[#efc349]/10 dark:hover:border-[#efc349] font-medium text-sm transition-all duration-300"
         >
           <Download className="w-4 h-4 mr-2" />
           Baixar documento
