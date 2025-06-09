@@ -151,16 +151,17 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
         className={`
           ${isMobile ? 'fixed' : 'relative'} 
           inset-y-0 left-0 z-50 
-          w-72 flex flex-col 
-          transition-transform duration-300 ease-in-out 
+          flex flex-col 
+          transition-all duration-300 ease-in-out 
           bg-white dark:bg-[#020817] 
+          border-r border-gray-200 dark:border-[#efc349]/30
           ${isMobile 
             ? open 
-              ? 'translate-x-0 shadow-2xl' 
-              : '-translate-x-full'
+              ? 'translate-x-0 shadow-2xl w-72' 
+              : '-translate-x-full w-72'
             : open 
-              ? 'translate-x-0' 
-              : '-translate-x-0 md:translate-x-0 md:w-20'
+              ? 'translate-x-0 w-72' 
+              : 'w-20 overflow-hidden'
           }
         `}
       >
@@ -177,7 +178,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
         )}
 
         {/* Logo area */}
-        <div className="h-20 flex items-center justify-center px-6 border-b border-gray-100 dark:border-[#020817]">
+        <div className="h-20 flex items-center justify-center px-6 border-b border-gray-100 dark:border-[#020817] shrink-0">
           <Link to="/" className="flex items-center justify-center transition-all duration-300 hover:scale-105">
             {(open || isMobile) ? (
               <img 
@@ -211,6 +212,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
                   label={item.label} 
                   active={item.active} 
                   to={item.to} 
+                  onClick={isMobile ? onClose : undefined}
                 />
               ) : (
                 <div 

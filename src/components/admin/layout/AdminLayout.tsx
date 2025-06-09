@@ -31,12 +31,12 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
         <AdminHeader />
         
-        {/* Mobile sidebar toggle button - CORRIGIDO */}
+        {/* Mobile sidebar toggle button */}
         {isMobile && (
           <Button 
             variant="ghost" 
             size="icon" 
-            className="fixed top-4 left-4 z-50 rounded-full w-12 h-12 transition-all duration-300 ease-in-out hover:scale-105 bg-white/80 dark:bg-[#020817]/80 border border-[#e6e6e6] dark:border-[#efc349] hover:bg-gray-50 dark:hover:bg-[#efc349]/10 backdrop-blur-sm" 
+            className="fixed top-4 left-4 z-50 rounded-full w-12 h-12 transition-all duration-300 ease-in-out hover:scale-105 bg-white/90 dark:bg-[#020817]/90 border border-[#e6e6e6] dark:border-[#efc349] hover:bg-gray-50 dark:hover:bg-[#efc349]/10 backdrop-blur-sm shadow-lg" 
             onClick={toggleSidebar}
             data-sidebar-toggle="true"
             aria-label={sidebarOpen ? "Fechar menu lateral" : "Abrir menu lateral"}
@@ -45,12 +45,12 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           </Button>
         )}
         
-        {/* Desktop sidebar toggle button - CORRIGIDO */}
+        {/* Desktop sidebar toggle button */}
         {!isMobile && (
           <Button 
             variant="ghost" 
             size="icon" 
-            className="fixed bottom-8 left-8 z-50 rounded-full w-12 h-12 transition-all duration-300 ease-in-out hover:scale-105 bg-white/80 dark:bg-[#020817]/80 border border-[#e6e6e6] dark:border-[#efc349] hover:bg-gray-50 dark:hover:bg-[#efc349]/10 backdrop-blur-sm" 
+            className="fixed bottom-8 left-8 z-50 rounded-full w-12 h-12 transition-all duration-300 ease-in-out hover:scale-105 bg-white/90 dark:bg-[#020817]/90 border border-[#e6e6e6] dark:border-[#efc349] hover:bg-gray-50 dark:hover:bg-[#efc349]/10 backdrop-blur-sm shadow-lg" 
             onClick={toggleSidebar}
             aria-label={sidebarOpen ? "Recolher menu lateral" : "Expandir menu lateral"}
           >
@@ -59,14 +59,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
               <ChevronRight size={20} className="text-[#020817] dark:text-[#efc349]" />
             }
           </Button>
-        )}
-        
-        {/* Overlay para mobile quando sidebar está aberta */}
-        {isMobile && sidebarOpen && (
-          <div 
-            className="fixed inset-0 bg-black/50 z-30"
-            onClick={() => setSidebarOpen(false)}
-          />
         )}
         
         <main className="flex-1 overflow-y-auto">

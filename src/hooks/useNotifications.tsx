@@ -35,14 +35,13 @@ export const useNotifications = () => {
       
       setNotifications(data);
       
-      // Check if there are any document notifications that haven't been read yet
-      // Since we don't have read_at in the database, we'll consider type for identification
-      const hasUnreadDocNotifications = data?.some(notif => 
-        notif.type === 'Novo Documento'
+      // Check if there are any unread notifications
+      const hasUnread = data?.some(notif => 
+        notif.type === 'Novo Documento' && !notif.read_at
       ) || false;
       
-      setHasNewNotifications(hasUnreadDocNotifications);
-      console.log("Há novas notificações de documentos?", hasUnreadDocNotifications);
+      setHasNewNotifications(hasUnread);
+      console.log("Há novas notificações?", hasUnread);
     } catch (error) {
       console.error('Erro ao carregar notificações:', error);
     } finally {
@@ -81,10 +80,11 @@ export const useNotifications = () => {
     try {
       console.log("Criando notificação de login para o usuário:", user.id);
       await createLoginNotification(user.id);
+      await fetchNotifications(); // Refresh after creating notification
     } catch (error) {
       console.error('Erro ao criar notificação de login:', error);
     }
-  }, [user?.id]);
+  }, [user?.id, fetchNotifications]);
 
   // Create logout notification
   const notifyLogout = useCallback(async () => {
@@ -116,6 +116,10 @@ export const useNotifications = () => {
       
       if (result.success) {
         console.log("Notificação salva:", result.notification);
+        // Refresh notifications for the target user if it's the current user
+        if (userId === user?.id) {
+          await fetchNotifications();
+        }
         return result.notification;
       } else {
         throw new Error(result.error || "Erro desconhecido ao criar notificação");
@@ -124,7 +128,7 @@ export const useNotifications = () => {
       console.error('Erro ao criar notificação:', error);
       throw error;
     }
-  }, []);
+  }, [user?.id, fetchNotifications]);
 
   // Mark document notifications as read
   const markDocumentNotificationAsRead = useCallback(async (documentId?: string) => {

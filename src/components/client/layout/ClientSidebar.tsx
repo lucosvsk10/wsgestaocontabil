@@ -21,21 +21,23 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
 }) => {
   return (
     <button 
-      className={`flex items-center space-x-4 px-6 py-4 rounded-lg transition-all duration-300 ease-in-out group w-full ${
+      className={`flex items-center space-x-4 px-6 py-4 rounded-xl transition-all duration-300 ease-in-out group w-full ${
         active 
-          ? "bg-[#efc349]/10 text-[#efc349] border-l-4 border-[#efc349]" 
-          : "text-gray-700 dark:text-white/80 hover:bg-gray-100 dark:hover:bg-[#efc349]/5 hover:text-[#020817] dark:hover:text-[#efc349]"
+          ? "bg-gradient-to-r from-[#efc349]/15 to-[#efc349]/5 text-[#efc349] border-l-4 border-[#efc349] shadow-lg" 
+          : "text-gray-600 dark:text-white/80 hover:bg-gradient-to-r hover:from-gray-50 hover:to-transparent dark:hover:from-[#efc349]/5 dark:hover:to-transparent hover:text-[#020817] dark:hover:text-[#efc349]"
       }`} 
       onClick={onClick}
     >
       <div className={`transition-all duration-300 ${
         active 
-          ? "text-[#efc349] scale-110" 
+          ? "text-[#efc349] scale-110 drop-shadow-sm" 
           : "text-gray-500 dark:text-white/70 group-hover:text-[#efc349] group-hover:scale-105"
       }`}>
         {icon}
       </div>
-      <span className="tracking-wide text-sm font-extralight">{label}</span>
+      <span className={`tracking-wide text-sm font-extralight ${
+        active ? "font-light" : ""
+      }`}>{label}</span>
     </button>
   );
 };
@@ -105,7 +107,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({ activeTab, setActiveTab, 
       {/* Mobile overlay */}
       {isMobile && open && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40"
+          className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm"
           onClick={() => onOpenChange(false)}
         />
       )}
@@ -116,8 +118,10 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({ activeTab, setActiveTab, 
           ${isMobile ? 'fixed' : 'relative'} 
           inset-y-0 left-0 z-50 
           w-72 flex flex-col 
-          transition-transform duration-300 ease-in-out 
+          transition-all duration-300 ease-in-out 
           bg-white dark:bg-[#020817] 
+          border-r border-gray-200 dark:border-[#efc349]/30
+          backdrop-blur-lg
           ${isMobile 
             ? open 
               ? 'translate-x-0 shadow-2xl' 
@@ -134,14 +138,14 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({ activeTab, setActiveTab, 
             variant="ghost"
             size="icon"
             onClick={() => onOpenChange(false)}
-            className="absolute top-4 right-4 z-10 text-gray-500 dark:text-white/70 hover:text-[#efc349]"
+            className="absolute top-4 right-4 z-10 text-gray-500 dark:text-white/70 hover:text-[#efc349] rounded-full hover:bg-gray-100 dark:hover:bg-[#efc349]/10"
           >
             <X size={20} />
           </Button>
         )}
 
         {/* Logo area */}
-        <div className="h-20 flex items-center justify-center px-6 border-b border-gray-100 dark:border-[#020817]">
+        <div className="h-20 flex items-center justify-center px-6 border-b border-gray-200 dark:border-[#efc349]/30 bg-gradient-to-r from-transparent to-gray-50/30 dark:to-[#efc349]/5">
           <Link to="/" className="flex items-center justify-center transition-all duration-300 hover:scale-105">
             {(open || isMobile) ? (
               <img 
@@ -150,7 +154,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({ activeTab, setActiveTab, 
                   : "/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png"
                 } 
                 alt="WS Gestão Contábil" 
-                className="h-8" 
+                className="h-8 drop-shadow-sm" 
               />
             ) : (
               <img 
@@ -159,14 +163,14 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({ activeTab, setActiveTab, 
                   : "/lovable-uploads/ed055b1a-ba3e-4890-b78d-1d83e85b592b.png"
                 } 
                 alt="WS Gestão Contábil" 
-                className="h-10" 
+                className="h-10 drop-shadow-sm" 
               />
             )}
           </Link>
         </div>
         
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-8 px-3 space-y-2">
+        <nav className="flex-1 overflow-y-auto py-8 px-4 space-y-3">
           {sidebarItems.map(item => (
             <div key={item.label}>
               {(open || isMobile) ? (
@@ -181,19 +185,19 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({ activeTab, setActiveTab, 
                 />
               ) : (
                 <div 
-                  className={`flex justify-center p-4 rounded-lg transition-all duration-300 hover:scale-110 ${
+                  className={`flex justify-center p-4 rounded-xl transition-all duration-300 hover:scale-110 ${
                     item.active 
-                      ? "bg-[#efc349]/10 border-l-4 border-[#efc349]" 
-                      : "hover:bg-gray-100 dark:hover:bg-[#efc349]/10"
+                      ? "bg-gradient-to-r from-[#efc349]/15 to-[#efc349]/5 border-l-4 border-[#efc349] shadow-lg" 
+                      : "hover:bg-gradient-to-r hover:from-gray-100 hover:to-transparent dark:hover:from-[#efc349]/10 dark:hover:to-transparent"
                   }`} 
                   title={item.label}
                 >
                   <button 
                     onClick={() => setActiveTab(item.id)}
-                    className={`transition-colors duration-300 ${
+                    className={`transition-all duration-300 ${
                       item.active 
-                        ? "text-[#efc349]" 
-                        : "text-gray-500 dark:text-white/70 hover:text-[#efc349]"
+                        ? "text-[#efc349] scale-110 drop-shadow-sm" 
+                        : "text-gray-500 dark:text-white/70 hover:text-[#efc349] hover:scale-105"
                     }`}
                   >
                     {item.icon}
@@ -203,6 +207,9 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({ activeTab, setActiveTab, 
             </div>
           ))}
         </nav>
+
+        {/* Footer gradient */}
+        <div className="h-4 bg-gradient-to-t from-gray-50/50 to-transparent dark:from-[#efc349]/5"></div>
       </aside>
     </>
   );
