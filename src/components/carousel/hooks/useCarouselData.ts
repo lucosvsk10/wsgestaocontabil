@@ -20,6 +20,7 @@ export const useCarouselData = () => {
           name: "Empresa Exemplo 1",
           logo_url: "/lovable-uploads/cb878201-552e-4728-a814-1554857917b4.png",
           instagram_url: "https://instagram.com/empresa1",
+          whatsapp_url: "https://wa.me/5511999999999",
           order_index: 0,
           active: true
         }, {
@@ -33,7 +34,7 @@ export const useCarouselData = () => {
           id: "3",
           name: "Empresa Exemplo 3",
           logo_url: "/lovable-uploads/cb878201-552e-4728-a814-1554857917b4.png",
-          instagram_url: "https://instagram.com/empresa3",
+          whatsapp_url: "https://wa.me/5511888888888",
           order_index: 2,
           active: true
         }, {
@@ -41,13 +42,13 @@ export const useCarouselData = () => {
           name: "Empresa Exemplo 4",
           logo_url: "/lovable-uploads/cb878201-552e-4728-a814-1554857917b4.png",
           instagram_url: "https://instagram.com/empresa4",
+          whatsapp_url: "https://wa.me/5511777777777",
           order_index: 3,
           active: true
         }, {
           id: "5",
           name: "Empresa Exemplo 5",
           logo_url: "/lovable-uploads/cb878201-552e-4728-a814-1554857917b4.png",
-          instagram_url: "https://instagram.com/empresa5",
           order_index: 4,
           active: true
         }, {

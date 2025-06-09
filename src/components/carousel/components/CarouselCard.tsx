@@ -1,6 +1,6 @@
 
 import { motion } from "framer-motion";
-import { Instagram, ExternalLink } from "lucide-react";
+import { Instagram, MessageCircle } from "lucide-react";
 import { ClientItem } from "../types";
 
 interface CarouselCardProps {
@@ -17,15 +17,15 @@ const CarouselCard = ({ client, index }: CarouselCardProps) => {
         duration: 0.4, 
         delay: index * 0.1 
       }}
-      className="group relative"
+      className="group relative h-full"
     >
-      <div className="bg-white dark:bg-[#0b1320] rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-[#efc349]/20 group h-full flex flex-col">
+      <div className="bg-white dark:bg-[#020817] rounded-lg p-6 shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100 dark:border-[#efc349]/30 h-full flex flex-col">
         {/* Logo */}
-        <div className="relative mb-6 flex-1 flex items-center justify-center w-full">
+        <div className="relative mb-4 flex-1 flex items-center justify-center w-full min-h-[80px]">
           <img 
             src={client.logo_url} 
             alt={client.name} 
-            className="max-h-20 max-w-32 w-auto object-contain filter grayscale-0 transition-all duration-300" 
+            className="max-h-20 max-w-full w-auto object-contain transition-all duration-300" 
             onError={(e) => {
               (e.target as HTMLImageElement).src = "/placeholder.svg";
             }} 
@@ -33,23 +33,36 @@ const CarouselCard = ({ client, index }: CarouselCardProps) => {
         </div>
         
         {/* Nome da empresa */}
-        <h3 className="text-lg font-light text-[#020817] dark:text-white text-center mb-4 line-clamp-2">
+        <h3 className="text-lg font-medium text-[#020817] dark:text-white text-center mb-4 line-clamp-2">
           {client.name}
         </h3>
         
-        {/* Link do Instagram */}
-        {client.instagram_url && (
-          <div className="flex justify-center">
-            <a 
-              href={client.instagram_url} 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="inline-flex items-center space-x-2 px-4 py-2 bg-[#efc349]/10 hover:bg-[#efc349]/20 border border-[#efc349]/30 rounded-full text-[#efc349] hover:text-[#020817] dark:hover:text-[#020817] transition-all duration-300 text-sm font-light group/link"
-            >
-              <Instagram className="w-4 h-4 group-hover/link:rotate-12 transition-transform duration-300" />
-              <span>Instagram</span>
-              <ExternalLink className="w-3 h-3 opacity-60" />
-            </a>
+        {/* Links sociais */}
+        {(client.instagram_url || client.whatsapp_url) && (
+          <div className="flex justify-center gap-3">
+            {client.instagram_url && (
+              <a 
+                href={client.instagram_url} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="inline-flex items-center justify-center w-10 h-10 bg-[#efc349]/10 hover:bg-[#efc349]/20 border border-[#efc349]/30 hover:border-[#efc349] rounded-full text-[#efc349] transition-all duration-300 group/link"
+                title="Instagram"
+              >
+                <Instagram className="w-4 h-4" />
+              </a>
+            )}
+            
+            {client.whatsapp_url && (
+              <a 
+                href={client.whatsapp_url} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="inline-flex items-center justify-center w-10 h-10 bg-[#efc349]/10 hover:bg-[#efc349]/20 border border-[#efc349]/30 hover:border-[#efc349] rounded-full text-[#efc349] transition-all duration-300 group/link"
+                title="WhatsApp"
+              >
+                <MessageCircle className="w-4 h-4" />
+              </a>
+            )}
           </div>
         )}
       </div>

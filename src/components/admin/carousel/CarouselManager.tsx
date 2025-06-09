@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Trash2, Plus, Edit2, Instagram, Image } from "lucide-react";
+import { Trash2, Plus, Edit2, Instagram, MessageCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -19,6 +19,7 @@ interface ClientItem {
   name: string;
   logo_url: string;
   instagram_url?: string;
+  whatsapp_url?: string;
   order_index: number;
   active: boolean;
 }
@@ -35,6 +36,7 @@ const CarouselManager = () => {
         name: "Empresa Exemplo 1",
         logo_url: "/lovable-uploads/cb878201-552e-4728-a814-1554857917b4.png",
         instagram_url: "https://instagram.com/empresa1",
+        whatsapp_url: "https://wa.me/5511999999999",
         order_index: 0,
         active: true
       },
@@ -50,7 +52,7 @@ const CarouselManager = () => {
         id: "3",
         name: "Empresa Exemplo 3", 
         logo_url: "/lovable-uploads/cb878201-552e-4728-a814-1554857917b4.png",
-        instagram_url: "https://instagram.com/empresa3",
+        whatsapp_url: "https://wa.me/5511888888888",
         order_index: 2,
         active: true
       }
@@ -62,7 +64,8 @@ const CarouselManager = () => {
   const [formData, setFormData] = useState({
     name: "",
     logo_url: "",
-    instagram_url: ""
+    instagram_url: "",
+    whatsapp_url: ""
   });
 
   const saveToLocalStorage = (clientsData: ClientItem[]) => {
@@ -85,6 +88,7 @@ const CarouselManager = () => {
       name: formData.name,
       logo_url: formData.logo_url,
       instagram_url: formData.instagram_url,
+      whatsapp_url: formData.whatsapp_url,
       order_index: clients.length,
       active: true
     };
@@ -92,7 +96,7 @@ const CarouselManager = () => {
     const updatedClients = [...clients, newClient];
     saveToLocalStorage(updatedClients);
     
-    setFormData({ name: "", logo_url: "", instagram_url: "" });
+    setFormData({ name: "", logo_url: "", instagram_url: "", whatsapp_url: "" });
     setIsAddDialogOpen(false);
     
     toast({
@@ -113,13 +117,19 @@ const CarouselManager = () => {
 
     const updatedClients = clients.map(client =>
       client.id === editingClient.id
-        ? { ...client, name: formData.name, logo_url: formData.logo_url, instagram_url: formData.instagram_url }
+        ? { 
+            ...client, 
+            name: formData.name, 
+            logo_url: formData.logo_url, 
+            instagram_url: formData.instagram_url,
+            whatsapp_url: formData.whatsapp_url
+          }
         : client
     );
 
     saveToLocalStorage(updatedClients);
     setEditingClient(null);
-    setFormData({ name: "", logo_url: "", instagram_url: "" });
+    setFormData({ name: "", logo_url: "", instagram_url: "", whatsapp_url: "" });
     
     toast({
       title: "Sucesso",
@@ -149,7 +159,8 @@ const CarouselManager = () => {
     setFormData({
       name: client.name,
       logo_url: client.logo_url,
-      instagram_url: client.instagram_url || ""
+      instagram_url: client.instagram_url || "",
+      whatsapp_url: client.whatsapp_url || ""
     });
   };
 
@@ -204,6 +215,15 @@ const CarouselManager = () => {
                   placeholder="https://instagram.com/empresa"
                 />
               </div>
+              <div>
+                <Label htmlFor="whatsapp_url">URL do WhatsApp (opcional)</Label>
+                <Input
+                  id="whatsapp_url"
+                  value={formData.whatsapp_url}
+                  onChange={(e) => setFormData({ ...formData, whatsapp_url: e.target.value })}
+                  placeholder="https://wa.me/5511999999999"
+                />
+              </div>
               <Button onClick={handleAddClient} className="w-full">
                 Adicionar
               </Button>
@@ -214,7 +234,7 @@ const CarouselManager = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {clients.map((client) => (
-          <Card key={client.id} className="bg-white dark:bg-[#0b1320] border-[#efc349]/20">
+          <Card key={client.id} className="bg-white dark:bg-[#020817] border-[#efc349]/20">
             <CardHeader className="pb-3">
               <div className="flex justify-between items-start">
                 <CardTitle className="text-lg text-[#020817] dark:text-white">
@@ -253,19 +273,35 @@ const CarouselManager = () => {
                 />
               </div>
               
-              {client.instagram_url && (
-                <div className="flex items-center justify-center text-sm text-gray-600 dark:text-gray-400">
-                  <Instagram className="w-4 h-4 mr-1" />
-                  <a 
-                    href={client.instagram_url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="hover:text-[#efc349] transition-colors"
-                  >
-                    Instagram
-                  </a>
-                </div>
-              )}
+              <div className="flex justify-center gap-3">
+                {client.instagram_url && (
+                  <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                    <Instagram className="w-4 h-4 mr-1 text-[#efc349]" />
+                    <a 
+                      href={client.instagram_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="hover:text-[#efc349] transition-colors"
+                    >
+                      Instagram
+                    </a>
+                  </div>
+                )}
+                
+                {client.whatsapp_url && (
+                  <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                    <MessageCircle className="w-4 h-4 mr-1 text-[#efc349]" />
+                    <a 
+                      href={client.whatsapp_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="hover:text-[#efc349] transition-colors"
+                    >
+                      WhatsApp
+                    </a>
+                  </div>
+                )}
+              </div>
               
               <div className="flex justify-center">
                 <Button
@@ -317,6 +353,15 @@ const CarouselManager = () => {
                 value={formData.instagram_url}
                 onChange={(e) => setFormData({ ...formData, instagram_url: e.target.value })}
                 placeholder="https://instagram.com/empresa"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit_whatsapp_url">URL do WhatsApp (opcional)</Label>
+              <Input
+                id="edit_whatsapp_url"
+                value={formData.whatsapp_url}
+                onChange={(e) => setFormData({ ...formData, whatsapp_url: e.target.value })}
+                placeholder="https://wa.me/5511999999999"
               />
             </div>
             <Button onClick={handleEditClient} className="w-full">
