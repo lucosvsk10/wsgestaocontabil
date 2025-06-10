@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { NotificationPopupData } from '@/types/notifications';
@@ -13,22 +13,35 @@ interface UseNotificationPopupsReturn {
 export const useNotificationPopups = (): UseNotificationPopupsReturn => {
   const { user } = useAuth();
   const [activePopups, setActivePopups] = useState<NotificationPopupData[]>([]);
-  const [processedNotifications, setProcessedNotifications] = useState<Set<string>>(new Set());
+  const processedNotificationsRef = useRef<Set<string>>(new Set());
 
   const dismissPopup = useCallback((id: string) => {
+    console.log('Fechando popup:', id);
     setActivePopups(prev => prev.filter(popup => popup.id !== id));
   }, []);
 
   const clearAllPopups = useCallback(() => {
+    console.log('Limpando todos os popups');
     setActivePopups([]);
+    processedNotificationsRef.current.clear();
   }, []);
 
   const processNotification = useCallback((notification: any) => {
+    console.log('Processando notificação para popup:', notification);
+    
     // Evitar processar a mesma notificação múltiplas vezes
-    if (processedNotifications.has(notification.id)) return;
+    if (processedNotificationsRef.current.has(notification.id)) {
+      console.log('Notificação já foi processada:', notification.id);
+      return;
+    }
 
     const isDocumentNotification = notification.type === 'Novo Documento';
     const isFiscalEventNotification = notification.type === 'Evento Fiscal';
+
+    console.log('Tipo da notificação:', notification.type, {
+      isDocumentNotification,
+      isFiscalEventNotification
+    });
 
     if (isDocumentNotification || isFiscalEventNotification) {
       const popupData: NotificationPopupData = {
@@ -42,14 +55,22 @@ export const useNotificationPopups = (): UseNotificationPopupsReturn => {
         createdAt: notification.created_at
       };
 
+      console.log('Criando popup:', popupData);
       setActivePopups(prev => [...prev, popupData]);
-      setProcessedNotifications(prev => new Set(prev).add(notification.id));
+      processedNotificationsRef.current.add(notification.id);
+    } else {
+      console.log('Tipo de notificação não gera popup:', notification.type);
     }
-  }, [processedNotifications]);
+  }, []);
 
   // Subscription para notificações em tempo real
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.log('Usuário não logado, não criando subscription de popups');
+      return;
+    }
+
+    console.log('Criando subscription de notificações para popups - usuário:', user.id);
 
     const channel = supabase
       .channel(`notification-popups-${user.id}`)
@@ -63,58 +84,26 @@ export const useNotificationPopups = (): UseNotificationPopupsReturn => {
         },
         (payload) => {
           const newNotification = payload.new;
-          console.log('Nova notificação recebida para popup:', newNotification);
-          
-          // Verificar se é uma notificação que deve gerar popup
-          if (newNotification.type === 'Novo Documento' || newNotification.type === 'Evento Fiscal') {
-            processNotification(newNotification);
-          }
+          console.log('Nova notificação recebida via realtime para popup:', newNotification);
+          processNotification(newNotification);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Status da subscription de popups:', status);
+      });
 
     return () => {
+      console.log('Removendo subscription de popups');
       supabase.removeChannel(channel);
     };
   }, [user?.id, processNotification]);
 
-  // Subscription para eventos fiscais
+  // Limpar notificações processadas quando o usuário muda
   useEffect(() => {
-    if (!user?.id) return;
-
-    const fiscalChannel = supabase
-      .channel('fiscal-events-popups')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'fiscal_events',
-        },
-        async (payload) => {
-          const newEvent = payload.new;
-          console.log('Novo evento fiscal criado:', newEvent);
-          
-          // Criar notificação para todos os usuários sobre novo evento fiscal
-          const popupData: NotificationPopupData = {
-            id: `fiscal-${newEvent.id}-${Date.now()}`,
-            type: 'agenda_fiscal',
-            title: 'Novo Evento na Agenda Fiscal',
-            message: `Novo evento: ${newEvent.title}`,
-            actionUrl: '/client/fiscal-calendar',
-            actionText: 'Ver Agenda',
-            fiscalEventId: newEvent.id,
-            createdAt: newEvent.created_at
-          };
-
-          setActivePopups(prev => [...prev, popupData]);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(fiscalChannel);
-    };
+    if (user?.id) {
+      processedNotificationsRef.current.clear();
+      console.log('Limpando notificações processadas para novo usuário');
+    }
   }, [user?.id]);
 
   return {

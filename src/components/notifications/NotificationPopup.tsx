@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { X, FileText, Calendar } from 'lucide-react';
+import { X, FileText, Calendar, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NotificationPopupData } from '@/types/notifications';
 import { useNavigate } from 'react-router-dom';
@@ -11,15 +11,23 @@ interface NotificationPopupProps {
 }
 
 export const NotificationPopup = ({ notification, onClose }: NotificationPopupProps) => {
-  const [isVisible, setIsVisible] = useState(true);
+  const [isVisible, setIsVisible] = useState(false);
   const navigate = useNavigate();
 
+  // Animação de entrada
+  useEffect(() => {
+    const timer = setTimeout(() => setIsVisible(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
   const handleClose = () => {
+    console.log('Fechando popup:', notification.id);
     setIsVisible(false);
     setTimeout(onClose, 300); // Aguarda a animação de saída
   };
 
   const handleActionClick = () => {
+    console.log('Clicando em ação do popup:', notification.actionUrl);
     navigate(notification.actionUrl);
     handleClose();
   };
@@ -31,7 +39,7 @@ export const NotificationPopup = ({ notification, onClose }: NotificationPopupPr
       case 'agenda_fiscal':
         return <Calendar className="h-5 w-5 text-orange-500" />;
       default:
-        return <FileText className="h-5 w-5 text-gray-500" />;
+        return <AlertCircle className="h-5 w-5 text-gray-500" />;
     }
   };
 
@@ -49,6 +57,7 @@ export const NotificationPopup = ({ notification, onClose }: NotificationPopupPr
   // Auto-close após 10 segundos
   useEffect(() => {
     const timer = setTimeout(() => {
+      console.log('Auto-fechando popup após 10 segundos:', notification.id);
       handleClose();
     }, 10000);
 
@@ -56,10 +65,12 @@ export const NotificationPopup = ({ notification, onClose }: NotificationPopupPr
   }, []);
 
   return (
-    <div className={`fixed bottom-6 right-6 z-50 transition-all duration-300 ease-in-out ${
-      isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
-    }`}>
-      <div className="max-w-[350px]">
+    <div 
+      className={`transition-all duration-300 ease-in-out transform ${
+        isVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-2 scale-95'
+      }`}
+    >
+      <div className="max-w-[380px] min-w-[320px]">
         <div className={`p-4 rounded-lg border backdrop-blur-sm shadow-lg ${getThemeClasses()}`}>
           <div className="flex justify-between items-start gap-3">
             <div className="flex-shrink-0 pt-0.5">
@@ -86,7 +97,7 @@ export const NotificationPopup = ({ notification, onClose }: NotificationPopupPr
                   onClick={handleClose}
                   variant="ghost"
                   size="sm"
-                  className="text-xs font-extralight px-2 py-1 h-auto"
+                  className="text-xs font-extralight px-2 py-1 h-auto text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
                 >
                   Depois
                 </Button>
