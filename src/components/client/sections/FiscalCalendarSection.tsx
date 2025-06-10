@@ -83,11 +83,11 @@ export const FiscalCalendarSection = () => {
 
   if (loading) {
     return (
-      <Card className="bg-white dark:bg-[#020817] border-gray-200 dark:border-[#efc349]/20">
+      <Card className="bg-white dark:bg-[#020817] border-gray-200 dark:border-[#efc349]/20 shadow-sm">
         <CardContent className="p-6">
           <div className="animate-pulse space-y-4">
             {[1, 2, 3].map(i => (
-              <div key={i} className="h-20 bg-gray-200 dark:bg-[#0b1320] rounded-lg"></div>
+              <div key={i} className="h-20 bg-gray-100 dark:bg-[#0b1320] rounded-lg"></div>
             ))}
           </div>
         </CardContent>
@@ -96,27 +96,27 @@ export const FiscalCalendarSection = () => {
   }
 
   return (
-    <Card className="bg-white dark:bg-[#020817] border-gray-200 dark:border-[#efc349]/20">
-      <CardHeader className="pb-4">
-        <CardTitle className="text-[#020817] dark:text-[#efc349] font-extralight flex items-center text-2xl">
+    <Card className="bg-white dark:bg-[#020817] border-gray-200 dark:border-[#efc349]/20 shadow-sm">
+      <CardHeader className="bg-white dark:bg-[#020817] border-b border-gray-200 dark:border-[#efc349]/20">
+        <CardTitle className="text-[#020817] dark:text-[#efc349] font-semibold flex items-center text-2xl">
           <Calendar className="w-6 h-6 mr-3" />
           Agenda Fiscal
-          <Badge variant="outline" className="ml-3 border-[#020817] dark:border-[#efc349]/30 text-[#020817] dark:text-[#efc349] font-extralight">
+          <Badge variant="outline" className="ml-3 border-gray-300 dark:border-[#efc349]/30 text-[#020817] dark:text-[#efc349] font-normal">
             {events.length} {events.length === 1 ? 'evento' : 'eventos'}
           </Badge>
         </CardTitle>
       </CardHeader>
       
-      <CardContent className="px-6 pb-6">
+      <CardContent className="bg-white dark:bg-[#020817] p-6">
         {events.length === 0 ? (
           <div className="text-center py-12">
             <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-[#0b1320] rounded-full flex items-center justify-center">
               <Calendar className="w-8 h-8 text-gray-400 dark:text-gray-600" />
             </div>
-            <h3 className="text-lg font-extralight text-[#020817] dark:text-white mb-2">
+            <h3 className="text-lg font-semibold text-[#020817] dark:text-white mb-2">
               Nenhum evento agendado
             </h3>
-            <p className="text-gray-600 dark:text-gray-400 font-extralight">
+            <p className="text-gray-600 dark:text-gray-400">
               Aguardando novos eventos fiscais
             </p>
           </div>
@@ -128,23 +128,23 @@ export const FiscalCalendarSection = () => {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.1 }}
-                className="group bg-gray-50 dark:bg-[#0b1320] border border-gray-200 dark:border-[#efc349]/20 rounded-xl p-5 hover:border-gray-300 dark:hover:border-[#efc349]/40 transition-all duration-300 hover:shadow-md dark:hover:shadow-none"
+                className="group bg-white dark:bg-[#0b1320] border border-gray-200 dark:border-[#efc349]/20 rounded-xl p-6 hover:border-[#efc349]/50 dark:hover:border-[#efc349]/40 transition-all duration-300 hover:shadow-md"
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-start space-x-4 flex-1">
-                    <div className="w-12 h-12 rounded-lg bg-white dark:bg-[#020817] border border-gray-200 dark:border-[#efc349]/30 flex items-center justify-center flex-shrink-0">
+                    <div className="w-12 h-12 rounded-lg bg-gray-100 dark:bg-[#020817] border border-gray-200 dark:border-[#efc349]/30 flex items-center justify-center flex-shrink-0">
                       <Calendar className="w-6 h-6 text-[#020817] dark:text-[#efc349]" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-[#020817] dark:text-white text-lg mb-2 group-hover:text-[#020817] dark:group-hover:text-[#efc349] transition-colors">
                         {event.title}
                       </h3>
-                      <p className="text-gray-600 dark:text-gray-300 font-extralight text-sm leading-relaxed mb-3">
+                      <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-3">
                         {event.description}
                       </p>
                     </div>
                   </div>
-                  <Badge className={`${getStatusColor(event.status)} text-white flex items-center gap-2 px-3 py-1 flex-shrink-0`}>
+                  <Badge className={`${getStatusColor(event.status)} text-white flex items-center gap-2 px-3 py-1 flex-shrink-0 font-medium`}>
                     {getStatusIcon(event.status)}
                     {getStatusText(event.status)}
                   </Badge>
@@ -162,7 +162,7 @@ export const FiscalCalendarSection = () => {
                       <Tag className="w-4 h-4 mr-2" />
                       <Badge 
                         variant="outline" 
-                        className="border-gray-300 dark:border-[#efc349]/30 text-[#020817] dark:text-[#efc349] font-extralight bg-white dark:bg-transparent"
+                        className="border-gray-300 dark:border-[#efc349]/30 text-[#020817] dark:text-[#efc349] font-normal bg-white dark:bg-transparent"
                       >
                         {event.category}
                       </Badge>

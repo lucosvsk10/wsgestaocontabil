@@ -99,7 +99,7 @@
   }
 
   body {
-    @apply bg-[#FFF1DE] dark:bg-deepNavy text-[#020817] dark:text-[#d9d9d9] font-prompt overflow-x-hidden;
+    @apply bg-white dark:bg-deepNavy text-[#020817] dark:text-[#d9d9d9] font-prompt overflow-x-hidden;
   }
 
   img {
@@ -249,7 +249,7 @@
 }
 
 .light-header {
-  @apply bg-[#FFF1DE] border-none text-[#020817];
+  @apply bg-white border-none text-[#020817];
 }
 
 .light-input {
@@ -270,4 +270,33 @@
 
 .light-table td {
   @apply border-[#e6e6e6];
+}
+
+/* Estilos específicos para o cliente no modo claro */
+.client-light-container {
+  @apply bg-white;
+}
+
+.client-light-card {
+  @apply bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-300;
+}
+
+.client-light-header {
+  @apply bg-white border-b border-gray-200 text-[#020817];
+}
+
+.client-light-title {
+  @apply text-[#020817] font-semibold;
+}
+
+.client-light-text {
+  @apply text-gray-600;
+}
+
+.client-light-button {
+  @apply bg-[#efc349] hover:bg-[#d4a843] text-[#020817] font-medium transition-all duration-300;
+}
+
+.client-light-button-outline {
+  @apply border border-gray-300 bg-white hover:bg-gray-50 text-[#020817] transition-all duration-300;
 }

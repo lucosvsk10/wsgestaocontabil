@@ -24,7 +24,7 @@ export const ClientDashboardLayout = ({ children, activeTab, setActiveTab }: Cli
   const toggleSidebar = () => setSidebarOpen(prev => !prev);
 
   return (
-    <div className="min-h-screen bg-[#FFF1DE] dark:bg-[#020817] flex overflow-hidden">
+    <div className="min-h-screen bg-white dark:bg-[#020817] flex overflow-hidden">
       {/* Sidebar */}
       <ClientSidebar 
         activeTab={activeTab} 
@@ -75,7 +75,7 @@ export const ClientDashboardLayout = ({ children, activeTab, setActiveTab }: Cli
           />
         )}
         
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto bg-white dark:bg-[#020817]">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

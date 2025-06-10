@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calculator, Eye, Download, Trash2 } from "lucide-react";
+import { Calculator, Eye, Download, Trash2, Building2, CreditCard } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/contexts/AuthContext";
@@ -286,47 +286,60 @@ export const SimulationsSection = () => {
 
   return (
     <>
-      <Card className="bg-[#0b1320] border-[#efc349]/20">
-        <CardHeader>
-          <CardTitle className="text-[#efc349] font-extralight flex items-center">
-            <Calculator className="w-6 h-6 mr-2" />
+      <Card className="bg-white dark:bg-[#0b1320] border-gray-200 dark:border-[#efc349]/20 shadow-sm">
+        <CardHeader className="bg-white dark:bg-[#0b1320] border-b border-gray-200 dark:border-[#efc349]/20">
+          <CardTitle className="text-[#020817] dark:text-[#efc349] font-semibold flex items-center text-2xl">
+            <Calculator className="w-6 h-6 mr-3" />
             Minhas Simulações
+            <Badge variant="outline" className="ml-3 border-gray-300 dark:border-[#efc349]/30 text-[#020817] dark:text-[#efc349] font-normal">
+              {simulations.length} simulação{simulations.length !== 1 ? 'ões' : ''}
+            </Badge>
           </CardTitle>
         </CardHeader>
         
-        <CardContent>
+        <CardContent className="bg-white dark:bg-[#0b1320] p-6">
           {simulations.length === 0 ? (
-            <div className="text-center py-8 text-gray-400">
-              <Calculator className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p className="font-extralight">Nenhuma simulação realizada</p>
-              <div className="flex flex-col gap-2 mt-4">
+            <div className="text-center py-12">
+              <div className="w-16 h-16 mx-auto mb-6 bg-gray-100 dark:bg-[#020817] rounded-full flex items-center justify-center">
+                <Calculator className="w-8 h-8 text-gray-400 dark:text-gray-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-[#020817] dark:text-white mb-2">
+                Nenhuma simulação realizada
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-6">
+                Comece criando sua primeira simulação
+              </p>
+              <div className="flex flex-col gap-3 max-w-xs mx-auto">
                 <Button 
-                  className="bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817]"
+                  className="bg-[#efc349] hover:bg-[#d4a843] text-[#020817] font-medium transition-all duration-300 hover:shadow-sm"
                   onClick={() => window.open('/simulador-irpf', '_blank')}
                 >
+                  <Calculator className="w-4 h-4 mr-2" />
                   Simulador IRPF
                 </Button>
                 <Button 
-                  className="bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817]"
+                  className="bg-[#efc349] hover:bg-[#d4a843] text-[#020817] font-medium transition-all duration-300 hover:shadow-sm"
                   onClick={() => window.open('/simulador-prolabore', '_blank')}
                 >
+                  <Building2 className="w-4 h-4 mr-2" />
                   Simulador Pró-labore
                 </Button>
                 <Button 
-                  className="bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817]"
+                  className="bg-[#efc349] hover:bg-[#d4a843] text-[#020817] font-medium transition-all duration-300 hover:shadow-sm"
                   onClick={() => window.open('/calculadora-inss', '_blank')}
                 >
+                  <CreditCard className="w-4 h-4 mr-2" />
                   Calculadora INSS
                 </Button>
               </div>
             </div>
           ) : (
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid grid-cols-4 mb-6">
-                <TabsTrigger value="all" className="font-extralight">Todas</TabsTrigger>
-                <TabsTrigger value="tax" className="font-extralight">IRPF</TabsTrigger>
-                <TabsTrigger value="inss" className="font-extralight">INSS</TabsTrigger>
-                <TabsTrigger value="prolabore" className="font-extralight">Pró-labore</TabsTrigger>
+              <TabsList className="grid grid-cols-4 mb-6 bg-gray-100 dark:bg-[#020817]">
+                <TabsTrigger value="all" className="font-medium data-[state=active]:bg-white dark:data-[state=active]:bg-[#0b1320] data-[state=active]:text-[#020817] dark:data-[state=active]:text-[#efc349]">Todas</TabsTrigger>
+                <TabsTrigger value="tax" className="font-medium data-[state=active]:bg-white dark:data-[state=active]:bg-[#0b1320] data-[state=active]:text-[#020817] dark:data-[state=active]:text-[#efc349]">IRPF</TabsTrigger>
+                <TabsTrigger value="inss" className="font-medium data-[state=active]:bg-white dark:data-[state=active]:bg-[#0b1320] data-[state=active]:text-[#020817] dark:data-[state=active]:text-[#efc349]">INSS</TabsTrigger>
+                <TabsTrigger value="prolabore" className="font-medium data-[state=active]:bg-white dark:data-[state=active]:bg-[#0b1320] data-[state=active]:text-[#020817] dark:data-[state=active]:text-[#efc349]">Pró-labore</TabsTrigger>
               </TabsList>
 
               <TabsContent value={activeTab}>
@@ -337,19 +350,24 @@ export const SimulationsSection = () => {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.3, delay: index * 0.1 }}
-                      className="bg-[#020817] border border-[#efc349]/20 rounded-lg p-4 hover:border-[#efc349]/40 transition-all"
+                      className="bg-white dark:bg-[#020817] border border-gray-200 dark:border-[#efc349]/20 rounded-xl p-6 hover:border-[#efc349]/50 dark:hover:border-[#efc349]/40 hover:shadow-md transition-all duration-300"
                     >
-                      <div className="flex justify-between items-start mb-3">
+                      <div className="flex justify-between items-start mb-4">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold text-white text-lg">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-[#0b1320] flex items-center justify-center">
+                              {simulation.type === 'tax' && <Calculator className="w-5 h-5 text-[#020817] dark:text-[#efc349]" />}
+                              {simulation.type === 'inss' && <CreditCard className="w-5 h-5 text-[#020817] dark:text-[#efc349]" />}
+                              {simulation.type === 'prolabore' && <Building2 className="w-5 h-5 text-[#020817] dark:text-[#efc349]" />}
+                            </div>
+                            <h3 className="font-semibold text-[#020817] dark:text-white text-lg">
                               {getSimulationType(simulation)}
                             </h3>
-                            <Badge className={`${getTypeColor(simulation.type)} text-white`}>
+                            <Badge className={`${getTypeColor(simulation.type)} text-white font-medium`}>
                               Concluída
                             </Badge>
                           </div>
-                          <p className="text-gray-400 font-extralight text-sm">
+                          <p className="text-gray-600 dark:text-gray-400 text-sm">
                             {new Date(getCreatedDate(simulation)).toLocaleString('pt-BR')}
                           </p>
                         </div>
@@ -357,38 +375,37 @@ export const SimulationsSection = () => {
                           size="sm"
                           variant="outline"
                           onClick={() => handleDeleteSimulation(simulation)}
-                          className="border-red-500/30 text-red-500 hover:bg-red-500/10"
+                          className="border-red-300 dark:border-red-500/30 text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
 
-                      <div className="mb-4">
-                        <p className="text-white font-medium text-xl mb-2">
+                      <div className="mb-6">
+                        <p className="text-[#020817] dark:text-white font-semibold text-2xl mb-2">
                           {getSimulationMainValue(simulation)}
                         </p>
-                        <p className="text-gray-300 text-sm">
+                        <p className="text-gray-600 dark:text-gray-300 text-sm">
                           {getSimulationDescription(simulation)}
                         </p>
                       </div>
 
-                      <div className="flex gap-2">
+                      <div className="flex gap-3">
                         <Button 
                           size="sm" 
                           variant="outline"
-                          className="border-[#efc349]/30 text-[#efc349] hover:bg-[#efc349]/10"
+                          className="border-gray-300 dark:border-[#efc349]/30 text-[#020817] dark:text-[#efc349] hover:bg-gray-50 dark:hover:bg-[#efc349]/10 transition-all duration-300"
                           onClick={() => handleViewDetails(simulation)}
                         >
-                          <Eye className="w-4 h-4 mr-1" />
+                          <Eye className="w-4 h-4 mr-2" />
                           Ver detalhes
                         </Button>
                         <Button 
                           size="sm" 
-                          variant="outline"
-                          className="border-[#efc349]/30 text-[#efc349] hover:bg-[#efc349]/10"
+                          className="bg-[#efc349] hover:bg-[#d4a843] text-[#020817] font-medium transition-all duration-300"
                           onClick={() => handleDownloadPDF(simulation)}
                         >
-                          <Download className="w-4 h-4 mr-1" />
+                          <Download className="w-4 h-4 mr-2" />
                           Baixar PDF
                         </Button>
                       </div>

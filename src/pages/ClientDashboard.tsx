@@ -86,7 +86,7 @@ const ClientDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#FFF1DE] dark:bg-[#020817]">
+    <div className="min-h-screen bg-white dark:bg-[#020817]">
       <ClientDashboardLayout activeTab={activeTab} setActiveTab={setActiveTab}>
         <WelcomeHeader />
         <QuickStats onTabChange={setActiveTab} />
