@@ -17,7 +17,7 @@ export const WelcomeHeader = () => {
   }} className="bg-navydark">
       <div className="flex items-center justify-between">
         <div className="bg-white dark:bg-deepNavy/60 border border-[#e6e6e6] dark:border-gold/30 rounded-xl p-6 my-[25px] py-[25px] px-[25px]">
-          <h1 className="text-3xl font-extralight mb-2 text-slate-50">
+          <h1 className="text-3xl font-extralight mb-2 text-deepNavy-90">
             Bem-vindo, {userData?.name || user?.email?.split('@')[0]}
           </h1>
           <p className="font-extralight text-gray-400">
