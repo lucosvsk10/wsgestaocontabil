@@ -23,7 +23,7 @@ export const DocumentResultsSummary = ({
   };
 
   return (
-    <div className="text-sm text-gray-600 dark:text-gray-300">
+    <div className="text-sm text-gray-700 dark:text-gray-300 font-extralight px-4">
       Exibindo {count} {count === 1 ? 'documento' : 'documentos'}
       {searchQuery && ` para "${searchQuery}"`}
       {statusFilter !== "all" && (
