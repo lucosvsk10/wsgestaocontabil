@@ -30,8 +30,9 @@ export function ThemeProvider({
   ...props
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(() => {
-    // Verificar se há tema salvo no localStorage, senão usar 'dark' como padrão
-    return (localStorage.getItem(storageKey) as Theme) || defaultTheme;
+    // Se não há tema salvo, usar 'dark' como padrão
+    const savedTheme = localStorage.getItem(storageKey) as Theme;
+    return savedTheme || defaultTheme;
   });
 
   useEffect(() => {
