@@ -1,3 +1,4 @@
+
 import { useAuth } from "@/contexts/AuthContext";
 import ThemeToggle from "@/components/ThemeToggle";
 import { UserCircle } from "lucide-react";
@@ -5,14 +6,19 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Button } from "@/components/ui/button";
 import { useNavigation } from "@/components/navbar/hooks/useNavigation";
 import { Link } from "react-router-dom";
-const AdminHeader = () => {
-  const {
-    user
-  } = useAuth();
-  const {
-    handleLogout
-  } = useNavigation();
-  return <header className="py-6 px-8 flex items-center justify-between bg-white dark:bg-[#020817] border-b border-gray-100 dark:border-[#020817]">
+
+interface AdminHeaderProps {
+  sidebarOpen: boolean;
+  setSidebarOpen: (open: boolean) => void;
+  toggleSidebar: () => void;
+}
+
+const AdminHeader = ({ sidebarOpen, setSidebarOpen, toggleSidebar }: AdminHeaderProps) => {
+  const { user } = useAuth();
+  const { handleLogout } = useNavigation();
+
+  return (
+    <header className="py-6 px-8 flex items-center justify-between bg-white dark:bg-[#020817] border-b border-gray-100 dark:border-[#020817]">
       <div className="flex items-center">
         {/* Conteúdo à esquerda */}
       </div>
@@ -42,6 +48,8 @@ const AdminHeader = () => {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-    </header>;
+    </header>
+  );
 };
+
 export default AdminHeader;
