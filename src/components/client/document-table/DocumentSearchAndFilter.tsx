@@ -1,9 +1,22 @@
 
 import { useState } from "react";
-import { Search, Filter, X } from "lucide-react";
+import { Search, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuCheckboxItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface DocumentSearchAndFilterProps {
   searchQuery: string;
@@ -22,71 +35,71 @@ export const DocumentSearchAndFilter = ({
   sortBy,
   setSortBy
 }: DocumentSearchAndFilterProps) => {
-  const clearFilters = () => {
-    setSearchQuery("");
-    setStatusFilter("all");
-    setSortBy("date-desc");
-  };
-
-  const hasActiveFilters = searchQuery || statusFilter !== "all" || sortBy !== "date-desc";
+  const isMobile = useIsMobile();
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-extralight text-[#020817] dark:text-[#efc349]">
-          Filtros e Busca
-        </h2>
-        {hasActiveFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={clearFilters}
-            className="text-gray-500 dark:text-gray-400 hover:text-[#020817] dark:hover:text-[#efc349] font-extralight"
-          >
-            <X className="w-4 h-4 mr-2" />
-            Limpar filtros
-          </Button>
-        )}
+    <div className="flex flex-col md:flex-row gap-4">
+      <div className="relative flex-grow">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400" size={18} />
+        <Input 
+          type="text" 
+          placeholder="Buscar documentos..." 
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10 bg-white dark:bg-navy-light/20 border-gray-200 dark:border-gold/20"
+        />
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Search Input */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4" />
-          <Input 
-            placeholder="Buscar documentos..." 
-            value={searchQuery} 
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 bg-transparent border-gray-300 dark:border-[#efc349]/30 text-[#020817] dark:text-white focus:border-[#efc349] dark:focus:border-[#efc349] transition-all duration-300 font-extralight"
-          />
-        </div>
-        
-        {/* Status Filter */}
+      <div className="flex gap-2">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="bg-transparent border-gray-300 dark:border-[#efc349]/30 text-[#020817] dark:text-white focus:border-[#efc349] dark:focus:border-[#efc349] font-extralight">
-            <SelectValue placeholder="Filtrar por status" />
+          <SelectTrigger className="w-[180px] bg-white dark:bg-navy-light/20 border-gray-200 dark:border-gold/20">
+            <SelectValue placeholder="Status" />
           </SelectTrigger>
-          <SelectContent className="bg-white dark:bg-[#020817] border-gray-200 dark:border-[#efc349]/30">
-            <SelectItem value="all" className="font-extralight">Todos os status</SelectItem>
-            <SelectItem value="new" className="font-extralight">Novos</SelectItem>
-            <SelectItem value="viewed" className="font-extralight">Visualizados</SelectItem>
-            <SelectItem value="expired" className="font-extralight">Expirados</SelectItem>
-            <SelectItem value="active" className="font-extralight">Ativos</SelectItem>
+          <SelectContent>
+            <SelectItem value="all">Todos os status</SelectItem>
+            <SelectItem value="new">Novos</SelectItem>
+            <SelectItem value="viewed">Visualizados</SelectItem>
+            <SelectItem value="expired">Expirados</SelectItem>
+            <SelectItem value="active">Ativos</SelectItem>
           </SelectContent>
         </Select>
-
-        {/* Sort Filter */}
+        
         <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="bg-transparent border-gray-300 dark:border-[#efc349]/30 text-[#020817] dark:text-white focus:border-[#efc349] dark:focus:border-[#efc349] font-extralight">
+          <SelectTrigger className="w-[180px] bg-white dark:bg-navy-light/20 border-gray-200 dark:border-gold/20">
             <SelectValue placeholder="Ordenar por" />
           </SelectTrigger>
-          <SelectContent className="bg-white dark:bg-[#020817] border-gray-200 dark:border-[#efc349]/30">
-            <SelectItem value="date-desc" className="font-extralight">Data (mais recente)</SelectItem>
-            <SelectItem value="date-asc" className="font-extralight">Data (mais antigo)</SelectItem>
-            <SelectItem value="name-asc" className="font-extralight">Nome (A-Z)</SelectItem>
-            <SelectItem value="name-desc" className="font-extralight">Nome (Z-A)</SelectItem>
+          <SelectContent>
+            <SelectItem value="date-desc">Data: Recentes primeiro</SelectItem>
+            <SelectItem value="date-asc">Data: Antigos primeiro</SelectItem>
+            <SelectItem value="name-asc">Nome: A-Z</SelectItem>
+            <SelectItem value="name-desc">Nome: Z-A</SelectItem>
           </SelectContent>
         </Select>
+        
+        {!isMobile && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="bg-white dark:bg-navy-light/20 border-gray-200 dark:border-gold/20">
+                <Filter size={18} />
+                <span className="ml-1">Filtros</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-navy-dark border-gray-200 dark:border-gold/20">
+              <DropdownMenuCheckboxItem
+                checked={statusFilter === "new"}
+                onCheckedChange={() => setStatusFilter(statusFilter === "new" ? "all" : "new")}
+              >
+                Apenas novos
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={statusFilter === "expired"}
+                onCheckedChange={() => setStatusFilter(statusFilter === "expired" ? "all" : "expired")}
+              >
+                Apenas expirados
+              </DropdownMenuCheckboxItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
     </div>
   );

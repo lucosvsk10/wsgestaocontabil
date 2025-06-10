@@ -74,46 +74,38 @@ export const DocumentTable = ({
   });
 
   return (
-    <div className="space-y-6 bg-white dark:bg-[#020817] min-h-screen">
+    <div className="space-y-6">
       {/* Search and Filters */}
-      <div className="bg-transparent border border-gray-200 dark:border-[#efc349]/30 rounded-xl p-6 shadow-sm">
-        <DocumentSearchAndFilter
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          statusFilter={statusFilter}
-          setStatusFilter={setStatusFilter}
-          sortBy={sortBy}
-          setSortBy={setSortBy}
-        />
-      </div>
+      <DocumentSearchAndFilter
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        sortBy={sortBy}
+        setSortBy={setSortBy}
+      />
 
       {/* Results Summary */}
-      <div className="bg-transparent border border-gray-200 dark:border-[#efc349]/30 rounded-xl p-4 shadow-sm">
-        <DocumentResultsSummary
-          count={sortedDocuments.length}
-          searchQuery={searchQuery}
-          statusFilter={statusFilter}
-        />
-      </div>
+      <DocumentResultsSummary
+        count={sortedDocuments.length}
+        searchQuery={searchQuery}
+        statusFilter={statusFilter}
+      />
       
       {/* Documents Grid or Empty State */}
       {sortedDocuments.length > 0 ? (
-        <div className="bg-transparent border border-gray-200 dark:border-[#efc349]/30 rounded-xl shadow-sm">
-          <DocumentGrid
-            documents={sortedDocuments}
-            formatDate={formatDate}
-            isDocumentExpired={isDocumentExpired}
-            daysUntilExpiration={daysUntilExpiration}
-            refreshDocuments={refreshDocuments}
-            loadingDocumentIds={loadingDocumentIds}
-            handleDownload={handleDownload}
-            categories={categories}
-          />
-        </div>
+        <DocumentGrid
+          documents={sortedDocuments}
+          formatDate={formatDate}
+          isDocumentExpired={isDocumentExpired}
+          daysUntilExpiration={daysUntilExpiration}
+          refreshDocuments={refreshDocuments}
+          loadingDocumentIds={loadingDocumentIds}
+          handleDownload={handleDownload}
+          categories={categories}
+        />
       ) : (
-        <div className="bg-transparent border border-gray-200 dark:border-[#efc349]/30 rounded-xl p-8 shadow-sm">
-          <DocumentEmptyState searchQuery={searchQuery} />
-        </div>
+        <DocumentEmptyState searchQuery={searchQuery} />
       )}
     </div>
   );
