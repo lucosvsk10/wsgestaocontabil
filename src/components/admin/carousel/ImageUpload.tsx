@@ -42,9 +42,10 @@ const ImageUpload = ({ currentImageUrl, onImageUploaded, onImageRemoved }: Image
     setIsUploading(true);
 
     try {
+      // Gerar nome único para a imagem usando timestamp e random
       const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}.${fileExt}`;
-      const filePath = `${fileName}`;
+      const uniqueFileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `carrossel/logos/${uniqueFileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('carousel-logos')
@@ -52,6 +53,7 @@ const ImageUpload = ({ currentImageUrl, onImageUploaded, onImageRemoved }: Image
 
       if (uploadError) throw uploadError;
 
+      // Obter URL pública da imagem
       const { data } = supabase.storage
         .from('carousel-logos')
         .getPublicUrl(filePath);
@@ -78,15 +80,20 @@ const ImageUpload = ({ currentImageUrl, onImageUploaded, onImageRemoved }: Image
     if (!currentImageUrl) return;
 
     try {
-      // Extrair o caminho do arquivo da URL
-      const urlParts = currentImageUrl.split('/');
-      const fileName = urlParts[urlParts.length - 1];
-      
-      const { error } = await supabase.storage
-        .from('carousel-logos')
-        .remove([fileName]);
+      // Extrair o caminho do arquivo da URL pública
+      const url = new URL(currentImageUrl);
+      const pathSegments = url.pathname.split('/');
+      // Pegar as últimas 3 partes: /storage/v1/object/public/carousel-logos/carrossel/logos/filename
+      const bucketIndex = pathSegments.indexOf('carousel-logos');
+      if (bucketIndex !== -1) {
+        const filePath = pathSegments.slice(bucketIndex + 1).join('/');
+        
+        const { error } = await supabase.storage
+          .from('carousel-logos')
+          .remove([filePath]);
 
-      if (error) throw error;
+        if (error) throw error;
+      }
 
       onImageRemoved();
       

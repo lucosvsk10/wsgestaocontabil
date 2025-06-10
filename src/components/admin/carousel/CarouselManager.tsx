@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,9 +69,19 @@ const CarouselManager = () => {
     whatsapp_url: ""
   });
 
+  // Função para forçar re-render dos dados
+  const refreshClientsData = useCallback(() => {
+    const stored = localStorage.getItem('carousel_clients');
+    if (stored) {
+      setClients(JSON.parse(stored));
+    }
+  }, []);
+
   const saveToLocalStorage = (clientsData: ClientItem[]) => {
     localStorage.setItem('carousel_clients', JSON.stringify(clientsData));
     setClients(clientsData);
+    // Disparar evento de storage para outros componentes que possam estar ouvindo
+    window.dispatchEvent(new Event('storage'));
   };
 
   const handleAddClient = () => {
@@ -180,7 +191,13 @@ const CarouselManager = () => {
     
     if (editingClient?.id === clientId) {
       setFormData({ ...formData, logo_url: url });
+      setEditingClient({ ...editingClient, logo_url: url });
     }
+    
+    // Forçar refresh dos dados para garantir atualização em tempo real
+    setTimeout(() => {
+      refreshClientsData();
+    }, 100);
   };
 
   const handleEditImageRemoval = (clientId: string) => {
@@ -191,7 +208,13 @@ const CarouselManager = () => {
     
     if (editingClient?.id === clientId) {
       setFormData({ ...formData, logo_url: "/logo-padrao.png" });
+      setEditingClient({ ...editingClient, logo_url: "/logo-padrao.png" });
     }
+    
+    // Forçar refresh dos dados
+    setTimeout(() => {
+      refreshClientsData();
+    }, 100);
   };
 
   return (
