@@ -96,10 +96,32 @@
   html {
     @apply antialiased;
     scroll-behavior: smooth;
+    /* Zoom global de 80% apenas para desktop */
+    @media (min-width: 768px) {
+      zoom: 80%;
+      /* Fallback para navegadores que não suportam zoom */
+      transform: scale(0.8);
+      transform-origin: 0 0;
+      width: 125%; /* Compensar o scale para ocupar toda a tela */
+      height: 125%; /* Compensar o scale para ocupar toda a tela */
+    }
   }
 
   body {
     @apply bg-white dark:bg-deepNavy text-[#020817] dark:text-[#d9d9d9] font-prompt overflow-x-hidden;
+    /* Garantir que o body ocupe todo o espaço disponível */
+    @media (min-width: 768px) {
+      min-height: 100vh;
+      width: 100%;
+    }
+  }
+
+  /* Garantir que o root container se ajuste corretamente */
+  #root {
+    @media (min-width: 768px) {
+      min-height: 100vh;
+      width: 100%;
+    }
   }
 
   img {
