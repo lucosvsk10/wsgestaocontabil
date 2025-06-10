@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import ImageUpload from "./ImageUpload";
 
 interface ClientItem {
   id: string;
@@ -34,7 +34,7 @@ const CarouselManager = () => {
       {
         id: "1",
         name: "Empresa Exemplo 1",
-        logo_url: "/lovable-uploads/cb878201-552e-4728-a814-1554857917b4.png",
+        logo_url: "/logo-padrao.png",
         instagram_url: "https://instagram.com/empresa1",
         whatsapp_url: "https://wa.me/5511999999999",
         order_index: 0,
@@ -43,7 +43,7 @@ const CarouselManager = () => {
       {
         id: "2", 
         name: "Empresa Exemplo 2",
-        logo_url: "/lovable-uploads/cb878201-552e-4728-a814-1554857917b4.png",
+        logo_url: "/logo-padrao.png",
         instagram_url: "https://instagram.com/empresa2",
         order_index: 1,
         active: true
@@ -51,7 +51,7 @@ const CarouselManager = () => {
       {
         id: "3",
         name: "Empresa Exemplo 3", 
-        logo_url: "/lovable-uploads/cb878201-552e-4728-a814-1554857917b4.png",
+        logo_url: "/logo-padrao.png",
         whatsapp_url: "https://wa.me/5511888888888",
         order_index: 2,
         active: true
@@ -74,10 +74,10 @@ const CarouselManager = () => {
   };
 
   const handleAddClient = () => {
-    if (!formData.name || !formData.logo_url) {
+    if (!formData.name) {
       toast({
         title: "Erro",
-        description: "Nome e URL da logo são obrigatórios",
+        description: "Nome da empresa é obrigatório",
         variant: "destructive"
       });
       return;
@@ -86,7 +86,7 @@ const CarouselManager = () => {
     const newClient: ClientItem = {
       id: Date.now().toString(),
       name: formData.name,
-      logo_url: formData.logo_url,
+      logo_url: formData.logo_url || "/logo-padrao.png",
       instagram_url: formData.instagram_url,
       whatsapp_url: formData.whatsapp_url,
       order_index: clients.length,
@@ -106,10 +106,10 @@ const CarouselManager = () => {
   };
 
   const handleEditClient = () => {
-    if (!editingClient || !formData.name || !formData.logo_url) {
+    if (!editingClient || !formData.name) {
       toast({
         title: "Erro",
-        description: "Nome e URL da logo são obrigatórios",
+        description: "Nome da empresa é obrigatório",
         variant: "destructive"
       });
       return;
@@ -120,7 +120,7 @@ const CarouselManager = () => {
         ? { 
             ...client, 
             name: formData.name, 
-            logo_url: formData.logo_url, 
+            logo_url: formData.logo_url || "/logo-padrao.png", 
             instagram_url: formData.instagram_url,
             whatsapp_url: formData.whatsapp_url
           }
@@ -164,6 +164,36 @@ const CarouselManager = () => {
     });
   };
 
+  const handleImageUpload = (url: string) => {
+    setFormData({ ...formData, logo_url: url });
+  };
+
+  const handleImageRemoval = () => {
+    setFormData({ ...formData, logo_url: "" });
+  };
+
+  const handleEditImageUpload = (url: string, clientId: string) => {
+    const updatedClients = clients.map(client =>
+      client.id === clientId ? { ...client, logo_url: url } : client
+    );
+    saveToLocalStorage(updatedClients);
+    
+    if (editingClient?.id === clientId) {
+      setFormData({ ...formData, logo_url: url });
+    }
+  };
+
+  const handleEditImageRemoval = (clientId: string) => {
+    const updatedClients = clients.map(client =>
+      client.id === clientId ? { ...client, logo_url: "/logo-padrao.png" } : client
+    );
+    saveToLocalStorage(updatedClients);
+    
+    if (editingClient?.id === clientId) {
+      setFormData({ ...formData, logo_url: "/logo-padrao.png" });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -183,7 +213,7 @@ const CarouselManager = () => {
               Adicionar Cliente
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Adicionar Novo Cliente</DialogTitle>
             </DialogHeader>
@@ -197,15 +227,13 @@ const CarouselManager = () => {
                   placeholder="Nome da empresa"
                 />
               </div>
-              <div>
-                <Label htmlFor="logo_url">URL da Logo</Label>
-                <Input
-                  id="logo_url"
-                  value={formData.logo_url}
-                  onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })}
-                  placeholder="/lovable-uploads/..."
-                />
-              </div>
+              
+              <ImageUpload
+                currentImageUrl={formData.logo_url !== "/logo-padrao.png" ? formData.logo_url : ""}
+                onImageUploaded={handleImageUpload}
+                onImageRemoved={handleImageRemoval}
+              />
+              
               <div>
                 <Label htmlFor="instagram_url">URL do Instagram (opcional)</Label>
                 <Input
@@ -268,8 +296,16 @@ const CarouselManager = () => {
                   alt={client.name}
                   className="max-h-20 w-auto object-contain"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = "/placeholder.svg";
+                    (e.target as HTMLImageElement).src = "/logo-padrao.png";
                   }}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <ImageUpload
+                  currentImageUrl={client.logo_url !== "/logo-padrao.png" ? client.logo_url : ""}
+                  onImageUploaded={(url) => handleEditImageUpload(url, client.id)}
+                  onImageRemoved={() => handleEditImageRemoval(client.id)}
                 />
               </div>
               
@@ -323,7 +359,7 @@ const CarouselManager = () => {
 
       {/* Dialog de Edição */}
       <Dialog open={!!editingClient} onOpenChange={() => setEditingClient(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Editar Cliente</DialogTitle>
           </DialogHeader>
@@ -337,15 +373,13 @@ const CarouselManager = () => {
                 placeholder="Nome da empresa"
               />
             </div>
-            <div>
-              <Label htmlFor="edit_logo_url">URL da Logo</Label>
-              <Input
-                id="edit_logo_url"
-                value={formData.logo_url}
-                onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })}
-                placeholder="/lovable-uploads/..."
-              />
-            </div>
+            
+            <ImageUpload
+              currentImageUrl={formData.logo_url !== "/logo-padrao.png" ? formData.logo_url : ""}
+              onImageUploaded={handleImageUpload}
+              onImageRemoved={handleImageRemoval}
+            />
+            
             <div>
               <Label htmlFor="edit_instagram_url">URL do Instagram (opcional)</Label>
               <Input

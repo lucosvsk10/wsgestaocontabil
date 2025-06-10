@@ -27,7 +27,7 @@ const CarouselCard = ({ client, index }: CarouselCardProps) => {
             alt={client.name} 
             className="max-h-20 max-w-full w-auto object-contain transition-all duration-300" 
             onError={(e) => {
-              (e.target as HTMLImageElement).src = "/placeholder.svg";
+              (e.target as HTMLImageElement).src = "/logo-padrao.png";
             }} 
           />
         </div>
