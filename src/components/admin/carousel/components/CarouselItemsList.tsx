@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Edit2, Trash2, Search, Instagram, MessageCircle } from 'lucide-react';
+import { Edit2, Trash2, Search, Instagram, MessageCircle, List } from 'lucide-react';
 import { CarouselItem } from '../types';
 
 interface CarouselItemsListProps {
@@ -25,7 +25,8 @@ const CarouselItemsList = ({ items, loading, onEdit, onDelete }: CarouselItemsLi
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-[#020817] dark:text-[#efc349]">
+          <CardTitle className="flex items-center gap-2 text-[#020817] dark:text-[#efc349]">
+            <List className="w-5 h-5" />
             Lista de Blocos do Carrossel
           </CardTitle>
         </CardHeader>
@@ -42,7 +43,8 @@ const CarouselItemsList = ({ items, loading, onEdit, onDelete }: CarouselItemsLi
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-[#020817] dark:text-[#efc349]">
+        <CardTitle className="flex items-center gap-2 text-[#020817] dark:text-[#efc349]">
+          <List className="w-5 h-5" />
           Lista de Blocos do Carrossel ({items.length})
         </CardTitle>
       </CardHeader>
@@ -76,7 +78,7 @@ const CarouselItemsList = ({ items, loading, onEdit, onDelete }: CarouselItemsLi
                     alt={item.name}
                     className="max-w-full max-h-full object-contain"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = "/logo-padrao.png";
+                      (e.target as HTMLImageElement).style.display = 'none';
                     }}
                   />
                 </div>

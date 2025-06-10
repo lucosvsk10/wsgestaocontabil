@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import CarouselNavbar from "./CarouselNavbar";
-import StorageManager from "./components/StorageManager";
+import LogoUploadPanel from "./components/LogoUploadPanel";
 import CarouselItemForm from "./components/CarouselItemForm";
 import CarouselItemsList from "./components/CarouselItemsList";
 import EditCarouselItemDialog from "./components/EditCarouselItemDialog";
@@ -21,7 +21,7 @@ const CarouselManager = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Tem certeza que deseja excluir este item?')) {
+    if (window.confirm('Tem certeza que deseja excluir este item do carrossel? (A logo no storage não será removida)')) {
       await deleteItem(id);
     }
   };
@@ -41,8 +41,8 @@ const CarouselManager = () => {
           </p>
         </div>
 
-        {/* Gerenciar Storage */}
-        <StorageManager />
+        {/* Painel de Upload de Logos */}
+        <LogoUploadPanel />
 
         {/* Formulário de Cadastro */}
         <CarouselItemForm onSubmit={addItem} />

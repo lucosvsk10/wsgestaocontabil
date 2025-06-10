@@ -20,7 +20,7 @@ export const useCarouselData = () => {
     const loadClients = async () => {
       try {
         const { data, error } = await supabase
-          .from('carousel_items' as any)
+          .from('carousel_items')
           .select('*')
           .eq('status', 'active')
           .order('created_at', { ascending: true });

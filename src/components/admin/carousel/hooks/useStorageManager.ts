@@ -13,7 +13,7 @@ export const useStorageManager = () => {
     try {
       const { data, error } = await supabase.storage
         .from('carousel-logos')
-        .list('carrossel/logos', {
+        .list('', {
           limit: 100,
           offset: 0
         });
@@ -23,7 +23,7 @@ export const useStorageManager = () => {
       const logosWithUrls = (data || []).map(file => {
         const { data: urlData } = supabase.storage
           .from('carousel-logos')
-          .getPublicUrl(`carrossel/logos/${file.name}`);
+          .getPublicUrl(file.name);
 
         return {
           name: file.name,
@@ -46,23 +46,28 @@ export const useStorageManager = () => {
     }
   };
 
-  const uploadLogo = async (file: File) => {
+  const uploadLogo = async (file: File, companyName: string) => {
     try {
       setLoading(true);
       
       const fileExt = file.name.split('.').pop();
-      const uniqueFileName = `${crypto.randomUUID()}.${fileExt}`;
-      const filePath = `carrossel/logos/${uniqueFileName}`;
+      const sanitizedName = companyName.toLowerCase()
+        .replace(/[^a-z0-9]/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '');
+      
+      const timestamp = Date.now();
+      const uniqueFileName = `${sanitizedName}_${timestamp}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('carousel-logos')
-        .upload(filePath, file);
+        .upload(uniqueFileName, file);
 
       if (uploadError) throw uploadError;
 
       const { data } = supabase.storage
         .from('carousel-logos')
-        .getPublicUrl(filePath);
+        .getPublicUrl(uniqueFileName);
 
       await fetchLogos();
       
@@ -89,7 +94,7 @@ export const useStorageManager = () => {
     try {
       const { error } = await supabase.storage
         .from('carousel-logos')
-        .remove([`carrossel/logos/${logoName}`]);
+        .remove([logoName]);
 
       if (error) throw error;
 

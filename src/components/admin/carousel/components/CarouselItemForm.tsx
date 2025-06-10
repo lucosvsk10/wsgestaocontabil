@@ -10,7 +10,7 @@ import { useStorageManager } from '../hooks/useStorageManager';
 import { CarouselItem } from '../types';
 
 interface CarouselItemFormProps {
-  onSubmit: (data: Omit<CarouselItem, 'id' | 'created_at'>) => Promise<boolean>;
+  onSubmit: (data: Omit<CarouselItem, 'id' | 'created_at' | 'updated_at'>) => Promise<boolean>;
 }
 
 const CarouselItemForm = ({ onSubmit }: CarouselItemFormProps) => {
@@ -27,13 +27,24 @@ const CarouselItemForm = ({ onSubmit }: CarouselItemFormProps) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.logo_url) {
-      alert('Nome da empresa e logo são obrigatórios');
+    if (!formData.name.trim()) {
+      alert('Nome da empresa é obrigatório');
+      return;
+    }
+
+    if (!formData.logo_url) {
+      alert('Logo é obrigatória');
       return;
     }
 
     setSubmitting(true);
-    const success = await onSubmit(formData);
+    const success = await onSubmit({
+      name: formData.name.trim(),
+      logo_url: formData.logo_url,
+      instagram: formData.instagram.trim() || undefined,
+      whatsapp: formData.whatsapp.trim() || undefined,
+      status: formData.status
+    });
     
     if (success) {
       setFormData({
@@ -76,7 +87,7 @@ const CarouselItemForm = ({ onSubmit }: CarouselItemFormProps) => {
               onValueChange={(value) => setFormData({ ...formData, logo_url: value })}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Selecione uma logo" />
+                <SelectValue placeholder="Selecione uma logo do storage" />
               </SelectTrigger>
               <SelectContent>
                 {logos.map((logo) => (
@@ -89,6 +100,11 @@ const CarouselItemForm = ({ onSubmit }: CarouselItemFormProps) => {
                 ))}
               </SelectContent>
             </Select>
+            {logos.length === 0 && (
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Nenhuma logo disponível. Faça upload de uma logo primeiro.
+              </p>
+            )}
           </div>
 
           <div>
@@ -129,7 +145,7 @@ const CarouselItemForm = ({ onSubmit }: CarouselItemFormProps) => {
 
           <Button 
             type="submit" 
-            disabled={submitting}
+            disabled={submitting || !formData.name.trim() || !formData.logo_url}
             className="w-full bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817]"
           >
             {submitting ? "Salvando..." : "Adicionar ao Carrossel"}

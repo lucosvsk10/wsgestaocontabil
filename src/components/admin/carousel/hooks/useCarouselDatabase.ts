@@ -12,12 +12,12 @@ export const useCarouselDatabase = () => {
   const fetchItems = async () => {
     try {
       const { data, error } = await supabase
-        .from('carousel_items' as any)
+        .from('carousel_items')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setItems((data as any[]) || []);
+      setItems(data || []);
     } catch (error) {
       console.error('Erro ao buscar itens:', error);
       toast({
@@ -30,17 +30,17 @@ export const useCarouselDatabase = () => {
     }
   };
 
-  const addItem = async (itemData: Omit<CarouselItem, 'id' | 'created_at'>) => {
+  const addItem = async (itemData: Omit<CarouselItem, 'id' | 'created_at' | 'updated_at'>) => {
     try {
       const { data, error } = await supabase
-        .from('carousel_items' as any)
+        .from('carousel_items')
         .insert([itemData])
         .select()
         .single();
 
       if (error) throw error;
 
-      setItems(prev => [data as any, ...prev]);
+      setItems(prev => [data, ...prev]);
       toast({
         title: "Sucesso",
         description: "Item adicionado ao carrossel"
@@ -60,7 +60,7 @@ export const useCarouselDatabase = () => {
   const updateItem = async (id: string, updates: Partial<CarouselItem>) => {
     try {
       const { data, error } = await supabase
-        .from('carousel_items' as any)
+        .from('carousel_items')
         .update(updates)
         .eq('id', id)
         .select()
@@ -69,7 +69,7 @@ export const useCarouselDatabase = () => {
       if (error) throw error;
 
       setItems(prev => prev.map(item => 
-        item.id === id ? { ...item, ...(data as any) } : item
+        item.id === id ? { ...item, ...data } : item
       ));
       
       toast({
@@ -91,7 +91,7 @@ export const useCarouselDatabase = () => {
   const deleteItem = async (id: string) => {
     try {
       const { error } = await supabase
-        .from('carousel_items' as any)
+        .from('carousel_items')
         .delete()
         .eq('id', id);
 

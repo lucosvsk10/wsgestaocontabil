@@ -7,6 +7,7 @@ export interface CarouselItem {
   whatsapp?: string;
   status: 'active' | 'inactive';
   created_at: string;
+  updated_at: string;
 }
 
 export interface StorageLogo {
