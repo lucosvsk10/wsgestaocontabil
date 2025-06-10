@@ -30,7 +30,7 @@ export const DocumentGrid = ({
 }: DocumentGridProps) => {
   const isMobile = useIsMobile();
   
-  // Responsive grid with better spacing and consistent card heights
+  // Responsive grid with better spacing
   const gridClasses = isMobile 
     ? "grid-cols-1 max-w-md mx-auto" 
     : window.innerWidth < 1024 
@@ -47,14 +47,14 @@ export const DocumentGrid = ({
   };
   
   return (
-    <div className={`grid ${gridClasses} gap-6 w-full p-4`}>
+    <div className={`grid ${gridClasses} gap-8 w-full p-4`}>
       {documents.map((doc, index) => (
         <motion.div
           key={doc.id}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: index * 0.1 }}
-          className="w-full h-full"
+          className="w-full"
         >
           <DocumentCard
             doc={doc}

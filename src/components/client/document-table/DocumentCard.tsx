@@ -47,7 +47,7 @@ export const DocumentCard = ({
       transition={{ duration: 0.3 }}
       className={cn(
         "bg-white/70 dark:bg-[#0b1320]/80 backdrop-blur-sm border border-gray-200/50 dark:border-[#1d2633]/80 rounded-xl overflow-hidden transition-all duration-300 flex flex-col shadow-sm hover:shadow-lg",
-        "w-full min-h-[380px] h-auto", 
+        "w-full min-h-[300px] max-h-[340px]", 
         isHovered ? "transform scale-[1.02] shadow-xl" : ""
       )}
       style={{
@@ -57,7 +57,7 @@ export const DocumentCard = ({
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Header with icon and category */}
-      <div className="p-5 pb-3 flex-shrink-0">
+      <div className="p-5 pb-3">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
             <div 
@@ -71,26 +71,24 @@ export const DocumentCard = ({
             </div>
           </div>
           {doc.viewed ? (
-            <Badge className="bg-green-50 text-green-700 border-green-200 dark:bg-green-600/20 dark:text-green-400 dark:border-green-600/30 text-xs flex-shrink-0">
+            <Badge className="bg-green-50 text-green-700 border-green-200 dark:bg-green-600/20 dark:text-green-400 dark:border-green-600/30 text-xs">
               <Eye className="w-3 h-3 mr-1" />
               Visualizado
             </Badge>
           ) : (
-            <Badge className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-600/20 dark:text-blue-400 dark:border-blue-600/30 text-xs flex-shrink-0">
+            <Badge className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-600/20 dark:text-blue-400 dark:border-blue-600/30 text-xs">
               Novo
             </Badge>
           )}
         </div>
         
-        {/* Document name - expandable area */}
-        <div className="min-h-[60px] flex items-start">
-          <h3 className="text-gray-900 dark:text-[#efc349] font-medium text-sm leading-relaxed break-words">
-            {doc.name}
-          </h3>
-        </div>
+        {/* Document name */}
+        <h3 className="text-gray-900 dark:text-[#efc349] font-medium text-sm mb-4 line-clamp-2 leading-relaxed">
+          {doc.name}
+        </h3>
       </div>
       
-      {/* Metadata section - flexible area */}
+      {/* Metadata section */}
       <div className="px-5 pb-3 space-y-3 text-xs flex-grow">
         <div className="flex items-center justify-between">
           <span className="flex items-center text-gray-600 dark:text-gray-400">
@@ -102,7 +100,7 @@ export const DocumentCard = ({
         <div className="flex items-center justify-between">
           <span className="text-gray-600 dark:text-gray-400">Validade:</span>
           <span className={cn(
-            "font-medium text-right",
+            "font-medium",
             isExpired 
               ? "text-red-600 dark:text-red-400" 
               : expirationText 
@@ -135,8 +133,8 @@ export const DocumentCard = ({
         </div>
       </div>
       
-      {/* Download button - fixed at bottom */}
-      <div className="p-5 pt-3 flex-shrink-0">
+      {/* Download button */}
+      <div className="p-5 pt-3">
         <Button
           onClick={() => handleDownload(doc)}
           disabled={loadingDocumentIds.has(doc.id)}
