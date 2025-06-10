@@ -17,7 +17,7 @@ export const useCarouselDatabase = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setItems((data || []) as CarouselItem[]);
+      setItems((data || []) as unknown as CarouselItem[]);
     } catch (error) {
       console.error('Erro ao buscar itens:', error);
       toast({
@@ -40,7 +40,7 @@ export const useCarouselDatabase = () => {
 
       if (error) throw error;
 
-      setItems(prev => [data as CarouselItem, ...prev]);
+      setItems(prev => [data as unknown as CarouselItem, ...prev]);
       toast({
         title: "Sucesso",
         description: "Item adicionado ao carrossel"
@@ -69,7 +69,7 @@ export const useCarouselDatabase = () => {
       if (error) throw error;
 
       setItems(prev => prev.map(item => 
-        item.id === id ? { ...item, ...data as CarouselItem } : item
+        item.id === id ? { ...item, ...data as unknown as CarouselItem } : item
       ));
       
       toast({

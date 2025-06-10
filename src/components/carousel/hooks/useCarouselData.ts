@@ -32,7 +32,7 @@ export const useCarouselData = () => {
         }
 
         // Converter para o formato esperado pelo carrossel
-        const formattedClients = (data || []).map((item: any, index: number) => ({
+        const formattedClients = ((data || []) as unknown as any[]).map((item: any, index: number) => ({
           id: item.id,
           name: item.name,
           logo_url: item.logo_url,
