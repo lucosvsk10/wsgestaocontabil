@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useStorageStats } from '@/hooks/useStorageStats';
 
 interface DashboardStats {
   totalUsers: number;
@@ -14,6 +15,7 @@ interface DashboardStats {
 }
 
 export const useDashboardData = () => {
+  const { storageStats } = useStorageStats();
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     totalDocuments: 0,
@@ -42,6 +44,18 @@ export const useDashboardData = () => {
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  // Atualizar estatísticas de armazenamento quando os dados reais estiverem disponíveis
+  useEffect(() => {
+    if (storageStats) {
+      setStats(prev => ({
+        ...prev,
+        storageStats: {
+          totalStorageMB: Number((storageStats.totalStorageMB || 0).toFixed(2))
+        }
+      }));
+    }
+  }, [storageStats]);
 
   const fetchDashboardData = async () => {
     try {
@@ -98,16 +112,16 @@ export const useDashboardData = () => {
         .limit(1)
         .single();
 
-      setStats({
+      setStats(prev => ({
+        ...prev,
         totalUsers: usersCount || 0,
         totalDocuments: documentsCount || 0,
         totalAnnouncements: announcementsCount || 0,
         totalFiscalEvents: fiscalEventsCount || 0,
         recentDocuments: processedRecentDocs,
         lastLogin: lastUser ? formatRecentDate(lastUser.created_at) : null,
-        pollCount: pollsCount || 0,
-        storageStats: { totalStorageMB: Math.random() * 50 + 10 } // Simulado
-      });
+        pollCount: pollsCount || 0
+      }));
     } catch (error) {
       console.error('Erro ao buscar dados do dashboard:', error);
     } finally {

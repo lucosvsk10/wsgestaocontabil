@@ -17,3 +17,16 @@ export type DatabaseNotification = {
   type: string | null;
 };
 
+// Tipos específicos para pop-ups de notificações
+export interface NotificationPopupData {
+  id: string;
+  type: 'novo_documento' | 'agenda_fiscal';
+  title: string;
+  message: string;
+  actionUrl: string;
+  actionText: string;
+  userId?: string; // Para documentos específicos
+  documentId?: string;
+  fiscalEventId?: string;
+  createdAt: string;
+}
