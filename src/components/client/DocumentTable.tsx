@@ -35,8 +35,13 @@ export const DocumentTable = ({
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("date-desc");
   
-  // Filter the documents based on search and filters
+  // Filter the documents based on search and filters - only show active documents for clients
   const filteredDocuments = documents.filter(doc => {
+    // Clientes só veem documentos ativos
+    if (doc.status && doc.status !== 'active') {
+      return false;
+    }
+    
     // Apply search query
     const matchesSearch = doc.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           (doc.filename || doc.original_filename || "").toLowerCase().includes(searchQuery.toLowerCase());

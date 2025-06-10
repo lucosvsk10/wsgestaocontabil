@@ -259,6 +259,7 @@ export type Database = {
           observations: string | null
           original_filename: string | null
           size: number | null
+          status: string | null
           storage_key: string | null
           subcategory: string | null
           type: string | null
@@ -277,6 +278,7 @@ export type Database = {
           observations?: string | null
           original_filename?: string | null
           size?: number | null
+          status?: string | null
           storage_key?: string | null
           subcategory?: string | null
           type?: string | null
@@ -295,6 +297,7 @@ export type Database = {
           observations?: string | null
           original_filename?: string | null
           size?: number | null
+          status?: string | null
           storage_key?: string | null
           subcategory?: string | null
           type?: string | null
@@ -820,6 +823,10 @@ export type Database = {
       is_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      mark_expired_documents: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       set_document_expiration: {
         Args: Record<PropertyKey, never>

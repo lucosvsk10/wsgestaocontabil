@@ -61,6 +61,48 @@ export const SimulationsView: React.FC = () => {
 
   useEffect(() => {
     fetchAllSimulations();
+    
+    // Setup realtime subscription for all simulation tables
+    const channels = [
+      supabase
+        .channel('tax-simulations-changes')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'tax_simulations'
+        }, () => {
+          console.log('Tax simulations changed, refreshing...');
+          fetchAllSimulations();
+        }),
+      
+      supabase
+        .channel('inss-simulations-changes')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'inss_simulations'
+        }, () => {
+          console.log('INSS simulations changed, refreshing...');
+          fetchAllSimulations();
+        }),
+      
+      supabase
+        .channel('prolabore-simulations-changes')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'prolabore_simulations'
+        }, () => {
+          console.log('Prolabore simulations changed, refreshing...');
+          fetchAllSimulations();
+        })
+    ];
+
+    channels.forEach(channel => channel.subscribe());
+
+    return () => {
+      channels.forEach(channel => supabase.removeChannel(channel));
+    };
   }, []);
 
   useEffect(() => {
@@ -88,7 +130,8 @@ export const SimulationsView: React.FC = () => {
       console.log('Usuário atual:', user?.id);
       console.log('Dados do usuário:', userData);
       
-      // Buscar simulações de IRPF
+      // Buscar simulações de IRPF com logging detalhado
+      console.log('Executando query para tax_simulations...');
       const { data: taxData, error: taxError } = await supabase
         .from('tax_simulations')
         .select('*')
@@ -96,9 +139,10 @@ export const SimulationsView: React.FC = () => {
       
       if (taxError) {
         console.error('Erro ao buscar simulações de IRPF:', taxError);
+        console.error('Detalhes do erro:', taxError.message, taxError.details);
       } else {
         console.log('Simulações de IRPF encontradas:', taxData?.length || 0);
-        console.log('Simulações de IRPF detalhadas:', taxData);
+        console.log('Primeiras 3 simulações IRPF:', taxData?.slice(0, 3));
       }
 
       // Buscar simulações de INSS
@@ -148,6 +192,16 @@ export const SimulationsView: React.FC = () => {
 
       setSimulations(allSimulations);
       setFilteredSimulations(allSimulations);
+      
+      // Se não há simulações, mostrar mensagem informativa
+      if (allSimulations.length === 0) {
+        console.log('Nenhuma simulação encontrada. Verificando políticas RLS...');
+        toast({
+          title: "Informação",
+          description: "Nenhuma simulação encontrada no sistema. Verifique se há simulações criadas pelos usuários.",
+          duration: 5000
+        });
+      }
     } catch (error) {
       console.error('Erro ao carregar simulações:', error);
       toast({
@@ -456,6 +510,13 @@ export const SimulationsView: React.FC = () => {
                 <p className="text-gray-600 dark:text-white/70 text-center font-extralight">
                   {searchTerm ? 'Nenhuma simulação corresponde aos termos de busca.' : 'Ainda não há simulações registradas no sistema.'}
                 </p>
+                {simulations.length === 0 && (
+                  <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <p className="text-sm text-blue-700 dark:text-blue-300 font-extralight">
+                      <strong>Dica:</strong> As simulações aparecem aqui quando os usuários utilizam os formulários de simulação de IRPF, INSS ou Pró-labore.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}

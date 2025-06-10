@@ -1,59 +1,62 @@
 
-import { format } from "date-fns";
-import { pt } from "date-fns/locale";
-import { Document } from "@/types/admin";
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
-// Função para formatar a data
-export const formatDate = (dateStr: string) => {
-  if (!dateStr) return 'Data desconhecida';
-  const date = new Date(dateStr);
-  return format(date, "dd/MM/yyyy 'às' HH:mm", { locale: pt });
+export const formatDate = (dateStr: string): string => {
+  if (!dateStr) return 'Data inválida';
+  try {
+    return format(new Date(dateStr), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+  } catch (error) {
+    console.error('Erro ao formatar data:', error);
+    return 'Data inválida';
+  }
 };
 
-// Função para formatar o tamanho do arquivo
-export const formatFileSize = (bytes?: number) => {
-  if (!bytes) return 'Tamanho desconhecido';
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-  if (bytes === 0) return '0 Byte';
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return Math.round(bytes / Math.pow(1024, i)) + ' ' + sizes[i];
-};
-
-// Verificar se o documento está expirado
-export const isDocumentExpired = (expiresAt: string | null) => {
+export const isDocumentExpired = (expiresAt: string | null): boolean => {
   if (!expiresAt) return false;
-  const expirationDate = new Date(expiresAt);
-  return expirationDate < new Date();
+  try {
+    return new Date(expiresAt) < new Date();
+  } catch (error) {
+    console.error('Erro ao verificar expiração:', error);
+    return false;
+  }
 };
 
-// Calcular dias restantes até a expiração
-export const daysUntilExpiration = (expiresAt: string | null) => {
+export const daysUntilExpiration = (expiresAt: string | null): string | null => {
   if (!expiresAt) return null;
-  const expirationDate = new Date(expiresAt);
-  const today = new Date();
-  const diffTime = expirationDate.getTime() - today.getTime();
-  if (diffTime <= 0) return 'Expirado';
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return `${diffDays} dias`;
+  try {
+    const expirationDate = new Date(expiresAt);
+    const today = new Date();
+    const diffTime = expirationDate.getTime() - today.getTime();
+    
+    if (diffTime <= 0) return 'Expirado';
+    
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 1) return 'Expira hoje';
+    if (diffDays <= 7) return `Expira em ${diffDays} dias`;
+    if (diffDays <= 30) return `Expira em ${diffDays} dias`;
+    
+    return `Expira em ${diffDays} dias`;
+  } catch (error) {
+    console.error('Erro ao calcular dias até expiração:', error);
+    return 'Erro no cálculo';
+  }
 };
 
-// Agrupar documentos por categoria
-export const getDocumentsByCategory = (allDocuments: Document[], categories: string[]) => {
-  const groupedDocuments: Record<string, Document[]> = {};
-  
-  categories.forEach(category => {
-    // Inicializa a categoria com array vazio
-    groupedDocuments[category] = [];
-    
-    // Filtra documentos para esta categoria
-    allDocuments.forEach(doc => {
-      const docCategory = doc.category.split('/')[0]; // Extrair categoria principal antes da '/'
-      
-      if (docCategory === category) {
-        groupedDocuments[category].push(doc);
-      }
-    });
-  });
-  
-  return groupedDocuments;
+export const getDocumentStatusColor = (status: string | null, expiresAt: string | null): string => {
+  if (status === 'expired' || isDocumentExpired(expiresAt)) {
+    return 'text-red-600 dark:text-red-400';
+  }
+  return 'text-green-600 dark:text-green-400';
+};
+
+export const getDocumentStatusText = (status: string | null, expiresAt: string | null): string => {
+  if (status === 'expired') {
+    return 'Expirado (Sistema)';
+  }
+  if (isDocumentExpired(expiresAt)) {
+    return 'Expirado';
+  }
+  return 'Ativo';
 };
