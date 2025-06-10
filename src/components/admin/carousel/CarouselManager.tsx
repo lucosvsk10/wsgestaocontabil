@@ -1,61 +1,66 @@
 
 import { useState } from "react";
 import CarouselNavbar from "./CarouselNavbar";
-import CarouselHeader from "./components/CarouselHeader";
-import ClientCard from "./components/ClientCard";
-import EditClientDialog from "./components/EditClientDialog";
-import { useCarouselClients, ClientItem } from "./hooks/useCarouselClients";
+import StorageManager from "./components/StorageManager";
+import CarouselItemForm from "./components/CarouselItemForm";
+import CarouselItemsList from "./components/CarouselItemsList";
+import EditCarouselItemDialog from "./components/EditCarouselItemDialog";
+import { useCarouselDatabase } from "./hooks/useCarouselDatabase";
+import { CarouselItem } from "./types";
 
 const CarouselManager = () => {
-  const {
-    clients,
-    addClient,
-    updateClient,
-    deleteClient,
-    toggleClientStatus,
-    handleImageUpload,
-    handleImageRemoval
-  } = useCarouselClients();
+  const { items, loading, addItem, updateItem, deleteItem } = useCarouselDatabase();
+  const [editingItem, setEditingItem] = useState<CarouselItem | null>(null);
 
-  const [editingClient, setEditingClient] = useState<ClientItem | null>(null);
-
-  const openEditDialog = (client: ClientItem) => {
-    setEditingClient(client);
+  const handleEdit = (item: CarouselItem) => {
+    setEditingItem(item);
   };
 
-  const closeEditDialog = () => {
-    setEditingClient(null);
+  const handleCloseEdit = () => {
+    setEditingItem(null);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm('Tem certeza que deseja excluir este item?')) {
+      await deleteItem(id);
+    }
   };
 
   return (
     <div className="min-h-screen">
       <CarouselNavbar title="Gerenciar Carousel" />
       
-      <div className="pt-20 p-6 space-y-6">
-        <CarouselHeader 
-          clientsCount={clients.length}
-          onAddClient={addClient}
-        />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {clients.map((client) => (
-            <ClientCard
-              key={client.id}
-              client={client}
-              onEdit={openEditDialog}
-              onDelete={deleteClient}
-              onToggleStatus={toggleClientStatus}
-              onImageUpload={handleImageUpload}
-              onImageRemoval={handleImageRemoval}
-            />
-          ))}
+      <div className="pt-20 p-6 space-y-8">
+        {/* Header */}
+        <div className="text-center">
+          <h1 className="text-4xl font-extralight text-[#020817] dark:text-[#efc349] mb-4">
+            Gerenciar Carousel
+          </h1>
+          <p className="text-lg text-gray-600 dark:text-white/70 font-extralight max-w-3xl mx-auto">
+            Gerencie as logos no storage, cadastre novos blocos e controle a exibição do carrossel na página inicial.
+          </p>
         </div>
 
-        <EditClientDialog
-          client={editingClient}
-          isOpen={!!editingClient}
-          onClose={closeEditDialog}
-          onUpdateClient={updateClient}
+        {/* Gerenciar Storage */}
+        <StorageManager />
+
+        {/* Formulário de Cadastro */}
+        <CarouselItemForm onSubmit={addItem} />
+
+        {/* Lista de Itens */}
+        <CarouselItemsList
+          items={items}
+          loading={loading}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
+
+        {/* Dialog de Edição */}
+        <EditCarouselItemDialog
+          item={editingItem}
+          isOpen={!!editingItem}
+          onClose={handleCloseEdit}
+          onUpdate={updateItem}
         />
       </div>
     </div>

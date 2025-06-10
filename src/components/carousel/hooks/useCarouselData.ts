@@ -1,76 +1,77 @@
 
 import { useState, useEffect } from "react";
-import { ClientItem } from "../types";
+import { supabase } from "@/integrations/supabase/client";
+
+export interface ClientItem {
+  id: string;
+  name: string;
+  logo_url: string;
+  instagram_url?: string;
+  whatsapp_url?: string;
+  order_index: number;
+  active: boolean;
+}
 
 export const useCarouselData = () => {
   const [clients, setClients] = useState<ClientItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Carregar clientes do localStorage
-    const loadClients = () => {
-      const stored = localStorage.getItem('carousel_clients');
-      if (stored) {
-        const allClients = JSON.parse(stored);
-        const activeClients = allClients.filter((client: ClientItem) => client.active);
-        setClients(activeClients);
-      } else {
-        // Dados padrão se não houver no localStorage
-        setClients([{
-          id: "1",
-          name: "Empresa Exemplo 1",
-          logo_url: "/logo-padrao.png",
-          instagram_url: "https://instagram.com/empresa1",
-          whatsapp_url: "https://wa.me/5511999999999",
-          order_index: 0,
+    const loadClients = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('carousel_items')
+          .select('*')
+          .eq('status', 'active')
+          .order('created_at', { ascending: true });
+
+        if (error) {
+          console.error('Erro ao carregar dados do carrossel:', error);
+          setClients([]);
+          return;
+        }
+
+        // Converter para o formato esperado pelo carrossel
+        const formattedClients = (data || []).map((item, index) => ({
+          id: item.id,
+          name: item.name,
+          logo_url: item.logo_url,
+          instagram_url: item.instagram,
+          whatsapp_url: item.whatsapp,
+          order_index: index,
           active: true
-        }, {
-          id: "2",
-          name: "Empresa Exemplo 2",
-          logo_url: "/logo-padrao.png",
-          instagram_url: "https://instagram.com/empresa2",
-          order_index: 1,
-          active: true
-        }, {
-          id: "3",
-          name: "Empresa Exemplo 3",
-          logo_url: "/logo-padrao.png",
-          whatsapp_url: "https://wa.me/5511888888888",
-          order_index: 2,
-          active: true
-        }, {
-          id: "4",
-          name: "Empresa Exemplo 4",
-          logo_url: "/logo-padrao.png",
-          instagram_url: "https://instagram.com/empresa4",
-          whatsapp_url: "https://wa.me/5511777777777",
-          order_index: 3,
-          active: true
-        }, {
-          id: "5",
-          name: "Empresa Exemplo 5",
-          logo_url: "/logo-padrao.png",
-          order_index: 4,
-          active: true
-        }, {
-          id: "6",
-          name: "Empresa Exemplo 6",
-          logo_url: "/logo-padrao.png",
-          instagram_url: "https://instagram.com/empresa6",
-          order_index: 5,
-          active: true
-        }]);
+        }));
+
+        setClients(formattedClients);
+      } catch (error) {
+        console.error('Erro ao carregar dados do carrossel:', error);
+        setClients([]);
+      } finally {
+        setLoading(false);
       }
     };
 
     loadClients();
 
-    // Listener para mudanças no localStorage
-    const handleStorageChange = () => {
-      loadClients();
+    // Listener para mudanças em tempo real
+    const channel = supabase
+      .channel('carousel_changes')
+      .on('postgres_changes', 
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'carousel_items' 
+        }, 
+        () => {
+          loadClients();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
     };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  return { clients };
+  return { clients, loading };
 };
