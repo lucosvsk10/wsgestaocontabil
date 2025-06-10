@@ -198,8 +198,6 @@ export const AdminDashboard = ({
       </Card>
 
       {/* Floating Action Button */}
-      <Button onClick={() => navigate("/admin/users")} className="fixed bottom-8 right-8 h-14 w-14 rounded-full bg-[#efc349] hover:bg-[#d4a73a] text-[#020817] shadow-lg z-50" size="icon">
-        <Plus className="h-6 w-6" />
-      </Button>
+      
     </div>;
 };
