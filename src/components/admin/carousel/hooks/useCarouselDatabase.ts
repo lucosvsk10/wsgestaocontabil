@@ -12,12 +12,12 @@ export const useCarouselDatabase = () => {
   const fetchItems = async () => {
     try {
       const { data, error } = await supabase
-        .from('carousel_items')
+        .from('carousel_items' as any)
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setItems(data || []);
+      setItems((data || []) as CarouselItem[]);
     } catch (error) {
       console.error('Erro ao buscar itens:', error);
       toast({
@@ -33,14 +33,14 @@ export const useCarouselDatabase = () => {
   const addItem = async (itemData: Omit<CarouselItem, 'id' | 'created_at' | 'updated_at'>) => {
     try {
       const { data, error } = await supabase
-        .from('carousel_items')
+        .from('carousel_items' as any)
         .insert([itemData])
         .select()
         .single();
 
       if (error) throw error;
 
-      setItems(prev => [data, ...prev]);
+      setItems(prev => [data as CarouselItem, ...prev]);
       toast({
         title: "Sucesso",
         description: "Item adicionado ao carrossel"
@@ -60,7 +60,7 @@ export const useCarouselDatabase = () => {
   const updateItem = async (id: string, updates: Partial<CarouselItem>) => {
     try {
       const { data, error } = await supabase
-        .from('carousel_items')
+        .from('carousel_items' as any)
         .update(updates)
         .eq('id', id)
         .select()
@@ -69,7 +69,7 @@ export const useCarouselDatabase = () => {
       if (error) throw error;
 
       setItems(prev => prev.map(item => 
-        item.id === id ? { ...item, ...data } : item
+        item.id === id ? { ...item, ...data as CarouselItem } : item
       ));
       
       toast({
@@ -91,7 +91,7 @@ export const useCarouselDatabase = () => {
   const deleteItem = async (id: string) => {
     try {
       const { error } = await supabase
-        .from('carousel_items')
+        .from('carousel_items' as any)
         .delete()
         .eq('id', id);
 
