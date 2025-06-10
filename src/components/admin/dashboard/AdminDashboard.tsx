@@ -1,17 +1,14 @@
-
 import { Users, FileText, PieChart, Clock, HardDrive, Bell, Calendar, Plus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { useDashboardData } from "./useDashboardData";
-
 interface AdminDashboardProps {
   users: any[];
   supabaseUsers: any[];
   documents: any[];
 }
-
 export const AdminDashboard = ({
   users,
   supabaseUsers,
@@ -22,14 +19,12 @@ export const AdminDashboard = ({
     const userInfo = users.find(u => u.id === authUser.id);
     return !['fiscal', 'contabil', 'geral'].includes(userInfo?.role || '');
   });
-
   const {
     stats,
     loading,
     formatRecentDate,
     isLoading
   } = useDashboardData();
-
   const statsData = [{
     title: "Clientes Ativos",
     value: clientUsers.length,
@@ -55,13 +50,11 @@ export const AdminDashboard = ({
     link: "/admin/storage",
     color: "orange"
   }];
-
   if (isLoading) {
     return <div className="flex justify-center items-center h-64">
         <LoadingSpinner />
       </div>;
   }
-
   return <div className="space-y-8 p-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -161,7 +154,7 @@ export const AdminDashboard = ({
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600 dark:text-[#b3b3b3]">Versão do Sistema</span>
-                <span className="text-sm font-medium text-[#020817] dark:text-[#f4f4f4]">1.0.0</span>
+                <span className="text-sm font-medium text-[#020817] dark:text-[#f4f4f4]">2.0.0</span>
               </div>
               {stats.storageStats && <div>
                   <div className="flex justify-between items-center mb-1">
