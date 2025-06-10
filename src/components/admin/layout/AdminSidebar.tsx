@@ -137,107 +137,98 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
   ];
 
   return (
-    <>
-      {/* Mobile overlay */}
+    <aside 
+      data-sidebar="true" 
+      className={`
+        ${isMobile ? 'fixed' : 'relative'} 
+        inset-y-0 left-0 z-50 
+        w-72 flex flex-col 
+        transition-transform duration-300 ease-in-out 
+        bg-white dark:bg-[#020817] 
+        ${isMobile 
+          ? open 
+            ? 'translate-x-0 shadow-2xl' 
+            : '-translate-x-full'
+          : open 
+            ? 'translate-x-0' 
+            : '-translate-x-0 md:translate-x-0 md:w-20'
+        }
+      `}
+    >
+      {/* Mobile close button */}
       {isMobile && open && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40"
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={onClose}
-        />
+          className="absolute top-4 right-4 z-10 text-gray-500 dark:text-white/70 hover:text-[#efc349]"
+        >
+          <X size={20} />
+        </Button>
       )}
-      
-      <aside 
-        data-sidebar="true" 
-        className={`
-          ${isMobile ? 'fixed' : 'relative'} 
-          inset-y-0 left-0 z-50 
-          w-72 flex flex-col 
-          transition-transform duration-300 ease-in-out 
-          bg-white dark:bg-[#020817] 
-          ${isMobile 
-            ? open 
-              ? 'translate-x-0 shadow-2xl' 
-              : '-translate-x-full'
-            : open 
-              ? 'translate-x-0' 
-              : '-translate-x-0 md:translate-x-0 md:w-20'
-          }
-        `}
-      >
-        {/* Mobile close button */}
-        {isMobile && open && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="absolute top-4 right-4 z-10 text-gray-500 dark:text-white/70 hover:text-[#efc349]"
-          >
-            <X size={20} />
-          </Button>
-        )}
 
-        {/* Logo area */}
-        <div className="h-20 flex items-center justify-center px-6 border-b border-gray-100 dark:border-[#020817]">
-          <Link to="/" className="flex items-center justify-center transition-all duration-300 hover:scale-105">
+      {/* Logo area */}
+      <div className="h-20 flex items-center justify-center px-6 border-b border-gray-100 dark:border-[#020817]">
+        <Link to="/" className="flex items-center justify-center transition-all duration-300 hover:scale-105">
+          {(open || isMobile) ? (
+            <img 
+              src={theme === 'light' 
+                ? "/lovable-uploads/f7fdf0cf-f16c-4df7-a92c-964aadea9539.png" 
+                : "/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png"
+              } 
+              alt="WS Gestão Contábil" 
+              className="h-8" 
+            />
+          ) : (
+            <img 
+              src={theme === 'light' 
+                ? "/lovable-uploads/83322e23-9ed8-4622-8631-8022a1d10c19.png" 
+                : "/lovable-uploads/ed055b1a-ba3e-4890-b78d-1d83e85b592b.png"
+              } 
+              alt="WS Gestão Contábil" 
+              className="h-10" 
+            />
+          )}
+        </Link>
+      </div>
+      
+      {/* Navigation */}
+      <nav className="flex-1 overflow-y-auto py-8 px-3 space-y-2">
+        {sidebarItems.map(item => (
+          <div key={item.label}>
             {(open || isMobile) ? (
-              <img 
-                src={theme === 'light' 
-                  ? "/lovable-uploads/f7fdf0cf-f16c-4df7-a92c-964aadea9539.png" 
-                  : "/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png"
-                } 
-                alt="WS Gestão Contábil" 
-                className="h-8" 
+              <SidebarItem 
+                icon={item.icon} 
+                label={item.label} 
+                active={item.active} 
+                to={item.to} 
+                onClick={isMobile ? onClose : undefined}
               />
             ) : (
-              <img 
-                src={theme === 'light' 
-                  ? "/lovable-uploads/83322e23-9ed8-4622-8631-8022a1d10c19.png" 
-                  : "/lovable-uploads/ed055b1a-ba3e-4890-b78d-1d83e85b592b.png"
-                } 
-                alt="WS Gestão Contábil" 
-                className="h-10" 
-              />
-            )}
-          </Link>
-        </div>
-        
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-8 px-3 space-y-2">
-          {sidebarItems.map(item => (
-            <div key={item.label}>
-              {(open || isMobile) ? (
-                <SidebarItem 
-                  icon={item.icon} 
-                  label={item.label} 
-                  active={item.active} 
+              <div 
+                className={`flex justify-center p-4 rounded-lg transition-all duration-300 hover:scale-110 ${
+                  item.active 
+                    ? "bg-[#efc349]/10 border-l-4 border-[#efc349]" 
+                    : "hover:bg-gray-100 dark:hover:bg-[#efc349]/10"
+                }`} 
+                title={item.label}
+              >
+                <Link 
                   to={item.to} 
-                />
-              ) : (
-                <div 
-                  className={`flex justify-center p-4 rounded-lg transition-all duration-300 hover:scale-110 ${
+                  className={`transition-colors duration-300 ${
                     item.active 
-                      ? "bg-[#efc349]/10 border-l-4 border-[#efc349]" 
-                      : "hover:bg-gray-100 dark:hover:bg-[#efc349]/10"
-                  }`} 
-                  title={item.label}
+                      ? "text-[#efc349]" 
+                      : "text-gray-500 dark:text-white/70 hover:text-[#efc349]"
+                  }`}
                 >
-                  <Link 
-                    to={item.to} 
-                    className={`transition-colors duration-300 ${
-                      item.active 
-                        ? "text-[#efc349]" 
-                        : "text-gray-500 dark:text-white/70 hover:text-[#efc349]"
-                    }`}
-                  >
-                    {item.icon}
-                  </Link>
-                </div>
-              )}
-            </div>
-          ))}
-        </nav>
-      </aside>
-    </>
+                  {item.icon}
+                </Link>
+              </div>
+            )}
+          </div>
+        ))}
+      </nav>
+    </aside>
   );
 };
 
