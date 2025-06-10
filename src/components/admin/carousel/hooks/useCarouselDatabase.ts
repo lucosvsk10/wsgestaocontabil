@@ -17,7 +17,7 @@ export const useCarouselDatabase = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setItems(data || []);
+      setItems((data as any[]) || []);
     } catch (error) {
       console.error('Erro ao buscar itens:', error);
       toast({
@@ -40,7 +40,7 @@ export const useCarouselDatabase = () => {
 
       if (error) throw error;
 
-      setItems(prev => [data, ...prev]);
+      setItems(prev => [data as any, ...prev]);
       toast({
         title: "Sucesso",
         description: "Item adicionado ao carrossel"
@@ -69,7 +69,7 @@ export const useCarouselDatabase = () => {
       if (error) throw error;
 
       setItems(prev => prev.map(item => 
-        item.id === id ? { ...item, ...data } : item
+        item.id === id ? { ...item, ...(data as any) } : item
       ));
       
       toast({
