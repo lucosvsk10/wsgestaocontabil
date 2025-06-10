@@ -47,7 +47,7 @@ export const DocumentCard = ({
       transition={{ duration: 0.3 }}
       className={cn(
         "bg-white/70 dark:bg-[#0b1320]/80 backdrop-blur-sm border border-gray-200/50 dark:border-[#1d2633]/80 rounded-xl overflow-hidden transition-all duration-300 flex flex-col shadow-sm hover:shadow-lg",
-        "w-full min-h-[320px] min-w-[280px]", 
+        "w-full min-h-[320px] min-w-[300px]", 
         isHovered ? "transform scale-[1.02] shadow-xl" : ""
       )}
       style={{
@@ -70,12 +70,7 @@ export const DocumentCard = ({
               {getCategoryName()}
             </div>
           </div>
-          {doc.viewed ? (
-            <Badge className="bg-green-50 text-green-700 border-green-200 dark:bg-green-600/20 dark:text-green-400 dark:border-green-600/30 text-xs">
-              <Eye className="w-3 h-3 mr-1" />
-              Visualizado
-            </Badge>
-          ) : (
+          {!doc.viewed && (
             <Badge className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-600/20 dark:text-blue-400 dark:border-blue-600/30 text-xs">
               Novo
             </Badge>
@@ -83,9 +78,19 @@ export const DocumentCard = ({
         </div>
         
         {/* Document name with proper spacing */}
-        <h3 className="text-gray-900 dark:text-[#efc349] font-medium text-base mb-4 leading-relaxed min-h-[3rem] break-words">
+        <h3 className="text-gray-900 dark:text-[#efc349] font-medium text-base mb-2 leading-relaxed min-h-[3rem] break-words">
           {doc.name}
         </h3>
+        
+        {/* Status "Visualizado" below document name */}
+        {doc.viewed && (
+          <div className="mb-4">
+            <Badge className="bg-green-50 text-green-700 border-green-200 dark:bg-green-600/20 dark:text-green-400 dark:border-green-600/30 text-xs">
+              <Eye className="w-3 h-3 mr-1" />
+              Visualizado
+            </Badge>
+          </div>
+        )}
       </div>
       
       {/* Metadata section with more space */}
@@ -121,7 +126,7 @@ export const DocumentCard = ({
             ) : doc.viewed ? (
               <>
                 <CheckCircle className="w-4 h-4 mr-1 text-green-600 dark:text-green-400" />
-                <span className="text-green-600 dark:text-green-400 font-medium">Visualizado</span>
+                <span className="text-green-600 dark:text-green-400 font-medium">Ativo</span>
               </>
             ) : (
               <>
