@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { LogOut, Menu, X, User } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { ModeToggle } from "@/components/ModeToggle";
+import { ThemeSwitcher } from "@/components/client/ThemeSwitcher";
 import { NotificationsDisplay } from "@/components/client/NotificationsDisplay";
 
 export const ClientNavbar = () => {
@@ -74,7 +74,7 @@ export const ClientNavbar = () => {
             </div>
 
             {/* Theme Toggle */}
-            <ModeToggle />
+            <ThemeSwitcher />
 
             {/* Logout Button */}
             <Button

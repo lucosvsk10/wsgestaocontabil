@@ -29,4 +29,5 @@ export interface Document {
   size?: number;
   viewed_at?: string | null;
   view_status?: string;
+  status?: string; // Adicionado para controlar estados (active, expired, etc.)
 }

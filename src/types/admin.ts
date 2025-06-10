@@ -41,6 +41,7 @@ export type Document = {
   size?: number;
   view_status?: DocumentViewStatus;
   viewed?: boolean;
+  status?: string; // Adicionado para controlar estados (active, expired, etc.)
 };
 
 export interface DocumentCategory {
