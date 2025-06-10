@@ -6,35 +6,6 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WS Gestão Contábil | Assessoria & Consultoria</title>
-    
-    <!-- Script para aplicar tema escuro imediatamente e evitar flash -->
-    <script>
-      (function() {
-        try {
-          // Forçar modo escuro como padrão na primeira visita
-          const savedTheme = localStorage.getItem('vite-ui-theme');
-          const theme = savedTheme || 'dark';
-          
-          // Aplicar imediatamente na tag html
-          document.documentElement.classList.remove('light', 'dark');
-          if (theme === 'system') {
-            const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            document.documentElement.classList.add(systemTheme);
-          } else {
-            document.documentElement.classList.add(theme);
-          }
-          
-          // Salvar tema escuro como padrão se não existir
-          if (!savedTheme) {
-            localStorage.setItem('vite-ui-theme', 'dark');
-          }
-        } catch (e) {
-          // Fallback: aplicar modo escuro
-          document.documentElement.classList.add('dark');
-        }
-      })();
-    </script>
-    
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
