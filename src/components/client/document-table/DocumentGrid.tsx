@@ -30,14 +30,14 @@ export const DocumentGrid = ({
 }: DocumentGridProps) => {
   const isMobile = useIsMobile();
   
-  // Responsive grid with better spacing
+  // Responsive grid with better spacing and wider cards
   const gridClasses = isMobile 
-    ? "grid-cols-1 max-w-md mx-auto" 
+    ? "grid-cols-1 max-w-lg mx-auto" 
     : window.innerWidth < 1024 
-      ? "grid-cols-2 max-w-4xl mx-auto" 
+      ? "grid-cols-2 max-w-5xl mx-auto" 
       : window.innerWidth < 1280 
-        ? "grid-cols-3 max-w-6xl mx-auto" 
-        : "grid-cols-4 max-w-7xl mx-auto";
+        ? "grid-cols-3 max-w-7xl mx-auto" 
+        : "grid-cols-4 max-w-full mx-auto";
 
   // Function to get category color for a document
   const getCategoryColor = (doc: Document) => {
@@ -47,7 +47,7 @@ export const DocumentGrid = ({
   };
   
   return (
-    <div className={`grid ${gridClasses} gap-8 w-full p-4`}>
+    <div className={`grid ${gridClasses} gap-6 w-full p-4`}>
       {documents.map((doc, index) => (
         <motion.div
           key={doc.id}

@@ -47,7 +47,7 @@ export const DocumentCard = ({
       transition={{ duration: 0.3 }}
       className={cn(
         "bg-white/70 dark:bg-[#0b1320]/80 backdrop-blur-sm border border-gray-200/50 dark:border-[#1d2633]/80 rounded-xl overflow-hidden transition-all duration-300 flex flex-col shadow-sm hover:shadow-lg",
-        "w-full min-h-[300px] max-h-[340px]", 
+        "w-full min-h-[320px] min-w-[280px]", 
         isHovered ? "transform scale-[1.02] shadow-xl" : ""
       )}
       style={{
@@ -57,14 +57,14 @@ export const DocumentCard = ({
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Header with icon and category */}
-      <div className="p-5 pb-3">
+      <div className="p-6 pb-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
             <div 
-              className="w-10 h-10 rounded-lg flex items-center justify-center mr-3" 
+              className="w-12 h-12 rounded-lg flex items-center justify-center mr-3" 
               style={{ backgroundColor: `${categoryColor}20` }}
             >
-              <FileText className="w-5 h-5" style={{ color: categoryColor }} />
+              <FileText className="w-6 h-6" style={{ color: categoryColor }} />
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">
               {getCategoryName()}
@@ -82,17 +82,17 @@ export const DocumentCard = ({
           )}
         </div>
         
-        {/* Document name */}
-        <h3 className="text-gray-900 dark:text-[#efc349] font-medium text-sm mb-4 line-clamp-2 leading-relaxed">
+        {/* Document name with proper spacing */}
+        <h3 className="text-gray-900 dark:text-[#efc349] font-medium text-base mb-4 leading-relaxed min-h-[3rem] break-words">
           {doc.name}
         </h3>
       </div>
       
-      {/* Metadata section */}
-      <div className="px-5 pb-3 space-y-3 text-xs flex-grow">
+      {/* Metadata section with more space */}
+      <div className="px-6 pb-4 space-y-4 text-sm flex-grow">
         <div className="flex items-center justify-between">
           <span className="flex items-center text-gray-600 dark:text-gray-400">
-            <Calendar className="w-3 h-3 mr-2" />
+            <Calendar className="w-4 h-4 mr-2" />
             Data de Envio:
           </span>
           <span className="text-gray-800 dark:text-gray-300 font-medium">{formatDate(doc.uploaded_at)}</span>
@@ -115,12 +115,12 @@ export const DocumentCard = ({
           <span className="flex items-center">
             {isExpired ? (
               <>
-                <AlertTriangle className="w-3 h-3 mr-1 text-red-600 dark:text-red-400" />
+                <AlertTriangle className="w-4 h-4 mr-1 text-red-600 dark:text-red-400" />
                 <span className="text-red-600 dark:text-red-400 font-medium">Expirado</span>
               </>
             ) : doc.viewed ? (
               <>
-                <CheckCircle className="w-3 h-3 mr-1 text-green-600 dark:text-green-400" />
+                <CheckCircle className="w-4 h-4 mr-1 text-green-600 dark:text-green-400" />
                 <span className="text-green-600 dark:text-green-400 font-medium">Visualizado</span>
               </>
             ) : (
@@ -133,12 +133,12 @@ export const DocumentCard = ({
         </div>
       </div>
       
-      {/* Download button */}
-      <div className="p-5 pt-3">
+      {/* Download button with more padding */}
+      <div className="p-6 pt-4">
         <Button
           onClick={() => handleDownload(doc)}
           disabled={loadingDocumentIds.has(doc.id)}
-          className="w-full bg-gray-900 hover:bg-gray-800 text-white dark:bg-transparent dark:border dark:border-[#efc349] dark:text-white dark:hover:bg-[#efc349]/10 dark:hover:border-[#efc349] font-medium text-sm transition-all duration-300 shadow-sm hover:shadow-md"
+          className="w-full bg-gray-900 hover:bg-gray-800 text-white dark:bg-transparent dark:border dark:border-[#efc349] dark:text-white dark:hover:bg-[#efc349]/10 dark:hover:border-[#efc349] font-medium text-sm transition-all duration-300 shadow-sm hover:shadow-md min-h-[44px]"
         >
           <Download className="w-4 h-4 mr-2" />
           {loadingDocumentIds.has(doc.id) ? "Baixando..." : "Baixar documento"}
