@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +13,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import ImageUpload from "./ImageUpload";
+import CarouselNavbar from "./CarouselNavbar";
 
 interface ClientItem {
   id: string;
@@ -28,7 +28,6 @@ interface ClientItem {
 const CarouselManager = () => {
   const { toast } = useToast();
   
-  // Estado local para clientes (sem banco de dados)
   const [clients, setClients] = useState<ClientItem[]>(() => {
     const stored = localStorage.getItem('carousel_clients');
     return stored ? JSON.parse(stored) : [
@@ -196,46 +195,195 @@ const CarouselManager = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header Section - Similar to IRPF Calculator */}
-      <div className="text-center mb-8">
-        <div className="flex items-center justify-center mb-4">
-          <Users className="w-8 h-8 text-[#efc349] mr-3" />
-          <h1 className="text-4xl font-extralight text-[#020817] dark:text-[#efc349]">
-            Gerenciar Carousel
-          </h1>
-        </div>
-        <p className="text-lg text-gray-600 dark:text-white/70 font-extralight max-w-2xl mx-auto">
-          Adicione, edite ou remova clientes do carousel da página inicial. Gerencie as logos, links sociais e status de exibição de cada empresa parceira.
-        </p>
-      </div>
-
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl text-[#020817] dark:text-[#efc349] mb-2 font-thin">
-            Lista de Clientes
-          </h2>
-          <p className="text-gray-600 dark:text-white/70">
-            {clients.length} {clients.length === 1 ? 'cliente cadastrado' : 'clientes cadastrados'}
+    <div className="min-h-screen">
+      <CarouselNavbar title="Gerenciar Carousel" />
+      
+      <div className="pt-20 p-6 space-y-6">
+        {/* Header Section - Similar to IRPF Calculator */}
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center mb-4">
+            <Users className="w-8 h-8 text-[#efc349] mr-3" />
+            <h1 className="text-4xl font-extralight text-[#020817] dark:text-[#efc349]">
+              Gerenciar Carousel
+            </h1>
+          </div>
+          <p className="text-lg text-gray-600 dark:text-white/70 font-extralight max-w-2xl mx-auto">
+            Adicione, edite ou remova clientes do carousel da página inicial. Gerencie as logos, links sociais e status de exibição de cada empresa parceira.
           </p>
         </div>
 
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817]">
-              <Plus className="w-4 h-4 mr-2" />
-              Adicionar Cliente
-            </Button>
-          </DialogTrigger>
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl text-[#020817] dark:text-[#efc349] mb-2 font-thin">
+              Lista de Clientes
+            </h2>
+            <p className="text-gray-600 dark:text-white/70">
+              {clients.length} {clients.length === 1 ? 'cliente cadastrado' : 'clientes cadastrados'}
+            </p>
+          </div>
+
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817]">
+                <Plus className="w-4 h-4 mr-2" />
+                Adicionar Cliente
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Adicionar Novo Cliente</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="name">Nome da Empresa</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Nome da empresa"
+                  />
+                </div>
+                
+                <ImageUpload
+                  currentImageUrl={formData.logo_url !== "/logo-padrao.png" ? formData.logo_url : ""}
+                  onImageUploaded={handleImageUpload}
+                  onImageRemoved={handleImageRemoval}
+                />
+                
+                <div>
+                  <Label htmlFor="instagram_url">URL do Instagram (opcional)</Label>
+                  <Input
+                    id="instagram_url"
+                    value={formData.instagram_url}
+                    onChange={(e) => setFormData({ ...formData, instagram_url: e.target.value })}
+                    placeholder="https://instagram.com/empresa"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="whatsapp_url">URL do WhatsApp (opcional)</Label>
+                  <Input
+                    id="whatsapp_url"
+                    value={formData.whatsapp_url}
+                    onChange={(e) => setFormData({ ...formData, whatsapp_url: e.target.value })}
+                    placeholder="https://wa.me/5511999999999"
+                  />
+                </div>
+                <Button onClick={handleAddClient} className="w-full">
+                  Adicionar
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {clients.map((client) => (
+            <Card key={client.id} className="bg-white dark:bg-[#020817] border-[#efc349]/20">
+              <CardHeader className="pb-3">
+                <div className="flex justify-between items-start">
+                  <CardTitle className="text-lg text-[#020817] dark:text-white">
+                    {client.name}
+                  </CardTitle>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => openEditDialog(client)}
+                      className="border-[#efc349]/30 text-[#efc349] hover:bg-[#efc349]/10"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDeleteClient(client.id)}
+                      className="border-red-500/30 text-red-500 hover:bg-red-500/10"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="space-y-4">
+                <div className="flex justify-center">
+                  <img
+                    src={client.logo_url}
+                    alt={client.name}
+                    className="max-h-20 w-auto object-contain"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "/logo-padrao.png";
+                    }}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <ImageUpload
+                    currentImageUrl={client.logo_url !== "/logo-padrao.png" ? client.logo_url : ""}
+                    onImageUploaded={(url) => handleEditImageUpload(url, client.id)}
+                    onImageRemoved={() => handleEditImageRemoval(client.id)}
+                  />
+                </div>
+                
+                <div className="flex justify-center gap-3">
+                  {client.instagram_url && (
+                    <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                      <Instagram className="w-4 h-4 mr-1 text-[#efc349]" />
+                      <a 
+                        href={client.instagram_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="hover:text-[#efc349] transition-colors"
+                      >
+                        Instagram
+                      </a>
+                    </div>
+                  )}
+                  
+                  {client.whatsapp_url && (
+                    <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                      <MessageCircle className="w-4 h-4 mr-1 text-[#efc349]" />
+                      <a 
+                        href={client.whatsapp_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="hover:text-[#efc349] transition-colors"
+                      >
+                        WhatsApp
+                      </a>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex justify-center">
+                  <Button
+                    size="sm"
+                    variant={client.active ? "default" : "outline"}
+                    onClick={() => toggleClientStatus(client.id)}
+                    className={client.active 
+                      ? "bg-green-600 hover:bg-green-700" 
+                      : "border-gray-400 text-gray-600 hover:bg-gray-100"
+                    }
+                  >
+                    {client.active ? "Ativo" : "Inativo"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Dialog de Edição */}
+        <Dialog open={!!editingClient} onOpenChange={() => setEditingClient(null)}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Adicionar Novo Cliente</DialogTitle>
+              <DialogTitle>Editar Cliente</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="name">Nome da Empresa</Label>
+                <Label htmlFor="edit_name">Nome da Empresa</Label>
                 <Input
-                  id="name"
+                  id="edit_name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="Nome da empresa"
@@ -249,175 +397,30 @@ const CarouselManager = () => {
               />
               
               <div>
-                <Label htmlFor="instagram_url">URL do Instagram (opcional)</Label>
+                <Label htmlFor="edit_instagram_url">URL do Instagram (opcional)</Label>
                 <Input
-                  id="instagram_url"
+                  id="edit_instagram_url"
                   value={formData.instagram_url}
                   onChange={(e) => setFormData({ ...formData, instagram_url: e.target.value })}
                   placeholder="https://instagram.com/empresa"
                 />
               </div>
               <div>
-                <Label htmlFor="whatsapp_url">URL do WhatsApp (opcional)</Label>
+                <Label htmlFor="edit_whatsapp_url">URL do WhatsApp (opcional)</Label>
                 <Input
-                  id="whatsapp_url"
+                  id="edit_whatsapp_url"
                   value={formData.whatsapp_url}
                   onChange={(e) => setFormData({ ...formData, whatsapp_url: e.target.value })}
                   placeholder="https://wa.me/5511999999999"
                 />
               </div>
-              <Button onClick={handleAddClient} className="w-full">
-                Adicionar
+              <Button onClick={handleEditClient} className="w-full">
+                Salvar Alterações
               </Button>
             </div>
           </DialogContent>
         </Dialog>
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {clients.map((client) => (
-          <Card key={client.id} className="bg-white dark:bg-[#020817] border-[#efc349]/20">
-            <CardHeader className="pb-3">
-              <div className="flex justify-between items-start">
-                <CardTitle className="text-lg text-[#020817] dark:text-white">
-                  {client.name}
-                </CardTitle>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => openEditDialog(client)}
-                    className="border-[#efc349]/30 text-[#efc349] hover:bg-[#efc349]/10"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleDeleteClient(client.id)}
-                    className="border-red-500/30 text-red-500 hover:bg-red-500/10"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            
-            <CardContent className="space-y-4">
-              <div className="flex justify-center">
-                <img
-                  src={client.logo_url}
-                  alt={client.name}
-                  className="max-h-20 w-auto object-contain"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = "/logo-padrao.png";
-                  }}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <ImageUpload
-                  currentImageUrl={client.logo_url !== "/logo-padrao.png" ? client.logo_url : ""}
-                  onImageUploaded={(url) => handleEditImageUpload(url, client.id)}
-                  onImageRemoved={() => handleEditImageRemoval(client.id)}
-                />
-              </div>
-              
-              <div className="flex justify-center gap-3">
-                {client.instagram_url && (
-                  <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                    <Instagram className="w-4 h-4 mr-1 text-[#efc349]" />
-                    <a 
-                      href={client.instagram_url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="hover:text-[#efc349] transition-colors"
-                    >
-                      Instagram
-                    </a>
-                  </div>
-                )}
-                
-                {client.whatsapp_url && (
-                  <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                    <MessageCircle className="w-4 h-4 mr-1 text-[#efc349]" />
-                    <a 
-                      href={client.whatsapp_url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="hover:text-[#efc349] transition-colors"
-                    >
-                      WhatsApp
-                    </a>
-                  </div>
-                )}
-              </div>
-              
-              <div className="flex justify-center">
-                <Button
-                  size="sm"
-                  variant={client.active ? "default" : "outline"}
-                  onClick={() => toggleClientStatus(client.id)}
-                  className={client.active 
-                    ? "bg-green-600 hover:bg-green-700" 
-                    : "border-gray-400 text-gray-600 hover:bg-gray-100"
-                  }
-                >
-                  {client.active ? "Ativo" : "Inativo"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Dialog de Edição */}
-      <Dialog open={!!editingClient} onOpenChange={() => setEditingClient(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Editar Cliente</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="edit_name">Nome da Empresa</Label>
-              <Input
-                id="edit_name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Nome da empresa"
-              />
-            </div>
-            
-            <ImageUpload
-              currentImageUrl={formData.logo_url !== "/logo-padrao.png" ? formData.logo_url : ""}
-              onImageUploaded={handleImageUpload}
-              onImageRemoved={handleImageRemoval}
-            />
-            
-            <div>
-              <Label htmlFor="edit_instagram_url">URL do Instagram (opcional)</Label>
-              <Input
-                id="edit_instagram_url"
-                value={formData.instagram_url}
-                onChange={(e) => setFormData({ ...formData, instagram_url: e.target.value })}
-                placeholder="https://instagram.com/empresa"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit_whatsapp_url">URL do WhatsApp (opcional)</Label>
-              <Input
-                id="edit_whatsapp_url"
-                value={formData.whatsapp_url}
-                onChange={(e) => setFormData({ ...formData, whatsapp_url: e.target.value })}
-                placeholder="https://wa.me/5511999999999"
-              />
-            </div>
-            <Button onClick={handleEditClient} className="w-full">
-              Salvar Alterações
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
