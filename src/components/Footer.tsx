@@ -1,7 +1,5 @@
-
 import { MapPin, Phone, Mail, Clock } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
-
 const Footer = () => {
   return <footer id="contato" className="border-t border-gold/20 bg-navy dark:bg-[#1e1c1a]">
       <div className="container mx-auto px-6 py-12 bg-navy dark:bg-[#1e1c1a]">
@@ -24,7 +22,7 @@ const Footer = () => {
             <ul className="space-y-4">
               <li className="flex items-start space-x-3">
                 <MapPin className="w-5 h-5 text-gold flex-shrink-0 mt-0.5" />
-                <span className="text-white/70 dark:text-white/80">Loteamento terra do leite Centro, Maj. Izidoro - AL, 57580-000</span>
+                <span className="text-white/70 dark:text-white/80">Loteamento terra do leite,  29, Quadra 1, Centro, Major isidoro, alagoas, CEP 57.580-000</span>
               </li>
               <li className="flex items-center space-x-3">
                 <Phone className="w-5 h-5 text-gold flex-shrink-0" />
