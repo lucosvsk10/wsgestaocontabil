@@ -1,7 +1,7 @@
 
 import { ReactNode } from "react";
-import { AdminSidebar } from "./AdminSidebar";
-import { AdminHeader } from "./AdminHeader";
+import AdminSidebar from "./AdminSidebar";
+import AdminHeader from "./AdminHeader";
 import { NotificationPopupContainer } from "@/components/notifications/NotificationPopupContainer";
 
 interface AdminLayoutProps {

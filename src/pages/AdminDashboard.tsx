@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDocumentManager } from "@/hooks/document/useDocumentManager";
 import { useUserManagement } from "@/hooks/useUserManagement";
 import { AdminTabsView } from "@/components/admin/AdminTabsView";
 import { AdminPasswordChangeModal } from "@/components/admin/AdminPasswordChangeModal";
-import AdminLayout from "@/components/admin/layout/AdminLayout";
+import { AdminLayout } from "@/components/admin/layout/AdminLayout";
 import { useForm } from "react-hook-form";
 import { useUsersFetch } from "@/hooks/useUsersFetch";
 
