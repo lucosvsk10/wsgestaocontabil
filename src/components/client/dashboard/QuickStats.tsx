@@ -1,3 +1,4 @@
+
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileText, Calculator, MessageSquare } from "lucide-react";
@@ -47,7 +48,7 @@ export const QuickStats = ({
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-gray-400 text-sm font-extralight">{stat.title}</p>
-                  <p className="text-2xl font-bold text-deepNavy-90">{stat.value}</p>
+                  <p className="text-2xl font-bold text-deepNavy-90 dark:text-white">{stat.value}</p>
                 </div>
                 <stat.icon className={`w-8 h-8 ${stat.color}`} />
               </div>
