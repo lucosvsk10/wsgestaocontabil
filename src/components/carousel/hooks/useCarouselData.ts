@@ -20,7 +20,7 @@ export const useCarouselData = () => {
     const loadClients = async () => {
       try {
         const { data, error } = await supabase
-          .from('carousel_items')
+          .from('carousel_items' as any)
           .select('*')
           .eq('status', 'active')
           .order('created_at', { ascending: true });
@@ -32,7 +32,7 @@ export const useCarouselData = () => {
         }
 
         // Converter para o formato esperado pelo carrossel
-        const formattedClients = (data || []).map((item, index) => ({
+        const formattedClients = (data || []).map((item: any, index: number) => ({
           id: item.id,
           name: item.name,
           logo_url: item.logo_url,

@@ -12,12 +12,20 @@ export const useCarouselDatabase = () => {
   const fetchItems = async () => {
     try {
       const { data, error } = await supabase
-        .from('carousel_items')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .rpc('get_carousel_items');
 
-      if (error) throw error;
-      setItems(data || []);
+      if (error) {
+        // Fallback para query direta se a função não existir
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('carousel_items' as any)
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (fallbackError) throw fallbackError;
+        setItems(fallbackData || []);
+      } else {
+        setItems(data || []);
+      }
     } catch (error) {
       console.error('Erro ao buscar itens:', error);
       toast({
@@ -33,7 +41,7 @@ export const useCarouselDatabase = () => {
   const addItem = async (itemData: Omit<CarouselItem, 'id' | 'created_at'>) => {
     try {
       const { data, error } = await supabase
-        .from('carousel_items')
+        .from('carousel_items' as any)
         .insert([itemData])
         .select()
         .single();
@@ -60,7 +68,7 @@ export const useCarouselDatabase = () => {
   const updateItem = async (id: string, updates: Partial<CarouselItem>) => {
     try {
       const { data, error } = await supabase
-        .from('carousel_items')
+        .from('carousel_items' as any)
         .update(updates)
         .eq('id', id)
         .select()
@@ -91,7 +99,7 @@ export const useCarouselDatabase = () => {
   const deleteItem = async (id: string) => {
     try {
       const { error } = await supabase
-        .from('carousel_items')
+        .from('carousel_items' as any)
         .delete()
         .eq('id', id);
 
