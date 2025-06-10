@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface BaseSimulation {
   id: string;
@@ -56,6 +57,7 @@ export const SimulationsView: React.FC = () => {
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
   const { toast } = useToast();
+  const { user, userData } = useAuth();
 
   useEffect(() => {
     fetchAllSimulations();
@@ -82,7 +84,9 @@ export const SimulationsView: React.FC = () => {
     try {
       setIsLoading(true);
       
-      console.log('Buscando todas as simulações...');
+      console.log('Buscando todas as simulações como administrador...');
+      console.log('Usuário atual:', user?.id);
+      console.log('Dados do usuário:', userData);
       
       // Buscar simulações de IRPF
       const { data: taxData, error: taxError } = await supabase
@@ -94,6 +98,7 @@ export const SimulationsView: React.FC = () => {
         console.error('Erro ao buscar simulações de IRPF:', taxError);
       } else {
         console.log('Simulações de IRPF encontradas:', taxData?.length || 0);
+        console.log('Simulações de IRPF detalhadas:', taxData);
       }
 
       // Buscar simulações de INSS
@@ -128,6 +133,11 @@ export const SimulationsView: React.FC = () => {
       ];
 
       console.log('Total de simulações encontradas:', allSimulations.length);
+      console.log('Simulações por tipo:', {
+        tax: allSimulations.filter(s => s.type === 'tax').length,
+        inss: allSimulations.filter(s => s.type === 'inss').length,
+        prolabore: allSimulations.filter(s => s.type === 'prolabore').length
+      });
 
       // Ordenar por data de criação
       allSimulations.sort((a, b) => {

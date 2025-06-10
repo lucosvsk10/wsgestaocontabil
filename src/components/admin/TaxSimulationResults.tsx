@@ -1,6 +1,8 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { TaxSimulation, UserDetails } from "@/types/tax-simulations";
 import LoadingState from "./tax-simulations/LoadingState";
 import EmptyState from "./tax-simulations/EmptyState";
@@ -15,6 +17,7 @@ const TaxSimulationResults = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [userDetails, setUserDetails] = useState<UserDetails>({});
   const { toast } = useToast();
+  const { user, userData } = useAuth();
 
   useEffect(() => {
     fetchSimulations();
@@ -56,6 +59,11 @@ const TaxSimulationResults = () => {
   const fetchSimulations = async () => {
     try {
       setLoading(true);
+      
+      console.log("Buscando simulações de IRPF como administrador...");
+      console.log("Usuário atual:", user?.id);
+      console.log("Dados do usuário:", userData);
+      
       const { data, error } = await supabase
         .from("tax_simulations")
         .select("*")
@@ -66,7 +74,8 @@ const TaxSimulationResults = () => {
         throw error;
       }
 
-      console.log("Simulações encontradas:", data);
+      console.log("Simulações encontradas:", data?.length || 0);
+      console.log("Simulações detalhadas:", data);
       
       if (data) {
         setSimulations(data);
