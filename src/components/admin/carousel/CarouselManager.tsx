@@ -1,9 +1,10 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Trash2, Plus, Edit2, Instagram, MessageCircle } from "lucide-react";
+import { Trash2, Plus, Edit2, Instagram, MessageCircle, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -196,13 +197,26 @@ const CarouselManager = () => {
 
   return (
     <div className="space-y-6">
+      {/* Header Section - Similar to IRPF Calculator */}
+      <div className="text-center mb-8">
+        <div className="flex items-center justify-center mb-4">
+          <Users className="w-8 h-8 text-[#efc349] mr-3" />
+          <h1 className="text-4xl font-extralight text-[#020817] dark:text-[#efc349]">
+            Gerenciar Carousel
+          </h1>
+        </div>
+        <p className="text-lg text-gray-600 dark:text-white/70 font-extralight max-w-2xl mx-auto">
+          Adicione, edite ou remova clientes do carousel da página inicial. Gerencie as logos, links sociais e status de exibição de cada empresa parceira.
+        </p>
+      </div>
+
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl text-[#020817] dark:text-[#efc349] mb-4 font-thin">
-            Gerenciar Carousel de Clientes
-          </h1>
+          <h2 className="text-2xl text-[#020817] dark:text-[#efc349] mb-2 font-thin">
+            Lista de Clientes
+          </h2>
           <p className="text-gray-600 dark:text-white/70">
-            Adicione, edite ou remova clientes do carousel da página inicial
+            {clients.length} {clients.length === 1 ? 'cliente cadastrado' : 'clientes cadastrados'}
           </p>
         </div>
 
