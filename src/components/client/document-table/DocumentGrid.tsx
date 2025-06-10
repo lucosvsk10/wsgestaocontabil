@@ -47,7 +47,7 @@ export const DocumentGrid = ({
   };
   
   return (
-    <div className={`grid ${gridClasses} gap-6 w-full`}>
+    <div className={`grid ${gridClasses} gap-6 w-full px-4 py-6`}>
       {documents.map((doc, index) => (
         <motion.div
           key={doc.id}
