@@ -15,7 +15,7 @@ import INSSCalculator from "./pages/INSSCalculator";
 import ProLaboreCalculator from "./pages/ProLaboreCalculator";
 import { checkIsAdmin } from "./utils/auth/userChecks";
 import { CompanyDataView } from "./components/admin/company/CompanyDataView";
-import CarouselManager from '@/components/admin/carousel/CarouselManager';
+import SimpleCarouselManager from '@/components/admin/carousel/SimpleCarouselManager';
 import AdminLayout from '@/components/admin/AdminLayout';
 
 const AppRoutes = () => {
@@ -107,13 +107,13 @@ const AppRoutes = () => {
       <Route path="/admin-dashboard" element={<Navigate to="/admin" replace />} />
       <Route path="/admin/tax-simulations" element={<Navigate to="/admin/simulations" replace />} />
       
-      {/* Rota corrigida do carousel */}
+      {/* Nova rota simplificada do carousel */}
       <Route 
         path="/admin/carousel" 
         element={
           <PrivateRoute requiredRole="admin">
             <AdminLayout>
-              <CarouselManager />
+              <SimpleCarouselManager />
             </AdminLayout>
           </PrivateRoute>
         } 

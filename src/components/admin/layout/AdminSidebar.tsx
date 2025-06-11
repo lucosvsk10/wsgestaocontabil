@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { LayoutDashboard, Users, PieChart, Calculator, Settings, Wrench, X, HardDrive, Megaphone, Calendar } from "lucide-react";
+import { LayoutDashboard, Users, PieChart, Calculator, Settings, Wrench, X, HardDrive, Megaphone, Calendar, Images } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
 
@@ -103,6 +103,12 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
       label: "Agenda",
       active: getIsActive("/admin/agenda"),
       to: "/admin/agenda"
+    },
+    {
+      icon: <Images size={20} />,
+      label: "Carrossel",
+      active: getIsActive("/admin/carousel"),
+      to: "/admin/carousel"
     },
     {
       icon: <PieChart size={20} />,

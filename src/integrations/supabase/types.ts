@@ -89,6 +89,39 @@ export type Database = {
         }
         Relationships: []
       }
+      carousel_items: {
+        Row: {
+          created_at: string
+          id: string
+          instagram: string | null
+          logo_url: string
+          name: string
+          status: string
+          updated_at: string
+          whatsapp: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          instagram?: string | null
+          logo_url: string
+          name: string
+          status?: string
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          instagram?: string | null
+          logo_url?: string
+          name?: string
+          status?: string
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
       client_announcements: {
         Row: {
           action_button_text: string | null
