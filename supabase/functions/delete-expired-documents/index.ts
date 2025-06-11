@@ -12,16 +12,22 @@ const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
 const supabase = createClient(supabaseUrl, supabaseKey)
 
-// Handle document cleanup
+// Handle document cleanup - delete documents 7 days after expiration
 async function deleteExpiredDocuments() {
-  console.log('Starting expired documents cleanup')
+  console.log('Starting expired documents cleanup (7 days after expiration)')
   
   try {
-    // Get all expired documents to know their storage paths first
+    // Calculate date 7 days ago
+    const sevenDaysAgo = new Date()
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+    
+    console.log('Looking for documents expired before:', sevenDaysAgo.toISOString())
+    
+    // Get all documents that expired more than 7 days ago
     const { data: expiredDocs, error: fetchError } = await supabase
       .from('documents')
-      .select('id, storage_key')
-      .lt('expires_at', new Date().toISOString())
+      .select('id, storage_key, name, expires_at')
+      .lt('expires_at', sevenDaysAgo.toISOString())
       .not('expires_at', 'is', null)
     
     if (fetchError) {
@@ -29,7 +35,7 @@ async function deleteExpiredDocuments() {
       throw fetchError
     }
     
-    console.log(`Found ${expiredDocs?.length || 0} expired documents`)
+    console.log(`Found ${expiredDocs?.length || 0} documents expired for more than 7 days`)
     
     if (!expiredDocs || expiredDocs.length === 0) {
       return { success: true, message: 'No expired documents to delete', deleted: 0 }
@@ -50,6 +56,8 @@ async function deleteExpiredDocuments() {
       if (storageError) {
         // Log but continue with database cleanup
         console.error('Error deleting files from storage:', storageError)
+      } else {
+        console.log('Files deleted successfully from storage')
       }
     }
     
@@ -66,7 +74,21 @@ async function deleteExpiredDocuments() {
     }
     
     console.log(`Successfully deleted ${documentIds.length} expired documents`)
-    return { success: true, message: `Deleted ${documentIds.length} expired documents`, deleted: documentIds.length }
+    
+    // Log details of deleted documents
+    expiredDocs.forEach(doc => {
+      console.log(`Deleted document: ${doc.name} (expired on: ${doc.expires_at})`)
+    })
+    
+    return { 
+      success: true, 
+      message: `Deleted ${documentIds.length} documents expired for more than 7 days`, 
+      deleted: documentIds.length,
+      deletedDocuments: expiredDocs.map(doc => ({
+        name: doc.name,
+        expiredOn: doc.expires_at
+      }))
+    }
   } catch (error) {
     console.error('Error in document cleanup process:', error)
     return { success: false, message: error.message, deleted: 0 }
@@ -81,7 +103,7 @@ Deno.serve(async (req) => {
   }
   
   try {
-    // Only allow POST requests for manual trigger or authenticated requests
+    // Allow POST requests for manual trigger or scheduled execution
     if (req.method === 'POST') {
       const result = await deleteExpiredDocuments()
       return new Response(

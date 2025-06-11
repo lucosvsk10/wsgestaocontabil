@@ -29,6 +29,7 @@ export const useUserManagement = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState("newest");
   const [isUserCreationDialogOpen, setIsUserCreationDialogOpen] = useState(false);
+  const [selectedUserForDeletion, setSelectedUserForDeletion] = useState<AuthUser | null>(null);
   
   const { isCreatingUser, createUser } = useUserCreation(refreshUsers);
 
@@ -58,6 +59,8 @@ export const useUserManagement = ({
         title: "Usuário criado com sucesso",
         description: "O novo usuário foi adicionado ao sistema."
       });
+      // Força atualização da lista após criação
+      refreshUsers();
     } catch (error) {
       console.error("Error creating user:", error);
       toast({
@@ -69,13 +72,15 @@ export const useUserManagement = ({
   };
 
   const handleDeleteUser = (userId: string) => {
-    if (confirm('Deseja realmente excluir este usuário?')) {
-      refreshUsers();
-      toast({
-        title: "Usuário excluído",
-        description: "O usuário foi removido do sistema."
-      });
+    const userToDelete = supabaseUsers.find(u => u.id === userId);
+    if (userToDelete) {
+      setSelectedUserForDeletion(userToDelete);
     }
+  };
+
+  const handleDeleteSuccess = () => {
+    setSelectedUserForDeletion(null);
+    refreshUsers();
   };
 
   return {
@@ -88,7 +93,10 @@ export const useUserManagement = ({
     isCreatingUser,
     adminUsers,
     clientUsers,
+    selectedUserForDeletion,
+    setSelectedUserForDeletion,
     handleUserCreation,
-    handleDeleteUser
+    handleDeleteUser,
+    handleDeleteSuccess
   };
 };

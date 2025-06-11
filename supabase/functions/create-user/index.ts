@@ -111,7 +111,9 @@ Deno.serve(async (req) => {
     // Admin supabase client
     const adminClient = createAdminClient()
 
-    // 1. Create user in auth.users with metadata
+    console.log('Creating user with data:', { email: body.email, name: body.name, role: body.role })
+
+    // 1. Create user in auth.users with metadata including name
     const { data: authUser, error: authError } = await adminClient.auth.admin.createUser({
       email: body.email,
       password: body.password,
@@ -130,18 +132,16 @@ Deno.serve(async (req) => {
       throw new Error('Failed to create user')
     }
     
-    // Fix the role assignment here - use the role that was explicitly passed 
-    // and don't override it based on isAdmin
     const userRole = body.role || 'client'
-    console.log('Creating user with role:', userRole)
+    console.log('Creating user profile with role:', userRole, 'and name:', body.name)
     
-    // 2. Create user in public.users
+    // 2. Create user in public.users with name field properly set
     const { error: userError } = await adminClient
       .from('users')
       .insert({
         id: authUser.user.id,
         email: body.email,
-        name: body.name,
+        name: body.name, // Explicitly set the name field
         role: userRole
       })
     
@@ -151,6 +151,13 @@ Deno.serve(async (req) => {
       await adminClient.auth.admin.deleteUser(authUser.user.id)
       throw userError
     }
+    
+    console.log('User created successfully:', {
+      id: authUser.user.id,
+      email: authUser.user.email,
+      name: body.name,
+      role: userRole
+    })
     
     return new Response(
       JSON.stringify({ 

@@ -1,6 +1,7 @@
 
 import { LoadingSpinner } from "../common/LoadingSpinner";
 import { UserCreationDialog } from "./components/UserCreationDialog";
+import { DeleteUserDialog } from "./DeleteUserDialog";
 import { UserListHeader } from "./user-management/UserListHeader";
 import { UserSearchAndFilter } from "./user-management/UserSearchAndFilter";
 import { UserTableComponent } from "./user-management/UserTableComponent";
@@ -45,8 +46,11 @@ export const UserList = ({
     isCreatingUser,
     adminUsers,
     clientUsers,
+    selectedUserForDeletion,
+    setSelectedUserForDeletion,
     handleUserCreation,
-    handleDeleteUser
+    handleDeleteUser,
+    handleDeleteSuccess
   } = useUserManagement({ supabaseUsers, users, refreshUsers });
 
   if (isLoading) {
@@ -98,6 +102,16 @@ export const UserList = ({
           onSubmit={handleUserCreation}
           isCreating={isCreatingUser}
         />
+
+        {/* User Deletion Dialog */}
+        {selectedUserForDeletion && (
+          <DeleteUserDialog
+            open={true}
+            onOpenChange={(open) => !open && setSelectedUserForDeletion(null)}
+            authUser={selectedUserForDeletion}
+            onSuccess={handleDeleteSuccess}
+          />
+        )}
       </div>
     </div>
   );
