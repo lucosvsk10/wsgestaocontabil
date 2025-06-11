@@ -1,63 +1,142 @@
 
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route
-} from "react-router-dom";
-import Index from "@/pages/Index";
-import TaxCalculator from "@/pages/TaxCalculator";
-import INSSCalculator from "@/pages/INSSCalculator";
-import ProLaboreCalculator from "@/pages/ProLaboreCalculator";
-import ClientLogin from "@/pages/ClientLogin";
-import ClientDashboard from "@/pages/ClientDashboard";
-import AdminDashboard from "@/pages/AdminDashboard";
-import NotFound from "@/pages/NotFound";
-import PrivateRoute from "@/components/PrivateRoute";
-import PollPage from "@/pages/PollPage";
-import NumericalPollPage from "@/pages/NumericalPollPage";
-import FormPollPage from "@/pages/FormPollPage";
-import SimpleCarouselManager from "@/components/admin/carousel/SimpleCarouselManager";
+import { Routes, Route, Navigate } from "react-router-dom";
+import Index from "./pages/Index";
+import NotFound from "./pages/NotFound";
+import ClientLogin from "./pages/ClientLogin";
+import PrivateRoute from "./components/PrivateRoute";
+import { useAuth } from "./contexts/AuthContext";
+import AdminDashboard from "./pages/AdminDashboard";
+import ClientDashboard from "./pages/ClientDashboard";
+import PollPage from "./pages/PollPage";
+import NumericalPollPage from "./pages/NumericalPollPage";
+import FormPollPage from "./pages/FormPollPage";
+import TaxCalculator from "./pages/TaxCalculator";
+import INSSCalculator from "./pages/INSSCalculator";
+import ProLaboreCalculator from "./pages/ProLaboreCalculator";
+import { checkIsAdmin } from "./utils/auth/userChecks";
+import { CompanyDataView } from "./components/admin/company/CompanyDataView";
+import CarouselManager from '@/components/admin/carousel/CarouselManager';
+import AdminLayout from '@/components/admin/AdminLayout';
 
-function AppRoutes() {
+const AppRoutes = () => {
+  const { userData, user } = useAuth();
+  
+  const isAdmin = () => {
+    return checkIsAdmin(userData, user?.email);
+  };
+
   return (
-    <Router>
-      <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={<Index />} />
-        <Route path="/tax-calculator" element={<TaxCalculator />} />
-        <Route path="/inss-calculator" element={<INSSCalculator />} />
-        <Route path="/prolabore-calculator" element={<ProLaboreCalculator />} />
-        <Route path="/client-login" element={<ClientLogin />} />
-        <Route path="/poll/:id" element={<PollPage />} />
-        <Route path="/numerical-poll/:id" element={<NumericalPollPage />} />
-        <Route path="/form-poll/:id" element={<FormPollPage />} />
-        
-        {/* Client Routes */}
-        <Route path="/client/*" element={
-          <PrivateRoute>
-            <ClientDashboard />
-          </PrivateRoute>
-        } />
-        
-        {/* Admin Routes */}
-        <Route path="/admin" element={
+    <Routes>
+      <Route path="/" element={<Index />} />
+      <Route path="/login" element={<ClientLogin />} />
+      <Route path="/enquete/:id" element={<PollPage />} />
+      <Route path="/enquete-numerica/:id" element={<NumericalPollPage />} />
+      <Route path="/formulario/:id" element={<FormPollPage />} />
+      <Route path="/simulador-irpf" element={<TaxCalculator />} />
+      <Route path="/calculadora-inss" element={<INSSCalculator />} />
+      <Route path="/simulador-prolabore" element={<ProLaboreCalculator />} />
+      
+      {/* Admin routes */}
+      <Route path="/admin" element={
+        <PrivateRoute requiredRole="admin">
+          <AdminDashboard activeTab="dashboard" />
+        </PrivateRoute>
+      } />
+      
+      <Route path="/admin/users" element={
+        <PrivateRoute requiredRole="admin">
+          <AdminDashboard activeTab="users" />
+        </PrivateRoute>
+      } />
+      
+      <Route path="/admin/user-documents/:userId" element={
+        <PrivateRoute requiredRole="admin">
+          <AdminDashboard activeTab="user-documents" />
+        </PrivateRoute>
+      } />
+
+      <Route path="/admin/company-data/:userId" element={
+        <PrivateRoute requiredRole="admin">
+          <CompanyDataView />
+        </PrivateRoute>
+      } />
+      
+      <Route path="/admin/storage" element={
+        <PrivateRoute requiredRole="admin">
+          <AdminDashboard activeTab="storage" />
+        </PrivateRoute>
+      } />
+      
+      <Route path="/admin/polls" element={
+        <PrivateRoute requiredRole="admin">
+          <AdminDashboard activeTab="polls" />
+        </PrivateRoute>
+      } />
+      
+      <Route path="/admin/tools" element={
+        <PrivateRoute requiredRole="admin">
+          <AdminDashboard activeTab="tools" />
+        </PrivateRoute>
+      } />
+      
+      <Route path="/admin/simulations" element={
+        <PrivateRoute requiredRole="admin">
+          <AdminDashboard activeTab="simulations" />
+        </PrivateRoute>
+      } />
+      
+      <Route path="/admin/announcements" element={
+        <PrivateRoute requiredRole="admin">
+          <AdminDashboard activeTab="announcements" />
+        </PrivateRoute>
+      } />
+      
+      <Route path="/admin/agenda" element={
+        <PrivateRoute requiredRole="admin">
+          <AdminDashboard activeTab="agenda" />
+        </PrivateRoute>
+      } />
+      
+      <Route path="/admin/settings" element={
+        <PrivateRoute requiredRole="admin">
+          <AdminDashboard activeTab="settings" />
+        </PrivateRoute>
+      } />
+      
+      {/* Manter compatibilidade com rotas antigas */}
+      <Route path="/admin-dashboard" element={<Navigate to="/admin" replace />} />
+      <Route path="/admin/tax-simulations" element={<Navigate to="/admin/simulations" replace />} />
+      
+      {/* Rota corrigida do carousel */}
+      <Route 
+        path="/admin/carousel" 
+        element={
           <PrivateRoute requiredRole="admin">
-            <AdminDashboard activeTab="dashboard" />
+            <AdminLayout>
+              <CarouselManager />
+            </AdminLayout>
           </PrivateRoute>
-        } />
-        
-        {/* Simple Carousel Manager Route */}
-        <Route path="/admin/carousel" element={
-          <PrivateRoute requiredRole="admin">
-            <SimpleCarouselManager />
-          </PrivateRoute>
-        } />
-        
-        {/* 404 Route */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </Router>
+        } 
+      />
+      
+      {/* Client routes */}
+      <Route path="/client/*" element={
+        <PrivateRoute>
+          <ClientDashboard />
+        </PrivateRoute>
+      } />
+      
+      {/* Redirect route after login */}
+      <Route path="/dashboard" element={
+        <PrivateRoute>
+          {isAdmin() ? <Navigate to="/admin" replace /> : <Navigate to="/client" replace />}
+        </PrivateRoute>
+      } />
+      
+      {/* 404 route - must be last */}
+      <Route path="*" element={<NotFound />} />
+    </Routes>
   );
-}
+};
 
 export default AppRoutes;
