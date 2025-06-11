@@ -34,11 +34,11 @@ const EditCarouselItemDialog = ({ item, isOpen, onClose, onUpdate }: EditCarouse
   useEffect(() => {
     if (item) {
       setFormData({
-        name: item.name || '',
-        logo_url: item.logo_url || '',
+        name: item.name,
+        logo_url: item.logo_url,
         instagram: item.instagram || '',
         whatsapp: item.whatsapp || '',
-        status: item.status || 'active'
+        status: item.status
       });
     }
   }, [item]);
@@ -47,72 +47,50 @@ const EditCarouselItemDialog = ({ item, isOpen, onClose, onUpdate }: EditCarouse
     e.preventDefault();
     if (!item) return;
 
-    if (!formData.name.trim() || !formData.logo_url) {
+    if (!formData.name || !formData.logo_url) {
       alert('Nome da empresa e logo são obrigatórios');
       return;
     }
 
     setSubmitting(true);
-    
-    try {
-      const updateData: Partial<CarouselItem> = {
-        name: formData.name.trim(),
-        logo_url: formData.logo_url,
-        instagram: formData.instagram.trim() || null,
-        whatsapp: formData.whatsapp.trim() || null,
-        status: formData.status
-      };
+    const success = await onUpdate(item.id, {
+      name: formData.name,
+      logo_url: formData.logo_url,
+      instagram: formData.instagram || undefined,
+      whatsapp: formData.whatsapp || undefined,
+      status: formData.status
+    });
 
-      const success = await onUpdate(item.id, updateData);
-
-      if (success) {
-        onClose();
-      }
-    } catch (error) {
-      console.error('Erro ao atualizar item:', error);
-      alert('Erro ao atualizar item. Tente novamente.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleClose = () => {
-    if (!submitting) {
+    if (success) {
       onClose();
     }
+
+    setSubmitting(false);
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md bg-white dark:bg-[#020817] border-gray-200 dark:border-[#efc349]/30">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-[#020817] dark:text-[#efc349]">
-            Editar Bloco do Carrossel
-          </DialogTitle>
+          <DialogTitle>Editar Bloco do Carrossel</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="edit_name" className="text-[#020817] dark:text-white">
-              Nome da Empresa *
-            </Label>
+            <Label htmlFor="edit_name">Nome da Empresa *</Label>
             <Input
               id="edit_name"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="Digite o nome da empresa"
               required
-              disabled={submitting}
             />
           </div>
 
           <div>
-            <Label htmlFor="edit_logo" className="text-[#020817] dark:text-white">
-              Logo *
-            </Label>
+            <Label htmlFor="edit_logo">Logo *</Label>
             <Select
               value={formData.logo_url}
               onValueChange={(value) => setFormData({ ...formData, logo_url: value })}
-              disabled={submitting}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione uma logo" />
@@ -131,39 +109,30 @@ const EditCarouselItemDialog = ({ item, isOpen, onClose, onUpdate }: EditCarouse
           </div>
 
           <div>
-            <Label htmlFor="edit_instagram" className="text-[#020817] dark:text-white">
-              Link do Instagram
-            </Label>
+            <Label htmlFor="edit_instagram">Link do Instagram</Label>
             <Input
               id="edit_instagram"
               value={formData.instagram}
               onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
               placeholder="https://instagram.com/empresa"
-              disabled={submitting}
             />
           </div>
 
           <div>
-            <Label htmlFor="edit_whatsapp" className="text-[#020817] dark:text-white">
-              Link do WhatsApp
-            </Label>
+            <Label htmlFor="edit_whatsapp">Link do WhatsApp</Label>
             <Input
               id="edit_whatsapp"
               value={formData.whatsapp}
               onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
               placeholder="https://wa.me/5511999999999"
-              disabled={submitting}
             />
           </div>
 
           <div>
-            <Label htmlFor="edit_status" className="text-[#020817] dark:text-white">
-              Status
-            </Label>
+            <Label htmlFor="edit_status">Status</Label>
             <Select
               value={formData.status}
               onValueChange={(value: 'active' | 'inactive') => setFormData({ ...formData, status: value })}
-              disabled={submitting}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -178,7 +147,7 @@ const EditCarouselItemDialog = ({ item, isOpen, onClose, onUpdate }: EditCarouse
           <Button 
             type="submit" 
             disabled={submitting}
-            className="w-full bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817] font-medium"
+            className="w-full bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817]"
           >
             {submitting ? "Salvando..." : "Salvar Alterações"}
           </Button>
