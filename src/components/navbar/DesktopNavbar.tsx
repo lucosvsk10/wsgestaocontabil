@@ -1,3 +1,4 @@
+
 import { Link, useLocation } from 'react-router-dom';
 import { Instagram, UserCircle, LogOut, FileText } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -26,7 +27,7 @@ const DesktopNavbar = ({
                 <UserCircle size={20} className="mr-1" />
                 <span className="text-sm font-medium uppercase tracking-wider">CONTA</span>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="shadow-lg rounded-lg border border-[#e6e6e6] dark:border-gold/20 bg-transparent">
+              <DropdownMenuContent align="center" className="shadow-lg rounded-lg border border-[#e6e6e6] dark:border-gold/20 bg-transparent">
                 <DropdownMenuItem className="text-[#020817] hover:bg-gray-100 dark:text-gold dark:hover:text-gold-light cursor-pointer dark:hover:bg-navy-light" onClick={navigateToDashboard}>
                   <FileText size={16} className="mr-2" />
                   <span className="text-sm uppercase tracking-wider font-extralight">MINHA ÁREA</span>
