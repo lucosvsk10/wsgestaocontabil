@@ -1,6 +1,5 @@
 
-import { useState, useRef } from "react";
-import { useMotionValue } from "framer-motion";
+import { useState, useRef, useCallback } from "react";
 
 interface UseCarouselAnimationProps {
   clientsLength: number;
@@ -10,53 +9,62 @@ export const useCarouselAnimation = ({ clientsLength }: UseCarouselAnimationProp
   const [isPaused, setIsPaused] = useState(false);
   const [currentPosition, setCurrentPosition] = useState(0);
   const animationRef = useRef<any>(null);
-  const x = useMotionValue(0);
 
   // Calcular a distância total que a animação deve percorrer
   const totalDistance = (clientsLength * 300) + (clientsLength * 24);
   
-  // Calcular a duração total baseada no número de clientes
-  const totalDuration = clientsLength * 4;
+  // Duração total da animação (mais lenta para suavidade)
+  const totalDuration = clientsLength * 6;
 
-  const pauseAnimation = () => {
+  const pauseAnimation = useCallback(() => {
     if (animationRef.current) {
-      // Capturar a posição atual da animação
-      const current = x.get();
-      setCurrentPosition(current);
+      // Capturar a posição atual usando o transform do elemento
+      const element = animationRef.current;
+      const computedStyle = window.getComputedStyle(element);
+      const matrix = computedStyle.transform;
+      
+      if (matrix && matrix !== 'none') {
+        const matrixValues = matrix.match(/matrix.*\((.+)\)/);
+        if (matrixValues) {
+          const values = matrixValues[1].split(', ');
+          const translateX = parseFloat(values[4]) || 0;
+          setCurrentPosition(translateX);
+        }
+      }
+      
       setIsPaused(true);
     }
-  };
+  }, []);
 
-  const resumeAnimation = () => {
+  const resumeAnimation = useCallback(() => {
     setIsPaused(false);
-  };
+  }, []);
 
-  const getAnimationConfig = () => {
+  const getAnimationConfig = useCallback(() => {
     if (isPaused) {
       return {
         x: currentPosition,
-        transition: { duration: 0 }
+        transition: { 
+          duration: 0,
+          ease: "linear"
+        }
       };
     }
 
-    // Calcular distância restante e duração ajustada
-    const distanceRemaining = totalDistance + currentPosition;
-    const progressPercentage = Math.abs(currentPosition) / totalDistance;
-    const remainingDuration = totalDuration * (1 - progressPercentage);
+    // Calcular a duração restante baseada na posição atual
+    const progress = Math.abs(currentPosition) / totalDistance;
+    const remainingDuration = totalDuration * (1 - (progress % 1));
 
     return {
-      x: [currentPosition, -totalDistance, 0],
+      x: [currentPosition, currentPosition - totalDistance, 0],
       transition: {
-        x: {
-          repeat: Infinity,
-          repeatType: "loop" as const,
-          duration: remainingDuration > 0 ? remainingDuration : totalDuration,
-          ease: "linear",
-          times: remainingDuration > 0 ? [0, (distanceRemaining / totalDistance), 1] : [0, 1]
-        }
+        duration: remainingDuration > 0 ? remainingDuration : totalDuration,
+        ease: "linear",
+        repeat: Infinity,
+        repeatType: "loop" as const
       }
     };
-  };
+  }, [isPaused, currentPosition, totalDistance, totalDuration]);
 
   return {
     isPaused,
@@ -64,7 +72,6 @@ export const useCarouselAnimation = ({ clientsLength }: UseCarouselAnimationProp
     resumeAnimation,
     getAnimationConfig,
     animationRef,
-    x,
     setCurrentPosition
   };
 };

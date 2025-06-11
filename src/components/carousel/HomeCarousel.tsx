@@ -11,9 +11,7 @@ const HomeCarousel = () => {
     pauseAnimation, 
     resumeAnimation, 
     getAnimationConfig, 
-    animationRef,
-    x,
-    setCurrentPosition
+    animationRef
   } = useCarouselAnimation({ clientsLength: clients.length });
 
   if (clients.length === 0) return null;
@@ -53,15 +51,10 @@ const HomeCarousel = () => {
               ref={animationRef}
               className="flex gap-6"
               style={{ 
-                x,
-                width: `${duplicatedClients.length * 300 + duplicatedClients.length * 24}px`
+                width: `${duplicatedClients.length * 300 + duplicatedClients.length * 24}px`,
+                willChange: 'transform'
               }}
               animate={getAnimationConfig()}
-              onUpdate={(latest) => {
-                if (!isPaused && typeof latest.x === 'number') {
-                  setCurrentPosition(latest.x);
-                }
-              }}
             >
               {duplicatedClients.map((client, index) => (
                 <div key={`${client.id}-${index}`} className="w-72 flex-shrink-0">
