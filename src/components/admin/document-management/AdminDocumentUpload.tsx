@@ -211,7 +211,7 @@ export const AdminDocumentUpload: React.FC<AdminDocumentUploadProps> = ({
     <div className="space-y-6">
       <Card className="border-[#e6e6e6] dark:border-navy-lighter/30 shadow-sm">
         <CardContent className="pt-6">
-          {/* Área de upload */}
+          
           <div 
             className={`
               border-2 border-dashed rounded-lg p-8 text-center cursor-pointer
@@ -302,7 +302,7 @@ export const AdminDocumentUpload: React.FC<AdminDocumentUploadProps> = ({
                 id="documentCategory" 
                 value={documentCategory} 
                 onChange={e => setDocumentCategory(e.target.value)} 
-                className="mt-1 w-full rounded-md border-[#e6e6e6] dark:border-navy-lighter/40 bg-white dark:bg-navy-light/20 text-[#020817] dark:text-white" 
+                className="mt-1 w-full rounded-md border-[#e6e6e6] dark:border-navy-lighter/40 bg-white dark:bg-navy-dark text-[#020817] dark:text-white" 
                 disabled={isUploading} 
                 required
               >
@@ -315,6 +315,7 @@ export const AdminDocumentUpload: React.FC<AdminDocumentUploadProps> = ({
               </select>
             </div>
 
+            
             <div>
               <Label htmlFor="documentSubcategory" className="text-gray-700 dark:text-gray-300">
                 Subcategoria (opcional)
