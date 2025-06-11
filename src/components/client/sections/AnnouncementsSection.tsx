@@ -108,8 +108,8 @@ export const AnnouncementsSection = () => {
                   </Badge>
                 </div>
 
-                <div className="max-h-24 overflow-y-auto mb-4">
-                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed break-words whitespace-pre-wrap">
+                <div className="max-h-32 overflow-y-auto mb-4 pr-2">
+                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed break-words word-break-all whitespace-pre-wrap">
                     {announcement.message}
                   </p>
                 </div>
