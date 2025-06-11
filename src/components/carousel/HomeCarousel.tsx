@@ -6,7 +6,15 @@ import CarouselCard from "./components/CarouselCard";
 
 const HomeCarousel = () => {
   const { clients } = useCarouselData();
-  const { isPaused, setIsPaused } = useCarouselAnimation({ clientsLength: clients.length });
+  const { 
+    isPaused, 
+    pauseAnimation, 
+    resumeAnimation, 
+    getAnimationConfig, 
+    animationRef,
+    x,
+    setCurrentPosition
+  } = useCarouselAnimation({ clientsLength: clients.length });
 
   if (clients.length === 0) return null;
 
@@ -38,20 +46,17 @@ const HomeCarousel = () => {
         <div className="relative max-w-7xl mx-auto overflow-hidden">
           <div 
             className="relative"
-            onMouseEnter={() => setIsPaused(true)} 
-            onMouseLeave={() => setIsPaused(false)}
+            onMouseEnter={pauseAnimation} 
+            onMouseLeave={resumeAnimation}
           >
             <motion.div
+              ref={animationRef}
               className="flex gap-6"
-              animate={{
-                x: isPaused ? undefined : [0, -((clients.length * 300) + (clients.length * 24))]
-              }}
-              transition={{
-                x: {
-                  repeat: Infinity,
-                  repeatType: "loop",
-                  duration: clients.length * 4,
-                  ease: "linear"
+              style={{ x }}
+              animate={getAnimationConfig()}
+              onUpdate={(latest) => {
+                if (!isPaused && typeof latest.x === 'number') {
+                  setCurrentPosition(latest.x);
                 }
               }}
               style={{

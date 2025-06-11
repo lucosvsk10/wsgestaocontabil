@@ -20,12 +20,12 @@ const CarouselCard = ({ client, index }: CarouselCardProps) => {
       className="group relative h-full"
     >
       <div className="bg-white dark:bg-[#020817] rounded-lg p-6 shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100 dark:border-[#efc349]/30 h-full flex flex-col">
-        {/* Logo */}
-        <div className="relative mb-4 flex-1 flex items-center justify-center w-full min-h-[80px]">
+        {/* Logo - tamanho aumentado */}
+        <div className="relative mb-4 flex-1 flex items-center justify-center w-full min-h-[128px]">
           <img 
             src={client.logo_url} 
             alt={client.name} 
-            className="max-h-20 max-w-full w-auto object-contain transition-all duration-300" 
+            className="max-h-32 max-w-full w-auto object-contain transition-all duration-300" 
             onError={(e) => {
               (e.target as HTMLImageElement).src = "/logo-padrao.png";
             }} 
