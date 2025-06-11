@@ -1,20 +1,16 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
-import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
-import { Calendar as CalendarIcon, Upload, Settings, Check } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { CategoryManagementModal } from "./CategoryManagementModal";
 import { useDocumentCategories } from "@/hooks/document-management/useDocumentCategories";
+import { DocumentUploadArea } from "./DocumentUploadArea";
+import { DocumentMetadataForm } from "./DocumentMetadataForm";
+import { DocumentProgressBar } from "./DocumentProgressBar";
 
 interface AdminDocumentUploadProps {
   userId: string;
@@ -34,11 +30,8 @@ export const AdminDocumentUpload: React.FC<AdminDocumentUploadProps> = ({
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
 
-  // Gerenciamento de categorias
   const {
     categories,
     isModalOpen,
@@ -48,10 +41,8 @@ export const AdminDocumentUpload: React.FC<AdminDocumentUploadProps> = ({
     deleteCategory
   } = useDocumentCategories();
 
-  // Convert files to an array
   const filesArray = selectedFiles ? Array.from(selectedFiles) : [];
 
-  // Função para lidar com o file drop
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     if (e.dataTransfer.files) {
@@ -59,17 +50,14 @@ export const AdminDocumentUpload: React.FC<AdminDocumentUploadProps> = ({
     }
   };
 
-  // Função para lidar com a seleção de arquivo
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       setSelectedFiles(e.target.files);
     }
   };
 
-  // Prevenção de comportamento padrão para eventos de arrastar
-  const preventDefaults = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleDropAreaClick = () => {
+    document.getElementById('fileInput')?.click();
   };
   
   const resetForm = () => {
@@ -81,7 +69,6 @@ export const AdminDocumentUpload: React.FC<AdminDocumentUploadProps> = ({
     setNoExpiration(false);
     setSelectedFiles(null);
 
-    // Reset file input field
     const fileInput = document.getElementById('fileInput') as HTMLInputElement;
     if (fileInput) fileInput.value = "";
     setUploadProgress(0);
@@ -115,51 +102,39 @@ export const AdminDocumentUpload: React.FC<AdminDocumentUploadProps> = ({
     
     try {
       setIsUploading(true);
-      setUploadProgress(10); // Iniciar progresso
+      setUploadProgress(10);
 
       let successCount = 0;
       const totalFiles = filesArray.length;
       for (let i = 0; i < filesArray.length; i++) {
         const file = filesArray[i];
 
-        // Gerar um nome de arquivo único
         const fileExt = file.name.split('.').pop();
         const fileName = `${userId}/${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
         const storageKey = `${userId}/${fileName}`;
 
-        // Upload do arquivo para o Storage do Supabase
-        const {
-          error: uploadError
-        } = await supabase.storage.from('documents').upload(storageKey, file);
+        const { error: uploadError } = await supabase.storage.from('documents').upload(storageKey, file);
         if (uploadError) throw uploadError;
-        setUploadProgress(30 + i / totalFiles * 40); // Progresso intermediário
+        setUploadProgress(30 + i / totalFiles * 40);
 
-        // Obter URL do arquivo
-        const {
-          data: urlData
-        } = await supabase.storage.from('documents').createSignedUrl(storageKey, 31536000); // URL válida por 1 ano
+        const { data: urlData } = await supabase.storage.from('documents').createSignedUrl(storageKey, 31536000);
 
         if (!urlData?.signedUrl) {
           throw new Error('Não foi possível obter URL para o arquivo');
         }
 
-        // Definir data de expiração
         let expiresAt = null;
         if (!noExpiration && expirationDate) {
           expiresAt = expirationDate.toISOString();
         }
 
-        // Salvar registro na tabela de documentos
         const docName = totalFiles > 1 ? `${documentName} (${i + 1}/${totalFiles})` : documentName;
-        const {
-          error: dbError
-        } = await supabase.from('documents').insert({
+        const { error: dbError } = await supabase.from('documents').insert({
           user_id: userId,
           name: docName,
           file_url: urlData.signedUrl,
           storage_key: storageKey,
           category: documentCategory,
-          // Agora é o ID da categoria
           subcategory: documentSubcategory || null,
           observations: documentObservations || null,
           expires_at: expiresAt,
@@ -168,7 +143,7 @@ export const AdminDocumentUpload: React.FC<AdminDocumentUploadProps> = ({
         });
         if (dbError) throw dbError;
         successCount++;
-        setUploadProgress(70 + i / totalFiles * 30); // Progresso final
+        setUploadProgress(70 + i / totalFiles * 30);
       }
       setUploadProgress(100);
       toast({
@@ -176,10 +151,8 @@ export const AdminDocumentUpload: React.FC<AdminDocumentUploadProps> = ({
         description: "Upload concluído com sucesso."
       });
 
-      // Reset form
       resetForm();
 
-      // Notificar componente pai para atualizar a lista de documentos
       if (onDocumentUploaded) {
         onDocumentUploaded();
       }
@@ -194,172 +167,38 @@ export const AdminDocumentUpload: React.FC<AdminDocumentUploadProps> = ({
       setIsUploading(false);
     }
   };
-
-  // Renderização do indicador de progresso
-  const renderProgressBar = () => {
-    return (
-      <div className="w-full bg-gray-200 dark:bg-navy-light/30 rounded-full h-2 mt-4">
-        <div 
-          className="bg-[#efc349] dark:bg-gold h-2 rounded-full" 
-          style={{width: `${uploadProgress}%`}}
-        ></div>
-      </div>
-    );
-  };
   
   return (
     <div className="space-y-6">
       <Card className="border-[#e6e6e6] dark:border-navy-lighter/30 shadow-sm">
         <CardContent className="pt-6">
-          
-          <div 
-            className={`
-              border-2 border-dashed rounded-lg p-8 text-center cursor-pointer
-              ${isUploading 
-                ? 'border-[#efc349]/50 bg-[#efc349]/5 dark:bg-gold/10' 
-                : 'border-gray-300 dark:border-navy-lighter/50 hover:border-[#efc349] hover:bg-[#efc349]/5 dark:hover:bg-gold/10'}
-            `} 
-            onDrop={handleDrop} 
-            onDragOver={preventDefaults} 
-            onDragEnter={preventDefaults} 
-            onDragLeave={preventDefaults} 
-            onClick={() => document.getElementById('fileInput')?.click()}
-          >
-            {isUploading ? (
-              <div className="flex flex-col items-center">
-                <LoadingSpinner />
-                <p className="mt-2 text-[#020817] dark:text-white">Enviando documento(s)...</p>
-                {renderProgressBar()}
-              </div>
-            ) : selectedFiles && selectedFiles.length > 0 ? (
-              <div>
-                <div className="mb-4 flex items-center justify-center">
-                  <Check className="h-10 w-10 text-green-500 dark:text-green-400" />
-                </div>
-                <h3 className="font-medium text-lg text-[#020817] dark:text-white mb-1">
-                  {selectedFiles.length} {selectedFiles.length === 1 ? 'arquivo selecionado' : 'arquivos selecionados'}
-                </h3>
-                <ul className="max-h-32 overflow-auto text-sm text-[#6b7280] dark:text-gray-300 mt-2">
-                  {filesArray.map((file, index) => (
-                    <li key={index} className="truncate">{file.name}</li>
-                  ))}
-                </ul>
-                <p className="mt-3 text-xs text-[#6b7280] dark:text-gray-400">
-                  Clique para selecionar outros arquivos
-                </p>
-              </div>
-            ) : (
-              <>
-                <Upload className="h-10 w-10 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
-                <h3 className="font-medium text-lg text-[#020817] dark:text-white">
-                  Arraste e solte arquivos aqui
-                </h3>
-                <p className="text-[#6b7280] dark:text-gray-400 mt-1">
-                  ou clique para selecionar
-                </p>
-                <p className="text-xs text-[#6b7280] dark:text-gray-400 mt-4">
-                  Suporta múltiplos arquivos
-                </p>
-              </>
-            )}
-            <Input id="fileInput" type="file" multiple className="hidden" onChange={handleFileChange} disabled={isUploading} />
-          </div>
+          <DocumentUploadArea
+            selectedFiles={selectedFiles}
+            isUploading={isUploading}
+            onDrop={handleDrop}
+            onFileChange={handleFileChange}
+            onDropAreaClick={handleDropAreaClick}
+          />
 
-          {/* Formulário de metadados */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-            <div>
-              <Label htmlFor="documentName" className="text-[#020817] dark:text-gray-300">
-                Nome do Documento*
-              </Label>
-              <Input 
-                id="documentName" 
-                value={documentName} 
-                onChange={e => setDocumentName(e.target.value)} 
-                placeholder="Nome que será exibido para o cliente" 
-                className="mt-1 border-[#e6e6e6] dark:border-navy-lighter/40 bg-white dark:bg-navy-light/20 dark:text-white" 
-                disabled={isUploading} 
-                required 
-              />
-            </div>
+          {isUploading && <DocumentProgressBar uploadProgress={uploadProgress} />}
 
-            <div>
-              <div className="flex justify-between items-center">
-                <Label htmlFor="documentCategory" className="text-[#020817] dark:text-gray-300">
-                  Categoria*
-                </Label>
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-8 text-[#6b7280] hover:text-[#020817] dark:hover:text-gold" 
-                  onClick={() => setIsModalOpen(true)}
-                >
-                  <Settings className="h-4 w-4 mr-1" />
-                  Gerenciar
-                </Button>
-              </div>
-              <select 
-                id="documentCategory" 
-                value={documentCategory} 
-                onChange={e => setDocumentCategory(e.target.value)} 
-                className="mt-1 w-full rounded-md border-[#e6e6e6] dark:border-navy-lighter/40 bg-white dark:bg-navy-dark text-[#020817] dark:text-white" 
-                disabled={isUploading} 
-                required
-              >
-                <option value="">Selecione uma categoria</option>
-                {categories.map(category => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            
-            <div>
-              <Label htmlFor="documentSubcategory" className="text-gray-700 dark:text-gray-300">
-                Subcategoria (opcional)
-              </Label>
-              <Input id="documentSubcategory" value={documentSubcategory} onChange={e => setDocumentSubcategory(e.target.value)} placeholder="Ex: Termo de aceite, Contra-cheque, etc" className="mt-1 border-gray-300 dark:border-navy-lighter/40 bg-white dark:bg-navy-light/20 dark:text-white" disabled={isUploading} />
-            </div>
-
-            <div>
-              <Label htmlFor="documentExpiration" className="text-gray-700 dark:text-gray-300">
-                Data de Expiração (opcional)
-              </Label>
-              <div className="flex items-center mt-1 space-x-4">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal border-gray-300 dark:border-navy-lighter/40 bg-white dark:bg-navy-light/20", !expirationDate && !noExpiration && "text-gray-500 dark:text-gray-400")} disabled={isUploading || noExpiration}>
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {expirationDate ? format(expirationDate, "PPP", {
-                      locale: ptBR
-                    }) : "Selecione uma data"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 bg-white dark:bg-navy-deeper">
-                    <Calendar mode="single" selected={expirationDate || undefined} onSelect={setExpirationDate} initialFocus disabled={date => date < new Date()} className="bg-white dark:bg-navy-deeper" />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div className="flex items-center mt-2">
-                <input type="checkbox" id="noExpiration" checked={noExpiration} onChange={e => {
-                setNoExpiration(e.target.checked);
-                if (e.target.checked) setExpirationDate(null);
-              }} className="rounded border-gray-300 dark:border-navy-lighter/40" disabled={isUploading} />
-                <label htmlFor="noExpiration" className="ml-2 text-sm text-gray-600 dark:text-gray-300">
-                  Sem data de expiração
-                </label>
-              </div>
-            </div>
-
-            <div className="md:col-span-2">
-              <Label htmlFor="documentObservations" className="text-gray-700 dark:text-gray-300">
-                Observações (opcional)
-              </Label>
-              <Textarea id="documentObservations" value={documentObservations} onChange={e => setDocumentObservations(e.target.value)} placeholder="Informações adicionais sobre o documento" className="mt-1 border-gray-300 dark:border-navy-lighter/40 bg-white dark:bg-navy-light/20 dark:text-white" disabled={isUploading} rows={3} />
-            </div>
-          </div>
+          <DocumentMetadataForm
+            documentName={documentName}
+            setDocumentName={setDocumentName}
+            documentCategory={documentCategory}
+            setDocumentCategory={setDocumentCategory}
+            documentSubcategory={documentSubcategory}
+            setDocumentSubcategory={setDocumentSubcategory}
+            documentObservations={documentObservations}
+            setDocumentObservations={setDocumentObservations}
+            expirationDate={expirationDate}
+            setExpirationDate={setExpirationDate}
+            noExpiration={noExpiration}
+            setNoExpiration={setNoExpiration}
+            categories={categories}
+            isUploading={isUploading}
+            onOpenCategoryModal={() => setIsModalOpen(true)}
+          />
 
           <div className="mt-8 flex justify-end">
             <Button 
@@ -383,7 +222,6 @@ export const AdminDocumentUpload: React.FC<AdminDocumentUploadProps> = ({
         </CardContent>
       </Card>
 
-      {/* Modal para gerenciar categorias */}
       <CategoryManagementModal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
