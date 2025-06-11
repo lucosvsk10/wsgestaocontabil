@@ -11,13 +11,19 @@ export const useCarouselDatabase = () => {
 
   const fetchItems = async () => {
     try {
+      console.log('Buscando itens do carrossel...');
       const { data, error } = await supabase
-        .from('carousel_items' as any)
+        .from('carousel_items')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setItems((data || []) as unknown as CarouselItem[]);
+      if (error) {
+        console.error('Erro detalhado ao buscar itens:', error);
+        throw error;
+      }
+
+      console.log('Itens carregados:', data);
+      setItems((data || []) as CarouselItem[]);
     } catch (error) {
       console.error('Erro ao buscar itens:', error);
       toast({
@@ -32,15 +38,35 @@ export const useCarouselDatabase = () => {
 
   const addItem = async (itemData: Omit<CarouselItem, 'id' | 'created_at' | 'updated_at'>) => {
     try {
+      console.log('Adicionando item:', itemData);
+      
+      // Validação frontend
+      if (!itemData.name || !itemData.logo_url) {
+        console.error('Dados inválidos:', itemData);
+        toast({
+          title: "Erro de Validação",
+          description: "Nome da empresa e logo são obrigatórios",
+          variant: "destructive"
+        });
+        return false;
+      }
+
       const { data, error } = await supabase
-        .from('carousel_items' as any)
+        .from('carousel_items')
         .insert([itemData])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro detalhado ao adicionar item:', error);
+        throw error;
+      }
 
-      setItems(prev => [data as unknown as CarouselItem, ...prev]);
+      console.log('Item adicionado com sucesso:', data);
+      
+      // Refresh completo da lista
+      await fetchItems();
+      
       toast({
         title: "Sucesso",
         description: "Item adicionado ao carrossel"
@@ -50,7 +76,7 @@ export const useCarouselDatabase = () => {
       console.error('Erro ao adicionar item:', error);
       toast({
         title: "Erro",
-        description: "Falha ao adicionar item",
+        description: `Falha ao adicionar item: ${error.message || 'Erro desconhecido'}`,
         variant: "destructive"
       });
       return false;
@@ -59,18 +85,45 @@ export const useCarouselDatabase = () => {
 
   const updateItem = async (id: string, updates: Partial<CarouselItem>) => {
     try {
+      console.log('Atualizando item:', id, updates);
+      
+      // Validação frontend
+      if (updates.name !== undefined && !updates.name) {
+        console.error('Nome não pode estar vazio');
+        toast({
+          title: "Erro de Validação",
+          description: "Nome da empresa não pode estar vazio",
+          variant: "destructive"
+        });
+        return false;
+      }
+
+      if (updates.logo_url !== undefined && !updates.logo_url) {
+        console.error('Logo URL não pode estar vazio');
+        toast({
+          title: "Erro de Validação",
+          description: "Logo é obrigatória",
+          variant: "destructive"
+        });
+        return false;
+      }
+
       const { data, error } = await supabase
-        .from('carousel_items' as any)
+        .from('carousel_items')
         .update(updates)
         .eq('id', id)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro detalhado ao atualizar item:', error);
+        throw error;
+      }
 
-      setItems(prev => prev.map(item => 
-        item.id === id ? { ...item, ...data as unknown as CarouselItem } : item
-      ));
+      console.log('Item atualizado com sucesso:', data);
+      
+      // Refresh completo da lista para garantir que as mudanças sejam refletidas
+      await fetchItems();
       
       toast({
         title: "Sucesso",
@@ -81,7 +134,7 @@ export const useCarouselDatabase = () => {
       console.error('Erro ao atualizar item:', error);
       toast({
         title: "Erro",
-        description: "Falha ao atualizar item",
+        description: `Falha ao atualizar item: ${error.message || 'Erro desconhecido'}`,
         variant: "destructive"
       });
       return false;
@@ -90,14 +143,23 @@ export const useCarouselDatabase = () => {
 
   const deleteItem = async (id: string) => {
     try {
+      console.log('Deletando item:', id);
+      
       const { error } = await supabase
-        .from('carousel_items' as any)
+        .from('carousel_items')
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro detalhado ao deletar item:', error);
+        throw error;
+      }
 
-      setItems(prev => prev.filter(item => item.id !== id));
+      console.log('Item deletado com sucesso');
+      
+      // Refresh completo da lista
+      await fetchItems();
+      
       toast({
         title: "Sucesso",
         description: "Item removido do carrossel"
@@ -106,7 +168,7 @@ export const useCarouselDatabase = () => {
       console.error('Erro ao deletar item:', error);
       toast({
         title: "Erro",
-        description: "Falha ao remover item",
+        description: `Falha ao remover item: ${error.message || 'Erro desconhecido'}`,
         variant: "destructive"
       });
     }

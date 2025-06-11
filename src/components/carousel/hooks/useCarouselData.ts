@@ -19,6 +19,7 @@ export const useCarouselData = () => {
   useEffect(() => {
     const loadClients = async () => {
       try {
+        console.log('Carregando dados do carrossel público...');
         const { data, error } = await supabase
           .from('carousel_items')
           .select('*')
@@ -31,6 +32,8 @@ export const useCarouselData = () => {
           return;
         }
 
+        console.log('Dados do carrossel carregados:', data);
+
         // Converter para o formato esperado pelo carrossel
         const formattedClients = ((data || []) as any[]).map((item: any, index: number) => ({
           id: item.id,
@@ -42,6 +45,7 @@ export const useCarouselData = () => {
           active: true
         }));
 
+        console.log('Clientes formatados:', formattedClients);
         setClients(formattedClients);
       } catch (error) {
         console.error('Erro ao carregar dados do carrossel:', error);
@@ -62,7 +66,8 @@ export const useCarouselData = () => {
           schema: 'public', 
           table: 'carousel_items' 
         }, 
-        () => {
+        (payload) => {
+          console.log('Mudança detectada no carrossel:', payload);
           loadClients();
         }
       )

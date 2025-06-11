@@ -30,9 +30,11 @@ const EditCarouselItemDialog = ({ item, isOpen, onClose, onUpdate }: EditCarouse
     status: 'active' as 'active' | 'inactive'
   });
   const [submitting, setSubmitting] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (item) {
+      console.log('Carregando dados do item para edição:', item);
       setFormData({
         name: item.name,
         logo_url: item.logo_url,
@@ -40,36 +42,71 @@ const EditCarouselItemDialog = ({ item, isOpen, onClose, onUpdate }: EditCarouse
         whatsapp: item.whatsapp || '',
         status: item.status
       });
+      setFormErrors({});
     }
   }, [item]);
+
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    
+    if (!formData.name.trim()) {
+      errors.name = 'Nome da empresa é obrigatório';
+    }
+    
+    if (!formData.logo_url) {
+      errors.logo_url = 'Logo é obrigatória';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!item) return;
 
-    if (!formData.name || !formData.logo_url) {
-      alert('Nome da empresa e logo são obrigatórios');
+    console.log('Submetendo formulário de edição:', formData);
+
+    if (!validateForm()) {
+      console.log('Formulário inválido:', formErrors);
       return;
     }
 
     setSubmitting(true);
-    const success = await onUpdate(item.id, {
-      name: formData.name,
-      logo_url: formData.logo_url,
-      instagram: formData.instagram || undefined,
-      whatsapp: formData.whatsapp || undefined,
-      status: formData.status
-    });
+    
+    try {
+      const updateData = {
+        name: formData.name.trim(),
+        logo_url: formData.logo_url,
+        instagram: formData.instagram.trim() || null,
+        whatsapp: formData.whatsapp.trim() || null,
+        status: formData.status
+      };
 
-    if (success) {
-      onClose();
+      console.log('Dados para atualização:', updateData);
+      
+      const success = await onUpdate(item.id, updateData);
+
+      if (success) {
+        console.log('Item atualizado com sucesso');
+        onClose();
+      } else {
+        console.log('Falha ao atualizar item');
+      }
+    } catch (error) {
+      console.error('Erro no submit:', error);
+    } finally {
+      setSubmitting(false);
     }
+  };
 
-    setSubmitting(false);
+  const handleClose = () => {
+    setFormErrors({});
+    onClose();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Editar Bloco do Carrossel</DialogTitle>
@@ -83,7 +120,11 @@ const EditCarouselItemDialog = ({ item, isOpen, onClose, onUpdate }: EditCarouse
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="Digite o nome da empresa"
               required
+              className={formErrors.name ? 'border-red-500' : ''}
             />
+            {formErrors.name && (
+              <p className="text-sm text-red-500 mt-1">{formErrors.name}</p>
+            )}
           </div>
 
           <div>
@@ -92,7 +133,7 @@ const EditCarouselItemDialog = ({ item, isOpen, onClose, onUpdate }: EditCarouse
               value={formData.logo_url}
               onValueChange={(value) => setFormData({ ...formData, logo_url: value })}
             >
-              <SelectTrigger>
+              <SelectTrigger className={formErrors.logo_url ? 'border-red-500' : ''}>
                 <SelectValue placeholder="Selecione uma logo" />
               </SelectTrigger>
               <SelectContent>
@@ -106,6 +147,9 @@ const EditCarouselItemDialog = ({ item, isOpen, onClose, onUpdate }: EditCarouse
                 ))}
               </SelectContent>
             </Select>
+            {formErrors.logo_url && (
+              <p className="text-sm text-red-500 mt-1">{formErrors.logo_url}</p>
+            )}
           </div>
 
           <div>
