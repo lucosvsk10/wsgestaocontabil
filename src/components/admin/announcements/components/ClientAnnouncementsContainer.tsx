@@ -359,9 +359,11 @@ export const ClientAnnouncementsContainer = () => {
               </CardHeader>
 
               <CardContent className="space-y-3">
-                <p className="text-gray-600 dark:text-gray-300 font-extralight text-sm">
-                  {announcement.message}
-                </p>
+                <div className="max-h-20 overflow-y-auto">
+                  <p className="text-gray-600 dark:text-gray-300 font-extralight text-sm break-words whitespace-pre-wrap leading-relaxed">
+                    {announcement.message}
+                  </p>
+                </div>
 
                 {announcement.action_button_text && announcement.action_button_url && (
                   <Button 
