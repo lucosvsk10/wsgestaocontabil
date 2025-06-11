@@ -41,13 +41,10 @@ export const DocumentCard = ({
   };
   
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
+    <div
       className={cn(
         "bg-white/70 dark:bg-[#0b1320]/80 backdrop-blur-sm border border-gray-200/50 dark:border-[#1d2633]/80 rounded-xl overflow-hidden transition-all duration-300 flex flex-col shadow-sm hover:shadow-lg",
-        "w-full h-full min-h-[380px]", // Fixed minimum height for consistency
+        "w-full h-full min-h-[380px]", // Full width within grid cell, consistent height
         // Aplicar opacidade reduzida para documentos expirados (apenas para clientes)
         isExpired ? "opacity-60" : "",
         isHovered && !isExpired ? "transform scale-[1.02] shadow-xl" : ""
@@ -167,6 +164,6 @@ export const DocumentCard = ({
           </Button>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 };

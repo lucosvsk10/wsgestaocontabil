@@ -37,28 +37,29 @@ export const DocumentGrid = ({
   
   return (
     <div className="w-full px-4 py-6">
-      {/* Responsive grid with proper gaps and breakpoints */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-w-7xl mx-auto">
+      {/* Responsive grid with consistent gaps and breakpoints */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {documents.map((doc, index) => (
-          <motion.div
-            key={doc.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.1 }}
-            className="w-full min-w-[280px] max-w-[400px] mx-auto"
-          >
-            <DocumentCard
-              doc={doc}
-              formatDate={formatDate}
-              isDocumentExpired={isDocumentExpired}
-              daysUntilExpiration={daysUntilExpiration}
-              refreshDocuments={refreshDocuments}
-              loadingDocumentIds={loadingDocumentIds}
-              handleDownload={handleDownload}
-              categoryColor={getCategoryColor(doc)}
-              categories={categories}
-            />
-          </motion.div>
+          <div key={doc.id} className="w-full">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.1 }}
+              className="h-full"
+            >
+              <DocumentCard
+                doc={doc}
+                formatDate={formatDate}
+                isDocumentExpired={isDocumentExpired}
+                daysUntilExpiration={daysUntilExpiration}
+                refreshDocuments={refreshDocuments}
+                loadingDocumentIds={loadingDocumentIds}
+                handleDownload={handleDownload}
+                categoryColor={getCategoryColor(doc)}
+                categories={categories}
+              />
+            </motion.div>
+          </div>
         ))}
       </div>
     </div>
