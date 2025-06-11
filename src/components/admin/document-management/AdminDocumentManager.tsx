@@ -161,7 +161,7 @@ export const AdminDocumentManager: React.FC<AdminDocumentManagerProps> = ({
                       <Input placeholder="Buscar documentos..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9 border-gray-200 dark:border-navy-lighter/30 dark:bg-navy-light/10" />
                     </div>
                     
-                    <select value={filterCategory || ''} onChange={e => setFilterCategory(e.target.value || null)} className="h-10 rounded-md border border-gray-200 dark:border-navy-lighter/30 dark:bg-navy-light/10 dark:text-white px-3">
+                    <select value={filterCategory || ''} onChange={e => setFilterCategory(e.target.value || null)} className="h-10 rounded-md border border-gray-200 dark:border-navy-lighter/30 bg-white dark:bg-navy-dark dark:text-white px-3">
                       <option value="">Todas categorias</option>
                       {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
                     </select>
