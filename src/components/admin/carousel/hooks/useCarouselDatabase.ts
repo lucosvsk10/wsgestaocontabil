@@ -12,12 +12,12 @@ export const useCarouselDatabase = () => {
   const fetchItems = async () => {
     try {
       const { data, error } = await supabase
-        .from('carousel_items' as any)
+        .from('carousel_items')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setItems((data || []) as unknown as CarouselItem[]);
+      setItems((data || []) as CarouselItem[]);
     } catch (error) {
       console.error('Erro ao buscar itens:', error);
       toast({
@@ -33,14 +33,14 @@ export const useCarouselDatabase = () => {
   const addItem = async (itemData: Omit<CarouselItem, 'id' | 'created_at' | 'updated_at'>) => {
     try {
       const { data, error } = await supabase
-        .from('carousel_items' as any)
+        .from('carousel_items')
         .insert([itemData])
         .select()
         .single();
 
       if (error) throw error;
 
-      setItems(prev => [data as unknown as CarouselItem, ...prev]);
+      setItems(prev => [data as CarouselItem, ...prev]);
       toast({
         title: "Sucesso",
         description: "Item adicionado ao carrossel"
@@ -59,17 +59,25 @@ export const useCarouselDatabase = () => {
 
   const updateItem = async (id: string, updates: Partial<CarouselItem>) => {
     try {
+      // Limpar campos vazios antes de enviar
+      const cleanUpdates = Object.fromEntries(
+        Object.entries(updates).filter(([_, value]) => value !== '')
+      );
+
       const { data, error } = await supabase
-        .from('carousel_items' as any)
-        .update(updates)
+        .from('carousel_items')
+        .update(cleanUpdates)
         .eq('id', id)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro do Supabase:', error);
+        throw error;
+      }
 
       setItems(prev => prev.map(item => 
-        item.id === id ? { ...item, ...data as unknown as CarouselItem } : item
+        item.id === id ? { ...item, ...data as CarouselItem } : item
       ));
       
       toast({
@@ -81,7 +89,7 @@ export const useCarouselDatabase = () => {
       console.error('Erro ao atualizar item:', error);
       toast({
         title: "Erro",
-        description: "Falha ao atualizar item",
+        description: `Falha ao atualizar item: ${error.message || 'Erro desconhecido'}`,
         variant: "destructive"
       });
       return false;
@@ -91,7 +99,7 @@ export const useCarouselDatabase = () => {
   const deleteItem = async (id: string) => {
     try {
       const { error } = await supabase
-        .from('carousel_items' as any)
+        .from('carousel_items')
         .delete()
         .eq('id', id);
 

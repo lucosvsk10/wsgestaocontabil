@@ -1,5 +1,5 @@
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 
 interface UseCarouselAnimationProps {
   clientsLength: number;
@@ -10,11 +10,13 @@ export const useCarouselAnimation = ({ clientsLength }: UseCarouselAnimationProp
   const [currentPosition, setCurrentPosition] = useState(0);
   const animationRef = useRef<any>(null);
 
-  // Calcular a distância total que a animação deve percorrer
-  const totalDistance = (clientsLength * 300) + (clientsLength * 24);
+  // Calcular a largura de um conjunto de clientes (um "ciclo" completo)
+  const itemWidth = 300; // largura do card
+  const gap = 24; // gap entre cards
+  const singleSetWidth = clientsLength * (itemWidth + gap);
   
-  // Duração total da animação (mais lenta para suavidade)
-  const totalDuration = clientsLength * 6;
+  // Duração baseada na quantidade de itens para manter velocidade consistente
+  const duration = clientsLength * 3; // 3 segundos por item
 
   const pauseAnimation = useCallback(() => {
     if (animationRef.current) {
@@ -51,27 +53,32 @@ export const useCarouselAnimation = ({ clientsLength }: UseCarouselAnimationProp
       };
     }
 
-    // Calcular a duração restante baseada na posição atual
-    const progress = Math.abs(currentPosition) / totalDistance;
-    const remainingDuration = totalDuration * (1 - (progress % 1));
-
+    // Animação infinita que move continuamente para a direita
+    // Começamos em 0 e movemos para -singleSetWidth (uma largura completa do conjunto)
+    // Isso cria o efeito de loop infinito
     return {
-      x: [currentPosition, currentPosition - totalDistance, 0],
+      x: [0, -singleSetWidth],
       transition: {
-        duration: remainingDuration > 0 ? remainingDuration : totalDuration,
+        duration: duration,
         ease: "linear",
         repeat: Infinity,
         repeatType: "loop" as const
       }
     };
-  }, [isPaused, currentPosition, totalDistance, totalDuration]);
+  }, [isPaused, currentPosition, singleSetWidth, duration]);
+
+  // Reset da posição quando não pausado para garantir sincronização
+  useEffect(() => {
+    if (!isPaused) {
+      setCurrentPosition(0);
+    }
+  }, [isPaused]);
 
   return {
     isPaused,
     pauseAnimation,
     resumeAnimation,
     getAnimationConfig,
-    animationRef,
-    setCurrentPosition
+    animationRef
   };
 };

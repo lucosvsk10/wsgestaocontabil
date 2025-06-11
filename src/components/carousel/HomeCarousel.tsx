@@ -16,8 +16,9 @@ const HomeCarousel = () => {
 
   if (clients.length === 0) return null;
 
-  // Duplicar clientes para rolagem infinita
-  const duplicatedClients = [...clients, ...clients, ...clients];
+  // Triplicar clientes para efeito infinito suave
+  // Precisamos de pelo menos 3 conjuntos para o efeito funcionar perfeitamente
+  const triplicatedClients = [...clients, ...clients, ...clients];
 
   return (
     <section className="relative w-full py-24 bg-[#FFF1DE] dark:bg-[#020817]" id="clientes">
@@ -51,13 +52,13 @@ const HomeCarousel = () => {
               ref={animationRef}
               className="flex gap-6"
               style={{ 
-                width: `${duplicatedClients.length * 300 + duplicatedClients.length * 24}px`,
+                width: `${triplicatedClients.length * (300 + 24)}px`,
                 willChange: 'transform'
               }}
               animate={getAnimationConfig()}
             >
-              {duplicatedClients.map((client, index) => (
-                <div key={`${client.id}-${index}`} className="w-72 flex-shrink-0">
+              {triplicatedClients.map((client, index) => (
+                <div key={`${client.id}-${Math.floor(index / clients.length)}-${index % clients.length}`} className="w-72 flex-shrink-0">
                   <CarouselCard client={client} index={0} />
                 </div>
               ))}
