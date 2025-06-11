@@ -1,11 +1,10 @@
-
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Search, Filter, Download, Eye, Calendar, FileText } from "lucide-react";
+import { Search, Filter, Download, Eye, Calendar, FileText, AlertTriangle } from "lucide-react";
 import { Document } from "@/types/admin";
 import { DocumentCategory } from "@/types/common";
 import { Badge } from "@/components/ui/badge";
@@ -142,60 +141,70 @@ export const DocumentsSection = ({
 
         {/* Lista de documentos */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredDocuments.map((doc, index) => (
-            <motion.div
-              key={doc.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.05 }}
-              className={`p-6 rounded-xl border transition-all hover:shadow-md hover:border-[#efc349]/50 ${
-                isDocumentExpired(doc.expires_at) 
-                  ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-500/30" 
-                  : !doc.viewed 
-                    ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-500/30" 
-                    : "bg-white dark:bg-[#020817] border-gray-200 dark:border-[#efc349]/20"
-              }`}
-            >
-              <div className="flex justify-between items-start mb-4">
-                <h3 className="font-semibold text-[#020817] dark:text-white text-lg leading-tight">{doc.name}</h3>
-                <div className="flex gap-2">
-                  {!doc.viewed && (
-                    <Badge className="bg-blue-600 hover:bg-blue-700 text-white font-medium">
-                      Novo
-                    </Badge>
-                  )}
-                  {isDocumentExpired(doc.expires_at) && (
-                    <Badge className="bg-red-600 hover:bg-red-700 text-white font-medium">
-                      Expirado
-                    </Badge>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-3 text-sm text-gray-600 dark:text-gray-300 mb-6">
-                <div className="flex items-center">
-                  <Calendar className="w-4 h-4 mr-2 text-gray-500" />
-                  <span>Enviado: {formatDate(doc.uploaded_at)}</span>
-                </div>
-                <div className="flex items-center">
-                  <Calendar className="w-4 h-4 mr-2 text-gray-500" />
-                  <span>Validade: {daysUntilExpiration(doc.expires_at) || "Sem expiração"}</span>
-                </div>
-                <div className="flex items-center">
-                  <Eye className="w-4 h-4 mr-2 text-gray-500" />
-                  <span>{doc.viewed ? "Visualizado" : "Não visualizado"}</span>
-                </div>
-              </div>
-
-              <Button 
-                onClick={() => onDownload(doc)} 
-                className="w-full bg-[#efc349] hover:bg-[#d4a843] text-[#020817] font-medium transition-all duration-300 hover:shadow-sm"
+          {filteredDocuments.map((doc, index) => {
+            const isExpired = isDocumentExpired(doc.expires_at);
+            return (
+              <motion.div
+                key={doc.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.05 }}
+                className={`p-6 rounded-xl border transition-all hover:shadow-md hover:border-[#efc349]/50 ${
+                  isExpired 
+                    ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-500/30 opacity-60" 
+                    : !doc.viewed 
+                      ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-500/30" 
+                      : "bg-white dark:bg-[#020817] border-gray-200 dark:border-[#efc349]/20"
+                }`}
               >
-                <Download className="w-4 h-4 mr-2" />
-                Baixar documento
-              </Button>
-            </motion.div>
-          ))}
+                <div className="flex justify-between items-start mb-4">
+                  <h3 className="font-semibold text-[#020817] dark:text-white text-lg leading-tight">{doc.name}</h3>
+                  <div className="flex gap-2">
+                    {!doc.viewed && !isExpired && (
+                      <Badge className="bg-blue-600 hover:bg-blue-700 text-white font-medium">
+                        Novo
+                      </Badge>
+                    )}
+                    {isExpired && (
+                      <Badge className="bg-red-600 hover:bg-red-700 text-white font-medium">
+                        Expirado
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-3 text-sm text-gray-600 dark:text-gray-300 mb-6">
+                  <div className="flex items-center">
+                    <Calendar className="w-4 h-4 mr-2 text-gray-500" />
+                    <span>Enviado: {formatDate(doc.uploaded_at)}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Calendar className="w-4 h-4 mr-2 text-gray-500" />
+                    <span>Validade: {isExpired ? "Expirado" : daysUntilExpiration(doc.expires_at) || "Sem expiração"}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Eye className="w-4 h-4 mr-2 text-gray-500" />
+                    <span>{doc.viewed ? "Visualizado" : "Não visualizado"}</span>
+                  </div>
+                </div>
+
+                {isExpired ? (
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-md font-medium transition-all duration-300 py-3 flex items-center justify-center">
+                    <AlertTriangle className="w-4 h-4 mr-2" />
+                    Expirado
+                  </div>
+                ) : (
+                  <Button 
+                    onClick={() => onDownload(doc)} 
+                    className="w-full bg-[#efc349] hover:bg-[#d4a843] text-[#020817] font-medium transition-all duration-300 hover:shadow-sm"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Baixar documento
+                  </Button>
+                )}
+              </motion.div>
+            );
+          })}
         </div>
 
         {filteredDocuments.length === 0 && (

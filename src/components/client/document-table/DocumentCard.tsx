@@ -47,8 +47,10 @@ export const DocumentCard = ({
       transition={{ duration: 0.3 }}
       className={cn(
         "bg-white/70 dark:bg-[#0b1320]/80 backdrop-blur-sm border border-gray-200/50 dark:border-[#1d2633]/80 rounded-xl overflow-hidden transition-all duration-300 flex flex-col shadow-sm hover:shadow-lg",
-        "w-full min-h-[320px] min-w-[300px]", 
-        isHovered ? "transform scale-[1.02] shadow-xl" : ""
+        "w-full min-h-[320px] min-w-[300px]",
+        // Aplicar opacidade reduzida para documentos expirados (apenas para clientes)
+        isExpired ? "opacity-60" : "",
+        isHovered && !isExpired ? "transform scale-[1.02] shadow-xl" : ""
       )}
       style={{
         borderLeft: `4px solid ${categoryColor}`,
@@ -70,9 +72,14 @@ export const DocumentCard = ({
               {getCategoryName()}
             </div>
           </div>
-          {!doc.viewed && (
+          {!doc.viewed && !isExpired && (
             <Badge className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-600/20 dark:text-blue-400 dark:border-blue-600/30 text-xs">
               Novo
+            </Badge>
+          )}
+          {isExpired && (
+            <Badge className="bg-red-50 text-red-700 border-red-200 dark:bg-red-600/20 dark:text-red-400 dark:border-red-600/30 text-xs">
+              Expirado
             </Badge>
           )}
         </div>
@@ -83,7 +90,7 @@ export const DocumentCard = ({
         </h3>
         
         {/* Status "Visualizado" below document name */}
-        {doc.viewed && (
+        {doc.viewed && !isExpired && (
           <div className="mb-4">
             <Badge className="bg-green-50 text-green-700 border-green-200 dark:bg-green-600/20 dark:text-green-400 dark:border-green-600/30 text-xs">
               <Eye className="w-3 h-3 mr-1" />
@@ -112,7 +119,7 @@ export const DocumentCard = ({
                 ? "text-green-600 dark:text-green-400" 
                 : "text-amber-600 dark:text-yellow-400"
           )}>
-            {expirationText || "Sem expiração"}
+            {isExpired ? "Expirado" : expirationText || "Sem expiração"}
           </span>
         </div>
         <div className="flex items-center justify-between">
@@ -138,16 +145,23 @@ export const DocumentCard = ({
         </div>
       </div>
       
-      {/* Download button with more padding */}
+      {/* Download button or "Expirado" text */}
       <div className="p-6 pt-4">
-        <Button
-          onClick={() => handleDownload(doc)}
-          disabled={loadingDocumentIds.has(doc.id)}
-          className="w-full bg-gray-900 hover:bg-gray-800 text-white dark:bg-transparent dark:border dark:border-[#efc349] dark:text-white dark:hover:bg-[#efc349]/10 dark:hover:border-[#efc349] font-medium text-sm transition-all duration-300 shadow-sm hover:shadow-md min-h-[44px]"
-        >
-          <Download className="w-4 h-4 mr-2" />
-          {loadingDocumentIds.has(doc.id) ? "Baixando..." : "Baixar documento"}
-        </Button>
+        {isExpired ? (
+          <div className="w-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 font-medium text-sm transition-all duration-300 shadow-sm min-h-[44px] rounded-md flex items-center justify-center">
+            <AlertTriangle className="w-4 h-4 mr-2" />
+            Expirado
+          </div>
+        ) : (
+          <Button
+            onClick={() => handleDownload(doc)}
+            disabled={loadingDocumentIds.has(doc.id)}
+            className="w-full bg-gray-900 hover:bg-gray-800 text-white dark:bg-transparent dark:border dark:border-[#efc349] dark:text-white dark:hover:bg-[#efc349]/10 dark:hover:border-[#efc349] font-medium text-sm transition-all duration-300 shadow-sm hover:shadow-md min-h-[44px]"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            {loadingDocumentIds.has(doc.id) ? "Baixando..." : "Baixar documento"}
+          </Button>
+        )}
       </div>
     </motion.div>
   );
