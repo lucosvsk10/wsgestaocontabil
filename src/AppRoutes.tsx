@@ -1,4 +1,3 @@
-
 import { Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -13,6 +12,7 @@ import FormPollPage from "./pages/FormPollPage";
 import TaxCalculator from "./pages/TaxCalculator";
 import INSSCalculator from "./pages/INSSCalculator";
 import ProLaboreCalculator from "./pages/ProLaboreCalculator";
+import ChangeLog from "./pages/ChangeLog";
 import { checkIsAdmin } from "./utils/auth/userChecks";
 import { CompanyDataView } from "./components/admin/company/CompanyDataView";
 import SimpleCarouselManager from '@/components/admin/carousel/SimpleCarouselManager';
@@ -35,6 +35,7 @@ const AppRoutes = () => {
       <Route path="/simulador-irpf" element={<TaxCalculator />} />
       <Route path="/calculadora-inss" element={<INSSCalculator />} />
       <Route path="/simulador-prolabore" element={<ProLaboreCalculator />} />
+      <Route path="/changelog" element={<ChangeLog />} />
       
       {/* Admin routes */}
       <Route path="/admin" element={
