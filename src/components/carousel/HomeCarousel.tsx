@@ -52,15 +52,15 @@ const HomeCarousel = () => {
             <motion.div
               ref={animationRef}
               className="flex gap-6"
-              style={{ x }}
+              style={{ 
+                x,
+                width: `${duplicatedClients.length * 300 + duplicatedClients.length * 24}px`
+              }}
               animate={getAnimationConfig()}
               onUpdate={(latest) => {
                 if (!isPaused && typeof latest.x === 'number') {
                   setCurrentPosition(latest.x);
                 }
-              }}
-              style={{
-                width: `${duplicatedClients.length * 300 + duplicatedClients.length * 24}px`
               }}
             >
               {duplicatedClients.map((client, index) => (
