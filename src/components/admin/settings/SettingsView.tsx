@@ -170,7 +170,7 @@ export const SettingsView = () => {
               <div className="p-6 rounded-xl bg-gray-50 dark:bg-transparent space-y-3">
                 <p className="text-sm font-medium text-gray-500 dark:text-white/70">Ambiente</p>
                 <p className="text-2xl font-bold text-[#020817] dark:text-white">Produção</p>
-                <p className="text-xs text-gray-500 dark:text-white/50">Status: OFFline</p>
+                <p className="text-xs text-gray-500 dark:text-white/50">Status: ONLINE</p>
               </div>
             </div>
           </div>
