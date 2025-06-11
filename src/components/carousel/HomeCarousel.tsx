@@ -27,7 +27,7 @@ const HomeCarousel = () => {
               Nossos Parceiros
             </span>
             <h2 className="text-4xl lg:text-5xl font-extralight text-[#020817] dark:text-white mb-6 leading-tight">
-              Clientes que <span className="text-[#efc349]">Confiam</span>
+              Alguns de Nossos <span className="text-[#efc349]">Clientes</span>
             </h2>
             <p className="text-[#020817]/70 dark:text-white/70 font-extralight max-w-3xl mx-auto leading-relaxed text-lg">
               Empresas de diversos segmentos que escolheram nossa expertise em gestão contábil e empresarial
