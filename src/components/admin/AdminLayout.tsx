@@ -1,18 +1,32 @@
+import { useState } from "react";
+import { Outlet } from "react-router-dom";
+import AdminHeader from "./layout/AdminHeader";
+import AdminSidebar from "./layout/AdminSidebar";
 
-import React from 'react';
+export default function AdminLayout() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-interface AdminLayoutProps {
-  children: React.ReactNode;
-}
+  const closeSidebar = () => {
+    setSidebarOpen(false);
+  };
 
-const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
+  const openSidebar = () => {
+    setSidebarOpen(true);
+  };
+
   return (
-    <div className="min-h-screen bg-[#FFF1DE] dark:bg-[#020817]">
-      <div className="container mx-auto px-4 py-8">
-        {children}
-      </div>
+    <div className="min-h-screen bg-gray-50 dark:bg-[#020817]">
+      <AdminHeader />
+      <AdminSidebar />
+
+      {/* Main Content */}
+      <main className="lg:pl-72">
+        <div className="py-6">
+          <div className="px-4 sm:px-6 lg:px-8">
+            <Outlet />
+          </div>
+        </div>
+      </main>
     </div>
   );
-};
-
-export default AdminLayout;
+}
