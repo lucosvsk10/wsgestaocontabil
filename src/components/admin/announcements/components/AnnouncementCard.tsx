@@ -69,9 +69,11 @@ export const AnnouncementCard = ({
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        <p className="text-sm text-gray-600 dark:text-gray-300 font-extralight">
-          {announcement.message}
-        </p>
+        <div className="max-h-20 overflow-y-auto">
+          <p className="text-sm text-gray-600 dark:text-gray-300 font-extralight break-words whitespace-pre-wrap leading-relaxed">
+            {announcement.message}
+          </p>
+        </div>
         
         <div className="grid grid-cols-2 gap-4 text-xs text-gray-500 dark:text-gray-400">
           <div>
