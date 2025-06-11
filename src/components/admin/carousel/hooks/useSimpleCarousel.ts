@@ -22,13 +22,19 @@ export const useSimpleCarousel = () => {
 
   const fetchItems = async () => {
     try {
-      // Usar query SQL direta já que a tabela ainda não está nos tipos
       const { data, error } = await supabase
-        .rpc('get_carousel_items');
+        .from('carousel_items')
+        .select('*')
+        .order('created_at', { ascending: false });
 
       if (error) {
-        console.log('Tabela ainda não existe, retornando array vazio');
+        console.log('Erro ao buscar itens:', error);
         setItems([]);
+        toast({
+          title: "Erro",
+          description: "Falha ao carregar itens do carrossel",
+          variant: "destructive"
+        });
       } else {
         setItems(data || []);
       }
@@ -90,13 +96,10 @@ export const useSimpleCarousel = () => {
   const addItem = async (itemData: Omit<CarouselItem, 'id' | 'created_at' | 'updated_at'>) => {
     try {
       const { data, error } = await supabase
-        .rpc('insert_carousel_item', {
-          p_name: itemData.name,
-          p_logo_url: itemData.logo_url,
-          p_instagram: itemData.instagram,
-          p_whatsapp: itemData.whatsapp,
-          p_status: itemData.status
-        });
+        .from('carousel_items')
+        .insert([itemData])
+        .select()
+        .single();
 
       if (error) throw error;
 
@@ -122,13 +125,9 @@ export const useSimpleCarousel = () => {
   const updateItem = async (id: string, updates: Partial<CarouselItem>) => {
     try {
       const { error } = await supabase
-        .rpc('update_carousel_item', {
-          p_id: id,
-          p_name: updates.name,
-          p_instagram: updates.instagram,
-          p_whatsapp: updates.whatsapp,
-          p_status: updates.status
-        });
+        .from('carousel_items')
+        .update(updates)
+        .eq('id', id);
 
       if (error) throw error;
 
@@ -154,7 +153,9 @@ export const useSimpleCarousel = () => {
   const deleteItem = async (id: string) => {
     try {
       const { error } = await supabase
-        .rpc('delete_carousel_item', { p_id: id });
+        .from('carousel_items')
+        .delete()
+        .eq('id', id);
 
       if (error) throw error;
 

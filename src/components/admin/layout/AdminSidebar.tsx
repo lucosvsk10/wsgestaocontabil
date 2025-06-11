@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from "@/lib/utils";
@@ -18,24 +19,11 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { checkIsAdmin } from "@/utils/auth/userChecks";
 
-interface SidebarProps {
-  className?: string;
-}
-
 const AdminSidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, userData } = useAuth();
   const isAdmin = checkIsAdmin(userData, user?.email);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
-  };
-
-  const closeMobileMenu = () => {
-    setIsMobileMenuOpen(false);
-  };
 
   const activeTab = new URLSearchParams(location.search).get('tab') || '';
 
@@ -131,7 +119,6 @@ const AdminSidebar = () => {
             )}
             onClick={() => {
               navigate(item.href);
-              closeMobileMenu();
             }}
           >
             <item.icon className="h-4 w-4" />
@@ -146,13 +133,13 @@ const AdminSidebar = () => {
           <a href="#" className="group flex items-center space-x-3">
             <div className="h-9 w-9 overflow-hidden rounded-full bg-gray-50">
               <Avatar>
-                <AvatarImage src={user?.photoURL || ""} />
+                <AvatarImage src={""} />
                 <AvatarFallback>{user?.email?.[0].toUpperCase() || "U"}</AvatarFallback>
               </Avatar>
             </div>
             <div className="flex-1">
               <div className="truncate text-sm font-semibold text-[#020817] dark:text-white">
-                {userData?.name || user?.displayName || "Usuário"}
+                {userData?.name || "Usuário"}
               </div>
               <div className="truncate text-xs text-gray-500 dark:text-gray-400 group-hover:text-gray-900">
                 {isAdmin ? "Administrador" : "Cliente"}

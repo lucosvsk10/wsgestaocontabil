@@ -20,10 +20,6 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
     setSidebarOpen(!isMobile);
   }, [isMobile]);
 
-  const handleSidebarClose = () => {
-    setSidebarOpen(false);
-  };
-
   const toggleSidebar = () => setSidebarOpen(prev => !prev);
 
   return (
