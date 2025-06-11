@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import SimpleNavbar from "@/components/calculators/SimpleNavbar";
 import ResultActions from "@/components/calculators/ResultActions";
+import { INSSHeader } from "@/components/tax-calculator/INSSHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,12 +10,14 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calculator, DollarSign, Briefcase } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+
 const INSSCalculator = () => {
   const [categoria, setCategoria] = useState("");
   const [valor, setValor] = useState("");
   const [tipoFacultativo, setTipoFacultativo] = useState("");
   const [resultado, setResultado] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+
   const calcularINSS = () => {
     setLoading(true);
     const valorBase = parseFloat(valor) || 0;
@@ -89,40 +92,35 @@ const INSSCalculator = () => {
     });
     setLoading(false);
   };
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
     }).format(value);
   };
+
   const resetForm = () => {
     setCategoria("");
     setValor("");
     setTipoFacultativo("");
     setResultado(null);
   };
-  return <div className="min-h-screen bg-background text-foreground font-prompt print:bg-white">
+
+  return (
+    <div className="min-h-screen bg-background text-foreground font-prompt print:bg-white">
       <div className="print:hidden">
         <SimpleNavbar title="Calculadora INSS 2024" />
       </div>
       
       <div className="container mx-auto px-4 py-[100px] print:py-8">
-        <motion.div initial={{
-        opacity: 0,
-        y: 20
-      }} animate={{
-        opacity: 1,
-        y: 0
-      }} transition={{
-        duration: 0.6
-      }} className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-extralight text-gold mb-4 print:text-foreground print:text-3xl md:text-3xl">Calculadora INSS</h1>
-            <p className="text-muted-foreground font-extralight print:text-gray-600 text-lg">
-              Calcule sua contribuição para o INSS conforme sua categoria
-            </p>
-          </div>
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          transition={{ duration: 0.6 }} 
+          className="max-w-4xl mx-auto"
+        >
+          <INSSHeader />
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Formulário */}
@@ -153,7 +151,8 @@ const INSSCalculator = () => {
                   </Select>
                 </div>
 
-                {categoria === "facultativo" && <div>
+                {categoria === "facultativo" && (
+                  <div>
                     <Label className="font-extralight print:text-black">
                       Tipo de Contribuição Facultativa
                     </Label>
@@ -167,28 +166,46 @@ const INSSCalculator = () => {
                         <SelectItem value="completo">Contribuição Completa (20%)</SelectItem>
                       </SelectContent>
                     </Select>
-                  </div>}
+                  </div>
+                )}
 
-                {categoria && categoria !== "mei" && <div>
+                {categoria && categoria !== "mei" && (
+                  <div>
                     <Label htmlFor="valor" className="font-extralight flex items-center print:text-black">
                       <DollarSign className="w-4 h-4 mr-1" />
                       {categoria === "clt" ? "Salário Mensal (R$)" : categoria === "facultativo" ? "Valor de Contribuição (R$)" : "Valor Declarado (R$)"}
                     </Label>
-                    <Input id="valor" type="number" placeholder={categoria === "clt" ? "3000.00" : "1412.00"} value={valor} onChange={e => setValor(e.target.value)} className="mt-1 print:bg-white print:border-gray-300 print:text-black" />
-                    {categoria === "clt" && <p className="text-xs text-muted-foreground mt-1 print:text-gray-600">
+                    <Input 
+                      id="valor" 
+                      type="number" 
+                      placeholder={categoria === "clt" ? "3000.00" : "1412.00"} 
+                      value={valor} 
+                      onChange={(e) => setValor(e.target.value)} 
+                      className="mt-1 print:bg-white print:border-gray-300 print:text-black" 
+                    />
+                    {categoria === "clt" && (
+                      <p className="text-xs text-muted-foreground mt-1 print:text-gray-600">
                         Teto INSS 2024: R$ 7.786,02
-                      </p>}
-                  </div>}
+                      </p>
+                    )}
+                  </div>
+                )}
 
-                {categoria === "mei" && <div className="bg-muted rounded-lg p-4 print:bg-gray-50 print:border print:border-gray-300">
+                {categoria === "mei" && (
+                  <div className="bg-muted rounded-lg p-4 print:bg-gray-50 print:border print:border-gray-300">
                     <p className="text-muted-foreground font-extralight print:text-gray-600">
                       <strong>MEI:</strong> Valor fixo mensal de 5% do salário mínimo.<br />
                       Não é necessário informar valor de contribuição.
                     </p>
-                  </div>}
+                  </div>
+                )}
 
                 <div className="flex gap-2 print:hidden">
-                  <Button onClick={calcularINSS} disabled={loading || !categoria || categoria !== "mei" && !valor} className="flex-1 bg-gold hover:bg-gold-dark text-background font-extralight">
+                  <Button 
+                    onClick={calcularINSS} 
+                    disabled={loading || !categoria || (categoria !== "mei" && !valor)} 
+                    className="flex-1 bg-gold hover:bg-gold-dark text-background font-extralight"
+                  >
                     {loading ? "Calculando..." : "Calcular INSS"}
                   </Button>
                   
@@ -200,15 +217,12 @@ const INSSCalculator = () => {
             </Card>
 
             {/* Resultado */}
-            {resultado && <motion.div initial={{
-            opacity: 0,
-            x: 20
-          }} animate={{
-            opacity: 1,
-            x: 0
-          }} transition={{
-            duration: 0.5
-          }}>
+            {resultado && (
+              <motion.div 
+                initial={{ opacity: 0, x: 20 }} 
+                animate={{ opacity: 1, x: 0 }} 
+                transition={{ duration: 0.5 }}
+              >
                 <Card className="print:bg-white print:border-gray-300">
                   <CardHeader>
                     <CardTitle className="font-extralight print:text-foreground">
@@ -233,10 +247,12 @@ const INSSCalculator = () => {
                           <span className="text-foreground font-medium print:text-black">{resultado.aliquota}%</span>
                         </div>
 
-                        {resultado.categoria !== "mei" && <div className="flex justify-between">
+                        {resultado.categoria !== "mei" && (
+                          <div className="flex justify-between">
                             <span className="text-muted-foreground print:text-gray-600">Valor Base:</span>
                             <span className="text-foreground print:text-black">{formatCurrency(resultado.valorBase)}</span>
-                          </div>}
+                          </div>
+                        )}
 
                         <div className="flex justify-between border-t border-border pt-3 print:border-gray-300">
                           <span className="text-muted-foreground print:text-gray-600">Contribuição Mensal:</span>
@@ -285,10 +301,13 @@ const INSSCalculator = () => {
                 <div className="print:hidden">
                   <ResultActions resultData={resultado} calculatorType="inss" />
                 </div>
-              </motion.div>}
+              </motion.div>
+            )}
           </div>
         </motion.div>
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default INSSCalculator;
