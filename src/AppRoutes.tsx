@@ -1,3 +1,4 @@
+
 import {
   BrowserRouter as Router,
   Routes,
@@ -8,8 +9,8 @@ import TaxCalculator from "@/pages/TaxCalculator";
 import INSSCalculator from "@/pages/INSSCalculator";
 import ProLaboreCalculator from "@/pages/ProLaboreCalculator";
 import ClientLogin from "@/pages/ClientLogin";
-import ClientDashboard from "@/pages/client/ClientDashboard";
-import AdminDashboard from "@/pages/admin/AdminDashboard";
+import ClientDashboard from "@/pages/ClientDashboard";
+import AdminDashboard from "@/pages/AdminDashboard";
 import NotFound from "@/pages/NotFound";
 import PrivateRoute from "@/components/PrivateRoute";
 import PollPage from "@/pages/PollPage";
@@ -41,7 +42,7 @@ function AppRoutes() {
         {/* Admin Routes */}
         <Route path="/admin" element={
           <PrivateRoute requiredRole="admin">
-            <AdminDashboard />
+            <AdminDashboard activeTab="dashboard" />
           </PrivateRoute>
         } />
         
