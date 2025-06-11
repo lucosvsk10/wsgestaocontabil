@@ -153,9 +153,13 @@ export const useCompanyData = (userId: string | undefined) => {
         last_query_date: formData.last_query_date === "" ? null : formData.last_query_date
       };
 
+      // Usar upsert com onConflict especificando a coluna de conflito
       const { error } = await supabase
         .from('company_data')
-        .upsert(dataToSave);
+        .upsert(dataToSave, { 
+          onConflict: 'user_id',
+          ignoreDuplicates: false 
+        });
 
       if (error) throw error;
 
