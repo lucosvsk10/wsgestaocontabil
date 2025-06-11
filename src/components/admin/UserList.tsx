@@ -214,6 +214,14 @@ export const UserList = ({
               Gerencie todos os usuários do sistema
             </p>
           </div>
+          
+          <Button
+            onClick={() => setIsUserCreationDialogOpen(true)}
+            className="bg-[#020817] hover:bg-[#0f172a] text-white dark:bg-transparent dark:border dark:border-[#efc349] dark:text-[#efc349] dark:hover:bg-[#efc349]/10 font-extralight"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Criar Novo Usuário
+          </Button>
         </div>
 
         {/* Search and Filter */}
