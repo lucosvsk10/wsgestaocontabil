@@ -70,25 +70,32 @@ const CarouselItemsList = ({ items, loading, onEdit, onDelete }: CarouselItemsLi
             {filteredItems.map((item) => (
               <div
                 key={item.id}
-                className="flex items-center gap-4 p-4 border border-gray-200 dark:border-[#efc349]/30 rounded-lg bg-white dark:bg-[#020817]"
+                className="flex items-center gap-4 p-4 border border-gray-200 dark:border-[#efc349]/30 rounded-lg bg-white dark:bg-[#020817] hover:shadow-md transition-shadow"
               >
-                <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center flex-shrink-0">
+                <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
                   <img
                     src={item.logo_url}
                     alt={item.name}
                     className="max-w-full max-h-full object-contain"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
                     }}
                   />
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-[#020817] dark:text-white truncate">
+                  <h3 className="font-medium text-[#020817] dark:text-white truncate text-lg">
                     {item.name}
                   </h3>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Badge variant={item.status === 'active' ? 'default' : 'secondary'}>
+                  <div className="flex items-center gap-2 mt-2">
+                    <Badge 
+                      variant={item.status === 'active' ? 'default' : 'secondary'}
+                      className={item.status === 'active' 
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
+                        : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400'
+                      }
+                    >
                       {item.status === 'active' ? 'Ativo' : 'Inativo'}
                     </Badge>
                     
@@ -108,12 +115,13 @@ const CarouselItemsList = ({ items, loading, onEdit, onDelete }: CarouselItemsLi
                   </div>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-shrink-0">
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => onEdit(item)}
-                    className="border-[#efc349]/30 text-[#efc349] hover:bg-[#efc349]/10"
+                    className="border-[#efc349]/50 text-[#efc349] hover:bg-[#efc349]/10 hover:border-[#efc349] transition-all duration-200"
+                    title="Editar item"
                   >
                     <Edit2 className="w-4 h-4" />
                   </Button>
@@ -121,7 +129,8 @@ const CarouselItemsList = ({ items, loading, onEdit, onDelete }: CarouselItemsLi
                     size="sm"
                     variant="outline"
                     onClick={() => onDelete(item.id)}
-                    className="border-red-500/30 text-red-500 hover:bg-red-500/10"
+                    className="border-red-500/50 text-red-500 hover:bg-red-500/10 hover:border-red-500 transition-all duration-200"
+                    title="Excluir item"
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
