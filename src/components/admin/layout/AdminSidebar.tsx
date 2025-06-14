@@ -1,7 +1,7 @@
 
 import { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useSidebarHandlers } from "@/hooks/layout/useSidebarHandlers";
 import { LayoutDashboard, Users, PieChart, Calculator, Settings, Wrench, X, HardDrive, Megaphone, Calendar, Images } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
@@ -50,30 +50,22 @@ interface AdminSidebarProps {
 
 const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
   const location = useLocation();
-  const isMobile = useIsMobile();
   const { theme } = useTheme();
-
-  // Close sidebar on outside click for mobile
-  useEffect(() => {
-    if (isMobile && open) {
-      const handleClickOutside = (e: MouseEvent) => {
-        const target = e.target as HTMLElement;
-        if (!target.closest('[data-sidebar="true"]') && !target.closest('[data-sidebar-toggle="true"]')) {
-          onClose();
-        }
-      };
-      
-      document.addEventListener("click", handleClickOutside);
-      return () => document.removeEventListener("click", handleClickOutside);
-    }
-  }, [isMobile, onClose, open]);
+  
+  // Use the custom hook for sidebar handlers
+  useSidebarHandlers({ 
+    isMobile: window.innerWidth < 768, 
+    open, 
+    onClose 
+  });
 
   // Close sidebar on route change for mobile
   useEffect(() => {
+    const isMobile = window.innerWidth < 768;
     if (isMobile && open) {
       onClose();
     }
-  }, [location.pathname, isMobile, onClose, open]);
+  }, [location.pathname, onClose, open]);
 
   const getIsActive = (path: string): boolean => {
     return location.pathname === path;
@@ -141,6 +133,8 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
       to: "/admin/settings"
     }
   ];
+
+  const isMobile = window.innerWidth < 768;
 
   return (
     <aside 

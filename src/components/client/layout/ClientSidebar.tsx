@@ -1,6 +1,6 @@
 
-import { useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useSidebarHandlers } from "@/hooks/layout/useSidebarHandlers";
+import { Link } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { FileText, Calculator, Bell, Calendar, Building2, X } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -48,24 +48,15 @@ interface ClientSidebarProps {
 }
 
 const ClientSidebar: React.FC<ClientSidebarProps> = ({ activeTab, setActiveTab, open, onOpenChange }) => {
-  const location = useLocation();
   const isMobile = useIsMobile();
   const { theme } = useTheme();
 
-  // Close sidebar on outside click for mobile
-  useEffect(() => {
-    if (isMobile && open) {
-      const handleClickOutside = (e: MouseEvent) => {
-        const target = e.target as HTMLElement;
-        if (!target.closest('[data-sidebar="true"]') && !target.closest('[data-sidebar-toggle="true"]')) {
-          onOpenChange(false);
-        }
-      };
-      
-      document.addEventListener("click", handleClickOutside);
-      return () => document.removeEventListener("click", handleClickOutside);
-    }
-  }, [isMobile, onOpenChange, open]);
+  // Use the custom hook for sidebar handlers
+  useSidebarHandlers({ 
+    isMobile, 
+    open, 
+    onClose: () => onOpenChange(false) 
+  });
 
   const sidebarItems = [
     {

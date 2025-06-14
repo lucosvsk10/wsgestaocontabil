@@ -1,6 +1,6 @@
 
-import { ReactNode, useState, useEffect } from "react";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { ReactNode } from "react";
+import { useAdminLayout } from "@/hooks/layout/useAdminLayout";
 import AdminSidebar from "./AdminSidebar";
 import AdminHeader from "./AdminHeader";
 import { NotificationPopupContainer } from "@/components/notifications/NotificationPopupContainer";
@@ -12,19 +12,13 @@ interface AdminLayoutProps {
 }
 
 export const AdminLayout = ({ children }: AdminLayoutProps) => {
-  const isMobile = useIsMobile();
-  const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
-
-  // Ajustar sidebar baseado no tamanho da tela
-  useEffect(() => {
-    setSidebarOpen(!isMobile);
-  }, [isMobile]);
-
-  const handleSidebarClose = () => {
-    setSidebarOpen(false);
-  };
-
-  const toggleSidebar = () => setSidebarOpen(prev => !prev);
+  const {
+    isMobile,
+    sidebarOpen,
+    setSidebarOpen,
+    handleSidebarClose,
+    toggleSidebar
+  } = useAdminLayout();
 
   return (
     <div className="min-h-screen bg-[#fdfdfd] dark:bg-[#020817] flex">

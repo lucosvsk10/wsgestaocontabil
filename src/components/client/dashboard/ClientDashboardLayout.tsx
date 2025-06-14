@@ -1,7 +1,6 @@
 
-import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useClientDashboardLayout } from "@/hooks/layout/useClientDashboardLayout";
 import ClientSidebar from "../layout/ClientSidebar";
 import ClientHeader from "../layout/ClientHeader";
 import { Button } from "@/components/ui/button";
@@ -14,14 +13,12 @@ interface ClientDashboardLayoutProps {
 }
 
 export const ClientDashboardLayout = ({ children, activeTab, setActiveTab }: ClientDashboardLayoutProps) => {
-  const isMobile = useIsMobile();
-  const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
-
-  useEffect(() => {
-    setSidebarOpen(!isMobile);
-  }, [isMobile]);
-
-  const toggleSidebar = () => setSidebarOpen(prev => !prev);
+  const {
+    isMobile,
+    sidebarOpen,
+    setSidebarOpen,
+    toggleSidebar
+  } = useClientDashboardLayout();
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#020817] flex overflow-hidden">
