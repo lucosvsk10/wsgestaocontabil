@@ -1,6 +1,13 @@
 
 import { useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, PieChart, Calculator, Settings, Wrench, HardDrive, Megaphone, Calendar, Images } from "lucide-react";
+import { LayoutDashboard, Users, PieChart, Calculator, Settings, Wrench, HardDrive, Megaphone, Calendar, Images, LucideIcon } from "lucide-react";
+
+interface SidebarItem {
+  icon: LucideIcon;
+  label: string;
+  active: boolean;
+  to: string;
+}
 
 export const useAdminSidebarNavigation = () => {
   const location = useLocation();
@@ -9,7 +16,7 @@ export const useAdminSidebarNavigation = () => {
     return location.pathname === path;
   };
 
-  const sidebarItems = [
+  const sidebarItems: SidebarItem[] = [
     {
       icon: LayoutDashboard,
       label: "Dashboard",

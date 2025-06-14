@@ -1,5 +1,12 @@
 
-import { FileText, Calculator, Bell, Calendar, Building2 } from "lucide-react";
+import { FileText, Calculator, Bell, Calendar, Building2, LucideIcon } from "lucide-react";
+
+interface SidebarItem {
+  icon: LucideIcon;
+  label: string;
+  id: string;
+  active: boolean;
+}
 
 interface UseClientSidebarNavigationProps {
   activeTab: string;
@@ -14,7 +21,7 @@ export const useClientSidebarNavigation = ({
   isMobile, 
   onOpenChange 
 }: UseClientSidebarNavigationProps) => {
-  const sidebarItems = [
+  const sidebarItems: SidebarItem[] = [
     {
       icon: FileText,
       label: "Documentos",

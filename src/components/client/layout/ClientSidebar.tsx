@@ -6,9 +6,10 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { X } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
+import { LucideIcon } from "lucide-react";
 
 interface SidebarItemProps {
-  icon: React.ComponentType<{ size?: number }>;
+  icon: LucideIcon;
   label: string;
   active: boolean;
   onClick: () => void;
