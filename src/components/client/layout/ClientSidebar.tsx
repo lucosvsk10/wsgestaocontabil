@@ -1,20 +1,21 @@
 
 import { useSidebarHandlers } from "@/hooks/layout/useSidebarHandlers";
+import { useClientSidebarNavigation } from "@/hooks/layout/useClientSidebarNavigation";
 import { Link } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { FileText, Calculator, Bell, Calendar, Building2, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
 
 interface SidebarItemProps {
-  icon: React.ReactNode;
+  icon: React.ComponentType<{ size?: number }>;
   label: string;
   active: boolean;
   onClick: () => void;
 }
 
 const SidebarItem: React.FC<SidebarItemProps> = ({
-  icon,
+  icon: Icon,
   label,
   active,
   onClick
@@ -33,7 +34,7 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
           ? "text-[#efc349] scale-110" 
           : "text-gray-500 dark:text-white/70 group-hover:text-[#efc349] group-hover:scale-105"
       }`}>
-        {icon}
+        <Icon size={20} />
       </div>
       <span className="tracking-wide text-sm font-extralight">{label}</span>
     </button>
@@ -50,6 +51,12 @@ interface ClientSidebarProps {
 const ClientSidebar: React.FC<ClientSidebarProps> = ({ activeTab, setActiveTab, open, onOpenChange }) => {
   const isMobile = useIsMobile();
   const { theme } = useTheme();
+  const { sidebarItems, handleItemClick } = useClientSidebarNavigation({ 
+    activeTab, 
+    setActiveTab, 
+    isMobile, 
+    onOpenChange 
+  });
 
   // Use the custom hook for sidebar handlers
   useSidebarHandlers({ 
@@ -57,39 +64,6 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({ activeTab, setActiveTab, 
     open, 
     onClose: () => onOpenChange(false) 
   });
-
-  const sidebarItems = [
-    {
-      icon: <FileText size={20} />,
-      label: "Documentos",
-      id: "documents",
-      active: activeTab === "documents"
-    },
-    {
-      icon: <Calculator size={20} />,
-      label: "Simulações",
-      id: "simulations",
-      active: activeTab === "simulations"
-    },
-    {
-      icon: <Bell size={20} />,
-      label: "Comunicados",
-      id: "announcements",
-      active: activeTab === "announcements"
-    },
-    {
-      icon: <Calendar size={20} />,
-      label: "Agenda",
-      id: "calendar",
-      active: activeTab === "calendar"
-    },
-    {
-      icon: <Building2 size={20} />,
-      label: "Empresa",
-      id: "company",
-      active: activeTab === "company"
-    }
-  ];
 
   return (
     <>
@@ -165,10 +139,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({ activeTab, setActiveTab, 
                   icon={item.icon} 
                   label={item.label} 
                   active={item.active} 
-                  onClick={() => {
-                    setActiveTab(item.id);
-                    if (isMobile) onOpenChange(false);
-                  }}
+                  onClick={() => handleItemClick(item.id)}
                 />
               ) : (
                 <div 
@@ -187,7 +158,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({ activeTab, setActiveTab, 
                         : "text-gray-500 dark:text-white/70 hover:text-[#efc349]"
                     }`}
                   >
-                    {item.icon}
+                    <item.icon size={20} />
                   </button>
                 </div>
               )}

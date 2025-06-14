@@ -1,13 +1,14 @@
 
 import { useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useSidebarHandlers } from "@/hooks/layout/useSidebarHandlers";
-import { LayoutDashboard, Users, PieChart, Calculator, Settings, Wrench, X, HardDrive, Megaphone, Calendar, Images } from "lucide-react";
+import { useAdminSidebarNavigation } from "@/hooks/layout/useAdminSidebarNavigation";
+import { X } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
 
 interface SidebarItemProps {
-  icon: React.ReactNode;
+  icon: React.ComponentType<{ size?: number }>;
   label: string;
   active: boolean;
   to: string;
@@ -15,7 +16,7 @@ interface SidebarItemProps {
 }
 
 const SidebarItem: React.FC<SidebarItemProps> = ({
-  icon,
+  icon: Icon,
   label,
   active,
   to,
@@ -36,7 +37,7 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
           ? "text-[#efc349] scale-110" 
           : "text-gray-500 dark:text-white/70 group-hover:text-[#efc349] group-hover:scale-105"
       }`}>
-        {icon}
+        <Icon size={20} />
       </div>
       <span className="tracking-wide text-sm font-extralight">{label}</span>
     </Link>
@@ -49,8 +50,8 @@ interface AdminSidebarProps {
 }
 
 const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
-  const location = useLocation();
   const { theme } = useTheme();
+  const { sidebarItems, currentPath } = useAdminSidebarNavigation();
   
   // Use the custom hook for sidebar handlers
   useSidebarHandlers({ 
@@ -65,74 +66,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
     if (isMobile && open) {
       onClose();
     }
-  }, [location.pathname, onClose, open]);
-
-  const getIsActive = (path: string): boolean => {
-    return location.pathname === path;
-  };
-
-  const sidebarItems = [
-    {
-      icon: <LayoutDashboard size={20} />,
-      label: "Dashboard",
-      active: getIsActive("/admin") || getIsActive("/admin/"),
-      to: "/admin"
-    },
-    {
-      icon: <Users size={20} />,
-      label: "Usuários",
-      active: getIsActive("/admin/users"),
-      to: "/admin/users"
-    },
-    {
-      icon: <HardDrive size={20} />,
-      label: "Armazenamento",
-      active: getIsActive("/admin/storage"),
-      to: "/admin/storage"
-    },
-    {
-      icon: <Calendar size={20} />,
-      label: "Agenda",
-      active: getIsActive("/admin/agenda"),
-      to: "/admin/agenda"
-    },
-    {
-      icon: <Images size={20} />,
-      label: "Carrossel",
-      active: getIsActive("/admin/carousel"),
-      to: "/admin/carousel"
-    },
-    {
-      icon: <PieChart size={20} />,
-      label: "Enquetes",
-      active: getIsActive("/admin/polls"),
-      to: "/admin/polls"
-    },
-    {
-      icon: <Wrench size={20} />,
-      label: "Ferramentas",
-      active: getIsActive("/admin/tools"),
-      to: "/admin/tools"
-    },
-    {
-      icon: <Calculator size={20} />,
-      label: "Simulações",
-      active: getIsActive("/admin/simulations"),
-      to: "/admin/simulations"
-    },
-    {
-      icon: <Megaphone size={20} />,
-      label: "Anúncios",
-      active: getIsActive("/admin/announcements"),
-      to: "/admin/announcements"
-    },
-    {
-      icon: <Settings size={20} />,
-      label: "Configurações",
-      active: getIsActive("/admin/settings"),
-      to: "/admin/settings"
-    }
-  ];
+  }, [currentPath, onClose, open]);
 
   const isMobile = window.innerWidth < 768;
 
@@ -221,7 +155,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
                       : "text-gray-500 dark:text-white/70 hover:text-[#efc349]"
                   }`}
                 >
-                  {item.icon}
+                  <item.icon size={20} />
                 </Link>
               </div>
             )}

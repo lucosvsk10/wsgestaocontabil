@@ -1,6 +1,7 @@
 
 import { motion } from "framer-motion";
 import { useClientDashboardLayout } from "@/hooks/layout/useClientDashboardLayout";
+import { useSidebarToggle } from "@/hooks/layout/useSidebarToggle";
 import ClientSidebar from "../layout/ClientSidebar";
 import ClientHeader from "../layout/ClientHeader";
 import { Button } from "@/components/ui/button";
@@ -16,9 +17,16 @@ export const ClientDashboardLayout = ({ children, activeTab, setActiveTab }: Cli
   const {
     isMobile,
     sidebarOpen,
-    setSidebarOpen,
-    toggleSidebar
+    setSidebarOpen
   } = useClientDashboardLayout();
+
+  const { toggleSidebar, getToggleButtonProps } = useSidebarToggle({
+    isMobile,
+    sidebarOpen,
+    setSidebarOpen
+  });
+
+  const toggleButtonProps = getToggleButtonProps();
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#020817] flex overflow-hidden">
@@ -39,10 +47,10 @@ export const ClientDashboardLayout = ({ children, activeTab, setActiveTab }: Cli
           <Button 
             variant="ghost" 
             size="icon" 
-            className="fixed top-4 left-4 z-50 rounded-full w-12 h-12 transition-all duration-300 ease-in-out hover:scale-105 bg-white/80 dark:bg-[#020817]/80 border border-[#e6e6e6] dark:border-[#efc349] hover:bg-gray-50 dark:hover:bg-[#efc349]/10 backdrop-blur-sm" 
+            className={toggleButtonProps.className}
             onClick={toggleSidebar}
             data-sidebar-toggle="true"
-            aria-label={sidebarOpen ? "Fechar menu lateral" : "Abrir menu lateral"}
+            aria-label={toggleButtonProps['aria-label']}
           >
             <Menu size={20} className="text-[#020817] dark:text-[#efc349]" />
           </Button>
@@ -53,9 +61,9 @@ export const ClientDashboardLayout = ({ children, activeTab, setActiveTab }: Cli
           <Button 
             variant="ghost" 
             size="icon" 
-            className="fixed bottom-8 left-8 z-50 rounded-full w-12 h-12 transition-all duration-300 ease-in-out hover:scale-105 bg-white/80 dark:bg-[#020817]/80 border border-[#e6e6e6] dark:border-[#efc349] hover:bg-gray-50 dark:hover:bg-[#efc349]/10 backdrop-blur-sm" 
+            className={toggleButtonProps.className}
             onClick={toggleSidebar}
-            aria-label={sidebarOpen ? "Recolher menu lateral" : "Expandir menu lateral"}
+            aria-label={toggleButtonProps['aria-label']}
           >
             {sidebarOpen ? 
               <ChevronLeft size={20} className="text-[#020817] dark:text-[#efc349]" /> : 
