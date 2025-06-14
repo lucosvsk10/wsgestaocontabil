@@ -1,23 +1,78 @@
 
+import React from "react";
 import { motion } from "framer-motion";
 import { useCarouselData } from "./hooks/useCarouselData";
 import { useCarouselAnimation } from "./hooks/useCarouselAnimation";
 import CarouselCard from "./components/CarouselCard";
 
-const HomeCarousel = () => {
+// Memoizar o item do carrossel para evitar re-renders desnecessários
+const CarouselItem = React.memo(({ client, index }: { client: any; index: number }) => (
+  <div className="w-72 flex-shrink-0">
+    <CarouselCard client={client} index={0} />
+  </div>
+));
+
+CarouselItem.displayName = "CarouselItem";
+
+// Memoizar o container da animação
+const AnimatedCarousel = React.memo(({ 
+  duplicatedClients, 
+  animationRef, 
+  getAnimationConfig, 
+  pauseAnimation, 
+  resumeAnimation 
+}: {
+  duplicatedClients: any[];
+  animationRef: React.RefObject<any>;
+  getAnimationConfig: () => any;
+  pauseAnimation: () => void;
+  resumeAnimation: () => void;
+}) => (
+  <div className="relative max-w-7xl mx-auto overflow-hidden">
+    <div 
+      className="relative"
+      onMouseEnter={pauseAnimation} 
+      onMouseLeave={resumeAnimation}
+    >
+      <motion.div
+        ref={animationRef}
+        className="flex gap-6"
+        style={{ 
+          width: `${duplicatedClients.length * 300 + duplicatedClients.length * 24}px`,
+          willChange: 'transform'
+        }}
+        animate={getAnimationConfig()}
+      >
+        {duplicatedClients.map((client, index) => (
+          <CarouselItem 
+            key={`${client.id}-${index}`} 
+            client={client} 
+            index={index}
+          />
+        ))}
+      </motion.div>
+    </div>
+  </div>
+));
+
+AnimatedCarousel.displayName = "AnimatedCarousel";
+
+const HomeCarousel = React.memo(() => {
   const { clients } = useCarouselData();
   const { 
-    isPaused, 
     pauseAnimation, 
     resumeAnimation, 
     getAnimationConfig, 
     animationRef
   } = useCarouselAnimation({ clientsLength: clients.length });
 
+  // Early return se não há clientes
   if (clients.length === 0) return null;
 
-  // Duplicar clientes para rolagem infinita
-  const duplicatedClients = [...clients, ...clients, ...clients];
+  // Memoizar duplicatedClients para evitar recálculo desnecessário
+  const duplicatedClients = React.useMemo(() => {
+    return [...clients, ...clients, ...clients];
+  }, [clients]);
 
   return (
     <section className="relative w-full py-24 bg-[#FFF1DE] dark:bg-[#020817]" id="clientes">
@@ -41,32 +96,18 @@ const HomeCarousel = () => {
           </motion.div>
         </div>
 
-        <div className="relative max-w-7xl mx-auto overflow-hidden">
-          <div 
-            className="relative"
-            onMouseEnter={pauseAnimation} 
-            onMouseLeave={resumeAnimation}
-          >
-            <motion.div
-              ref={animationRef}
-              className="flex gap-6"
-              style={{ 
-                width: `${duplicatedClients.length * 300 + duplicatedClients.length * 24}px`,
-                willChange: 'transform'
-              }}
-              animate={getAnimationConfig()}
-            >
-              {duplicatedClients.map((client, index) => (
-                <div key={`${client.id}-${index}`} className="w-72 flex-shrink-0">
-                  <CarouselCard client={client} index={0} />
-                </div>
-              ))}
-            </motion.div>
-          </div>
-        </div>
+        <AnimatedCarousel
+          duplicatedClients={duplicatedClients}
+          animationRef={animationRef}
+          getAnimationConfig={getAnimationConfig}
+          pauseAnimation={pauseAnimation}
+          resumeAnimation={resumeAnimation}
+        />
       </div>
     </section>
   );
-};
+});
+
+HomeCarousel.displayName = "HomeCarousel";
 
 export default HomeCarousel;
