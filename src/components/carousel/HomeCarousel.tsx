@@ -66,13 +66,13 @@ const HomeCarousel = React.memo(() => {
     animationRef
   } = useCarouselAnimation({ clientsLength: clients.length });
 
-  // Early return se não há clientes
-  if (clients.length === 0) return null;
-
   // Memoizar duplicatedClients para evitar recálculo desnecessário
   const duplicatedClients = React.useMemo(() => {
     return [...clients, ...clients, ...clients];
   }, [clients]);
+
+  // Early return AFTER all hooks
+  if (clients.length === 0) return null;
 
   return (
     <section className="relative w-full py-24 bg-[#FFF1DE] dark:bg-[#020817]" id="clientes">
