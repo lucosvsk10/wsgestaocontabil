@@ -1,0 +1,40 @@
+
+.fadein-on-scroll {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.fadein-on-scroll.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.gold-highlight {
+  @apply relative inline-block;
+}
+
+.gold-highlight::after {
+  content: '';
+  @apply absolute left-0 right-0 bottom-0 h-[2px] bg-[#efc349] dark:bg-gold;
+  transform: scaleX(0);
+  transform-origin: bottom right;
+  transition: transform 0.3s ease-out;
+}
+
+.gold-highlight:hover::after {
+  transform: scaleX(1);
+  transform-origin: bottom left;
+}
+
+.hero-border {
+  @apply relative;
+}
+
+.hero-border::before {
+  content: '';
+  @apply absolute top-0 left-0 right-0 bottom-0 border-[10px] border-[#efc349] dark:border-gold rounded-2xl;
+  transform: scale(1.02);
+  opacity: 0.7;
+  z-index: -1;
+}

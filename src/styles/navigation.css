@@ -1,0 +1,13 @@
+
+.nav-link {
+  @apply relative text-[#020817] dark:text-gold hover:text-[#efc349] dark:hover:text-gold-light transition-colors duration-300;
+}
+
+.nav-link::after {
+  content: '';
+  @apply absolute left-0 bottom-[-4px] h-[2px] w-0 bg-[#efc349] dark:bg-gold transition-all duration-300 ease-in-out;
+}
+
+.nav-link:hover::after {
+  @apply w-full;
+}
