@@ -1,12 +1,13 @@
 
 import { useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, PieChart, Calculator, Settings, Wrench, HardDrive, Megaphone, Calendar, Images, LucideIcon } from "lucide-react";
+import { LayoutDashboard, Users, PieChart, Calculator, Settings, Wrench, HardDrive, Megaphone, Calendar, Images, Building, LucideIcon } from "lucide-react";
 
 interface SidebarItem {
   icon: LucideIcon;
   label: string;
   active: boolean;
   to: string;
+  badge?: string;
 }
 
 export const useAdminSidebarNavigation = () => {
@@ -58,6 +59,13 @@ export const useAdminSidebarNavigation = () => {
       label: "Ferramentas",
       active: getIsActive("/admin/tools"),
       to: "/admin/tools"
+    },
+    {
+      icon: Building,
+      label: "Gestor Fiscal",
+      active: getIsActive("/admin/fiscal-manager"),
+      to: "/admin/fiscal-manager",
+      badge: "BETA"
     },
     {
       icon: Calculator,

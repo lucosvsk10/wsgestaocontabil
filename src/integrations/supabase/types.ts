@@ -356,6 +356,179 @@ export type Database = {
           },
         ]
       }
+      fiscal_certificates: {
+        Row: {
+          certificate_data: string
+          certificate_name: string
+          company_id: string
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean
+          password_hash: string
+          valid_from: string
+          valid_until: string
+        }
+        Insert: {
+          certificate_data: string
+          certificate_name: string
+          company_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean
+          password_hash: string
+          valid_from: string
+          valid_until: string
+        }
+        Update: {
+          certificate_data?: string
+          certificate_name?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean
+          password_hash?: string
+          valid_from?: string
+          valid_until?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fiscal_certificates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "fiscal_companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fiscal_companies: {
+        Row: {
+          cnpj: string
+          created_at: string
+          created_by: string
+          endereco: Json | null
+          id: string
+          inscricao_estadual: string | null
+          inscricao_municipal: string | null
+          nome_fantasia: string | null
+          razao_social: string
+          updated_at: string
+        }
+        Insert: {
+          cnpj: string
+          created_at?: string
+          created_by: string
+          endereco?: Json | null
+          id?: string
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
+          nome_fantasia?: string | null
+          razao_social: string
+          updated_at?: string
+        }
+        Update: {
+          cnpj?: string
+          created_at?: string
+          created_by?: string
+          endereco?: Json | null
+          id?: string
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
+          nome_fantasia?: string | null
+          razao_social?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      fiscal_documents: {
+        Row: {
+          cfop: string | null
+          chave_acesso: string
+          cnpj_destinatario: string | null
+          cnpj_emitente: string
+          company_id: string
+          created_at: string
+          data_emissao: string
+          id: string
+          natureza_operacao: string | null
+          nome_destinatario: string | null
+          nome_emitente: string
+          numero_nota: string
+          pdf_url: string | null
+          serie: string
+          status: string
+          sync_id: string | null
+          tipo_documento: string
+          tipo_operacao: string
+          valor_impostos: number | null
+          valor_total: number
+          xml_content: string
+        }
+        Insert: {
+          cfop?: string | null
+          chave_acesso: string
+          cnpj_destinatario?: string | null
+          cnpj_emitente: string
+          company_id: string
+          created_at?: string
+          data_emissao: string
+          id?: string
+          natureza_operacao?: string | null
+          nome_destinatario?: string | null
+          nome_emitente: string
+          numero_nota: string
+          pdf_url?: string | null
+          serie: string
+          status?: string
+          sync_id?: string | null
+          tipo_documento: string
+          tipo_operacao: string
+          valor_impostos?: number | null
+          valor_total: number
+          xml_content: string
+        }
+        Update: {
+          cfop?: string | null
+          chave_acesso?: string
+          cnpj_destinatario?: string | null
+          cnpj_emitente?: string
+          company_id?: string
+          created_at?: string
+          data_emissao?: string
+          id?: string
+          natureza_operacao?: string | null
+          nome_destinatario?: string | null
+          nome_emitente?: string
+          numero_nota?: string
+          pdf_url?: string | null
+          serie?: string
+          status?: string
+          sync_id?: string | null
+          tipo_documento?: string
+          tipo_operacao?: string
+          valor_impostos?: number | null
+          valor_total?: number
+          xml_content?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fiscal_documents_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "fiscal_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fiscal_documents_sync_id_fkey"
+            columns: ["sync_id"]
+            isOneToOne: false
+            referencedRelation: "fiscal_sync_logs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fiscal_events: {
         Row: {
           category: string
@@ -388,6 +561,65 @@ export type Database = {
           title?: string
         }
         Relationships: []
+      }
+      fiscal_sync_logs: {
+        Row: {
+          company_id: string
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          documentos_encontrados: number | null
+          documentos_erro: number | null
+          documentos_processados: number | null
+          id: string
+          mensagem_erro: string | null
+          periodo_fim: string
+          periodo_inicio: string
+          status: string
+          sync_type: string
+          tempo_duracao: number | null
+        }
+        Insert: {
+          company_id: string
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          documentos_encontrados?: number | null
+          documentos_erro?: number | null
+          documentos_processados?: number | null
+          id?: string
+          mensagem_erro?: string | null
+          periodo_fim: string
+          periodo_inicio: string
+          status?: string
+          sync_type: string
+          tempo_duracao?: number | null
+        }
+        Update: {
+          company_id?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          documentos_encontrados?: number | null
+          documentos_erro?: number | null
+          documentos_processados?: number | null
+          id?: string
+          mensagem_erro?: string | null
+          periodo_fim?: string
+          periodo_inicio?: string
+          status?: string
+          sync_type?: string
+          tempo_duracao?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fiscal_sync_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "fiscal_companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       form_questions: {
         Row: {
