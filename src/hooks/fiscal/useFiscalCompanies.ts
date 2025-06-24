@@ -68,7 +68,7 @@ export const useFiscalCompanies = () => {
       // Convert certificate file to base64
       const certificateBase64 = await fileToBase64(certificateFile);
 
-      // Store the certificate - using correct property names
+      // Store the certificate - using correct property names from types
       const { error: certError } = await supabase
         .from('fiscal_certificates')
         .insert({
@@ -76,9 +76,9 @@ export const useFiscalCompanies = () => {
           certificate_name: certificateFile.name,
           certificate_data: certificateBase64,
           password_hash: password, // In production, this should be encrypted
-          valid_from: new Date(),
-          valid_until: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
-          created_by: (await supabase.auth.getUser()).data.user?.id
+          valid_from: new Date().toISOString().split('T')[0],
+          valid_until: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          created_by: (await supabase.auth.getUser()).data.user?.id || ''
         });
 
       if (certError) throw certError;
@@ -92,16 +92,16 @@ export const useFiscalCompanies = () => {
 
   const syncCompanyDocuments = async (companyId: string, cnpj: string) => {
     try {
-      // Create sync log entry - using correct property names
+      // Create sync log entry - using correct property names from types
       const { data: syncLog, error: syncError } = await supabase
         .from('fiscal_sync_logs')
         .insert({
           company_id: companyId,
           sync_type: 'manual',
-          periodo_inicio: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
-          periodo_fim: new Date(),
+          periodo_inicio: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          periodo_fim: new Date().toISOString().split('T')[0],
           status: 'iniciado',
-          created_by: (await supabase.auth.getUser()).data.user?.id
+          created_by: (await supabase.auth.getUser()).data.user?.id || ''
         })
         .select()
         .single();
