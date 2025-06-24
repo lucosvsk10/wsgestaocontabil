@@ -68,7 +68,7 @@ export const useFiscalCompanies = () => {
       // Convert certificate file to base64
       const certificateBase64 = await fileToBase64(certificateFile);
 
-      // Store the certificate
+      // Store the certificate - using correct property names
       const { error: certError } = await supabase
         .from('fiscal_certificates')
         .insert({
@@ -92,7 +92,7 @@ export const useFiscalCompanies = () => {
 
   const syncCompanyDocuments = async (companyId: string, cnpj: string) => {
     try {
-      // Create sync log entry
+      // Create sync log entry - using correct property names
       const { data: syncLog, error: syncError } = await supabase
         .from('fiscal_sync_logs')
         .insert({
