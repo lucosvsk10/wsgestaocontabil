@@ -16,10 +16,10 @@ import { ptBR } from "date-fns/locale";
 const DocumentsList = () => {
   const [filters, setFilters] = useState({
     search: '',
-    tipo: '',
-    operacao: '',
+    tipo: 'all',
+    operacao: 'all',
     dateRange: null,
-    company: ''
+    company: 'all'
   });
 
   const { documents, companies, isLoading, downloadDocument, downloadReport } = useFiscalDocuments(filters);
@@ -98,7 +98,7 @@ const DocumentsList = () => {
                   <SelectValue placeholder="Todos os tipos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os tipos</SelectItem>
+                  <SelectItem value="all">Todos os tipos</SelectItem>
                   <SelectItem value="NFe">NF-e</SelectItem>
                   <SelectItem value="NFCe">NFC-e</SelectItem>
                   <SelectItem value="NFSe">NFS-e</SelectItem>
@@ -117,7 +117,7 @@ const DocumentsList = () => {
                   <SelectValue placeholder="Todas operações" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas operações</SelectItem>
+                  <SelectItem value="all">Todas operações</SelectItem>
                   <SelectItem value="entrada">Entrada</SelectItem>
                   <SelectItem value="saida">Saída</SelectItem>
                 </SelectContent>
@@ -133,7 +133,7 @@ const DocumentsList = () => {
                   <SelectValue placeholder="Todas empresas" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas empresas</SelectItem>
+                  <SelectItem value="all">Todas empresas</SelectItem>
                   {companies.map(company => (
                     <SelectItem key={company.id} value={company.id}>
                       {company.razao_social}

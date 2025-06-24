@@ -75,15 +75,15 @@ export const useFiscalDocuments = (filters: DocumentFilters) => {
         query = query.or(`chave_acesso.ilike.%${filters.search}%,numero_nota.ilike.%${filters.search}%,cnpj_emitente.ilike.%${filters.search}%`);
       }
 
-      if (filters.tipo) {
+      if (filters.tipo && filters.tipo !== 'all') {
         query = query.eq('tipo_documento', filters.tipo);
       }
 
-      if (filters.operacao) {
+      if (filters.operacao && filters.operacao !== 'all') {
         query = query.eq('tipo_operacao', filters.operacao);
       }
 
-      if (filters.company) {
+      if (filters.company && filters.company !== 'all') {
         query = query.eq('company_id', filters.company);
       }
 
