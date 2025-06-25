@@ -49,7 +49,6 @@ export const useFiscalCompanies = () => {
 
   const createCompany = async (formData: CompanyFormData, certificateFile: File, password: string) => {
     try {
-      // First, create the company record
       const { data: companyData, error: companyError } = await supabase
         .from('fiscal_companies')
         .insert({
@@ -58,24 +57,22 @@ export const useFiscalCompanies = () => {
           nome_fantasia: formData.nomeFantasia || null,
           inscricao_estadual: formData.inscricaoEstadual || null,
           inscricao_municipal: formData.inscricaoMunicipal || null,
-          created_by: (await supabase.auth.getUser()).data.user?.id
+          created_by: (await supabase.auth.getUser()).data.user?.id || ''
         })
         .select()
         .single();
 
       if (companyError) throw companyError;
 
-      // Convert certificate file to base64
       const certificateBase64 = await fileToBase64(certificateFile);
 
-      // Store the certificate - using correct property names from types
       const { error: certError } = await supabase
         .from('fiscal_certificates')
         .insert({
           company_id: companyData.id,
           certificate_name: certificateFile.name,
           certificate_data: certificateBase64,
-          password_hash: password, // In production, this should be encrypted
+          password_hash: password,
           valid_from: new Date().toISOString().split('T')[0],
           valid_until: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           created_by: (await supabase.auth.getUser()).data.user?.id || ''
@@ -90,9 +87,89 @@ export const useFiscalCompanies = () => {
     }
   };
 
+  const updateCompany = async (companyId: string, formData: CompanyFormData, certificateFile?: File, password?: string) => {
+    try {
+      const { error: companyError } = await supabase
+        .from('fiscal_companies')
+        .update({
+          cnpj: formData.cnpj,
+          razao_social: formData.razaoSocial,
+          nome_fantasia: formData.nomeFantasia || null,
+          inscricao_estadual: formData.inscricaoEstadual || null,
+          inscricao_municipal: formData.inscricaoMunicipal || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', companyId);
+
+      if (companyError) throw companyError;
+
+      if (certificateFile && password) {
+        const certificateBase64 = await fileToBase64(certificateFile);
+        
+        const { error: certError } = await supabase
+          .from('fiscal_certificates')
+          .update({
+            certificate_name: certificateFile.name,
+            certificate_data: certificateBase64,
+            password_hash: password,
+            valid_from: new Date().toISOString().split('T')[0],
+            valid_until: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+          })
+          .eq('company_id', companyId);
+
+        if (certError) throw certError;
+      }
+
+      await fetchCompanies();
+    } catch (error) {
+      console.error('Error updating company:', error);
+      throw error;
+    }
+  };
+
+  const deleteCompany = async (companyId: string) => {
+    try {
+      // First delete certificates
+      const { error: certError } = await supabase
+        .from('fiscal_certificates')
+        .delete()
+        .eq('company_id', companyId);
+
+      if (certError) throw certError;
+
+      // Delete fiscal documents
+      const { error: docsError } = await supabase
+        .from('fiscal_documents')
+        .delete()
+        .eq('company_id', companyId);
+
+      if (docsError) throw docsError;
+
+      // Delete sync logs
+      const { error: logsError } = await supabase
+        .from('fiscal_sync_logs')
+        .delete()
+        .eq('company_id', companyId);
+
+      if (logsError) throw logsError;
+
+      // Finally delete the company
+      const { error: companyError } = await supabase
+        .from('fiscal_companies')
+        .delete()
+        .eq('id', companyId);
+
+      if (companyError) throw companyError;
+
+      await fetchCompanies();
+    } catch (error) {
+      console.error('Error deleting company:', error);
+      throw error;
+    }
+  };
+
   const syncCompanyDocuments = async (companyId: string, cnpj: string) => {
     try {
-      // Create sync log entry - using correct property names from types
       const { data: syncLog, error: syncError } = await supabase
         .from('fiscal_sync_logs')
         .insert({
@@ -108,7 +185,6 @@ export const useFiscalCompanies = () => {
 
       if (syncError) throw syncError;
 
-      // Call the edge function to sync documents
       await callEdgeFunction('fiscal-sync', {
         companyId,
         cnpj,
@@ -134,6 +210,8 @@ export const useFiscalCompanies = () => {
     companies,
     isLoading,
     createCompany,
+    updateCompany,
+    deleteCompany,
     syncCompanyDocuments,
     refreshCompanies: fetchCompanies
   };

@@ -1,20 +1,21 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Upload, Plus, Building, FileText, Calendar, AlertCircle, Loader2 } from "lucide-react";
+import { Upload, Plus, Building, FileText, Pencil, Trash2, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useFiscalCompanies } from "@/hooks/fiscal/useFiscalCompanies";
 import { useReceiptaFederalAPI } from "@/hooks/company/useReceiptaFederalAPI";
+import { CompanyEditDialog } from "./CompanyEditDialog";
+import { CompanyDeleteDialog } from "./CompanyDeleteDialog";
 import { toast } from "sonner";
 
 const CompanyRegistration = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingCompany, setEditingCompany] = useState<any>(null);
+  const [deletingCompany, setDeletingCompany] = useState<any>(null);
   const [formData, setFormData] = useState({
     cnpj: '',
     razaoSocial: '',
@@ -26,8 +27,8 @@ const CompanyRegistration = () => {
   const [certificatePassword, setCertificatePassword] = useState('');
   const [isValidatingCnpj, setIsValidatingCnpj] = useState(false);
 
-  const { companies, isLoading, createCompany, syncCompanyDocuments } = useFiscalCompanies();
-  const { fetchCompanyData, loading: loadingReceita } = useReceiptaFederalAPI();
+  const { companies, isLoading, createCompany, updateCompany, deleteCompany, syncCompanyDocuments } = useFiscalCompanies();
+  const { fetchCompanyData } = useReceiptaFederalAPI();
 
   const formatCNPJ = (value: string) => {
     const cleaned = value.replace(/\D/g, '');
@@ -47,7 +48,6 @@ const CompanyRegistration = () => {
     const formatted = formatCNPJ(value);
     setFormData({...formData, cnpj: formatted});
 
-    // Se o CNPJ estiver completo e válido, buscar dados da Receita Federal
     if (validateCNPJ(formatted)) {
       setIsValidatingCnpj(true);
       try {
@@ -57,8 +57,8 @@ const CompanyRegistration = () => {
             ...prev,
             razaoSocial: companyData.nome || '',
             nomeFantasia: companyData.fantasia || '',
-            inscricaoEstadual: '', // A API da Receita Federal não retorna IE
-            inscricaoMunicipal: '' // A API da Receita Federal não retorna IM
+            inscricaoEstadual: '',
+            inscricaoMunicipal: ''
           }));
         }
       } catch (error) {
@@ -67,7 +67,6 @@ const CompanyRegistration = () => {
         setIsValidatingCnpj(false);
       }
     } else {
-      // Limpar campos se CNPJ incompleto
       setFormData(prev => ({
         ...prev,
         razaoSocial: '',
@@ -112,6 +111,24 @@ const CompanyRegistration = () => {
     } catch (error) {
       toast.error("Erro ao cadastrar empresa. Verifique os dados.");
     }
+  };
+
+  const handleEdit = (company: any) => {
+    setEditingCompany(company);
+  };
+
+  const handleDelete = (company: any) => {
+    setDeletingCompany(company);
+  };
+
+  const handleUpdateCompany = async (formData: any, certificateFile?: File, password?: string) => {
+    await updateCompany(editingCompany.id, formData, certificateFile, password);
+    setEditingCompany(null);
+  };
+
+  const handleDeleteCompany = async (companyId: string) => {
+    await deleteCompany(companyId);
+    setDeletingCompany(null);
   };
 
   const handleSync = async (companyId: string, cnpj: string) => {
@@ -344,12 +361,30 @@ const CompanyRegistration = () => {
                       )}
                     </div>
                   </div>
-                  <Badge 
-                    variant="outline" 
-                    className="border-green-500 text-green-500"
-                  >
-                    Ativo
-                  </Badge>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleEdit(company)}
+                      className="h-8 w-8 p-0 hover:bg-[#efc349]/10"
+                    >
+                      <Pencil className="w-4 h-4 text-[#efc349]" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleDelete(company)}
+                      className="h-8 w-8 p-0 hover:bg-red-100 dark:hover:bg-red-900/20"
+                    >
+                      <Trash2 className="w-4 h-4 text-red-500" />
+                    </Button>
+                    <Badge 
+                      variant="outline" 
+                      className="border-green-500 text-green-500"
+                    >
+                      Ativo
+                    </Badge>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -391,6 +426,22 @@ const CompanyRegistration = () => {
           ))
         )}
       </div>
+
+      {/* Edit Dialog */}
+      <CompanyEditDialog
+        company={editingCompany}
+        isOpen={!!editingCompany}
+        onClose={() => setEditingCompany(null)}
+        onUpdate={handleUpdateCompany}
+      />
+
+      {/* Delete Dialog */}
+      <CompanyDeleteDialog
+        company={deletingCompany}
+        isOpen={!!deletingCompany}
+        onClose={() => setDeletingCompany(null)}
+        onDelete={handleDeleteCompany}
+      />
     </div>
   );
 };
