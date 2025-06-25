@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Upload, Plus, Building, FileText, Calendar, AlertCircle } from "lucide-react";
+import { Upload, Plus, Building, FileText, Calendar, AlertCircle, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useFiscalCompanies } from "@/hooks/fiscal/useFiscalCompanies";
+import { useReceiptaFederalAPI } from "@/hooks/company/useReceiptaFederalAPI";
 import { toast } from "sonner";
 
 const CompanyRegistration = () => {
@@ -23,8 +24,59 @@ const CompanyRegistration = () => {
   });
   const [certificateFile, setCertificateFile] = useState<File | null>(null);
   const [certificatePassword, setCertificatePassword] = useState('');
+  const [isValidatingCnpj, setIsValidatingCnpj] = useState(false);
 
   const { companies, isLoading, createCompany, syncCompanyDocuments } = useFiscalCompanies();
+  const { fetchCompanyData, loading: loadingReceita } = useReceiptaFederalAPI();
+
+  const formatCNPJ = (value: string) => {
+    const cleaned = value.replace(/\D/g, '');
+    const formatted = cleaned.replace(
+      /^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,
+      '$1.$2.$3/$4-$5'
+    );
+    return formatted;
+  };
+
+  const validateCNPJ = (cnpj: string) => {
+    const cleaned = cnpj.replace(/\D/g, '');
+    return cleaned.length === 14;
+  };
+
+  const handleCnpjChange = async (value: string) => {
+    const formatted = formatCNPJ(value);
+    setFormData({...formData, cnpj: formatted});
+
+    // Se o CNPJ estiver completo e válido, buscar dados da Receita Federal
+    if (validateCNPJ(formatted)) {
+      setIsValidatingCnpj(true);
+      try {
+        const companyData = await fetchCompanyData(formatted);
+        if (companyData) {
+          setFormData(prev => ({
+            ...prev,
+            razaoSocial: companyData.nome || '',
+            nomeFantasia: companyData.fantasia || '',
+            inscricaoEstadual: '', // A API da Receita Federal não retorna IE
+            inscricaoMunicipal: '' // A API da Receita Federal não retorna IM
+          }));
+        }
+      } catch (error) {
+        console.error('Erro ao buscar dados da empresa:', error);
+      } finally {
+        setIsValidatingCnpj(false);
+      }
+    } else {
+      // Limpar campos se CNPJ incompleto
+      setFormData(prev => ({
+        ...prev,
+        razaoSocial: '',
+        nomeFantasia: '',
+        inscricaoEstadual: '',
+        inscricaoMunicipal: ''
+      }));
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +88,11 @@ const CompanyRegistration = () => {
 
     if (!certificatePassword) {
       toast.error("Por favor, informe a senha do certificado");
+      return;
+    }
+
+    if (!validateCNPJ(formData.cnpj)) {
+      toast.error("Por favor, informe um CNPJ válido");
       return;
     }
 
@@ -65,6 +122,12 @@ const CompanyRegistration = () => {
       toast.error("Erro ao iniciar sincronização");
     }
   };
+
+  const isFormValid = validateCNPJ(formData.cnpj) && 
+                     formData.razaoSocial && 
+                     certificateFile && 
+                     certificatePassword && 
+                     !isValidatingCnpj;
 
   return (
     <div className="space-y-6">
@@ -100,14 +163,22 @@ const CompanyRegistration = () => {
                   <Label htmlFor="cnpj" className="text-[#020817] dark:text-white">
                     CNPJ *
                   </Label>
-                  <Input
-                    id="cnpj"
-                    placeholder="00.000.000/0001-00"
-                    value={formData.cnpj}
-                    onChange={(e) => setFormData({...formData, cnpj: e.target.value})}
-                    required
-                    className="border-[#efc349]/20 focus:border-[#efc349]"
-                  />
+                  <div className="relative">
+                    <Input
+                      id="cnpj"
+                      placeholder="00.000.000/0001-00"
+                      value={formData.cnpj}
+                      onChange={(e) => handleCnpjChange(e.target.value)}
+                      required
+                      maxLength={18}
+                      className="border-[#efc349]/20 focus:border-[#efc349]"
+                    />
+                    {isValidatingCnpj && (
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        <Loader2 className="w-4 h-4 animate-spin text-[#efc349]" />
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="razaoSocial" className="text-[#020817] dark:text-white">
@@ -120,6 +191,7 @@ const CompanyRegistration = () => {
                     onChange={(e) => setFormData({...formData, razaoSocial: e.target.value})}
                     required
                     className="border-[#efc349]/20 focus:border-[#efc349]"
+                    disabled={isValidatingCnpj}
                   />
                 </div>
               </div>
@@ -134,6 +206,7 @@ const CompanyRegistration = () => {
                   value={formData.nomeFantasia}
                   onChange={(e) => setFormData({...formData, nomeFantasia: e.target.value})}
                   className="border-[#efc349]/20 focus:border-[#efc349]"
+                  disabled={isValidatingCnpj}
                 />
               </div>
 
@@ -148,6 +221,7 @@ const CompanyRegistration = () => {
                     value={formData.inscricaoEstadual}
                     onChange={(e) => setFormData({...formData, inscricaoEstadual: e.target.value})}
                     className="border-[#efc349]/20 focus:border-[#efc349]"
+                    disabled={isValidatingCnpj}
                   />
                 </div>
                 <div className="space-y-2">
@@ -160,6 +234,7 @@ const CompanyRegistration = () => {
                     value={formData.inscricaoMunicipal}
                     onChange={(e) => setFormData({...formData, inscricaoMunicipal: e.target.value})}
                     className="border-[#efc349]/20 focus:border-[#efc349]"
+                    disabled={isValidatingCnpj}
                   />
                 </div>
               </div>
@@ -175,6 +250,7 @@ const CompanyRegistration = () => {
                     accept=".p12,.pfx"
                     onChange={(e) => setCertificateFile(e.target.files?.[0] || null)}
                     className="border-[#efc349]/20 focus:border-[#efc349]"
+                    disabled={isValidatingCnpj}
                   />
                   <Upload className="w-5 h-5 text-[#efc349]" />
                 </div>
@@ -195,6 +271,7 @@ const CompanyRegistration = () => {
                   onChange={(e) => setCertificatePassword(e.target.value)}
                   required
                   className="border-[#efc349]/20 focus:border-[#efc349]"
+                  disabled={isValidatingCnpj}
                 />
               </div>
 
@@ -204,14 +281,23 @@ const CompanyRegistration = () => {
                   variant="outline"
                   onClick={() => setIsDialogOpen(false)}
                   className="border-[#efc349]/20 text-[#020817] dark:text-white"
+                  disabled={isValidatingCnpj}
                 >
                   Cancelar
                 </Button>
                 <Button
                   type="submit"
                   className="bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817]"
+                  disabled={!isFormValid}
                 >
-                  Cadastrar Empresa
+                  {isValidatingCnpj ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Validando CNPJ...
+                    </>
+                  ) : (
+                    "Cadastrar Empresa"
+                  )}
                 </Button>
               </div>
             </form>
