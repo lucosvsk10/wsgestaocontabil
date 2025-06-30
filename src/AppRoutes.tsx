@@ -1,4 +1,3 @@
-
 import { Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -22,6 +21,8 @@ import { FiscalDashboard } from '@/components/client/fiscal/FiscalDashboard';
 import { FiscalNotesList } from '@/components/client/fiscal/FiscalNotesList';
 import { AdminFiscalDashboard } from '@/components/admin/fiscal/AdminFiscalDashboard';
 import { AdminFiscalNotesList } from '@/components/admin/fiscal/AdminFiscalNotesList';
+import { FiscalAutomationManager } from '@/components/admin/companies/FiscalAutomationManager';
+import { FiscalCertificateManager } from '@/components/client/fiscal/FiscalCertificateManager';
 
 const AppRoutes = () => {
   const { userData, user } = useAuth();
@@ -125,6 +126,14 @@ const AppRoutes = () => {
           </AdminLayout>
         </PrivateRoute>
       } />
+
+      <Route path="/admin/fiscal-automation" element={
+        <PrivateRoute requiredRole="admin">
+          <AdminLayout>
+            <FiscalAutomationManager />
+          </AdminLayout>
+        </PrivateRoute>
+      } />
       
       {/* Manter compatibilidade com rotas antigas */}
       <Route path="/admin-dashboard" element={<Navigate to="/admin" replace />} />
@@ -159,6 +168,12 @@ const AppRoutes = () => {
       <Route path="/client/fiscal-notes" element={
         <PrivateRoute>
           <FiscalNotesList />
+        </PrivateRoute>
+      } />
+
+      <Route path="/client/fiscal-certificates" element={
+        <PrivateRoute>
+          <FiscalCertificateManager />
         </PrivateRoute>
       } />
       

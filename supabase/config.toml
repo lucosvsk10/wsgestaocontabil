@@ -33,3 +33,9 @@ port = 54327
 
 [functions.fiscal-sync]
 verify_jwt = true
+
+[functions.upload-certificate]
+verify_jwt = true
+
+[functions.enhanced-fiscal-sync]
+verify_jwt = true
