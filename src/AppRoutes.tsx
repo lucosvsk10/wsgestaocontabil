@@ -1,3 +1,4 @@
+
 import { Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -17,6 +18,10 @@ import { checkIsAdmin } from "./utils/auth/userChecks";
 import { CompanyDataView } from "./components/admin/company/CompanyDataView";
 import SimpleCarouselManager from '@/components/admin/carousel/SimpleCarouselManager';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { FiscalDashboard } from '@/components/client/fiscal/FiscalDashboard';
+import { FiscalNotesList } from '@/components/client/fiscal/FiscalNotesList';
+import { AdminFiscalDashboard } from '@/components/admin/fiscal/AdminFiscalDashboard';
+import { AdminFiscalNotesList } from '@/components/admin/fiscal/AdminFiscalNotesList';
 
 const AppRoutes = () => {
   const { userData, user } = useAuth();
@@ -103,6 +108,23 @@ const AppRoutes = () => {
           <AdminDashboard activeTab="settings" />
         </PrivateRoute>
       } />
+
+      {/* Admin Fiscal Routes */}
+      <Route path="/admin/fiscal-dashboard" element={
+        <PrivateRoute requiredRole="admin">
+          <AdminLayout>
+            <AdminFiscalDashboard />
+          </AdminLayout>
+        </PrivateRoute>
+      } />
+
+      <Route path="/admin/fiscal-notes" element={
+        <PrivateRoute requiredRole="admin">
+          <AdminLayout>
+            <AdminFiscalNotesList />
+          </AdminLayout>
+        </PrivateRoute>
+      } />
       
       {/* Manter compatibilidade com rotas antigas */}
       <Route path="/admin-dashboard" element={<Navigate to="/admin" replace />} />
@@ -124,6 +146,19 @@ const AppRoutes = () => {
       <Route path="/client/*" element={
         <PrivateRoute>
           <ClientDashboard />
+        </PrivateRoute>
+      } />
+
+      {/* Client Fiscal Routes */}
+      <Route path="/client/fiscal-dashboard" element={
+        <PrivateRoute>
+          <FiscalDashboard />
+        </PrivateRoute>
+      } />
+
+      <Route path="/client/fiscal-notes" element={
+        <PrivateRoute>
+          <FiscalNotesList />
         </PrivateRoute>
       } />
       
