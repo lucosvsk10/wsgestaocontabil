@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useFiscalData } from '@/hooks/fiscal/useFiscalData';
-import { Loader2, TrendingUp, TrendingDown, FileText, Sync } from 'lucide-react';
+import { Loader2, TrendingUp, TrendingDown, FileText, RefreshCw } from 'lucide-react';
 import { formatCurrency } from '@/utils/formatters';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -35,7 +35,7 @@ export const FiscalDashboard = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-navy dark:text-white">Dashboard Fiscal</h1>
         <Button onClick={refetch} variant="outline" size="sm">
-          <Sync className="h-4 w-4 mr-2" />
+          <RefreshCw className="h-4 w-4 mr-2" />
           Atualizar
         </Button>
       </div>

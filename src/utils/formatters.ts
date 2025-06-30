@@ -43,3 +43,17 @@ export function formatDateTime(date: string | Date): string {
     minute: '2-digit'
   });
 }
+
+/**
+ * Format currency to Brazilian Real format
+ * @param value Number to format as currency
+ * @returns Formatted string (R$ 1.234,56)
+ */
+export function formatCurrency(value: number): string {
+  if (value === null || value === undefined || isNaN(value)) return 'R$ 0,00';
+  
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  }).format(value);
+}
