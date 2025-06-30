@@ -14,7 +14,6 @@ interface SidebarItemProps {
   active: boolean;
   to: string;
   onClick?: () => void;
-  badge?: string;
 }
 
 const SidebarItem: React.FC<SidebarItemProps> = ({
@@ -22,13 +21,12 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
   label,
   active,
   to,
-  onClick,
-  badge
+  onClick
 }) => {
   return (
     <Link 
       to={to} 
-      className={`flex items-center space-x-4 px-6 py-4 rounded-lg transition-all duration-300 ease-in-out group relative ${
+      className={`flex items-center space-x-4 px-6 py-4 rounded-lg transition-all duration-300 ease-in-out group ${
         active 
           ? "bg-[#efc349]/10 text-[#efc349] border-l-4 border-[#efc349]" 
           : "text-gray-700 dark:text-white/80 hover:bg-gray-100 dark:hover:bg-[#efc349]/5 hover:text-[#020817] dark:hover:text-[#efc349]"
@@ -43,11 +41,6 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
         <Icon size={20} />
       </div>
       <span className="tracking-wide text-sm font-extralight">{label}</span>
-      {badge && (
-        <span className="absolute -top-1 -right-1 bg-[#efc349] text-[#020817] text-xs font-bold px-2 py-0.5 rounded-full">
-          {badge}
-        </span>
-      )}
     </Link>
   );
 };
@@ -137,7 +130,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-8 px-3 space-y-2">
         {sidebarItems.map(item => (
-          <div key={item.label} className="relative">
+          <div key={item.label}>
             {(open || isMobile) ? (
               <SidebarItem 
                 icon={item.icon} 
@@ -145,11 +138,10 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
                 active={item.active} 
                 to={item.to} 
                 onClick={isMobile ? onClose : undefined}
-                badge={item.badge}
               />
             ) : (
               <div 
-                className={`flex justify-center p-4 rounded-lg transition-all duration-300 hover:scale-110 relative ${
+                className={`flex justify-center p-4 rounded-lg transition-all duration-300 hover:scale-110 ${
                   item.active 
                     ? "bg-[#efc349]/10 border-l-4 border-[#efc349]" 
                     : "hover:bg-gray-100 dark:hover:bg-[#efc349]/10"
@@ -166,11 +158,6 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
                 >
                   <item.icon size={20} />
                 </Link>
-                {item.badge && (
-                  <span className="absolute -top-1 -right-1 bg-[#efc349] text-[#020817] text-xs font-bold px-1.5 py-0.5 rounded-full">
-                    {item.badge}
-                  </span>
-                )}
               </div>
             )}
           </div>

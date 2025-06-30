@@ -1,4 +1,3 @@
-
 import { Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -18,7 +17,6 @@ import { checkIsAdmin } from "./utils/auth/userChecks";
 import { CompanyDataView } from "./components/admin/company/CompanyDataView";
 import SimpleCarouselManager from '@/components/admin/carousel/SimpleCarouselManager';
 import AdminLayout from '@/components/admin/AdminLayout';
-import FiscalManagerView from '@/components/admin/fiscal/FiscalManagerView';
 
 const AppRoutes = () => {
   const { userData, user } = useAuth();
@@ -103,15 +101,6 @@ const AppRoutes = () => {
       <Route path="/admin/settings" element={
         <PrivateRoute requiredRole="admin">
           <AdminDashboard activeTab="settings" />
-        </PrivateRoute>
-      } />
-      
-      {/* Fiscal Manager route */}
-      <Route path="/admin/fiscal-manager" element={
-        <PrivateRoute requiredRole="admin">
-          <AdminLayout>
-            <FiscalManagerView />
-          </AdminLayout>
         </PrivateRoute>
       } />
       
