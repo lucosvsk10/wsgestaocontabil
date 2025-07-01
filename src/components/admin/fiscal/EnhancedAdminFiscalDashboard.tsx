@@ -10,6 +10,8 @@ import { format, subDays, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter
 import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { FiscalFeedbackHelp } from '@/components/fiscal/FiscalFeedbackHelp';
+import { FiscalSEO } from '@/components/fiscal/FiscalSEO';
 
 const COLORS = ['#F5C441', '#0b1320', '#4F46E5', '#059669', '#DC2626'];
 
@@ -102,7 +104,13 @@ export const EnhancedAdminFiscalDashboard = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <>
+      <FiscalSEO 
+        title="Dashboard Fiscal Admin" 
+        description="Painel administrativo para gestão e análise de dados fiscais de todas as empresas" 
+        keywords="dashboard fiscal, administração, notas fiscais, análise fiscal"
+      />
+      <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-navy dark:text-white">Dashboard Fiscal - Admin</h1>
         <div className="flex gap-2">
@@ -322,6 +330,9 @@ export const EnhancedAdminFiscalDashboard = () => {
           )}
         </CardContent>
       </Card>
+      
+      <FiscalFeedbackHelp />
     </div>
+    </>
   );
 };
