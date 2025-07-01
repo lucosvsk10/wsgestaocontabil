@@ -23,6 +23,7 @@ import { AdminFiscalDashboard } from '@/components/admin/fiscal/AdminFiscalDashb
 import { AdminFiscalNotesList } from '@/components/admin/fiscal/AdminFiscalNotesList';
 import { FiscalAutomationManager } from '@/components/admin/companies/FiscalAutomationManager';
 import { FiscalCertificateManager } from '@/components/client/fiscal/FiscalCertificateManager';
+import { AccountantArea } from '@/components/admin/accountant/AccountantArea';
 
 const AppRoutes = () => {
   const { userData, user } = useAuth();
@@ -131,6 +132,14 @@ const AppRoutes = () => {
         <PrivateRoute requiredRole="admin">
           <AdminLayout>
             <FiscalAutomationManager />
+          </AdminLayout>
+        </PrivateRoute>
+      } />
+
+      <Route path="/admin/accountant-area" element={
+        <PrivateRoute requiredRole="admin">
+          <AdminLayout>
+            <AccountantArea />
           </AdminLayout>
         </PrivateRoute>
       } />
