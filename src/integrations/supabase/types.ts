@@ -163,6 +163,7 @@ export type Database = {
           cnpj: string
           company_name: string
           created_at: string
+          fiscal_automation_client: boolean | null
           id: string
           receita_federal_api_key: string | null
           sefaz_api_key: string | null
@@ -172,6 +173,7 @@ export type Database = {
           cnpj: string
           company_name: string
           created_at?: string
+          fiscal_automation_client?: boolean | null
           id?: string
           receita_federal_api_key?: string | null
           sefaz_api_key?: string | null
@@ -181,6 +183,7 @@ export type Database = {
           cnpj?: string
           company_name?: string
           created_at?: string
+          fiscal_automation_client?: boolean | null
           id?: string
           receita_federal_api_key?: string | null
           sefaz_api_key?: string | null
