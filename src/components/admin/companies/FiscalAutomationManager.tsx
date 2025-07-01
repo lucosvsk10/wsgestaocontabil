@@ -33,7 +33,7 @@ export const FiscalAutomationManager = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from('companies')
-        .select('*')
+        .select('id, company_name, cnpj, fiscal_automation_client, created_at')
         .order('company_name');
 
       if (error) throw error;
