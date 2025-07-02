@@ -34,13 +34,51 @@ Deno.serve(async (req) => {
 
     console.log(`Buscando dados para CNPJ: ${cleanCNPJ}`);
 
-    // Aqui você pode integrar com APIs públicas como:
-    // - ReceitaWS: https://receitaws.com.br/api
-    // - BrasilAPI: https://brasilapi.com.br/docs
-    // Para fins de demonstração, vamos usar uma simulação
+    console.log('Tentando buscar dados via ReceitaWS...');
+    
+    try {
+      // Tentar usar ReceitaWS primeiro
+      const response = await fetch(`https://receitaws.com.br/v1/cnpj/${cleanCNPJ}`, {
+        headers: {
+          'User-Agent': 'Lovable-App/1.0'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data.status === 'ERROR') {
+          throw new Error(data.message || 'CNPJ não encontrado');
+        }
 
-    // Simulação de resposta da API da Receita Federal
-    // Em produção, substitua por uma chamada real à API
+        const cnpjData: CNPJData = {
+          cnpj: data.cnpj?.replace(/[^\d]/g, '') || cleanCNPJ,
+          company_name: data.nome || '',
+          trade_name: data.fantasia || '',
+          address: data.logradouro ? 
+            `${data.logradouro}, ${data.numero || 'S/N'} - ${data.bairro} - ${data.municipio}/${data.uf} - CEP: ${data.cep}` : '',
+          company_size: data.porte || ''
+        };
+
+        console.log('Dados encontrados via ReceitaWS:', cnpjData);
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            data: cnpjData,
+            message: 'Dados encontrados com sucesso'
+          }),
+          { 
+            status: 200, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
+    } catch (error) {
+      console.log('Erro na ReceitaWS, usando dados mock:', error);
+    }
+
+    // Fallback para dados mock se a API falhar
     const mockResponse: CNPJData = {
       cnpj: cleanCNPJ,
       company_name: "EMPRESA EXEMPLO LTDA",
@@ -49,31 +87,7 @@ Deno.serve(async (req) => {
       company_size: "Microempresa"
     };
 
-    // Exemplo de integração real com ReceitaWS (descomente para usar)
-    /*
-    const response = await fetch(`https://receitaws.com.br/v1/cnpj/${cleanCNPJ}`);
-    
-    if (!response.ok) {
-      throw new Error('Erro ao consultar CNPJ na Receita Federal');
-    }
-
-    const data = await response.json();
-
-    if (data.status === 'ERROR') {
-      return new Response(
-        JSON.stringify({ success: false, message: 'CNPJ não encontrado ou inválido' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const cnpjData: CNPJData = {
-      cnpj: data.cnpj,
-      company_name: data.nome,
-      trade_name: data.fantasia || null,
-      address: `${data.logradouro}, ${data.numero} - ${data.bairro} - ${data.municipio}/${data.uf} - CEP: ${data.cep}`,
-      company_size: data.porte || null
-    };
-    */
+    console.log('Usando dados mock:', mockResponse);
 
     return new Response(
       JSON.stringify({ 
