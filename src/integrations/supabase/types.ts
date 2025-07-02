@@ -160,33 +160,42 @@ export type Database = {
       }
       companies: {
         Row: {
+          address: string | null
+          certificate_data: string | null
+          certificate_password: string | null
           cnpj: string
           company_name: string
+          company_size: string | null
           created_at: string
-          fiscal_automation_client: boolean | null
           id: string
-          receita_federal_api_key: string | null
-          sefaz_api_key: string | null
+          is_fiscal_automation_client: boolean | null
+          trade_name: string | null
           updated_at: string
         }
         Insert: {
+          address?: string | null
+          certificate_data?: string | null
+          certificate_password?: string | null
           cnpj: string
           company_name: string
+          company_size?: string | null
           created_at?: string
-          fiscal_automation_client?: boolean | null
           id?: string
-          receita_federal_api_key?: string | null
-          sefaz_api_key?: string | null
+          is_fiscal_automation_client?: boolean | null
+          trade_name?: string | null
           updated_at?: string
         }
         Update: {
+          address?: string | null
+          certificate_data?: string | null
+          certificate_password?: string | null
           cnpj?: string
           company_name?: string
+          company_size?: string | null
           created_at?: string
-          fiscal_automation_client?: boolean | null
           id?: string
-          receita_federal_api_key?: string | null
-          sefaz_api_key?: string | null
+          is_fiscal_automation_client?: boolean | null
+          trade_name?: string | null
           updated_at?: string
         }
         Relationships: []

@@ -21,9 +21,7 @@ interface Company {
   certificate_password?: string | null;
   created_at: string;
   updated_at: string;
-  fiscal_automation_client?: boolean | null;
-  receita_federal_api_key?: string | null;
-  sefaz_api_key?: string | null;
+  is_fiscal_automation_client?: boolean | null;
 }
 
 export const FiscalManagementView = () => {
