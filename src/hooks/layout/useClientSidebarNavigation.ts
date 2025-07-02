@@ -1,5 +1,5 @@
 
-import { FileText, Calculator, Bell, Calendar, Building2, Receipt, Shield, LucideIcon } from "lucide-react";
+import { FileText, Calculator, Bell, Calendar, Building2, LucideIcon } from "lucide-react";
 
 interface SidebarItem {
   icon: LucideIcon;
@@ -45,24 +45,6 @@ export const useClientSidebarNavigation = ({
       label: "Agenda",
       id: "calendar",
       active: activeTab === "calendar"
-    },
-    {
-      icon: Receipt,
-      label: "Fiscal - Dashboard",
-      id: "fiscal-dashboard",
-      active: activeTab === "fiscal-dashboard"
-    },
-    {
-      icon: FileText,
-      label: "Notas Fiscais",
-      id: "fiscal-notes",
-      active: activeTab === "fiscal-notes"
-    },
-    {
-      icon: Shield,
-      label: "Certificados",
-      id: "fiscal-certificates",
-      active: activeTab === "fiscal-certificates"
     },
     {
       icon: Building2,

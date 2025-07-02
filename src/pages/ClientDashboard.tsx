@@ -11,9 +11,6 @@ import { FiscalCalendarSection } from "@/components/client/sections/FiscalCalend
 import { CompanyDataSection } from "@/components/client/sections/CompanyDataSection";
 import { useDocumentActions } from "@/hooks/document/useDocumentActions";
 import { DocumentTable } from "@/components/client/DocumentTable";
-import { EnhancedFiscalDashboard } from "@/components/client/fiscal/EnhancedFiscalDashboard";
-import { EnhancedFiscalNotesList } from "@/components/admin/fiscal/EnhancedFiscalNotesList";
-import { FiscalCertificateManager } from "@/components/client/fiscal/FiscalCertificateManager";
 
 const ClientDashboard = () => {
   const {
@@ -62,12 +59,6 @@ const ClientDashboard = () => {
         return <AnnouncementsSection />;
       case "calendar":
         return <FiscalCalendarSection />;
-      case "fiscal-dashboard":
-        return <EnhancedFiscalDashboard />;
-      case "fiscal-notes":
-        return <EnhancedFiscalNotesList />;
-      case "fiscal-certificates":
-        return <FiscalCertificateManager />;
       case "company":
         return <CompanyDataSection />;
       default:
