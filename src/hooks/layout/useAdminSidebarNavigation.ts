@@ -1,6 +1,6 @@
 
 import { useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, PieChart, Calculator, Settings, Wrench, HardDrive, Megaphone, Calendar, Images, LucideIcon } from "lucide-react";
+import { LayoutDashboard, Users, PieChart, Calculator, Settings, Wrench, HardDrive, Megaphone, Calendar, Images, FileText, LucideIcon } from "lucide-react";
 
 interface SidebarItem {
   icon: LucideIcon;
@@ -70,6 +70,12 @@ export const useAdminSidebarNavigation = () => {
       label: "Anúncios",
       active: getIsActive("/admin/announcements"),
       to: "/admin/announcements"
+    },
+    {
+      icon: FileText,
+      label: "Gestão Fiscal",
+      active: getIsActive("/admin/fiscal-management"),
+      to: "/admin/fiscal-management"
     },
     {
       icon: Settings,

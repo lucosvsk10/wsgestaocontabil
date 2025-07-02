@@ -98,6 +98,12 @@ const AppRoutes = () => {
         </PrivateRoute>
       } />
       
+      <Route path="/admin/fiscal-management" element={
+        <PrivateRoute requiredRole="admin">
+          <AdminDashboard activeTab="fiscal-management" />
+        </PrivateRoute>
+      } />
+      
       <Route path="/admin/settings" element={
         <PrivateRoute requiredRole="admin">
           <AdminDashboard activeTab="settings" />
