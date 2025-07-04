@@ -498,40 +498,60 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Converter certificado base64 para ArrayBuffer
+    // Converter certificado para ArrayBuffer
     console.log(`[DEBUG] Iniciando processamento do certificado...`);
     let certificateBuffer: ArrayBuffer;
     try {
       console.log(`[DEBUG] Dados do certificado - Tipo: ${typeof company.certificate_data}`);
+      console.log(`[DEBUG] Dados do certificado - É Array: ${Array.isArray(company.certificate_data)}`);
+      console.log(`[DEBUG] Dados do certificado - Constructor: ${company.certificate_data?.constructor?.name}`);
       
       // Verificar se é Uint8Array (bytea) ou string (base64)
-      let certificateData: string;
       if (company.certificate_data instanceof Uint8Array) {
-        console.log(`[DEBUG] Certificado é Uint8Array, tamanho: ${company.certificate_data.length} bytes`);
-        // Converter Uint8Array para base64
-        certificateData = btoa(String.fromCharCode(...company.certificate_data));
-        console.log(`[DEBUG] Convertido para base64, tamanho: ${certificateData.length} chars`);
+        console.log(`[DEBUG] Certificado é Uint8Array (bytea), tamanho: ${company.certificate_data.length} bytes`);
+        // Usar diretamente os dados binários
+        certificateBuffer = company.certificate_data.buffer.slice(
+          company.certificate_data.byteOffset,
+          company.certificate_data.byteOffset + company.certificate_data.byteLength
+        );
+        console.log(`[DEBUG] ArrayBuffer criado diretamente de Uint8Array, tamanho: ${certificateBuffer.byteLength} bytes`);
+        
       } else if (typeof company.certificate_data === 'string') {
-        console.log(`[DEBUG] Certificado já é string, tamanho: ${company.certificate_data.length} chars`);
-        certificateData = company.certificate_data;
+        console.log(`[DEBUG] Certificado é string (base64), tamanho: ${company.certificate_data.length} chars`);
+        
+        // Verificar se a string parece ser base64 válida
+        const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+        if (!base64Regex.test(company.certificate_data)) {
+          throw new Error('String do certificado não parece ser base64 válida');
+        }
+        
+        console.log(`[DEBUG] Tentando decodificar base64...`);
+        const binaryString = atob(company.certificate_data);
+        console.log(`[DEBUG] Base64 decodificado com sucesso, tamanho: ${binaryString.length} bytes`);
+        
+        certificateBuffer = new ArrayBuffer(binaryString.length);
+        const bytes = new Uint8Array(certificateBuffer);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        console.log(`[DEBUG] ArrayBuffer criado com sucesso, tamanho: ${certificateBuffer.byteLength} bytes`);
+        
       } else {
-        throw new Error(`Formato de certificado não suportado: ${typeof company.certificate_data}`);
+        throw new Error(`Formato de certificado não suportado: ${typeof company.certificate_data} (constructor: ${company.certificate_data?.constructor?.name})`);
       }
-      
-      console.log(`[DEBUG] Tentando decodificar base64...`);
-      const binaryString = atob(certificateData);
-      console.log(`[DEBUG] Base64 decodificado com sucesso, tamanho: ${binaryString.length} bytes`);
-      
-      certificateBuffer = new ArrayBuffer(binaryString.length);
-      const bytes = new Uint8Array(certificateBuffer);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      console.log(`[DEBUG] ArrayBuffer criado com sucesso, tamanho: ${certificateBuffer.byteLength} bytes`);
       
     } catch (certError) {
       console.error('[ERROR] Erro ao processar certificado:', certError);
       console.error('[ERROR] Stack trace:', certError.stack);
+      console.error('[ERROR] Dados do certificado debug:', {
+        type: typeof company.certificate_data,
+        isArray: Array.isArray(company.certificate_data),
+        constructor: company.certificate_data?.constructor?.name,
+        length: company.certificate_data?.length,
+        firstFewBytes: company.certificate_data instanceof Uint8Array ? 
+          Array.from(company.certificate_data.slice(0, 16)).map(b => b.toString(16).padStart(2, '0')).join(' ') :
+          'N/A'
+      });
       return new Response(
         JSON.stringify({ success: false, message: `Erro ao processar certificado digital: ${certError.message}` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
