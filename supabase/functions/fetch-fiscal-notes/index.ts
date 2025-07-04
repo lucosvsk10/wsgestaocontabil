@@ -15,6 +15,24 @@ interface FiscalNote {
   xml_content: string;
 }
 
+// Função para decodificar BYTEA hexadecimal do PostgreSQL
+function decodePgByteaHex(hexString: string): Uint8Array {
+  if (!hexString.startsWith('\\x')) {
+    // Se o dado não tiver '\x', é um problema de salvamento ou outra representação.
+    // Para agora, vamos assumir que ele SEMPRE deve ter '\x' vindo do BYTEA.
+    throw new Error("Formato de BYTEA inesperado: não começa com '\\x'.");
+  }
+  const cleanHexString = hexString.substring(2); // Remove o '\x'
+  if (cleanHexString.length % 2 !== 0) {
+    throw new Error("String hexadecimal BYTEA inválida: comprimento ímpar após remover '\\x'.");
+  }
+  const bytes = new Uint8Array(cleanHexString.length / 2);
+  for (let i = 0; i < cleanHexString.length; i += 2) {
+    bytes[i / 2] = parseInt(cleanHexString.substring(i, i + 2), 16);
+  }
+  return bytes;
+}
+
 // Função para buscar notas de VENDA (NF-e emitidas pela empresa) via SEFAZ
 async function fetchSaleNotes(cnpj: string, certificate: ArrayBuffer, password: string): Promise<FiscalNote[]> {
   console.log(`Iniciando comunicação real com SEFAZ para CNPJ: ${cnpj}`);
@@ -507,77 +525,53 @@ Deno.serve(async (req) => {
         console.log(`[DEBUG] certificate_data RAW - Uint8Array values (first 10): [${company.certificate_data.slice(0, 10).join(', ')}]`);
     }
 
-    // Converter certificado para ArrayBuffer
-    console.log(`[DEBUG] Iniciando processamento do certificado...`);
+    // CONVERSÃO CORRETA DE certificate_data USANDO decodePgByteaHex
+    let pfxBinaryData: Uint8Array;
+    let pureBase64CertString: string;
+
+    // 1. Converter a string '\x' hexadecimal para Uint8Array (dados binários)
+    try {
+        if (typeof company.certificate_data === 'string') {
+            pfxBinaryData = decodePgByteaHex(company.certificate_data);
+            console.log(`[DEBUG] Converteu \\x hex para Uint8Array. Tamanho: ${pfxBinaryData.length}`);
+            console.log(`[DEBUG] Primeiros 10 bytes do Uint8Array: [${pfxBinaryData.slice(0, 10).join(', ')}]`);
+        } else if (company.certificate_data instanceof Uint8Array) {
+            pfxBinaryData = company.certificate_data;
+            console.log(`[DEBUG] certificate_data já é Uint8Array.`);
+        } else {
+            throw new Error("Formato de certificate_data inesperado do DB.");
+        }
+    } catch (e) {
+        console.error(`[ERROR] Erro na decodificação BYTEA para Uint8Array: ${e.message}`);
+        throw new Error("Erro interno ao preparar certificado do banco de dados.");
+    }
+
+    // 2. Converter o Uint8Array (binário) para uma string Base64 VÁLIDA
+    try {
+        // String.fromCharCode(...Uint8Array) converte os bytes em uma string binária
+        // btoa() codifica essa string binária para Base64
+        pureBase64CertString = btoa(String.fromCharCode(...pfxBinaryData));
+        console.log(`[DEBUG] Certificado convertido para Base64 pura (primeiros 50 chars): "${pureBase64CertString.substring(0, 50)}..."`);
+    } catch (e) {
+        console.error(`[ERROR] Erro na conversão Uint8Array para Base64 (btoa): ${e.message}`);
+        throw new Error("Erro interno ao codificar certificado para Base64.");
+    }
+
+    // A partir deste ponto, 'pureBase64CertString' DEVE SER uma Base64 válida.
+    // Usar pfxBinaryData para criar o ArrayBuffer necessário
     let certificateBuffer: ArrayBuffer;
     try {
-      console.log(`[DEBUG] Dados do certificado - Tipo: ${typeof company.certificate_data}`);
-      console.log(`[DEBUG] Dados do certificado - É Array: ${Array.isArray(company.certificate_data)}`);
-      console.log(`[DEBUG] Dados do certificado - Constructor: ${company.certificate_data?.constructor?.name}`);
-      
-      // IMPLEMENTAR CONVERSÃO EXPLÍCITA DE BYTEA PARA BASE64
-      if (company.certificate_data instanceof Uint8Array) {
-        console.log(`[DEBUG] Certificado é Uint8Array (bytea), tamanho: ${company.certificate_data.length} bytes`);
-        
-        // Converter Uint8Array para string binária e depois para Base64
-        console.log(`[DEBUG] Convertendo Uint8Array para string binária...`);
-        const binaryString = String.fromCharCode(...company.certificate_data);
-        console.log(`[DEBUG] String binária criada, tamanho: ${binaryString.length} bytes`);
-        
-        // Codificar string binária para Base64
-        console.log(`[DEBUG] Codificando string binária para Base64...`);
-        const base64CertString = btoa(binaryString);
-        console.log(`[DEBUG] Base64 string gerada, tamanho: ${base64CertString.length} chars`);
-        console.log(`[DEBUG] Base64 string gerada para decodificar: ${base64CertString.substring(0, 50)}...`);
-        
-        // COMENTANDO TEMPORARIAMENTE O atob() QUE CAUSA ERRO
-        // Se realmente precisássemos decodificar novamente:
-        // const decodedBinaryCert = atob(base64CertString);
-        
-        // Usar diretamente os dados binários originais para o ArrayBuffer
-        certificateBuffer = company.certificate_data.buffer.slice(
-          company.certificate_data.byteOffset,
-          company.certificate_data.byteOffset + company.certificate_data.byteLength
+        certificateBuffer = pfxBinaryData.buffer.slice(
+            pfxBinaryData.byteOffset,
+            pfxBinaryData.byteOffset + pfxBinaryData.byteLength
         );
-        console.log(`[DEBUG] ArrayBuffer criado diretamente de Uint8Array, tamanho: ${certificateBuffer.byteLength} bytes`);
-        
-      } else if (typeof company.certificate_data === 'string') {
-        console.log(`[DEBUG] Certificado é string (base64), tamanho: ${company.certificate_data.length} chars`);
-        
-        // Verificar se a string parece ser base64 válida
-        const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
-        if (!base64Regex.test(company.certificate_data)) {
-          throw new Error('String do certificado não parece ser base64 válida');
-        }
-        
-        console.log(`[DEBUG] Tentando decodificar base64...`);
-        // COMENTANDO TEMPORARIAMENTE O atob() QUE PODE CAUSAR ERRO
-        // const binaryString = atob(company.certificate_data);
-        // console.log(`[DEBUG] Base64 decodificado com sucesso, tamanho: ${binaryString.length} bytes`);
-        
-        // Por enquanto, vamos apenas usar a string diretamente
-        console.log(`[DEBUG] Usando string base64 diretamente (SEM decodificar)...`);
-        
-        // Criar um ArrayBuffer "falso" para não quebrar o fluxo
-        certificateBuffer = new ArrayBuffer(0);
-        console.log(`[DEBUG] ArrayBuffer temporário criado, tamanho: ${certificateBuffer.byteLength} bytes`);
-        
-      } else {
-        throw new Error(`Formato de certificado não suportado: ${typeof company.certificate_data} (constructor: ${company.certificate_data?.constructor?.name})`);
-      }
-      
+        console.log(`[DEBUG] ArrayBuffer criado a partir do Uint8Array, tamanho: ${certificateBuffer.byteLength} bytes`);
+    } catch (bufferError) {
+        console.error('[ERROR] Erro ao criar ArrayBuffer:', bufferError);
+        throw new Error(`Erro ao preparar certificado para processamento: ${bufferError.message}`);
     } catch (certError) {
-      console.error('[ERROR] Erro ao processar certificado:', certError);
+      console.error('[ERROR] Erro geral no processamento do certificado:', certError);
       console.error('[ERROR] Stack trace:', certError.stack);
-      console.error('[ERROR] Dados do certificado debug:', {
-        type: typeof company.certificate_data,
-        isArray: Array.isArray(company.certificate_data),
-        constructor: company.certificate_data?.constructor?.name,
-        length: company.certificate_data?.length,
-        firstFewBytes: company.certificate_data instanceof Uint8Array ? 
-          Array.from(company.certificate_data.slice(0, 16)).map(b => b.toString(16).padStart(2, '0')).join(' ') :
-          'N/A'
-      });
       return new Response(
         JSON.stringify({ success: false, message: `Erro ao processar certificado digital: ${certError.message}` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
