@@ -450,6 +450,63 @@ function generateAccessKey(): string {
   return (timestamp + random + '0000000000000000000000000000').slice(0, 44);
 }
 
+// Função para testar conectividade
+async function testConnectivity() {
+  console.log('[DEBUG CONNECTIVITY] Iniciando testes de conectividade...');
+  
+  // Teste 1: Conectividade geral (Google)
+  try {
+    console.log('[DEBUG CONNECTIVITY] Teste 1: Conectividade geral (Google)...');
+    const googleResponse = await fetch('https://www.google.com/search?q=test', {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+    console.log(`[DEBUG CONNECTIVITY] Google - Status: ${googleResponse.status}, StatusText: ${googleResponse.statusText}`);
+  } catch (googleError) {
+    console.error('[ERROR CONNECTIVITY] Erro ao conectar com Google:', googleError.message);
+  }
+
+  // Teste 2: SEFAZ SP - GET simples
+  try {
+    console.log('[DEBUG CONNECTIVITY] Teste 2: SEFAZ SP - GET simples...');
+    const sefazResponse = await fetch('https://nfe.fazenda.sp.gov.br/ws/nfestatusservico4.asmx', {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+      }
+    });
+    console.log(`[DEBUG CONNECTIVITY] SEFAZ SP - Status: ${sefazResponse.status}, StatusText: ${sefazResponse.statusText}`);
+    const sefazText = await sefazResponse.text();
+    console.log(`[DEBUG CONNECTIVITY] SEFAZ SP - Response length: ${sefazText.length} chars`);
+    console.log(`[DEBUG CONNECTIVITY] SEFAZ SP - Response preview: ${sefazText.substring(0, 200)}...`);
+  } catch (sefazError) {
+    console.error('[ERROR CONNECTIVITY] Erro ao conectar com SEFAZ SP:', sefazError.message);
+  }
+
+  // Teste 3: Receita Federal - GET simples
+  try {
+    console.log('[DEBUG CONNECTIVITY] Teste 3: Receita Federal - GET simples...');
+    const rfResponse = await fetch('https://www1.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx', {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+      }
+    });
+    console.log(`[DEBUG CONNECTIVITY] Receita Federal - Status: ${rfResponse.status}, StatusText: ${rfResponse.statusText}`);
+    const rfText = await rfResponse.text();
+    console.log(`[DEBUG CONNECTIVITY] Receita Federal - Response length: ${rfText.length} chars`);
+    console.log(`[DEBUG CONNECTIVITY] Receita Federal - Response preview: ${rfText.substring(0, 200)}...`);
+  } catch (rfError) {
+    console.error('[ERROR CONNECTIVITY] Erro ao conectar com Receita Federal:', rfError.message);
+  }
+
+  console.log('[DEBUG CONNECTIVITY] Testes de conectividade concluídos.');
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -588,8 +645,18 @@ Deno.serve(async (req) => {
       );
     }
 
+    // EXECUTAR TESTES DE CONECTIVIDADE ANTES DE TENTAR BUSCAR NOTAS
+    await testConnectivity();
+
     let notesFound = [];
     let errorMessage = '';
+
+    // Loggar headers que serão enviados na requisição POST real
+    console.log('[DEBUG HEADERS] Headers que serão enviados na requisição SOAP:');
+    console.log('[DEBUG HEADERS] Content-Type: text/xml; charset=utf-8');
+    console.log('[DEBUG HEADERS] SOAPAction: http://www.portalfiscal.inf.br/nfe/wsdl/NfeConsultaProtocolo4 (para SEFAZ)');
+    console.log('[DEBUG HEADERS] SOAPAction: http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe/nfeDistDFeInteresse (para RF)');
+    console.log('[DEBUG HEADERS] User-Agent: Default Deno fetch');
 
     try {
       if (type === 'sale') {
