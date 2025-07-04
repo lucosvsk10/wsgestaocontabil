@@ -569,13 +569,6 @@ Deno.serve(async (req) => {
     } catch (bufferError) {
         console.error('[ERROR] Erro ao criar ArrayBuffer:', bufferError);
         throw new Error(`Erro ao preparar certificado para processamento: ${bufferError.message}`);
-    } catch (certError) {
-      console.error('[ERROR] Erro geral no processamento do certificado:', certError);
-      console.error('[ERROR] Stack trace:', certError.stack);
-      return new Response(
-        JSON.stringify({ success: false, message: `Erro ao processar certificado digital: ${certError.message}` }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
     }
 
     console.log(`[DEBUG] Processando senha do certificado...`);
