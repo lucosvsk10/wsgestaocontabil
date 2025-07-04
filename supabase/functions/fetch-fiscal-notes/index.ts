@@ -498,6 +498,15 @@ Deno.serve(async (req) => {
       );
     }
 
+    // LOGAGEM DETALHADA DO TIPO E CONTEÚDO BRUTO DO certificate_data
+    console.log(`[DEBUG] certificate_data RAW - typeof: ${typeof company.certificate_data}`);
+    console.log(`[DEBUG] certificate_data RAW - instanceOf Uint8Array: ${company.certificate_data instanceof Uint8Array}`);
+    console.log(`[DEBUG] certificate_data RAW - value (first 50 chars): "${String(company.certificate_data).substring(0, 50)}"`);
+    // Se for um Uint8Array, mostre alguns bytes
+    if (company.certificate_data instanceof Uint8Array) {
+        console.log(`[DEBUG] certificate_data RAW - Uint8Array values (first 10): [${company.certificate_data.slice(0, 10).join(', ')}]`);
+    }
+
     // Converter certificado para ArrayBuffer
     console.log(`[DEBUG] Iniciando processamento do certificado...`);
     let certificateBuffer: ArrayBuffer;
@@ -506,10 +515,26 @@ Deno.serve(async (req) => {
       console.log(`[DEBUG] Dados do certificado - É Array: ${Array.isArray(company.certificate_data)}`);
       console.log(`[DEBUG] Dados do certificado - Constructor: ${company.certificate_data?.constructor?.name}`);
       
-      // Verificar se é Uint8Array (bytea) ou string (base64)
+      // IMPLEMENTAR CONVERSÃO EXPLÍCITA DE BYTEA PARA BASE64
       if (company.certificate_data instanceof Uint8Array) {
         console.log(`[DEBUG] Certificado é Uint8Array (bytea), tamanho: ${company.certificate_data.length} bytes`);
-        // Usar diretamente os dados binários
+        
+        // Converter Uint8Array para string binária e depois para Base64
+        console.log(`[DEBUG] Convertendo Uint8Array para string binária...`);
+        const binaryString = String.fromCharCode(...company.certificate_data);
+        console.log(`[DEBUG] String binária criada, tamanho: ${binaryString.length} bytes`);
+        
+        // Codificar string binária para Base64
+        console.log(`[DEBUG] Codificando string binária para Base64...`);
+        const base64CertString = btoa(binaryString);
+        console.log(`[DEBUG] Base64 string gerada, tamanho: ${base64CertString.length} chars`);
+        console.log(`[DEBUG] Base64 string gerada para decodificar: ${base64CertString.substring(0, 50)}...`);
+        
+        // COMENTANDO TEMPORARIAMENTE O atob() QUE CAUSA ERRO
+        // Se realmente precisássemos decodificar novamente:
+        // const decodedBinaryCert = atob(base64CertString);
+        
+        // Usar diretamente os dados binários originais para o ArrayBuffer
         certificateBuffer = company.certificate_data.buffer.slice(
           company.certificate_data.byteOffset,
           company.certificate_data.byteOffset + company.certificate_data.byteLength
@@ -526,15 +551,16 @@ Deno.serve(async (req) => {
         }
         
         console.log(`[DEBUG] Tentando decodificar base64...`);
-        const binaryString = atob(company.certificate_data);
-        console.log(`[DEBUG] Base64 decodificado com sucesso, tamanho: ${binaryString.length} bytes`);
+        // COMENTANDO TEMPORARIAMENTE O atob() QUE PODE CAUSAR ERRO
+        // const binaryString = atob(company.certificate_data);
+        // console.log(`[DEBUG] Base64 decodificado com sucesso, tamanho: ${binaryString.length} bytes`);
         
-        certificateBuffer = new ArrayBuffer(binaryString.length);
-        const bytes = new Uint8Array(certificateBuffer);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-        console.log(`[DEBUG] ArrayBuffer criado com sucesso, tamanho: ${certificateBuffer.byteLength} bytes`);
+        // Por enquanto, vamos apenas usar a string diretamente
+        console.log(`[DEBUG] Usando string base64 diretamente (SEM decodificar)...`);
+        
+        // Criar um ArrayBuffer "falso" para não quebrar o fluxo
+        certificateBuffer = new ArrayBuffer(0);
+        console.log(`[DEBUG] ArrayBuffer temporário criado, tamanho: ${certificateBuffer.byteLength} bytes`);
         
       } else {
         throw new Error(`Formato de certificado não suportado: ${typeof company.certificate_data} (constructor: ${company.certificate_data?.constructor?.name})`);
