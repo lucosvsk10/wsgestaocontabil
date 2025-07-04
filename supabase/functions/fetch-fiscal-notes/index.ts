@@ -188,30 +188,70 @@ function getUFCode(uf: string): string {
 
 // Função para assinar XML simplificada (versão compatível com Deno)
 async function signXmlWithCertificate(xmlContent: string, certificate: ArrayBuffer, password: string): Promise<string> {
-  console.log('Processando certificado digital...');
+  console.log('[DEBUG] Iniciando signXmlWithCertificate...');
+  console.log(`[DEBUG] Parâmetros - XML length: ${xmlContent.length}, Certificate size: ${certificate.byteLength}, Password length: ${password.length}`);
   
   try {
+    console.log('[DEBUG] Verificando se temos um certificado válido...');
+    if (certificate.byteLength === 0) {
+      throw new Error('Certificado digital vazio ou inválido');
+    }
+    console.log(`[DEBUG] Certificado válido com ${certificate.byteLength} bytes`);
+    
+    // Tentativa de análise básica do certificado PFX
+    console.log('[DEBUG] Tentando analisar estrutura do certificado PFX...');
+    try {
+      const certificateView = new Uint8Array(certificate);
+      const firstBytes = Array.from(certificateView.slice(0, 16)).map(b => b.toString(16).padStart(2, '0')).join(' ');
+      console.log(`[DEBUG] Primeiros 16 bytes do certificado: ${firstBytes}`);
+      
+      // Verificar se parece com um arquivo PFX (normalmente começa com bytes específicos)
+      if (certificateView[0] === 0x30 && certificateView[1] === 0x82) {
+        console.log('[DEBUG] Certificado parece ser um arquivo PFX válido (ASN.1 DER)');
+      } else {
+        console.log('[WARN] Certificado pode não estar no formato PFX esperado');
+      }
+    } catch (analysisError) {
+      console.error('[ERROR] Erro na análise do certificado:', analysisError);
+    }
+    
+    // Tentativa de usar Web Crypto API do Deno para processamento básico
+    console.log('[DEBUG] Tentando processar certificado com Web Crypto API...');
+    try {
+      // Esta é uma tentativa básica - PFX requer processamento específico
+      // Nota: Web Crypto API não suporta diretamente PFX, que é um formato PKCS#12
+      console.log('[DEBUG] Web Crypto API disponível, mas PFX requer processamento específico');
+      console.log('[DEBUG] Verificando disponibilidade de crypto.subtle...');
+      
+      if (crypto && crypto.subtle) {
+        console.log('[DEBUG] crypto.subtle disponível');
+        // Aqui seria necessária uma biblioteca específica para PKCS#12/PFX
+        console.log('[WARN] PFX parsing requer biblioteca específica não disponível');
+      } else {
+        console.log('[ERROR] crypto.subtle não disponível');
+      }
+    } catch (cryptoError) {
+      console.error('[ERROR] Erro no processamento crypto:', cryptoError);
+      throw new Error(`Erro no processamento criptográfico: ${cryptoError.message}`);
+    }
+    
     // IMPORTANTE: Esta é uma implementação simplificada para Edge Functions
     // Em produção, seria necessário uma biblioteca de assinatura digital compatível com Deno
     // As APIs de certificado digital para fiscal brasileiro são complexas e requerem bibliotecas específicas
     
-    console.log('AVISO: Usando implementação simplificada de certificado digital');
-    console.log('Para produção, integrar biblioteca compatível com Deno para assinatura XML');
-    
-    // Verificar se temos um certificado válido
-    if (certificate.byteLength === 0) {
-      throw new Error('Certificado digital vazio ou inválido');
-    }
+    console.log('[WARN] Usando implementação simplificada de certificado digital');
+    console.log('[WARN] Para produção, integrar biblioteca compatível com Deno para assinatura XML');
     
     // Para esta versão, retornamos o XML sem assinatura mas com estrutura preparada
     // Em produção, aqui seria aplicada a assinatura digital real
     const signedXml = xmlContent;
     
-    console.log('Processamento de certificado concluído (versão simplificada)');
+    console.log('[DEBUG] Processamento de certificado concluído (versão simplificada)');
     return signedXml;
     
   } catch (error) {
-    console.error('Erro no processamento do certificado:', error);
+    console.error('[ERROR] Erro no processamento do certificado:', error);
+    console.error('[ERROR] Stack trace completo:', error.stack);
     throw new Error(`Falha no processamento do certificado: ${error.message}`);
   }
 }
@@ -400,8 +440,10 @@ Deno.serve(async (req) => {
 
   try {
     const { companyId, cnpj, type } = await req.json();
+    console.log(`[DEBUG] Requisição recebida - Company ID: ${companyId}, CNPJ: ${cnpj}, Type: ${type}`);
 
     if (!companyId || !cnpj || !type) {
+      console.log('[ERROR] Dados obrigatórios não fornecidos');
       return new Response(
         JSON.stringify({ success: false, message: 'Dados obrigatórios não fornecidos' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -409,6 +451,7 @@ Deno.serve(async (req) => {
     }
 
     if (!['purchase', 'sale'].includes(type)) {
+      console.log(`[ERROR] Tipo inválido: ${type}`);
       return new Response(
         JSON.stringify({ success: false, message: 'Tipo deve ser "purchase" ou "sale"' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -420,54 +463,113 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log(`Buscando notas fiscais de ${type} para CNPJ: ${cnpj}`);
+    console.log(`[DEBUG] Buscando notas fiscais de ${type} para CNPJ: ${cnpj}`);
 
     // Buscar dados da empresa e certificado
+    console.log(`[DEBUG] Consultando dados da empresa no banco...`);
     const { data: company, error: companyError } = await supabase
       .from('companies')
       .select('certificate_data, certificate_password')
       .eq('id', companyId)
       .single();
 
-    if (companyError || !company.certificate_data) {
+    console.log(`[DEBUG] Resultado da consulta empresa:`, {
+      hasError: !!companyError,
+      errorMessage: companyError?.message,
+      hasCertificateData: !!company?.certificate_data,
+      hasCertificatePassword: !!company?.certificate_password,
+      certificateDataType: typeof company?.certificate_data,
+      certificatePasswordType: typeof company?.certificate_password
+    });
+
+    if (companyError) {
+      console.log(`[ERROR] Erro ao buscar empresa: ${companyError.message}`);
       return new Response(
-        JSON.stringify({ success: false, message: 'Empresa não encontrada ou certificado não configurado' }),
+        JSON.stringify({ success: false, message: `Erro ao buscar empresa: ${companyError.message}` }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!company?.certificate_data) {
+      console.log('[ERROR] Certificado não configurado');
+      return new Response(
+        JSON.stringify({ success: false, message: 'Certificado não configurado' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     // Converter certificado base64 para ArrayBuffer
+    console.log(`[DEBUG] Iniciando processamento do certificado...`);
     let certificateBuffer: ArrayBuffer;
     try {
-      const binaryString = atob(company.certificate_data);
+      console.log(`[DEBUG] Dados do certificado - Tipo: ${typeof company.certificate_data}`);
+      
+      // Verificar se é Uint8Array (bytea) ou string (base64)
+      let certificateData: string;
+      if (company.certificate_data instanceof Uint8Array) {
+        console.log(`[DEBUG] Certificado é Uint8Array, tamanho: ${company.certificate_data.length} bytes`);
+        // Converter Uint8Array para base64
+        certificateData = btoa(String.fromCharCode(...company.certificate_data));
+        console.log(`[DEBUG] Convertido para base64, tamanho: ${certificateData.length} chars`);
+      } else if (typeof company.certificate_data === 'string') {
+        console.log(`[DEBUG] Certificado já é string, tamanho: ${company.certificate_data.length} chars`);
+        certificateData = company.certificate_data;
+      } else {
+        throw new Error(`Formato de certificado não suportado: ${typeof company.certificate_data}`);
+      }
+      
+      console.log(`[DEBUG] Tentando decodificar base64...`);
+      const binaryString = atob(certificateData);
+      console.log(`[DEBUG] Base64 decodificado com sucesso, tamanho: ${binaryString.length} bytes`);
+      
       certificateBuffer = new ArrayBuffer(binaryString.length);
       const bytes = new Uint8Array(certificateBuffer);
       for (let i = 0; i < binaryString.length; i++) {
         bytes[i] = binaryString.charCodeAt(i);
       }
+      console.log(`[DEBUG] ArrayBuffer criado com sucesso, tamanho: ${certificateBuffer.byteLength} bytes`);
+      
     } catch (certError) {
-      console.error('Erro ao processar certificado:', certError);
+      console.error('[ERROR] Erro ao processar certificado:', certError);
+      console.error('[ERROR] Stack trace:', certError.stack);
       return new Response(
-        JSON.stringify({ success: false, message: 'Erro ao processar certificado digital' }),
+        JSON.stringify({ success: false, message: `Erro ao processar certificado digital: ${certError.message}` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const decryptedPassword = atob(company.certificate_password);
+    console.log(`[DEBUG] Processando senha do certificado...`);
+    let decryptedPassword: string;
+    try {
+      if (!company.certificate_password) {
+        throw new Error('Senha do certificado não fornecida');
+      }
+      console.log(`[DEBUG] Tipo da senha: ${typeof company.certificate_password}, tamanho: ${company.certificate_password.length}`);
+      decryptedPassword = atob(company.certificate_password);
+      console.log(`[DEBUG] Senha decodificada com sucesso, tamanho: ${decryptedPassword.length}`);
+    } catch (passwordError) {
+      console.error('[ERROR] Erro ao processar senha do certificado:', passwordError);
+      return new Response(
+        JSON.stringify({ success: false, message: `Erro ao processar senha do certificado: ${passwordError.message}` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     let notesFound = [];
     let errorMessage = '';
 
     try {
       if (type === 'sale') {
-        console.log('Iniciando comunicação real com SEFAZ para notas de venda...');
+        console.log('[DEBUG] Iniciando comunicação real com SEFAZ para notas de venda...');
         notesFound = await fetchSaleNotes(cnpj, certificateBuffer, decryptedPassword);
         
       } else if (type === 'purchase') {
-        console.log('Iniciando comunicação real com Receita Federal para notas de compra...');
+        console.log('[DEBUG] Iniciando comunicação real com Receita Federal para notas de compra...');
         notesFound = await fetchPurchaseNotes(cnpj, certificateBuffer, decryptedPassword);
       }
     } catch (error) {
-      console.error(`Erro na comunicação com ${type === 'sale' ? 'SEFAZ' : 'Receita Federal'}:`, error);
+      console.error(`[ERROR] Erro na comunicação com ${type === 'sale' ? 'SEFAZ' : 'Receita Federal'}:`, error);
+      console.error('[ERROR] Stack trace completo:', error.stack);
       errorMessage = error.message || 'Erro na comunicação com os órgãos fiscais';
     }
 
