@@ -17,6 +17,7 @@ import { checkIsAdmin } from "./utils/auth/userChecks";
 import { CompanyDataView } from "./components/admin/company/CompanyDataView";
 import SimpleCarouselManager from '@/components/admin/carousel/SimpleCarouselManager';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { XMLManager } from './pages/XMLManager';
 
 const AppRoutes = () => {
   const { userData, user } = useAuth();
@@ -122,6 +123,16 @@ const AppRoutes = () => {
             <AdminLayout>
               <SimpleCarouselManager />
             </AdminLayout>
+          </PrivateRoute>
+        } 
+      />
+      
+      {/* Rota do gerenciador de XML */}
+      <Route 
+        path="/admin/xml-manager" 
+        element={
+          <PrivateRoute requiredRole="admin">
+            <XMLManager />
           </PrivateRoute>
         } 
       />
