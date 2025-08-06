@@ -53,8 +53,8 @@ const Index = () => {
           <BusinessNews />
           <AccountingSection />
         </main>
+        <Footer />
       </div>
-      <Footer />
       
       {/* Poll Widget */}
       <PollWidget />
