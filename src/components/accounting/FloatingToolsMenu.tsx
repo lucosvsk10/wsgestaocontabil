@@ -1,7 +1,7 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Calculator, ChevronUp } from "lucide-react";
+import { Calculator } from "lucide-react";
 
 interface FloatingToolsMenuProps {
   className?: string;
@@ -10,6 +10,44 @@ interface FloatingToolsMenuProps {
 const FloatingToolsMenu = ({
   className
 }: FloatingToolsMenuProps) => {
+  const [isToolsSectionVisible, setIsToolsSectionVisible] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
+
+  useEffect(() => {
+    const handleIntersection = (entries: IntersectionObserverEntry[]) => {
+      entries.forEach(entry => {
+        if (entry.target.id === 'ferramentas') {
+          if (entry.isIntersecting && !isToolsSectionVisible) {
+            setIsExiting(true);
+            setTimeout(() => {
+              setIsToolsSectionVisible(true);
+            }, 300);
+          } else if (!entry.isIntersecting && isToolsSectionVisible) {
+            setIsToolsSectionVisible(false);
+            setIsExiting(false);
+          }
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver(handleIntersection, {
+      root: null,
+      rootMargin: '0px',
+      threshold: 0.1
+    });
+
+    const ferramentasSection = document.getElementById('ferramentas');
+    if (ferramentasSection) {
+      observer.observe(ferramentasSection);
+    }
+
+    return () => {
+      if (ferramentasSection) {
+        observer.unobserve(ferramentasSection);
+      }
+    };
+  }, [isToolsSectionVisible]);
+
   const scrollToFerramentas = () => {
     const ferramentasSection = document.getElementById('ferramentas');
     if (ferramentasSection) {
@@ -20,11 +58,20 @@ const FloatingToolsMenu = ({
     }
   };
 
+  // Não renderizar se a seção ferramentas estiver visível
+  if (isToolsSectionVisible) {
+    return null;
+  }
+
   return (
     <div className={`fixed bottom-6 right-6 z-50 ${className}`}>
       <Button 
         size="icon" 
-        className="h-14 w-14 rounded-full bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817] shadow-lg animate-bounce" 
+        className={`h-14 w-14 rounded-full bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817] shadow-lg transition-all duration-300 ${
+          isExiting 
+            ? 'animate-[bubble-pop_0.3s_ease-in_forwards]' 
+            : 'animate-bounce hover:animate-none'
+        }`}
         onClick={scrollToFerramentas} 
         aria-label="Ir para Ferramentas"
       >
