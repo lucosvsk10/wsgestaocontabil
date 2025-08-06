@@ -3,23 +3,23 @@ import { Search, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { useZoomControl } from '@/hooks/useZoomControl';
 
 const ZoomControl: React.FC = () => {
-  const { zoomLevel, adjustZoom, resetZoom, zoomPercentage } = useZoomControl();
+  const { zoomLevel, adjustZoom, resetZoom, zoomPercentage, isTransitioning } = useZoomControl();
 
   return (
-    <div className="fixed right-6 bottom-20 z-50 bg-white/90 dark:bg-[#020817]/90 backdrop-blur-sm border border-[#e6e6e6] dark:border-[#efc349] rounded-xl p-4 shadow-lg">
-      <div className="flex flex-col items-center space-y-3">
+    <div className="fixed right-4 top-24 z-50 bg-white/95 dark:bg-[#020817]/95 backdrop-blur-md border border-[#e6e6e6] dark:border-[#efc349] rounded-2xl p-3 shadow-xl transition-all duration-300 hover:shadow-2xl">
+      <div className="flex flex-col items-center space-y-2">
         {/* Icon */}
-        <div className="text-[#020817] dark:text-[#efc349]">
-          <Search size={20} />
+        <div className="text-[#020817] dark:text-[#efc349] transition-colors duration-200">
+          <Search size={18} />
         </div>
         
         {/* Zoom percentage display */}
-        <div className="text-xs font-light text-[#020817] dark:text-white min-w-[40px] text-center">
+        <div className="text-xs font-medium text-[#020817] dark:text-white min-w-[35px] text-center px-2 py-1 bg-[#f5f5f5] dark:bg-[#1a1a1a] rounded-lg transition-colors duration-200">
           {zoomPercentage}%
         </div>
         
         {/* Vertical slider */}
-        <div className="relative h-24 w-6 flex items-center justify-center">
+        <div className="relative h-20 w-5 flex items-center justify-center">
           <input
             type="range"
             min="0.8"
@@ -27,12 +27,9 @@ const ZoomControl: React.FC = () => {
             step="0.05"
             value={zoomLevel}
             onChange={(e) => adjustZoom(parseFloat(e.target.value))}
-            className="h-20 w-1 bg-[#e6e6e6] dark:bg-[#efc349]/30 rounded-full appearance-none cursor-pointer slider-vertical"
-            style={{
-              WebkitAppearance: 'slider-vertical',
-              transform: 'rotate(-90deg)',
-            }}
+            className="zoom-slider"
             aria-label="Controle de zoom"
+            disabled={isTransitioning}
           />
         </div>
         
@@ -40,26 +37,29 @@ const ZoomControl: React.FC = () => {
         <div className="flex flex-col space-y-1">
           <button
             onClick={() => adjustZoom(zoomLevel + 0.1)}
-            className="p-1 text-[#020817] dark:text-[#efc349] hover:bg-[#efc349]/10 rounded transition-colors"
+            className="p-1.5 text-[#020817] dark:text-[#efc349] hover:bg-[#efc349]/20 rounded-lg transition-all duration-200 hover:scale-110 disabled:opacity-50"
             aria-label="Aumentar zoom"
+            disabled={isTransitioning || zoomLevel >= 1.5}
           >
-            <ZoomIn size={16} />
+            <ZoomIn size={14} />
           </button>
           
           <button
             onClick={resetZoom}
-            className="p-1 text-[#020817] dark:text-[#efc349] hover:bg-[#efc349]/10 rounded transition-colors"
+            className="p-1.5 text-[#020817] dark:text-[#efc349] hover:bg-[#efc349]/20 rounded-lg transition-all duration-200 hover:scale-110 disabled:opacity-50"
             aria-label="Resetar zoom"
+            disabled={isTransitioning}
           >
-            <RotateCcw size={16} />
+            <RotateCcw size={14} />
           </button>
           
           <button
             onClick={() => adjustZoom(zoomLevel - 0.1)}
-            className="p-1 text-[#020817] dark:text-[#efc349] hover:bg-[#efc349]/10 rounded transition-colors"
+            className="p-1.5 text-[#020817] dark:text-[#efc349] hover:bg-[#efc349]/20 rounded-lg transition-all duration-200 hover:scale-110 disabled:opacity-50"
             aria-label="Diminuir zoom"
+            disabled={isTransitioning || zoomLevel <= 0.8}
           >
-            <ZoomOut size={16} />
+            <ZoomOut size={14} />
           </button>
         </div>
       </div>

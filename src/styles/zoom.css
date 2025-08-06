@@ -1,63 +1,103 @@
-/* Slider vertical customizado */
-.slider-vertical {
+/* Zoom Control Slider */
+.zoom-slider {
   writing-mode: bt-lr; /* IE */
   -webkit-appearance: slider-vertical; /* WebKit */
-  width: 20px;
+  width: 16px;
   height: 80px;
   background: transparent;
   outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
 }
 
-.slider-vertical::-webkit-slider-track {
-  width: 4px;
+.zoom-slider::-webkit-slider-track {
+  width: 3px;
   height: 80px;
   background: #e6e6e6;
-  border-radius: 2px;
+  border-radius: 3px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.dark .slider-vertical::-webkit-slider-track {
-  background: rgba(239, 195, 73, 0.3);
+.dark .zoom-slider::-webkit-slider-track {
+  background: rgba(239, 195, 73, 0.2);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
-.slider-vertical::-webkit-slider-thumb {
+.zoom-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 16px;
-  height: 16px;
-  background: #efc349;
+  width: 14px;
+  height: 14px;
+  background: linear-gradient(135deg, #efc349, #d4a935);
   border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 2px solid white;
 }
 
-.slider-vertical::-webkit-slider-thumb:hover {
-  background: #d4a935;
-  transform: scale(1.1);
+.dark .zoom-slider::-webkit-slider-thumb {
+  border-color: #020817;
 }
 
-.slider-vertical::-moz-range-track {
-  width: 4px;
+.zoom-slider::-webkit-slider-thumb:hover {
+  background: linear-gradient(135deg, #d4a935, #b8922d);
+  transform: scale(1.15);
+  box-shadow: 0 4px 12px rgba(239, 195, 73, 0.4);
+}
+
+.zoom-slider:disabled::-webkit-slider-thumb {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.zoom-slider::-moz-range-track {
+  width: 3px;
   height: 80px;
   background: #e6e6e6;
-  border-radius: 2px;
+  border-radius: 3px;
   border: none;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.dark .slider-vertical::-moz-range-track {
-  background: rgba(239, 195, 73, 0.3);
+.dark .zoom-slider::-moz-range-track {
+  background: rgba(239, 195, 73, 0.2);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
-.slider-vertical::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  background: #efc349;
+.zoom-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: linear-gradient(135deg, #efc349, #d4a935);
   border-radius: 50%;
   cursor: pointer;
-  border: none;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  border: 2px solid white;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.slider-vertical::-moz-range-thumb:hover {
-  background: #d4a935;
-  transform: scale(1.1);
+.dark .zoom-slider::-moz-range-thumb {
+  border-color: #020817;
+}
+
+.zoom-slider::-moz-range-thumb:hover {
+  background: linear-gradient(135deg, #d4a935, #b8922d);
+  transform: scale(1.15);
+  box-shadow: 0 4px 12px rgba(239, 195, 73, 0.4);
+}
+
+.zoom-slider:disabled::-moz-range-thumb {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Smooth zoom transition effects */
+.zoom-transition {
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), filter 0.2s ease-in-out;
+}
+
+.zoom-blur {
+  filter: blur(2px);
 }

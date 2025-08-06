@@ -100,10 +100,15 @@
 
   body {
     @apply bg-white dark:bg-deepNavy text-[#020817] dark:text-[#d9d9d9] font-prompt overflow-x-hidden;
+  }
+
+  #main-content {
     transform: scale(var(--zoom-scale, 1));
     transform-origin: top left;
     width: calc(100% / var(--zoom-scale, 1));
-    height: calc(100% / var(--zoom-scale, 1));
+    min-height: calc(100vh / var(--zoom-scale, 1));
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), filter 0.2s ease-in-out;
+    will-change: transform, filter;
   }
 
   img {

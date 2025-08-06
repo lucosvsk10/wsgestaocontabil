@@ -43,15 +43,17 @@ const Index = () => {
   return (
     <div className="relative min-h-screen bg-[#FFF1DE] dark:bg-[#020817]">
       <Navbar />
-      <main>
-        <Hero />
-        <About />
-        <ToolsSection />
-        <HomeCarousel />
-        <UsefulLinksSection />
-        <BusinessNews />
-        <AccountingSection />
-      </main>
+      <div id="main-content">
+        <main>
+          <Hero />
+          <About />
+          <ToolsSection />
+          <HomeCarousel />
+          <UsefulLinksSection />
+          <BusinessNews />
+          <AccountingSection />
+        </main>
+      </div>
       <Footer />
       
       {/* Poll Widget */}
