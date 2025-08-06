@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 export const useZoomControl = () => {
   const [zoomLevel, setZoomLevel] = useState(() => {
     const saved = localStorage.getItem('ws-zoom-level');
-    return saved ? parseFloat(saved) : 1;
+    return saved ? parseFloat(saved) : 0.8;
   });
   
   const [isTransitioning, setIsTransitioning] = useState(false);
