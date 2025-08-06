@@ -9,6 +9,7 @@ import { PollWidget } from "@/components/polls/PollWidget";
 import FloatingToolsMenu from '@/components/accounting/FloatingToolsMenu';
 import ToolsSection from '@/components/tools/ToolsSection';
 import HomeCarousel from '@/components/carousel/HomeCarousel';
+import UsefulLinksSection from '@/components/useful-links/UsefulLinksSection';
 
 const Index = () => {
   useEffect(() => {
@@ -46,6 +47,7 @@ const Index = () => {
         <About />
         <ToolsSection />
         <HomeCarousel />
+        <UsefulLinksSection />
         <BusinessNews />
         <AccountingSection />
       </main>
@@ -61,6 +63,7 @@ const Index = () => {
           <a href="#servicos" className="w-3 h-3 rounded-full bg-[#efc349]/30 hover:bg-[#efc349] transition-colors duration-300" aria-label="Ir para serviços" />
           <a href="#sobre" className="w-3 h-3 rounded-full bg-[#efc349]/30 hover:bg-[#efc349] transition-colors duration-300" aria-label="Ir para sobre" />
           <a href="#ferramentas" className="w-3 h-3 rounded-full bg-[#efc349]/30 hover:bg-[#efc349] transition-colors duration-300" aria-label="Ir para ferramentas" />
+          <a href="#links-uteis" className="w-3 h-3 rounded-full bg-[#efc349]/30 hover:bg-[#efc349] transition-colors duration-300" aria-label="Ir para links úteis" />
           <a href="#noticias" className="w-3 h-3 rounded-full bg-[#efc349]/30 hover:bg-[#efc349] transition-colors duration-300" aria-label="Ir para notícias" />
           <a href="#contabil" className="w-3 h-3 rounded-full bg-[#efc349]/30 hover:bg-[#efc349] transition-colors duration-300" aria-label="Ir para contábil" />
           <a href="#contato" className="w-3 h-3 rounded-full bg-[#efc349]/30 hover:bg-[#efc349] transition-colors duration-300" aria-label="Ir para contato" />
