@@ -2,10 +2,17 @@
 import React, { useState } from 'react';
 import { Search, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { useZoomControl } from '@/hooks/useZoomControl';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const ZoomControl: React.FC = () => {
   const { zoomLevel, adjustZoom, resetZoom, zoomPercentage, isTransitioning } = useZoomControl();
   const [isHovered, setIsHovered] = useState(false);
+  const isMobile = useIsMobile();
+
+  // Não renderizar em dispositivos móveis
+  if (isMobile) {
+    return null;
+  }
 
   return (
     <div 
