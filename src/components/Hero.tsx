@@ -87,7 +87,7 @@ const Hero = () => {
             
             {/* Right column - Visual element */}
             <div className="flex flex-col items-center justify-center w-[90%]">
-              <div className="flex flex-col items-end bg-inherit max-w-[250px] md:max-w-[300px]">
+              <div className="flex flex-col items-center bg-inherit max-w-[250px] md:max-w-[300px]">
                 <div className="w-[70%] md:w-[80%]">
                   <img src={theme === 'light' ? "/lovable-uploads/99f722e6-cc97-4cb4-8141-6a28a446db88.png" : "/lovable-uploads/1eaf9486-7e70-4235-adbf-53d8043d5b91.png"} alt="Símbolo da Contabilidade" className="w-full h-full object-contain animate-fade-in" />
                 </div>
