@@ -3,7 +3,12 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 export const useZoomControl = () => {
   const [zoomLevel, setZoomLevel] = useState(() => {
     const saved = localStorage.getItem('ws-zoom-level');
-    return saved ? parseFloat(saved) : 1;
+    if (saved) {
+      return parseFloat(saved);
+    }
+    // Default zoom: 80% for desktop, 100% for mobile
+    const isMobile = window.innerWidth < 768;
+    return isMobile ? 1 : 0.8;
   });
   
   const [isTransitioning, setIsTransitioning] = useState(false);
