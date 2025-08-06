@@ -71,7 +71,7 @@ const FloatingToolsMenu = ({
     <div className={`fixed bottom-6 right-6 z-50 ${className}`}>
       <Button 
         size="icon" 
-        className={`h-14 w-14 rounded-full bg-gold hover:bg-gold/90 text-primary shadow-lg transition-all duration-300 ${
+        className={`h-14 w-14 rounded-full bg-yellow-400 hover:bg-yellow-500 text-slate-900 shadow-lg transition-all duration-300 ${
           isExiting 
             ? 'animate-[bubble-pop_0.3s_ease-in_forwards]' 
             : isEntering
