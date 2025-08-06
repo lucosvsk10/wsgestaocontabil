@@ -44,7 +44,7 @@ const Index = () => {
     <div className="relative min-h-screen bg-[#FFF1DE] dark:bg-[#020817]">
       <Navbar />
       <div id="main-content">
-        <main className="flex-1 overflow-y-auto">
+        <main>
           <Hero />
           <About />
           <ToolsSection />
