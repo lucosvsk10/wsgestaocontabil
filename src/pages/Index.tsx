@@ -10,6 +10,7 @@ import FloatingToolsMenu from '@/components/accounting/FloatingToolsMenu';
 import ToolsSection from '@/components/tools/ToolsSection';
 import HomeCarousel from '@/components/carousel/HomeCarousel';
 import UsefulLinksSection from '@/components/useful-links/UsefulLinksSection';
+import ZoomControl from '@/components/zoom/ZoomControl';
 
 const Index = () => {
   useEffect(() => {
@@ -55,6 +56,9 @@ const Index = () => {
       
       {/* Poll Widget */}
       <PollWidget />
+      
+      {/* Zoom Control */}
+      <ZoomControl />
       
       {/* Fixed navigation dots */}
       <div className="fixed right-6 top-1/2 transform -translate-y-1/2 z-40 hidden lg:block">

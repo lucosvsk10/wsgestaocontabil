@@ -100,6 +100,10 @@
 
   body {
     @apply bg-white dark:bg-deepNavy text-[#020817] dark:text-[#d9d9d9] font-prompt overflow-x-hidden;
+    transform: scale(var(--zoom-scale, 1));
+    transform-origin: top left;
+    width: calc(100% / var(--zoom-scale, 1));
+    height: calc(100% / var(--zoom-scale, 1));
   }
 
   img {
