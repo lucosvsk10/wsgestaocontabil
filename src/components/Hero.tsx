@@ -33,7 +33,7 @@ const Hero = () => {
         <div className="flex justify-center items-center">
           <div className="grid md:grid-cols-2 items-center gap-4 my-0 -mt-4 px-[150px] mx-auto py-[8px]">
             {/* Left column - Content */}
-            <div className="flex flex-col ml-[75px]">
+            <div className="flex flex-col">
               <h1 className="text-5xl md:text-6xl font-extrabold text-primary">
                 WS GESTÃO CONTÁBIL
               </h1>
