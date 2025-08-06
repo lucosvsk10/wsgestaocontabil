@@ -106,9 +106,19 @@
     transform: scale(var(--zoom-scale, 1));
     transform-origin: top left;
     width: calc(100% / var(--zoom-scale, 1));
-    min-height: calc(100vh / var(--zoom-scale, 1));
     transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), filter 0.2s ease-in-out;
     will-change: transform, filter;
+  }
+
+  /* Ensure no gap between main content and footer */
+  .page-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  .content-wrapper {
+    flex: 1;
   }
 
   img {

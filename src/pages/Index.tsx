@@ -41,18 +41,20 @@ const Index = () => {
   }, []);
   
   return (
-    <div className="relative min-h-screen bg-[#FFF1DE] dark:bg-[#020817]">
+    <div className="page-container relative bg-[#FFF1DE] dark:bg-[#020817]">
       <Navbar />
-      <div id="main-content">
-        <main>
-          <Hero />
-          <About />
-          <ToolsSection />
-          <HomeCarousel />
-          <UsefulLinksSection />
-          <BusinessNews />
-          <AccountingSection />
-        </main>
+      <div className="content-wrapper">
+        <div id="main-content">
+          <main>
+            <Hero />
+            <About />
+            <ToolsSection />
+            <HomeCarousel />
+            <UsefulLinksSection />
+            <BusinessNews />
+            <AccountingSection />
+          </main>
+        </div>
       </div>
       <Footer />
       
