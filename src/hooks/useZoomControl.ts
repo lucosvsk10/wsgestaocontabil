@@ -9,28 +9,46 @@ export const useZoomControl = () => {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Optimized zoom application with minimal blur
+  // Debounced zoom application with blur effect
   const applyZoom = useCallback((value: number) => {
     setIsTransitioning(true);
     
+    // Add blur effect to main content
+    const mainContent = document.getElementById('main-content');
+    if (mainContent) {
+      mainContent.style.filter = 'blur(2px)';
+      mainContent.style.transition = 'filter 0.2s ease-in-out, transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+    }
+
     // Clear previous timeout
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
 
-    // Apply zoom immediately with shorter transition
-    document.documentElement.style.setProperty('--zoom-scale', value.toString());
-    localStorage.setItem('ws-zoom-level', value.toString());
-    
-    // End transition state quickly
+    // Apply zoom after short delay for smooth transition
     timeoutRef.current = setTimeout(() => {
-      setIsTransitioning(false);
-    }, 300);
+      document.documentElement.style.setProperty('--zoom-scale', value.toString());
+      localStorage.setItem('ws-zoom-level', value.toString());
+      
+      // Remove blur effect
+      setTimeout(() => {
+        if (mainContent) {
+          mainContent.style.filter = 'none';
+        }
+        setIsTransitioning(false);
+      }, 150);
+    }, 100);
   }, []);
 
   useEffect(() => {
     // Apply initial zoom on mount
     document.documentElement.style.setProperty('--zoom-scale', zoomLevel.toString());
+    
+    // Initialize main content with smooth transitions
+    const mainContent = document.getElementById('main-content');
+    if (mainContent) {
+      mainContent.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), filter 0.2s ease-in-out';
+    }
   }, []);
 
   const adjustZoom = useCallback((value: number) => {

@@ -93,17 +93,11 @@
   transform: none !important;
 }
 
-/* Optimized zoom transition effects */
+/* Smooth zoom transition effects */
 .zoom-transition {
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  backface-visibility: hidden;
-  image-rendering: crisp-edges;
-  image-rendering: -webkit-optimize-contrast;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), filter 0.2s ease-in-out;
 }
 
-/* Image quality preservation */
-img, picture, svg {
-  image-rendering: crisp-edges;
-  image-rendering: -webkit-optimize-contrast;
-  backface-visibility: hidden;
+.zoom-blur {
+  filter: blur(2px);
 }

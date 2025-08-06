@@ -103,15 +103,12 @@
   }
 
   #main-content {
-    transform: scale3d(var(--zoom-scale, 1), var(--zoom-scale, 1), 1);
+    transform: scale(var(--zoom-scale, 1));
     transform-origin: top left;
     width: calc(100% / var(--zoom-scale, 1));
     min-height: calc(100vh / var(--zoom-scale, 1));
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), filter 0.15s ease-in-out;
-    will-change: transform;
-    backface-visibility: hidden;
-    image-rendering: crisp-edges;
-    image-rendering: -webkit-optimize-contrast;
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), filter 0.2s ease-in-out;
+    will-change: transform, filter;
   }
 
   img {
