@@ -52,7 +52,7 @@ export const useZoomControl = () => {
   }, []);
 
   const adjustZoom = useCallback((value: number) => {
-    const newZoom = Math.min(Math.max(value, 0.8), 1.5); // Min 80%, Max 150%
+    const newZoom = Math.min(Math.max(value, 0.8), 1.2); // Min 80%, Max 120%
     setZoomLevel(newZoom);
     applyZoom(newZoom);
   }, [applyZoom]);

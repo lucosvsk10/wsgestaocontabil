@@ -47,7 +47,7 @@ const ZoomControl: React.FC = () => {
             <input
               type="range"
               min="0.8"
-              max="1.5"
+              max="1.2"
               step="0.05"
               value={zoomLevel}
               onChange={(e) => adjustZoom(parseFloat(e.target.value))}
@@ -63,7 +63,7 @@ const ZoomControl: React.FC = () => {
               onClick={() => adjustZoom(zoomLevel + 0.1)}
               className="p-1.5 text-[#020817] dark:text-[#efc349] hover:bg-[#efc349]/20 rounded-lg transition-all duration-200 hover:scale-110 disabled:opacity-50"
               aria-label="Aumentar zoom"
-              disabled={isTransitioning || zoomLevel >= 1.5}
+              disabled={isTransitioning || zoomLevel >= 1.2}
             >
               <ZoomIn size={14} />
             </button>
