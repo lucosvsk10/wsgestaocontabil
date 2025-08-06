@@ -12,6 +12,7 @@ const FloatingToolsMenu = ({
 }: FloatingToolsMenuProps) => {
   const [isToolsSectionVisible, setIsToolsSectionVisible] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
+  const [isEntering, setIsEntering] = useState(false);
 
   useEffect(() => {
     const handleIntersection = (entries: IntersectionObserverEntry[]) => {
@@ -23,8 +24,11 @@ const FloatingToolsMenu = ({
               setIsToolsSectionVisible(true);
             }, 300);
           } else if (!entry.isIntersecting && isToolsSectionVisible) {
-            setIsToolsSectionVisible(false);
-            setIsExiting(false);
+            setIsEntering(true);
+            setTimeout(() => {
+              setIsToolsSectionVisible(false);
+              setIsExiting(false);
+            }, 100);
           }
         }
       });
@@ -70,6 +74,8 @@ const FloatingToolsMenu = ({
         className={`h-14 w-14 rounded-full bg-[#efc349] hover:bg-[#efc349]/90 text-[#020817] shadow-lg transition-all duration-300 ${
           isExiting 
             ? 'animate-[bubble-pop_0.3s_ease-in_forwards]' 
+            : isEntering
+            ? 'animate-[bubble-in_0.4s_ease-out_forwards]'
             : 'animate-bounce hover:animate-none'
         }`}
         onClick={scrollToFerramentas} 
