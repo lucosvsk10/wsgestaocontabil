@@ -8,7 +8,6 @@ import { UserType } from "@/types/admin";
 import { Poll } from "@/types/polls";
 import { AdminDashboardView } from "./dashboard/AdminDashboardView";
 import { SettingsView } from "./settings/SettingsView";
-import { FiscalManagementView } from "./fiscal/FiscalManagementView";
 import { AdminToolsView } from "./tools/AdminToolsView";
 import { AnnouncementsView } from "./announcements/AnnouncementsView";
 
@@ -122,11 +121,6 @@ export function AdminTabsView({
         {/* Tab Content - Fiscal Calendar */}
         {activeTab === "agenda" && <div className="space-y-8">
             <FiscalCalendar />
-          </div>}
-
-        {/* Tab Content - Fiscal Management */}
-        {activeTab === "fiscal-management" && <div className="space-y-8">
-            <FiscalManagementView />
           </div>}
 
         {/* Tab Content - Settings */}
