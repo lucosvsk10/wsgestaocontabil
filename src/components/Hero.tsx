@@ -29,11 +29,11 @@ const Hero = () => {
     };
   }, []);
   return <section id="hero" className="relative min-h-[100vh] flex items-center justify-center overflow-hidden bg-background py-[80px]">
-      <div ref={heroRef} className="container relative z-5 transition-all duration-700 transform opacity-0 translate-y-10 my-px py-[4px] mx-0 px-[20px]">
-        <div className="flex justify-center items-center">
-          <div className="grid md:grid-cols-2 items-center gap-4 my-0 -mt-4 px-[150px] mx-auto py-[8px]">
+      <div ref={heroRef} className="container relative z-5 transition-all duration-700 transform opacity-0 translate-y-10 my-px py-[4px] mx-0 pl-[50px] md:px-[20px]">
+        <div className="flex justify-start md:justify-center items-center">
+          <div className="flex flex-col md:grid md:grid-cols-2 items-start md:items-center gap-4 my-0 -mt-4 md:px-[150px] mx-auto py-[8px] w-full">
             {/* Left column - Content */}
-            <div className="flex flex-col ml-[75px]">
+            <div className="flex flex-col md:ml-[75px]">
               <h1 className="text-5xl md:text-6xl font-extrabold text-primary">
                 WS GESTÃO CONTÁBIL
               </h1>
@@ -86,12 +86,12 @@ const Hero = () => {
             </div>
             
             {/* Right column - Visual element */}
-            <div className="flex flex-col items-center justify-center w-[90%] ml-[100px]">
-              <div className="flex flex-col items-center bg-inherit max-w-[250px] md:max-w-[300px]">
+            <div className="flex flex-col items-start md:items-center justify-center w-[90%] md:ml-[100px] mt-6 md:mt-0">
+              <div className="flex flex-col items-start md:items-center bg-inherit max-w-[250px] md:max-w-[300px]">
                 <div className="w-[70%] md:w-[80%]">
                   <img src={theme === 'light' ? "/lovable-uploads/99f722e6-cc97-4cb4-8141-6a28a446db88.png" : "/lovable-uploads/1eaf9486-7e70-4235-adbf-53d8043d5b91.png"} alt="Símbolo da Contabilidade" className="w-full h-full object-contain animate-fade-in" />
                 </div>
-                <p className="text-xs text-muted-foreground mt-2 text-center italic px-[20px]">
+                <p className="text-xs text-muted-foreground mt-2 text-left md:text-center italic px-[20px]">
                   O caduceu é um símbolo da contabilidade, representando a sabedoria, o conhecimento e a proteção do comércio e das riquezas, características do profissional contábil.
                 </p>
               </div>
