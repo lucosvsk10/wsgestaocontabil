@@ -94,8 +94,13 @@ const ClientDashboard = () => {
   return (
     <div className="min-h-screen bg-white dark:bg-[#020817]">
       <ClientDashboardLayout activeTab={activeTab} setActiveTab={setActiveTab}>
-        <WelcomeHeader />
-        <QuickStats onTabChange={setActiveTab} />
+        {/* Mostrar WelcomeHeader e QuickStats apenas para páginas principais */}
+        {activeTab !== "upload-history" && activeTab !== "monthly-upload" && (
+          <>
+            <WelcomeHeader />
+            <QuickStats onTabChange={setActiveTab} />
+          </>
+        )}
         {renderContent()}
       </ClientDashboardLayout>
     </div>
