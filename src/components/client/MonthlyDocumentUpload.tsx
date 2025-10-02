@@ -7,7 +7,7 @@
  * - Aumentar N8N_PAYLOAD_SIZE_MAX se necessário (atual: 25MB por arquivo)
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,8 +15,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Upload, FileText, CheckCircle2, XCircle, Loader2, Lock } from "lucide-react";
+import { Upload, FileText, CheckCircle2, XCircle, Loader2, Lock, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +29,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 // Webhook do n8n - TROCAR AQUI se necessário
 const WEBHOOK_URL = "https://pre-studiolx-n8n.zmdnad.easypanel.host/webhook/ws-site";
@@ -66,6 +68,47 @@ export const MonthlyDocumentUpload = () => {
   const [month, setMonth] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
   const [isClosingMonth, setIsClosingMonth] = useState(false);
+  const [isMonthClosed, setIsMonthClosed] = useState(false);
+  const [uploadCount, setUploadCount] = useState(0);
+
+  // Verificar se o mês atual está fechado
+  useEffect(() => {
+    const checkMonthStatus = async () => {
+      if (!user || !month) return;
+
+      const [year, monthNum] = month.split('-');
+      const { data } = await supabase
+        .from('month_closures')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('month', month)
+        .eq('year', parseInt(year))
+        .maybeSingle();
+
+      setIsMonthClosed(!!data);
+    };
+
+    checkMonthStatus();
+  }, [user, month]);
+
+  // Contar uploads do mês atual
+  useEffect(() => {
+    const countUploads = async () => {
+      if (!user || !month) return;
+
+      const [year, monthNum] = month.split('-');
+      const { count } = await supabase
+        .from('uploads')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('month', month)
+        .eq('year', parseInt(year));
+
+      setUploadCount(count || 0);
+    };
+
+    countUploads();
+  }, [user, month, files]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
@@ -140,6 +183,17 @@ export const MonthlyDocumentUpload = () => {
         }
 
         const result = await response.json();
+
+        // Salvar no banco de dados
+        const [year, monthNum] = month.split('-');
+        await supabase.from('uploads').insert({
+          user_id: user?.id || '',
+          user_email: user?.email || '',
+          user_name: userData?.name || userData?.fullname || user?.email?.split('@')[0] || 'Usuário',
+          file_name: fileStatus.file.name,
+          month: month,
+          year: parseInt(year)
+        });
 
         // Atualizar com sucesso
         setFiles(prev => prev.map((f, i) => 
@@ -252,6 +306,15 @@ export const MonthlyDocumentUpload = () => {
       return;
     }
 
+    if (!month) {
+      toast({
+        title: "Selecione um mês",
+        description: "Por favor, selecione o mês que deseja fechar",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsClosingMonth(true);
 
     try {
@@ -275,6 +338,19 @@ export const MonthlyDocumentUpload = () => {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
+      // Salvar fechamento no banco de dados
+      const [year, monthNum] = month.split('-');
+      await supabase.from('month_closures').insert({
+        user_id: user.id,
+        user_email: user.email || '',
+        user_name: userData?.name || userData?.fullname || user?.email?.split('@')[0] || 'Usuário',
+        month: month,
+        year: parseInt(year),
+        status: 'fechado'
+      });
+
+      setIsMonthClosed(true);
+
       toast({
         title: "Mês fechado com sucesso!",
         description: "A operação foi concluída.",
@@ -294,15 +370,38 @@ export const MonthlyDocumentUpload = () => {
 
   return (
     <div className="container mx-auto py-8 px-4 space-y-6">
-      {/* Botão Fechar Mês */}
-      <div className="flex justify-end">
+      {/* Status do mês e botão fechar */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="space-y-2">
+          {month && (
+            <>
+              <div className="flex items-center gap-2">
+                {isMonthClosed ? (
+                  <>
+                    <CheckCircle2 className="w-5 h-5 text-green-500" />
+                    <span className="text-sm font-medium">Status do mês: <span className="text-green-600">Fechado</span></span>
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="w-5 h-5 text-yellow-500" />
+                    <span className="text-sm font-medium">Status do mês: <span className="text-yellow-600">Em Aberto</span></span>
+                  </>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Você enviou {uploadCount} arquivo(s) este mês
+              </p>
+            </>
+          )}
+        </div>
+
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button
               variant="default"
               size="lg"
               className="bg-[#F5C441] hover:bg-[#F5C441]/90 text-black font-semibold"
-              disabled={isClosingMonth || !user}
+              disabled={isClosingMonth || !user || !month || isMonthClosed}
             >
               {isClosingMonth ? (
                 <>
@@ -321,7 +420,7 @@ export const MonthlyDocumentUpload = () => {
             <AlertDialogHeader>
               <AlertDialogTitle>Confirmar fechamento do mês</AlertDialogTitle>
               <AlertDialogDescription>
-                Tem certeza que deseja fechar o mês? Esta ação não pode ser desfeita.
+                Tem certeza que deseja fechar o mês {month}? Esta ação não pode ser desfeita.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -336,6 +435,16 @@ export const MonthlyDocumentUpload = () => {
           </AlertDialogContent>
         </AlertDialog>
       </div>
+
+      {/* Aviso se o mês estiver fechado */}
+      {isMonthClosed && (
+        <Alert className="border-yellow-500 bg-yellow-50">
+          <AlertTriangle className="h-4 w-4 text-yellow-600" />
+          <AlertDescription className="text-yellow-800">
+            ⚠️ Atenção: O mês selecionado já está fechado! Confirme antes de fazer novos uploads.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Card>
         <CardHeader>

@@ -12,6 +12,7 @@ import { CompanyDataSection } from "@/components/client/sections/CompanyDataSect
 import { useDocumentActions } from "@/hooks/document/useDocumentActions";
 import { DocumentTable } from "@/components/client/DocumentTable";
 import { MonthlyDocumentUpload } from "@/components/client/MonthlyDocumentUpload";
+import { UploadHistory } from "@/components/client/UploadHistory";
 
 const ClientDashboard = () => {
   const {
@@ -56,6 +57,8 @@ const ClientDashboard = () => {
         );
       case "monthly-upload":
         return <MonthlyDocumentUpload />;
+      case "upload-history":
+        return <UploadHistory />;
       case "simulations":
         return <SimulationsSection />;
       case "announcements":

@@ -35,6 +35,12 @@ export const useClientSidebarNavigation = ({
       active: activeTab === "monthly-upload"
     },
     {
+      icon: FileText,
+      label: "Histórico de Lançamentos",
+      id: "upload-history",
+      active: activeTab === "upload-history"
+    },
+    {
       icon: Calculator,
       label: "Simulações",
       id: "simulations",
