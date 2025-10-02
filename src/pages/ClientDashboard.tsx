@@ -11,6 +11,7 @@ import { FiscalCalendarSection } from "@/components/client/sections/FiscalCalend
 import { CompanyDataSection } from "@/components/client/sections/CompanyDataSection";
 import { useDocumentActions } from "@/hooks/document/useDocumentActions";
 import { DocumentTable } from "@/components/client/DocumentTable";
+import { MonthlyDocumentUpload } from "@/components/client/MonthlyDocumentUpload";
 
 const ClientDashboard = () => {
   const {
@@ -53,6 +54,8 @@ const ClientDashboard = () => {
             categories={commonCategories}
           />
         );
+      case "monthly-upload":
+        return <MonthlyDocumentUpload />;
       case "simulations":
         return <SimulationsSection />;
       case "announcements":

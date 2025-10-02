@@ -17,6 +17,7 @@ import { checkIsAdmin } from "./utils/auth/userChecks";
 import { CompanyDataView } from "./components/admin/company/CompanyDataView";
 import SimpleCarouselManager from '@/components/admin/carousel/SimpleCarouselManager';
 import AdminLayout from '@/components/admin/AdminLayout';
+import DocumentHistoryPage from "./pages/DocumentHistoryPage";
 
 const AppRoutes = () => {
   const { userData, user } = useAuth();
@@ -115,6 +116,18 @@ const AppRoutes = () => {
           <PrivateRoute requiredRole="admin">
             <AdminLayout>
               <SimpleCarouselManager />
+            </AdminLayout>
+          </PrivateRoute>
+        } 
+      />
+      
+      {/* Histórico de Lançamentos - Admin */}
+      <Route 
+        path="/admin/document-history" 
+        element={
+          <PrivateRoute requiredRole="admin">
+            <AdminLayout>
+              <DocumentHistoryPage />
             </AdminLayout>
           </PrivateRoute>
         } 
