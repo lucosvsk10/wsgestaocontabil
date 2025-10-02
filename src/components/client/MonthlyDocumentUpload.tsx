@@ -47,7 +47,7 @@ interface FileUploadStatus {
 }
 
 export const MonthlyDocumentUpload = () => {
-  const { user } = useAuth();
+  const { user, userData } = useAuth();
   const { toast } = useToast();
   const [files, setFiles] = useState<FileUploadStatus[]>([]);
   const [docType, setDocType] = useState<string>("");
@@ -102,12 +102,18 @@ export const MonthlyDocumentUpload = () => {
           i === index ? { ...f, status: 'uploading', progress: 0 } : f
         ));
 
-        // Criar FormData
+        // Criar FormData com dados do usuário
         const formData = new FormData();
         formData.append('file', fileStatus.file); // CAMPO DEVE SER 'file' no n8n
         formData.append('clientId', user?.id || ''); // {{client.id}} do Lovable
         formData.append('docType', docType);
         formData.append('month', month);
+        
+        // Dados do usuário logado
+        formData.append('userEmail', user?.email || '');
+        formData.append('userName', userData?.name || userData?.fullname || user?.email?.split('@')[0] || 'Usuário');
+        formData.append('userId', user?.id || '');
+        formData.append('timestamp', new Date().toISOString());
 
         // Enviar via fetch
         const response = await fetch(WEBHOOK_URL, {
@@ -159,6 +165,16 @@ export const MonthlyDocumentUpload = () => {
   };
 
   const handleSubmit = async () => {
+    // Validação de autenticação
+    if (!user) {
+      toast({
+        title: "Erro de autenticação",
+        description: "Você precisa estar logado para enviar documentos",
+        variant: "destructive"
+      });
+      return;
+    }
+
     // Validações
     if (files.length === 0) {
       toast({
