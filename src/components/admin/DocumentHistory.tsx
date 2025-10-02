@@ -184,12 +184,12 @@ export const DocumentHistory = () => {
 
             <div className="space-y-2">
               <Label htmlFor="filterDocType">Tipo de Documento</Label>
-              <Select value={filterDocType} onValueChange={setFilterDocType}>
+              <Select value={filterDocType || "all"} onValueChange={(value) => setFilterDocType(value === "all" ? "" : value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="Extrato">Extrato</SelectItem>
                   <SelectItem value="Comprovante">Comprovante</SelectItem>
                   <SelectItem value="Outro">Outro</SelectItem>
