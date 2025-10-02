@@ -15,11 +15,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Upload, FileText, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { Upload, FileText, CheckCircle2, XCircle, Loader2, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 // Webhook do n8n - TROCAR AQUI se necessário
 const WEBHOOK_URL = "https://pre-studiolx-n8n.zmdnad.easypanel.host/webhook/ws-site";
+const WEBHOOK_CLOSE_MONTH_URL = "https://pre-studiolx-n8n.zmdnad.easypanel.host/webhook/ws-site-out";
 
 // Tipos de documento permitidos
 const ALLOWED_TYPES = [
@@ -53,6 +65,7 @@ export const MonthlyDocumentUpload = () => {
   const [docType, setDocType] = useState<string>("");
   const [month, setMonth] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
+  const [isClosingMonth, setIsClosingMonth] = useState(false);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
@@ -228,8 +241,102 @@ export const MonthlyDocumentUpload = () => {
     ? (files.filter(f => f.status === 'success').length / files.length) * 100 
     : 0;
 
+  const handleCloseMonth = async () => {
+    // Validação de autenticação
+    if (!user) {
+      toast({
+        title: "Erro de autenticação",
+        description: "Você precisa estar logado para fechar o mês",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsClosingMonth(true);
+
+    try {
+      const payload = {
+        action: "fechar_mes",
+        userEmail: user?.email || '',
+        userName: userData?.name || userData?.fullname || user?.email?.split('@')[0] || 'Usuário',
+        userId: user?.id || '',
+        timestamp: new Date().toISOString()
+      };
+
+      const response = await fetch(WEBHOOK_CLOSE_MONTH_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      toast({
+        title: "Mês fechado com sucesso!",
+        description: "A operação foi concluída.",
+      });
+
+    } catch (error: any) {
+      toast({
+        title: "Erro ao fechar o mês",
+        description: "Tente novamente mais tarde.",
+        variant: "destructive"
+      });
+      console.error('Erro ao fechar mês:', error);
+    } finally {
+      setIsClosingMonth(false);
+    }
+  };
+
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto py-8 px-4 space-y-6">
+      {/* Botão Fechar Mês */}
+      <div className="flex justify-end">
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="default"
+              size="lg"
+              className="bg-[#F5C441] hover:bg-[#F5C441]/90 text-black font-semibold"
+              disabled={isClosingMonth || !user}
+            >
+              {isClosingMonth ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Processando...
+                </>
+              ) : (
+                <>
+                  <Lock className="w-5 h-5 mr-2" />
+                  Fechar Mês
+                </>
+              )}
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar fechamento do mês</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja fechar o mês? Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleCloseMonth}
+                className="bg-[#F5C441] hover:bg-[#F5C441]/90 text-black"
+              >
+                Confirmar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
