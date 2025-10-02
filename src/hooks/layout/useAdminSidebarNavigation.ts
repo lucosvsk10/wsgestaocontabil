@@ -42,6 +42,12 @@ export const useAdminSidebarNavigation = () => {
       to: "/admin/document-history"
     },
     {
+      icon: Users,
+      label: "Histórico Geral",
+      active: getIsActive("/admin/upload-history"),
+      to: "/admin/upload-history"
+    },
+    {
       icon: Calendar,
       label: "Agenda",
       active: getIsActive("/admin/agenda"),
