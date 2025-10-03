@@ -1,4 +1,4 @@
-import { MapPin, Phone, Mail, Clock } from 'lucide-react';
+import { MapPin, MessageCircle, Mail, Clock } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 const Footer = () => {
   return <footer id="contato" className="border-t border-gold/20 bg-navy dark:bg-[#1e1c1a]">
@@ -31,7 +31,7 @@ const Footer = () => {
                     </span>
                   </li>
                   <li className="flex items-center space-x-3">
-                    <Phone className="w-5 h-5 text-gold flex-shrink-0" />
+                    <MessageCircle className="w-5 h-5 text-gold flex-shrink-0" />
                     <span className="text-white/70 dark:text-white/80 text-sm">(82) 99932-4884</span>
                   </li>
                   <li className="flex items-center space-x-3">
@@ -51,8 +51,8 @@ const Footer = () => {
                     </span>
                   </li>
                   <li className="flex items-center space-x-3">
-                    <Phone className="w-5 h-5 text-gold flex-shrink-0" />
-                    <span className="text-white/70 dark:text-white/80 text-sm">(82) 99932-4884 </span>
+                    <MessageCircle className="w-5 h-5 text-gold flex-shrink-0" />
+                    <span className="text-white/70 dark:text-white/80 text-sm">(82) 99932-4884 / (82) 99656-0439</span>
                   </li>
                   <li className="flex items-center space-x-3">
                     <Mail className="w-5 h-5 text-gold flex-shrink-0" />
