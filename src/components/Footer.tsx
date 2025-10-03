@@ -26,22 +26,48 @@ const Footer = () => {
 
           <div className="space-y-6">
             <h3 className="text-xl font-semibold text-gold">Contato</h3>
-            <ul className="space-y-4">
-              <li className="flex items-start space-x-3">
-                <MapPin className="w-5 h-5 text-gold flex-shrink-0 mt-0.5" />
-                <span className="text-white/70 dark:text-white/80">
-                  Loteamento terra do leite,  29, Quadra 1, Centro, Major isidoro, alagoas, CEP 57.580-000
-                </span>
-              </li>
-              <li className="flex items-center space-x-3">
-                <Phone className="w-5 h-5 text-gold flex-shrink-0" />
-                <span className="text-white/70 dark:text-white/80">(82) 99932-4884</span>
-              </li>
-              <li className="flex items-center space-x-3">
-                <Mail className="w-5 h-5 text-gold flex-shrink-0" />
-                <span className="text-white/70 dark:text-white/80">contabilie2010@hotmail.com</span>
-              </li>
-            </ul>
+            
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-white font-medium mb-3">Sede - Major Isidoro</h4>
+                <ul className="space-y-3">
+                  <li className="flex items-start space-x-3">
+                    <MapPin className="w-5 h-5 text-gold flex-shrink-0 mt-0.5" />
+                    <span className="text-white/70 dark:text-white/80 text-sm">
+                      Loteamento terra do leite, 29, Quadra 1, Centro, Major Isidoro, AL, CEP 57.580-000
+                    </span>
+                  </li>
+                  <li className="flex items-center space-x-3">
+                    <Phone className="w-5 h-5 text-gold flex-shrink-0" />
+                    <span className="text-white/70 dark:text-white/80 text-sm">(82) 99932-4884</span>
+                  </li>
+                  <li className="flex items-center space-x-3">
+                    <Mail className="w-5 h-5 text-gold flex-shrink-0" />
+                    <span className="text-white/70 dark:text-white/80 text-sm">contabilie2010@hotmail.com</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="pt-4 border-t border-gold/20">
+                <h4 className="text-white font-medium mb-3">Filial - Palmeira dos Índios</h4>
+                <ul className="space-y-3">
+                  <li className="flex items-start space-x-3">
+                    <MapPin className="w-5 h-5 text-gold flex-shrink-0 mt-0.5" />
+                    <span className="text-white/70 dark:text-white/80 text-sm">
+                      Av. Muniz Falcão, 391, Sala 12, São Cristóvão, Palmeira dos Índios, AL, CEP 57.680-490
+                    </span>
+                  </li>
+                  <li className="flex items-center space-x-3">
+                    <Phone className="w-5 h-5 text-gold flex-shrink-0" />
+                    <span className="text-white/70 dark:text-white/80 text-sm">(82) 99932-4884 / (82) 99656-0439</span>
+                  </li>
+                  <li className="flex items-center space-x-3">
+                    <Mail className="w-5 h-5 text-gold flex-shrink-0" />
+                    <span className="text-white/70 dark:text-white/80 text-sm">wsgestao.societario@hotmail.com</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-6">
