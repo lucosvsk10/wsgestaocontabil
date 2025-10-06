@@ -165,6 +165,13 @@ export const MonthlyDocumentUpload = () => {
         formData.append('docType', docType);
         formData.append('month', month);
         
+        // Informações do arquivo
+        const fileExtension = fileStatus.file.name.split('.').pop()?.toLowerCase() || '';
+        formData.append('fileType', fileStatus.file.type); // MIME type (ex: application/pdf, image/jpeg)
+        formData.append('fileExtension', fileExtension); // Extensão (ex: pdf, jpg, png)
+        formData.append('fileName', fileStatus.file.name); // Nome completo do arquivo
+        formData.append('fileSize', fileStatus.file.size.toString()); // Tamanho em bytes
+        
         // Dados do usuário logado
         formData.append('userEmail', user?.email || '');
         formData.append('userName', userData?.name || userData?.fullname || user?.email?.split('@')[0] || 'Usuário');
