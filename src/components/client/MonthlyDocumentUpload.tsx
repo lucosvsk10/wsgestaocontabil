@@ -448,7 +448,7 @@ export const MonthlyDocumentUpload = () => {
         <Alert className="border-yellow-500 bg-yellow-50">
           <AlertTriangle className="h-4 w-4 text-yellow-600" />
           <AlertDescription className="text-yellow-800">
-            ⚠️ Atenção: O mês selecionado já está fechado! Confirme antes de fazer novos uploads.
+            Atenção: O mês selecionado já está fechado! Confirme antes de fazer novos uploads.
           </AlertDescription>
         </Alert>
       )}

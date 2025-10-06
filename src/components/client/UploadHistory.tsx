@@ -1,10 +1,23 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import { FileText, CheckCircle2, XCircle, Calendar } from "lucide-react";
+import { FileText, CheckCircle2, XCircle, Calendar, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 
 interface Upload {
   id: string;
@@ -21,9 +34,10 @@ interface MonthData {
 }
 
 export const UploadHistory = () => {
-  const { user } = useAuth();
+  const { user, userData, isAdmin } = useAuth();
   const [history, setHistory] = useState<MonthData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -100,6 +114,34 @@ export const UploadHistory = () => {
     fetchHistory();
   }, [user]);
 
+  const handleClearHistory = async () => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('uploads')
+        .delete()
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
+      
+      // Atualizar estado local
+      setHistory([]);
+      
+      toast({
+        title: "Histórico limpo!",
+        description: "Todos os seus registros foram removidos com sucesso.",
+      });
+    } catch (error) {
+      console.error('Erro ao limpar histórico:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível limpar o histórico. Tente novamente.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const formatMonthYear = (month: string, year: number) => {
     const [yearStr, monthStr] = month.split('-');
     const date = new Date(parseInt(yearStr), parseInt(monthStr) - 1);
@@ -124,12 +166,47 @@ export const UploadHistory = () => {
       <div className="mb-6">
         <h1 className="text-3xl font-bold flex items-center gap-3">
           <Calendar className="w-8 h-8 text-[#F5C441]" />
-          📊 Histórico de Lançamentos
+          Histórico de Lançamentos
         </h1>
         <p className="text-muted-foreground mt-2">
           Visualize todos os seus uploads e status de fechamento por mês
         </p>
       </div>
+
+      {/* Botão Limpar Histórico (apenas para clientes) */}
+      {!isAdmin && history.length > 0 && (
+        <div className="mb-6">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button 
+                variant="destructive" 
+                className="gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Limpar Todo Histórico
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirmar limpeza do histórico</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta ação é irreversível! Todos os seus registros de uploads serão permanentemente excluídos.
+                  Tem certeza que deseja continuar?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={handleClearHistory}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  Sim, limpar tudo
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      )}
 
       <Card className="shadow-lg">
         <CardContent className="p-6">
@@ -159,7 +236,7 @@ export const UploadHistory = () => {
                     <div className="flex items-center gap-3">
                       <Calendar className="w-6 h-6 text-primary" />
                       <h2 className="text-xl font-bold">
-                        📅 {formatMonthYear(monthData.month, monthData.year)}
+                        {formatMonthYear(monthData.month, monthData.year)}
                       </h2>
                     </div>
                     <div className={`flex items-center gap-2 px-4 py-2 rounded-full ${
@@ -170,12 +247,12 @@ export const UploadHistory = () => {
                       {monthData.isClosed ? (
                         <>
                           <CheckCircle2 className="w-5 h-5" />
-                          <span className="font-bold">✅ FECHADO</span>
+                          <span className="font-bold">FECHADO</span>
                         </>
                       ) : (
                         <>
                           <XCircle className="w-5 h-5" />
-                          <span className="font-bold">❌ EM ABERTO</span>
+                          <span className="font-bold">EM ABERTO</span>
                         </>
                       )}
                     </div>
@@ -185,7 +262,7 @@ export const UploadHistory = () => {
                   {monthData.isClosed && monthData.closedAt && (
                     <div className="mb-4 p-3 bg-white/50 dark:bg-black/20 rounded-lg">
                       <p className="text-sm font-medium text-green-700 dark:text-green-400">
-                        🔒 Fechado em: {format(new Date(monthData.closedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                        Fechado em: {format(new Date(monthData.closedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                       </p>
                     </div>
                   )}
@@ -194,7 +271,7 @@ export const UploadHistory = () => {
                   {monthData.uploads.length > 0 ? (
                     <div className="space-y-3">
                       <p className="text-sm font-semibold text-muted-foreground mb-3">
-                        📄 Arquivos enviados ({monthData.uploads.length}):
+                        Arquivos enviados ({monthData.uploads.length}):
                       </p>
                       {monthData.uploads.map((upload) => (
                         <div
@@ -204,10 +281,10 @@ export const UploadHistory = () => {
                           <FileText className="w-5 h-5 text-[#F5C441] flex-shrink-0 mt-0.5" />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold truncate">
-                              • {upload.file_name}
+                              {upload.file_name}
                             </p>
                             <p className="text-xs text-muted-foreground mt-1">
-                              ⏰ Enviado em: {format(new Date(upload.upload_date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                              Enviado em: {format(new Date(upload.upload_date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                             </p>
                           </div>
                         </div>

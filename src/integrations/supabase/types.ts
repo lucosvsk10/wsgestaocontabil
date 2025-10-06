@@ -827,27 +827,6 @@ export type Database = {
         }
         Relationships: []
       }
-      lancamentos_mensais: {
-        Row: {
-          created_at: string
-          doc: string | null
-          id: number
-          nome: string | null
-        }
-        Insert: {
-          created_at?: string
-          doc?: string | null
-          id?: number
-          nome?: string | null
-        }
-        Update: {
-          created_at?: string
-          doc?: string | null
-          id?: number
-          nome?: string | null
-        }
-        Relationships: []
-      }
       month_closures: {
         Row: {
           closed_at: string
