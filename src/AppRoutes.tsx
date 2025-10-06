@@ -16,7 +16,7 @@ import ChangeLog from "./pages/ChangeLog";
 import { checkIsAdmin } from "./utils/auth/userChecks";
 import { CompanyDataView } from "./components/admin/company/CompanyDataView";
 import SimpleCarouselManager from '@/components/admin/carousel/SimpleCarouselManager';
-import AdminLayout from '@/components/admin/AdminLayout';
+import { AdminLayout } from '@/components/admin/layout/AdminLayout';
 import DocumentHistoryPage from "./pages/DocumentHistoryPage";
 import { AdminUploadHistory } from "./components/admin/AdminUploadHistory";
 
