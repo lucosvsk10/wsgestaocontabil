@@ -226,7 +226,7 @@ export const AdminUploadHistory = () => {
       <div className="mb-6">
         <h1 className="text-3xl font-bold flex items-center gap-3">
           <Users className="w-8 h-8 text-[#F5C441]" />
-          👥 Histórico Geral - Todos os Usuários
+          Histórico Geral - Todos os Usuários
         </h1>
         <p className="text-muted-foreground mt-2">
           Visualização administrativa de todos os uploads e fechamentos de mês
@@ -235,10 +235,10 @@ export const AdminUploadHistory = () => {
 
       {/* Estatísticas */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900">
+        <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Users className="w-4 h-4" />
+              <Users className="w-4 h-4 text-[#F5C441]" />
               Usuários Ativos
             </CardTitle>
           </CardHeader>
@@ -247,10 +247,10 @@ export const AdminUploadHistory = () => {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900">
+        <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <FolderOpen className="w-4 h-4" />
+              <FolderOpen className="w-4 h-4 text-[#F5C441]" />
               Total de Arquivos
             </CardTitle>
           </CardHeader>
@@ -259,10 +259,10 @@ export const AdminUploadHistory = () => {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900">
+        <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Lock className="w-4 h-4" />
+              <Lock className="w-4 h-4 text-green-600 dark:text-green-400" />
               Meses Fechados
             </CardTitle>
           </CardHeader>
@@ -271,10 +271,10 @@ export const AdminUploadHistory = () => {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900">
+        <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Unlock className="w-4 h-4" />
+              <Unlock className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
               Meses em Aberto
             </CardTitle>
           </CardHeader>
@@ -287,7 +287,7 @@ export const AdminUploadHistory = () => {
       {/* Filtros */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">🔍 Filtros</CardTitle>
+          <CardTitle className="text-lg">Filtros</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -364,7 +364,7 @@ export const AdminUploadHistory = () => {
                 <CardTitle className="flex items-center gap-3">
                   <Users className="w-6 h-6 text-[#F5C441]" />
                   <div>
-                    <div className="text-xl">👤 {userHistory.userName}</div>
+                    <div className="text-xl">{userHistory.userName}</div>
                     <div className="text-sm font-normal text-muted-foreground">
                       {userHistory.userEmail}
                     </div>
@@ -386,7 +386,7 @@ export const AdminUploadHistory = () => {
                       <div className="flex items-center gap-3">
                         <Calendar className="w-5 h-5" />
                         <h3 className="text-lg font-bold">
-                          📅 {formatMonthYear(monthData.month, monthData.year)}
+                          {formatMonthYear(monthData.month, monthData.year)}
                         </h3>
                       </div>
                       <div className={`flex items-center gap-2 px-4 py-2 rounded-full ${
@@ -397,12 +397,12 @@ export const AdminUploadHistory = () => {
                         {monthData.isClosed ? (
                           <>
                             <CheckCircle2 className="w-4 h-4" />
-                            <span className="font-bold text-sm">✅ FECHADO</span>
+                            <span className="font-bold text-sm">FECHADO</span>
                           </>
                         ) : (
                           <>
                             <XCircle className="w-4 h-4" />
-                            <span className="font-bold text-sm">❌ EM ABERTO</span>
+                            <span className="font-bold text-sm">EM ABERTO</span>
                           </>
                         )}
                       </div>
@@ -412,7 +412,7 @@ export const AdminUploadHistory = () => {
                     {monthData.isClosed && monthData.closedAt && (
                       <div className="mb-4 p-3 bg-white/50 dark:bg-black/20 rounded-lg">
                         <p className="text-sm font-medium text-green-700 dark:text-green-400">
-                          🔒 Fechado em: {format(new Date(monthData.closedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          Fechado em: {format(new Date(monthData.closedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                         </p>
                       </div>
                     )}
@@ -421,7 +421,7 @@ export const AdminUploadHistory = () => {
                     {monthData.uploads.length > 0 ? (
                       <div className="space-y-3">
                         <p className="text-sm font-semibold text-muted-foreground mb-3">
-                          📄 Arquivos enviados ({monthData.uploads.length}):
+                          Arquivos enviados ({monthData.uploads.length}):
                         </p>
                         {monthData.uploads.map((upload) => (
                           <div
@@ -431,10 +431,10 @@ export const AdminUploadHistory = () => {
                             <FileText className="w-5 h-5 text-[#F5C441] flex-shrink-0 mt-0.5" />
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-semibold truncate">
-                                • {upload.file_name}
+                                {upload.file_name}
                               </p>
                               <p className="text-xs text-muted-foreground mt-1">
-                                ⏰ Enviado em: {format(new Date(upload.upload_date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                Enviado em: {format(new Date(upload.upload_date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                               </p>
                             </div>
                           </div>
