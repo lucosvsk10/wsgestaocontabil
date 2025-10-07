@@ -37,15 +37,7 @@ const WEBHOOK_CLOSE_MONTH_URL = "https://pre-studiolx-n8n.zmdnad.easypanel.host/
 
 // Tipos de documento permitidos
 const ALLOWED_TYPES = [
-  'application/pdf',
-  'image/jpeg',
-  'image/png',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'text/csv',
-  'application/zip',
-  'application/vnd.oasis.opendocument.text',
-  'text/plain'
+  'application/pdf'
 ];
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
@@ -121,7 +113,7 @@ export const MonthlyDocumentUpload = () => {
       if (!ALLOWED_TYPES.includes(file.type)) {
         toast({
           title: "Arquivo inválido",
-          description: `${file.name}: tipo não permitido`,
+          description: `${file.name}: apenas arquivos PDF são permitidos`,
           variant: "destructive"
         });
         return;
@@ -498,12 +490,12 @@ export const MonthlyDocumentUpload = () => {
               id="files"
               type="file"
               multiple
-              accept=".pdf,.jpg,.jpeg,.png,.xls,.xlsx,.csv,.zip,.odt,.txt"
+              accept="application/pdf,.pdf"
               onChange={handleFileSelect}
               disabled={isUploading}
             />
             <p className="text-xs text-muted-foreground">
-              Formatos: PDF, JPG, PNG, XLS, XLSX, CSV, ZIP, ODT, TXT (máx 25MB cada)
+              Apenas arquivos PDF (máx 25MB cada)
             </p>
           </div>
 
