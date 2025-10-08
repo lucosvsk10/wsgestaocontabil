@@ -90,7 +90,7 @@ export const MonthlyDocumentUpload = () => {
 
       const [year, monthNum] = month.split('-');
       const { count } = await supabase
-        .from('uploads')
+        .from('processed_documents')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id)
         .eq('month', month)
@@ -185,13 +185,18 @@ export const MonthlyDocumentUpload = () => {
 
         // Salvar no banco de dados
         const [year, monthNum] = month.split('-');
-        await supabase.from('uploads').insert({
+        await supabase.from('processed_documents').insert({
           user_id: user?.id || '',
           user_email: user?.email || '',
           user_name: userData?.name || userData?.fullname || user?.email?.split('@')[0] || 'Usuário',
           file_name: fileStatus.file.name,
+          file_url: result.storageUrl || result.url || '',
+          storage_key: result.storageKey || result.key || '',
+          protocol_id: result.protocolId || result.id || '',
+          doc_type: docType,
           month: month,
-          year: parseInt(year)
+          year: parseInt(year),
+          processing_status: 'processed'
         });
 
         // Atualizar com sucesso

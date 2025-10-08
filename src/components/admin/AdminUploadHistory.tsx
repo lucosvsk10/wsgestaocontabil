@@ -9,6 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 interface Upload {
   id: string;
   file_name: string;
+  file_url: string;
+  storage_key: string;
+  protocol_id?: string;
+  doc_type: string;
   upload_date: string;
 }
 
@@ -60,9 +64,9 @@ export const AdminUploadHistory = () => {
     try {
       // Buscar TODOS os uploads
       const { data: uploads } = await supabase
-        .from('uploads')
+        .from('processed_documents')
         .select('*')
-        .order('upload_date', { ascending: false });
+        .order('upload_date', { ascending: false }) as { data: any[] | null };
 
       // Buscar TODOS os fechamentos
       const { data: closures } = await supabase
@@ -99,6 +103,10 @@ export const AdminUploadHistory = () => {
         monthData.uploads.push({
           id: upload.id,
           file_name: upload.file_name,
+          file_url: upload.file_url || '',
+          storage_key: upload.storage_key || '',
+          protocol_id: upload.protocol_id,
+          doc_type: upload.doc_type || 'Lançamento',
           upload_date: upload.upload_date
         });
       });

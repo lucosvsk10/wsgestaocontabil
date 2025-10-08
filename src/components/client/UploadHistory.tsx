@@ -118,10 +118,10 @@ export const UploadHistory = () => {
     if (!user) return;
     
     try {
-      const { error } = await supabase
-        .from('uploads')
-        .delete()
-        .eq('user_id', user.id);
+    const { error } = await supabase
+      .from('processed_documents')
+      .delete()
+      .eq('user_id', user.id);
       
       if (error) throw error;
       

@@ -1121,6 +1121,60 @@ export type Database = {
         }
         Relationships: []
       }
+      processed_documents: {
+        Row: {
+          created_at: string | null
+          doc_type: string
+          execution_log: Json | null
+          file_name: string
+          file_url: string
+          id: string
+          month: string
+          processing_status: string | null
+          protocol_id: string | null
+          storage_key: string
+          upload_date: string | null
+          user_email: string
+          user_id: string
+          user_name: string
+          year: number
+        }
+        Insert: {
+          created_at?: string | null
+          doc_type: string
+          execution_log?: Json | null
+          file_name: string
+          file_url: string
+          id?: string
+          month: string
+          processing_status?: string | null
+          protocol_id?: string | null
+          storage_key: string
+          upload_date?: string | null
+          user_email: string
+          user_id: string
+          user_name: string
+          year: number
+        }
+        Update: {
+          created_at?: string | null
+          doc_type?: string
+          execution_log?: Json | null
+          file_name?: string
+          file_url?: string
+          id?: string
+          month?: string
+          processing_status?: string | null
+          protocol_id?: string | null
+          storage_key?: string
+          upload_date?: string | null
+          user_email?: string
+          user_id?: string
+          user_name?: string
+          year?: number
+        }
+        Relationships: []
+      }
       prolabore_simulations: {
         Row: {
           created_at: string
