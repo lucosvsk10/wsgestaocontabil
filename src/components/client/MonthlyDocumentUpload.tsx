@@ -18,6 +18,7 @@ import { Progress } from "@/components/ui/progress";
 import { Upload, FileText, CheckCircle2, XCircle, Loader2, Lock, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { callEdgeFunction } from "@/utils/edgeFunctions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -265,6 +266,29 @@ export const MonthlyDocumentUpload = () => {
     }
 
     setIsUploading(true);
+
+    // Criar/verificar bucket do usuário para este mês
+    try {
+      const [year, monthNum] = month.split('-');
+      const bucketResult = await callEdgeFunction('manage-user-bucket', {
+        userId: user.id,
+        month: monthNum,
+        year: year
+      });
+      
+      console.log('✅ Bucket preparado:', bucketResult.bucketName);
+      toast({
+        title: bucketResult.created ? "📦 Bucket criado" : "📦 Bucket verificado",
+        description: bucketResult.message,
+      });
+    } catch (bucketError) {
+      console.error('Erro ao preparar bucket:', bucketError);
+      toast({
+        title: "⚠️ Aviso",
+        description: "Não foi possível criar o bucket, mas o upload continuará.",
+        variant: "destructive"
+      });
+    }
 
     // Enviar cada arquivo individualmente
     for (let i = 0; i < files.length; i++) {
