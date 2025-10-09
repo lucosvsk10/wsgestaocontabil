@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import { FileText, CheckCircle2, XCircle, Calendar, Users, FolderOpen, Lock, Unlock } from "lucide-react";
+import { FileText, CheckCircle2, XCircle, Calendar, Users, FolderOpen, Lock, Unlock, Download } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -241,6 +241,81 @@ export const AdminUploadHistory = () => {
     }
   };
 
+  const handleDownloadMonth = async (userId: string, userName: string, month: string, year: number) => {
+    try {
+      toast({
+        title: "Iniciando download...",
+        description: "Buscando documentos processados do mês.",
+      });
+
+      // Buscar documentos processados deste mês
+      const { data: documents, error } = await supabase
+        .from('processed_documents')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('month', month)
+        .eq('year', year);
+
+      if (error) throw error;
+
+      if (!documents || documents.length === 0) {
+        toast({
+          title: "Nenhum documento encontrado",
+          description: "Não há documentos processados para este período.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Baixar cada arquivo
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const doc of documents) {
+        try {
+          // Baixar o arquivo do storage
+          const { data: fileData, error: downloadError } = await supabase
+            .storage
+            .from(doc.storage_key.split('/')[0])
+            .download(doc.storage_key.split('/').slice(1).join('/'));
+
+          if (downloadError) throw downloadError;
+
+          // Criar link de download
+          const url = URL.createObjectURL(fileData);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = doc.file_name;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+
+          successCount++;
+          
+          // Aguardar um pouco entre downloads para não sobrecarregar
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (err) {
+          console.error('Erro ao baixar arquivo:', doc.file_name, err);
+          errorCount++;
+        }
+      }
+
+      toast({
+        title: "Download concluído!",
+        description: `${successCount} arquivo(s) baixado(s) com sucesso. ${errorCount > 0 ? `${errorCount} erro(s).` : ''}`,
+      });
+
+    } catch (error) {
+      console.error('Erro ao baixar documentos do mês:', error);
+      toast({
+        title: "Erro ao baixar documentos",
+        description: "Tente novamente mais tarde.",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Obter lista de meses únicos para filtro
   const uniqueMonths = Array.from(
     new Set(
@@ -431,7 +506,7 @@ export const AdminUploadHistory = () => {
                           {formatMonthYear(monthData.month, monthData.year)}
                         </h3>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <div className={`flex items-center gap-2 px-4 py-2 rounded-full ${
                           monthData.isClosed 
                             ? 'bg-green-500 text-white' 
@@ -449,6 +524,18 @@ export const AdminUploadHistory = () => {
                             </>
                           )}
                         </div>
+                        
+                        {/* Botão de Download por Mês */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDownloadMonth(userHistory.userId, userHistory.userName, monthData.month, monthData.year)}
+                          className="bg-blue-500 hover:bg-blue-600 text-white border-0"
+                        >
+                          <Download className="w-4 h-4 mr-2" />
+                          Baixar Mês
+                        </Button>
+                        
                         {monthData.isClosed && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
