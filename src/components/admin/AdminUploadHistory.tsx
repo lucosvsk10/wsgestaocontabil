@@ -5,6 +5,19 @@ import { FileText, CheckCircle2, XCircle, Calendar, Users, FolderOpen, Lock, Unl
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Upload {
   id: string;
@@ -35,6 +48,7 @@ interface Stats {
 }
 
 export const AdminUploadHistory = () => {
+  const { toast } = useToast();
   const [userHistories, setUserHistories] = useState<UserHistory[]>([]);
   const [filteredHistories, setFilteredHistories] = useState<UserHistory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -197,6 +211,34 @@ export const AdminUploadHistory = () => {
     const [yearStr, monthStr] = month.split('-');
     const date = new Date(parseInt(yearStr), parseInt(monthStr) - 1);
     return format(date, "MMMM 'de' yyyy", { locale: ptBR }).toUpperCase();
+  };
+
+  const handleReopenMonth = async (userId: string, month: string, year: number) => {
+    try {
+      const { error } = await supabase
+        .from('month_closures')
+        .delete()
+        .eq('user_id', userId)
+        .eq('month', month)
+        .eq('year', year);
+
+      if (error) throw error;
+
+      toast({
+        title: "Mês reaberto com sucesso!",
+        description: `O mês ${month} foi reaberto para edição.`,
+      });
+
+      // Recarregar os dados
+      fetchAllHistory();
+    } catch (error) {
+      console.error('Erro ao reabrir mês:', error);
+      toast({
+        title: "Erro ao reabrir mês",
+        description: "Tente novamente mais tarde.",
+        variant: "destructive"
+      });
+    }
   };
 
   // Obter lista de meses únicos para filtro
@@ -389,21 +431,55 @@ export const AdminUploadHistory = () => {
                           {formatMonthYear(monthData.month, monthData.year)}
                         </h3>
                       </div>
-                      <div className={`flex items-center gap-2 px-4 py-2 rounded-full ${
-                        monthData.isClosed 
-                          ? 'bg-green-500 text-white' 
-                          : 'bg-yellow-500 text-black'
-                      }`}>
-                        {monthData.isClosed ? (
-                          <>
-                            <CheckCircle2 className="w-4 h-4" />
-                            <span className="font-bold text-sm">FECHADO</span>
-                          </>
-                        ) : (
-                          <>
-                            <XCircle className="w-4 h-4" />
-                            <span className="font-bold text-sm">EM ABERTO</span>
-                          </>
+                      <div className="flex items-center gap-2">
+                        <div className={`flex items-center gap-2 px-4 py-2 rounded-full ${
+                          monthData.isClosed 
+                            ? 'bg-green-500 text-white' 
+                            : 'bg-yellow-500 text-black'
+                        }`}>
+                          {monthData.isClosed ? (
+                            <>
+                              <CheckCircle2 className="w-4 h-4" />
+                              <span className="font-bold text-sm">FECHADO</span>
+                            </>
+                          ) : (
+                            <>
+                              <XCircle className="w-4 h-4" />
+                              <span className="font-bold text-sm">EM ABERTO</span>
+                            </>
+                          )}
+                        </div>
+                        {monthData.isClosed && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="bg-yellow-500 hover:bg-yellow-600 text-black border-0"
+                              >
+                                <Unlock className="w-4 h-4 mr-2" />
+                                Reabrir
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Confirmar reabertura do mês</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja reabrir o mês {monthData.month} para {userHistory.userName}? 
+                                  O cliente poderá fazer novos uploads neste período.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleReopenMonth(userHistory.userId, monthData.month, monthData.year)}
+                                  className="bg-[#F5C441] hover:bg-[#F5C441]/90 text-black"
+                                >
+                                  Confirmar
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         )}
                       </div>
                     </div>

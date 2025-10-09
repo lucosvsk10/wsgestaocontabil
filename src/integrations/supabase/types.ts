@@ -827,6 +827,30 @@ export type Database = {
         }
         Relationships: []
       }
+      lancamentos: {
+        Row: {
+          credito: string | null
+          data: string | null
+          debito: string | null
+          historico: string | null
+          valor: string
+        }
+        Insert: {
+          credito?: string | null
+          data?: string | null
+          debito?: string | null
+          historico?: string | null
+          valor: string
+        }
+        Update: {
+          credito?: string | null
+          data?: string | null
+          debito?: string | null
+          historico?: string | null
+          valor?: string
+        }
+        Relationships: []
+      }
       month_closures: {
         Row: {
           closed_at: string
@@ -1118,6 +1142,60 @@ export type Database = {
           is_public?: boolean
           poll_type?: string
           title?: string
+        }
+        Relationships: []
+      }
+      processed_documents: {
+        Row: {
+          created_at: string | null
+          doc_type: string
+          execution_log: Json | null
+          file_name: string
+          file_url: string
+          id: string
+          month: string
+          processing_status: string | null
+          protocol_id: string | null
+          storage_key: string
+          upload_date: string | null
+          user_email: string
+          user_id: string
+          user_name: string
+          year: number
+        }
+        Insert: {
+          created_at?: string | null
+          doc_type: string
+          execution_log?: Json | null
+          file_name: string
+          file_url: string
+          id?: string
+          month: string
+          processing_status?: string | null
+          protocol_id?: string | null
+          storage_key: string
+          upload_date?: string | null
+          user_email: string
+          user_id: string
+          user_name: string
+          year: number
+        }
+        Update: {
+          created_at?: string | null
+          doc_type?: string
+          execution_log?: Json | null
+          file_name?: string
+          file_url?: string
+          id?: string
+          month?: string
+          processing_status?: string | null
+          protocol_id?: string | null
+          storage_key?: string
+          upload_date?: string | null
+          user_email?: string
+          user_id?: string
+          user_name?: string
+          year?: number
         }
         Relationships: []
       }
