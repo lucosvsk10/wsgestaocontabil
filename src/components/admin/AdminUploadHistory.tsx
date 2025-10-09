@@ -8,24 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 interface Upload {
   id: string;
   file_name: string;
   upload_date: string;
 }
-
 interface MonthData {
   month: string;
   year: number;
@@ -33,21 +21,18 @@ interface MonthData {
   closedAt?: string;
   uploads: Upload[];
 }
-
 interface UserHistory {
   userId: string;
   userName: string;
   userEmail: string;
   months: MonthData[];
 }
-
 interface Stats {
   totalUsers: number;
   totalFiles: number;
   closedMonths: number;
   openMonths: number;
 }
-
 interface ProcessedDocument {
   id: string;
   file_name: string;
@@ -57,29 +42,29 @@ interface ProcessedDocument {
   upload_date: string;
   file_url: string;
 }
-
 interface ProcessedMonthData {
   month: string;
   year: number;
   documents: ProcessedDocument[];
 }
-
 interface ProcessedUserHistory {
   user_id: string;
   user_name: string;
   user_email: string;
-  months: { [key: string]: ProcessedMonthData };
+  months: {
+    [key: string]: ProcessedMonthData;
+  };
 }
-
 interface ProcessedStats {
   totalDocuments: number;
   totalUsers: number;
   documentsThisMonth: number;
   documentTypes: number;
 }
-
 export const AdminUploadHistory = () => {
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const [userHistories, setUserHistories] = useState<UserHistory[]>([]);
   const [filteredHistories, setFilteredHistories] = useState<UserHistory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -105,37 +90,33 @@ export const AdminUploadHistory = () => {
     documentsThisMonth: 0,
     documentTypes: 0
   });
-
   useEffect(() => {
     fetchAllHistory();
     fetchProcessedDocuments();
   }, []);
-
   useEffect(() => {
     applyFilters();
   }, [selectedUser, selectedMonth, selectedStatus, userHistories]);
-
   useEffect(() => {
     applyProcessedFilters();
   }, [selectedProcessedUser, selectedProcessedPeriod, selectedDocType, processedHistories]);
-
   const fetchAllHistory = async () => {
     try {
       // Buscar TODOS os uploads
-      const { data: uploads } = await supabase
-        .from('uploads')
-        .select('*')
-        .order('upload_date', { ascending: false });
+      const {
+        data: uploads
+      } = await supabase.from('uploads').select('*').order('upload_date', {
+        ascending: false
+      });
 
       // Buscar TODOS os fechamentos
-      const { data: closures } = await supabase
-        .from('month_closures')
-        .select('*');
+      const {
+        data: closures
+      } = await supabase.from('month_closures').select('*');
 
       // Agrupar por usuário
       const usersMap = new Map<string, UserHistory>();
-
-      uploads?.forEach((upload) => {
+      uploads?.forEach(upload => {
         if (!usersMap.has(upload.user_id)) {
           usersMap.set(upload.user_id, {
             userId: upload.user_id,
@@ -144,10 +125,8 @@ export const AdminUploadHistory = () => {
             months: []
           });
         }
-
         const userHistory = usersMap.get(upload.user_id)!;
         const monthKey = `${upload.year}-${upload.month}`;
-        
         let monthData = userHistory.months.find(m => `${m.year}-${m.month}` === monthKey);
         if (!monthData) {
           monthData = {
@@ -158,7 +137,6 @@ export const AdminUploadHistory = () => {
           };
           userHistory.months.push(monthData);
         }
-
         monthData.uploads.push({
           id: upload.id,
           file_name: upload.file_name,
@@ -167,12 +145,11 @@ export const AdminUploadHistory = () => {
       });
 
       // Adicionar informações de fechamento
-      closures?.forEach((closure) => {
+      closures?.forEach(closure => {
         const userHistory = usersMap.get(closure.user_id);
         if (userHistory) {
           const monthKey = `${closure.year}-${closure.month}`;
           let monthData = userHistory.months.find(m => `${m.year}-${m.month}` === monthKey);
-          
           if (monthData) {
             monthData.isClosed = true;
             monthData.closedAt = closure.closed_at;
@@ -190,14 +167,13 @@ export const AdminUploadHistory = () => {
       });
 
       // Ordenar meses de cada usuário
-      usersMap.forEach((userHistory) => {
+      usersMap.forEach(userHistory => {
         userHistory.months.sort((a, b) => {
           const dateA = new Date(a.year, parseInt(a.month.split('-')[1]) - 1);
           const dateB = new Date(b.year, parseInt(b.month.split('-')[1]) - 1);
           return dateB.getTime() - dateA.getTime();
         });
       });
-
       const histories = Array.from(usersMap.values());
       setUserHistories(histories);
 
@@ -205,7 +181,6 @@ export const AdminUploadHistory = () => {
       const totalFiles = uploads?.length || 0;
       const closedMonthsSet = new Set<string>();
       const openMonthsSet = new Set<string>();
-
       histories.forEach(user => {
         user.months.forEach(month => {
           const key = `${user.userId}-${month.year}-${month.month}`;
@@ -216,26 +191,24 @@ export const AdminUploadHistory = () => {
           }
         });
       });
-
       setStats({
         totalUsers: histories.length,
         totalFiles,
         closedMonths: closedMonthsSet.size,
         openMonths: openMonthsSet.size
       });
-
     } catch (error) {
       console.error('Erro ao buscar histórico:', error);
     } finally {
       setIsLoading(false);
     }
   };
-
   const fetchProcessedDocuments = async () => {
     try {
-      const { data: documents, error } = await supabase
-        .from('documents')
-        .select(`
+      const {
+        data: documents,
+        error
+      } = await supabase.from('documents').select(`
           id,
           name,
           category,
@@ -247,21 +220,19 @@ export const AdminUploadHistory = () => {
             name,
             email
           )
-        `)
-        .not('drive_url', 'is', null)
-        .eq('status', 'active')
-        .order('uploaded_at', { ascending: false });
-
+        `).not('drive_url', 'is', null).eq('status', 'active').order('uploaded_at', {
+        ascending: false
+      });
       if (error) throw error;
-
       if (!documents) {
         setProcessedHistories([]);
         return;
       }
 
       // Agrupar documentos por usuário
-      const grouped: { [key: string]: ProcessedUserHistory } = {};
-      
+      const grouped: {
+        [key: string]: ProcessedUserHistory;
+      } = {};
       documents.forEach((doc: any) => {
         const userData = doc.users;
         if (!userData) return;
@@ -269,7 +240,7 @@ export const AdminUploadHistory = () => {
         // Extrair mês e ano das observations ou do name
         let year: number;
         let month: string;
-        
+
         // Tentar extrair de observations primeiro: "Período: 2025-01"
         const obsMatch = doc.observations?.match(/Período:\s*(\d{4})-(\d{2})/);
         if (obsMatch) {
@@ -291,7 +262,6 @@ export const AdminUploadHistory = () => {
 
         // Extrair tipo do documento (Fechamento, Relatório, etc.)
         const docType = doc.name?.split('|')[0]?.trim() || 'Documento';
-
         if (!grouped[doc.user_id]) {
           grouped[doc.user_id] = {
             user_id: doc.user_id,
@@ -300,7 +270,6 @@ export const AdminUploadHistory = () => {
             months: {}
           };
         }
-
         const monthKey = `${year}-${month}`;
         if (!grouped[doc.user_id].months[monthKey]) {
           grouped[doc.user_id].months[monthKey] = {
@@ -309,7 +278,6 @@ export const AdminUploadHistory = () => {
             documents: []
           };
         }
-
         grouped[doc.user_id].months[monthKey].documents.push({
           id: doc.id,
           file_name: doc.name,
@@ -320,7 +288,6 @@ export const AdminUploadHistory = () => {
           year: year
         });
       });
-
       const processedArray = Object.values(grouped);
       setProcessedHistories(processedArray);
       setFilteredProcessedHistories(processedArray);
@@ -334,29 +301,25 @@ export const AdminUploadHistory = () => {
         const uploadDate = new Date(doc.uploaded_at);
         return uploadDate.getMonth() + 1 === currentMonth && uploadDate.getFullYear() === currentYear;
       }).length;
-      
       const docTypes = [...new Set(documents.map((doc: any) => {
         const docType = doc.name?.split('|')[0]?.trim() || 'Documento';
         return docType;
       }))].length;
-
       setProcessedStats({
         totalDocuments: totalDocs,
         totalUsers: totalUsers,
         documentsThisMonth: docsThisMonth,
         documentTypes: docTypes
       });
-
     } catch (error) {
       console.error('Erro ao buscar documentos processados:', error);
       toast({
         title: "Erro",
         description: "Não foi possível carregar os documentos processados.",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-
   const applyProcessedFilters = () => {
     let filtered = [...processedHistories];
 
@@ -374,7 +337,9 @@ export const AdminUploadHistory = () => {
             acc[key] = userHistory.months[key];
           }
           return acc;
-        }, {} as { [key: string]: ProcessedMonthData })
+        }, {} as {
+          [key: string]: ProcessedMonthData;
+        })
       })).filter(h => Object.keys(h.months).length > 0);
     }
 
@@ -386,16 +351,19 @@ export const AdminUploadHistory = () => {
           const month = userHistory.months[key];
           const filteredDocs = month.documents.filter(doc => doc.doc_type === selectedDocType);
           if (filteredDocs.length > 0) {
-            acc[key] = { ...month, documents: filteredDocs };
+            acc[key] = {
+              ...month,
+              documents: filteredDocs
+            };
           }
           return acc;
-        }, {} as { [key: string]: ProcessedMonthData })
+        }, {} as {
+          [key: string]: ProcessedMonthData;
+        })
       })).filter(h => Object.keys(h.months).length > 0);
     }
-
     setFilteredProcessedHistories(filtered);
   };
-
   const applyFilters = () => {
     let filtered = [...userHistories];
 
@@ -410,37 +378,29 @@ export const AdminUploadHistory = () => {
         ...userHistory,
         months: userHistory.months.filter(month => {
           const matchMonth = selectedMonth === "all" || `${month.year}-${month.month}` === selectedMonth;
-          const matchStatus = selectedStatus === "all" || 
-            (selectedStatus === "closed" && month.isClosed) ||
-            (selectedStatus === "open" && !month.isClosed);
+          const matchStatus = selectedStatus === "all" || selectedStatus === "closed" && month.isClosed || selectedStatus === "open" && !month.isClosed;
           return matchMonth && matchStatus;
         })
       })).filter(h => h.months.length > 0); // Remover usuários sem meses após filtro
     }
-
     setFilteredHistories(filtered);
   };
-
   const formatMonthYear = (month: string, year: number) => {
     const [yearStr, monthStr] = month.split('-');
     const date = new Date(parseInt(yearStr), parseInt(monthStr) - 1);
-    return format(date, "MMMM 'de' yyyy", { locale: ptBR }).toUpperCase();
+    return format(date, "MMMM 'de' yyyy", {
+      locale: ptBR
+    }).toUpperCase();
   };
-
   const handleReopenMonth = async (userId: string, month: string, year: number) => {
     try {
-      const { error } = await supabase
-        .from('month_closures')
-        .delete()
-        .eq('user_id', userId)
-        .eq('month', month)
-        .eq('year', year);
-
+      const {
+        error
+      } = await supabase.from('month_closures').delete().eq('user_id', userId).eq('month', month).eq('year', year);
       if (error) throw error;
-
       toast({
         title: "Mês reaberto com sucesso!",
-        description: `O mês ${month} foi reaberto para edição.`,
+        description: `O mês ${month} foi reaberto para edição.`
       });
 
       // Recarregar os dados
@@ -454,19 +414,15 @@ export const AdminUploadHistory = () => {
       });
     }
   };
-
   const handleDeleteDocument = async (docId: string, docName: string) => {
     try {
-      const { error } = await supabase
-        .from('documents')
-        .delete()
-        .eq('id', docId);
-
+      const {
+        error
+      } = await supabase.from('documents').delete().eq('id', docId);
       if (error) throw error;
-
       toast({
         title: "Documento excluído",
-        description: `${docName} foi excluído com sucesso.`,
+        description: `${docName} foi excluído com sucesso.`
       });
 
       // Recarregar documentos processados
@@ -480,24 +436,19 @@ export const AdminUploadHistory = () => {
       });
     }
   };
-
   const handleDownloadMonth = async (userId: string, userName: string, month: string, year: number) => {
     try {
       toast({
         title: "Iniciando download...",
-        description: "Buscando documentos processados do mês.",
+        description: "Buscando documentos processados do mês."
       });
 
       // Buscar documentos processados deste mês
-      const { data: documents, error } = await supabase
-        .from('processed_documents')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('month', month)
-        .eq('year', year);
-
+      const {
+        data: documents,
+        error
+      } = await supabase.from('processed_documents').select('*').eq('user_id', userId).eq('month', month).eq('year', year);
       if (error) throw error;
-
       if (!documents || documents.length === 0) {
         toast({
           title: "Nenhum documento encontrado",
@@ -510,15 +461,13 @@ export const AdminUploadHistory = () => {
       // Baixar cada arquivo
       let successCount = 0;
       let errorCount = 0;
-
       for (const doc of documents) {
         try {
           // Baixar o arquivo do storage
-          const { data: fileData, error: downloadError } = await supabase
-            .storage
-            .from(doc.storage_key.split('/')[0])
-            .download(doc.storage_key.split('/').slice(1).join('/'));
-
+          const {
+            data: fileData,
+            error: downloadError
+          } = await supabase.storage.from(doc.storage_key.split('/')[0]).download(doc.storage_key.split('/').slice(1).join('/'));
           if (downloadError) throw downloadError;
 
           // Criar link de download
@@ -530,9 +479,8 @@ export const AdminUploadHistory = () => {
           link.click();
           document.body.removeChild(link);
           URL.revokeObjectURL(url);
-
           successCount++;
-          
+
           // Aguardar um pouco entre downloads para não sobrecarregar
           await new Promise(resolve => setTimeout(resolve, 500));
         } catch (err) {
@@ -540,12 +488,10 @@ export const AdminUploadHistory = () => {
           errorCount++;
         }
       }
-
       toast({
         title: "Download concluído!",
-        description: `${successCount} arquivo(s) baixado(s) com sucesso. ${errorCount > 0 ? `${errorCount} erro(s).` : ''}`,
+        description: `${successCount} arquivo(s) baixado(s) com sucesso. ${errorCount > 0 ? `${errorCount} erro(s).` : ''}`
       });
-
     } catch (error) {
       console.error('Erro ao baixar documentos do mês:', error);
       toast({
@@ -557,46 +503,23 @@ export const AdminUploadHistory = () => {
   };
 
   // Obter lista de meses únicos para filtro
-  const uniqueMonths = Array.from(
-    new Set(
-      userHistories.flatMap(u => 
-        u.months.map(m => `${m.year}-${m.month}`)
-      )
-    )
-  ).sort().reverse();
+  const uniqueMonths = Array.from(new Set(userHistories.flatMap(u => u.months.map(m => `${m.year}-${m.month}`)))).sort().reverse();
 
   // Obter lista de períodos únicos para filtro de processados
-  const uniqueProcessedPeriods = Array.from(
-    new Set(
-      processedHistories.flatMap(u => 
-        Object.keys(u.months)
-      )
-    )
-  ).sort().reverse();
+  const uniqueProcessedPeriods = Array.from(new Set(processedHistories.flatMap(u => Object.keys(u.months)))).sort().reverse();
 
   // Obter lista de tipos de documento únicos
-  const uniqueDocTypes = Array.from(
-    new Set(
-      processedHistories.flatMap(u => 
-        Object.values(u.months).flatMap(m => m.documents.map(d => d.doc_type))
-      )
-    )
-  ).sort();
-
+  const uniqueDocTypes = Array.from(new Set(processedHistories.flatMap(u => Object.values(u.months).flatMap(m => m.documents.map(d => d.doc_type))))).sort();
   if (isLoading) {
-    return (
-      <div className="container mx-auto py-8 px-4">
+    return <div className="container mx-auto py-8 px-4">
         <Card>
           <CardContent className="py-8 text-center">
             <p>Carregando histórico geral...</p>
           </CardContent>
         </Card>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="container mx-auto py-8 px-4 space-y-6">
+  return <div className="container mx-auto py-8 px-4 space-y-6">
       {/* Título Principal */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold flex items-center gap-3">
@@ -683,11 +606,9 @@ export const AdminUploadHistory = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos os usuários</SelectItem>
-                      {userHistories.map((user) => (
-                        <SelectItem key={user.userId} value={user.userId}>
+                      {userHistories.map(user => <SelectItem key={user.userId} value={user.userId}>
                           {user.userName} ({user.userEmail})
-                        </SelectItem>
-                      ))}
+                        </SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -700,15 +621,15 @@ export const AdminUploadHistory = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos os períodos</SelectItem>
-                      {uniqueMonths.map((month) => {
-                        const [year, monthStr] = month.split('-');
-                        const date = new Date(parseInt(year), parseInt(monthStr) - 1);
-                        return (
-                          <SelectItem key={month} value={month}>
-                            {format(date, "MMMM/yyyy", { locale: ptBR })}
-                          </SelectItem>
-                        );
-                      })}
+                      {uniqueMonths.map(month => {
+                      const [year, monthStr] = month.split('-');
+                      const date = new Date(parseInt(year), parseInt(monthStr) - 1);
+                      return <SelectItem key={month} value={month}>
+                            {format(date, "MMMM/yyyy", {
+                          locale: ptBR
+                        })}
+                          </SelectItem>;
+                    })}
                     </SelectContent>
                   </Select>
                 </div>
@@ -732,18 +653,14 @@ export const AdminUploadHistory = () => {
 
           {/* Lista de históricos */}
           <div className="space-y-6">
-            {filteredHistories.length === 0 ? (
-              <Card>
+            {filteredHistories.length === 0 ? <Card>
                 <CardContent className="py-12 text-center">
                   <FileText className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
                   <p className="text-lg text-muted-foreground">
                     Nenhum registro encontrado com os filtros selecionados.
                   </p>
                 </CardContent>
-              </Card>
-            ) : (
-              filteredHistories.map((userHistory) => (
-                <Card key={userHistory.userId} className="shadow-lg">
+              </Card> : filteredHistories.map(userHistory => <Card key={userHistory.userId} className="shadow-lg">
                   <CardHeader className="bg-gradient-to-r from-[#F5C441]/20 to-transparent">
                     <CardTitle className="flex items-center gap-3">
                       <Users className="w-6 h-6 text-[#F5C441]" />
@@ -756,15 +673,7 @@ export const AdminUploadHistory = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-6 space-y-6">
-                    {userHistory.months.map((monthData, idx) => (
-                      <div
-                        key={idx}
-                        className={`border-2 rounded-xl p-6 ${
-                          monthData.isClosed 
-                            ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' 
-                            : 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/20 dark:border-yellow-800'
-                        }`}
-                      >
+                    {userHistory.months.map((monthData, idx) => <div key={idx} className={`border-2 rounded-xl p-6 ${monthData.isClosed ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' : 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/20 dark:border-yellow-800'}`}>
                         {/* Cabeçalho do mês */}
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 pb-4 border-b-2 border-current/10">
                           <div className="flex items-center gap-3">
@@ -774,43 +683,22 @@ export const AdminUploadHistory = () => {
                             </h3>
                           </div>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <div className={`flex items-center gap-2 px-4 py-2 rounded-full ${
-                              monthData.isClosed 
-                                ? 'bg-green-500 text-white' 
-                                : 'bg-yellow-500 text-black'
-                            }`}>
-                              {monthData.isClosed ? (
-                                <>
+                            <div className={`flex items-center gap-2 px-4 py-2 rounded-full ${monthData.isClosed ? 'bg-green-500 text-white' : 'bg-yellow-500 text-black'}`}>
+                              {monthData.isClosed ? <>
                                   <CheckCircle2 className="w-4 h-4" />
                                   <span className="font-bold text-sm">FECHADO</span>
-                                </>
-                              ) : (
-                                <>
+                                </> : <>
                                   <XCircle className="w-4 h-4" />
                                   <span className="font-bold text-sm">EM ABERTO</span>
-                                </>
-                              )}
+                                </>}
                             </div>
                             
                             {/* Botão de Download por Mês */}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDownloadMonth(userHistory.userId, userHistory.userName, monthData.month, monthData.year)}
-                              className="bg-blue-500 hover:bg-blue-600 text-white border-0"
-                            >
-                              <Download className="w-4 h-4 mr-2" />
-                              Baixar Mês
-                            </Button>
                             
-                            {monthData.isClosed && (
-                              <AlertDialog>
+                            
+                            {monthData.isClosed && <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="bg-yellow-500 hover:bg-yellow-600 text-black border-0"
-                                  >
+                                  <Button variant="outline" size="sm" className="bg-yellow-500 hover:bg-yellow-600 text-black border-0">
                                     <Unlock className="w-4 h-4 mr-2" />
                                     Reabrir
                                   </Button>
@@ -825,64 +713,50 @@ export const AdminUploadHistory = () => {
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
                                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() => handleReopenMonth(userHistory.userId, monthData.month, monthData.year)}
-                                      className="bg-[#F5C441] hover:bg-[#F5C441]/90 text-black"
-                                    >
+                                    <AlertDialogAction onClick={() => handleReopenMonth(userHistory.userId, monthData.month, monthData.year)} className="bg-[#F5C441] hover:bg-[#F5C441]/90 text-black">
                                       Confirmar
                                     </AlertDialogAction>
                                   </AlertDialogFooter>
                                 </AlertDialogContent>
-                              </AlertDialog>
-                            )}
+                              </AlertDialog>}
                           </div>
                         </div>
 
                         {/* Data de fechamento */}
-                        {monthData.isClosed && monthData.closedAt && (
-                          <div className="mb-4 p-3 bg-white/50 dark:bg-black/20 rounded-lg">
+                        {monthData.isClosed && monthData.closedAt && <div className="mb-4 p-3 bg-white/50 dark:bg-black/20 rounded-lg">
                             <p className="text-sm font-medium text-green-700 dark:text-green-400">
-                              Fechado em: {format(new Date(monthData.closedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                              Fechado em: {format(new Date(monthData.closedAt), "dd/MM/yyyy 'às' HH:mm", {
+                      locale: ptBR
+                    })}
                             </p>
-                          </div>
-                        )}
+                          </div>}
 
                         {/* Lista de arquivos */}
-                        {monthData.uploads.length > 0 ? (
-                          <div className="space-y-3">
+                        {monthData.uploads.length > 0 ? <div className="space-y-3">
                             <p className="text-sm font-semibold text-muted-foreground mb-3">
                               Arquivos enviados ({monthData.uploads.length}):
                             </p>
-                            {monthData.uploads.map((upload) => (
-                              <div
-                                key={upload.id}
-                                className="flex items-start gap-3 bg-white dark:bg-gray-800 p-4 rounded-lg border-l-4 border-[#F5C441]"
-                              >
+                            {monthData.uploads.map(upload => <div key={upload.id} className="flex items-start gap-3 bg-white dark:bg-gray-800 p-4 rounded-lg border-l-4 border-[#F5C441]">
                                 <FileText className="w-5 h-5 text-[#F5C441] flex-shrink-0 mt-0.5" />
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-semibold truncate">
                                     {upload.file_name}
                                   </p>
                                   <p className="text-xs text-muted-foreground mt-1">
-                                    Enviado em: {format(new Date(upload.upload_date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                    Enviado em: {format(new Date(upload.upload_date), "dd/MM/yyyy 'às' HH:mm", {
+                          locale: ptBR
+                        })}
                                   </p>
                                 </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-center py-4 bg-white/50 dark:bg-black/20 rounded-lg">
+                              </div>)}
+                          </div> : <div className="text-center py-4 bg-white/50 dark:bg-black/20 rounded-lg">
                             <p className="text-sm text-muted-foreground italic">
                               Nenhum arquivo enviado neste mês
                             </p>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                          </div>}
+                      </div>)}
                   </CardContent>
-                </Card>
-              ))
-            )}
+                </Card>)}
           </div>
         </TabsContent>
 
@@ -954,11 +828,9 @@ export const AdminUploadHistory = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos os usuários</SelectItem>
-                      {processedHistories.map((user) => (
-                        <SelectItem key={user.user_id} value={user.user_id}>
+                      {processedHistories.map(user => <SelectItem key={user.user_id} value={user.user_id}>
                           {user.user_name} ({user.user_email})
-                        </SelectItem>
-                      ))}
+                        </SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -971,15 +843,15 @@ export const AdminUploadHistory = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos os períodos</SelectItem>
-                      {uniqueProcessedPeriods.map((period) => {
-                        const [year, monthStr] = period.split('-');
-                        const date = new Date(parseInt(year), parseInt(monthStr) - 1);
-                        return (
-                          <SelectItem key={period} value={period}>
-                            {format(date, "MMMM/yyyy", { locale: ptBR })}
-                          </SelectItem>
-                        );
-                      })}
+                      {uniqueProcessedPeriods.map(period => {
+                      const [year, monthStr] = period.split('-');
+                      const date = new Date(parseInt(year), parseInt(monthStr) - 1);
+                      return <SelectItem key={period} value={period}>
+                            {format(date, "MMMM/yyyy", {
+                          locale: ptBR
+                        })}
+                          </SelectItem>;
+                    })}
                     </SelectContent>
                   </Select>
                 </div>
@@ -992,11 +864,9 @@ export const AdminUploadHistory = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos os tipos</SelectItem>
-                      {uniqueDocTypes.map((type) => (
-                        <SelectItem key={type} value={type}>
+                      {uniqueDocTypes.map(type => <SelectItem key={type} value={type}>
                           {type}
-                        </SelectItem>
-                      ))}
+                        </SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1006,18 +876,14 @@ export const AdminUploadHistory = () => {
 
           {/* Lista de lançamentos processados */}
           <div className="space-y-6">
-            {filteredProcessedHistories.length === 0 ? (
-              <Card>
+            {filteredProcessedHistories.length === 0 ? <Card>
                 <CardContent className="py-12 text-center">
                   <FileText className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
                   <p className="text-lg text-muted-foreground">
                     Nenhum documento processado encontrado com os filtros selecionados.
                   </p>
                 </CardContent>
-              </Card>
-            ) : (
-              filteredProcessedHistories.map((userHistory) => (
-                <Card key={userHistory.user_id} className="shadow-lg">
+              </Card> : filteredProcessedHistories.map(userHistory => <Card key={userHistory.user_id} className="shadow-lg">
                   <CardHeader className="bg-gradient-to-r from-[#F5C441]/20 to-transparent">
                     <CardTitle className="flex items-center gap-3">
                       <Users className="w-6 h-6 text-[#F5C441]" />
@@ -1030,16 +896,14 @@ export const AdminUploadHistory = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-6 space-y-6">
-                    {Object.values(userHistory.months).map((monthData, idx) => (
-                      <div
-                        key={idx}
-                        className="border-2 rounded-xl p-6 bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800"
-                      >
+                    {Object.values(userHistory.months).map((monthData, idx) => <div key={idx} className="border-2 rounded-xl p-6 bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
                         {/* Cabeçalho do mês */}
                         <div className="flex items-center gap-3 mb-4 pb-4 border-b-2 border-current/10">
                           <Calendar className="w-5 h-5" />
                           <h3 className="text-lg font-bold">
-                            {format(new Date(monthData.year, parseInt(monthData.month) - 1), "MMMM 'de' yyyy", { locale: ptBR }).toUpperCase()}
+                            {format(new Date(monthData.year, parseInt(monthData.month) - 1), "MMMM 'de' yyyy", {
+                      locale: ptBR
+                    }).toUpperCase()}
                           </h3>
                           <span className="ml-auto text-sm font-semibold text-muted-foreground">
                             {monthData.documents.length} documento(s)
@@ -1048,11 +912,7 @@ export const AdminUploadHistory = () => {
 
                         {/* Lista de documentos */}
                         <div className="space-y-3">
-                          {monthData.documents.map((doc) => (
-                            <div
-                              key={doc.id}
-                              className="flex items-start gap-3 bg-white dark:bg-gray-800 p-4 rounded-lg border-l-4 border-blue-500"
-                            >
+                          {monthData.documents.map(doc => <div key={doc.id} className="flex items-start gap-3 bg-white dark:bg-gray-800 p-4 rounded-lg border-l-4 border-blue-500">
                               <FileText className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-semibold truncate">
@@ -1063,39 +923,32 @@ export const AdminUploadHistory = () => {
                                     {doc.doc_type}
                                   </span>
                                   <span className="text-xs text-muted-foreground">
-                                    {format(new Date(doc.upload_date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                    {format(new Date(doc.upload_date), "dd/MM/yyyy 'às' HH:mm", {
+                            locale: ptBR
+                          })}
                                   </span>
                                 </div>
                               </div>
                               <div className="flex gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    // Extrair o ID do arquivo do Google Drive
-                                    const fileIdMatch = doc.file_url.match(/\/d\/([^/]+)/);
-                                    if (fileIdMatch) {
-                                      const fileId = fileIdMatch[1];
-                                      // URL de download direto do Google Drive
-                                      const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
-                                      window.open(downloadUrl, '_blank');
-                                    } else {
-                                      window.open(doc.file_url, '_blank');
-                                    }
-                                  }}
-                                  className="shrink-0 bg-blue-500 hover:bg-blue-600 text-white border-0"
-                                >
+                                <Button variant="outline" size="sm" onClick={() => {
+                        // Extrair o ID do arquivo do Google Drive
+                        const fileIdMatch = doc.file_url.match(/\/d\/([^/]+)/);
+                        if (fileIdMatch) {
+                          const fileId = fileIdMatch[1];
+                          // URL de download direto do Google Drive
+                          const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+                          window.open(downloadUrl, '_blank');
+                        } else {
+                          window.open(doc.file_url, '_blank');
+                        }
+                      }} className="shrink-0 bg-blue-500 hover:bg-blue-600 text-white border-0">
                                   <Download className="w-4 h-4 mr-2" />
                                   Baixar
                                 </Button>
                                 
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="shrink-0 bg-red-500 hover:bg-red-600 text-white border-0"
-                                    >
+                                    <Button variant="outline" size="sm" className="shrink-0 bg-red-500 hover:bg-red-600 text-white border-0">
                                       <XCircle className="w-4 h-4 mr-2" />
                                       Excluir
                                     </Button>
@@ -1109,28 +962,20 @@ export const AdminUploadHistory = () => {
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
                                       <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                      <AlertDialogAction
-                                        onClick={() => handleDeleteDocument(doc.id, doc.file_name)}
-                                        className="bg-red-500 hover:bg-red-600"
-                                      >
+                                      <AlertDialogAction onClick={() => handleDeleteDocument(doc.id, doc.file_name)} className="bg-red-500 hover:bg-red-600">
                                         Confirmar exclusão
                                       </AlertDialogAction>
                                     </AlertDialogFooter>
                                   </AlertDialogContent>
                                 </AlertDialog>
                               </div>
-                            </div>
-                          ))}
+                            </div>)}
                         </div>
-                      </div>
-                    ))}
+                      </div>)}
                   </CardContent>
-                </Card>
-              ))
-            )}
+                </Card>)}
           </div>
         </TabsContent>
       </Tabs>
-    </div>
-  );
+    </div>;
 };
