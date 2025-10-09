@@ -482,6 +482,8 @@ export const MonthlyDocumentUpload = () => {
                 type="month"
                 value={month}
                 onChange={(e) => setMonth(e.target.value)}
+                min={`${new Date().getFullYear()}-01`}
+                max={`${new Date().getFullYear()}-12`}
               />
             </div>
           </div>
