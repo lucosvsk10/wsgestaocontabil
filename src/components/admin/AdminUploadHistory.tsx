@@ -455,6 +455,32 @@ export const AdminUploadHistory = () => {
     }
   };
 
+  const handleDeleteDocument = async (docId: string, docName: string) => {
+    try {
+      const { error } = await supabase
+        .from('documents')
+        .delete()
+        .eq('id', docId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Documento excluído",
+        description: `${docName} foi excluído com sucesso.`,
+      });
+
+      // Recarregar documentos processados
+      fetchProcessedDocuments();
+    } catch (error) {
+      console.error('Erro ao excluir documento:', error);
+      toast({
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir o documento.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleDownloadMonth = async (userId: string, userName: string, month: string, year: number) => {
     try {
       toast({
@@ -1041,15 +1067,58 @@ export const AdminUploadHistory = () => {
                                   </span>
                                 </div>
                               </div>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => window.open(doc.file_url, '_blank')}
-                                className="shrink-0"
-                              >
-                                <ExternalLink className="w-4 h-4 mr-2" />
-                                Abrir no Drive
-                              </Button>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    // Extrair o ID do arquivo do Google Drive
+                                    const fileIdMatch = doc.file_url.match(/\/d\/([^/]+)/);
+                                    if (fileIdMatch) {
+                                      const fileId = fileIdMatch[1];
+                                      // URL de download direto do Google Drive
+                                      const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+                                      window.open(downloadUrl, '_blank');
+                                    } else {
+                                      window.open(doc.file_url, '_blank');
+                                    }
+                                  }}
+                                  className="shrink-0 bg-blue-500 hover:bg-blue-600 text-white border-0"
+                                >
+                                  <Download className="w-4 h-4 mr-2" />
+                                  Baixar
+                                </Button>
+                                
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="shrink-0 bg-red-500 hover:bg-red-600 text-white border-0"
+                                    >
+                                      <XCircle className="w-4 h-4 mr-2" />
+                                      Excluir
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Tem certeza que deseja excluir "{doc.file_name}"? Esta ação não pode ser desfeita.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={() => handleDeleteDocument(doc.id, doc.file_name)}
+                                        className="bg-red-500 hover:bg-red-600"
+                                      >
+                                        Confirmar exclusão
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </div>
                             </div>
                           ))}
                         </div>
