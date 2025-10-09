@@ -317,11 +317,14 @@ export const MonthlyDocumentUpload = () => {
     setIsClosingMonth(true);
 
     try {
+      const [yearClose, monthClose] = month.split('-');
       const payload = {
         action: "fechar_mes",
         userEmail: user?.email || '',
         userName: userData?.name || userData?.fullname || user?.email?.split('@')[0] || 'Usuário',
         userId: user?.id || '',
+        month: month,
+        year: parseInt(yearClose),
         timestamp: new Date().toISOString()
       };
 
