@@ -56,11 +56,6 @@ interface ProcessedDocument {
   year: number;
   upload_date: string;
   file_url: string;
-  user_id: string;
-  user_name: string;
-  user_email: string;
-  processing_status?: string;
-  protocol_id?: string;
 }
 
 interface ProcessedMonthData {
@@ -70,10 +65,10 @@ interface ProcessedMonthData {
 }
 
 interface ProcessedUserHistory {
-  userId: string;
-  userName: string;
-  userEmail: string;
-  months: ProcessedMonthData[];
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  months: { [key: string]: ProcessedMonthData };
 }
 
 interface ProcessedStats {
@@ -238,72 +233,127 @@ export const AdminUploadHistory = () => {
 
   const fetchProcessedDocuments = async () => {
     try {
-      // Buscar TODOS os documentos processados
-      const { data: documents } = await supabase
-        .from('processed_documents')
-        .select('*')
-        .order('upload_date', { ascending: false });
+      const { data: documents, error } = await supabase
+        .from('documents')
+        .select(`
+          id,
+          name,
+          category,
+          uploaded_at,
+          drive_url,
+          observations,
+          user_id,
+          users:user_id (
+            name,
+            email
+          )
+        `)
+        .not('drive_url', 'is', null)
+        .eq('status', 'active')
+        .order('uploaded_at', { ascending: false });
 
-      // Agrupar por usuário
-      const usersMap = new Map<string, ProcessedUserHistory>();
+      if (error) throw error;
 
-      documents?.forEach((doc) => {
-        if (!usersMap.has(doc.user_id)) {
-          usersMap.set(doc.user_id, {
-            userId: doc.user_id,
-            userName: doc.user_name,
-            userEmail: doc.user_email,
-            months: []
-          });
+      if (!documents) {
+        setProcessedHistories([]);
+        return;
+      }
+
+      // Agrupar documentos por usuário
+      const grouped: { [key: string]: ProcessedUserHistory } = {};
+      
+      documents.forEach((doc: any) => {
+        const userData = doc.users;
+        if (!userData) return;
+
+        // Extrair mês e ano das observations ou do name
+        let year: number;
+        let month: string;
+        
+        // Tentar extrair de observations primeiro: "Período: 2025-01"
+        const obsMatch = doc.observations?.match(/Período:\s*(\d{4})-(\d{2})/);
+        if (obsMatch) {
+          year = parseInt(obsMatch[1]);
+          month = obsMatch[2];
+        } else {
+          // Tentar extrair do name: "Fechamento | teste | 2025-01"
+          const nameMatch = doc.name?.match(/(\d{4})-(\d{2})/);
+          if (nameMatch) {
+            year = parseInt(nameMatch[1]);
+            month = nameMatch[2];
+          } else {
+            // Fallback: usar data do upload
+            const uploadDate = new Date(doc.uploaded_at);
+            year = uploadDate.getFullYear();
+            month = String(uploadDate.getMonth() + 1).padStart(2, '0');
+          }
         }
 
-        const userHistory = usersMap.get(doc.user_id)!;
-        const monthKey = `${doc.year}-${doc.month}`;
-        
-        let monthData = userHistory.months.find(m => `${m.year}-${m.month}` === monthKey);
-        if (!monthData) {
-          monthData = {
-            month: doc.month,
-            year: doc.year,
+        // Extrair tipo do documento (Fechamento, Relatório, etc.)
+        const docType = doc.name?.split('|')[0]?.trim() || 'Documento';
+
+        if (!grouped[doc.user_id]) {
+          grouped[doc.user_id] = {
+            user_id: doc.user_id,
+            user_name: userData.name,
+            user_email: userData.email,
+            months: {}
+          };
+        }
+
+        const monthKey = `${year}-${month}`;
+        if (!grouped[doc.user_id].months[monthKey]) {
+          grouped[doc.user_id].months[monthKey] = {
+            month: month,
+            year: year,
             documents: []
           };
-          userHistory.months.push(monthData);
         }
 
-        monthData.documents.push(doc);
-      });
-
-      // Ordenar meses de cada usuário
-      usersMap.forEach((userHistory) => {
-        userHistory.months.sort((a, b) => {
-          const dateA = new Date(a.year, parseInt(a.month) - 1);
-          const dateB = new Date(b.year, parseInt(b.month) - 1);
-          return dateB.getTime() - dateA.getTime();
+        grouped[doc.user_id].months[monthKey].documents.push({
+          id: doc.id,
+          file_name: doc.name,
+          file_url: doc.drive_url,
+          doc_type: docType,
+          upload_date: doc.uploaded_at,
+          month: month,
+          year: year
         });
       });
 
-      const histories = Array.from(usersMap.values());
-      setProcessedHistories(histories);
+      const processedArray = Object.values(grouped);
+      setProcessedHistories(processedArray);
+      setFilteredProcessedHistories(processedArray);
 
       // Calcular estatísticas
-      const totalDocuments = documents?.length || 0;
-      const uniqueUsers = new Set(documents?.map(d => d.user_id) || []).size;
+      const totalDocs = documents.length;
+      const totalUsers = processedArray.length;
       const currentMonth = new Date().getMonth() + 1;
       const currentYear = new Date().getFullYear();
-      const documentsThisMonth = documents?.filter(d => 
-        d.year === currentYear && parseInt(d.month) === currentMonth
-      ).length || 0;
-      const uniqueDocTypes = new Set(documents?.map(d => d.doc_type) || []).size;
+      const docsThisMonth = documents.filter((doc: any) => {
+        const uploadDate = new Date(doc.uploaded_at);
+        return uploadDate.getMonth() + 1 === currentMonth && uploadDate.getFullYear() === currentYear;
+      }).length;
+      
+      const docTypes = [...new Set(documents.map((doc: any) => {
+        const docType = doc.name?.split('|')[0]?.trim() || 'Documento';
+        return docType;
+      }))].length;
 
       setProcessedStats({
-        totalDocuments,
-        totalUsers: uniqueUsers,
-        documentsThisMonth,
-        documentTypes: uniqueDocTypes
+        totalDocuments: totalDocs,
+        totalUsers: totalUsers,
+        documentsThisMonth: docsThisMonth,
+        documentTypes: docTypes
       });
 
     } catch (error) {
       console.error('Erro ao buscar documentos processados:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar os documentos processados.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -312,28 +362,35 @@ export const AdminUploadHistory = () => {
 
     // Filtrar por usuário
     if (selectedProcessedUser !== "all") {
-      filtered = filtered.filter(h => h.userId === selectedProcessedUser);
+      filtered = filtered.filter(h => h.user_id === selectedProcessedUser);
     }
 
     // Filtrar por período
     if (selectedProcessedPeriod !== "all") {
       filtered = filtered.map(userHistory => ({
         ...userHistory,
-        months: userHistory.months.filter(month => 
-          `${month.year}-${month.month}` === selectedProcessedPeriod
-        )
-      })).filter(h => h.months.length > 0);
+        months: Object.keys(userHistory.months).reduce((acc, key) => {
+          if (key === selectedProcessedPeriod) {
+            acc[key] = userHistory.months[key];
+          }
+          return acc;
+        }, {} as { [key: string]: ProcessedMonthData })
+      })).filter(h => Object.keys(h.months).length > 0);
     }
 
     // Filtrar por tipo de documento
     if (selectedDocType !== "all") {
       filtered = filtered.map(userHistory => ({
         ...userHistory,
-        months: userHistory.months.map(month => ({
-          ...month,
-          documents: month.documents.filter(doc => doc.doc_type === selectedDocType)
-        })).filter(m => m.documents.length > 0)
-      })).filter(h => h.months.length > 0);
+        months: Object.keys(userHistory.months).reduce((acc, key) => {
+          const month = userHistory.months[key];
+          const filteredDocs = month.documents.filter(doc => doc.doc_type === selectedDocType);
+          if (filteredDocs.length > 0) {
+            acc[key] = { ...month, documents: filteredDocs };
+          }
+          return acc;
+        }, {} as { [key: string]: ProcessedMonthData })
+      })).filter(h => Object.keys(h.months).length > 0);
     }
 
     setFilteredProcessedHistories(filtered);
@@ -486,7 +543,7 @@ export const AdminUploadHistory = () => {
   const uniqueProcessedPeriods = Array.from(
     new Set(
       processedHistories.flatMap(u => 
-        u.months.map(m => `${m.year}-${String(m.month).padStart(2, '0')}`)
+        Object.keys(u.months)
       )
     )
   ).sort().reverse();
@@ -495,7 +552,7 @@ export const AdminUploadHistory = () => {
   const uniqueDocTypes = Array.from(
     new Set(
       processedHistories.flatMap(u => 
-        u.months.flatMap(m => m.documents.map(d => d.doc_type))
+        Object.values(u.months).flatMap(m => m.documents.map(d => d.doc_type))
       )
     )
   ).sort();
@@ -872,8 +929,8 @@ export const AdminUploadHistory = () => {
                     <SelectContent>
                       <SelectItem value="all">Todos os usuários</SelectItem>
                       {processedHistories.map((user) => (
-                        <SelectItem key={user.userId} value={user.userId}>
-                          {user.userName} ({user.userEmail})
+                        <SelectItem key={user.user_id} value={user.user_id}>
+                          {user.user_name} ({user.user_email})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -934,20 +991,20 @@ export const AdminUploadHistory = () => {
               </Card>
             ) : (
               filteredProcessedHistories.map((userHistory) => (
-                <Card key={userHistory.userId} className="shadow-lg">
+                <Card key={userHistory.user_id} className="shadow-lg">
                   <CardHeader className="bg-gradient-to-r from-[#F5C441]/20 to-transparent">
                     <CardTitle className="flex items-center gap-3">
                       <Users className="w-6 h-6 text-[#F5C441]" />
                       <div>
-                        <div className="text-xl">{userHistory.userName}</div>
+                        <div className="text-xl">{userHistory.user_name}</div>
                         <div className="text-sm font-normal text-muted-foreground">
-                          {userHistory.userEmail}
+                          {userHistory.user_email}
                         </div>
                       </div>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-6 space-y-6">
-                    {userHistory.months.map((monthData, idx) => (
+                    {Object.values(userHistory.months).map((monthData, idx) => (
                       <div
                         key={idx}
                         className="border-2 rounded-xl p-6 bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800"
