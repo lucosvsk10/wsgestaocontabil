@@ -42,6 +42,7 @@ export type Document = {
   view_status?: DocumentViewStatus;
   viewed?: boolean;
   status?: string; // Adicionado para controlar estados (active, expired, etc.)
+  drive_url?: string; // Link do Google Drive para documentos processados
 };
 
 export interface DocumentCategory {

@@ -331,6 +331,7 @@ export type Database = {
       documents: {
         Row: {
           category: string | null
+          drive_url: string | null
           expires_at: string | null
           file_url: string
           filename: string | null
@@ -350,6 +351,7 @@ export type Database = {
         }
         Insert: {
           category?: string | null
+          drive_url?: string | null
           expires_at?: string | null
           file_url: string
           filename?: string | null
@@ -369,6 +371,7 @@ export type Database = {
         }
         Update: {
           category?: string | null
+          drive_url?: string | null
           expires_at?: string | null
           file_url?: string
           filename?: string | null
