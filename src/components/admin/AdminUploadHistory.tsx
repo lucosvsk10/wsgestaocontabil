@@ -1044,23 +1044,11 @@ export const AdminUploadHistory = () => {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => {
-                                  // Extrair o ID do arquivo do Google Drive
-                                  const fileIdMatch = doc.file_url.match(/\/d\/([^/]+)/);
-                                  if (fileIdMatch) {
-                                    const fileId = fileIdMatch[1];
-                                    // URL de download direto do Google Drive
-                                    const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
-                                    window.open(downloadUrl, '_blank');
-                                  } else {
-                                    // Fallback: abrir URL original
-                                    window.open(doc.file_url, '_blank');
-                                  }
-                                }}
+                                onClick={() => window.open(doc.file_url, '_blank')}
                                 className="shrink-0"
                               >
-                                <Download className="w-4 h-4 mr-2" />
-                                Baixar documento
+                                <ExternalLink className="w-4 h-4 mr-2" />
+                                Abrir no Drive
                               </Button>
                             </div>
                           ))}
