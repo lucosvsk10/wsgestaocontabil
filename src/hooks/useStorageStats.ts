@@ -19,6 +19,8 @@ export interface StorageStats {
   totalStorageBytes: number;
   totalStorageKB: number;
   totalStorageMB: number;
+  totalStorageGB: number;
+  storageLimitGB: number;
   userStorage: UserStorageData[];
 }
 
@@ -120,6 +122,8 @@ export const useStorageStats = () => {
         totalStorageBytes: totalBytes,
         totalStorageKB: totalKB,
         totalStorageMB: totalMB,
+        totalStorageGB: Math.round(totalBytes / (1024 * 1024 * 1024) * 100) / 100,
+        storageLimitGB: 100,
         userStorage
       };
       
@@ -133,6 +137,8 @@ export const useStorageStats = () => {
         totalStorageBytes: 0,
         totalStorageKB: 0,
         totalStorageMB: 0,
+        totalStorageGB: 0,
+        storageLimitGB: 100,
         userStorage: []
       });
       

@@ -101,6 +101,18 @@ serve(async (req) => {
       });
     }
 
+    // Obter limite de armazenamento configurado
+    const { data: settings, error: settingsError } = await supabaseAdmin
+      .from('system_settings')
+      .select('storage_limit_gb')
+      .single();
+
+    if (settingsError) {
+      console.warn("Erro ao obter configurações do sistema:", settingsError);
+    }
+
+    const storageLimitGB = settings?.storage_limit_gb || 100;
+
     // Obter todos os usuários do auth
     const { data: authData, error: authUsersError } = await supabaseAdmin.auth.admin.listUsers();
     
@@ -155,6 +167,8 @@ serve(async (req) => {
       totalStorageBytes,
       totalStorageKB: Math.round(totalStorageBytes / 1024 * 100) / 100,
       totalStorageMB: Math.round(totalStorageBytes / (1024 * 1024) * 100) / 100,
+      totalStorageGB: Math.round(totalStorageBytes / (1024 * 1024 * 1024) * 100) / 100,
+      storageLimitGB,
       userStorage: storageStats 
     }), { 
       headers: { ...corsHeaders, "Content-Type": "application/json" } 
