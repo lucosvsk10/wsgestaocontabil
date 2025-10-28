@@ -44,3 +44,6 @@ port = 54329
 
 [functions.storage-stats]
 verify_jwt = true
+
+[functions.delete-expired-documents]
+verify_jwt = false

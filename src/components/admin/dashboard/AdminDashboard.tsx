@@ -141,26 +141,26 @@ export const AdminDashboard = ({
             </div>
             
             <div className="space-y-3">
-              {/* Documentos Expirando */}
-              <div className="p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700/30">
+              {/* Documentos Enviados Recentemente */}
+              <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700/30">
                 <div className="flex justify-between items-center mb-2">
                   <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-                    <span className="text-sm font-medium text-yellow-800 dark:text-yellow-300">
-                      Documentos Expirando
+                    <FileText className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    <span className="text-sm font-medium text-green-800 dark:text-green-300">
+                      Documentos Enviados
                     </span>
                   </div>
-                  <span className="text-lg font-bold text-yellow-600 dark:text-yellow-400">
-                    {stats.expiringDocuments}
+                  <span className="text-lg font-bold text-green-600 dark:text-green-400">
+                    {stats.recentDocumentsCount}
                   </span>
                 </div>
-                <p className="text-xs text-yellow-700 dark:text-yellow-400/80 mb-2">
-                  Nos próximos 30 dias
+                <p className="text-xs text-green-700 dark:text-green-400/80 mb-2">
+                  Últimos 7 dias
                 </p>
                 <Button 
                   size="sm" 
                   variant="ghost" 
-                  className="w-full text-yellow-700 dark:text-yellow-300 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 h-8"
+                  className="w-full text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30 h-8"
                   onClick={() => navigate("/admin/storage")}
                 >
                   Ver Documentos →
