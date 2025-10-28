@@ -1,16 +1,21 @@
-import { MapPin, MessageCircle, Mail, Clock } from 'lucide-react';
-import ThemeToggle from './ThemeToggle';
+import { MapPin, MessageCircle, Mail, Clock } from "lucide-react";
+import ThemeToggle from "./ThemeToggle";
 const Footer = () => {
-  return <footer id="contato" className="border-t border-gold/20 bg-navy dark:bg-[#1e1c1a]">
+  return (
+    <footer id="contato" className="border-t border-gold/20 bg-navy dark:bg-[#1e1c1a]">
       <div className="container mx-auto px-6 py-12 bg-navy dark:bg-[#1e1c1a]">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
           <div className="space-y-6">
             <div className="flex items-center space-x-2">
-              <img src="/lovable-uploads/4b269729-8d34-4824-8425-cc8c319161a8.png" alt="WS Gestão Contábil Logo" className="h-16 w-auto" />
+              <img
+                src="/lovable-uploads/4b269729-8d34-4824-8425-cc8c319161a8.png"
+                alt="WS Gestão Contábil Logo"
+                className="h-16 w-auto"
+              />
             </div>
             <p className="text-white/70 dark:text-white/80 max-w-xs">
-              Soluções contábeis completas para o sucesso do seu negócio. 
-              Conte com nossa expertise para cuidar da saúde financeira da sua empresa.
+              Soluções contábeis completas para o sucesso do seu negócio. Conte com nossa expertise para cuidar da saúde
+              financeira da sua empresa.
             </p>
             <div className="flex justify-end mt-4">
               <ThemeToggle />
@@ -19,7 +24,7 @@ const Footer = () => {
 
           <div className="space-y-6">
             <h3 className="text-xl font-semibold text-gold">Contato</h3>
-            
+
             <div className="space-y-4">
               <div>
                 <h4 className="text-white font-medium mb-3">Sede - Major Isidoro</h4>
@@ -52,7 +57,7 @@ const Footer = () => {
                   </li>
                   <li className="flex items-center space-x-3">
                     <MessageCircle className="w-5 h-5 text-gold flex-shrink-0" />
-                    <span className="text-white/70 dark:text-white/80 text-sm">(82) 99932-4884 / (82) 99656-0439</span>
+                    <span className="text-white/70 dark:text-white/80 text-sm">(82) 99932-4884</span>
                   </li>
                   <li className="flex items-center space-x-3">
                     <Mail className="w-5 h-5 text-gold flex-shrink-0" />
@@ -75,7 +80,12 @@ const Footer = () => {
               </li>
             </ul>
             <div className="pt-4">
-              <a href="https://wa.me/5582999324884" target="_blank" rel="noopener noreferrer" className="inline-flex items-center px-5 py-2.5 rounded-lg bg-gold hover:bg-gold-light text-navy-dark font-medium transition-colors duration-300">
+              <a
+                href="https://wa.me/5582999324884"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center px-5 py-2.5 rounded-lg bg-gold hover:bg-gold-light text-navy-dark font-medium transition-colors duration-300"
+              >
                 Solicite um Orçamento
               </a>
             </div>
@@ -86,13 +96,19 @@ const Footer = () => {
           <p>
             © 2025 WS Gestão Contábil. Todos os direitos reservados.
             <br />
-            Desenvolvido por{' '}
-            <a href="https://studiolxdev.lovable.app" target="_blank" rel="noopener noreferrer" className="text-gold hover:text-gold-light transition-colors duration-300 underline">
+            Desenvolvido por{" "}
+            <a
+              href="https://studiolxdev.lovable.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gold hover:text-gold-light transition-colors duration-300 underline"
+            >
               Studio LX | Desenvolvimento Web
             </a>
           </p>
         </div>
       </div>
-    </footer>;
+    </footer>
+  );
 };
 export default Footer;
