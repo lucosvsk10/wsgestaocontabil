@@ -15,7 +15,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Download, MoreHorizontal, Trash2, Eye, FileIcon } from "lucide-react";
+import { Download, MoreHorizontal, Trash2, Eye, FileIcon, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { Document } from "@/types/admin";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
@@ -110,6 +110,12 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
                   </div>
                   <div className="max-w-[240px] overflow-hidden text-ellipsis">
                     {document.name}
+                    {document.drive_url && (
+                      <span className="ml-2 inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
+                        <ExternalLink className="w-3 h-3 mr-1" />
+                        Drive
+                      </span>
+                    )}
                     {document.viewed ? (
                       <span className="ml-2 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800">
                         <Eye className="w-3 h-3 mr-1" />
@@ -152,10 +158,17 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onDownload(document)}>
-                        <Download className="mr-2 h-4 w-4" />
-                        <span>Baixar</span>
-                      </DropdownMenuItem>
+                      {document.drive_url ? (
+                        <DropdownMenuItem onClick={() => window.open(document.drive_url, '_blank')}>
+                          <ExternalLink className="mr-2 h-4 w-4 text-blue-600" />
+                          <span>Abrir no Drive</span>
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem onClick={() => onDownload(document)}>
+                          <Download className="mr-2 h-4 w-4" />
+                          <span>Baixar</span>
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem 
                         onClick={() => onDelete(document.id)}
                         className="text-red-600 dark:text-red-400 focus:text-red-700 dark:focus:text-red-300"

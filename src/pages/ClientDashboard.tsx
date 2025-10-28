@@ -11,6 +11,8 @@ import { FiscalCalendarSection } from "@/components/client/sections/FiscalCalend
 import { CompanyDataSection } from "@/components/client/sections/CompanyDataSection";
 import { useDocumentActions } from "@/hooks/document/useDocumentActions";
 import { DocumentTable } from "@/components/client/DocumentTable";
+import { MonthlyDocumentUpload } from "@/components/client/MonthlyDocumentUpload";
+import { UploadHistory } from "@/components/client/UploadHistory";
 
 const ClientDashboard = () => {
   const {
@@ -53,6 +55,10 @@ const ClientDashboard = () => {
             categories={commonCategories}
           />
         );
+      case "monthly-upload":
+        return <MonthlyDocumentUpload />;
+      case "upload-history":
+        return <UploadHistory />;
       case "simulations":
         return <SimulationsSection />;
       case "announcements":
@@ -88,8 +94,13 @@ const ClientDashboard = () => {
   return (
     <div className="min-h-screen bg-white dark:bg-[#020817]">
       <ClientDashboardLayout activeTab={activeTab} setActiveTab={setActiveTab}>
-        <WelcomeHeader />
-        <QuickStats onTabChange={setActiveTab} />
+        {/* Mostrar WelcomeHeader e QuickStats apenas para páginas principais */}
+        {activeTab !== "upload-history" && activeTab !== "monthly-upload" && (
+          <>
+            <WelcomeHeader />
+            <QuickStats onTabChange={setActiveTab} />
+          </>
+        )}
         {renderContent()}
       </ClientDashboardLayout>
     </div>

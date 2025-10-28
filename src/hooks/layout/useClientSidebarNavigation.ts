@@ -1,5 +1,5 @@
 
-import { FileText, Calculator, Bell, Calendar, Building2, LucideIcon } from "lucide-react";
+import { FileText, Calculator, Bell, Calendar, Building2, Upload, LucideIcon } from "lucide-react";
 
 interface SidebarItem {
   icon: LucideIcon;
@@ -27,6 +27,18 @@ export const useClientSidebarNavigation = ({
       label: "Documentos",
       id: "documents",
       active: activeTab === "documents"
+    },
+    {
+      icon: Upload,
+      label: "Envio de Documentos",
+      id: "monthly-upload",
+      active: activeTab === "monthly-upload"
+    },
+    {
+      icon: FileText,
+      label: "Histórico de Lançamentos",
+      id: "upload-history",
+      active: activeTab === "upload-history"
     },
     {
       icon: Calculator,

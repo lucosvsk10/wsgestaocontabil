@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Document } from "@/utils/auth/types";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { Download, FileText, Calendar, CheckCircle, AlertTriangle, Eye } from "lucide-react";
+import { Download, FileText, Calendar, CheckCircle, AlertTriangle, Eye, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -70,6 +70,12 @@ export const DocumentCard = ({
             </div>
           </div>
           <div className="flex flex-col gap-1 flex-shrink-0">
+            {doc.drive_url && (
+              <Badge className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-600/20 dark:text-blue-400 dark:border-blue-600/30 text-xs whitespace-nowrap">
+                <ExternalLink className="w-3 h-3 mr-1" />
+                Drive
+              </Badge>
+            )}
             {!doc.viewed && !isExpired && (
               <Badge className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-600/20 dark:text-blue-400 dark:border-blue-600/30 text-xs whitespace-nowrap">
                 Novo
@@ -153,6 +159,14 @@ export const DocumentCard = ({
             <AlertTriangle className="w-4 h-4 mr-2" />
             Expirado
           </div>
+        ) : doc.drive_url ? (
+          <Button
+            onClick={() => window.open(doc.drive_url, '_blank')}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600/20 dark:border dark:border-blue-500 dark:text-blue-400 dark:hover:bg-blue-600/30 font-medium text-sm transition-all duration-300 shadow-sm hover:shadow-md min-h-[44px]"
+          >
+            <ExternalLink className="w-4 h-4 mr-2" />
+            Abrir no Drive
+          </Button>
         ) : (
           <Button
             onClick={() => handleDownload(doc)}

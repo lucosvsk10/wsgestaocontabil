@@ -25,6 +25,7 @@ export const FileUploadArea = ({ handleFileChange }: FileUploadAreaProps) => {
                 id="file-upload"
                 name="file-upload"
                 type="file"
+                accept="application/pdf,.pdf"
                 className="sr-only"
                 onChange={handleFileChange}
               />
@@ -32,7 +33,7 @@ export const FileUploadArea = ({ handleFileChange }: FileUploadAreaProps) => {
             <p className="pl-1">ou arraste e solte</p>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            PDF, DOC, DOCX, XLS, XLSX, JPG, PNG até 10MB
+            Apenas arquivos PDF até 10MB
           </p>
         </div>
       </div>
