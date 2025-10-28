@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)"
-  }
   public: {
     Tables: {
       announcement_views: {
@@ -163,48 +158,6 @@ export type Database = {
         }
         Relationships: []
       }
-      companies: {
-        Row: {
-          address: string | null
-          certificate_data: string | null
-          certificate_password: string | null
-          cnpj: string
-          company_name: string
-          company_size: string | null
-          created_at: string
-          id: string
-          is_fiscal_automation_client: boolean | null
-          trade_name: string | null
-          updated_at: string
-        }
-        Insert: {
-          address?: string | null
-          certificate_data?: string | null
-          certificate_password?: string | null
-          cnpj: string
-          company_name: string
-          company_size?: string | null
-          created_at?: string
-          id?: string
-          is_fiscal_automation_client?: boolean | null
-          trade_name?: string | null
-          updated_at?: string
-        }
-        Update: {
-          address?: string | null
-          certificate_data?: string | null
-          certificate_password?: string | null
-          cnpj?: string
-          company_name?: string
-          company_size?: string | null
-          created_at?: string
-          id?: string
-          is_fiscal_automation_client?: boolean | null
-          trade_name?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
       company_data: {
         Row: {
           accountant_contact: string
@@ -331,7 +284,6 @@ export type Database = {
       documents: {
         Row: {
           category: string | null
-          drive_url: string | null
           expires_at: string | null
           file_url: string
           filename: string | null
@@ -351,7 +303,6 @@ export type Database = {
         }
         Insert: {
           category?: string | null
-          drive_url?: string | null
           expires_at?: string | null
           file_url: string
           filename?: string | null
@@ -371,7 +322,6 @@ export type Database = {
         }
         Update: {
           category?: string | null
-          drive_url?: string | null
           expires_at?: string | null
           file_url?: string
           filename?: string | null
@@ -402,179 +352,6 @@ export type Database = {
             columns: ["category"]
             isOneToOne: false
             referencedRelation: "document_categories"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      fiscal_certificates: {
-        Row: {
-          certificate_data: string
-          certificate_name: string
-          company_id: string
-          created_at: string
-          created_by: string
-          id: string
-          is_active: boolean
-          password_hash: string
-          valid_from: string
-          valid_until: string
-        }
-        Insert: {
-          certificate_data: string
-          certificate_name: string
-          company_id: string
-          created_at?: string
-          created_by: string
-          id?: string
-          is_active?: boolean
-          password_hash: string
-          valid_from: string
-          valid_until: string
-        }
-        Update: {
-          certificate_data?: string
-          certificate_name?: string
-          company_id?: string
-          created_at?: string
-          created_by?: string
-          id?: string
-          is_active?: boolean
-          password_hash?: string
-          valid_from?: string
-          valid_until?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fiscal_certificates_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "fiscal_companies"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      fiscal_companies: {
-        Row: {
-          cnpj: string
-          created_at: string
-          created_by: string
-          endereco: Json | null
-          id: string
-          inscricao_estadual: string | null
-          inscricao_municipal: string | null
-          nome_fantasia: string | null
-          razao_social: string
-          updated_at: string
-        }
-        Insert: {
-          cnpj: string
-          created_at?: string
-          created_by: string
-          endereco?: Json | null
-          id?: string
-          inscricao_estadual?: string | null
-          inscricao_municipal?: string | null
-          nome_fantasia?: string | null
-          razao_social: string
-          updated_at?: string
-        }
-        Update: {
-          cnpj?: string
-          created_at?: string
-          created_by?: string
-          endereco?: Json | null
-          id?: string
-          inscricao_estadual?: string | null
-          inscricao_municipal?: string | null
-          nome_fantasia?: string | null
-          razao_social?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      fiscal_documents: {
-        Row: {
-          cfop: string | null
-          chave_acesso: string
-          cnpj_destinatario: string | null
-          cnpj_emitente: string
-          company_id: string
-          created_at: string
-          data_emissao: string
-          id: string
-          natureza_operacao: string | null
-          nome_destinatario: string | null
-          nome_emitente: string
-          numero_nota: string
-          pdf_url: string | null
-          serie: string
-          status: string
-          sync_id: string | null
-          tipo_documento: string
-          tipo_operacao: string
-          valor_impostos: number | null
-          valor_total: number
-          xml_content: string
-        }
-        Insert: {
-          cfop?: string | null
-          chave_acesso: string
-          cnpj_destinatario?: string | null
-          cnpj_emitente: string
-          company_id: string
-          created_at?: string
-          data_emissao: string
-          id?: string
-          natureza_operacao?: string | null
-          nome_destinatario?: string | null
-          nome_emitente: string
-          numero_nota: string
-          pdf_url?: string | null
-          serie: string
-          status?: string
-          sync_id?: string | null
-          tipo_documento: string
-          tipo_operacao: string
-          valor_impostos?: number | null
-          valor_total: number
-          xml_content: string
-        }
-        Update: {
-          cfop?: string | null
-          chave_acesso?: string
-          cnpj_destinatario?: string | null
-          cnpj_emitente?: string
-          company_id?: string
-          created_at?: string
-          data_emissao?: string
-          id?: string
-          natureza_operacao?: string | null
-          nome_destinatario?: string | null
-          nome_emitente?: string
-          numero_nota?: string
-          pdf_url?: string | null
-          serie?: string
-          status?: string
-          sync_id?: string | null
-          tipo_documento?: string
-          tipo_operacao?: string
-          valor_impostos?: number | null
-          valor_total?: number
-          xml_content?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fiscal_documents_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "fiscal_companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fiscal_documents_sync_id_fkey"
-            columns: ["sync_id"]
-            isOneToOne: false
-            referencedRelation: "fiscal_sync_logs"
             referencedColumns: ["id"]
           },
         ]
@@ -611,124 +388,6 @@ export type Database = {
           title?: string
         }
         Relationships: []
-      }
-      fiscal_notes: {
-        Row: {
-          access_key: string
-          cfop: string | null
-          company_id: string
-          created_at: string
-          id: string
-          issue_date: string
-          issuer_cnpj: string
-          note_type: string
-          pdf_url: string | null
-          recipient_cnpj: string
-          status: string
-          updated_at: string
-          value: number
-          xml_url: string | null
-        }
-        Insert: {
-          access_key: string
-          cfop?: string | null
-          company_id: string
-          created_at?: string
-          id?: string
-          issue_date: string
-          issuer_cnpj: string
-          note_type: string
-          pdf_url?: string | null
-          recipient_cnpj: string
-          status?: string
-          updated_at?: string
-          value: number
-          xml_url?: string | null
-        }
-        Update: {
-          access_key?: string
-          cfop?: string | null
-          company_id?: string
-          created_at?: string
-          id?: string
-          issue_date?: string
-          issuer_cnpj?: string
-          note_type?: string
-          pdf_url?: string | null
-          recipient_cnpj?: string
-          status?: string
-          updated_at?: string
-          value?: number
-          xml_url?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fiscal_notes_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      fiscal_sync_logs: {
-        Row: {
-          company_id: string
-          completed_at: string | null
-          created_at: string
-          created_by: string
-          documentos_encontrados: number | null
-          documentos_erro: number | null
-          documentos_processados: number | null
-          id: string
-          mensagem_erro: string | null
-          periodo_fim: string
-          periodo_inicio: string
-          status: string
-          sync_type: string
-          tempo_duracao: number | null
-        }
-        Insert: {
-          company_id: string
-          completed_at?: string | null
-          created_at?: string
-          created_by: string
-          documentos_encontrados?: number | null
-          documentos_erro?: number | null
-          documentos_processados?: number | null
-          id?: string
-          mensagem_erro?: string | null
-          periodo_fim: string
-          periodo_inicio: string
-          status?: string
-          sync_type: string
-          tempo_duracao?: number | null
-        }
-        Update: {
-          company_id?: string
-          completed_at?: string | null
-          created_at?: string
-          created_by?: string
-          documentos_encontrados?: number | null
-          documentos_erro?: number | null
-          documentos_processados?: number | null
-          id?: string
-          mensagem_erro?: string | null
-          periodo_fim?: string
-          periodo_inicio?: string
-          status?: string
-          sync_type?: string
-          tempo_duracao?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fiscal_sync_logs_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "fiscal_companies"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       form_questions: {
         Row: {
@@ -829,110 +488,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
-      }
-      lancamentos: {
-        Row: {
-          credito: string | null
-          data: string | null
-          debito: string | null
-          historico: string | null
-          valor: string
-        }
-        Insert: {
-          credito?: string | null
-          data?: string | null
-          debito?: string | null
-          historico?: string | null
-          valor: string
-        }
-        Update: {
-          credito?: string | null
-          data?: string | null
-          debito?: string | null
-          historico?: string | null
-          valor?: string
-        }
-        Relationships: []
-      }
-      month_closures: {
-        Row: {
-          closed_at: string
-          created_at: string
-          id: string
-          month: string
-          status: string
-          user_email: string
-          user_id: string
-          user_name: string
-          year: number
-        }
-        Insert: {
-          closed_at?: string
-          created_at?: string
-          id?: string
-          month: string
-          status?: string
-          user_email: string
-          user_id: string
-          user_name: string
-          year: number
-        }
-        Update: {
-          closed_at?: string
-          created_at?: string
-          id?: string
-          month?: string
-          status?: string
-          user_email?: string
-          user_id?: string
-          user_name?: string
-          year?: number
-        }
-        Relationships: []
-      }
-      note_items: {
-        Row: {
-          cfop: string | null
-          cst: string | null
-          description: string
-          id: string
-          ncm: string | null
-          note_id: string
-          quantity: number
-          total_price: number
-          unit_price: number
-        }
-        Insert: {
-          cfop?: string | null
-          cst?: string | null
-          description: string
-          id?: string
-          ncm?: string | null
-          note_id: string
-          quantity: number
-          total_price: number
-          unit_price: number
-        }
-        Update: {
-          cfop?: string | null
-          cst?: string | null
-          description?: string
-          id?: string
-          ncm?: string | null
-          note_id?: string
-          quantity?: number
-          total_price?: number
-          unit_price?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "note_items_note_id_fkey"
-            columns: ["note_id"]
-            isOneToOne: false
-            referencedRelation: "fiscal_notes"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       notifications: {
         Row: {
@@ -1148,60 +703,6 @@ export type Database = {
         }
         Relationships: []
       }
-      processed_documents: {
-        Row: {
-          created_at: string | null
-          doc_type: string
-          execution_log: Json | null
-          file_name: string
-          file_url: string
-          id: string
-          month: string
-          processing_status: string | null
-          protocol_id: string | null
-          storage_key: string
-          upload_date: string | null
-          user_email: string
-          user_id: string
-          user_name: string
-          year: number
-        }
-        Insert: {
-          created_at?: string | null
-          doc_type: string
-          execution_log?: Json | null
-          file_name: string
-          file_url: string
-          id?: string
-          month: string
-          processing_status?: string | null
-          protocol_id?: string | null
-          storage_key: string
-          upload_date?: string | null
-          user_email: string
-          user_id: string
-          user_name: string
-          year: number
-        }
-        Update: {
-          created_at?: string | null
-          doc_type?: string
-          execution_log?: Json | null
-          file_name?: string
-          file_url?: string
-          id?: string
-          month?: string
-          processing_status?: string | null
-          protocol_id?: string | null
-          storage_key?: string
-          upload_date?: string | null
-          user_email?: string
-          user_id?: string
-          user_name?: string
-          year?: number
-        }
-        Relationships: []
-      }
       prolabore_simulations: {
         Row: {
           created_at: string
@@ -1289,42 +790,6 @@ export type Database = {
         }
         Relationships: []
       }
-      uploads: {
-        Row: {
-          created_at: string
-          file_name: string
-          id: string
-          month: string
-          upload_date: string
-          user_email: string
-          user_id: string
-          user_name: string
-          year: number
-        }
-        Insert: {
-          created_at?: string
-          file_name: string
-          id?: string
-          month: string
-          upload_date?: string
-          user_email: string
-          user_id: string
-          user_name: string
-          year: number
-        }
-        Update: {
-          created_at?: string
-          file_name?: string
-          id?: string
-          month?: string
-          upload_date?: string
-          user_email?: string
-          user_id?: string
-          user_name?: string
-          year?: number
-        }
-        Relationships: []
-      }
       users: {
         Row: {
           created_at: string | null
@@ -1388,15 +853,7 @@ export type Database = {
         Args: Record<PropertyKey, never> | { name: string }
         Returns: string
       }
-      get_user_company_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
       is_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_user_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
@@ -1418,25 +875,21 @@ export type Database = {
   }
 }
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
-
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+type DefaultSchema = Database[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof DatabaseWithoutInternals },
+    | { schema: keyof Database },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof Database
   }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
@@ -1454,16 +907,14 @@ export type Tables<
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
+    | { schema: keyof Database },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof Database
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
@@ -1479,16 +930,14 @@ export type TablesInsert<
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
+    | { schema: keyof Database },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof Database
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
@@ -1504,16 +953,14 @@ export type TablesUpdate<
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
+    | { schema: keyof Database },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof Database
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
@@ -1521,16 +968,14 @@ export type Enums<
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof DatabaseWithoutInternals },
+    | { schema: keyof Database },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof Database
   }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
-> = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never

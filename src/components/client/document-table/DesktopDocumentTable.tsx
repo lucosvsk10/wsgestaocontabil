@@ -3,7 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Document } from "@/utils/auth/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DocumentActions } from "./DocumentActions";
-import { BellDot, Clock, Info, AlertTriangle, ExternalLink } from "lucide-react";
+import { BellDot, Clock, Info, AlertTriangle } from "lucide-react";
 
 interface DesktopDocumentTableProps {
   documents: Document[];
@@ -56,12 +56,6 @@ export const DesktopDocumentTable = ({
                     {!doc.viewed && !isExpired && <BellDot size={16} className="text-blue-500 dark:text-blue-400 mr-2" />}
                     {isExpired && <AlertTriangle size={16} className="text-red-500 dark:text-red-400 mr-2" />}
                     {doc.name}
-                    {doc.drive_url && (
-                      <span className="ml-2 text-xs px-2 py-1 rounded-full bg-blue-500/80 text-white dark:bg-transparent dark:border dark:border-blue-500/30 dark:text-blue-400 flex items-center gap-1">
-                        <ExternalLink size={12} />
-                        Drive
-                      </span>
-                    )}
                     {!doc.viewed && !isExpired && (
                       <span className="ml-2 text-xs px-2 py-1 rounded-full bg-blue-500/80 text-white dark:bg-transparent dark:border dark:border-blue-500/30 dark:text-blue-400">
                         Novo

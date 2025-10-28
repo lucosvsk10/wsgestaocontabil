@@ -24,8 +24,7 @@ import {
   ArrowUp,
   ArrowDown,
   Search,
-  Edit,
-  ExternalLink
+  Edit
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -180,12 +179,6 @@ export const AdminDocumentTable: React.FC<AdminDocumentTableProps> = ({
                     </div>
                     <div className="max-w-[240px] overflow-hidden text-ellipsis">
                       {document.name}
-                      {document.drive_url && (
-                        <span className="ml-2 inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900 px-2 py-0.5 text-xs font-medium text-blue-800 dark:text-blue-300">
-                          <ExternalLink className="w-3 h-3 mr-1" />
-                          Drive
-                        </span>
-                      )}
                     </div>
                   </div>
                 </TableCell>
@@ -237,17 +230,10 @@ export const AdminDocumentTable: React.FC<AdminDocumentTableProps> = ({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        {document.drive_url ? (
-                          <DropdownMenuItem onClick={() => window.open(document.drive_url, '_blank')}>
-                            <ExternalLink className="mr-2 h-4 w-4 text-blue-600 dark:text-blue-400" />
-                            <span>Abrir no Drive</span>
-                          </DropdownMenuItem>
-                        ) : (
-                          <DropdownMenuItem onClick={() => onDownload(document)}>
-                            <Download className="mr-2 h-4 w-4" />
-                            <span>Baixar</span>
-                          </DropdownMenuItem>
-                        )}
+                        <DropdownMenuItem onClick={() => onDownload(document)}>
+                          <Download className="mr-2 h-4 w-4" />
+                          <span>Baixar</span>
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => onEdit(document)}>
                           <Edit className="mr-2 h-4 w-4 text-blue-600 dark:text-blue-400" />
                           <span>Editar</span>
@@ -306,17 +292,10 @@ export const AdminDocumentTable: React.FC<AdminDocumentTableProps> = ({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      {document.drive_url ? (
-                        <DropdownMenuItem onClick={() => window.open(document.drive_url, '_blank')}>
-                          <ExternalLink className="mr-2 h-4 w-4 text-blue-600 dark:text-blue-400" />
-                          <span>Abrir no Drive</span>
-                        </DropdownMenuItem>
-                      ) : (
-                        <DropdownMenuItem onClick={() => onDownload(document)}>
-                          <Download className="mr-2 h-4 w-4" />
-                          <span>Baixar</span>
-                        </DropdownMenuItem>
-                      )}
+                      <DropdownMenuItem onClick={() => onDownload(document)}>
+                        <Download className="mr-2 h-4 w-4" />
+                        <span>Baixar</span>
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => onEdit(document)}>
                         <Edit className="mr-2 h-4 w-4 text-blue-600 dark:text-blue-400" />
                         <span>Editar</span>

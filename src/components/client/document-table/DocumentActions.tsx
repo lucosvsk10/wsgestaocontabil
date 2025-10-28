@@ -1,5 +1,5 @@
 
-import { Download, AlertTriangle, ExternalLink } from "lucide-react";
+import { Download, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Document } from "@/utils/auth/types";
 import { useAuth } from "@/contexts/AuthContext";
@@ -39,17 +39,6 @@ export const DocumentActions = ({
           <AlertTriangle size={14} />
           <span>Expirado</span>
         </div>
-      ) : doc.drive_url ? (
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => window.open(doc.drive_url, '_blank')} 
-          title="Abrir documento no Google Drive"
-          className="flex-1 bg-blue-100 dark:bg-blue-900/20 dark:border-blue-500 dark:border-opacity-30 text-blue-700 dark:text-blue-400 hover:bg-blue-200 hover:text-blue-800 dark:hover:bg-blue-900/30 dark:hover:text-blue-300 flex items-center justify-center gap-1"
-        >
-          <ExternalLink size={14} />
-          <span className="truncate">Abrir no Drive</span>
-        </Button>
       ) : (
         <Button 
           variant="outline" 
