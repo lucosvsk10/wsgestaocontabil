@@ -9,9 +9,15 @@ interface DashboardStats {
   totalAnnouncements: number;
   totalFiscalEvents: number;
   recentDocuments: any[];
-  lastLogin: string | null;
   pollCount: number;
-  storageStats: { totalStorageMB: number } | null;
+  recentDocumentsCount: number;
+  upcomingFiscalEvents: number;
+  activeAnnouncements: number;
+  storageStats: {
+    totalStorageMB: number;
+    totalStorageGB: number;
+    storageLimitGB: number;
+  } | null;
 }
 
 export const useDashboardData = () => {
@@ -22,8 +28,10 @@ export const useDashboardData = () => {
     totalAnnouncements: 0,
     totalFiscalEvents: 0,
     recentDocuments: [],
-    lastLogin: null,
     pollCount: 0,
+    recentDocumentsCount: 0,
+    upcomingFiscalEvents: 0,
+    activeAnnouncements: 0,
     storageStats: null
   });
   const [loading, setLoading] = useState(true);
@@ -51,7 +59,9 @@ export const useDashboardData = () => {
       setStats(prev => ({
         ...prev,
         storageStats: {
-          totalStorageMB: Number((storageStats.totalStorageMB || 0).toFixed(2))
+          totalStorageMB: Number((storageStats.totalStorageMB || 0).toFixed(2)),
+          totalStorageGB: Number((storageStats.totalStorageGB || 0).toFixed(2)),
+          storageLimitGB: storageStats.storageLimitGB || 100
         }
       }));
     }
@@ -66,10 +76,11 @@ export const useDashboardData = () => {
         .from('users')
         .select('*', { count: 'exact', head: true });
 
-      // Fetch documents count
+      // Total active documents only
       const { count: documentsCount } = await supabase
         .from('documents')
-        .select('*', { count: 'exact', head: true });
+        .select('*', { count: 'exact', head: true })
+        .or('status.eq.active,status.is.null');
 
       // Fetch announcements count
       const { count: announcementsCount } = await supabase
@@ -104,13 +115,35 @@ export const useDashboardData = () => {
         userName: doc.users?.name || 'Usuário desconhecido'
       }));
 
-      // Get last login (simplified - just get the most recent user)
-      const { data: lastUser } = await supabase
-        .from('users')
-        .select('created_at')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+      // Documentos enviados nos últimos 7 dias (ativos)
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      
+      const { count: recentDocsCount } = await supabase
+        .from('documents')
+        .select('*', { count: 'exact', head: true })
+        .gte('uploaded_at', sevenDaysAgo.toISOString())
+        .or('status.eq.active,status.is.null');
+
+      // Eventos fiscais próximos (próximos 30 dias)
+      const thirtyDaysFromNow = new Date();
+      thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+      
+      const { count: upcomingEventsCount } = await supabase
+        .from('fiscal_events')
+        .select('*', { count: 'exact', head: true })
+        .gte('date', new Date().toISOString().split('T')[0])
+        .lte('date', thirtyDaysFromNow.toISOString().split('T')[0]);
+
+      // Avisos ativos (últimos 30 dias)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const { count: activeAnnouncementsCount } = await supabase
+        .from('announcements')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_active', true)
+        .gte('created_at', thirtyDaysAgo.toISOString());
 
       setStats(prev => ({
         ...prev,
@@ -119,8 +152,10 @@ export const useDashboardData = () => {
         totalAnnouncements: announcementsCount || 0,
         totalFiscalEvents: fiscalEventsCount || 0,
         recentDocuments: processedRecentDocs,
-        lastLogin: lastUser ? formatRecentDate(lastUser.created_at) : null,
-        pollCount: pollsCount || 0
+        pollCount: pollsCount || 0,
+        recentDocumentsCount: recentDocsCount || 0,
+        upcomingFiscalEvents: upcomingEventsCount || 0,
+        activeAnnouncements: activeAnnouncementsCount || 0
       }));
     } catch (error) {
       console.error('Erro ao buscar dados do dashboard:', error);

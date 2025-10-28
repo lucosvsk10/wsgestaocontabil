@@ -1238,6 +1238,27 @@ export type Database = {
         }
         Relationships: []
       }
+      system_settings: {
+        Row: {
+          created_at: string
+          id: string
+          storage_limit_gb: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          storage_limit_gb?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          storage_limit_gb?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       tax_simulations: {
         Row: {
           data_criacao: string | null
@@ -1380,34 +1401,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      delete_expired_documents: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      foldername: {
-        Args: Record<PropertyKey, never> | { name: string }
-        Returns: string
-      }
-      get_user_company_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      is_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_user_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      mark_expired_documents: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      set_document_expiration: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      delete_expired_documents: { Args: never; Returns: undefined }
+      foldername:
+        | { Args: { name: string }; Returns: string }
+        | { Args: never; Returns: string }
+      get_user_company_id: { Args: never; Returns: string }
+      is_admin: { Args: never; Returns: boolean }
+      is_user_admin: { Args: never; Returns: boolean }
+      mark_expired_documents: { Args: never; Returns: undefined }
+      set_document_expiration: { Args: never; Returns: undefined }
     }
     Enums: {
       [_ in never]: never

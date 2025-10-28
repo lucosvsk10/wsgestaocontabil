@@ -44,10 +44,7 @@ export const FileDropzone: React.FC<FileDropzoneProps> = ({
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     maxSize,
-    multiple: true,
-    accept: {
-      'application/pdf': ['.pdf']
-    }
+    multiple: true
   });
   
   const removeFile = (index: number) => {
@@ -122,7 +119,7 @@ export const FileDropzone: React.FC<FileDropzoneProps> = ({
             }
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            Apenas arquivos PDF (máx. {formatBytes(maxSize)})
+            PDF, DOC, DOCX, XLS, XLSX, JPG, PNG (máx. {formatBytes(maxSize)})
           </p>
           {selectedFiles.length > 0 && (
             <p className="text-xs text-navy-dark dark:text-gold mt-2">

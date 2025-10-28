@@ -26,7 +26,9 @@ export const StorageView = () => {
     return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
   };
 
-  const usedPercentage = storageStats ? (storageStats.totalStorageMB / 100) * 100 : 0;
+  const usedPercentage = storageStats 
+    ? (storageStats.totalStorageGB / storageStats.storageLimitGB) * 100 
+    : 0;
 
   const handleExportReport = () => {
     try {
@@ -135,7 +137,7 @@ export const StorageView = () => {
                 </div>
                 <Progress value={usedPercentage} className="h-2" />
                 <p className="text-sm text-gray-600 dark:text-[#b3b3b3]">
-                  {usedPercentage.toFixed(1)}% de 100 MB utilizados
+                  {storageStats ? `${storageStats.totalStorageGB.toFixed(2)} GB` : "0 B"} de {storageStats?.storageLimitGB || 100} GB utilizados ({usedPercentage.toFixed(2)}%)
                 </p>
               </div>
             </CardContent>

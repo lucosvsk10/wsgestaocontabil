@@ -139,36 +139,118 @@ export const AdminDashboard = ({
               </h3>
               <Bell className="h-5 w-5 text-gray-400 dark:text-[#efc349]" />
             </div>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600 dark:text-[#b3b3b3]">Último Login</span>
-                <span className="text-sm font-medium text-[#020817] dark:text-[#f4f4f4]">
-                  {stats.lastLogin || "Não disponível"}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600 dark:text-[#b3b3b3]">Usuários Online</span>
-                <span className="text-sm font-medium text-[#020817] dark:text-[#f4f4f4]">
-                  {Math.floor(Math.random() * 5) + 1}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600 dark:text-[#b3b3b3]">Versão do Sistema</span>
-                <span className="text-sm font-medium text-[#020817] dark:text-[#f4f4f4]">2.0.0</span>
-              </div>
-              {stats.storageStats && <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm text-gray-600 dark:text-[#b3b3b3]">Armazenamento</span>
-                    <span className="text-sm font-medium text-[#020817] dark:text-[#f4f4f4]">
-                      {stats.storageStats.totalStorageMB.toFixed(1)}MB / 100MB
+            
+            <div className="space-y-3">
+              {/* Documentos Enviados Recentemente */}
+              <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700/30">
+                <div className="flex justify-between items-center mb-2">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    <span className="text-sm font-medium text-green-800 dark:text-green-300">
+                      Documentos Enviados
                     </span>
                   </div>
-                  <div className="w-full bg-gray-200 dark:bg-[#020817] rounded-full h-2">
-                    <div className="bg-[#efc349] h-2 rounded-full transition-all duration-300" style={{
-                  width: `${Math.min(100, stats.storageStats.totalStorageMB / 100 * 100)}%`
-                }}></div>
+                  <span className="text-lg font-bold text-green-600 dark:text-green-400">
+                    {stats.recentDocumentsCount}
+                  </span>
+                </div>
+                <p className="text-xs text-green-700 dark:text-green-400/80 mb-2">
+                  Últimos 7 dias
+                </p>
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  className="w-full text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30 h-8"
+                  onClick={() => navigate("/admin/storage")}
+                >
+                  Ver Documentos →
+                </Button>
+              </div>
+
+              {/* Eventos Fiscais */}
+              <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/30">
+                <div className="flex justify-between items-center mb-2">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                      Eventos Fiscais Próximos
+                    </span>
                   </div>
-                </div>}
+                  <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                    {stats.upcomingFiscalEvents}
+                  </span>
+                </div>
+                <p className="text-xs text-blue-700 dark:text-blue-400/80 mb-2">
+                  Nos próximos 30 dias
+                </p>
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  className="w-full text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 h-8"
+                  onClick={() => navigate("/admin/calendar")}
+                >
+                  Ver Agenda →
+                </Button>
+              </div>
+
+              {/* Armazenamento */}
+              {stats.storageStats && (
+                <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-700/30">
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="flex items-center gap-2">
+                      <HardDrive className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                      <span className="text-sm font-medium text-gray-800 dark:text-gray-300">
+                        Armazenamento
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                    {stats.storageStats.totalStorageGB?.toFixed(2) || '0'} GB de {stats.storageStats.storageLimitGB || 100} GB
+                  </p>
+                  <div className="w-full bg-gray-200 dark:bg-[#020817] rounded-full h-2 mb-2">
+                    <div 
+                      className="bg-[#efc349] h-2 rounded-full transition-all duration-300" 
+                      style={{ 
+                        width: `${Math.min(100, ((stats.storageStats.totalStorageGB || 0) / (stats.storageStats.storageLimitGB || 100)) * 100)}%` 
+                      }}
+                    />
+                  </div>
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    className="w-full text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900/30 h-8"
+                    onClick={() => navigate("/admin/storage")}
+                  >
+                    Ver Detalhes →
+                  </Button>
+                </div>
+              )}
+
+              {/* Avisos Ativos */}
+              <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700/30">
+                <div className="flex justify-between items-center mb-2">
+                  <div className="flex items-center gap-2">
+                    <Bell className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                    <span className="text-sm font-medium text-purple-800 dark:text-purple-300">
+                      Avisos Ativos
+                    </span>
+                  </div>
+                  <span className="text-lg font-bold text-purple-600 dark:text-purple-400">
+                    {stats.activeAnnouncements}
+                  </span>
+                </div>
+                <p className="text-xs text-purple-700 dark:text-purple-400/80 mb-2">
+                  Últimos 30 dias
+                </p>
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  className="w-full text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/30 h-8"
+                  onClick={() => navigate("/admin/announcements")}
+                >
+                  Gerenciar Avisos →
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
