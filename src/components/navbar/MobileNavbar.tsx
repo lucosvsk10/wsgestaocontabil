@@ -112,7 +112,7 @@ const MobileNavbar = ({ isOpen, onClose, handleLogout, navigateToDashboard }: Mo
           
           {/* Instagram Link - Kept at the end */}
           <a 
-            href="https://www.instagram.com/ws_gestao_contabil?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" 
+            href="https://www.instagram.com/wscontabil.co/" 
             target="_blank" 
             rel="noopener noreferrer" 
             className="text-[#efc349] hover:text-[#d6a932] dark:text-gold dark:hover:text-gold-light text-xl transition-colors" 

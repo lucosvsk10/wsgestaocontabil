@@ -63,7 +63,7 @@ const DesktopNavbar = ({
         </>}
       
       {/* Instagram link always at the end */}
-      <a href="https://www.instagram.com/ws_gestao_contabil?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer" className="text-[#020817] hover:text-[#efc349] dark:text-gold dark:hover:text-gold-light transition-colors duration-300" aria-label="Instagram">
+      <a href="https://www.instagram.com/wscontabil.co/" target="_blank" rel="noopener noreferrer" className="text-[#020817] hover:text-[#efc349] dark:text-gold dark:hover:text-gold-light transition-colors duration-300" aria-label="Instagram">
         <Instagram size={20} />
       </a>
     </nav>;
