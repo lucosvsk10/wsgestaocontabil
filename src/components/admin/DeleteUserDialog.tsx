@@ -30,36 +30,47 @@ export const DeleteUserDialog = ({ open, onOpenChange, authUser, onSuccess }: De
         throw new Error("Você precisa estar logado para realizar esta ação");
       }
       
-      // First delete related records in the database
+      // Delete all related records in the correct order to avoid foreign key errors
+      
+      // 1. Delete activity records (no dependencies)
+      await supabase.from('announcement_views').delete().eq('user_id', authUser.id);
+      await supabase.from('notifications').delete().eq('user_id', authUser.id);
+      await supabase.from('visualized_documents').delete().eq('user_id', authUser.id);
+      
+      // 2. Delete poll/form responses
+      await supabase.from('form_responses').delete().eq('user_id', authUser.id);
+      await supabase.from('numerical_responses').delete().eq('user_id', authUser.id);
+      await supabase.from('poll_responses').delete().eq('user_id', authUser.id);
+      
+      // 3. Delete simulations
+      await supabase.from('tax_simulations').delete().eq('user_id', authUser.id);
+      await supabase.from('inss_simulations').delete().eq('user_id', authUser.id);
+      await supabase.from('prolabore_simulations').delete().eq('user_id', authUser.id);
+      
+      // 4. Delete document-related records
+      await supabase.from('processed_documents').delete().eq('user_id', authUser.id);
+      await supabase.from('uploads').delete().eq('user_id', authUser.id);
+      await supabase.from('month_closures').delete().eq('user_id', authUser.id);
+      
+      // 5. Delete documents (critical - may have storage files)
       const { error: documentsError } = await supabase
         .from('documents')
         .delete()
         .eq('user_id', authUser.id);
       
       if (documentsError) {
-        console.error('Erro ao excluir documentos do usuário:', documentsError);
+        console.error('Erro ao excluir documentos:', documentsError);
         throw new Error(`Erro ao excluir documentos: ${documentsError.message}`);
       }
       
-      // Delete roles entry if it exists
-      const { error: rolesError } = await supabase
-        .from('roles')
-        .delete()
-        .eq('user_id', authUser.id);
+      // 6. Delete company data
+      await supabase.from('company_data').delete().eq('user_id', authUser.id);
       
-      if (rolesError) {
-        console.error('Erro ao excluir funções do usuário:', rolesError);
-      }
+      // 7. Delete roles
+      await supabase.from('roles').delete().eq('user_id', authUser.id);
       
-      // Delete user profile if it exists
-      const { error: usersError } = await supabase
-        .from('users')
-        .delete()
-        .eq('id', authUser.id);
-      
-      if (usersError) {
-        console.error('Erro ao excluir perfil do usuário:', usersError);
-      }
+      // 8. Delete user profile
+      await supabase.from('users').delete().eq('id', authUser.id);
       
       // Delete the auth user via edge function
       const response = await fetch(`https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/admin-operations`, {
