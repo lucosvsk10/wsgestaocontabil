@@ -328,6 +328,42 @@ export type Database = {
         }
         Relationships: []
       }
+      documentos_conciliacao: {
+        Row: {
+          competencia: string
+          created_at: string | null
+          dados_extraidos: Json | null
+          id: string
+          nome_arquivo: string
+          status_processamento: string | null
+          updated_at: string | null
+          url_storage: string
+          user_id: string
+        }
+        Insert: {
+          competencia: string
+          created_at?: string | null
+          dados_extraidos?: Json | null
+          id?: string
+          nome_arquivo: string
+          status_processamento?: string | null
+          updated_at?: string | null
+          url_storage: string
+          user_id: string
+        }
+        Update: {
+          competencia?: string
+          created_at?: string | null
+          dados_extraidos?: Json | null
+          id?: string
+          nome_arquivo?: string
+          status_processamento?: string | null
+          updated_at?: string | null
+          url_storage?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
           category: string | null
@@ -402,6 +438,53 @@ export type Database = {
             columns: ["category"]
             isOneToOne: false
             referencedRelation: "document_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      extrato_bancario: {
+        Row: {
+          competencia: string
+          created_at: string | null
+          data_transacao: string
+          descricao: string
+          documento_id: string | null
+          id: string
+          status: string | null
+          updated_at: string | null
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          competencia: string
+          created_at?: string | null
+          data_transacao: string
+          descricao: string
+          documento_id?: string | null
+          id?: string
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+          valor: number
+        }
+        Update: {
+          competencia?: string
+          created_at?: string | null
+          data_transacao?: string
+          descricao?: string
+          documento_id?: string | null
+          id?: string
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_extrato_documento"
+            columns: ["documento_id"]
+            isOneToOne: false
+            referencedRelation: "documentos_conciliacao"
             referencedColumns: ["id"]
           },
         ]
