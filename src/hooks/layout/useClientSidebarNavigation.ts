@@ -1,5 +1,5 @@
 
-import { FileText, Calculator, Bell, Calendar, Building2, LucideIcon } from "lucide-react";
+import { FileText, Calculator, Bell, Calendar, Building2, Receipt, LucideIcon } from "lucide-react";
 
 interface SidebarItem {
   icon: LucideIcon;
@@ -51,6 +51,12 @@ export const useClientSidebarNavigation = ({
       label: "Empresa",
       id: "company",
       active: activeTab === "company"
+    },
+    {
+      icon: Receipt,
+      label: "Conciliação",
+      id: "conciliacao",
+      active: activeTab === "conciliacao"
     }
   ];
 
