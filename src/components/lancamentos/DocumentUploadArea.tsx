@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload, FileText, X, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { Upload, FileText, X, Loader2, CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
@@ -73,6 +73,12 @@ export const DocumentUploadArea = ({
     setFiles(prev => prev.filter(f => f.id !== fileId));
   };
 
+  const retryFile = (fileId: string) => {
+    setFiles(prev => prev.map(f => 
+      f.id === fileId ? { ...f, status: "pending" as const, error: undefined } : f
+    ));
+  };
+
   const uploadFiles = async () => {
     if (files.length === 0) return;
     
@@ -112,7 +118,7 @@ export const DocumentUploadArea = ({
             url_storage: urlData.publicUrl,
             tipo_documento: fileData.tipo,
             arquivo_original: fileData.file.name,
-            status_processamento: 'pendente'
+            status_processamento: 'nao_processado'
           });
 
         if (dbError) throw dbError;
@@ -281,6 +287,26 @@ export const DocumentUploadArea = ({
                       <X className="h-4 w-4" />
                     </Button>
                   </>
+                )}
+
+                {fileData.status === "error" && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => retryFile(fileData.id)}
+                    >
+                      <RefreshCw className="h-4 w-4 mr-1" />
+                      Tentar Novamente
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeFile(fileData.id)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
                 )}
               </motion.div>
             ))}
