@@ -9,6 +9,7 @@ import { SimulationsSection } from "@/components/client/sections/SimulationsSect
 import { AnnouncementsSection } from "@/components/client/sections/AnnouncementsSection";
 import { FiscalCalendarSection } from "@/components/client/sections/FiscalCalendarSection";
 import { CompanyDataSection } from "@/components/client/sections/CompanyDataSection";
+import { LancamentosSection } from "@/components/client/sections/LancamentosSection";
 import { useDocumentActions } from "@/hooks/document/useDocumentActions";
 import { DocumentTable } from "@/components/client/DocumentTable";
 
@@ -61,6 +62,8 @@ const ClientDashboard = () => {
         return <FiscalCalendarSection />;
       case "company":
         return <CompanyDataSection />;
+      case "lancamentos":
+        return <LancamentosSection />;
       default:
         return (
           <DocumentTable

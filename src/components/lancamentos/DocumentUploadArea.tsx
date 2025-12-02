@@ -180,24 +180,19 @@ export const DocumentUploadArea = ({
   return (
     <div className="space-y-4">
       {/* Dropzone */}
-      <motion.div
-        whileHover={{ scale: 1.01 }}
-        whileTap={{ scale: 0.99 }}
+      <div
+        {...getRootProps()}
         className={`
-          relative overflow-hidden rounded-2xl border-2 border-dashed transition-all duration-300 cursor-pointer
+          relative overflow-hidden rounded-2xl border-2 border-dashed transition-all duration-300 cursor-pointer hover:scale-[1.01] active:scale-[0.99]
           ${isDragActive 
             ? 'border-primary bg-primary/5' 
             : 'border-border hover:border-primary/50 bg-card'
           }
         `}
-        {...getRootProps()}
       >
         <input {...getInputProps()} />
         <div className="p-12 text-center">
-          <motion.div
-            animate={{ y: isDragActive ? -5 : 0 }}
-            transition={{ type: "spring", stiffness: 300 }}
-          >
+          <div className={`transform transition-transform duration-200 ${isDragActive ? '-translate-y-1' : ''}`}>
             <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
               <Upload className="h-8 w-8 text-primary" />
             </div>
@@ -210,9 +205,9 @@ export const DocumentUploadArea = ({
             <p className="text-xs text-muted-foreground">
               PNG, JPG, PDF, Excel, CSV, Word
             </p>
-          </motion.div>
+          </div>
         </div>
-      </motion.div>
+      </div>
 
       {/* File List */}
       <AnimatePresence>
