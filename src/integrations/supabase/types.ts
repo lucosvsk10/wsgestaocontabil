@@ -328,6 +328,57 @@ export type Database = {
         }
         Relationships: []
       }
+      documentos_conciliacao: {
+        Row: {
+          arquivo_original: string | null
+          competencia: string
+          created_at: string | null
+          dados_extraidos: Json | null
+          id: string
+          nome_arquivo: string
+          processado_em: string | null
+          status_processamento: string | null
+          tentativas_processamento: number | null
+          tipo_documento: string | null
+          ultimo_erro: string | null
+          updated_at: string | null
+          url_storage: string
+          user_id: string
+        }
+        Insert: {
+          arquivo_original?: string | null
+          competencia: string
+          created_at?: string | null
+          dados_extraidos?: Json | null
+          id?: string
+          nome_arquivo: string
+          processado_em?: string | null
+          status_processamento?: string | null
+          tentativas_processamento?: number | null
+          tipo_documento?: string | null
+          ultimo_erro?: string | null
+          updated_at?: string | null
+          url_storage: string
+          user_id: string
+        }
+        Update: {
+          arquivo_original?: string | null
+          competencia?: string
+          created_at?: string | null
+          dados_extraidos?: Json | null
+          id?: string
+          nome_arquivo?: string
+          processado_em?: string | null
+          status_processamento?: string | null
+          tentativas_processamento?: number | null
+          tipo_documento?: string | null
+          ultimo_erro?: string | null
+          updated_at?: string | null
+          url_storage?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
           category: string | null
@@ -405,6 +456,92 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      extrato_bancario: {
+        Row: {
+          competencia: string
+          created_at: string | null
+          data_transacao: string
+          descricao: string
+          documento_id: string | null
+          id: string
+          status: string | null
+          updated_at: string | null
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          competencia: string
+          created_at?: string | null
+          data_transacao: string
+          descricao: string
+          documento_id?: string | null
+          id?: string
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+          valor: number
+        }
+        Update: {
+          competencia?: string
+          created_at?: string | null
+          data_transacao?: string
+          descricao?: string
+          documento_id?: string | null
+          id?: string
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_extrato_documento"
+            columns: ["documento_id"]
+            isOneToOne: false
+            referencedRelation: "documentos_conciliacao"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fechamentos_exportados: {
+        Row: {
+          arquivo_csv_url: string | null
+          arquivo_excel_url: string | null
+          competencia: string
+          created_at: string | null
+          id: string
+          status: string | null
+          total_lancamentos: number | null
+          user_email: string | null
+          user_id: string
+          user_name: string | null
+        }
+        Insert: {
+          arquivo_csv_url?: string | null
+          arquivo_excel_url?: string | null
+          competencia: string
+          created_at?: string | null
+          id?: string
+          status?: string | null
+          total_lancamentos?: number | null
+          user_email?: string | null
+          user_id: string
+          user_name?: string | null
+        }
+        Update: {
+          arquivo_csv_url?: string | null
+          arquivo_excel_url?: string | null
+          competencia?: string
+          created_at?: string | null
+          id?: string
+          status?: string | null
+          total_lancamentos?: number | null
+          user_email?: string | null
+          user_id?: string
+          user_name?: string | null
+        }
+        Relationships: []
       }
       fiscal_certificates: {
         Row: {
@@ -853,6 +990,53 @@ export type Database = {
           valor?: string
         }
         Relationships: []
+      }
+      lancamentos_processados: {
+        Row: {
+          competencia: string
+          created_at: string | null
+          credito: string | null
+          data: string | null
+          debito: string | null
+          documento_origem_id: string | null
+          historico: string | null
+          id: string
+          user_id: string
+          valor: number | null
+        }
+        Insert: {
+          competencia: string
+          created_at?: string | null
+          credito?: string | null
+          data?: string | null
+          debito?: string | null
+          documento_origem_id?: string | null
+          historico?: string | null
+          id?: string
+          user_id: string
+          valor?: number | null
+        }
+        Update: {
+          competencia?: string
+          created_at?: string | null
+          credito?: string | null
+          data?: string | null
+          debito?: string | null
+          documento_origem_id?: string | null
+          historico?: string | null
+          id?: string
+          user_id?: string
+          valor?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lancamentos_processados_documento_origem_id_fkey"
+            columns: ["documento_origem_id"]
+            isOneToOne: false
+            referencedRelation: "documentos_conciliacao"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       month_closures: {
         Row: {

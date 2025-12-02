@@ -17,6 +17,8 @@ import { checkIsAdmin } from "./utils/auth/userChecks";
 import { CompanyDataView } from "./components/admin/company/CompanyDataView";
 import SimpleCarouselManager from '@/components/admin/carousel/SimpleCarouselManager';
 import AdminLayout from '@/components/admin/AdminLayout';
+import AdminLancamentos from "./pages/AdminLancamentos";
+import ClientLancamentos from "./pages/ClientLancamentos";
 
 const AppRoutes = () => {
   const { userData, user } = useAuth();
@@ -119,6 +121,13 @@ const AppRoutes = () => {
           </PrivateRoute>
         } 
       />
+      
+      {/* Rota de Lançamentos Admin */}
+      <Route path="/admin/lancamentos" element={
+        <PrivateRoute requiredRole="admin">
+          <AdminLancamentos />
+        </PrivateRoute>
+      } />
       
       {/* Client routes */}
       <Route path="/client/*" element={

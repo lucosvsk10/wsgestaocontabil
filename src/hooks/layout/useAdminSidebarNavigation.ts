@@ -1,6 +1,6 @@
 
 import { useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, PieChart, Calculator, Settings, Wrench, HardDrive, Megaphone, Calendar, Images, LucideIcon } from "lucide-react";
+import { LayoutDashboard, Users, PieChart, Calculator, Settings, Wrench, HardDrive, Megaphone, Calendar, Images, FileStack, LucideIcon } from "lucide-react";
 
 interface SidebarItem {
   icon: LucideIcon;
@@ -46,6 +46,12 @@ export const useAdminSidebarNavigation = () => {
       label: "Carrossel",
       active: getIsActive("/admin/carousel"),
       to: "/admin/carousel"
+    },
+    {
+      icon: FileStack,
+      label: "Lançamentos",
+      active: getIsActive("/admin/lancamentos"),
+      to: "/admin/lancamentos"
     },
     {
       icon: PieChart,
