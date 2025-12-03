@@ -328,7 +328,7 @@ export type Database = {
         }
         Relationships: []
       }
-      documentos_conciliacao: {
+      documentos_brutos: {
         Row: {
           alinhado_em: string | null
           arquivo_original: string | null
@@ -508,7 +508,7 @@ export type Database = {
             foreignKeyName: "fk_extrato_documento"
             columns: ["documento_id"]
             isOneToOne: false
-            referencedRelation: "documentos_conciliacao"
+            referencedRelation: "documentos_brutos"
             referencedColumns: ["id"]
           },
         ]
@@ -1000,7 +1000,7 @@ export type Database = {
         }
         Relationships: []
       }
-      lancamentos_processados: {
+      lancamentos_alinhados: {
         Row: {
           competencia: string
           created_at: string | null
@@ -1039,10 +1039,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "lancamentos_processados_documento_origem_id_fkey"
+            foreignKeyName: "lancamentos_alinhados_documento_origem_id_fkey"
             columns: ["documento_origem_id"]
             isOneToOne: false
-            referencedRelation: "documentos_conciliacao"
+            referencedRelation: "documentos_brutos"
             referencedColumns: ["id"]
           },
         ]

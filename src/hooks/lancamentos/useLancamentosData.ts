@@ -35,9 +35,9 @@ export const useLancamentosData = (userId: string | undefined, competencia: stri
 
     setIsLoading(true);
     try {
-      // Fetch documents with new fields
+      // Fetch documents with new fields from renamed table
       const { data: docs, error: docsError } = await supabase
-        .from('documentos_conciliacao')
+        .from('documentos_brutos')
         .select('id, nome_arquivo, tipo_documento, status_processamento, status_alinhamento, created_at, processado_em, tentativas_processamento, ultimo_erro, url_storage')
         .eq('user_id', userId)
         .eq('competencia', competencia)
@@ -79,7 +79,7 @@ export const useLancamentosData = (userId: string | undefined, competencia: stri
         {
           event: '*',
           schema: 'public',
-          table: 'documentos_conciliacao',
+          table: 'documentos_brutos',
           filter: `user_id=eq.${userId}`
         },
         () => {
@@ -99,7 +99,7 @@ export const useLancamentosData = (userId: string | undefined, competencia: stri
 
       // Buscar dados do documento para obter a URL do storage
       const { data: doc, error: fetchError } = await supabase
-        .from('documentos_conciliacao')
+        .from('documentos_brutos')
         .select('url_storage')
         .eq('id', documentId)
         .single();
@@ -134,15 +134,15 @@ export const useLancamentosData = (userId: string | undefined, competencia: stri
         }
       }
 
-      // Excluir lançamentos processados relacionados
+      // Excluir lançamentos alinhados relacionados
       await supabase
-        .from('lancamentos_processados')
+        .from('lancamentos_alinhados')
         .delete()
         .eq('documento_origem_id', documentId);
 
       // Excluir do banco de dados
       const { error: deleteError } = await supabase
-        .from('documentos_conciliacao')
+        .from('documentos_brutos')
         .delete()
         .eq('id', documentId);
 

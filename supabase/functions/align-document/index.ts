@@ -22,9 +22,9 @@ serve(async (req) => {
 
     console.log(`Starting alignment for document ${document_id}`);
 
-    // Get document data
+    // Get document data from renamed table
     const { data: doc, error: docError } = await supabase
-      .from('documentos_conciliacao')
+      .from('documentos_brutos')
       .select('*')
       .eq('id', document_id)
       .single();
@@ -48,7 +48,7 @@ serve(async (req) => {
 
     // Update alignment status to processing
     await supabase
-      .from('documentos_conciliacao')
+      .from('documentos_brutos')
       .update({ status_alinhamento: 'processando' })
       .eq('id', document_id);
 
@@ -71,7 +71,7 @@ serve(async (req) => {
       
       // Update alignment status to error
       await supabase
-        .from('documentos_conciliacao')
+        .from('documentos_brutos')
         .update({ 
           status_alinhamento: 'erro',
           tentativas_alinhamento: (doc.tentativas_alinhamento || 0) + 1
@@ -141,8 +141,9 @@ serve(async (req) => {
           credito: l.credito
         }));
 
+        // Insert into renamed table
         const { error: insertError } = await supabase
-          .from('lancamentos_processados')
+          .from('lancamentos_alinhados')
           .insert(lancamentosToInsert);
 
         if (insertError) {
@@ -155,7 +156,7 @@ serve(async (req) => {
 
       // Update document as aligned
       await supabase
-        .from('documentos_conciliacao')
+        .from('documentos_brutos')
         .update({
           status_alinhamento: 'alinhado',
           alinhado_em: new Date().toISOString(),
@@ -185,7 +186,7 @@ serve(async (req) => {
       
       // Update alignment status to error
       await supabase
-        .from('documentos_conciliacao')
+        .from('documentos_brutos')
         .update({
           status_alinhamento: 'erro',
           tentativas_alinhamento: (doc.tentativas_alinhamento || 0) + 1

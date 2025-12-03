@@ -49,9 +49,9 @@ export const ClientStatusList = ({
       // For each user, get their status
       const clientStatuses = await Promise.all(
         (users || []).map(async (user) => {
-          // Get aligned lancamentos count for current month
+          // Get aligned lancamentos count for current month from renamed table
           const { count: alignedCount } = await supabase
-            .from('lancamentos_processados')
+            .from('lancamentos_alinhados')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', user.id)
             .eq('competencia', currentCompetencia);
