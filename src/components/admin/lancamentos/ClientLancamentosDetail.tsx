@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Download, FileSpreadsheet, ClipboardList, User, Mail, Calendar, CheckCircle, AlertCircle, Lock, Unlock, Loader2 } from "lucide-react";
+import { Download, FileSpreadsheet, ClipboardList, User, Mail, Calendar, CheckCircle, AlertCircle, Lock, Unlock, Loader2, RefreshCw, FileWarning } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,9 +34,13 @@ interface ClientInfo {
   email: string;
 }
 
-interface Document {
+interface DocumentoBruto {
   id: string;
-  status_processamento: string;
+  nome_arquivo: string;
+  status_processamento: string | null;
+  status_alinhamento: string | null;
+  ultimo_erro: string | null;
+  tentativas_alinhamento: number | null;
 }
 
 interface ClientLancamentosDetailProps {
@@ -63,13 +67,14 @@ const MONTH_NAMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
 export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailProps) => {
   const [clientInfo, setClientInfo] = useState<ClientInfo | null>(null);
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
-  const [documents, setDocuments] = useState<Document[]>([]);
+  const [documents, setDocuments] = useState<DocumentoBruto[]>([]);
   const [fechamento, setFechamento] = useState<Fechamento | null>(null);
   const [hasPlanoContas, setHasPlanoContas] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isClosing, setIsClosing] = useState(false);
   const [isReopening, setIsReopening] = useState(false);
   const [isPlanoModalOpen, setIsPlanoModalOpen] = useState(false);
+  const [realigningDocId, setRealigningDocId] = useState<string | null>(null);
   
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(String(now.getMonth() + 1).padStart(2, '0'));
@@ -105,7 +110,7 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
 
       const { data: docsData } = await supabase
         .from('documentos_brutos')
-        .select('id, status_processamento')
+        .select('id, nome_arquivo, status_processamento, status_alinhamento, ultimo_erro, tentativas_alinhamento')
         .eq('user_id', clientId)
         .eq('competencia', competencia);
       setDocuments(docsData || []);
@@ -127,6 +132,47 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
       console.error('Error fetching client data:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleRealign = async (documentId: string) => {
+    setRealigningDocId(documentId);
+    try {
+      // Reset tentativas e status antes de realinhar
+      await supabase
+        .from('documentos_brutos')
+        .update({ 
+          status_alinhamento: 'pendente',
+          tentativas_alinhamento: 0,
+          ultimo_erro: null
+        })
+        .eq('id', documentId);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch('https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/align-document', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
+        body: JSON.stringify({ document_id: documentId })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        toast.success(`Documento realinhado! ${result.lancamentos_count} lançamentos gerados.`);
+      } else {
+        toast.error(result.error || 'Erro ao realinhar documento');
+      }
+      
+      fetchClientData();
+    } catch (error: any) {
+      console.error('Error realigning document:', error);
+      toast.error("Erro ao realinhar: " + error.message);
+    } finally {
+      setRealigningDocId(null);
     }
   };
 
@@ -183,7 +229,9 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
 
   const processedDocs = documents.filter(d => d.status_processamento === 'concluido');
   const pendingDocs = documents.filter(d => d.status_processamento === 'nao_processado' || d.status_processamento === 'processando');
-  const canClose = lancamentos.length > 0 && pendingDocs.length === 0 && !fechamento;
+  const errorDocs = documents.filter(d => d.status_alinhamento === 'erro');
+  const aligningDocs = documents.filter(d => d.status_alinhamento === 'processando' || d.status_alinhamento === 'aguardando_retry');
+  const canClose = lancamentos.length > 0 && pendingDocs.length === 0 && errorDocs.length === 0 && !fechamento;
 
   return (
     <div className="bg-card rounded-xl overflow-hidden">
@@ -389,6 +437,68 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
           </div>
         )}
       </div>
+
+      {/* Documentos com erro de alinhamento */}
+      {errorDocs.length > 0 && (
+        <div className="mx-5 mt-4">
+          <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20">
+            <div className="flex items-center gap-2 mb-3">
+              <FileWarning className="w-4 h-4 text-destructive" />
+              <span className="text-sm font-medium text-foreground">
+                Documentos com erro de alinhamento ({errorDocs.length})
+              </span>
+            </div>
+            <div className="space-y-2">
+              {errorDocs.map(doc => (
+                <div key={doc.id} className="flex items-center justify-between gap-3 p-3 rounded-lg bg-background/50">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-foreground truncate">{doc.nome_arquivo}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{doc.ultimo_erro || 'Erro desconhecido'}</p>
+                    {doc.tentativas_alinhamento && (
+                      <p className="text-xs text-muted-foreground">
+                        Tentativas: {doc.tentativas_alinhamento}/3
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRealign(doc.id)}
+                    disabled={realigningDocId === doc.id}
+                    className="shrink-0 rounded-lg"
+                  >
+                    {realigningDocId === doc.id ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                        Realinhando...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                        Realinhar
+                      </>
+                    )}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Documentos em processamento */}
+      {aligningDocs.length > 0 && (
+        <div className="mx-5 mt-4">
+          <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
+            <div className="flex items-center gap-2">
+              <Loader2 className="w-4 h-4 text-amber-500 animate-spin" />
+              <span className="text-sm text-foreground">
+                {aligningDocs.length} documento(s) em processamento de alinhamento...
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Lançamentos */}
       <div className="p-5 pt-6">
