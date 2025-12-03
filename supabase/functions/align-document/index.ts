@@ -10,6 +10,101 @@ const N8N_WEBHOOK_URL = "https://basilisk-coop-n8n.zmdnad.easypanel.host/webhook
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 5 * 60 * 1000; // 5 minutes
 
+// ============= FUNÇÕES DE CONVERSÃO DE FORMATO =============
+
+/**
+ * Converte data de "DD/MM/YYYY" para "YYYY-MM-DD" (formato ISO)
+ */
+function convertDate(dateStr: string | null | undefined): string | null {
+  if (!dateStr) return null;
+  
+  // Se já está no formato ISO (YYYY-MM-DD), retornar como está
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+  
+  // Converter de DD/MM/YYYY para YYYY-MM-DD
+  const parts = dateStr.split('/');
+  if (parts.length === 3) {
+    const [day, month, year] = parts;
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  }
+  
+  console.warn(`Invalid date format: ${dateStr}`);
+  return null;
+}
+
+/**
+ * Converte valor de "488,17" (string BR) para 488.17 (number)
+ */
+function convertValor(valor: string | number | null | undefined): number {
+  if (valor === null || valor === undefined) return 0;
+  if (typeof valor === 'number') return valor;
+  
+  // Remove pontos de milhar e troca vírgula por ponto
+  const cleaned = valor.toString().replace(/\./g, '').replace(',', '.');
+  const parsed = parseFloat(cleaned);
+  
+  return isNaN(parsed) ? 0 : parsed;
+}
+
+/**
+ * Extrai lançamentos da resposta do n8n independente do formato
+ * 
+ * Formatos suportados:
+ * 1. [{ "documento_alinhado": [...] }] - Array com objeto contendo documento_alinhado
+ * 2. [{"data":"03/11/2025",...}, ...] - Array direto de lançamentos
+ * 3. { "lancamentos": [...] } - Objeto com chave lancamentos
+ * 4. { "documento_alinhado": [...] } - Objeto com chave documento_alinhado
+ */
+function extractLancamentos(n8nData: any): any[] {
+  console.log('=== EXTRACTING LANCAMENTOS ===');
+  console.log('Input type:', typeof n8nData);
+  console.log('Is array:', Array.isArray(n8nData));
+  console.log('Input preview:', JSON.stringify(n8nData).substring(0, 500));
+  
+  let lancamentos: any[] = [];
+  
+  // FORMATO 1: Array com objeto contendo documento_alinhado
+  // [{ "documento_alinhado": [...] }]
+  if (Array.isArray(n8nData) && n8nData.length > 0 && n8nData[0]?.documento_alinhado) {
+    console.log('Detected format: Array with documento_alinhado');
+    lancamentos = n8nData[0].documento_alinhado;
+  }
+  // FORMATO 2: Array direto de lançamentos
+  // [{"data":"03/11/2025", ...}, ...]
+  else if (Array.isArray(n8nData) && n8nData.length > 0 && (n8nData[0]?.data || n8nData[0]?.historico)) {
+    console.log('Detected format: Direct array of lancamentos');
+    lancamentos = n8nData;
+  }
+  // FORMATO 3: Objeto com chave lancamentos
+  // { "lancamentos": [...] }
+  else if (n8nData?.lancamentos && Array.isArray(n8nData.lancamentos)) {
+    console.log('Detected format: Object with lancamentos key');
+    lancamentos = n8nData.lancamentos;
+  }
+  // FORMATO 4: Objeto com chave documento_alinhado
+  // { "documento_alinhado": [...] }
+  else if (n8nData?.documento_alinhado && Array.isArray(n8nData.documento_alinhado)) {
+    console.log('Detected format: Object with documento_alinhado key');
+    lancamentos = n8nData.documento_alinhado;
+  }
+  else {
+    console.error('Unknown n8n response format!');
+    console.error('Keys found:', n8nData ? Object.keys(n8nData) : 'null');
+  }
+  
+  console.log(`Extracted ${lancamentos.length} lancamentos`);
+  
+  if (lancamentos.length > 0) {
+    console.log('First lancamento (raw):', JSON.stringify(lancamentos[0]));
+  }
+  
+  console.log('==============================');
+  
+  return lancamentos;
+}
+
+// ============= FIM FUNÇÕES DE CONVERSÃO =============
+
 // Function to schedule retry
 async function scheduleRetry(supabaseUrl: string, supabaseServiceKey: string, documentId: string, delayMs: number) {
   console.log(`Scheduling retry for document ${documentId} in ${delayMs / 1000}s`);
@@ -176,17 +271,16 @@ serve(async (req) => {
       const n8nData = await n8nResponse.json();
       
       // Log detalhado da resposta do n8n
-      console.log('=== n8n RESPONSE DEBUG ===');
-      console.log('Raw response:', JSON.stringify(n8nData, null, 2));
-      console.log('Has lancamentos key:', 'lancamentos' in n8nData);
-      console.log('Lancamentos type:', typeof n8nData.lancamentos);
-      console.log('Lancamentos count:', n8nData.lancamentos?.length || 0);
-      console.log('==========================');
+      console.log('=== n8n RAW RESPONSE ===');
+      console.log('Response type:', typeof n8nData);
+      console.log('Is array:', Array.isArray(n8nData));
+      console.log('Full response:', JSON.stringify(n8nData, null, 2));
+      console.log('========================');
 
-      // Process and save lancamentos
-      const lancamentos = n8nData.lancamentos || [];
+      // Extrair lançamentos usando parser multi-formato
+      const lancamentos = extractLancamentos(n8nData);
 
-      // CORREÇÃO: Se n8n não retornou lançamentos, marcar como erro
+      // Se n8n não retornou lançamentos, marcar como erro
       if (lancamentos.length === 0) {
         console.error(`n8n returned empty lancamentos for document ${document_id}`);
         
@@ -217,17 +311,29 @@ serve(async (req) => {
         });
       }
 
-      // Inserir lançamentos
-      const lancamentosToInsert = lancamentos.map((l: any) => ({
-        user_id: doc.user_id,
-        competencia: doc.competencia,
-        documento_origem_id: doc.id,
-        data: l.data,
-        valor: l.valor,
-        historico: l.historico,
-        debito: l.debito,
-        credito: l.credito
-      }));
+      // Converter e inserir lançamentos
+      const lancamentosToInsert = lancamentos.map((l: any) => {
+        const converted = {
+          user_id: doc.user_id,
+          competencia: doc.competencia,
+          documento_origem_id: doc.id,
+          data: convertDate(l.data),              // "03/11/2025" → "2025-11-03"
+          valor: convertValor(l.valor),           // "488,17" → 488.17
+          historico: l.historico,
+          debito: String(l.debito || ''),         // 35 → "35"
+          credito: String(l.credito || '')        // 2 → "2"
+        };
+        return converted;
+      });
+
+      // Log de debug das conversões
+      console.log('=== CONVERSION DEBUG ===');
+      console.log(`Converting ${lancamentos.length} lancamentos`);
+      if (lancamentosToInsert.length > 0) {
+        console.log('First lancamento BEFORE conversion:', JSON.stringify(lancamentos[0]));
+        console.log('First lancamento AFTER conversion:', JSON.stringify(lancamentosToInsert[0]));
+      }
+      console.log('========================');
 
       console.log(`Inserting ${lancamentosToInsert.length} lancamentos for document ${document_id}`);
 
