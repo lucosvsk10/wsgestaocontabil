@@ -46,6 +46,12 @@ serve(async (req) => {
       });
     }
 
+    // Update alignment status to processing
+    await supabase
+      .from('documentos_conciliacao')
+      .update({ status_alinhamento: 'processando' })
+      .eq('id', document_id);
+
     // Get user info
     const { data: userInfo } = await supabase
       .from('users')
@@ -63,6 +69,15 @@ serve(async (req) => {
     if (planoError || !planoData) {
       console.error('Plano de contas not found for user:', doc.user_id);
       
+      // Update alignment status to error
+      await supabase
+        .from('documentos_conciliacao')
+        .update({ 
+          status_alinhamento: 'erro',
+          tentativas_alinhamento: (doc.tentativas_alinhamento || 0) + 1
+        })
+        .eq('id', document_id);
+
       // Notify user about missing plano de contas
       await supabase
         .from('notifications')
@@ -138,6 +153,16 @@ serve(async (req) => {
         console.log(`Inserted ${lancamentos.length} lancamentos for document ${document_id}`);
       }
 
+      // Update document as aligned
+      await supabase
+        .from('documentos_conciliacao')
+        .update({
+          status_alinhamento: 'alinhado',
+          alinhado_em: new Date().toISOString(),
+          tentativas_alinhamento: 0
+        })
+        .eq('id', document_id);
+
       // Notify user
       await supabase
         .from('notifications')
@@ -158,12 +183,21 @@ serve(async (req) => {
     } catch (n8nError: any) {
       console.error('n8n alignment error:', n8nError);
       
+      // Update alignment status to error
+      await supabase
+        .from('documentos_conciliacao')
+        .update({
+          status_alinhamento: 'erro',
+          tentativas_alinhamento: (doc.tentativas_alinhamento || 0) + 1
+        })
+        .eq('id', document_id);
+
       // Notify about error
       await supabase
         .from('notifications')
         .insert({
           user_id: doc.user_id,
-          message: `Erro ao alinhar documento ${doc.nome_arquivo}. Tente novamente mais tarde.`,
+          message: `Erro ao alinhar documento ${doc.nome_arquivo}. O sistema tentará novamente.`,
           type: 'erro_alinhamento'
         });
 

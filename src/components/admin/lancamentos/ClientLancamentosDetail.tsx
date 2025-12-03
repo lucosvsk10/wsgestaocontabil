@@ -1,22 +1,21 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { FileText, Calendar, Download, FileSpreadsheet, User, Clock, CheckCircle, AlertCircle, ClipboardList } from "lucide-react";
-import { PlanoContasModal } from "./PlanoContasModal";
+import { Download, FileSpreadsheet, ClipboardList, User, Mail, Calendar, CheckCircle, AlertCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { PlanoContasModal } from "./PlanoContasModal";
+import { LancamentosTable } from "./LancamentosTable";
 
-interface Document {
+interface Lancamento {
   id: string;
-  nome_arquivo: string;
-  tipo_documento: string;
-  status_processamento: string;
+  data: string | null;
+  historico: string | null;
+  debito: string | null;
+  credito: string | null;
+  valor: number | null;
   created_at: string;
-  url_storage: string;
-  ultimo_erro?: string;
 }
 
 interface Fechamento {
@@ -52,71 +51,61 @@ const MONTHS = [
   { value: '12', label: 'Dezembro' },
 ];
 
-const TYPE_LABELS: Record<string, string> = {
-  compra: "Compra",
-  extrato: "Extrato",
-  comprovante: "Comprovante",
-  observacao: "Observação"
-};
-
-const STATUS_CONFIG = {
-  pendente: { icon: Clock, label: "Pendente", color: "bg-yellow-500/10 text-yellow-600" },
-  processando: { icon: Clock, label: "Processando", color: "bg-blue-500/10 text-blue-600" },
-  processado: { icon: CheckCircle, label: "Processado", color: "bg-green-500/10 text-green-600" },
-  erro: { icon: AlertCircle, label: "Erro", color: "bg-destructive/10 text-destructive" }
-};
-
 export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailProps) => {
   const [clientInfo, setClientInfo] = useState<ClientInfo | null>(null);
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [fechamentos, setFechamentos] = useState<Fechamento[]>([]);
-  const [selectedMonth, setSelectedMonth] = useState(String(new Date().getMonth() + 1).padStart(2, '0'));
-  const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()));
-  const [isLoading, setIsLoading] = useState(true);
+  const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
+  const [fechamento, setFechamento] = useState<Fechamento | null>(null);
   const [hasPlanoContas, setHasPlanoContas] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isPlanoModalOpen, setIsPlanoModalOpen] = useState(false);
-
+  
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(String(now.getMonth() + 1).padStart(2, '0'));
+  const [selectedYear, setSelectedYear] = useState(String(now.getFullYear()));
+  
   const competencia = `${selectedYear}-${selectedMonth}`;
-  const currentYear = new Date().getFullYear();
+  const currentYear = now.getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => String(currentYear - 2 + i));
 
   useEffect(() => {
-    fetchClientData();
+    if (clientId) {
+      fetchClientData();
+    }
   }, [clientId, competencia]);
 
   const fetchClientData = async () => {
     setIsLoading(true);
     try {
-      // Fetch client info
-      const { data: user } = await supabase
+      // Get client info
+      const { data: userData } = await supabase
         .from('users')
         .select('name, email')
         .eq('id', clientId)
         .single();
       
-      setClientInfo(user);
+      setClientInfo(userData);
 
-      // Fetch documents
-      const { data: docs } = await supabase
-        .from('documentos_conciliacao')
+      // Get aligned lancamentos for selected month (ONLY aligned entries)
+      const { data: lancamentosData } = await supabase
+        .from('lancamentos_processados')
         .select('*')
         .eq('user_id', clientId)
         .eq('competencia', competencia)
-        .order('created_at', { ascending: false });
+        .order('data', { ascending: true });
       
-      setDocuments(docs || []);
+      setLancamentos(lancamentosData || []);
 
-      // Fetch fechamentos
-      const { data: fechs } = await supabase
+      // Get fechamento for selected month
+      const { data: fechamentoData } = await supabase
         .from('fechamentos_exportados')
         .select('*')
         .eq('user_id', clientId)
-        .order('competencia', { ascending: false })
-        .limit(6);
+        .eq('competencia', competencia)
+        .maybeSingle();
       
-      setFechamentos(fechs || []);
+      setFechamento(fechamentoData);
 
-      // Check if client has plano de contas
+      // Check plano de contas
       const { count } = await supabase
         .from('planos_contas')
         .select('*', { count: 'exact', head: true })
@@ -131,53 +120,144 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
     }
   };
 
-  const currentFechamento = fechamentos.find(f => f.competencia === competencia);
-
   return (
-    <div className="space-y-6">
-      {/* Client Header */}
-      {clientInfo && (
-        <div className="bg-card rounded-xl border border-border p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <User className="h-6 w-6 text-primary" />
+    <div className="bg-card rounded-xl border border-border overflow-hidden">
+      {/* Header com info do cliente */}
+      <div className="p-5 border-b border-border bg-muted/20">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-1">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <User className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-semibold text-foreground">
-                    {clientInfo.name}
-                  </h2>
-                  {hasPlanoContas ? (
-                    <Badge className="bg-green-500/10 text-green-600 border-green-500/30">
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Plano OK
-                    </Badge>
-                  ) : (
-                    <Badge className="bg-destructive/10 text-destructive border-destructive/30">
-                      <AlertCircle className="h-3 w-3 mr-1" />
-                      Sem Plano
-                    </Badge>
-                  )}
-                </div>
+                <h2 className="text-lg font-semibold text-foreground">
+                  {clientInfo?.name || 'Carregando...'}
+                </h2>
+                {clientInfo?.email && (
+                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <Mail className="w-3.5 h-3.5" />
+                    {clientInfo.email}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Botão Plano de Contas destacado */}
+          <Button
+            onClick={() => setIsPlanoModalOpen(true)}
+            variant={hasPlanoContas ? "outline" : "default"}
+            className={!hasPlanoContas ? "bg-primary text-primary-foreground hover:bg-primary/90" : ""}
+          >
+            <ClipboardList className="w-4 h-4 mr-2" />
+            Plano de Contas
+            {hasPlanoContas ? (
+              <Badge className="ml-2 bg-green-500/20 text-green-600 border-0">
+                <CheckCircle className="w-3 h-3 mr-1" />
+                OK
+              </Badge>
+            ) : (
+              <Badge className="ml-2 bg-destructive/20 text-destructive border-0">
+                <AlertCircle className="w-3 h-3 mr-1" />
+                Pendente
+              </Badge>
+            )}
+          </Button>
+        </div>
+
+        {/* Seletores de mês/ano */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <Calendar className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">Competência:</span>
+          </div>
+          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+            <SelectTrigger className="w-36">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {MONTHS.map(m => (
+                <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={selectedYear} onValueChange={setSelectedYear}>
+            <SelectTrigger className="w-24">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {years.map(y => (
+                <SelectItem key={y} value={y}>{y}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Status do fechamento */}
+      {fechamento && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="p-4 border-b border-border bg-green-500/5"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
+                <CheckCircle className="w-5 h-5 text-green-500" />
+              </div>
+              <div>
+                <p className="font-medium text-foreground">Mês Fechado</p>
                 <p className="text-sm text-muted-foreground">
-                  {clientInfo.email}
+                  {fechamento.total_lancamentos} lançamentos exportados
                 </p>
               </div>
             </div>
-            <Button
-              variant={hasPlanoContas ? "outline" : "default"}
-              size="sm"
-              onClick={() => setIsPlanoModalOpen(true)}
-            >
-              <ClipboardList className="h-4 w-4 mr-2" />
-              Plano de Contas
-            </Button>
+            <div className="flex gap-2">
+              {fechamento.arquivo_excel_url && (
+                <a
+                  href={fechamento.arquivo_excel_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-500/10 text-green-600 text-sm font-medium hover:bg-green-500/20 transition-colors"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                  Excel
+                </a>
+              )}
+              {fechamento.arquivo_csv_url && (
+                <a
+                  href={fechamento.arquivo_csv_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-muted text-foreground text-sm font-medium hover:bg-muted/80 transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  CSV
+                </a>
+              )}
+            </div>
           </div>
-        </div>
+        </motion.div>
       )}
 
-      {/* Plano de Contas Modal */}
+      {/* Tabela de lançamentos alinhados */}
+      <div className="p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-medium text-foreground flex items-center gap-2">
+            <FileSpreadsheet className="w-4 h-4 text-primary" />
+            Lançamentos Alinhados
+          </h3>
+          <Badge variant="outline" className="text-muted-foreground">
+            {lancamentos.length} registros
+          </Badge>
+        </div>
+        
+        <LancamentosTable lancamentos={lancamentos} isLoading={isLoading} />
+      </div>
+
+      {/* Modal do Plano de Contas */}
       <PlanoContasModal
         isOpen={isPlanoModalOpen}
         onClose={() => {
@@ -187,178 +267,6 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
         clientId={clientId}
         clientName={clientInfo?.name || ''}
       />
-
-      {/* Month Selector */}
-      <div className="flex items-center gap-3">
-        <Calendar className="h-5 w-5 text-primary" />
-        <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-          <SelectTrigger className="w-36">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {MONTHS.map(m => (
-              <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={selectedYear} onValueChange={setSelectedYear}>
-          <SelectTrigger className="w-24">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {years.map(y => (
-              <SelectItem key={y} value={y}>{y}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Fechamento Status */}
-      {currentFechamento && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-green-500/10 border border-green-500/30 rounded-xl p-4"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <CheckCircle className="h-5 w-5 text-green-500" />
-              <div>
-                <p className="font-medium text-foreground">Mês Fechado</p>
-                <p className="text-sm text-muted-foreground">
-                  {currentFechamento.total_lancamentos} lançamentos
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              {currentFechamento.arquivo_excel_url && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => window.open(currentFechamento.arquivo_excel_url, '_blank')}
-                >
-                  <FileSpreadsheet className="h-4 w-4 mr-1" />
-                  Excel
-                </Button>
-              )}
-              {currentFechamento.arquivo_csv_url && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => window.open(currentFechamento.arquivo_csv_url, '_blank')}
-                >
-                  <Download className="h-4 w-4 mr-1" />
-                  CSV
-                </Button>
-              )}
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Documents List */}
-      <div className="bg-card rounded-xl border border-border overflow-hidden">
-        <div className="p-4 border-b border-border">
-          <h3 className="font-semibold text-foreground">
-            Documentos ({documents.length})
-          </h3>
-        </div>
-
-        {documents.length === 0 ? (
-          <div className="p-8 text-center text-muted-foreground">
-            Nenhum documento enviado neste período
-          </div>
-        ) : (
-          <div className="divide-y divide-border">
-            {documents.map((doc) => {
-              const status = STATUS_CONFIG[doc.status_processamento as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pendente;
-              const StatusIcon = status.icon;
-
-              return (
-                <div key={doc.id} className="p-4 hover:bg-muted/50 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <FileText className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium text-foreground truncate max-w-xs">
-                          {doc.nome_arquivo}
-                        </p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span>{TYPE_LABELS[doc.tipo_documento] || doc.tipo_documento}</span>
-                          <span>•</span>
-                          <span>{format(new Date(doc.created_at), "dd/MM HH:mm", { locale: ptBR })}</span>
-                        </div>
-                        {doc.ultimo_erro && (
-                          <p className="text-xs text-destructive mt-1">{doc.ultimo_erro}</p>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <Badge className={status.color}>
-                        <StatusIcon className="h-3 w-3 mr-1" />
-                        {status.label}
-                      </Badge>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => window.open(doc.url_storage, '_blank')}
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Recent Fechamentos */}
-      {fechamentos.length > 0 && (
-        <div className="bg-card rounded-xl border border-border overflow-hidden">
-          <div className="p-4 border-b border-border">
-            <h3 className="font-semibold text-foreground">
-              Histórico de Fechamentos
-            </h3>
-          </div>
-          <div className="divide-y divide-border">
-            {fechamentos.map((fech) => (
-              <div key={fech.id} className="p-4 flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-foreground">
-                    {MONTHS.find(m => m.value === fech.competencia.split('-')[1])?.label} {fech.competencia.split('-')[0]}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {fech.total_lancamentos} lançamentos
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  {fech.arquivo_excel_url && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => window.open(fech.arquivo_excel_url, '_blank')}
-                    >
-                      <FileSpreadsheet className="h-4 w-4" />
-                    </Button>
-                  )}
-                  {fech.arquivo_csv_url && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => window.open(fech.arquivo_csv_url, '_blank')}
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 };
