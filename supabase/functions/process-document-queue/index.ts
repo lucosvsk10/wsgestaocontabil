@@ -31,9 +31,9 @@ serve(async (req) => {
     let storagePath = file_url;
 
     if (!docId) {
-      // Find the document that was just inserted
+      // Find the document that was just inserted from renamed table
       const { data: doc, error: docError } = await supabase
-        .from('documentos_conciliacao')
+        .from('documentos_brutos')
         .select('id, url_storage, tentativas_processamento')
         .eq('user_id', user_id)
         .eq('competencia', competencia)
@@ -53,7 +53,7 @@ serve(async (req) => {
     } else {
       // This is a retry - fetch the storage path from DB
       const { data: doc, error: docError } = await supabase
-        .from('documentos_conciliacao')
+        .from('documentos_brutos')
         .select('url_storage')
         .eq('id', docId)
         .single();
@@ -88,7 +88,7 @@ serve(async (req) => {
 
     // Update status to processing
     await supabase
-      .from('documentos_conciliacao')
+      .from('documentos_brutos')
       .update({ status_processamento: 'processando' })
       .eq('id', docId);
 
@@ -118,7 +118,7 @@ serve(async (req) => {
 
       // Update document as processed
       await supabase
-        .from('documentos_conciliacao')
+        .from('documentos_brutos')
         .update({
           status_processamento: 'concluido',
           processado_em: new Date().toISOString(),
@@ -141,7 +141,7 @@ serve(async (req) => {
 
       // Get current retry count
       const { data: currentDoc } = await supabase
-        .from('documentos_conciliacao')
+        .from('documentos_brutos')
         .select('tentativas_processamento')
         .eq('id', docId)
         .single();
@@ -151,7 +151,7 @@ serve(async (req) => {
       if (currentRetries >= MAX_RETRIES) {
         // Max retries reached - mark as error
         await supabase
-          .from('documentos_conciliacao')
+          .from('documentos_brutos')
           .update({
             status_processamento: 'erro',
             tentativas_processamento: currentRetries,
@@ -183,7 +183,7 @@ serve(async (req) => {
       } else {
         // Schedule retry
         await supabase
-          .from('documentos_conciliacao')
+          .from('documentos_brutos')
           .update({
             status_processamento: 'nao_processado',
             tentativas_processamento: currentRetries,

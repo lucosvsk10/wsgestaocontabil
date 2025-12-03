@@ -22,10 +22,10 @@ serve(async (req) => {
     console.log(`Received n8n response for document ${document_id}:`, { success, event });
 
     if (event === 'arquivos-brutos') {
-      // Update document with extracted data
+      // Update document with extracted data in renamed table
       if (success) {
         await supabase
-          .from('documentos_conciliacao')
+          .from('documentos_brutos')
           .update({
             status_processamento: 'concluido',
             processado_em: new Date().toISOString(),
@@ -39,7 +39,7 @@ serve(async (req) => {
       } else {
         // Get current retry count to decide if we should mark as error
         const { data: doc } = await supabase
-          .from('documentos_conciliacao')
+          .from('documentos_brutos')
           .select('tentativas_processamento, user_id, nome_arquivo')
           .eq('id', document_id)
           .single();
@@ -48,7 +48,7 @@ serve(async (req) => {
 
         if (currentRetries >= 5) {
           await supabase
-            .from('documentos_conciliacao')
+            .from('documentos_brutos')
             .update({
               status_processamento: 'erro',
               tentativas_processamento: currentRetries,
@@ -68,7 +68,7 @@ serve(async (req) => {
           }
         } else {
           await supabase
-            .from('documentos_conciliacao')
+            .from('documentos_brutos')
             .update({
               status_processamento: 'pendente',
               tentativas_processamento: currentRetries,
@@ -95,8 +95,9 @@ serve(async (req) => {
           credito: l.credito
         }));
 
+        // Insert into renamed table
         const { error: insertError } = await supabase
-          .from('lancamentos_processados')
+          .from('lancamentos_alinhados')
           .insert(lancamentosToInsert);
 
         if (insertError) {

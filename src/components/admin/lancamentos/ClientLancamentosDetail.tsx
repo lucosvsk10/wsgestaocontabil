@@ -85,9 +85,9 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
       
       setClientInfo(userData);
 
-      // Get aligned lancamentos for selected month (ONLY aligned entries)
+      // Get aligned lancamentos for selected month from renamed table
       const { data: lancamentosData } = await supabase
-        .from('lancamentos_processados')
+        .from('lancamentos_alinhados')
         .select('*')
         .eq('user_id', clientId)
         .eq('competencia', competencia)

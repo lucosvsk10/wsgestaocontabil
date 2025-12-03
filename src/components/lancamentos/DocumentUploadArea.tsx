@@ -109,8 +109,9 @@ export const DocumentUploadArea = ({
 
         if (uploadError) throw uploadError;
 
+        // Insert into renamed table: documentos_brutos
         const { error: dbError } = await supabase
-          .from('documentos_conciliacao')
+          .from('documentos_brutos')
           .insert({
             user_id: userId,
             competencia,
