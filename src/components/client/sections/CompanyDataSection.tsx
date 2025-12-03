@@ -35,14 +35,14 @@ export const CompanyDataSection = () => {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="text-center space-y-2">
-          <div className="w-12 h-12 mx-auto rounded-full bg-foreground/5 animate-pulse" />
-          <div className="h-6 w-32 mx-auto bg-foreground/5 rounded animate-pulse" />
+      <div className="max-w-3xl mx-auto py-8 px-4">
+        <div className="text-center mb-10">
+          <div className="w-12 h-12 mx-auto rounded-full bg-muted animate-pulse mb-4" />
+          <div className="h-6 w-32 mx-auto bg-muted rounded animate-pulse" />
         </div>
         <div className="space-y-4">
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className="h-6 bg-foreground/5 rounded animate-pulse" />
+            <div key={i} className="h-16 bg-card rounded-xl animate-pulse" />
           ))}
         </div>
       </div>
@@ -50,34 +50,38 @@ export const CompanyDataSection = () => {
   }
 
   const DataRow = ({ icon: Icon, label, value }: { icon: any; label: string; value: string | undefined }) => (
-    <div className="flex items-center py-3 border-b border-border/10 last:border-0">
-      <Icon className="w-4 h-4 text-muted-foreground mr-3 flex-shrink-0" />
+    <div className="flex items-center py-3.5 px-4 hover:bg-muted/50 transition-colors rounded-lg">
+      <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center mr-3 flex-shrink-0">
+        <Icon className="w-4 h-4 text-muted-foreground" />
+      </div>
       <span className="text-xs text-muted-foreground w-28 flex-shrink-0">{label}</span>
-      <span className="text-sm text-foreground flex-1">{value || '-'}</span>
+      <span className="text-sm text-foreground flex-1 font-medium">{value || '-'}</span>
     </div>
   );
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
       transition={{ duration: 0.4 }}
-      className="space-y-6"
+      className="max-w-3xl mx-auto py-8 px-4"
     >
       {/* Header minimalista */}
-      <div className="text-center space-y-2">
-        <div className="w-12 h-12 mx-auto rounded-full bg-foreground/5 flex items-center justify-center">
-          <Building2 className="w-5 h-5 text-muted-foreground" />
+      <div className="text-center mb-10">
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mb-4">
+          <Building2 className="w-5 h-5 text-primary" />
         </div>
-        <h1 className="text-2xl font-light text-foreground">Dados da Empresa</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="text-2xl font-light text-foreground mb-1">
+          Dados da Empresa
+        </h1>
+        <p className="text-sm text-muted-foreground font-light">
           Informações cadastrais
         </p>
       </div>
 
       {!companyData ? (
-        <div className="text-center py-16">
-          <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-foreground/5 flex items-center justify-center">
+        <div className="bg-card rounded-xl p-12 text-center">
+          <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
             <Building2 className="w-5 h-5 text-muted-foreground" />
           </div>
           <h3 className="text-sm font-medium text-foreground mb-1">
@@ -88,13 +92,15 @@ export const CompanyDataSection = () => {
           </p>
         </div>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-6">
           {/* Informações Básicas */}
-          <div>
-            <h2 className="text-xs uppercase tracking-wider text-muted-foreground mb-4 font-medium">
-              Informações Básicas
-            </h2>
-            <div className="bg-foreground/[0.02] rounded-lg px-4">
+          <div className="bg-card rounded-xl overflow-hidden">
+            <div className="px-5 py-3 border-b border-border/50">
+              <h2 className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                Informações Básicas
+              </h2>
+            </div>
+            <div className="p-2">
               <DataRow icon={Building2} label="Razão Social" value={companyData.name} />
               <DataRow icon={CreditCard} label="CNPJ" value={companyData.cnpj} />
               <DataRow icon={Calendar} label="Abertura" value={companyData.opening_date ? new Date(companyData.opening_date).toLocaleDateString('pt-BR') : undefined} />
@@ -103,11 +109,13 @@ export const CompanyDataSection = () => {
           </div>
 
           {/* Contato */}
-          <div>
-            <h2 className="text-xs uppercase tracking-wider text-muted-foreground mb-4 font-medium">
-              Contato
-            </h2>
-            <div className="bg-foreground/[0.02] rounded-lg px-4">
+          <div className="bg-card rounded-xl overflow-hidden">
+            <div className="px-5 py-3 border-b border-border/50">
+              <h2 className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                Contato
+              </h2>
+            </div>
+            <div className="p-2">
               <DataRow icon={Phone} label="Telefone" value={companyData.phone} />
               <DataRow icon={Mail} label="E-mail" value={companyData.email} />
               <DataRow icon={MapPin} label="Endereço" value={companyData.address} />
@@ -115,11 +123,13 @@ export const CompanyDataSection = () => {
           </div>
 
           {/* Contador Responsável */}
-          <div>
-            <h2 className="text-xs uppercase tracking-wider text-muted-foreground mb-4 font-medium">
-              Contador Responsável
-            </h2>
-            <div className="bg-foreground/[0.02] rounded-lg px-4">
+          <div className="bg-card rounded-xl overflow-hidden">
+            <div className="px-5 py-3 border-b border-border/50">
+              <h2 className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                Contador Responsável
+              </h2>
+            </div>
+            <div className="p-2">
               <DataRow icon={User} label="Nome" value={companyData.accountant_name} />
               <DataRow icon={Phone} label="Contato" value={companyData.accountant_contact} />
             </div>

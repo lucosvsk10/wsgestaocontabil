@@ -3,7 +3,7 @@ import { AdminLayout } from "@/components/admin/layout/AdminLayout";
 import { ClientStatusList } from "@/components/admin/lancamentos/ClientStatusList";
 import { ClientLancamentosDetail } from "@/components/admin/lancamentos/ClientLancamentosDetail";
 import { motion } from "framer-motion";
-import { MousePointerClick } from "lucide-react";
+import { FileSpreadsheet, MousePointerClick } from "lucide-react";
 
 const AdminLancamentos = () => {
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
@@ -16,13 +16,19 @@ const AdminLancamentos = () => {
         transition={{ duration: 0.5 }}
         className="space-y-6 p-1"
       >
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            Gestão de Lançamentos
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Acompanhe os documentos enviados pelos clientes
-          </p>
+        {/* Header */}
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+            <FileSpreadsheet className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-light text-foreground">
+              Gestão de Lançamentos
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              Acompanhe os documentos enviados pelos clientes
+            </p>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
@@ -40,11 +46,14 @@ const AdminLancamentos = () => {
               <ClientLancamentosDetail clientId={selectedClientId} />
             ) : (
               <div className="bg-card rounded-xl p-12 text-center">
-                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 rounded-xl bg-muted flex items-center justify-center mx-auto mb-4">
                   <MousePointerClick className="w-6 h-6 text-muted-foreground" />
                 </div>
-                <p className="text-muted-foreground">
-                  Selecione um cliente para ver os detalhes
+                <h3 className="text-sm font-medium text-foreground mb-1">
+                  Selecione um cliente
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Escolha um cliente da lista para ver os detalhes dos lançamentos
                 </p>
               </div>
             )}

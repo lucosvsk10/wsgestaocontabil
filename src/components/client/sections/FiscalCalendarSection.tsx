@@ -50,23 +50,23 @@ export const FiscalCalendarSection = () => {
   const getStatusIndicator = (status: string) => {
     switch (status) {
       case 'completed': return { color: 'bg-green-500', icon: CheckCircle, text: 'Concluído' };
-      case 'today': return { color: 'bg-blue-500', icon: Clock, text: 'Hoje' };
-      case 'overdue': return { color: 'bg-red-500', icon: AlertTriangle, text: 'Atrasado' };
+      case 'today': return { color: 'bg-primary', icon: Clock, text: 'Hoje' };
+      case 'overdue': return { color: 'bg-destructive', icon: AlertTriangle, text: 'Atrasado' };
       case 'upcoming': return { color: 'bg-amber-500', icon: Calendar, text: 'Pendente' };
-      default: return { color: 'bg-gray-500', icon: Calendar, text: status };
+      default: return { color: 'bg-muted-foreground', icon: Calendar, text: status };
     }
   };
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="text-center space-y-2">
-          <div className="w-12 h-12 mx-auto rounded-full bg-foreground/5 animate-pulse" />
-          <div className="h-6 w-32 mx-auto bg-foreground/5 rounded animate-pulse" />
+      <div className="max-w-3xl mx-auto py-8 px-4">
+        <div className="text-center mb-10">
+          <div className="w-12 h-12 mx-auto rounded-full bg-muted animate-pulse mb-4" />
+          <div className="h-6 w-32 mx-auto bg-muted rounded animate-pulse" />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-3">
           {[1, 2, 3].map(i => (
-            <div key={i} className="h-20 bg-foreground/5 rounded-lg animate-pulse" />
+            <div key={i} className="h-20 bg-card rounded-xl animate-pulse" />
           ))}
         </div>
       </div>
@@ -75,30 +75,32 @@ export const FiscalCalendarSection = () => {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
       transition={{ duration: 0.4 }}
-      className="space-y-6"
+      className="max-w-3xl mx-auto py-8 px-4"
     >
       {/* Header minimalista */}
-      <div className="text-center space-y-2">
-        <div className="w-12 h-12 mx-auto rounded-full bg-foreground/5 flex items-center justify-center">
-          <Calendar className="w-5 h-5 text-muted-foreground" />
+      <div className="text-center mb-10">
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mb-4">
+          <Calendar className="w-5 h-5 text-primary" />
         </div>
-        <h1 className="text-2xl font-light text-foreground">Agenda Fiscal</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="text-2xl font-light text-foreground mb-1">
+          Agenda Fiscal
+        </h1>
+        <p className="text-sm text-muted-foreground font-light">
           Próximos vencimentos e obrigações
         </p>
       </div>
 
       {/* Contagem */}
-      <p className="text-xs text-muted-foreground">
+      <p className="text-xs text-muted-foreground mb-4">
         {events.length} evento{events.length !== 1 ? 's' : ''}
       </p>
 
       {events.length === 0 ? (
-        <div className="text-center py-16">
-          <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-foreground/5 flex items-center justify-center">
+        <div className="bg-card rounded-xl p-12 text-center">
+          <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
             <Calendar className="w-5 h-5 text-muted-foreground" />
           </div>
           <h3 className="text-sm font-medium text-foreground mb-1">
@@ -109,64 +111,66 @@ export const FiscalCalendarSection = () => {
           </p>
         </div>
       ) : (
-        <div className="space-y-1">
-          {events.map((event, index) => {
-            const statusInfo = getStatusIndicator(event.status);
-            return (
-              <motion.div
-                key={event.id}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.2, delay: index * 0.03 }}
-                className="group py-4 px-4 rounded-lg transition-all duration-200 hover:bg-foreground/5"
-              >
-                <div className="flex items-start gap-4">
-                  {/* Indicador de status como círculo pequeno */}
-                  <div className="flex-shrink-0 pt-1">
-                    <div className={`w-2.5 h-2.5 rounded-full ${statusInfo.color}`} />
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-sm font-medium text-foreground">
-                        {event.title}
-                      </h3>
-                      {event.status === 'overdue' && (
-                        <span className="text-[10px] uppercase tracking-wider text-destructive font-medium">
-                          Atrasado
-                        </span>
-                      )}
-                      {event.status === 'today' && (
-                        <span className="text-[10px] uppercase tracking-wider text-blue-500 font-medium">
-                          Hoje
-                        </span>
-                      )}
+        <div className="bg-card rounded-xl overflow-hidden">
+          <div className="divide-y divide-border/50">
+            {events.map((event, index) => {
+              const statusInfo = getStatusIndicator(event.status);
+              return (
+                <motion.div
+                  key={event.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.2, delay: index * 0.03 }}
+                  className="group py-4 px-5 transition-all duration-200 hover:bg-muted/50"
+                >
+                  <div className="flex items-start gap-4">
+                    {/* Indicador de status */}
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                      event.status === 'completed' ? 'bg-green-500/10' :
+                      event.status === 'today' ? 'bg-primary/10' :
+                      event.status === 'overdue' ? 'bg-destructive/10' :
+                      'bg-amber-500/10'
+                    }`}>
+                      <div className={`w-2.5 h-2.5 rounded-full ${statusInfo.color}`} />
                     </div>
                     
-                    {event.description && (
-                      <p className="text-xs text-muted-foreground line-clamp-1 mb-2">
-                        {event.description}
-                      </p>
-                    )}
-                    
-                    <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {new Date(event.date).toLocaleDateString('pt-BR')}
-                      </span>
-                      <span className="text-foreground/30">•</span>
-                      <span>{event.category}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="text-sm font-medium text-foreground">
+                          {event.title}
+                        </h3>
+                        {event.status === 'overdue' && (
+                          <span className="text-[10px] uppercase tracking-wider text-destructive font-medium bg-destructive/10 px-1.5 py-0.5 rounded">
+                            Atrasado
+                          </span>
+                        )}
+                        {event.status === 'today' && (
+                          <span className="text-[10px] uppercase tracking-wider text-primary font-medium bg-primary/10 px-1.5 py-0.5 rounded">
+                            Hoje
+                          </span>
+                        )}
+                      </div>
+                      
+                      {event.description && (
+                        <p className="text-xs text-muted-foreground line-clamp-1 mb-2">
+                          {event.description}
+                        </p>
+                      )}
+                      
+                      <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {new Date(event.date).toLocaleDateString('pt-BR')}
+                        </span>
+                        <span className="text-border">•</span>
+                        <span>{event.category}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-
-                {/* Divisor sutil entre itens */}
-                {index < events.length - 1 && (
-                  <div className="mt-4 border-b border-border/20" />
-                )}
-              </motion.div>
-            );
-          })}
+                </motion.div>
+              );
+            })}
+          </div>
         </div>
       )}
     </motion.div>

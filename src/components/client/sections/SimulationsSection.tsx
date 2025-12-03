@@ -263,14 +263,14 @@ export const SimulationsSection = () => {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="text-center space-y-2">
-          <div className="w-12 h-12 mx-auto rounded-full bg-foreground/5 animate-pulse" />
-          <div className="h-6 w-32 mx-auto bg-foreground/5 rounded animate-pulse" />
+      <div className="max-w-3xl mx-auto py-8 px-4">
+        <div className="text-center mb-10">
+          <div className="w-12 h-12 mx-auto rounded-full bg-muted animate-pulse mb-4" />
+          <div className="h-6 w-32 mx-auto bg-muted rounded animate-pulse" />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-3">
           {[1, 2, 3].map(i => (
-            <div key={i} className="h-20 bg-foreground/5 rounded-lg animate-pulse" />
+            <div key={i} className="h-20 bg-card rounded-xl animate-pulse" />
           ))}
         </div>
       </div>
@@ -280,32 +280,34 @@ export const SimulationsSection = () => {
   return (
     <>
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
         transition={{ duration: 0.4 }}
-        className="space-y-6"
+        className="max-w-3xl mx-auto py-8 px-4"
       >
         {/* Header minimalista */}
-        <div className="text-center space-y-2">
-          <div className="w-12 h-12 mx-auto rounded-full bg-foreground/5 flex items-center justify-center">
-            <Calculator className="w-5 h-5 text-muted-foreground" />
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mb-4">
+            <Calculator className="w-5 h-5 text-primary" />
           </div>
-          <h1 className="text-2xl font-light text-foreground">Simulações</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-2xl font-light text-foreground mb-1">
+            Simulações
+          </h1>
+          <p className="text-sm text-muted-foreground font-light">
             Suas simulações de impostos
           </p>
         </div>
 
         {simulations.length === 0 ? (
-          <div className="text-center py-12 space-y-6">
-            <p className="text-sm text-muted-foreground">
+          <div className="bg-card rounded-xl p-12 text-center">
+            <p className="text-sm text-muted-foreground mb-6">
               Nenhuma simulação realizada ainda
             </p>
             <div className="flex flex-col gap-2 max-w-xs mx-auto">
               <a 
                 href="/simulador-irpf" 
                 target="_blank"
-                className="py-2.5 px-4 rounded-lg text-sm font-medium bg-foreground/5 hover:bg-foreground/10 text-foreground border border-border/50 transition-all duration-200 flex items-center justify-center gap-2"
+                className="py-2.5 px-4 rounded-xl text-sm font-medium bg-muted hover:bg-muted/80 text-foreground transition-all duration-200 flex items-center justify-center gap-2"
               >
                 <Calculator className="w-4 h-4" />
                 Simulador IRPF
@@ -313,7 +315,7 @@ export const SimulationsSection = () => {
               <a 
                 href="/simulador-prolabore" 
                 target="_blank"
-                className="py-2.5 px-4 rounded-lg text-sm font-medium bg-foreground/5 hover:bg-foreground/10 text-foreground border border-border/50 transition-all duration-200 flex items-center justify-center gap-2"
+                className="py-2.5 px-4 rounded-xl text-sm font-medium bg-muted hover:bg-muted/80 text-foreground transition-all duration-200 flex items-center justify-center gap-2"
               >
                 <Building2 className="w-4 h-4" />
                 Simulador Pró-labore
@@ -321,7 +323,7 @@ export const SimulationsSection = () => {
               <a 
                 href="/calculadora-inss" 
                 target="_blank"
-                className="py-2.5 px-4 rounded-lg text-sm font-medium bg-foreground/5 hover:bg-foreground/10 text-foreground border border-border/50 transition-all duration-200 flex items-center justify-center gap-2"
+                className="py-2.5 px-4 rounded-xl text-sm font-medium bg-muted hover:bg-muted/80 text-foreground transition-all duration-200 flex items-center justify-center gap-2"
               >
                 <CreditCard className="w-4 h-4" />
                 Calculadora INSS
@@ -330,16 +332,16 @@ export const SimulationsSection = () => {
           </div>
         ) : (
           <>
-            {/* Tabs como texto simples */}
-            <div className="flex gap-4 text-sm border-b border-border/30 pb-3">
+            {/* Tabs */}
+            <div className="flex flex-wrap gap-2 mb-4">
               {tabs.map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`transition-colors ${
+                  className={`px-3 py-1.5 rounded-lg text-sm transition-all ${
                     activeTab === tab.id 
-                      ? "text-foreground font-medium" 
-                      : "text-muted-foreground hover:text-foreground"
+                      ? "bg-primary text-primary-foreground" 
+                      : "bg-card text-muted-foreground hover:text-foreground hover:bg-muted"
                   }`}
                 >
                   {tab.label}
@@ -348,67 +350,69 @@ export const SimulationsSection = () => {
             </div>
 
             {/* Contagem */}
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground mb-4">
               {filteredSimulations.length} simulação{filteredSimulations.length !== 1 ? 'ões' : ''}
             </p>
 
             {/* Lista de simulações */}
-            <div className="space-y-1">
-              {filteredSimulations.map((simulation, index) => {
-                const Icon = getTypeIcon(simulation.type);
-                return (
-                  <motion.div
-                    key={`${simulation.type}-${simulation.id}`}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.2, delay: index * 0.03 }}
-                    className="group py-4 px-4 rounded-lg transition-all duration-200 hover:bg-foreground/5"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4 flex-1 min-w-0">
-                        <div className="w-8 h-8 rounded-full bg-foreground/5 flex items-center justify-center flex-shrink-0">
-                          <Icon className="w-4 h-4 text-muted-foreground" />
-                        </div>
-                        
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <h3 className="text-sm font-medium text-foreground">
-                              {getSimulationType(simulation)}
-                            </h3>
-                            <span className="text-lg font-light text-foreground">
-                              {getSimulationMainValue(simulation)}
-                            </span>
+            <div className="bg-card rounded-xl overflow-hidden">
+              <div className="divide-y divide-border/50">
+                {filteredSimulations.map((simulation, index) => {
+                  const Icon = getTypeIcon(simulation.type);
+                  return (
+                    <motion.div
+                      key={`${simulation.type}-${simulation.id}`}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.2, delay: index * 0.03 }}
+                      className="group py-4 px-5 transition-all duration-200 hover:bg-muted/50"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4 flex-1 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
+                            <Icon className="w-4 h-4 text-muted-foreground" />
                           </div>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {getSimulationDescription(simulation)} • {new Date(getCreatedDate(simulation)).toLocaleDateString('pt-BR')}
-                          </p>
+                          
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-sm font-medium text-foreground">
+                                {getSimulationType(simulation)}
+                              </h3>
+                              <span className="text-lg font-light text-foreground">
+                                {getSimulationMainValue(simulation)}
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {getSimulationDescription(simulation)} • {new Date(getCreatedDate(simulation)).toLocaleDateString('pt-BR')}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button 
+                            onClick={() => handleViewDetails(simulation)}
+                            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-primary/10 transition-all duration-200"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => handleDownloadPDF(simulation)}
+                            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-primary/10 transition-all duration-200"
+                          >
+                            <Download className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteSimulation(simulation)}
+                            className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-200"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button 
-                          onClick={() => handleViewDetails(simulation)}
-                          className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-foreground/10 transition-all duration-200"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button 
-                          onClick={() => handleDownloadPDF(simulation)}
-                          className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-foreground/10 transition-all duration-200"
-                        >
-                          <Download className="w-4 h-4" />
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteSimulation(simulation)}
-                          className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-200"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
+                    </motion.div>
+                  );
+                })}
+              </div>
             </div>
           </>
         )}
