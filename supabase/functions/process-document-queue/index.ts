@@ -119,7 +119,7 @@ serve(async (req) => {
       await supabase
         .from('documentos_conciliacao')
         .update({
-          status_processamento: 'processado',
+          status_processamento: 'concluido',
           processado_em: new Date().toISOString(),
           dados_extraidos: n8nData.extracted_data || null,
           tentativas_processamento: 0 // Reset on success
@@ -179,7 +179,7 @@ serve(async (req) => {
         await supabase
           .from('documentos_conciliacao')
           .update({
-            status_processamento: 'pendente',
+            status_processamento: 'nao_processado',
             tentativas_processamento: currentRetries,
             ultimo_erro: `Tentativa ${currentRetries}/${MAX_RETRIES}: ${n8nError.message}`
           })
