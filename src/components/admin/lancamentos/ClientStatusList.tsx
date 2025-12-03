@@ -76,9 +76,7 @@ export const ClientStatusList = ({
       {/* Header */}
       <div className="p-4 bg-transparent">
         <div className="flex items-center gap-2 mb-3">
-          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Users className="h-4 w-4 text-primary" />
-          </div>
+          
           <h2 className="font-semibold text-foreground">Clientes</h2>
           <Badge variant="secondary" className="ml-auto text-xs">
             {clients.length}
