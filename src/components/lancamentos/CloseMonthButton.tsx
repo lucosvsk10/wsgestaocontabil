@@ -73,47 +73,45 @@ export const CloseMonthButton = ({
     }
   };
 
-  // Month is already closed - show download options
+  // Month is already closed
   if (fechamento) {
     return (
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-green-500/10 border border-green-500/30 rounded-2xl p-6"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="rounded-xl bg-green-500/5 dark:bg-green-500/10 p-5"
       >
-        <div className="flex items-center gap-4 mb-4">
-          <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center">
-            <CheckCircle className="h-6 w-6 text-green-500" />
-          </div>
+        <div className="flex items-center gap-3 mb-4">
+          <CheckCircle className="h-5 w-5 text-green-500" />
           <div>
-            <h3 className="text-lg font-semibold text-foreground">
-              Mês Fechado
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {fechamento.total_lancamentos} lançamentos processados
+            <p className="text-sm font-medium text-foreground">Mês Fechado</p>
+            <p className="text-xs text-muted-foreground">
+              {fechamento.total_lancamentos} lançamentos
             </p>
           </div>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex gap-2">
           {fechamento.arquivo_excel_url && (
             <Button
               variant="outline"
+              size="sm"
               onClick={() => window.open(fechamento.arquivo_excel_url, '_blank')}
               className="flex-1"
             >
               <FileSpreadsheet className="h-4 w-4 mr-2" />
-              Baixar Excel
+              Excel
             </Button>
           )}
           {fechamento.arquivo_csv_url && (
             <Button
               variant="outline"
+              size="sm"
               onClick={() => window.open(fechamento.arquivo_csv_url, '_blank')}
               className="flex-1"
             >
               <Download className="h-4 w-4 mr-2" />
-              Baixar CSV
+              CSV
             </Button>
           )}
         </div>
@@ -122,41 +120,38 @@ export const CloseMonthButton = ({
   }
 
   return (
-    <div className="space-y-4">
-      {/* Status Summary */}
-      <div className="flex items-center justify-center gap-6 text-sm">
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-green-500" />
-          <span className="text-muted-foreground">
+    <div className="space-y-3">
+      {/* Status - Minimalista */}
+      {documents.length > 0 && (
+        <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-green-500" />
             {processedDocs.length} processado(s)
           </span>
-        </div>
-        {pendingDocs.length > 0 && (
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-yellow-500" />
-            <span className="text-muted-foreground">
+          {pendingDocs.length > 0 && (
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-amber-500" />
               {pendingDocs.length} pendente(s)
             </span>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
-      {/* Close Month Button */}
+      {/* Close Button */}
       <AlertDialog>
         <AlertDialogTrigger asChild>
           <Button
-            size="lg"
             disabled={!canClose || isClosing}
-            className="w-full h-14 text-lg font-semibold"
+            className="w-full"
           >
             {isClosing ? (
               <>
-                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Processando...
               </>
             ) : (
               <>
-                <Lock className="h-5 w-5 mr-2" />
+                <Lock className="h-4 w-4 mr-2" />
                 Fechar Mês
               </>
             )}
@@ -166,7 +161,7 @@ export const CloseMonthButton = ({
           <AlertDialogHeader>
             <AlertDialogTitle>Fechar Mês?</AlertDialogTitle>
             <AlertDialogDescription>
-              Ao fechar o mês, todos os documentos serão processados e uma planilha será gerada. 
+              Todos os documentos serão consolidados e uma planilha será gerada. 
               Você não poderá enviar novos documentos para este período.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -180,8 +175,8 @@ export const CloseMonthButton = ({
       </AlertDialog>
 
       {!canClose && documents.length > 0 && pendingDocs.length > 0 && (
-        <p className="text-center text-sm text-muted-foreground">
-          Aguarde o processamento de todos os documentos antes de fechar o mês
+        <p className="text-center text-xs text-muted-foreground">
+          Aguarde o processamento de todos os documentos
         </p>
       )}
     </div>

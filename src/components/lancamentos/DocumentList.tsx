@@ -1,6 +1,5 @@
 import { motion } from "framer-motion";
 import { FileText, Clock, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -23,95 +22,88 @@ const STATUS_CONFIG: Record<string, { icon: typeof Clock; label: string; color: 
   nao_processado: {
     icon: Clock,
     label: "Aguardando",
-    color: "bg-muted/50 text-muted-foreground border-border"
+    color: "text-muted-foreground"
   },
   processando: {
     icon: Loader2,
     label: "Processando",
-    color: "bg-blue-500/10 text-blue-600 border-blue-500/30",
+    color: "text-blue-500",
     animate: true
   },
   concluido: {
     icon: CheckCircle,
     label: "Processado",
-    color: "bg-green-500/10 text-green-600 border-green-500/30"
+    color: "text-green-500"
   },
   erro: {
     icon: AlertCircle,
     label: "Erro",
-    color: "bg-destructive/10 text-destructive border-destructive/30"
+    color: "text-destructive"
   }
 };
 
 const TYPE_LABELS: Record<string, string> = {
-  compra: "Nota de Compra",
+  compra: "Compra",
   extrato: "Extrato",
   comprovante: "Comprovante",
-  observacao: "Observação"
+  observacao: "Outros"
 };
 
 export const DocumentList = ({ documents, isLoading }: DocumentListProps) => {
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   if (documents.length === 0) {
     return (
-      <div className="bg-card rounded-xl border border-border p-8 text-center">
-        <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-        <h3 className="text-lg font-medium text-foreground mb-2">
-          Nenhum documento enviado
-        </h3>
+      <div className="py-12 text-center">
+        <FileText className="h-8 w-8 mx-auto text-muted-foreground/50 mb-3" />
         <p className="text-sm text-muted-foreground">
-          Arraste seus documentos para a área acima para começar
+          Nenhum documento enviado
         </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-foreground">
-          Documentos Enviados
-        </h2>
-        <Badge variant="outline">
-          {documents.length} documento(s)
-        </Badge>
+    <div className="space-y-3">
+      <div className="flex items-center justify-between px-1">
+        <h3 className="text-sm font-medium text-foreground">
+          Documentos
+        </h3>
+        <span className="text-xs text-muted-foreground">
+          {documents.length} arquivo(s)
+        </span>
       </div>
 
-      <div className="grid gap-3">
+      <div className="space-y-1">
         {documents.map((doc, index) => {
-          const status = STATUS_CONFIG[doc.status_processamento as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pendente;
+          const status = STATUS_CONFIG[doc.status_processamento as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.nao_processado;
           const StatusIcon = status.icon;
 
           return (
             <motion.div
               key={doc.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-              className="flex items-center gap-4 p-4 bg-card rounded-xl border border-border hover:border-primary/30 transition-colors"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: index * 0.03 }}
+              className="flex items-center gap-3 py-3 px-3 rounded-lg hover:bg-muted/30 transition-colors group"
             >
-              <div className="flex-shrink-0">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <FileText className="h-5 w-5 text-primary" />
-                </div>
-              </div>
+              <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
 
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate text-foreground">
+                <p className="text-sm truncate text-foreground">
                   {doc.nome_arquivo}
                 </p>
-                <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-2 mt-0.5">
                   <span className="text-xs text-muted-foreground">
                     {TYPE_LABELS[doc.tipo_documento] || doc.tipo_documento}
                   </span>
-                  <span className="text-xs text-muted-foreground">•</span>
+                  <span className="text-xs text-muted-foreground/50">•</span>
                   <span className="text-xs text-muted-foreground">
                     {format(new Date(doc.created_at), "dd/MM HH:mm", { locale: ptBR })}
                   </span>
@@ -123,10 +115,10 @@ export const DocumentList = ({ documents, isLoading }: DocumentListProps) => {
                 )}
               </div>
 
-              <Badge className={`${status.color} border`}>
-                <StatusIcon className={`h-3 w-3 mr-1 ${status.animate ? 'animate-spin' : ''}`} />
-                {status.label}
-              </Badge>
+              <div className={`flex items-center gap-1.5 ${status.color}`}>
+                <StatusIcon className={`h-3.5 w-3.5 ${status.animate ? 'animate-spin' : ''}`} />
+                <span className="text-xs">{status.label}</span>
+              </div>
             </motion.div>
           );
         })}
