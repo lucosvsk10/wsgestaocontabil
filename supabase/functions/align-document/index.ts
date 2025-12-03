@@ -7,22 +7,67 @@ const corsHeaders = {
 };
 
 const N8N_WEBHOOK_URL = "https://basilisk-coop-n8n.zmdnad.easypanel.host/webhook/ws-site";
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 5 * 60 * 1000; // 5 minutes
+
+// Function to schedule retry
+async function scheduleRetry(supabaseUrl: string, supabaseServiceKey: string, documentId: string, delayMs: number) {
+  console.log(`Scheduling retry for document ${documentId} in ${delayMs / 1000}s`);
+  
+  await new Promise(resolve => setTimeout(resolve, delayMs));
+  
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  
+  // Check if document still needs retry (status might have changed)
+  const { data: doc } = await supabase
+    .from('documentos_brutos')
+    .select('status_alinhamento, tentativas_alinhamento')
+    .eq('id', documentId)
+    .single();
+  
+  if (doc?.status_alinhamento === 'aguardando_retry') {
+    console.log(`Executing retry for document ${documentId}, attempt ${(doc.tentativas_alinhamento || 0) + 1}`);
+    
+    // Update status to processando
+    await supabase
+      .from('documentos_brutos')
+      .update({ status_alinhamento: 'processando' })
+      .eq('id', documentId);
+    
+    // Call the alignment function via HTTP (self-invoke)
+    try {
+      await fetch(`${supabaseUrl}/functions/v1/align-document`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseServiceKey}`
+        },
+        body: JSON.stringify({ document_id: documentId, is_retry: true })
+      });
+    } catch (error) {
+      console.error('Error invoking retry:', error);
+    }
+  } else {
+    console.log(`Document ${documentId} no longer needs retry (status: ${doc?.status_alinhamento})`);
+  }
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { document_id } = await req.json();
+    const { document_id, is_retry } = await req.json();
 
-    console.log(`Starting alignment for document ${document_id}`);
+    console.log(`Starting alignment for document ${document_id}${is_retry ? ' (retry)' : ''}`);
 
-    // Get document data from renamed table
+    // Get document data
     const { data: doc, error: docError } = await supabase
       .from('documentos_brutos')
       .select('*')
@@ -46,10 +91,16 @@ serve(async (req) => {
       });
     }
 
+    const currentAttempt = (doc.tentativas_alinhamento || 0) + 1;
+    console.log(`Alignment attempt ${currentAttempt}/${MAX_RETRIES} for document ${document_id}`);
+
     // Update alignment status to processing
     await supabase
       .from('documentos_brutos')
-      .update({ status_alinhamento: 'processando' })
+      .update({ 
+        status_alinhamento: 'processando',
+        tentativas_alinhamento: currentAttempt
+      })
       .eq('id', document_id);
 
     // Get user info
@@ -69,16 +120,15 @@ serve(async (req) => {
     if (planoError || !planoData) {
       console.error('Plano de contas not found for user:', doc.user_id);
       
-      // Update alignment status to error
+      // This is a permanent error - don't retry
       await supabase
         .from('documentos_brutos')
         .update({ 
           status_alinhamento: 'erro',
-          tentativas_alinhamento: (doc.tentativas_alinhamento || 0) + 1
+          ultimo_erro: 'Plano de Contas não cadastrado'
         })
         .eq('id', document_id);
 
-      // Notify user about missing plano de contas
       await supabase
         .from('notifications')
         .insert({
@@ -141,7 +191,6 @@ serve(async (req) => {
           credito: l.credito
         }));
 
-        // Insert into renamed table
         const { error: insertError } = await supabase
           .from('lancamentos_alinhados')
           .insert(lancamentosToInsert);
@@ -154,13 +203,13 @@ serve(async (req) => {
         console.log(`Inserted ${lancamentos.length} lancamentos for document ${document_id}`);
       }
 
-      // Update document as aligned
+      // Update document as aligned - SUCCESS!
       await supabase
         .from('documentos_brutos')
         .update({
           status_alinhamento: 'alinhado',
           alinhado_em: new Date().toISOString(),
-          tentativas_alinhamento: 0
+          ultimo_erro: null
         })
         .eq('id', document_id);
 
@@ -182,33 +231,67 @@ serve(async (req) => {
       });
 
     } catch (n8nError: any) {
-      console.error('n8n alignment error:', n8nError);
+      console.error(`n8n alignment error (attempt ${currentAttempt}/${MAX_RETRIES}):`, n8nError);
       
-      // Update alignment status to error
-      await supabase
-        .from('documentos_brutos')
-        .update({
-          status_alinhamento: 'erro',
-          tentativas_alinhamento: (doc.tentativas_alinhamento || 0) + 1
-        })
-        .eq('id', document_id);
+      // Check if we can retry
+      if (currentAttempt < MAX_RETRIES) {
+        console.log(`Scheduling retry ${currentAttempt + 1}/${MAX_RETRIES} in 5 minutes`);
+        
+        // Update status to waiting for retry
+        await supabase
+          .from('documentos_brutos')
+          .update({
+            status_alinhamento: 'aguardando_retry',
+            ultimo_erro: `Tentativa ${currentAttempt}/${MAX_RETRIES} falhou. Próxima tentativa em 5 minutos.`
+          })
+          .eq('id', document_id);
 
-      // Notify about error
-      await supabase
-        .from('notifications')
-        .insert({
-          user_id: doc.user_id,
-          message: `Erro ao alinhar documento ${doc.nome_arquivo}. O sistema tentará novamente.`,
-          type: 'erro_alinhamento'
+        // Schedule retry using background task
+        EdgeRuntime.waitUntil(
+          scheduleRetry(supabaseUrl, supabaseServiceKey, document_id, RETRY_DELAY_MS)
+        );
+
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: n8nError.message,
+          retry_scheduled: true,
+          current_attempt: currentAttempt,
+          max_retries: MAX_RETRIES
+        }), {
+          status: 200, // Return 200 since retry is scheduled
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
+      } else {
+        // Max retries reached - mark as final error
+        console.log(`Max retries (${MAX_RETRIES}) reached for document ${document_id}`);
+        
+        await supabase
+          .from('documentos_brutos')
+          .update({
+            status_alinhamento: 'erro',
+            ultimo_erro: `Falhou após ${MAX_RETRIES} tentativas: ${n8nError.message}`
+          })
+          .eq('id', document_id);
 
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: n8nError.message 
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+        // Notify about final error
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: doc.user_id,
+            message: `Erro ao alinhar documento ${doc.nome_arquivo} após ${MAX_RETRIES} tentativas. Entre em contato com o suporte.`,
+            type: 'erro_alinhamento'
+          });
+
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: n8nError.message,
+          final_error: true,
+          attempts: currentAttempt
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
     }
 
   } catch (error: any) {

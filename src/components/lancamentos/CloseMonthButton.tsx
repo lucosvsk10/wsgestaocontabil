@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Lock, Download, Loader2, CheckCircle } from "lucide-react";
+import { Lock, Unlock, Download, Loader2, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -49,6 +49,7 @@ export const CloseMonthButton = ({
   isAdmin = false
 }: CloseMonthButtonProps) => {
   const [isClosing, setIsClosing] = useState(false);
+  const [isReopening, setIsReopening] = useState(false);
 
   const processedDocs = documents.filter(d => d.status_processamento === 'concluido');
   const pendingDocs = documents.filter(d => d.status_processamento === 'nao_processado' || d.status_processamento === 'processando');
@@ -74,12 +75,43 @@ export const CloseMonthButton = ({
     }
   };
 
+  const handleReopenMonth = async () => {
+    setIsReopening(true);
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch('https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/reopen-month', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
+        body: JSON.stringify({ user_id: userId, competencia })
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao reabrir mês');
+      }
+
+      toast.success("Mês reaberto com sucesso!");
+      onClose();
+    } catch (error: any) {
+      console.error('Error reopening month:', error);
+      toast.error("Erro ao reabrir mês: " + error.message);
+    } finally {
+      setIsReopening(false);
+    }
+  };
+
   const formatMonth = (comp: string) => {
     const [year, month] = comp.split('-');
     return `${MONTHS[parseInt(month) - 1]}`;
   };
 
-  // Mês fechado - mostrar para todos
+  // Mês fechado
   if (fechamento) {
     return (
       <div className="text-center py-4 space-y-3">
@@ -116,6 +148,45 @@ export const CloseMonthButton = ({
             </a>
           )}
         </div>
+
+        {/* Botão de reabrir apenas para admin */}
+        {isAdmin && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isReopening}
+                className="mt-2"
+              >
+                {isReopening ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                    Reabrindo...
+                  </>
+                ) : (
+                  <>
+                    <Unlock className="w-3.5 h-3.5 mr-1.5" />
+                    Reabrir Mês
+                  </>
+                )}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Reabrir mês?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  O cliente poderá enviar novos documentos para este período. 
+                  Os arquivos de exportação serão removidos e será necessário fechar o mês novamente.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleReopenMonth}>Confirmar</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </div>
     );
   }

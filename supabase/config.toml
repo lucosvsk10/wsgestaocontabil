@@ -62,3 +62,6 @@ verify_jwt = false
 
 [functions.align-document]
 verify_jwt = true
+
+[functions.reopen-month]
+verify_jwt = false
