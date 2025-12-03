@@ -106,19 +106,29 @@ export const useLancamentosData = (userId: string | undefined, competencia: stri
 
       // Excluir do storage se houver URL
       if (doc?.url_storage) {
-        // Extrair o path do storage da URL
-        const url = new URL(doc.url_storage);
-        const pathParts = url.pathname.split('/');
-        const bucketIndex = pathParts.findIndex(p => p === 'documentos-conciliacao');
-        if (bucketIndex !== -1) {
-          const storagePath = pathParts.slice(bucketIndex + 1).join('/');
-          const { error: storageError } = await supabase.storage
-            .from('documentos-conciliacao')
-            .remove([storagePath]);
-          
-          if (storageError) {
-            console.error('Erro ao excluir arquivo do storage:', storageError);
+        let storagePath = doc.url_storage;
+        
+        // Se for uma URL completa, extrair o path
+        if (doc.url_storage.startsWith('http')) {
+          try {
+            const url = new URL(doc.url_storage);
+            const pathParts = url.pathname.split('/');
+            const bucketIndex = pathParts.findIndex(p => p === 'documentos-conciliacao');
+            if (bucketIndex !== -1) {
+              storagePath = pathParts.slice(bucketIndex + 1).join('/');
+            }
+          } catch (e) {
+            console.error('Erro ao parsear URL:', e);
           }
+        }
+        
+        // Tentar excluir do storage
+        const { error: storageError } = await supabase.storage
+          .from('documentos-conciliacao')
+          .remove([storagePath]);
+        
+        if (storageError) {
+          console.error('Erro ao excluir arquivo do storage:', storageError);
         }
       }
 
