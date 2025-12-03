@@ -174,34 +174,73 @@ serve(async (req) => {
       }
 
       const n8nData = await n8nResponse.json();
-      console.log('n8n alignment response:', n8nData);
+      
+      // Log detalhado da resposta do n8n
+      console.log('=== n8n RESPONSE DEBUG ===');
+      console.log('Raw response:', JSON.stringify(n8nData, null, 2));
+      console.log('Has lancamentos key:', 'lancamentos' in n8nData);
+      console.log('Lancamentos type:', typeof n8nData.lancamentos);
+      console.log('Lancamentos count:', n8nData.lancamentos?.length || 0);
+      console.log('==========================');
 
       // Process and save lancamentos
       const lancamentos = n8nData.lancamentos || [];
 
-      if (lancamentos.length > 0) {
-        const lancamentosToInsert = lancamentos.map((l: any) => ({
-          user_id: doc.user_id,
-          competencia: doc.competencia,
-          documento_origem_id: doc.id,
-          data: l.data,
-          valor: l.valor,
-          historico: l.historico,
-          debito: l.debito,
-          credito: l.credito
-        }));
+      // CORREÇÃO: Se n8n não retornou lançamentos, marcar como erro
+      if (lancamentos.length === 0) {
+        console.error(`n8n returned empty lancamentos for document ${document_id}`);
+        
+        await supabase
+          .from('documentos_brutos')
+          .update({
+            status_alinhamento: 'erro',
+            ultimo_erro: 'n8n não retornou lançamentos alinhados. Verifique os dados extraídos do documento.'
+          })
+          .eq('id', document_id);
 
-        const { error: insertError } = await supabase
-          .from('lancamentos_alinhados')
-          .insert(lancamentosToInsert);
+        // Notificar usuário sobre o problema
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: doc.user_id,
+            message: `Documento ${doc.nome_arquivo}: alinhamento não gerou lançamentos. Verifique se o documento contém dados válidos.`,
+            type: 'erro_alinhamento'
+          });
 
-        if (insertError) {
-          console.error('Error inserting lancamentos:', insertError);
-          throw insertError;
-        }
-
-        console.log(`Inserted ${lancamentos.length} lancamentos for document ${document_id}`);
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: 'n8n não retornou lançamentos',
+          document_id
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
       }
+
+      // Inserir lançamentos
+      const lancamentosToInsert = lancamentos.map((l: any) => ({
+        user_id: doc.user_id,
+        competencia: doc.competencia,
+        documento_origem_id: doc.id,
+        data: l.data,
+        valor: l.valor,
+        historico: l.historico,
+        debito: l.debito,
+        credito: l.credito
+      }));
+
+      console.log(`Inserting ${lancamentosToInsert.length} lancamentos for document ${document_id}`);
+
+      const { error: insertError } = await supabase
+        .from('lancamentos_alinhados')
+        .insert(lancamentosToInsert);
+
+      if (insertError) {
+        console.error('Error inserting lancamentos:', insertError);
+        throw insertError;
+      }
+
+      console.log(`Successfully inserted ${lancamentos.length} lancamentos for document ${document_id}`);
 
       // Update document as aligned - SUCCESS!
       await supabase
