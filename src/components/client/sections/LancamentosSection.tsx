@@ -22,6 +22,8 @@ export const LancamentosSection = () => {
     documents,
     fechamento,
     isLoading,
+    deletingIds,
+    deleteDocument,
     refetch
   } = useLancamentosData(user?.id, competencia);
 
@@ -75,6 +77,8 @@ export const LancamentosSection = () => {
         <DocumentList
           documents={documents}
           isLoading={isLoading}
+          onDelete={deleteDocument}
+          deletingIds={deletingIds}
         />
 
         {/* Fechar mês */}
