@@ -1,7 +1,6 @@
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
-import { motion, AnimatePresence } from "framer-motion";
-import { Upload, FileText, X, Loader2, CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
+import { Upload, X, FileText, Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,8 +23,8 @@ interface DocumentUploadAreaProps {
 }
 
 const DOCUMENT_TYPES = [
-  { value: "compra", label: "Nota de Compra" },
-  { value: "extrato", label: "Extrato Bancário" },
+  { value: "compra", label: "Compra" },
+  { value: "extrato", label: "Extrato" },
   { value: "comprovante", label: "Comprovante" },
   { value: "observacao", label: "Outros" },
 ];
@@ -57,16 +56,12 @@ export const DocumentUploadArea = ({
       'application/vnd.ms-excel': ['.xls'],
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
       'text/csv': ['.csv'],
-      'application/msword': ['.doc'],
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx']
     },
     disabled: isMonthClosed
   });
 
   const updateFileType = (fileId: string, tipo: string) => {
-    setFiles(prev => prev.map(f => 
-      f.id === fileId ? { ...f, tipo } : f
-    ));
+    setFiles(prev => prev.map(f => f.id === fileId ? { ...f, tipo } : f));
   };
 
   const removeFile = (fileId: string) => {
@@ -120,7 +115,15 @@ export const DocumentUploadArea = ({
           f.id === fileData.id ? { ...f, status: "success" } : f
         ));
 
-        await triggerN8nProcessing(userId, competencia, storagePath, fileData.file.name);
+        await supabase.functions.invoke('process-document-queue', {
+          body: {
+            user_id: userId,
+            competencia,
+            file_url: storagePath,
+            file_name: fileData.file.name,
+            event: 'arquivos-brutos'
+          }
+        });
 
       } catch (error: any) {
         console.error('Upload error:', error);
@@ -139,190 +142,128 @@ export const DocumentUploadArea = ({
     }, 2000);
   };
 
-  const triggerN8nProcessing = async (userId: string, competencia: string, fileUrl: string, fileName: string) => {
-    try {
-      await supabase.functions.invoke('process-document-queue', {
-        body: {
-          user_id: userId,
-          competencia,
-          file_url: fileUrl,
-          file_name: fileName,
-          event: 'arquivos-brutos'
-        }
-      });
-    } catch (error) {
-      console.error('Error triggering n8n:', error);
-    }
-  };
-
   const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
   if (isMonthClosed) {
     return (
-      <div className="rounded-xl bg-green-500/5 dark:bg-green-500/10 p-6 text-center">
-        <CheckCircle className="h-8 w-8 mx-auto text-green-500 mb-3" />
-        <p className="text-sm text-muted-foreground">
-          Mês fechado. Não é possível enviar novos documentos.
-        </p>
+      <div className="text-center py-6 text-muted-foreground">
+        <p className="text-sm">Este mês já foi fechado</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {/* Dropzone - Minimalista */}
+    <div className="space-y-3">
+      {/* Dropzone minimalista */}
       <div
         {...getRootProps()}
         className={`
-          relative rounded-xl border border-dashed transition-all duration-200 cursor-pointer
+          rounded-xl border border-dashed p-6 text-center cursor-pointer transition-all duration-200
           ${isDragActive 
-            ? 'border-primary/60 bg-primary/5' 
-            : 'border-gray-200 dark:border-white/10 hover:border-primary/40 hover:bg-muted/30'
+            ? 'border-primary bg-primary/5' 
+            : 'border-border/60 hover:border-primary/50 hover:bg-muted/20'
           }
         `}
       >
         <input {...getInputProps()} />
-        <div className="p-8 text-center">
-          <Upload className={`h-6 w-6 mx-auto mb-3 transition-colors ${isDragActive ? 'text-primary' : 'text-muted-foreground'}`} />
-          <p className="text-sm text-foreground font-medium mb-1">
-            {isDragActive ? "Solte aqui" : "Arraste documentos"}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            ou clique para selecionar
-          </p>
+        <div className="flex flex-col items-center gap-2">
+          <div className="w-9 h-9 rounded-full bg-muted/60 flex items-center justify-center">
+            <Upload className={`w-4 h-4 ${isDragActive ? 'text-primary' : 'text-muted-foreground'}`} />
+          </div>
+          <div>
+            <p className="text-sm text-foreground">
+              {isDragActive ? "Solte aqui" : "Arraste documentos"}
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              ou clique para selecionar
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* File List - Compacto */}
-      <AnimatePresence>
-        {files.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="space-y-2"
-          >
-            {files.map((fileData) => (
-              <motion.div
-                key={fileData.id}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 10 }}
-                className={`
-                  flex items-center gap-3 p-3 rounded-lg transition-colors
-                  ${fileData.status === "success" 
-                    ? "bg-green-500/5 dark:bg-green-500/10" 
-                    : fileData.status === "error" 
-                      ? "bg-destructive/5 dark:bg-destructive/10"
-                      : "bg-muted/30"
-                  }
-                `}
-              >
-                <div className="flex-shrink-0">
-                  {fileData.status === "uploading" ? (
-                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                  ) : fileData.status === "success" ? (
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                  ) : fileData.status === "error" ? (
-                    <AlertCircle className="h-4 w-4 text-destructive" />
-                  ) : (
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm truncate text-foreground">
-                    {fileData.file.name}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatFileSize(fileData.file.size)}
-                    {fileData.error && (
-                      <span className="text-destructive ml-2">{fileData.error}</span>
-                    )}
-                  </p>
-                </div>
+      {/* Lista de arquivos */}
+      {files.length > 0 && (
+        <div className="space-y-1.5">
+          {files.map(fileData => (
+            <div
+              key={fileData.id}
+              className={`
+                flex items-center gap-2.5 py-2.5 px-3 rounded-lg transition-colors
+                ${fileData.status === "success" ? "bg-green-500/5" : 
+                  fileData.status === "error" ? "bg-destructive/5" : "bg-muted/40"}
+              `}
+            >
+              {fileData.status === "uploading" ? (
+                <Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" />
+              ) : fileData.status === "success" ? (
+                <span className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center shrink-0">
+                  <span className="w-1.5 h-1.5 bg-white rounded-full" />
+                </span>
+              ) : fileData.status === "error" ? (
+                <AlertCircle className="w-4 h-4 text-destructive shrink-0" />
+              ) : (
+                <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+              )}
+              
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-foreground truncate">{fileData.file.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {formatFileSize(fileData.file.size)}
+                  {fileData.error && <span className="text-destructive ml-1.5">• {fileData.error}</span>}
+                </p>
+              </div>
 
-                {fileData.status === "pending" && (
-                  <>
-                    <Select
-                      value={fileData.tipo}
-                      onValueChange={(value) => updateFileType(fileData.id, value)}
-                    >
-                      <SelectTrigger className="w-32 h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {DOCUMENT_TYPES.map(type => (
-                          <SelectItem key={type.value} value={type.value}>
-                            {type.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+              {fileData.status === "pending" && (
+                <>
+                  <Select value={fileData.tipo} onValueChange={(v) => updateFileType(fileData.id, v)}>
+                    <SelectTrigger className="w-24 h-7 text-xs border-0 bg-background/50">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DOCUMENT_TYPES.map(type => (
+                        <SelectItem key={type.value} value={type.value} className="text-xs">
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <button onClick={() => removeFile(fileData.id)} className="p-1 text-muted-foreground hover:text-foreground">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </>
+              )}
 
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => removeFile(fileData.id)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </>
-                )}
+              {fileData.status === "error" && (
+                <button onClick={() => retryFile(fileData.id)} className="p-1 text-muted-foreground hover:text-foreground">
+                  <RefreshCw className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          ))}
 
-                {fileData.status === "error" && (
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 text-xs"
-                      onClick={() => retryFile(fileData.id)}
-                    >
-                      <RefreshCw className="h-3 w-3 mr-1" />
-                      Tentar
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => removeFile(fileData.id)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-              </motion.div>
-            ))}
-
-            {files.some(f => f.status === "pending") && (
-              <Button
-                onClick={uploadFiles}
-                disabled={isUploading}
-                className="w-full"
-              >
-                {isUploading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Enviando...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Enviar {files.filter(f => f.status === "pending").length} arquivo(s)
-                  </>
-                )}
-              </Button>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+          {files.some(f => f.status === "pending") && (
+            <Button
+              onClick={uploadFiles}
+              disabled={isUploading}
+              size="sm"
+              className="w-full mt-2"
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                `Enviar ${files.filter(f => f.status === "pending").length} arquivo(s)`
+              )}
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 };

@@ -18,28 +18,11 @@ interface DocumentListProps {
   isLoading: boolean;
 }
 
-const STATUS_CONFIG: Record<string, { icon: typeof Clock; label: string; color: string; animate?: boolean }> = {
-  nao_processado: {
-    icon: Clock,
-    label: "Aguardando",
-    color: "text-muted-foreground"
-  },
-  processando: {
-    icon: Loader2,
-    label: "Processando",
-    color: "text-blue-500",
-    animate: true
-  },
-  concluido: {
-    icon: CheckCircle,
-    label: "Processado",
-    color: "text-green-500"
-  },
-  erro: {
-    icon: AlertCircle,
-    label: "Erro",
-    color: "text-destructive"
-  }
+const STATUS_CONFIG: Record<string, { icon: typeof Clock; label: string; className: string; spin?: boolean }> = {
+  nao_processado: { icon: Clock, label: "Aguardando", className: "text-muted-foreground" },
+  processando: { icon: Loader2, label: "Processando", className: "text-blue-500", spin: true },
+  concluido: { icon: CheckCircle, label: "Processado", className: "text-green-500" },
+  erro: { icon: AlertCircle, label: "Erro", className: "text-destructive" }
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -52,37 +35,30 @@ const TYPE_LABELS: Record<string, string> = {
 export const DocumentList = ({ documents, isLoading }: DocumentListProps) => {
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div className="flex items-center justify-center py-6">
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   if (documents.length === 0) {
     return (
-      <div className="py-12 text-center">
-        <FileText className="h-8 w-8 mx-auto text-muted-foreground/50 mb-3" />
-        <p className="text-sm text-muted-foreground">
-          Nenhum documento enviado
-        </p>
+      <div className="text-center py-8">
+        <p className="text-sm text-muted-foreground">Nenhum documento neste mês</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between px-1">
-        <h3 className="text-sm font-medium text-foreground">
-          Documentos
-        </h3>
-        <span className="text-xs text-muted-foreground">
-          {documents.length} arquivo(s)
-        </span>
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-sm font-medium text-foreground">Documentos</span>
+        <span className="text-xs text-muted-foreground">{documents.length}</span>
       </div>
 
-      <div className="space-y-1">
+      <div className="divide-y divide-border/40">
         {documents.map((doc, index) => {
-          const status = STATUS_CONFIG[doc.status_processamento as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.nao_processado;
+          const status = STATUS_CONFIG[doc.status_processamento] || STATUS_CONFIG.nao_processado;
           const StatusIcon = status.icon;
 
           return (
@@ -90,33 +66,25 @@ export const DocumentList = ({ documents, isLoading }: DocumentListProps) => {
               key={doc.id}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: index * 0.03 }}
-              className="flex items-center gap-3 py-3 px-3 rounded-lg hover:bg-muted/30 transition-colors group"
+              transition={{ delay: index * 0.02 }}
+              className="py-2.5 flex items-center gap-2.5"
             >
-              <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-
+              <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+              
               <div className="flex-1 min-w-0">
-                <p className="text-sm truncate text-foreground">
-                  {doc.nome_arquivo}
-                </p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-xs text-muted-foreground">
-                    {TYPE_LABELS[doc.tipo_documento] || doc.tipo_documento}
-                  </span>
-                  <span className="text-xs text-muted-foreground/50">•</span>
-                  <span className="text-xs text-muted-foreground">
-                    {format(new Date(doc.created_at), "dd/MM HH:mm", { locale: ptBR })}
-                  </span>
+                <p className="text-sm text-foreground truncate">{doc.nome_arquivo}</p>
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <span>{TYPE_LABELS[doc.tipo_documento] || doc.tipo_documento}</span>
+                  <span className="opacity-40">•</span>
+                  <span>{format(new Date(doc.created_at), "dd/MM", { locale: ptBR })}</span>
                 </div>
                 {doc.ultimo_erro && (
-                  <p className="text-xs text-destructive mt-1 truncate">
-                    {doc.ultimo_erro}
-                  </p>
+                  <p className="text-xs text-destructive truncate mt-0.5">{doc.ultimo_erro}</p>
                 )}
               </div>
 
-              <div className={`flex items-center gap-1.5 ${status.color}`}>
-                <StatusIcon className={`h-3.5 w-3.5 ${status.animate ? 'animate-spin' : ''}`} />
+              <div className={`flex items-center gap-1 ${status.className}`}>
+                <StatusIcon className={`w-3 h-3 ${status.spin ? 'animate-spin' : ''}`} />
                 <span className="text-xs">{status.label}</span>
               </div>
             </motion.div>

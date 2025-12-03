@@ -1,6 +1,4 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface MonthSelectorProps {
   selectedMonth: number;
@@ -10,18 +8,8 @@ interface MonthSelectorProps {
 }
 
 const MONTHS = [
-  { value: 1, label: "Janeiro" },
-  { value: 2, label: "Fevereiro" },
-  { value: 3, label: "Março" },
-  { value: 4, label: "Abril" },
-  { value: 5, label: "Maio" },
-  { value: 6, label: "Junho" },
-  { value: 7, label: "Julho" },
-  { value: 8, label: "Agosto" },
-  { value: 9, label: "Setembro" },
-  { value: 10, label: "Outubro" },
-  { value: 11, label: "Novembro" },
-  { value: 12, label: "Dezembro" },
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
 ];
 
 export const MonthSelector = ({
@@ -30,9 +18,6 @@ export const MonthSelector = ({
   onMonthChange,
   onYearChange
 }: MonthSelectorProps) => {
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
-
   const goToPreviousMonth = () => {
     if (selectedMonth === 1) {
       onMonthChange(12);
@@ -52,60 +37,29 @@ export const MonthSelector = ({
   };
 
   return (
-    <div className="flex items-center justify-center gap-3">
-      <Button
-        variant="ghost"
-        size="icon"
+    <div className="flex items-center justify-center gap-6">
+      <button
         onClick={goToPreviousMonth}
-        className="h-9 w-9 rounded-full hover:bg-muted"
+        className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
       >
-        <ChevronLeft className="h-4 w-4" />
-      </Button>
+        <ChevronLeft className="h-5 w-5" />
+      </button>
 
-      <div className="flex items-center gap-1">
-        <Select
-          value={String(selectedMonth)}
-          onValueChange={(value) => onMonthChange(Number(value))}
-        >
-          <SelectTrigger className="w-28 h-9 border-0 bg-transparent hover:bg-muted/50 focus:ring-0 font-medium">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {MONTHS.map(month => (
-              <SelectItem key={month.value} value={String(month.value)}>
-                {month.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <span className="text-muted-foreground text-sm">/</span>
-
-        <Select
-          value={String(selectedYear)}
-          onValueChange={(value) => onYearChange(Number(value))}
-        >
-          <SelectTrigger className="w-20 h-9 border-0 bg-transparent hover:bg-muted/50 focus:ring-0 font-medium">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {years.map(year => (
-              <SelectItem key={year} value={String(year)}>
-                {year}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="text-center min-w-[160px]">
+        <div className="text-xl font-medium text-foreground">
+          {MONTHS[selectedMonth - 1]}
+        </div>
+        <div className="text-sm text-muted-foreground font-light">
+          {selectedYear}
+        </div>
       </div>
 
-      <Button
-        variant="ghost"
-        size="icon"
+      <button
         onClick={goToNextMonth}
-        className="h-9 w-9 rounded-full hover:bg-muted"
+        className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
       >
-        <ChevronRight className="h-4 w-4" />
-      </Button>
+        <ChevronRight className="h-5 w-5" />
+      </button>
     </div>
   );
 };

@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { Lock, Download, Loader2, CheckCircle, FileSpreadsheet } from "lucide-react";
+import { Lock, Download, Loader2, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -37,6 +36,9 @@ interface CloseMonthButtonProps {
   onClose: () => void;
 }
 
+const MONTHS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+
 export const CloseMonthButton = ({
   userId,
   competencia,
@@ -54,11 +56,8 @@ export const CloseMonthButton = ({
     setIsClosing(true);
     
     try {
-      const { data, error } = await supabase.functions.invoke('close-month', {
-        body: {
-          user_id: userId,
-          competencia
-        }
+      const { error } = await supabase.functions.invoke('close-month', {
+        body: { user_id: userId, competencia }
       });
 
       if (error) throw error;
@@ -73,111 +72,99 @@ export const CloseMonthButton = ({
     }
   };
 
-  // Month is already closed
+  const formatMonth = (comp: string) => {
+    const [year, month] = comp.split('-');
+    return `${MONTHS[parseInt(month) - 1]}`;
+  };
+
+  // Mês fechado
   if (fechamento) {
     return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="rounded-xl bg-green-500/5 dark:bg-green-500/10 p-5"
-      >
-        <div className="flex items-center gap-3 mb-4">
-          <CheckCircle className="h-5 w-5 text-green-500" />
-          <div>
-            <p className="text-sm font-medium text-foreground">Mês Fechado</p>
-            <p className="text-xs text-muted-foreground">
-              {fechamento.total_lancamentos} lançamentos
-            </p>
-          </div>
+      <div className="text-center py-4 space-y-3">
+        <div className="flex items-center justify-center gap-1.5 text-green-600 dark:text-green-400">
+          <Lock className="w-3.5 h-3.5" />
+          <span className="text-sm">Mês Fechado</span>
         </div>
+        
+        <p className="text-xs text-muted-foreground">
+          {fechamento.total_lancamentos} lançamento(s)
+        </p>
 
-        <div className="flex gap-2">
+        <div className="flex items-center justify-center gap-2">
           {fechamento.arquivo_excel_url && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => window.open(fechamento.arquivo_excel_url, '_blank')}
-              className="flex-1"
+            <a
+              href={fechamento.arquivo_excel_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
             >
-              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              <Download className="w-3 h-3" />
               Excel
-            </Button>
+            </a>
           )}
           {fechamento.arquivo_csv_url && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => window.open(fechamento.arquivo_csv_url, '_blank')}
-              className="flex-1"
+            <a
+              href={fechamento.arquivo_csv_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
             >
-              <Download className="h-4 w-4 mr-2" />
+              <Download className="w-3 h-3" />
               CSV
-            </Button>
+            </a>
           )}
         </div>
-      </motion.div>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-3">
-      {/* Status - Minimalista */}
-      {documents.length > 0 && (
-        <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-green-500" />
-            {processedDocs.length} processado(s)
-          </span>
-          {pendingDocs.length > 0 && (
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-amber-500" />
-              {pendingDocs.length} pendente(s)
-            </span>
-          )}
-        </div>
-      )}
+    <div className="text-center py-4 space-y-2.5">
+      {/* Status */}
+      <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground">
+        <span className="flex items-center gap-1">
+          <CheckCircle className="w-3 h-3 text-green-500" />
+          {processedDocs.length} ok
+        </span>
+        {pendingDocs.length > 0 && (
+          <span className="text-amber-500">{pendingDocs.length} pendente(s)</span>
+        )}
+      </div>
 
-      {/* Close Button */}
+      {/* Botão */}
       <AlertDialog>
         <AlertDialogTrigger asChild>
           <Button
             disabled={!canClose || isClosing}
-            className="w-full"
+            variant={canClose ? "default" : "outline"}
+            size="sm"
           >
             {isClosing ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Processando...
+                <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                Fechando...
               </>
             ) : (
-              <>
-                <Lock className="h-4 w-4 mr-2" />
-                Fechar Mês
-              </>
+              `Fechar ${formatMonth(competencia)}`
             )}
           </Button>
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Fechar Mês?</AlertDialogTitle>
+            <AlertDialogTitle>Fechar mês?</AlertDialogTitle>
             <AlertDialogDescription>
-              Todos os documentos serão consolidados e uma planilha será gerada. 
-              Você não poderá enviar novos documentos para este período.
+              Os relatórios serão gerados e você não poderá mais enviar documentos para este período.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleCloseMonth}>
-              Confirmar
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleCloseMonth}>Confirmar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {!canClose && documents.length > 0 && pendingDocs.length > 0 && (
-        <p className="text-center text-xs text-muted-foreground">
-          Aguarde o processamento de todos os documentos
-        </p>
+      {!canClose && pendingDocs.length > 0 && (
+        <p className="text-xs text-muted-foreground">Aguarde o processamento</p>
       )}
     </div>
   );

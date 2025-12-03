@@ -7,7 +7,7 @@ import { CloseMonthButton } from "@/components/lancamentos/CloseMonthButton";
 import { MonthHistory } from "@/components/lancamentos/MonthHistory";
 import { useLancamentosData } from "@/hooks/lancamentos/useLancamentosData";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2 } from "lucide-react";
+import { Loader2, FileText } from "lucide-react";
 
 export const LancamentosSection = () => {
   const { user } = useAuth();
@@ -27,30 +27,33 @@ export const LancamentosSection = () => {
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className="max-w-2xl mx-auto space-y-8"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4 }}
+      className="max-w-3xl mx-auto py-8 px-4"
     >
-      {/* Header */}
-      <div className="text-center space-y-1">
-        <h1 className="text-xl font-semibold text-foreground">
+      {/* Header minimalista */}
+      <div className="text-center mb-10">
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mb-4">
+          <FileText className="w-5 h-5 text-primary" />
+        </div>
+        <h1 className="text-2xl font-light text-foreground mb-1">
           Lançamentos Mensais
         </h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground font-light">
           Envie seus documentos de compras, extratos e comprovantes
         </p>
       </div>
 
-      {/* Month Selector */}
+      {/* Seletor de mês */}
       <MonthSelector
         selectedMonth={selectedMonth}
         selectedYear={selectedYear}
@@ -58,8 +61,8 @@ export const LancamentosSection = () => {
         onYearChange={setSelectedYear}
       />
 
-      {/* Main Content Card */}
-      <div className="space-y-6 p-6 rounded-2xl bg-card/50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5">
+      {/* Conteúdo principal */}
+      <div className="space-y-8 mt-8">
         {/* Upload */}
         <DocumentUploadArea
           userId={user.id}
@@ -68,34 +71,26 @@ export const LancamentosSection = () => {
           isMonthClosed={!!fechamento}
         />
 
-        {/* Separator */}
-        {documents.length > 0 && (
-          <div className="border-t border-gray-100 dark:border-white/5" />
-        )}
-
-        {/* Documents */}
+        {/* Lista de documentos */}
         <DocumentList
           documents={documents}
           isLoading={isLoading}
         />
 
-        {/* Close Month */}
+        {/* Fechar mês */}
         {documents.length > 0 && (
-          <>
-            <div className="border-t border-gray-100 dark:border-white/5" />
-            <CloseMonthButton
-              userId={user.id}
-              competencia={competencia}
-              documents={documents}
-              fechamento={fechamento}
-              onClose={refetch}
-            />
-          </>
+          <CloseMonthButton
+            userId={user.id}
+            competencia={competencia}
+            documents={documents}
+            fechamento={fechamento}
+            onClose={refetch}
+          />
         )}
-      </div>
 
-      {/* History */}
-      <MonthHistory userId={user.id} />
+        {/* Histórico */}
+        <MonthHistory userId={user.id} />
+      </div>
     </motion.div>
   );
 };
