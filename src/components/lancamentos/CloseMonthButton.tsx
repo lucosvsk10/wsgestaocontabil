@@ -46,8 +46,8 @@ export const CloseMonthButton = ({
 }: CloseMonthButtonProps) => {
   const [isClosing, setIsClosing] = useState(false);
 
-  const processedDocs = documents.filter(d => d.status_processamento === 'processado');
-  const pendingDocs = documents.filter(d => d.status_processamento === 'pendente' || d.status_processamento === 'processando');
+  const processedDocs = documents.filter(d => d.status_processamento === 'concluido');
+  const pendingDocs = documents.filter(d => d.status_processamento === 'nao_processado' || d.status_processamento === 'processando');
   const canClose = processedDocs.length > 0 && pendingDocs.length === 0;
 
   const handleCloseMonth = async () => {
