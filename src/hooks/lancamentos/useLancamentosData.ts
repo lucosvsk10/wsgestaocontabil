@@ -7,7 +7,9 @@ interface Document {
   nome_arquivo: string;
   tipo_documento: string;
   status_processamento: string;
+  status_alinhamento?: string;
   created_at: string;
+  processado_em?: string;
   tentativas_processamento?: number;
   ultimo_erro?: string;
   url_storage?: string;
@@ -33,10 +35,10 @@ export const useLancamentosData = (userId: string | undefined, competencia: stri
 
     setIsLoading(true);
     try {
-      // Fetch documents
+      // Fetch documents with new fields
       const { data: docs, error: docsError } = await supabase
         .from('documentos_conciliacao')
-        .select('id, nome_arquivo, tipo_documento, status_processamento, created_at, tentativas_processamento, ultimo_erro')
+        .select('id, nome_arquivo, tipo_documento, status_processamento, status_alinhamento, created_at, processado_em, tentativas_processamento, ultimo_erro, url_storage')
         .eq('user_id', userId)
         .eq('competencia', competencia)
         .order('created_at', { ascending: false });
@@ -113,7 +115,7 @@ export const useLancamentosData = (userId: string | undefined, competencia: stri
           try {
             const url = new URL(doc.url_storage);
             const pathParts = url.pathname.split('/');
-            const bucketIndex = pathParts.findIndex(p => p === 'documentos-conciliacao');
+            const bucketIndex = pathParts.findIndex(p => p === 'lancamentos');
             if (bucketIndex !== -1) {
               storagePath = pathParts.slice(bucketIndex + 1).join('/');
             }
@@ -124,7 +126,7 @@ export const useLancamentosData = (userId: string | undefined, competencia: stri
         
         // Tentar excluir do storage
         const { error: storageError } = await supabase.storage
-          .from('documentos-conciliacao')
+          .from('lancamentos')
           .remove([storagePath]);
         
         if (storageError) {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Users, Search, Clock, CheckCircle, AlertCircle, FileText, ClipboardList } from "lucide-react";
+import { Users, Search, CheckCircle, ClipboardList, FileSpreadsheet } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,10 +10,8 @@ interface ClientStatus {
   id: string;
   name: string;
   email: string;
-  documentsCount: number;
-  pendingCount: number;
+  alignedCount: number;
   closedMonths: number;
-  hasError: boolean;
   hasPlanoContas: boolean;
 }
 
@@ -48,31 +46,15 @@ export const ClientStatusList = ({
       const now = new Date();
       const currentCompetencia = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-      // For each user, get their document status
+      // For each user, get their status
       const clientStatuses = await Promise.all(
         (users || []).map(async (user) => {
-          // Get documents count for current month
-          const { count: docsCount } = await supabase
-            .from('documentos_conciliacao')
+          // Get aligned lancamentos count for current month
+          const { count: alignedCount } = await supabase
+            .from('lancamentos_processados')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', user.id)
             .eq('competencia', currentCompetencia);
-
-          // Get pending documents
-          const { count: pendingCount } = await supabase
-            .from('documentos_conciliacao')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id)
-            .eq('competencia', currentCompetencia)
-            .in('status_processamento', ['pendente', 'processando']);
-
-          // Get error documents
-          const { count: errorCount } = await supabase
-            .from('documentos_conciliacao')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id)
-            .eq('competencia', currentCompetencia)
-            .eq('status_processamento', 'erro');
 
           // Get closed months count
           const { count: closedCount } = await supabase
@@ -90,10 +72,8 @@ export const ClientStatusList = ({
             id: user.id,
             name: user.name || 'Sem nome',
             email: user.email || '',
-            documentsCount: docsCount || 0,
-            pendingCount: pendingCount || 0,
+            alignedCount: alignedCount || 0,
             closedMonths: closedCount || 0,
-            hasError: (errorCount || 0) > 0,
             hasPlanoContas: (planoCount || 0) > 0
           };
         })
@@ -111,38 +91,6 @@ export const ClientStatusList = ({
     client.name.toLowerCase().includes(search.toLowerCase()) ||
     client.email.toLowerCase().includes(search.toLowerCase())
   );
-
-  const getStatusBadge = (client: ClientStatus) => {
-    if (client.hasError) {
-      return (
-        <Badge className="bg-destructive/10 text-destructive border-destructive/30">
-          <AlertCircle className="h-3 w-3 mr-1" />
-          Erro
-        </Badge>
-      );
-    }
-    if (client.pendingCount > 0) {
-      return (
-        <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/30">
-          <Clock className="h-3 w-3 mr-1" />
-          Processando
-        </Badge>
-      );
-    }
-    if (client.documentsCount > 0) {
-      return (
-        <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/30">
-          <FileText className="h-3 w-3 mr-1" />
-          {client.documentsCount} docs
-        </Badge>
-      );
-    }
-    return (
-      <Badge variant="outline" className="text-muted-foreground">
-        Sem docs
-      </Badge>
-    );
-  };
 
   return (
     <div className="bg-card rounded-xl border border-border overflow-hidden">
@@ -181,23 +129,33 @@ export const ClientStatusList = ({
               <span className="font-medium text-foreground truncate">
                 {client.name}
               </span>
-              {getStatusBadge(client)}
+              {client.alignedCount > 0 && (
+                <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/30">
+                  <FileSpreadsheet className="h-3 w-3 mr-1" />
+                  {client.alignedCount} lançamentos
+                </Badge>
+              )}
             </div>
             <p className="text-xs text-muted-foreground truncate">
               {client.email}
             </p>
-            <div className="flex items-center gap-2 mt-2 flex-wrap">
-              {!client.hasPlanoContas && (
+            <div className="flex items-center gap-3 mt-2 flex-wrap">
+              {!client.hasPlanoContas ? (
                 <div className="flex items-center gap-1">
                   <ClipboardList className="h-3 w-3 text-destructive" />
-                  <span className="text-xs text-destructive">Sem plano</span>
+                  <span className="text-xs text-destructive font-medium">Sem plano</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1">
+                  <ClipboardList className="h-3 w-3 text-green-500" />
+                  <span className="text-xs text-green-600">Plano OK</span>
                 </div>
               )}
               {client.closedMonths > 0 && (
                 <div className="flex items-center gap-1">
                   <CheckCircle className="h-3 w-3 text-green-500" />
                   <span className="text-xs text-muted-foreground">
-                    {client.closedMonths} fechado(s)
+                    {client.closedMonths} mês(es) fechado(s)
                   </span>
                 </div>
               )}

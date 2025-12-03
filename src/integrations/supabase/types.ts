@@ -330,6 +330,7 @@ export type Database = {
       }
       documentos_conciliacao: {
         Row: {
+          alinhado_em: string | null
           arquivo_original: string | null
           competencia: string
           created_at: string | null
@@ -337,7 +338,9 @@ export type Database = {
           id: string
           nome_arquivo: string
           processado_em: string | null
+          status_alinhamento: string | null
           status_processamento: string | null
+          tentativas_alinhamento: number | null
           tentativas_processamento: number | null
           tipo_documento: string | null
           ultimo_erro: string | null
@@ -346,6 +349,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          alinhado_em?: string | null
           arquivo_original?: string | null
           competencia: string
           created_at?: string | null
@@ -353,7 +357,9 @@ export type Database = {
           id?: string
           nome_arquivo: string
           processado_em?: string | null
+          status_alinhamento?: string | null
           status_processamento?: string | null
+          tentativas_alinhamento?: number | null
           tentativas_processamento?: number | null
           tipo_documento?: string | null
           ultimo_erro?: string | null
@@ -362,6 +368,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          alinhado_em?: string | null
           arquivo_original?: string | null
           competencia?: string
           created_at?: string | null
@@ -369,7 +376,9 @@ export type Database = {
           id?: string
           nome_arquivo?: string
           processado_em?: string | null
+          status_alinhamento?: string | null
           status_processamento?: string | null
+          tentativas_alinhamento?: number | null
           tentativas_processamento?: number | null
           tipo_documento?: string | null
           ultimo_erro?: string | null

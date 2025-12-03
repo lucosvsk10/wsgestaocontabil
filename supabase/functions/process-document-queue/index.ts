@@ -9,6 +9,7 @@ const corsHeaders = {
 const N8N_WEBHOOK_URL = "https://basilisk-coop-n8n.zmdnad.easypanel.host/webhook/ws-site";
 const MAX_RETRIES = 5;
 const RETRY_DELAY_MS = 10 * 60 * 1000; // 10 minutes
+const ALIGNMENT_DELAY_MS = 3 * 60 * 1000; // 3 minutes (changed from 15)
 const SIGNED_URL_EXPIRY = 3600; // 1 hour
 
 serve(async (req) => {
@@ -27,10 +28,10 @@ serve(async (req) => {
 
     // If document_id is provided, this is a retry
     let docId = document_id;
-    let storagePath = file_url; // file_url now contains the storage path
+    let storagePath = file_url;
 
     if (!docId) {
-      // Find the document that was just inserted (using storage path)
+      // Find the document that was just inserted
       const { data: doc, error: docError } = await supabase
         .from('documentos_conciliacao')
         .select('id, url_storage, tentativas_processamento')
@@ -68,7 +69,7 @@ serve(async (req) => {
       storagePath = doc.url_storage;
     }
 
-    // Generate a FRESH signed URL for this attempt
+    // Generate a FRESH signed URL
     console.log(`Generating fresh signed URL for storage path: ${storagePath}`);
     const { data: signedUrlData, error: signedUrlError } = await supabase.storage
       .from('lancamentos')
@@ -101,8 +102,8 @@ serve(async (req) => {
           document_id: docId,
           user_id,
           competencia,
-          file_url: freshSignedUrl, // Always a fresh signed URL!
-          storage_path: storagePath, // Also send path for reference
+          file_url: freshSignedUrl,
+          storage_path: storagePath,
           file_name,
           timestamp: new Date().toISOString()
         })
@@ -122,34 +123,14 @@ serve(async (req) => {
           status_processamento: 'concluido',
           processado_em: new Date().toISOString(),
           dados_extraidos: n8nData.extracted_data || null,
-          tentativas_processamento: 0 // Reset on success
+          tentativas_processamento: 0,
+          status_alinhamento: 'pendente' // Initialize alignment status
         })
         .eq('id', docId);
 
-      // Schedule alignment in 15 minutes
-      const ALIGNMENT_DELAY_MS = 15 * 60 * 1000; // 15 minutes
-      console.log(`Scheduling alignment for document ${docId} in 15 minutes`);
-      
-      EdgeRuntime.waitUntil(
-        new Promise(resolve => {
-          setTimeout(async () => {
-            try {
-              console.log(`Triggering alignment for document ${docId}`);
-              await fetch(`${supabaseUrl}/functions/v1/align-document`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${supabaseServiceKey}`
-                },
-                body: JSON.stringify({ document_id: docId })
-              });
-            } catch (e) {
-              console.error('Alignment scheduling error:', e);
-            }
-            resolve(true);
-          }, ALIGNMENT_DELAY_MS);
-        })
-      );
+      // NOTE: Alignment is now triggered by the frontend progress bar at 80% (2m24s)
+      // We no longer schedule alignment from here
+      console.log(`Document ${docId} processed successfully. Alignment will be triggered by frontend.`);
 
       return new Response(JSON.stringify({ success: true, data: n8nData }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -178,7 +159,7 @@ serve(async (req) => {
           })
           .eq('id', docId);
 
-        // Create notification for admin and user
+        // Create notification
         await supabase
           .from('notifications')
           .insert([
@@ -217,7 +198,6 @@ serve(async (req) => {
           new Promise(resolve => {
             setTimeout(async () => {
               try {
-                // Trigger retry
                 await fetch(`${supabaseUrl}/functions/v1/process-document-queue`, {
                   method: 'POST',
                   headers: {
