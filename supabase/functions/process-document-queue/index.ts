@@ -9,6 +9,7 @@ const corsHeaders = {
 const N8N_WEBHOOK_URL = "https://basilisk-coop-n8n.zmdnad.easypanel.host/webhook/ws-site";
 const MAX_RETRIES = 5;
 const RETRY_DELAY_MS = 10 * 60 * 1000; // 10 minutes
+const SIGNED_URL_EXPIRY = 3600; // 1 hour
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -26,12 +27,13 @@ serve(async (req) => {
 
     // If document_id is provided, this is a retry
     let docId = document_id;
+    let storagePath = file_url; // file_url now contains the storage path
 
     if (!docId) {
-      // Find the document that was just inserted
+      // Find the document that was just inserted (using storage path)
       const { data: doc, error: docError } = await supabase
         .from('documentos_conciliacao')
-        .select('id, tentativas_processamento')
+        .select('id, url_storage, tentativas_processamento')
         .eq('user_id', user_id)
         .eq('competencia', competencia)
         .eq('url_storage', file_url)
@@ -46,7 +48,42 @@ serve(async (req) => {
       }
 
       docId = doc.id;
+      storagePath = doc.url_storage;
+    } else {
+      // This is a retry - fetch the storage path from DB
+      const { data: doc, error: docError } = await supabase
+        .from('documentos_conciliacao')
+        .select('url_storage')
+        .eq('id', docId)
+        .single();
+
+      if (docError) {
+        console.error('Error fetching document for retry:', docError);
+        return new Response(JSON.stringify({ error: 'Document not found for retry' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      storagePath = doc.url_storage;
     }
+
+    // Generate a FRESH signed URL for this attempt
+    console.log(`Generating fresh signed URL for storage path: ${storagePath}`);
+    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+      .from('lancamentos')
+      .createSignedUrl(storagePath, SIGNED_URL_EXPIRY);
+
+    if (signedUrlError) {
+      console.error('Error generating signed URL:', signedUrlError);
+      return new Response(JSON.stringify({ error: 'Failed to generate signed URL' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    const freshSignedUrl = signedUrlData.signedUrl;
+    console.log(`Fresh signed URL generated, valid for ${SIGNED_URL_EXPIRY} seconds`);
 
     // Update status to processing
     await supabase
@@ -54,7 +91,7 @@ serve(async (req) => {
       .update({ status_processamento: 'processando' })
       .eq('id', docId);
 
-    // Send to n8n
+    // Send to n8n with FRESH signed URL
     try {
       const n8nResponse = await fetch(N8N_WEBHOOK_URL, {
         method: 'POST',
@@ -64,7 +101,8 @@ serve(async (req) => {
           document_id: docId,
           user_id,
           competencia,
-          file_url,
+          file_url: freshSignedUrl, // Always a fresh signed URL!
+          storage_path: storagePath, // Also send path for reference
           file_name,
           timestamp: new Date().toISOString()
         })
