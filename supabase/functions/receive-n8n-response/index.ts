@@ -27,7 +27,7 @@ serve(async (req) => {
         await supabase
           .from('documentos_conciliacao')
           .update({
-            status_processamento: 'processado',
+            status_processamento: 'concluido',
             processado_em: new Date().toISOString(),
             dados_extraidos: extracted_data,
             tentativas_processamento: 0
@@ -76,6 +76,45 @@ serve(async (req) => {
             })
             .eq('id', document_id);
         }
+      }
+    } else if (event === 'alinhamento-documento') {
+      // Handle alignment response from n8n
+      const { lancamentos, user_id, competencia } = body;
+      
+      console.log(`Received alignment response for document ${document_id}`);
+
+      if (success && lancamentos && lancamentos.length > 0) {
+        const lancamentosToInsert = lancamentos.map((l: any) => ({
+          user_id,
+          competencia,
+          documento_origem_id: document_id,
+          data: l.data,
+          valor: l.valor,
+          historico: l.historico,
+          debito: l.debito,
+          credito: l.credito
+        }));
+
+        const { error: insertError } = await supabase
+          .from('lancamentos_processados')
+          .insert(lancamentosToInsert);
+
+        if (insertError) {
+          console.error('Error inserting lancamentos:', insertError);
+        } else {
+          console.log(`Inserted ${lancamentos.length} lancamentos for document ${document_id}`);
+          
+          // Notify user
+          await supabase
+            .from('notifications')
+            .insert({
+              user_id,
+              message: `Documento alinhado com sucesso! ${lancamentos.length} lançamentos processados.`,
+              type: 'documento_alinhado'
+            });
+        }
+      } else if (!success) {
+        console.error(`Alignment failed for document ${document_id}:`, error_message);
       }
     }
 
