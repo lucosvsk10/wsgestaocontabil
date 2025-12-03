@@ -30,7 +30,7 @@ const ClientLancamentos = () => {
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -38,18 +38,18 @@ const ClientLancamentos = () => {
   return (
     <ClientDashboardLayout activeTab={activeTab} setActiveTab={setActiveTab}>
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="space-y-8 max-w-5xl mx-auto"
+        transition={{ duration: 0.3 }}
+        className="max-w-2xl mx-auto space-y-8 pb-8"
       >
-        {/* Header */}
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-foreground">
+        {/* Header - Minimalista */}
+        <div className="text-center space-y-1 pt-4">
+          <h1 className="text-xl font-semibold text-foreground">
             Lançamentos
           </h1>
-          <p className="text-muted-foreground">
-            Envie seus documentos mensais de forma organizada
+          <p className="text-sm text-muted-foreground">
+            Envie seus documentos mensais
           </p>
         </div>
 
@@ -61,30 +61,43 @@ const ClientLancamentos = () => {
           onYearChange={setSelectedYear}
         />
 
-        {/* Upload Area */}
-        <DocumentUploadArea
-          userId={user.id}
-          competencia={competencia}
-          onUploadComplete={refetch}
-          isMonthClosed={!!fechamento}
-        />
+        {/* Main Content Card */}
+        <div className="space-y-6 p-6 rounded-2xl bg-card/50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5">
+          {/* Upload */}
+          <DocumentUploadArea
+            userId={user.id}
+            competencia={competencia}
+            onUploadComplete={refetch}
+            isMonthClosed={!!fechamento}
+          />
 
-        {/* Document List */}
-        <DocumentList
-          documents={documents}
-          isLoading={isLoading}
-        />
+          {/* Separator */}
+          {documents.length > 0 && (
+            <div className="border-t border-gray-100 dark:border-white/5" />
+          )}
 
-        {/* Close Month Button */}
-        <CloseMonthButton
-          userId={user.id}
-          competencia={competencia}
-          documents={documents}
-          fechamento={fechamento}
-          onClose={refetch}
-        />
+          {/* Documents */}
+          <DocumentList
+            documents={documents}
+            isLoading={isLoading}
+          />
 
-        {/* Month History */}
+          {/* Close Month */}
+          {documents.length > 0 && (
+            <>
+              <div className="border-t border-gray-100 dark:border-white/5" />
+              <CloseMonthButton
+                userId={user.id}
+                competencia={competencia}
+                documents={documents}
+                fechamento={fechamento}
+                onClose={refetch}
+              />
+            </>
+          )}
+        </div>
+
+        {/* History */}
         <MonthHistory userId={user.id} />
       </motion.div>
     </ClientDashboardLayout>

@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -52,24 +52,22 @@ export const MonthSelector = ({
   };
 
   return (
-    <div className="flex items-center justify-center gap-4">
+    <div className="flex items-center justify-center gap-3">
       <Button
-        variant="outline"
+        variant="ghost"
         size="icon"
         onClick={goToPreviousMonth}
-        className="rounded-full"
+        className="h-9 w-9 rounded-full hover:bg-muted"
       >
         <ChevronLeft className="h-4 w-4" />
       </Button>
 
-      <div className="flex items-center gap-2 px-4 py-2 bg-card rounded-xl border border-border">
-        <Calendar className="h-4 w-4 text-primary" />
-        
+      <div className="flex items-center gap-1">
         <Select
           value={String(selectedMonth)}
           onValueChange={(value) => onMonthChange(Number(value))}
         >
-          <SelectTrigger className="w-32 border-0 bg-transparent focus:ring-0">
+          <SelectTrigger className="w-28 h-9 border-0 bg-transparent hover:bg-muted/50 focus:ring-0 font-medium">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -81,13 +79,13 @@ export const MonthSelector = ({
           </SelectContent>
         </Select>
 
-        <span className="text-muted-foreground">/</span>
+        <span className="text-muted-foreground text-sm">/</span>
 
         <Select
           value={String(selectedYear)}
           onValueChange={(value) => onYearChange(Number(value))}
         >
-          <SelectTrigger className="w-24 border-0 bg-transparent focus:ring-0">
+          <SelectTrigger className="w-20 h-9 border-0 bg-transparent hover:bg-muted/50 focus:ring-0 font-medium">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -101,10 +99,10 @@ export const MonthSelector = ({
       </div>
 
       <Button
-        variant="outline"
+        variant="ghost"
         size="icon"
         onClick={goToNextMonth}
-        className="rounded-full"
+        className="h-9 w-9 rounded-full hover:bg-muted"
       >
         <ChevronRight className="h-4 w-4" />
       </Button>

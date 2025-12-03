@@ -26,8 +26,8 @@ interface DocumentUploadAreaProps {
 const DOCUMENT_TYPES = [
   { value: "compra", label: "Nota de Compra" },
   { value: "extrato", label: "Extrato Bancário" },
-  { value: "comprovante", label: "Comprovante de Pagamento" },
-  { value: "observacao", label: "Observação / Outros" },
+  { value: "comprovante", label: "Comprovante" },
+  { value: "observacao", label: "Outros" },
 ];
 
 export const DocumentUploadArea = ({
@@ -96,21 +96,19 @@ export const DocumentUploadArea = ({
         const fileName = `${uuidv4()}.${fileExt}`;
         const storagePath = `${userId}/${competencia}/${fileName}`;
 
-        // Upload to storage
         const { error: uploadError } = await supabase.storage
           .from('lancamentos')
           .upload(storagePath, fileData.file);
 
         if (uploadError) throw uploadError;
 
-        // Insert into database - save the storage path (NOT URL)
         const { error: dbError } = await supabase
           .from('documentos_conciliacao')
           .insert({
             user_id: userId,
             competencia,
             nome_arquivo: fileData.file.name,
-            url_storage: storagePath, // Save path - Edge Function will generate signed URL
+            url_storage: storagePath,
             tipo_documento: fileData.tipo,
             arquivo_original: fileData.file.name,
             status_processamento: 'nao_processado'
@@ -122,7 +120,6 @@ export const DocumentUploadArea = ({
           f.id === fileData.id ? { ...f, status: "success" } : f
         ));
 
-        // Trigger n8n processing - Edge Function will generate fresh signed URL
         await triggerN8nProcessing(userId, competencia, storagePath, fileData.file.name);
 
       } catch (error: any) {
@@ -135,9 +132,8 @@ export const DocumentUploadArea = ({
 
     setIsUploading(false);
     onUploadComplete();
-    toast.success("Documentos enviados com sucesso!");
+    toast.success("Documentos enviados!");
     
-    // Clear successful uploads after 2 seconds
     setTimeout(() => {
       setFiles(prev => prev.filter(f => f.status !== "success"));
     }, 2000);
@@ -162,17 +158,17 @@ export const DocumentUploadArea = ({
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const sizes = ['Bytes', 'KB', 'MB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   };
 
   if (isMonthClosed) {
     return (
-      <div className="bg-muted/50 rounded-2xl border-2 border-dashed border-border p-8 text-center">
-        <CheckCircle className="h-12 w-12 mx-auto text-green-500 mb-4" />
-        <p className="text-muted-foreground">
-          Este mês já foi fechado. Não é possível enviar novos documentos.
+      <div className="rounded-xl bg-green-500/5 dark:bg-green-500/10 p-6 text-center">
+        <CheckCircle className="h-8 w-8 mx-auto text-green-500 mb-3" />
+        <p className="text-sm text-muted-foreground">
+          Mês fechado. Não é possível enviar novos documentos.
         </p>
       </div>
     );
@@ -180,72 +176,68 @@ export const DocumentUploadArea = ({
 
   return (
     <div className="space-y-4">
-      {/* Dropzone */}
+      {/* Dropzone - Minimalista */}
       <div
         {...getRootProps()}
         className={`
-          relative overflow-hidden rounded-2xl border-2 border-dashed transition-all duration-300 cursor-pointer hover:scale-[1.01] active:scale-[0.99]
+          relative rounded-xl border border-dashed transition-all duration-200 cursor-pointer
           ${isDragActive 
-            ? 'border-primary bg-primary/5' 
-            : 'border-border hover:border-primary/50 bg-card'
+            ? 'border-primary/60 bg-primary/5' 
+            : 'border-gray-200 dark:border-white/10 hover:border-primary/40 hover:bg-muted/30'
           }
         `}
       >
         <input {...getInputProps()} />
-        <div className="p-12 text-center">
-          <div className={`transform transition-transform duration-200 ${isDragActive ? '-translate-y-1' : ''}`}>
-            <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-              <Upload className="h-8 w-8 text-primary" />
-            </div>
-            <h3 className="text-lg font-semibold text-foreground mb-2">
-              {isDragActive ? "Solte os arquivos aqui" : "Arraste seus documentos"}
-            </h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              ou clique para selecionar
-            </p>
-            <p className="text-xs text-muted-foreground">
-              PNG, JPG, PDF, Excel, CSV, Word
-            </p>
-          </div>
+        <div className="p-8 text-center">
+          <Upload className={`h-6 w-6 mx-auto mb-3 transition-colors ${isDragActive ? 'text-primary' : 'text-muted-foreground'}`} />
+          <p className="text-sm text-foreground font-medium mb-1">
+            {isDragActive ? "Solte aqui" : "Arraste documentos"}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            ou clique para selecionar
+          </p>
         </div>
       </div>
 
-      {/* File List */}
+      {/* File List - Compacto */}
       <AnimatePresence>
         {files.length > 0 && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="space-y-3"
+            className="space-y-2"
           >
             {files.map((fileData) => (
               <motion.div
                 key={fileData.id}
-                initial={{ opacity: 0, x: -20 }}
+                initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
+                exit={{ opacity: 0, x: 10 }}
                 className={`
-                  flex items-center gap-4 p-4 rounded-xl border transition-colors
-                  ${fileData.status === "success" ? "bg-green-500/10 border-green-500/30" : 
-                    fileData.status === "error" ? "bg-destructive/10 border-destructive/30" :
-                    "bg-card border-border"}
+                  flex items-center gap-3 p-3 rounded-lg transition-colors
+                  ${fileData.status === "success" 
+                    ? "bg-green-500/5 dark:bg-green-500/10" 
+                    : fileData.status === "error" 
+                      ? "bg-destructive/5 dark:bg-destructive/10"
+                      : "bg-muted/30"
+                  }
                 `}
               >
                 <div className="flex-shrink-0">
                   {fileData.status === "uploading" ? (
-                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
                   ) : fileData.status === "success" ? (
-                    <CheckCircle className="h-5 w-5 text-green-500" />
+                    <CheckCircle className="h-4 w-4 text-green-500" />
                   ) : fileData.status === "error" ? (
-                    <AlertCircle className="h-5 w-5 text-destructive" />
+                    <AlertCircle className="h-4 w-4 text-destructive" />
                   ) : (
-                    <FileText className="h-5 w-5 text-muted-foreground" />
+                    <FileText className="h-4 w-4 text-muted-foreground" />
                   )}
                 </div>
                 
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate text-foreground">
+                  <p className="text-sm truncate text-foreground">
                     {fileData.file.name}
                   </p>
                   <p className="text-xs text-muted-foreground">
@@ -262,7 +254,7 @@ export const DocumentUploadArea = ({
                       value={fileData.tipo}
                       onValueChange={(value) => updateFileType(fileData.id, value)}
                     >
-                      <SelectTrigger className="w-40">
+                      <SelectTrigger className="w-32 h-8 text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -277,6 +269,7 @@ export const DocumentUploadArea = ({
                     <Button
                       variant="ghost"
                       size="icon"
+                      className="h-8 w-8"
                       onClick={() => removeFile(fileData.id)}
                     >
                       <X className="h-4 w-4" />
@@ -285,18 +278,20 @@ export const DocumentUploadArea = ({
                 )}
 
                 {fileData.status === "error" && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
+                      className="h-8 text-xs"
                       onClick={() => retryFile(fileData.id)}
                     >
-                      <RefreshCw className="h-4 w-4 mr-1" />
-                      Tentar Novamente
+                      <RefreshCw className="h-3 w-3 mr-1" />
+                      Tentar
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
+                      className="h-8 w-8"
                       onClick={() => removeFile(fileData.id)}
                     >
                       <X className="h-4 w-4" />
@@ -306,13 +301,11 @@ export const DocumentUploadArea = ({
               </motion.div>
             ))}
 
-            {/* Upload Button */}
             {files.some(f => f.status === "pending") && (
               <Button
                 onClick={uploadFiles}
                 disabled={isUploading}
                 className="w-full"
-                size="lg"
               >
                 {isUploading ? (
                   <>
@@ -322,7 +315,7 @@ export const DocumentUploadArea = ({
                 ) : (
                   <>
                     <Upload className="h-4 w-4 mr-2" />
-                    Enviar {files.filter(f => f.status === "pending").length} documento(s)
+                    Enviar {files.filter(f => f.status === "pending").length} arquivo(s)
                   </>
                 )}
               </Button>
