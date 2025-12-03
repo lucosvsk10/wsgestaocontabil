@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Users, Search, Clock, CheckCircle, AlertCircle, FileText } from "lucide-react";
+import { Users, Search, Clock, CheckCircle, AlertCircle, FileText, ClipboardList } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,6 +14,7 @@ interface ClientStatus {
   pendingCount: number;
   closedMonths: number;
   hasError: boolean;
+  hasPlanoContas: boolean;
 }
 
 interface ClientStatusListProps {
@@ -79,6 +80,12 @@ export const ClientStatusList = ({
             .select('*', { count: 'exact', head: true })
             .eq('user_id', user.id);
 
+          // Check if has plano de contas
+          const { count: planoCount } = await supabase
+            .from('planos_contas')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id);
+
           return {
             id: user.id,
             name: user.name || 'Sem nome',
@@ -86,7 +93,8 @@ export const ClientStatusList = ({
             documentsCount: docsCount || 0,
             pendingCount: pendingCount || 0,
             closedMonths: closedCount || 0,
-            hasError: (errorCount || 0) > 0
+            hasError: (errorCount || 0) > 0,
+            hasPlanoContas: (planoCount || 0) > 0
           };
         })
       );
@@ -178,14 +186,22 @@ export const ClientStatusList = ({
             <p className="text-xs text-muted-foreground truncate">
               {client.email}
             </p>
-            {client.closedMonths > 0 && (
-              <div className="flex items-center gap-1 mt-2">
-                <CheckCircle className="h-3 w-3 text-green-500" />
-                <span className="text-xs text-muted-foreground">
-                  {client.closedMonths} mês(es) fechado(s)
-                </span>
-              </div>
-            )}
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              {!client.hasPlanoContas && (
+                <div className="flex items-center gap-1">
+                  <ClipboardList className="h-3 w-3 text-destructive" />
+                  <span className="text-xs text-destructive">Sem plano</span>
+                </div>
+              )}
+              {client.closedMonths > 0 && (
+                <div className="flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3 text-green-500" />
+                  <span className="text-xs text-muted-foreground">
+                    {client.closedMonths} fechado(s)
+                  </span>
+                </div>
+              )}
+            </div>
           </motion.button>
         ))}
 

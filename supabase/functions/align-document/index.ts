@@ -53,6 +53,35 @@ serve(async (req) => {
       .eq('id', doc.user_id)
       .single();
 
+    // Get plano de contas (REQUIRED)
+    const { data: planoData, error: planoError } = await supabase
+      .from('planos_contas')
+      .select('conteudo')
+      .eq('user_id', doc.user_id)
+      .single();
+
+    if (planoError || !planoData) {
+      console.error('Plano de contas not found for user:', doc.user_id);
+      
+      // Notify user about missing plano de contas
+      await supabase
+        .from('notifications')
+        .insert({
+          user_id: doc.user_id,
+          message: `Documento ${doc.nome_arquivo} não pode ser alinhado: Plano de Contas não cadastrado. Entre em contato com o escritório.`,
+          type: 'erro_alinhamento'
+        });
+
+      return new Response(JSON.stringify({ 
+        error: 'Plano de contas não cadastrado para este cliente' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    console.log(`Found plano de contas for user ${doc.user_id} (${planoData.conteudo.length} chars)`);
+
     // Send to n8n for AI alignment
     try {
       console.log(`Sending document ${document_id} to n8n for alignment`);
@@ -70,6 +99,7 @@ serve(async (req) => {
           tipo_documento: doc.tipo_documento,
           nome_arquivo: doc.nome_arquivo,
           dados_extraidos: doc.dados_extraidos,
+          plano_contas: planoData.conteudo,
           timestamp: new Date().toISOString()
         })
       });

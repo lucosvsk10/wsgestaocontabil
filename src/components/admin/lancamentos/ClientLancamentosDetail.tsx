@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { FileText, Calendar, Download, FileSpreadsheet, User, Clock, CheckCircle, AlertCircle } from "lucide-react";
+import { FileText, Calendar, Download, FileSpreadsheet, User, Clock, CheckCircle, AlertCircle, ClipboardList } from "lucide-react";
+import { PlanoContasModal } from "./PlanoContasModal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -72,6 +73,8 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
   const [selectedMonth, setSelectedMonth] = useState(String(new Date().getMonth() + 1).padStart(2, '0'));
   const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()));
   const [isLoading, setIsLoading] = useState(true);
+  const [hasPlanoContas, setHasPlanoContas] = useState(false);
+  const [isPlanoModalOpen, setIsPlanoModalOpen] = useState(false);
 
   const competencia = `${selectedYear}-${selectedMonth}`;
   const currentYear = new Date().getFullYear();
@@ -113,6 +116,14 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
       
       setFechamentos(fechs || []);
 
+      // Check if client has plano de contas
+      const { count } = await supabase
+        .from('planos_contas')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', clientId);
+      
+      setHasPlanoContas((count || 0) > 0);
+
     } catch (error) {
       console.error('Error fetching client data:', error);
     } finally {
@@ -127,21 +138,55 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
       {/* Client Header */}
       {clientInfo && (
         <div className="bg-card rounded-xl border border-border p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <User className="h-6 w-6 text-primary" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <User className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-semibold text-foreground">
+                    {clientInfo.name}
+                  </h2>
+                  {hasPlanoContas ? (
+                    <Badge className="bg-green-500/10 text-green-600 border-green-500/30">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Plano OK
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-destructive/10 text-destructive border-destructive/30">
+                      <AlertCircle className="h-3 w-3 mr-1" />
+                      Sem Plano
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {clientInfo.email}
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-lg font-semibold text-foreground">
-                {clientInfo.name}
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                {clientInfo.email}
-              </p>
-            </div>
+            <Button
+              variant={hasPlanoContas ? "outline" : "default"}
+              size="sm"
+              onClick={() => setIsPlanoModalOpen(true)}
+            >
+              <ClipboardList className="h-4 w-4 mr-2" />
+              Plano de Contas
+            </Button>
           </div>
         </div>
       )}
+
+      {/* Plano de Contas Modal */}
+      <PlanoContasModal
+        isOpen={isPlanoModalOpen}
+        onClose={() => {
+          setIsPlanoModalOpen(false);
+          fetchClientData();
+        }}
+        clientId={clientId}
+        clientName={clientInfo?.name || ''}
+      />
 
       {/* Month Selector */}
       <div className="flex items-center gap-3">

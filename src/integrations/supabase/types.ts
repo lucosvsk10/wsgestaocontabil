@@ -1222,6 +1222,33 @@ export type Database = {
           },
         ]
       }
+      planos_contas: {
+        Row: {
+          conteudo: string
+          created_at: string | null
+          created_by: string
+          id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          conteudo: string
+          created_at?: string | null
+          created_by: string
+          id?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          conteudo?: string
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       poll_options: {
         Row: {
           created_at: string
