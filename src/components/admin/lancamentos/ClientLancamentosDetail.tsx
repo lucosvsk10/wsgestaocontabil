@@ -76,7 +76,6 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
   const fetchClientData = async () => {
     setIsLoading(true);
     try {
-      // Get client info
       const { data: userData } = await supabase
         .from('users')
         .select('name, email')
@@ -85,7 +84,6 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
       
       setClientInfo(userData);
 
-      // Get aligned lancamentos for selected month from renamed table
       const { data: lancamentosData } = await supabase
         .from('lancamentos_alinhados')
         .select('*')
@@ -95,7 +93,6 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
       
       setLancamentos(lancamentosData || []);
 
-      // Get fechamento for selected month
       const { data: fechamentoData } = await supabase
         .from('fechamentos_exportados')
         .select('*')
@@ -105,7 +102,6 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
       
       setFechamento(fechamentoData);
 
-      // Check plano de contas
       const { count } = await supabase
         .from('planos_contas')
         .select('*', { count: 'exact', head: true })
@@ -121,59 +117,51 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
   };
 
   return (
-    <div className="bg-card rounded-xl border border-border overflow-hidden">
-      {/* Header com info do cliente */}
-      <div className="p-5 border-b border-border bg-muted/20">
-        <div className="flex items-start justify-between gap-4 mb-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-1">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <User className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-foreground">
-                  {clientInfo?.name || 'Carregando...'}
-                </h2>
-                {clientInfo?.email && (
-                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                    <Mail className="w-3.5 h-3.5" />
-                    {clientInfo.email}
-                  </div>
-                )}
-              </div>
+    <div className="bg-background rounded-xl shadow-sm overflow-hidden">
+      {/* Header */}
+      <div className="p-5 bg-muted/30">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+              <User className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">
+                {clientInfo?.name || 'Carregando...'}
+              </h2>
+              {clientInfo?.email && (
+                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <Mail className="w-3.5 h-3.5" />
+                  {clientInfo.email}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Botão Plano de Contas destacado */}
           <Button
             onClick={() => setIsPlanoModalOpen(true)}
-            variant={hasPlanoContas ? "outline" : "default"}
-            className={!hasPlanoContas ? "bg-primary text-primary-foreground hover:bg-primary/90" : ""}
+            variant="outline"
+            size="sm"
+            className="shrink-0"
           >
             <ClipboardList className="w-4 h-4 mr-2" />
             Plano de Contas
             {hasPlanoContas ? (
-              <Badge className="ml-2 bg-green-500/20 text-green-600 border-0">
-                <CheckCircle className="w-3 h-3 mr-1" />
-                OK
-              </Badge>
+              <CheckCircle className="w-3.5 h-3.5 ml-2 text-green-500" />
             ) : (
-              <Badge className="ml-2 bg-destructive/20 text-destructive border-0">
-                <AlertCircle className="w-3 h-3 mr-1" />
-                Pendente
-              </Badge>
+              <AlertCircle className="w-3.5 h-3.5 ml-2 text-destructive" />
             )}
           </Button>
         </div>
 
-        {/* Seletores de mês/ano */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5">
-            <Calendar className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">Competência:</span>
+        {/* Seletores */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <Calendar className="w-4 h-4" />
+            <span>Competência:</span>
           </div>
           <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-            <SelectTrigger className="w-36">
+            <SelectTrigger className="w-32 h-9 bg-background border-0 shadow-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -183,7 +171,7 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
             </SelectContent>
           </Select>
           <Select value={selectedYear} onValueChange={setSelectedYear}>
-            <SelectTrigger className="w-24">
+            <SelectTrigger className="w-20 h-9 bg-background border-0 shadow-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -195,21 +183,21 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
         </div>
       </div>
 
-      {/* Status do fechamento */}
+      {/* Fechamento Status */}
       {fechamento && (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="p-4 border-b border-border bg-green-500/5"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mx-5 mt-4 p-4 rounded-lg bg-green-500/5"
         >
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center shrink-0">
                 <CheckCircle className="w-5 h-5 text-green-500" />
               </div>
               <div>
-                <p className="font-medium text-foreground">Mês Fechado</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="font-medium text-foreground text-sm">Mês Fechado</p>
+                <p className="text-xs text-muted-foreground">
                   {fechamento.total_lancamentos} lançamentos exportados
                 </p>
               </div>
@@ -220,9 +208,9 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
                   href={fechamento.arquivo_excel_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-500/10 text-green-600 text-sm font-medium hover:bg-green-500/20 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-green-500/10 text-green-600 text-xs font-medium hover:bg-green-500/20 transition-colors"
                 >
-                  <FileSpreadsheet className="w-4 h-4" />
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
                   Excel
                 </a>
               )}
@@ -231,9 +219,9 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
                   href={fechamento.arquivo_csv_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-muted text-foreground text-sm font-medium hover:bg-muted/80 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-muted text-foreground text-xs font-medium hover:bg-muted/80 transition-colors"
                 >
-                  <Download className="w-4 h-4" />
+                  <Download className="w-3.5 h-3.5" />
                   CSV
                 </a>
               )}
@@ -242,14 +230,14 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
         </motion.div>
       )}
 
-      {/* Tabela de lançamentos alinhados */}
-      <div className="p-4">
+      {/* Lançamentos */}
+      <div className="p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-medium text-foreground flex items-center gap-2">
+          <h3 className="font-medium text-foreground text-sm flex items-center gap-2">
             <FileSpreadsheet className="w-4 h-4 text-primary" />
             Lançamentos Alinhados
           </h3>
-          <Badge variant="outline" className="text-muted-foreground">
+          <Badge variant="secondary" className="text-xs">
             {lancamentos.length} registros
           </Badge>
         </div>
@@ -257,7 +245,7 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
         <LancamentosTable lancamentos={lancamentos} isLoading={isLoading} />
       </div>
 
-      {/* Modal do Plano de Contas */}
+      {/* Modal */}
       <PlanoContasModal
         isOpen={isPlanoModalOpen}
         onClose={() => {
