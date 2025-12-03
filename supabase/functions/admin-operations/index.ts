@@ -7,6 +7,23 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Check if user has admin privileges using database role only
+const checkIsAdmin = async (supabaseAdmin: any, userId: string): Promise<boolean> => {
+  const { data: userData, error } = await supabaseAdmin
+    .from('users')
+    .select('role')
+    .eq('id', userId)
+    .single();
+  
+  if (error) {
+    console.error('Error checking admin role:', error);
+    return false;
+  }
+  
+  const adminRoles = ['admin', 'fiscal', 'contabil', 'geral'];
+  return adminRoles.includes(userData?.role || '');
+};
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -41,25 +58,11 @@ serve(async (req) => {
       throw new Error("Usuário não autenticado");
     }
 
-    // Check if user is admin
-    const isAdminEmail = caller.email === "wsgestao@gmail.com" || caller.email === "l09022007@gmail.com";
+    // Check if user is admin using database role only (NO hardcoded emails)
+    const isAdmin = await checkIsAdmin(supabaseAdmin, caller.id);
     
-    if (!isAdminEmail) {
-      const { data: userData, error: userError } = await supabaseAdmin
-        .from('users')
-        .select('role')
-        .eq('id', caller.id)
-        .single();
-
-      if (userError) {
-        throw new Error("Erro ao verificar função do usuário");
-      }
-      
-      const isAdmin = ['fiscal', 'contabil', 'geral'].includes(userData?.role || '');
-      
-      if (!isAdmin) {
-        throw new Error("Permissão negada. Apenas administradores podem realizar esta operação.");
-      }
+    if (!isAdmin) {
+      throw new Error("Permissão negada. Apenas administradores podem realizar esta operação.");
     }
     
     // Parse request data

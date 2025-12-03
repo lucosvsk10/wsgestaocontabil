@@ -7,6 +7,23 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Check if user has admin privileges using database role only
+const checkIsAdmin = async (supabaseAdmin: any, userId: string): Promise<boolean> => {
+  const { data: userData, error } = await supabaseAdmin
+    .from('users')
+    .select('role')
+    .eq('id', userId)
+    .single();
+  
+  if (error) {
+    console.error('Error checking admin role:', error);
+    return false;
+  }
+  
+  const adminRoles = ['admin', 'fiscal', 'contabil', 'geral'];
+  return adminRoles.includes(userData?.role || '');
+};
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -48,33 +65,14 @@ serve(async (req) => {
       });
     }
 
-    // Verificar se o usuário tem permissão (apenas emails específicos ou admins)
-    // Simplified admin check - only check directly from auth email and role in users table
-    const isAdminEmail = caller.email === "wsgestao@gmail.com" || caller.email === "l09022007@gmail.com";
+    // Verificar se o usuário tem permissão usando role do banco de dados (NO hardcoded emails)
+    const isAdmin = await checkIsAdmin(supabaseAdmin, caller.id);
     
-    if (!isAdminEmail) {
-      const { data: userData, error: userError } = await supabaseAdmin
-        .from('users')
-        .select('role')
-        .eq('id', caller.id)
-        .single();
-
-      if (userError) {
-        return new Response(JSON.stringify({ error: "Erro ao verificar função do usuário", details: userError }), { 
-          status: 500, 
-          headers: { ...corsHeaders, "Content-Type": "application/json" } 
-        });
-      }
-
-      // Check if user role has admin privileges
-      const isAdminRole = ['fiscal', 'contabil', 'geral'].includes(userData?.role || '');
-      
-      if (!isAdminRole) {
-        return new Response(JSON.stringify({ error: "Acesso negado. Apenas administradores podem acessar esta função." }), { 
-          status: 403, 
-          headers: { ...corsHeaders, "Content-Type": "application/json" } 
-        });
-      }
+    if (!isAdmin) {
+      return new Response(JSON.stringify({ error: "Acesso negado. Apenas administradores podem acessar esta função." }), { 
+        status: 403, 
+        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      });
     }
 
     // Obter estatísticas de armazenamento por usuário
