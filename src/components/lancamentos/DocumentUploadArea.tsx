@@ -1,6 +1,6 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
-import { Upload, X, FileText, Loader2, AlertCircle, RefreshCw } from "lucide-react";
+import { Upload, X, FileText, Loader2, AlertCircle, RefreshCw, Ban } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
@@ -27,6 +27,33 @@ export const DocumentUploadArea = ({
 }: DocumentUploadAreaProps) => {
   const [files, setFiles] = useState<FileWithMeta[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [hasPlanoContas, setHasPlanoContas] = useState<boolean | null>(null);
+  const [isCheckingPlano, setIsCheckingPlano] = useState(true);
+
+  // Check if user has plano de contas
+  useEffect(() => {
+    const checkPlanoContas = async () => {
+      setIsCheckingPlano(true);
+      try {
+        const { count, error } = await supabase
+          .from('planos_contas')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId);
+
+        if (error) throw error;
+        setHasPlanoContas((count || 0) > 0);
+      } catch (error) {
+        console.error('Error checking plano de contas:', error);
+        setHasPlanoContas(false);
+      } finally {
+        setIsCheckingPlano(false);
+      }
+    };
+
+    if (userId) {
+      checkPlanoContas();
+    }
+  }, [userId]);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const newFiles = acceptedFiles.map(file => ({
@@ -132,6 +159,35 @@ export const DocumentUploadArea = ({
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
+
+  if (isCheckingPlano) {
+    return (
+      <div className="flex items-center justify-center py-6">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!hasPlanoContas) {
+    return (
+      <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
+            <Ban className="w-6 h-6 text-destructive" />
+          </div>
+          <div>
+            <p className="font-medium text-destructive">Upload Bloqueado</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Seu plano de contas ainda não foi cadastrado.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Entre em contato com o escritório para liberação.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isMonthClosed) {
     return (
