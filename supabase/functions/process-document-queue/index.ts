@@ -126,6 +126,31 @@ serve(async (req) => {
         })
         .eq('id', docId);
 
+      // Schedule alignment in 15 minutes
+      const ALIGNMENT_DELAY_MS = 15 * 60 * 1000; // 15 minutes
+      console.log(`Scheduling alignment for document ${docId} in 15 minutes`);
+      
+      EdgeRuntime.waitUntil(
+        new Promise(resolve => {
+          setTimeout(async () => {
+            try {
+              console.log(`Triggering alignment for document ${docId}`);
+              await fetch(`${supabaseUrl}/functions/v1/align-document`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${supabaseServiceKey}`
+                },
+                body: JSON.stringify({ document_id: docId })
+              });
+            } catch (e) {
+              console.error('Alignment scheduling error:', e);
+            }
+            resolve(true);
+          }, ALIGNMENT_DELAY_MS);
+        })
+      );
+
       return new Response(JSON.stringify({ success: true, data: n8nData }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
