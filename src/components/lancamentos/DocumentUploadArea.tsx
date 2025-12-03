@@ -103,19 +103,21 @@ export const DocumentUploadArea = ({
 
         if (uploadError) throw uploadError;
 
-        // Get public URL
-        const { data: urlData } = supabase.storage
+        // Create signed URL for download (valid for 1 hour)
+        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
           .from('lancamentos')
-          .getPublicUrl(storagePath);
+          .createSignedUrl(storagePath, 3600);
 
-        // Insert into database
+        if (signedUrlError) throw signedUrlError;
+
+        // Insert into database - save the storage path, not the URL
         const { error: dbError } = await supabase
           .from('documentos_conciliacao')
           .insert({
             user_id: userId,
             competencia,
             nome_arquivo: fileData.file.name,
-            url_storage: urlData.publicUrl,
+            url_storage: storagePath, // Save path instead of URL
             tipo_documento: fileData.tipo,
             arquivo_original: fileData.file.name,
             status_processamento: 'nao_processado'
@@ -127,8 +129,8 @@ export const DocumentUploadArea = ({
           f.id === fileData.id ? { ...f, status: "success" } : f
         ));
 
-        // Trigger n8n processing
-        await triggerN8nProcessing(userId, competencia, urlData.publicUrl, fileData.file.name);
+        // Trigger n8n processing with signed URL
+        await triggerN8nProcessing(userId, competencia, signedUrlData.signedUrl, fileData.file.name);
 
       } catch (error: any) {
         console.error('Upload error:', error);

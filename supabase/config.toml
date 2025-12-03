@@ -56,3 +56,6 @@ verify_jwt = false
 
 [functions.close-month]
 verify_jwt = true
+
+[functions.get-document-url]
+verify_jwt = false
