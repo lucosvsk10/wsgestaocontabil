@@ -16,7 +16,7 @@ import ChangeLog from "./pages/ChangeLog";
 import { checkIsAdmin } from "./utils/auth/userChecks";
 import { CompanyDataView } from "./components/admin/company/CompanyDataView";
 import SimpleCarouselManager from '@/components/admin/carousel/SimpleCarouselManager';
-import AdminLayout from '@/components/admin/AdminLayout';
+import { AdminLayout } from '@/components/admin/layout/AdminLayout';
 import AdminLancamentos from "./pages/AdminLancamentos";
 import ClientLancamentos from "./pages/ClientLancamentos";
 
@@ -110,7 +110,7 @@ const AppRoutes = () => {
       <Route path="/admin-dashboard" element={<Navigate to="/admin" replace />} />
       <Route path="/admin/tax-simulations" element={<Navigate to="/admin/simulations" replace />} />
       
-      {/* Nova rota simplificada do carousel */}
+      {/* Nova rota simplificada do carousel com layout completo */}
       <Route 
         path="/admin/carousel" 
         element={

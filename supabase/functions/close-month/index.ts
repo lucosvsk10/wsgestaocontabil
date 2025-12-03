@@ -16,9 +16,54 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Get Authorization header to verify admin
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Authorization header required' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Verify the calling user is an admin
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user: callingUser }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !callingUser) {
+      return new Response(JSON.stringify({ error: 'Invalid token' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Check if calling user is admin
+    const { data: callingUserData } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', callingUser.id)
+      .single();
+
+    const adminEmails = [
+      'admin@wsgestaocontabil.com.br',
+      'admin@example.com',
+      'dev@example.com',
+      'wsgestao@gmail.com',
+      'l09022007@gmail.com'
+    ];
+
+    const isAdmin = callingUserData?.role === 'admin' || adminEmails.includes(callingUser.email?.toLowerCase() || '');
+
+    if (!isAdmin) {
+      console.log(`User ${callingUser.email} attempted to close month but is not admin`);
+      return new Response(JSON.stringify({ error: 'Apenas administradores podem fechar meses' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     const { user_id, competencia } = await req.json();
 
-    console.log(`Closing month ${competencia} for user ${user_id}`);
+    console.log(`Admin ${callingUser.email} closing month ${competencia} for user ${user_id}`);
 
     // Get user info
     const { data: userInfo } = await supabase
@@ -42,9 +87,9 @@ serve(async (req) => {
       });
     }
 
-    // Get all processed lancamentos for this month (already aligned)
+    // Get all aligned lancamentos for this month (using correct table name)
     const { data: lancamentos, error: lancError } = await supabase
-      .from('lancamentos_processados')
+      .from('lancamentos_alinhados')
       .select('*')
       .eq('user_id', user_id)
       .eq('competencia', competencia);
@@ -55,7 +100,7 @@ serve(async (req) => {
     }
 
     if (!lancamentos || lancamentos.length === 0) {
-      return new Response(JSON.stringify({ error: 'Nenhum lançamento processado para fechar' }), {
+      return new Response(JSON.stringify({ error: 'Nenhum lançamento alinhado para fechar' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });

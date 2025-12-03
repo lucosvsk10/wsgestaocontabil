@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Users, Search, CheckCircle, ClipboardList, FileSpreadsheet } from "lucide-react";
+import { Users, Search, CheckCircle, ClipboardList } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
@@ -87,9 +87,9 @@ export const ClientStatusList = ({
   );
 
   return (
-    <div className="bg-background rounded-xl shadow-sm overflow-hidden">
+    <div className="bg-card rounded-xl overflow-hidden">
       {/* Header */}
-      <div className="p-4 bg-muted/30">
+      <div className="p-4 bg-muted/50">
         <div className="flex items-center gap-2 mb-3">
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
             <Users className="h-4 w-4 text-primary" />
@@ -105,7 +105,7 @@ export const ClientStatusList = ({
             placeholder="Buscar cliente..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 bg-background border-0 shadow-sm"
+            className="pl-9 bg-background"
           />
         </div>
       </div>
@@ -121,7 +121,7 @@ export const ClientStatusList = ({
             Nenhum cliente encontrado
           </div>
         ) : (
-          <div className="divide-y divide-border/50">
+          <div className="divide-y divide-border/30">
             {filteredClients.map((client, index) => (
               <motion.button
                 key={client.id}
@@ -132,8 +132,8 @@ export const ClientStatusList = ({
                 className={cn(
                   "w-full p-4 text-left transition-all duration-200",
                   selectedClientId === client.id
-                    ? "bg-primary/5"
-                    : "hover:bg-muted/30"
+                    ? "bg-primary/10"
+                    : "hover:bg-muted/50"
                 )}
               >
                 <div className="flex items-start justify-between gap-2 mb-1.5">

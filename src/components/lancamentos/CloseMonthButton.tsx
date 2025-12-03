@@ -34,6 +34,7 @@ interface CloseMonthButtonProps {
   documents: Document[];
   fechamento: Fechamento | null;
   onClose: () => void;
+  isAdmin?: boolean;
 }
 
 const MONTHS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -44,7 +45,8 @@ export const CloseMonthButton = ({
   competencia,
   documents,
   fechamento,
-  onClose
+  onClose,
+  isAdmin = false
 }: CloseMonthButtonProps) => {
   const [isClosing, setIsClosing] = useState(false);
 
@@ -77,7 +79,7 @@ export const CloseMonthButton = ({
     return `${MONTHS[parseInt(month) - 1]}`;
   };
 
-  // Mês fechado
+  // Mês fechado - mostrar para todos
   if (fechamento) {
     return (
       <div className="text-center py-4 space-y-3">
@@ -118,6 +120,27 @@ export const CloseMonthButton = ({
     );
   }
 
+  // Se não for admin, mostrar apenas status (sem botão de fechar)
+  if (!isAdmin) {
+    return (
+      <div className="text-center py-4 space-y-2.5">
+        <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <CheckCircle className="w-3 h-3 text-green-500" />
+            {processedDocs.length} processado(s)
+          </span>
+          {pendingDocs.length > 0 && (
+            <span className="text-amber-500">{pendingDocs.length} pendente(s)</span>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Aguardando fechamento pelo administrador
+        </p>
+      </div>
+    );
+  }
+
+  // Admin pode fechar o mês
   return (
     <div className="text-center py-4 space-y-2.5">
       {/* Status */}

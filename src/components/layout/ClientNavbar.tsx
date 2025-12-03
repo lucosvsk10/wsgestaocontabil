@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { LogOut, Menu, X, User } from "lucide-react";
+import { LogOut, Menu, X, User, Home, Calculator, ShieldCheck, Briefcase, FileText, Calendar, ClipboardList } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { ThemeSwitcher } from "@/components/client/ThemeSwitcher";
@@ -17,13 +17,13 @@ export const ClientNavbar = () => {
   };
 
   const navItems = [
-    { path: "/client", label: "Dashboard", icon: "🏠" },
-    { path: "/client/tax-simulation", label: "Simulação IRPF", icon: "📊" },
-    { path: "/client/inss-simulation", label: "Simulação INSS", icon: "🏥" },
-    { path: "/client/prolabore-simulation", label: "Pró-labore", icon: "💼" },
-    { path: "/client/documents", label: "Documentos", icon: "📄" },
-    { path: "/client/fiscal-calendar", label: "Agenda Fiscal", icon: "📅" },
-    { path: "/client/polls", label: "Enquetes", icon: "📝" }
+    { path: "/client", label: "Dashboard", icon: Home },
+    { path: "/client/tax-simulation", label: "Simulação IRPF", icon: Calculator },
+    { path: "/client/inss-simulation", label: "Simulação INSS", icon: ShieldCheck },
+    { path: "/client/prolabore-simulation", label: "Pró-labore", icon: Briefcase },
+    { path: "/client/documents", label: "Documentos", icon: FileText },
+    { path: "/client/fiscal-calendar", label: "Agenda Fiscal", icon: Calendar },
+    { path: "/client/polls", label: "Enquetes", icon: ClipboardList }
   ];
 
   return (
@@ -45,20 +45,23 @@ export const ClientNavbar = () => {
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-1">
-              {navItems.map((item) => (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    isActive(item.path)
-                      ? "bg-[#efc349]/10 text-[#020817] dark:text-[#efc349]"
-                      : "text-gray-600 dark:text-gray-300 hover:text-[#020817] dark:hover:text-[#efc349] hover:bg-gray-100 dark:hover:bg-[#efc349]/5"
-                  }`}
-                >
-                  <span className="mr-2">{item.icon}</span>
-                  {item.label}
-                </Link>
-              ))}
+              {navItems.map((item) => {
+                const IconComponent = item.icon;
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${
+                      isActive(item.path)
+                        ? "bg-[#efc349]/10 text-[#020817] dark:text-[#efc349]"
+                        : "text-gray-600 dark:text-gray-300 hover:text-[#020817] dark:hover:text-[#efc349] hover:bg-gray-100 dark:hover:bg-[#efc349]/5"
+                    }`}
+                  >
+                    <IconComponent className="w-4 h-4" />
+                    {item.label}
+                  </Link>
+                );
+              })}
             </div>
 
             {/* Right Side - Notifications, User, Theme Toggle, Logout */}
@@ -116,21 +119,24 @@ export const ClientNavbar = () => {
                   </span>
                 </div>
 
-                {navItems.map((item) => (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
-                      isActive(item.path)
-                        ? "bg-[#efc349]/10 text-[#020817] dark:text-[#efc349]"
-                        : "text-gray-600 dark:text-gray-300 hover:text-[#020817] dark:hover:text-[#efc349] hover:bg-gray-100 dark:hover:bg-[#efc349]/5"
-                    }`}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <span className="mr-2">{item.icon}</span>
-                    {item.label}
-                  </Link>
-                ))}
+                {navItems.map((item) => {
+                  const IconComponent = item.icon;
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium transition-colors ${
+                        isActive(item.path)
+                          ? "bg-[#efc349]/10 text-[#020817] dark:text-[#efc349]"
+                          : "text-gray-600 dark:text-gray-300 hover:text-[#020817] dark:hover:text-[#efc349] hover:bg-gray-100 dark:hover:bg-[#efc349]/5"
+                      }`}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      <IconComponent className="w-4 h-4" />
+                      {item.label}
+                    </Link>
+                  );
+                })}
               </div>
             </div>
           )}

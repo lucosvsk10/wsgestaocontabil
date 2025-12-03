@@ -81,7 +81,7 @@ export const LancamentosSection = () => {
           deletingIds={deletingIds}
         />
 
-        {/* Fechar mês */}
+        {/* Status do mês - apenas visualização para cliente */}
         {documents.length > 0 && (
           <CloseMonthButton
             userId={user.id}
@@ -89,6 +89,7 @@ export const LancamentosSection = () => {
             documents={documents}
             fechamento={fechamento}
             onClose={refetch}
+            isAdmin={false}
           />
         )}
 

@@ -47,8 +47,8 @@ export const LancamentosTable = ({ lancamentos, isLoading }: LancamentosTablePro
   if (lancamentos.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
-        <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mb-3">
-          <FileSpreadsheet className="w-5 h-5 text-muted-foreground/50" />
+        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
+          <FileSpreadsheet className="w-5 h-5 text-muted-foreground" />
         </div>
         <p className="text-muted-foreground text-sm">Nenhum lançamento alinhado</p>
         <p className="text-xs text-muted-foreground/70 mt-1">
@@ -59,25 +59,25 @@ export const LancamentosTable = ({ lancamentos, isLoading }: LancamentosTablePro
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg bg-muted/20">
+    <div className="overflow-x-auto rounded-xl bg-muted/30">
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left">
-            <th className="py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">Data</th>
+          <tr className="text-left bg-muted/50">
+            <th className="py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide rounded-tl-xl">Data</th>
             <th className="py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">Histórico</th>
             <th className="py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">Débito</th>
             <th className="py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">Crédito</th>
-            <th className="py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide text-right">Valor</th>
+            <th className="py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide text-right rounded-tr-xl">Valor</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-border/30">
+        <tbody className="divide-y divide-border/20">
           {lancamentos.map((lancamento, index) => (
             <motion.tr
               key={lancamento.id}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: index * 0.015 }}
-              className="hover:bg-muted/30 transition-colors"
+              className="hover:bg-muted/40 transition-colors"
             >
               <td className="py-3 px-4 text-foreground whitespace-nowrap">
                 {formatDate(lancamento.data)}
@@ -98,11 +98,11 @@ export const LancamentosTable = ({ lancamentos, isLoading }: LancamentosTablePro
           ))}
         </tbody>
         <tfoot>
-          <tr className="bg-muted/40">
-            <td colSpan={4} className="py-3 px-4 font-medium text-foreground text-sm">
+          <tr className="bg-muted/50">
+            <td colSpan={4} className="py-3 px-4 font-medium text-foreground text-sm rounded-bl-xl">
               Total ({lancamentos.length} lançamentos)
             </td>
-            <td className="py-3 px-4 text-right font-bold text-foreground">
+            <td className="py-3 px-4 text-right font-bold text-foreground rounded-br-xl">
               {formatCurrency(lancamentos.reduce((sum, l) => sum + (l.valor || 0), 0))}
             </td>
           </tr>

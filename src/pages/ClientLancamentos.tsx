@@ -86,7 +86,7 @@ const ClientLancamentos = () => {
             deletingIds={deletingIds}
           />
 
-          {/* Close Month */}
+          {/* Status do mês - apenas visualização para cliente */}
           {documents.length > 0 && (
             <>
               <div className="border-t border-gray-100 dark:border-white/5" />
@@ -96,6 +96,7 @@ const ClientLancamentos = () => {
                 documents={documents}
                 fechamento={fechamento}
                 onClose={refetch}
+                isAdmin={false}
               />
             </>
           )}
