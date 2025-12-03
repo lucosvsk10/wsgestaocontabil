@@ -1,13 +1,9 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Calculator, Eye, Download, Trash2, Building2, CreditCard } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SimulationDetailModal } from "./SimulationDetailModal";
 
 interface BaseSimulation {
@@ -57,7 +53,6 @@ export const SimulationsSection = () => {
   useEffect(() => {
     fetchSimulations();
     
-    // Subscription para atualizações em tempo real
     const channels = [
       supabase
         .channel('user_tax_simulations')
@@ -101,9 +96,6 @@ export const SimulationsSection = () => {
     }
     
     try {
-      console.log("Buscando simulações para usuário:", user.id);
-      
-      // Buscar todas as simulações do usuário
       const [taxSims, inssSims, prolaboreSims] = await Promise.all([
         supabase
           .from('tax_simulations')
@@ -124,21 +116,18 @@ export const SimulationsSection = () => {
           .order('created_at', { ascending: false })
       ]);
 
-      // Combinar todas as simulações com tipo identificado
       const allSimulations: UserSimulation[] = [
         ...(taxSims.data || []).map(sim => ({ ...sim, type: 'tax' as const })),
         ...(inssSims.data || []).map(sim => ({ ...sim, type: 'inss' as const })),
         ...(prolaboreSims.data || []).map(sim => ({ ...sim, type: 'prolabore' as const }))
       ];
 
-      // Ordenar por data de criação
       allSimulations.sort((a, b) => {
         const dateA = new Date(getCreatedDate(a));
         const dateB = new Date(getCreatedDate(b));
         return dateB.getTime() - dateA.getTime();
       });
 
-      console.log("Simulações encontradas para o usuário:", allSimulations);
       setSimulations(allSimulations);
     } catch (error) {
       console.error('Erro ao buscar simulações:', error);
@@ -147,7 +136,6 @@ export const SimulationsSection = () => {
     }
   };
 
-  // Função helper para obter a data de criação
   const getCreatedDate = (simulation: UserSimulation) => {
     return simulation.data_criacao || simulation.created_at || '';
   };
@@ -181,7 +169,7 @@ export const SimulationsSection = () => {
         description: "Simulação excluída com sucesso"
       });
 
-      fetchSimulations(); // Recarregar a lista
+      fetchSimulations();
     } catch (error) {
       console.error('Erro ao excluir simulação:', error);
       toast({
@@ -201,14 +189,10 @@ export const SimulationsSection = () => {
     const sim = simulation || selectedSimulation;
     if (!sim) return;
 
-    // Implementação básica do download de PDF - pode ser expandida no futuro
     toast({
       title: "PDF em desenvolvimento",
       description: "A funcionalidade de download de PDF será implementada em breve"
     });
-    
-    // Aqui você pode implementar a geração real do PDF
-    console.log("Gerando PDF para simulação:", sim);
   };
 
   const formatCurrency = (value: number) => {
@@ -244,24 +228,24 @@ export const SimulationsSection = () => {
     switch (simulation.type) {
       case 'tax':
         const taxSim = simulation as TaxSimulation;
-        return `Rend. Bruto: ${formatCurrency(taxSim.rendimento_bruto)} - Imposto: ${formatCurrency(taxSim.imposto_estimado)}`;
+        return `Rend: ${formatCurrency(taxSim.rendimento_bruto)} • Imposto: ${formatCurrency(taxSim.imposto_estimado)}`;
       case 'inss':
         const inssSim = simulation as INSSSimulation;
-        return `${inssSim.dados?.categoria || 'N/A'} - ${inssSim.dados?.aliquota || 0}% - Contrib.: ${formatCurrency(inssSim.dados?.contribuicao || 0)}`;
+        return `${inssSim.dados?.categoria || 'N/A'} • ${inssSim.dados?.aliquota || 0}%`;
       case 'prolabore':
         const prolaboreSim = simulation as ProlaboreSimulation;
-        return `Bruto: ${formatCurrency(prolaboreSim.dados?.valorBruto || 0)} - Líquido: ${formatCurrency(prolaboreSim.dados?.valorLiquido || 0)}`;
+        return `Bruto: ${formatCurrency(prolaboreSim.dados?.valorBruto || 0)}`;
       default:
         return '';
     }
   };
 
-  const getTypeColor = (type: string) => {
+  const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'tax': return 'bg-blue-600 hover:bg-blue-700';
-      case 'inss': return 'bg-green-600 hover:bg-green-700';
-      case 'prolabore': return 'bg-purple-600 hover:bg-purple-700';
-      default: return 'bg-gray-600 hover:bg-gray-700';
+      case 'tax': return Calculator;
+      case 'inss': return CreditCard;
+      case 'prolabore': return Building2;
+      default: return Calculator;
     }
   };
 
@@ -270,153 +254,165 @@ export const SimulationsSection = () => {
     return sim.type === activeTab;
   });
 
+  const tabs = [
+    { id: 'all', label: 'Todas' },
+    { id: 'tax', label: 'IRPF' },
+    { id: 'inss', label: 'INSS' },
+    { id: 'prolabore', label: 'Pró-labore' }
+  ];
+
   if (loading) {
     return (
-      <Card className="bg-[#0b1320] border-[#efc349]/20">
-        <CardContent className="p-6">
-          <div className="animate-pulse space-y-4">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-20 bg-[#020817] rounded"></div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        <div className="text-center space-y-2">
+          <div className="w-12 h-12 mx-auto rounded-full bg-foreground/5 animate-pulse" />
+          <div className="h-6 w-32 mx-auto bg-foreground/5 rounded animate-pulse" />
+        </div>
+        <div className="space-y-2">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-20 bg-foreground/5 rounded-lg animate-pulse" />
+          ))}
+        </div>
+      </div>
     );
   }
 
   return (
     <>
-      <Card className="bg-white dark:bg-[#0b1320] border-gray-200 dark:border-[#efc349]/20 shadow-sm">
-        <CardHeader className="bg-white dark:bg-[#0b1320] border-b border-gray-200 dark:border-[#efc349]/20">
-          <CardTitle className="text-[#020817] dark:text-[#efc349] font-semibold flex items-center text-2xl">
-            <Calculator className="w-6 h-6 mr-3" />
-            Minhas Simulações
-            <Badge variant="outline" className="ml-3 border-gray-300 dark:border-[#efc349]/30 text-[#020817] dark:text-[#efc349] font-normal">
-              {simulations.length} simulação{simulations.length !== 1 ? 'ões' : ''}
-            </Badge>
-          </CardTitle>
-        </CardHeader>
-        
-        <CardContent className="bg-white dark:bg-[#0b1320] p-6">
-          {simulations.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 mx-auto mb-6 bg-gray-100 dark:bg-[#020817] rounded-full flex items-center justify-center">
-                <Calculator className="w-8 h-8 text-gray-400 dark:text-gray-600" />
-              </div>
-              <h3 className="text-lg font-semibold text-[#020817] dark:text-white mb-2">
-                Nenhuma simulação realizada
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
-                Comece criando sua primeira simulação
-              </p>
-              <div className="flex flex-col gap-3 max-w-xs mx-auto">
-                <Button 
-                  className="bg-[#efc349] hover:bg-[#d4a843] text-[#020817] font-medium transition-all duration-300 hover:shadow-sm"
-                  onClick={() => window.open('/simulador-irpf', '_blank')}
-                >
-                  <Calculator className="w-4 h-4 mr-2" />
-                  Simulador IRPF
-                </Button>
-                <Button 
-                  className="bg-[#efc349] hover:bg-[#d4a843] text-[#020817] font-medium transition-all duration-300 hover:shadow-sm"
-                  onClick={() => window.open('/simulador-prolabore', '_blank')}
-                >
-                  <Building2 className="w-4 h-4 mr-2" />
-                  Simulador Pró-labore
-                </Button>
-                <Button 
-                  className="bg-[#efc349] hover:bg-[#d4a843] text-[#020817] font-medium transition-all duration-300 hover:shadow-sm"
-                  onClick={() => window.open('/calculadora-inss', '_blank')}
-                >
-                  <CreditCard className="w-4 h-4 mr-2" />
-                  Calculadora INSS
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid grid-cols-4 mb-6 bg-gray-100 dark:bg-[#020817]">
-                <TabsTrigger value="all" className="font-medium data-[state=active]:bg-white dark:data-[state=active]:bg-[#0b1320] data-[state=active]:text-[#020817] dark:data-[state=active]:text-[#efc349]">Todas</TabsTrigger>
-                <TabsTrigger value="tax" className="font-medium data-[state=active]:bg-white dark:data-[state=active]:bg-[#0b1320] data-[state=active]:text-[#020817] dark:data-[state=active]:text-[#efc349]">IRPF</TabsTrigger>
-                <TabsTrigger value="inss" className="font-medium data-[state=active]:bg-white dark:data-[state=active]:bg-[#0b1320] data-[state=active]:text-[#020817] dark:data-[state=active]:text-[#efc349]">INSS</TabsTrigger>
-                <TabsTrigger value="prolabore" className="font-medium data-[state=active]:bg-white dark:data-[state=active]:bg-[#0b1320] data-[state=active]:text-[#020817] dark:data-[state=active]:text-[#efc349]">Pró-labore</TabsTrigger>
-              </TabsList>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="space-y-6"
+      >
+        {/* Header minimalista */}
+        <div className="text-center space-y-2">
+          <div className="w-12 h-12 mx-auto rounded-full bg-foreground/5 flex items-center justify-center">
+            <Calculator className="w-5 h-5 text-muted-foreground" />
+          </div>
+          <h1 className="text-2xl font-light text-foreground">Simulações</h1>
+          <p className="text-sm text-muted-foreground">
+            Suas simulações de impostos
+          </p>
+        </div>
 
-              <TabsContent value={activeTab}>
-                <div className="space-y-4">
-                  {filteredSimulations.map((simulation, index) => (
-                    <motion.div
-                      key={`${simulation.type}-${simulation.id}`}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
-                      className="bg-white dark:bg-[#020817] border border-gray-200 dark:border-[#efc349]/20 rounded-xl p-6 hover:border-[#efc349]/50 dark:hover:border-[#efc349]/40 hover:shadow-md transition-all duration-300"
-                    >
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-[#0b1320] flex items-center justify-center">
-                              {simulation.type === 'tax' && <Calculator className="w-5 h-5 text-[#020817] dark:text-[#efc349]" />}
-                              {simulation.type === 'inss' && <CreditCard className="w-5 h-5 text-[#020817] dark:text-[#efc349]" />}
-                              {simulation.type === 'prolabore' && <Building2 className="w-5 h-5 text-[#020817] dark:text-[#efc349]" />}
-                            </div>
-                            <h3 className="font-semibold text-[#020817] dark:text-white text-lg">
+        {simulations.length === 0 ? (
+          <div className="text-center py-12 space-y-6">
+            <p className="text-sm text-muted-foreground">
+              Nenhuma simulação realizada ainda
+            </p>
+            <div className="flex flex-col gap-2 max-w-xs mx-auto">
+              <a 
+                href="/simulador-irpf" 
+                target="_blank"
+                className="py-2.5 px-4 rounded-lg text-sm font-medium bg-foreground/5 hover:bg-foreground/10 text-foreground border border-border/50 transition-all duration-200 flex items-center justify-center gap-2"
+              >
+                <Calculator className="w-4 h-4" />
+                Simulador IRPF
+              </a>
+              <a 
+                href="/simulador-prolabore" 
+                target="_blank"
+                className="py-2.5 px-4 rounded-lg text-sm font-medium bg-foreground/5 hover:bg-foreground/10 text-foreground border border-border/50 transition-all duration-200 flex items-center justify-center gap-2"
+              >
+                <Building2 className="w-4 h-4" />
+                Simulador Pró-labore
+              </a>
+              <a 
+                href="/calculadora-inss" 
+                target="_blank"
+                className="py-2.5 px-4 rounded-lg text-sm font-medium bg-foreground/5 hover:bg-foreground/10 text-foreground border border-border/50 transition-all duration-200 flex items-center justify-center gap-2"
+              >
+                <CreditCard className="w-4 h-4" />
+                Calculadora INSS
+              </a>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Tabs como texto simples */}
+            <div className="flex gap-4 text-sm border-b border-border/30 pb-3">
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`transition-colors ${
+                    activeTab === tab.id 
+                      ? "text-foreground font-medium" 
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Contagem */}
+            <p className="text-xs text-muted-foreground">
+              {filteredSimulations.length} simulação{filteredSimulations.length !== 1 ? 'ões' : ''}
+            </p>
+
+            {/* Lista de simulações */}
+            <div className="space-y-1">
+              {filteredSimulations.map((simulation, index) => {
+                const Icon = getTypeIcon(simulation.type);
+                return (
+                  <motion.div
+                    key={`${simulation.type}-${simulation.id}`}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.2, delay: index * 0.03 }}
+                    className="group py-4 px-4 rounded-lg transition-all duration-200 hover:bg-foreground/5"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4 flex-1 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-foreground/5 flex items-center justify-center flex-shrink-0">
+                          <Icon className="w-4 h-4 text-muted-foreground" />
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-medium text-foreground">
                               {getSimulationType(simulation)}
                             </h3>
-                            <Badge className={`${getTypeColor(simulation.type)} text-white font-medium`}>
-                              Concluída
-                            </Badge>
+                            <span className="text-lg font-light text-foreground">
+                              {getSimulationMainValue(simulation)}
+                            </span>
                           </div>
-                          <p className="text-gray-600 dark:text-gray-400 text-sm">
-                            {new Date(getCreatedDate(simulation)).toLocaleString('pt-BR')}
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {getSimulationDescription(simulation)} • {new Date(getCreatedDate(simulation)).toLocaleDateString('pt-BR')}
                           </p>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
+                      </div>
+
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={() => handleViewDetails(simulation)}
+                          className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-foreground/10 transition-all duration-200"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => handleDownloadPDF(simulation)}
+                          className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-foreground/10 transition-all duration-200"
+                        >
+                          <Download className="w-4 h-4" />
+                        </button>
+                        <button 
                           onClick={() => handleDeleteSimulation(simulation)}
-                          className="border-red-300 dark:border-red-500/30 text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"
+                          className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-200"
                         >
                           <Trash2 className="w-4 h-4" />
-                        </Button>
+                        </button>
                       </div>
-
-                      <div className="mb-6">
-                        <p className="text-[#020817] dark:text-white font-semibold text-2xl mb-2">
-                          {getSimulationMainValue(simulation)}
-                        </p>
-                        <p className="text-gray-600 dark:text-gray-300 text-sm">
-                          {getSimulationDescription(simulation)}
-                        </p>
-                      </div>
-
-                      <div className="flex gap-3">
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          className="border-gray-300 dark:border-[#efc349]/30 text-[#020817] dark:text-[#efc349] hover:bg-gray-50 dark:hover:bg-[#efc349]/10 transition-all duration-300"
-                          onClick={() => handleViewDetails(simulation)}
-                        >
-                          <Eye className="w-4 h-4 mr-2" />
-                          Ver detalhes
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          className="bg-[#efc349] hover:bg-[#d4a843] text-[#020817] font-medium transition-all duration-300"
-                          onClick={() => handleDownloadPDF(simulation)}
-                        >
-                          <Download className="w-4 h-4 mr-2" />
-                          Baixar PDF
-                        </Button>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </TabsContent>
-            </Tabs>
-          )}
-        </CardContent>
-      </Card>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </motion.div>
 
       <SimulationDetailModal
         isOpen={isDetailModalOpen}
