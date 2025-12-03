@@ -50,7 +50,7 @@ serve(async (req) => {
       .select('*')
       .eq('user_id', user_id)
       .eq('competencia', competencia)
-      .eq('status_processamento', 'processado');
+      .eq('status_processamento', 'concluido');
 
     if (docsError) throw docsError;
 
