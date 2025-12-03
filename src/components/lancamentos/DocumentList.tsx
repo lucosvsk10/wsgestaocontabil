@@ -1,7 +1,11 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { FileText, Clock, CheckCircle, AlertCircle, Loader2, Trash2 } from "lucide-react";
+import { FileText, Clock, CheckCircle, AlertCircle, Loader2, Trash2, Zap } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface Document {
   id: string;
@@ -35,9 +39,59 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 export const DocumentList = ({ documents, isLoading, onDelete, deletingIds = new Set() }: DocumentListProps) => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [aligningIds, setAligningIds] = useState<Set<string>>(new Set());
+  
+  const isTestUser = user?.email === 'teste@gmail.com';
+  
   const canDelete = (doc: Document) => {
     return doc.status_processamento === 'erro' || 
            (doc.tentativas_processamento && doc.tentativas_processamento > 0);
+  };
+
+  const canAlign = (doc: Document) => {
+    return isTestUser && doc.status_processamento === 'concluido';
+  };
+
+  const handleForceAlign = async (doc: Document) => {
+    setAligningIds(prev => new Set(prev).add(doc.id));
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch(`https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/align-document`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
+        body: JSON.stringify({ document_id: doc.id })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao alinhar documento');
+      }
+
+      toast({
+        title: "Alinhamento iniciado",
+        description: `${result.lancamentos_count || 0} lançamentos processados.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setAligningIds(prev => {
+        const next = new Set(prev);
+        next.delete(doc.id);
+        return next;
+      });
+    }
   };
 
   const handleDelete = async (doc: Document) => {
@@ -111,6 +165,22 @@ export const DocumentList = ({ documents, isLoading, onDelete, deletingIds = new
                   <StatusIcon className={`w-3 h-3 ${status.spin ? 'animate-spin' : ''}`} />
                   <span className="text-xs">{status.label}</span>
                 </div>
+
+                {canAlign(doc) && (
+                  <button
+                    onClick={() => handleForceAlign(doc)}
+                    disabled={aligningIds.has(doc.id)}
+                    className="px-2 py-1 rounded text-xs bg-primary/10 hover:bg-primary/20 text-primary transition-colors disabled:opacity-50 flex items-center gap-1"
+                    title="Forçar alinhamento IA"
+                  >
+                    {aligningIds.has(doc.id) ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Zap className="w-3 h-3" />
+                    )}
+                    <span>Forçar Alinhamento</span>
+                  </button>
+                )}
 
                 {showDelete && onDelete && (
                   <button
