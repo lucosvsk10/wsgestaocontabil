@@ -20,10 +20,10 @@ interface DocumentListProps {
 }
 
 const STATUS_CONFIG: Record<string, { icon: typeof Clock; label: string; color: string; animate?: boolean }> = {
-  pendente: {
+  nao_processado: {
     icon: Clock,
-    label: "Pendente",
-    color: "bg-yellow-500/10 text-yellow-600 border-yellow-500/30"
+    label: "Aguardando",
+    color: "bg-muted/50 text-muted-foreground border-border"
   },
   processando: {
     icon: Loader2,
@@ -31,7 +31,7 @@ const STATUS_CONFIG: Record<string, { icon: typeof Clock; label: string; color: 
     color: "bg-blue-500/10 text-blue-600 border-blue-500/30",
     animate: true
   },
-  processado: {
+  concluido: {
     icon: CheckCircle,
     label: "Processado",
     color: "bg-green-500/10 text-green-600 border-green-500/30"
