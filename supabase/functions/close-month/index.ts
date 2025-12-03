@@ -6,6 +6,23 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Check if user has admin privileges using database role only
+const checkIsAdmin = async (supabase: any, userId: string): Promise<boolean> => {
+  const { data: userData, error } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', userId)
+    .single();
+  
+  if (error) {
+    console.error('Error checking admin role:', error);
+    return false;
+  }
+  
+  // Only database role determines admin status (NO hardcoded emails)
+  return userData?.role === 'admin';
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -36,22 +53,8 @@ serve(async (req) => {
       });
     }
 
-    // Check if calling user is admin
-    const { data: callingUserData } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', callingUser.id)
-      .single();
-
-    const adminEmails = [
-      'admin@wsgestaocontabil.com.br',
-      'admin@example.com',
-      'dev@example.com',
-      'wsgestao@gmail.com',
-      'l09022007@gmail.com'
-    ];
-
-    const isAdmin = callingUserData?.role === 'admin' || adminEmails.includes(callingUser.email?.toLowerCase() || '');
+    // Check if calling user is admin using database role only (NO hardcoded emails)
+    const isAdmin = await checkIsAdmin(supabase, callingUser.id);
 
     if (!isAdmin) {
       console.log(`User ${callingUser.email} attempted to close month but is not admin`);

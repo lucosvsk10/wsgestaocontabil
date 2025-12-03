@@ -2,25 +2,14 @@
 /**
  * Check if user is an administrator
  * @param userData User data from database
- * @param email User email (optional backup check)
+ * @param email User email (optional, kept for backward compatibility but NOT used for admin check)
  * @returns Boolean indicating if user is admin
  */
 export const checkIsAdmin = (userData: any, email?: string | null): boolean => {
-  // Check if user has admin role in user data
+  // SECURITY: Only check database role - NO hardcoded emails
+  // Admin status is determined solely by the 'admin' role in the users table
   if (userData && userData.role === 'admin') {
     return true;
-  }
-  
-  // Fallback check for specific admin emails
-  if (email) {
-    const adminEmails = [
-      'admin@wsgestaocontabil.com.br',
-      'admin@example.com',
-      'dev@example.com',
-      'wsgestao@gmail.com',
-      'l09022007@gmail.com'
-    ];
-    return adminEmails.includes(email.toLowerCase());
   }
   
   return false;

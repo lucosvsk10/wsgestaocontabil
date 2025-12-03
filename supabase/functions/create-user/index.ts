@@ -25,7 +25,7 @@ const createAdminClient = () => {
   return createClient(supabaseUrl, supabaseServiceKey)
 }
 
-// Check if the user has admin privileges
+// Check if the user has admin privileges using database role only
 const isAdmin = async (token: string) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
@@ -55,13 +55,7 @@ const isAdmin = async (token: string) => {
       throw new Error('Unauthorized: User not found')
     }
     
-    // Check if the user is an admin by email (hardcoded admin emails)
-    const adminEmails = ['wsgestao@gmail.com', 'l09022007@gmail.com']
-    if (user.email && adminEmails.includes(user.email)) {
-      return true
-    }
-    
-    // Check if the user is an admin in the database
+    // Check if the user is an admin in the database (NO hardcoded emails)
     const { data: userData, error: roleError } = await supabaseClient
       .from('users')
       .select('role')
