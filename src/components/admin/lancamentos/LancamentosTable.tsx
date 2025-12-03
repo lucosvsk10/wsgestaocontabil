@@ -38,18 +38,20 @@ export const LancamentosTable = ({ lancamentos, isLoading }: LancamentosTablePro
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-pulse text-muted-foreground">Carregando...</div>
+      <div className="flex items-center justify-center py-16">
+        <div className="animate-pulse text-muted-foreground text-sm">Carregando...</div>
       </div>
     );
   }
 
   if (lancamentos.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <FileSpreadsheet className="w-10 h-10 text-muted-foreground/40 mb-3" />
-        <p className="text-muted-foreground">Nenhum lançamento alinhado</p>
-        <p className="text-sm text-muted-foreground/70 mt-1">
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mb-3">
+          <FileSpreadsheet className="w-5 h-5 text-muted-foreground/50" />
+        </div>
+        <p className="text-muted-foreground text-sm">Nenhum lançamento alinhado</p>
+        <p className="text-xs text-muted-foreground/70 mt-1">
           Os lançamentos aparecerão aqui após o alinhamento
         </p>
       </div>
@@ -57,50 +59,50 @@ export const LancamentosTable = ({ lancamentos, isLoading }: LancamentosTablePro
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto rounded-lg bg-muted/20">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-border">
-            <th className="text-left py-3 px-3 font-medium text-muted-foreground">Data</th>
-            <th className="text-left py-3 px-3 font-medium text-muted-foreground">Histórico</th>
-            <th className="text-left py-3 px-3 font-medium text-muted-foreground">Débito</th>
-            <th className="text-left py-3 px-3 font-medium text-muted-foreground">Crédito</th>
-            <th className="text-right py-3 px-3 font-medium text-muted-foreground">Valor</th>
+          <tr className="text-left">
+            <th className="py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">Data</th>
+            <th className="py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">Histórico</th>
+            <th className="py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">Débito</th>
+            <th className="py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">Crédito</th>
+            <th className="py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide text-right">Valor</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="divide-y divide-border/30">
           {lancamentos.map((lancamento, index) => (
             <motion.tr
               key={lancamento.id}
-              initial={{ opacity: 0, y: 5 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.02 }}
-              className="border-b border-border/50 hover:bg-muted/30 transition-colors"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: index * 0.015 }}
+              className="hover:bg-muted/30 transition-colors"
             >
-              <td className="py-3 px-3 text-foreground">
+              <td className="py-3 px-4 text-foreground whitespace-nowrap">
                 {formatDate(lancamento.data)}
               </td>
-              <td className="py-3 px-3 text-foreground max-w-[200px] truncate">
+              <td className="py-3 px-4 text-foreground max-w-[250px] truncate">
                 {lancamento.historico || '-'}
               </td>
-              <td className="py-3 px-3 text-foreground font-mono text-xs">
+              <td className="py-3 px-4 font-mono text-xs text-muted-foreground">
                 {lancamento.debito || '-'}
               </td>
-              <td className="py-3 px-3 text-foreground font-mono text-xs">
+              <td className="py-3 px-4 font-mono text-xs text-muted-foreground">
                 {lancamento.credito || '-'}
               </td>
-              <td className="py-3 px-3 text-right text-foreground font-medium">
+              <td className="py-3 px-4 text-right font-medium text-foreground whitespace-nowrap">
                 {formatCurrency(lancamento.valor)}
               </td>
             </motion.tr>
           ))}
         </tbody>
         <tfoot>
-          <tr className="bg-muted/30">
-            <td colSpan={4} className="py-3 px-3 font-medium text-foreground">
+          <tr className="bg-muted/40">
+            <td colSpan={4} className="py-3 px-4 font-medium text-foreground text-sm">
               Total ({lancamentos.length} lançamentos)
             </td>
-            <td className="py-3 px-3 text-right font-bold text-foreground">
+            <td className="py-3 px-4 text-right font-bold text-foreground">
               {formatCurrency(lancamentos.reduce((sum, l) => sum + (l.valor || 0), 0))}
             </td>
           </tr>

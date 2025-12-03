@@ -13,20 +13,20 @@ const AdminLancamentos = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="space-y-6"
+        className="space-y-6 p-1"
       >
         <div>
           <h1 className="text-2xl font-bold text-foreground">
             Gestão de Lançamentos
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm mt-1">
             Acompanhe os documentos enviados pelos clientes
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
           {/* Client List */}
-          <div className="lg:col-span-1">
+          <div className="xl:col-span-4 2xl:col-span-3">
             <ClientStatusList
               selectedClientId={selectedClientId}
               onSelectClient={setSelectedClientId}
@@ -34,11 +34,14 @@ const AdminLancamentos = () => {
           </div>
 
           {/* Client Detail */}
-          <div className="lg:col-span-2">
+          <div className="xl:col-span-8 2xl:col-span-9">
             {selectedClientId ? (
               <ClientLancamentosDetail clientId={selectedClientId} />
             ) : (
-              <div className="bg-card rounded-xl border border-border p-8 text-center">
+              <div className="bg-muted/30 rounded-xl p-12 text-center">
+                <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
+                  <span className="text-3xl text-muted-foreground/50">👈</span>
+                </div>
                 <p className="text-muted-foreground">
                   Selecione um cliente para ver os detalhes
                 </p>
