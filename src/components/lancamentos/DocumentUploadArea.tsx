@@ -1,8 +1,6 @@
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { Upload, X, FileText, Loader2, AlertCircle, RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
@@ -10,7 +8,6 @@ import { v4 as uuidv4 } from "uuid";
 interface FileWithMeta {
   id: string;
   file: File;
-  tipo: string;
   status: "pending" | "uploading" | "success" | "error";
   error?: string;
 }
@@ -21,13 +18,6 @@ interface DocumentUploadAreaProps {
   onUploadComplete: () => void;
   isMonthClosed: boolean;
 }
-
-const DOCUMENT_TYPES = [
-  { value: "compra", label: "Compra" },
-  { value: "extrato", label: "Extrato" },
-  { value: "comprovante", label: "Comprovante" },
-  { value: "observacao", label: "Outros" },
-];
 
 export const DocumentUploadArea = ({
   userId,
@@ -42,7 +32,6 @@ export const DocumentUploadArea = ({
     const newFiles = acceptedFiles.map(file => ({
       id: uuidv4(),
       file,
-      tipo: "comprovante",
       status: "pending" as const
     }));
     setFiles(prev => [...prev, ...newFiles]);
@@ -59,10 +48,6 @@ export const DocumentUploadArea = ({
     },
     disabled: isMonthClosed
   });
-
-  const updateFileType = (fileId: string, tipo: string) => {
-    setFiles(prev => prev.map(f => f.id === fileId ? { ...f, tipo } : f));
-  };
 
   const removeFile = (fileId: string) => {
     setFiles(prev => prev.filter(f => f.id !== fileId));
@@ -104,7 +89,7 @@ export const DocumentUploadArea = ({
             competencia,
             nome_arquivo: fileData.file.name,
             url_storage: storagePath,
-            tipo_documento: fileData.tipo,
+            tipo_documento: "arquivo",
             arquivo_original: fileData.file.name,
             status_processamento: 'nao_processado'
           });
@@ -155,6 +140,8 @@ export const DocumentUploadArea = ({
       </div>
     );
   }
+
+  const pendingCount = files.filter(f => f.status === "pending").length;
 
   return (
     <div className="space-y-3">
@@ -218,49 +205,46 @@ export const DocumentUploadArea = ({
               </div>
 
               {fileData.status === "pending" && (
-                <>
-                  <Select value={fileData.tipo} onValueChange={(v) => updateFileType(fileData.id, v)}>
-                    <SelectTrigger className="w-24 h-7 text-xs border-0 bg-background/50">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DOCUMENT_TYPES.map(type => (
-                        <SelectItem key={type.value} value={type.value} className="text-xs">
-                          {type.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <button onClick={() => removeFile(fileData.id)} className="p-1 text-muted-foreground hover:text-foreground">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </>
+                <button 
+                  onClick={() => removeFile(fileData.id)} 
+                  className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
               )}
 
               {fileData.status === "error" && (
-                <button onClick={() => retryFile(fileData.id)} className="p-1 text-muted-foreground hover:text-foreground">
+                <button 
+                  onClick={() => retryFile(fileData.id)} 
+                  className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                >
                   <RefreshCw className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
           ))}
 
-          {files.some(f => f.status === "pending") && (
-            <Button
+          {pendingCount > 0 && (
+            <button
               onClick={uploadFiles}
               disabled={isUploading}
-              size="sm"
-              className="w-full mt-2"
+              className="
+                w-full mt-3 py-2.5 px-4 rounded-lg text-sm font-medium
+                bg-muted/50 hover:bg-muted/80 
+                text-foreground border border-border/40
+                transition-all duration-200
+                disabled:opacity-50 disabled:cursor-not-allowed
+              "
             >
               {isUploading ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   Enviando...
-                </>
+                </span>
               ) : (
-                `Enviar ${files.filter(f => f.status === "pending").length} arquivo(s)`
+                `Enviar ${pendingCount} arquivo${pendingCount > 1 ? 's' : ''}`
               )}
-            </Button>
+            </button>
           )}
         </div>
       )}
