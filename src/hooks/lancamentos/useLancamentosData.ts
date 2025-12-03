@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface Document {
   id: string;
@@ -9,6 +10,7 @@ interface Document {
   created_at: string;
   tentativas_processamento?: number;
   ultimo_erro?: string;
+  url_storage?: string;
 }
 
 interface Fechamento {
@@ -20,9 +22,11 @@ interface Fechamento {
 }
 
 export const useLancamentosData = (userId: string | undefined, competencia: string) => {
+  const { toast } = useToast();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [fechamento, setFechamento] = useState<Fechamento | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
 
   const fetchData = useCallback(async () => {
     if (!userId) return;
@@ -87,10 +91,81 @@ export const useLancamentosData = (userId: string | undefined, competencia: stri
     };
   }, [userId, fetchData]);
 
+  const deleteDocument = useCallback(async (documentId: string) => {
+    try {
+      setDeletingIds(prev => new Set(prev).add(documentId));
+
+      // Buscar dados do documento para obter a URL do storage
+      const { data: doc, error: fetchError } = await supabase
+        .from('documentos_conciliacao')
+        .select('url_storage')
+        .eq('id', documentId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Excluir do storage se houver URL
+      if (doc?.url_storage) {
+        // Extrair o path do storage da URL
+        const url = new URL(doc.url_storage);
+        const pathParts = url.pathname.split('/');
+        const bucketIndex = pathParts.findIndex(p => p === 'documentos-conciliacao');
+        if (bucketIndex !== -1) {
+          const storagePath = pathParts.slice(bucketIndex + 1).join('/');
+          const { error: storageError } = await supabase.storage
+            .from('documentos-conciliacao')
+            .remove([storagePath]);
+          
+          if (storageError) {
+            console.error('Erro ao excluir arquivo do storage:', storageError);
+          }
+        }
+      }
+
+      // Excluir lançamentos processados relacionados
+      await supabase
+        .from('lancamentos_processados')
+        .delete()
+        .eq('documento_origem_id', documentId);
+
+      // Excluir do banco de dados
+      const { error: deleteError } = await supabase
+        .from('documentos_conciliacao')
+        .delete()
+        .eq('id', documentId);
+
+      if (deleteError) throw deleteError;
+
+      // Atualizar lista local
+      setDocuments(prev => prev.filter(d => d.id !== documentId));
+
+      toast({
+        title: "Documento excluído",
+        description: "O documento foi removido com sucesso."
+      });
+
+    } catch (error: any) {
+      console.error('Erro ao excluir documento:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao excluir",
+        description: error.message || "Não foi possível excluir o documento."
+      });
+    } finally {
+      setDeletingIds(prev => {
+        const next = new Set(prev);
+        next.delete(documentId);
+        return next;
+      });
+    }
+  }, [toast]);
+
   return {
     documents,
     fechamento,
     isLoading,
+    deletingIds,
+    deleteDocument,
     refetch: fetchData
   };
 };

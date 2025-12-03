@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { FileText, Clock, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { FileText, Clock, CheckCircle, AlertCircle, Loader2, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -16,6 +16,8 @@ interface Document {
 interface DocumentListProps {
   documents: Document[];
   isLoading: boolean;
+  onDelete?: (documentId: string) => Promise<void>;
+  deletingIds?: Set<string>;
 }
 
 const STATUS_CONFIG: Record<string, { icon: typeof Clock; label: string; className: string; spin?: boolean }> = {
@@ -32,7 +34,20 @@ const TYPE_LABELS: Record<string, string> = {
   observacao: "Outros"
 };
 
-export const DocumentList = ({ documents, isLoading }: DocumentListProps) => {
+export const DocumentList = ({ documents, isLoading, onDelete, deletingIds = new Set() }: DocumentListProps) => {
+  const canDelete = (doc: Document) => {
+    return doc.status_processamento === 'erro' || 
+           (doc.tentativas_processamento && doc.tentativas_processamento > 0);
+  };
+
+  const handleDelete = async (doc: Document) => {
+    if (!onDelete) return;
+    if (!window.confirm(`Tem certeza que deseja excluir "${doc.nome_arquivo}"? Esta ação não pode ser desfeita.`)) {
+      return;
+    }
+    await onDelete(doc.id);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-6">
@@ -60,6 +75,8 @@ export const DocumentList = ({ documents, isLoading }: DocumentListProps) => {
         {documents.map((doc, index) => {
           const status = STATUS_CONFIG[doc.status_processamento] || STATUS_CONFIG.nao_processado;
           const StatusIcon = status.icon;
+          const showDelete = canDelete(doc);
+          const isDeleting = deletingIds.has(doc.id);
 
           return (
             <motion.div
@@ -77,15 +94,38 @@ export const DocumentList = ({ documents, isLoading }: DocumentListProps) => {
                   <span>{TYPE_LABELS[doc.tipo_documento] || doc.tipo_documento}</span>
                   <span className="opacity-40">•</span>
                   <span>{format(new Date(doc.created_at), "dd/MM", { locale: ptBR })}</span>
+                  {doc.tentativas_processamento && doc.tentativas_processamento > 0 && (
+                    <>
+                      <span className="opacity-40">•</span>
+                      <span className="text-destructive">{doc.tentativas_processamento} tentativa{doc.tentativas_processamento > 1 ? 's' : ''}</span>
+                    </>
+                  )}
                 </div>
                 {doc.ultimo_erro && (
                   <p className="text-xs text-destructive truncate mt-0.5">{doc.ultimo_erro}</p>
                 )}
               </div>
 
-              <div className={`flex items-center gap-1 ${status.className}`}>
-                <StatusIcon className={`w-3 h-3 ${status.spin ? 'animate-spin' : ''}`} />
-                <span className="text-xs">{status.label}</span>
+              <div className="flex items-center gap-2">
+                <div className={`flex items-center gap-1 ${status.className}`}>
+                  <StatusIcon className={`w-3 h-3 ${status.spin ? 'animate-spin' : ''}`} />
+                  <span className="text-xs">{status.label}</span>
+                </div>
+
+                {showDelete && onDelete && (
+                  <button
+                    onClick={() => handleDelete(doc)}
+                    disabled={isDeleting}
+                    className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
+                    title="Excluir documento"
+                  >
+                    {isDeleting ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                )}
               </div>
             </motion.div>
           );
