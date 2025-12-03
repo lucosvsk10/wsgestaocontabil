@@ -1,8 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, MapPin, Phone, Mail, Calendar, CreditCard } from "lucide-react";
+import { Building2, MapPin, Phone, Mail, Calendar, CreditCard, User } from "lucide-react";
 import { CompanyData } from "@/types/client";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -37,113 +35,97 @@ export const CompanyDataSection = () => {
 
   if (loading) {
     return (
-      <Card className="bg-white dark:bg-[#0b1320] border-gray-200 dark:border-[#efc349]/20 shadow-sm">
-        <CardContent className="p-6">
-          <div className="animate-pulse space-y-4">
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-6 bg-gray-100 dark:bg-[#020817] rounded"></div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        <div className="text-center space-y-2">
+          <div className="w-12 h-12 mx-auto rounded-full bg-foreground/5 animate-pulse" />
+          <div className="h-6 w-32 mx-auto bg-foreground/5 rounded animate-pulse" />
+        </div>
+        <div className="space-y-4">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="h-6 bg-foreground/5 rounded animate-pulse" />
+          ))}
+        </div>
+      </div>
     );
   }
 
+  const DataRow = ({ icon: Icon, label, value }: { icon: any; label: string; value: string | undefined }) => (
+    <div className="flex items-center py-3 border-b border-border/10 last:border-0">
+      <Icon className="w-4 h-4 text-muted-foreground mr-3 flex-shrink-0" />
+      <span className="text-xs text-muted-foreground w-28 flex-shrink-0">{label}</span>
+      <span className="text-sm text-foreground flex-1">{value || '-'}</span>
+    </div>
+  );
+
   return (
-    <Card className="bg-white dark:bg-[#0b1320] border-gray-200 dark:border-[#efc349]/20 shadow-sm">
-      <CardHeader className="bg-white dark:bg-[#0b1320] border-b border-gray-200 dark:border-[#efc349]/20">
-        <CardTitle className="text-[#020817] dark:text-[#efc349] font-semibold flex items-center text-2xl">
-          <Building2 className="w-6 h-6 mr-3" />
-          Dados da Empresa
-        </CardTitle>
-      </CardHeader>
-      
-      <CardContent className="bg-white dark:bg-[#0b1320] p-6">
-        {!companyData ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-[#020817] rounded-full flex items-center justify-center">
-              <Building2 className="w-8 h-8 text-gray-400 dark:text-gray-600" />
-            </div>
-            <h3 className="text-lg font-semibold text-[#020817] dark:text-white mb-2">
-              Dados da empresa não cadastrados
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              Entre em contato com o escritório para cadastrar
-            </p>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="space-y-6"
+    >
+      {/* Header minimalista */}
+      <div className="text-center space-y-2">
+        <div className="w-12 h-12 mx-auto rounded-full bg-foreground/5 flex items-center justify-center">
+          <Building2 className="w-5 h-5 text-muted-foreground" />
+        </div>
+        <h1 className="text-2xl font-light text-foreground">Dados da Empresa</h1>
+        <p className="text-sm text-muted-foreground">
+          Informações cadastrais
+        </p>
+      </div>
+
+      {!companyData ? (
+        <div className="text-center py-16">
+          <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-foreground/5 flex items-center justify-center">
+            <Building2 className="w-5 h-5 text-muted-foreground" />
           </div>
-        ) : (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-            className="space-y-8"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-6">
-                <div className="bg-white dark:bg-[#020817] border border-gray-200 dark:border-[#efc349]/20 rounded-xl p-6">
-                  <h3 className="text-[#020817] dark:text-[#efc349] font-semibold mb-4 text-lg">Informações Básicas</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center">
-                      <Building2 className="w-5 h-5 mr-3 text-gray-500" />
-                      <span className="text-[#020817] dark:text-white font-medium">{companyData.name}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <CreditCard className="w-5 h-5 mr-3 text-gray-500" />
-                      <span className="text-[#020817] dark:text-white font-medium">{companyData.cnpj}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <Calendar className="w-5 h-5 mr-3 text-gray-500" />
-                      <span className="text-[#020817] dark:text-white font-medium">
-                        Abertura: {new Date(companyData.opening_date).toLocaleDateString('pt-BR')}
-                      </span>
-                    </div>
-                    <div className="flex items-center">
-                      <Building2 className="w-5 h-5 mr-3 text-gray-500" />
-                      <span className="text-[#020817] dark:text-white font-medium">
-                        Regime: {companyData.tax_regime}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white dark:bg-[#020817] border border-gray-200 dark:border-[#efc349]/20 rounded-xl p-6">
-                  <h3 className="text-[#020817] dark:text-[#efc349] font-semibold mb-4 text-lg">Contato</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center">
-                      <Phone className="w-5 h-5 mr-3 text-gray-500" />
-                      <span className="text-[#020817] dark:text-white font-medium">{companyData.phone}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <Mail className="w-5 h-5 mr-3 text-gray-500" />
-                      <span className="text-[#020817] dark:text-white font-medium">{companyData.email}</span>
-                    </div>
-                    <div className="flex items-start">
-                      <MapPin className="w-5 h-5 mr-3 text-gray-500 mt-0.5" />
-                      <span className="text-[#020817] dark:text-white font-medium">{companyData.address}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <div className="bg-white dark:bg-[#020817] border border-gray-200 dark:border-[#efc349]/20 rounded-xl p-6">
-                  <h3 className="text-[#020817] dark:text-[#efc349] font-semibold mb-4 text-lg">Contador Responsável</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center">
-                      <Building2 className="w-5 h-5 mr-3 text-gray-500" />
-                      <span className="text-[#020817] dark:text-white font-medium">{companyData.accountant_name}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <Phone className="w-5 h-5 mr-3 text-gray-500" />
-                      <span className="text-[#020817] dark:text-white font-medium">{companyData.accountant_contact}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+          <h3 className="text-sm font-medium text-foreground mb-1">
+            Dados da empresa não cadastrados
+          </h3>
+          <p className="text-xs text-muted-foreground">
+            Entre em contato com o escritório para cadastrar
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-8">
+          {/* Informações Básicas */}
+          <div>
+            <h2 className="text-xs uppercase tracking-wider text-muted-foreground mb-4 font-medium">
+              Informações Básicas
+            </h2>
+            <div className="bg-foreground/[0.02] rounded-lg px-4">
+              <DataRow icon={Building2} label="Razão Social" value={companyData.name} />
+              <DataRow icon={CreditCard} label="CNPJ" value={companyData.cnpj} />
+              <DataRow icon={Calendar} label="Abertura" value={companyData.opening_date ? new Date(companyData.opening_date).toLocaleDateString('pt-BR') : undefined} />
+              <DataRow icon={Building2} label="Regime" value={companyData.tax_regime} />
             </div>
-          </motion.div>
-        )}
-      </CardContent>
-    </Card>
+          </div>
+
+          {/* Contato */}
+          <div>
+            <h2 className="text-xs uppercase tracking-wider text-muted-foreground mb-4 font-medium">
+              Contato
+            </h2>
+            <div className="bg-foreground/[0.02] rounded-lg px-4">
+              <DataRow icon={Phone} label="Telefone" value={companyData.phone} />
+              <DataRow icon={Mail} label="E-mail" value={companyData.email} />
+              <DataRow icon={MapPin} label="Endereço" value={companyData.address} />
+            </div>
+          </div>
+
+          {/* Contador Responsável */}
+          <div>
+            <h2 className="text-xs uppercase tracking-wider text-muted-foreground mb-4 font-medium">
+              Contador Responsável
+            </h2>
+            <div className="bg-foreground/[0.02] rounded-lg px-4">
+              <DataRow icon={User} label="Nome" value={companyData.accountant_name} />
+              <DataRow icon={Phone} label="Contato" value={companyData.accountant_contact} />
+            </div>
+          </div>
+        </div>
+      )}
+    </motion.div>
   );
 };
