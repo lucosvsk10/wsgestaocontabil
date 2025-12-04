@@ -25,7 +25,7 @@ const createAdminClient = () => {
   return createClient(supabaseUrl, supabaseServiceKey)
 }
 
-// Check if the user has admin privileges using database role only
+// Check if the user has admin privileges using user_roles table
 const isAdmin = async (token: string) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
@@ -55,21 +55,20 @@ const isAdmin = async (token: string) => {
       throw new Error('Unauthorized: User not found')
     }
     
-    // Check if the user is an admin in the database (NO hardcoded emails)
-    const { data: userData, error: roleError } = await supabaseClient
-      .from('users')
+    // Check if the user is an admin using user_roles table
+    const { data: roles, error: roleError } = await supabaseClient
+      .from('user_roles')
       .select('role')
-      .eq('id', user.id)
-      .single()
+      .eq('user_id', user.id)
     
     if (roleError) {
       console.error('Error fetching user role:', roleError)
       return false
     }
     
-    // Check if user role is admin, fiscal, contabil, or geral
+    // Check if user has any admin role
     const adminRoles = ['admin', 'fiscal', 'contabil', 'geral']
-    return adminRoles.includes(userData?.role || '')
+    return roles?.some(r => adminRoles.includes(r.role)) || false
   } catch (error) {
     console.error('Error checking admin status:', error)
     return false

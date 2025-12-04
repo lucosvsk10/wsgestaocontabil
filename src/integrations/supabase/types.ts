@@ -1566,6 +1566,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           created_at: string | null
@@ -1626,13 +1647,21 @@ export type Database = {
         | { Args: { name: string }; Returns: string }
         | { Args: never; Returns: string }
       get_user_company_id: { Args: never; Returns: string }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       is_admin: { Args: never; Returns: boolean }
+      is_any_admin: { Args: { _user_id: string }; Returns: boolean }
       is_user_admin: { Args: never; Returns: boolean }
       mark_expired_documents: { Args: never; Returns: undefined }
       set_document_expiration: { Args: never; Returns: undefined }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "client" | "fiscal" | "contabil" | "geral"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1759,6 +1788,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "client", "fiscal", "contabil", "geral"],
+    },
   },
 } as const

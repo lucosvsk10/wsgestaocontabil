@@ -6,21 +6,20 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Check if user has admin privileges using database role only
+// Check if user has admin privileges using user_roles table
 const checkIsAdmin = async (supabase: any, userId: string): Promise<boolean> => {
-  const { data: userData, error } = await supabase
-    .from('users')
+  const { data: roles, error } = await supabase
+    .from('user_roles')
     .select('role')
-    .eq('id', userId)
-    .single();
+    .eq('user_id', userId);
   
   if (error) {
     console.error('Error checking admin role:', error);
     return false;
   }
   
-  // Only database role determines admin status (NO hardcoded emails)
-  return userData?.role === 'admin';
+  // Only database role determines admin status
+  return roles?.some(r => r.role === 'admin') || false;
 };
 
 serve(async (req) => {

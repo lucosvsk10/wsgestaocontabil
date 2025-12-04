@@ -48,15 +48,14 @@ serve(async (req) => {
       });
     }
 
-    // Verificar se o usuário tem permissão de admin usando APENAS o banco de dados
-    const { data: userData, error: userError } = await supabaseAdmin
-      .from("users")
+    // Verificar se o usuário tem permissão de admin usando user_roles table
+    const { data: roles, error: userError } = await supabaseAdmin
+      .from("user_roles")
       .select("role")
-      .eq("id", caller.id)
-      .single();
+      .eq("user_id", caller.id);
     
-    // Only database role determines admin status (NO hardcoded emails)
-    const isAdmin = userData?.role === "admin";
+    // Only database role determines admin status
+    const isAdmin = roles?.some(r => r.role === "admin") || false;
 
     if (userError || !isAdmin) {
       return new Response(JSON.stringify({ error: "Permissão negada" }), { 
