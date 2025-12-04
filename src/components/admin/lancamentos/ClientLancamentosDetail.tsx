@@ -82,12 +82,14 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
   const [hasPlanoContas, setHasPlanoContas] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isClosing, setIsClosing] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
   const [isReopening, setIsReopening] = useState(false);
   const [isPlanoModalOpen, setIsPlanoModalOpen] = useState(false);
   const [realigningDocId, setRealigningDocId] = useState<string | null>(null);
   const [exportFormat, setExportFormat] = useState<'csv' | 'excel' | 'all'>('excel');
   const [closeMonthStatus, setCloseMonthStatus] = useState<CloseMonthStatus | null>(null);
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+  const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
   
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(String(now.getMonth() + 1).padStart(2, '0'));
@@ -220,9 +222,15 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
   };
 
   const handleCloseMonth = async () => {
-    setIsClosing(true);
+    setIsVerifying(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      
+      // Show verification message
+      toast.info("Verificando lançamentos antes de fechar o mês...");
+
+      setIsClosing(true);
+      setIsVerifying(false);
       
       const response = await fetch('https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/close-month', {
         method: 'POST',
@@ -247,7 +255,9 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
         ? ` ${result.duplicates_removed} duplicata(s) removida(s).` 
         : '';
       
-      toast.success(`Mês fechado com sucesso! ${result.total_lancamentos} lançamentos exportados.${duplicatesMsg}`);
+      const verifiedMsg = result.n8n_verified ? ' (Verificado pelo n8n)' : '';
+      
+      toast.success(`Mês fechado com sucesso! ${result.total_lancamentos} lançamentos exportados.${duplicatesMsg}${verifiedMsg}`);
       fetchClientData();
       setCloseMonthStatus(null);
     } catch (error: any) {
@@ -255,6 +265,7 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
       toast.error("Erro ao fechar mês: " + error.message);
     } finally {
       setIsClosing(false);
+      setIsVerifying(false);
     }
   };
 
@@ -285,6 +296,45 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
       toast.error("Erro ao reabrir mês: " + error.message);
     } finally {
       setIsReopening(false);
+    }
+  };
+
+  const handleDownload = async (filePath: string, fileType: 'excel' | 'csv') => {
+    if (!filePath) {
+      toast.error("Arquivo não disponível");
+      return;
+    }
+
+    setDownloadingFile(fileType);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch('https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/get-signed-url', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
+        body: JSON.stringify({ 
+          bucket: 'lancamentos',
+          path: filePath
+        })
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao obter URL de download');
+      }
+
+      // Open the signed URL in a new tab to download
+      window.open(result.signed_url, '_blank');
+      toast.success("Download iniciado!");
+    } catch (error: any) {
+      console.error('Error getting signed URL:', error);
+      toast.error("Erro ao baixar arquivo: " + error.message);
+    } finally {
+      setDownloadingFile(null);
     }
   };
 
@@ -387,26 +437,36 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
               </div>
               <div className="flex gap-2 flex-wrap">
                 {fechamento.arquivo_excel_url && (
-                  <a 
-                    href={fechamento.arquivo_excel_url} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/20 text-green-600 text-xs font-medium hover:bg-green-500/30 transition-colors"
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDownload(fechamento.arquivo_excel_url!, 'excel')}
+                    disabled={downloadingFile === 'excel'}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/20 text-green-600 text-xs font-medium hover:bg-green-500/30 transition-colors h-auto"
                   >
-                    <FileSpreadsheet className="w-3.5 h-3.5" />
+                    {downloadingFile === 'excel' ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <FileSpreadsheet className="w-3.5 h-3.5" />
+                    )}
                     Excel
-                  </a>
+                  </Button>
                 )}
                 {fechamento.arquivo_csv_url && (
-                  <a 
-                    href={fechamento.arquivo_csv_url} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted text-foreground text-xs font-medium hover:bg-muted/80 transition-colors"
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDownload(fechamento.arquivo_csv_url!, 'csv')}
+                    disabled={downloadingFile === 'csv'}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted text-foreground text-xs font-medium hover:bg-muted/80 transition-colors h-auto"
                   >
-                    <Download className="w-3.5 h-3.5" />
+                    {downloadingFile === 'csv' ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Download className="w-3.5 h-3.5" />
+                    )}
                     CSV
-                  </a>
+                  </Button>
                 )}
                 {/* Botão de reabrir */}
                 <AlertDialog>
@@ -464,7 +524,7 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button 
-                    disabled={!canClose || isClosing || isCheckingStatus} 
+                    disabled={!canClose || isClosing || isCheckingStatus || isVerifying} 
                     variant={canClose ? "default" : "outline"} 
                     size="sm"
                     className="rounded-lg"
@@ -475,15 +535,20 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
                       }
                     }}
                   >
-                    {isCheckingStatus ? (
+                    {isVerifying ? (
                       <>
                         <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                        Verificando...
+                        Verificando antes de fechar...
+                      </>
+                    ) : isCheckingStatus ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                        Verificando status...
                       </>
                     ) : isClosing ? (
                       <>
                         <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                        Fechando...
+                        Fechando mês...
                       </>
                     ) : (
                       <>
@@ -517,6 +582,12 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
                                 <span className="font-medium text-amber-500">{closeMonthStatus.duplicates_count}</span>
                               </div>
                             )}
+                          </div>
+
+                          {/* Info sobre verificação n8n */}
+                          <div className="flex items-center gap-2 p-2 rounded-lg bg-blue-500/10 text-blue-600 text-xs">
+                            <CheckCircle className="w-4 h-4 shrink-0" />
+                            <span>Os lançamentos serão verificados automaticamente antes do fechamento</span>
                           </div>
 
                           {/* Avisos */}
@@ -572,9 +643,16 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
                       <AlertDialogCancel onClick={() => setCloseMonthStatus(null)}>Cancelar</AlertDialogCancel>
                       <AlertDialogAction 
                         onClick={handleCloseMonth}
-                        disabled={!closeMonthStatus.can_close}
+                        disabled={!closeMonthStatus.can_close || isVerifying || isClosing}
                       >
-                        Confirmar Fechamento
+                        {isVerifying || isClosing ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            {isVerifying ? 'Verificando...' : 'Fechando...'}
+                          </>
+                        ) : (
+                          'Confirmar Fechamento'
+                        )}
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
