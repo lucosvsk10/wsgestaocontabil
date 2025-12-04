@@ -117,6 +117,63 @@ serve(async (req) => {
       } else if (!success) {
         console.error(`Alignment failed for document ${document_id}:`, error_message);
       }
+    } else if (event === 'verificacao-fechamento') {
+      // Handle month closing verification response from n8n
+      const { user_id, competencia, corrected_lancamentos, duplicates_removed } = body;
+      
+      console.log(`Received verification response for user ${user_id}, competencia ${competencia}`);
+
+      if (success && corrected_lancamentos && Array.isArray(corrected_lancamentos)) {
+        // Delete existing lancamentos for this period
+        const { error: deleteError } = await supabase
+          .from('lancamentos_alinhados')
+          .delete()
+          .eq('user_id', user_id)
+          .eq('competencia', competencia);
+
+        if (deleteError) {
+          console.error('Error deleting old lancamentos:', deleteError);
+          return new Response(JSON.stringify({ 
+            received: true, 
+            error: 'Erro ao limpar lançamentos antigos' 
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        // Insert corrected lancamentos
+        const lancamentosToInsert = corrected_lancamentos.map((l: any) => ({
+          user_id,
+          competencia,
+          data: l.data,
+          valor: l.valor,
+          historico: l.historico,
+          debito: l.debito,
+          credito: l.credito,
+          documento_origem_id: l.documento_origem_id || null
+        }));
+
+        const { error: insertError } = await supabase
+          .from('lancamentos_alinhados')
+          .insert(lancamentosToInsert);
+
+        if (insertError) {
+          console.error('Error inserting corrected lancamentos:', insertError);
+        } else {
+          console.log(`Applied ${corrected_lancamentos.length} corrected lancamentos, ${duplicates_removed || 0} duplicates removed`);
+          
+          // Notify user about the correction
+          await supabase
+            .from('notifications')
+            .insert({
+              user_id,
+              message: `Verificação de fechamento concluída. ${duplicates_removed || 0} duplicata(s) removida(s).`,
+              type: 'verificacao_fechamento'
+            });
+        }
+      } else if (!success) {
+        console.error(`Verification failed for user ${user_id}:`, error_message);
+      }
     }
 
     return new Response(JSON.stringify({ received: true }), {

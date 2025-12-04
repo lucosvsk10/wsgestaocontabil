@@ -70,3 +70,6 @@ verify_jwt = false
 
 [functions.check-close-month-status]
 verify_jwt = true
+
+[functions.get-signed-url]
+verify_jwt = true
