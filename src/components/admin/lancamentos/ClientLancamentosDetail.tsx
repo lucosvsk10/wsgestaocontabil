@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Download, FileSpreadsheet, ClipboardList, User, Mail, Calendar, CheckCircle, AlertCircle, Lock, Unlock, Loader2, RefreshCw, FileWarning } from "lucide-react";
+import { Download, FileSpreadsheet, ClipboardList, User, Mail, Calendar, CheckCircle, AlertCircle, Lock, Unlock, Loader2, RefreshCw, FileWarning, FileText, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +43,16 @@ interface DocumentoBruto {
   tentativas_alinhamento: number | null;
 }
 
+interface CloseMonthStatus {
+  can_close: boolean;
+  is_closed: boolean;
+  total_lancamentos: number;
+  duplicates_count: number;
+  pending_docs: { id: string; nome: string; status: string }[];
+  error_docs: { id: string; nome: string; erro: string }[];
+  warnings: string[];
+}
+
 interface ClientLancamentosDetailProps {
   clientId: string;
 }
@@ -75,6 +85,9 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
   const [isReopening, setIsReopening] = useState(false);
   const [isPlanoModalOpen, setIsPlanoModalOpen] = useState(false);
   const [realigningDocId, setRealigningDocId] = useState<string | null>(null);
+  const [exportFormat, setExportFormat] = useState<'csv' | 'excel' | 'all'>('excel');
+  const [closeMonthStatus, setCloseMonthStatus] = useState<CloseMonthStatus | null>(null);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
   
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(String(now.getMonth() + 1).padStart(2, '0'));
@@ -135,10 +148,40 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
     }
   };
 
+  const checkCloseMonthStatus = async () => {
+    setIsCheckingStatus(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch('https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/check-close-month-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
+        body: JSON.stringify({ user_id: clientId, competencia })
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao verificar status');
+      }
+
+      setCloseMonthStatus(result);
+      return result;
+    } catch (error: any) {
+      console.error('Error checking status:', error);
+      toast.error("Erro ao verificar status: " + error.message);
+      return null;
+    } finally {
+      setIsCheckingStatus(false);
+    }
+  };
+
   const handleRealign = async (documentId: string) => {
     setRealigningDocId(documentId);
     try {
-      // Reset tentativas e status antes de realinhar
       await supabase
         .from('documentos_brutos')
         .update({ 
@@ -179,12 +222,34 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
   const handleCloseMonth = async () => {
     setIsClosing(true);
     try {
-      const { error } = await supabase.functions.invoke('close-month', {
-        body: { user_id: clientId, competencia }
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch('https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/close-month', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
+        body: JSON.stringify({ 
+          user_id: clientId, 
+          competencia,
+          format: exportFormat
+        })
       });
-      if (error) throw error;
-      toast.success("Mês fechado com sucesso!");
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao fechar mês');
+      }
+
+      const duplicatesMsg = result.duplicates_removed > 0 
+        ? ` ${result.duplicates_removed} duplicata(s) removida(s).` 
+        : '';
+      
+      toast.success(`Mês fechado com sucesso! ${result.total_lancamentos} lançamentos exportados.${duplicatesMsg}`);
       fetchClientData();
+      setCloseMonthStatus(null);
     } catch (error: any) {
       console.error('Error closing month:', error);
       toast.error("Erro ao fechar mês: " + error.message);
@@ -385,28 +450,37 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
         ) : (
           <div className="p-4 rounded-xl bg-muted/30">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  {lancamentos.length > 0 && (
-                    <span className="flex items-center gap-1">
-                      <CheckCircle className="w-3 h-3 text-green-500" />
-                      {lancamentos.length} lançamento(s) alinhado(s)
-                    </span>
-                  )}
-                  {pendingDocs.length > 0 && (
-                    <span className="text-amber-500">{pendingDocs.length} doc(s) pendente(s)</span>
-                  )}
-                </div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                {lancamentos.length > 0 && (
+                  <span className="flex items-center gap-1">
+                    <CheckCircle className="w-3 h-3 text-green-500" />
+                    {lancamentos.length} lançamento(s) alinhado(s)
+                  </span>
+                )}
+                {pendingDocs.length > 0 && (
+                  <span className="text-amber-500">{pendingDocs.length} doc(s) pendente(s)</span>
+                )}
               </div>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button 
-                    disabled={!canClose || isClosing} 
+                    disabled={!canClose || isClosing || isCheckingStatus} 
                     variant={canClose ? "default" : "outline"} 
                     size="sm"
                     className="rounded-lg"
+                    onClick={(e) => {
+                      if (canClose && !closeMonthStatus) {
+                        e.preventDefault();
+                        checkCloseMonthStatus();
+                      }
+                    }}
                   >
-                    {isClosing ? (
+                    {isCheckingStatus ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                        Verificando...
+                      </>
+                    ) : isClosing ? (
                       <>
                         <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
                         Fechando...
@@ -419,19 +493,92 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
                     )}
                   </Button>
                 </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Fechar mês de {formatMonth()}?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Os relatórios serão gerados para o cliente {clientInfo?.name}. 
-                      Você poderá reabrir o mês se necessário.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleCloseMonth}>Confirmar Fechamento</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
+                {closeMonthStatus && (
+                  <AlertDialogContent className="max-w-md">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="flex items-center gap-2">
+                        <Lock className="w-5 h-5" />
+                        Fechar mês de {formatMonth()}?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription asChild>
+                        <div className="space-y-4">
+                          {/* Resumo */}
+                          <div className="p-3 rounded-lg bg-muted/50 space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Total de lançamentos:</span>
+                              <span className="font-medium text-foreground">{closeMonthStatus.total_lancamentos}</span>
+                            </div>
+                            {closeMonthStatus.duplicates_count > 0 && (
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-amber-500 flex items-center gap-1">
+                                  <AlertTriangle className="w-3.5 h-3.5" />
+                                  Duplicatas a remover:
+                                </span>
+                                <span className="font-medium text-amber-500">{closeMonthStatus.duplicates_count}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Avisos */}
+                          {closeMonthStatus.warnings.length > 0 && (
+                            <div className="space-y-1.5">
+                              {closeMonthStatus.warnings.map((warning, idx) => (
+                                <div key={idx} className="flex items-start gap-2 text-xs text-amber-500">
+                                  <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                                  <span>{warning}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Seletor de formato */}
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-foreground">Formato de exportação:</label>
+                            <Select value={exportFormat} onValueChange={(v) => setExportFormat(v as any)}>
+                              <SelectTrigger className="w-full">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="csv">
+                                  <div className="flex items-center gap-2">
+                                    <FileText className="w-4 h-4" />
+                                    CSV
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="excel">
+                                  <div className="flex items-center gap-2">
+                                    <FileSpreadsheet className="w-4 h-4" />
+                                    Excel (.xlsx)
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="all">
+                                  <div className="flex items-center gap-2">
+                                    <Download className="w-4 h-4" />
+                                    Todos (CSV + Excel)
+                                  </div>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <p className="text-xs text-muted-foreground">
+                            Os relatórios serão gerados para o cliente {clientInfo?.name}. 
+                            Você poderá reabrir o mês se necessário.
+                          </p>
+                        </div>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel onClick={() => setCloseMonthStatus(null)}>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction 
+                        onClick={handleCloseMonth}
+                        disabled={!closeMonthStatus.can_close}
+                      >
+                        Confirmar Fechamento
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                )}
               </AlertDialog>
             </div>
           </div>
