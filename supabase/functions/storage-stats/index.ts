@@ -30,42 +30,54 @@ serve(async (req) => {
   }
 
   try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+    const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
+
     // Verificar autenticação
     const authHeader = req.headers.get("Authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      console.log("No auth header or invalid format");
       return new Response(JSON.stringify({ error: "Autenticação inválida" }), { 
         status: 401, 
         headers: { ...corsHeaders, "Content-Type": "application/json" } 
       });
     }
 
-    // Criar cliente Supabase com service role key
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") || "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "",
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
-
-    // Obter JWT do cabeçalho de autorização
     const jwt = authHeader.replace("Bearer ", "");
-    
+    console.log("JWT received, validating...");
+
+    // Criar cliente Supabase com o token do usuário para validar a sessão
+    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: { Authorization: `Bearer ${jwt}` },
+      },
+    });
+
     // Verificar o token e obter o usuário
-    const { data: { user: caller }, error: authError } = await supabaseAdmin.auth.getUser(jwt);
+    const { data: { user: caller }, error: authError } = await supabaseUser.auth.getUser();
     
     if (authError || !caller) {
-      return new Response(JSON.stringify({ error: "Usuário não autenticado" }), { 
+      console.error("Auth error:", authError);
+      return new Response(JSON.stringify({ error: "Usuário não autenticado", details: authError?.message }), { 
         status: 401, 
         headers: { ...corsHeaders, "Content-Type": "application/json" } 
       });
     }
 
-    // Verificar se o usuário tem permissão usando role do banco de dados (NO hardcoded emails)
+    console.log("User authenticated:", caller.id, caller.email);
+
+    // Criar cliente admin para operações privilegiadas
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+
+    // Verificar se o usuário tem permissão usando role do banco de dados
     const isAdmin = await checkIsAdmin(supabaseAdmin, caller.id);
+    console.log("Is admin:", isAdmin);
     
     if (!isAdmin) {
       return new Response(JSON.stringify({ error: "Acesso negado. Apenas administradores podem acessar esta função." }), { 
@@ -80,6 +92,7 @@ serve(async (req) => {
       .select('user_id, size');
 
     if (documentsError) {
+      console.error("Error fetching documents:", documentsError);
       return new Response(JSON.stringify({ error: "Erro ao obter documentos", details: documentsError }), { 
         status: 500, 
         headers: { ...corsHeaders, "Content-Type": "application/json" } 
@@ -92,6 +105,7 @@ serve(async (req) => {
       .select('id, name, email');
 
     if (usersError) {
+      console.error("Error fetching users:", usersError);
       return new Response(JSON.stringify({ error: "Erro ao obter usuários", details: usersError }), { 
         status: 500, 
         headers: { ...corsHeaders, "Content-Type": "application/json" } 
@@ -114,6 +128,7 @@ serve(async (req) => {
     const { data: authData, error: authUsersError } = await supabaseAdmin.auth.admin.listUsers();
     
     if (authUsersError) {
+      console.error("Error fetching auth users:", authUsersError);
       return new Response(JSON.stringify({ error: "Erro ao obter usuários autenticados", details: authUsersError }), { 
         status: 500, 
         headers: { ...corsHeaders, "Content-Type": "application/json" } 
@@ -160,6 +175,7 @@ serve(async (req) => {
     // Calcular o uso total
     const totalStorageBytes = storageStats.reduce((sum, item) => sum + item.sizeBytes, 0);
 
+    console.log("Returning storage stats");
     return new Response(JSON.stringify({ 
       totalStorageBytes,
       totalStorageKB: Math.round(totalStorageBytes / 1024 * 100) / 100,
