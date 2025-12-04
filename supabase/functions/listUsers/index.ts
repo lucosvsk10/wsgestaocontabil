@@ -1,6 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.21.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -24,6 +24,8 @@ const checkIsAdmin = async (supabaseAdmin: any, userId: string): Promise<boolean
 };
 
 serve(async (req) => {
+  console.log("=== listUsers function called ===");
+  
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -32,12 +34,21 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
+    
+    console.log("Creating admin client...");
 
-    // Verificar autenticação
+    // Criar cliente admin para todas as operações
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+
+    // Verificar autenticação usando o JWT do header
     const authHeader = req.headers.get("Authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      console.log("No auth header or invalid format");
+      console.log("No auth header");
       return new Response(JSON.stringify({ error: "Autenticação inválida" }), { 
         status: 401, 
         headers: { ...corsHeaders, "Content-Type": "application/json" } 
@@ -45,35 +56,28 @@ serve(async (req) => {
     }
 
     const jwt = authHeader.replace("Bearer ", "");
-    console.log("JWT received, validating...");
-
-    // Criar cliente Supabase com o token do usuário para validar a sessão
-    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: { Authorization: `Bearer ${jwt}` },
-      },
-    });
-
-    // Verificar o token e obter o usuário
-    const { data: { user: caller }, error: authError } = await supabaseUser.auth.getUser();
+    console.log("Validating JWT...");
     
-    if (authError || !caller) {
-      console.error("Auth error:", authError);
-      return new Response(JSON.stringify({ error: "Usuário não autenticado", details: authError?.message }), { 
+    // Validar o JWT e obter o usuário
+    const { data: { user: caller }, error: authError } = await supabaseAdmin.auth.getUser(jwt);
+    
+    if (authError) {
+      console.error("Auth error:", authError.message);
+      return new Response(JSON.stringify({ error: "Usuário não autenticado", details: authError.message }), { 
+        status: 401, 
+        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      });
+    }
+    
+    if (!caller) {
+      console.error("No user returned");
+      return new Response(JSON.stringify({ error: "Usuário não encontrado" }), { 
         status: 401, 
         headers: { ...corsHeaders, "Content-Type": "application/json" } 
       });
     }
 
     console.log("User authenticated:", caller.id, caller.email);
-
-    // Criar cliente admin para operações privilegiadas
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
 
     // Verificar se o usuário tem permissão usando role do banco de dados
     const isAdmin = await checkIsAdmin(supabaseAdmin, caller.id);
