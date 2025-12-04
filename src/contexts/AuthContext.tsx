@@ -44,10 +44,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         setSession(session);
         setUser(session?.user || null);
-        setIsLoading(false);
+        
+        if (session?.user) {
+          // Defer Supabase calls with setTimeout to avoid auth deadlock
+          setTimeout(() => {
+            fetchUserData(session.user.id);
+          }, 0);
+        } else {
+          setUserData(null);
+          setIsLoading(false);
+        }
       }
     );
 
