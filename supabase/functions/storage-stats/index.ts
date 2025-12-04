@@ -7,13 +7,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Check if user has admin privileges using database role only
+// Check if user has admin privileges using user_roles table
 const checkIsAdmin = async (supabaseAdmin: any, userId: string): Promise<boolean> => {
-  const { data: userData, error } = await supabaseAdmin
-    .from('users')
+  const { data: roles, error } = await supabaseAdmin
+    .from('user_roles')
     .select('role')
-    .eq('id', userId)
-    .single();
+    .eq('user_id', userId);
   
   if (error) {
     console.error('Error checking admin role:', error);
@@ -21,7 +20,7 @@ const checkIsAdmin = async (supabaseAdmin: any, userId: string): Promise<boolean
   }
   
   const adminRoles = ['admin', 'fiscal', 'contabil', 'geral'];
-  return adminRoles.includes(userData?.role || '');
+  return roles?.some(r => adminRoles.includes(r.role)) || false;
 };
 
 serve(async (req) => {
