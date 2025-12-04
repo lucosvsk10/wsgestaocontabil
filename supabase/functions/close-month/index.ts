@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import * as XLSX from "https://esm.sh/xlsx@0.18.5";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,8 +19,85 @@ const checkIsAdmin = async (supabase: any, userId: string): Promise<boolean> => 
     return false;
   }
   
-  // Only database role determines admin status
   return roles?.some(r => r.role === 'admin') || false;
+};
+
+// Identify and remove duplicate lancamentos
+const removeDuplicates = async (supabase: any, userId: string, competencia: string): Promise<number> => {
+  // Get all lancamentos for this user/competencia
+  const { data: lancamentos, error } = await supabase
+    .from('lancamentos_alinhados')
+    .select('id, data, valor, historico, debito, credito, created_at')
+    .eq('user_id', userId)
+    .eq('competencia', competencia)
+    .order('created_at', { ascending: true });
+
+  if (error || !lancamentos) return 0;
+
+  // Find duplicates based on (data, valor, historico, debito, credito)
+  const seen = new Map<string, string>();
+  const duplicateIds: string[] = [];
+
+  for (const l of lancamentos) {
+    const key = `${l.data}|${l.valor}|${l.historico}|${l.debito}|${l.credito}`;
+    if (seen.has(key)) {
+      duplicateIds.push(l.id);
+    } else {
+      seen.set(key, l.id);
+    }
+  }
+
+  if (duplicateIds.length > 0) {
+    console.log(`Removing ${duplicateIds.length} duplicate lancamentos`);
+    const { error: deleteError } = await supabase
+      .from('lancamentos_alinhados')
+      .delete()
+      .in('id', duplicateIds);
+    
+    if (deleteError) {
+      console.error('Error deleting duplicates:', deleteError);
+      return 0;
+    }
+  }
+
+  return duplicateIds.length;
+};
+
+// Generate CSV content
+const generateCSV = (lancamentos: any[]): string => {
+  const csvHeader = 'Data,Valor,Historico,Debito,Credito\n';
+  const csvContent = csvHeader + lancamentos.map((l: any) => 
+    `${l.data || ''},${l.valor || ''},${(l.historico || '').replace(/,/g, ';').replace(/\n/g, ' ')},${l.debito || ''},${l.credito || ''}`
+  ).join('\n');
+  return csvContent;
+};
+
+// Generate Excel buffer
+const generateExcel = (lancamentos: any[]): Uint8Array => {
+  const worksheetData = lancamentos.map((l: any) => ({
+    'Data': l.data || '',
+    'Valor': l.valor || 0,
+    'Histórico': l.historico || '',
+    'Débito': l.debito || '',
+    'Crédito': l.credito || ''
+  }));
+  
+  const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+  
+  // Set column widths
+  worksheet['!cols'] = [
+    { wch: 12 },  // Data
+    { wch: 15 },  // Valor
+    { wch: 50 },  // Histórico
+    { wch: 15 },  // Débito
+    { wch: 15 }   // Crédito
+  ];
+  
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Lançamentos');
+  
+  const excelBuffer = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' });
+  return new Uint8Array(excelBuffer);
 };
 
 serve(async (req) => {
@@ -52,7 +130,7 @@ serve(async (req) => {
       });
     }
 
-    // Check if calling user is admin using database role only (NO hardcoded emails)
+    // Check if calling user is admin
     const isAdmin = await checkIsAdmin(supabase, callingUser.id);
 
     if (!isAdmin) {
@@ -63,9 +141,9 @@ serve(async (req) => {
       });
     }
 
-    const { user_id, competencia } = await req.json();
+    const { user_id, competencia, format = 'csv' } = await req.json();
 
-    console.log(`Admin ${callingUser.email} closing month ${competencia} for user ${user_id}`);
+    console.log(`Admin ${callingUser.email} closing month ${competencia} for user ${user_id} with format ${format}`);
 
     // Get user info
     const { data: userInfo } = await supabase
@@ -89,12 +167,39 @@ serve(async (req) => {
       });
     }
 
-    // Get all aligned lancamentos for this month (using correct table name)
+    // Check for unprocessed documents
+    const { data: pendingDocs, error: pendingError } = await supabase
+      .from('documentos_brutos')
+      .select('id, nome_arquivo, status_processamento')
+      .eq('user_id', user_id)
+      .eq('competencia', competencia)
+      .in('status_processamento', ['nao_processado', 'processando']);
+
+    if (pendingError) {
+      console.error('Error checking pending docs:', pendingError);
+    }
+
+    if (pendingDocs && pendingDocs.length > 0) {
+      return new Response(JSON.stringify({ 
+        error: 'Existem documentos pendentes de processamento',
+        pending_docs: pendingDocs.map(d => ({ id: d.id, nome: d.nome_arquivo, status: d.status_processamento }))
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Remove duplicates before export
+    const duplicatesRemoved = await removeDuplicates(supabase, user_id, competencia);
+    console.log(`Removed ${duplicatesRemoved} duplicate lancamentos`);
+
+    // Get all aligned lancamentos for this month (after removing duplicates)
     const { data: lancamentos, error: lancError } = await supabase
       .from('lancamentos_alinhados')
       .select('*')
       .eq('user_id', user_id)
-      .eq('competencia', competencia);
+      .eq('competencia', competencia)
+      .order('data', { ascending: true });
 
     if (lancError) {
       console.error('Error fetching lancamentos:', lancError);
@@ -110,29 +215,54 @@ serve(async (req) => {
 
     console.log(`Found ${lancamentos.length} lancamentos for closing`);
 
-    // Generate CSV content
-    const csvHeader = 'Data,Valor,Historico,Debito,Credito\n';
-    const csvContent = csvHeader + lancamentos.map((l: any) => 
-      `${l.data || ''},${l.valor || ''},${(l.historico || '').replace(/,/g, ';')},${l.debito || ''},${l.credito || ''}`
-    ).join('\n');
+    let csvUrl = null;
+    let excelUrl = null;
 
-    // Upload CSV to storage
+    // Generate CSV (always generate for backup)
+    const csvContent = generateCSV(lancamentos);
     const csvFileName = `${user_id}/${competencia}/lancamentos_${competencia}.csv`;
-    const { error: uploadError } = await supabase.storage
+    
+    const { error: csvUploadError } = await supabase.storage
       .from('lancamentos')
       .upload(csvFileName, csvContent, {
         contentType: 'text/csv',
         upsert: true
       });
 
-    if (uploadError) {
-      console.error('Error uploading CSV:', uploadError);
-      throw uploadError;
+    if (csvUploadError) {
+      console.error('Error uploading CSV:', csvUploadError);
+    } else {
+      const { data: csvUrlData } = supabase.storage
+        .from('lancamentos')
+        .getPublicUrl(csvFileName);
+      csvUrl = csvUrlData.publicUrl;
     }
 
-    const { data: csvUrlData } = supabase.storage
-      .from('lancamentos')
-      .getPublicUrl(csvFileName);
+    // Generate Excel if requested
+    if (format === 'excel' || format === 'all') {
+      try {
+        const excelBuffer = generateExcel(lancamentos);
+        const excelFileName = `${user_id}/${competencia}/lancamentos_${competencia}.xlsx`;
+        
+        const { error: excelUploadError } = await supabase.storage
+          .from('lancamentos')
+          .upload(excelFileName, excelBuffer, {
+            contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            upsert: true
+          });
+
+        if (excelUploadError) {
+          console.error('Error uploading Excel:', excelUploadError);
+        } else {
+          const { data: excelUrlData } = supabase.storage
+            .from('lancamentos')
+            .getPublicUrl(excelFileName);
+          excelUrl = excelUrlData.publicUrl;
+        }
+      } catch (excelError) {
+        console.error('Error generating Excel:', excelError);
+      }
+    }
 
     // Create fechamento record
     const { data: fechamento, error: fechError } = await supabase
@@ -144,7 +274,8 @@ serve(async (req) => {
         competencia,
         status: 'concluido',
         total_lancamentos: lancamentos.length,
-        arquivo_csv_url: csvUrlData.publicUrl
+        arquivo_csv_url: csvUrl,
+        arquivo_excel_url: excelUrl
       })
       .select()
       .single();
@@ -175,13 +306,15 @@ serve(async (req) => {
         type: 'mes_fechado'
       });
 
-    console.log(`Month ${competencia} closed successfully with ${lancamentos.length} lancamentos`);
+    console.log(`Month ${competencia} closed successfully with ${lancamentos.length} lancamentos, ${duplicatesRemoved} duplicates removed`);
 
     return new Response(JSON.stringify({ 
       success: true, 
       fechamento_id: fechamento.id,
       total_lancamentos: lancamentos.length,
-      csv_url: csvUrlData.publicUrl
+      duplicates_removed: duplicatesRemoved,
+      csv_url: csvUrl,
+      excel_url: excelUrl
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
