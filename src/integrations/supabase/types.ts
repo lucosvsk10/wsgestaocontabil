@@ -520,11 +520,13 @@ export type Database = {
           competencia: string
           created_at: string | null
           id: string
+          n8n_status: string | null
           status: string | null
           total_lancamentos: number | null
           user_email: string | null
           user_id: string
           user_name: string | null
+          verification_id: string | null
         }
         Insert: {
           arquivo_csv_url?: string | null
@@ -532,11 +534,13 @@ export type Database = {
           competencia: string
           created_at?: string | null
           id?: string
+          n8n_status?: string | null
           status?: string | null
           total_lancamentos?: number | null
           user_email?: string | null
           user_id: string
           user_name?: string | null
+          verification_id?: string | null
         }
         Update: {
           arquivo_csv_url?: string | null
@@ -544,11 +548,13 @@ export type Database = {
           competencia?: string
           created_at?: string | null
           id?: string
+          n8n_status?: string | null
           status?: string | null
           total_lancamentos?: number | null
           user_email?: string | null
           user_id?: string
           user_name?: string | null
+          verification_id?: string | null
         }
         Relationships: []
       }

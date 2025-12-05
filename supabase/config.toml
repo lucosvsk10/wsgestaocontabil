@@ -73,3 +73,6 @@ verify_jwt = true
 
 [functions.get-signed-url]
 verify_jwt = true
+
+[functions.check-verification-status]
+verify_jwt = true
