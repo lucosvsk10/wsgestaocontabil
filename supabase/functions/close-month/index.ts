@@ -7,8 +7,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// n8n webhook URL for verification
-const N8N_WEBHOOK_URL = Deno.env.get('N8N_CLOSE_MONTH_WEBHOOK') || '';
+// n8n webhook URL for verification (same as other functions)
+const N8N_WEBHOOK_URL = "https://basilisk-coop-n8n.zmdnad.easypanel.host/webhook/ws-site";
 
 // Check if user has admin privileges using user_roles table
 const checkIsAdmin = async (supabase: any, userId: string): Promise<boolean> => {
@@ -105,13 +105,8 @@ const generateExcel = (lancamentos: any[]): Uint8Array => {
 
 // Send to n8n for verification
 const sendToN8nForVerification = async (userId: string, competencia: string, lancamentos: any[]): Promise<{ success: boolean; correctedData?: any[]; error?: string }> => {
-  if (!N8N_WEBHOOK_URL) {
-    console.log('N8N_CLOSE_MONTH_WEBHOOK not configured, skipping n8n verification');
-    return { success: true };
-  }
-
   try {
-    console.log(`Sending ${lancamentos.length} lancamentos to n8n for verification`);
+    console.log(`Sending ${lancamentos.length} lancamentos to n8n for verification (event: verificacao-fechamento)`);
     
     const response = await fetch(N8N_WEBHOOK_URL, {
       method: 'POST',
@@ -300,11 +295,11 @@ serve(async (req) => {
 
     console.log(`Found ${lancamentos.length} lancamentos for closing`);
 
-    // Send to n8n for verification (if configured)
+    // Send to n8n for verification
     let duplicatesRemoved = 0;
     let n8nVerificationResult = { success: true, correctedData: undefined as any[] | undefined };
     
-    if (!skip_n8n_verification && N8N_WEBHOOK_URL) {
+    if (!skip_n8n_verification) {
       n8nVerificationResult = await sendToN8nForVerification(user_id, competencia, lancamentos);
       
       if (!n8nVerificationResult.success) {
