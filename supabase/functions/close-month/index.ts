@@ -7,7 +7,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// n8n webhook URL for verification (same as other functions)
+// n8n webhook URL for verification
 const N8N_WEBHOOK_URL = "https://basilisk-coop-n8n.zmdnad.easypanel.host/webhook/ws-site";
 
 // Check if user has admin privileges using user_roles table
@@ -27,7 +27,6 @@ const checkIsAdmin = async (supabase: any, userId: string): Promise<boolean> => 
 
 // Identify and remove duplicate lancamentos
 const removeDuplicates = async (supabase: any, userId: string, competencia: string): Promise<number> => {
-  // Get all lancamentos for this user/competencia
   const { data: lancamentos, error } = await supabase
     .from('lancamentos_alinhados')
     .select('id, data, valor, historico, debito, credito, created_at')
@@ -37,7 +36,6 @@ const removeDuplicates = async (supabase: any, userId: string, competencia: stri
 
   if (error || !lancamentos) return 0;
 
-  // Find duplicates based on (data, valor, historico, debito, credito)
   const seen = new Map<string, string>();
   const duplicateIds: string[] = [];
 
@@ -87,13 +85,12 @@ const generateExcel = (lancamentos: any[]): Uint8Array => {
   
   const worksheet = XLSX.utils.json_to_sheet(worksheetData);
   
-  // Set column widths
   worksheet['!cols'] = [
-    { wch: 12 },  // Data
-    { wch: 15 },  // Valor
-    { wch: 50 },  // Histórico
-    { wch: 15 },  // Débito
-    { wch: 15 }   // Crédito
+    { wch: 12 },
+    { wch: 15 },
+    { wch: 50 },
+    { wch: 15 },
+    { wch: 15 }
   ];
   
   const workbook = XLSX.utils.book_new();
@@ -103,94 +100,115 @@ const generateExcel = (lancamentos: any[]): Uint8Array => {
   return new Uint8Array(excelBuffer);
 };
 
-// Send to n8n for verification
-const sendToN8nForVerification = async (userId: string, competencia: string, lancamentos: any[]): Promise<{ success: boolean; correctedData?: any[]; error?: string }> => {
+// Export function to generate files and complete closing
+export const completeMonthClosing = async (
+  supabase: any,
+  userId: string,
+  competencia: string,
+  format: string,
+  userInfo: any,
+  verificationId: string
+): Promise<{ success: boolean; error?: string }> => {
   try {
-    // Filter lancamentos to send only essential fields
-    const lancamentosSimplificados = lancamentos.map(l => ({
-      data: l.data,
-      historico: l.historico,
-      debito: l.debito,
-      credito: l.credito,
-      valor: l.valor
-    }));
+    // Get lancamentos
+    let { data: lancamentos } = await supabase
+      .from('lancamentos_alinhados')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('competencia', competencia)
+      .order('data', { ascending: true });
 
-    console.log(`Sending ${lancamentosSimplificados.length} lancamentos to n8n for verification (event: verificacao-fechamento)`);
+    if (!lancamentos || lancamentos.length === 0) {
+      throw new Error('Nenhum lançamento encontrado');
+    }
+
+    // Generate files
+    let csvFilePath = null;
+    let excelFilePath = null;
+
+    const csvContent = generateCSV(lancamentos);
+    const csvFileName = `${userId}/${competencia}/lancamentos_${competencia}.csv`;
     
-    const response = await fetch(N8N_WEBHOOK_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        event: 'verificacao-fechamento',
-        user_id: userId,
-        competencia,
-        lancamentos: lancamentosSimplificados,
-        callback_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/receive-n8n-response`
+    const { error: csvUploadError } = await supabase.storage
+      .from('lancamentos')
+      .upload(csvFileName, csvContent, {
+        contentType: 'text/csv',
+        upsert: true
+      });
+
+    if (!csvUploadError) {
+      csvFilePath = csvFileName;
+    }
+
+    if (format === 'excel' || format === 'all') {
+      try {
+        const excelBuffer = generateExcel(lancamentos);
+        const excelFileName = `${userId}/${competencia}/lancamentos_${competencia}.xlsx`;
+        
+        const { error: excelUploadError } = await supabase.storage
+          .from('lancamentos')
+          .upload(excelFileName, excelBuffer, {
+            contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            upsert: true
+          });
+
+        if (!excelUploadError) {
+          excelFilePath = excelFileName;
+        }
+      } catch (excelError) {
+        console.error('Error generating Excel:', excelError);
+      }
+    }
+
+    // Update fechamento record
+    const { error: updateError } = await supabase
+      .from('fechamentos_exportados')
+      .update({
+        n8n_status: 'concluido',
+        total_lancamentos: lancamentos.length,
+        arquivo_csv_url: csvFilePath,
+        arquivo_excel_url: excelFilePath
       })
-    });
+      .eq('verification_id', verificationId);
 
-    if (!response.ok) {
-      console.error('n8n returned error:', response.status);
-      return { success: false, error: `n8n returned status ${response.status}` };
+    if (updateError) {
+      console.error('Error updating fechamento:', updateError);
     }
 
-    const result = await response.json();
-    console.log('n8n verification response:', result);
+    // Record in month_closures
+    await supabase
+      .from('month_closures')
+      .insert({
+        user_id: userId,
+        user_name: userInfo?.name || '',
+        user_email: userInfo?.email || '',
+        month: competencia.split('-')[1],
+        year: parseInt(competencia.split('-')[0]),
+        status: 'fechado'
+      });
 
-    // If n8n returns corrected data, use it
-    if (result.corrected_lancamentos && Array.isArray(result.corrected_lancamentos)) {
-      return { 
-        success: true, 
-        correctedData: result.corrected_lancamentos 
-      };
-    }
+    // Notify user
+    await supabase
+      .from('notifications')
+      .insert({
+        user_id: userId,
+        message: `Mês ${competencia} fechado com sucesso! ${lancamentos.length} lançamentos exportados.`,
+        type: 'mes_fechado'
+      });
 
+    console.log(`Month closing completed for ${userId}, ${competencia}`);
     return { success: true };
   } catch (error: any) {
-    console.error('Error sending to n8n:', error);
+    console.error('Error completing month closing:', error);
+    
+    // Update status to error
+    await supabase
+      .from('fechamentos_exportados')
+      .update({ n8n_status: 'erro' })
+      .eq('verification_id', verificationId);
+    
     return { success: false, error: error.message };
   }
-};
-
-// Apply corrected data from n8n
-const applyCorrectedData = async (supabase: any, userId: string, competencia: string, correctedData: any[]): Promise<number> => {
-  // Delete existing lancamentos for this period
-  const { error: deleteError } = await supabase
-    .from('lancamentos_alinhados')
-    .delete()
-    .eq('user_id', userId)
-    .eq('competencia', competencia);
-
-  if (deleteError) {
-    console.error('Error deleting old lancamentos:', deleteError);
-    throw new Error('Erro ao limpar lançamentos antigos');
-  }
-
-  // Insert corrected lancamentos
-  const lancamentosToInsert = correctedData.map(l => ({
-    user_id: userId,
-    competencia,
-    data: l.data,
-    valor: l.valor,
-    historico: l.historico,
-    debito: l.debito,
-    credito: l.credito,
-    documento_origem_id: l.documento_origem_id || null
-  }));
-
-  const { error: insertError } = await supabase
-    .from('lancamentos_alinhados')
-    .insert(lancamentosToInsert);
-
-  if (insertError) {
-    console.error('Error inserting corrected lancamentos:', insertError);
-    throw new Error('Erro ao inserir lançamentos corrigidos');
-  }
-
-  console.log(`Applied ${correctedData.length} corrected lancamentos from n8n`);
-  return correctedData.length;
 };
 
 serve(async (req) => {
@@ -203,7 +221,6 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get Authorization header to verify admin
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Authorization header required' }), {
@@ -212,7 +229,6 @@ serve(async (req) => {
       });
     }
 
-    // Verify the calling user is an admin
     const token = authHeader.replace('Bearer ', '');
     const { data: { user: callingUser }, error: authError } = await supabase.auth.getUser(token);
     
@@ -223,20 +239,18 @@ serve(async (req) => {
       });
     }
 
-    // Check if calling user is admin
     const isAdmin = await checkIsAdmin(supabase, callingUser.id);
 
     if (!isAdmin) {
-      console.log(`User ${callingUser.email} attempted to close month but is not admin`);
       return new Response(JSON.stringify({ error: 'Apenas administradores podem fechar meses' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    const { user_id, competencia, format = 'csv', skip_n8n_verification = false } = await req.json();
+    const { user_id, competencia, format = 'excel', skip_n8n_verification = false } = await req.json();
 
-    console.log(`Admin ${callingUser.email} closing month ${competencia} for user ${user_id} with format ${format}`);
+    console.log(`Admin ${callingUser.email} closing month ${competencia} for user ${user_id}`);
 
     // Get user info
     const { data: userInfo } = await supabase
@@ -248,12 +262,20 @@ serve(async (req) => {
     // Check if already closed
     const { data: existingFechamento } = await supabase
       .from('fechamentos_exportados')
-      .select('id')
+      .select('id, n8n_status')
       .eq('user_id', user_id)
       .eq('competencia', competencia)
       .single();
 
     if (existingFechamento) {
+      if (existingFechamento.n8n_status === 'verificando') {
+        return new Response(JSON.stringify({ 
+          status: 'verificando',
+          message: 'Verificação em andamento'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
       return new Response(JSON.stringify({ error: 'Mês já foi fechado' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -261,28 +283,24 @@ serve(async (req) => {
     }
 
     // Check for unprocessed documents
-    const { data: pendingDocs, error: pendingError } = await supabase
+    const { data: pendingDocs } = await supabase
       .from('documentos_brutos')
       .select('id, nome_arquivo, status_processamento')
       .eq('user_id', user_id)
       .eq('competencia', competencia)
       .in('status_processamento', ['nao_processado', 'processando']);
 
-    if (pendingError) {
-      console.error('Error checking pending docs:', pendingError);
-    }
-
     if (pendingDocs && pendingDocs.length > 0) {
       return new Response(JSON.stringify({ 
         error: 'Existem documentos pendentes de processamento',
-        pending_docs: pendingDocs.map(d => ({ id: d.id, nome: d.nome_arquivo, status: d.status_processamento }))
+        pending_docs: pendingDocs.map(d => ({ id: d.id, nome: d.nome_arquivo }))
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    // Get all aligned lancamentos for verification
+    // Get all aligned lancamentos
     let { data: lancamentos, error: lancError } = await supabase
       .from('lancamentos_alinhados')
       .select('*')
@@ -290,10 +308,7 @@ serve(async (req) => {
       .eq('competencia', competencia)
       .order('data', { ascending: true });
 
-    if (lancError) {
-      console.error('Error fetching lancamentos:', lancError);
-      throw lancError;
-    }
+    if (lancError) throw lancError;
 
     if (!lancamentos || lancamentos.length === 0) {
       return new Response(JSON.stringify({ error: 'Nenhum lançamento alinhado para fechar' }), {
@@ -304,176 +319,124 @@ serve(async (req) => {
 
     console.log(`Found ${lancamentos.length} lancamentos for closing`);
 
-    // Send to n8n for verification
-    let duplicatesRemoved = 0;
-    let n8nVerificationResult = { success: true, correctedData: undefined as any[] | undefined };
-    
-    if (!skip_n8n_verification) {
-      n8nVerificationResult = await sendToN8nForVerification(user_id, competencia, lancamentos);
-      
-      if (!n8nVerificationResult.success) {
-        console.log('n8n verification failed, proceeding with local duplicate removal');
-      }
+    // Generate verification ID
+    const verificationId = crypto.randomUUID();
 
-      // If n8n returned corrected data, apply it
-      if (n8nVerificationResult.correctedData && n8nVerificationResult.correctedData.length > 0) {
-        console.log('Applying corrected data from n8n');
-        await applyCorrectedData(supabase, user_id, competencia, n8nVerificationResult.correctedData);
-        
-        // Re-fetch lancamentos after correction
-        const { data: updatedLancamentos } = await supabase
-          .from('lancamentos_alinhados')
-          .select('*')
-          .eq('user_id', user_id)
-          .eq('competencia', competencia)
-          .order('data', { ascending: true });
-        
-        lancamentos = updatedLancamentos || [];
-        duplicatesRemoved = n8nVerificationResult.correctedData.length - lancamentos.length;
-      }
-    }
-    
-    // If n8n didn't correct, do local duplicate removal
-    if (!n8nVerificationResult.correctedData) {
-      duplicatesRemoved = await removeDuplicates(supabase, user_id, competencia);
-      console.log(`Removed ${duplicatesRemoved} duplicate lancamentos locally`);
-
-      // Re-fetch lancamentos after duplicate removal
-      const { data: updatedLancamentos } = await supabase
-        .from('lancamentos_alinhados')
-        .select('*')
-        .eq('user_id', user_id)
-        .eq('competencia', competencia)
-        .order('data', { ascending: true });
-      
-      lancamentos = updatedLancamentos || [];
-    }
-
-    // Store file paths for signed URL generation
-    let csvFilePath = null;
-    let excelFilePath = null;
-
-    // Generate CSV (always generate for backup)
-    const csvContent = generateCSV(lancamentos);
-    const csvFileName = `${user_id}/${competencia}/lancamentos_${competencia}.csv`;
-    
-    const { error: csvUploadError } = await supabase.storage
-      .from('lancamentos')
-      .upload(csvFileName, csvContent, {
-        contentType: 'text/csv',
-        upsert: true
-      });
-
-    if (csvUploadError) {
-      console.error('Error uploading CSV:', csvUploadError);
-    } else {
-      csvFilePath = csvFileName;
-    }
-
-    // Generate Excel if requested
-    if (format === 'excel' || format === 'all') {
-      try {
-        const excelBuffer = generateExcel(lancamentos);
-        const excelFileName = `${user_id}/${competencia}/lancamentos_${competencia}.xlsx`;
-        
-        const { error: excelUploadError } = await supabase.storage
-          .from('lancamentos')
-          .upload(excelFileName, excelBuffer, {
-            contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            upsert: true
-          });
-
-        if (excelUploadError) {
-          console.error('Error uploading Excel:', excelUploadError);
-        } else {
-          excelFilePath = excelFileName;
-        }
-      } catch (excelError) {
-        console.error('Error generating Excel:', excelError);
-      }
-    }
-
-    // Generate signed URLs for download (valid for 7 days)
-    let csvSignedUrl = null;
-    let excelSignedUrl = null;
-
-    if (csvFilePath) {
-      const { data: csvUrlData, error: csvSignError } = await supabase.storage
-        .from('lancamentos')
-        .createSignedUrl(csvFilePath, 604800); // 7 days
-      
-      if (!csvSignError && csvUrlData) {
-        csvSignedUrl = csvUrlData.signedUrl;
-      }
-    }
-
-    if (excelFilePath) {
-      const { data: excelUrlData, error: excelSignError } = await supabase.storage
-        .from('lancamentos')
-        .createSignedUrl(excelFilePath, 604800); // 7 days
-      
-      if (!excelSignError && excelUrlData) {
-        excelSignedUrl = excelUrlData.signedUrl;
-      }
-    }
-
-    // Create fechamento record with file paths (not signed URLs, as they expire)
-    const { data: fechamento, error: fechError } = await supabase
+    // Create pending fechamento record
+    const { error: insertError } = await supabase
       .from('fechamentos_exportados')
       .insert({
         user_id,
         user_name: userInfo?.name,
         user_email: userInfo?.email,
         competencia,
-        status: 'concluido',
-        total_lancamentos: lancamentos.length,
-        arquivo_csv_url: csvFilePath, // Store path, not signed URL
-        arquivo_excel_url: excelFilePath // Store path, not signed URL
-      })
-      .select()
-      .single();
+        status: 'pendente',
+        n8n_status: 'verificando',
+        verification_id: verificationId,
+        total_lancamentos: lancamentos.length
+      });
 
-    if (fechError) {
-      console.error('Error creating fechamento:', fechError);
-      throw fechError;
+    if (insertError) {
+      console.error('Error creating fechamento:', insertError);
+      throw insertError;
     }
 
-    // Record in month_closures
-    await supabase
-      .from('month_closures')
-      .insert({
-        user_id,
-        user_name: userInfo?.name || '',
-        user_email: userInfo?.email || '',
-        month: competencia.split('-')[1],
-        year: parseInt(competencia.split('-')[0]),
-        status: 'fechado'
+    // If skipping n8n, complete immediately
+    if (skip_n8n_verification) {
+      const duplicatesRemoved = await removeDuplicates(supabase, user_id, competencia);
+      console.log(`Removed ${duplicatesRemoved} duplicates locally (skip_n8n)`);
+      
+      const result = await completeMonthClosing(supabase, user_id, competencia, format, userInfo, verificationId);
+      
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
+      return new Response(JSON.stringify({ 
+        status: 'concluido',
+        success: true,
+        verification_id: verificationId,
+        total_lancamentos: lancamentos.length - duplicatesRemoved,
+        duplicates_removed: duplicatesRemoved,
+        n8n_verified: false
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Send to n8n for async verification
+    const lancamentosSimplificados = lancamentos.map(l => ({
+      data: l.data,
+      historico: l.historico,
+      debito: l.debito,
+      credito: l.credito,
+      valor: l.valor
+    }));
+
+    console.log(`Sending ${lancamentosSimplificados.length} lancamentos to n8n for verification`);
+
+    try {
+      const n8nResponse = await fetch(N8N_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: 'verificacao-fechamento',
+          verification_id: verificationId,
+          user_id,
+          competencia,
+          format,
+          lancamentos: lancamentosSimplificados,
+          callback_url: `${supabaseUrl}/functions/v1/receive-n8n-response`
+        })
       });
 
-    // Notify user
-    await supabase
-      .from('notifications')
-      .insert({
-        user_id,
-        message: `Mês ${competencia} fechado com sucesso! ${lancamentos.length} lançamentos exportados.`,
-        type: 'mes_fechado'
+      if (!n8nResponse.ok) {
+        console.error('n8n returned error:', n8nResponse.status);
+        // Fallback to local processing
+        const duplicatesRemoved = await removeDuplicates(supabase, user_id, competencia);
+        const result = await completeMonthClosing(supabase, user_id, competencia, format, userInfo, verificationId);
+        
+        return new Response(JSON.stringify({ 
+          status: 'concluido',
+          success: true,
+          verification_id: verificationId,
+          total_lancamentos: lancamentos.length - duplicatesRemoved,
+          duplicates_removed: duplicatesRemoved,
+          n8n_verified: false,
+          message: 'Fechado localmente (n8n indisponível)'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Return immediately with verification pending status
+      return new Response(JSON.stringify({ 
+        status: 'verificando',
+        verification_id: verificationId,
+        message: 'Aguardando verificação do n8n...',
+        total_lancamentos: lancamentos.length
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
 
-    console.log(`Month ${competencia} closed successfully with ${lancamentos.length} lancamentos, ${duplicatesRemoved} duplicates removed`);
-
-    return new Response(JSON.stringify({ 
-      success: true, 
-      fechamento_id: fechamento.id,
-      total_lancamentos: lancamentos.length,
-      duplicates_removed: duplicatesRemoved,
-      csv_url: csvSignedUrl,
-      excel_url: excelSignedUrl,
-      csv_path: csvFilePath,
-      excel_path: excelFilePath,
-      n8n_verified: !!n8nVerificationResult.correctedData
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+    } catch (n8nError: any) {
+      console.error('Error calling n8n:', n8nError);
+      // Fallback to local processing
+      const duplicatesRemoved = await removeDuplicates(supabase, user_id, competencia);
+      const result = await completeMonthClosing(supabase, user_id, competencia, format, userInfo, verificationId);
+      
+      return new Response(JSON.stringify({ 
+        status: 'concluido',
+        success: true,
+        verification_id: verificationId,
+        total_lancamentos: lancamentos.length - duplicatesRemoved,
+        duplicates_removed: duplicatesRemoved,
+        n8n_verified: false,
+        message: 'Fechado localmente (erro ao conectar n8n)'
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
 
   } catch (error: any) {
     console.error('Error:', error);

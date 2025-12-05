@@ -221,16 +221,52 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
     }
   };
 
+  // Poll for verification status
+  const pollVerificationStatus = async (verificationId: string): Promise<{ status: string; message?: string }> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const maxAttempts = 60; // 60 attempts * 2 seconds = 2 minutes max
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+      try {
+        const response = await fetch('https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/check-verification-status', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`
+          },
+          body: JSON.stringify({ verification_id: verificationId })
+        });
+
+        const result = await response.json();
+        
+        if (result.status === 'concluido') {
+          return { status: 'concluido', message: result.message };
+        } else if (result.status === 'erro') {
+          return { status: 'erro', message: result.message || 'Erro na verificação' };
+        }
+
+        // Still verifying, wait 2 seconds before next poll
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        attempts++;
+      } catch (error) {
+        console.error('Error polling status:', error);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        attempts++;
+      }
+    }
+
+    return { status: 'timeout', message: 'Tempo limite de verificação excedido' };
+  };
+
   const handleCloseMonth = async () => {
     setIsVerifying(true);
+    setIsClosing(false);
+    
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
-      // Show verification message
-      toast.info("Verificando lançamentos antes de fechar o mês...");
-
-      setIsClosing(true);
-      setIsVerifying(false);
+      toast.info("Enviando lançamentos para verificação...");
       
       const response = await fetch('https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/close-month', {
         method: 'POST',
@@ -251,21 +287,40 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
         throw new Error(result.error || 'Erro ao fechar mês');
       }
 
-      const duplicatesMsg = result.duplicates_removed > 0 
-        ? ` ${result.duplicates_removed} duplicata(s) removida(s).` 
-        : '';
-      
-      const verifiedMsg = result.n8n_verified ? ' (Verificado pelo n8n)' : '';
-      
-      toast.success(`Mês fechado com sucesso! ${result.total_lancamentos} lançamentos exportados.${duplicatesMsg}${verifiedMsg}`);
+      // Check response status
+      if (result.status === 'verificando') {
+        // n8n is processing asynchronously, start polling
+        toast.info("Aguardando verificação do n8n...", { duration: 5000 });
+        
+        const pollResult = await pollVerificationStatus(result.verification_id);
+        
+        if (pollResult.status === 'concluido') {
+          toast.success("Mês fechado com sucesso! (Verificado pelo n8n)");
+        } else if (pollResult.status === 'erro') {
+          toast.error(pollResult.message || "Erro na verificação do n8n");
+        } else if (pollResult.status === 'timeout') {
+          toast.warning("Verificação ainda em andamento. Recarregue a página para ver o status.");
+        }
+      } else if (result.status === 'concluido') {
+        // Completed immediately (local fallback or skip_n8n)
+        const duplicatesMsg = result.duplicates_removed > 0 
+          ? ` ${result.duplicates_removed} duplicata(s) removida(s).` 
+          : '';
+        const verifiedMsg = result.n8n_verified ? ' (Verificado pelo n8n)' : '';
+        
+        toast.success(`Mês fechado com sucesso! ${result.total_lancamentos} lançamentos exportados.${duplicatesMsg}${verifiedMsg}`);
+      } else {
+        toast.success("Mês fechado com sucesso!");
+      }
+
       fetchClientData();
       setCloseMonthStatus(null);
     } catch (error: any) {
       console.error('Error closing month:', error);
       toast.error("Erro ao fechar mês: " + error.message);
     } finally {
-      setIsClosing(false);
       setIsVerifying(false);
+      setIsClosing(false);
     }
   };
 
