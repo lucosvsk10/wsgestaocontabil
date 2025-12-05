@@ -106,7 +106,16 @@ const generateExcel = (lancamentos: any[]): Uint8Array => {
 // Send to n8n for verification
 const sendToN8nForVerification = async (userId: string, competencia: string, lancamentos: any[]): Promise<{ success: boolean; correctedData?: any[]; error?: string }> => {
   try {
-    console.log(`Sending ${lancamentos.length} lancamentos to n8n for verification (event: verificacao-fechamento)`);
+    // Filter lancamentos to send only essential fields
+    const lancamentosSimplificados = lancamentos.map(l => ({
+      data: l.data,
+      historico: l.historico,
+      debito: l.debito,
+      credito: l.credito,
+      valor: l.valor
+    }));
+
+    console.log(`Sending ${lancamentosSimplificados.length} lancamentos to n8n for verification (event: verificacao-fechamento)`);
     
     const response = await fetch(N8N_WEBHOOK_URL, {
       method: 'POST',
@@ -117,7 +126,7 @@ const sendToN8nForVerification = async (userId: string, competencia: string, lan
         event: 'verificacao-fechamento',
         user_id: userId,
         competencia,
-        lancamentos,
+        lancamentos: lancamentosSimplificados,
         callback_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/receive-n8n-response`
       })
     });
