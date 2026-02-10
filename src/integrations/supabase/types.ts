@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)"
+    PostgrestVersion: "14.1"
   }
   public: {
     Tables: {
@@ -1650,8 +1650,8 @@ export type Database = {
     Functions: {
       delete_expired_documents: { Args: never; Returns: undefined }
       foldername:
-        | { Args: { name: string }; Returns: string }
         | { Args: never; Returns: string }
+        | { Args: { name: string }; Returns: string }
       get_user_company_id: { Args: never; Returns: string }
       has_role: {
         Args: {

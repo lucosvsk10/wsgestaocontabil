@@ -1,13 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Download, FileSpreadsheet, ClipboardList, User, Mail, Calendar, CheckCircle, AlertCircle, Lock, Unlock, Loader2, RefreshCw, FileWarning, FileText, AlertTriangle } from "lucide-react";
+import { Download, FileSpreadsheet, ClipboardList, User, Mail, Calendar, CheckCircle, AlertCircle, Lock, Unlock, Loader2, RefreshCw, FileWarning, FileText, AlertTriangle, Plus, CheckSquare, Trash2, List, SortAsc } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { PlanoContasModal } from "./PlanoContasModal";
-import { LancamentosTable } from "./LancamentosTable";
+import { LancamentosTable, type PlanoContasMap } from "./LancamentosTable";
+import { AddLancamentoModal } from "./AddLancamentoModal";
 import { toast } from "sonner";
 
 interface Lancamento {
@@ -80,16 +81,21 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
   const [documents, setDocuments] = useState<DocumentoBruto[]>([]);
   const [fechamento, setFechamento] = useState<Fechamento | null>(null);
   const [hasPlanoContas, setHasPlanoContas] = useState(false);
+  const [planoContasMap, setPlanoContasMap] = useState<PlanoContasMap>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isClosing, setIsClosing] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isReopening, setIsReopening] = useState(false);
   const [isPlanoModalOpen, setIsPlanoModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [realigningDocId, setRealigningDocId] = useState<string | null>(null);
   const [exportFormat, setExportFormat] = useState<'csv' | 'excel' | 'all'>('excel');
   const [closeMonthStatus, setCloseMonthStatus] = useState<CloseMonthStatus | null>(null);
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
   const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'data' | 'conta'>('data');
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(String(now.getMonth() + 1).padStart(2, '0'));
@@ -138,11 +144,31 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
         .maybeSingle();
       setFechamento(fechamentoData);
 
-      const { count } = await supabase
+      const { data: planoData } = await supabase
         .from('planos_contas')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', clientId);
-      setHasPlanoContas((count || 0) > 0);
+        .select('conteudo')
+        .eq('user_id', clientId)
+        .maybeSingle();
+      
+      setHasPlanoContas(!!planoData);
+      
+      if (planoData?.conteudo) {
+        try {
+          const parsed = JSON.parse(planoData.conteudo);
+          const map: PlanoContasMap = {};
+          const items = Array.isArray(parsed) && parsed[0]?.data ? parsed[0].data : (Array.isArray(parsed) ? parsed : []);
+          for (const item of items) {
+            const code = String(item['Codigo reduzido'] || item['codigo_reduzido'] || '');
+            const desc = item['Descrição'] || item['descricao'] || item['Descrição da conta'] || '';
+            if (code) map[code] = desc;
+          }
+          setPlanoContasMap(map);
+        } catch {
+          setPlanoContasMap({});
+        }
+      } else {
+        setPlanoContasMap({});
+      }
     } catch (error) {
       console.error('Error fetching client data:', error);
     } finally {
@@ -782,17 +808,112 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
 
       {/* Lançamentos */}
       <div className="p-5 pt-6">
-        <div className="flex items-center justify-between mb-4">
+        {/* Toolbar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <h3 className="font-medium text-foreground text-sm flex items-center gap-2">
             <FileSpreadsheet className="w-4 h-4 text-primary" />
             Lançamentos Alinhados
+            <Badge variant="secondary" className="text-xs rounded-lg ml-1">
+              {lancamentos.length}
+            </Badge>
           </h3>
-          <Badge variant="secondary" className="text-xs rounded-lg">
-            {lancamentos.length} registros
-          </Badge>
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* View mode selector */}
+            <Select value={viewMode} onValueChange={(v) => setViewMode(v as 'data' | 'conta')}>
+              <SelectTrigger className="w-[140px] h-8 text-xs bg-background rounded-lg">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="data">
+                  <span className="flex items-center gap-1.5"><SortAsc className="w-3.5 h-3.5" /> Por Data</span>
+                </SelectItem>
+                <SelectItem value="conta">
+                  <span className="flex items-center gap-1.5"><List className="w-3.5 h-3.5" /> Por Conta</span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Add button */}
+            {!fechamento && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs rounded-lg"
+                onClick={() => setIsAddModalOpen(true)}
+              >
+                <Plus className="w-3.5 h-3.5 mr-1" />
+                Adicionar
+              </Button>
+            )}
+
+            {/* Selection mode toggle */}
+            {!fechamento && lancamentos.length > 0 && (
+              <Button
+                variant={isSelectionMode ? "default" : "outline"}
+                size="sm"
+                className="h-8 text-xs rounded-lg"
+                onClick={() => {
+                  setIsSelectionMode(!isSelectionMode);
+                  setSelectedIds(new Set());
+                }}
+              >
+                <CheckSquare className="w-3.5 h-3.5 mr-1" />
+                {isSelectionMode ? 'Cancelar' : 'Selecionar'}
+              </Button>
+            )}
+
+            {/* Delete selected */}
+            {isSelectionMode && selectedIds.size > 0 && (
+              <Button
+                variant="destructive"
+                size="sm"
+                className="h-8 text-xs rounded-lg"
+                onClick={async () => {
+                  const ids = Array.from(selectedIds);
+                  const { error } = await supabase
+                    .from('lancamentos_alinhados')
+                    .delete()
+                    .in('id', ids);
+                  if (error) {
+                    toast.error("Erro ao excluir: " + error.message);
+                  } else {
+                    toast.success(`${ids.length} lançamento(s) excluído(s)`);
+                    setSelectedIds(new Set());
+                    setIsSelectionMode(false);
+                    fetchClientData();
+                  }
+                }}
+              >
+                <Trash2 className="w-3.5 h-3.5 mr-1" />
+                Excluir ({selectedIds.size})
+              </Button>
+            )}
+          </div>
         </div>
         
-        <LancamentosTable lancamentos={lancamentos} isLoading={isLoading} />
+        <LancamentosTable
+          lancamentos={lancamentos}
+          planoContas={planoContasMap}
+          viewMode={viewMode}
+          isLoading={isLoading}
+          isSelectionMode={isSelectionMode}
+          selectedIds={selectedIds}
+          onToggleSelect={(id) => {
+            setSelectedIds(prev => {
+              const next = new Set(prev);
+              if (next.has(id)) next.delete(id);
+              else next.add(id);
+              return next;
+            });
+          }}
+          onSelectAll={() => {
+            if (selectedIds.size === lancamentos.length) {
+              setSelectedIds(new Set());
+            } else {
+              setSelectedIds(new Set(lancamentos.map(l => l.id)));
+            }
+          }}
+        />
       </div>
 
       {/* Modal */}
@@ -804,6 +925,15 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
         }} 
         clientId={clientId} 
         clientName={clientInfo?.name || ''} 
+      />
+
+      <AddLancamentoModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        clientId={clientId}
+        competencia={competencia}
+        planoContas={planoContasMap}
+        onSuccess={fetchClientData}
       />
     </div>
   );

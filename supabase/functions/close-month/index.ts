@@ -64,33 +64,93 @@ const removeDuplicates = async (supabase: any, userId: string, competencia: stri
   return duplicateIds.length;
 };
 
-// Generate CSV content
-const generateCSV = (lancamentos: any[]): string => {
-  const csvHeader = 'Data,Valor,Historico,Debito,Credito\n';
-  const csvContent = csvHeader + lancamentos.map((l: any) => 
-    `${l.data || ''},${l.valor || ''},${(l.historico || '').replace(/,/g, ';').replace(/\n/g, ' ')},${l.debito || ''},${l.credito || ''}`
-  ).join('\n');
-  return csvContent;
+// Build plano de contas map
+const buildPlanoContasMap = (conteudo: string): Record<string, string> => {
+  try {
+    const parsed = JSON.parse(conteudo);
+    const map: Record<string, string> = {};
+    const items = Array.isArray(parsed) && parsed[0]?.data ? parsed[0].data : (Array.isArray(parsed) ? parsed : []);
+    for (const item of items) {
+      const code = String(item['Codigo reduzido'] || item['codigo_reduzido'] || '');
+      const desc = item['Descrição'] || item['descricao'] || item['Descrição da conta'] || '';
+      if (code) map[code] = desc;
+    }
+    return map;
+  } catch {
+    return {};
+  }
 };
 
-// Generate Excel buffer
-const generateExcel = (lancamentos: any[]): Uint8Array => {
-  const worksheetData = lancamentos.map((l: any) => ({
-    'Data': l.data || '',
-    'Valor': l.valor || 0,
-    'Histórico': l.historico || '',
-    'Débito': l.debito || '',
-    'Crédito': l.credito || ''
-  }));
-  
-  const worksheet = XLSX.utils.json_to_sheet(worksheetData);
-  
+// Group lancamentos by debit account
+const groupByAccount = (lancamentos: any[], planoMap: Record<string, string>) => {
+  const groups: Record<string, { conta: string; descricao: string; items: any[] }> = {};
+  for (const l of lancamentos) {
+    const key = l.debito || 'sem-conta';
+    if (!groups[key]) {
+      groups[key] = { conta: l.debito || 'Sem conta', descricao: planoMap[l.debito] || '', items: [] };
+    }
+    groups[key].items.push(l);
+  }
+  return Object.values(groups).sort((a, b) => a.conta.localeCompare(b.conta, undefined, { numeric: true }));
+};
+
+// Generate CSV content with account grouping
+const generateCSV = (lancamentos: any[], planoMap: Record<string, string>): string => {
+  const groups = groupByAccount(lancamentos, planoMap);
+  let csv = '';
+  let grandTotal = 0;
+
+  for (const group of groups) {
+    csv += `\n--- Conta: ${group.conta} | ${group.descricao || 'Sem descrição'} ---\n`;
+    csv += 'Data,Valor,Historico,Debito,Desc.Debito,Credito,Desc.Credito\n';
+    let subtotal = 0;
+    for (const l of group.items) {
+      const val = l.valor || 0;
+      subtotal += val;
+      csv += `${l.data || ''},${val},${(l.historico || '').replace(/,/g, ';').replace(/\n/g, ' ')},${l.debito || ''},${(planoMap[l.debito] || '').replace(/,/g, ';')},${l.credito || ''},${(planoMap[l.credito] || '').replace(/,/g, ';')}\n`;
+    }
+    csv += `Subtotal: ${group.items.length} lançamentos,,${subtotal},,,,\n`;
+    grandTotal += subtotal;
+  }
+  csv += `\nTotal Geral: ${lancamentos.length} lançamentos,,${grandTotal},,,,\n`;
+  return csv;
+};
+
+// Generate Excel buffer with account grouping
+const generateExcel = (lancamentos: any[], planoMap: Record<string, string>): Uint8Array => {
+  const groups = groupByAccount(lancamentos, planoMap);
+  const rows: any[] = [];
+
+  for (const group of groups) {
+    // Group header
+    rows.push({ 'Data': `Conta: ${group.conta}`, 'Valor': '', 'Histórico': group.descricao || 'Sem descrição', 'Débito': '', 'Desc. Débito': '', 'Crédito': '', 'Desc. Crédito': '' });
+    
+    let subtotal = 0;
+    for (const l of group.items) {
+      subtotal += l.valor || 0;
+      rows.push({
+        'Data': l.data || '',
+        'Valor': l.valor || 0,
+        'Histórico': l.historico || '',
+        'Débito': l.debito || '',
+        'Desc. Débito': planoMap[l.debito] || '',
+        'Crédito': l.credito || '',
+        'Desc. Crédito': planoMap[l.credito] || '',
+      });
+    }
+    // Subtotal row
+    rows.push({ 'Data': `Subtotal: ${group.items.length} lançamentos`, 'Valor': subtotal, 'Histórico': '', 'Débito': '', 'Desc. Débito': '', 'Crédito': '', 'Desc. Crédito': '' });
+    // Empty row separator
+    rows.push({ 'Data': '', 'Valor': '', 'Histórico': '', 'Débito': '', 'Desc. Débito': '', 'Crédito': '', 'Desc. Crédito': '' });
+  }
+
+  // Grand total
+  const grandTotal = lancamentos.reduce((s: number, l: any) => s + (l.valor || 0), 0);
+  rows.push({ 'Data': `Total Geral: ${lancamentos.length} lançamentos`, 'Valor': grandTotal, 'Histórico': '', 'Débito': '', 'Desc. Débito': '', 'Crédito': '', 'Desc. Crédito': '' });
+
+  const worksheet = XLSX.utils.json_to_sheet(rows);
   worksheet['!cols'] = [
-    { wch: 12 },
-    { wch: 15 },
-    { wch: 50 },
-    { wch: 15 },
-    { wch: 15 }
+    { wch: 15 }, { wch: 15 }, { wch: 50 }, { wch: 12 }, { wch: 25 }, { wch: 12 }, { wch: 25 }
   ];
   
   const workbook = XLSX.utils.book_new();
@@ -122,11 +182,20 @@ export const completeMonthClosing = async (
       throw new Error('Nenhum lançamento encontrado');
     }
 
+    // Get plano de contas for descriptions
+    const { data: planoData } = await supabase
+      .from('planos_contas')
+      .select('conteudo')
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+    const planoMap = planoData?.conteudo ? buildPlanoContasMap(planoData.conteudo) : {};
+
     // Generate files
     let csvFilePath = null;
     let excelFilePath = null;
 
-    const csvContent = generateCSV(lancamentos);
+    const csvContent = generateCSV(lancamentos, planoMap);
     const csvFileName = `${userId}/${competencia}/lancamentos_${competencia}.csv`;
     
     const { error: csvUploadError } = await supabase.storage
@@ -142,7 +211,7 @@ export const completeMonthClosing = async (
 
     if (format === 'excel' || format === 'all') {
       try {
-        const excelBuffer = generateExcel(lancamentos);
+        const excelBuffer = generateExcel(lancamentos, planoMap);
         const excelFileName = `${userId}/${competencia}/lancamentos_${competencia}.xlsx`;
         
         const { error: excelUploadError } = await supabase.storage
