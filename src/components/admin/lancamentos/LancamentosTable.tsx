@@ -49,6 +49,11 @@ export const LancamentosTable = ({
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '-';
+    // Parse YYYY-MM-DD manually to avoid UTC timezone shift
+    const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      return `${match[3]}/${match[2]}/${match[1]}`;
+    }
     try {
       return format(new Date(dateStr), 'dd/MM/yyyy', { locale: ptBR });
     } catch {
@@ -207,6 +212,27 @@ export const LancamentosTable = ({
           >
             {/* Group Header */}
             <div className="flex items-center gap-3 px-5 py-3 bg-primary/10 border-l-4 border-l-primary">
+              {isSelectionMode && (
+                <Checkbox
+                  checked={group.items.every(i => selectedIds.has(i.id))}
+                  onCheckedChange={() => {
+                    const groupIds = group.items.map(i => i.id);
+                    const allSelected = groupIds.every(id => selectedIds.has(id));
+                    if (allSelected) {
+                      // Deselect all in group
+                      groupIds.forEach(id => {
+                        if (selectedIds.has(id)) onToggleSelect?.(id);
+                      });
+                    } else {
+                      // Select all in group
+                      groupIds.forEach(id => {
+                        if (!selectedIds.has(id)) onToggleSelect?.(id);
+                      });
+                    }
+                  }}
+                  className="border-muted-foreground/40"
+                />
+              )}
               <div className="font-bold text-foreground text-sm">
                 Conta: {group.conta}
               </div>

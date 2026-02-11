@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import * as XLSX from "https://esm.sh/xlsx@0.18.5";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -86,13 +87,43 @@ serve(async (req) => {
     const freshSignedUrl = signedUrlData.signedUrl;
     console.log(`Fresh signed URL generated, valid for ${SIGNED_URL_EXPIRY} seconds`);
 
+    // Parse tabular file content for formats n8n can't handle via URL
+    const ext = (file_name || '').split('.').pop()?.toLowerCase() || '';
+    let fileContent: string | null = null;
+
+    if (['xlsx', 'xls', 'csv', 'xml'].includes(ext)) {
+      console.log(`Tabular file detected (${ext}), downloading and parsing content...`);
+      try {
+        const { data: fileData, error: dlError } = await supabase.storage
+          .from('lancamentos')
+          .download(storagePath);
+
+        if (dlError) {
+          console.error('Error downloading file for parsing:', dlError);
+        } else if (fileData) {
+          if (ext === 'csv' || ext === 'xml') {
+            fileContent = await fileData.text();
+          } else {
+            // xlsx, xls
+            const buffer = await fileData.arrayBuffer();
+            const workbook = XLSX.read(new Uint8Array(buffer));
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            fileContent = JSON.stringify(XLSX.utils.sheet_to_json(firstSheet));
+          }
+          console.log(`Parsed ${ext} content: ${fileContent?.length || 0} chars`);
+        }
+      } catch (parseErr: any) {
+        console.error(`Error parsing ${ext} file:`, parseErr);
+      }
+    }
+
     // Update status to processing
     await supabase
       .from('documentos_brutos')
       .update({ status_processamento: 'processando' })
       .eq('id', docId);
 
-    // Send to n8n with FRESH signed URL
+    // Send to n8n with FRESH signed URL and file_content for tabular formats
     try {
       const n8nResponse = await fetch(N8N_WEBHOOK_URL, {
         method: 'POST',
@@ -103,6 +134,8 @@ serve(async (req) => {
           user_id,
           competencia,
           file_url: freshSignedUrl,
+          file_content: fileContent,
+          file_type: ext,
           storage_path: storagePath,
           file_name,
           timestamp: new Date().toISOString()
