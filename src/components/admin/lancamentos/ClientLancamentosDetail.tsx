@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { motion } from "framer-motion";
-import { Download, FileSpreadsheet, ClipboardList, User, Mail, Calendar, CheckCircle, AlertCircle, Lock, Unlock, Loader2, RefreshCw, FileWarning, FileText, AlertTriangle, Plus, CheckSquare, Trash2, List, SortAsc } from "lucide-react";
+import { Download, FileSpreadsheet, ClipboardList, User, Mail, Calendar, CheckCircle, AlertCircle, Lock, Unlock, Loader2, RefreshCw, FileWarning, FileText, AlertTriangle, Plus, CheckSquare, Trash2, List, SortAsc, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -96,6 +96,8 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
   const [viewMode, setViewMode] = useState<'data' | 'conta'>('data');
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isUploadingFiles, setIsUploadingFiles] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(String(now.getMonth() + 1).padStart(2, '0'));
@@ -421,6 +423,63 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
 
   const formatMonth = () => {
     return MONTH_NAMES[parseInt(selectedMonth) - 1];
+  };
+
+  const handleAdminUpload = async (files: FileList) => {
+    if (!files.length || !clientId) return;
+    setIsUploadingFiles(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      for (const file of Array.from(files)) {
+        const storagePath = `${clientId}/${competencia}/${Date.now()}_${file.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from('lancamentos')
+          .upload(storagePath, file);
+        if (uploadError) {
+          toast.error(`Erro ao enviar ${file.name}: ${uploadError.message}`);
+          continue;
+        }
+        // Insert into documentos_brutos
+        const { data: docData, error: docError } = await supabase
+          .from('documentos_brutos')
+          .insert({
+            user_id: clientId,
+            competencia,
+            nome_arquivo: file.name,
+            url_storage: storagePath,
+            status_processamento: 'nao_processado',
+            status_alinhamento: 'pendente',
+          })
+          .select('id')
+          .single();
+        if (docError) {
+          toast.error(`Erro ao registrar ${file.name}: ${docError.message}`);
+          continue;
+        }
+        // Trigger processing
+        await fetch('https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/process-document-queue', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`
+          },
+          body: JSON.stringify({
+            user_id: clientId,
+            competencia,
+            file_url: storagePath,
+            file_name: file.name,
+            event: 'arquivos-brutos',
+            document_id: docData.id
+          })
+        });
+        toast.success(`${file.name} enviado com sucesso!`);
+      }
+      fetchClientData();
+    } catch (err: any) {
+      toast.error("Erro no upload: " + err.message);
+    } finally {
+      setIsUploadingFiles(false);
+    }
   };
 
   const processedDocs = documents.filter(d => d.status_processamento === 'concluido');
@@ -801,6 +860,48 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
               <span className="text-sm text-foreground">
                 {aligningDocs.length} documento(s) em processamento de alinhamento...
               </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Upload Area */}
+      {!fechamento && (
+        <div className="mx-5 mt-4">
+          <div className="p-4 rounded-xl border border-dashed border-border/50 hover:border-primary/40 transition-colors">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files) handleAdminUpload(e.target.files);
+                e.target.value = '';
+              }}
+            />
+            <div
+              className="flex flex-col items-center justify-center cursor-pointer py-4"
+              onClick={() => fileInputRef.current?.click()}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (e.dataTransfer.files) handleAdminUpload(e.dataTransfer.files);
+              }}
+              onDragOver={(e) => e.preventDefault()}
+            >
+              {isUploadingFiles ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                  <span className="text-sm text-muted-foreground">Enviando...</span>
+                </div>
+              ) : (
+                <>
+                  <Upload className="w-8 h-8 text-muted-foreground/50 mb-2" />
+                  <p className="text-sm font-medium text-foreground">Upload de documentos para {clientInfo?.name}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Arraste arquivos ou clique para selecionar • Competência: {formatMonth()}/{selectedYear}
+                  </p>
+                </>
+              )}
             </div>
           </div>
         </div>

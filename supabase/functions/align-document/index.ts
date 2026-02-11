@@ -246,6 +246,9 @@ serve(async (req) => {
     try {
       console.log(`Sending document ${document_id} to n8n for alignment`);
       
+      // Use file_content as fallback when dados_extraidos is null (tabular formats)
+      const dadosParaEnviar = doc.dados_extraidos || null;
+      
       const n8nResponse = await fetch(N8N_WEBHOOK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -258,7 +261,7 @@ serve(async (req) => {
           competencia: doc.competencia,
           tipo_documento: doc.tipo_documento,
           nome_arquivo: doc.nome_arquivo,
-          dados_extraidos: doc.dados_extraidos,
+          dados_extraidos: dadosParaEnviar,
           plano_contas: planoData.conteudo,
           timestamp: new Date().toISOString()
         })
