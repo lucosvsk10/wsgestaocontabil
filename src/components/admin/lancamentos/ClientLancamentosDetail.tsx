@@ -9,6 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { PlanoContasModal } from "./PlanoContasModal";
 import { LancamentosTable, type PlanoContasMap } from "./LancamentosTable";
 import { AddLancamentoModal } from "./AddLancamentoModal";
+import { ImportXlsxModal } from "./ImportXlsxModal";
 import { toast } from "sonner";
 
 interface Lancamento {
@@ -88,6 +89,7 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
   const [isReopening, setIsReopening] = useState(false);
   const [isPlanoModalOpen, setIsPlanoModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [realigningDocId, setRealigningDocId] = useState<string | null>(null);
   const [exportFormat, setExportFormat] = useState<'csv' | 'excel' | 'all'>('excel');
   const [closeMonthStatus, setCloseMonthStatus] = useState<CloseMonthStatus | null>(null);
@@ -936,17 +938,27 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
 
             {/* Add button */}
             {!fechamento && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 text-xs rounded-lg"
-                onClick={() => setIsAddModalOpen(true)}
-              >
-                <Plus className="w-3.5 h-3.5 mr-1" />
-                Adicionar
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs rounded-lg"
+                  onClick={() => setIsAddModalOpen(true)}
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1" />
+                  Adicionar
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs rounded-lg"
+                  onClick={() => setIsImportModalOpen(true)}
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 mr-1" />
+                  Importar XLSX
+                </Button>
+              </>
             )}
-
             {/* Selection mode toggle */}
             {!fechamento && lancamentos.length > 0 && (
               <Button
@@ -1034,6 +1046,13 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
         clientId={clientId}
         competencia={competencia}
         planoContas={planoContasMap}
+        onSuccess={fetchClientData}
+      />
+      <ImportXlsxModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        clientId={clientId}
+        competencia={competencia}
         onSuccess={fetchClientData}
       />
     </div>
