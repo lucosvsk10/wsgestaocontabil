@@ -7,7 +7,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const N8N_WEBHOOK_URL = "https://basilisk-coop-n8n.zmdnad.easypanel.host/webhook/ws-site";
+const N8N_WEBHOOK_URL = "https://studiolx-n8n.oi0tyg.easypanel.host/webhook/ws-site";
 const MAX_RETRIES = 5;
 const RETRY_DELAY_MS = 10 * 60 * 1000; // 10 minutes
 const ALIGNMENT_DELAY_MS = 3 * 60 * 1000; // 3 minutes (changed from 15)
