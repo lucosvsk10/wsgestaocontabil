@@ -162,11 +162,22 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
         try {
           const parsed = JSON.parse(planoData.conteudo);
           const map: PlanoContasMap = {};
-          const items = Array.isArray(parsed) && parsed[0]?.data ? parsed[0].data : (Array.isArray(parsed) ? parsed : []);
-          for (const item of items) {
-            const code = String(item['Codigo reduzido'] || item['codigo_reduzido'] || '');
-            const desc = item['Descrição'] || item['descricao'] || item['Descrição da conta'] || '';
-            if (code) map[code] = desc;
+          
+          // New format: [{codigo, descricao}]
+          if (Array.isArray(parsed) && parsed.length > 0 && ('codigo' in parsed[0])) {
+            for (const item of parsed) {
+              const code = String(item.codigo || '').trim();
+              const desc = String(item.descricao || '').trim();
+              if (code) map[code] = desc;
+            }
+          } else {
+            // Legacy format fallback
+            const items = Array.isArray(parsed) && parsed[0]?.data ? parsed[0].data : (Array.isArray(parsed) ? parsed : []);
+            for (const item of items) {
+              const code = String(item['Codigo reduzido'] || item['codigo_reduzido'] || '');
+              const desc = item['Descrição'] || item['descricao'] || item['Descrição da conta'] || '';
+              if (code) map[code] = desc;
+            }
           }
           setPlanoContasMap(map);
         } catch {
