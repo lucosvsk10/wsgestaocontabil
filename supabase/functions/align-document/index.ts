@@ -249,6 +249,22 @@ serve(async (req) => {
       // Use file_content as fallback when dados_extraidos is null (tabular formats)
       const dadosParaEnviar = doc.dados_extraidos || null;
       
+      // For PDFs, generate a fresh signed URL so n8n can access the original file
+      const ext = (doc.nome_arquivo || '').split('.').pop()?.toLowerCase();
+      let fileUrl: string | null = null;
+      if (ext === 'pdf' || doc.tipo_documento === 'pdf') {
+        console.log('PDF detected, generating fresh signed URL for alignment...');
+        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+          .from('lancamentos')
+          .createSignedUrl(doc.url_storage, 3600);
+        if (signedUrlError) {
+          console.error('Error generating signed URL for PDF:', signedUrlError);
+        } else {
+          fileUrl = signedUrlData?.signedUrl || null;
+          console.log('Fresh signed URL generated for PDF alignment');
+        }
+      }
+      
       const n8nResponse = await fetch(N8N_WEBHOOK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -262,6 +278,8 @@ serve(async (req) => {
           tipo_documento: doc.tipo_documento,
           nome_arquivo: doc.nome_arquivo,
           dados_extraidos: dadosParaEnviar,
+          file_url: fileUrl,
+          file_type: ext,
           plano_contas: planoData.conteudo,
           timestamp: new Date().toISOString()
         })
