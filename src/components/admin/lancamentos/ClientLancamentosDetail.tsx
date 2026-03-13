@@ -91,6 +91,7 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
   const [isPlanoModalOpen, setIsPlanoModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [realigningDocId, setRealigningDocId] = useState<string | null>(null);
   const [exportFormat, setExportFormat] = useState<'csv' | 'excel' | 'all'>('excel');
   const [closeMonthStatus, setCloseMonthStatus] = useState<CloseMonthStatus | null>(null);
