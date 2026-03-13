@@ -101,8 +101,7 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
   const [viewMode, setViewMode] = useState<'data' | 'conta'>('data');
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [isUploadingFiles, setIsUploadingFiles] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(String(now.getMonth() + 1).padStart(2, '0'));
