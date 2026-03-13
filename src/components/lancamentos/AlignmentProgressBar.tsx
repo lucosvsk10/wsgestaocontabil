@@ -71,8 +71,9 @@ export const AlignmentProgressBar = ({
       const newProgress = Math.min((elapsed / ALIGNMENT_DURATION_MS) * 100, 100);
       setProgress(newProgress);
 
-      // Trigger alignment at 80%
-      if (newProgress >= TRIGGER_AT_PERCENT && !triggered && statusAlinhamento === 'pendente') {
+      // Alignment is now auto-triggered by process-document-queue backend
+      // Frontend trigger as fallback only if still 'pendente' after progress bar completes
+      if (newProgress >= 100 && !triggered && statusAlinhamento === 'pendente') {
         triggerAlignment();
       }
     };

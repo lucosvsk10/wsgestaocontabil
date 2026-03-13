@@ -162,9 +162,29 @@ serve(async (req) => {
         })
         .eq('id', docId);
 
-      // NOTE: Alignment is now triggered by the frontend progress bar at 80% (2m24s)
-      // We no longer schedule alignment from here
-      console.log(`Document ${docId} processed successfully. Alignment will be triggered by frontend.`);
+      console.log(`Document ${docId} processed successfully. Scheduling alignment in 20s...`);
+
+      // Schedule alignment after a short delay (allows n8n to finish any async work)
+      EdgeRuntime.waitUntil(
+        new Promise(resolve => {
+          setTimeout(async () => {
+            try {
+              console.log(`Triggering alignment for document ${docId}`);
+              await fetch(`${supabaseUrl}/functions/v1/align-document`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${supabaseServiceKey}`
+                },
+                body: JSON.stringify({ document_id: docId })
+              });
+            } catch (e) {
+              console.error('Error triggering alignment:', e);
+            }
+            resolve(true);
+          }, 20000); // 20 second delay
+        })
+      );
 
       return new Response(JSON.stringify({ success: true, data: n8nData }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
