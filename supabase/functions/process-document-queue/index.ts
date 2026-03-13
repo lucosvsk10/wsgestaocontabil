@@ -156,7 +156,7 @@ serve(async (req) => {
           status_processamento: 'concluido',
           processado_em: new Date().toISOString(),
           dados_extraidos: n8nData.extracted_data || n8nData.text || n8nData.content || n8nData,
-          tipo_documento: ext === 'pdf' ? 'pdf' : (doc?.tipo_documento || 'comprovante'),
+          tipo_documento: ext === 'pdf' ? 'pdf' : undefined,
           tentativas_processamento: 0,
           status_alinhamento: 'pendente' // Initialize alignment status
         })
