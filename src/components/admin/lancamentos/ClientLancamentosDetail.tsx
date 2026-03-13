@@ -440,62 +440,7 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
     return MONTH_NAMES[parseInt(selectedMonth) - 1];
   };
 
-  const handleAdminUpload = async (files: FileList) => {
-    if (!files.length || !clientId) return;
-    setIsUploadingFiles(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      for (const file of Array.from(files)) {
-        const storagePath = `${clientId}/${competencia}/${Date.now()}_${file.name}`;
-        const { error: uploadError } = await supabase.storage
-          .from('lancamentos')
-          .upload(storagePath, file);
-        if (uploadError) {
-          toast.error(`Erro ao enviar ${file.name}: ${uploadError.message}`);
-          continue;
-        }
-        // Insert into documentos_brutos
-        const { data: docData, error: docError } = await supabase
-          .from('documentos_brutos')
-          .insert({
-            user_id: clientId,
-            competencia,
-            nome_arquivo: file.name,
-            url_storage: storagePath,
-            status_processamento: 'nao_processado',
-            status_alinhamento: 'pendente',
-          })
-          .select('id')
-          .single();
-        if (docError) {
-          toast.error(`Erro ao registrar ${file.name}: ${docError.message}`);
-          continue;
-        }
-        // Trigger processing
-        await fetch('https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/process-document-queue', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session?.access_token}`
-          },
-          body: JSON.stringify({
-            user_id: clientId,
-            competencia,
-            file_url: storagePath,
-            file_name: file.name,
-            event: 'arquivos-brutos',
-            document_id: docData.id
-          })
-        });
-        toast.success(`${file.name} enviado com sucesso!`);
-      }
-      fetchClientData();
-    } catch (err: any) {
-      toast.error("Erro no upload: " + err.message);
-    } finally {
-      setIsUploadingFiles(false);
-    }
-  };
+  
 
   const processedDocs = documents.filter(d => d.status_processamento === 'concluido');
   const pendingDocs = documents.filter(d => d.status_processamento === 'nao_processado' || d.status_processamento === 'processando');
