@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, FileText, Save, Upload, Plus, Trash2, Search, FileSpreadsheet } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, FileText, Save, Upload, Plus, Trash2, Search, FileSpreadsheet, CheckCircle, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,17 +22,22 @@ interface PlanoContasModalProps {
   clientName: string;
 }
 
+interface PendingImport {
+  headers: string[];
+  headerRowIdx: number;
+  rows: any[][];
+  codigoIdx: number;
+  descricaoIdx: number;
+  autoDetected: boolean;
+}
+
 // Parse legacy formats into the new structured format
 const parseLegacyContent = (conteudo: string): PlanoContasItem[] => {
   try {
     const parsed = JSON.parse(conteudo);
-    
-    // Already in new format: [{codigo, descricao}]
     if (Array.isArray(parsed) && parsed.length > 0 && ('codigo' in parsed[0])) {
       return parsed;
     }
-    
-    // Legacy JSON format with 'Codigo reduzido'
     const items = Array.isArray(parsed) && parsed[0]?.data ? parsed[0].data : (Array.isArray(parsed) ? parsed : []);
     const result: PlanoContasItem[] = [];
     for (const item of items) {
@@ -41,7 +47,6 @@ const parseLegacyContent = (conteudo: string): PlanoContasItem[] => {
     }
     return result;
   } catch {
-    // Plain text fallback: try to parse lines like "370 - ATIVO"
     const lines = conteudo.split('\n').filter(l => l.trim());
     const result: PlanoContasItem[] = [];
     for (const line of lines) {
@@ -54,29 +59,35 @@ const parseLegacyContent = (conteudo: string): PlanoContasItem[] => {
   }
 };
 
-// Detect column mapping from XLSX headers
-const detectColumns = (headers: string[]): { codigoIdx: number; descricaoIdx: number } | null => {
-  const codigoVariations = ['c.r.', 'cr', 'c.r', 'codigo', 'código', 'codigo reduzido', 'código reduzido', 'numero', 'número', 'numero da conta', 'número da conta', 'conta', 'cod'];
-  const descricaoVariations = ['descrição', 'descricao', 'descrição da conta', 'descricao da conta', 'nome', 'desc', 'desc.'];
+// Normalize for flexible matching
+const normalize = (name: string): string =>
+  name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[_\s.]+/g, " ").trim();
 
-  let codigoIdx = -1;
-  let descricaoIdx = -1;
+// Find best column index using tiered matching
+const findColumnIndex = (headers: string[], possibleNames: string[]): number => {
+  const normalizedHeaders = headers.map(h => h ? normalize(String(h)) : "");
+  const normalizedNames = possibleNames.map(normalize);
 
-  for (let i = 0; i < headers.length; i++) {
-    const h = String(headers[i] || '').toLowerCase().trim();
-    if (codigoIdx === -1 && codigoVariations.some(v => h === v || h.includes(v))) {
-      codigoIdx = i;
-    }
-    if (descricaoIdx === -1 && descricaoVariations.some(v => h === v || h.includes(v))) {
-      descricaoIdx = i;
-    }
+  // Exact match
+  for (const name of normalizedNames) {
+    const idx = normalizedHeaders.indexOf(name);
+    if (idx !== -1) return idx;
   }
-
-  if (codigoIdx !== -1 && descricaoIdx !== -1) {
-    return { codigoIdx, descricaoIdx };
+  // Starts with
+  for (const name of normalizedNames) {
+    const idx = normalizedHeaders.findIndex(h => h.startsWith(name));
+    if (idx !== -1) return idx;
   }
-  return null;
+  // Contains
+  for (const name of normalizedNames) {
+    const idx = normalizedHeaders.findIndex(h => h.includes(name));
+    if (idx !== -1) return idx;
+  }
+  return -1;
 };
+
+const CR_NAMES = ['c.r.', 'cr', 'c.r', 'codigo', 'código', 'codigo reduzido', 'código reduzido', 'numero da conta', 'número da conta', 'conta', 'cod'];
+const DESC_NAMES = ['descrição', 'descricao', 'descrição da conta', 'descricao da conta', 'desc', 'desc.', 'nome'];
 
 export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: PlanoContasModalProps) => {
   const { user } = useAuth();
@@ -85,11 +96,13 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
   const [isSaving, setIsSaving] = useState(false);
   const [existingId, setExistingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
 
   useEffect(() => {
     if (isOpen && clientId) {
       fetchPlanoContas();
       setSearchTerm("");
+      setPendingImport(null);
     }
   }, [isOpen, clientId]);
 
@@ -135,41 +148,33 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
           return;
         }
 
-        // Find header row (first row with recognizable columns)
-        let headerRowIdx = -1;
-        let columns: { codigoIdx: number; descricaoIdx: number } | null = null;
-
+        // Find header row
+        let headerRowIdx = 0;
+        let bestHeaders: string[] = rows[0].map(String);
+        
         for (let i = 0; i < Math.min(5, rows.length); i++) {
-          const detected = detectColumns(rows[i].map(String));
-          if (detected) {
+          const rowHeaders = rows[i].map(String);
+          const crIdx = findColumnIndex(rowHeaders, CR_NAMES);
+          const descIdx = findColumnIndex(rowHeaders, DESC_NAMES);
+          if (crIdx !== -1 && descIdx !== -1) {
             headerRowIdx = i;
-            columns = detected;
+            bestHeaders = rowHeaders;
             break;
           }
         }
 
-        if (!columns || headerRowIdx === -1) {
-          toast.error("Não foi possível identificar as colunas 'C.R.' e 'Descrição' na planilha");
-          return;
-        }
+        const codigoIdx = findColumnIndex(bestHeaders, CR_NAMES);
+        const descricaoIdx = findColumnIndex(bestHeaders, DESC_NAMES);
 
-        const imported: PlanoContasItem[] = [];
-        for (let i = headerRowIdx + 1; i < rows.length; i++) {
-          const row = rows[i];
-          const codigo = String(row[columns.codigoIdx] || '').trim();
-          const descricao = String(row[columns.descricaoIdx] || '').trim();
-          if (codigo) {
-            imported.push({ codigo, descricao });
-          }
-        }
-
-        if (imported.length === 0) {
-          toast.error("Nenhuma conta encontrada na planilha");
-          return;
-        }
-
-        setItems(imported);
-        toast.success(`${imported.length} contas importadas com sucesso!`);
+        // Show mapping review step — always, so user can confirm or change
+        setPendingImport({
+          headers: bestHeaders,
+          headerRowIdx,
+          rows,
+          codigoIdx: codigoIdx !== -1 ? codigoIdx : 0,
+          descricaoIdx: descricaoIdx !== -1 ? descricaoIdx : Math.min(1, bestHeaders.length - 1),
+          autoDetected: codigoIdx !== -1 && descricaoIdx !== -1,
+        });
       } catch (err) {
         console.error('Error importing XLSX:', err);
         toast.error("Erro ao ler a planilha");
@@ -177,6 +182,30 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
     };
     reader.readAsArrayBuffer(file);
   }, []);
+
+  const confirmImport = () => {
+    if (!pendingImport) return;
+    const { rows, headerRowIdx, codigoIdx, descricaoIdx } = pendingImport;
+
+    const imported: PlanoContasItem[] = [];
+    for (let i = headerRowIdx + 1; i < rows.length; i++) {
+      const row = rows[i];
+      const codigo = String(row[codigoIdx] || '').trim();
+      const descricao = String(row[descricaoIdx] || '').trim();
+      if (codigo) {
+        imported.push({ codigo, descricao });
+      }
+    }
+
+    if (imported.length === 0) {
+      toast.error("Nenhuma conta encontrada com as colunas selecionadas");
+      return;
+    }
+
+    setItems(imported);
+    setPendingImport(null);
+    toast.success(`${imported.length} contas importadas com sucesso!`);
+  };
 
   const { getRootProps, getInputProps, isDragActive, open: openFileDialog } = useDropzone({
     onDrop: handleImportXlsx,
@@ -246,6 +275,21 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
 
   const isFiltered = searchTerm.trim().length > 0;
 
+  // Preview rows from pending import
+  const previewRows = useMemo(() => {
+    if (!pendingImport) return [];
+    const { rows, headerRowIdx, codigoIdx, descricaoIdx } = pendingImport;
+    const preview: { codigo: string; descricao: string }[] = [];
+    for (let i = headerRowIdx + 1; i < Math.min(headerRowIdx + 6, rows.length); i++) {
+      const row = rows[i];
+      preview.push({
+        codigo: String(row[codigoIdx] || '').trim(),
+        descricao: String(row[descricaoIdx] || '').trim(),
+      });
+    }
+    return preview;
+  }, [pendingImport]);
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
@@ -259,6 +303,97 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        ) : pendingImport ? (
+          /* Column mapping review step */
+          <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+            <div className="rounded-lg border border-border bg-muted/30 p-4 mb-4">
+              <div className="flex items-center gap-2 mb-3">
+                {pendingImport.autoDetected ? (
+                  <CheckCircle className="h-5 w-5 text-emerald-500" />
+                ) : (
+                  <AlertTriangle className="h-5 w-5 text-amber-500" />
+                )}
+                <h3 className="font-medium text-sm">
+                  {pendingImport.autoDetected
+                    ? 'Colunas identificadas automaticamente — confirme ou altere antes de importar'
+                    : 'Não foi possível identificar automaticamente — selecione as colunas corretas'}
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Nº da Conta (C.R.)</label>
+                  <Select
+                    value={String(pendingImport.codigoIdx)}
+                    onValueChange={(v) => setPendingImport(prev => prev ? { ...prev, codigoIdx: parseInt(v) } : null)}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {pendingImport.headers.map((h, i) => (
+                        <SelectItem key={i} value={String(i)}>
+                          Coluna {i + 1}: {h || '(vazio)'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Descrição</label>
+                  <Select
+                    value={String(pendingImport.descricaoIdx)}
+                    onValueChange={(v) => setPendingImport(prev => prev ? { ...prev, descricaoIdx: parseInt(v) } : null)}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {pendingImport.headers.map((h, i) => (
+                        <SelectItem key={i} value={String(i)}>
+                          Coluna {i + 1}: {h || '(vazio)'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            {/* Preview */}
+            <p className="text-xs font-medium text-muted-foreground mb-2">Pré-visualização (primeiras linhas):</p>
+            <div className="border rounded-lg overflow-auto flex-1 min-h-0">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-muted/80 backdrop-blur-sm">
+                  <tr>
+                    <th className="text-left px-3 py-2 font-medium w-[140px]">Nº da Conta</th>
+                    <th className="text-left px-3 py-2 font-medium">Descrição</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {previewRows.map((row, i) => (
+                    <tr key={i} className="border-t border-border/50">
+                      <td className="px-3 py-2 font-mono text-xs">{row.codigo || '—'}</td>
+                      <td className="px-3 py-2 text-xs">{row.descricao || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              {pendingImport.rows.length - pendingImport.headerRowIdx - 1} linhas de dados encontradas
+            </p>
+
+            <div className="flex gap-2 mt-4 justify-end">
+              <Button variant="outline" size="sm" onClick={() => setPendingImport(null)}>
+                Cancelar
+              </Button>
+              <Button size="sm" onClick={confirmImport}>
+                <CheckCircle className="h-4 w-4 mr-1" />
+                Confirmar e Importar
+              </Button>
+            </div>
           </div>
         ) : (
           <div {...getRootProps()} className={`flex-1 overflow-hidden flex flex-col min-h-0 ${isDragActive ? 'ring-2 ring-primary ring-offset-2 rounded-lg' : ''}`}>
@@ -312,7 +447,6 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
                     </tr>
                   ) : (
                     filteredItems.map((item, displayIdx) => {
-                      // Find real index in items array for editing
                       const realIdx = isFiltered ? items.indexOf(item) : displayIdx;
                       return (
                         <tr key={realIdx} className="border-t border-border/50 hover:bg-muted/30">
@@ -361,19 +495,21 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
           <Button variant="outline" onClick={onClose} disabled={isSaving}>
             Cancelar
           </Button>
-          <Button onClick={handleSave} disabled={isSaving || isLoading}>
-            {isSaving ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Salvando...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                {existingId ? 'Atualizar' : 'Salvar'}
-              </>
-            )}
-          </Button>
+          {!pendingImport && (
+            <Button onClick={handleSave} disabled={isSaving || isLoading}>
+              {isSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  {existingId ? 'Atualizar' : 'Salvar'}
+                </>
+              )}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
