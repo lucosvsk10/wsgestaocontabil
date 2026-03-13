@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { FileSpreadsheet, Download, SortAsc, List } from "lucide-react";
+import { FileSpreadsheet, Download, SortAsc, List, Calculator } from "lucide-react";
 import * as XLSX from "xlsx";
 import type { PlanoContasMap } from "./LancamentosTable";
 
@@ -31,14 +31,15 @@ const formatDate = (dateStr: string | null) => {
   return dateStr;
 };
 
-const formatCurrency = (value: number | null) => {
-  if (value === null) return "-";
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
-};
-
 const getDescricao = (codigo: string | null, planoContas: PlanoContasMap) => {
   if (!codigo) return "-";
   return planoContas[codigo] || "-";
+};
+
+const getLastDayOfMonth = (competencia: string): string => {
+  const [year, month] = competencia.split("-").map(Number);
+  const lastDay = new Date(year, month, 0).getDate();
+  return `${String(lastDay).padStart(2, "0")}/${String(month).padStart(2, "0")}/${year}`;
 };
 
 export const ExportLancamentosModal = ({
@@ -49,7 +50,7 @@ export const ExportLancamentosModal = ({
   clientName,
   competencia,
 }: ExportLancamentosModalProps) => {
-  const [mode, setMode] = useState<"data" | "conta">("data");
+  const [mode, setMode] = useState<"data" | "conta" | "saldo">("data");
 
   const exportByDate = () => {
     const rows = lancamentos.map((l) => ({
@@ -74,8 +75,6 @@ export const ExportLancamentosModal = ({
     });
 
     const ws = XLSX.utils.json_to_sheet(rows);
-
-    // Column widths
     ws["!cols"] = [
       { wch: 12 }, { wch: 35 }, { wch: 10 }, { wch: 25 }, { wch: 10 }, { wch: 25 }, { wch: 15 },
     ];
@@ -87,7 +86,6 @@ export const ExportLancamentosModal = ({
   };
 
   const exportByAccount = () => {
-    // Group by debit account
     const groups: Record<string, { conta: string; descricao: string; items: Lancamento[] }> = {};
     for (const l of lancamentos) {
       const key = l.debito || "sem-conta";
@@ -109,7 +107,6 @@ export const ExportLancamentosModal = ({
     let row = 0;
 
     for (const group of sorted) {
-      // Group header row
       allRows.push({
         Data: `Conta: ${group.conta} | ${group.descricao !== "-" ? group.descricao : "Sem descrição"}`,
         Histórico: "",
@@ -119,11 +116,9 @@ export const ExportLancamentosModal = ({
         "Desc. Crédito": "",
         Valor: "",
       });
-      // Merge header across all columns
       merges.push({ s: { r: row + 1, c: 0 }, e: { r: row + 1, c: 6 } });
       row++;
 
-      // Items
       for (const l of group.items) {
         allRows.push({
           Data: formatDate(l.data),
@@ -137,7 +132,6 @@ export const ExportLancamentosModal = ({
         row++;
       }
 
-      // Subtotal
       const subtotal = group.items.reduce((s, l) => s + (l.valor || 0), 0);
       allRows.push({
         Data: "",
@@ -150,12 +144,10 @@ export const ExportLancamentosModal = ({
       });
       row++;
 
-      // Empty separator row
       allRows.push({ Data: "", Histórico: "", Débito: "", "Desc. Débito": "", Crédito: "", "Desc. Crédito": "", Valor: "" });
       row++;
     }
 
-    // Grand total
     const grandTotal = lancamentos.reduce((s, l) => s + (l.valor || 0), 0);
     allRows.push({
       Data: "",
@@ -179,9 +171,60 @@ export const ExportLancamentosModal = ({
     onClose();
   };
 
+  const exportBalanceByAccount = () => {
+    const lastDay = getLastDayOfMonth(competencia);
+
+    // Group by debit account and sum values
+    const groups: Record<string, { conta: string; descricao: string; total: number }> = {};
+    for (const l of lancamentos) {
+      const key = l.debito || "sem-conta";
+      if (!groups[key]) {
+        groups[key] = {
+          conta: l.debito || "Sem conta",
+          descricao: getDescricao(l.debito, planoContas),
+          total: 0,
+        };
+      }
+      groups[key].total += l.valor || 0;
+    }
+
+    const sorted = Object.values(groups).sort((a, b) =>
+      a.conta.localeCompare(b.conta, undefined, { numeric: true })
+    );
+
+    const rows = sorted.map((g) => ({
+      Data: lastDay,
+      Débito: g.conta,
+      Histórico: `(-) ${g.descricao !== "-" ? g.descricao : "Sem descrição"}`,
+      Valor: g.total,
+      Crédito: "374",
+    }));
+
+    // Grand total
+    const grandTotal = sorted.reduce((s, g) => s + g.total, 0);
+    rows.push({
+      Data: "",
+      Débito: "",
+      Histórico: `Total Geral (${sorted.length} contas)`,
+      Valor: grandTotal,
+      Crédito: "",
+    });
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws["!cols"] = [
+      { wch: 12 }, { wch: 10 }, { wch: 40 }, { wch: 15 }, { wch: 10 },
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Saldo por Conta");
+    XLSX.writeFile(wb, `lancamentos_${clientName.replace(/\s+/g, "_")}_${competencia}_saldo_por_conta.xlsx`);
+    onClose();
+  };
+
   const handleExport = () => {
     if (mode === "data") exportByDate();
-    else exportByAccount();
+    else if (mode === "conta") exportByAccount();
+    else exportBalanceByAccount();
   };
 
   return (
@@ -236,6 +279,27 @@ export const ExportLancamentosModal = ({
               <p className="font-medium text-foreground text-sm">Por Conta</p>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Agrupado por conta contábil com subtotais
+              </p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setMode("saldo")}
+            className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${
+              mode === "saldo"
+                ? "border-primary bg-primary/5"
+                : "border-border/50 hover:border-border"
+            }`}
+          >
+            <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
+              mode === "saldo" ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
+            }`}>
+              <Calculator className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="font-medium text-foreground text-sm">Saldo por Conta</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Resumo com total por conta (Data, Débito, Histórico, Valor, Crédito)
               </p>
             </div>
           </button>
