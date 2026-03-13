@@ -961,6 +961,18 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
                 </Button>
               </>
             )}
+            {/* Export button */}
+            {lancamentos.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs rounded-lg"
+                onClick={() => setIsExportModalOpen(true)}
+              >
+                <Download className="w-3.5 h-3.5 mr-1" />
+                Exportar Lista
+              </Button>
+            )}
             {/* Selection mode toggle */}
             {!fechamento && lancamentos.length > 0 && (
               <Button
