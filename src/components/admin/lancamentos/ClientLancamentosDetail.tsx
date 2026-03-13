@@ -828,42 +828,13 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
       {/* Admin Upload Area */}
       {!fechamento && (
         <div className="mx-5 mt-4">
-          <div className="p-4 rounded-xl border border-dashed border-border/50 hover:border-primary/40 transition-colors">
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              className="hidden"
-              onChange={(e) => {
-                if (e.target.files) handleAdminUpload(e.target.files);
-                e.target.value = '';
-              }}
-            />
-            <div
-              className="flex flex-col items-center justify-center cursor-pointer py-4"
-              onClick={() => fileInputRef.current?.click()}
-              onDrop={(e) => {
-                e.preventDefault();
-                if (e.dataTransfer.files) handleAdminUpload(e.dataTransfer.files);
-              }}
-              onDragOver={(e) => e.preventDefault()}
-            >
-              {isUploadingFiles ? (
-                <div className="flex items-center gap-2">
-                  <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                  <span className="text-sm text-muted-foreground">Enviando...</span>
-                </div>
-              ) : (
-                <>
-                  <Upload className="w-8 h-8 text-muted-foreground/50 mb-2" />
-                  <p className="text-sm font-medium text-foreground">Upload de documentos para {clientInfo?.name}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Arraste arquivos ou clique para selecionar • Competência: {formatMonth()}/{selectedYear}
-                  </p>
-                </>
-              )}
-            </div>
-          </div>
+          <AdminDocumentUploadArea
+            clientId={clientId}
+            clientName={clientInfo?.name || "Cliente"}
+            competencia={competencia}
+            monthLabel={`${formatMonth()}/${selectedYear}`}
+            onUploadComplete={fetchClientData}
+          />
         </div>
       )}
 
