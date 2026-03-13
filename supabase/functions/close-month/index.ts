@@ -69,6 +69,18 @@ const buildPlanoContasMap = (conteudo: string): Record<string, string> => {
   try {
     const parsed = JSON.parse(conteudo);
     const map: Record<string, string> = {};
+    
+    // New format: [{codigo, descricao}]
+    if (Array.isArray(parsed) && parsed.length > 0 && ('codigo' in parsed[0])) {
+      for (const item of parsed) {
+        const code = String(item.codigo || '').trim();
+        const desc = String(item.descricao || '').trim();
+        if (code) map[code] = desc;
+      }
+      return map;
+    }
+    
+    // Legacy format fallback
     const items = Array.isArray(parsed) && parsed[0]?.data ? parsed[0].data : (Array.isArray(parsed) ? parsed : []);
     for (const item of items) {
       const code = String(item['Codigo reduzido'] || item['codigo_reduzido'] || '');
