@@ -9,9 +9,60 @@ const corsHeaders = {
 
 const N8N_WEBHOOK_URL = "https://studiolx-n8n.oi0tyg.easypanel.host/webhook/ws-site";
 const MAX_RETRIES = 5;
-const RETRY_DELAY_MS = 10 * 60 * 1000; // 10 minutes
-const ALIGNMENT_DELAY_MS = 3 * 60 * 1000; // 3 minutes (changed from 15)
-const SIGNED_URL_EXPIRY = 3600; // 1 hour
+const RETRY_DELAY_MS = 10 * 60 * 1000;
+const SIGNED_URL_EXPIRY = 3600;
+
+// ============= FUNÇÕES DE CONVERSÃO (copiadas do align-document) =============
+
+function convertDate(dateStr: string | null | undefined): string | null {
+  if (!dateStr) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+  const parts = dateStr.split('/');
+  if (parts.length === 3) {
+    const [day, month, year] = parts;
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  }
+  console.warn(`Invalid date format: ${dateStr}`);
+  return null;
+}
+
+function convertValor(valor: string | number | null | undefined): number {
+  if (valor === null || valor === undefined) return 0;
+  if (typeof valor === 'number') return valor;
+  const cleaned = valor.toString().replace(/\./g, '').replace(',', '.');
+  const parsed = parseFloat(cleaned);
+  return isNaN(parsed) ? 0 : parsed;
+}
+
+function extractLancamentos(n8nData: any): any[] {
+  console.log('=== EXTRACTING LANCAMENTOS ===');
+  console.log('Input type:', typeof n8nData);
+  console.log('Is array:', Array.isArray(n8nData));
+  console.log('Input preview:', JSON.stringify(n8nData).substring(0, 500));
+
+  let lancamentos: any[] = [];
+
+  if (Array.isArray(n8nData) && n8nData.length > 0 && n8nData[0]?.documento_alinhado) {
+    lancamentos = n8nData[0].documento_alinhado;
+  } else if (Array.isArray(n8nData) && n8nData.length > 0 && (n8nData[0]?.data || n8nData[0]?.historico)) {
+    lancamentos = n8nData;
+  } else if (n8nData?.lancamentos && Array.isArray(n8nData.lancamentos)) {
+    lancamentos = n8nData.lancamentos;
+  } else if (n8nData?.documento_alinhado && Array.isArray(n8nData.documento_alinhado)) {
+    lancamentos = n8nData.documento_alinhado;
+  } else {
+    console.error('Unknown n8n response format!');
+    console.error('Keys found:', n8nData ? Object.keys(n8nData) : 'null');
+  }
+
+  console.log(`Extracted ${lancamentos.length} lancamentos`);
+  if (lancamentos.length > 0) {
+    console.log('First lancamento (raw):', JSON.stringify(lancamentos[0]));
+  }
+  return lancamentos;
+}
+
+// ============= FIM FUNÇÕES DE CONVERSÃO =============
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -27,12 +78,11 @@ serve(async (req) => {
 
     console.log(`Processing document: ${file_name} for user ${user_id}`);
 
-    // If document_id is provided, this is a retry
+    // Find or validate document
     let docId = document_id;
     let storagePath = file_url;
 
     if (!docId) {
-      // Find the document that was just inserted from renamed table
       const { data: doc, error: docError } = await supabase
         .from('documentos_brutos')
         .select('id, url_storage, tentativas_processamento')
@@ -48,11 +98,9 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
-
       docId = doc.id;
       storagePath = doc.url_storage;
     } else {
-      // This is a retry - fetch the storage path from DB
       const { data: doc, error: docError } = await supabase
         .from('documentos_brutos')
         .select('url_storage')
@@ -60,18 +108,15 @@ serve(async (req) => {
         .single();
 
       if (docError) {
-        console.error('Error fetching document for retry:', docError);
         return new Response(JSON.stringify({ error: 'Document not found for retry' }), {
           status: 404,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
-
       storagePath = doc.url_storage;
     }
 
-    // Generate a FRESH signed URL
-    console.log(`Generating fresh signed URL for storage path: ${storagePath}`);
+    // Generate signed URL
     const { data: signedUrlData, error: signedUrlError } = await supabase.storage
       .from('lancamentos')
       .createSignedUrl(storagePath, SIGNED_URL_EXPIRY);
@@ -85,14 +130,13 @@ serve(async (req) => {
     }
 
     const freshSignedUrl = signedUrlData.signedUrl;
-    console.log(`Fresh signed URL generated, valid for ${SIGNED_URL_EXPIRY} seconds`);
-
-    // Parse tabular file content for formats n8n can't handle via URL
     const ext = (file_name || '').split('.').pop()?.toLowerCase() || '';
-    let fileContent: string | null = null;
+    const isPdf = ext === 'pdf';
 
+    // Parse tabular file content
+    let fileContent: string | null = null;
     if (['xlsx', 'xls', 'csv', 'xml'].includes(ext)) {
-      console.log(`Tabular file detected (${ext}), downloading and parsing content...`);
+      console.log(`Tabular file detected (${ext}), downloading and parsing...`);
       try {
         const { data: fileData, error: dlError } = await supabase.storage
           .from('lancamentos')
@@ -104,7 +148,6 @@ serve(async (req) => {
           if (ext === 'csv' || ext === 'xml') {
             fileContent = await fileData.text();
           } else {
-            // xlsx, xls
             const buffer = await fileData.arrayBuffer();
             const workbook = XLSX.read(new Uint8Array(buffer));
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -123,7 +166,7 @@ serve(async (req) => {
       .update({ status_processamento: 'processando' })
       .eq('id', docId);
 
-    // Send to n8n with FRESH signed URL and file_content for tabular formats
+    // ===== STEP 1: Send to n8n for extraction =====
     try {
       const n8nResponse = await fetch(N8N_WEBHOOK_URL, {
         method: 'POST',
@@ -147,53 +190,214 @@ serve(async (req) => {
       }
 
       const n8nData = await n8nResponse.json();
-      console.log('n8n response:', n8nData);
+      console.log('n8n extraction response:', JSON.stringify(n8nData).substring(0, 500));
 
-      // Update document as processed
+      const dadosExtraidos = n8nData.extracted_data || n8nData.text || n8nData.content || n8nData;
+
+      // Save extraction result
       await supabase
         .from('documentos_brutos')
         .update({
           status_processamento: 'concluido',
           processado_em: new Date().toISOString(),
-          dados_extraidos: n8nData.extracted_data || n8nData.text || n8nData.content || n8nData,
-          tipo_documento: ext === 'pdf' ? 'pdf' : undefined,
+          dados_extraidos: dadosExtraidos,
+          tipo_documento: isPdf ? 'pdf' : undefined,
           tentativas_processamento: 0,
-          status_alinhamento: 'pendente' // Initialize alignment status
+          status_alinhamento: 'pendente'
         })
         .eq('id', docId);
 
-      console.log(`Document ${docId} processed successfully. Scheduling alignment in 20s...`);
+      // ===== STEP 2: PDF — immediate alignment (no delay) =====
+      if (isPdf) {
+        console.log(`PDF detected — starting IMMEDIATE alignment for document ${docId}`);
 
-      // Schedule alignment after a short delay (allows n8n to finish any async work)
-      EdgeRuntime.waitUntil(
-        new Promise(resolve => {
-          setTimeout(async () => {
-            try {
-              console.log(`Triggering alignment for document ${docId}`);
-              await fetch(`${supabaseUrl}/functions/v1/align-document`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${supabaseServiceKey}`
-                },
-                body: JSON.stringify({ document_id: docId })
-              });
-            } catch (e) {
-              console.error('Error triggering alignment:', e);
-            }
-            resolve(true);
-          }, 20000); // 20 second delay
-        })
-      );
+        // Get plano de contas
+        const { data: planoData, error: planoError } = await supabase
+          .from('planos_contas')
+          .select('conteudo')
+          .eq('user_id', user_id)
+          .single();
 
-      return new Response(JSON.stringify({ success: true, data: n8nData }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+        if (planoError || !planoData) {
+          console.error('Plano de contas not found for user:', user_id);
+          await supabase
+            .from('documentos_brutos')
+            .update({
+              status_alinhamento: 'erro',
+              ultimo_erro: 'Plano de Contas não cadastrado'
+            })
+            .eq('id', docId);
+
+          await supabase
+            .from('notifications')
+            .insert({
+              user_id,
+              message: `Documento ${file_name} não pode ser alinhado: Plano de Contas não cadastrado.`,
+              type: 'erro_alinhamento'
+            });
+
+          return new Response(JSON.stringify({ success: true, extraction: true, alignment: false, reason: 'no_plano_contas' }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        // Get user info
+        const { data: userInfo } = await supabase
+          .from('users')
+          .select('name, email')
+          .eq('id', user_id)
+          .single();
+
+        // Generate fresh signed URL for alignment
+        const { data: alignSignedUrl } = await supabase.storage
+          .from('lancamentos')
+          .createSignedUrl(storagePath, SIGNED_URL_EXPIRY);
+
+        // Update status
+        await supabase
+          .from('documentos_brutos')
+          .update({ status_alinhamento: 'processando', tentativas_alinhamento: 1 })
+          .eq('id', docId);
+
+        // Send to n8n for alignment IMMEDIATELY
+        console.log(`Sending PDF alignment request to n8n for document ${docId}`);
+        const alignResponse = await fetch(N8N_WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event: 'alinhamento-documento',
+            document_id: docId,
+            user_id,
+            user_name: userInfo?.name,
+            user_email: userInfo?.email,
+            competencia,
+            tipo_documento: 'pdf',
+            nome_arquivo: file_name,
+            dados_extraidos: dadosExtraidos,
+            file_url: alignSignedUrl?.signedUrl || freshSignedUrl,
+            file_type: 'pdf',
+            plano_contas: planoData.conteudo,
+            timestamp: new Date().toISOString()
+          })
+        });
+
+        if (!alignResponse.ok) {
+          throw new Error(`n8n alignment returned ${alignResponse.status}`);
+        }
+
+        const alignData = await alignResponse.json();
+        console.log('n8n alignment response:', JSON.stringify(alignData).substring(0, 500));
+
+        // Extract and insert lançamentos
+        const lancamentos = extractLancamentos(alignData);
+
+        if (lancamentos.length === 0) {
+          console.error(`Alignment returned 0 lancamentos for document ${docId}`);
+          await supabase
+            .from('documentos_brutos')
+            .update({
+              status_alinhamento: 'erro',
+              ultimo_erro: 'n8n não retornou lançamentos alinhados'
+            })
+            .eq('id', docId);
+
+          await supabase
+            .from('notifications')
+            .insert({
+              user_id,
+              message: `Documento ${file_name}: alinhamento não gerou lançamentos.`,
+              type: 'erro_alinhamento'
+            });
+
+          return new Response(JSON.stringify({ success: true, extraction: true, alignment: false, reason: 'no_lancamentos' }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        // Convert and insert
+        const lancamentosToInsert = lancamentos.map((l: any) => ({
+          user_id,
+          competencia,
+          documento_origem_id: docId,
+          data: convertDate(l.data),
+          valor: convertValor(l.valor),
+          historico: l.historico,
+          debito: String(l.debito || ''),
+          credito: String(l.credito || '')
+        }));
+
+        console.log(`Inserting ${lancamentosToInsert.length} lancamentos for PDF ${docId}`);
+        const { error: insertError } = await supabase
+          .from('lancamentos_alinhados')
+          .insert(lancamentosToInsert);
+
+        if (insertError) {
+          console.error('Error inserting lancamentos:', insertError);
+          throw insertError;
+        }
+
+        // Mark as fully aligned
+        await supabase
+          .from('documentos_brutos')
+          .update({
+            status_alinhamento: 'alinhado',
+            alinhado_em: new Date().toISOString(),
+            ultimo_erro: null
+          })
+          .eq('id', docId);
+
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id,
+            message: `Documento ${file_name} alinhado com sucesso! ${lancamentos.length} lançamentos processados.`,
+            type: 'documento_alinhado'
+          });
+
+        console.log(`PDF ${docId} fully processed and aligned: ${lancamentos.length} lancamentos`);
+
+        return new Response(JSON.stringify({
+          success: true,
+          extraction: true,
+          alignment: true,
+          lancamentos_count: lancamentos.length
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+
+      } else {
+        // ===== Non-PDF: keep existing flow with delayed align-document call =====
+        console.log(`Non-PDF (${ext}) — scheduling alignment via align-document in 20s`);
+
+        EdgeRuntime.waitUntil(
+          new Promise(resolve => {
+            setTimeout(async () => {
+              try {
+                console.log(`Triggering alignment for non-PDF document ${docId}`);
+                await fetch(`${supabaseUrl}/functions/v1/align-document`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${supabaseServiceKey}`
+                  },
+                  body: JSON.stringify({ document_id: docId })
+                });
+              } catch (e) {
+                console.error('Error triggering alignment:', e);
+              }
+              resolve(true);
+            }, 20000);
+          })
+        );
+
+        return new Response(JSON.stringify({ success: true, data: n8nData }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
 
     } catch (n8nError: any) {
       console.error('n8n error:', n8nError);
 
-      // Get current retry count
       const { data: currentDoc } = await supabase
         .from('documentos_brutos')
         .select('tentativas_processamento')
@@ -203,7 +407,6 @@ serve(async (req) => {
       const currentRetries = (currentDoc?.tentativas_processamento || 0) + 1;
 
       if (currentRetries >= MAX_RETRIES) {
-        // Max retries reached - mark as error
         await supabase
           .from('documentos_brutos')
           .update({
@@ -213,29 +416,18 @@ serve(async (req) => {
           })
           .eq('id', docId);
 
-        // Create notification
         await supabase
           .from('notifications')
-          .insert([
-            {
-              user_id,
-              message: `Erro no processamento do arquivo: ${file_name}. Entre em contato com o suporte.`,
-              type: 'erro_processamento'
-            }
-          ]);
+          .insert([{
+            user_id,
+            message: `Erro no processamento do arquivo: ${file_name}. Entre em contato com o suporte.`,
+            type: 'erro_processamento'
+          }]);
 
-        console.log(`Document ${docId} failed after ${MAX_RETRIES} retries`);
-
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: 'Max retries reached',
-          document_id: docId
-        }), {
+        return new Response(JSON.stringify({ success: false, error: 'Max retries reached', document_id: docId }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
-
       } else {
-        // Schedule retry
         await supabase
           .from('documentos_brutos')
           .update({
@@ -245,9 +437,6 @@ serve(async (req) => {
           })
           .eq('id', docId);
 
-        console.log(`Document ${docId} will retry (attempt ${currentRetries}/${MAX_RETRIES})`);
-
-        // Use waitUntil for background retry scheduling
         EdgeRuntime.waitUntil(
           new Promise(resolve => {
             setTimeout(async () => {
@@ -258,14 +447,7 @@ serve(async (req) => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${supabaseServiceKey}`
                   },
-                  body: JSON.stringify({
-                    user_id,
-                    competencia,
-                    file_url,
-                    file_name,
-                    event,
-                    document_id: docId
-                  })
+                  body: JSON.stringify({ user_id, competencia, file_url, file_name, event, document_id: docId })
                 });
               } catch (e) {
                 console.error('Retry scheduling error:', e);
@@ -275,12 +457,7 @@ serve(async (req) => {
           })
         );
 
-        return new Response(JSON.stringify({ 
-          success: false, 
-          retrying: true,
-          attempt: currentRetries,
-          document_id: docId
-        }), {
+        return new Response(JSON.stringify({ success: false, retrying: true, attempt: currentRetries, document_id: docId }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
