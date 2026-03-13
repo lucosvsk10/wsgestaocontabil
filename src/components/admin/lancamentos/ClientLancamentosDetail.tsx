@@ -11,6 +11,7 @@ import { LancamentosTable, type PlanoContasMap } from "./LancamentosTable";
 import { AddLancamentoModal } from "./AddLancamentoModal";
 import { ImportXlsxModal } from "./ImportXlsxModal";
 import { ExportLancamentosModal } from "./ExportLancamentosModal";
+import { AdminDocumentUploadArea } from "./AdminDocumentUploadArea";
 import { toast } from "sonner";
 
 interface Lancamento {
