@@ -10,6 +10,7 @@ import { PlanoContasModal } from "./PlanoContasModal";
 import { LancamentosTable, type PlanoContasMap } from "./LancamentosTable";
 import { AddLancamentoModal } from "./AddLancamentoModal";
 import { ImportXlsxModal } from "./ImportXlsxModal";
+import { ExportLancamentosModal } from "./ExportLancamentosModal";
 import { toast } from "sonner";
 
 interface Lancamento {
