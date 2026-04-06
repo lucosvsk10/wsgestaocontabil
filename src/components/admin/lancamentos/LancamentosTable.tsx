@@ -264,7 +264,9 @@ export const LancamentosTable = ({
                     <th className="py-2 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">Débito</th>
                     <th className="py-2 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">Desc. Débito</th>
                     <th className="py-2 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">Crédito</th>
-                    <th className="py-2 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">Desc. Crédito</th>
+                     <th className="py-2 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">Desc. Crédito</th>
+                    <th className="py-2 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">CC Débito</th>
+                    <th className="py-2 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">CC Crédito</th>
                     <th className="py-2 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide text-right">Valor</th>
                   </tr>
                 </thead>
