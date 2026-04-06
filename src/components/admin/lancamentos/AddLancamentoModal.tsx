@@ -108,11 +108,11 @@ export const AddLancamentoModal = ({ isOpen, onClose, clientId, competencia, pla
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>CC Débito</Label>
-              <Input value={centroCustoDebito} onChange={(e) => setCentroCustoDebito(e.target.value)} placeholder="Centro de custo" />
+              <Input value={centroCustoDebito} onChange={(e) => setCentroCustoDebito(e.target.value.replace(/\D/g, ''))} placeholder="Código numérico" inputMode="numeric" />
             </div>
             <div className="space-y-1.5">
               <Label>CC Crédito</Label>
-              <Input value={centroCustoCredito} onChange={(e) => setCentroCustoCredito(e.target.value)} placeholder="Centro de custo" />
+              <Input value={centroCustoCredito} onChange={(e) => setCentroCustoCredito(e.target.value.replace(/\D/g, ''))} placeholder="Código numérico" inputMode="numeric" />
             </div>
           </div>
           <div className="space-y-1.5">
