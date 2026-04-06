@@ -66,7 +66,7 @@ export const ImportXlsxModal = ({ isOpen, onClose, clientId, competencia, onSucc
     setSheetColumns([]);
     setSheetData([]);
     setWorkbook(null);
-    setMapping({ data: IGNORE_VALUE, historico: IGNORE_VALUE, debito: IGNORE_VALUE, credito: IGNORE_VALUE, valor: IGNORE_VALUE });
+    setMapping({ data: IGNORE_VALUE, historico: IGNORE_VALUE, debito: IGNORE_VALUE, credito: IGNORE_VALUE, valor: IGNORE_VALUE, centro_custo_debito: IGNORE_VALUE, centro_custo_credito: IGNORE_VALUE });
     setPreviewRows([]);
   };
 
