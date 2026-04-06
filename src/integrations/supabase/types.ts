@@ -1008,6 +1008,8 @@ export type Database = {
       }
       lancamentos_alinhados: {
         Row: {
+          centro_custo_credito: string | null
+          centro_custo_debito: string | null
           competencia: string
           created_at: string | null
           credito: string | null
@@ -1020,6 +1022,8 @@ export type Database = {
           valor: number | null
         }
         Insert: {
+          centro_custo_credito?: string | null
+          centro_custo_debito?: string | null
           competencia: string
           created_at?: string | null
           credito?: string | null
@@ -1032,6 +1036,8 @@ export type Database = {
           valor?: number | null
         }
         Update: {
+          centro_custo_credito?: string | null
+          centro_custo_debito?: string | null
           competencia?: string
           created_at?: string | null
           credito?: string | null
