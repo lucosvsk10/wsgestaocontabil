@@ -32,6 +32,8 @@ const SYSTEM_COLUMNS: { key: keyof ColumnMapping; label: string; required: boole
   { key: "debito", label: "Débito", required: false },
   { key: "credito", label: "Crédito", required: false },
   { key: "valor", label: "Valor", required: true },
+  { key: "centro_custo_debito", label: "CC Débito", required: false },
+  { key: "centro_custo_credito", label: "CC Crédito", required: false },
 ];
 
 const IGNORE_VALUE = "__ignore__";
