@@ -182,7 +182,7 @@ export const LancamentosTable = ({
     </motion.tr>
   );
 
-  const colSpan = isSelectionMode ? 8 : 7;
+  const colSpan = isSelectionMode ? 10 : 9;
 
   // View by date
   if (viewMode === 'data') {
