@@ -150,11 +150,13 @@ export const ExportLancamentosModal = ({
         "Desc. Débito": "",
         Crédito: "",
         "Desc. Crédito": "",
+        "CC Débito": "",
+        "CC Crédito": "",
         Valor: subtotal,
       });
       row++;
 
-      allRows.push({ Data: "", Histórico: "", Débito: "", "Desc. Débito": "", Crédito: "", "Desc. Crédito": "", Valor: "" });
+      allRows.push({ Data: "", Histórico: "", Débito: "", "Desc. Débito": "", Crédito: "", "Desc. Crédito": "", "CC Débito": "", "CC Crédito": "", Valor: "" });
       row++;
     }
 
