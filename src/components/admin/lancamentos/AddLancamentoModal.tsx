@@ -54,7 +54,7 @@ export const AddLancamentoModal = ({ isOpen, onClose, clientId, competencia, pla
       if (error) throw error;
 
       toast.success("Lançamento adicionado com sucesso!");
-      setData(""); setHistorico(""); setDebito(""); setCredito(""); setValor("");
+      setData(""); setHistorico(""); setDebito(""); setCredito(""); setValor(""); setCentroCustoDebito(""); setCentroCustoCredito("");
       onSuccess();
       onClose();
     } catch (err: any) {
