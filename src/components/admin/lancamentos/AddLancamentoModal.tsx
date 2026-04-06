@@ -47,6 +47,8 @@ export const AddLancamentoModal = ({ isOpen, onClose, clientId, competencia, pla
           debito: debito || null,
           credito: credito || null,
           valor: parseFloat(valor),
+          centro_custo_debito: centroCustoDebito || null,
+          centro_custo_credito: centroCustoCredito || null,
         });
 
       if (error) throw error;
