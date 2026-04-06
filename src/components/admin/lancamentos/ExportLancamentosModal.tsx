@@ -120,9 +120,11 @@ export const ExportLancamentosModal = ({
         "Desc. Débito": "",
         Crédito: "",
         "Desc. Crédito": "",
+        "CC Débito": "",
+        "CC Crédito": "",
         Valor: "",
       });
-      merges.push({ s: { r: row + 1, c: 0 }, e: { r: row + 1, c: 6 } });
+      merges.push({ s: { r: row + 1, c: 0 }, e: { r: row + 1, c: 8 } });
       row++;
 
       for (const l of group.items) {
