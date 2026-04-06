@@ -338,11 +338,13 @@ serve(async (req) => {
           user_id: doc.user_id,
           competencia: doc.competencia,
           documento_origem_id: doc.id,
-          data: convertDate(l.data),              // "03/11/2025" → "2025-11-03"
-          valor: convertValor(l.valor),           // "488,17" → 488.17
+          data: convertDate(l.data),
+          valor: convertValor(l.valor),
           historico: l.historico,
-          debito: String(l.debito || ''),         // 35 → "35"
-          credito: String(l.credito || '')        // 2 → "2"
+          debito: String(l.debito || ''),
+          credito: String(l.credito || ''),
+          centro_custo_debito: l.centro_custo_debito || l.cc_debito || null,
+          centro_custo_credito: l.centro_custo_credito || l.cc_credito || null,
         };
         return converted;
       });
