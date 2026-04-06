@@ -158,6 +158,8 @@ export const ImportXlsxModal = ({ isOpen, onClose, clientId, competencia, onSucc
       debito: mapping.debito !== IGNORE_VALUE ? String(row[mapping.debito] ?? "") : null,
       credito: mapping.credito !== IGNORE_VALUE ? String(row[mapping.credito] ?? "") : null,
       valor: mapping.valor !== IGNORE_VALUE ? row[mapping.valor] : null,
+      centro_custo_debito: mapping.centro_custo_debito !== IGNORE_VALUE ? String(row[mapping.centro_custo_debito] ?? "") : null,
+      centro_custo_credito: mapping.centro_custo_credito !== IGNORE_VALUE ? String(row[mapping.centro_custo_credito] ?? "") : null,
     }));
 
     setPreviewRows(mapped);
