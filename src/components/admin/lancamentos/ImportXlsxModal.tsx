@@ -26,14 +26,14 @@ type ColumnMapping = {
   centro_custo_credito: string;
 };
 
-const SYSTEM_COLUMNS: { key: keyof ColumnMapping; label: string; required: boolean }[] = [
-  { key: "data", label: "Data", required: false },
-  { key: "historico", label: "Histórico", required: false },
-  { key: "debito", label: "Débito", required: false },
-  { key: "credito", label: "Crédito", required: false },
-  { key: "valor", label: "Valor", required: true },
-  { key: "centro_custo_debito", label: "CC Débito", required: false },
-  { key: "centro_custo_credito", label: "CC Crédito", required: false },
+const SYSTEM_COLUMNS: { key: keyof ColumnMapping; label: string; mappedLabel: string; required: boolean }[] = [
+  { key: "data", label: "Data", mappedLabel: "Data", required: false },
+  { key: "historico", label: "Histórico", mappedLabel: "Histórico", required: false },
+  { key: "debito", label: "Débito", mappedLabel: "Conta de débito", required: false },
+  { key: "credito", label: "Crédito", mappedLabel: "Conta de crédito", required: false },
+  { key: "valor", label: "Valor", mappedLabel: "Valor", required: true },
+  { key: "centro_custo_debito", label: "CC Débito", mappedLabel: "Centro de custo débito", required: false },
+  { key: "centro_custo_credito", label: "CC Crédito", mappedLabel: "Centro de custo crédito", required: false },
 ];
 
 const IGNORE_VALUE = "__ignore__";
@@ -337,7 +337,7 @@ export const ImportXlsxModal = ({ isOpen, onClose, clientId, competencia, onSucc
                       onValueChange={(v) => setMapping((prev) => ({ ...prev, [col.key]: v }))}
                     >
                       <SelectTrigger className="flex-1 bg-background h-9 text-sm">
-                        <SelectValue placeholder="Ignorar" />
+                        <SelectValue placeholder={col.mappedLabel} />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value={IGNORE_VALUE}>
