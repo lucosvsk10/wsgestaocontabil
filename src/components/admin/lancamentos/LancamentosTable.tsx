@@ -13,6 +13,8 @@ interface Lancamento {
   debito: string | null;
   credito: string | null;
   valor: number | null;
+  centro_custo_debito: string | null;
+  centro_custo_credito: string | null;
   created_at: string;
 }
 
@@ -126,6 +128,8 @@ export const LancamentosTable = ({
         <th className="py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">Desc. Débito</th>
         <th className="py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">Crédito</th>
         <th className="py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">Desc. Crédito</th>
+        <th className="py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">CC Débito</th>
+        <th className="py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">CC Crédito</th>
         <th className="py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide text-right rounded-tr-xl">Valor</th>
       </tr>
     </thead>
@@ -166,13 +170,19 @@ export const LancamentosTable = ({
       <td className="py-3 px-4 text-xs text-muted-foreground max-w-[150px] truncate">
         {getDescricao(lancamento.credito)}
       </td>
+      <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
+        {lancamento.centro_custo_debito || '-'}
+      </td>
+      <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
+        {lancamento.centro_custo_credito || '-'}
+      </td>
       <td className="py-3 px-4 text-right font-medium text-foreground whitespace-nowrap text-sm">
         {formatCurrency(lancamento.valor)}
       </td>
     </motion.tr>
   );
 
-  const colSpan = isSelectionMode ? 8 : 7;
+  const colSpan = isSelectionMode ? 10 : 9;
 
   // View by date
   if (viewMode === 'data') {
@@ -254,7 +264,9 @@ export const LancamentosTable = ({
                     <th className="py-2 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">Débito</th>
                     <th className="py-2 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">Desc. Débito</th>
                     <th className="py-2 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">Crédito</th>
-                    <th className="py-2 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">Desc. Crédito</th>
+                     <th className="py-2 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">Desc. Crédito</th>
+                    <th className="py-2 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">CC Débito</th>
+                    <th className="py-2 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">CC Crédito</th>
                     <th className="py-2 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide text-right">Valor</th>
                   </tr>
                 </thead>

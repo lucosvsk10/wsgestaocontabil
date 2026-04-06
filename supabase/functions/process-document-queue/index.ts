@@ -323,7 +323,9 @@ serve(async (req) => {
           valor: convertValor(l.valor),
           historico: l.historico,
           debito: String(l.debito || ''),
-          credito: String(l.credito || '')
+          credito: String(l.credito || ''),
+          centro_custo_debito: l.centro_custo_debito || l.cc_debito || null,
+          centro_custo_credito: l.centro_custo_credito || l.cc_credito || null,
         }));
 
         console.log(`Inserting ${lancamentosToInsert.length} lancamentos for PDF ${docId}`);

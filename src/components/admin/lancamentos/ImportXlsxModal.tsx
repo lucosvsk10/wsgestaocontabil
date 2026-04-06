@@ -22,6 +22,8 @@ type ColumnMapping = {
   debito: string;
   credito: string;
   valor: string;
+  centro_custo_debito: string;
+  centro_custo_credito: string;
 };
 
 const SYSTEM_COLUMNS: { key: keyof ColumnMapping; label: string; required: boolean }[] = [
@@ -30,6 +32,8 @@ const SYSTEM_COLUMNS: { key: keyof ColumnMapping; label: string; required: boole
   { key: "debito", label: "Débito", required: false },
   { key: "credito", label: "Crédito", required: false },
   { key: "valor", label: "Valor", required: true },
+  { key: "centro_custo_debito", label: "CC Débito", required: false },
+  { key: "centro_custo_credito", label: "CC Crédito", required: false },
 ];
 
 const IGNORE_VALUE = "__ignore__";
@@ -48,6 +52,8 @@ export const ImportXlsxModal = ({ isOpen, onClose, clientId, competencia, onSucc
     debito: IGNORE_VALUE,
     credito: IGNORE_VALUE,
     valor: IGNORE_VALUE,
+    centro_custo_debito: IGNORE_VALUE,
+    centro_custo_credito: IGNORE_VALUE,
   });
   const [isSaving, setIsSaving] = useState(false);
   const [previewRows, setPreviewRows] = useState<Record<string, any>[]>([]);
@@ -60,7 +66,7 @@ export const ImportXlsxModal = ({ isOpen, onClose, clientId, competencia, onSucc
     setSheetColumns([]);
     setSheetData([]);
     setWorkbook(null);
-    setMapping({ data: IGNORE_VALUE, historico: IGNORE_VALUE, debito: IGNORE_VALUE, credito: IGNORE_VALUE, valor: IGNORE_VALUE });
+    setMapping({ data: IGNORE_VALUE, historico: IGNORE_VALUE, debito: IGNORE_VALUE, credito: IGNORE_VALUE, valor: IGNORE_VALUE, centro_custo_debito: IGNORE_VALUE, centro_custo_credito: IGNORE_VALUE });
     setPreviewRows([]);
   };
 
@@ -113,6 +119,8 @@ export const ImportXlsxModal = ({ isOpen, onClose, clientId, competencia, onSucc
         debito: IGNORE_VALUE,
         credito: IGNORE_VALUE,
         valor: IGNORE_VALUE,
+        centro_custo_debito: IGNORE_VALUE,
+        centro_custo_credito: IGNORE_VALUE,
       };
 
       for (const col of cols) {
@@ -124,6 +132,8 @@ export const ImportXlsxModal = ({ isOpen, onClose, clientId, competencia, onSucc
         else if (lower.includes("valor") || lower.includes("value") || lower.includes("amount") || lower.includes("total")) {
           if (autoMapping.valor === IGNORE_VALUE) autoMapping.valor = col;
         }
+        else if ((lower.includes("centro") || lower.includes("cc")) && lower.includes("debit")) autoMapping.centro_custo_debito = col;
+        else if ((lower.includes("centro") || lower.includes("cc")) && lower.includes("credit")) autoMapping.centro_custo_credito = col;
       }
 
       setMapping(autoMapping);
@@ -148,6 +158,8 @@ export const ImportXlsxModal = ({ isOpen, onClose, clientId, competencia, onSucc
       debito: mapping.debito !== IGNORE_VALUE ? String(row[mapping.debito] ?? "") : null,
       credito: mapping.credito !== IGNORE_VALUE ? String(row[mapping.credito] ?? "") : null,
       valor: mapping.valor !== IGNORE_VALUE ? row[mapping.valor] : null,
+      centro_custo_debito: mapping.centro_custo_debito !== IGNORE_VALUE ? String(row[mapping.centro_custo_debito] ?? "") : null,
+      centro_custo_credito: mapping.centro_custo_credito !== IGNORE_VALUE ? String(row[mapping.centro_custo_credito] ?? "") : null,
     }));
 
     setPreviewRows(mapped);
@@ -206,6 +218,8 @@ export const ImportXlsxModal = ({ isOpen, onClose, clientId, competencia, onSucc
           debito: row.debito || null,
           credito: row.credito || null,
           valor: parseValor(row.valor),
+          centro_custo_debito: row.centro_custo_debito || null,
+          centro_custo_credito: row.centro_custo_credito || null,
         }))
         .filter((r) => r.valor !== null && r.valor !== 0);
 
@@ -402,6 +416,8 @@ export const ImportXlsxModal = ({ isOpen, onClose, clientId, competencia, onSucc
                     <th className="py-2 px-3 text-left font-medium text-muted-foreground">Histórico</th>
                     <th className="py-2 px-3 text-left font-medium text-muted-foreground">Débito</th>
                     <th className="py-2 px-3 text-left font-medium text-muted-foreground">Crédito</th>
+                    <th className="py-2 px-3 text-left font-medium text-muted-foreground">CC Déb.</th>
+                    <th className="py-2 px-3 text-left font-medium text-muted-foreground">CC Créd.</th>
                     <th className="py-2 px-3 text-right font-medium text-muted-foreground">Valor</th>
                   </tr>
                 </thead>
@@ -415,6 +431,8 @@ export const ImportXlsxModal = ({ isOpen, onClose, clientId, competencia, onSucc
                         <td className="py-1.5 px-3 text-foreground max-w-[150px] truncate">{formatPreviewValue(row.historico)}</td>
                         <td className="py-1.5 px-3 font-mono text-muted-foreground">{formatPreviewValue(row.debito)}</td>
                         <td className="py-1.5 px-3 font-mono text-muted-foreground">{formatPreviewValue(row.credito)}</td>
+                        <td className="py-1.5 px-3 text-muted-foreground text-xs">{formatPreviewValue(row.centro_custo_debito)}</td>
+                        <td className="py-1.5 px-3 text-muted-foreground text-xs">{formatPreviewValue(row.centro_custo_credito)}</td>
                         <td className="py-1.5 px-3 text-right font-medium text-foreground">{formatPreviewValue(row.valor)}</td>
                       </tr>
                     );

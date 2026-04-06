@@ -23,6 +23,8 @@ export const AddLancamentoModal = ({ isOpen, onClose, clientId, competencia, pla
   const [debito, setDebito] = useState("");
   const [credito, setCredito] = useState("");
   const [valor, setValor] = useState("");
+  const [centroCustoDebito, setCentroCustoDebito] = useState("");
+  const [centroCustoCredito, setCentroCustoCredito] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   const contasOptions = Object.entries(planoContas).sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }));
@@ -45,12 +47,14 @@ export const AddLancamentoModal = ({ isOpen, onClose, clientId, competencia, pla
           debito: debito || null,
           credito: credito || null,
           valor: parseFloat(valor),
+          centro_custo_debito: centroCustoDebito || null,
+          centro_custo_credito: centroCustoCredito || null,
         });
 
       if (error) throw error;
 
       toast.success("Lançamento adicionado com sucesso!");
-      setData(""); setHistorico(""); setDebito(""); setCredito(""); setValor("");
+      setData(""); setHistorico(""); setDebito(""); setCredito(""); setValor(""); setCentroCustoDebito(""); setCentroCustoCredito("");
       onSuccess();
       onClose();
     } catch (err: any) {
@@ -99,6 +103,16 @@ export const AddLancamentoModal = ({ isOpen, onClose, clientId, competencia, pla
               {credito && planoContas[credito] && (
                 <p className="text-xs text-muted-foreground truncate">{planoContas[credito]}</p>
               )}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>CC Débito</Label>
+              <Input value={centroCustoDebito} onChange={(e) => setCentroCustoDebito(e.target.value)} placeholder="Centro de custo" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>CC Crédito</Label>
+              <Input value={centroCustoCredito} onChange={(e) => setCentroCustoCredito(e.target.value)} placeholder="Centro de custo" />
             </div>
           </div>
           <div className="space-y-1.5">

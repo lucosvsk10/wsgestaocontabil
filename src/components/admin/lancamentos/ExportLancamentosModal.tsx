@@ -12,6 +12,8 @@ interface Lancamento {
   debito: string | null;
   credito: string | null;
   valor: number | null;
+  centro_custo_debito: string | null;
+  centro_custo_credito: string | null;
   created_at: string;
 }
 
@@ -60,6 +62,8 @@ export const ExportLancamentosModal = ({
       "Desc. Débito": getDescricao(l.debito, planoContas),
       Crédito: l.credito || "-",
       "Desc. Crédito": getDescricao(l.credito, planoContas),
+      "CC Débito": l.centro_custo_debito || "-",
+      "CC Crédito": l.centro_custo_credito || "-",
       Valor: l.valor ?? 0,
     }));
 
@@ -71,12 +75,14 @@ export const ExportLancamentosModal = ({
       "Desc. Débito": "",
       Crédito: "",
       "Desc. Crédito": "",
+      "CC Débito": "",
+      "CC Crédito": "",
       Valor: total,
     });
 
     const ws = XLSX.utils.json_to_sheet(rows);
     ws["!cols"] = [
-      { wch: 12 }, { wch: 35 }, { wch: 10 }, { wch: 25 }, { wch: 10 }, { wch: 25 }, { wch: 15 },
+      { wch: 12 }, { wch: 35 }, { wch: 10 }, { wch: 25 }, { wch: 10 }, { wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 15 },
     ];
 
     const wb = XLSX.utils.book_new();
@@ -114,9 +120,11 @@ export const ExportLancamentosModal = ({
         "Desc. Débito": "",
         Crédito: "",
         "Desc. Crédito": "",
+        "CC Débito": "",
+        "CC Crédito": "",
         Valor: "",
       });
-      merges.push({ s: { r: row + 1, c: 0 }, e: { r: row + 1, c: 6 } });
+      merges.push({ s: { r: row + 1, c: 0 }, e: { r: row + 1, c: 8 } });
       row++;
 
       for (const l of group.items) {
@@ -127,6 +135,8 @@ export const ExportLancamentosModal = ({
           "Desc. Débito": getDescricao(l.debito, planoContas),
           Crédito: l.credito || "-",
           "Desc. Crédito": getDescricao(l.credito, planoContas),
+          "CC Débito": l.centro_custo_debito || "-",
+          "CC Crédito": l.centro_custo_credito || "-",
           Valor: l.valor ?? 0,
         });
         row++;
@@ -140,11 +150,13 @@ export const ExportLancamentosModal = ({
         "Desc. Débito": "",
         Crédito: "",
         "Desc. Crédito": "",
+        "CC Débito": "",
+        "CC Crédito": "",
         Valor: subtotal,
       });
       row++;
 
-      allRows.push({ Data: "", Histórico: "", Débito: "", "Desc. Débito": "", Crédito: "", "Desc. Crédito": "", Valor: "" });
+      allRows.push({ Data: "", Histórico: "", Débito: "", "Desc. Débito": "", Crédito: "", "Desc. Crédito": "", "CC Débito": "", "CC Crédito": "", Valor: "" });
       row++;
     }
 
@@ -156,13 +168,15 @@ export const ExportLancamentosModal = ({
       "Desc. Débito": "",
       Crédito: "",
       "Desc. Crédito": "",
+      "CC Débito": "",
+      "CC Crédito": "",
       Valor: grandTotal,
     });
 
     const ws = XLSX.utils.json_to_sheet(allRows);
     ws["!merges"] = merges;
     ws["!cols"] = [
-      { wch: 12 }, { wch: 35 }, { wch: 10 }, { wch: 25 }, { wch: 10 }, { wch: 25 }, { wch: 15 },
+      { wch: 12 }, { wch: 35 }, { wch: 10 }, { wch: 25 }, { wch: 10 }, { wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 15 },
     ];
 
     const wb = XLSX.utils.book_new();
