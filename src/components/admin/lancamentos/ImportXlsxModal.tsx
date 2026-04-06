@@ -132,6 +132,8 @@ export const ImportXlsxModal = ({ isOpen, onClose, clientId, competencia, onSucc
         else if (lower.includes("valor") || lower.includes("value") || lower.includes("amount") || lower.includes("total")) {
           if (autoMapping.valor === IGNORE_VALUE) autoMapping.valor = col;
         }
+        else if ((lower.includes("centro") || lower.includes("cc")) && lower.includes("debit")) autoMapping.centro_custo_debito = col;
+        else if ((lower.includes("centro") || lower.includes("cc")) && lower.includes("credit")) autoMapping.centro_custo_credito = col;
       }
 
       setMapping(autoMapping);
