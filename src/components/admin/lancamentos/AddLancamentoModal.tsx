@@ -105,6 +105,16 @@ export const AddLancamentoModal = ({ isOpen, onClose, clientId, competencia, pla
               )}
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>CC Débito</Label>
+              <Input value={centroCustoDebito} onChange={(e) => setCentroCustoDebito(e.target.value)} placeholder="Centro de custo" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>CC Crédito</Label>
+              <Input value={centroCustoCredito} onChange={(e) => setCentroCustoCredito(e.target.value)} placeholder="Centro de custo" />
+            </div>
+          </div>
           <div className="space-y-1.5">
             <Label>Valor *</Label>
             <Input type="number" step="0.01" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="0,00" />
