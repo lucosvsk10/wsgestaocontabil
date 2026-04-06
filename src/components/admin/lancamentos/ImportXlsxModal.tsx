@@ -22,6 +22,8 @@ type ColumnMapping = {
   debito: string;
   credito: string;
   valor: string;
+  centro_custo_debito: string;
+  centro_custo_credito: string;
 };
 
 const SYSTEM_COLUMNS: { key: keyof ColumnMapping; label: string; required: boolean }[] = [
