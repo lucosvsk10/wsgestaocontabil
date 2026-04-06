@@ -416,6 +416,8 @@ export const ImportXlsxModal = ({ isOpen, onClose, clientId, competencia, onSucc
                     <th className="py-2 px-3 text-left font-medium text-muted-foreground">Histórico</th>
                     <th className="py-2 px-3 text-left font-medium text-muted-foreground">Débito</th>
                     <th className="py-2 px-3 text-left font-medium text-muted-foreground">Crédito</th>
+                    <th className="py-2 px-3 text-left font-medium text-muted-foreground">CC Déb.</th>
+                    <th className="py-2 px-3 text-left font-medium text-muted-foreground">CC Créd.</th>
                     <th className="py-2 px-3 text-right font-medium text-muted-foreground">Valor</th>
                   </tr>
                 </thead>
@@ -429,6 +431,8 @@ export const ImportXlsxModal = ({ isOpen, onClose, clientId, competencia, onSucc
                         <td className="py-1.5 px-3 text-foreground max-w-[150px] truncate">{formatPreviewValue(row.historico)}</td>
                         <td className="py-1.5 px-3 font-mono text-muted-foreground">{formatPreviewValue(row.debito)}</td>
                         <td className="py-1.5 px-3 font-mono text-muted-foreground">{formatPreviewValue(row.credito)}</td>
+                        <td className="py-1.5 px-3 text-muted-foreground text-xs">{formatPreviewValue(row.centro_custo_debito)}</td>
+                        <td className="py-1.5 px-3 text-muted-foreground text-xs">{formatPreviewValue(row.centro_custo_credito)}</td>
                         <td className="py-1.5 px-3 text-right font-medium text-foreground">{formatPreviewValue(row.valor)}</td>
                       </tr>
                     );
