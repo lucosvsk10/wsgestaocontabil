@@ -218,6 +218,8 @@ export const ImportXlsxModal = ({ isOpen, onClose, clientId, competencia, onSucc
           debito: row.debito || null,
           credito: row.credito || null,
           valor: parseValor(row.valor),
+          centro_custo_debito: row.centro_custo_debito || null,
+          centro_custo_credito: row.centro_custo_credito || null,
         }))
         .filter((r) => r.valor !== null && r.valor !== 0);
 
