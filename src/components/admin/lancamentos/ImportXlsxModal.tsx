@@ -125,15 +125,17 @@ export const ImportXlsxModal = ({ isOpen, onClose, clientId, competencia, onSucc
 
       for (const col of cols) {
         const lower = col.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        if (lower.includes("data") || lower.includes("date")) autoMapping.data = col;
+        const isCentro = lower.includes("centro") || lower.startsWith("cc");
+        
+        if (isCentro && (lower.includes("debit") || lower.includes("debito"))) autoMapping.centro_custo_debito = col;
+        else if (isCentro && (lower.includes("credit") || lower.includes("credito"))) autoMapping.centro_custo_credito = col;
+        else if (lower.includes("data") || lower.includes("date")) autoMapping.data = col;
         else if (lower.includes("historic") || lower.includes("descri") || lower.includes("memo")) autoMapping.historico = col;
         else if (lower.includes("debit") || lower.includes("debito")) autoMapping.debito = col;
         else if (lower.includes("credit") || lower.includes("credito")) autoMapping.credito = col;
         else if (lower.includes("valor") || lower.includes("value") || lower.includes("amount") || lower.includes("total")) {
           if (autoMapping.valor === IGNORE_VALUE) autoMapping.valor = col;
         }
-        else if ((lower.includes("centro") || lower.includes("cc")) && lower.includes("debit")) autoMapping.centro_custo_debito = col;
-        else if ((lower.includes("centro") || lower.includes("cc")) && lower.includes("credit")) autoMapping.centro_custo_credito = col;
       }
 
       setMapping(autoMapping);
