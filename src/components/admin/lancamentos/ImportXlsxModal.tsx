@@ -52,6 +52,8 @@ export const ImportXlsxModal = ({ isOpen, onClose, clientId, competencia, onSucc
     debito: IGNORE_VALUE,
     credito: IGNORE_VALUE,
     valor: IGNORE_VALUE,
+    centro_custo_debito: IGNORE_VALUE,
+    centro_custo_credito: IGNORE_VALUE,
   });
   const [isSaving, setIsSaving] = useState(false);
   const [previewRows, setPreviewRows] = useState<Record<string, any>[]>([]);
