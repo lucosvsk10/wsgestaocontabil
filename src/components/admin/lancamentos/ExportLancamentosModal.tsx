@@ -75,6 +75,8 @@ export const ExportLancamentosModal = ({
       "Desc. Débito": "",
       Crédito: "",
       "Desc. Crédito": "",
+      "CC Débito": "",
+      "CC Crédito": "",
       Valor: total,
     });
 
