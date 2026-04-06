@@ -128,6 +128,8 @@ export const LancamentosTable = ({
         <th className="py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">Desc. Débito</th>
         <th className="py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">Crédito</th>
         <th className="py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">Desc. Crédito</th>
+        <th className="py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">CC Débito</th>
+        <th className="py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide">CC Crédito</th>
         <th className="py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wide text-right rounded-tr-xl">Valor</th>
       </tr>
     </thead>
