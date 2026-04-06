@@ -176,7 +176,7 @@ export const ExportLancamentosModal = ({
     const ws = XLSX.utils.json_to_sheet(allRows);
     ws["!merges"] = merges;
     ws["!cols"] = [
-      { wch: 12 }, { wch: 35 }, { wch: 10 }, { wch: 25 }, { wch: 10 }, { wch: 25 }, { wch: 15 },
+      { wch: 12 }, { wch: 35 }, { wch: 10 }, { wch: 25 }, { wch: 10 }, { wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 15 },
     ];
 
     const wb = XLSX.utils.book_new();
