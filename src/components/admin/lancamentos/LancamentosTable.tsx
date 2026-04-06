@@ -170,6 +170,12 @@ export const LancamentosTable = ({
       <td className="py-3 px-4 text-xs text-muted-foreground max-w-[150px] truncate">
         {getDescricao(lancamento.credito)}
       </td>
+      <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
+        {lancamento.centro_custo_debito || '-'}
+      </td>
+      <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
+        {lancamento.centro_custo_credito || '-'}
+      </td>
       <td className="py-3 px-4 text-right font-medium text-foreground whitespace-nowrap text-sm">
         {formatCurrency(lancamento.valor)}
       </td>
