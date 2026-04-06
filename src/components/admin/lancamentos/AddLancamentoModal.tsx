@@ -23,6 +23,8 @@ export const AddLancamentoModal = ({ isOpen, onClose, clientId, competencia, pla
   const [debito, setDebito] = useState("");
   const [credito, setCredito] = useState("");
   const [valor, setValor] = useState("");
+  const [centroCustoDebito, setCentroCustoDebito] = useState("");
+  const [centroCustoCredito, setCentroCustoCredito] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   const contasOptions = Object.entries(planoContas).sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }));
