@@ -21,6 +21,8 @@ interface Lancamento {
   debito: string | null;
   credito: string | null;
   valor: number | null;
+  centro_custo_debito: string | null;
+  centro_custo_credito: string | null;
   created_at: string;
 }
 
