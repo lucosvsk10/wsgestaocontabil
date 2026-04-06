@@ -337,7 +337,7 @@ export const ImportXlsxModal = ({ isOpen, onClose, clientId, competencia, onSucc
                       onValueChange={(v) => setMapping((prev) => ({ ...prev, [col.key]: v }))}
                     >
                       <SelectTrigger className="flex-1 bg-background h-9 text-sm">
-                        <SelectValue placeholder="Ignorar" />
+                        <SelectValue placeholder={col.mappedLabel} />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value={IGNORE_VALUE}>
