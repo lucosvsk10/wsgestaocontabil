@@ -135,6 +135,8 @@ export const ExportLancamentosModal = ({
           "Desc. Débito": getDescricao(l.debito, planoContas),
           Crédito: l.credito || "-",
           "Desc. Crédito": getDescricao(l.credito, planoContas),
+          "CC Débito": l.centro_custo_debito || "-",
+          "CC Crédito": l.centro_custo_credito || "-",
           Valor: l.valor ?? 0,
         });
         row++;
