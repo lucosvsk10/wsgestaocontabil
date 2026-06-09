@@ -58,25 +58,18 @@ serve(async (req) => {
     const jwt = authHeader.replace("Bearer ", "");
     console.log("Validating JWT...");
     
-    // Validar o JWT e obter o usuário
-    const { data: { user: caller }, error: authError } = await supabaseAdmin.auth.getUser(jwt);
-    
-    if (authError) {
-      console.error("Auth error:", authError.message);
-      return new Response(JSON.stringify({ error: "Usuário não autenticado", details: authError.message }), { 
-        status: 401, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" } 
-      });
-    }
-    
-    if (!caller) {
-      console.error("No user returned");
-      return new Response(JSON.stringify({ error: "Usuário não encontrado" }), { 
-        status: 401, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+    // Validar o JWT usando getClaims (compatível com signing keys assimétricas)
+    const { data: claimsData, error: authError } = await supabaseAdmin.auth.getClaims(jwt);
+
+    if (authError || !claimsData?.claims?.sub) {
+      console.error("Auth error:", authError?.message || "no claims");
+      return new Response(JSON.stringify({ error: "Usuário não autenticado", details: authError?.message || "Invalid token" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
+    const caller = { id: claimsData.claims.sub as string, email: claimsData.claims.email as string };
     console.log("User authenticated:", caller.id, caller.email);
 
     // Verificar se o usuário tem permissão usando role do banco de dados
