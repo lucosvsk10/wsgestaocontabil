@@ -58,18 +58,23 @@ serve(async (req) => {
     const jwt = authHeader.replace("Bearer ", "");
     console.log("Validating JWT...");
     
-    // Validar o JWT usando getClaims (compatível com signing keys assimétricas)
-    const { data: claimsData, error: authError } = await supabaseAdmin.auth.getClaims(jwt);
+    // Validar JWT criando um cliente com o header Authorization do usuário
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
 
-    if (authError || !claimsData?.claims?.sub) {
-      console.error("Auth error:", authError?.message || "no claims");
+    const { data: { user: caller }, error: authError } = await userClient.auth.getUser();
+
+    if (authError || !caller) {
+      console.error("Auth error:", authError?.message || "no user");
       return new Response(JSON.stringify({ error: "Usuário não autenticado", details: authError?.message || "Invalid token" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
-    const caller = { id: claimsData.claims.sub as string, email: claimsData.claims.email as string };
     console.log("User authenticated:", caller.id, caller.email);
 
     // Verificar se o usuário tem permissão usando role do banco de dados
