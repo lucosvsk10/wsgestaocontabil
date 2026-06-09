@@ -72,15 +72,20 @@ export const useDocumentManagement = (users: any[], supabaseUsers: any[]) => {
         throw new Error("Caminho do arquivo não encontrado para este documento.");
       }
 
-      const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-        .from('documents')
-        .createSignedUrl(storagePath, 300);
+      const { data: signedUrlData, error: signedUrlError } = await supabase.functions.invoke('get-signed-url', {
+        body: {
+          bucket: 'documents',
+          path: storagePath
+        }
+      });
 
-      if (signedUrlError || !signedUrlData?.signedUrl) {
+      const signedUrl = signedUrlData?.signed_url || signedUrlData?.signedUrl;
+
+      if (signedUrlError || !signedUrl) {
         throw signedUrlError || new Error("Não foi possível gerar o link seguro do documento.");
       }
 
-      const response = await fetch(signedUrlData.signedUrl);
+      const response = await fetch(signedUrl);
 
       if (!response.ok) {
         throw new Error(`Falha ao baixar o arquivo (${response.status}).`);
