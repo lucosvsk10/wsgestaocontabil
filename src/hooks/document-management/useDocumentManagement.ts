@@ -5,6 +5,27 @@ import { useToast } from "@/hooks/use-toast";
 import { Document, DocumentCategory } from "@/types/common";
 import { useDocumentCategories } from "./useDocumentCategories";
 
+const getReadableDownloadError = (error: unknown) => {
+  if (error instanceof Error && error.message && error.message !== "{}") {
+    return error.message;
+  }
+
+  return "Não foi possível acessar o arquivo no armazenamento. Verifique se o documento existe e tente novamente.";
+};
+
+const getStoragePathFromFileUrl = (fileUrl?: string | null) => {
+  if (!fileUrl) return null;
+
+  try {
+    const url = new URL(fileUrl);
+    const pathname = decodeURIComponent(url.pathname);
+    const match = pathname.match(/\/storage\/v1\/object\/(?:public\/|sign\/)?documents\/(.+)$/);
+    return match?.[1] || null;
+  } catch {
+    return null;
+  }
+};
+
 export const useDocumentManagement = (users: any[], supabaseUsers: any[]) => {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -44,46 +65,53 @@ export const useDocumentManagement = (users: any[], supabaseUsers: any[]) => {
   const handleDownload = async (document: Document) => {
     try {
       setLoadingDocumentIds(prev => new Set([...prev, document.id]));
-      
-      if (document.storage_key) {
-        // Download using storage_key
-        const { data, error } = await supabase.storage
-          .from('documents')
-          .download(document.storage_key);
-        
-        if (error) throw error;
-        
-        if (data) {
-          const url = URL.createObjectURL(data);
-          const a = window.document.createElement('a') as HTMLAnchorElement;
-          a.href = url;
-          a.download = document.filename || document.original_filename || document.name;
-          window.document.body.appendChild(a);
-          a.click();
-          window.document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-          
-          toast({
-            title: "Download concluído",
-            description: "O documento foi baixado com sucesso."
-          });
-          
-          return;
-        }
+
+      const storagePath = document.storage_key || getStoragePathFromFileUrl(document.file_url);
+
+      if (!storagePath) {
+        throw new Error("Caminho do arquivo não encontrado para este documento.");
       }
 
-      // Fallback to public URL
-      if (document.file_url) {
-        window.open(document.file_url, '_blank');
-      } else {
-        throw new Error("URL do documento não encontrada");
+      const { data: signedUrlData, error: signedUrlError } = await supabase.functions.invoke('get-signed-url', {
+        body: {
+          bucket: 'documents',
+          path: storagePath
+        }
+      });
+
+      const signedUrl = signedUrlData?.signed_url || signedUrlData?.signedUrl;
+
+      if (signedUrlError || !signedUrl) {
+        throw signedUrlError || new Error("Não foi possível gerar o link seguro do documento.");
       }
+
+      const response = await fetch(signedUrl);
+
+      if (!response.ok) {
+        throw new Error(`Falha ao baixar o arquivo (${response.status}).`);
+      }
+
+      const data = await response.blob();
+      const url = URL.createObjectURL(data);
+      const a = window.document.createElement('a') as HTMLAnchorElement;
+      a.href = url;
+      a.download = document.filename || document.original_filename || document.name;
+      window.document.body.appendChild(a);
+      a.click();
+      window.document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Download concluído",
+        description: "O documento foi baixado com sucesso."
+      });
+
     } catch (error: any) {
       console.error('Erro ao baixar documento:', error);
       toast({
         variant: "destructive",
         title: "Erro ao baixar documento",
-        description: error.message
+        description: getReadableDownloadError(error)
       });
     } finally {
       setLoadingDocumentIds(prev => {
