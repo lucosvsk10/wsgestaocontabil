@@ -235,6 +235,8 @@ const AdminLancamentosExport = () => {
               </div>
             </div>
 
+            {sheet && <QuickEditPanel data={sheet} selectedCol={selectedCol} onChange={setSheet} />}
+
             <div className="bg-muted/30 rounded-xl p-4 space-y-2 border border-border">
               <label className="text-xs text-muted-foreground">Nome do arquivo</label>
               <Input
