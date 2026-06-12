@@ -172,11 +172,21 @@ const AdminLancamentosExport = () => {
     return `${MONTH_NAMES[idx] || m} / ${y}`;
   }, [competencia]);
 
-  const handleDownload = () => {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const hasTotalRow = useMemo(
+    () => !!sheet?.rows.some((row) => row.some((c) => c.isTotal)),
+    [sheet]
+  );
+
+  const performDownload = (includeTotal: boolean) => {
     if (!sheet) return;
+    const rowsToExport = includeTotal
+      ? sheet.rows
+      : sheet.rows.filter((row) => !row.some((c) => c.isTotal));
     const aoa: (string | number)[][] = [sheet.headers];
     const merges: XLSX.Range[] = [];
-    sheet.rows.forEach((row, rIdx) => {
+    rowsToExport.forEach((row, rIdx) => {
       const flat: (string | number)[] = [];
       let colCursor = 0;
       row.forEach((cell) => {
@@ -203,6 +213,15 @@ const AdminLancamentosExport = () => {
     const name = filename.endsWith(".xlsx") ? filename : `${filename}.xlsx`;
     XLSX.writeFile(wb, name);
     toast.success("Download iniciado");
+  };
+
+  const handleDownload = () => {
+    if (!sheet) return;
+    if (hasTotalRow) {
+      setConfirmOpen(true);
+    } else {
+      performDownload(false);
+    }
   };
 
   return (
