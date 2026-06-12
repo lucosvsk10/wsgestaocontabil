@@ -180,7 +180,7 @@ export function buildBalanceByAccount(
   plano: PlanoContasMap,
   competencia: string,
 ): SheetData {
-  const headers = ["Data", "Débito", "Histórico", "Valor", "Crédito"];
+  const headers = ["Data", "Débito", "Histórico", "Valor", "Crédito", "CC Débito", "CC Crédito"];
   const lastDay = getLastDayOfMonth(competencia);
   const groups: Record<string, { conta: string; descricao: string; total: number }> = {};
   for (const l of lancs) {
@@ -203,14 +203,18 @@ export function buildBalanceByAccount(
     cell(`(-) ${g.descricao !== "-" ? g.descricao : "Sem descrição"}`),
     cell(g.total, { numeric: true }),
     cell("374"),
+    cell("100"),
+    cell(""),
   ]);
   const grand = sorted.reduce((s, g) => s + g.total, 0);
   rows.push([
-    cell(""),
-    cell(""),
-    cell(`Total Geral (${sorted.length} contas)`, { bold: true }),
-    cell(grand, { bold: true, numeric: true }),
-    cell(""),
+    cell("", { isTotal: true }),
+    cell("", { isTotal: true }),
+    cell(`Total Geral (${sorted.length} contas)`, { bold: true, isTotal: true }),
+    cell(grand, { bold: true, numeric: true, isTotal: true }),
+    cell("", { isTotal: true }),
+    cell("", { isTotal: true }),
+    cell("", { isTotal: true }),
   ]);
   return { headers, rows };
 }
