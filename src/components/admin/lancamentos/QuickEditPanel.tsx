@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Wand2, Trash2, ArrowLeftToLine, ArrowRightToLine, Type } from "lucide-react";
+import { Wand2, Trash2, ArrowLeftToLine, ArrowRightToLine, Type, ChevronDown, ChevronUp } from "lucide-react";
 import type { SheetData, SheetCell } from "./exportBuilders";
 
 interface Props {
