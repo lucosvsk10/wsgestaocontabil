@@ -80,15 +80,15 @@ export function buildByDate(lancs: Lancamento[], plano: PlanoContasMap): SheetDa
 
   const total = lancs.reduce((s, l) => s + (l.valor || 0), 0);
   rows.push([
-    cell(""),
-    cell(`Total (${lancs.length} lançamentos)`, { bold: true }),
-    cell(""),
-    cell(""),
-    cell(""),
-    cell(""),
-    cell(""),
-    cell(""),
-    cell(total, { bold: true, numeric: true }),
+    cell("", { isTotal: true }),
+    cell(`Total (${lancs.length} lançamentos)`, { bold: true, isTotal: true }),
+    cell("", { isTotal: true }),
+    cell("", { isTotal: true }),
+    cell("", { isTotal: true }),
+    cell("", { isTotal: true }),
+    cell("", { isTotal: true }),
+    cell("", { isTotal: true }),
+    cell(total, { bold: true, numeric: true, isTotal: true }),
   ]);
 
   return { headers, rows };
