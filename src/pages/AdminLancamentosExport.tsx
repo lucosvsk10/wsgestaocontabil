@@ -353,6 +353,31 @@ const AdminLancamentosExport = () => {
         </div>
       </div>
 
+      <AlertDialog open={leaveOpen} onOpenChange={setLeaveOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sair sem salvar?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você tem alterações não salvas no editor. Se sair agora, todas as edições serão perdidas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setLeaveOpen(false)}>
+              Continuar editando
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setLeaveOpen(false);
+                setIsDirty(false);
+                navigate(-1);
+              }}
+            >
+              Sair e descartar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
