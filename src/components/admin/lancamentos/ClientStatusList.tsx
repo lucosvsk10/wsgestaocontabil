@@ -72,9 +72,9 @@ export const ClientStatusList = ({
     }
   };
   const filteredClients = clients.filter(client => client.name.toLowerCase().includes(search.toLowerCase()) || client.email.toLowerCase().includes(search.toLowerCase()));
-  return <div className="bg-card rounded-xl overflow-hidden">
+  return <div className="bg-card rounded-xl overflow-hidden flex flex-col h-[calc(100vh-180px)]">
       {/* Header */}
-      <div className="p-4 bg-transparent">
+      <div className="p-4 bg-transparent shrink-0">
         <div className="flex items-center gap-2 mb-3">
           
           <h2 className="font-semibold text-foreground">Clientes</h2>
