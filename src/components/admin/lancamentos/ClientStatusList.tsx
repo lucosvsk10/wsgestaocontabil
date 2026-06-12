@@ -89,7 +89,7 @@ export const ClientStatusList = ({
       </div>
 
       {/* Client List */}
-      <div className="max-h-[calc(100vh-320px)] overflow-y-auto">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {isLoading ? <div className="p-8 text-center">
             <div className="animate-pulse text-muted-foreground text-sm">Carregando...</div>
           </div> : filteredClients.length === 0 ? <div className="p-8 text-center text-muted-foreground text-sm">
