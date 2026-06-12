@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { SpreadsheetEditor } from "@/components/admin/lancamentos/SpreadsheetEditor";
+import { QuickEditPanel } from "@/components/admin/lancamentos/QuickEditPanel";
 import {
   buildSheetData,
   MODE_LABELS,
@@ -38,6 +39,8 @@ const AdminLancamentosExport = () => {
   const [filename, setFilename] = useState("");
 
   const mode = (["data", "conta", "saldo"].includes(modo) ? modo : "data") as ExportMode;
+  const [selectedRow, setSelectedRow] = useState<number | null>(null);
+  const [selectedCol, setSelectedCol] = useState<number | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -179,7 +182,14 @@ const AdminLancamentosExport = () => {
                 <Loader2 className="w-5 h-5 animate-spin mr-2" /> Carregando...
               </div>
             ) : (
-              <SpreadsheetEditor data={sheet} onChange={setSheet} />
+              <SpreadsheetEditor
+                data={sheet}
+                onChange={setSheet}
+                selectedRow={selectedRow}
+                selectedCol={selectedCol}
+                onSelectRow={setSelectedRow}
+                onSelectCol={setSelectedCol}
+              />
             )}
           </div>
 
