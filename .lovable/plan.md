@@ -1,68 +1,70 @@
-## Ajustes na área de Lançamentos (Admin)
+## Editor de planilha antes da exportação
 
-### 1. Lista de Clientes acompanha altura da tela (imagem 1)
-Em `src/components/admin/lancamentos/ClientStatusList.tsx`:
-- Trocar `max-h-[calc(100vh-320px)]` por uma altura que acompanha o viewport real, usando `h-[calc(100vh-180px)]` no card raiz com `flex flex-col`, deixando o header fixo e a lista (`flex-1 overflow-y-auto`) preencher o restante.
-- Resultado: a barra de rolagem aparece dentro do card e acompanha a tela; nada de scroll horizontal manual.
+### Fluxo
+1. No `ExportLancamentosModal`, o usuário escolhe o modo (Por Data / Por Conta / Saldo por Conta) e clica em "Continuar para editor" (substitui o botão "Exportar XLSX").
+2. O app navega para uma nova rota `/admin/lancamentos/:clientId/exportar/:modo?competencia=YYYY-MM`, abrindo o editor em tela cheia.
+3. Na nova página o usuário edita células, adiciona/remove linhas e aplica formatação básica. Ao clicar em "Baixar XLSX", o arquivo é gerado e baixado (sem persistência).
 
-### 2. Modais em exibição completa e responsiva (imagem 2)
-Em cada modal de Lançamentos, ampliar largura e remover overflow horizontal:
-- `ImportXlsxModal.tsx`: `DialogContent` → `w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto` e converter a prévia da tabela em wrapper `overflow-x-auto` interno (em vez de o modal inteiro rolar lateralmente).
-- `ExportLancamentosModal.tsx`: `sm:max-w-md` → `w-[95vw] max-w-lg`.
-- `AddLancamentoModal.tsx`: `sm:max-w-md` → `w-[95vw] max-w-xl`.
-- `PlanoContasModal.tsx`: `max-w-3xl` → `w-[95vw] max-w-4xl`.
-- Garantir `max-h-[90vh]` + `overflow-y-auto` em todos para evitar corte vertical e rolagem horizontal manual.
-
-### 3. Barra de busca em "Lançamentos Alinhados"
-Em `ClientLancamentosDetail.tsx`:
-- Adicionar estado `lancamentosSearch`.
-- Inserir um `Input` com ícone `Search` logo acima da `LancamentosTable` (dentro do bloco "Lançamentos").
-- Filtrar `lancamentos` por: histórico, débito, crédito, descrição da conta (via `planoContasMap`), centros de custo e valor formatado, antes de passar para `LancamentosTable`.
-- Mostrar contagem filtrada/total no Badge.
-
-### 4. Reformulação do header do cliente (imagem 3)
-Mesma `ClientLancamentosDetail.tsx`, seções de header + barra de ações.
-
-Layout novo, mais limpo e sem botões sobrepostos:
-
+### Layout da página do editor (`AdminLancamentosExport.tsx`)
 ```text
-┌──────────────────────────────────────────────────────────────┐
-│ [Avatar] NOME DO CLIENTE                  [ Plano de Contas ]│
-│         email                                                │
-│                                                              │
-│ Competência: [Mês ▾] [Ano ▾]                                 │
-├──────────────────────────────────────────────────────────────┤
-│ ✓ 14 lançamentos alinhados            [ 🔒 Fechar Janeiro ] │
-├──────────────────────────────────────────────────────────────┤
-│ ⬆  Upload para FLOR DO TRIGO — Janeiro/2026                  │
-├──────────────────────────────────────────────────────────────┤
-│ Lançamentos Alinhados (14)                                   │
-│ [🔍 Buscar lançamento...........]                            │
-│ [Ordenar: Por Data ▾]  [+ Novo]  [↑ Importar]  [↓ Exportar] │
-│                                            [☑ Selecionar]    │
-└──────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│ [←] Editor de Exportação                       [⬇ Baixar XLSX] [Cancelar]│
+├──────────────────────────────────────┬───────────────────────────────────┤
+│                                      │  Empresa                          │
+│  Toolbar: [B] [Cor▾] [+ linha]       │  ─ FLOR DO TRIGO                  │
+│           [− linha] [Desfazer]       │  Compet\u00eancia                       │
+│                                      │  ─ Janeiro / 2026                 │
+│  ┌──────────────────────────────┐    │  Formato                          │
+│  │ Grade edit\u00e1vel (rolagem x/y) │    │  ─ Por Data                       │
+│  │ ...                          │    │  Resumo                           │
+│  └──────────────────────────────┘    │  ─ 14 lan\u00e7amentos                  │
+│                                      │  ─ Total: R$ 12.345,67            │
+│                                      │  Nome do arquivo                  │
+│                                      │  [ lancamentos_flor_…xlsx     ]   │
+└──────────────────────────────────────┴───────────────────────────────────┘
 ```
+- Coluna esquerda (`flex-1`): toolbar fina + grade editável ocupando `h-[calc(100vh-180px)]` com scroll interno.
+- Coluna direita (`w-80 shrink-0`): card `bg-muted/30 rounded-xl` com dados da empresa, mês/ano, modo escolhido, contagem e total, e input para renomear o arquivo.
+- Cores neutras do tema, ícones Lucide, sem amarelo nas bordas.
 
-Mudanças concretas:
-- Nome do cliente: usar `text-foreground` (cor padrão do tema), não amarelo. Remover qualquer destaque que esteja deixando o texto sem contraste; manter apenas o avatar com fundo `bg-primary/10`.
-- Renomear botões para títulos curtos e claros:
-  - "Adicionar" → "Novo lançamento"
-  - "Importar XLSX" → "Importar planilha"
-  - "Exportar Lista" → "Exportar"
-  - "Selecionar" mantém.
-- Agrupar a toolbar dos lançamentos em duas linhas em telas pequenas (`flex flex-wrap gap-2`) com separação visual: à esquerda título + busca + filtro de ordenação; à direita ações (Novo / Importar / Exportar / Selecionar) usando `ml-auto`.
-- Padronizar todos os botões da toolbar com `variant="outline"`, `size="sm"`, `h-9`, `rounded-lg`, ícone à esquerda — eliminando o efeito "sobreposto".
-- Mover "Plano de Contas" para o canto direito do header do cliente (alinhado com o nome) e nunca abaixo dos seletores de competência.
-- Bloco "X lançamentos alinhados / Fechar mês" passa a ser um card próprio com `bg-muted/30`, com a mensagem à esquerda e o botão `Fechar` à direita, sem misturar com outros controles.
+### Editor de células
+- Componente novo `SpreadsheetEditor.tsx` puramente client-side, sem nova dependência:
+  - Estrutura `{ headers: string[]; rows: Cell[][] }` onde `Cell = { value: string | number; bold?: boolean; color?: string; bg?: string; merge?: { rowSpan, colSpan }; isSubtotal?: boolean }`.
+  - Renderiza uma `<table>` com `contentEditable` por célula, `onBlur` salvando no estado.
+  - Toolbar: negrito, cor do texto (popover com 6 cores), cor de fundo, adicionar linha acima/abaixo, remover linha selecionada, desfazer (pilha de snapshots, máx. 50).
+  - Seleção: clique em uma linha destaca; Shift+clique seleciona intervalo (apenas para remover/formatar).
+  - Sem fórmulas, sem reordenar colunas (fora do escopo escolhido).
 
-### Detalhes técnicos
-- Sem mudanças de schema/migrations.
-- Sem mudanças em edge functions.
-- Arquivos editados:
-  - `src/components/admin/lancamentos/ClientStatusList.tsx`
-  - `src/components/admin/lancamentos/ClientLancamentosDetail.tsx`
-  - `src/components/admin/lancamentos/ImportXlsxModal.tsx`
-  - `src/components/admin/lancamentos/ExportLancamentosModal.tsx`
-  - `src/components/admin/lancamentos/AddLancamentoModal.tsx`
-  - `src/components/admin/lancamentos/PlanoContasModal.tsx`
-- A busca de lançamentos é puramente client-side (filtra o array já carregado), sem custo extra de rede.
+### Geração inicial dos dados
+- Reaproveitar a lógica de `ExportLancamentosModal` extraindo em `src/components/admin/lancamentos/exportBuilders.ts`:
+  - `buildByDate(lancamentos, planoContas)` → `{ headers, rows, merges }`
+  - `buildByAccount(...)` → idem (com linhas de cabeçalho de grupo já marcadas `isSubtotal/merge`).
+  - `buildBalanceByAccount(..., competencia)` → idem.
+- O modal passa a chamar esses builders só para validar/contar; a página do editor também os chama no `useEffect` inicial.
+
+### Download
+- Botão "Baixar XLSX" converte o estado do editor em planilha com `xlsx`:
+  - `XLSX.utils.aoa_to_sheet` a partir de `[headers, ...rows.map(r => r.map(c => c.value))]`.
+  - Aplica `!merges` reconstruído a partir das células com `merge`.
+  - Aplica estilos básicos via `cell.s` (negrito, cor) — usar `xlsx-js-style` se necessário; alternativa: manter formatação só visual no editor e exportar valores puros (decidir na implementação se `xlsx` puro não cobre estilos).
+- Nome do arquivo vem do input lateral, default `lancamentos_<cliente>_<competencia>_<modo>.xlsx`.
+
+### Roteamento e navegação
+- Adicionar rota em `src/AppRoutes.tsx`: `/admin/lancamentos/:clientId/exportar/:modo` → `AdminLancamentosExport` (protegida pelo mesmo guard de admin).
+- `ExportLancamentosModal` recebe `clientId` e `competencia`, e em vez de gerar o XLSX, chama `navigate(...)` com o modo escolhido e fecha o modal.
+- Página do editor carrega os lançamentos pelo hook existente `useLancamentosData(clientId, competencia)` (ou refaz a query equivalente) e o plano de contas; mostra skeleton enquanto carrega.
+
+### Arquivos
+- Novos:
+  - `src/pages/AdminLancamentosExport.tsx`
+  - `src/components/admin/lancamentos/SpreadsheetEditor.tsx`
+  - `src/components/admin/lancamentos/exportBuilders.ts`
+- Editados:
+  - `src/AppRoutes.tsx` (nova rota)
+  - `src/components/admin/lancamentos/ExportLancamentosModal.tsx` (passa a navegar em vez de baixar)
+  - `src/components/admin/lancamentos/ClientLancamentosDetail.tsx` (passa `competencia` corretamente ao modal, se ainda não passa)
+
+### Fora de escopo
+- Sem mudanças de schema, edge functions ou Storage.
+- Sem fórmulas, sem reordenar colunas, sem múltiplas abas.
+- Sem persistência do arquivo editado.
