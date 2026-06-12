@@ -21,6 +21,7 @@ export interface SheetCell {
   bg?: string;
   colSpan?: number;
   numeric?: boolean;
+  isTotal?: boolean;
 }
 
 export interface SheetData {
