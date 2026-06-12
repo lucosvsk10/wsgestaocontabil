@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -33,20 +33,6 @@ export const QuickEditPanel = ({ data, selectedCol, onChange }: Props) => {
   const [replace, setReplace] = useState("");
   const [prefix, setPrefix] = useState("");
   const [suffix, setSuffix] = useState("");
-  const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const bumpIdle = () => {
-    if (idleTimer.current) clearTimeout(idleTimer.current);
-    idleTimer.current = setTimeout(() => setExpanded(false), 6000);
-  };
-
-  useEffect(() => {
-    if (expanded) bumpIdle();
-    return () => {
-      if (idleTimer.current) clearTimeout(idleTimer.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expanded]);
 
   const mutate = (fn: (val: string) => string) => {
     const next = cloneData(data);
@@ -72,14 +58,8 @@ export const QuickEditPanel = ({ data, selectedCol, onChange }: Props) => {
   const disabled = scope === "selected" && selectedCol === null;
 
   return (
-    <div
-      className="bg-muted/30 rounded-xl border border-border overflow-hidden transition-all"
-      onMouseEnter={() => setExpanded(true)}
-      onMouseLeave={() => setExpanded(false)}
-      onFocus={() => setExpanded(true)}
-      onMouseMove={bumpIdle}
-      onKeyDown={bumpIdle}
-    >
+    <div className="bg-muted/30 rounded-xl border border-border overflow-hidden transition-all">
+
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
