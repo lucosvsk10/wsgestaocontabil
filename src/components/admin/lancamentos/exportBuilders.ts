@@ -21,6 +21,7 @@ export interface SheetCell {
   bg?: string;
   colSpan?: number;
   numeric?: boolean;
+  isTotal?: boolean;
 }
 
 export interface SheetData {
@@ -79,15 +80,15 @@ export function buildByDate(lancs: Lancamento[], plano: PlanoContasMap): SheetDa
 
   const total = lancs.reduce((s, l) => s + (l.valor || 0), 0);
   rows.push([
-    cell(""),
-    cell(`Total (${lancs.length} lançamentos)`, { bold: true }),
-    cell(""),
-    cell(""),
-    cell(""),
-    cell(""),
-    cell(""),
-    cell(""),
-    cell(total, { bold: true, numeric: true }),
+    cell("", { isTotal: true }),
+    cell(`Total (${lancs.length} lançamentos)`, { bold: true, isTotal: true }),
+    cell("", { isTotal: true }),
+    cell("", { isTotal: true }),
+    cell("", { isTotal: true }),
+    cell("", { isTotal: true }),
+    cell("", { isTotal: true }),
+    cell("", { isTotal: true }),
+    cell(total, { bold: true, numeric: true, isTotal: true }),
   ]);
 
   return { headers, rows };
@@ -161,15 +162,15 @@ export function buildByAccount(lancs: Lancamento[], plano: PlanoContasMap): Shee
   }
   const grand = lancs.reduce((s, l) => s + (l.valor || 0), 0);
   rows.push([
-    cell(""),
-    cell(`Total Geral (${lancs.length} lançamentos)`, { bold: true }),
-    cell(""),
-    cell(""),
-    cell(""),
-    cell(""),
-    cell(""),
-    cell(""),
-    cell(grand, { bold: true, numeric: true }),
+    cell("", { isTotal: true }),
+    cell(`Total Geral (${lancs.length} lançamentos)`, { bold: true, isTotal: true }),
+    cell("", { isTotal: true }),
+    cell("", { isTotal: true }),
+    cell("", { isTotal: true }),
+    cell("", { isTotal: true }),
+    cell("", { isTotal: true }),
+    cell("", { isTotal: true }),
+    cell(grand, { bold: true, numeric: true, isTotal: true }),
   ]);
   return { headers, rows };
 }
@@ -179,7 +180,7 @@ export function buildBalanceByAccount(
   plano: PlanoContasMap,
   competencia: string,
 ): SheetData {
-  const headers = ["Data", "Débito", "Histórico", "Valor", "Crédito"];
+  const headers = ["Data", "Débito", "Histórico", "Valor", "Crédito", "CC Débito", "CC Crédito"];
   const lastDay = getLastDayOfMonth(competencia);
   const groups: Record<string, { conta: string; descricao: string; total: number }> = {};
   for (const l of lancs) {
@@ -202,14 +203,18 @@ export function buildBalanceByAccount(
     cell(`(-) ${g.descricao !== "-" ? g.descricao : "Sem descrição"}`),
     cell(g.total, { numeric: true }),
     cell("374"),
+    cell("100"),
+    cell(""),
   ]);
   const grand = sorted.reduce((s, g) => s + g.total, 0);
   rows.push([
-    cell(""),
-    cell(""),
-    cell(`Total Geral (${sorted.length} contas)`, { bold: true }),
-    cell(grand, { bold: true, numeric: true }),
-    cell(""),
+    cell("", { isTotal: true }),
+    cell("", { isTotal: true }),
+    cell(`Total Geral (${sorted.length} contas)`, { bold: true, isTotal: true }),
+    cell(grand, { bold: true, numeric: true, isTotal: true }),
+    cell("", { isTotal: true }),
+    cell("", { isTotal: true }),
+    cell("", { isTotal: true }),
   ]);
   return { headers, rows };
 }

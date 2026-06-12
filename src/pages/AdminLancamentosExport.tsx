@@ -5,6 +5,16 @@ import * as XLSX from "xlsx";
 import { AdminLayout } from "@/components/admin/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { SpreadsheetEditor } from "@/components/admin/lancamentos/SpreadsheetEditor";
@@ -162,11 +172,21 @@ const AdminLancamentosExport = () => {
     return `${MONTH_NAMES[idx] || m} / ${y}`;
   }, [competencia]);
 
-  const handleDownload = () => {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const hasTotalRow = useMemo(
+    () => !!sheet?.rows.some((row) => row.some((c) => c.isTotal)),
+    [sheet]
+  );
+
+  const performDownload = (includeTotal: boolean) => {
     if (!sheet) return;
+    const rowsToExport = includeTotal
+      ? sheet.rows
+      : sheet.rows.filter((row) => !row.some((c) => c.isTotal));
     const aoa: (string | number)[][] = [sheet.headers];
     const merges: XLSX.Range[] = [];
-    sheet.rows.forEach((row, rIdx) => {
+    rowsToExport.forEach((row, rIdx) => {
       const flat: (string | number)[] = [];
       let colCursor = 0;
       row.forEach((cell) => {
@@ -193,6 +213,15 @@ const AdminLancamentosExport = () => {
     const name = filename.endsWith(".xlsx") ? filename : `${filename}.xlsx`;
     XLSX.writeFile(wb, name);
     toast.success("Download iniciado");
+  };
+
+  const handleDownload = () => {
+    if (!sheet) return;
+    if (hasTotalRow) {
+      setConfirmOpen(true);
+    } else {
+      performDownload(false);
+    }
   };
 
   return (
@@ -301,6 +330,35 @@ const AdminLancamentosExport = () => {
           </aside>
         </div>
       </div>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Incluir linha de Total Geral?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deseja incluir a linha de total geral no arquivo XLSX? Por padrão, ela não é incluída.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setConfirmOpen(false);
+                performDownload(false);
+              }}
+            >
+              Sem total
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setConfirmOpen(false);
+                performDownload(true);
+              }}
+            >
+              Incluir total
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminLayout>
   );
 };
