@@ -219,6 +219,7 @@ export const QuickEditPanel = ({ data, selectedCol, onChange }: Props) => {
           Compactar espaços
         </Button>
       </div>
+      )}
     </div>
   );
 };
