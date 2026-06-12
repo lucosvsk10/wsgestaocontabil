@@ -330,6 +330,35 @@ const AdminLancamentosExport = () => {
           </aside>
         </div>
       </div>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Incluir linha de Total Geral?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deseja incluir a linha de total geral no arquivo XLSX? Por padrão, ela não é incluída.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setConfirmOpen(false);
+                performDownload(false);
+              }}
+            >
+              Sem total
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setConfirmOpen(false);
+                performDownload(true);
+              }}
+            >
+              Incluir total
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminLayout>
   );
 };
