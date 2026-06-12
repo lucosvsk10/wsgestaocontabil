@@ -284,7 +284,7 @@ const AdminLancamentosExport = () => {
             ) : (
               <SpreadsheetEditor
                 data={sheet}
-                onChange={setSheet}
+                onChange={handleSheetChange}
                 selectedRow={selectedRow}
                 selectedCol={selectedCol}
                 onSelectRow={setSelectedRow}
