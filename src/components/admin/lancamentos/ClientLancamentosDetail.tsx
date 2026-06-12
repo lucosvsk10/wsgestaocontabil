@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Download, FileSpreadsheet, ClipboardList, User, Mail, Calendar, CheckCircle, AlertCircle, Lock, Unlock, Loader2, RefreshCw, FileWarning, FileText, AlertTriangle, Plus, CheckSquare, Trash2, List, SortAsc } from "lucide-react";
+import { Download, FileSpreadsheet, ClipboardList, User, Mail, Calendar, CheckCircle, AlertCircle, Lock, Unlock, Loader2, RefreshCw, FileWarning, FileText, AlertTriangle, Plus, CheckSquare, Trash2, List, SortAsc, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
