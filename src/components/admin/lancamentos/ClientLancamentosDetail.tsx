@@ -452,6 +452,28 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
   const aligningDocs = documents.filter(d => d.status_alinhamento === 'processando' || d.status_alinhamento === 'aguardando_retry');
   const canClose = lancamentos.length > 0 && pendingDocs.length === 0 && errorDocs.length === 0 && !fechamento;
 
+  const filteredLancamentos = useMemo(() => {
+    const q = lancamentosSearch.trim().toLowerCase();
+    if (!q) return lancamentos;
+    const fmtValor = (v: number | null) =>
+      v === null ? "" : new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v).toLowerCase();
+    return lancamentos.filter(l => {
+      const debDesc = (l.debito && planoContasMap[l.debito]) || "";
+      const credDesc = (l.credito && planoContasMap[l.credito]) || "";
+      return (
+        (l.historico || "").toLowerCase().includes(q) ||
+        (l.debito || "").toLowerCase().includes(q) ||
+        (l.credito || "").toLowerCase().includes(q) ||
+        debDesc.toLowerCase().includes(q) ||
+        credDesc.toLowerCase().includes(q) ||
+        (l.centro_custo_debito || "").toLowerCase().includes(q) ||
+        (l.centro_custo_credito || "").toLowerCase().includes(q) ||
+        fmtValor(l.valor).includes(q) ||
+        (l.data || "").includes(q)
+      );
+    });
+  }, [lancamentos, lancamentosSearch, planoContasMap]);
+
   return (
     <div className="bg-card rounded-xl overflow-hidden">
       {/* Header */}
