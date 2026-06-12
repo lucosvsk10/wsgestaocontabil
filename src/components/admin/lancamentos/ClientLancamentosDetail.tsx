@@ -1036,10 +1036,9 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
       <ExportLancamentosModal
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
-        lancamentos={lancamentos}
-        planoContas={planoContasMap}
-        clientName={clientInfo?.name || 'Cliente'}
+        clientId={clientId}
         competencia={competencia}
+        totalLancamentos={lancamentos.length}
       />
     </div>
   );

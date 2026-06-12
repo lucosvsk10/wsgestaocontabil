@@ -18,6 +18,7 @@ import { CompanyDataView } from "./components/admin/company/CompanyDataView";
 import SimpleCarouselManager from '@/components/admin/carousel/SimpleCarouselManager';
 import { AdminLayout } from '@/components/admin/layout/AdminLayout';
 import AdminLancamentos from "./pages/AdminLancamentos";
+import AdminLancamentosExport from "./pages/AdminLancamentosExport";
 import ClientLancamentos from "./pages/ClientLancamentos";
 
 const AppRoutes = () => {
@@ -126,6 +127,12 @@ const AppRoutes = () => {
       <Route path="/admin/lancamentos" element={
         <PrivateRoute requiredRole="admin">
           <AdminLancamentos />
+        </PrivateRoute>
+      } />
+
+      <Route path="/admin/lancamentos/:clientId/exportar/:modo" element={
+        <PrivateRoute requiredRole="admin">
+          <AdminLancamentosExport />
         </PrivateRoute>
       } />
       
