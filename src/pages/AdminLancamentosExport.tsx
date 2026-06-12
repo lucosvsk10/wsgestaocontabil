@@ -25,6 +25,19 @@ const MONTH_NAMES = [
 
 const slug = (s: string) => s.replace(/\s+/g, "_").replace(/[^\w-]/g, "").toLowerCase();
 
+// Auto-limpeza: remove "(-)" e espaços iniciais de células de texto
+const autoCleanSheet = (data: SheetData): SheetData => ({
+  headers: data.headers.map((h) => h.replace(/\(-\)/g, "").replace(/^\s+/, "")),
+  rows: data.rows.map((row) =>
+    row.map((cell) => {
+      if (cell.numeric) return cell;
+      const v = String(cell.value ?? "");
+      const cleaned = v.replace(/\(-\)/g, "").replace(/^\s+/, "");
+      return cleaned === v ? cell : { ...cell, value: cleaned };
+    })
+  ),
+});
+
 const AdminLancamentosExport = () => {
   const { clientId = "", modo = "data" } = useParams<{ clientId: string; modo: ExportMode }>();
   const [params] = useSearchParams();
