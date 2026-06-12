@@ -72,11 +72,25 @@ export const QuickEditPanel = ({ data, selectedCol, onChange }: Props) => {
   const disabled = scope === "selected" && selectedCol === null;
 
   return (
-    <div className="bg-muted/30 rounded-xl p-4 space-y-3 border border-border">
-      <div className="flex items-center gap-2">
+    <div
+      className="bg-muted/30 rounded-xl border border-border overflow-hidden transition-all"
+      onMouseEnter={() => setExpanded(true)}
+      onMouseLeave={() => setExpanded(false)}
+      onFocus={() => setExpanded(true)}
+      onMouseMove={bumpIdle}
+      onKeyDown={bumpIdle}
+    >
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full flex items-center gap-2 px-4 py-3 hover:bg-muted/50 transition-colors"
+      >
         <Wand2 className="w-4 h-4 text-primary" />
-        <h3 className="text-sm font-medium text-foreground">Edição rápida</h3>
-      </div>
+        <h3 className="text-sm font-medium text-foreground flex-1 text-left">Edição rápida</h3>
+        {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+      </button>
+      {expanded && (
+      <div className="px-4 pb-4 space-y-3">
 
       <div>
         <label className="text-xs text-muted-foreground">Aplicar em</label>
