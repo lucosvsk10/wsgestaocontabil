@@ -66,7 +66,7 @@ export const AddLancamentoModal = ({ isOpen, onClose, clientId, competencia, pla
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="w-[95vw] max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Adicionar Lançamento</DialogTitle>
         </DialogHeader>

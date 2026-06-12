@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Download, FileSpreadsheet, ClipboardList, User, Mail, Calendar, CheckCircle, AlertCircle, Lock, Unlock, Loader2, RefreshCw, FileWarning, FileText, AlertTriangle, Plus, CheckSquare, Trash2, List, SortAsc } from "lucide-react";
+import { Download, FileSpreadsheet, ClipboardList, User, Mail, Calendar, CheckCircle, AlertCircle, Lock, Unlock, Loader2, RefreshCw, FileWarning, FileText, AlertTriangle, Plus, CheckSquare, Trash2, List, SortAsc, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -103,6 +104,7 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
   const [viewMode, setViewMode] = useState<'data' | 'conta'>('data');
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [lancamentosSearch, setLancamentosSearch] = useState("");
   
   
   const now = new Date();
@@ -449,6 +451,28 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
   const errorDocs = documents.filter(d => d.status_alinhamento === 'erro');
   const aligningDocs = documents.filter(d => d.status_alinhamento === 'processando' || d.status_alinhamento === 'aguardando_retry');
   const canClose = lancamentos.length > 0 && pendingDocs.length === 0 && errorDocs.length === 0 && !fechamento;
+
+  const filteredLancamentos = useMemo(() => {
+    const q = lancamentosSearch.trim().toLowerCase();
+    if (!q) return lancamentos;
+    const fmtValor = (v: number | null) =>
+      v === null ? "" : new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v).toLowerCase();
+    return lancamentos.filter(l => {
+      const debDesc = (l.debito && planoContasMap[l.debito]) || "";
+      const credDesc = (l.credito && planoContasMap[l.credito]) || "";
+      return (
+        (l.historico || "").toLowerCase().includes(q) ||
+        (l.debito || "").toLowerCase().includes(q) ||
+        (l.credito || "").toLowerCase().includes(q) ||
+        debDesc.toLowerCase().includes(q) ||
+        credDesc.toLowerCase().includes(q) ||
+        (l.centro_custo_debito || "").toLowerCase().includes(q) ||
+        (l.centro_custo_credito || "").toLowerCase().includes(q) ||
+        fmtValor(l.valor).includes(q) ||
+        (l.data || "").includes(q)
+      );
+    });
+  }, [lancamentos, lancamentosSearch, planoContasMap]);
 
   return (
     <div className="bg-card rounded-xl overflow-hidden">
@@ -842,19 +866,32 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
 
       {/* Lançamentos */}
       <div className="p-5 pt-6">
-        {/* Toolbar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        {/* Title row */}
+        <div className="flex items-center justify-between gap-3 mb-3">
           <h3 className="font-medium text-foreground text-sm flex items-center gap-2">
             <FileSpreadsheet className="w-4 h-4 text-primary" />
-            Lançamentos Alinhados
+            <span className="text-foreground">Lançamentos Alinhados</span>
             <Badge variant="secondary" className="text-xs rounded-lg ml-1">
-              {lancamentos.length}
+              {lancamentosSearch ? `${filteredLancamentos.length}/${lancamentos.length}` : lancamentos.length}
             </Badge>
           </h3>
+        </div>
+
+        {/* Search + toolbar */}
+        <div className="flex flex-col gap-3 mb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por histórico, conta, centro de custo, valor..."
+              value={lancamentosSearch}
+              onChange={(e) => setLancamentosSearch(e.target.value)}
+              className="pl-9 h-9 bg-background"
+            />
+          </div>
+
           <div className="flex items-center gap-2 flex-wrap">
-            {/* View mode selector */}
             <Select value={viewMode} onValueChange={(v) => setViewMode(v as 'data' | 'conta')}>
-              <SelectTrigger className="w-[140px] h-8 text-xs bg-background rounded-lg">
+              <SelectTrigger className="w-[150px] h-9 text-xs bg-background rounded-lg">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -867,88 +904,85 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
               </SelectContent>
             </Select>
 
-            {/* Add button */}
-            {!fechamento && (
-              <>
+            <div className="flex items-center gap-2 flex-wrap ml-auto">
+              {!fechamento && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 text-xs rounded-lg"
+                    onClick={() => setIsAddModalOpen(true)}
+                  >
+                    <Plus className="w-3.5 h-3.5 mr-1.5" />
+                    Novo lançamento
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 text-xs rounded-lg"
+                    onClick={() => setIsImportModalOpen(true)}
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5" />
+                    Importar planilha
+                  </Button>
+                </>
+              )}
+              {lancamentos.length > 0 && (
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-8 text-xs rounded-lg"
-                  onClick={() => setIsAddModalOpen(true)}
+                  className="h-9 text-xs rounded-lg"
+                  onClick={() => setIsExportModalOpen(true)}
                 >
-                  <Plus className="w-3.5 h-3.5 mr-1" />
-                  Adicionar
+                  <Download className="w-3.5 h-3.5 mr-1.5" />
+                  Exportar
                 </Button>
+              )}
+              {!fechamento && lancamentos.length > 0 && (
                 <Button
-                  variant="outline"
+                  variant={isSelectionMode ? "default" : "outline"}
                   size="sm"
-                  className="h-8 text-xs rounded-lg"
-                  onClick={() => setIsImportModalOpen(true)}
-                >
-                  <FileSpreadsheet className="w-3.5 h-3.5 mr-1" />
-                  Importar XLSX
-                </Button>
-              </>
-            )}
-            {/* Export button */}
-            {lancamentos.length > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 text-xs rounded-lg"
-                onClick={() => setIsExportModalOpen(true)}
-              >
-                <Download className="w-3.5 h-3.5 mr-1" />
-                Exportar Lista
-              </Button>
-            )}
-            {/* Selection mode toggle */}
-            {!fechamento && lancamentos.length > 0 && (
-              <Button
-                variant={isSelectionMode ? "default" : "outline"}
-                size="sm"
-                className="h-8 text-xs rounded-lg"
-                onClick={() => {
-                  setIsSelectionMode(!isSelectionMode);
-                  setSelectedIds(new Set());
-                }}
-              >
-                <CheckSquare className="w-3.5 h-3.5 mr-1" />
-                {isSelectionMode ? 'Cancelar' : 'Selecionar'}
-              </Button>
-            )}
-
-            {/* Delete selected */}
-            {isSelectionMode && selectedIds.size > 0 && (
-              <Button
-                variant="destructive"
-                size="sm"
-                className="h-8 text-xs rounded-lg"
-                onClick={async () => {
-                  const ids = Array.from(selectedIds);
-                  const { error } = await supabase
-                    .from('lancamentos_alinhados')
-                    .delete()
-                    .in('id', ids);
-                  if (error) {
-                    toast.error("Erro ao excluir: " + error.message);
-                  } else {
-                    toast.success(`${ids.length} lançamento(s) excluído(s)`);
+                  className="h-9 text-xs rounded-lg"
+                  onClick={() => {
+                    setIsSelectionMode(!isSelectionMode);
                     setSelectedIds(new Set());
-                    setIsSelectionMode(false);
-                    fetchClientData();
-                  }
-                }}
-              >
-                <Trash2 className="w-3.5 h-3.5 mr-1" />
-                Excluir ({selectedIds.size})
-              </Button>
-            )}
+                  }}
+                >
+                  <CheckSquare className="w-3.5 h-3.5 mr-1.5" />
+                  {isSelectionMode ? 'Cancelar' : 'Selecionar'}
+                </Button>
+              )}
+              {isSelectionMode && selectedIds.size > 0 && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="h-9 text-xs rounded-lg"
+                  onClick={async () => {
+                    const ids = Array.from(selectedIds);
+                    const { error } = await supabase
+                      .from('lancamentos_alinhados')
+                      .delete()
+                      .in('id', ids);
+                    if (error) {
+                      toast.error("Erro ao excluir: " + error.message);
+                    } else {
+                      toast.success(`${ids.length} lançamento(s) excluído(s)`);
+                      setSelectedIds(new Set());
+                      setIsSelectionMode(false);
+                      fetchClientData();
+                    }
+                  }}
+                >
+                  <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                  Excluir ({selectedIds.size})
+                </Button>
+              )}
+            </div>
           </div>
         </div>
-        
+
         <LancamentosTable
-          lancamentos={lancamentos}
+          lancamentos={filteredLancamentos}
           planoContas={planoContasMap}
           viewMode={viewMode}
           isLoading={isLoading}
@@ -963,14 +997,15 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
             });
           }}
           onSelectAll={() => {
-            if (selectedIds.size === lancamentos.length) {
+            if (selectedIds.size === filteredLancamentos.length) {
               setSelectedIds(new Set());
             } else {
-              setSelectedIds(new Set(lancamentos.map(l => l.id)));
+              setSelectedIds(new Set(filteredLancamentos.map(l => l.id)));
             }
           }}
         />
       </div>
+
 
       {/* Modal */}
       <PlanoContasModal 

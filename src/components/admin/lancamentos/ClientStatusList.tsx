@@ -72,9 +72,9 @@ export const ClientStatusList = ({
     }
   };
   const filteredClients = clients.filter(client => client.name.toLowerCase().includes(search.toLowerCase()) || client.email.toLowerCase().includes(search.toLowerCase()));
-  return <div className="bg-card rounded-xl overflow-hidden">
+  return <div className="bg-card rounded-xl overflow-hidden flex flex-col h-[calc(100vh-180px)]">
       {/* Header */}
-      <div className="p-4 bg-transparent">
+      <div className="p-4 bg-transparent shrink-0">
         <div className="flex items-center gap-2 mb-3">
           
           <h2 className="font-semibold text-foreground">Clientes</h2>
@@ -89,7 +89,7 @@ export const ClientStatusList = ({
       </div>
 
       {/* Client List */}
-      <div className="max-h-[calc(100vh-320px)] overflow-y-auto">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {isLoading ? <div className="p-8 text-center">
             <div className="animate-pulse text-muted-foreground text-sm">Carregando...</div>
           </div> : filteredClients.length === 0 ? <div className="p-8 text-center text-muted-foreground text-sm">
