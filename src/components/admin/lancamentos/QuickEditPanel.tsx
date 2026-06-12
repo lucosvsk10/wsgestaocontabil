@@ -27,11 +27,25 @@ const capitalizeFirst = (s: string) => {
 };
 
 export const QuickEditPanel = ({ data, selectedCol, onChange }: Props) => {
-  const [scope, setScope] = useState<Scope>("selected");
+  const [expanded, setExpanded] = useState(false);
   const [find, setFind] = useState("");
   const [replace, setReplace] = useState("");
   const [prefix, setPrefix] = useState("");
   const [suffix, setSuffix] = useState("");
+  const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const bumpIdle = () => {
+    if (idleTimer.current) clearTimeout(idleTimer.current);
+    idleTimer.current = setTimeout(() => setExpanded(false), 6000);
+  };
+
+  useEffect(() => {
+    if (expanded) bumpIdle();
+    return () => {
+      if (idleTimer.current) clearTimeout(idleTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expanded]);
 
   const mutate = (fn: (val: string) => string) => {
     const next = cloneData(data);
