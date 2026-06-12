@@ -38,6 +38,41 @@ const autoCleanSheet = (data: SheetData): SheetData => ({
   ),
 });
 
+// Padrões pré-definidos para o modo "Saldo por Conta" baseado no código da conta débito
+const SALDO_DEFAULTS: Record<string, (mmYYYY: string) => string> = {
+  "823": (p) => `PAGTO. SALARIOS E REMUNERAÇÕES ${p}`,
+  "826": (p) => `PAGTO. FGTS MÊS ${p}`,
+  "777": () => `PAGTO. FORNECEDORES`,
+  "111": () => `DEMAIS IMPOSTOS, TAXAS E CONTRIBUIÇÕES, EXCETO IRE CSLL`,
+  "114": () => `DESPESAS COM VEÍCULOS, CONSERVAÇÃO DE BENS E NSTALAÇÕES`,
+  "134": () => `DESPESAS COM TELEFONEE INTERNET`,
+};
+
+// Aplica defaults do modo Saldo: uppercase em tudo + substitui histórico por padrão da conta
+const applySaldoDefaults = (data: SheetData, competencia: string): SheetData => {
+  const [y, m] = competencia.split("-");
+  const mmYYYY = `${m}/${y}`;
+  return {
+    headers: data.headers.map((h) => h.toUpperCase()),
+    rows: data.rows.map((row) => {
+      // row layout: [data, debito, historico, valor, credito]
+      const debCell = row[1];
+      const debCode = String(debCell?.value ?? "").trim();
+      const preset = SALDO_DEFAULTS[debCode];
+      return row.map((cell, idx) => {
+        if (cell.numeric) return cell;
+        let v = String(cell.value ?? "");
+        if (preset && idx === 2) {
+          v = preset(mmYYYY);
+        } else {
+          v = v.toUpperCase();
+        }
+        return v === cell.value ? cell : { ...cell, value: v };
+      });
+    }),
+  };
+};
+
 const AdminLancamentosExport = () => {
   const { clientId = "", modo = "data" } = useParams<{ clientId: string; modo: ExportMode }>();
   const [params] = useSearchParams();
