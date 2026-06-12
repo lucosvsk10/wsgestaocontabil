@@ -28,6 +28,7 @@ const capitalizeFirst = (s: string) => {
 
 export const QuickEditPanel = ({ data, selectedCol, onChange }: Props) => {
   const [expanded, setExpanded] = useState(false);
+  const [scope, setScope] = useState<Scope>("selected");
   const [find, setFind] = useState("");
   const [replace, setReplace] = useState("");
   const [prefix, setPrefix] = useState("");
