@@ -197,15 +197,19 @@ export function buildBalanceByAccount(
   const sorted = Object.values(groups).sort((a, b) =>
     a.conta.localeCompare(b.conta, undefined, { numeric: true })
   );
-  const rows: SheetCell[][] = sorted.map((g) => [
-    cell(lastDay),
-    cell(g.conta),
-    cell(`(-) ${g.descricao !== "-" ? g.descricao : "Sem descrição"}`),
-    cell(g.total, { numeric: true }),
-    cell("374"),
-    cell("100"),
-    cell(""),
-  ]);
+  const rows: SheetCell[][] = sorted.map((g) => {
+    const descRaw = g.descricao !== "-" ? g.descricao : "Sem descrição";
+    const hasMinus = /\(-\)/.test(descRaw);
+    return [
+      cell(lastDay),
+      cell(g.conta),
+      cell(descRaw),
+      cell(g.total, { numeric: true }),
+      cell("374"),
+      cell(hasMinus ? "100" : ""),
+      cell(""),
+    ];
+  });
   const grand = sorted.reduce((s, g) => s + g.total, 0);
   rows.push([
     cell("", { isTotal: true }),
