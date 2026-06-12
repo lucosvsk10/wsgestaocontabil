@@ -102,7 +102,7 @@ const AdminLancamentosExport = () => {
           }
         }
         setPlanoMap(map);
-        setSheet(buildSheetData(mode, lancs, map, competencia));
+        setSheet(autoCleanSheet(buildSheetData(mode, lancs, map, competencia)));
         setFilename(`lancamentos_${slug(name)}_${competencia}_${mode}.xlsx`);
       } catch (e: any) {
         console.error(e);
