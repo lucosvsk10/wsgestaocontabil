@@ -58,14 +58,8 @@ export const QuickEditPanel = ({ data, selectedCol, onChange }: Props) => {
   const disabled = scope === "selected" && selectedCol === null;
 
   return (
-    <div
-      className="bg-muted/30 rounded-xl border border-border overflow-hidden transition-all"
-      onMouseEnter={() => setExpanded(true)}
-      onMouseLeave={() => setExpanded(false)}
-      onFocus={() => setExpanded(true)}
-      onMouseMove={bumpIdle}
-      onKeyDown={bumpIdle}
-    >
+    <div className="bg-muted/30 rounded-xl border border-border overflow-hidden transition-all">
+
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
