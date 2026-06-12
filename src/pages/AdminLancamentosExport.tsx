@@ -224,12 +224,34 @@ const AdminLancamentosExport = () => {
     }
   };
 
+  // Dirty state + leave guard
+  const [isDirty, setIsDirty] = useState(false);
+  const [leaveOpen, setLeaveOpen] = useState(false);
+  const handleSheetChange = (next: SheetData) => {
+    setSheet(next);
+    setIsDirty(true);
+  };
+  const attemptLeave = () => {
+    if (isDirty) setLeaveOpen(true);
+    else navigate(-1);
+  };
+
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
+
   return (
     <AdminLayout>
       <div className="p-1 space-y-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm" className="rounded-lg" onClick={() => navigate(-1)}>
+            <Button variant="outline" size="sm" className="rounded-lg" onClick={attemptLeave}>
               <ArrowLeft className="w-4 h-4 mr-1.5" /> Voltar
             </Button>
             <div>
@@ -243,7 +265,7 @@ const AdminLancamentosExport = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+            <Button variant="ghost" size="sm" onClick={attemptLeave}>
               Cancelar
             </Button>
             <Button size="sm" className="rounded-lg" onClick={handleDownload} disabled={loading || !sheet}>
@@ -262,7 +284,7 @@ const AdminLancamentosExport = () => {
             ) : (
               <SpreadsheetEditor
                 data={sheet}
-                onChange={setSheet}
+                onChange={handleSheetChange}
                 selectedRow={selectedRow}
                 selectedCol={selectedCol}
                 onSelectRow={setSelectedRow}
@@ -313,7 +335,7 @@ const AdminLancamentosExport = () => {
               </div>
             </div>
 
-            {sheet && <QuickEditPanel data={sheet} selectedCol={selectedCol} onChange={setSheet} />}
+            {sheet && <QuickEditPanel data={sheet} selectedCol={selectedCol} onChange={handleSheetChange} />}
 
             <div className="bg-muted/30 rounded-xl p-4 space-y-2 border border-border">
               <label className="text-xs text-muted-foreground">Nome do arquivo</label>
@@ -330,6 +352,31 @@ const AdminLancamentosExport = () => {
           </aside>
         </div>
       </div>
+
+      <AlertDialog open={leaveOpen} onOpenChange={setLeaveOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sair sem salvar?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você tem alterações não salvas no editor. Se sair agora, todas as edições serão perdidas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setLeaveOpen(false)}>
+              Continuar editando
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setLeaveOpen(false);
+                setIsDirty(false);
+                navigate(-1);
+              }}
+            >
+              Sair e descartar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
