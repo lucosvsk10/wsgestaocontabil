@@ -104,6 +104,7 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
   const [viewMode, setViewMode] = useState<'data' | 'conta'>('data');
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [lancamentosSearch, setLancamentosSearch] = useState("");
   
   
   const now = new Date();
