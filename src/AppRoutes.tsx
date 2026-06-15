@@ -19,6 +19,7 @@ import SimpleCarouselManager from '@/components/admin/carousel/SimpleCarouselMan
 import { AdminLayout } from '@/components/admin/layout/AdminLayout';
 import AdminLancamentos from "./pages/AdminLancamentos";
 import AdminLancamentosExport from "./pages/AdminLancamentosExport";
+import AdminFolhaEditor from "./pages/AdminFolhaEditor";
 import ClientLancamentos from "./pages/ClientLancamentos";
 
 const AppRoutes = () => {
