@@ -4,14 +4,34 @@ import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import {
-  Upload, FileText, Loader2, Sparkles, FileSpreadsheet, Trash2, RefreshCw,
+  Upload, FileText, Loader2, FileSpreadsheet, Trash2, RefreshCw,
   CheckCircle2, AlertCircle, Calendar,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+
+interface FolhaLancamento {
+  id: string;
+  data: string;
+  conta_debito: number | null;
+  conta_credito: number | null;
+  historico: string | null;
+  valor: number | null;
+  ordem: number | null;
+}
+
+const formatDateBR = (d: string) => {
+  if (!d) return "";
+  const [y, m, day] = d.split("-");
+  if (!y || !m || !day) return d;
+  return `${day}/${m}/${y}`;
+};
+const formatBRL = (v: number | null) =>
+  (v ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 interface FolhaPagamentoDetailProps {
   clientId: string;
