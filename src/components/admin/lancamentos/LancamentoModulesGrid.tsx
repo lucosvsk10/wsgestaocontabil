@@ -1,15 +1,17 @@
 import { motion } from "framer-motion";
-import { Receipt, Lock } from "lucide-react";
+import { Receipt, Wallet, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface LancamentoModulesGridProps {
   disabled: boolean;
   onOpenDespesas: () => void;
+  onOpenFolha: () => void;
 }
 
 export const LancamentoModulesGrid = ({
   disabled,
   onOpenDespesas,
+  onOpenFolha,
 }: LancamentoModulesGridProps) => {
   const modules = [
     {
@@ -20,6 +22,15 @@ export const LancamentoModulesGrid = ({
       icon: Receipt,
       active: true,
       onClick: onOpenDespesas,
+    },
+    {
+      key: "folha",
+      title: "Folha de Pagamento",
+      description:
+        "Upload de relatórios em PDF e geração automática dos lançamentos contábeis via IA.",
+      icon: Wallet,
+      active: true,
+      onClick: onOpenFolha,
     },
   ];
 
