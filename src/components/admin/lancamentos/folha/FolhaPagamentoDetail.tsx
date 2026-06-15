@@ -4,14 +4,34 @@ import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import {
-  Upload, FileText, Loader2, Sparkles, FileSpreadsheet, Trash2, RefreshCw,
+  Upload, FileText, Loader2, FileSpreadsheet, Trash2, RefreshCw,
   CheckCircle2, AlertCircle, Calendar,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+
+interface FolhaLancamento {
+  id: string;
+  data: string;
+  conta_debito: string | null;
+  conta_credito: string | null;
+  historico: string | null;
+  valor: number | null;
+  ordem: number | null;
+}
+
+const formatDateBR = (d: string) => {
+  if (!d) return "";
+  const [y, m, day] = d.split("-");
+  if (!y || !m || !day) return d;
+  return `${day}/${m}/${y}`;
+};
+const formatBRL = (v: number | null) =>
+  (v ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 interface FolhaPagamentoDetailProps {
   clientId: string;
@@ -46,7 +66,8 @@ export const FolhaPagamentoDetail = ({ clientId, clientName }: FolhaPagamentoDet
   const years = Array.from({ length: 5 }, (_, i) => String(currentYear - 2 + i));
 
   const [uploads, setUploads] = useState<FolhaUpload[]>([]);
-  const [lancamentosCount, setLancamentosCount] = useState(0);
+  const [lancamentos, setLancamentos] = useState<FolhaLancamento[]>([]);
+  const lancamentosCount = lancamentos.length;
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -54,12 +75,12 @@ export const FolhaPagamentoDetail = ({ clientId, clientName }: FolhaPagamentoDet
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [{ data: ups }, { count }] = await Promise.all([
+      const [{ data: ups }, { data: lans }] = await Promise.all([
         supabase.from("folha_uploads").select("*").eq("client_id", clientId).eq("competencia", competencia).order("created_at", { ascending: false }),
-        supabase.from("folha_lancamentos").select("*", { count: "exact", head: true }).eq("client_id", clientId).eq("competencia", competencia),
+        supabase.from("folha_lancamentos").select("*").eq("client_id", clientId).eq("competencia", competencia).order("ordem", { ascending: true }),
       ]);
       setUploads((ups || []) as FolhaUpload[]);
-      setLancamentosCount(count || 0);
+      setLancamentos((lans || []) as FolhaLancamento[]);
     } catch (e: any) {
       console.error(e);
     } finally {
@@ -190,12 +211,14 @@ export const FolhaPagamentoDetail = ({ clientId, clientName }: FolhaPagamentoDet
             <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Atualizar
           </Button>
           <Button size="sm" onClick={handleProcess} disabled={isProcessing || uploads.length === 0} className="h-9">
-            {isProcessing ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-1.5" />}
-            Processar com IA
+            {isProcessing && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+            Processar DOC
           </Button>
-          <Button size="sm" variant="default" onClick={handleOpenEditor} disabled={lancamentosCount === 0} className="h-9">
-            <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5" /> Abrir editor ({lancamentosCount})
-          </Button>
+          {lancamentosCount > 0 && (
+            <Button size="sm" variant="default" onClick={handleOpenEditor} className="h-9">
+              <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5" /> Exportar ({lancamentosCount})
+            </Button>
+          )}
         </div>
       </div>
 
@@ -242,6 +265,38 @@ export const FolhaPagamentoDetail = ({ clientId, clientName }: FolhaPagamentoDet
             </ul>
           )}
         </div>
+
+        {lancamentosCount > 0 && (
+          <div>
+            <h3 className="text-sm font-medium text-foreground mb-2">
+              Lançamentos gerados ({lancamentosCount})
+            </h3>
+            <div className="border border-border rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[110px]">Data</TableHead>
+                    <TableHead className="w-[90px]">Débito</TableHead>
+                    <TableHead className="w-[90px]">Crédito</TableHead>
+                    <TableHead>Histórico</TableHead>
+                    <TableHead className="text-right w-[130px]">Valor (R$)</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {lancamentos.map((l) => (
+                    <TableRow key={l.id}>
+                      <TableCell className="whitespace-nowrap">{formatDateBR(l.data)}</TableCell>
+                      <TableCell>{l.conta_debito ?? "-"}</TableCell>
+                      <TableCell>{l.conta_credito ?? "-"}</TableCell>
+                      <TableCell className="text-sm">{l.historico ?? ""}</TableCell>
+                      <TableCell className="text-right whitespace-nowrap font-mono">{formatBRL(l.valor)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        )}
       </div>
     </motion.div>
   );
