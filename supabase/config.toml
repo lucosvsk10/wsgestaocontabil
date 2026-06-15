@@ -76,3 +76,6 @@ verify_jwt = true
 
 [functions.check-verification-status]
 verify_jwt = true
+
+[functions.process-folha-pagamento]
+verify_jwt = true
