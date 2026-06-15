@@ -265,6 +265,39 @@ export const FolhaPagamentoDetail = ({ clientId, clientName }: FolhaPagamentoDet
             </ul>
           )}
         </div>
+
+        {lancamentosCount > 0 && (
+          <div>
+            <h3 className="text-sm font-medium text-foreground mb-2">
+              Lançamentos gerados ({lancamentosCount})
+            </h3>
+            <div className="border border-border rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[110px]">Data</TableHead>
+                    <TableHead className="w-[90px]">Débito</TableHead>
+                    <TableHead className="w-[90px]">Crédito</TableHead>
+                    <TableHead>Histórico</TableHead>
+                    <TableHead className="text-right w-[130px]">Valor (R$)</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {lancamentos.map((l) => (
+                    <TableRow key={l.id}>
+                      <TableCell className="whitespace-nowrap">{formatDateBR(l.data)}</TableCell>
+                      <TableCell>{l.conta_debito ?? "-"}</TableCell>
+                      <TableCell>{l.conta_credito ?? "-"}</TableCell>
+                      <TableCell className="text-sm">{l.historico ?? ""}</TableCell>
+                      <TableCell className="text-right whitespace-nowrap font-mono">{formatBRL(l.valor)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        )}
+      </div>
       </div>
     </motion.div>
   );
