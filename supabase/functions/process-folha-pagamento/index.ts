@@ -14,23 +14,26 @@ Não decore códigos fixos. Para cada evento encontrado na folha, busque no Plan
 1. Eventos de Gasto/Custo da Empresa -> Débito em conta de Despesa/Resultado.
 2. Eventos de Obrigações/Retenções -> Crédito em conta de Passivo Circulante.
 
+### REGRA CRÍTICA DE CONTA DE DÉBITO (FUNCIONÁRIOS)
+Para QUALQUER verba rescisória ou salarial de FUNCIONÁRIOS (salários, médias, gratificações, salário família, ajuda de custo, aviso prévio, saldo de salário, 13º, férias indenizadas, etc.), a conta de DÉBITO de despesa deve ser OBRIGATORIAMENTE a conta 92 (Despesa de Salários/Folha de funcionários). NUNCA utilize contas de honorários ou diretoria (como a 88) para funcionários, a menos que o Plano de Contas indique explicitamente outra conta para aquela categoria específica. A conta 88 (ou equivalente de pró-labore/diretoria) deve ser usada APENAS para Pró-labore de sócios.
+
 ### REGRAS DE OTIMIZAÇÃO (Redução de Linhas)
 Agrupe valores com a mesma combinação de [Conta Débito + Conta Crédito], consolidando o histórico:
 
 1. REMUNERAÇÕES REGULARES (Salários, Médias, Gratificações, Salário Família, Ajuda de Custo):
-   - Mapeamento: Débito na Despesa de Salários e Crédito em Salários a Pagar.
+   - Mapeamento: Débito na conta 92 (Despesa de Salários de funcionários) e Crédito em Salários a Pagar.
    - Histórico Padronizado: "SALARIOS E REMUNERAÇÕES A PAGAR"
 
 2. PRÓ-LABORE DOS SÓCIOS:
    - Mapeamento: Débito na Despesa de Pró-labore e Crédito em Pró-labore a Pagar.
    - Histórico Padronizado: "PRO-LABORE A PAGAR MÊS [MM/AAAA]"
 
-3. VERBAS RESCISÓRIAS GERAIS (Saldo de Salário, Aviso Prévio, 13º Rescisão):
-   - Mapeamento: Débito na Despesa correspondente e Crédito em Salários a Pagar ou Benefícios Rescisórios.
+3. VERBAS RESCISÓRIAS GERAIS DE FUNCIONÁRIOS (Saldo de Salário, Aviso Prévio, 13º Rescisão):
+   - Mapeamento: Débito na conta 92 (Despesa de Salários de funcionários) e Crédito em Salários a Pagar ou Benefícios Rescisórios.
    - Histórico Padronizado: "RECISAO A PAGAR MÊS [MM/AAAA]"
 
-4. FÉRIAS NA RESCISÃO / INDENIZADAS:
-   - Mapeamento: Débito na Despesa de Salários/Férias e Crédito em Férias a Pagar / Benefícios Rescisórios.
+4. FÉRIAS NA RESCISÃO / INDENIZADAS DE FUNCIONÁRIOS:
+   - Mapeamento: Débito na conta 92 (Despesa de Salários de funcionários) e Crédito em Férias a Pagar / Benefícios Rescisórios.
    - Histórico Padronizado: "FERIAS A PAGAR MÊS DE [MM/AAAA] (RECISÃO)"
 
 5. RETENÇÕES DE INSS:
