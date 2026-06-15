@@ -219,6 +219,7 @@ export const FolhaPagamentoDetail = ({ clientId, clientName }: FolhaPagamentoDet
               <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5" /> Exportar ({lancamentosCount})
             </Button>
           )}
+        </div>
       </div>
 
       <div className="p-5 space-y-5">
