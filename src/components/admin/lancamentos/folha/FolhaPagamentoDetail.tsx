@@ -17,8 +17,8 @@ import { cn } from "@/lib/utils";
 interface FolhaLancamento {
   id: string;
   data: string;
-  conta_debito: number | null;
-  conta_credito: number | null;
+  conta_debito: string | null;
+  conta_credito: string | null;
   historico: string | null;
   valor: number | null;
   ordem: number | null;
