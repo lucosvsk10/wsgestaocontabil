@@ -25,6 +25,7 @@ export const ClientStatusList = ({
   const [clients, setClients] = useState<ClientStatus[]>([]);
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [planoOpenFor, setPlanoOpenFor] = useState<{ id: string; name: string } | null>(null);
   useEffect(() => {
     fetchClients();
   }, []);
