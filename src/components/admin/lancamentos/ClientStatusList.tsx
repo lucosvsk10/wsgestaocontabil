@@ -97,36 +97,54 @@ export const ClientStatusList = ({
           </div> : filteredClients.length === 0 ? <div className="p-8 text-center text-muted-foreground text-sm">
             Nenhum cliente encontrado
           </div> : <div className="divide-y divide-border/30">
-            {filteredClients.map((client, index) => <motion.button key={client.id} initial={{
+            {filteredClients.map((client, index) => <motion.div key={client.id} initial={{
           opacity: 0
         }} animate={{
           opacity: 1
         }} transition={{
           delay: index * 0.02
-        }} onClick={() => onSelectClient(client.id)} className={cn("w-full p-4 text-left transition-all duration-200", selectedClientId === client.id ? "bg-primary/10" : "hover:bg-muted/50")}>
-                <div className="flex items-start justify-between gap-2 mb-1.5">
-                  <span className="font-medium text-foreground text-sm truncate flex-1">
-                    {client.name}
-                  </span>
-                  {client.alignedCount > 0 && <Badge variant="secondary" className="text-xs shrink-0">
-                      {client.alignedCount}
-                    </Badge>}
-                </div>
-                <p className="text-xs text-muted-foreground truncate mb-2">
-                  {client.email}
-                </p>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className={cn("inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full", client.hasPlanoContas ? "bg-green-500/10 text-green-600" : "bg-destructive/10 text-destructive")}>
-                    <ClipboardList className="h-3 w-3" />
-                    {client.hasPlanoContas ? "Plano OK" : "Sem plano"}
-                  </span>
-                  {client.closedMonths > 0 && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                      <CheckCircle className="h-3 w-3 text-green-500" />
-                      {client.closedMonths} fechado(s)
-                    </span>}
-                </div>
-              </motion.button>)}
+        }} className={cn("w-full flex items-stretch transition-all duration-200", selectedClientId === client.id ? "bg-primary/10" : "hover:bg-muted/50")}>
+                <button onClick={() => onSelectClient(client.id)} className="flex-1 p-4 text-left min-w-0">
+                  <div className="flex items-start justify-between gap-2 mb-1.5">
+                    <span className="font-medium text-foreground text-sm truncate flex-1">
+                      {client.name}
+                    </span>
+                    {client.alignedCount > 0 && <Badge variant="secondary" className="text-xs shrink-0">
+                        {client.alignedCount}
+                      </Badge>}
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate mb-2">
+                    {client.email}
+                  </p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={cn("inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full", client.hasPlanoContas ? "bg-green-500/10 text-green-600" : "bg-destructive/10 text-destructive")}>
+                      <ClipboardList className="h-3 w-3" />
+                      {client.hasPlanoContas ? "Plano OK" : "Sem plano"}
+                    </span>
+                    {client.closedMonths > 0 && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                        <CheckCircle className="h-3 w-3 text-green-500" />
+                        {client.closedMonths} fechado(s)
+                      </span>}
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setPlanoOpenFor({ id: client.id, name: client.name }); }}
+                  title="Plano de Contas"
+                  className="px-3 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors border-l border-border/30"
+                >
+                  <Building2 className="h-4 w-4" />
+                </button>
+              </motion.div>)}
           </div>}
       </div>
+      {planoOpenFor && (
+        <PlanoContasModal
+          isOpen={!!planoOpenFor}
+          onClose={() => { setPlanoOpenFor(null); fetchClients(); }}
+          clientId={planoOpenFor.id}
+          clientName={planoOpenFor.name}
+        />
+      )}
     </div>;
 };
