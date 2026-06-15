@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Users, Search, CheckCircle, ClipboardList } from "lucide-react";
+import { Users, Search, CheckCircle, ClipboardList, Building2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { PlanoContasModal } from "./PlanoContasModal";
 interface ClientStatus {
   id: string;
   name: string;
