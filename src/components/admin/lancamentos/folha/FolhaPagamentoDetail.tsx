@@ -66,7 +66,8 @@ export const FolhaPagamentoDetail = ({ clientId, clientName }: FolhaPagamentoDet
   const years = Array.from({ length: 5 }, (_, i) => String(currentYear - 2 + i));
 
   const [uploads, setUploads] = useState<FolhaUpload[]>([]);
-  const [lancamentosCount, setLancamentosCount] = useState(0);
+  const [lancamentos, setLancamentos] = useState<FolhaLancamento[]>([]);
+  const lancamentosCount = lancamentos.length;
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -74,12 +75,12 @@ export const FolhaPagamentoDetail = ({ clientId, clientName }: FolhaPagamentoDet
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [{ data: ups }, { count }] = await Promise.all([
+      const [{ data: ups }, { data: lans }] = await Promise.all([
         supabase.from("folha_uploads").select("*").eq("client_id", clientId).eq("competencia", competencia).order("created_at", { ascending: false }),
-        supabase.from("folha_lancamentos").select("*", { count: "exact", head: true }).eq("client_id", clientId).eq("competencia", competencia),
+        supabase.from("folha_lancamentos").select("*").eq("client_id", clientId).eq("competencia", competencia).order("ordem", { ascending: true }),
       ]);
       setUploads((ups || []) as FolhaUpload[]);
-      setLancamentosCount(count || 0);
+      setLancamentos((lans || []) as FolhaLancamento[]);
     } catch (e: any) {
       console.error(e);
     } finally {
