@@ -28,12 +28,12 @@ Agrupe valores com a mesma combinação de [Conta Débito + Conta Crédito], con
    - Mapeamento: Débito na Despesa de Pró-labore e Crédito em Pró-labore a Pagar.
    - Histórico Padronizado: "PRO-LABORE A PAGAR MÊS [MM/AAAA]"
 
-3. VERBAS RESCISÓRIAS GERAIS (Saldo de Salário, Aviso Prévio, 13º Rescisão):
-   - Mapeamento: Débito na Despesa correspondente e Crédito em Salários a Pagar ou Benefícios Rescisórios.
+3. VERBAS RESCISÓRIAS GERAIS DE FUNCIONÁRIOS (Saldo de Salário, Aviso Prévio, 13º Rescisão):
+   - Mapeamento: Débito na conta 92 (Despesa de Salários de funcionários) e Crédito em Salários a Pagar ou Benefícios Rescisórios.
    - Histórico Padronizado: "RECISAO A PAGAR MÊS [MM/AAAA]"
 
-4. FÉRIAS NA RESCISÃO / INDENIZADAS:
-   - Mapeamento: Débito na Despesa de Salários/Férias e Crédito em Férias a Pagar / Benefícios Rescisórios.
+4. FÉRIAS NA RESCISÃO / INDENIZADAS DE FUNCIONÁRIOS:
+   - Mapeamento: Débito na conta 92 (Despesa de Salários de funcionários) e Crédito em Férias a Pagar / Benefícios Rescisórios.
    - Histórico Padronizado: "FERIAS A PAGAR MÊS DE [MM/AAAA] (RECISÃO)"
 
 5. RETENÇÕES DE INSS:
