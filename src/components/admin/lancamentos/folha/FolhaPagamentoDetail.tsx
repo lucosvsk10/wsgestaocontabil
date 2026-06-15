@@ -298,7 +298,6 @@ export const FolhaPagamentoDetail = ({ clientId, clientName }: FolhaPagamentoDet
           </div>
         )}
       </div>
-      </div>
     </motion.div>
   );
 };
