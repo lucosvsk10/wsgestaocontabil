@@ -211,13 +211,14 @@ export const FolhaPagamentoDetail = ({ clientId, clientName }: FolhaPagamentoDet
             <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Atualizar
           </Button>
           <Button size="sm" onClick={handleProcess} disabled={isProcessing || uploads.length === 0} className="h-9">
-            {isProcessing ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-1.5" />}
-            Processar com IA
+            {isProcessing && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+            Processar DOC
           </Button>
-          <Button size="sm" variant="default" onClick={handleOpenEditor} disabled={lancamentosCount === 0} className="h-9">
-            <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5" /> Abrir editor ({lancamentosCount})
-          </Button>
-        </div>
+          {lancamentosCount > 0 && (
+            <Button size="sm" variant="default" onClick={handleOpenEditor} className="h-9">
+              <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5" /> Exportar ({lancamentosCount})
+            </Button>
+          )}
       </div>
 
       <div className="p-5 space-y-5">
