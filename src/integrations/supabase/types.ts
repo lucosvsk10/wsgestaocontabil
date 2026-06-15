@@ -882,6 +882,98 @@ export type Database = {
           },
         ]
       }
+      folha_lancamentos: {
+        Row: {
+          client_id: string
+          competencia: string
+          conta_credito: string | null
+          conta_debito: string | null
+          created_at: string
+          data: string | null
+          historico: string | null
+          id: string
+          ordem: number
+          source_upload_id: string | null
+          updated_at: string
+          valor: number | null
+        }
+        Insert: {
+          client_id: string
+          competencia: string
+          conta_credito?: string | null
+          conta_debito?: string | null
+          created_at?: string
+          data?: string | null
+          historico?: string | null
+          id?: string
+          ordem?: number
+          source_upload_id?: string | null
+          updated_at?: string
+          valor?: number | null
+        }
+        Update: {
+          client_id?: string
+          competencia?: string
+          conta_credito?: string | null
+          conta_debito?: string | null
+          created_at?: string
+          data?: string | null
+          historico?: string | null
+          id?: string
+          ordem?: number
+          source_upload_id?: string | null
+          updated_at?: string
+          valor?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folha_lancamentos_source_upload_id_fkey"
+            columns: ["source_upload_id"]
+            isOneToOne: false
+            referencedRelation: "folha_uploads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      folha_uploads: {
+        Row: {
+          client_id: string
+          competencia: string
+          created_at: string
+          id: string
+          nome_arquivo: string
+          status: string
+          storage_path: string
+          ultimo_erro: string | null
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          client_id: string
+          competencia: string
+          created_at?: string
+          id?: string
+          nome_arquivo: string
+          status?: string
+          storage_path: string
+          ultimo_erro?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          client_id?: string
+          competencia?: string
+          created_at?: string
+          id?: string
+          nome_arquivo?: string
+          status?: string
+          storage_path?: string
+          ultimo_erro?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
       form_questions: {
         Row: {
           created_at: string
@@ -1066,6 +1158,7 @@ export type Database = {
           id: string
           month: string
           status: string
+          tipo: string
           user_email: string
           user_id: string
           user_name: string
@@ -1077,6 +1170,7 @@ export type Database = {
           id?: string
           month: string
           status?: string
+          tipo?: string
           user_email: string
           user_id: string
           user_name: string
@@ -1088,6 +1182,7 @@ export type Database = {
           id?: string
           month?: string
           status?: string
+          tipo?: string
           user_email?: string
           user_id?: string
           user_name?: string
