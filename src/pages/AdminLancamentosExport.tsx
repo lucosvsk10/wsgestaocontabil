@@ -225,6 +225,19 @@ const AdminLancamentosExport = () => {
     }
   };
 
+  const handleDownloadCalima = () => {
+    const rows = lancamentos.map((l) => ({
+      data: l.data,
+      valor: l.valor,
+      conta_debito: l.conta_debito,
+      conta_credito: l.conta_credito,
+      historico: l.historico,
+    }));
+    const base = filename.replace(/\.xlsx$/i, "");
+    exportCalimaXlsx(rows, planoMap, `${base}_calima.xlsx`);
+    toast.success("Exportado para Calima ERP");
+  };
+
   // Dirty state + leave guard
   const [isDirty, setIsDirty] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
