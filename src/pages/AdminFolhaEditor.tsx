@@ -179,6 +179,23 @@ const AdminFolhaEditor = () => {
     toast.success("Download iniciado");
   };
 
+  const handleDownloadCalima = () => {
+    if (!sheet) return;
+    // sheet layout: [data, debito, descDeb, ccDeb, credito, descCred, ccCred, historico, valor]
+    const rows = sheet.rows.map((r) => ({
+      data: String(r[0].value ?? ""),
+      conta_debito: String(r[1].value ?? "").trim() || null,
+      cc_debito: String(r[3].value ?? "").trim() || null,
+      conta_credito: String(r[4].value ?? "").trim() || null,
+      cc_credito: String(r[6].value ?? "").trim() || null,
+      historico: String(r[7].value ?? ""),
+      valor: r[8].numeric ? Number(r[8].value) || 0 : Number(String(r[8].value).replace(/\./g, "").replace(",", ".")) || 0,
+    }));
+    const base = filename.replace(/\.xlsx$/i, "");
+    exportCalimaXlsx(rows, planoMap, `${base}_calima.xlsx`);
+    toast.success("Exportado para Calima ERP");
+  };
+
   return (
     <AdminLayout>
       <div className="p-1 space-y-4">
