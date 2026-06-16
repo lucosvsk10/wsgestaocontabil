@@ -155,12 +155,13 @@ Deno.serve(async (req) => {
 
         const body = {
           model: "google/gemini-2.5-flash",
+          response_format: { type: "json_object" },
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
             {
               role: "user",
               content: [
-                { type: "text", text: `Competência: ${competencia}\n\n${planoText}\n\nAnalise o PDF da folha de pagamento anexo e retorne o array JSON conforme especificado.` },
+                { type: "text", text: `Competência: ${competencia}\n\n${planoText}\n\nAnalise o PDF da folha de pagamento anexo. Retorne ESTRITAMENTE um objeto JSON no formato { "lancamentos": [ { "data": "DD/MM/AAAA", "conta_debito": "STRING", "conta_credito": "STRING", "historico": "STRING", "valor": NUMBER } ] }. Se não houver dados extraíveis, retorne { "lancamentos": [] }. Não inclua texto fora do JSON.` },
                 { type: "file", file: { filename: up.nome_arquivo, file_data: `data:application/pdf;base64,${b64}` } },
               ],
             },
