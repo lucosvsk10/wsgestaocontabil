@@ -215,6 +215,9 @@ const AdminFolhaEditor = () => {
             <Button size="sm" variant="outline" onClick={handleSave} disabled={saving || loading || !sheet}>
               {saving ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Save className="w-4 h-4 mr-1.5" />} Salvar
             </Button>
+            <Button size="sm" variant="outline" className="rounded-lg" onClick={handleDownloadCalima} disabled={loading || !sheet}>
+              <FileDown className="w-4 h-4 mr-1.5" /> Para o Calima ERP
+            </Button>
             <Button size="sm" className="rounded-lg" onClick={handleDownload} disabled={loading || !sheet}>
               <Download className="w-4 h-4 mr-1.5" /> Baixar XLSX
             </Button>
