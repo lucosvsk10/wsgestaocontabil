@@ -77,6 +77,7 @@ const AdminFolhaEditor = () => {
   const [clientName, setClientName] = useState("Cliente");
   const [sheet, setSheet] = useState<SheetData | null>(null);
   const [filename, setFilename] = useState("");
+  const [planoMap, setPlanoMap] = useState<Record<string, string>>({});
   const [isDirty, setIsDirty] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [selectedRow, setSelectedRow] = useState<number | null>(null);
