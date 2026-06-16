@@ -7,6 +7,8 @@ export interface CalimaRow {
   conta_debito: string | null;
   conta_credito: string | null;
   historico: string | null;
+  cc_debito?: string | null;
+  cc_credito?: string | null;
 }
 
 const CALIMA_HEADERS = [
