@@ -284,6 +284,9 @@ const AdminLancamentosExport = () => {
             <Button variant="ghost" size="sm" onClick={attemptLeave}>
               Cancelar
             </Button>
+            <Button size="sm" variant="outline" className="rounded-lg" onClick={handleDownloadCalima} disabled={loading || lancamentos.length === 0}>
+              <FileDown className="w-4 h-4 mr-1.5" /> Para o Calima ERP
+            </Button>
             <Button size="sm" className="rounded-lg" onClick={handleDownload} disabled={loading || !sheet}>
               <Download className="w-4 h-4 mr-1.5" /> Baixar XLSX
             </Button>
