@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Download, Loader2, Building2, Calendar, FileSpreadsheet, ListChecks, Hash } from "lucide-react";
+import { ArrowLeft, Download, Loader2, Building2, Calendar, FileSpreadsheet, ListChecks, Hash, FileDown } from "lucide-react";
+import { exportCalimaXlsx } from "@/components/admin/lancamentos/exportCalima";
 import * as XLSX from "xlsx";
 import { AdminLayout } from "@/components/admin/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
