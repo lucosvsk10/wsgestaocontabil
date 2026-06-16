@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Download, Loader2, Building2, Calendar, FileSpreadsheet, Save } from "lucide-react";
+import { ArrowLeft, Download, Loader2, Building2, Calendar, FileSpreadsheet, Save, FileDown } from "lucide-react";
+import { exportCalimaXlsx } from "@/components/admin/lancamentos/exportCalima";
 import * as XLSX from "xlsx";
 import { AdminLayout } from "@/components/admin/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -76,6 +77,7 @@ const AdminFolhaEditor = () => {
   const [clientName, setClientName] = useState("Cliente");
   const [sheet, setSheet] = useState<SheetData | null>(null);
   const [filename, setFilename] = useState("");
+  const [planoMap, setPlanoMap] = useState<Record<string, string>>({});
   const [isDirty, setIsDirty] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [selectedRow, setSelectedRow] = useState<number | null>(null);
@@ -107,6 +109,7 @@ const AdminFolhaEditor = () => {
           ordem: r.ordem ?? i,
         })) as Row[];
         setSheet(buildSheet(list, planoRes.map));
+        setPlanoMap(planoRes.map);
         setFilename(`folha_${slug(name)}_${competencia}.xlsx`);
       } catch (e: any) {
         toast.error("Erro ao carregar: " + e.message);
@@ -176,6 +179,23 @@ const AdminFolhaEditor = () => {
     toast.success("Download iniciado");
   };
 
+  const handleDownloadCalima = () => {
+    if (!sheet) return;
+    // sheet layout: [data, debito, descDeb, ccDeb, credito, descCred, ccCred, historico, valor]
+    const rows = sheet.rows.map((r) => ({
+      data: String(r[0].value ?? ""),
+      conta_debito: String(r[1].value ?? "").trim() || null,
+      cc_debito: String(r[3].value ?? "").trim() || null,
+      conta_credito: String(r[4].value ?? "").trim() || null,
+      cc_credito: String(r[6].value ?? "").trim() || null,
+      historico: String(r[7].value ?? ""),
+      valor: r[8].numeric ? Number(r[8].value) || 0 : Number(String(r[8].value).replace(/\./g, "").replace(",", ".")) || 0,
+    }));
+    const base = filename.replace(/\.xlsx$/i, "");
+    exportCalimaXlsx(rows, planoMap, `${base}_calima.xlsx`);
+    toast.success("Exportado para Calima ERP");
+  };
+
   return (
     <AdminLayout>
       <div className="p-1 space-y-4">
@@ -194,6 +214,9 @@ const AdminFolhaEditor = () => {
           <div className="flex items-center gap-2">
             <Button size="sm" variant="outline" onClick={handleSave} disabled={saving || loading || !sheet}>
               {saving ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Save className="w-4 h-4 mr-1.5" />} Salvar
+            </Button>
+            <Button size="sm" variant="outline" className="rounded-lg" onClick={handleDownloadCalima} disabled={loading || !sheet}>
+              <FileDown className="w-4 h-4 mr-1.5" /> Para o Calima ERP
             </Button>
             <Button size="sm" className="rounded-lg" onClick={handleDownload} disabled={loading || !sheet}>
               <Download className="w-4 h-4 mr-1.5" /> Baixar XLSX

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Download, Loader2, Building2, Calendar, FileSpreadsheet, ListChecks, Hash } from "lucide-react";
+import { ArrowLeft, Download, Loader2, Building2, Calendar, FileSpreadsheet, ListChecks, Hash, FileDown } from "lucide-react";
+import { exportCalimaXlsx } from "@/components/admin/lancamentos/exportCalima";
 import * as XLSX from "xlsx";
 import { AdminLayout } from "@/components/admin/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -224,6 +225,21 @@ const AdminLancamentosExport = () => {
     }
   };
 
+  const handleDownloadCalima = () => {
+    const rows = lancamentos.map((l) => ({
+      data: l.data,
+      valor: l.valor,
+      conta_debito: l.debito,
+      conta_credito: l.credito,
+      historico: l.historico,
+      cc_debito: l.centro_custo_debito,
+      cc_credito: l.centro_custo_credito,
+    }));
+    const base = filename.replace(/\.xlsx$/i, "");
+    exportCalimaXlsx(rows, planoMap, `${base}_calima.xlsx`);
+    toast.success("Exportado para Calima ERP");
+  };
+
   // Dirty state + leave guard
   const [isDirty, setIsDirty] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
@@ -267,6 +283,9 @@ const AdminLancamentosExport = () => {
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={attemptLeave}>
               Cancelar
+            </Button>
+            <Button size="sm" variant="outline" className="rounded-lg" onClick={handleDownloadCalima} disabled={loading || lancamentos.length === 0}>
+              <FileDown className="w-4 h-4 mr-1.5" /> Para o Calima ERP
             </Button>
             <Button size="sm" className="rounded-lg" onClick={handleDownload} disabled={loading || !sheet}>
               <Download className="w-4 h-4 mr-1.5" /> Baixar XLSX
