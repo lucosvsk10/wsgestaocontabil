@@ -62,6 +62,16 @@ const parseDateBR = (s: string): string | null => {
   return m ? `${m[3]}-${m[2]}-${m[1]}` : null;
 };
 
+// Último dia real do mês da competência (YYYY-MM) -> YYYY-MM-DD
+const lastDayOfCompetencia = (competencia: string): string | null => {
+  const m = String(competencia).match(/^(\d{4})-(\d{2})/);
+  if (!m) return null;
+  const year = Number(m[1]);
+  const month = Number(m[2]); // 1-12
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return `${m[1]}-${m[2]}-${String(lastDay).padStart(2, "0")}`;
+};
+
 const extractJsonArray = (text: string): any[] => {
   const cleaned = text.replace(/```json/gi, "").replace(/```/g, "").trim();
   const start = cleaned.indexOf("[");
@@ -164,17 +174,31 @@ Deno.serve(async (req) => {
         const content = aiJson?.choices?.[0]?.message?.content ?? "";
         const lancs = extractJsonArray(content);
 
-        const rowsToInsert = lancs.map((l: any, idx: number) => ({
-          client_id: clientId,
-          competencia,
-          data: parseDateBR(l.data),
-          conta_debito: l.conta_debito != null ? String(l.conta_debito) : null,
-          conta_credito: l.conta_credito != null ? String(l.conta_credito) : null,
-          historico: String(l.historico || "").toUpperCase(),
-          valor: Number(l.valor) || 0,
-          ordem: allRows.length + idx,
-          source_upload_id: up.id,
-        }));
+        const fallbackDate = lastDayOfCompetencia(competencia);
+        const isValidISO = (d: string | null) => {
+          if (!d) return false;
+          const m = d.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+          if (!m) return false;
+          const y = Number(m[1]), mo = Number(m[2]), da = Number(m[3]);
+          const dt = new Date(Date.UTC(y, mo - 1, da));
+          return dt.getUTCFullYear() === y && dt.getUTCMonth() === mo - 1 && dt.getUTCDate() === da;
+        };
+
+        const rowsToInsert = lancs.map((l: any, idx: number) => {
+          const parsed = parseDateBR(l.data);
+          const data = isValidISO(parsed) ? parsed : fallbackDate;
+          return {
+            client_id: clientId,
+            competencia,
+            data,
+            conta_debito: l.conta_debito != null ? String(l.conta_debito) : null,
+            conta_credito: l.conta_credito != null ? String(l.conta_credito) : null,
+            historico: String(l.historico || "").toUpperCase(),
+            valor: Number(l.valor) || 0,
+            ordem: allRows.length + idx,
+            source_upload_id: up.id,
+          };
+        });
         allRows.push(...rowsToInsert);
         totalLancamentos += rowsToInsert.length;
 
