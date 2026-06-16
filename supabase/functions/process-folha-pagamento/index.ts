@@ -62,6 +62,16 @@ const parseDateBR = (s: string): string | null => {
   return m ? `${m[3]}-${m[2]}-${m[1]}` : null;
 };
 
+// Último dia real do mês da competência (YYYY-MM) -> YYYY-MM-DD
+const lastDayOfCompetencia = (competencia: string): string | null => {
+  const m = String(competencia).match(/^(\d{4})-(\d{2})/);
+  if (!m) return null;
+  const year = Number(m[1]);
+  const month = Number(m[2]); // 1-12
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return `${m[1]}-${m[2]}-${String(lastDay).padStart(2, "0")}`;
+};
+
 const extractJsonArray = (text: string): any[] => {
   const cleaned = text.replace(/```json/gi, "").replace(/```/g, "").trim();
   const start = cleaned.indexOf("[");
