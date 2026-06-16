@@ -109,6 +109,7 @@ const AdminFolhaEditor = () => {
           ordem: r.ordem ?? i,
         })) as Row[];
         setSheet(buildSheet(list, planoRes.map));
+        setPlanoMap(planoRes.map);
         setFilename(`folha_${slug(name)}_${competencia}.xlsx`);
       } catch (e: any) {
         toast.error("Erro ao carregar: " + e.message);
