@@ -73,11 +73,24 @@ const lastDayOfCompetencia = (competencia: string): string | null => {
 };
 
 const extractJsonArray = (text: string): any[] => {
-  const cleaned = text.replace(/```json/gi, "").replace(/```/g, "").trim();
+  const cleaned = String(text || "").replace(/```json/gi, "").replace(/```/g, "").trim();
   const start = cleaned.indexOf("[");
   const end = cleaned.lastIndexOf("]");
-  if (start === -1 || end === -1) throw new Error("Resposta da IA não contém um array JSON");
-  return JSON.parse(cleaned.slice(start, end + 1));
+  if (start !== -1 && end !== -1 && end > start) {
+    try { return JSON.parse(cleaned.slice(start, end + 1)); } catch { /* fall through */ }
+  }
+  // Try parsing as object containing an array property
+  const objStart = cleaned.indexOf("{");
+  const objEnd = cleaned.lastIndexOf("}");
+  if (objStart !== -1 && objEnd !== -1 && objEnd > objStart) {
+    try {
+      const obj = JSON.parse(cleaned.slice(objStart, objEnd + 1));
+      for (const k of Object.keys(obj)) {
+        if (Array.isArray(obj[k])) return obj[k];
+      }
+    } catch { /* ignore */ }
+  }
+  throw new Error(`Resposta da IA inválida. Trecho: ${cleaned.slice(0, 300)}`);
 };
 
 Deno.serve(async (req) => {
