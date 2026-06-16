@@ -48,8 +48,8 @@ export const exportCalimaXlsx = (
       (r.conta_debito || "").toString().trim(),
       (r.conta_credito || "").toString().trim(),
       (r.historico || "").toString().toUpperCase(),
-      ccFor(r.conta_debito, plano),
-      ccFor(r.conta_credito, plano),
+      r.cc_debito != null && String(r.cc_debito).trim() !== "" ? String(r.cc_debito).trim() : ccFor(r.conta_debito, plano),
+      r.cc_credito != null && String(r.cc_credito).trim() !== "" ? String(r.cc_credito).trim() : ccFor(r.conta_credito, plano),
     ]);
   }
   const ws = XLSX.utils.aoa_to_sheet(aoa);
