@@ -229,9 +229,11 @@ const AdminLancamentosExport = () => {
     const rows = lancamentos.map((l) => ({
       data: l.data,
       valor: l.valor,
-      conta_debito: l.conta_debito,
-      conta_credito: l.conta_credito,
+      conta_debito: l.debito,
+      conta_credito: l.credito,
       historico: l.historico,
+      cc_debito: l.centro_custo_debito,
+      cc_credito: l.centro_custo_credito,
     }));
     const base = filename.replace(/\.xlsx$/i, "");
     exportCalimaXlsx(rows, planoMap, `${base}_calima.xlsx`);
