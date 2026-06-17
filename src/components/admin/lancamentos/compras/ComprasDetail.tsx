@@ -375,12 +375,6 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
         </div>
       </motion.div>
 
-      <CfopMappingDialog
-        open={mappingOpen}
-        onOpenChange={setMappingOpen}
-        clientId={clientId}
-        onSaved={fetchData}
-      />
 
       <Dialog open={!!selectionUploadId} onOpenChange={(o) => !o && setSelectionUploadId(null)}>
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
