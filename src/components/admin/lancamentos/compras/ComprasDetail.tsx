@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import {
   Upload, FileText, Loader2, Trash2, RefreshCw, CheckCircle2,
-  AlertCircle, Calendar, Settings2, Play, CheckSquare,
+  AlertCircle, Calendar, Play, CheckSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +15,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import { CfopMappingDialog } from "./CfopMappingDialog";
 
 const MONTHS = [
   { value: "01", label: "Janeiro" }, { value: "02", label: "Fevereiro" },
