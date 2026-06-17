@@ -324,49 +324,14 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
                     </div>
 
                     {linhas.length > 0 && (
-                      <>
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="w-[44px]">
-                                <Checkbox checked={allChecked} onCheckedChange={(v) => toggleAll(u.id, !!v)} />
-                              </TableHead>
-                              <TableHead className="w-[80px]">CFOP</TableHead>
-                              <TableHead>Descrição</TableHead>
-                              <TableHead className="text-right w-[150px]">Vr. Contábil (R$)</TableHead>
-                              <TableHead className="w-[140px] text-xs">Conta D / C</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {linhas.map((l, i) => {
-                              const mapped = mappedCfops.has(l.cfop);
-                              return (
-                                <TableRow key={i} className={cn(!mapped && l.selecionado && "bg-destructive/5")}>
-                                  <TableCell>
-                                    <Checkbox checked={l.selecionado} onCheckedChange={(v) => toggleLinha(u.id, i, !!v)} />
-                                  </TableCell>
-                                  <TableCell className="font-mono text-xs">{l.cfop}</TableCell>
-                                  <TableCell className="text-sm">{l.descricao}</TableCell>
-                                  <TableCell className="text-right font-mono text-sm">{formatBRL(l.vr_contabil)}</TableCell>
-                                  <TableCell className="text-xs">
-                                    {mapped ? (
-                                      <span className="text-muted-foreground">mapeado</span>
-                                    ) : (
-                                      <span className="text-destructive">não mapeado</span>
-                                    )}
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            })}
-                          </TableBody>
-                        </Table>
-                        <div className="px-4 py-3 border-t border-border flex justify-end">
-                          <Button size="sm" disabled={confirmingId === u.id} onClick={() => handleConfirm(u.id)}>
-                            {confirmingId === u.id ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <CheckSquare className="w-3.5 h-3.5 mr-1.5" />}
-                            Confirmar e lançar
-                          </Button>
-                        </div>
-                      </>
+                      <div className="px-4 py-3 border-t border-border flex items-center justify-between">
+                        <p className="text-xs text-muted-foreground">
+                          {linhas.length} linha(s) extraída(s) • {linhas.filter(l => l.selecionado).length} pré-selecionada(s)
+                        </p>
+                        <Button size="sm" variant="outline" onClick={() => setSelectionUploadId(u.id)}>
+                          <CheckSquare className="w-3.5 h-3.5 mr-1.5" /> Selecionar linhas
+                        </Button>
+                      </div>
                     )}
                   </div>
                 );
