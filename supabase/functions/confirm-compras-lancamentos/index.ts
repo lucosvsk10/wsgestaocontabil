@@ -13,6 +13,17 @@ const lastDayOfCompetencia = (competencia: string): string | null => {
   return `${m[1]}-${m[2]}-${String(lastDay).padStart(2, "0")}`;
 };
 
+const CFOP_RULES: Record<string, { debito: string; credito: string }> = {
+  "1101": { debito: "493", credito: "777" },
+  "2101": { debito: "493", credito: "777" },
+  "1407": { debito: "494", credito: "777" },
+  "1556": { debito: "494", credito: "777" },
+  "2407": { debito: "494", credito: "777" },
+  "2556": { debito: "494", credito: "777" },
+  "1102": { debito: "486", credito: "777" },
+  "2102": { debito: "486", credito: "777" },
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
