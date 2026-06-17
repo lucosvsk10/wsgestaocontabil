@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import {
   Upload, FileText, Loader2, Trash2, RefreshCw, CheckCircle2,
-  AlertCircle, Calendar, Settings2, Play, CheckSquare,
+  AlertCircle, Calendar, Play, CheckSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +15,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import { CfopMappingDialog } from "./CfopMappingDialog";
 
 const MONTHS = [
   { value: "01", label: "Janeiro" }, { value: "02", label: "Fevereiro" },
@@ -71,30 +70,26 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
 
   const [uploads, setUploads] = useState<ComprasUpload[]>([]);
   const [lancamentos, setLancamentos] = useState<ComprasLancamento[]>([]);
-  const [mappedCfops, setMappedCfops] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [editedLinhas, setEditedLinhas] = useState<Record<string, Linha[]>>({});
-  const [mappingOpen, setMappingOpen] = useState(false);
   const [selectionUploadId, setSelectionUploadId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [{ data: ups }, { data: lans }, { data: mps }] = await Promise.all([
+      const [{ data: ups }, { data: lans }] = await Promise.all([
         supabase.from("compras_uploads").select("*")
           .eq("client_id", clientId).eq("competencia", competencia)
           .order("created_at", { ascending: false }),
         supabase.from("compras_lancamentos").select("*")
           .eq("client_id", clientId).eq("competencia", competencia)
           .order("ordem", { ascending: true }),
-        supabase.from("compras_cfop_mapping").select("cfop").eq("client_id", clientId),
       ]);
       setUploads((ups || []) as ComprasUpload[]);
       setLancamentos((lans || []) as ComprasLancamento[]);
-      setMappedCfops(new Set((mps || []).map((m: any) => String(m.cfop))));
       // Inicializar edição com linhas do banco
       const ed: Record<string, Linha[]> = {};
       (ups || []).forEach((u: any) => {
@@ -186,9 +181,10 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
   const handleConfirm = async (uploadId: string) => {
     const linhas = (editedLinhas[uploadId] || []).filter((l) => l.selecionado && l.vr_contabil > 0);
     if (!linhas.length) { toast.error("Selecione pelo menos uma linha"); return; }
-    const semMap = linhas.filter((l) => !mappedCfops.has(l.cfop));
+    const CFOPS_OK = new Set(["1101","2101","1102","2102","1407","1556","2407","2556"]);
+    const semMap = linhas.filter((l) => !CFOPS_OK.has(String(l.cfop)));
     if (semMap.length) {
-      toast.error(`CFOP(s) sem mapeamento: ${[...new Set(semMap.map(l => l.cfop))].join(", ")}. Abra "Mapear CFOPs".`);
+      toast.error(`CFOP(s) não suportado(s): ${[...new Set(semMap.map(l => l.cfop))].join(", ")}. Desmarque essas linhas.`);
       return;
     }
     setConfirmingId(uploadId);
@@ -263,9 +259,6 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
             </Select>
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={() => setMappingOpen(true)} className="h-9">
-              <Settings2 className="w-3.5 h-3.5 mr-1.5" /> Mapear CFOPs
-            </Button>
             <Button size="sm" variant="outline" onClick={fetchData} className="h-9">
               <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Atualizar
             </Button>
@@ -381,12 +374,6 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
         </div>
       </motion.div>
 
-      <CfopMappingDialog
-        open={mappingOpen}
-        onOpenChange={setMappingOpen}
-        clientId={clientId}
-        onSaved={fetchData}
-      />
 
       <Dialog open={!!selectionUploadId} onOpenChange={(o) => !o && setSelectionUploadId(null)}>
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
@@ -413,27 +400,18 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
                         <TableHead className="w-[80px]">CFOP</TableHead>
                         <TableHead>Descrição</TableHead>
                         <TableHead className="text-right w-[150px]">Vr. Contábil (R$)</TableHead>
-                        <TableHead className="w-[120px] text-xs">Mapeamento</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {linhas.map((l, i) => {
-                        const mapped = mappedCfops.has(l.cfop);
                         return (
-                          <TableRow key={i} className={cn(!mapped && l.selecionado && "bg-destructive/5")}>
+                          <TableRow key={i}>
                             <TableCell>
                               <Checkbox checked={l.selecionado} onCheckedChange={(v) => toggleLinha(selectionUploadId, i, !!v)} />
                             </TableCell>
                             <TableCell className="font-mono text-xs">{l.cfop}</TableCell>
                             <TableCell className="text-sm">{l.descricao}</TableCell>
                             <TableCell className="text-right font-mono text-sm">{formatBRL(l.vr_contabil)}</TableCell>
-                            <TableCell className="text-xs">
-                              {mapped ? (
-                                <span className="text-emerald-600">OK</span>
-                              ) : (
-                                <span className="text-destructive">não mapeado</span>
-                              )}
-                            </TableCell>
                           </TableRow>
                         );
                       })}
