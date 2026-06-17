@@ -4,6 +4,7 @@ import { ClientLancamentosDetail } from "@/components/admin/lancamentos/ClientLa
 import { CompanySelectorTop } from "@/components/admin/lancamentos/CompanySelectorTop";
 import { LancamentoModulesGrid } from "@/components/admin/lancamentos/LancamentoModulesGrid";
 import { FolhaPagamentoDetail } from "@/components/admin/lancamentos/folha/FolhaPagamentoDetail";
+import { ComprasDetail } from "@/components/admin/lancamentos/compras/ComprasDetail";
 import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 const STORAGE_KEY = "admin.lancamentos.selectedClientId";
 
-type View = "hub" | "despesas" | "folha";
+type View = "hub" | "despesas" | "folha" | "compras";
 
 const AdminLancamentos = () => {
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
