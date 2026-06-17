@@ -1,17 +1,19 @@
 import { motion } from "framer-motion";
-import { Receipt, Wallet, Lock } from "lucide-react";
+import { Receipt, Wallet, ShoppingCart, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface LancamentoModulesGridProps {
   disabled: boolean;
   onOpenDespesas: () => void;
   onOpenFolha: () => void;
+  onOpenCompras: () => void;
 }
 
 export const LancamentoModulesGrid = ({
   disabled,
   onOpenDespesas,
   onOpenFolha,
+  onOpenCompras,
 }: LancamentoModulesGridProps) => {
   const modules = [
     {
@@ -31,6 +33,15 @@ export const LancamentoModulesGrid = ({
       icon: Wallet,
       active: true,
       onClick: onOpenFolha,
+    },
+    {
+      key: "compras",
+      title: "Compras (Entradas por CFOP)",
+      description:
+        "Upload do Registro de Entradas, seleção das linhas a lançar e geração automática pelo plano de contas.",
+      icon: ShoppingCart,
+      active: true,
+      onClick: onOpenCompras,
     },
   ];
 
