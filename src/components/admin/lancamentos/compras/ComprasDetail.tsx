@@ -71,13 +71,11 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
 
   const [uploads, setUploads] = useState<ComprasUpload[]>([]);
   const [lancamentos, setLancamentos] = useState<ComprasLancamento[]>([]);
-  const [mappedCfops, setMappedCfops] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [editedLinhas, setEditedLinhas] = useState<Record<string, Linha[]>>({});
-  const [mappingOpen, setMappingOpen] = useState(false);
   const [selectionUploadId, setSelectionUploadId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
