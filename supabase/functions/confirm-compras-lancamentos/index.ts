@@ -39,18 +39,12 @@ Deno.serve(async (req) => {
       .from("compras_uploads").select("*").eq("id", uploadId).maybeSingle();
     if (upErr || !up) throw new Error("Upload não encontrado");
 
-    const cfops = [...new Set(linhas.map((l: any) => String(l.cfop)).filter(Boolean))];
-    const { data: mapping, error: mErr } = await supa
-      .from("compras_cfop_mapping").select("*")
-      .eq("client_id", up.client_id).in("cfop", cfops);
-    if (mErr) throw mErr;
-    const mapByCfop = new Map<string, any>((mapping || []).map((m: any) => [String(m.cfop), m]));
-
-    const faltando = cfops.filter((c) => !mapByCfop.has(c));
+    const cfopsLinhas = [...new Set(linhas.map((l: any) => String(l.cfop)).filter(Boolean))];
+    const faltando = cfopsLinhas.filter((c) => !CFOP_RULES[c]);
     if (faltando.length) {
       return new Response(JSON.stringify({
-        error: "cfop_nao_mapeado",
-        message: `CFOP(s) sem mapeamento contábil: ${faltando.join(", ")}. Configure em "Mapear CFOPs".`,
+        error: "cfop_nao_suportado",
+        message: `CFOP(s) não suportado(s) para lançamento de compras: ${faltando.join(", ")}. Desmarque essas linhas.`,
         cfops_faltando: faltando,
       }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -66,14 +60,14 @@ Deno.serve(async (req) => {
     const rows = linhas
       .filter((l: any) => Number(l.vr_contabil) > 0)
       .map((l: any, idx: number) => {
-        const map = mapByCfop.get(String(l.cfop));
+        const rule = CFOP_RULES[String(l.cfop)];
         const desc = String(l.descricao || "").toUpperCase().trim();
         return {
           client_id: up.client_id,
           competencia: up.competencia,
           data,
-          conta_debito: String(map.conta_debito),
-          conta_credito: String(map.conta_credito),
+          conta_debito: rule.debito,
+          conta_credito: rule.credito,
           cfop: String(l.cfop),
           historico: `${desc} - ${sufixo}`,
           valor: round2(Number(l.vr_contabil)),
