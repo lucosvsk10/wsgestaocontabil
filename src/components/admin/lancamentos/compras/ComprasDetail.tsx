@@ -260,9 +260,6 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
             </Select>
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={() => setMappingOpen(true)} className="h-9">
-              <Settings2 className="w-3.5 h-3.5 mr-1.5" /> Mapear CFOPs
-            </Button>
             <Button size="sm" variant="outline" onClick={fetchData} className="h-9">
               <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Atualizar
             </Button>
