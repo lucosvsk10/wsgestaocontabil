@@ -387,6 +387,76 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
         clientId={clientId}
         onSaved={fetchData}
       />
+
+      <Dialog open={!!selectionUploadId} onOpenChange={(o) => !o && setSelectionUploadId(null)}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Selecione as linhas a lançar</DialogTitle>
+            <DialogDescription>
+              Itens pré-marcados seguem o mapeamento padrão de CFOPs. Ajuste se necessário e confirme para gerar os lançamentos.
+            </DialogDescription>
+          </DialogHeader>
+          {selectionUploadId && (() => {
+            const linhas = editedLinhas[selectionUploadId] || [];
+            const allChecked = linhas.length > 0 && linhas.every((l) => l.selecionado);
+            const selCount = linhas.filter((l) => l.selecionado).length;
+            const totalSel = linhas.filter((l) => l.selecionado).reduce((s, l) => s + (l.vr_contabil || 0), 0);
+            return (
+              <>
+                <div className="overflow-auto border border-border rounded-lg">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-card z-10">
+                      <TableRow>
+                        <TableHead className="w-[44px]">
+                          <Checkbox checked={allChecked} onCheckedChange={(v) => toggleAll(selectionUploadId, !!v)} />
+                        </TableHead>
+                        <TableHead className="w-[80px]">CFOP</TableHead>
+                        <TableHead>Descrição</TableHead>
+                        <TableHead className="text-right w-[150px]">Vr. Contábil (R$)</TableHead>
+                        <TableHead className="w-[120px] text-xs">Mapeamento</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {linhas.map((l, i) => {
+                        const mapped = mappedCfops.has(l.cfop);
+                        return (
+                          <TableRow key={i} className={cn(!mapped && l.selecionado && "bg-destructive/5")}>
+                            <TableCell>
+                              <Checkbox checked={l.selecionado} onCheckedChange={(v) => toggleLinha(selectionUploadId, i, !!v)} />
+                            </TableCell>
+                            <TableCell className="font-mono text-xs">{l.cfop}</TableCell>
+                            <TableCell className="text-sm">{l.descricao}</TableCell>
+                            <TableCell className="text-right font-mono text-sm">{formatBRL(l.vr_contabil)}</TableCell>
+                            <TableCell className="text-xs">
+                              {mapped ? (
+                                <span className="text-emerald-600">OK</span>
+                              ) : (
+                                <span className="text-destructive">não mapeado</span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+                <DialogFooter className="flex-row items-center justify-between sm:justify-between gap-3">
+                  <p className="text-xs text-muted-foreground">
+                    {selCount} de {linhas.length} selecionada(s) • Total: R$ {formatBRL(totalSel)}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setSelectionUploadId(null)}>Cancelar</Button>
+                    <Button size="sm" disabled={confirmingId === selectionUploadId} onClick={() => handleConfirm(selectionUploadId)}>
+                      {confirmingId === selectionUploadId ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <CheckSquare className="w-3.5 h-3.5 mr-1.5" />}
+                      Confirmar e lançar
+                    </Button>
+                  </div>
+                </DialogFooter>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
