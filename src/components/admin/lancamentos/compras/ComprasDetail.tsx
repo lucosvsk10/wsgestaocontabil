@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
