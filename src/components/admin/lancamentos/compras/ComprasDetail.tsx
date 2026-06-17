@@ -205,6 +205,7 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
       const result = await res.json();
       if (!res.ok) throw new Error(result.message || result.error || "Erro");
       toast.success(`${result.total} lançamento(s) gerados`);
+      setSelectionUploadId(null);
       navigate(`/admin/lancamentos/compras/${clientId}/editar?competencia=${competencia}`);
     } catch (e: any) {
       toast.error(e.message);
