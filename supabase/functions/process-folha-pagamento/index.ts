@@ -63,10 +63,23 @@ Antes de retornar a resposta, realize uma soma de verificação:
 - Valores: numéricos limpos (float). Se o resultado acumulado de um grupo for zero, não gere a linha.
 
 ### FORMATO DO RETORNO (JSON STRICT)
-Retorne ESTRITAMENTE um array JSON, sem markdown, sem texto introdutório:
-[
-  { "data": "DD/MM/AAAA", "conta_debito": "STRING", "conta_credito": "STRING", "historico": "STRING", "valor": NUMBER }
-]`;
+Retorne ESTRITAMENTE um objeto JSON com DUAS chaves:
+{
+  "campos_pdf": {
+    "salario_base": NUMBER,
+    "salario_familia": NUMBER,
+    "ferias": NUMBER,
+    "um_terco_ferias": NUMBER,
+    "ajuda_custo": NUMBER,
+    "e_consignado": NUMBER,
+    "rendimentos_total": NUMBER,
+    "pro_labore": NUMBER
+  },
+  "lancamentos": [
+    { "data": "DD/MM/AAAA", "conta_debito": "STRING", "conta_credito": "STRING", "historico": "STRING", "valor": NUMBER }
+  ]
+}
+Use 0 para qualquer campo numérico ausente em "campos_pdf". NUNCA omita uma chave de "campos_pdf". "campos_pdf" deve refletir EXATAMENTE os valores brutos extraídos do PDF, sem agrupamentos.`;
 
 
 const parseDateBR = (s: string): string | null => {
