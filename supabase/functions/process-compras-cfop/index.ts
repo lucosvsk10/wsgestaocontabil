@@ -16,7 +16,7 @@ const SYSTEM_PROMPT = `Você é um assistente especializado em contabilidade fis
 3. Aplique um status de pré-seleção:
    - "selecionado": true para compras e materiais (1101, 2101, 1102, 2102, 1407, 1556, 2407, 2556 e variações de comercialização/industrialização).
    - "selecionado": false para despesas de consumo direto (1252 Energia Elétrica, 1653 Combustíveis e Lubrificantes) e outros CFOPs de serviços/despesas que não são compras de mercadoria.
-4. Se a lista de CFOPs já mapeados pelo cliente for fornecida no contexto, use-a como referência adicional: CFOPs marcados com "ativo_padrao=true" devem vir selecionados; "ativo_padrao=false" devem vir desmarcados; CFOPs não mapeados seguem a regra geral acima.
+4. Os CFOPs que DEVEM vir selecionados (compras lançáveis) são exclusivamente: 1101, 2101, 1102, 2102, 1407, 1556, 2407, 2556. Qualquer outro CFOP deve vir com "selecionado": false.
 5. Se um CFOP aparecer mais de uma vez no relatório, some os "Vr. Contábil" em uma única linha por CFOP.
 
 ### FORMATO DO RETORNO (JSON STRICT)
