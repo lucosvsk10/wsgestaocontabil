@@ -143,6 +143,12 @@ const AppRoutes = () => {
           <AdminFolhaEditor />
         </PrivateRoute>
       } />
+
+      <Route path="/admin/lancamentos/compras/:clientId/editar" element={
+        <PrivateRoute requiredRole="admin">
+          <AdminComprasEditor />
+        </PrivateRoute>
+      } />
       
       {/* Client routes */}
       <Route path="/client/*" element={
