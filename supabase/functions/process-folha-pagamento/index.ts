@@ -97,26 +97,52 @@ const lastDayOfCompetencia = (competencia: string): string | null => {
   return `${m[1]}-${m[2]}-${String(lastDay).padStart(2, "0")}`;
 };
 
-const extractJsonArray = (text: string): any[] => {
+const extractAiPayload = (text: string): { campos: Record<string, number>; lancamentos: any[] } => {
   const cleaned = String(text || "").replace(/```json/gi, "").replace(/```/g, "").trim();
-  const start = cleaned.indexOf("[");
-  const end = cleaned.lastIndexOf("]");
-  if (start !== -1 && end !== -1 && end > start) {
-    try { return JSON.parse(cleaned.slice(start, end + 1)); } catch { /* fall through */ }
-  }
-  // Try parsing as object containing an array property
+  let parsed: any = null;
   const objStart = cleaned.indexOf("{");
   const objEnd = cleaned.lastIndexOf("}");
   if (objStart !== -1 && objEnd !== -1 && objEnd > objStart) {
-    try {
-      const obj = JSON.parse(cleaned.slice(objStart, objEnd + 1));
-      for (const k of Object.keys(obj)) {
-        if (Array.isArray(obj[k])) return obj[k];
-      }
-    } catch { /* ignore */ }
+    try { parsed = JSON.parse(cleaned.slice(objStart, objEnd + 1)); } catch { /* ignore */ }
   }
-  throw new Error(`Resposta da IA inválida. Trecho: ${cleaned.slice(0, 300)}`);
+  if (!parsed) {
+    const start = cleaned.indexOf("[");
+    const end = cleaned.lastIndexOf("]");
+    if (start !== -1 && end !== -1 && end > start) {
+      try { parsed = { lancamentos: JSON.parse(cleaned.slice(start, end + 1)) }; } catch { /* ignore */ }
+    }
+  }
+  if (!parsed) throw new Error(`Resposta da IA inválida. Trecho: ${cleaned.slice(0, 300)}`);
+
+  let lancamentos: any[] = [];
+  if (Array.isArray(parsed)) lancamentos = parsed;
+  else if (Array.isArray(parsed.lancamentos)) lancamentos = parsed.lancamentos;
+  else {
+    for (const k of Object.keys(parsed)) {
+      if (Array.isArray(parsed[k])) { lancamentos = parsed[k]; break; }
+    }
+  }
+
+  const rawCampos = (parsed && typeof parsed === "object" && parsed.campos_pdf && typeof parsed.campos_pdf === "object")
+    ? parsed.campos_pdf : {};
+  const num = (v: any) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const campos: Record<string, number> = {
+    salario_base: num(rawCampos.salario_base),
+    salario_familia: num(rawCampos.salario_familia),
+    ferias: num(rawCampos.ferias),
+    um_terco_ferias: num(rawCampos.um_terco_ferias ?? rawCampos["1_3_ferias"] ?? rawCampos.terco_ferias),
+    ajuda_custo: num(rawCampos.ajuda_custo),
+    e_consignado: num(rawCampos.e_consignado ?? rawCampos.eConsignado ?? rawCampos.emprestimo_consignado),
+    rendimentos_total: num(rawCampos.rendimentos_total),
+    pro_labore: num(rawCampos.pro_labore),
+  };
+  return { campos, lancamentos };
 };
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
