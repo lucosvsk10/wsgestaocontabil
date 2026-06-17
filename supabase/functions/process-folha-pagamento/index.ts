@@ -237,7 +237,7 @@ Deno.serve(async (req) => {
 
         const aiJson = await aiRes.json();
         const content = aiJson?.choices?.[0]?.message?.content ?? "";
-        const lancs = extractJsonArray(content);
+        const { campos, lancamentos: lancs } = extractAiPayload(content);
 
         const fallbackDate = lastDayOfCompetencia(competencia);
         const isValidISO = (d: string | null) => {
@@ -249,7 +249,78 @@ Deno.serve(async (req) => {
           return dt.getUTCFullYear() === y && dt.getUTCMonth() === mo - 1 && dt.getUTCDate() === da;
         };
 
-        const rowsToInsert = lancs.map((l: any, idx: number) => {
+        // ====== RECONCILIAÇÃO MATEMÁTICA (via código, não confiar na IA) ======
+        // 1) Valor exato da linha SALÁRIOS (Débito 92 / Crédito 823):
+        //    Salário Base + Salário Família + Férias + 1/3 Férias + Ajuda de Custo
+        const salarioCalculado = round2(
+          campos.salario_base +
+          campos.salario_familia +
+          campos.ferias +
+          campos.um_terco_ferias +
+          campos.ajuda_custo
+        );
+
+        const isSalarioRow = (l: any) =>
+          String(l?.conta_debito ?? "").trim() === "92" &&
+          String(l?.conta_credito ?? "").trim() === "823";
+
+        const isConsignadoRow = (l: any) => {
+          const deb = String(l?.conta_debito ?? "").trim();
+          const hist = String(l?.historico ?? "").toUpperCase();
+          return deb === "823" && /CONSIGN/.test(hist);
+        };
+
+        const lancsArr = Array.isArray(lancs) ? [...lancs] : [];
+
+        // Substitui (ou cria) a linha de salários com o valor calculado
+        const salarioIdx = lancsArr.findIndex(isSalarioRow);
+        if (salarioCalculado > 0) {
+          if (salarioIdx >= 0) {
+            lancsArr[salarioIdx] = {
+              ...lancsArr[salarioIdx],
+              valor: salarioCalculado,
+              historico: "SALARIOS E REMUNERAÇÕES A PAGAR",
+            };
+          } else {
+            lancsArr.unshift({
+              data: null,
+              conta_debito: "92",
+              conta_credito: "823",
+              historico: "SALARIOS E REMUNERAÇÕES A PAGAR",
+              valor: salarioCalculado,
+            });
+          }
+        } else if (salarioIdx >= 0) {
+          // Sem valor calculado mas IA criou linha: remove se zerada
+          if (!(Number(lancsArr[salarioIdx]?.valor) > 0)) lancsArr.splice(salarioIdx, 1);
+        }
+
+        // Garante linha de eConsignado (Débito 823 / Crédito 912) se houver valor
+        const eCons = round2(campos.e_consignado);
+        const consIdx = lancsArr.findIndex(isConsignadoRow);
+        const mmAaaa = competencia.match(/^(\d{4})-(\d{2})/);
+        const histConsig = `EMPRESTIMO CONSIGNADO EM FOLHA MÊS ${mmAaaa ? `${mmAaaa[2]}/${mmAaaa[1]}` : ""}`.trim();
+        if (eCons > 0) {
+          if (consIdx >= 0) {
+            lancsArr[consIdx] = {
+              ...lancsArr[consIdx],
+              conta_debito: "823",
+              conta_credito: String(lancsArr[consIdx]?.conta_credito ?? "912") || "912",
+              valor: eCons,
+              historico: histConsig,
+            };
+          } else {
+            lancsArr.push({
+              data: null,
+              conta_debito: "823",
+              conta_credito: "912",
+              historico: histConsig,
+              valor: eCons,
+            });
+          }
+        }
+
+        const rowsToInsert = lancsArr.map((l: any, idx: number) => {
           const parsed = parseDateBR(l.data);
           const data = isValidISO(parsed) ? parsed : fallbackDate;
           return {
@@ -259,11 +330,11 @@ Deno.serve(async (req) => {
             conta_debito: l.conta_debito != null ? String(l.conta_debito) : null,
             conta_credito: l.conta_credito != null ? String(l.conta_credito) : null,
             historico: String(l.historico || "").toUpperCase(),
-            valor: Number(l.valor) || 0,
+            valor: round2(Number(l.valor) || 0),
             ordem: allRows.length + idx,
             source_upload_id: up.id,
           };
-        });
+        }).filter((r) => r.valor > 0);
         allRows.push(...rowsToInsert);
         totalLancamentos += rowsToInsert.length;
 
