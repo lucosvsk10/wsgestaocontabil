@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { CfopMappingDialog } from "./CfopMappingDialog";
@@ -77,6 +78,7 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [editedLinhas, setEditedLinhas] = useState<Record<string, Linha[]>>({});
   const [mappingOpen, setMappingOpen] = useState(false);
+  const [selectionUploadId, setSelectionUploadId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -108,39 +110,7 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const onDrop = useCallback(async (files: File[]) => {
-    if (!files.length) return;
-    setUploading(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      for (const file of files) {
-        if (!file.name.toLowerCase().endsWith(".pdf")) {
-          toast.error(`${file.name} não é PDF`);
-          continue;
-        }
-        const path = `compras/${clientId}/${competencia}/${Date.now()}_${file.name.replace(/[^\w.-]/g, "_")}`;
-        const { error: upErr } = await supabase.storage.from("lancamentos").upload(path, file, {
-          contentType: "application/pdf",
-        });
-        if (upErr) { toast.error(`Erro ao enviar ${file.name}: ${upErr.message}`); continue; }
-        const { error: insErr } = await supabase.from("compras_uploads").insert({
-          client_id: clientId, competencia, storage_path: path,
-          nome_arquivo: file.name, status: "pendente", uploaded_by: user?.id,
-        });
-        if (insErr) toast.error(`Erro ao registrar ${file.name}: ${insErr.message}`);
-      }
-      toast.success("Upload concluído");
-      fetchData();
-    } finally {
-      setUploading(false);
-    }
-  }, [clientId, competencia, fetchData]);
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop, accept: { "application/pdf": [".pdf"] }, multiple: true,
-  });
-
-  const handleProcess = async (uploadId: string) => {
+  const processUpload = useCallback(async (uploadId: string): Promise<Linha[] | null> => {
     setProcessingId(uploadId);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -154,13 +124,63 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
       );
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "Erro");
-      toast.success(`Linhas extraídas: ${result.linhas?.length || 0}`);
-      fetchData();
+      const linhas = (result.linhas || []) as Linha[];
+      toast.success(`Linhas extraídas: ${linhas.length}`);
+      setEditedLinhas((prev) => ({ ...prev, [uploadId]: linhas }));
+      return linhas;
     } catch (e: any) {
       toast.error("Erro: " + e.message);
+      return null;
     } finally {
       setProcessingId(null);
     }
+  }, []);
+
+  const onDrop = useCallback(async (files: File[]) => {
+    if (!files.length) return;
+    setUploading(true);
+    const newIds: string[] = [];
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      for (const file of files) {
+        if (!file.name.toLowerCase().endsWith(".pdf")) {
+          toast.error(`${file.name} não é PDF`);
+          continue;
+        }
+        const path = `compras/${clientId}/${competencia}/${Date.now()}_${file.name.replace(/[^\w.-]/g, "_")}`;
+        const { error: upErr } = await supabase.storage.from("lancamentos").upload(path, file, {
+          contentType: "application/pdf",
+        });
+        if (upErr) { toast.error(`Erro ao enviar ${file.name}: ${upErr.message}`); continue; }
+        const { data: ins, error: insErr } = await supabase.from("compras_uploads").insert({
+          client_id: clientId, competencia, storage_path: path,
+          nome_arquivo: file.name, status: "pendente", uploaded_by: user?.id,
+        }).select("id").single();
+        if (insErr) { toast.error(`Erro ao registrar ${file.name}: ${insErr.message}`); continue; }
+        if (ins?.id) newIds.push(ins.id);
+      }
+      await fetchData();
+    } finally {
+      setUploading(false);
+    }
+    // Auto-processa cada upload sequencialmente e abre o modal de seleção do último
+    for (const id of newIds) {
+      const linhas = await processUpload(id);
+      if (linhas && linhas.length > 0) {
+        setSelectionUploadId(id);
+      }
+    }
+    if (newIds.length) fetchData();
+  }, [clientId, competencia, fetchData, processUpload]);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop, accept: { "application/pdf": [".pdf"] }, multiple: true,
+  });
+
+  const handleProcess = async (uploadId: string) => {
+    const linhas = await processUpload(uploadId);
+    if (linhas && linhas.length > 0) setSelectionUploadId(uploadId);
+    fetchData();
   };
 
   const handleConfirm = async (uploadId: string) => {
@@ -185,6 +205,7 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
       const result = await res.json();
       if (!res.ok) throw new Error(result.message || result.error || "Erro");
       toast.success(`${result.total} lançamento(s) gerados`);
+      setSelectionUploadId(null);
       navigate(`/admin/lancamentos/compras/${clientId}/editar?competencia=${competencia}`);
     } catch (e: any) {
       toast.error(e.message);
@@ -303,49 +324,14 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
                     </div>
 
                     {linhas.length > 0 && (
-                      <>
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="w-[44px]">
-                                <Checkbox checked={allChecked} onCheckedChange={(v) => toggleAll(u.id, !!v)} />
-                              </TableHead>
-                              <TableHead className="w-[80px]">CFOP</TableHead>
-                              <TableHead>Descrição</TableHead>
-                              <TableHead className="text-right w-[150px]">Vr. Contábil (R$)</TableHead>
-                              <TableHead className="w-[140px] text-xs">Conta D / C</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {linhas.map((l, i) => {
-                              const mapped = mappedCfops.has(l.cfop);
-                              return (
-                                <TableRow key={i} className={cn(!mapped && l.selecionado && "bg-destructive/5")}>
-                                  <TableCell>
-                                    <Checkbox checked={l.selecionado} onCheckedChange={(v) => toggleLinha(u.id, i, !!v)} />
-                                  </TableCell>
-                                  <TableCell className="font-mono text-xs">{l.cfop}</TableCell>
-                                  <TableCell className="text-sm">{l.descricao}</TableCell>
-                                  <TableCell className="text-right font-mono text-sm">{formatBRL(l.vr_contabil)}</TableCell>
-                                  <TableCell className="text-xs">
-                                    {mapped ? (
-                                      <span className="text-muted-foreground">mapeado</span>
-                                    ) : (
-                                      <span className="text-destructive">não mapeado</span>
-                                    )}
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            })}
-                          </TableBody>
-                        </Table>
-                        <div className="px-4 py-3 border-t border-border flex justify-end">
-                          <Button size="sm" disabled={confirmingId === u.id} onClick={() => handleConfirm(u.id)}>
-                            {confirmingId === u.id ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <CheckSquare className="w-3.5 h-3.5 mr-1.5" />}
-                            Confirmar e lançar
-                          </Button>
-                        </div>
-                      </>
+                      <div className="px-4 py-3 border-t border-border flex items-center justify-between">
+                        <p className="text-xs text-muted-foreground">
+                          {linhas.length} linha(s) extraída(s) • {linhas.filter(l => l.selecionado).length} pré-selecionada(s)
+                        </p>
+                        <Button size="sm" variant="outline" onClick={() => setSelectionUploadId(u.id)}>
+                          <CheckSquare className="w-3.5 h-3.5 mr-1.5" /> Selecionar linhas
+                        </Button>
+                      </div>
                     )}
                   </div>
                 );
@@ -401,6 +387,76 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
         clientId={clientId}
         onSaved={fetchData}
       />
+
+      <Dialog open={!!selectionUploadId} onOpenChange={(o) => !o && setSelectionUploadId(null)}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Selecione as linhas a lançar</DialogTitle>
+            <DialogDescription>
+              Itens pré-marcados seguem o mapeamento padrão de CFOPs. Ajuste se necessário e confirme para gerar os lançamentos.
+            </DialogDescription>
+          </DialogHeader>
+          {selectionUploadId && (() => {
+            const linhas = editedLinhas[selectionUploadId] || [];
+            const allChecked = linhas.length > 0 && linhas.every((l) => l.selecionado);
+            const selCount = linhas.filter((l) => l.selecionado).length;
+            const totalSel = linhas.filter((l) => l.selecionado).reduce((s, l) => s + (l.vr_contabil || 0), 0);
+            return (
+              <>
+                <div className="overflow-auto border border-border rounded-lg">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-card z-10">
+                      <TableRow>
+                        <TableHead className="w-[44px]">
+                          <Checkbox checked={allChecked} onCheckedChange={(v) => toggleAll(selectionUploadId, !!v)} />
+                        </TableHead>
+                        <TableHead className="w-[80px]">CFOP</TableHead>
+                        <TableHead>Descrição</TableHead>
+                        <TableHead className="text-right w-[150px]">Vr. Contábil (R$)</TableHead>
+                        <TableHead className="w-[120px] text-xs">Mapeamento</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {linhas.map((l, i) => {
+                        const mapped = mappedCfops.has(l.cfop);
+                        return (
+                          <TableRow key={i} className={cn(!mapped && l.selecionado && "bg-destructive/5")}>
+                            <TableCell>
+                              <Checkbox checked={l.selecionado} onCheckedChange={(v) => toggleLinha(selectionUploadId, i, !!v)} />
+                            </TableCell>
+                            <TableCell className="font-mono text-xs">{l.cfop}</TableCell>
+                            <TableCell className="text-sm">{l.descricao}</TableCell>
+                            <TableCell className="text-right font-mono text-sm">{formatBRL(l.vr_contabil)}</TableCell>
+                            <TableCell className="text-xs">
+                              {mapped ? (
+                                <span className="text-emerald-600">OK</span>
+                              ) : (
+                                <span className="text-destructive">não mapeado</span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+                <DialogFooter className="flex-row items-center justify-between sm:justify-between gap-3">
+                  <p className="text-xs text-muted-foreground">
+                    {selCount} de {linhas.length} selecionada(s) • Total: R$ {formatBRL(totalSel)}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setSelectionUploadId(null)}>Cancelar</Button>
+                    <Button size="sm" disabled={confirmingId === selectionUploadId} onClick={() => handleConfirm(selectionUploadId)}>
+                      {confirmingId === selectionUploadId ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <CheckSquare className="w-3.5 h-3.5 mr-1.5" />}
+                      Confirmar e lançar
+                    </Button>
+                  </div>
+                </DialogFooter>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
