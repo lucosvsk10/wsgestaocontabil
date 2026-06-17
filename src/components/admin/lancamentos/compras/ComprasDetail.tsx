@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -60,6 +61,7 @@ interface ComprasLancamento {
 }
 
 export const ComprasDetail = ({ clientId, clientName }: Props) => {
+  const navigate = useNavigate();
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(String(now.getMonth() + 1).padStart(2, "0"));
   const [selectedYear, setSelectedYear] = useState(String(now.getFullYear()));
@@ -183,7 +185,7 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
       const result = await res.json();
       if (!res.ok) throw new Error(result.message || result.error || "Erro");
       toast.success(`${result.total} lançamento(s) gerados`);
-      fetchData();
+      navigate(`/admin/lancamentos/compras/${clientId}/editar?competencia=${competencia}`);
     } catch (e: any) {
       toast.error(e.message);
     } finally {
