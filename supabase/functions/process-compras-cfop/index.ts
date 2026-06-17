@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
         {
           role: "user",
           content: [
-            { type: "text", text: `${mappingText}\n\nAnalise o PDF do "Registro de Entradas por CFOP" anexo e retorne ESTRITAMENTE o JSON com a chave "linhas" conforme especificado.` },
+            { type: "text", text: `Analise o PDF do "Registro de Entradas por CFOP" anexo e retorne ESTRITAMENTE o JSON com a chave "linhas" conforme especificado.` },
             { type: "file", file: { filename: up.nome_arquivo, file_data: `data:application/pdf;base64,${b64}` } },
           ],
         },
