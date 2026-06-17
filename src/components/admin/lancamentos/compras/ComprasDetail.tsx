@@ -110,39 +110,7 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const onDrop = useCallback(async (files: File[]) => {
-    if (!files.length) return;
-    setUploading(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      for (const file of files) {
-        if (!file.name.toLowerCase().endsWith(".pdf")) {
-          toast.error(`${file.name} não é PDF`);
-          continue;
-        }
-        const path = `compras/${clientId}/${competencia}/${Date.now()}_${file.name.replace(/[^\w.-]/g, "_")}`;
-        const { error: upErr } = await supabase.storage.from("lancamentos").upload(path, file, {
-          contentType: "application/pdf",
-        });
-        if (upErr) { toast.error(`Erro ao enviar ${file.name}: ${upErr.message}`); continue; }
-        const { error: insErr } = await supabase.from("compras_uploads").insert({
-          client_id: clientId, competencia, storage_path: path,
-          nome_arquivo: file.name, status: "pendente", uploaded_by: user?.id,
-        });
-        if (insErr) toast.error(`Erro ao registrar ${file.name}: ${insErr.message}`);
-      }
-      toast.success("Upload concluído");
-      fetchData();
-    } finally {
-      setUploading(false);
-    }
-  }, [clientId, competencia, fetchData]);
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop, accept: { "application/pdf": [".pdf"] }, multiple: true,
-  });
-
-  const handleProcess = async (uploadId: string) => {
+  const processUpload = useCallback(async (uploadId: string): Promise<Linha[] | null> => {
     setProcessingId(uploadId);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -156,13 +124,63 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
       );
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "Erro");
-      toast.success(`Linhas extraídas: ${result.linhas?.length || 0}`);
-      fetchData();
+      const linhas = (result.linhas || []) as Linha[];
+      toast.success(`Linhas extraídas: ${linhas.length}`);
+      setEditedLinhas((prev) => ({ ...prev, [uploadId]: linhas }));
+      return linhas;
     } catch (e: any) {
       toast.error("Erro: " + e.message);
+      return null;
     } finally {
       setProcessingId(null);
     }
+  }, []);
+
+  const onDrop = useCallback(async (files: File[]) => {
+    if (!files.length) return;
+    setUploading(true);
+    const newIds: string[] = [];
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      for (const file of files) {
+        if (!file.name.toLowerCase().endsWith(".pdf")) {
+          toast.error(`${file.name} não é PDF`);
+          continue;
+        }
+        const path = `compras/${clientId}/${competencia}/${Date.now()}_${file.name.replace(/[^\w.-]/g, "_")}`;
+        const { error: upErr } = await supabase.storage.from("lancamentos").upload(path, file, {
+          contentType: "application/pdf",
+        });
+        if (upErr) { toast.error(`Erro ao enviar ${file.name}: ${upErr.message}`); continue; }
+        const { data: ins, error: insErr } = await supabase.from("compras_uploads").insert({
+          client_id: clientId, competencia, storage_path: path,
+          nome_arquivo: file.name, status: "pendente", uploaded_by: user?.id,
+        }).select("id").single();
+        if (insErr) { toast.error(`Erro ao registrar ${file.name}: ${insErr.message}`); continue; }
+        if (ins?.id) newIds.push(ins.id);
+      }
+      await fetchData();
+    } finally {
+      setUploading(false);
+    }
+    // Auto-processa cada upload sequencialmente e abre o modal de seleção do último
+    for (const id of newIds) {
+      const linhas = await processUpload(id);
+      if (linhas && linhas.length > 0) {
+        setSelectionUploadId(id);
+      }
+    }
+    if (newIds.length) fetchData();
+  }, [clientId, competencia, fetchData, processUpload]);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop, accept: { "application/pdf": [".pdf"] }, multiple: true,
+  });
+
+  const handleProcess = async (uploadId: string) => {
+    const linhas = await processUpload(uploadId);
+    if (linhas && linhas.length > 0) setSelectionUploadId(uploadId);
+    fetchData();
   };
 
   const handleConfirm = async (uploadId: string) => {
