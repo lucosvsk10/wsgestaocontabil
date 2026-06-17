@@ -1,65 +1,37 @@
-## Novo módulo: Compras (Registro de Entradas por CFOP)
+## Objetivo
+Eliminar qualquer etapa de "mapear CFOPs". O usuário só seleciona as linhas; o sistema decide débito/crédito automaticamente pela regra fixa de CFOP.
 
-Adiciona um terceiro card no hub de lançamentos do admin (ao lado de Despesas e Folha), com fluxo: upload PDF → IA extrai blocos por CFOP → usuário seleciona quais lançar → sistema gera os lançamentos contábeis e grava em `lancamentos_alinhados` para entrar no fechamento do mês.
+## Regra fixa (hardcoded)
+- CFOP **1101 / 2101** → Débito **493** | Crédito **777**
+- CFOP **1407 / 1556 / 2407 / 2556** → Débito **494** | Crédito **777**
+- CFOP **1102 / 2102** (comercialização) → Débito **486** | Crédito **777**
+- Qualquer outro CFOP → a linha **não é pré-selecionada** (despesa/utilidade). Se o usuário marcar manualmente, o sistema bloqueia com aviso "CFOP não suportado para lançamento de compras".
 
-### 1. Banco de dados
-Nova tabela `compras_uploads` (espelhando `folha_uploads`):
-- `user_id`, `competencia` (YYYY-MM), `file_url`, `file_name`, `status` (pending/processed/error), `dados_extraidos` (jsonb com as linhas por CFOP), `processed_at`.
-- RLS: admins via `is_any_admin`, dono via `user_id`. GRANTs para authenticated/service_role.
+## Mudanças
 
-Mapeamento CFOP → contas editável por cliente:
-- Nova tabela `compras_cfop_mapping`:
-  - `user_id`, `cfop` (text), `conta_debito` (text), `conta_credito` (text default '777'), `ativo_padrao` (boolean — define se vem pré-selecionado no upload).
-  - RLS por `user_id` + admin.
-  - Seed inicial via UI (não migration): admin pode adicionar/editar.
+### Frontend — `ComprasDetail.tsx`
+- Remover botão **"Mapear CFOPs"** do cabeçalho.
+- Remover toda referência a `mappedCfops` / `CfopMappingDialog` / coluna "Mapeamento" do modal.
+- Modal de seleção fica só com: checkbox, CFOP, Descrição, Vr. Contábil.
+- Pré-seleção feita pela própria IA continua valendo (CFOPs da regra fixa já vêm marcados).
 
-Bucket de storage: reutiliza `lancamentos` (já existe) sob prefixo `compras/<user_id>/<competencia>/`.
+### Frontend — arquivos a deletar
+- `src/components/admin/lancamentos/compras/CfopMappingDialog.tsx`
 
-### 2. Edge function `process-compras-cfop`
-- Recebe `upload_id`.
-- Baixa PDF, extrai texto (pdf-parse via npm: ou usa Gemini com input file_data base64 — mesma abordagem do process-folha-pagamento).
-- Chama Lovable AI Gateway (`google/gemini-3-flash-preview`) com o prompt do usuário (regras de leitura ETAPA 1) + lista de CFOPs mapeados do cliente para definir `selecionado` default.
-- Espera JSON `{ "linhas": [{ cfop, descricao, vr_contabil, selecionado }] }`.
-- Salva em `compras_uploads.dados_extraidos` e marca `status=processed`.
+### Edge function — `process-compras-cfop`
+- Remover leitura da tabela `compras_cfop_mapping`.
+- Prompt da IA já contém a regra fixa (1101→Débito/Crédito etc.) e marca `selecionado=true` apenas para os CFOPs da regra.
 
-Edge function `confirm-compras-lancamentos`:
-- Recebe `upload_id` + array de linhas selecionadas (com cfop, descricao, vr_contabil).
-- Para cada linha, busca mapping CFOP → (débito, crédito) do cliente; se não existir, retorna erro listando os CFOPs faltantes.
-- Gera registros em `lancamentos_alinhados` com:
-  - `data_lancamento` = último dia da competência
-  - `valor` = vr_contabil
-  - `conta_debito`, `conta_credito` do mapping
-  - `historico` = `"<DESCRIÇÃO EM CAIXA ALTA> - MÊS MM/AAAA"`
-  - `centro_custo_debito`/`credito` = null (contas patrimoniais)
-  - `origem` = 'compras_cfop'
+### Edge function — `confirm-compras-lancamentos`
+- Remover lookup em `compras_cfop_mapping`.
+- Resolver Débito/Crédito direto via `switch (cfop)` com a regra fixa.
+- Se vier CFOP fora da regra → erro 400 explicando.
 
-### 3. Frontend
+### Banco de dados
+- A tabela `compras_cfop_mapping` deixa de ser usada. **Não vou deletar** a tabela para não perder histórico/migrations — só paro de ler/gravar nela. (Se preferir DROP, me avise.)
 
-**Hub** (`src/components/admin/lancamentos/LancamentoModulesGrid.tsx`): adicionar card "Compras" → rota `compras`.
-
-**`AdminLancamentos.tsx`**: aceitar view `"compras"` e renderizar `ComprasDetail`.
-
-**Novos componentes** em `src/components/admin/lancamentos/compras/`:
-- `ComprasDetail.tsx` — wrapper com seletor de mês, upload, lista de uploads do mês.
-- `ComprasUploadArea.tsx` — drag/drop PDF, chama edge function.
-- `ComprasUploadCard.tsx` — para cada upload mostra status; quando `processed`, mostra tabela com checkboxes:
-  - Colunas: ☑ | CFOP | Descrição | Vr. Contábil (R$ formatado) | Conta Débito (auto, do mapping) | Conta Crédito
-  - Linhas sem mapping aparecem em amarelo com aviso "CFOP não mapeado".
-  - Botão "Confirmar e lançar" → chama `confirm-compras-lancamentos`.
-- `CfopMappingDialog.tsx` — gerenciar o de-para CFOP→contas do cliente (CRUD simples + toggle "pré-selecionado por padrão").
-
-**Estilo**: segue padrão dos outros módulos (rounded-xl, max-w-3xl, sem emojis, Lucide icons, valores em R$ brasileiro).
-
-### 4. Regras de negócio confirmadas
-- Pré-seleção definida pelo campo `ativo_padrao` do mapping do cliente (admin configura uma vez).
-- Histórico: `"<DESCRIÇÃO CFOP EM CAIXA ALTA> - MÊS MM/AAAA"`.
-- Data: último dia da competência.
-- Valor usado: sempre **Vr. Contábil** (Vr. Total é ignorado pela IA).
-- Centro de custo: vazio (compras vão para contas patrimoniais/estoque, não despesas).
-- Nada de `dados_extraidos` aparece como texto bruto — apenas a tabela estruturada.
-
-### Detalhes técnicos
-- Reaproveitar `extractAiPayload`/`round2` do `process-folha-pagamento` (copiar para o novo edge function).
-- Lovable AI com `response_format: { type: "json_object" }`.
-- Realtime na lista de uploads para refletir `status` durante processamento.
-- Após confirmar lançamentos, marcar `compras_uploads.status = 'launched'` para travar reprocessamento (admin pode "Reverter" deletando os `lancamentos_alinhados` daquele upload — opcional, posso adicionar se quiser).
+## Fluxo final
+1. Upload do PDF.
+2. IA extrai automaticamente e abre o modal.
+3. Usuário marca/desmarca linhas (as 3 famílias de CFOP já vêm marcadas).
+4. "Confirmar e lançar" → backend monta débito/crédito pela regra fixa e redireciona pro editor.
