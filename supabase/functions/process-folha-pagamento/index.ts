@@ -63,10 +63,23 @@ Antes de retornar a resposta, realize uma soma de verificação:
 - Valores: numéricos limpos (float). Se o resultado acumulado de um grupo for zero, não gere a linha.
 
 ### FORMATO DO RETORNO (JSON STRICT)
-Retorne ESTRITAMENTE um array JSON, sem markdown, sem texto introdutório:
-[
-  { "data": "DD/MM/AAAA", "conta_debito": "STRING", "conta_credito": "STRING", "historico": "STRING", "valor": NUMBER }
-]`;
+Retorne ESTRITAMENTE um objeto JSON com DUAS chaves:
+{
+  "campos_pdf": {
+    "salario_base": NUMBER,
+    "salario_familia": NUMBER,
+    "ferias": NUMBER,
+    "um_terco_ferias": NUMBER,
+    "ajuda_custo": NUMBER,
+    "e_consignado": NUMBER,
+    "rendimentos_total": NUMBER,
+    "pro_labore": NUMBER
+  },
+  "lancamentos": [
+    { "data": "DD/MM/AAAA", "conta_debito": "STRING", "conta_credito": "STRING", "historico": "STRING", "valor": NUMBER }
+  ]
+}
+Use 0 para qualquer campo numérico ausente em "campos_pdf". NUNCA omita uma chave de "campos_pdf". "campos_pdf" deve refletir EXATAMENTE os valores brutos extraídos do PDF, sem agrupamentos.`;
 
 
 const parseDateBR = (s: string): string | null => {
@@ -84,26 +97,52 @@ const lastDayOfCompetencia = (competencia: string): string | null => {
   return `${m[1]}-${m[2]}-${String(lastDay).padStart(2, "0")}`;
 };
 
-const extractJsonArray = (text: string): any[] => {
+const extractAiPayload = (text: string): { campos: Record<string, number>; lancamentos: any[] } => {
   const cleaned = String(text || "").replace(/```json/gi, "").replace(/```/g, "").trim();
-  const start = cleaned.indexOf("[");
-  const end = cleaned.lastIndexOf("]");
-  if (start !== -1 && end !== -1 && end > start) {
-    try { return JSON.parse(cleaned.slice(start, end + 1)); } catch { /* fall through */ }
-  }
-  // Try parsing as object containing an array property
+  let parsed: any = null;
   const objStart = cleaned.indexOf("{");
   const objEnd = cleaned.lastIndexOf("}");
   if (objStart !== -1 && objEnd !== -1 && objEnd > objStart) {
-    try {
-      const obj = JSON.parse(cleaned.slice(objStart, objEnd + 1));
-      for (const k of Object.keys(obj)) {
-        if (Array.isArray(obj[k])) return obj[k];
-      }
-    } catch { /* ignore */ }
+    try { parsed = JSON.parse(cleaned.slice(objStart, objEnd + 1)); } catch { /* ignore */ }
   }
-  throw new Error(`Resposta da IA inválida. Trecho: ${cleaned.slice(0, 300)}`);
+  if (!parsed) {
+    const start = cleaned.indexOf("[");
+    const end = cleaned.lastIndexOf("]");
+    if (start !== -1 && end !== -1 && end > start) {
+      try { parsed = { lancamentos: JSON.parse(cleaned.slice(start, end + 1)) }; } catch { /* ignore */ }
+    }
+  }
+  if (!parsed) throw new Error(`Resposta da IA inválida. Trecho: ${cleaned.slice(0, 300)}`);
+
+  let lancamentos: any[] = [];
+  if (Array.isArray(parsed)) lancamentos = parsed;
+  else if (Array.isArray(parsed.lancamentos)) lancamentos = parsed.lancamentos;
+  else {
+    for (const k of Object.keys(parsed)) {
+      if (Array.isArray(parsed[k])) { lancamentos = parsed[k]; break; }
+    }
+  }
+
+  const rawCampos = (parsed && typeof parsed === "object" && parsed.campos_pdf && typeof parsed.campos_pdf === "object")
+    ? parsed.campos_pdf : {};
+  const num = (v: any) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const campos: Record<string, number> = {
+    salario_base: num(rawCampos.salario_base),
+    salario_familia: num(rawCampos.salario_familia),
+    ferias: num(rawCampos.ferias),
+    um_terco_ferias: num(rawCampos.um_terco_ferias ?? rawCampos["1_3_ferias"] ?? rawCampos.terco_ferias),
+    ajuda_custo: num(rawCampos.ajuda_custo),
+    e_consignado: num(rawCampos.e_consignado ?? rawCampos.eConsignado ?? rawCampos.emprestimo_consignado),
+    rendimentos_total: num(rawCampos.rendimentos_total),
+    pro_labore: num(rawCampos.pro_labore),
+  };
+  return { campos, lancamentos };
 };
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -173,7 +212,7 @@ Deno.serve(async (req) => {
             {
               role: "user",
               content: [
-                { type: "text", text: `Competência: ${competencia}\n\n${planoText}\n\nAnalise o PDF da folha de pagamento anexo. Retorne ESTRITAMENTE um objeto JSON no formato { "lancamentos": [ { "data": "DD/MM/AAAA", "conta_debito": "STRING", "conta_credito": "STRING", "historico": "STRING", "valor": NUMBER } ] }. Se não houver dados extraíveis, retorne { "lancamentos": [] }. Não inclua texto fora do JSON.` },
+                { type: "text", text: `Competência: ${competencia}\n\n${planoText}\n\nAnalise o PDF da folha de pagamento anexo. Retorne ESTRITAMENTE um objeto JSON conforme especificado no system prompt, com as chaves "campos_pdf" (valores brutos extraídos do PDF) e "lancamentos" (array de lançamentos contábeis). Se não houver dados extraíveis, retorne { "campos_pdf": { ...todos zerados }, "lancamentos": [] }. Não inclua texto fora do JSON.` },
                 { type: "file", file: { filename: up.nome_arquivo, file_data: `data:application/pdf;base64,${b64}` } },
               ],
             },
@@ -198,7 +237,7 @@ Deno.serve(async (req) => {
 
         const aiJson = await aiRes.json();
         const content = aiJson?.choices?.[0]?.message?.content ?? "";
-        const lancs = extractJsonArray(content);
+        const { campos, lancamentos: lancs } = extractAiPayload(content);
 
         const fallbackDate = lastDayOfCompetencia(competencia);
         const isValidISO = (d: string | null) => {
@@ -210,7 +249,78 @@ Deno.serve(async (req) => {
           return dt.getUTCFullYear() === y && dt.getUTCMonth() === mo - 1 && dt.getUTCDate() === da;
         };
 
-        const rowsToInsert = lancs.map((l: any, idx: number) => {
+        // ====== RECONCILIAÇÃO MATEMÁTICA (via código, não confiar na IA) ======
+        // 1) Valor exato da linha SALÁRIOS (Débito 92 / Crédito 823):
+        //    Salário Base + Salário Família + Férias + 1/3 Férias + Ajuda de Custo
+        const salarioCalculado = round2(
+          campos.salario_base +
+          campos.salario_familia +
+          campos.ferias +
+          campos.um_terco_ferias +
+          campos.ajuda_custo
+        );
+
+        const isSalarioRow = (l: any) =>
+          String(l?.conta_debito ?? "").trim() === "92" &&
+          String(l?.conta_credito ?? "").trim() === "823";
+
+        const isConsignadoRow = (l: any) => {
+          const deb = String(l?.conta_debito ?? "").trim();
+          const hist = String(l?.historico ?? "").toUpperCase();
+          return deb === "823" && /CONSIGN/.test(hist);
+        };
+
+        const lancsArr = Array.isArray(lancs) ? [...lancs] : [];
+
+        // Substitui (ou cria) a linha de salários com o valor calculado
+        const salarioIdx = lancsArr.findIndex(isSalarioRow);
+        if (salarioCalculado > 0) {
+          if (salarioIdx >= 0) {
+            lancsArr[salarioIdx] = {
+              ...lancsArr[salarioIdx],
+              valor: salarioCalculado,
+              historico: "SALARIOS E REMUNERAÇÕES A PAGAR",
+            };
+          } else {
+            lancsArr.unshift({
+              data: null,
+              conta_debito: "92",
+              conta_credito: "823",
+              historico: "SALARIOS E REMUNERAÇÕES A PAGAR",
+              valor: salarioCalculado,
+            });
+          }
+        } else if (salarioIdx >= 0) {
+          // Sem valor calculado mas IA criou linha: remove se zerada
+          if (!(Number(lancsArr[salarioIdx]?.valor) > 0)) lancsArr.splice(salarioIdx, 1);
+        }
+
+        // Garante linha de eConsignado (Débito 823 / Crédito 912) se houver valor
+        const eCons = round2(campos.e_consignado);
+        const consIdx = lancsArr.findIndex(isConsignadoRow);
+        const mmAaaa = competencia.match(/^(\d{4})-(\d{2})/);
+        const histConsig = `EMPRESTIMO CONSIGNADO EM FOLHA MÊS ${mmAaaa ? `${mmAaaa[2]}/${mmAaaa[1]}` : ""}`.trim();
+        if (eCons > 0) {
+          if (consIdx >= 0) {
+            lancsArr[consIdx] = {
+              ...lancsArr[consIdx],
+              conta_debito: "823",
+              conta_credito: String(lancsArr[consIdx]?.conta_credito ?? "912") || "912",
+              valor: eCons,
+              historico: histConsig,
+            };
+          } else {
+            lancsArr.push({
+              data: null,
+              conta_debito: "823",
+              conta_credito: "912",
+              historico: histConsig,
+              valor: eCons,
+            });
+          }
+        }
+
+        const rowsToInsert = lancsArr.map((l: any, idx: number) => {
           const parsed = parseDateBR(l.data);
           const data = isValidISO(parsed) ? parsed : fallbackDate;
           return {
@@ -220,11 +330,11 @@ Deno.serve(async (req) => {
             conta_debito: l.conta_debito != null ? String(l.conta_debito) : null,
             conta_credito: l.conta_credito != null ? String(l.conta_credito) : null,
             historico: String(l.historico || "").toUpperCase(),
-            valor: Number(l.valor) || 0,
+            valor: round2(Number(l.valor) || 0),
             ordem: allRows.length + idx,
             source_upload_id: up.id,
           };
-        });
+        }).filter((r) => r.valor > 0);
         allRows.push(...rowsToInsert);
         totalLancamentos += rowsToInsert.length;
 
