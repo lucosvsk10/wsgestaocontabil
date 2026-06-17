@@ -62,14 +62,7 @@ Deno.serve(async (req) => {
 
     await supa.from("compras_uploads").update({ status: "processando", ultimo_erro: null }).eq("id", up.id);
 
-    // Mapping atual do cliente (para pré-seleção)
-    const { data: mappingRows } = await supa
-      .from("compras_cfop_mapping").select("cfop, ativo_padrao, descricao")
-      .eq("client_id", up.client_id);
-    const mappingText = (mappingRows || []).length
-      ? "[CFOPs JÁ MAPEADOS PARA ESTE CLIENTE]\n" +
-        mappingRows!.map((m: any) => `${m.cfop} - ativo_padrao=${m.ativo_padrao}${m.descricao ? ` (${m.descricao})` : ""}`).join("\n")
-      : "[Nenhum CFOP mapeado ainda para este cliente]";
+    // (Regra fixa de CFOPs no SYSTEM_PROMPT — sem mapeamento por cliente)
 
     const { data: file, error: dlErr } = await supa.storage.from("lancamentos").download(up.storage_path);
     if (dlErr) throw dlErr;
