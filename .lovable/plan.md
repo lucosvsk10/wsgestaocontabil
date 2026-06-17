@@ -1,82 +1,65 @@
-## Objetivo
+## Novo módulo: Compras (Registro de Entradas por CFOP)
 
-Adicionar um segundo card no hub de Lançamentos — **Folha de Pagamento** — que recebe PDFs por mês, envia para a IA do Gemini (via Lovable AI Gateway) com o prompt contábil já definido, e abre o resultado no mesmo editor de planilha das exportações. Também mover o acesso ao Plano de Contas para um ícone de prédio ao lado de cada empresa no seletor, tornando-o a fonte global do site.
+Adiciona um terceiro card no hub de lançamentos do admin (ao lado de Despesas e Folha), com fluxo: upload PDF → IA extrai blocos por CFOP → usuário seleciona quais lançar → sistema gera os lançamentos contábeis e grava em `lancamentos_alinhados` para entrar no fechamento do mês.
 
----
+### 1. Banco de dados
+Nova tabela `compras_uploads` (espelhando `folha_uploads`):
+- `user_id`, `competencia` (YYYY-MM), `file_url`, `file_name`, `status` (pending/processed/error), `dados_extraidos` (jsonb com as linhas por CFOP), `processed_at`.
+- RLS: admins via `is_any_admin`, dono via `user_id`. GRANTs para authenticated/service_role.
 
-## 1. Plano de Contas global (acessível pelo seletor de empresa)
+Mapeamento CFOP → contas editável por cliente:
+- Nova tabela `compras_cfop_mapping`:
+  - `user_id`, `cfop` (text), `conta_debito` (text), `conta_credito` (text default '777'), `ativo_padrao` (boolean — define se vem pré-selecionado no upload).
+  - RLS por `user_id` + admin.
+  - Seed inicial via UI (não migration): admin pode adicionar/editar.
 
-- `ClientStatusList`: ao lado do nome de cada empresa, adicionar um botão ícone `Building2` (prédio) que abre o `PlanoContasModal` daquela empresa (sem selecionar a empresa nem fechar o popover).
-- O modal `PlanoContasModal` já existe e lê/grava em `planos_contas` — reutilizar sem alterações de schema.
-- Criar helper `src/lib/planoContas.ts` com `fetchPlanoContas(clientId)` para o resto do site consumir como fonte única (já é, mas ficará centralizado para o módulo de folha usar também).
+Bucket de storage: reutiliza `lancamentos` (já existe) sob prefixo `compras/<user_id>/<competencia>/`.
 
-## 2. Card "Folha de Pagamento" no hub
+### 2. Edge function `process-compras-cfop`
+- Recebe `upload_id`.
+- Baixa PDF, extrai texto (pdf-parse via npm: ou usa Gemini com input file_data base64 — mesma abordagem do process-folha-pagamento).
+- Chama Lovable AI Gateway (`google/gemini-3-flash-preview`) com o prompt do usuário (regras de leitura ETAPA 1) + lista de CFOPs mapeados do cliente para definir `selecionado` default.
+- Espera JSON `{ "linhas": [{ cfop, descricao, vr_contabil, selecionado }] }`.
+- Salva em `compras_uploads.dados_extraidos` e marca `status=processed`.
 
-- `LancamentoModulesGrid`: novo módulo `folha` com ícone `Wallet` (Lucide), ativo, `onClick: onOpenFolha`.
-- `AdminLancamentos.tsx`: novo `View = "hub" | "despesas" | "folha"` e handler `handleOpenFolha`.
+Edge function `confirm-compras-lancamentos`:
+- Recebe `upload_id` + array de linhas selecionadas (com cfop, descricao, vr_contabil).
+- Para cada linha, busca mapping CFOP → (débito, crédito) do cliente; se não existir, retorna erro listando os CFOPs faltantes.
+- Gera registros em `lancamentos_alinhados` com:
+  - `data_lancamento` = último dia da competência
+  - `valor` = vr_contabil
+  - `conta_debito`, `conta_credito` do mapping
+  - `historico` = `"<DESCRIÇÃO EM CAIXA ALTA> - MÊS MM/AAAA"`
+  - `centro_custo_debito`/`credito` = null (contas patrimoniais)
+  - `origem` = 'compras_cfop'
 
-## 3. Nova tela: Folha de Pagamento
+### 3. Frontend
 
-Componente `FolhaPagamentoDetail` (espelho leve do `ClientLancamentosDetail`):
+**Hub** (`src/components/admin/lancamentos/LancamentoModulesGrid.tsx`): adicionar card "Compras" → rota `compras`.
 
-- **Seletor de mês** reutilizando `MonthSelector` (mesmo padrão de competência YYYY-MM).
-- **Histórico de meses** (lista com status: pendente / processado / fechado).
-- **Área de upload** de PDFs por competência → grava no bucket `folha_pagamento` (privado) e cria linha em `folha_uploads`.
-- Botão **"Processar com IA"** → chama edge function `process-folha-pagamento` para a competência selecionada.
-- Após processar, botão **"Abrir editor"** navega para `/admin/lancamentos/folha/:clientId/editar?competencia=YYYY-MM`, que carrega `SpreadsheetEditor` (mesmo das exportações) pré-populado com as linhas geradas pela IA. Salvar grava de volta em `folha_lancamentos`.
-- Botão **"Fechar mês"** trava edições (segue padrão `month_closures`).
+**`AdminLancamentos.tsx`**: aceitar view `"compras"` e renderizar `ComprasDetail`.
 
-## 4. Edge function `process-folha-pagamento`
+**Novos componentes** em `src/components/admin/lancamentos/compras/`:
+- `ComprasDetail.tsx` — wrapper com seletor de mês, upload, lista de uploads do mês.
+- `ComprasUploadArea.tsx` — drag/drop PDF, chama edge function.
+- `ComprasUploadCard.tsx` — para cada upload mostra status; quando `processed`, mostra tabela com checkboxes:
+  - Colunas: ☑ | CFOP | Descrição | Vr. Contábil (R$ formatado) | Conta Débito (auto, do mapping) | Conta Crédito
+  - Linhas sem mapping aparecem em amarelo com aviso "CFOP não mapeado".
+  - Botão "Confirmar e lançar" → chama `confirm-compras-lancamentos`.
+- `CfopMappingDialog.tsx` — gerenciar o de-para CFOP→contas do cliente (CRUD simples + toggle "pré-selecionado por padrão").
 
-- Input: `{ clientId, competencia, uploadIds[] }`.
-- Para cada PDF: baixa do bucket, envia ao Lovable AI Gateway (`google/gemini-3-flash-preview`) com o prompt do usuário no system prompt + plano de contas (`planos_contas` do cliente) injetado, e o PDF como `input_file` (base64 `application/pdf`).
-- Resposta esperada: array JSON de lançamentos `{data, conta_debito, conta_credito, historico, valor}`.
-- Persiste em `folha_lancamentos` (substituindo o lote anterior daquela competência).
-- Trata erros 402/429 do gateway com mensagens claras no UI.
+**Estilo**: segue padrão dos outros módulos (rounded-xl, max-w-3xl, sem emojis, Lucide icons, valores em R$ brasileiro).
 
-## 5. Mudanças de schema (migração única)
+### 4. Regras de negócio confirmadas
+- Pré-seleção definida pelo campo `ativo_padrao` do mapping do cliente (admin configura uma vez).
+- Histórico: `"<DESCRIÇÃO CFOP EM CAIXA ALTA> - MÊS MM/AAAA"`.
+- Data: último dia da competência.
+- Valor usado: sempre **Vr. Contábil** (Vr. Total é ignorado pela IA).
+- Centro de custo: vazio (compras vão para contas patrimoniais/estoque, não despesas).
+- Nada de `dados_extraidos` aparece como texto bruto — apenas a tabela estruturada.
 
-Novas tabelas em `public`:
-
-- `folha_uploads`: `id`, `client_id`, `competencia` (text YYYY-MM), `storage_path`, `nome_arquivo`, `status` (pending/processed/error), `created_at`.
-- `folha_lancamentos`: `id`, `client_id`, `competencia`, `data` (date), `conta_debito` (int), `conta_credito` (int), `historico` (text), `valor` (numeric), `ordem` (int), `created_at`, `updated_at`.
-- Adicionar `tipo` (text default `"despesas"`) em `month_closures` para diferenciar fechamentos de despesas vs folha, OU criar `folha_month_closures` separada (preferência: campo `tipo` para simplificar).
-
-GRANTs para `authenticated` e `service_role`; RLS: admins (via `is_any_admin`) leem/escrevem tudo; clientes leem apenas seus próprios.
-
-Bucket `folha_pagamento` privado (criado via tool).
-
-## 6. Editor de planilha
-
-- Reutilizar `SpreadsheetEditor` e infraestrutura de `AdminLancamentosExport` (export builders, leave-guard, download XLSX).
-- Construir `SheetData` a partir de `folha_lancamentos` com colunas: Data, Conta Débito, Desc. Débito, CC Débito, Conta Crédito, Desc. Crédito, CC Crédito, Histórico, Valor — mesmo padrão "Saldo por Conta" / despesas, aplicando regras já existentes (ex: CC 100 para contas com "(-)").
-- Salvar de volta com upsert por `(client_id, competencia, ordem)`.
-
-## Detalhes técnicos
-
-- Segredo `LOVABLE_API_KEY` já existe — usar em edge function (`Lovable-API-Key` header, `https://ai.gateway.lovable.dev/v1/chat/completions`).
-- PDF enviado como bloco `{type:"file", file:{filename, file_data:"data:application/pdf;base64,..."}}` no `messages[0].content`.
-- Prompt do usuário vira o `system` da request; plano de contas é injetado como bloco de texto antes do PDF.
-- Datas: parse manual de "YYYY-MM-DD" (regra de timezone do projeto).
-- UI: rounded-xl, neutros, sem amarelo, `max-w-3xl` nas views do cliente — segue o memory core.
-
-## Arquivos
-
-Novos:
-- `src/components/admin/lancamentos/folha/FolhaPagamentoDetail.tsx`
-- `src/components/admin/lancamentos/folha/FolhaUploadArea.tsx`
-- `src/components/admin/lancamentos/folha/FolhaMonthHistory.tsx`
-- `src/pages/AdminFolhaEditor.tsx` (editor da planilha gerada)
-- `src/lib/planoContas.ts`
-- `supabase/functions/process-folha-pagamento/index.ts`
-
-Editados:
-- `src/components/admin/lancamentos/LancamentoModulesGrid.tsx` (+card)
-- `src/pages/AdminLancamentos.tsx` (+view "folha")
-- `src/components/admin/lancamentos/ClientStatusList.tsx` (+ícone prédio → PlanoContasModal)
-- `src/AppRoutes.tsx` (+rota do editor de folha)
-
-## Confirmações pendentes
-
-1. **Bucket único `folha_pagamento`** (paths `clientId/competencia/arquivo.pdf`) ou por cliente como já é em `lancamentos`? — Plano assume único.
-2. **Modelo Gemini**: usar `google/gemini-3-flash-preview` (padrão, rápido e barato) ou `google/gemini-2.5-pro` (mais preciso, mais caro)? — Plano assume flash.
+### Detalhes técnicos
+- Reaproveitar `extractAiPayload`/`round2` do `process-folha-pagamento` (copiar para o novo edge function).
+- Lovable AI com `response_format: { type: "json_object" }`.
+- Realtime na lista de uploads para refletir `status` durante processamento.
+- Após confirmar lançamentos, marcar `compras_uploads.status = 'launched'` para travar reprocessamento (admin pode "Reverter" deletando os `lancamentos_alinhados` daquele upload — opcional, posso adicionar se quiser).
