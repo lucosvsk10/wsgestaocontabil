@@ -78,6 +78,7 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [editedLinhas, setEditedLinhas] = useState<Record<string, Linha[]>>({});
   const [mappingOpen, setMappingOpen] = useState(false);
+  const [selectionUploadId, setSelectionUploadId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
