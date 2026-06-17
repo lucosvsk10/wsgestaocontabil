@@ -20,6 +20,7 @@ import { AdminLayout } from '@/components/admin/layout/AdminLayout';
 import AdminLancamentos from "./pages/AdminLancamentos";
 import AdminLancamentosExport from "./pages/AdminLancamentosExport";
 import AdminFolhaEditor from "./pages/AdminFolhaEditor";
+import AdminComprasEditor from "./pages/AdminComprasEditor";
 import ClientLancamentos from "./pages/ClientLancamentos";
 
 const AppRoutes = () => {
