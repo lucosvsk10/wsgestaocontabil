@@ -81,18 +81,16 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [{ data: ups }, { data: lans }, { data: mps }] = await Promise.all([
+      const [{ data: ups }, { data: lans }] = await Promise.all([
         supabase.from("compras_uploads").select("*")
           .eq("client_id", clientId).eq("competencia", competencia)
           .order("created_at", { ascending: false }),
         supabase.from("compras_lancamentos").select("*")
           .eq("client_id", clientId).eq("competencia", competencia)
           .order("ordem", { ascending: true }),
-        supabase.from("compras_cfop_mapping").select("cfop").eq("client_id", clientId),
       ]);
       setUploads((ups || []) as ComprasUpload[]);
       setLancamentos((lans || []) as ComprasLancamento[]);
-      setMappedCfops(new Set((mps || []).map((m: any) => String(m.cfop))));
       // Inicializar edição com linhas do banco
       const ed: Record<string, Linha[]> = {};
       (ups || []).forEach((u: any) => {
