@@ -61,6 +61,7 @@ interface ComprasLancamento {
 }
 
 export const ComprasDetail = ({ clientId, clientName }: Props) => {
+  const navigate = useNavigate();
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(String(now.getMonth() + 1).padStart(2, "0"));
   const [selectedYear, setSelectedYear] = useState(String(now.getFullYear()));
