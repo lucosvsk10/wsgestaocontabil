@@ -62,7 +62,9 @@ const AdminLancamentos = () => {
               ? "Selecione a empresa e o módulo desejado"
               : view === "despesas"
               ? "Lançamentos de despesas da empresa selecionada"
-              : "Folha de pagamento da empresa selecionada"}
+              : view === "folha"
+              ? "Folha de pagamento da empresa selecionada"
+              : "Compras (Registro de Entradas por CFOP)"}
           </p>
         </div>
 
@@ -78,6 +80,7 @@ const AdminLancamentos = () => {
               disabled={!selectedClientId}
               onOpenDespesas={() => selectedClientId && setView("despesas")}
               onOpenFolha={() => selectedClientId && setView("folha")}
+              onOpenCompras={() => selectedClientId && setView("compras")}
             />
           </div>
         ) : (
@@ -93,6 +96,12 @@ const AdminLancamentos = () => {
             )}
             {selectedClientId && view === "folha" && (
               <FolhaPagamentoDetail
+                clientId={selectedClientId}
+                clientName={selectedClientName || "Empresa"}
+              />
+            )}
+            {selectedClientId && view === "compras" && (
+              <ComprasDetail
                 clientId={selectedClientId}
                 clientName={selectedClientName || "Empresa"}
               />
