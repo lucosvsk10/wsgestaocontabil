@@ -46,6 +46,17 @@ Agrupe valores com a mesma combinação de [Conta Débito + Conta Crédito], con
    - Mapeamento: Débito na Despesa de FGTS e Crédito na obrigação de FGTS a Recolher.
    - Histórico Padronizado: "FGTS A PAGAR MÊS [MM/AAAA]"
 
+7. RETENÇÕES DIVERSAS (Empréstimos Consignados, Pensões Alimentícias, Sindicatos, Convênios, e quaisquer descontos de natureza comercial ou de terceiros):
+   - Identifique QUALQUER desconto na folha cuja contraparte seja terceiro (não tributo).
+   - Mapeamento: Débito na conta de Salários a Pagar (Centro de Resultado 823) e Crédito na conta de obrigação correspondente no Passivo (ex: Empréstimos/Financiamentos, Pensão Alimentícia a Pagar, Contribuição Sindical a Pagar, Contas a Pagar).
+   - Histórico Padronizado: "[NOME DO DESCONTO] EM FOLHA MÊS [MM/AAAA]" (ex: "EMPRESTIMO CONSIGNADO EM FOLHA MÊS 03/2026").
+
+### VERIFICAÇÃO OBRIGATÓRIA (DOUBLE-CHECK) ANTES DE FECHAR O JSON
+Antes de retornar a resposta, realize uma soma de verificação:
+- Some TODOS os valores das linhas geradas referentes a REMUNERAÇÕES (itens 1, 3 e 4 acima — funcionários), EXCLUINDO Pró-labore.
+- Essa soma deve bater EXATAMENTE com o campo "Rendimentos" (ou equivalente: Total de Proventos / Vencimentos) do PDF original, SUBTRAÍDO do valor do Pró-labore dos sócios.
+- Se não bater, revise os agrupamentos e valores antes de emitir o JSON final. NÃO retorne JSON com divergência.
+
 ### DIRETRIZES DE FORMATAÇÃO
 - Data: sempre o último dia do mês da competência da folha analisada (DD/MM/AAAA).
 - Históricos: SEMPRE em CAIXA ALTA, substituindo "[MM/AAAA]" pela competência real.
@@ -56,6 +67,7 @@ Retorne ESTRITAMENTE um array JSON, sem markdown, sem texto introdutório:
 [
   { "data": "DD/MM/AAAA", "conta_debito": "STRING", "conta_credito": "STRING", "historico": "STRING", "valor": NUMBER }
 ]`;
+
 
 const parseDateBR = (s: string): string | null => {
   const m = String(s).match(/^(\d{2})\/(\d{2})\/(\d{4})/);
