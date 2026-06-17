@@ -401,27 +401,18 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
                         <TableHead className="w-[80px]">CFOP</TableHead>
                         <TableHead>Descrição</TableHead>
                         <TableHead className="text-right w-[150px]">Vr. Contábil (R$)</TableHead>
-                        <TableHead className="w-[120px] text-xs">Mapeamento</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {linhas.map((l, i) => {
-                        const mapped = mappedCfops.has(l.cfop);
                         return (
-                          <TableRow key={i} className={cn(!mapped && l.selecionado && "bg-destructive/5")}>
+                          <TableRow key={i}>
                             <TableCell>
                               <Checkbox checked={l.selecionado} onCheckedChange={(v) => toggleLinha(selectionUploadId, i, !!v)} />
                             </TableCell>
                             <TableCell className="font-mono text-xs">{l.cfop}</TableCell>
                             <TableCell className="text-sm">{l.descricao}</TableCell>
                             <TableCell className="text-right font-mono text-sm">{formatBRL(l.vr_contabil)}</TableCell>
-                            <TableCell className="text-xs">
-                              {mapped ? (
-                                <span className="text-emerald-600">OK</span>
-                              ) : (
-                                <span className="text-destructive">não mapeado</span>
-                              )}
-                            </TableCell>
                           </TableRow>
                         );
                       })}
