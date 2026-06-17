@@ -182,9 +182,10 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
   const handleConfirm = async (uploadId: string) => {
     const linhas = (editedLinhas[uploadId] || []).filter((l) => l.selecionado && l.vr_contabil > 0);
     if (!linhas.length) { toast.error("Selecione pelo menos uma linha"); return; }
-    const semMap = linhas.filter((l) => !mappedCfops.has(l.cfop));
+    const CFOPS_OK = new Set(["1101","2101","1102","2102","1407","1556","2407","2556"]);
+    const semMap = linhas.filter((l) => !CFOPS_OK.has(String(l.cfop)));
     if (semMap.length) {
-      toast.error(`CFOP(s) sem mapeamento: ${[...new Set(semMap.map(l => l.cfop))].join(", ")}. Abra "Mapear CFOPs".`);
+      toast.error(`CFOP(s) não suportado(s): ${[...new Set(semMap.map(l => l.cfop))].join(", ")}. Desmarque essas linhas.`);
       return;
     }
     setConfirmingId(uploadId);
