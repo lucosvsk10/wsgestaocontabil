@@ -79,3 +79,9 @@ verify_jwt = true
 
 [functions.process-folha-pagamento]
 verify_jwt = true
+
+[functions.process-compras-cfop]
+verify_jwt = true
+
+[functions.confirm-compras-lancamentos]
+verify_jwt = true
