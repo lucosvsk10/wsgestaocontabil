@@ -4,6 +4,7 @@ import { ClientLancamentosDetail } from "@/components/admin/lancamentos/ClientLa
 import { CompanySelectorTop } from "@/components/admin/lancamentos/CompanySelectorTop";
 import { LancamentoModulesGrid } from "@/components/admin/lancamentos/LancamentoModulesGrid";
 import { FolhaPagamentoDetail } from "@/components/admin/lancamentos/folha/FolhaPagamentoDetail";
+import { ComprasDetail } from "@/components/admin/lancamentos/compras/ComprasDetail";
 import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 const STORAGE_KEY = "admin.lancamentos.selectedClientId";
 
-type View = "hub" | "despesas" | "folha";
+type View = "hub" | "despesas" | "folha" | "compras";
 
 const AdminLancamentos = () => {
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
@@ -61,7 +62,9 @@ const AdminLancamentos = () => {
               ? "Selecione a empresa e o módulo desejado"
               : view === "despesas"
               ? "Lançamentos de despesas da empresa selecionada"
-              : "Folha de pagamento da empresa selecionada"}
+              : view === "folha"
+              ? "Folha de pagamento da empresa selecionada"
+              : "Compras (Registro de Entradas por CFOP)"}
           </p>
         </div>
 
@@ -77,6 +80,7 @@ const AdminLancamentos = () => {
               disabled={!selectedClientId}
               onOpenDespesas={() => selectedClientId && setView("despesas")}
               onOpenFolha={() => selectedClientId && setView("folha")}
+              onOpenCompras={() => selectedClientId && setView("compras")}
             />
           </div>
         ) : (
@@ -92,6 +96,12 @@ const AdminLancamentos = () => {
             )}
             {selectedClientId && view === "folha" && (
               <FolhaPagamentoDetail
+                clientId={selectedClientId}
+                clientName={selectedClientName || "Empresa"}
+              />
+            )}
+            {selectedClientId && view === "compras" && (
+              <ComprasDetail
                 clientId={selectedClientId}
                 clientName={selectedClientName || "Empresa"}
               />

@@ -304,6 +304,132 @@ export type Database = {
         }
         Relationships: []
       }
+      compras_cfop_mapping: {
+        Row: {
+          ativo_padrao: boolean
+          cfop: string
+          client_id: string
+          conta_credito: string
+          conta_debito: string
+          created_at: string
+          descricao: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          ativo_padrao?: boolean
+          cfop: string
+          client_id: string
+          conta_credito?: string
+          conta_debito: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          ativo_padrao?: boolean
+          cfop?: string
+          client_id?: string
+          conta_credito?: string
+          conta_debito?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      compras_lancamentos: {
+        Row: {
+          cfop: string | null
+          client_id: string
+          competencia: string
+          conta_credito: string | null
+          conta_debito: string | null
+          created_at: string
+          data: string | null
+          historico: string | null
+          id: string
+          ordem: number
+          source_upload_id: string | null
+          updated_at: string
+          valor: number | null
+        }
+        Insert: {
+          cfop?: string | null
+          client_id: string
+          competencia: string
+          conta_credito?: string | null
+          conta_debito?: string | null
+          created_at?: string
+          data?: string | null
+          historico?: string | null
+          id?: string
+          ordem?: number
+          source_upload_id?: string | null
+          updated_at?: string
+          valor?: number | null
+        }
+        Update: {
+          cfop?: string | null
+          client_id?: string
+          competencia?: string
+          conta_credito?: string | null
+          conta_debito?: string | null
+          created_at?: string
+          data?: string | null
+          historico?: string | null
+          id?: string
+          ordem?: number
+          source_upload_id?: string | null
+          updated_at?: string
+          valor?: number | null
+        }
+        Relationships: []
+      }
+      compras_uploads: {
+        Row: {
+          client_id: string
+          competencia: string
+          created_at: string
+          dados_extraidos: Json | null
+          id: string
+          nome_arquivo: string
+          status: string
+          storage_path: string
+          ultimo_erro: string | null
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          client_id: string
+          competencia: string
+          created_at?: string
+          dados_extraidos?: Json | null
+          id?: string
+          nome_arquivo: string
+          status?: string
+          storage_path: string
+          ultimo_erro?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          client_id?: string
+          competencia?: string
+          created_at?: string
+          dados_extraidos?: Json | null
+          id?: string
+          nome_arquivo?: string
+          status?: string
+          storage_path?: string
+          ultimo_erro?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
       document_categories: {
         Row: {
           color: string | null
