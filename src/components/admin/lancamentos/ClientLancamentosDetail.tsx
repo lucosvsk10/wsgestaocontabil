@@ -13,6 +13,7 @@ import { AddLancamentoModal } from "./AddLancamentoModal";
 import { ImportXlsxModal } from "./ImportXlsxModal";
 import { ExportLancamentosModal } from "./ExportLancamentosModal";
 import { AdminDocumentUploadArea } from "./AdminDocumentUploadArea";
+import { parsePlanoContasContent } from "@/lib/planoContas";
 import { toast } from "sonner";
 
 interface Lancamento {
@@ -159,34 +160,17 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
         .select('conteudo')
         .eq('user_id', clientId)
         .maybeSingle();
-      
+
       setHasPlanoContas(!!planoData);
-      
+
       if (planoData?.conteudo) {
-        try {
-          const parsed = JSON.parse(planoData.conteudo);
-          const map: PlanoContasMap = {};
-          
-          // New format: [{codigo, descricao}]
-          if (Array.isArray(parsed) && parsed.length > 0 && ('codigo' in parsed[0])) {
-            for (const item of parsed) {
-              const code = String(item.codigo || '').trim();
-              const desc = String(item.descricao || '').trim();
-              if (code) map[code] = desc;
-            }
-          } else {
-            // Legacy format fallback
-            const items = Array.isArray(parsed) && parsed[0]?.data ? parsed[0].data : (Array.isArray(parsed) ? parsed : []);
-            for (const item of items) {
-              const code = String(item['Codigo reduzido'] || item['codigo_reduzido'] || '');
-              const desc = item['Descrição'] || item['descricao'] || item['Descrição da conta'] || '';
-              if (code) map[code] = desc;
-            }
-          }
-          setPlanoContasMap(map);
-        } catch {
-          setPlanoContasMap({});
+        const { items, preferencia } = parsePlanoContasContent(planoData.conteudo);
+        const map: PlanoContasMap = {};
+        for (const it of items) {
+          const code = preferencia === 'completo' ? (it.codigo_completo || it.cr) : (it.cr || it.codigo_completo);
+          if (code) map[code] = it.descricao;
         }
+        setPlanoContasMap(map);
       } else {
         setPlanoContasMap({});
       }
