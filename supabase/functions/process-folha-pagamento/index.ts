@@ -1,5 +1,6 @@
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { planoContasForAI } from "../_shared/planoContas.ts";
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -167,18 +168,8 @@ Deno.serve(async (req) => {
 
     let planoText = "[PLANO DE CONTAS não cadastrado para esta empresa]";
     if (planoRow?.conteudo) {
-      try {
-        const parsed = JSON.parse(planoRow.conteudo);
-        const items = Array.isArray(parsed) && parsed.length && "codigo" in parsed[0]
-          ? parsed
-          : (Array.isArray(parsed) && parsed[0]?.data ? parsed[0].data : (Array.isArray(parsed) ? parsed : []));
-        const lines = items.map((i: any) => {
-          const code = i.codigo || i["Codigo reduzido"] || i["codigo_reduzido"] || "";
-          const desc = i.descricao || i["Descrição"] || i["descricao"] || "";
-          return `${code} - ${desc}`;
-        }).filter(Boolean);
-        planoText = "[PLANO DE CONTAS]\n" + lines.join("\n");
-      } catch { /* keep default */ }
+      const { text } = planoContasForAI(planoRow.conteudo);
+      if (text) planoText = "[PLANO DE CONTAS]\n" + text;
     }
 
     const { data: uploads, error: upErr } = await supa

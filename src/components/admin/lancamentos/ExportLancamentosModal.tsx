@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { buildSheetData, type ExportMode, type Lancamento } from "./exportBuilders";
 import { downloadSheetXlsx } from "./downloadSheet";
 import type { PlanoContasMap } from "./LancamentosTable";
+import { parsePlanoContasContent } from "@/lib/planoContas";
 
 interface ExportLancamentosModalProps {
   isOpen: boolean;
@@ -56,23 +57,10 @@ export const ExportLancamentosModal = ({
 
       let map: PlanoContasMap = {};
       if (planoData?.conteudo) {
-        try {
-          const parsed = JSON.parse(planoData.conteudo);
-          if (Array.isArray(parsed) && parsed.length > 0 && "codigo" in parsed[0]) {
-            for (const item of parsed) {
-              const code = String(item.codigo || "").trim();
-              if (code) map[code] = String(item.descricao || "").trim();
-            }
-          } else {
-            const items = Array.isArray(parsed) && parsed[0]?.data ? parsed[0].data : Array.isArray(parsed) ? parsed : [];
-            for (const item of items) {
-              const code = String(item["Codigo reduzido"] || item["codigo_reduzido"] || "");
-              const desc = item["Descrição"] || item["descricao"] || item["Descrição da conta"] || "";
-              if (code) map[code] = desc;
-            }
-          }
-        } catch {
-          map = {};
+        const { items: pcItems, preferencia } = parsePlanoContasContent(planoData.conteudo);
+        for (const it of pcItems) {
+          const code = preferencia === "completo" ? (it.codigo_completo || it.cr) : (it.cr || it.codigo_completo);
+          if (code) map[code] = it.descricao;
         }
       }
 

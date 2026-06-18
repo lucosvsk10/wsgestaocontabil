@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import * as XLSX from "https://esm.sh/xlsx@0.18.5";
+import { parsePlanoContas, buildPlanoMap } from "../_shared/planoContas.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -64,33 +65,10 @@ const removeDuplicates = async (supabase: any, userId: string, competencia: stri
   return duplicateIds.length;
 };
 
-// Build plano de contas map
+// Build plano de contas map (chaveado pelo código preferido para IA/relatório)
 const buildPlanoContasMap = (conteudo: string): Record<string, string> => {
-  try {
-    const parsed = JSON.parse(conteudo);
-    const map: Record<string, string> = {};
-    
-    // New format: [{codigo, descricao}]
-    if (Array.isArray(parsed) && parsed.length > 0 && ('codigo' in parsed[0])) {
-      for (const item of parsed) {
-        const code = String(item.codigo || '').trim();
-        const desc = String(item.descricao || '').trim();
-        if (code) map[code] = desc;
-      }
-      return map;
-    }
-    
-    // Legacy format fallback
-    const items = Array.isArray(parsed) && parsed[0]?.data ? parsed[0].data : (Array.isArray(parsed) ? parsed : []);
-    for (const item of items) {
-      const code = String(item['Codigo reduzido'] || item['codigo_reduzido'] || '');
-      const desc = item['Descrição'] || item['descricao'] || item['Descrição da conta'] || '';
-      if (code) map[code] = desc;
-    }
-    return map;
-  } catch {
-    return {};
-  }
+  const { items, preferencia } = parsePlanoContas(conteudo);
+  return buildPlanoMap(items, preferencia);
 };
 
 // Group lancamentos by debit account
