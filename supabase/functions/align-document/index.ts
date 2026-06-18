@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { planoContasForAI } from "../_shared/planoContas.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -280,7 +281,7 @@ serve(async (req) => {
           dados_extraidos: dadosParaEnviar,
           file_url: fileUrl,
           file_type: ext,
-          plano_contas: planoData.conteudo,
+          plano_contas: JSON.stringify(planoContasForAI(planoData.conteudo).json),
           timestamp: new Date().toISOString()
         })
       });
