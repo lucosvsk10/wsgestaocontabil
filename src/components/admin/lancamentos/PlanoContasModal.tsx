@@ -160,7 +160,7 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: "array" });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+        const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: "" });
 
         if (rows.length < 2) {
           toast.error("Planilha vazia ou sem dados suficientes");
