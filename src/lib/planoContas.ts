@@ -48,9 +48,22 @@ export const addPlanoContasAliases = (map: PlanoContasMap, codigo: string, descr
 
 export const lookupPlanoContasDescricao = (map: PlanoContasMap, codigo: string | null | undefined): string => {
   if (!codigo) return "";
-  for (const alias of codigoAliases(String(codigo))) {
+  const aliases = codigoAliases(String(codigo));
+  for (const alias of aliases) {
     if (map[alias]) return map[alias];
   }
+  let fallback = "";
+  let fallbackLength = 0;
+  for (const alias of aliases) {
+    for (const key of Object.keys(map)) {
+      const isPrefixMatch = alias.length >= 4 && key.length >= 4 && (alias.startsWith(key) || key.startsWith(alias));
+      if (isPrefixMatch && key.length > fallbackLength) {
+        fallback = map[key];
+        fallbackLength = key.length;
+      }
+    }
+  }
+  if (fallback) return fallback;
   return "";
 };
 
