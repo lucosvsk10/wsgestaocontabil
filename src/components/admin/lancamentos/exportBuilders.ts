@@ -1,4 +1,5 @@
 import type { PlanoContasMap } from "./LancamentosTable";
+import { lookupPlanoContasDescricao } from "@/lib/planoContas";
 
 export interface Lancamento {
   id: string;
@@ -38,7 +39,7 @@ const formatDate = (dateStr: string | null) => {
 
 const getDescricao = (codigo: string | null, plano: PlanoContasMap) => {
   if (!codigo) return "-";
-  return plano[codigo] || "-";
+  return lookupPlanoContasDescricao(plano, codigo) || "-";
 };
 
 const getLastDayOfMonth = (competencia: string): string => {
