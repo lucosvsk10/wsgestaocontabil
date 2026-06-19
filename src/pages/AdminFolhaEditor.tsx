@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { SpreadsheetEditor } from "@/components/admin/lancamentos/SpreadsheetEditor";
 import { QuickEditPanel } from "@/components/admin/lancamentos/QuickEditPanel";
 import type { SheetCell, SheetData } from "@/components/admin/lancamentos/exportBuilders";
-import { fetchPlanoContas } from "@/lib/planoContas";
+import { fetchPlanoContas, lookupPlanoContasDescricao } from "@/lib/planoContas";
 
 const MONTH_NAMES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
@@ -45,8 +45,8 @@ const parseDateBR = (s: string): string | null => {
 const buildSheet = (rows: Row[], planoMap: Record<string, string>): SheetData => {
   const headers = ["Data","Conta Débito","Desc. Débito","CC Débito","Conta Crédito","Desc. Crédito","CC Crédito","Histórico","Valor"];
   const body: SheetCell[][] = rows.map((r) => {
-    const debDesc = (r.conta_debito && planoMap[r.conta_debito]) || "";
-    const credDesc = (r.conta_credito && planoMap[r.conta_credito]) || "";
+    const debDesc = lookupPlanoContasDescricao(planoMap, r.conta_debito);
+    const credDesc = lookupPlanoContasDescricao(planoMap, r.conta_credito);
     const ccDeb = /\(-\)/.test(debDesc) ? "100" : "";
     const ccCred = /\(-\)/.test(credDesc) ? "100" : "";
     return [

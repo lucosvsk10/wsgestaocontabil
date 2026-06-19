@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { buildSheetData, type ExportMode, type Lancamento } from "./exportBuilders";
 import { downloadSheetXlsx } from "./downloadSheet";
 import type { PlanoContasMap } from "./LancamentosTable";
-import { parsePlanoContasContent } from "@/lib/planoContas";
+import { buildPlanoContasMap, parsePlanoContasContent } from "@/lib/planoContas";
 
 interface ExportLancamentosModalProps {
   isOpen: boolean;
@@ -57,11 +57,8 @@ export const ExportLancamentosModal = ({
 
       let map: PlanoContasMap = {};
       if (planoData?.conteudo) {
-        const { items: pcItems } = parsePlanoContasContent(planoData.conteudo);
-        for (const it of pcItems) {
-          if (it.cr) map[it.cr] = it.descricao;
-          if (it.codigo_completo) map[it.codigo_completo] = it.descricao;
-        }
+        const { items: pcItems, preferencia } = parsePlanoContasContent(planoData.conteudo);
+        map = buildPlanoContasMap(pcItems, preferencia);
       }
 
       const sheet = buildSheetData(mode, lancs, map, competencia);

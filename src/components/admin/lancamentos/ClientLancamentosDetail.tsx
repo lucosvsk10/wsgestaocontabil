@@ -13,7 +13,7 @@ import { AddLancamentoModal } from "./AddLancamentoModal";
 import { ImportXlsxModal } from "./ImportXlsxModal";
 import { ExportLancamentosModal } from "./ExportLancamentosModal";
 import { AdminDocumentUploadArea } from "./AdminDocumentUploadArea";
-import { parsePlanoContasContent } from "@/lib/planoContas";
+import { buildPlanoContasMap, parsePlanoContasContent } from "@/lib/planoContas";
 import { toast } from "sonner";
 
 interface Lancamento {
@@ -164,13 +164,8 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
       setHasPlanoContas(!!planoData);
 
       if (planoData?.conteudo) {
-        const { items } = parsePlanoContasContent(planoData.conteudo);
-        const map: PlanoContasMap = {};
-        for (const it of items) {
-          if (it.cr) map[it.cr] = it.descricao;
-          if (it.codigo_completo) map[it.codigo_completo] = it.descricao;
-        }
-        setPlanoContasMap(map);
+        const { items, preferencia } = parsePlanoContasContent(planoData.conteudo);
+        setPlanoContasMap(buildPlanoContasMap(items, preferencia));
       } else {
         setPlanoContasMap({});
       }

@@ -28,7 +28,7 @@ import {
   type SheetData,
 } from "@/components/admin/lancamentos/exportBuilders";
 import type { PlanoContasMap } from "@/components/admin/lancamentos/LancamentosTable";
-import { parsePlanoContasContent } from "@/lib/planoContas";
+import { buildPlanoContasMap, parsePlanoContasContent } from "@/lib/planoContas";
 
 const MONTH_NAMES = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -129,11 +129,8 @@ const AdminLancamentosExport = () => {
 
         let map: PlanoContasMap = {};
         if (planoData?.conteudo) {
-          const { items: pcItems } = parsePlanoContasContent(planoData.conteudo);
-          for (const it of pcItems) {
-            if (it.cr) map[it.cr] = it.descricao;
-            if (it.codigo_completo) map[it.codigo_completo] = it.descricao;
-          }
+          const { items: pcItems, preferencia } = parsePlanoContasContent(planoData.conteudo);
+          map = buildPlanoContasMap(pcItems, preferencia);
         }
         setPlanoMap(map);
         const base = autoCleanSheet(buildSheetData(mode, lancs, map, competencia));

@@ -21,6 +21,22 @@ const pickCode = (it: PlanoContasItem, pref: PlanoContasPreferencia): string => 
   return pref === "completo" ? it.cr : it.codigo_completo;
 };
 
+const codigoAliases = (codigo: string): string[] => {
+  const clean = String(codigo ?? "").trim().replace(/\s+/g, "");
+  if (!clean) return [];
+  const aliases = new Set<string>([clean]);
+  const withoutSeparators = clean.replace(/[^\p{L}\p{N}]/gu, "");
+  if (withoutSeparators) aliases.add(withoutSeparators);
+  const withoutLeadingZerosBySegment = clean
+    .split(/([.\-/])/)
+    .map((part) => (/^\d+$/.test(part) ? String(Number(part)) : part))
+    .join("");
+  if (withoutLeadingZerosBySegment) aliases.add(withoutLeadingZerosBySegment);
+  const onlyDigitsNoLeadingZeros = withoutSeparators.replace(/^0+(?=\d)/, "");
+  if (onlyDigitsNoLeadingZeros) aliases.add(onlyDigitsNoLeadingZeros);
+  return Array.from(aliases);
+};
+
 export const parsePlanoContas = (conteudo: string | null | undefined): PlanoContasParsed => {
   const empty: PlanoContasParsed = { items: [], preferencia: "cr" };
   if (!conteudo) return empty;
@@ -64,17 +80,46 @@ export const parsePlanoContas = (conteudo: string | null | undefined): PlanoCont
   }
 };
 
-/** Map { código preferido → descrição } a ser usado em exports/relatórios. */
+/** Map com C.R., código completo e variações de formatação para exports/relatórios. */
 export const buildPlanoMap = (
   items: PlanoContasItem[],
-  preferencia: PlanoContasPreferencia,
+  preferencia: PlanoContasPreferencia = "cr",
 ): Record<string, string> => {
   const map: Record<string, string> = {};
+  const primaryField = preferencia === "completo" ? "codigo_completo" : "cr";
+  const secondaryField = preferencia === "completo" ? "cr" : "codigo_completo";
   for (const it of items) {
-    const code = pickCode(it, preferencia);
-    if (code) map[code] = it.descricao;
+    for (const code of codigoAliases(it[primaryField])) {
+      if (code && !map[code]) map[code] = it.descricao;
+    }
+  }
+  for (const it of items) {
+    for (const code of codigoAliases(it[secondaryField])) {
+      if (code && !map[code]) map[code] = it.descricao;
+    }
   }
   return map;
+};
+
+export const lookupPlanoDescricao = (map: Record<string, string>, codigo: string | null | undefined): string => {
+  if (!codigo) return "";
+  const aliases = codigoAliases(String(codigo));
+  for (const alias of aliases) {
+    if (map[alias]) return map[alias];
+  }
+  let fallback = "";
+  let fallbackLength = 0;
+  for (const alias of aliases) {
+    for (const key of Object.keys(map)) {
+      const isPrefixMatch = alias.length >= 4 && key.length >= 4 && (alias.startsWith(key) || key.startsWith(alias));
+      if (isPrefixMatch && key.length > fallbackLength) {
+        fallback = map[key];
+        fallbackLength = key.length;
+      }
+    }
+  }
+  if (fallback) return fallback;
+  return "";
 };
 
 /**

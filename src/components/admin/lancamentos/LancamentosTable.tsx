@@ -5,6 +5,7 @@ import { ptBR } from "date-fns/locale";
 import { FileSpreadsheet, Trash2, CheckSquare, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { lookupPlanoContasDescricao } from "@/lib/planoContas";
 
 interface Lancamento {
   id: string;
@@ -65,7 +66,7 @@ export const LancamentosTable = ({
 
   const getDescricao = (codigo: string | null) => {
     if (!codigo) return '-';
-    return planoContas[codigo] || '-';
+    return lookupPlanoContasDescricao(planoContas, codigo) || '-';
   };
 
   const groupedByAccount = useMemo(() => {

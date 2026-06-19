@@ -15,6 +15,58 @@ export interface PlanoContasItem {
 
 export type PlanoContasMap = Record<string, string>;
 
+const normalizeCodigo = (codigo: string): string =>
+  codigo.trim().replace(/\s+/g, "");
+
+const codigoAliases = (codigo: string): string[] => {
+  const clean = normalizeCodigo(String(codigo ?? ""));
+  if (!clean) return [];
+
+  const aliases = new Set<string>([clean]);
+  const withoutSeparators = clean.replace(/[^\p{L}\p{N}]/gu, "");
+  if (withoutSeparators) aliases.add(withoutSeparators);
+
+  const withoutLeadingZerosBySegment = clean
+    .split(/([.\-/])/)
+    .map((part) => (/^\d+$/.test(part) ? String(Number(part)) : part))
+    .join("");
+  if (withoutLeadingZerosBySegment) aliases.add(withoutLeadingZerosBySegment);
+
+  const onlyDigitsNoLeadingZeros = withoutSeparators.replace(/^0+(?=\d)/, "");
+  if (onlyDigitsNoLeadingZeros) aliases.add(onlyDigitsNoLeadingZeros);
+
+  return Array.from(aliases);
+};
+
+export const addPlanoContasAliases = (map: PlanoContasMap, codigo: string, descricao: string) => {
+  const desc = String(descricao ?? "").trim();
+  if (!desc) return;
+  for (const alias of codigoAliases(codigo)) {
+    if (!map[alias]) map[alias] = desc;
+  }
+};
+
+export const lookupPlanoContasDescricao = (map: PlanoContasMap, codigo: string | null | undefined): string => {
+  if (!codigo) return "";
+  const aliases = codigoAliases(String(codigo));
+  for (const alias of aliases) {
+    if (map[alias]) return map[alias];
+  }
+  let fallback = "";
+  let fallbackLength = 0;
+  for (const alias of aliases) {
+    for (const key of Object.keys(map)) {
+      const isPrefixMatch = alias.length >= 4 && key.length >= 4 && (alias.startsWith(key) || key.startsWith(alias));
+      if (isPrefixMatch && key.length > fallbackLength) {
+        fallback = map[key];
+        fallbackLength = key.length;
+      }
+    }
+  }
+  if (fallback) return fallback;
+  return "";
+};
+
 export interface PlanoContasParsed {
   items: PlanoContasItem[];
   preferencia: PlanoContasPreferencia;
@@ -90,15 +142,19 @@ export const serializePlanoContas = (
   return JSON.stringify({ preferencia_ia: preferencia, items: cleanItems });
 };
 
-/** Constrói o map { código preferido → descrição } a partir dos itens já parseados. */
+/** Constrói o map de descrições aceitando C.R., código completo e variações de formatação. */
 export const buildPlanoContasMap = (
   items: PlanoContasItem[],
-  preferencia: PlanoContasPreferencia,
+  preferencia: PlanoContasPreferencia = "cr",
 ): PlanoContasMap => {
   const map: PlanoContasMap = {};
+  const primaryField = preferencia === "completo" ? "codigo_completo" : "cr";
+  const secondaryField = preferencia === "completo" ? "cr" : "codigo_completo";
   for (const it of items) {
-    const code = pickCode(it, preferencia);
-    if (code) map[code] = it.descricao;
+    addPlanoContasAliases(map, it[primaryField], it.descricao);
+  }
+  for (const it of items) {
+    addPlanoContasAliases(map, it[secondaryField], it.descricao);
   }
   return map;
 };

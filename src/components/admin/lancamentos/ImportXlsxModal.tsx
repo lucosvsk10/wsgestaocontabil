@@ -105,7 +105,7 @@ export const ImportXlsxModal = ({ isOpen, onClose, clientId, competencia, onSucc
   const selectSheet = (wb: XLSX.WorkBook, name: string) => {
     setSelectedSheet(name);
     const sheet = wb.Sheets[name];
-    const json = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: "" });
+    const json = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: "", raw: false });
     setSheetData(json);
 
     if (json.length > 0) {

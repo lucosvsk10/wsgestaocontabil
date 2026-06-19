@@ -7,6 +7,7 @@ import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { PlanoContasMap } from "./LancamentosTable";
+import { lookupPlanoContasDescricao } from "@/lib/planoContas";
 
 interface AddLancamentoModalProps {
   isOpen: boolean;
@@ -28,6 +29,8 @@ export const AddLancamentoModal = ({ isOpen, onClose, clientId, competencia, pla
   const [isSaving, setIsSaving] = useState(false);
 
   const contasOptions = Object.entries(planoContas).sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }));
+  const debitoDescricao = lookupPlanoContasDescricao(planoContas, debito);
+  const creditoDescricao = lookupPlanoContasDescricao(planoContas, credito);
 
   const handleSave = async () => {
     if (!data || !valor) {
@@ -88,8 +91,8 @@ export const AddLancamentoModal = ({ isOpen, onClose, clientId, competencia, pla
                   <option key={cod} value={cod}>{desc}</option>
                 ))}
               </datalist>
-              {debito && planoContas[debito] && (
-                <p className="text-xs text-muted-foreground truncate">{planoContas[debito]}</p>
+              {debito && debitoDescricao && (
+                <p className="text-xs text-muted-foreground truncate">{debitoDescricao}</p>
               )}
             </div>
             <div className="space-y-1.5">
@@ -100,8 +103,8 @@ export const AddLancamentoModal = ({ isOpen, onClose, clientId, competencia, pla
                   <option key={cod} value={cod}>{desc}</option>
                 ))}
               </datalist>
-              {credito && planoContas[credito] && (
-                <p className="text-xs text-muted-foreground truncate">{planoContas[credito]}</p>
+              {credito && creditoDescricao && (
+                <p className="text-xs text-muted-foreground truncate">{creditoDescricao}</p>
               )}
             </div>
           </div>
