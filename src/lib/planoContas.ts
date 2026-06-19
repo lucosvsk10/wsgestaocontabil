@@ -15,6 +15,45 @@ export interface PlanoContasItem {
 
 export type PlanoContasMap = Record<string, string>;
 
+const normalizeCodigo = (codigo: string): string =>
+  codigo.trim().replace(/\s+/g, "");
+
+const codigoAliases = (codigo: string): string[] => {
+  const clean = normalizeCodigo(String(codigo ?? ""));
+  if (!clean) return [];
+
+  const aliases = new Set<string>([clean]);
+  const withoutSeparators = clean.replace(/[^\p{L}\p{N}]/gu, "");
+  if (withoutSeparators) aliases.add(withoutSeparators);
+
+  const withoutLeadingZerosBySegment = clean
+    .split(/([.\-/])/)
+    .map((part) => (/^\d+$/.test(part) ? String(Number(part)) : part))
+    .join("");
+  if (withoutLeadingZerosBySegment) aliases.add(withoutLeadingZerosBySegment);
+
+  const onlyDigitsNoLeadingZeros = withoutSeparators.replace(/^0+(?=\d)/, "");
+  if (onlyDigitsNoLeadingZeros) aliases.add(onlyDigitsNoLeadingZeros);
+
+  return Array.from(aliases);
+};
+
+export const addPlanoContasAliases = (map: PlanoContasMap, codigo: string, descricao: string) => {
+  const desc = String(descricao ?? "").trim();
+  if (!desc) return;
+  for (const alias of codigoAliases(codigo)) {
+    if (!map[alias]) map[alias] = desc;
+  }
+};
+
+export const lookupPlanoContasDescricao = (map: PlanoContasMap, codigo: string | null | undefined): string => {
+  if (!codigo) return "";
+  for (const alias of codigoAliases(String(codigo))) {
+    if (map[alias]) return map[alias];
+  }
+  return "";
+};
+
 export interface PlanoContasParsed {
   items: PlanoContasItem[];
   preferencia: PlanoContasPreferencia;
@@ -90,15 +129,15 @@ export const serializePlanoContas = (
   return JSON.stringify({ preferencia_ia: preferencia, items: cleanItems });
 };
 
-/** Constrói o map { código preferido → descrição } a partir dos itens já parseados. */
+/** Constrói o map de descrições aceitando C.R., código completo e variações de formatação. */
 export const buildPlanoContasMap = (
   items: PlanoContasItem[],
-  preferencia: PlanoContasPreferencia,
+  _preferencia?: PlanoContasPreferencia,
 ): PlanoContasMap => {
   const map: PlanoContasMap = {};
   for (const it of items) {
-    const code = pickCode(it, preferencia);
-    if (code) map[code] = it.descricao;
+    addPlanoContasAliases(map, it.cr, it.descricao);
+    addPlanoContasAliases(map, it.codigo_completo, it.descricao);
   }
   return map;
 };
