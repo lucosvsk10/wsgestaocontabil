@@ -94,6 +94,14 @@ export const buildPlanoMap = (
   return map;
 };
 
+export const lookupPlanoDescricao = (map: Record<string, string>, codigo: string | null | undefined): string => {
+  if (!codigo) return "";
+  for (const alias of codigoAliases(String(codigo))) {
+    if (map[alias]) return map[alias];
+  }
+  return "";
+};
+
 /**
  * Versão compacta para mandar à IA: somente o código preferido + descrição.
  * Reduz token vs. enviar conteudo bruto com ambos os códigos.
