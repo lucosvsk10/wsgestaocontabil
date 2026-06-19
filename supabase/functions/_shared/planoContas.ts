@@ -83,11 +83,18 @@ export const parsePlanoContas = (conteudo: string | null | undefined): PlanoCont
 /** Map com C.R., código completo e variações de formatação para exports/relatórios. */
 export const buildPlanoMap = (
   items: PlanoContasItem[],
-  _preferencia?: PlanoContasPreferencia,
+  preferencia: PlanoContasPreferencia = "cr",
 ): Record<string, string> => {
   const map: Record<string, string> = {};
+  const primaryField = preferencia === "completo" ? "codigo_completo" : "cr";
+  const secondaryField = preferencia === "completo" ? "cr" : "codigo_completo";
   for (const it of items) {
-    for (const code of [...codigoAliases(it.cr), ...codigoAliases(it.codigo_completo)]) {
+    for (const code of codigoAliases(it[primaryField])) {
+      if (code && !map[code]) map[code] = it.descricao;
+    }
+  }
+  for (const it of items) {
+    for (const code of codigoAliases(it[secondaryField])) {
       if (code && !map[code]) map[code] = it.descricao;
     }
   }
