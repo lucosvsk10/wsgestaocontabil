@@ -1,5 +1,6 @@
 import * as XLSX from "xlsx";
 import type { PlanoContasMap } from "./LancamentosTable";
+import { lookupPlanoContasDescricao } from "@/lib/planoContas";
 
 export interface CalimaRow {
   data: string | null; // "YYYY-MM-DD" or "DD/MM/YYYY"
@@ -31,7 +32,7 @@ const formatDateBR = (d: string | null): string => {
 
 const ccFor = (code: string | null, plano: PlanoContasMap): string => {
   if (!code) return "";
-  const desc = plano[code] || "";
+  const desc = lookupPlanoContasDescricao(plano, code);
   return /\(-\)/.test(desc) ? "100" : "";
 };
 
