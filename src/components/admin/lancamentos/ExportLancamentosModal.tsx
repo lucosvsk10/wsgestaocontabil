@@ -57,10 +57,10 @@ export const ExportLancamentosModal = ({
 
       let map: PlanoContasMap = {};
       if (planoData?.conteudo) {
-        const { items: pcItems, preferencia } = parsePlanoContasContent(planoData.conteudo);
+        const { items: pcItems } = parsePlanoContasContent(planoData.conteudo);
         for (const it of pcItems) {
-          const code = preferencia === "completo" ? (it.codigo_completo || it.cr) : (it.cr || it.codigo_completo);
-          if (code) map[code] = it.descricao;
+          if (it.cr) map[it.cr] = it.descricao;
+          if (it.codigo_completo) map[it.codigo_completo] = it.descricao;
         }
       }
 
