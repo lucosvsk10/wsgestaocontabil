@@ -132,12 +132,16 @@ export const serializePlanoContas = (
 /** Constrói o map de descrições aceitando C.R., código completo e variações de formatação. */
 export const buildPlanoContasMap = (
   items: PlanoContasItem[],
-  _preferencia?: PlanoContasPreferencia,
+  preferencia: PlanoContasPreferencia = "cr",
 ): PlanoContasMap => {
   const map: PlanoContasMap = {};
+  const primaryField = preferencia === "completo" ? "codigo_completo" : "cr";
+  const secondaryField = preferencia === "completo" ? "cr" : "codigo_completo";
   for (const it of items) {
-    addPlanoContasAliases(map, it.cr, it.descricao);
-    addPlanoContasAliases(map, it.codigo_completo, it.descricao);
+    addPlanoContasAliases(map, it[primaryField], it.descricao);
+  }
+  for (const it of items) {
+    addPlanoContasAliases(map, it[secondaryField], it.descricao);
   }
   return map;
 };
