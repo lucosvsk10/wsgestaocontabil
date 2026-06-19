@@ -21,6 +21,22 @@ const pickCode = (it: PlanoContasItem, pref: PlanoContasPreferencia): string => 
   return pref === "completo" ? it.cr : it.codigo_completo;
 };
 
+const codigoAliases = (codigo: string): string[] => {
+  const clean = String(codigo ?? "").trim().replace(/\s+/g, "");
+  if (!clean) return [];
+  const aliases = new Set<string>([clean]);
+  const withoutSeparators = clean.replace(/[^\p{L}\p{N}]/gu, "");
+  if (withoutSeparators) aliases.add(withoutSeparators);
+  const withoutLeadingZerosBySegment = clean
+    .split(/([.\-/])/)
+    .map((part) => (/^\d+$/.test(part) ? String(Number(part)) : part))
+    .join("");
+  if (withoutLeadingZerosBySegment) aliases.add(withoutLeadingZerosBySegment);
+  const onlyDigitsNoLeadingZeros = withoutSeparators.replace(/^0+(?=\d)/, "");
+  if (onlyDigitsNoLeadingZeros) aliases.add(onlyDigitsNoLeadingZeros);
+  return Array.from(aliases);
+};
+
 export const parsePlanoContas = (conteudo: string | null | undefined): PlanoContasParsed => {
   const empty: PlanoContasParsed = { items: [], preferencia: "cr" };
   if (!conteudo) return empty;
@@ -64,15 +80,16 @@ export const parsePlanoContas = (conteudo: string | null | undefined): PlanoCont
   }
 };
 
-/** Map { código preferido → descrição } a ser usado em exports/relatórios. */
+/** Map com C.R., código completo e variações de formatação para exports/relatórios. */
 export const buildPlanoMap = (
   items: PlanoContasItem[],
-  preferencia: PlanoContasPreferencia,
+  _preferencia?: PlanoContasPreferencia,
 ): Record<string, string> => {
   const map: Record<string, string> = {};
   for (const it of items) {
-    const code = pickCode(it, preferencia);
-    if (code) map[code] = it.descricao;
+    for (const code of [...codigoAliases(it.cr), ...codigoAliases(it.codigo_completo)]) {
+      if (code && !map[code]) map[code] = it.descricao;
+    }
   }
   return map;
 };
