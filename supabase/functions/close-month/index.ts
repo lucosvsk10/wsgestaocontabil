@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import * as XLSX from "https://esm.sh/xlsx@0.18.5";
-import { parsePlanoContas, buildPlanoMap } from "../_shared/planoContas.ts";
+import { parsePlanoContas, buildPlanoMap, lookupPlanoDescricao } from "../_shared/planoContas.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -77,7 +77,7 @@ const groupByAccount = (lancamentos: any[], planoMap: Record<string, string>) =>
   for (const l of lancamentos) {
     const key = l.debito || 'sem-conta';
     if (!groups[key]) {
-      groups[key] = { conta: l.debito || 'Sem conta', descricao: planoMap[l.debito] || '', items: [] };
+      groups[key] = { conta: l.debito || 'Sem conta', descricao: lookupPlanoDescricao(planoMap, l.debito), items: [] };
     }
     groups[key].items.push(l);
   }
@@ -97,7 +97,7 @@ const generateCSV = (lancamentos: any[], planoMap: Record<string, string>): stri
     for (const l of group.items) {
       const val = l.valor || 0;
       subtotal += val;
-      csv += `${l.data || ''},${val},${(l.historico || '').replace(/,/g, ';').replace(/\n/g, ' ')},${l.debito || ''},${(planoMap[l.debito] || '').replace(/,/g, ';')},${l.credito || ''},${(planoMap[l.credito] || '').replace(/,/g, ';')}\n`;
+      csv += `${l.data || ''},${val},${(l.historico || '').replace(/,/g, ';').replace(/\n/g, ' ')},${l.debito || ''},${lookupPlanoDescricao(planoMap, l.debito).replace(/,/g, ';')},${l.credito || ''},${lookupPlanoDescricao(planoMap, l.credito).replace(/,/g, ';')}\n`;
     }
     csv += `Subtotal: ${group.items.length} lançamentos,,${subtotal},,,,\n`;
     grandTotal += subtotal;
@@ -123,9 +123,9 @@ const generateExcel = (lancamentos: any[], planoMap: Record<string, string>): Ui
         'Valor': l.valor || 0,
         'Histórico': l.historico || '',
         'Débito': l.debito || '',
-        'Desc. Débito': planoMap[l.debito] || '',
+        'Desc. Débito': lookupPlanoDescricao(planoMap, l.debito),
         'Crédito': l.credito || '',
-        'Desc. Crédito': planoMap[l.credito] || '',
+        'Desc. Crédito': lookupPlanoDescricao(planoMap, l.credito),
       });
     }
     // Subtotal row
