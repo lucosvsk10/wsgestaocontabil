@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { SpreadsheetEditor } from "@/components/admin/lancamentos/SpreadsheetEditor";
 import { QuickEditPanel } from "@/components/admin/lancamentos/QuickEditPanel";
+import { FolhaRowEditor } from "@/components/admin/lancamentos/folha/FolhaRowEditor";
 import type { SheetCell, SheetData } from "@/components/admin/lancamentos/exportBuilders";
 import { fetchPlanoContas, lookupPlanoContasDescricao } from "@/lib/planoContas";
 
