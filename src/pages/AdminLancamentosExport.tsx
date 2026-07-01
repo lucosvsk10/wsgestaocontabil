@@ -194,37 +194,28 @@ const AdminLancamentosExport = () => {
   const handleDownloadCalima = () => {
     const base = filename.replace(/\.xlsx$/i, "");
 
-    // Preferir os dados do editor (agrupados/editados). Se estivermos no modo
-    // "saldo", cada linha do sheet já é uma conta consolidada.
-    if (sheet && mode === "saldo") {
-      // Layout do sheet saldo: [Data, Débito, Histórico, Valor, Crédito, CC Débito, CC Crédito]
-      const rows = sheet.rows
-        .filter((row) => !row.some((c) => c.isTotal))
-        .map((row) => ({
-          data: String(row[0]?.value ?? ""),
-          conta_debito: String(row[1]?.value ?? ""),
-          historico: String(row[2]?.value ?? ""),
-          valor: Number(row[3]?.value) || 0,
-          conta_credito: String(row[4]?.value ?? ""),
-          cc_debito: String(row[5]?.value ?? ""),
-          cc_credito: String(row[6]?.value ?? ""),
-        }))
-        .filter((r) => r.conta_debito || r.conta_credito || r.valor);
-      exportCalimaXlsx(rows, planoMap, `${base}_calima.xlsx`);
-      toast.success("Exportado para Calima ERP");
-      return;
-    }
+    // SEMPRE agrega no formato saldo por conta para o Calima, independente
+    // do modo atual do editor. Isso garante a formatação Calima correta
+    // (uma linha por conta consolidada, com débito/crédito/CC).
+    const saldoSheet = applySaldoDefaults(
+      autoCleanSheet(buildBalanceByAccount(lancamentos, planoMap, competencia)),
+      competencia,
+    );
 
-    // Fallback: usa os lançamentos brutos
-    const rows = lancamentos.map((l) => ({
-      data: l.data,
-      valor: l.valor,
-      conta_debito: l.debito,
-      conta_credito: l.credito,
-      historico: l.historico,
-      cc_debito: l.centro_custo_debito,
-      cc_credito: l.centro_custo_credito,
-    }));
+    // Layout: [Data, Débito, Histórico, Valor, Crédito, CC Débito, CC Crédito]
+    const rows = saldoSheet.rows
+      .filter((row) => !row.some((c) => c.isTotal))
+      .map((row) => ({
+        data: String(row[0]?.value ?? ""),
+        conta_debito: String(row[1]?.value ?? ""),
+        historico: String(row[2]?.value ?? ""),
+        valor: Number(row[3]?.value) || 0,
+        conta_credito: String(row[4]?.value ?? ""),
+        cc_debito: String(row[5]?.value ?? ""),
+        cc_credito: String(row[6]?.value ?? ""),
+      }))
+      .filter((r) => r.conta_debito || r.conta_credito || r.valor);
+
     exportCalimaXlsx(rows, planoMap, `${base}_calima.xlsx`);
     toast.success("Exportado para Calima ERP");
   };
