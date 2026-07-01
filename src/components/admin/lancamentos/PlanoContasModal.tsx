@@ -124,6 +124,8 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
   const [searchTerm, setSearchTerm] = useState("");
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
 
+  const [confirmClearOpen, setConfirmClearOpen] = useState(false);
+
   useEffect(() => {
     if (isOpen && clientId) {
       fetchPlanoContas();
