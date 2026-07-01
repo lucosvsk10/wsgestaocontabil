@@ -647,6 +647,31 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
           )}
         </DialogFooter>
       </DialogContent>
+
+      <AlertDialog open={confirmClearOpen} onOpenChange={setConfirmClearOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir todas as linhas?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Isso vai remover todas as {items.length} contas do plano atual. A ação só é confirmada ao clicar em "Salvar" depois.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setItems([]);
+                setSearchTerm("");
+                setConfirmClearOpen(false);
+                toast.success("Todas as linhas foram removidas. Clique em Salvar para confirmar.");
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir todas
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 };
