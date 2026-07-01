@@ -30,7 +30,7 @@ export const ExportLancamentosModal = ({
   competencia,
   totalLancamentos,
 }: ExportLancamentosModalProps) => {
-  const [mode, setMode] = useState<ExportMode>("data");
+  const [mode, setMode] = useState<ExportChoice>("data");
   const [downloading, setDownloading] = useState(false);
   const navigate = useNavigate();
 
@@ -41,7 +41,7 @@ export const ExportLancamentosModal = ({
       return;
     }
 
-    // Direct download para "data" e "conta"
+    // Direct download para "data", "conta" e "calima"
     setDownloading(true);
     try {
       const [{ data: userData }, { data: lancData }, { data: planoData }] = await Promise.all([
@@ -64,10 +64,25 @@ export const ExportLancamentosModal = ({
         map = buildPlanoContasMap(pcItems, preferencia);
       }
 
-      const sheet = buildSheetData(mode, lancs, map, competencia);
       const filename = `lancamentos_${slug(name)}_${competencia}_${mode}.xlsx`;
-      downloadSheetXlsx(sheet, filename, true);
-      toast.success("Download iniciado");
+
+      if (mode === "calima") {
+        const rows = lancs.map((l) => ({
+          data: l.data,
+          valor: l.valor,
+          conta_debito: l.debito,
+          conta_credito: l.credito,
+          historico: l.historico,
+          cc_debito: l.centro_custo_debito,
+          cc_credito: l.centro_custo_credito,
+        }));
+        exportCalimaXlsx(rows, map, filename);
+        toast.success("Exportado para Calima ERP");
+      } else {
+        const sheet = buildSheetData(mode, lancs, map, competencia);
+        downloadSheetXlsx(sheet, filename, true);
+        toast.success("Download iniciado");
+      }
       onClose();
     } catch (e: any) {
       console.error(e);
@@ -77,10 +92,11 @@ export const ExportLancamentosModal = ({
     }
   };
 
-  const options: { id: ExportMode; icon: typeof SortAsc; title: string; desc: string }[] = [
+  const options: { id: ExportChoice; icon: typeof SortAsc; title: string; desc: string }[] = [
     { id: "data", icon: SortAsc, title: "Por Data", desc: "Lista única ordenada cronologicamente" },
     { id: "conta", icon: List, title: "Por Conta", desc: "Agrupado por conta contábil com subtotais" },
     { id: "saldo", icon: Calculator, title: "Saldo por Conta", desc: "Resumo com total por conta (abre editor antes do download)" },
+    { id: "calima", icon: FileDown, title: "Calima ERP", desc: "Formato de importação do Calima ERP" },
   ];
 
   const isSaldo = mode === "saldo";
