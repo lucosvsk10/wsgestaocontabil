@@ -22,6 +22,7 @@ import { SpreadsheetEditor } from "@/components/admin/lancamentos/SpreadsheetEdi
 import { QuickEditPanel } from "@/components/admin/lancamentos/QuickEditPanel";
 import {
   buildSheetData,
+  buildBalanceByAccount,
   MODE_LABELS,
   type ExportMode,
   type Lancamento,
