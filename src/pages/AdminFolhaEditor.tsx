@@ -276,6 +276,16 @@ const AdminFolhaEditor = () => {
               </div>
             </div>
 
+            {sheet && (
+              <FolhaRowEditor
+                data={sheet}
+                selectedRow={selectedRow}
+                planoMap={planoMap}
+                competencia={competencia}
+                onChange={onChange}
+                onSelectRow={setSelectedRow}
+              />
+            )}
             {sheet && <QuickEditPanel data={sheet} selectedCol={selectedCol} onChange={onChange} />}
 
             <div className="bg-muted/30 rounded-xl p-4 space-y-2 border border-border">
