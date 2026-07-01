@@ -513,6 +513,16 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
                 <Plus className="h-4 w-4 mr-1" />
                 Adicionar Linha
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setConfirmClearOpen(true)}
+                disabled={items.length === 0}
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Excluir Todas
+              </Button>
               <div className="flex-1" />
               <div className="relative">
                 <Search className="h-4 w-4 absolute left-2.5 top-2.5 text-muted-foreground" />
