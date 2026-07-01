@@ -1,62 +1,51 @@
-# Plano de Contas com Código Completo + C.R.
+## Objetivo
 
-Hoje o plano de contas tem só um campo (`codigo`) que representa o C.R. (código reduzido). Vamos passar a guardar **dois códigos por conta** e deixar o admin escolher, por cliente, **qual deles a IA vai ler** — só um vai pro prompt, evitando token desnecessário.
+Deixar o processamento da folha 100% guiado pelo plano de contas de cada empresa (sem código fixo), robusto para verbas novas, e turbinar o editor manual existente.
 
-## O que muda na tela (PlanoContasModal)
+---
 
-Tabela passa a ter 3 colunas editáveis:
+## 1. Edge function `process-folha-pagamento` — sem contas fixas
 
-```text
-| Código Completo | C.R. (reduzido) | Descrição |
-```
+**Arquivo:** `supabase/functions/process-folha-pagamento/index.ts`
 
-Logo acima da tabela, um seletor exclusivo (toggle group estilo "pill", só uma opção ativa por vez):
+- Reescrever o `SYSTEM_PROMPT`:
+  - Remover todas as menções a códigos fixos ("conta 92", "conta 88", "conta 823", "CR 823", "912", "100").
+  - Substituir por instruções por **natureza da conta**: "conta de despesa de salários de funcionários", "conta de despesa de pró-labore", "conta de salários a pagar (passivo)", "obrigação de INSS a recolher", "FGTS a recolher", "empréstimo consignado a pagar", etc.
+  - Reforçar: **use exclusivamente o CR presente no [PLANO DE CONTAS] enviado no contexto**. Nunca invente código.
+  - Adicionar regra: para verbas não previstas nas categorias 1-7, procure no plano de contas a conta cuja descrição seja **semanticamente mais próxima** do evento; se usar essa via, prefixe o histórico com `[SUGERIDO]` e mantenha a lógica de débito (despesa/passivo) x crédito (passivo/obrigação).
+  - Se não achar nenhuma conta plausível no plano, prefixar histórico com `[REVISAR]` e deixar `conta_debito` / `conta_credito` como `null`.
+- Remover a reconciliação hardcoded que força `"92"/"823"` e `"823"/"912"`:
+  - A linha consolidada de salários passa a ser identificada pelo **histórico** (`SALARIOS E REMUNERAÇÕES A PAGAR`), não pelos códigos. O valor calculado (`salario_base + familia + ferias + 1/3 + ajuda_custo`) sobrescreve apenas o campo `valor`; débito/crédito permanecem os que a IA escolheu do plano.
+  - Mesma coisa para consignado: identificar por `/CONSIGN/` no histórico; não impor `823`/`912`.
+  - Se a IA não gerou a linha e o valor > 0, criar a linha **sem débito/crédito** e prefixar histórico com `[REVISAR]` para o usuário completar no editor.
+- Manter o double-check matemático (soma remunerações ≈ rendimentos − pró-labore).
 
-```text
-IA vai ler:  [ C.R. ]  [ Código Completo ]
-```
+## 2. Editor manual da folha — melhorias
 
-- Default: **C.R.** (mantém comportamento atual).
-- A escolha é por cliente e fica salva junto com o plano.
-- Aviso curto ao lado: "A IA recebe apenas o campo selecionado para reduzir custo."
+**Arquivo:** `src/pages/AdminFolhaEditor.tsx` (+ pequeno componente novo)
 
-Importação XLSX: o passo de mapeamento de colunas ganha um terceiro select ("Código Completo"), opcional. Auto-detecção aceita cabeçalhos como `código completo`, `codigo contábil`, `conta completa`, `código analítico`. Se a planilha tiver só uma coluna de código, ela vai pro campo correspondente à preferência atual e a outra fica vazia.
+- Adicionar barra de ações acima da planilha:
+  - **➕ Adicionar linha** (insere linha em branco no final, data = último dia da competência).
+  - **🗑️ Remover linha selecionada** (usa `selectedRow`).
+  - **📋 Duplicar linha selecionada**.
+- Criar `AccountAutocomplete` (novo, pequeno): input com dropdown que filtra pelo CR **ou** pela descrição do plano de contas. Quando o usuário edita as colunas "Conta Débito" ou "Conta Crédito", oferecer sugestões do `planoMap`. Ao escolher, preenche o CR e atualiza a coluna "Desc. Débito/Crédito" automaticamente.
+- Sugestão de histórico: dropdown com os históricos padronizados do prompt (SALARIOS E REMUNERAÇÕES A PAGAR, PRO-LABORE A PAGAR MÊS MM/AAAA, INSS S/SALÁRIOS…, FGTS A PAGAR…, etc.) já preenchidos com a competência atual.
+- Destaque visual para linhas com histórico começando em `[SUGERIDO]` (badge amarelo) e `[REVISAR]` (badge vermelho) para o usuário revisar antes de salvar/exportar.
+- Manter Salvar / Baixar XLSX / Para Calima ERP como estão hoje.
 
-Entrada manual: linha nova traz os 3 campos. Pelo menos um dos códigos é obrigatório por linha.
+## 3. Detalhes técnicos
 
-## Como fica salvo
+- Nenhum código de conta é lido/escrito por lógica hardcoded fora do plano de contas.
+- `folha_lancamentos` continua com a mesma estrutura (sem migration).
+- `_shared/planoContas.ts` já expõe descrições por CR — reutilizar.
+- Sem alteração em outras exportações (Calima segue o CR salvo).
 
-A coluna `planos_contas.conteudo` continua sendo texto (JSON). Sem migration. Novo formato:
+## 4. O que **não** vai mudar
 
-```json
-{
-  "preferencia_ia": "cr",            // "cr" | "completo"
-  "items": [
-    { "cr": "493", "codigo_completo": "1.1.01.001", "descricao": "..." }
-  ]
-}
-```
+- Fluxo de upload/processamento na tela `FolhaPagamentoDetail` (fica só leitura + botão para o editor).
+- Estrutura das tabelas.
+- Contas fiscais/despesas/compras (fora do escopo).
 
-Parser aceita os formatos antigos (array puro de `{codigo, descricao}`): trata `codigo` como `cr`, deixa `codigo_completo` vazio, `preferencia_ia = "cr"`.
+---
 
-## Como a IA passa a ler
-
-`src/lib/planoContas.ts` → `fetchPlanoContas` retorna:
-
-```ts
-{ items, preferencia, map }   // map é keyed apenas pelo código preferido
-```
-
-As edge functions que montam o prompt (`align-document`, `process-folha-pagamento`, `process-document-queue`, `close-month`, mais o uso na confirmação de compras) vão enviar **só** o par `código preferido → descrição`. Telas que listam contas (`AdminLancamentosExport`, `AdminFolhaEditor`, `AdminComprasEditor`, `ClientLancamentosDetail`, `ClientStatusList`, `DocumentUploadArea`, `ExportLancamentosModal`) usam o mesmo `map` — exibem o código preferido. Sem mudança de UX nelas.
-
-## Arquivos afetados
-
-- `src/components/admin/lancamentos/PlanoContasModal.tsx` — 3 colunas, toggle de preferência, import com 3 selects, salvar novo JSON.
-- `src/lib/planoContas.ts` — novo schema + parser retrocompatível + `preferencia` no retorno.
-- `supabase/functions/align-document/index.ts`, `process-folha-pagamento/index.ts`, `process-document-queue/index.ts`, `close-month/index.ts`, `confirm-compras-lancamentos/index.ts` — ler novo JSON, mandar para IA somente o campo preferido.
-- Consumidores frontend listados acima — ajuste mínimo só para usar o helper atualizado.
-
-## Fora do escopo
-
-- Não vamos alterar schema do Postgres (continua `text`).
-- Não vamos converter automaticamente planos existentes — eles continuam funcionando como "só C.R." até o admin reimportar/editar.
+**Resultado esperado:** cada empresa passa a ter os lançamentos de folha classificados apenas segundo o CR do seu próprio plano de contas, verbas novas caem como `[SUGERIDO]`/`[REVISAR]`, e o usuário pode adicionar/editar/remover linhas no editor com autocomplete de contas e sugestão de histórico.

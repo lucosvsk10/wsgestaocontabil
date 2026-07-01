@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { SpreadsheetEditor } from "@/components/admin/lancamentos/SpreadsheetEditor";
 import { QuickEditPanel } from "@/components/admin/lancamentos/QuickEditPanel";
+import { FolhaRowEditor } from "@/components/admin/lancamentos/folha/FolhaRowEditor";
 import type { SheetCell, SheetData } from "@/components/admin/lancamentos/exportBuilders";
 import { fetchPlanoContas, lookupPlanoContasDescricao } from "@/lib/planoContas";
 
@@ -49,20 +50,27 @@ const buildSheet = (rows: Row[], planoMap: Record<string, string>): SheetData =>
     const credDesc = lookupPlanoContasDescricao(planoMap, r.conta_credito);
     const ccDeb = /\(-\)/.test(debDesc) ? "100" : "";
     const ccCred = /\(-\)/.test(credDesc) ? "100" : "";
+    const hist = (r.historico || "").toUpperCase();
+    // Cores por status do histórico
+    let bg: string | undefined;
+    if (/^\s*\[REVISAR\]/.test(hist)) bg = "#fde2e2";
+    else if (/^\s*\[SUGERIDO\]/.test(hist)) bg = "#fff2cc";
+    const withBg = (c: SheetCell): SheetCell => (bg ? { ...c, bg } : c);
     return [
-      cell(formatDate(r.data)),
-      cell(r.conta_debito || ""),
-      cell(debDesc.replace(/\(-\)/g, "").replace(/^\s+/, "")),
-      cell(ccDeb),
-      cell(r.conta_credito || ""),
-      cell(credDesc.replace(/\(-\)/g, "").replace(/^\s+/, "")),
-      cell(ccCred),
-      cell((r.historico || "").toUpperCase()),
-      cell(r.valor ?? 0, { numeric: true }),
+      withBg(cell(formatDate(r.data))),
+      withBg(cell(r.conta_debito || "")),
+      withBg(cell(debDesc.replace(/\(-\)/g, "").replace(/^\s+/, ""))),
+      withBg(cell(ccDeb)),
+      withBg(cell(r.conta_credito || "")),
+      withBg(cell(credDesc.replace(/\(-\)/g, "").replace(/^\s+/, ""))),
+      withBg(cell(ccCred)),
+      withBg(cell(hist)),
+      withBg(cell(r.valor ?? 0, { numeric: true })),
     ];
   });
   return { headers, rows: body };
 };
+
 
 const slug = (s: string) => s.replace(/\s+/g, "_").replace(/[^\w-]/g, "").toLowerCase();
 
@@ -268,6 +276,16 @@ const AdminFolhaEditor = () => {
               </div>
             </div>
 
+            {sheet && (
+              <FolhaRowEditor
+                data={sheet}
+                selectedRow={selectedRow}
+                planoMap={planoMap}
+                competencia={competencia}
+                onChange={onChange}
+                onSelectRow={setSelectedRow}
+              />
+            )}
             {sheet && <QuickEditPanel data={sheet} selectedCol={selectedCol} onChange={onChange} />}
 
             <div className="bg-muted/30 rounded-xl p-4 space-y-2 border border-border">
