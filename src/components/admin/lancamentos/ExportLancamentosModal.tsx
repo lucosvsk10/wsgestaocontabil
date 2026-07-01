@@ -2,16 +2,13 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { FileSpreadsheet, ArrowRight, SortAsc, List, Calculator, Download, Loader2, FileDown } from "lucide-react";
+import { FileSpreadsheet, ArrowRight, SortAsc, List, Calculator, Download, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { buildSheetData, type ExportMode, type Lancamento } from "./exportBuilders";
 import { downloadSheetXlsx } from "./downloadSheet";
-import { exportCalimaXlsx } from "./exportCalima";
 import type { PlanoContasMap } from "./LancamentosTable";
 import { buildPlanoContasMap, parsePlanoContasContent } from "@/lib/planoContas";
-
-type ExportChoice = ExportMode | "calima";
 
 interface ExportLancamentosModalProps {
   isOpen: boolean;
