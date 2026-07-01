@@ -183,7 +183,14 @@ export function buildBalanceByAccount(
 ): SheetData {
   const headers = ["Data", "Débito", "Histórico", "Valor", "Crédito", "CC Débito", "CC Crédito"];
   const lastDay = getLastDayOfMonth(competencia);
-  const groups: Record<string, { conta: string; descricao: string; total: number }> = {};
+  const groups: Record<string, {
+    conta: string;
+    descricao: string;
+    total: number;
+    creditos: Set<string>;
+    ccDebitos: Set<string>;
+    ccCreditos: Set<string>;
+  }> = {};
   for (const l of lancs) {
     const key = l.debito || "sem-conta";
     if (!groups[key]) {
@@ -191,24 +198,30 @@ export function buildBalanceByAccount(
         conta: l.debito || "Sem conta",
         descricao: getDescricao(l.debito, plano),
         total: 0,
+        creditos: new Set(),
+        ccDebitos: new Set(),
+        ccCreditos: new Set(),
       };
     }
     groups[key].total += l.valor || 0;
+    if (l.credito) groups[key].creditos.add(l.credito);
+    if (l.centro_custo_debito) groups[key].ccDebitos.add(l.centro_custo_debito);
+    if (l.centro_custo_credito) groups[key].ccCreditos.add(l.centro_custo_credito);
   }
   const sorted = Object.values(groups).sort((a, b) =>
     a.conta.localeCompare(b.conta, undefined, { numeric: true })
   );
+  const uniq = (s: Set<string>) => (s.size === 1 ? Array.from(s)[0] : "");
   const rows: SheetCell[][] = sorted.map((g) => {
     const descRaw = g.descricao !== "-" ? g.descricao : "Sem descrição";
-    const hasMinus = /\(-\)/.test(descRaw);
     return [
       cell(lastDay),
       cell(g.conta),
       cell(descRaw),
       cell(g.total, { numeric: true }),
-      cell("374"),
-      cell(hasMinus ? "100" : ""),
-      cell(""),
+      cell(uniq(g.creditos)),
+      cell(uniq(g.ccDebitos)),
+      cell(uniq(g.ccCreditos)),
     ];
   });
   const grand = sorted.reduce((s, g) => s + g.total, 0);
