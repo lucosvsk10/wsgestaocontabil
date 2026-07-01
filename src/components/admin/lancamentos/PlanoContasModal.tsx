@@ -653,17 +653,30 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir todas as linhas?</AlertDialogTitle>
             <AlertDialogDescription>
-              Isso vai remover todas as {items.length} contas do plano atual. A ação só é confirmada ao clicar em "Salvar" depois.
+              Isso vai remover permanentemente todas as {items.length} contas do plano atual deste cliente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
-                setItems([]);
-                setSearchTerm("");
-                setConfirmClearOpen(false);
-                toast.success("Todas as linhas foram removidas. Clique em Salvar para confirmar.");
+              onClick={async () => {
+                try {
+                  if (existingId) {
+                    const { error } = await supabase
+                      .from("planos_contas")
+                      .delete()
+                      .eq("id", existingId);
+                    if (error) throw error;
+                  }
+                  setItems([]);
+                  setSearchTerm("");
+                  setExistingId(null);
+                  setConfirmClearOpen(false);
+                  toast.success("Plano de contas apagado com sucesso.");
+                } catch (err) {
+                  console.error("Erro ao apagar plano de contas:", err);
+                  toast.error("Erro ao apagar plano de contas");
+                }
               }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
