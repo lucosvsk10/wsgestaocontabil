@@ -237,9 +237,11 @@ Deno.serve(async (req) => {
           return dt.getUTCFullYear() === y && dt.getUTCMonth() === mo - 1 && dt.getUTCDate() === da;
         };
 
-        // ====== RECONCILIAÇÃO MATEMÁTICA (via código, não confiar na IA) ======
-        // 1) Valor exato da linha SALÁRIOS (Débito 92 / Crédito 823):
-        //    Salário Base + Salário Família + Férias + 1/3 Férias + Ajuda de Custo
+        // ====== RECONCILIAÇÃO MATEMÁTICA (via código, não confiar 100% na IA) ======
+        // Não impomos nenhum código de conta: identificamos as linhas pelo HISTÓRICO
+        // e apenas ajustamos o VALOR. Débito/Crédito continuam vindos do plano de contas
+        // escolhido pela IA. Se a IA não gerou a linha, criamos com contas nulas + [REVISAR].
+
         const salarioCalculado = round2(
           campos.salario_base +
           campos.salario_familia +
@@ -248,42 +250,42 @@ Deno.serve(async (req) => {
           campos.ajuda_custo
         );
 
-        const isSalarioRow = (l: any) =>
-          String(l?.conta_debito ?? "").trim() === "92" &&
-          String(l?.conta_credito ?? "").trim() === "823";
+        const HIST_SALARIO = "SALARIOS E REMUNERAÇÕES A PAGAR";
+        const isSalarioRow = (l: any) => {
+          const h = String(l?.historico ?? "").toUpperCase();
+          return /SAL[AÁ]RIOS?\s+E\s+REMUNERA/.test(h);
+        };
 
         const isConsignadoRow = (l: any) => {
-          const deb = String(l?.conta_debito ?? "").trim();
-          const hist = String(l?.historico ?? "").toUpperCase();
-          return deb === "823" && /CONSIGN/.test(hist);
+          const h = String(l?.historico ?? "").toUpperCase();
+          return /CONSIGN/.test(h);
         };
 
         const lancsArr = Array.isArray(lancs) ? [...lancs] : [];
 
-        // Substitui (ou cria) a linha de salários com o valor calculado
+        // Ajusta valor da linha de salários pelo cálculo (não mexe em débito/crédito)
         const salarioIdx = lancsArr.findIndex(isSalarioRow);
         if (salarioCalculado > 0) {
           if (salarioIdx >= 0) {
             lancsArr[salarioIdx] = {
               ...lancsArr[salarioIdx],
               valor: salarioCalculado,
-              historico: "SALARIOS E REMUNERAÇÕES A PAGAR",
+              historico: HIST_SALARIO,
             };
           } else {
             lancsArr.unshift({
               data: null,
-              conta_debito: "92",
-              conta_credito: "823",
-              historico: "SALARIOS E REMUNERAÇÕES A PAGAR",
+              conta_debito: null,
+              conta_credito: null,
+              historico: `[REVISAR] ${HIST_SALARIO}`,
               valor: salarioCalculado,
             });
           }
         } else if (salarioIdx >= 0) {
-          // Sem valor calculado mas IA criou linha: remove se zerada
           if (!(Number(lancsArr[salarioIdx]?.valor) > 0)) lancsArr.splice(salarioIdx, 1);
         }
 
-        // Garante linha de eConsignado (Débito 823 / Crédito 912) se houver valor
+        // Garante linha de eConsignado se houver valor (sem impor CR)
         const eCons = round2(campos.e_consignado);
         const consIdx = lancsArr.findIndex(isConsignadoRow);
         const mmAaaa = competencia.match(/^(\d{4})-(\d{2})/);
@@ -292,17 +294,15 @@ Deno.serve(async (req) => {
           if (consIdx >= 0) {
             lancsArr[consIdx] = {
               ...lancsArr[consIdx],
-              conta_debito: "823",
-              conta_credito: String(lancsArr[consIdx]?.conta_credito ?? "912") || "912",
               valor: eCons,
-              historico: histConsig,
+              historico: lancsArr[consIdx]?.historico || histConsig,
             };
           } else {
             lancsArr.push({
               data: null,
-              conta_debito: "823",
-              conta_credito: "912",
-              historico: histConsig,
+              conta_debito: null,
+              conta_credito: null,
+              historico: `[REVISAR] ${histConsig}`,
               valor: eCons,
             });
           }
@@ -311,13 +311,17 @@ Deno.serve(async (req) => {
         const rowsToInsert = lancsArr.map((l: any, idx: number) => {
           const parsed = parseDateBR(l.data);
           const data = isValidISO(parsed) ? parsed : fallbackDate;
+          const rawHist = String(l.historico || "").trim();
+          // Preserva prefixos [SUGERIDO] / [REVISAR] sem forçar toUpperCase quebrando os colchetes
+          const historico = rawHist ? rawHist.replace(/\s+/g, " ").toUpperCase() : "";
           return {
             client_id: clientId,
             competencia,
             data,
-            conta_debito: l.conta_debito != null ? String(l.conta_debito) : null,
-            conta_credito: l.conta_credito != null ? String(l.conta_credito) : null,
-            historico: String(l.historico || "").toUpperCase(),
+            conta_debito: l.conta_debito != null && String(l.conta_debito).trim() !== "" ? String(l.conta_debito).trim() : null,
+            conta_credito: l.conta_credito != null && String(l.conta_credito).trim() !== "" ? String(l.conta_credito).trim() : null,
+            historico,
+
             valor: round2(Number(l.valor) || 0),
             ordem: allRows.length + idx,
             source_upload_id: up.id,
