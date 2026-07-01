@@ -1,5 +1,15 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -113,6 +123,8 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
   const [existingId, setExistingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
+
+  const [confirmClearOpen, setConfirmClearOpen] = useState(false);
 
   useEffect(() => {
     if (isOpen && clientId) {
@@ -501,6 +513,16 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
                 <Plus className="h-4 w-4 mr-1" />
                 Adicionar Linha
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setConfirmClearOpen(true)}
+                disabled={items.length === 0}
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Excluir Todas
+              </Button>
               <div className="flex-1" />
               <div className="relative">
                 <Search className="h-4 w-4 absolute left-2.5 top-2.5 text-muted-foreground" />
@@ -625,6 +647,44 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
           )}
         </DialogFooter>
       </DialogContent>
+
+      <AlertDialog open={confirmClearOpen} onOpenChange={setConfirmClearOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir todas as linhas?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Isso vai remover permanentemente todas as {items.length} contas do plano atual deste cliente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                try {
+                  if (existingId) {
+                    const { error } = await supabase
+                      .from("planos_contas")
+                      .delete()
+                      .eq("id", existingId);
+                    if (error) throw error;
+                  }
+                  setItems([]);
+                  setSearchTerm("");
+                  setExistingId(null);
+                  setConfirmClearOpen(false);
+                  toast.success("Plano de contas apagado com sucesso.");
+                } catch (err) {
+                  console.error("Erro ao apagar plano de contas:", err);
+                  toast.error("Erro ao apagar plano de contas");
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir todas
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 };
