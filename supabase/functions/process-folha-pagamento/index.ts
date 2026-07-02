@@ -240,7 +240,7 @@ Deno.serve(async (req) => {
 
         const aiJson = await aiRes.json();
         const content = aiJson?.choices?.[0]?.message?.content ?? "";
-        const { campos, lancamentos: lancs } = extractAiPayload(content);
+        const { campos, lancamentos: lancs, observacoes_ia } = extractAiPayload(content);
 
         const fallbackDate = lastDayOfCompetencia(competencia);
         const isValidISO = (d: string | null) => {
@@ -294,6 +294,7 @@ Deno.serve(async (req) => {
               conta_credito: null,
               historico: `[REVISAR] ${HIST_SALARIO}`,
               valor: salarioCalculado,
+              justificativa: "Linha criada automaticamente: soma calculada de SALÁRIO BASE + SALÁRIO FAMÍLIA + FÉRIAS + 1/3 FÉRIAS + AJUDA DE CUSTO extraídos do PDF.",
             });
           }
         } else if (salarioIdx >= 0) {
@@ -319,6 +320,7 @@ Deno.serve(async (req) => {
               conta_credito: null,
               historico: `[REVISAR] ${histConsig}`,
               valor: eCons,
+              justificativa: "Linha criada automaticamente a partir do valor de EMPRÉSTIMO CONSIGNADO extraído do PDF.",
             });
           }
         }
@@ -329,6 +331,9 @@ Deno.serve(async (req) => {
           const rawHist = String(l.historico || "").trim();
           // Preserva prefixos [SUGERIDO] / [REVISAR] sem forçar toUpperCase quebrando os colchetes
           const historico = rawHist ? rawHist.replace(/\s+/g, " ").toUpperCase() : "";
+          const justificativa = l.justificativa != null && String(l.justificativa).trim() !== ""
+            ? String(l.justificativa).trim()
+            : null;
           return {
             client_id: clientId,
             competencia,
@@ -336,7 +341,7 @@ Deno.serve(async (req) => {
             conta_debito: l.conta_debito != null && String(l.conta_debito).trim() !== "" ? String(l.conta_debito).trim() : null,
             conta_credito: l.conta_credito != null && String(l.conta_credito).trim() !== "" ? String(l.conta_credito).trim() : null,
             historico,
-
+            justificativa,
             valor: round2(Number(l.valor) || 0),
             ordem: allRows.length + idx,
             source_upload_id: up.id,
@@ -345,7 +350,11 @@ Deno.serve(async (req) => {
         allRows.push(...rowsToInsert);
         totalLancamentos += rowsToInsert.length;
 
-        await supa.from("folha_uploads").update({ status: "processado", ultimo_erro: null }).eq("id", up.id);
+        await supa.from("folha_uploads").update({
+          status: "processado",
+          ultimo_erro: null,
+          observacoes_ia: observacoes_ia || null,
+        }).eq("id", up.id);
       } catch (e: any) {
         console.error("Erro processando upload", up.id, e);
         await supa.from("folha_uploads").update({ status: "erro", ultimo_erro: String(e.message || e).slice(0, 500) }).eq("id", up.id);
