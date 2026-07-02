@@ -1,68 +1,58 @@
 ## Objetivo
-
-1. Simplificar todo o pipeline para trabalhar **apenas com o C.R. (Código Reduzido)** do plano de contas — remover conceito de "código completo" / "preferência da IA".
-2. No processamento de **folha de pagamento** (só folha, não compras/fiscal), fazer a IA gerar:
-   - Uma **nova coluna "Justificativa"** por linha explicando de onde saiu do PDF e, quando aplicável, quais valores foram somados/unificados.
-   - Um campo global de **Observações da IA** (dúvidas ou justificativas incomuns) exibido no editor.
+1. Garantir que os valores mostrados/salvos são **exatamente** os do PDF — sem somas inventadas nem linhas sintéticas.
+2. No editor da Folha, separar o "Total" em **Rendimentos (verde)** e **Descontos (vermelho)**.
+3. Substituir as bordas douradas por um estilo neutro e agradável.
 
 ---
 
-## 1. Plano de contas: apenas C.R.
+## 1. Corrigir a origem dos valores (edge function `process-folha-pagamento`)
 
-**Arquivos:** `src/lib/planoContas.ts`, `supabase/functions/_shared/planoContas.ts`, `src/components/admin/lancamentos/PlanoContasModal.tsx`.
+O erro está na **reconciliação matemática** que hoje sobrescreve o que a IA leu:
 
-- Remover o campo `codigo_completo` e o tipo `PlanoContasPreferencia` de ambos os arquivos compartilhados. Item passa a ser `{ cr, descricao }`.
-- `parsePlanoContasContent` / `parsePlanoContas`:
-  - Aceitar o formato antigo (com `codigo_completo` e/ou `preferencia_ia`) apenas para **ler** dados já salvos — descartar `codigo_completo` e ignorar `preferencia_ia`, mantendo compatibilidade.
-  - Sempre retornar `{ items: [{cr, descricao}] }` — sem `preferencia`.
-- `serializePlanoContas`: gravar `{ items: [{cr, descricao}] }` puro, sem `preferencia_ia`.
-- `buildPlanoContasMap` / `buildPlanoMap`: mapear apenas o CR (com aliases de formatação) → descrição.
-- `planoContasForAI`: enviar linhas `"CR - descrição"` sempre pelo CR.
-- `PlanoContasModal`: remover a coluna "Código completo" e o seletor "preferência da IA"; deixar só C.R. + descrição. Importação de planilha lê apenas colunas do CR/descrição.
-- Migração de dados **não é necessária** (o parser aceita legado); só deixamos de escrever `codigo_completo`.
+- Trecho `salarioCalculado = salario_base + salario_familia + ferias + 1/3 + ajuda_custo` está **somando campos brutos** e substituindo o valor da linha de salários da IA — isso é a principal fonte de valores diferentes do PDF.
+- O bloco de `eConsignado` cria uma linha nova se a IA não gerou, potencialmente duplicando o desconto.
+- O `campos_pdf` estimulava a IA a devolver totais que depois eram re-somados.
 
-## 2. Edge function `process-folha-pagamento`
+**Ações:**
+- Remover completamente o bloco de "RECONCILIAÇÃO MATEMÁTICA" (linhas ~255–326): nada de `salarioCalculado`, nada de `unshift`/`push` de linhas `[REVISAR]` a partir de `campos.*`.
+- Retirar do `SYSTEM_PROMPT` a seção `campos_pdf` e a "VERIFICAÇÃO OBRIGATÓRIA (DOUBLE-CHECK)" que induziam a IA a recompor valores.
+- Reforçar no prompt: *"Copie os valores exatamente como aparecem no PDF. Se agrupar linhas com mesma combinação débito+crédito, o valor final DEVE ser a soma aritmética exata das verbas listadas na justificativa — nunca arredonde, estime ou complete."*
+- Manter a lógica de `[SUGERIDO]` / `[REVISAR]` e `justificativa` / `observacoes_ia` inalterada.
+- `extractAiPayload` passa a retornar só `{ lancamentos, observacoes_ia }`.
 
-**Arquivo:** `supabase/functions/process-folha-pagamento/index.ts`.
+Resultado: a planilha mostra o que a IA leu, sem "correções" via código que causam divergência.
 
-- Ajustar o `SYSTEM_PROMPT` para deixar explícito: "Use SOMENTE o CR (código reduzido) do [PLANO DE CONTAS]. Não existem códigos completos."
-- **Novos campos de saída:**
-  - Em cada lançamento, adicionar `"justificativa": STRING` — texto curto explicando de onde o valor veio no PDF (ex.: "Soma de SALÁRIOS (R$ 12.340) + AJUDA DE CUSTO (R$ 400) da seção 'RESUMO DE PROVENTOS'") e, quando for uma linha consolidada de várias verbas, listar quais foram unificadas.
-  - No topo do JSON, novo campo `"observacoes_ia": STRING` — texto livre para dúvidas, valores que não bateram, verbas suspeitas ou casos que exigiram interpretação. Vazio quando não houver observação.
-- Persistir os novos campos:
-  - `folha_lancamentos.justificativa TEXT NULL` (nova coluna, migration).
-  - `folha_uploads.observacoes_ia TEXT NULL` (nova coluna, migration). Gravado por upload processado.
-- Reconciliação matemática existente continua igual (identificação por regex no histórico); ao criar/ajustar linhas via código, preservar/gerar `justificativa` coerente (ex.: "Ajuste automático: soma calculada dos campos do PDF").
-- `[SUGERIDO] / [REVISAR]` continuam funcionando; a IA agora também explica no campo `justificativa` por que sugeriu ou por que marcou para revisão.
+## 2. Total dividido em Rendimentos × Descontos (`AdminFolhaEditor.tsx`)
 
-## 3. Editor da folha
+Classificação por linha via histórico (evita depender do plano de contas do lado do cliente):
 
-**Arquivos:** `src/pages/AdminFolhaEditor.tsx`, `src/components/admin/lancamentos/folha/FolhaRowEditor.tsx`, `src/components/admin/lancamentos/exportBuilders.ts` (se necessário para tipos).
+- **Desconto** quando o histórico bater com: `INSS S/`, `IRRF`, `CONSIGN`, `PENSAO`, `SINDICAL`, `CONVENIO`, `EMPRESTIMO`, `VALE`, ou começar com "DESC".
+- **Rendimento** = todas as demais linhas com valor > 0 (salários, pró-labore, férias, rescisão, FGTS-empresa, etc. — do ponto de vista da folha são proventos/despesas da empresa).
 
-- Carregar `justificativa` de cada linha e `observacoes_ia` da tabela `folha_uploads` (agregando de todos os uploads da competência — juntar por `\n\n`).
-- Manter a planilha principal como está (9 colunas de exportação). A **coluna "Justificativa" é apresentada só na UI**, não vai para o XLSX/Calima:
-  - Renderizar um painel/side panel: ao selecionar uma linha, mostrar a justificativa da IA em bloco de texto (`FolhaRowEditor` ganha uma seção "Justificativa da IA" acima dos campos editáveis).
-  - Também exibir a justificativa em coluna extra do editor visual? Não — manter fora da planilha para não bagunçar a exportação, ficar só no side panel.
-- Ao **salvar**, preservar `justificativa` original (não sobrescrever). Se o usuário adicionar/duplicar linha manualmente, `justificativa = null` (ou "Adicionado manualmente").
-- Adicionar **card "Observações da IA"** na sidebar (acima do card de resumo), com o texto vindo de `folha_uploads.observacoes_ia`. Se vazio, esconder o card. Apenas leitura.
-- Exports (Baixar XLSX / Calima) **não incluem** justificativa nem observações — mantém formato Calima intacto.
+Alterações:
+- Substituir o `useMemo` `total` por `{ rendimentos, descontos, liquido }`.
+- No card lateral, trocar a linha "Total" por dois campos:
+  - `Rendimentos` — valor formatado em **verde** (`text-emerald-600 dark:text-emerald-400`).
+  - `Descontos` — valor formatado em **vermelho** (`text-red-600 dark:text-red-400`).
+  - Uma terceira linha discreta `Líquido` (rendimentos − descontos) em cor neutra, opcional.
 
-## 4. Migrations
+## 3. Remover bordas douradas
 
-```sql
-ALTER TABLE public.folha_lancamentos ADD COLUMN IF NOT EXISTS justificativa TEXT;
-ALTER TABLE public.folha_uploads     ADD COLUMN IF NOT EXISTS observacoes_ia TEXT;
-```
+Fonte principal: `src/styles/dark-mode.css` — cartões/inputs/popover usam `border-gold/30` e `border-gold/40`.
 
-Sem alteração de RLS/grants (herdam das tabelas).
-
-## 5. Escopo do que **não** muda
-
-- Compras, fiscal e extrato bancário: não recebem justificativa nem observações.
-- Estrutura da exportação Calima e do XLSX baixado do editor de folha permanece idêntica.
-- Reconciliação matemática (`salario_base + familia + ferias + 1/3 + ajuda_custo`) e regras de débito/crédito por natureza (do plano anterior aprovado) continuam vigentes.
-- Prefixos `[SUGERIDO]` / `[REVISAR]` no histórico permanecem.
+- Substituir todas as ocorrências de `border-gold/XX` (e `border-gold border-opacity-XX`) por `border-border` (token neutro do design system já existente).
+- Ajustar `.dark .button` para `border-border` e hover `bg-accent/40` (sem tom dourado).
+- Preservar o dourado apenas como cor de destaque de textos/ícones onde já é usada; **não** como borda de containers.
+- Verificar `AdminFolhaEditor` e `FolhaRowEditor`: já usam `border-border`, ficam consistentes automaticamente após a limpeza do dark-mode.css.
 
 ---
 
-**Resultado esperado:** plano de contas simplificado a um único código (CR) em todo o sistema, e no fluxo de folha o usuário passa a ver, por linha, uma justificativa da IA explicando de onde veio o valor / o que foi somado, além de uma caixa de observações gerais da IA por competência.
+## Arquivos afetados
+- `supabase/functions/process-folha-pagamento/index.ts` — remover reconciliação + ajustar prompt + simplificar `extractAiPayload`.
+- `src/pages/AdminFolhaEditor.tsx` — dividir Total em Rendimentos/Descontos com cor.
+- `src/styles/dark-mode.css` — trocar `border-gold/*` por `border-border`.
+
+## Fora de escopo
+- Nenhuma mudança no banco (colunas `justificativa` e `observacoes_ia` continuam iguais).
+- Nenhuma mudança em compras/fiscal/bancário.
+- Formatos de exportação (XLSX / Calima) permanecem idênticos.

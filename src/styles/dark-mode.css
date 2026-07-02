@@ -1,5 +1,5 @@
 
-/* Estilização para o modo escuro */
+/* Estilização para o modo escuro — bordas neutras */
 .dark .card,
 .dark .dropdown-menu,
 .dark .dialog,
@@ -12,11 +12,11 @@
 .dark .command,
 .dark .select,
 .dark .alert-dialog {
-  @apply border border-gold/30 bg-transparent backdrop-blur-sm rounded-lg;
+  @apply border border-border bg-transparent backdrop-blur-sm rounded-lg;
 }
 
 .dark .button {
-  @apply border border-gold/40 bg-transparent text-white hover:bg-gold/10;
+  @apply border border-border bg-transparent text-white hover:bg-accent/40;
 }
 
 .dark .button-primary {
@@ -26,24 +26,24 @@
 .dark .input,
 .dark .textarea,
 .dark .select {
-  @apply border-gold/30 bg-transparent text-white focus:border-gold/60;
+  @apply border-border bg-transparent text-white focus:border-ring;
 }
 
 /* Estilos específicos para o modo escuro nas páginas administrativas */
 .dark .admin-card {
-  @apply bg-transparent border border-gold border-opacity-30 rounded-lg;
+  @apply bg-transparent border border-border rounded-lg;
 }
 
 .dark .admin-header {
-  @apply bg-deepNavy border-none text-gold;
+  @apply bg-deepNavy border-none text-foreground;
 }
 
 .dark .admin-input {
-  @apply bg-transparent border-gold border-opacity-30 text-white;
+  @apply bg-transparent border-border text-white;
 }
 
 .dark .admin-button {
-  @apply bg-transparent border border-gold border-opacity-40 text-[#d9d9d9] hover:bg-gold/10;
+  @apply bg-transparent border border-border text-[#d9d9d9] hover:bg-accent/40;
 }
 
 .dark .admin-table {
@@ -51,9 +51,9 @@
 }
 
 .dark .admin-table th {
-  @apply text-gold border-gold border-opacity-20;
+  @apply text-foreground border-border;
 }
 
 .dark .admin-table td {
-  @apply border-gold border-opacity-10;
+  @apply border-border;
 }

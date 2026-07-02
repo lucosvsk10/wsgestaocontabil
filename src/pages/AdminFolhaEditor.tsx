@@ -162,10 +162,20 @@ const AdminFolhaEditor = () => {
 
   const attemptLeave = () => { if (isDirty) setLeaveOpen(true); else navigate(-1); };
 
-  const total = useMemo(() => {
-    if (!sheet) return 0;
-    return sheet.rows.reduce((s, r) => s + (r[8]?.numeric ? Number(r[8].value) || 0 : 0), 0);
+  const { rendimentos, descontos } = useMemo(() => {
+    if (!sheet) return { rendimentos: 0, descontos: 0 };
+    const DESC_RE = /(INSS\s*S\/|IRRF|CONSIGN|PENSAO|PENSÃO|SINDICAL|CONVENIO|CONVÊNIO|EMPRESTIMO|EMPRÉSTIMO|VALE|^\s*DESC)/i;
+    let r = 0, d = 0;
+    for (const row of sheet.rows) {
+      const v = row[8]?.numeric ? Number(row[8].value) || 0 : 0;
+      if (!v) continue;
+      const hist = String(row[7]?.value ?? "");
+      if (DESC_RE.test(hist)) d += v; else r += v;
+    }
+    return { rendimentos: r, descontos: d };
   }, [sheet]);
+  const liquido = rendimentos - descontos;
+  const fmtBRL = (n: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(n);
 
   const monthLabel = useMemo(() => {
     const [y, m] = competencia.split("-");
@@ -297,9 +307,21 @@ const AdminFolhaEditor = () => {
                 <span className="text-sm font-medium text-foreground">{sheet?.rows.length ?? 0}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Total</span>
+                <span className="text-xs text-muted-foreground">Rendimentos</span>
+                <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                  {fmtBRL(rendimentos)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">Descontos</span>
+                <span className="text-sm font-semibold text-red-600 dark:text-red-400">
+                  {fmtBRL(descontos)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between pt-1 border-t border-border">
+                <span className="text-xs text-muted-foreground">Líquido</span>
                 <span className="text-sm font-medium text-foreground">
-                  {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(total)}
+                  {fmtBRL(liquido)}
                 </span>
               </div>
             </div>
