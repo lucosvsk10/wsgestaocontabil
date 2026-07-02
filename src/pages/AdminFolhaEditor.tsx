@@ -91,6 +91,8 @@ const AdminFolhaEditor = () => {
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [selectedRow, setSelectedRow] = useState<number | null>(null);
   const [selectedCol, setSelectedCol] = useState<number | null>(null);
+  const [justificativas, setJustificativas] = useState<(string | null)[]>([]);
+  const [observacoesIA, setObservacoesIA] = useState<string>("");
 
   useEffect(() => {
     (async () => {
@@ -101,9 +103,10 @@ const AdminFolhaEditor = () => {
       }
       setLoading(true);
       try {
-        const [{ data: userData }, { data: rows }, planoRes] = await Promise.all([
+        const [{ data: userData }, { data: rows }, { data: uploads }, planoRes] = await Promise.all([
           supabase.from("users").select("name").eq("id", clientId).maybeSingle(),
           supabase.from("folha_lancamentos").select("*").eq("client_id", clientId).eq("competencia", competencia).order("ordem", { ascending: true }),
+          supabase.from("folha_uploads").select("observacoes_ia").eq("client_id", clientId).eq("competencia", competencia),
           fetchPlanoContas(clientId),
         ]);
         const name = userData?.name || "Cliente";
@@ -116,9 +119,16 @@ const AdminFolhaEditor = () => {
           historico: r.historico,
           valor: r.valor != null ? Number(r.valor) : null,
           ordem: r.ordem ?? i,
+          justificativa: r.justificativa ?? null,
         })) as Row[];
         setSheet(buildSheet(list, planoRes.map));
+        setJustificativas(list.map((r) => r.justificativa));
         setPlanoMap(planoRes.map);
+        const obs = (uploads || [])
+          .map((u: any) => String(u.observacoes_ia || "").trim())
+          .filter(Boolean)
+          .join("\n\n");
+        setObservacoesIA(obs);
         setFilename(`folha_${slug(name)}_${competencia}.xlsx`);
       } catch (e: any) {
         toast.error("Erro ao carregar: " + e.message);
