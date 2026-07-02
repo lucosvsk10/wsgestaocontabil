@@ -145,7 +145,18 @@ const AdminFolhaEditor = () => {
     return () => window.removeEventListener("beforeunload", h);
   }, [isDirty]);
 
-  const onChange = (next: SheetData) => { setSheet(next); setIsDirty(true); };
+  const onChange = (next: SheetData) => {
+    setSheet(next);
+    setIsDirty(true);
+    // Mantém o array de justificativas com o mesmo tamanho da planilha
+    setJustificativas((prev) => {
+      if (next.rows.length === prev.length) return prev;
+      if (next.rows.length > prev.length) {
+        return [...prev, ...Array(next.rows.length - prev.length).fill(null)];
+      }
+      return prev.slice(0, next.rows.length);
+    });
+  };
 
   const attemptLeave = () => { if (isDirty) setLeaveOpen(true); else navigate(-1); };
 
