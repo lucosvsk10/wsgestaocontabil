@@ -299,12 +299,24 @@ const AdminFolhaEditor = () => {
               </div>
             </div>
 
+            {observacoesIA && (
+              <div className="bg-amber-50 dark:bg-amber-950/30 rounded-xl p-4 space-y-2 border border-amber-200 dark:border-amber-900">
+                <div className="flex items-center gap-2 text-xs font-semibold text-amber-800 dark:text-amber-200">
+                  <FileSpreadsheet className="w-3.5 h-3.5" /> Observações da IA
+                </div>
+                <p className="text-xs text-amber-900 dark:text-amber-100 whitespace-pre-wrap leading-relaxed">
+                  {observacoesIA}
+                </p>
+              </div>
+            )}
+
             {sheet && (
               <FolhaRowEditor
                 data={sheet}
                 selectedRow={selectedRow}
                 planoMap={planoMap}
                 competencia={competencia}
+                justificativa={selectedRow != null ? justificativas[selectedRow] ?? null : null}
                 onChange={onChange}
                 onSelectRow={setSelectedRow}
               />
