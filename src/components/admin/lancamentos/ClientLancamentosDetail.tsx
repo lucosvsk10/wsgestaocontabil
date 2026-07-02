@@ -164,8 +164,8 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
       setHasPlanoContas(!!planoData);
 
       if (planoData?.conteudo) {
-        const { items, preferencia } = parsePlanoContasContent(planoData.conteudo);
-        setPlanoContasMap(buildPlanoContasMap(items, preferencia));
+        const { items } = parsePlanoContasContent(planoData.conteudo);
+        setPlanoContasMap(buildPlanoContasMap(items));
       } else {
         setPlanoContasMap({});
       }
