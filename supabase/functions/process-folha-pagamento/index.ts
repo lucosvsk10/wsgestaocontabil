@@ -192,7 +192,7 @@ Deno.serve(async (req) => {
             {
               role: "user",
               content: [
-                { type: "text", text: `Competência: ${competencia}\n\n${planoText}\n\nAnalise o PDF da folha de pagamento anexo. Retorne ESTRITAMENTE um objeto JSON conforme especificado no system prompt, com as chaves "campos_pdf" (valores brutos extraídos do PDF) e "lancamentos" (array de lançamentos contábeis). Se não houver dados extraíveis, retorne { "campos_pdf": { ...todos zerados }, "lancamentos": [] }. Não inclua texto fora do JSON.` },
+                { type: "text", text: `Competência: ${competencia}\n\n${planoText}\n\nAnalise o PDF da folha de pagamento anexo. Retorne ESTRITAMENTE um objeto JSON conforme especificado no system prompt, com as chaves "observacoes_ia" e "lancamentos". Se não houver dados extraíveis, retorne { "observacoes_ia": "", "lancamentos": [] }. Não inclua texto fora do JSON. LEMBRE: os valores devem ser IDÊNTICOS aos do PDF, sem arredondar ou estimar.` },
                 { type: "file", file: { filename: up.nome_arquivo, file_data: `data:application/pdf;base64,${b64}` } },
               ],
             },
@@ -217,7 +217,7 @@ Deno.serve(async (req) => {
 
         const aiJson = await aiRes.json();
         const content = aiJson?.choices?.[0]?.message?.content ?? "";
-        const { campos, lancamentos: lancs, observacoes_ia } = extractAiPayload(content);
+        const { lancamentos: lancs, observacoes_ia } = extractAiPayload(content);
 
         const fallbackDate = lastDayOfCompetencia(competencia);
         const isValidISO = (d: string | null) => {
@@ -229,78 +229,9 @@ Deno.serve(async (req) => {
           return dt.getUTCFullYear() === y && dt.getUTCMonth() === mo - 1 && dt.getUTCDate() === da;
         };
 
-        // ====== RECONCILIAÇÃO MATEMÁTICA (via código, não confiar 100% na IA) ======
-        // Não impomos nenhum código de conta: identificamos as linhas pelo HISTÓRICO
-        // e apenas ajustamos o VALOR. Débito/Crédito continuam vindos do plano de contas
-        // escolhido pela IA. Se a IA não gerou a linha, criamos com contas nulas + [REVISAR].
-
-        const salarioCalculado = round2(
-          campos.salario_base +
-          campos.salario_familia +
-          campos.ferias +
-          campos.um_terco_ferias +
-          campos.ajuda_custo
-        );
-
-        const HIST_SALARIO = "SALARIOS E REMUNERAÇÕES A PAGAR";
-        const isSalarioRow = (l: any) => {
-          const h = String(l?.historico ?? "").toUpperCase();
-          return /SAL[AÁ]RIOS?\s+E\s+REMUNERA/.test(h);
-        };
-
-        const isConsignadoRow = (l: any) => {
-          const h = String(l?.historico ?? "").toUpperCase();
-          return /CONSIGN/.test(h);
-        };
-
+        // Fidelidade total: usamos os lançamentos exatamente como a IA retornou.
+        // Nenhuma reconciliação matemática, nenhuma linha sintética.
         const lancsArr = Array.isArray(lancs) ? [...lancs] : [];
-
-        // Ajusta valor da linha de salários pelo cálculo (não mexe em débito/crédito)
-        const salarioIdx = lancsArr.findIndex(isSalarioRow);
-        if (salarioCalculado > 0) {
-          if (salarioIdx >= 0) {
-            lancsArr[salarioIdx] = {
-              ...lancsArr[salarioIdx],
-              valor: salarioCalculado,
-              historico: HIST_SALARIO,
-            };
-          } else {
-            lancsArr.unshift({
-              data: null,
-              conta_debito: null,
-              conta_credito: null,
-              historico: `[REVISAR] ${HIST_SALARIO}`,
-              valor: salarioCalculado,
-              justificativa: "Linha criada automaticamente: soma calculada de SALÁRIO BASE + SALÁRIO FAMÍLIA + FÉRIAS + 1/3 FÉRIAS + AJUDA DE CUSTO extraídos do PDF.",
-            });
-          }
-        } else if (salarioIdx >= 0) {
-          if (!(Number(lancsArr[salarioIdx]?.valor) > 0)) lancsArr.splice(salarioIdx, 1);
-        }
-
-        // Garante linha de eConsignado se houver valor (sem impor CR)
-        const eCons = round2(campos.e_consignado);
-        const consIdx = lancsArr.findIndex(isConsignadoRow);
-        const mmAaaa = competencia.match(/^(\d{4})-(\d{2})/);
-        const histConsig = `EMPRESTIMO CONSIGNADO EM FOLHA MÊS ${mmAaaa ? `${mmAaaa[2]}/${mmAaaa[1]}` : ""}`.trim();
-        if (eCons > 0) {
-          if (consIdx >= 0) {
-            lancsArr[consIdx] = {
-              ...lancsArr[consIdx],
-              valor: eCons,
-              historico: lancsArr[consIdx]?.historico || histConsig,
-            };
-          } else {
-            lancsArr.push({
-              data: null,
-              conta_debito: null,
-              conta_credito: null,
-              historico: `[REVISAR] ${histConsig}`,
-              valor: eCons,
-              justificativa: "Linha criada automaticamente a partir do valor de EMPRÉSTIMO CONSIGNADO extraído do PDF.",
-            });
-          }
-        }
 
         const rowsToInsert = lancsArr.map((l: any, idx: number) => {
           const parsed = parseDateBR(l.data);
