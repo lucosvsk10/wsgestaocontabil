@@ -185,7 +185,7 @@ const AdminFolhaEditor = () => {
         conta_credito: String(r[4].value ?? "").trim() || null,
         historico: String(r[7].value ?? "").trim() || null,
         valor: r[8].numeric ? Number(r[8].value) || 0 : Number(String(r[8].value).replace(/\./g, "").replace(",", ".")) || 0,
-        justificativa: justificativas[idx] ?? null,
+        justificativa: (String(r[9]?.value ?? "").trim() || justificativas[idx]) ?? null,
       }));
       await supabase.from("folha_lancamentos").delete().eq("client_id", clientId).eq("competencia", competencia);
       if (newRows.length) {
