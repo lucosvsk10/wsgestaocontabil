@@ -63,8 +63,12 @@ Para CADA lançamento, preencha o campo "justificativa" com uma explicação cur
 ### OBSERVAÇÕES GERAIS DA IA (OBRIGATÓRIO)
 No topo do JSON, o campo "observacoes_ia" (string única, pode ser vazia "") serve para você registrar dúvidas, casos incomuns, ou justificativas de decisões não óbvias tomadas durante o processamento — coisas que o usuário humano precisa saber ao revisar. Exemplos: valor que não bateu na conferência matemática, verba nova encontrada e como você tratou, retenção incomum, competência divergente entre páginas, etc. Se não houver nada a comentar, deixe "".
 
-### VERIFICAÇÃO OBRIGATÓRIA (DOUBLE-CHECK)
-Some TODOS os valores das linhas de REMUNERAÇÕES (itens 1, 3 e 4), EXCLUINDO pró-labore. O total deve bater EXATAMENTE com o campo "Rendimentos"/"Total de Proventos" do PDF SUBTRAÍDO do valor do Pró-labore. Se não bater, revise antes de emitir o JSON e registre o motivo em "observacoes_ia".
+### FIDELIDADE ABSOLUTA AOS VALORES DO PDF (REGRA MAIS IMPORTANTE)
+- Copie os valores EXATAMENTE como aparecem no PDF. NUNCA arredonde, estime, complete ou "corrija" valores.
+- Se você agrupar linhas com a mesma combinação [Conta Débito + Conta Crédito], o valor final DEVE ser a soma aritmética EXATA das verbas listadas na justificativa (centavo por centavo).
+- Se um valor no PDF for R$ 1.234,56, use 1234.56 — nem 1234.55, nem 1234.60, nem 1234.
+- Não invente linhas que não estejam no PDF. Não descarte linhas que estejam no PDF.
+- Se algo estiver ilegível ou ambíguo, marque com [REVISAR] e explique na justificativa — não chute.
 
 ### FORMATAÇÃO
 - Data: último dia real do mês da competência (DD/MM/AAAA).
@@ -74,22 +78,11 @@ Some TODOS os valores das linhas de REMUNERAÇÕES (itens 1, 3 e 4), EXCLUINDO p
 ### FORMATO DO RETORNO (JSON STRICT)
 Retorne ESTRITAMENTE um objeto JSON:
 {
-  "campos_pdf": {
-    "salario_base": NUMBER,
-    "salario_familia": NUMBER,
-    "ferias": NUMBER,
-    "um_terco_ferias": NUMBER,
-    "ajuda_custo": NUMBER,
-    "e_consignado": NUMBER,
-    "rendimentos_total": NUMBER,
-    "pro_labore": NUMBER
-  },
   "observacoes_ia": "STRING",
   "lancamentos": [
     { "data": "DD/MM/AAAA", "conta_debito": "STRING_OR_NULL", "conta_credito": "STRING_OR_NULL", "historico": "STRING", "valor": NUMBER, "justificativa": "STRING" }
   ]
-}
-Use 0 para qualquer campo numérico ausente em "campos_pdf". NUNCA omita uma chave de "campos_pdf". "campos_pdf" reflete os valores brutos do PDF, sem agrupamentos.`;
+}`;
 
 
 const parseDateBR = (s: string): string | null => {
@@ -107,7 +100,7 @@ const lastDayOfCompetencia = (competencia: string): string | null => {
   return `${m[1]}-${m[2]}-${String(lastDay).padStart(2, "0")}`;
 };
 
-const extractAiPayload = (text: string): { campos: Record<string, number>; lancamentos: any[] } => {
+const extractAiPayload = (text: string): { lancamentos: any[]; observacoes_ia: string } => {
   const cleaned = String(text || "").replace(/```json/gi, "").replace(/```/g, "").trim();
   let parsed: any = null;
   const objStart = cleaned.indexOf("{");
@@ -133,26 +126,10 @@ const extractAiPayload = (text: string): { campos: Record<string, number>; lanca
     }
   }
 
-  const rawCampos = (parsed && typeof parsed === "object" && parsed.campos_pdf && typeof parsed.campos_pdf === "object")
-    ? parsed.campos_pdf : {};
-  const num = (v: any) => {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : 0;
-  };
-  const campos: Record<string, number> = {
-    salario_base: num(rawCampos.salario_base),
-    salario_familia: num(rawCampos.salario_familia),
-    ferias: num(rawCampos.ferias),
-    um_terco_ferias: num(rawCampos.um_terco_ferias ?? rawCampos["1_3_ferias"] ?? rawCampos.terco_ferias),
-    ajuda_custo: num(rawCampos.ajuda_custo),
-    e_consignado: num(rawCampos.e_consignado ?? rawCampos.eConsignado ?? rawCampos.emprestimo_consignado),
-    rendimentos_total: num(rawCampos.rendimentos_total),
-    pro_labore: num(rawCampos.pro_labore),
-  };
   const observacoes_ia = typeof (parsed as any)?.observacoes_ia === "string"
     ? String((parsed as any).observacoes_ia).trim()
     : "";
-  return { campos, lancamentos, observacoes_ia };
+  return { lancamentos, observacoes_ia };
 };
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
