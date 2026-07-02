@@ -28,6 +28,7 @@ interface Row {
   historico: string | null;
   valor: number | null;
   ordem: number;
+  justificativa: string | null;
 }
 
 const cell = (value: string | number, extra: Partial<SheetCell> = {}): SheetCell => ({ value, ...extra });
@@ -90,6 +91,8 @@ const AdminFolhaEditor = () => {
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [selectedRow, setSelectedRow] = useState<number | null>(null);
   const [selectedCol, setSelectedCol] = useState<number | null>(null);
+  const [justificativas, setJustificativas] = useState<(string | null)[]>([]);
+  const [observacoesIA, setObservacoesIA] = useState<string>("");
 
   useEffect(() => {
     (async () => {
@@ -100,9 +103,10 @@ const AdminFolhaEditor = () => {
       }
       setLoading(true);
       try {
-        const [{ data: userData }, { data: rows }, planoRes] = await Promise.all([
+        const [{ data: userData }, { data: rows }, { data: uploads }, planoRes] = await Promise.all([
           supabase.from("users").select("name").eq("id", clientId).maybeSingle(),
           supabase.from("folha_lancamentos").select("*").eq("client_id", clientId).eq("competencia", competencia).order("ordem", { ascending: true }),
+          supabase.from("folha_uploads").select("observacoes_ia").eq("client_id", clientId).eq("competencia", competencia),
           fetchPlanoContas(clientId),
         ]);
         const name = userData?.name || "Cliente";
@@ -115,9 +119,16 @@ const AdminFolhaEditor = () => {
           historico: r.historico,
           valor: r.valor != null ? Number(r.valor) : null,
           ordem: r.ordem ?? i,
+          justificativa: r.justificativa ?? null,
         })) as Row[];
         setSheet(buildSheet(list, planoRes.map));
+        setJustificativas(list.map((r) => r.justificativa));
         setPlanoMap(planoRes.map);
+        const obs = (uploads || [])
+          .map((u: any) => String(u.observacoes_ia || "").trim())
+          .filter(Boolean)
+          .join("\n\n");
+        setObservacoesIA(obs);
         setFilename(`folha_${slug(name)}_${competencia}.xlsx`);
       } catch (e: any) {
         toast.error("Erro ao carregar: " + e.message);
@@ -134,7 +145,18 @@ const AdminFolhaEditor = () => {
     return () => window.removeEventListener("beforeunload", h);
   }, [isDirty]);
 
-  const onChange = (next: SheetData) => { setSheet(next); setIsDirty(true); };
+  const onChange = (next: SheetData) => {
+    setSheet(next);
+    setIsDirty(true);
+    // Mantém o array de justificativas com o mesmo tamanho da planilha
+    setJustificativas((prev) => {
+      if (next.rows.length === prev.length) return prev;
+      if (next.rows.length > prev.length) {
+        return [...prev, ...Array(next.rows.length - prev.length).fill(null)];
+      }
+      return prev.slice(0, next.rows.length);
+    });
+  };
 
   const attemptLeave = () => { if (isDirty) setLeaveOpen(true); else navigate(-1); };
 
@@ -161,6 +183,7 @@ const AdminFolhaEditor = () => {
         conta_credito: String(r[4].value ?? "").trim() || null,
         historico: String(r[7].value ?? "").trim() || null,
         valor: r[8].numeric ? Number(r[8].value) || 0 : Number(String(r[8].value).replace(/\./g, "").replace(",", ".")) || 0,
+        justificativa: justificativas[idx] ?? null,
       }));
       await supabase.from("folha_lancamentos").delete().eq("client_id", clientId).eq("competencia", competencia);
       if (newRows.length) {
@@ -276,12 +299,24 @@ const AdminFolhaEditor = () => {
               </div>
             </div>
 
+            {observacoesIA && (
+              <div className="bg-amber-50 dark:bg-amber-950/30 rounded-xl p-4 space-y-2 border border-amber-200 dark:border-amber-900">
+                <div className="flex items-center gap-2 text-xs font-semibold text-amber-800 dark:text-amber-200">
+                  <FileSpreadsheet className="w-3.5 h-3.5" /> Observações da IA
+                </div>
+                <p className="text-xs text-amber-900 dark:text-amber-100 whitespace-pre-wrap leading-relaxed">
+                  {observacoesIA}
+                </p>
+              </div>
+            )}
+
             {sheet && (
               <FolhaRowEditor
                 data={sheet}
                 selectedRow={selectedRow}
                 planoMap={planoMap}
                 competencia={competencia}
+                justificativa={selectedRow != null ? justificativas[selectedRow] ?? null : null}
                 onChange={onChange}
                 onSelectRow={setSelectedRow}
               />

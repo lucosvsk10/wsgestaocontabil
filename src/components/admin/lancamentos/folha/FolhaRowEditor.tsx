@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Check, ChevronsUpDown, Copy, Sparkles } from "lucide-react";
+import { Check, ChevronsUpDown, Copy, Sparkles, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -13,6 +13,7 @@ interface Props {
   selectedRow: number | null;
   planoMap: Record<string, string>;
   competencia: string;
+  justificativa?: string | null;
   onChange: (d: SheetData) => void;
   onSelectRow: (r: number | null) => void;
 }
@@ -90,7 +91,7 @@ const AccountCombobox = ({
   );
 };
 
-export const FolhaRowEditor = ({ data, selectedRow, planoMap, competencia, onChange, onSelectRow }: Props) => {
+export const FolhaRowEditor = ({ data, selectedRow, planoMap, competencia, justificativa, onChange, onSelectRow }: Props) => {
   const historicos = useMemo(() => buildHistoricos(competencia), [competencia]);
 
   if (selectedRow === null || !data.rows[selectedRow]) {
@@ -160,6 +161,16 @@ export const FolhaRowEditor = ({ data, selectedRow, planoMap, competencia, onCha
           </Button>
         </div>
       </div>
+
+      {justificativa && (
+        <div className="rounded-lg border border-primary/20 bg-primary/5 p-2.5 space-y-1">
+          <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+            <Info className="h-3 w-3" /> Justificativa da IA
+          </div>
+          <p className="text-xs text-foreground/90 whitespace-pre-wrap leading-relaxed">{justificativa}</p>
+        </div>
+      )}
+
 
       <div>
         <label className="text-[11px] text-muted-foreground">Data (DD/MM/AAAA)</label>

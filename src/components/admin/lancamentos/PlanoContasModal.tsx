@@ -13,7 +13,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Loader2,
   FileText,
@@ -25,7 +24,6 @@ import {
   FileSpreadsheet,
   CheckCircle,
   AlertTriangle,
-  Sparkles,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -36,7 +34,6 @@ import {
   parsePlanoContasContent,
   serializePlanoContas,
   type PlanoContasItem,
-  type PlanoContasPreferencia,
 } from "@/lib/planoContas";
 
 interface PlanoContasModalProps {
@@ -51,7 +48,6 @@ interface PendingImport {
   headerRowIdx: number;
   rows: any[][];
   crIdx: number;
-  completoIdx: number; // -1 = não usar
   descricaoIdx: number;
   autoDetected: boolean;
 }
@@ -88,19 +84,8 @@ const CR_NAMES = [
   "número da conta",
   "conta reduzida",
   "reduzido",
-];
-const COMPLETO_NAMES = [
-  "codigo completo",
-  "código completo",
-  "codigo contabil",
-  "código contábil",
-  "conta completa",
-  "codigo analitico",
-  "código analítico",
-  "classificacao",
-  "classificação",
-  "conta contabil",
-  "conta contábil",
+  "codigo",
+  "código",
 ];
 const DESC_NAMES = [
   "descrição",
@@ -112,12 +97,11 @@ const DESC_NAMES = [
   "nome",
 ];
 
-const emptyItem = (): PlanoContasItem => ({ cr: "", codigo_completo: "", descricao: "", codigo: "" });
+const emptyItem = (): PlanoContasItem => ({ cr: "", descricao: "" });
 
 export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: PlanoContasModalProps) => {
   const { user } = useAuth();
   const [items, setItems] = useState<PlanoContasItem[]>([]);
-  const [preferencia, setPreferencia] = useState<PlanoContasPreferencia>("cr");
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [existingId, setExistingId] = useState<string | null>(null);
@@ -148,11 +132,9 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
       if (data) {
         const parsed = parsePlanoContasContent(data.conteudo);
         setItems(parsed.items);
-        setPreferencia(parsed.preferencia);
         setExistingId(data.id);
       } else {
         setItems([]);
-        setPreferencia("cr");
         setExistingId(null);
       }
     } catch (error) {
@@ -185,9 +167,8 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
         for (let i = 0; i < Math.min(5, rows.length); i++) {
           const rowHeaders = rows[i].map(String);
           const crIdx = findColumnIndex(rowHeaders, CR_NAMES);
-          const completoIdx = findColumnIndex(rowHeaders, COMPLETO_NAMES);
           const descIdx = findColumnIndex(rowHeaders, DESC_NAMES);
-          if ((crIdx !== -1 || completoIdx !== -1) && descIdx !== -1) {
+          if (crIdx !== -1 && descIdx !== -1) {
             headerRowIdx = i;
             bestHeaders = rowHeaders;
             break;
@@ -195,7 +176,6 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
         }
 
         const crIdx = findColumnIndex(bestHeaders, CR_NAMES);
-        const completoIdx = findColumnIndex(bestHeaders, COMPLETO_NAMES);
         const descricaoIdx = findColumnIndex(bestHeaders, DESC_NAMES);
 
         setPendingImport({
@@ -203,9 +183,8 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
           headerRowIdx,
           rows,
           crIdx: crIdx !== -1 ? crIdx : 0,
-          completoIdx, // pode ser -1 (ignorar)
           descricaoIdx: descricaoIdx !== -1 ? descricaoIdx : Math.min(1, bestHeaders.length - 1),
-          autoDetected: (crIdx !== -1 || completoIdx !== -1) && descricaoIdx !== -1,
+          autoDetected: crIdx !== -1 && descricaoIdx !== -1,
         });
       } catch (err) {
         console.error("Error importing XLSX:", err);
@@ -217,17 +196,14 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
 
   const confirmImport = () => {
     if (!pendingImport) return;
-    const { rows, headerRowIdx, crIdx, completoIdx, descricaoIdx } = pendingImport;
+    const { rows, headerRowIdx, crIdx, descricaoIdx } = pendingImport;
 
     const imported: PlanoContasItem[] = [];
     for (let i = headerRowIdx + 1; i < rows.length; i++) {
       const row = rows[i];
       const cr = String(row[crIdx] || "").trim();
-      const codigo_completo = completoIdx >= 0 ? String(row[completoIdx] || "").trim() : "";
       const descricao = String(row[descricaoIdx] || "").trim();
-      if (cr || codigo_completo) {
-        imported.push({ cr, codigo_completo, descricao, codigo: cr || codigo_completo });
-      }
+      if (cr) imported.push({ cr, descricao });
     }
 
     if (imported.length === 0) {
@@ -252,23 +228,15 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
   });
 
   const handleSave = async () => {
-    const valid = items.filter((i) => i.cr || i.codigo_completo);
+    const valid = items.filter((i) => i.cr.trim());
     if (valid.length === 0) {
-      toast.error("O plano de contas não pode estar vazio");
-      return;
-    }
-    if (preferencia === "cr" && valid.every((i) => !i.cr)) {
-      toast.error("Nenhuma linha tem C.R. preenchido — não dá pra usar essa preferência");
-      return;
-    }
-    if (preferencia === "completo" && valid.every((i) => !i.codigo_completo)) {
-      toast.error("Nenhuma linha tem Código Completo — não dá pra usar essa preferência");
+      toast.error("O plano de contas não pode estar vazio (preencha o C.R.)");
       return;
     }
 
     setIsSaving(true);
     try {
-      const conteudo = serializePlanoContas(valid, preferencia);
+      const conteudo = serializePlanoContas(valid);
 
       if (existingId) {
         const { error } = await supabase
@@ -302,7 +270,7 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
     setItems((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const updateRow = (index: number, field: "cr" | "codigo_completo" | "descricao", value: string) => {
+  const updateRow = (index: number, field: "cr" | "descricao", value: string) => {
     setItems((prev) => prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)));
   };
 
@@ -312,7 +280,6 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
     return items.filter(
       (item) =>
         item.cr.toLowerCase().includes(term) ||
-        item.codigo_completo.toLowerCase().includes(term) ||
         item.descricao.toLowerCase().includes(term),
     );
   }, [items, searchTerm]);
@@ -321,13 +288,12 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
 
   const previewRows = useMemo(() => {
     if (!pendingImport) return [];
-    const { rows, headerRowIdx, crIdx, completoIdx, descricaoIdx } = pendingImport;
-    const preview: { cr: string; codigo_completo: string; descricao: string }[] = [];
+    const { rows, headerRowIdx, crIdx, descricaoIdx } = pendingImport;
+    const preview: { cr: string; descricao: string }[] = [];
     for (let i = headerRowIdx + 1; i < Math.min(headerRowIdx + 6, rows.length); i++) {
       const row = rows[i];
       preview.push({
         cr: String(row[crIdx] || "").trim(),
-        codigo_completo: completoIdx >= 0 ? String(row[completoIdx] || "").trim() : "",
         descricao: String(row[descricaoIdx] || "").trim(),
       });
     }
@@ -364,7 +330,7 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
                 </h3>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1.5 block">C.R. (reduzido)</label>
                   <Select
@@ -377,29 +343,6 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {pendingImport.headers.map((h, i) => (
-                        <SelectItem key={i} value={String(i)}>
-                          Coluna {i + 1}: {h || "(vazio)"}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                    Código Completo <span className="text-muted-foreground/70">(opcional)</span>
-                  </label>
-                  <Select
-                    value={String(pendingImport.completoIdx)}
-                    onValueChange={(v) =>
-                      setPendingImport((prev) => (prev ? { ...prev, completoIdx: parseInt(v) } : null))
-                    }
-                  >
-                    <SelectTrigger className="h-9">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="-1">— Não usar —</SelectItem>
                       {pendingImport.headers.map((h, i) => (
                         <SelectItem key={i} value={String(i)}>
                           Coluna {i + 1}: {h || "(vazio)"}
@@ -436,15 +379,13 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-muted/80 backdrop-blur-sm">
                   <tr>
-                    <th className="text-left px-3 py-2 font-medium w-[140px]">Código Completo</th>
-                    <th className="text-left px-3 py-2 font-medium w-[110px]">C.R.</th>
+                    <th className="text-left px-3 py-2 font-medium w-[140px]">C.R.</th>
                     <th className="text-left px-3 py-2 font-medium">Descrição</th>
                   </tr>
                 </thead>
                 <tbody>
                   {previewRows.map((row, i) => (
                     <tr key={i} className="border-t border-border/50">
-                      <td className="px-3 py-2 font-mono text-xs">{row.codigo_completo || "—"}</td>
                       <td className="px-3 py-2 font-mono text-xs">{row.cr || "—"}</td>
                       <td className="px-3 py-2 text-xs">{row.descricao || "—"}</td>
                     </tr>
@@ -474,34 +415,6 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
             }`}
           >
             <input {...getInputProps()} />
-
-            {/* IA preferencia */}
-            <div className="flex items-center justify-between gap-3 mb-3 p-3 rounded-lg border border-border bg-muted/30">
-              <div className="flex items-center gap-2 min-w-0">
-                <Sparkles className="h-4 w-4 text-primary shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">IA vai ler:</p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    A IA recebe apenas o campo selecionado para reduzir custo.
-                  </p>
-                </div>
-              </div>
-              <ToggleGroup
-                type="single"
-                value={preferencia}
-                onValueChange={(v) => {
-                  if (v === "cr" || v === "completo") setPreferencia(v);
-                }}
-                className="shrink-0"
-              >
-                <ToggleGroupItem value="cr" size="sm" className="text-xs px-3">
-                  C.R.
-                </ToggleGroupItem>
-                <ToggleGroupItem value="completo" size="sm" className="text-xs px-3">
-                  Código Completo
-                </ToggleGroupItem>
-              </ToggleGroup>
-            </div>
 
             {/* Toolbar */}
             <div className="flex items-center gap-2 mb-3 flex-wrap">
@@ -547,18 +460,7 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-muted/80 backdrop-blur-sm z-10">
                   <tr>
-                    <th className="text-left px-3 py-2 font-medium w-[180px]">
-                      Código Completo
-                      {preferencia === "completo" && (
-                        <span className="ml-1 text-[10px] uppercase tracking-wide text-primary">• IA</span>
-                      )}
-                    </th>
-                    <th className="text-left px-3 py-2 font-medium w-[120px]">
-                      C.R.
-                      {preferencia === "cr" && (
-                        <span className="ml-1 text-[10px] uppercase tracking-wide text-primary">• IA</span>
-                      )}
-                    </th>
+                    <th className="text-left px-3 py-2 font-medium w-[140px]">C.R.</th>
                     <th className="text-left px-3 py-2 font-medium">Descrição</th>
                     <th className="w-10 px-2 py-2"></th>
                   </tr>
@@ -566,7 +468,7 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
                 <tbody>
                   {filteredItems.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="text-center py-12 text-muted-foreground">
+                      <td colSpan={3} className="text-center py-12 text-muted-foreground">
                         {isFiltered
                           ? "Nenhuma conta encontrada"
                           : "Nenhuma conta cadastrada. Importe um arquivo XLSX ou adicione manualmente."}
@@ -577,14 +479,6 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
                       const realIdx = isFiltered ? items.indexOf(item) : displayIdx;
                       return (
                         <tr key={realIdx} className="border-t border-border/50 hover:bg-muted/30">
-                          <td className="px-2 py-1">
-                            <Input
-                              value={item.codigo_completo}
-                              onChange={(e) => updateRow(realIdx, "codigo_completo", e.target.value)}
-                              className="h-8 text-xs font-mono border-0 bg-transparent shadow-none focus:ring-1"
-                              placeholder="Ex: 1.1.01.001"
-                            />
-                          </td>
                           <td className="px-2 py-1">
                             <Input
                               value={item.cr}

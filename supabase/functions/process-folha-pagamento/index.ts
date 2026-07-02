@@ -8,10 +8,10 @@ const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const SYSTEM_PROMPT = `Você é o motor de inteligência contábil de um sistema de gestão de documentos. Sua função é analisar relatórios de Folha de Pagamento (PDF) e transformá-los em lotes de lançamentos otimizados para o Calima ERP.
 
-Você DEVE cruzar cada evento da folha com o [PLANO DE CONTAS] enviado no contexto desta requisição. Os códigos (CR) variam de empresa para empresa — NÃO existe código fixo. Use SEMPRE, e somente, códigos que apareçam no [PLANO DE CONTAS]. NUNCA invente um CR que não esteja lá.
+Você DEVE cruzar cada evento da folha com o [PLANO DE CONTAS] enviado no contexto desta requisição. O plano de contas usa APENAS o C.R. (código reduzido) — NÃO existe "código completo", "código contábil" ou "conta analítica". Use SEMPRE, e somente, os CRs que aparecem no [PLANO DE CONTAS]. NUNCA invente um CR que não esteja lá.
 
 ### PRINCÍPIO DA CONCILIAÇÃO DINÂMICA (por NATUREZA da conta)
-Para cada evento, identifique a NATUREZA contábil e depois escolha, no plano de contas da empresa, a conta cuja descrição corresponda a essa natureza. Categorias:
+Para cada evento, identifique a NATUREZA contábil e depois escolha, no plano de contas da empresa, o CR cuja descrição corresponda a essa natureza. Categorias:
 
 A. DESPESA DE SALÁRIOS DE FUNCIONÁRIOS — descrições como "SALARIOS E ORDENADOS", "SALÁRIOS", "REMUNERAÇÃO DE FUNCIONÁRIOS", "MÃO DE OBRA".
 B. DESPESA DE PRÓ-LABORE — descrições como "PRO-LABORE", "HONORARIOS DA DIRETORIA", "REMUNERAÇÃO DE SÓCIOS/ADMINISTRADORES".
@@ -46,14 +46,25 @@ Agrupe linhas com a MESMA combinação [Conta Débito + Conta Crédito] somando 
 ### VERBAS NOVAS / NÃO PREVISTAS (IMPORTANTE)
 A folha pode trazer eventos não listados acima (auxílios, benefícios, prêmios, descontos específicos, adicionais, etc.). Nesses casos:
 1. Identifique a natureza contábil (é despesa? passivo a pagar? obrigação a recolher?).
-2. Procure no plano de contas a conta cuja DESCRIÇÃO seja SEMANTICAMENTE MAIS PRÓXIMA. Use tokens como "auxilio", "beneficio", "premio", "adicional", "vale", "diaria", etc.
-3. Se encontrar uma conta plausível, use-a normalmente MAS prefixe o histórico com "[SUGERIDO] " para o usuário revisar.
-4. Se NENHUMA conta do plano se aplicar, gere a linha com "conta_debito": null e "conta_credito": null (o que couber ficar em branco) e prefixe o histórico com "[REVISAR] " descrevendo a verba.
+2. Procure no plano de contas o CR cuja DESCRIÇÃO seja SEMANTICAMENTE MAIS PRÓXIMA. Use tokens como "auxilio", "beneficio", "premio", "adicional", "vale", "diaria", etc.
+3. Se encontrar um CR plausível, use-o normalmente MAS prefixe o histórico com "[SUGERIDO] " para o usuário revisar.
+4. Se NENHUM CR do plano se aplicar, gere a linha com "conta_debito": null e "conta_credito": null (o que couber ficar em branco) e prefixe o histórico com "[REVISAR] " descrevendo a verba.
 
 Isso vale para AMBOS os lados (débito e crédito). NUNCA descarte um valor da folha silenciosamente.
 
+### JUSTIFICATIVA POR LINHA (OBRIGATÓRIO)
+Para CADA lançamento, preencha o campo "justificativa" com uma explicação curta e objetiva de onde aquele valor foi extraído do PDF:
+- Nome da seção do relatório de onde saiu (ex.: "Resumo de Proventos", "Descontos", "Verbas Rescisórias").
+- Se a linha unificou várias verbas, LISTE as verbas somadas com seus valores individuais. Ex.: "Soma de SALÁRIO BASE (R$ 12.340,00) + AJUDA DE CUSTO (R$ 400,00) + SALÁRIO FAMÍLIA (R$ 62,00)".
+- Se marcou [SUGERIDO], explique brevemente qual verba original justificou a escolha do CR mais próximo.
+- Se marcou [REVISAR], descreva a verba encontrada no PDF que não teve conta correspondente.
+- Seja curto (1-3 linhas). Sem juridiquês.
+
+### OBSERVAÇÕES GERAIS DA IA (OBRIGATÓRIO)
+No topo do JSON, o campo "observacoes_ia" (string única, pode ser vazia "") serve para você registrar dúvidas, casos incomuns, ou justificativas de decisões não óbvias tomadas durante o processamento — coisas que o usuário humano precisa saber ao revisar. Exemplos: valor que não bateu na conferência matemática, verba nova encontrada e como você tratou, retenção incomum, competência divergente entre páginas, etc. Se não houver nada a comentar, deixe "".
+
 ### VERIFICAÇÃO OBRIGATÓRIA (DOUBLE-CHECK)
-Some TODOS os valores das linhas de REMUNERAÇÕES (itens 1, 3 e 4), EXCLUINDO pró-labore. O total deve bater EXATAMENTE com o campo "Rendimentos"/"Total de Proventos" do PDF SUBTRAÍDO do valor do Pró-labore. Se não bater, revise antes de emitir o JSON.
+Some TODOS os valores das linhas de REMUNERAÇÕES (itens 1, 3 e 4), EXCLUINDO pró-labore. O total deve bater EXATAMENTE com o campo "Rendimentos"/"Total de Proventos" do PDF SUBTRAÍDO do valor do Pró-labore. Se não bater, revise antes de emitir o JSON e registre o motivo em "observacoes_ia".
 
 ### FORMATAÇÃO
 - Data: último dia real do mês da competência (DD/MM/AAAA).
@@ -73,8 +84,9 @@ Retorne ESTRITAMENTE um objeto JSON:
     "rendimentos_total": NUMBER,
     "pro_labore": NUMBER
   },
+  "observacoes_ia": "STRING",
   "lancamentos": [
-    { "data": "DD/MM/AAAA", "conta_debito": "STRING_OR_NULL", "conta_credito": "STRING_OR_NULL", "historico": "STRING", "valor": NUMBER }
+    { "data": "DD/MM/AAAA", "conta_debito": "STRING_OR_NULL", "conta_credito": "STRING_OR_NULL", "historico": "STRING", "valor": NUMBER, "justificativa": "STRING" }
   ]
 }
 Use 0 para qualquer campo numérico ausente em "campos_pdf". NUNCA omita uma chave de "campos_pdf". "campos_pdf" reflete os valores brutos do PDF, sem agrupamentos.`;
@@ -137,7 +149,10 @@ const extractAiPayload = (text: string): { campos: Record<string, number>; lanca
     rendimentos_total: num(rawCampos.rendimentos_total),
     pro_labore: num(rawCampos.pro_labore),
   };
-  return { campos, lancamentos };
+  const observacoes_ia = typeof (parsed as any)?.observacoes_ia === "string"
+    ? String((parsed as any).observacoes_ia).trim()
+    : "";
+  return { campos, lancamentos, observacoes_ia };
 };
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -225,7 +240,7 @@ Deno.serve(async (req) => {
 
         const aiJson = await aiRes.json();
         const content = aiJson?.choices?.[0]?.message?.content ?? "";
-        const { campos, lancamentos: lancs } = extractAiPayload(content);
+        const { campos, lancamentos: lancs, observacoes_ia } = extractAiPayload(content);
 
         const fallbackDate = lastDayOfCompetencia(competencia);
         const isValidISO = (d: string | null) => {
@@ -279,6 +294,7 @@ Deno.serve(async (req) => {
               conta_credito: null,
               historico: `[REVISAR] ${HIST_SALARIO}`,
               valor: salarioCalculado,
+              justificativa: "Linha criada automaticamente: soma calculada de SALÁRIO BASE + SALÁRIO FAMÍLIA + FÉRIAS + 1/3 FÉRIAS + AJUDA DE CUSTO extraídos do PDF.",
             });
           }
         } else if (salarioIdx >= 0) {
@@ -304,6 +320,7 @@ Deno.serve(async (req) => {
               conta_credito: null,
               historico: `[REVISAR] ${histConsig}`,
               valor: eCons,
+              justificativa: "Linha criada automaticamente a partir do valor de EMPRÉSTIMO CONSIGNADO extraído do PDF.",
             });
           }
         }
@@ -314,6 +331,9 @@ Deno.serve(async (req) => {
           const rawHist = String(l.historico || "").trim();
           // Preserva prefixos [SUGERIDO] / [REVISAR] sem forçar toUpperCase quebrando os colchetes
           const historico = rawHist ? rawHist.replace(/\s+/g, " ").toUpperCase() : "";
+          const justificativa = l.justificativa != null && String(l.justificativa).trim() !== ""
+            ? String(l.justificativa).trim()
+            : null;
           return {
             client_id: clientId,
             competencia,
@@ -321,7 +341,7 @@ Deno.serve(async (req) => {
             conta_debito: l.conta_debito != null && String(l.conta_debito).trim() !== "" ? String(l.conta_debito).trim() : null,
             conta_credito: l.conta_credito != null && String(l.conta_credito).trim() !== "" ? String(l.conta_credito).trim() : null,
             historico,
-
+            justificativa,
             valor: round2(Number(l.valor) || 0),
             ordem: allRows.length + idx,
             source_upload_id: up.id,
@@ -330,7 +350,11 @@ Deno.serve(async (req) => {
         allRows.push(...rowsToInsert);
         totalLancamentos += rowsToInsert.length;
 
-        await supa.from("folha_uploads").update({ status: "processado", ultimo_erro: null }).eq("id", up.id);
+        await supa.from("folha_uploads").update({
+          status: "processado",
+          ultimo_erro: null,
+          observacoes_ia: observacoes_ia || null,
+        }).eq("id", up.id);
       } catch (e: any) {
         console.error("Erro processando upload", up.id, e);
         await supa.from("folha_uploads").update({ status: "erro", ultimo_erro: String(e.message || e).slice(0, 500) }).eq("id", up.id);

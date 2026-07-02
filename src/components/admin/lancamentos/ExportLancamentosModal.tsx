@@ -57,8 +57,8 @@ export const ExportLancamentosModal = ({
 
       let map: PlanoContasMap = {};
       if (planoData?.conteudo) {
-        const { items: pcItems, preferencia } = parsePlanoContasContent(planoData.conteudo);
-        map = buildPlanoContasMap(pcItems, preferencia);
+        const { items: pcItems } = parsePlanoContasContent(planoData.conteudo);
+        map = buildPlanoContasMap(pcItems);
       }
 
       const sheet = buildSheetData(mode, lancs, map, competencia);

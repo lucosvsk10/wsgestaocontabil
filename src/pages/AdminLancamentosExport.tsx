@@ -110,8 +110,8 @@ const AdminLancamentosExport = () => {
 
         let map: PlanoContasMap = {};
         if (planoData?.conteudo) {
-          const { items: pcItems, preferencia } = parsePlanoContasContent(planoData.conteudo);
-          map = buildPlanoContasMap(pcItems, preferencia);
+          const { items: pcItems } = parsePlanoContasContent(planoData.conteudo);
+          map = buildPlanoContasMap(pcItems);
         }
         setPlanoMap(map);
         const base = autoCleanSheet(buildSheetData(mode, lancs, map, competencia));
