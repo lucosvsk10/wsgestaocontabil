@@ -203,9 +203,12 @@ const AdminFolhaEditor = () => {
 
   const handleDownload = () => {
     if (!sheet) return;
-    const aoa: (string | number)[][] = [sheet.headers, ...sheet.rows.map((r) => r.map((c) => c.value))];
+    // Remove as duas últimas colunas (Justificativa IA e Observações IA) da exportação
+    const headers = sheet.headers.slice(0, 9);
+    const rows = sheet.rows.map((r) => r.slice(0, 9));
+    const aoa: (string | number)[][] = [headers, ...rows.map((r) => r.map((c) => c.value))];
     const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws["!cols"] = sheet.headers.map(() => ({ wch: 18 }));
+    ws["!cols"] = headers.map(() => ({ wch: 18 }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Folha");
     XLSX.writeFile(wb, filename.endsWith(".xlsx") ? filename : `${filename}.xlsx`);
