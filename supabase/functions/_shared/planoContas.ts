@@ -1,25 +1,15 @@
-// Shared helpers para parsear o plano de contas dentro das edge functions.
-// Mantém compatibilidade com o formato antigo ([{codigo, descricao}]) e com
-// planilhas legadas. O formato atual é { preferencia_ia, items }.
-
-export type PlanoContasPreferencia = "cr" | "completo";
+// Shared helpers para parsear o plano de contas nas edge functions.
+// Simplificado: apenas C.R. (código reduzido). Mantém compatibilidade de leitura
+// com formatos legados (que continham codigo_completo/preferencia_ia).
 
 export interface PlanoContasItem {
   cr: string;
-  codigo_completo: string;
   descricao: string;
 }
 
 export interface PlanoContasParsed {
   items: PlanoContasItem[];
-  preferencia: PlanoContasPreferencia;
 }
-
-const pickCode = (it: PlanoContasItem, pref: PlanoContasPreferencia): string => {
-  const primary = pref === "completo" ? it.codigo_completo : it.cr;
-  if (primary) return primary;
-  return pref === "completo" ? it.cr : it.codigo_completo;
-};
 
 const codigoAliases = (codigo: string): string[] => {
   const clean = String(codigo ?? "").trim().replace(/\s+/g, "");
@@ -38,33 +28,29 @@ const codigoAliases = (codigo: string): string[] => {
 };
 
 export const parsePlanoContas = (conteudo: string | null | undefined): PlanoContasParsed => {
-  const empty: PlanoContasParsed = { items: [], preferencia: "cr" };
+  const empty: PlanoContasParsed = { items: [] };
   if (!conteudo) return empty;
   try {
     const parsed = JSON.parse(conteudo);
 
     if (parsed && !Array.isArray(parsed) && Array.isArray(parsed.items)) {
-      const preferencia: PlanoContasPreferencia =
-        parsed.preferencia_ia === "completo" ? "completo" : "cr";
       const items: PlanoContasItem[] = parsed.items
         .map((i: any) => ({
-          cr: String(i.cr ?? i.codigo_reduzido ?? i.codigo ?? "").trim(),
-          codigo_completo: String(i.codigo_completo ?? i.codigoCompleto ?? "").trim(),
+          cr: String(i.cr ?? i.codigo_reduzido ?? i.codigo ?? i.codigo_completo ?? "").trim(),
           descricao: String(i.descricao ?? "").trim(),
         }))
-        .filter((i: PlanoContasItem) => i.cr || i.codigo_completo);
-      return { items, preferencia };
+        .filter((i: PlanoContasItem) => i.cr);
+      return { items };
     }
 
     if (Array.isArray(parsed) && parsed.length > 0 && "codigo" in parsed[0]) {
       const items: PlanoContasItem[] = parsed
         .map((i: any) => ({
           cr: String(i.codigo ?? "").trim(),
-          codigo_completo: "",
           descricao: String(i.descricao ?? "").trim(),
         }))
         .filter((i) => i.cr);
-      return { items, preferencia: "cr" };
+      return { items };
     }
 
     const arr = Array.isArray(parsed) && parsed[0]?.data ? parsed[0].data : Array.isArray(parsed) ? parsed : [];
@@ -72,30 +58,20 @@ export const parsePlanoContas = (conteudo: string | null | undefined): PlanoCont
     for (const item of arr) {
       const cr = String(item["Codigo reduzido"] || item["codigo_reduzido"] || item["CR"] || item["C.R."] || "").trim();
       const descricao = String(item["Descrição"] || item["descricao"] || item["Descrição da conta"] || "").trim();
-      if (cr) items.push({ cr, codigo_completo: "", descricao });
+      if (cr) items.push({ cr, descricao });
     }
-    return { items, preferencia: "cr" };
+    return { items };
   } catch {
     return empty;
   }
 };
 
-/** Map com C.R., código completo e variações de formatação para exports/relatórios. */
-export const buildPlanoMap = (
-  items: PlanoContasItem[],
-  preferencia: PlanoContasPreferencia = "cr",
-): Record<string, string> => {
+/** Map do CR (com aliases de formatação) → descrição. */
+export const buildPlanoMap = (items: PlanoContasItem[]): Record<string, string> => {
   const map: Record<string, string> = {};
-  const primaryField = preferencia === "completo" ? "codigo_completo" : "cr";
-  const secondaryField = preferencia === "completo" ? "cr" : "codigo_completo";
   for (const it of items) {
-    for (const code of codigoAliases(it[primaryField])) {
-      if (code && !map[code]) map[code] = it.descricao;
-    }
-  }
-  for (const it of items) {
-    for (const code of codigoAliases(it[secondaryField])) {
-      if (code && !map[code]) map[code] = it.descricao;
+    for (const alias of codigoAliases(it.cr)) {
+      if (alias && !map[alias]) map[alias] = it.descricao;
     }
   }
   return map;
@@ -111,18 +87,17 @@ export const lookupPlanoDescricao = (map: Record<string, string>, codigo: string
 };
 
 /**
- * Versão compacta para mandar à IA: somente o código preferido + descrição.
- * Reduz token vs. enviar conteudo bruto com ambos os códigos.
+ * Versão compacta para mandar à IA: apenas CR + descrição.
+ * A IA deve usar exclusivamente o CR — não existe mais código completo.
  */
 export const planoContasForAI = (conteudo: string | null | undefined): {
   text: string;
   json: { codigo: string; descricao: string }[];
-  preferencia: PlanoContasPreferencia;
 } => {
-  const { items, preferencia } = parsePlanoContas(conteudo);
+  const { items } = parsePlanoContas(conteudo);
   const rows = items
-    .map((it) => ({ codigo: pickCode(it, preferencia), descricao: it.descricao }))
+    .map((it) => ({ codigo: it.cr, descricao: it.descricao }))
     .filter((r) => r.codigo);
   const text = rows.map((r) => `${r.codigo} - ${r.descricao}`).join("\n");
-  return { text, json: rows, preferencia };
+  return { text, json: rows };
 };

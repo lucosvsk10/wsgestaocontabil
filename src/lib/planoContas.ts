@@ -1,16 +1,16 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type PlanoContasPreferencia = "cr" | "completo";
+/**
+ * Plano de contas: apenas C.R. (código reduzido).
+ * O conceito de "código completo" e "preferência da IA" foi removido.
+ * O parser mantém compatibilidade com dados antigos que ainda possam existir no banco.
+ */
 
 export interface PlanoContasItem {
-  /** Código reduzido (C.R.) */
+  /** Código reduzido (C.R.) — único código usado no sistema. */
   cr: string;
-  /** Código completo / contábil / analítico */
-  codigo_completo: string;
   /** Descrição da conta */
   descricao: string;
-  /** Código preferido (cópia do cr ou codigo_completo conforme preferencia) — facilita listagens */
-  codigo: string;
 }
 
 export type PlanoContasMap = Record<string, string>;
@@ -57,92 +57,71 @@ export const lookupPlanoContasDescricao = (map: PlanoContasMap, codigo: string |
 
 export interface PlanoContasParsed {
   items: PlanoContasItem[];
-  preferencia: PlanoContasPreferencia;
 }
 
-const pickCode = (item: PlanoContasItem, preferencia: PlanoContasPreferencia): string => {
-  const primary = preferencia === "completo" ? item.codigo_completo : item.cr;
-  if (primary) return primary;
-  // fallback para o outro campo se o preferido estiver vazio nesta linha
-  return preferencia === "completo" ? item.cr : item.codigo_completo;
-};
-
 export const parsePlanoContasContent = (conteudo: string): PlanoContasParsed => {
-  const empty: PlanoContasParsed = { items: [], preferencia: "cr" };
+  const empty: PlanoContasParsed = { items: [] };
   if (!conteudo) return empty;
   try {
     const parsed = JSON.parse(conteudo);
 
-    // Novo formato: { preferencia_ia, items: [...] }
+    // Formato atual: { items: [{cr, descricao}] } (ignora preferencia_ia/codigo_completo legados)
     if (parsed && !Array.isArray(parsed) && Array.isArray(parsed.items)) {
-      const preferencia: PlanoContasPreferencia =
-        parsed.preferencia_ia === "completo" ? "completo" : "cr";
       const items: PlanoContasItem[] = parsed.items
         .map((i: any) => {
-          const cr = String(i.cr ?? i.codigo_reduzido ?? i.codigo ?? "").trim();
-          const codigo_completo = String(i.codigo_completo ?? i.codigoCompleto ?? "").trim();
+          const cr = String(
+            i.cr ?? i.codigo_reduzido ?? i.codigo ?? i.codigo_completo ?? "",
+          ).trim();
           const descricao = String(i.descricao ?? "").trim();
-          const codigo = pickCode({ cr, codigo_completo, descricao, codigo: "" }, preferencia);
-          return { cr, codigo_completo, descricao, codigo };
+          return { cr, descricao };
         })
-        .filter((i: PlanoContasItem) => i.cr || i.codigo_completo);
-      return { items, preferencia };
+        .filter((i: PlanoContasItem) => i.cr);
+      return { items };
     }
 
-    // Formato anterior: [{ codigo, descricao }]
+    // Formato antigo: [{ codigo, descricao }]
     if (Array.isArray(parsed) && parsed.length > 0 && "codigo" in parsed[0]) {
       const items: PlanoContasItem[] = parsed
-        .map((i: any) => {
-          const cr = String(i.codigo ?? "").trim();
-          const descricao = String(i.descricao ?? "").trim();
-          return { cr, codigo_completo: "", descricao, codigo: cr };
-        })
+        .map((i: any) => ({
+          cr: String(i.codigo ?? "").trim(),
+          descricao: String(i.descricao ?? "").trim(),
+        }))
         .filter((i) => i.cr);
-      return { items, preferencia: "cr" };
+      return { items };
     }
 
-    // Formatos legados (planilha)
+    // Formatos legados (planilha bruta)
     const arr = Array.isArray(parsed) && parsed[0]?.data ? parsed[0].data : Array.isArray(parsed) ? parsed : [];
     const items: PlanoContasItem[] = [];
     for (const item of arr) {
-      const cr = String(item["Codigo reduzido"] || item["codigo_reduzido"] || item["CR"] || item["C.R."] || "").trim();
+      const cr = String(
+        item["Codigo reduzido"] || item["codigo_reduzido"] || item["CR"] || item["C.R."] || "",
+      ).trim();
       const descricao = String(item["Descrição"] || item["descricao"] || item["Descrição da conta"] || "").trim();
-      if (cr) items.push({ cr, codigo_completo: "", descricao, codigo: cr });
+      if (cr) items.push({ cr, descricao });
     }
-    return { items, preferencia: "cr" };
+    return { items };
   } catch {
     return empty;
   }
 };
 
-/** Serializa para gravação no banco. */
-export const serializePlanoContas = (
-  items: PlanoContasItem[],
-  preferencia: PlanoContasPreferencia,
-): string => {
+/** Serializa para gravação no banco (apenas CR + descrição). */
+export const serializePlanoContas = (items: PlanoContasItem[]): string => {
   const cleanItems = items
     .map((i) => ({
       cr: (i.cr || "").trim(),
-      codigo_completo: (i.codigo_completo || "").trim(),
       descricao: (i.descricao || "").trim(),
     }))
-    .filter((i) => i.cr || i.codigo_completo);
-  return JSON.stringify({ preferencia_ia: preferencia, items: cleanItems });
+    .filter((i) => i.cr);
+  return JSON.stringify({ items: cleanItems });
 };
 
-/** Constrói o map de descrições aceitando C.R., código completo e variações de formatação. */
-export const buildPlanoContasMap = (
-  items: PlanoContasItem[],
-  preferencia: PlanoContasPreferencia = "cr",
-): PlanoContasMap => {
+/** Constrói o map do CR (com aliases de formatação) → descrição. */
+export const buildPlanoContasMap = (items: PlanoContasItem[]): PlanoContasMap => {
   const map: PlanoContasMap = {};
-  const primaryField = preferencia === "completo" ? "codigo_completo" : "cr";
-  const secondaryField = preferencia === "completo" ? "cr" : "codigo_completo";
   for (const it of items) {
-    addPlanoContasAliases(map, it[primaryField], it.descricao);
-  }
-  for (const it of items) {
-    addPlanoContasAliases(map, it[secondaryField], it.descricao);
+    addPlanoContasAliases(map, it.cr, it.descricao);
   }
   return map;
 };
@@ -151,7 +130,6 @@ export const fetchPlanoContas = async (
   clientId: string,
 ): Promise<{
   items: PlanoContasItem[];
-  preferencia: PlanoContasPreferencia;
   map: PlanoContasMap;
 }> => {
   const { data } = await supabase
@@ -160,9 +138,7 @@ export const fetchPlanoContas = async (
     .eq("user_id", clientId)
     .maybeSingle();
 
-  const { items, preferencia } = data?.conteudo
-    ? parsePlanoContasContent(data.conteudo)
-    : { items: [], preferencia: "cr" as PlanoContasPreferencia };
-  const map = buildPlanoContasMap(items, preferencia);
-  return { items, preferencia, map };
+  const { items } = data?.conteudo ? parsePlanoContasContent(data.conteudo) : { items: [] };
+  const map = buildPlanoContasMap(items);
+  return { items, map };
 };
