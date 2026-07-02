@@ -123,14 +123,14 @@ const AdminFolhaEditor = () => {
           ordem: r.ordem ?? i,
           justificativa: r.justificativa ?? null,
         })) as Row[];
-        setSheet(buildSheet(list, planoRes.map));
-        setJustificativas(list.map((r) => r.justificativa));
-        setPlanoMap(planoRes.map);
         const obs = (uploads || [])
           .map((u: any) => String(u.observacoes_ia || "").trim())
           .filter(Boolean)
           .join("\n\n");
         setObservacoesIA(obs);
+        setSheet(buildSheet(list, planoRes.map, obs));
+        setJustificativas(list.map((r) => r.justificativa));
+        setPlanoMap(planoRes.map);
         setFilename(`folha_${slug(name)}_${competencia}.xlsx`);
       } catch (e: any) {
         toast.error("Erro ao carregar: " + e.message);
