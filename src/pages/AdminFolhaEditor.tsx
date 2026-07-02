@@ -44,9 +44,9 @@ const parseDateBR = (s: string): string | null => {
   return m ? `${m[3]}-${m[2]}-${m[1]}` : null;
 };
 
-const buildSheet = (rows: Row[], planoMap: Record<string, string>): SheetData => {
-  const headers = ["Data","Conta Débito","Desc. Débito","CC Débito","Conta Crédito","Desc. Crédito","CC Crédito","Histórico","Valor"];
-  const body: SheetCell[][] = rows.map((r) => {
+const buildSheet = (rows: Row[], planoMap: Record<string, string>, observacoesIA: string = ""): SheetData => {
+  const headers = ["Data","Conta Débito","Desc. Débito","CC Débito","Conta Crédito","Desc. Crédito","CC Crédito","Histórico","Valor","Justificativa IA","Observações IA"];
+  const body: SheetCell[][] = rows.map((r, idx) => {
     const debDesc = lookupPlanoContasDescricao(planoMap, r.conta_debito);
     const credDesc = lookupPlanoContasDescricao(planoMap, r.conta_credito);
     const ccDeb = /\(-\)/.test(debDesc) ? "100" : "";
@@ -67,6 +67,8 @@ const buildSheet = (rows: Row[], planoMap: Record<string, string>): SheetData =>
       withBg(cell(ccCred)),
       withBg(cell(hist)),
       withBg(cell(r.valor ?? 0, { numeric: true })),
+      withBg(cell(r.justificativa || "")),
+      withBg(cell(idx === 0 ? observacoesIA : "")),
     ];
   });
   return { headers, rows: body };
@@ -121,14 +123,14 @@ const AdminFolhaEditor = () => {
           ordem: r.ordem ?? i,
           justificativa: r.justificativa ?? null,
         })) as Row[];
-        setSheet(buildSheet(list, planoRes.map));
-        setJustificativas(list.map((r) => r.justificativa));
-        setPlanoMap(planoRes.map);
         const obs = (uploads || [])
           .map((u: any) => String(u.observacoes_ia || "").trim())
           .filter(Boolean)
           .join("\n\n");
         setObservacoesIA(obs);
+        setSheet(buildSheet(list, planoRes.map, obs));
+        setJustificativas(list.map((r) => r.justificativa));
+        setPlanoMap(planoRes.map);
         setFilename(`folha_${slug(name)}_${competencia}.xlsx`);
       } catch (e: any) {
         toast.error("Erro ao carregar: " + e.message);
@@ -183,7 +185,7 @@ const AdminFolhaEditor = () => {
         conta_credito: String(r[4].value ?? "").trim() || null,
         historico: String(r[7].value ?? "").trim() || null,
         valor: r[8].numeric ? Number(r[8].value) || 0 : Number(String(r[8].value).replace(/\./g, "").replace(",", ".")) || 0,
-        justificativa: justificativas[idx] ?? null,
+        justificativa: (String(r[9]?.value ?? "").trim() || justificativas[idx]) ?? null,
       }));
       await supabase.from("folha_lancamentos").delete().eq("client_id", clientId).eq("competencia", competencia);
       if (newRows.length) {
@@ -201,9 +203,12 @@ const AdminFolhaEditor = () => {
 
   const handleDownload = () => {
     if (!sheet) return;
-    const aoa: (string | number)[][] = [sheet.headers, ...sheet.rows.map((r) => r.map((c) => c.value))];
+    // Remove as duas últimas colunas (Justificativa IA e Observações IA) da exportação
+    const headers = sheet.headers.slice(0, 9);
+    const rows = sheet.rows.map((r) => r.slice(0, 9));
+    const aoa: (string | number)[][] = [headers, ...rows.map((r) => r.map((c) => c.value))];
     const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws["!cols"] = sheet.headers.map(() => ({ wch: 18 }));
+    ws["!cols"] = headers.map(() => ({ wch: 18 }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Folha");
     XLSX.writeFile(wb, filename.endsWith(".xlsx") ? filename : `${filename}.xlsx`);
