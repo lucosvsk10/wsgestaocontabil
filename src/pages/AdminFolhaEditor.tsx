@@ -28,6 +28,7 @@ interface Row {
   historico: string | null;
   valor: number | null;
   ordem: number;
+  justificativa: string | null;
 }
 
 const cell = (value: string | number, extra: Partial<SheetCell> = {}): SheetCell => ({ value, ...extra });
