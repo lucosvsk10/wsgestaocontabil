@@ -1018,6 +1018,7 @@ export type Database = {
           data: string | null
           historico: string | null
           id: string
+          justificativa: string | null
           ordem: number
           source_upload_id: string | null
           updated_at: string
@@ -1032,6 +1033,7 @@ export type Database = {
           data?: string | null
           historico?: string | null
           id?: string
+          justificativa?: string | null
           ordem?: number
           source_upload_id?: string | null
           updated_at?: string
@@ -1046,6 +1048,7 @@ export type Database = {
           data?: string | null
           historico?: string | null
           id?: string
+          justificativa?: string | null
           ordem?: number
           source_upload_id?: string | null
           updated_at?: string
@@ -1068,6 +1071,7 @@ export type Database = {
           created_at: string
           id: string
           nome_arquivo: string
+          observacoes_ia: string | null
           status: string
           storage_path: string
           ultimo_erro: string | null
@@ -1080,6 +1084,7 @@ export type Database = {
           created_at?: string
           id?: string
           nome_arquivo: string
+          observacoes_ia?: string | null
           status?: string
           storage_path: string
           ultimo_erro?: string | null
@@ -1092,6 +1097,7 @@ export type Database = {
           created_at?: string
           id?: string
           nome_arquivo?: string
+          observacoes_ia?: string | null
           status?: string
           storage_path?: string
           ultimo_erro?: string | null
