@@ -149,7 +149,10 @@ const extractAiPayload = (text: string): { campos: Record<string, number>; lanca
     rendimentos_total: num(rawCampos.rendimentos_total),
     pro_labore: num(rawCampos.pro_labore),
   };
-  return { campos, lancamentos };
+  const observacoes_ia = typeof (parsed as any)?.observacoes_ia === "string"
+    ? String((parsed as any).observacoes_ia).trim()
+    : "";
+  return { campos, lancamentos, observacoes_ia };
 };
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
