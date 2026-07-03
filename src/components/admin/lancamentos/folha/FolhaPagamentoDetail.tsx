@@ -159,7 +159,11 @@ export const FolhaPagamentoDetail = ({ clientId, clientName }: FolhaPagamentoDet
       );
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "Erro ao processar");
-      toast.success(`Processado! ${result.total_lancamentos || 0} lançamentos gerados.`);
+      if (result.total_erros > 0) {
+        toast.error(`${result.total_erros} arquivo(s) ficaram com divergência. Confira a mensagem em "Arquivos do mês".`);
+      } else {
+        toast.success(`Processado! ${result.total_lancamentos || 0} lançamentos gerados.`);
+      }
       fetchData();
     } catch (e: any) {
       toast.error("Erro ao processar: " + e.message);
