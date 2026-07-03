@@ -1,58 +1,55 @@
-## Objetivo
-1. Garantir que os valores mostrados/salvos são **exatamente** os do PDF — sem somas inventadas nem linhas sintéticas.
-2. No editor da Folha, separar o "Total" em **Rendimentos (verde)** e **Descontos (vermelho)**.
-3. Substituir as bordas douradas por um estilo neutro e agradável.
+## Plano
 
----
+1. **Fazer a IA extrair também os totais oficiais do documento**
+   - No processamento de folha, além dos lançamentos agrupados, a IA deverá retornar obrigatoriamente:
+     - `total_rendimentos_documento`
+     - `total_descontos_documento`
+     - `total_liquido_documento` quando existir no PDF
+   - Esses valores devem ser copiados do resumo/totalizador do próprio PDF, não calculados pela IA.
 
-## 1. Corrigir a origem dos valores (edge function `process-folha-pagamento`)
+2. **Validar matematicamente antes de salvar no banco**
+   - Depois que a IA gerar os lançamentos, o código vai somar as linhas geradas por tipo:
+     - Rendimentos/proventos
+     - Descontos/retenções
+   - A soma dos lançamentos gerados precisa bater centavo por centavo com os totais extraídos do documento.
+   - Se houver diferença, o processamento **não deve salvar como se estivesse correto**.
 
-O erro está na **reconciliação matemática** que hoje sobrescreve o que a IA leu:
+3. **Tratar divergência como erro de revisão, não como lançamento válido**
+   - Se o PDF diz, por exemplo, `Rendimentos: 15.000,00`, mas os lançamentos somam outro valor:
+     - O upload será marcado com erro/revisão.
+     - A mensagem vai informar: total do documento, total gerado e diferença.
+   - Isso evita que a planilha chegue ao editor com valor inventado, ajustado ou incompleto.
 
-- Trecho `salarioCalculado = salario_base + salario_familia + ferias + 1/3 + ajuda_custo` está **somando campos brutos** e substituindo o valor da linha de salários da IA — isso é a principal fonte de valores diferentes do PDF.
-- O bloco de `eConsignado` cria uma linha nova se a IA não gerou, potencialmente duplicando o desconto.
-- O `campos_pdf` estimulava a IA a devolver totais que depois eram re-somados.
+4. **Permitir agrupamento apenas quando preserva o total**
+   - A IA poderá continuar unificando contas/verbas quando fizer sentido.
+   - Mas cada linha agrupada deverá explicar na justificativa quais verbas foram somadas.
+   - A soma final dos agrupamentos precisa ser exatamente igual ao documento original.
 
-**Ações:**
-- Remover completamente o bloco de "RECONCILIAÇÃO MATEMÁTICA" (linhas ~255–326): nada de `salarioCalculado`, nada de `unshift`/`push` de linhas `[REVISAR]` a partir de `campos.*`.
-- Retirar do `SYSTEM_PROMPT` a seção `campos_pdf` e a "VERIFICAÇÃO OBRIGATÓRIA (DOUBLE-CHECK)" que induziam a IA a recompor valores.
-- Reforçar no prompt: *"Copie os valores exatamente como aparecem no PDF. Se agrupar linhas com mesma combinação débito+crédito, o valor final DEVE ser a soma aritmética exata das verbas listadas na justificativa — nunca arredonde, estime ou complete."*
-- Manter a lógica de `[SUGERIDO]` / `[REVISAR]` e `justificativa` / `observacoes_ia` inalterada.
-- `extractAiPayload` passa a retornar só `{ lancamentos, observacoes_ia }`.
+5. **Melhorar o prompt da folha**
+   - Reforçar que a prioridade absoluta é bater com os totais oficiais do PDF.
+   - Proibir completar diferenças com “ajustes”, arredondamentos ou suposições.
+   - Se não conseguir identificar uma verba ou total, deve marcar para revisão em vez de chutar.
 
-Resultado: a planilha mostra o que a IA leu, sem "correções" via código que causam divergência.
+6. **Ajustar a tela do editor da folha**
+   - Manter os totais separados em verde/vermelho:
+     - Rendimentos
+     - Descontos
+     - Líquido
+   - Se houver totais do documento disponíveis, mostrar a conferência entre “Documento” e “Planilha”.
+   - Se houver divergência, destacar claramente para revisão.
 
-## 2. Total dividido em Rendimentos × Descontos (`AdminFolhaEditor.tsx`)
+## Detalhes técnicos
 
-Classificação por linha via histórico (evita depender do plano de contas do lado do cliente):
+- Arquivo principal: `supabase/functions/process-folha-pagamento/index.ts`.
+- O retorno JSON da IA passará a incluir os totais oficiais do PDF.
+- Será criada uma função de validação no processamento:
 
-- **Desconto** quando o histórico bater com: `INSS S/`, `IRRF`, `CONSIGN`, `PENSAO`, `SINDICAL`, `CONVENIO`, `EMPRESTIMO`, `VALE`, ou começar com "DESC".
-- **Rendimento** = todas as demais linhas com valor > 0 (salários, pró-labore, férias, rescisão, FGTS-empresa, etc. — do ponto de vista da folha são proventos/despesas da empresa).
+```text
+soma_rendimentos_lancamentos === total_rendimentos_documento
+soma_descontos_lancamentos === total_descontos_documento
+soma_liquido_lancamentos === total_liquido_documento, quando informado
+```
 
-Alterações:
-- Substituir o `useMemo` `total` por `{ rendimentos, descontos, liquido }`.
-- No card lateral, trocar a linha "Total" por dois campos:
-  - `Rendimentos` — valor formatado em **verde** (`text-emerald-600 dark:text-emerald-400`).
-  - `Descontos` — valor formatado em **vermelho** (`text-red-600 dark:text-red-400`).
-  - Uma terceira linha discreta `Líquido` (rendimentos − descontos) em cor neutra, opcional.
-
-## 3. Remover bordas douradas
-
-Fonte principal: `src/styles/dark-mode.css` — cartões/inputs/popover usam `border-gold/30` e `border-gold/40`.
-
-- Substituir todas as ocorrências de `border-gold/XX` (e `border-gold border-opacity-XX`) por `border-border` (token neutro do design system já existente).
-- Ajustar `.dark .button` para `border-border` e hover `bg-accent/40` (sem tom dourado).
-- Preservar o dourado apenas como cor de destaque de textos/ícones onde já é usada; **não** como borda de containers.
-- Verificar `AdminFolhaEditor` e `FolhaRowEditor`: já usam `border-border`, ficam consistentes automaticamente após a limpeza do dark-mode.css.
-
----
-
-## Arquivos afetados
-- `supabase/functions/process-folha-pagamento/index.ts` — remover reconciliação + ajustar prompt + simplificar `extractAiPayload`.
-- `src/pages/AdminFolhaEditor.tsx` — dividir Total em Rendimentos/Descontos com cor.
-- `src/styles/dark-mode.css` — trocar `border-gold/*` por `border-border`.
-
-## Fora de escopo
-- Nenhuma mudança no banco (colunas `justificativa` e `observacoes_ia` continuam iguais).
-- Nenhuma mudança em compras/fiscal/bancário.
-- Formatos de exportação (XLSX / Calima) permanecem idênticos.
+- A tolerância será de no máximo `R$ 0,01` apenas para diferença de ponto flutuante do JavaScript, nunca para aceitar erro real.
+- Se a divergência for maior que isso, o upload fica com `status = erro` e `ultimo_erro` explicando a diferença.
+- Não vou reintroduzir nenhuma lógica que cria linhas sintéticas ou recalcula salário por campos separados.
