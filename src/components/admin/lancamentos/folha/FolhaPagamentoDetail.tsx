@@ -159,7 +159,11 @@ export const FolhaPagamentoDetail = ({ clientId, clientName }: FolhaPagamentoDet
       );
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "Erro ao processar");
-      toast.success(`Processado! ${result.total_lancamentos || 0} lançamentos gerados.`);
+      if (result.total_erros > 0) {
+        toast.error(`${result.total_erros} arquivo(s) ficaram com divergência. Confira a mensagem em "Arquivos do mês".`);
+      } else {
+        toast.success(`Processado! ${result.total_lancamentos || 0} lançamentos gerados.`);
+      }
       fetchData();
     } catch (e: any) {
       toast.error("Erro ao processar: " + e.message);
@@ -254,7 +258,7 @@ export const FolhaPagamentoDetail = ({ clientId, clientName }: FolhaPagamentoDet
                   <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-foreground truncate">{u.nome_arquivo}</p>
-                    {u.ultimo_erro && <p className="text-xs text-destructive truncate">{u.ultimo_erro}</p>}
+                    {u.ultimo_erro && <p className="text-xs text-destructive whitespace-pre-wrap break-words">{u.ultimo_erro}</p>}
                   </div>
                   {statusBadge(u.status)}
                   <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleDelete(u.id, u.storage_path)}>
