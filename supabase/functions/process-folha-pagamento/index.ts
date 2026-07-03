@@ -285,6 +285,7 @@ Deno.serve(async (req) => {
     if (upErr) throw upErr;
 
     let totalLancamentos = 0;
+    let totalErros = 0;
     const allRows: any[] = [];
 
     // Limpa lançamentos anteriores desta competência (substituição completa)
@@ -409,6 +410,7 @@ Deno.serve(async (req) => {
           ...totaisLancamentos,
         }).eq("id", up.id);
       } catch (e: any) {
+        totalErros += 1;
         console.error("Erro processando upload", up.id, e);
         await supa.from("folha_uploads").update({ status: "erro", ultimo_erro: String(e.message || e).slice(0, 500) }).eq("id", up.id);
       }
@@ -419,7 +421,7 @@ Deno.serve(async (req) => {
       if (insErr) throw insErr;
     }
 
-    return new Response(JSON.stringify({ success: true, total_lancamentos: totalLancamentos }), {
+    return new Response(JSON.stringify({ success: true, total_lancamentos: totalLancamentos, total_erros: totalErros }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e: any) {
