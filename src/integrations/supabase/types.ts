@@ -1074,6 +1074,12 @@ export type Database = {
           observacoes_ia: string | null
           status: string
           storage_path: string
+          total_descontos_documento: number | null
+          total_descontos_lancamentos: number | null
+          total_liquido_documento: number | null
+          total_liquido_lancamentos: number | null
+          total_rendimentos_documento: number | null
+          total_rendimentos_lancamentos: number | null
           ultimo_erro: string | null
           updated_at: string
           uploaded_by: string | null
@@ -1087,6 +1093,12 @@ export type Database = {
           observacoes_ia?: string | null
           status?: string
           storage_path: string
+          total_descontos_documento?: number | null
+          total_descontos_lancamentos?: number | null
+          total_liquido_documento?: number | null
+          total_liquido_lancamentos?: number | null
+          total_rendimentos_documento?: number | null
+          total_rendimentos_lancamentos?: number | null
           ultimo_erro?: string | null
           updated_at?: string
           uploaded_by?: string | null
@@ -1100,6 +1112,12 @@ export type Database = {
           observacoes_ia?: string | null
           status?: string
           storage_path?: string
+          total_descontos_documento?: number | null
+          total_descontos_lancamentos?: number | null
+          total_liquido_documento?: number | null
+          total_liquido_lancamentos?: number | null
+          total_rendimentos_documento?: number | null
+          total_rendimentos_lancamentos?: number | null
           ultimo_erro?: string | null
           updated_at?: string
           uploaded_by?: string | null
