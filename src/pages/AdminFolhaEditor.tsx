@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Download, Loader2, Building2, Calendar, FileSpreadsheet, Save, FileDown } from "lucide-react";
+import { ArrowLeft, Download, Loader2, Building2, Calendar, FileSpreadsheet, Save, FileDown, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { exportCalimaXlsx } from "@/components/admin/lancamentos/exportCalima";
 import * as XLSX from "xlsx";
 import { AdminLayout } from "@/components/admin/layout/AdminLayout";
@@ -29,6 +29,12 @@ interface Row {
   valor: number | null;
   ordem: number;
   justificativa: string | null;
+}
+
+interface DocumentoTotals {
+  rendimentos: number | null;
+  descontos: number | null;
+  liquido: number | null;
 }
 
 const cell = (value: string | number, extra: Partial<SheetCell> = {}): SheetCell => ({ value, ...extra });
@@ -74,6 +80,22 @@ const buildSheet = (rows: Row[], planoMap: Record<string, string>, observacoesIA
   return { headers, rows: body };
 };
 
+const fmtBRL = (n: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(n);
+
+const parseMoneyCell = (value: unknown) => {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  return Number(String(value ?? "").replace(/\./g, "").replace(",", ".")) || 0;
+};
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+const classifyFolhaLine = (historico: string): "rendimento" | "desconto" | "encargo" => {
+  const normalized = historico.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+  if (/(INSS\s*S\/|IRRF|CONSIGN|PENSAO|SINDICAL|CONVENIO|EMPRESTIMO|VALE|^\s*DESC)/.test(normalized)) return "desconto";
+  if (/(FGTS|INSS\s+PATRONAL|INSS\s+EMPRESA|CONTRIBUICAO\s+PREVIDENCIARIA.*EMPRESA)/.test(normalized)) return "encargo";
+  return "rendimento";
+};
+
 
 const slug = (s: string) => s.replace(/\s+/g, "_").replace(/[^\w-]/g, "").toLowerCase();
 
@@ -95,6 +117,7 @@ const AdminFolhaEditor = () => {
   const [selectedCol, setSelectedCol] = useState<number | null>(null);
   const [justificativas, setJustificativas] = useState<(string | null)[]>([]);
   const [observacoesIA, setObservacoesIA] = useState<string>("");
+  const [documentoTotals, setDocumentoTotals] = useState<DocumentoTotals>({ rendimentos: null, descontos: null, liquido: null });
 
   useEffect(() => {
     (async () => {
@@ -108,7 +131,7 @@ const AdminFolhaEditor = () => {
         const [{ data: userData }, { data: rows }, { data: uploads }, planoRes] = await Promise.all([
           supabase.from("users").select("name").eq("id", clientId).maybeSingle(),
           supabase.from("folha_lancamentos").select("*").eq("client_id", clientId).eq("competencia", competencia).order("ordem", { ascending: true }),
-          supabase.from("folha_uploads").select("observacoes_ia").eq("client_id", clientId).eq("competencia", competencia),
+          supabase.from("folha_uploads").select("observacoes_ia,total_rendimentos_documento,total_descontos_documento,total_liquido_documento").eq("client_id", clientId).eq("competencia", competencia),
           fetchPlanoContas(clientId),
         ]);
         const name = userData?.name || "Cliente";
@@ -127,6 +150,18 @@ const AdminFolhaEditor = () => {
           .map((u: any) => String(u.observacoes_ia || "").trim())
           .filter(Boolean)
           .join("\n\n");
+        const sumUploadTotal = (key: string) => {
+          const values = (uploads || [])
+            .map((u: any) => u[key])
+            .filter((v: any) => v != null && Number.isFinite(Number(v)))
+            .map((v: any) => Number(v));
+          return values.length ? values.reduce((acc, v) => acc + v, 0) : null;
+        };
+        setDocumentoTotals({
+          rendimentos: sumUploadTotal("total_rendimentos_documento"),
+          descontos: sumUploadTotal("total_descontos_documento"),
+          liquido: sumUploadTotal("total_liquido_documento"),
+        });
         setObservacoesIA(obs);
         setSheet(buildSheet(list, planoRes.map, obs));
         setJustificativas(list.map((r) => r.justificativa));
@@ -162,20 +197,32 @@ const AdminFolhaEditor = () => {
 
   const attemptLeave = () => { if (isDirty) setLeaveOpen(true); else navigate(-1); };
 
-  const { rendimentos, descontos } = useMemo(() => {
-    if (!sheet) return { rendimentos: 0, descontos: 0 };
-    const DESC_RE = /(INSS\s*S\/|IRRF|CONSIGN|PENSAO|PENSÃO|SINDICAL|CONVENIO|CONVÊNIO|EMPRESTIMO|EMPRÉSTIMO|VALE|^\s*DESC)/i;
-    let r = 0, d = 0;
+  const { rendimentos, descontos, encargos } = useMemo(() => {
+    if (!sheet) return { rendimentos: 0, descontos: 0, encargos: 0 };
+    let r = 0, d = 0, e = 0;
     for (const row of sheet.rows) {
-      const v = row[8]?.numeric ? Number(row[8].value) || 0 : 0;
+      const v = row[8]?.numeric ? Number(row[8].value) || 0 : parseMoneyCell(row[8]?.value);
       if (!v) continue;
       const hist = String(row[7]?.value ?? "");
-      if (DESC_RE.test(hist)) d += v; else r += v;
+      const tipo = classifyFolhaLine(hist);
+      if (tipo === "desconto") d += v;
+      else if (tipo === "encargo") e += v;
+      else r += v;
     }
-    return { rendimentos: r, descontos: d };
+    return { rendimentos: round2(r), descontos: round2(d), encargos: round2(e) };
   }, [sheet]);
-  const liquido = rendimentos - descontos;
-  const fmtBRL = (n: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(n);
+  const liquido = round2(rendimentos - descontos);
+
+  const conferencia = useMemo(() => {
+    const items = [
+      { label: "Rendimentos", doc: documentoTotals.rendimentos, planilha: rendimentos, tone: "text-emerald-600 dark:text-emerald-400" },
+      { label: "Descontos", doc: documentoTotals.descontos, planilha: descontos, tone: "text-red-600 dark:text-red-400" },
+      { label: "Líquido", doc: documentoTotals.liquido, planilha: liquido, tone: "text-foreground" },
+    ].filter((item) => item.doc != null) as { label: string; doc: number; planilha: number; tone: string }[];
+    return items.map((item) => ({ ...item, diff: round2(item.planilha - item.doc), ok: Math.abs(round2(item.planilha - item.doc)) <= 0.01 }));
+  }, [documentoTotals, descontos, liquido, rendimentos]);
+  const hasDocumentoTotals = conferencia.length > 0;
+  const hasDivergencia = conferencia.some((item) => !item.ok);
 
   const monthLabel = useMemo(() => {
     const [y, m] = competencia.split("-");
@@ -194,14 +241,20 @@ const AdminFolhaEditor = () => {
         conta_debito: String(r[1].value ?? "").trim() || null,
         conta_credito: String(r[4].value ?? "").trim() || null,
         historico: String(r[7].value ?? "").trim() || null,
-        valor: r[8].numeric ? Number(r[8].value) || 0 : Number(String(r[8].value).replace(/\./g, "").replace(",", ".")) || 0,
+        valor: r[8].numeric ? Number(r[8].value) || 0 : parseMoneyCell(r[8].value),
         justificativa: (String(r[9]?.value ?? "").trim() || justificativas[idx]) ?? null,
       }));
       await supabase.from("folha_lancamentos").delete().eq("client_id", clientId).eq("competencia", competencia);
+      const totalsLancamentos = {
+        total_rendimentos_lancamentos: rendimentos,
+        total_descontos_lancamentos: descontos,
+        total_liquido_lancamentos: liquido,
+      };
       if (newRows.length) {
         const { error } = await supabase.from("folha_lancamentos").insert(newRows);
         if (error) throw error;
       }
+      await supabase.from("folha_uploads").update(totalsLancamentos).eq("client_id", clientId).eq("competencia", competencia);
       toast.success("Lançamentos salvos");
       setIsDirty(false);
     } catch (e: any) {
@@ -235,7 +288,7 @@ const AdminFolhaEditor = () => {
       conta_credito: String(r[4].value ?? "").trim() || null,
       cc_credito: String(r[6].value ?? "").trim() || null,
       historico: String(r[7].value ?? ""),
-      valor: r[8].numeric ? Number(r[8].value) || 0 : Number(String(r[8].value).replace(/\./g, "").replace(",", ".")) || 0,
+      valor: r[8].numeric ? Number(r[8].value) || 0 : parseMoneyCell(r[8].value),
     }));
     const base = filename.replace(/\.xlsx$/i, "");
     exportCalimaXlsx(rows, planoMap, `${base}_calima.xlsx`);
@@ -324,7 +377,38 @@ const AdminFolhaEditor = () => {
                   {fmtBRL(liquido)}
                 </span>
               </div>
+              {encargos > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Encargos fora do total</span>
+                  <span className="text-sm font-medium text-muted-foreground">
+                    {fmtBRL(encargos)}
+                  </span>
+                </div>
+              )}
             </div>
+
+            {hasDocumentoTotals && (
+              <div className={`rounded-xl p-4 space-y-3 border ${hasDivergencia ? "bg-red-50 dark:bg-red-950/25 border-red-200 dark:border-red-900" : "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900"}`}>
+                <div className={`flex items-center gap-2 text-xs font-semibold ${hasDivergencia ? "text-red-800 dark:text-red-200" : "text-emerald-800 dark:text-emerald-200"}`}>
+                  {hasDivergencia ? <AlertTriangle className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                  Conferência com o documento
+                </div>
+                <div className="space-y-2">
+                  {conferencia.map((item) => (
+                    <div key={item.label} className="space-y-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs text-muted-foreground">{item.label}</span>
+                        <span className={`text-xs font-semibold ${item.tone}`}>{item.ok ? "OK" : `Dif. ${fmtBRL(item.diff)}`}</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-[11px] text-muted-foreground">
+                        <span>Documento: {fmtBRL(item.doc)}</span>
+                        <span>Planilha: {fmtBRL(item.planilha)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {observacoesIA && (
               <div className="bg-amber-50 dark:bg-amber-950/30 rounded-xl p-4 space-y-2 border border-amber-200 dark:border-amber-900">
