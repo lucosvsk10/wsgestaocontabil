@@ -217,7 +217,7 @@ const validateFolhaTotals = (
   }
 
   const total_liquido_lancamentos = round2(total_rendimentos_lancamentos - total_descontos_lancamentos);
-  const checks = [
+  const checks: { label: string; doc: number; planilha: number }[] = [
     {
       label: "Rendimentos",
       doc: totals.total_rendimentos_documento,
@@ -292,7 +292,16 @@ Deno.serve(async (req) => {
 
     for (const up of uploads || []) {
       try {
-        await supa.from("folha_uploads").update({ status: "processando", ultimo_erro: null }).eq("id", up.id);
+        await supa.from("folha_uploads").update({
+          status: "processando",
+          ultimo_erro: null,
+          total_rendimentos_documento: null,
+          total_descontos_documento: null,
+          total_liquido_documento: null,
+          total_rendimentos_lancamentos: null,
+          total_descontos_lancamentos: null,
+          total_liquido_lancamentos: null,
+        }).eq("id", up.id);
 
         const { data: file, error: dlErr } = await supa.storage.from("lancamentos").download(up.storage_path);
         if (dlErr) throw dlErr;
