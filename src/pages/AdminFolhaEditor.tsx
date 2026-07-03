@@ -84,7 +84,17 @@ const fmtBRL = (n: number) => new Intl.NumberFormat("pt-BR", { style: "currency"
 
 const parseMoneyCell = (value: unknown) => {
   if (typeof value === "number") return Number.isFinite(value) ? value : 0;
-  return Number(String(value ?? "").replace(/\./g, "").replace(",", ".")) || 0;
+  const cleaned = String(value ?? "").trim().replace(/R\$|\s/g, "");
+  const lastComma = cleaned.lastIndexOf(",");
+  const lastDot = cleaned.lastIndexOf(".");
+  const normalized = lastComma > -1 && lastDot > -1
+    ? lastComma > lastDot
+      ? cleaned.replace(/\./g, "").replace(",", ".")
+      : cleaned.replace(/,/g, "")
+    : cleaned.includes(",")
+      ? cleaned.replace(/\./g, "").replace(",", ".")
+      : cleaned;
+  return Number(normalized) || 0;
 };
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
