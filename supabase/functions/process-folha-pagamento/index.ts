@@ -106,6 +106,24 @@ Retorne ESTRITAMENTE um objeto JSON:
   ]
 }`;
 
+const TOTALS_PROMPT = `Você é um auditor de folha de pagamento. Sua única função é localizar no PDF os totais oficiais do resumo/totalizador da folha.
+
+Retorne ESTRITAMENTE um objeto JSON, sem markdown e sem texto fora do JSON:
+{
+  "total_rendimentos_documento": NUMBER_OR_NULL,
+  "total_descontos_documento": NUMBER_OR_NULL,
+  "total_liquido_documento": NUMBER_OR_NULL,
+  "observacoes_ia": "STRING"
+}
+
+Regras:
+- Copie os totais exatamente como aparecem no PDF.
+- Não calcule, não estime e não some verbas avulsas para preencher total ausente.
+- Rendimentos/proventos = total oficial de proventos/rendimentos do trabalhador/folha.
+- Descontos = total oficial de descontos/retenções.
+- Líquido = total líquido, se houver.
+- Se algum total não estiver explícito, use null e explique em observacoes_ia.`;
+
 
 const parseDateBR = (s: string): string | null => {
   const m = String(s).match(/^(\d{2})\/(\d{2})\/(\d{4})/);
@@ -317,6 +335,47 @@ Deno.serve(async (req) => {
         for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
         const b64 = btoa(bin);
 
+        const totalsBody = {
+          model: "google/gemini-2.5-flash",
+          response_format: { type: "json_object" },
+          messages: [
+            { role: "system", content: TOTALS_PROMPT },
+            {
+              role: "user",
+              content: [
+                { type: "text", text: `Competência: ${competencia}\n\nExtraia apenas os totais oficiais de rendimentos, descontos e líquido do PDF anexo. Não gere lançamentos.` },
+                { type: "file", file: { filename: up.nome_arquivo, file_data: `data:application/pdf;base64,${b64}` } },
+              ],
+            },
+          ],
+        };
+
+        const totalsRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Lovable-API-Key": LOVABLE_API_KEY,
+          },
+          body: JSON.stringify(totalsBody),
+        });
+
+        if (totalsRes.status === 429) throw new Error("Limite de requisições atingido. Tente novamente em alguns instantes.");
+        if (totalsRes.status === 402) throw new Error("Créditos da IA esgotados. Adicione créditos no workspace.");
+        if (!totalsRes.ok) {
+          const errText = await totalsRes.text();
+          throw new Error(`IA Gateway erro ${totalsRes.status}: ${errText.slice(0, 200)}`);
+        }
+
+        const totalsJson = await totalsRes.json();
+        const totalsFinishReason = totalsJson?.choices?.[0]?.finish_reason;
+        if (totalsFinishReason === "length" || totalsFinishReason === "max_tokens") {
+          throw new Error("A resposta da IA com os totais oficiais foi cortada. Reprocesse o documento para evitar conferência incompleta.");
+        }
+        const officialTotals = extractAiPayload(totalsJson?.choices?.[0]?.message?.content ?? "");
+        if (officialTotals.total_rendimentos_documento == null || officialTotals.total_descontos_documento == null) {
+          throw new Error(officialTotals.observacoes_ia || "A IA não identificou os totais oficiais de rendimentos e descontos no PDF. Nada foi salvo para evitar valores incompletos.");
+        }
+
         const body = {
           model: "google/gemini-2.5-flash",
           response_format: { type: "json_object" },
@@ -325,7 +384,7 @@ Deno.serve(async (req) => {
             {
               role: "user",
               content: [
-                { type: "text", text: `Competência: ${competencia}\n\n${planoText}\n\nAnalise o PDF da folha de pagamento anexo. Retorne ESTRITAMENTE um objeto JSON conforme especificado no system prompt, com as chaves "observacoes_ia", "total_rendimentos_documento", "total_descontos_documento", "total_liquido_documento" e "lancamentos". Se não houver dados extraíveis, retorne os totais como null e "lancamentos": []. Não inclua texto fora do JSON. LEMBRE: os valores dos lançamentos e dos totais devem ser IDÊNTICOS aos do PDF, sem arredondar, estimar ou completar diferenças.` },
+                { type: "text", text: `Competência: ${competencia}\n\n${planoText}\n\nTotais oficiais já extraídos do documento para conferência obrigatória:\n- Rendimentos: ${officialTotals.total_rendimentos_documento.toFixed(2)}\n- Descontos: ${officialTotals.total_descontos_documento.toFixed(2)}\n- Líquido: ${officialTotals.total_liquido_documento != null ? officialTotals.total_liquido_documento.toFixed(2) : "não informado"}\n\nAnalise o PDF da folha de pagamento anexo. Retorne ESTRITAMENTE um objeto JSON conforme especificado no system prompt, com as chaves "observacoes_ia", "total_rendimentos_documento", "total_descontos_documento", "total_liquido_documento" e "lancamentos". Se não houver dados extraíveis, retorne os totais como null e "lancamentos": []. Não inclua texto fora do JSON. LEMBRE: os valores dos lançamentos e dos totais devem ser IDÊNTICOS aos do PDF, sem arredondar, estimar ou completar diferenças.` },
                 { type: "file", file: { filename: up.nome_arquivo, file_data: `data:application/pdf;base64,${b64}` } },
               ],
             },
@@ -357,10 +416,10 @@ Deno.serve(async (req) => {
         const {
           lancamentos: lancs,
           observacoes_ia,
-          total_rendimentos_documento,
-          total_descontos_documento,
-          total_liquido_documento,
         } = extractAiPayload(content);
+        const total_rendimentos_documento = officialTotals.total_rendimentos_documento;
+        const total_descontos_documento = officialTotals.total_descontos_documento;
+        const total_liquido_documento = officialTotals.total_liquido_documento;
 
         const fallbackDate = lastDayOfCompetencia(competencia);
         const isValidISO = (d: string | null) => {
@@ -409,7 +468,7 @@ Deno.serve(async (req) => {
         await supa.from("folha_uploads").update({
           status: "processado",
           ultimo_erro: null,
-          observacoes_ia: observacoes_ia || null,
+          observacoes_ia: [officialTotals.observacoes_ia, observacoes_ia].filter(Boolean).join("\n\n") || null,
           total_rendimentos_documento,
           total_descontos_documento,
           total_liquido_documento,
