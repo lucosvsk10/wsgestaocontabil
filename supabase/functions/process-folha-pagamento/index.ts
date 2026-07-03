@@ -128,9 +128,15 @@ const parseAiMoney = (value: unknown): number | null => {
   const raw = String(value).trim();
   if (!raw) return null;
   const cleaned = raw.replace(/R\$|\s/g, "");
-  const normalized = cleaned.includes(",")
-    ? cleaned.replace(/\./g, "").replace(",", ".")
-    : cleaned;
+  const lastComma = cleaned.lastIndexOf(",");
+  const lastDot = cleaned.lastIndexOf(".");
+  const normalized = lastComma > -1 && lastDot > -1
+    ? lastComma > lastDot
+      ? cleaned.replace(/\./g, "").replace(",", ".")
+      : cleaned.replace(/,/g, "")
+    : cleaned.includes(",")
+      ? cleaned.replace(/\./g, "").replace(",", ".")
+      : cleaned;
   const n = Number(normalized);
   return Number.isFinite(n) ? round2(n) : null;
 };
