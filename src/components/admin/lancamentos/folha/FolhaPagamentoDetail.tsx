@@ -258,7 +258,7 @@ export const FolhaPagamentoDetail = ({ clientId, clientName }: FolhaPagamentoDet
                   <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-foreground truncate">{u.nome_arquivo}</p>
-                    {u.ultimo_erro && <p className="text-xs text-destructive truncate">{u.ultimo_erro}</p>}
+                    {u.ultimo_erro && <p className="text-xs text-destructive whitespace-pre-wrap break-words">{u.ultimo_erro}</p>}
                   </div>
                   {statusBadge(u.status)}
                   <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleDelete(u.id, u.storage_path)}>
