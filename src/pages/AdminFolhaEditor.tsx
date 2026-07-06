@@ -418,7 +418,9 @@ const AdminFolhaEditor = () => {
                   ))}
                 </div>
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Conferência informativa. Se houver divergência, revise as linhas manualmente — a IA lê o PDF exatamente como está e não ajusta valores.
+                  {hasDivergencia
+                    ? "Divergência detectada. Estes dados foram gerados antes da validação rígida ou precisam ser revisados/reprocessados; não exporte sem corrigir os valores."
+                    : "Valores conferidos com o documento original."}
                 </p>
               </div>
             )}
