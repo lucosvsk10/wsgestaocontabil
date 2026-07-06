@@ -336,7 +336,7 @@ Deno.serve(async (req) => {
         const b64 = btoa(bin);
 
         const totalsBody = {
-          model: "google/gemini-2.5-flash",
+          model: "google/gemini-2.5-pro",
           response_format: { type: "json_object" },
           messages: [
             { role: "system", content: TOTALS_PROMPT },
@@ -377,18 +377,18 @@ Deno.serve(async (req) => {
         const totDesc = officialTotals.total_descontos_documento;
         const totLiq = officialTotals.total_liquido_documento;
         const totalsHint = (totRend != null && totDesc != null)
-          ? `Totais oficiais extraídos do resumo do PDF (use como referência para copiar os valores certos verba por verba, NÃO para ajustar/forçar somas):\n- Rendimentos: ${totRend.toFixed(2)}\n- Descontos: ${totDesc.toFixed(2)}\n- Líquido: ${totLiq != null ? totLiq.toFixed(2) : "não informado"}`
-          : `Totais oficiais do PDF não puderam ser identificados na primeira leitura. Copie os valores de cada verba EXATAMENTE como estão no documento.`;
+          ? `Totais oficiais do resumo do PDF. A soma dos lançamentos precisa bater porque as verbas foram lidas corretamente; NÃO ajuste valores para fechar:\n- Rendimentos: ${totRend.toFixed(2)}\n- Descontos: ${totDesc.toFixed(2)}\n- Líquido: ${totLiq != null ? totLiq.toFixed(2) : "não informado"}`
+          : `Totais oficiais do PDF não puderam ser identificados na primeira leitura. Localize o resumo oficial no PDF; se não localizar rendimentos e descontos, retorne null e nenhum lançamento será aceito.`;
 
         const body = {
-          model: "google/gemini-2.5-flash",
+          model: "google/gemini-2.5-pro",
           response_format: { type: "json_object" },
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
             {
               role: "user",
               content: [
-                { type: "text", text: `Competência: ${competencia}\n\n${planoText}\n\n${totalsHint}\n\nAnalise o PDF da folha de pagamento anexo. Leia verba por verba, linha por linha, e copie CADA valor EXATAMENTE como aparece no PDF — sem arredondar, sem estimar, sem completar diferenças, sem inventar linhas e sem omitir linhas visíveis. Retorne ESTRITAMENTE um objeto JSON conforme o system prompt, com as chaves "observacoes_ia", "total_rendimentos_documento", "total_descontos_documento", "total_liquido_documento" e "lancamentos". Se não houver dados extraíveis, retorne totais como null e "lancamentos": []. Não inclua texto fora do JSON.` },
+                { type: "text", text: `Competência: ${competencia}\n\n${planoText}\n\n${totalsHint}\n\nAnalise o PDF da folha de pagamento anexo. Primeiro leia os totais oficiais do resumo. Depois leia cada verba/evento exatamente como aparece no documento e gere os lançamentos apenas a partir dessas verbas. A soma dos lançamentos de tipo "rendimento" deve ser igual ao total de rendimentos do PDF; a soma dos lançamentos de tipo "desconto" deve ser igual ao total de descontos do PDF. Se não bater, releia e corrija a verba/classificação errada — não explique divergência, não invente linha, não ajuste centavos. Retorne ESTRITAMENTE um objeto JSON conforme o system prompt, com as chaves "observacoes_ia", "total_rendimentos_documento", "total_descontos_documento", "total_liquido_documento" e "lancamentos". Se não houver dados extraíveis, retorne totais como null e "lancamentos": []. Não inclua texto fora do JSON.` },
                 { type: "file", file: { filename: up.nome_arquivo, file_data: `data:application/pdf;base64,${b64}` } },
               ],
             },
@@ -438,9 +438,11 @@ Deno.serve(async (req) => {
         };
 
         // Fidelidade total: usamos os lançamentos exatamente como a IA retornou.
-        // Nada de validação bloqueante, nada de reconciliação matemática, nada de linha sintética.
+        // Nada de reconciliação matemática, linha sintética ou ajuste de centavos.
+        // Se os valores não baterem com o documento, rejeitamos o processamento.
         const lancsArr = Array.isArray(lancs) ? [...lancs] : [];
         const totaisLancamentos = computeFolhaTotals(lancsArr);
+        assertFolhaSemDivergencia(totaisLancamentos, total_rendimentos_documento, total_descontos_documento);
 
 
         const rowsToInsert = lancsArr.map((l: any, idx: number) => {
