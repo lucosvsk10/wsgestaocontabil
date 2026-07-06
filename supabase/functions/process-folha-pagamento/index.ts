@@ -379,9 +379,10 @@ Deno.serve(async (req) => {
           lancamentos: lancs,
           observacoes_ia,
         } = extractAiPayload(content);
-        const total_rendimentos_documento = officialTotals.total_rendimentos_documento;
-        const total_descontos_documento = officialTotals.total_descontos_documento;
-        const total_liquido_documento = officialTotals.total_liquido_documento;
+        // Prefere os totais oficiais extraídos na primeira leitura; se ambos ausentes, tenta os que a IA devolveu no passo 2.
+        const total_rendimentos_documento = totRend ?? extractAiPayload(content).total_rendimentos_documento;
+        const total_descontos_documento = totDesc ?? extractAiPayload(content).total_descontos_documento;
+        const total_liquido_documento = totLiq ?? extractAiPayload(content).total_liquido_documento;
 
         const fallbackDate = lastDayOfCompetencia(competencia);
         const isValidISO = (d: string | null) => {
@@ -394,13 +395,10 @@ Deno.serve(async (req) => {
         };
 
         // Fidelidade total: usamos os lançamentos exatamente como a IA retornou.
-        // Nenhuma reconciliação matemática, nenhuma linha sintética.
+        // Nada de validação bloqueante, nada de reconciliação matemática, nada de linha sintética.
         const lancsArr = Array.isArray(lancs) ? [...lancs] : [];
-        const totaisLancamentos = validateFolhaTotals(lancsArr, {
-          total_rendimentos_documento,
-          total_descontos_documento,
-          total_liquido_documento,
-        });
+        const totaisLancamentos = computeFolhaTotals(lancsArr);
+
 
         const rowsToInsert = lancsArr.map((l: any, idx: number) => {
           const parsed = parseDateBR(l.data);
