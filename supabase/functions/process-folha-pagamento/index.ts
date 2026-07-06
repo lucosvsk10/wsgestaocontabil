@@ -80,14 +80,15 @@ No topo do JSON, informe os totais oficiais COPIADOS do resumo/totalizador do PD
 Esses totais NÃO são para você calcular. Eles devem vir do documento original. Se não conseguir identificar o total de rendimentos ou descontos no PDF, retorne null no campo correspondente, marque observacoes_ia explicando e NÃO chute.
 
 ### FIDELIDADE ABSOLUTA AOS VALORES DO PDF (REGRA MAIS IMPORTANTE)
-- Copie os valores EXATAMENTE como aparecem no PDF. NUNCA arredonde, estime, complete ou "corrija" valores.
-- Se você agrupar linhas com a mesma combinação [Conta Débito + Conta Crédito], o valor final DEVE ser a soma aritmética EXATA das verbas listadas na justificativa (centavo por centavo).
-- A soma de todos os lançamentos com tipo "rendimento" DEVE bater com "total_rendimentos_documento".
-- A soma de todos os lançamentos com tipo "desconto" DEVE bater com "total_descontos_documento".
-- Se "total_liquido_documento" existir, ele DEVE bater com rendimentos menos descontos.
-- Se um valor no PDF for R$ 1.234,56, use 1234.56 — nem 1234.55, nem 1234.60, nem 1234.
-- Não invente linhas que não estejam no PDF. Não descarte linhas que estejam no PDF.
+- Sua ÚNICA tarefa numérica é LER o PDF e COPIAR os valores. Você NÃO calcula, NÃO ajusta, NÃO reconcilia, NÃO "fecha" totais.
+- Cada valor deve ser copiado EXATAMENTE como aparece no PDF, centavo por centavo. Se o PDF diz 1.234,56, use 1234.56 — nem 1234.55, nem 1234.60, nem 1234.
+- NUNCA arredonde. NUNCA estime. NUNCA complete diferença. NUNCA some para bater com um total. NUNCA remova um centavo. NUNCA acrescente um centavo.
+- NUNCA invente linha que não esteja no PDF. NUNCA descarte linha que esteja no PDF.
+- Se agrupar linhas com a mesma dupla [Débito + Crédito], o valor final DEVE ser a soma aritmética exata das verbas listadas na justificativa — e cada verba somada tem que existir de fato no PDF com aquele valor.
+- Se o total dos rendimentos, descontos ou FGTS a recolher não bater com o resumo do PDF depois de você copiar as verbas, isso significa que VOCÊ LEU ALGUMA VERBA ERRADA — releia e corrija a leitura da verba, NUNCA ajuste o valor para forçar o total a bater.
+- Os totais oficiais do PDF que aparecem no prompt do usuário são apenas REFERÊNCIA de conferência da sua leitura. Não são metas a serem atingidas por soma.
 - Se algo estiver ilegível ou ambíguo, marque com [REVISAR] e explique na justificativa — não chute.
+
 
 ### FORMATAÇÃO
 - Data: último dia real do mês da competência (DD/MM/AAAA).
@@ -217,21 +218,9 @@ const classifyLancamento = (l: any): FolhaTipo => {
   return "rendimento";
 };
 
-const validateFolhaTotals = (
-  lancamentos: any[],
-  totals: {
-    total_rendimentos_documento: number | null;
-    total_descontos_documento: number | null;
-    total_liquido_documento: number | null;
-  },
-) => {
-  if (totals.total_rendimentos_documento == null || totals.total_descontos_documento == null) {
-    throw new Error("A IA não identificou os totais oficiais de rendimentos e descontos no PDF. Reprocesse com um documento que contenha o resumo da folha ou revise manualmente.");
-  }
-
+const computeFolhaTotals = (lancamentos: any[]) => {
   let total_rendimentos_lancamentos = 0;
   let total_descontos_lancamentos = 0;
-
   for (const l of lancamentos) {
     const valor = parseAiMoney(l?.valor) ?? 0;
     if (valor <= 0) continue;
@@ -239,41 +228,10 @@ const validateFolhaTotals = (
     if (tipo === "rendimento") total_rendimentos_lancamentos = round2(total_rendimentos_lancamentos + valor);
     if (tipo === "desconto") total_descontos_lancamentos = round2(total_descontos_lancamentos + valor);
   }
-
   const total_liquido_lancamentos = round2(total_rendimentos_lancamentos - total_descontos_lancamentos);
-  const checks: { label: string; doc: number; planilha: number }[] = [
-    {
-      label: "Rendimentos",
-      doc: totals.total_rendimentos_documento,
-      planilha: total_rendimentos_lancamentos,
-    },
-    {
-      label: "Descontos",
-      doc: totals.total_descontos_documento,
-      planilha: total_descontos_lancamentos,
-    },
-  ];
-  if (totals.total_liquido_documento != null) {
-    checks.push({ label: "Líquido", doc: totals.total_liquido_documento, planilha: total_liquido_lancamentos });
-  }
-
-  const divergencias = checks
-    .map((c) => ({ ...c, diff: round2(c.planilha - c.doc) }))
-    .filter((c) => Math.abs(c.diff) > 0.01);
-
-  if (divergencias.length) {
-    const detalhe = divergencias
-      .map((d) => `${d.label}: documento ${d.doc.toFixed(2)}, lançamentos ${d.planilha.toFixed(2)}, diferença ${d.diff.toFixed(2)}`)
-      .join("; ");
-    throw new Error(`Divergência nos totais da folha. ${detalhe}. Nada foi salvo para evitar valor inventado ou incompleto.`);
-  }
-
-  return {
-    total_rendimentos_lancamentos,
-    total_descontos_lancamentos,
-    total_liquido_lancamentos,
-  };
+  return { total_rendimentos_lancamentos, total_descontos_lancamentos, total_liquido_lancamentos };
 };
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -372,9 +330,13 @@ Deno.serve(async (req) => {
           throw new Error("A resposta da IA com os totais oficiais foi cortada. Reprocesse o documento para evitar conferência incompleta.");
         }
         const officialTotals = extractAiPayload(totalsJson?.choices?.[0]?.message?.content ?? "");
-        if (officialTotals.total_rendimentos_documento == null || officialTotals.total_descontos_documento == null) {
-          throw new Error(officialTotals.observacoes_ia || "A IA não identificou os totais oficiais de rendimentos e descontos no PDF. Nada foi salvo para evitar valores incompletos.");
-        }
+        // Totais oficiais são apenas referência informativa — nunca bloqueiam.
+        const totRend = officialTotals.total_rendimentos_documento;
+        const totDesc = officialTotals.total_descontos_documento;
+        const totLiq = officialTotals.total_liquido_documento;
+        const totalsHint = (totRend != null && totDesc != null)
+          ? `Totais oficiais extraídos do resumo do PDF (use como referência para copiar os valores certos verba por verba, NÃO para ajustar/forçar somas):\n- Rendimentos: ${totRend.toFixed(2)}\n- Descontos: ${totDesc.toFixed(2)}\n- Líquido: ${totLiq != null ? totLiq.toFixed(2) : "não informado"}`
+          : `Totais oficiais do PDF não puderam ser identificados na primeira leitura. Copie os valores de cada verba EXATAMENTE como estão no documento.`;
 
         const body = {
           model: "google/gemini-2.5-flash",
@@ -384,12 +346,13 @@ Deno.serve(async (req) => {
             {
               role: "user",
               content: [
-                { type: "text", text: `Competência: ${competencia}\n\n${planoText}\n\nTotais oficiais já extraídos do documento para conferência obrigatória:\n- Rendimentos: ${officialTotals.total_rendimentos_documento.toFixed(2)}\n- Descontos: ${officialTotals.total_descontos_documento.toFixed(2)}\n- Líquido: ${officialTotals.total_liquido_documento != null ? officialTotals.total_liquido_documento.toFixed(2) : "não informado"}\n\nAnalise o PDF da folha de pagamento anexo. Retorne ESTRITAMENTE um objeto JSON conforme especificado no system prompt, com as chaves "observacoes_ia", "total_rendimentos_documento", "total_descontos_documento", "total_liquido_documento" e "lancamentos". Se não houver dados extraíveis, retorne os totais como null e "lancamentos": []. Não inclua texto fora do JSON. LEMBRE: os valores dos lançamentos e dos totais devem ser IDÊNTICOS aos do PDF, sem arredondar, estimar ou completar diferenças.` },
+                { type: "text", text: `Competência: ${competencia}\n\n${planoText}\n\n${totalsHint}\n\nAnalise o PDF da folha de pagamento anexo. Leia verba por verba, linha por linha, e copie CADA valor EXATAMENTE como aparece no PDF — sem arredondar, sem estimar, sem completar diferenças, sem inventar linhas e sem omitir linhas visíveis. Retorne ESTRITAMENTE um objeto JSON conforme o system prompt, com as chaves "observacoes_ia", "total_rendimentos_documento", "total_descontos_documento", "total_liquido_documento" e "lancamentos". Se não houver dados extraíveis, retorne totais como null e "lancamentos": []. Não inclua texto fora do JSON.` },
                 { type: "file", file: { filename: up.nome_arquivo, file_data: `data:application/pdf;base64,${b64}` } },
               ],
             },
           ],
         };
+
 
         const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
@@ -417,9 +380,10 @@ Deno.serve(async (req) => {
           lancamentos: lancs,
           observacoes_ia,
         } = extractAiPayload(content);
-        const total_rendimentos_documento = officialTotals.total_rendimentos_documento;
-        const total_descontos_documento = officialTotals.total_descontos_documento;
-        const total_liquido_documento = officialTotals.total_liquido_documento;
+        // Prefere os totais oficiais extraídos na primeira leitura; se ambos ausentes, tenta os que a IA devolveu no passo 2.
+        const total_rendimentos_documento = totRend ?? extractAiPayload(content).total_rendimentos_documento;
+        const total_descontos_documento = totDesc ?? extractAiPayload(content).total_descontos_documento;
+        const total_liquido_documento = totLiq ?? extractAiPayload(content).total_liquido_documento;
 
         const fallbackDate = lastDayOfCompetencia(competencia);
         const isValidISO = (d: string | null) => {
@@ -432,13 +396,10 @@ Deno.serve(async (req) => {
         };
 
         // Fidelidade total: usamos os lançamentos exatamente como a IA retornou.
-        // Nenhuma reconciliação matemática, nenhuma linha sintética.
+        // Nada de validação bloqueante, nada de reconciliação matemática, nada de linha sintética.
         const lancsArr = Array.isArray(lancs) ? [...lancs] : [];
-        const totaisLancamentos = validateFolhaTotals(lancsArr, {
-          total_rendimentos_documento,
-          total_descontos_documento,
-          total_liquido_documento,
-        });
+        const totaisLancamentos = computeFolhaTotals(lancsArr);
+
 
         const rowsToInsert = lancsArr.map((l: any, idx: number) => {
           const parsed = parseDateBR(l.data);
