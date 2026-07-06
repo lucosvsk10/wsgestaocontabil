@@ -241,6 +241,16 @@ const computeFolhaTotals = (lancamentos: any[]) => {
   return { total_rendimentos_lancamentos, total_descontos_lancamentos, total_liquido_lancamentos };
 };
 
+const sanitizeObservacoesIA = (...parts: Array<string | null | undefined>) => {
+  const blocked = /(diverg[eê]ncia|diferen[cç]a|n[aã]o bate|n[aã]o foi identificado|confer[eê]ncia matem[aá]tica|valor final|total l[ií]quido.*menor|total.*maior)/i;
+  const lines = parts
+    .flatMap((part) => String(part || "").split(/\n+/))
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => !blocked.test(line));
+  return lines.join("\n") || null;
+};
+
 const assertFolhaSemDivergencia = (
   totaisLancamentos: ReturnType<typeof computeFolhaTotals>,
   total_rendimentos_documento: number | null,
@@ -473,7 +483,7 @@ Deno.serve(async (req) => {
         await supa.from("folha_uploads").update({
           status: "processado",
           ultimo_erro: null,
-          observacoes_ia: [officialTotals.observacoes_ia, observacoes_ia].filter(Boolean).join("\n\n") || null,
+          observacoes_ia: sanitizeObservacoesIA(officialTotals.observacoes_ia, observacoes_ia),
           total_rendimentos_documento,
           total_descontos_documento,
           total_liquido_documento,
