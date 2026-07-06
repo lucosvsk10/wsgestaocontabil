@@ -6,7 +6,16 @@ const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-const SYSTEM_PROMPT = `Você é o motor de inteligência contábil de um sistema de gestão de documentos. Sua função é analisar relatórios de Folha de Pagamento (PDF) e transformá-los em lotes de lançamentos otimizados para o Calima ERP.
+const SYSTEM_PROMPT = `Você é o motor de leitura contábil de folha de pagamento. Sua função é LER o PDF com fidelidade absoluta e transformar SOMENTE os valores que existem no documento em lançamentos para o Calima ERP.
+
+REGRA CENTRAL: o resultado final NÃO pode ter divergência entre os valores do documento original e os lançamentos gerados. Se houver divergência, a leitura está errada. Não explique diferença: leia novamente as verbas visíveis e use os valores corretos do PDF.
+
+### ORDEM OBRIGATÓRIA DE TRABALHO
+1. Localize no PDF o resumo/totalizador oficial: total de rendimentos/proventos, total de descontos e total líquido.
+2. Leia as verbas/eventos do PDF linha por linha, copiando descrição e valor exatamente como aparecem.
+3. Classifique cada verba como rendimento, desconto ou encargo.
+4. Só depois escolha as contas contábeis no plano de contas.
+5. Antes de responder, confira aritmeticamente se a soma dos lançamentos de tipo "rendimento" é exatamente igual ao total de rendimentos do PDF e se a soma dos lançamentos de tipo "desconto" é exatamente igual ao total de descontos do PDF. Se não bater, você leu ou classificou alguma verba errada: corrija a leitura/classificação da verba original. Nunca ajuste centavos para fechar.
 
 Você DEVE cruzar cada evento da folha com o [PLANO DE CONTAS] enviado no contexto desta requisição. O plano de contas usa APENAS o C.R. (código reduzido) — NÃO existe "código completo", "código contábil" ou "conta analítica". Use SEMPRE, e somente, os CRs que aparecem no [PLANO DE CONTAS]. NUNCA invente um CR que não esteja lá.
 
@@ -41,7 +50,7 @@ Para cada categoria, escolha o CR do plano de contas cuja descrição melhor cor
 7. IRRF RETIDO EM FOLHA → Débito em (E) e Crédito em (I). Histórico: "IRRF S/SALÁRIOS A PAGAR MÊS [MM/AAAA]".
 8. RETENÇÕES DIVERSAS (consignado, pensão, sindicato, convênio, empréstimos, descontos comerciais de terceiros): Débito em (E) e Crédito na obrigação correspondente (J, K, ou similar do plano). Histórico: "[NOME DO DESCONTO] EM FOLHA MÊS [MM/AAAA]" (ex.: "EMPRESTIMO CONSIGNADO EM FOLHA MÊS 03/2026").
 
-Agrupe linhas com a MESMA combinação [Conta Débito + Conta Crédito] somando os valores, desde que a soma final continue batendo exatamente com os totais oficiais do PDF.
+Agrupe linhas com a MESMA combinação [Conta Débito + Conta Crédito] apenas quando todas as verbas agrupadas estiverem listadas na justificativa com seus valores originais e a soma aritmética exata continuar igual aos totais oficiais do PDF.
 
 ### TIPO DE CADA LANÇAMENTO (OBRIGATÓRIO PARA CONFERÊNCIA)
 Para CADA lançamento, informe também o campo "tipo" com um destes valores:
@@ -69,7 +78,7 @@ Para CADA lançamento, preencha o campo "justificativa" com uma explicação cur
 - Seja curto (1-3 linhas). Sem juridiquês.
 
 ### OBSERVAÇÕES GERAIS DA IA (OBRIGATÓRIO)
-No topo do JSON, o campo "observacoes_ia" (string única, pode ser vazia "") serve para você registrar dúvidas, casos incomuns, ou justificativas de decisões não óbvias tomadas durante o processamento — coisas que o usuário humano precisa saber ao revisar. Exemplos: valor que não bateu na conferência matemática, verba nova encontrada e como você tratou, retenção incomum, competência divergente entre páginas, etc. Se não houver nada a comentar, deixe "".
+No topo do JSON, o campo "observacoes_ia" (string única, pode ser vazia "") serve apenas para dúvidas reais de leitura, verba ilegível, verba nova ou conta não encontrada. NÃO use este campo para justificar divergência de valores. Divergência significa leitura incorreta e deve ser resolvida antes do retorno. Se não houver nada a comentar, deixe "".
 
 ### TOTAIS OFICIAIS DO DOCUMENTO (OBRIGATÓRIO)
 No topo do JSON, informe os totais oficiais COPIADOS do resumo/totalizador do PDF:
@@ -80,13 +89,11 @@ No topo do JSON, informe os totais oficiais COPIADOS do resumo/totalizador do PD
 Esses totais NÃO são para você calcular. Eles devem vir do documento original. Se não conseguir identificar o total de rendimentos ou descontos no PDF, retorne null no campo correspondente, marque observacoes_ia explicando e NÃO chute.
 
 ### FIDELIDADE ABSOLUTA AOS VALORES DO PDF (REGRA MAIS IMPORTANTE)
-- Sua ÚNICA tarefa numérica é LER o PDF e COPIAR os valores. Você NÃO calcula, NÃO ajusta, NÃO reconcilia, NÃO "fecha" totais.
+- Sua ÚNICA tarefa numérica é LER o PDF e COPIAR os valores. Você NÃO inventa, NÃO arredonda, NÃO estima, NÃO completa diferença, NÃO remove centavos e NÃO acrescenta centavos.
 - Cada valor deve ser copiado EXATAMENTE como aparece no PDF, centavo por centavo. Se o PDF diz 1.234,56, use 1234.56 — nem 1234.55, nem 1234.60, nem 1234.
-- NUNCA arredonde. NUNCA estime. NUNCA complete diferença. NUNCA some para bater com um total. NUNCA remova um centavo. NUNCA acrescente um centavo.
-- NUNCA invente linha que não esteja no PDF. NUNCA descarte linha que esteja no PDF.
+- NUNCA invente linha que não esteja no PDF. NUNCA descarte linha que esteja no PDF. NUNCA classifique desconto como encargo para esconder diferença.
 - Se agrupar linhas com a mesma dupla [Débito + Crédito], o valor final DEVE ser a soma aritmética exata das verbas listadas na justificativa — e cada verba somada tem que existir de fato no PDF com aquele valor.
-- Se o total dos rendimentos, descontos ou FGTS a recolher não bater com o resumo do PDF depois de você copiar as verbas, isso significa que VOCÊ LEU ALGUMA VERBA ERRADA — releia e corrija a leitura da verba, NUNCA ajuste o valor para forçar o total a bater.
-- Os totais oficiais do PDF que aparecem no prompt do usuário são apenas REFERÊNCIA de conferência da sua leitura. Não são metas a serem atingidas por soma.
+- Rendimentos, descontos, líquido e FGTS/encargos devem sair do documento original. Os lançamentos de rendimento e desconto devem bater com os totais oficiais porque as verbas foram lidas corretamente, não por ajuste manual.
 - Se algo estiver ilegível ou ambíguo, marque com [REVISAR] e explique na justificativa — não chute.
 
 
@@ -120,6 +127,8 @@ Retorne ESTRITAMENTE um objeto JSON, sem markdown e sem texto fora do JSON:
 Regras:
 - Copie os totais exatamente como aparecem no PDF.
 - Não calcule, não estime e não some verbas avulsas para preencher total ausente.
+- Use apenas valores impressos no resumo/totalizador oficial do documento.
+- Se houver mais de um resumo, prefira o total geral da folha/empresa, não subtotal de funcionário ou seção.
 - Rendimentos/proventos = total oficial de proventos/rendimentos do trabalhador/folha.
 - Descontos = total oficial de descontos/retenções.
 - Líquido = total líquido, se houver.
@@ -232,6 +241,49 @@ const computeFolhaTotals = (lancamentos: any[]) => {
   return { total_rendimentos_lancamentos, total_descontos_lancamentos, total_liquido_lancamentos };
 };
 
+const sanitizeObservacoesIA = (...parts: Array<string | null | undefined>) => {
+  const blocked = /(diverg[eê]ncia|diferen[cç]a|n[aã]o bate|n[aã]o foi identificado|confer[eê]ncia matem[aá]tica|valor final|total l[ií]quido.*menor|total.*maior)/i;
+  const lines = parts
+    .flatMap((part) => String(part || "").split(/\n+/))
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => !blocked.test(line));
+  return lines.join("\n") || null;
+};
+
+const assertFolhaSemDivergencia = (
+  totaisLancamentos: ReturnType<typeof computeFolhaTotals>,
+  total_rendimentos_documento: number | null,
+  total_descontos_documento: number | null,
+) => {
+  if (total_rendimentos_documento == null || total_descontos_documento == null) {
+    throw new Error(
+      "A IA não conseguiu identificar os totais oficiais de rendimentos e descontos no PDF. O processamento foi recusado para evitar valores divergentes.",
+    );
+  }
+
+  const divergencias: string[] = [];
+  const diffRend = round2(totaisLancamentos.total_rendimentos_lancamentos - total_rendimentos_documento);
+  const diffDesc = round2(totaisLancamentos.total_descontos_lancamentos - total_descontos_documento);
+
+  if (Math.abs(diffRend) > 0.01) {
+    divergencias.push(
+      `rendimentos: documento ${total_rendimentos_documento.toFixed(2)}, IA ${totaisLancamentos.total_rendimentos_lancamentos.toFixed(2)}, diferença ${diffRend.toFixed(2)}`,
+    );
+  }
+  if (Math.abs(diffDesc) > 0.01) {
+    divergencias.push(
+      `descontos: documento ${total_descontos_documento.toFixed(2)}, IA ${totaisLancamentos.total_descontos_lancamentos.toFixed(2)}, diferença ${diffDesc.toFixed(2)}`,
+    );
+  }
+
+  if (divergencias.length) {
+    throw new Error(
+      `A IA não leu o PDF corretamente: ${divergencias.join("; ")}. Nenhum lançamento divergente foi aceito. Reprocesse o documento ou revise o PDF original.`,
+    );
+  }
+};
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -294,7 +346,7 @@ Deno.serve(async (req) => {
         const b64 = btoa(bin);
 
         const totalsBody = {
-          model: "google/gemini-2.5-flash",
+          model: "google/gemini-2.5-pro",
           response_format: { type: "json_object" },
           messages: [
             { role: "system", content: TOTALS_PROMPT },
@@ -335,18 +387,18 @@ Deno.serve(async (req) => {
         const totDesc = officialTotals.total_descontos_documento;
         const totLiq = officialTotals.total_liquido_documento;
         const totalsHint = (totRend != null && totDesc != null)
-          ? `Totais oficiais extraídos do resumo do PDF (use como referência para copiar os valores certos verba por verba, NÃO para ajustar/forçar somas):\n- Rendimentos: ${totRend.toFixed(2)}\n- Descontos: ${totDesc.toFixed(2)}\n- Líquido: ${totLiq != null ? totLiq.toFixed(2) : "não informado"}`
-          : `Totais oficiais do PDF não puderam ser identificados na primeira leitura. Copie os valores de cada verba EXATAMENTE como estão no documento.`;
+          ? `Totais oficiais do resumo do PDF. A soma dos lançamentos precisa bater porque as verbas foram lidas corretamente; NÃO ajuste valores para fechar:\n- Rendimentos: ${totRend.toFixed(2)}\n- Descontos: ${totDesc.toFixed(2)}\n- Líquido: ${totLiq != null ? totLiq.toFixed(2) : "não informado"}`
+          : `Totais oficiais do PDF não puderam ser identificados na primeira leitura. Localize o resumo oficial no PDF; se não localizar rendimentos e descontos, retorne null e nenhum lançamento será aceito.`;
 
         const body = {
-          model: "google/gemini-2.5-flash",
+          model: "google/gemini-2.5-pro",
           response_format: { type: "json_object" },
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
             {
               role: "user",
               content: [
-                { type: "text", text: `Competência: ${competencia}\n\n${planoText}\n\n${totalsHint}\n\nAnalise o PDF da folha de pagamento anexo. Leia verba por verba, linha por linha, e copie CADA valor EXATAMENTE como aparece no PDF — sem arredondar, sem estimar, sem completar diferenças, sem inventar linhas e sem omitir linhas visíveis. Retorne ESTRITAMENTE um objeto JSON conforme o system prompt, com as chaves "observacoes_ia", "total_rendimentos_documento", "total_descontos_documento", "total_liquido_documento" e "lancamentos". Se não houver dados extraíveis, retorne totais como null e "lancamentos": []. Não inclua texto fora do JSON.` },
+                { type: "text", text: `Competência: ${competencia}\n\n${planoText}\n\n${totalsHint}\n\nAnalise o PDF da folha de pagamento anexo. Primeiro leia os totais oficiais do resumo. Depois leia cada verba/evento exatamente como aparece no documento e gere os lançamentos apenas a partir dessas verbas. A soma dos lançamentos de tipo "rendimento" deve ser igual ao total de rendimentos do PDF; a soma dos lançamentos de tipo "desconto" deve ser igual ao total de descontos do PDF. Se não bater, releia e corrija a verba/classificação errada — não explique divergência, não invente linha, não ajuste centavos. Retorne ESTRITAMENTE um objeto JSON conforme o system prompt, com as chaves "observacoes_ia", "total_rendimentos_documento", "total_descontos_documento", "total_liquido_documento" e "lancamentos". Se não houver dados extraíveis, retorne totais como null e "lancamentos": []. Não inclua texto fora do JSON.` },
                 { type: "file", file: { filename: up.nome_arquivo, file_data: `data:application/pdf;base64,${b64}` } },
               ],
             },
@@ -396,9 +448,11 @@ Deno.serve(async (req) => {
         };
 
         // Fidelidade total: usamos os lançamentos exatamente como a IA retornou.
-        // Nada de validação bloqueante, nada de reconciliação matemática, nada de linha sintética.
+        // Nada de reconciliação matemática, linha sintética ou ajuste de centavos.
+        // Se os valores não baterem com o documento, rejeitamos o processamento.
         const lancsArr = Array.isArray(lancs) ? [...lancs] : [];
         const totaisLancamentos = computeFolhaTotals(lancsArr);
+        assertFolhaSemDivergencia(totaisLancamentos, total_rendimentos_documento, total_descontos_documento);
 
 
         const rowsToInsert = lancsArr.map((l: any, idx: number) => {
@@ -429,7 +483,7 @@ Deno.serve(async (req) => {
         await supa.from("folha_uploads").update({
           status: "processado",
           ultimo_erro: null,
-          observacoes_ia: [officialTotals.observacoes_ia, observacoes_ia].filter(Boolean).join("\n\n") || null,
+          observacoes_ia: sanitizeObservacoesIA(officialTotals.observacoes_ia, observacoes_ia),
           total_rendimentos_documento,
           total_descontos_documento,
           total_liquido_documento,

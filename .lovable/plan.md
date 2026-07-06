@@ -1,58 +1,35 @@
-## Objetivo
+## Plano
 
-A IA deve simplesmente LER os valores do PDF exatamente como estão (rendimentos, descontos, FGTS a recolher, etc.), sem inventar, arredondar, acrescentar ou remover um centavo. Nada de auto-correção, nada de validação bloqueante no servidor. Se ela ler certo, os totais vão bater naturalmente. Se ela ler errado, o usuário revisa no editor — o site não deve barrar.
+Vou alterar a folha de pagamento para a IA não retornar lançamentos com diferença como se estivesse tudo certo. A regra passa a ser: se a IA não conseguir ler e montar os lançamentos mantendo exatamente os totais do PDF, o processamento não será aceito como concluído.
 
-## O que muda
+### 1. Trocar a estratégia do prompt
+- Reescrever o prompt da folha para separar claramente duas tarefas:
+  1. Ler o PDF e extrair os valores originais exatamente como aparecem.
+  2. Só depois transformar esses valores em lançamentos contábeis.
+- Remover qualquer linguagem que sugira “explicar divergência”, “conferência informativa” ou aceitar diferença.
+- Exigir que cada lançamento traga a evidência do PDF na justificativa: verba original, seção e valor usado.
+- Reforçar que a IA não pode inventar, omitir, arredondar, ajustar ou trocar centavos.
 
-### 1. Edge function `process-folha-pagamento/index.ts`
+### 2. Usar modelo mais forte para leitura do PDF
+- Trocar a chamada principal da folha de `google/gemini-2.5-flash` para `google/gemini-2.5-pro`, que é mais adequado para leitura multimodal/PDF com raciocínio mais cuidadoso.
+- Manter uma chamada específica para totais oficiais do PDF, mas também com instrução mais rígida.
 
-- **Remover** completamente a função `validateFolhaTotals` e a chamada que hoje faz `throw` marcando `status = erro` quando as somas não batem.
-- **Manter** a extração dos totais oficiais do PDF (`total_rendimentos_documento`, `total_descontos_documento`, `total_liquido_documento`) — mas **só como referência informativa** salva no banco. Não usar para bloquear nem para pedir retentativa.
-- **Continuar enviando** esses totais para a IA no prompt como contexto: "o PDF diz que rendimentos são X, descontos são Y — copie fielmente".
-- **Não fazer loop de retentativa**, não trocar de modelo dinamicamente. Uma chamada só. Se a IA errar, o resultado vai para o editor do jeito que veio.
-- Salvar sempre `status = processado` quando a IA responder JSON válido. `status = erro` fica reservado só para falha real (IA offline, JSON inválido, PDF não baixou).
-- Calcular `total_rendimentos_lancamentos`, `total_descontos_lancamentos`, `total_liquido_lancamentos` apenas para popular o painel de conferência do editor (visual), sem bloquear nada.
+### 3. Validar como garantia de qualidade, não como “correção”
+- Depois que a IA retornar os lançamentos, o sistema vai somar rendimentos e descontos.
+- Se os totais dos lançamentos não baterem com os totais oficiais do documento, o upload ficará com `status = erro` e mensagem direta dizendo que a IA não leu o PDF corretamente.
+- Não haverá ajuste automático, linha sintética, redistribuição, compensação ou auto-correção.
+- O documento não será exportado com valores divergentes como se estivesse correto.
 
-### 2. Reforço do system prompt
+### 4. Remover observações inúteis de divergência
+- Não salvar mais explicações longas da IA tentando justificar diferença.
+- `observacoes_ia` ficará apenas para dúvidas reais de leitura, verba ilegível ou conta não encontrada.
+- A tela não deve sugerir que “a IA lê exatamente” quando houve divergência.
 
-Deixar ainda mais direto o que a IA deve fazer:
+### 5. Ajustar a tela do editor
+- O painel “Conferência com o documento” volta a ser tratado como conferência real.
+- Se houver divergência em dados antigos já processados, a tela deve mostrar que o arquivo precisa ser reprocessado/revisado, sem dizer que isso é aceitável.
+- Remover o texto atual que diz que a conferência é apenas informativa.
 
-- Ler o PDF verba por verba, linha por linha.
-- Copiar os valores EXATAMENTE como aparecem, centavo por centavo.
-- Nunca somar para "fechar" um total, nunca arredondar, nunca completar diferença, nunca omitir uma linha visível.
-- Se agrupar linhas com a mesma dupla débito/crédito, a soma tem que ser aritmeticamente exata das verbas listadas na justificativa.
-- FGTS a recolher, INSS patronal e demais encargos: continuam sendo lidos e lançados como `tipo = "encargo"`, também com valor exato do PDF.
-- Se algo estiver ilegível, marcar com `[REVISAR]` e explicar — nunca chutar.
+## Resultado esperado
 
-### 3. Editor `src/pages/AdminFolhaEditor.tsx`
-
-- O painel "Conferência com o documento" fica apenas como referência visual (verde quando bate, alerta amarelo quando diverge). Nunca como bloqueio.
-- Ajustar o texto para deixar claro: "Se houver divergência, revise as linhas — a IA não ajusta valores automaticamente."
-- Nenhuma ação (exportar, salvar, editar) deve depender da conferência bater.
-
-### 4. `FolhaPagamentoDetail.tsx`
-
-- Remover o toast "X arquivo(s) ficaram com divergência" — como divergência não é mais erro, o toast volta a mostrar só o total de lançamentos gerados.
-- `ultimo_erro` continua exibido, mas só apareceria em falha real de processamento.
-
-## Detalhes técnicos
-
-Fluxo simplificado da edge function por upload:
-
-```text
-1. baixar PDF
-2. chamar IA (extração de totais oficiais) → salvar totais no banco
-3. chamar IA (lançamentos) com plano de contas + totais oficiais como contexto
-4. salvar lançamentos como vieram da IA
-5. calcular somas por tipo apenas para exibir no editor
-6. status = processado (sempre que a IA responder JSON válido)
-```
-
-Nada de:
-- validação matemática que bloqueia,
-- loop de retentativa da IA,
-- troca dinâmica de modelo,
-- linhas sintéticas,
-- ajuste de valores no código.
-
-Nenhuma migration nova é necessária.
+A IA só deve entregar folha processada quando os valores extraídos dos lançamentos forem iguais aos totais originais do PDF. Se ela não conseguir ler corretamente, o sistema deve rejeitar aquele processamento e pedir reprocessamento/revisão, sem inventar centavos e sem aceitar divergência.
