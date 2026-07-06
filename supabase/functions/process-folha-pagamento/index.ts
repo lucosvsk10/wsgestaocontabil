@@ -80,14 +80,15 @@ No topo do JSON, informe os totais oficiais COPIADOS do resumo/totalizador do PD
 Esses totais NÃO são para você calcular. Eles devem vir do documento original. Se não conseguir identificar o total de rendimentos ou descontos no PDF, retorne null no campo correspondente, marque observacoes_ia explicando e NÃO chute.
 
 ### FIDELIDADE ABSOLUTA AOS VALORES DO PDF (REGRA MAIS IMPORTANTE)
-- Copie os valores EXATAMENTE como aparecem no PDF. NUNCA arredonde, estime, complete ou "corrija" valores.
-- Se você agrupar linhas com a mesma combinação [Conta Débito + Conta Crédito], o valor final DEVE ser a soma aritmética EXATA das verbas listadas na justificativa (centavo por centavo).
-- A soma de todos os lançamentos com tipo "rendimento" DEVE bater com "total_rendimentos_documento".
-- A soma de todos os lançamentos com tipo "desconto" DEVE bater com "total_descontos_documento".
-- Se "total_liquido_documento" existir, ele DEVE bater com rendimentos menos descontos.
-- Se um valor no PDF for R$ 1.234,56, use 1234.56 — nem 1234.55, nem 1234.60, nem 1234.
-- Não invente linhas que não estejam no PDF. Não descarte linhas que estejam no PDF.
+- Sua ÚNICA tarefa numérica é LER o PDF e COPIAR os valores. Você NÃO calcula, NÃO ajusta, NÃO reconcilia, NÃO "fecha" totais.
+- Cada valor deve ser copiado EXATAMENTE como aparece no PDF, centavo por centavo. Se o PDF diz 1.234,56, use 1234.56 — nem 1234.55, nem 1234.60, nem 1234.
+- NUNCA arredonde. NUNCA estime. NUNCA complete diferença. NUNCA some para bater com um total. NUNCA remova um centavo. NUNCA acrescente um centavo.
+- NUNCA invente linha que não esteja no PDF. NUNCA descarte linha que esteja no PDF.
+- Se agrupar linhas com a mesma dupla [Débito + Crédito], o valor final DEVE ser a soma aritmética exata das verbas listadas na justificativa — e cada verba somada tem que existir de fato no PDF com aquele valor.
+- Se o total dos rendimentos, descontos ou FGTS a recolher não bater com o resumo do PDF depois de você copiar as verbas, isso significa que VOCÊ LEU ALGUMA VERBA ERRADA — releia e corrija a leitura da verba, NUNCA ajuste o valor para forçar o total a bater.
+- Os totais oficiais do PDF que aparecem no prompt do usuário são apenas REFERÊNCIA de conferência da sua leitura. Não são metas a serem atingidas por soma.
 - Se algo estiver ilegível ou ambíguo, marque com [REVISAR] e explique na justificativa — não chute.
+
 
 ### FORMATAÇÃO
 - Data: último dia real do mês da competência (DD/MM/AAAA).
