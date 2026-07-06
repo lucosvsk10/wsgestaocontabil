@@ -329,9 +329,13 @@ Deno.serve(async (req) => {
           throw new Error("A resposta da IA com os totais oficiais foi cortada. Reprocesse o documento para evitar conferência incompleta.");
         }
         const officialTotals = extractAiPayload(totalsJson?.choices?.[0]?.message?.content ?? "");
-        if (officialTotals.total_rendimentos_documento == null || officialTotals.total_descontos_documento == null) {
-          throw new Error(officialTotals.observacoes_ia || "A IA não identificou os totais oficiais de rendimentos e descontos no PDF. Nada foi salvo para evitar valores incompletos.");
-        }
+        // Totais oficiais são apenas referência informativa — nunca bloqueiam.
+        const totRend = officialTotals.total_rendimentos_documento;
+        const totDesc = officialTotals.total_descontos_documento;
+        const totLiq = officialTotals.total_liquido_documento;
+        const totalsHint = (totRend != null && totDesc != null)
+          ? `Totais oficiais extraídos do resumo do PDF (use como referência para copiar os valores certos verba por verba, NÃO para ajustar/forçar somas):\n- Rendimentos: ${totRend.toFixed(2)}\n- Descontos: ${totDesc.toFixed(2)}\n- Líquido: ${totLiq != null ? totLiq.toFixed(2) : "não informado"}`
+          : `Totais oficiais do PDF não puderam ser identificados na primeira leitura. Copie os valores de cada verba EXATAMENTE como estão no documento.`;
 
         const body = {
           model: "google/gemini-2.5-flash",
@@ -341,12 +345,13 @@ Deno.serve(async (req) => {
             {
               role: "user",
               content: [
-                { type: "text", text: `Competência: ${competencia}\n\n${planoText}\n\nTotais oficiais já extraídos do documento para conferência obrigatória:\n- Rendimentos: ${officialTotals.total_rendimentos_documento.toFixed(2)}\n- Descontos: ${officialTotals.total_descontos_documento.toFixed(2)}\n- Líquido: ${officialTotals.total_liquido_documento != null ? officialTotals.total_liquido_documento.toFixed(2) : "não informado"}\n\nAnalise o PDF da folha de pagamento anexo. Retorne ESTRITAMENTE um objeto JSON conforme especificado no system prompt, com as chaves "observacoes_ia", "total_rendimentos_documento", "total_descontos_documento", "total_liquido_documento" e "lancamentos". Se não houver dados extraíveis, retorne os totais como null e "lancamentos": []. Não inclua texto fora do JSON. LEMBRE: os valores dos lançamentos e dos totais devem ser IDÊNTICOS aos do PDF, sem arredondar, estimar ou completar diferenças.` },
+                { type: "text", text: `Competência: ${competencia}\n\n${planoText}\n\n${totalsHint}\n\nAnalise o PDF da folha de pagamento anexo. Leia verba por verba, linha por linha, e copie CADA valor EXATAMENTE como aparece no PDF — sem arredondar, sem estimar, sem completar diferenças, sem inventar linhas e sem omitir linhas visíveis. Retorne ESTRITAMENTE um objeto JSON conforme o system prompt, com as chaves "observacoes_ia", "total_rendimentos_documento", "total_descontos_documento", "total_liquido_documento" e "lancamentos". Se não houver dados extraíveis, retorne totais como null e "lancamentos": []. Não inclua texto fora do JSON.` },
                 { type: "file", file: { filename: up.nome_arquivo, file_data: `data:application/pdf;base64,${b64}` } },
               ],
             },
           ],
         };
+
 
         const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
