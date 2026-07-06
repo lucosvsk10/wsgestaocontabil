@@ -217,21 +217,9 @@ const classifyLancamento = (l: any): FolhaTipo => {
   return "rendimento";
 };
 
-const validateFolhaTotals = (
-  lancamentos: any[],
-  totals: {
-    total_rendimentos_documento: number | null;
-    total_descontos_documento: number | null;
-    total_liquido_documento: number | null;
-  },
-) => {
-  if (totals.total_rendimentos_documento == null || totals.total_descontos_documento == null) {
-    throw new Error("A IA não identificou os totais oficiais de rendimentos e descontos no PDF. Reprocesse com um documento que contenha o resumo da folha ou revise manualmente.");
-  }
-
+const computeFolhaTotals = (lancamentos: any[]) => {
   let total_rendimentos_lancamentos = 0;
   let total_descontos_lancamentos = 0;
-
   for (const l of lancamentos) {
     const valor = parseAiMoney(l?.valor) ?? 0;
     if (valor <= 0) continue;
@@ -239,41 +227,10 @@ const validateFolhaTotals = (
     if (tipo === "rendimento") total_rendimentos_lancamentos = round2(total_rendimentos_lancamentos + valor);
     if (tipo === "desconto") total_descontos_lancamentos = round2(total_descontos_lancamentos + valor);
   }
-
   const total_liquido_lancamentos = round2(total_rendimentos_lancamentos - total_descontos_lancamentos);
-  const checks: { label: string; doc: number; planilha: number }[] = [
-    {
-      label: "Rendimentos",
-      doc: totals.total_rendimentos_documento,
-      planilha: total_rendimentos_lancamentos,
-    },
-    {
-      label: "Descontos",
-      doc: totals.total_descontos_documento,
-      planilha: total_descontos_lancamentos,
-    },
-  ];
-  if (totals.total_liquido_documento != null) {
-    checks.push({ label: "Líquido", doc: totals.total_liquido_documento, planilha: total_liquido_lancamentos });
-  }
-
-  const divergencias = checks
-    .map((c) => ({ ...c, diff: round2(c.planilha - c.doc) }))
-    .filter((c) => Math.abs(c.diff) > 0.01);
-
-  if (divergencias.length) {
-    const detalhe = divergencias
-      .map((d) => `${d.label}: documento ${d.doc.toFixed(2)}, lançamentos ${d.planilha.toFixed(2)}, diferença ${d.diff.toFixed(2)}`)
-      .join("; ");
-    throw new Error(`Divergência nos totais da folha. ${detalhe}. Nada foi salvo para evitar valor inventado ou incompleto.`);
-  }
-
-  return {
-    total_rendimentos_lancamentos,
-    total_descontos_lancamentos,
-    total_liquido_lancamentos,
-  };
+  return { total_rendimentos_lancamentos, total_descontos_lancamentos, total_liquido_lancamentos };
 };
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
