@@ -127,6 +127,8 @@ Retorne ESTRITAMENTE um objeto JSON, sem markdown e sem texto fora do JSON:
 Regras:
 - Copie os totais exatamente como aparecem no PDF.
 - Não calcule, não estime e não some verbas avulsas para preencher total ausente.
+- Use apenas valores impressos no resumo/totalizador oficial do documento.
+- Se houver mais de um resumo, prefira o total geral da folha/empresa, não subtotal de funcionário ou seção.
 - Rendimentos/proventos = total oficial de proventos/rendimentos do trabalhador/folha.
 - Descontos = total oficial de descontos/retenções.
 - Líquido = total líquido, se houver.
@@ -237,6 +239,39 @@ const computeFolhaTotals = (lancamentos: any[]) => {
   }
   const total_liquido_lancamentos = round2(total_rendimentos_lancamentos - total_descontos_lancamentos);
   return { total_rendimentos_lancamentos, total_descontos_lancamentos, total_liquido_lancamentos };
+};
+
+const assertFolhaSemDivergencia = (
+  totaisLancamentos: ReturnType<typeof computeFolhaTotals>,
+  total_rendimentos_documento: number | null,
+  total_descontos_documento: number | null,
+) => {
+  if (total_rendimentos_documento == null || total_descontos_documento == null) {
+    throw new Error(
+      "A IA não conseguiu identificar os totais oficiais de rendimentos e descontos no PDF. O processamento foi recusado para evitar valores divergentes.",
+    );
+  }
+
+  const divergencias: string[] = [];
+  const diffRend = round2(totaisLancamentos.total_rendimentos_lancamentos - total_rendimentos_documento);
+  const diffDesc = round2(totaisLancamentos.total_descontos_lancamentos - total_descontos_documento);
+
+  if (Math.abs(diffRend) > 0.01) {
+    divergencias.push(
+      `rendimentos: documento ${total_rendimentos_documento.toFixed(2)}, IA ${totaisLancamentos.total_rendimentos_lancamentos.toFixed(2)}, diferença ${diffRend.toFixed(2)}`,
+    );
+  }
+  if (Math.abs(diffDesc) > 0.01) {
+    divergencias.push(
+      `descontos: documento ${total_descontos_documento.toFixed(2)}, IA ${totaisLancamentos.total_descontos_lancamentos.toFixed(2)}, diferença ${diffDesc.toFixed(2)}`,
+    );
+  }
+
+  if (divergencias.length) {
+    throw new Error(
+      `A IA não leu o PDF corretamente: ${divergencias.join("; ")}. Nenhum lançamento divergente foi aceito. Reprocesse o documento ou revise o PDF original.`,
+    );
+  }
 };
 
 
