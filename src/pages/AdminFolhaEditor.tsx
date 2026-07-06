@@ -417,8 +417,12 @@ const AdminFolhaEditor = () => {
                     </div>
                   ))}
                 </div>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  Conferência informativa. Se houver divergência, revise as linhas manualmente — a IA lê o PDF exatamente como está e não ajusta valores.
+                </p>
               </div>
             )}
+
 
             {observacoesIA && (
               <div className="bg-amber-50 dark:bg-amber-950/30 rounded-xl p-4 space-y-2 border border-amber-200 dark:border-amber-900">
