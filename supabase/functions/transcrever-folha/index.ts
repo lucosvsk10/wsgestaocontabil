@@ -15,12 +15,23 @@ REGRAS ABSOLUTAS (violação = falha):
 - Copie cada número EXATAMENTE como impresso, centavo por centavo. Se o PDF diz "1.234,56", envie 1234.56.
 - Se uma célula estiver vazia no PDF, envie null. Se estiver ilegível, envie null e cite em "observacoes_ia".
 
-A coluna "Informativos" pode conter vários itens (Recol FGTS, Base INSS, Base IRRF etc). Copie o valor de "Recol FGTS" (ou variantes: "FGTS", "Recolhimento FGTS", "FGTS a recolher") para o campo "recol_fgts" da linha. Outros informativos podem ser ignorados.
+A coluna "Informativos" pode conter vários itens (Recol FGTS, Base INSS, Base IRRF etc). IGNORE tudo dessa coluna — exceto o **Recol FGTS**, que também costuma aparecer no bloco "Resultados" logo abaixo da tabela principal (rótulos aceitos: "Recol FGTS", "Recol. FGTS", "FGTS a recolher", "Recolhimento FGTS").
+
+REGRA ESPECIAL PARA O RECOL FGTS:
+- Adicione UMA linha extra na tabela transcrita representando o Recol FGTS, com:
+  - "codigo": "RECOL_FGTS"
+  - "descricao": "Recol. FGTS"
+  - "referencia": null
+  - "rendimento": null
+  - "desconto": null
+  - "recol_fgts": <valor exato impresso>
+- Nas demais linhas (verbas da tabela principal), o campo "recol_fgts" deve ser SEMPRE null.
+- Se o PDF não trouxer Recol FGTS, não crie essa linha e envie "total_recol_fgts_pdf": null.
 
 TOTAIS OFICIAIS (rodapé da tabela):
 - "total_rendimentos_pdf": soma impressa no rodapé da coluna Rendimentos.
 - "total_descontos_pdf": soma impressa no rodapé da coluna Descontos.
-- "total_recol_fgts_pdf": valor total impresso do Recol FGTS (rodapé/informativo), se houver.
+- "total_recol_fgts_pdf": valor impresso do Recol FGTS no bloco "Resultados", se houver.
 NÃO calcule esses totais — copie exatamente o que está impresso. Se não houver, envie null.
 
 FORMATO DE RETORNO (JSON estrito, sem markdown):
@@ -33,6 +44,7 @@ FORMATO DE RETORNO (JSON estrito, sem markdown):
   "total_recol_fgts_pdf": NUMBER_OU_NULL,
   "observacoes_ia": "STRING"
 }`;
+
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -156,6 +168,8 @@ Deno.serve(async (req) => {
     const sumRend = round2(linhas.reduce((a: number, l: any) => a + (l.rendimento ?? 0), 0));
     const sumDesc = round2(linhas.reduce((a: number, l: any) => a + (l.desconto ?? 0), 0));
 
+    const sumFgts = round2(linhas.reduce((a: number, l: any) => a + (l.recol_fgts ?? 0), 0));
+
     const problemas: string[] = [];
     if (total_rendimentos_pdf == null) problemas.push("total de rendimentos do PDF não identificado");
     if (total_descontos_pdf == null) problemas.push("total de descontos do PDF não identificado");
@@ -165,6 +179,10 @@ Deno.serve(async (req) => {
     if (total_descontos_pdf != null && Math.abs(sumDesc - total_descontos_pdf) > 0.01) {
       problemas.push(`descontos: soma das linhas ${sumDesc.toFixed(2)} ≠ total do PDF ${total_descontos_pdf.toFixed(2)} (dif ${(sumDesc - total_descontos_pdf).toFixed(2)})`);
     }
+    if (total_recol_fgts_pdf != null && Math.abs(sumFgts - total_recol_fgts_pdf) > 0.01) {
+      problemas.push(`Recol FGTS: soma das linhas ${sumFgts.toFixed(2)} ≠ total do PDF ${total_recol_fgts_pdf.toFixed(2)}`);
+    }
+
 
     const status = problemas.length ? "erro_transcricao" : "transcrito";
     const erro = problemas.length
