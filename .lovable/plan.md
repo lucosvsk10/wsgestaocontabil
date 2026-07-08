@@ -1,99 +1,58 @@
-# Refatoração do sistema de folha de pagamento
 
-Vou reconstruir o fluxo de folha em duas etapas de IA independentes, com upload que dispara o processamento automaticamente.
+## Objetivo
 
-## Fluxo novo
+Fechar a Etapa 2 (contabilização) para que ela gere automaticamente os lançamentos agrupando as verbas transcritas, seguindo as diretrizes contábeis originais — sem CR/conta fixa (cada empresa tem seu plano de contas próprio) — e incluindo o **Recol FGTS** (que aparece no rodapé "Resultados" do PDF) como um lançamento próprio.
 
-```text
-PDF enviado
-   │
-   ▼
-[Etapa 1 - IA "Digitalizadora"]  → lê APENAS o PDF
-   │  Extrai linha a linha: Cód, Descrição, Referência,
-   │  Rendimentos, Descontos, Recol FGTS (sem somar, sem
-   │  interpretar, sem inventar).
-   ▼
-Tabela transcrita (editável)
-   │  Valida: soma Rendimentos = total oficial do PDF
-   │          soma Descontos   = total oficial do PDF
-   │  Se não bater → status "erro_transcricao", pede reprocesso.
-   ▼
-[Etapa 2 - IA "Contabilizadora"] → lê APENAS a tabela
-   │  Sem PDF, sem valores originais além dos já transcritos.
-   │  Aplica plano de contas + regras de agrupamento
-   │  (as regras serão definidas por você depois; por ora
-   │   uso um prompt-esqueleto pronto para receber suas
-   │   instruções).
-   ▼
-Lançamentos contábeis finais
-```
+## 1. Etapa 1 (transcrição) — pequeno ajuste
 
-## 1. Banco de dados
+`transcrever-folha/index.ts`:
+- Reforçar no prompt que a linha do **Recol FGTS** (bloco "Resultados", abaixo da tabela principal) deve ser transcrita como uma linha adicional na tabela, com `codigo = "RECOL_FGTS"`, `descricao = "Recol. FGTS"`, valor na coluna `recol_fgts` (e `rendimento`/`desconto` nulos).
+- Continua exigindo que a soma da coluna `recol_fgts` das linhas seja igual a `total_recol_fgts_pdf` (bloqueia se divergir).
+- Nada muda na UI de transcrição — a linha só aparece na tabela editável.
 
-Nova tabela `folha_transcricoes` para guardar o resultado da etapa 1:
-- `upload_id`, `client_id`, `competencia`
-- `linhas` (jsonb): `[{ codigo, descricao, referencia, rendimento, desconto, recol_fgts }]`
-- `total_rendimentos_pdf`, `total_descontos_pdf`, `total_recol_fgts_pdf`
-- `status` (`pendente` | `transcrito` | `erro_transcricao` | `contabilizado`)
-- `erro`, timestamps
+## 2. Etapa 2 (contabilização) — preencher as regras de agrupamento
 
-Ampliar `folha_uploads.status` para incluir `transcrevendo`, `transcrito`, `contabilizando`.
+`contabilizar-folha/index.ts` — substituir o bloco vazio `### REGRAS DE AGRUPAMENTO / MAPEAMENTO` do system prompt pelas diretrizes originais, adaptadas para funcionarem **100% pelo plano de contas do cliente** (usando o CR que existir nele; nenhum código fixo no código):
 
-Limpar dados antigos: `DELETE` em `folha_lancamentos`, `folha_uploads` e objetos do bucket `lancamentos` sob `folha/` (conforme sua escolha "limpar tudo").
+### Princípio da conciliação dinâmica
+Para cada verba transcrita, escolher no plano de contas fornecido:
+- Rendimentos / encargos da empresa → **débito** em conta de despesa/resultado da natureza correspondente.
+- Descontos e obrigações → **crédito** em conta de passivo circulante da natureza correspondente.
+- Contrapartida das remunerações a pagar → conta de passivo "salários/pró-labore a pagar" do próprio plano.
 
-## 2. Edge functions
+### Agrupamento por [Débito + Crédito] com históricos padronizados (CAIXA ALTA, competência MM/AAAA)
+1. **Remunerações regulares** (Salário base, Horas extras, DSR, Médias, Gratificações, Salário família, Salário maternidade, Ajuda de custo, Férias, 1/3 sobre férias, Compl. férias) → despesa de salários × salários a pagar. Histórico: `SALARIOS E REMUNERAÇÕES A PAGAR MÊS MM/AAAA`.
+2. **Pró-labore** (linhas de sócio) → despesa de pró-labore × pró-labore a pagar. Histórico: `PRO-LABORE A PAGAR MÊS MM/AAAA`.
+3. **Verbas rescisórias** (Saldo de salário, Aviso prévio, 13º rescisão) → despesa correspondente × salários/benefícios rescisórios a pagar. Histórico: `RECISAO A PAGAR MÊS MM/AAAA`.
+4. **Férias indenizadas/rescisão** → despesa de férias × férias a pagar. Histórico: `FERIAS A PAGAR MÊS DE MM/AAAA (RECISÃO)`.
+5. **INSS retido** (separar por origem):
+   - INSS sobre salários de empregados → `INSS S/SALÁRIOS A PAGAR MÊS MM/AAAA`
+   - INSS sobre pró-labore (sócio) → `INSS S/PRO-LABORE (SOCIO) A PAGAR MÊS MM/AAAA`
+   - INSS sobre 13º rescisão → `INSS S/13º SALARIO - RECISÃO A PAGAR MÊS DE MM/AAAA`
+   - Débito: conta de salários/pró-labore a pagar (a que sofreu o desconto). Crédito: INSS a recolher.
+6. **FGTS a recolher** (linha `Recol FGTS` do rodapé) → despesa de FGTS × FGTS a recolher. Histórico: `FGTS A PAGAR MÊS MM/AAAA`. Valor = `total_recol_fgts_pdf`.
+7. **Retenções diversas** (Consignado, Pensão alimentícia, Sindicato, IRRF, Vale-transporte, etc.) → débito em salários a pagar × crédito na obrigação da natureza. Histórico: `[NOME DA VERBA] EM FOLHA MÊS MM/AAAA`.
+8. **Verba desconhecida** → escolher a conta mais próxima semanticamente no plano; prefixar histórico com `[SUGERIDO] `. Se realmente não houver conta plausível, deixar `conta_debito`/`conta_credito` null e prefixar com `[REVISAR] `.
 
-Reescrever `process-folha-pagamento` e dividir em duas funções:
+### Regras de integridade (mantidas)
+- Nenhum código de conta hard-coded — sempre CR do plano do cliente.
+- Soma dos lançamentos tipo rendimento = total_rendimentos da tabela. Soma dos descontos = total_descontos. Soma FGTS = total_recol_fgts. Se não bater, marcar `observacoes_ia` com o alerta.
+- Data = último dia útil da competência.
 
-**`transcrever-folha`** (etapa 1)
-- Recebe `uploadId`.
-- Baixa o PDF, envia para Gemini 2.5 Pro com prompt rígido: "transcreva exatamente as linhas da tabela; nunca some, nunca invente, nunca corrija; devolva também os três totais impressos no rodapé".
-- Salva em `folha_transcricoes`.
-- Valida `soma linhas == totais do rodapé` (tolerância 0). Se divergir → `status = erro_transcricao`, grava mensagem clara e **não** chama a etapa 2.
-- Se bater → dispara automaticamente `contabilizar-folha`.
+## 3. Front-end
 
-**`contabilizar-folha`** (etapa 2)
-- Recebe `transcricaoId`.
-- **Não** acessa Storage nem PDF. Passa para a IA apenas: tabela transcrita + plano de contas do cliente + (futuramente) suas regras de agrupamento.
-- Gera `folha_lancamentos` a partir do resultado.
-- Marca transcrição como `contabilizado` e upload como `processado`.
+Sem redesenho. Ajustes mínimos:
+- `TranscricaoEditor.tsx`: mostrar a linha `RECOL_FGTS` normalmente (já cai no fluxo editável).
+- `FolhaPagamentoDetail.tsx`: nada muda — Etapa 2 continua disparando automaticamente após transcrição válida.
 
-## 3. Frontend
+## 4. Detalhes técnicos
 
-`FolhaPagamentoDetail.tsx`:
-- Upload dispara `transcrever-folha` imediatamente por arquivo enviado (sem botão "Processar DOC"). Remover esse botão.
-- Realtime/polling em `folha_uploads` + `folha_transcricoes` para mostrar progresso (`Enviando → Transcrevendo → Conferindo totais → Gerando lançamentos → Concluído` ou `Erro`).
-- Nova seção "Transcrição do documento": mostra a tabela editável (Cód, Descrição, Referência, Rendimentos, Descontos, Recol FGTS) com rodapé comparando soma × totais do PDF. Campo em vermelho quando divergente.
-- Botão "Salvar e refazer lançamentos" na tabela editável: grava alterações e re-executa `contabilizar-folha` (a etapa 1 não roda de novo, respeitando a edição manual).
-- Se `status = erro_transcricao`: mostrar mensagem e botão "Reprocessar PDF" (roda etapa 1 de novo).
-- Remover textos antigos de "conferência informativa".
+**Arquivos alterados:**
+- `supabase/functions/transcrever-folha/index.ts` — prompt reforçado para incluir Recol FGTS como linha.
+- `supabase/functions/contabilizar-folha/index.ts` — bloco de regras de agrupamento preenchido; cálculo de sumFGTS acrescentado para validação; classificação de tipo (`rendimento`/`desconto`/`encargo`) refinada.
 
-`AdminFolhaEditor.tsx`:
-- Mostrar acima dos lançamentos a tabela transcrita (somente leitura aqui) para o admin conferir origem dos valores.
-- Remover lógica de "aceitar divergência".
-
-## 4. Prompts
-
-**Etapa 1 (digitalização)** — regras duras:
-- Ler a tabela verba por verba, exatamente como impressa.
-- Nunca somar, arredondar, completar, inferir, mover valor de coluna, unificar linhas.
-- Devolver JSON estrito `{ linhas: [...], totais_pdf: { rendimentos, descontos, recol_fgts } }`.
-- Se uma célula estiver ilegível: devolver `null` e listar em `observacoes`, sem chutar.
-
-**Etapa 2 (contabilização)** — esqueleto pronto para receber suas regras futuras:
-- Entrada: tabela já transcrita + plano de contas.
-- Instrução base: "use somente estes valores, não recalcule, não crie linha nova".
-- Deixo um bloco `REGRAS_DE_AGRUPAMENTO` vazio comentado, para você preencher quando quiser.
-
-## Detalhes técnicos
-
-- Modelo em ambas as etapas: `google/gemini-2.5-pro` via Lovable AI Gateway (multimodal para PDF na etapa 1; texto puro na etapa 2).
-- Etapa 1 usa `Output.object` com schema pequeno (linhas + 3 totais), sem `min`/`max`.
-- Validação de totais em código, tolerância `0.00` (bloqueia qualquer diferença, conforme você pediu).
-- Realtime via `supabase.channel` em `folha_uploads` e `folha_transcricoes` dentro de `useEffect` com cleanup.
-- Migração inclui `GRANT`s obrigatórios e RLS por `client_id`/admin.
-- Após aprovação da migração e limpeza dos dados antigos, faço as alterações de código e deploy das duas edge functions.
-
-## Fora do escopo desta rodada
-
-- Regras específicas de agrupamento contábil e de leitura do plano de contas na etapa 2 — ficam como bloco a preencher quando você me passar as instruções.
+**O que NÃO muda:**
+- Estrutura de `folha_transcricoes` e `folha_lancamentos`.
+- Fluxo automático upload → transcrever → contabilizar.
+- Validação de divergência da Etapa 1 (bloqueio total).
+- Editor manual da transcrição.
