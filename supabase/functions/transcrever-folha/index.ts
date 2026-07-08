@@ -75,18 +75,9 @@ const extractJson = (text: string): any => {
   return JSON.parse(cleaned.slice(s, e + 1));
 };
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+async function processUpload(uploadId: string) {
+  const supa = createClient(SUPABASE_URL, SERVICE_ROLE);
   try {
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY não configurada");
-    const { uploadId } = await req.json();
-    if (!uploadId) {
-      return new Response(JSON.stringify({ error: "uploadId obrigatório" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    const supa = createClient(SUPABASE_URL, SERVICE_ROLE);
-
     const { data: up, error: upErr } = await supa
       .from("folha_uploads")
       .select("*")
@@ -107,7 +98,6 @@ Deno.serve(async (req) => {
       observacoes_ia: null,
     }).eq("id", up.id);
 
-    // Apaga lançamentos e transcrição antigos deste upload
     await supa.from("folha_lancamentos").delete().eq("source_upload_id", up.id);
     await supa.from("folha_transcricoes").delete().eq("upload_id", up.id);
 
@@ -120,7 +110,7 @@ Deno.serve(async (req) => {
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Lovable-API-Key": LOVABLE_API_KEY },
+      headers: { "Content-Type": "application/json", "Lovable-API-Key": LOVABLE_API_KEY! },
       body: JSON.stringify({
         model: "google/gemini-2.5-pro",
         response_format: { type: "json_object" },
@@ -164,10 +154,8 @@ Deno.serve(async (req) => {
     const total_recol_fgts_pdf = parseAiMoney(parsed.total_recol_fgts_pdf);
     const observacoes_ia = typeof parsed.observacoes_ia === "string" ? parsed.observacoes_ia.trim() : "";
 
-    // Validação: soma das linhas == totais oficiais (tolerância zero, aceitando 1 centavo por arredondamento).
     const sumRend = round2(linhas.reduce((a: number, l: any) => a + (l.rendimento ?? 0), 0));
     const sumDesc = round2(linhas.reduce((a: number, l: any) => a + (l.desconto ?? 0), 0));
-
     const sumFgts = round2(linhas.reduce((a: number, l: any) => a + (l.recol_fgts ?? 0), 0));
 
     const problemas: string[] = [];
@@ -182,7 +170,6 @@ Deno.serve(async (req) => {
     if (total_recol_fgts_pdf != null && Math.abs(sumFgts - total_recol_fgts_pdf) > 0.01) {
       problemas.push(`Recol FGTS: soma das linhas ${sumFgts.toFixed(2)} ≠ total do PDF ${total_recol_fgts_pdf.toFixed(2)}`);
     }
-
 
     const status = problemas.length ? "erro_transcricao" : "transcrito";
     const erro = problemas.length
@@ -218,7 +205,6 @@ Deno.serve(async (req) => {
       observacoes_ia: observacoes_ia || null,
     }).eq("id", up.id);
 
-    // Se transcrição válida, dispara a contabilização automaticamente (fire-and-forget).
     if (status === "transcrito") {
       fetch(`${SUPABASE_URL}/functions/v1/contabilizar-folha`, {
         method: "POST",
@@ -229,24 +215,45 @@ Deno.serve(async (req) => {
         body: JSON.stringify({ transcricaoId: trans.id }),
       }).catch((e) => console.error("Falha ao disparar contabilizar-folha", e));
     }
+  } catch (e: any) {
+    console.error("transcrever-folha background error", e);
+    await supa.from("folha_uploads").update({
+      status: "erro_transcricao",
+      ultimo_erro: String(e.message || e).slice(0, 500),
+    }).eq("id", uploadId);
+  }
+}
 
-    return new Response(JSON.stringify({ success: true, status, transcricaoId: trans.id, erro }), {
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  try {
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY não configurada");
+    const { uploadId } = await req.json();
+    if (!uploadId) {
+      return new Response(JSON.stringify({ error: "uploadId obrigatório" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Marca como transcrevendo imediatamente e dispara o processamento em background
+    const supa = createClient(SUPABASE_URL, SERVICE_ROLE);
+    await supa.from("folha_uploads").update({
+      status: "transcrevendo",
+      ultimo_erro: null,
+    }).eq("id", uploadId);
+
+    // @ts-ignore - EdgeRuntime é disponível no runtime do Supabase
+    EdgeRuntime.waitUntil(processUpload(uploadId));
+
+    return new Response(JSON.stringify({ success: true, status: "transcrevendo", uploadId }), {
+      status: 202,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e: any) {
     console.error("transcrever-folha error", e);
-    try {
-      const body = await req.clone().json().catch(() => ({} as any));
-      if (body?.uploadId) {
-        const supa = createClient(SUPABASE_URL, SERVICE_ROLE);
-        await supa.from("folha_uploads").update({
-          status: "erro_transcricao",
-          ultimo_erro: String(e.message || e).slice(0, 500),
-        }).eq("id", body.uploadId);
-      }
-    } catch { /* ignore */ }
     return new Response(JSON.stringify({ error: e.message || String(e) }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
+
