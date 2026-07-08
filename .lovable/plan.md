@@ -1,35 +1,99 @@
-## Plano
+# Refatoração do sistema de folha de pagamento
 
-Vou alterar a folha de pagamento para a IA não retornar lançamentos com diferença como se estivesse tudo certo. A regra passa a ser: se a IA não conseguir ler e montar os lançamentos mantendo exatamente os totais do PDF, o processamento não será aceito como concluído.
+Vou reconstruir o fluxo de folha em duas etapas de IA independentes, com upload que dispara o processamento automaticamente.
 
-### 1. Trocar a estratégia do prompt
-- Reescrever o prompt da folha para separar claramente duas tarefas:
-  1. Ler o PDF e extrair os valores originais exatamente como aparecem.
-  2. Só depois transformar esses valores em lançamentos contábeis.
-- Remover qualquer linguagem que sugira “explicar divergência”, “conferência informativa” ou aceitar diferença.
-- Exigir que cada lançamento traga a evidência do PDF na justificativa: verba original, seção e valor usado.
-- Reforçar que a IA não pode inventar, omitir, arredondar, ajustar ou trocar centavos.
+## Fluxo novo
 
-### 2. Usar modelo mais forte para leitura do PDF
-- Trocar a chamada principal da folha de `google/gemini-2.5-flash` para `google/gemini-2.5-pro`, que é mais adequado para leitura multimodal/PDF com raciocínio mais cuidadoso.
-- Manter uma chamada específica para totais oficiais do PDF, mas também com instrução mais rígida.
+```text
+PDF enviado
+   │
+   ▼
+[Etapa 1 - IA "Digitalizadora"]  → lê APENAS o PDF
+   │  Extrai linha a linha: Cód, Descrição, Referência,
+   │  Rendimentos, Descontos, Recol FGTS (sem somar, sem
+   │  interpretar, sem inventar).
+   ▼
+Tabela transcrita (editável)
+   │  Valida: soma Rendimentos = total oficial do PDF
+   │          soma Descontos   = total oficial do PDF
+   │  Se não bater → status "erro_transcricao", pede reprocesso.
+   ▼
+[Etapa 2 - IA "Contabilizadora"] → lê APENAS a tabela
+   │  Sem PDF, sem valores originais além dos já transcritos.
+   │  Aplica plano de contas + regras de agrupamento
+   │  (as regras serão definidas por você depois; por ora
+   │   uso um prompt-esqueleto pronto para receber suas
+   │   instruções).
+   ▼
+Lançamentos contábeis finais
+```
 
-### 3. Validar como garantia de qualidade, não como “correção”
-- Depois que a IA retornar os lançamentos, o sistema vai somar rendimentos e descontos.
-- Se os totais dos lançamentos não baterem com os totais oficiais do documento, o upload ficará com `status = erro` e mensagem direta dizendo que a IA não leu o PDF corretamente.
-- Não haverá ajuste automático, linha sintética, redistribuição, compensação ou auto-correção.
-- O documento não será exportado com valores divergentes como se estivesse correto.
+## 1. Banco de dados
 
-### 4. Remover observações inúteis de divergência
-- Não salvar mais explicações longas da IA tentando justificar diferença.
-- `observacoes_ia` ficará apenas para dúvidas reais de leitura, verba ilegível ou conta não encontrada.
-- A tela não deve sugerir que “a IA lê exatamente” quando houve divergência.
+Nova tabela `folha_transcricoes` para guardar o resultado da etapa 1:
+- `upload_id`, `client_id`, `competencia`
+- `linhas` (jsonb): `[{ codigo, descricao, referencia, rendimento, desconto, recol_fgts }]`
+- `total_rendimentos_pdf`, `total_descontos_pdf`, `total_recol_fgts_pdf`
+- `status` (`pendente` | `transcrito` | `erro_transcricao` | `contabilizado`)
+- `erro`, timestamps
 
-### 5. Ajustar a tela do editor
-- O painel “Conferência com o documento” volta a ser tratado como conferência real.
-- Se houver divergência em dados antigos já processados, a tela deve mostrar que o arquivo precisa ser reprocessado/revisado, sem dizer que isso é aceitável.
-- Remover o texto atual que diz que a conferência é apenas informativa.
+Ampliar `folha_uploads.status` para incluir `transcrevendo`, `transcrito`, `contabilizando`.
 
-## Resultado esperado
+Limpar dados antigos: `DELETE` em `folha_lancamentos`, `folha_uploads` e objetos do bucket `lancamentos` sob `folha/` (conforme sua escolha "limpar tudo").
 
-A IA só deve entregar folha processada quando os valores extraídos dos lançamentos forem iguais aos totais originais do PDF. Se ela não conseguir ler corretamente, o sistema deve rejeitar aquele processamento e pedir reprocessamento/revisão, sem inventar centavos e sem aceitar divergência.
+## 2. Edge functions
+
+Reescrever `process-folha-pagamento` e dividir em duas funções:
+
+**`transcrever-folha`** (etapa 1)
+- Recebe `uploadId`.
+- Baixa o PDF, envia para Gemini 2.5 Pro com prompt rígido: "transcreva exatamente as linhas da tabela; nunca some, nunca invente, nunca corrija; devolva também os três totais impressos no rodapé".
+- Salva em `folha_transcricoes`.
+- Valida `soma linhas == totais do rodapé` (tolerância 0). Se divergir → `status = erro_transcricao`, grava mensagem clara e **não** chama a etapa 2.
+- Se bater → dispara automaticamente `contabilizar-folha`.
+
+**`contabilizar-folha`** (etapa 2)
+- Recebe `transcricaoId`.
+- **Não** acessa Storage nem PDF. Passa para a IA apenas: tabela transcrita + plano de contas do cliente + (futuramente) suas regras de agrupamento.
+- Gera `folha_lancamentos` a partir do resultado.
+- Marca transcrição como `contabilizado` e upload como `processado`.
+
+## 3. Frontend
+
+`FolhaPagamentoDetail.tsx`:
+- Upload dispara `transcrever-folha` imediatamente por arquivo enviado (sem botão "Processar DOC"). Remover esse botão.
+- Realtime/polling em `folha_uploads` + `folha_transcricoes` para mostrar progresso (`Enviando → Transcrevendo → Conferindo totais → Gerando lançamentos → Concluído` ou `Erro`).
+- Nova seção "Transcrição do documento": mostra a tabela editável (Cód, Descrição, Referência, Rendimentos, Descontos, Recol FGTS) com rodapé comparando soma × totais do PDF. Campo em vermelho quando divergente.
+- Botão "Salvar e refazer lançamentos" na tabela editável: grava alterações e re-executa `contabilizar-folha` (a etapa 1 não roda de novo, respeitando a edição manual).
+- Se `status = erro_transcricao`: mostrar mensagem e botão "Reprocessar PDF" (roda etapa 1 de novo).
+- Remover textos antigos de "conferência informativa".
+
+`AdminFolhaEditor.tsx`:
+- Mostrar acima dos lançamentos a tabela transcrita (somente leitura aqui) para o admin conferir origem dos valores.
+- Remover lógica de "aceitar divergência".
+
+## 4. Prompts
+
+**Etapa 1 (digitalização)** — regras duras:
+- Ler a tabela verba por verba, exatamente como impressa.
+- Nunca somar, arredondar, completar, inferir, mover valor de coluna, unificar linhas.
+- Devolver JSON estrito `{ linhas: [...], totais_pdf: { rendimentos, descontos, recol_fgts } }`.
+- Se uma célula estiver ilegível: devolver `null` e listar em `observacoes`, sem chutar.
+
+**Etapa 2 (contabilização)** — esqueleto pronto para receber suas regras futuras:
+- Entrada: tabela já transcrita + plano de contas.
+- Instrução base: "use somente estes valores, não recalcule, não crie linha nova".
+- Deixo um bloco `REGRAS_DE_AGRUPAMENTO` vazio comentado, para você preencher quando quiser.
+
+## Detalhes técnicos
+
+- Modelo em ambas as etapas: `google/gemini-2.5-pro` via Lovable AI Gateway (multimodal para PDF na etapa 1; texto puro na etapa 2).
+- Etapa 1 usa `Output.object` com schema pequeno (linhas + 3 totais), sem `min`/`max`.
+- Validação de totais em código, tolerância `0.00` (bloqueia qualquer diferença, conforme você pediu).
+- Realtime via `supabase.channel` em `folha_uploads` e `folha_transcricoes` dentro de `useEffect` com cleanup.
+- Migração inclui `GRANT`s obrigatórios e RLS por `client_id`/admin.
+- Após aprovação da migração e limpeza dos dados antigos, faço as alterações de código e deploy das duas edge functions.
+
+## Fora do escopo desta rodada
+
+- Regras específicas de agrupamento contábil e de leitura do plano de contas na etapa 2 — ficam como bloco a preencher quando você me passar as instruções.
