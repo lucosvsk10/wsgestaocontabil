@@ -213,7 +213,7 @@ Deno.serve(async (req) => {
       return dt.getUTCFullYear() === y && dt.getUTCMonth() === mo - 1 && dt.getUTCDate() === da;
     };
 
-    const rows = lancs.map((l: any, idx: number) => {
+    const rowsWithTipo = lancs.map((l: any, idx: number) => {
       const parsedDate = parseDateBR(l.data);
       const data = isValidISO(parsedDate) ? parsedDate : fallbackDate;
       const rawHist = String(l.historico || "").trim();
@@ -221,27 +221,35 @@ Deno.serve(async (req) => {
       const justificativa = l.justificativa != null && String(l.justificativa).trim() !== ""
         ? String(l.justificativa).trim()
         : null;
+      const tipo = String(l.tipo || "").toLowerCase();
       return {
-        client_id: trans.client_id,
-        competencia: trans.competencia,
-        data,
-        conta_debito: l.conta_debito != null && String(l.conta_debito).trim() !== "" ? String(l.conta_debito).trim() : null,
-        conta_credito: l.conta_credito != null && String(l.conta_credito).trim() !== "" ? String(l.conta_credito).trim() : null,
-        historico,
-        justificativa,
-        valor: parseAiMoney(l.valor) ?? 0,
-        ordem: idx,
-        source_upload_id: trans.upload_id,
+        row: {
+          client_id: trans.client_id,
+          competencia: trans.competencia,
+          data,
+          conta_debito: l.conta_debito != null && String(l.conta_debito).trim() !== "" ? String(l.conta_debito).trim() : null,
+          conta_credito: l.conta_credito != null && String(l.conta_credito).trim() !== "" ? String(l.conta_credito).trim() : null,
+          historico,
+          justificativa,
+          valor: parseAiMoney(l.valor) ?? 0,
+          ordem: idx,
+          source_upload_id: trans.upload_id,
+        },
+        tipo,
       };
-    }).filter((r: any) => r.valor > 0);
+    }).filter((r: any) => r.row.valor > 0);
+
+    const rows = rowsWithTipo.map((r: any) => r.row);
 
     if (rows.length) {
       const { error: insErr } = await supa.from("folha_lancamentos").insert(rows);
       if (insErr) throw insErr;
     }
 
-    const sumRend = round2(rows.filter((r: any) => /rendimento/.test(String(r.historico))).reduce((a: number, r: any) => a + Number(r.valor || 0), 0));
-    const sumDesc = round2(rows.filter((r: any) => /desconto/.test(String(r.historico))).reduce((a: number, r: any) => a + Number(r.valor || 0), 0));
+    const sumByTipo = (t: string) => round2(rowsWithTipo.filter((r: any) => r.tipo === t).reduce((a: number, r: any) => a + Number(r.row.valor || 0), 0));
+    const sumRend = sumByTipo("rendimento");
+    const sumDesc = sumByTipo("desconto");
+
 
     await supa.from("folha_transcricoes").update({
       status: "contabilizado",
