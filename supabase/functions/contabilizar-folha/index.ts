@@ -118,18 +118,10 @@ const extractJson = (text: string): any => {
   return JSON.parse(cleaned.slice(s, e + 1));
 };
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+async function processContabilizacao(transcricaoId: string) {
+  const supa = createClient(SUPABASE_URL, SERVICE_ROLE);
   try {
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY não configurada");
-    const { transcricaoId } = await req.json();
-    if (!transcricaoId) {
-      return new Response(JSON.stringify({ error: "transcricaoId obrigatório" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
-    const supa = createClient(SUPABASE_URL, SERVICE_ROLE);
 
     const { data: trans, error: transErr } = await supa
       .from("folha_transcricoes")
