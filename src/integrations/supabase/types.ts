@@ -1064,6 +1064,62 @@ export type Database = {
           },
         ]
       }
+      folha_transcricoes: {
+        Row: {
+          client_id: string
+          competencia: string
+          created_at: string
+          erro: string | null
+          id: string
+          linhas: Json
+          observacoes_ia: string | null
+          status: string
+          total_descontos_pdf: number | null
+          total_recol_fgts_pdf: number | null
+          total_rendimentos_pdf: number | null
+          updated_at: string
+          upload_id: string
+        }
+        Insert: {
+          client_id: string
+          competencia: string
+          created_at?: string
+          erro?: string | null
+          id?: string
+          linhas?: Json
+          observacoes_ia?: string | null
+          status?: string
+          total_descontos_pdf?: number | null
+          total_recol_fgts_pdf?: number | null
+          total_rendimentos_pdf?: number | null
+          updated_at?: string
+          upload_id: string
+        }
+        Update: {
+          client_id?: string
+          competencia?: string
+          created_at?: string
+          erro?: string | null
+          id?: string
+          linhas?: Json
+          observacoes_ia?: string | null
+          status?: string
+          total_descontos_pdf?: number | null
+          total_recol_fgts_pdf?: number | null
+          total_rendimentos_pdf?: number | null
+          updated_at?: string
+          upload_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folha_transcricoes_upload_id_fkey"
+            columns: ["upload_id"]
+            isOneToOne: true
+            referencedRelation: "folha_uploads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       folha_uploads: {
         Row: {
           client_id: string
@@ -1078,6 +1134,7 @@ export type Database = {
           total_descontos_lancamentos: number | null
           total_liquido_documento: number | null
           total_liquido_lancamentos: number | null
+          total_recol_fgts_documento: number | null
           total_rendimentos_documento: number | null
           total_rendimentos_lancamentos: number | null
           ultimo_erro: string | null
@@ -1097,6 +1154,7 @@ export type Database = {
           total_descontos_lancamentos?: number | null
           total_liquido_documento?: number | null
           total_liquido_lancamentos?: number | null
+          total_recol_fgts_documento?: number | null
           total_rendimentos_documento?: number | null
           total_rendimentos_lancamentos?: number | null
           ultimo_erro?: string | null
@@ -1116,6 +1174,7 @@ export type Database = {
           total_descontos_lancamentos?: number | null
           total_liquido_documento?: number | null
           total_liquido_lancamentos?: number | null
+          total_recol_fgts_documento?: number | null
           total_rendimentos_documento?: number | null
           total_rendimentos_lancamentos?: number | null
           ultimo_erro?: string | null
