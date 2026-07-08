@@ -258,30 +258,45 @@ async function processContabilizacao(transcricaoId: string) {
       total_liquido_lancamentos: (sumRend || sumDesc) ? round2(sumRend - sumDesc) : null,
     }).eq("id", trans.upload_id);
 
-    return new Response(JSON.stringify({ success: true, total_lancamentos: rows.length }), {
+  } catch (e: any) {
+    console.error("contabilizar-folha background error", e);
+    try {
+      const { data: t } = await supa.from("folha_transcricoes").select("upload_id").eq("id", transcricaoId).maybeSingle();
+      await supa.from("folha_transcricoes").update({
+        status: "erro_contabilizacao",
+        erro: String(e.message || e).slice(0, 500),
+      }).eq("id", transcricaoId);
+      if (t?.upload_id) {
+        await supa.from("folha_uploads").update({
+          status: "erro",
+          ultimo_erro: String(e.message || e).slice(0, 500),
+        }).eq("id", t.upload_id);
+      }
+    } catch { /* ignore */ }
+  }
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  try {
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY não configurada");
+    const { transcricaoId } = await req.json();
+    if (!transcricaoId) {
+      return new Response(JSON.stringify({ error: "transcricaoId obrigatório" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    // @ts-ignore - EdgeRuntime é disponível no runtime do Supabase
+    EdgeRuntime.waitUntil(processContabilizacao(transcricaoId));
+    return new Response(JSON.stringify({ success: true, status: "contabilizando", transcricaoId }), {
+      status: 202,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e: any) {
     console.error("contabilizar-folha error", e);
-    try {
-      const body = await req.clone().json().catch(() => ({} as any));
-      if (body?.transcricaoId) {
-        const supa = createClient(SUPABASE_URL, SERVICE_ROLE);
-        const { data: t } = await supa.from("folha_transcricoes").select("upload_id").eq("id", body.transcricaoId).maybeSingle();
-        await supa.from("folha_transcricoes").update({
-          status: "erro_contabilizacao",
-          erro: String(e.message || e).slice(0, 500),
-        }).eq("id", body.transcricaoId);
-        if (t?.upload_id) {
-          await supa.from("folha_uploads").update({
-            status: "erro",
-            ultimo_erro: String(e.message || e).slice(0, 500),
-          }).eq("id", t.upload_id);
-        }
-      }
-    } catch { /* ignore */ }
     return new Response(JSON.stringify({ error: e.message || String(e) }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
+
