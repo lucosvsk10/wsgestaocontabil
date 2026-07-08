@@ -168,6 +168,8 @@ Deno.serve(async (req) => {
     const sumRend = round2(linhas.reduce((a: number, l: any) => a + (l.rendimento ?? 0), 0));
     const sumDesc = round2(linhas.reduce((a: number, l: any) => a + (l.desconto ?? 0), 0));
 
+    const sumFgts = round2(linhas.reduce((a: number, l: any) => a + (l.recol_fgts ?? 0), 0));
+
     const problemas: string[] = [];
     if (total_rendimentos_pdf == null) problemas.push("total de rendimentos do PDF não identificado");
     if (total_descontos_pdf == null) problemas.push("total de descontos do PDF não identificado");
@@ -177,6 +179,10 @@ Deno.serve(async (req) => {
     if (total_descontos_pdf != null && Math.abs(sumDesc - total_descontos_pdf) > 0.01) {
       problemas.push(`descontos: soma das linhas ${sumDesc.toFixed(2)} ≠ total do PDF ${total_descontos_pdf.toFixed(2)} (dif ${(sumDesc - total_descontos_pdf).toFixed(2)})`);
     }
+    if (total_recol_fgts_pdf != null && Math.abs(sumFgts - total_recol_fgts_pdf) > 0.01) {
+      problemas.push(`Recol FGTS: soma das linhas ${sumFgts.toFixed(2)} ≠ total do PDF ${total_recol_fgts_pdf.toFixed(2)}`);
+    }
+
 
     const status = problemas.length ? "erro_transcricao" : "transcrito";
     const erro = problemas.length
