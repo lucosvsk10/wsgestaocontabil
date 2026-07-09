@@ -420,6 +420,17 @@ const AdminFolhaEditor = () => {
             )}
 
 
+            {selectedRow != null && justificativas[selectedRow] && (
+              <div className="bg-muted/30 rounded-xl p-4 space-y-2 border border-border">
+                <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-primary" /> Justificativa IA — Linha {selectedRow + 1}
+                </div>
+                <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                  {justificativas[selectedRow]}
+                </p>
+              </div>
+            )}
+
             {observacoesIA && (
               <div className="bg-amber-50 dark:bg-amber-950/30 rounded-xl p-4 space-y-2 border border-amber-200 dark:border-amber-900">
                 <div className="flex items-center gap-2 text-xs font-semibold text-amber-800 dark:text-amber-200">
