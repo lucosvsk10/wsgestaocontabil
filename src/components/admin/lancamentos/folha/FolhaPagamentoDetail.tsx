@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { TranscricaoEditor } from "./TranscricaoEditor";
+import { LancamentosInlineEditor } from "./LancamentosInlineEditor";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 interface FolhaPagamentoDetailProps {
   clientId: string;
