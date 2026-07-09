@@ -96,12 +96,6 @@ const parseMoneyCell = (value: unknown) => {
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-const classifyFolhaLine = (historico: string): "rendimento" | "desconto" | "encargo" => {
-  const normalized = historico.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
-  if (/(INSS\s*S\/|IRRF|CONSIGN|PENSAO|SINDICAL|CONVENIO|EMPRESTIMO|VALE|^\s*DESC)/.test(normalized)) return "desconto";
-  if (/(FGTS|INSS\s+PATRONAL|INSS\s+EMPRESA|CONTRIBUICAO\s+PREVIDENCIARIA.*EMPRESA)/.test(normalized)) return "encargo";
-  return "rendimento";
-};
 
 
 const slug = (s: string) => s.replace(/\s+/g, "_").replace(/[^\w-]/g, "").toLowerCase();
