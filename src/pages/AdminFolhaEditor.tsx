@@ -96,12 +96,6 @@ const parseMoneyCell = (value: unknown) => {
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-const classifyFolhaLine = (historico: string): "rendimento" | "desconto" | "encargo" => {
-  const normalized = historico.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
-  if (/(INSS\s*S\/|IRRF|CONSIGN|PENSAO|SINDICAL|CONVENIO|EMPRESTIMO|VALE|^\s*DESC)/.test(normalized)) return "desconto";
-  if (/(FGTS|INSS\s+PATRONAL|INSS\s+EMPRESA|CONTRIBUICAO\s+PREVIDENCIARIA.*EMPRESA)/.test(normalized)) return "encargo";
-  return "rendimento";
-};
 
 
 const slug = (s: string) => s.replace(/\s+/g, "_").replace(/[^\w-]/g, "").toLowerCase();
@@ -125,6 +119,7 @@ const AdminFolhaEditor = () => {
   const [justificativas, setJustificativas] = useState<(string | null)[]>([]);
   const [observacoesIA, setObservacoesIA] = useState<string>("");
   const [documentoTotals, setDocumentoTotals] = useState<DocumentoTotals>({ rendimentos: null, descontos: null, liquido: null });
+  const [transcricaoTotals, setTranscricaoTotals] = useState<DocumentoTotals>({ rendimentos: null, descontos: null, liquido: null });
 
   useEffect(() => {
     (async () => {
@@ -135,10 +130,11 @@ const AdminFolhaEditor = () => {
       }
       setLoading(true);
       try {
-        const [{ data: userData }, { data: rows }, { data: uploads }, planoRes] = await Promise.all([
+        const [{ data: userData }, { data: rows }, { data: uploads }, { data: transcricoes }, planoRes] = await Promise.all([
           supabase.from("users").select("name").eq("id", clientId).maybeSingle(),
           supabase.from("folha_lancamentos").select("*").eq("client_id", clientId).eq("competencia", competencia).order("ordem", { ascending: true }),
           supabase.from("folha_uploads").select("observacoes_ia,total_rendimentos_documento,total_descontos_documento,total_liquido_documento").eq("client_id", clientId).eq("competencia", competencia),
+          supabase.from("folha_transcricoes").select("linhas,total_rendimentos_pdf,total_descontos_pdf").eq("client_id", clientId).eq("competencia", competencia),
           fetchPlanoContas(clientId),
         ]);
         const name = userData?.name || "Cliente";
@@ -168,6 +164,20 @@ const AdminFolhaEditor = () => {
           rendimentos: sumUploadTotal("total_rendimentos_documento"),
           descontos: sumUploadTotal("total_descontos_documento"),
           liquido: sumUploadTotal("total_liquido_documento"),
+        });
+        // Totais da PLANILHA vêm da transcrição faithful (Stage 1), não dos lançamentos contábeis agrupados
+        let tRend = 0, tDesc = 0; let hasT = false;
+        for (const t of (transcricoes || []) as any[]) {
+          hasT = true;
+          if (t.total_rendimentos_pdf != null) tRend += Number(t.total_rendimentos_pdf) || 0;
+          else for (const l of (t.linhas || [])) tRend += Number(l?.rendimento) || 0;
+          if (t.total_descontos_pdf != null) tDesc += Number(t.total_descontos_pdf) || 0;
+          else for (const l of (t.linhas || [])) tDesc += Number(l?.desconto) || 0;
+        }
+        setTranscricaoTotals({
+          rendimentos: hasT ? round2(tRend) : null,
+          descontos: hasT ? round2(tDesc) : null,
+          liquido: hasT ? round2(tRend - tDesc) : null,
         });
         setObservacoesIA(obs);
         setSheet(buildSheet(list, planoRes.map));
@@ -204,21 +214,20 @@ const AdminFolhaEditor = () => {
 
   const attemptLeave = () => { if (isDirty) setLeaveOpen(true); else navigate(-1); };
 
-  const { rendimentos, descontos, encargos } = useMemo(() => {
-    if (!sheet) return { rendimentos: 0, descontos: 0, encargos: 0 };
-    let r = 0, d = 0, e = 0;
-    for (const row of sheet.rows) {
-      const v = row[8]?.numeric ? Number(row[8].value) || 0 : parseMoneyCell(row[8]?.value);
-      if (!v) continue;
-      const hist = String(row[7]?.value ?? "");
-      const tipo = classifyFolhaLine(hist);
-      if (tipo === "desconto") d += v;
-      else if (tipo === "encargo") e += v;
-      else r += v;
-    }
-    return { rendimentos: round2(r), descontos: round2(d), encargos: round2(e) };
-  }, [sheet]);
+  // Totais da planilha vêm da transcrição faithful (Stage 1). Se não existir, cai nos totais do documento.
+  const rendimentos = transcricaoTotals.rendimentos ?? documentoTotals.rendimentos ?? 0;
+  const descontos = transcricaoTotals.descontos ?? documentoTotals.descontos ?? 0;
   const liquido = round2(rendimentos - descontos);
+
+  // Total contabilizado (soma dos valores dos lançamentos gerados)
+  const totalContabilizado = useMemo(() => {
+    if (!sheet) return 0;
+    let s = 0;
+    for (const row of sheet.rows) {
+      s += row[8]?.numeric ? Number(row[8].value) || 0 : parseMoneyCell(row[8]?.value);
+    }
+    return round2(s);
+  }, [sheet]);
 
   const conferencia = useMemo(() => {
     const items = [
@@ -381,14 +390,12 @@ const AdminFolhaEditor = () => {
                   {fmtBRL(liquido)}
                 </span>
               </div>
-              {encargos > 0 && (
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Encargos fora do total</span>
-                  <span className="text-sm font-medium text-muted-foreground">
-                    {fmtBRL(encargos)}
-                  </span>
-                </div>
-              )}
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">Total contabilizado</span>
+                <span className="text-sm font-medium text-muted-foreground">
+                  {fmtBRL(totalContabilizado)}
+                </span>
+              </div>
             </div>
 
             {hasDocumentoTotals && (
