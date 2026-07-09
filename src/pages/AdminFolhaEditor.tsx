@@ -50,15 +50,14 @@ const parseDateBR = (s: string): string | null => {
   return m ? `${m[3]}-${m[2]}-${m[1]}` : null;
 };
 
-const buildSheet = (rows: Row[], planoMap: Record<string, string>, observacoesIA: string = ""): SheetData => {
-  const headers = ["Data","Conta Débito","Desc. Débito","CC Débito","Conta Crédito","Desc. Crédito","CC Crédito","Histórico","Valor","Justificativa IA","Observações IA"];
-  const body: SheetCell[][] = rows.map((r, idx) => {
+const buildSheet = (rows: Row[], planoMap: Record<string, string>): SheetData => {
+  const headers = ["Data","Conta Débito","Desc. Débito","CC Débito","Conta Crédito","Desc. Crédito","CC Crédito","Histórico","Valor"];
+  const body: SheetCell[][] = rows.map((r) => {
     const debDesc = lookupPlanoContasDescricao(planoMap, r.conta_debito);
     const credDesc = lookupPlanoContasDescricao(planoMap, r.conta_credito);
     const ccDeb = /\(-\)/.test(debDesc) ? "100" : "";
     const ccCred = /\(-\)/.test(credDesc) ? "100" : "";
     const hist = (r.historico || "").toUpperCase();
-    // Cores por status do histórico
     let bg: string | undefined;
     if (/^\s*\[REVISAR\]/.test(hist)) bg = "#fde2e2";
     else if (/^\s*\[SUGERIDO\]/.test(hist)) bg = "#fff2cc";
@@ -73,8 +72,6 @@ const buildSheet = (rows: Row[], planoMap: Record<string, string>, observacoesIA
       withBg(cell(ccCred)),
       withBg(cell(hist)),
       withBg(cell(r.valor ?? 0, { numeric: true })),
-      withBg(cell(r.justificativa || "")),
-      withBg(cell(idx === 0 ? observacoesIA : "")),
     ];
   });
   return { headers, rows: body };
@@ -173,7 +170,7 @@ const AdminFolhaEditor = () => {
           liquido: sumUploadTotal("total_liquido_documento"),
         });
         setObservacoesIA(obs);
-        setSheet(buildSheet(list, planoRes.map, obs));
+        setSheet(buildSheet(list, planoRes.map));
         setJustificativas(list.map((r) => r.justificativa));
         setPlanoMap(planoRes.map);
         setFilename(`folha_${slug(name)}_${competencia}.xlsx`);
@@ -252,7 +249,7 @@ const AdminFolhaEditor = () => {
         conta_credito: String(r[4].value ?? "").trim() || null,
         historico: String(r[7].value ?? "").trim() || null,
         valor: r[8].numeric ? Number(r[8].value) || 0 : parseMoneyCell(r[8].value),
-        justificativa: (String(r[9]?.value ?? "").trim() || justificativas[idx]) ?? null,
+        justificativa: justificativas[idx] ?? null,
       }));
       await supabase.from("folha_lancamentos").delete().eq("client_id", clientId).eq("competencia", competencia);
       const totalsLancamentos = {
@@ -276,12 +273,9 @@ const AdminFolhaEditor = () => {
 
   const handleDownload = () => {
     if (!sheet) return;
-    // Remove as duas últimas colunas (Justificativa IA e Observações IA) da exportação
-    const headers = sheet.headers.slice(0, 9);
-    const rows = sheet.rows.map((r) => r.slice(0, 9));
-    const aoa: (string | number)[][] = [headers, ...rows.map((r) => r.map((c) => c.value))];
+    const aoa: (string | number)[][] = [sheet.headers, ...sheet.rows.map((r) => r.map((c) => c.value))];
     const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws["!cols"] = headers.map(() => ({ wch: 18 }));
+    ws["!cols"] = sheet.headers.map(() => ({ wch: 18 }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Folha");
     XLSX.writeFile(wb, filename.endsWith(".xlsx") ? filename : `${filename}.xlsx`);
@@ -425,6 +419,17 @@ const AdminFolhaEditor = () => {
               </div>
             )}
 
+
+            {selectedRow != null && justificativas[selectedRow] && (
+              <div className="bg-muted/30 rounded-xl p-4 space-y-2 border border-border">
+                <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-primary" /> Justificativa IA — Linha {selectedRow + 1}
+                </div>
+                <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                  {justificativas[selectedRow]}
+                </p>
+              </div>
+            )}
 
             {observacoesIA && (
               <div className="bg-amber-50 dark:bg-amber-950/30 rounded-xl p-4 space-y-2 border border-amber-200 dark:border-amber-900">
