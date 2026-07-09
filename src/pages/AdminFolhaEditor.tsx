@@ -170,7 +170,7 @@ const AdminFolhaEditor = () => {
           liquido: sumUploadTotal("total_liquido_documento"),
         });
         setObservacoesIA(obs);
-        setSheet(buildSheet(list, planoRes.map, obs));
+        setSheet(buildSheet(list, planoRes.map));
         setJustificativas(list.map((r) => r.justificativa));
         setPlanoMap(planoRes.map);
         setFilename(`folha_${slug(name)}_${competencia}.xlsx`);
