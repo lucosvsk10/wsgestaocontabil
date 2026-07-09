@@ -272,7 +272,24 @@ export const FolhaPagamentoDetail = ({ clientId, clientName }: FolhaPagamentoDet
                     </div>
                     {t && isOpen && (
                       <div className="p-3 border-t border-border bg-muted/20">
-                        <TranscricaoEditor transcricao={t} onChanged={fetchData} />
+                        <Tabs defaultValue="lancamentos" className="w-full">
+                          <TabsList className="mb-3">
+                            <TabsTrigger value="lancamentos">Lançamentos contábeis</TabsTrigger>
+                            <TabsTrigger value="transcricao">Transcrição do PDF</TabsTrigger>
+                          </TabsList>
+                          <TabsContent value="lancamentos" className="mt-0">
+                            <LancamentosInlineEditor
+                              uploadId={u.id}
+                              clientId={clientId}
+                              competencia={competencia}
+                              transcricaoId={t.id}
+                              transcricaoStatus={t.status}
+                            />
+                          </TabsContent>
+                          <TabsContent value="transcricao" className="mt-0">
+                            <TranscricaoEditor transcricao={t} onChanged={fetchData} />
+                          </TabsContent>
+                        </Tabs>
                       </div>
                     )}
                   </li>
