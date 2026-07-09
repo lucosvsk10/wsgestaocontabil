@@ -214,21 +214,20 @@ const AdminFolhaEditor = () => {
 
   const attemptLeave = () => { if (isDirty) setLeaveOpen(true); else navigate(-1); };
 
-  const { rendimentos, descontos, encargos } = useMemo(() => {
-    if (!sheet) return { rendimentos: 0, descontos: 0, encargos: 0 };
-    let r = 0, d = 0, e = 0;
-    for (const row of sheet.rows) {
-      const v = row[8]?.numeric ? Number(row[8].value) || 0 : parseMoneyCell(row[8]?.value);
-      if (!v) continue;
-      const hist = String(row[7]?.value ?? "");
-      const tipo = classifyFolhaLine(hist);
-      if (tipo === "desconto") d += v;
-      else if (tipo === "encargo") e += v;
-      else r += v;
-    }
-    return { rendimentos: round2(r), descontos: round2(d), encargos: round2(e) };
-  }, [sheet]);
+  // Totais da planilha vêm da transcrição faithful (Stage 1). Se não existir, cai nos totais do documento.
+  const rendimentos = transcricaoTotals.rendimentos ?? documentoTotals.rendimentos ?? 0;
+  const descontos = transcricaoTotals.descontos ?? documentoTotals.descontos ?? 0;
   const liquido = round2(rendimentos - descontos);
+
+  // Total contabilizado (soma dos valores dos lançamentos gerados)
+  const totalContabilizado = useMemo(() => {
+    if (!sheet) return 0;
+    let s = 0;
+    for (const row of sheet.rows) {
+      s += row[8]?.numeric ? Number(row[8].value) || 0 : parseMoneyCell(row[8]?.value);
+    }
+    return round2(s);
+  }, [sheet]);
 
   const conferencia = useMemo(() => {
     const items = [
