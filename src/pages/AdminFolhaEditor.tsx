@@ -50,15 +50,14 @@ const parseDateBR = (s: string): string | null => {
   return m ? `${m[3]}-${m[2]}-${m[1]}` : null;
 };
 
-const buildSheet = (rows: Row[], planoMap: Record<string, string>, observacoesIA: string = ""): SheetData => {
-  const headers = ["Data","Conta Débito","Desc. Débito","CC Débito","Conta Crédito","Desc. Crédito","CC Crédito","Histórico","Valor","Justificativa IA","Observações IA"];
-  const body: SheetCell[][] = rows.map((r, idx) => {
+const buildSheet = (rows: Row[], planoMap: Record<string, string>): SheetData => {
+  const headers = ["Data","Conta Débito","Desc. Débito","CC Débito","Conta Crédito","Desc. Crédito","CC Crédito","Histórico","Valor"];
+  const body: SheetCell[][] = rows.map((r) => {
     const debDesc = lookupPlanoContasDescricao(planoMap, r.conta_debito);
     const credDesc = lookupPlanoContasDescricao(planoMap, r.conta_credito);
     const ccDeb = /\(-\)/.test(debDesc) ? "100" : "";
     const ccCred = /\(-\)/.test(credDesc) ? "100" : "";
     const hist = (r.historico || "").toUpperCase();
-    // Cores por status do histórico
     let bg: string | undefined;
     if (/^\s*\[REVISAR\]/.test(hist)) bg = "#fde2e2";
     else if (/^\s*\[SUGERIDO\]/.test(hist)) bg = "#fff2cc";
@@ -73,8 +72,6 @@ const buildSheet = (rows: Row[], planoMap: Record<string, string>, observacoesIA
       withBg(cell(ccCred)),
       withBg(cell(hist)),
       withBg(cell(r.valor ?? 0, { numeric: true })),
-      withBg(cell(r.justificativa || "")),
-      withBg(cell(idx === 0 ? observacoesIA : "")),
     ];
   });
   return { headers, rows: body };
