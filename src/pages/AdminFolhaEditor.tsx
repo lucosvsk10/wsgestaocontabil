@@ -130,10 +130,11 @@ const AdminFolhaEditor = () => {
       }
       setLoading(true);
       try {
-        const [{ data: userData }, { data: rows }, { data: uploads }, planoRes] = await Promise.all([
+        const [{ data: userData }, { data: rows }, { data: uploads }, { data: transcricoes }, planoRes] = await Promise.all([
           supabase.from("users").select("name").eq("id", clientId).maybeSingle(),
           supabase.from("folha_lancamentos").select("*").eq("client_id", clientId).eq("competencia", competencia).order("ordem", { ascending: true }),
           supabase.from("folha_uploads").select("observacoes_ia,total_rendimentos_documento,total_descontos_documento,total_liquido_documento").eq("client_id", clientId).eq("competencia", competencia),
+          supabase.from("folha_transcricoes").select("linhas,total_rendimentos_pdf,total_descontos_pdf").eq("client_id", clientId).eq("competencia", competencia),
           fetchPlanoContas(clientId),
         ]);
         const name = userData?.name || "Cliente";
@@ -163,6 +164,20 @@ const AdminFolhaEditor = () => {
           rendimentos: sumUploadTotal("total_rendimentos_documento"),
           descontos: sumUploadTotal("total_descontos_documento"),
           liquido: sumUploadTotal("total_liquido_documento"),
+        });
+        // Totais da PLANILHA vêm da transcrição faithful (Stage 1), não dos lançamentos contábeis agrupados
+        let tRend = 0, tDesc = 0; let hasT = false;
+        for (const t of (transcricoes || []) as any[]) {
+          hasT = true;
+          if (t.total_rendimentos_pdf != null) tRend += Number(t.total_rendimentos_pdf) || 0;
+          else for (const l of (t.linhas || [])) tRend += Number(l?.rendimento) || 0;
+          if (t.total_descontos_pdf != null) tDesc += Number(t.total_descontos_pdf) || 0;
+          else for (const l of (t.linhas || [])) tDesc += Number(l?.desconto) || 0;
+        }
+        setTranscricaoTotals({
+          rendimentos: hasT ? round2(tRend) : null,
+          descontos: hasT ? round2(tDesc) : null,
+          liquido: hasT ? round2(tRend - tDesc) : null,
         });
         setObservacoesIA(obs);
         setSheet(buildSheet(list, planoRes.map));
