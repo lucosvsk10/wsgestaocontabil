@@ -390,14 +390,12 @@ const AdminFolhaEditor = () => {
                   {fmtBRL(liquido)}
                 </span>
               </div>
-              {encargos > 0 && (
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Encargos fora do total</span>
-                  <span className="text-sm font-medium text-muted-foreground">
-                    {fmtBRL(encargos)}
-                  </span>
-                </div>
-              )}
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">Total contabilizado</span>
+                <span className="text-sm font-medium text-muted-foreground">
+                  {fmtBRL(totalContabilizado)}
+                </span>
+              </div>
             </div>
 
             {hasDocumentoTotals && (
