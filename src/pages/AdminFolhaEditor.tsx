@@ -119,6 +119,7 @@ const AdminFolhaEditor = () => {
   const [justificativas, setJustificativas] = useState<(string | null)[]>([]);
   const [observacoesIA, setObservacoesIA] = useState<string>("");
   const [documentoTotals, setDocumentoTotals] = useState<DocumentoTotals>({ rendimentos: null, descontos: null, liquido: null });
+  const [transcricaoTotals, setTranscricaoTotals] = useState<DocumentoTotals>({ rendimentos: null, descontos: null, liquido: null });
 
   useEffect(() => {
     (async () => {
