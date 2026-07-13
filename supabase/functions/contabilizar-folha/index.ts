@@ -219,6 +219,7 @@ async function processContabilizacao(transcricaoId: string) {
       body: JSON.stringify({
         model: "google/gemini-2.5-pro",
         response_format: { type: "json_object" },
+        max_tokens: 8000,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: `Competência: ${trans.competencia}\n\n${planoText}\n\n[TABELA TRANSCRITA]\n${tabelaTexto}\n\nGere os lançamentos contábeis usando SOMENTE os valores acima.` },
@@ -234,10 +235,12 @@ async function processContabilizacao(transcricaoId: string) {
     }
     const aiJson = await aiRes.json();
     const finishReason = aiJson?.choices?.[0]?.finish_reason;
+    const rawContent = aiJson?.choices?.[0]?.message?.content ?? "";
+    console.log("contabilizar-folha AI response", { finishReason, length: String(rawContent).length });
     if (finishReason === "length" || finishReason === "max_tokens") {
-      throw new Error("A resposta da IA foi cortada. Reprocesse a contabilização.");
+      throw new Error("A resposta da IA foi cortada (limite de tokens). Reprocesse a contabilização.");
     }
-    const parsed = extractJson(aiJson?.choices?.[0]?.message?.content ?? "");
+    const parsed = extractJson(rawContent);
     const lancs = Array.isArray(parsed.lancamentos) ? parsed.lancamentos : [];
     const observacoes_ia = typeof parsed.observacoes_ia === "string" ? parsed.observacoes_ia.trim() : "";
 
