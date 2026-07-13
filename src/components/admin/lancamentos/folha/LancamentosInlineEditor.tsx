@@ -40,6 +40,7 @@ export const LancamentosInlineEditor = ({ uploadId, clientId, competencia, trans
   const [running, setRunning] = useState(false);
   const [dirty, setDirty] = useState<Record<string, boolean>>({});
   const [removed, setRemoved] = useState<string[]>([]);
+  const [transcricaoTotal, setTranscricaoTotal] = useState<number | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -51,8 +52,18 @@ export const LancamentosInlineEditor = ({ uploadId, clientId, competencia, trans
     setLinhas((data || []) as Lancamento[]);
     setDirty({});
     setRemoved([]);
+    if (transcricaoId) {
+      const { data: t } = await supabase
+        .from("folha_transcricoes")
+        .select("total_rendimentos_pdf,total_descontos_pdf,total_recol_fgts_pdf")
+        .eq("id", transcricaoId)
+        .maybeSingle();
+      if (t) {
+        setTranscricaoTotal(round2(Number(t.total_rendimentos_pdf || 0) + Number(t.total_descontos_pdf || 0) + Number(t.total_recol_fgts_pdf || 0)));
+      }
+    }
     setLoading(false);
-  }, [uploadId]);
+  }, [uploadId, transcricaoId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
