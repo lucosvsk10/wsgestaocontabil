@@ -134,6 +134,7 @@ export const LancamentosInlineEditor = ({ uploadId, clientId, competencia, trans
 
   const handleReprocessar = async () => {
     if (!transcricaoId) { toast.error("Sem transcrição vinculada"); return; }
+    if (!window.confirm("Reprocessar contabilização? Os lançamentos atuais serão apagados e regerados pela IA.")) return;
     setRunning(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
