@@ -262,7 +262,11 @@ export const FolhaPagamentoDetail = ({ clientId, clientName }: FolhaPagamentoDet
                       </div>
                       {statusBadge(u.status)}
                       {u.status === "erro" || u.status === "erro_transcricao" ? (
-                        <Button size="sm" variant="outline" className="h-8" onClick={() => triggerTranscricao(u.id)}>
+                        <Button size="sm" variant="outline" className="h-8" onClick={() => {
+                          if (window.confirm("Reprocessar este arquivo? Os dados de transcrição e lançamentos atuais serão sobrescritos.")) {
+                            triggerTranscricao(u.id);
+                          }
+                        }}>
                           <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Reprocessar
                         </Button>
                       ) : null}

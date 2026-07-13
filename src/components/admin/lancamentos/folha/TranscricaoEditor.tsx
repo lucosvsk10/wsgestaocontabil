@@ -105,6 +105,7 @@ export const TranscricaoEditor = ({ transcricao, onChanged }: Props) => {
   };
 
   const handleReprocessarPDF = async () => {
+    if (!window.confirm("Reprocessar o PDF? A transcrição atual e todos os lançamentos gerados serão sobrescritos.")) return;
     setRunning(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
