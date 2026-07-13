@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2, Save, RefreshCw, Trash2, Plus, AlertTriangle } from "lucide-react";
+import { Loader2, Save, RefreshCw, Trash2, Plus, AlertTriangle, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,6 +40,7 @@ export const LancamentosInlineEditor = ({ uploadId, clientId, competencia, trans
   const [running, setRunning] = useState(false);
   const [dirty, setDirty] = useState<Record<string, boolean>>({});
   const [removed, setRemoved] = useState<string[]>([]);
+  const [transcricaoTotal, setTranscricaoTotal] = useState<number | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -51,8 +52,18 @@ export const LancamentosInlineEditor = ({ uploadId, clientId, competencia, trans
     setLinhas((data || []) as Lancamento[]);
     setDirty({});
     setRemoved([]);
+    if (transcricaoId) {
+      const { data: t } = await supabase
+        .from("folha_transcricoes")
+        .select("total_rendimentos_pdf,total_descontos_pdf,total_recol_fgts_pdf")
+        .eq("id", transcricaoId)
+        .maybeSingle();
+      if (t) {
+        setTranscricaoTotal(round2(Number(t.total_rendimentos_pdf || 0) + Number(t.total_descontos_pdf || 0) + Number(t.total_recol_fgts_pdf || 0)));
+      }
+    }
     setLoading(false);
-  }, [uploadId]);
+  }, [uploadId, transcricaoId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -213,7 +224,20 @@ export const LancamentosInlineEditor = ({ uploadId, clientId, competencia, trans
             </tbody>
             <tfoot className="bg-muted/30 border-t border-border">
               <tr>
-                <td colSpan={4} className="px-2 py-2 text-right font-semibold">Total</td>
+                <td colSpan={4} className="px-2 py-2 text-right font-semibold">
+                  Total
+                  {transcricaoTotal != null && (
+                    Math.abs(total - transcricaoTotal) < 0.01 ? (
+                      <span className="inline-flex items-center gap-1 ml-2 text-xs font-medium text-green-600 dark:text-green-500">
+                        <Check className="w-3.5 h-3.5" /> Confere com transcrição
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 ml-2 text-xs font-medium text-red-600 dark:text-red-500">
+                        <X className="w-3.5 h-3.5" /> Divergência (transcrição {fmt(transcricaoTotal)} · dif. {fmt(round2(total - transcricaoTotal))})
+                      </span>
+                    )
+                  )}
+                </td>
                 <td className="px-2 py-2 text-right font-mono font-semibold">{fmt(total)}</td>
                 <td colSpan={2} />
               </tr>
