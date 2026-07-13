@@ -224,7 +224,20 @@ export const LancamentosInlineEditor = ({ uploadId, clientId, competencia, trans
             </tbody>
             <tfoot className="bg-muted/30 border-t border-border">
               <tr>
-                <td colSpan={4} className="px-2 py-2 text-right font-semibold">Total</td>
+                <td colSpan={4} className="px-2 py-2 text-right font-semibold">
+                  Total
+                  {transcricaoTotal != null && (
+                    Math.abs(total - transcricaoTotal) < 0.01 ? (
+                      <span className="inline-flex items-center gap-1 ml-2 text-xs font-medium text-green-600 dark:text-green-500">
+                        <Check className="w-3.5 h-3.5" /> Confere com transcrição
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 ml-2 text-xs font-medium text-red-600 dark:text-red-500">
+                        <X className="w-3.5 h-3.5" /> Divergência (transcrição {fmt(transcricaoTotal)} · dif. {fmt(round2(total - transcricaoTotal))})
+                      </span>
+                    )
+                  )}
+                </td>
                 <td className="px-2 py-2 text-right font-mono font-semibold">{fmt(total)}</td>
                 <td colSpan={2} />
               </tr>
