@@ -110,12 +110,58 @@ const parseAiMoney = (value: unknown): number | null => {
   return Number.isFinite(n) ? round2(n) : null;
 };
 
+const findJsonEnd = (text: string, startIdx: number): number => {
+  const openCh = text[startIdx];
+  const closeCh = openCh === "[" ? "]" : "}";
+  let depth = 0;
+  let inStr = false;
+  let esc = false;
+  for (let i = startIdx; i < text.length; i++) {
+    const c = text[i];
+    if (inStr) {
+      if (esc) { esc = false; continue; }
+      if (c === "\\") { esc = true; continue; }
+      if (c === '"') inStr = false;
+      continue;
+    }
+    if (c === '"') { inStr = true; continue; }
+    if (c === openCh) depth++;
+    else if (c === closeCh) {
+      depth--;
+      if (depth === 0) return i;
+    }
+  }
+  return -1;
+};
+
 const extractJson = (text: string): any => {
-  const cleaned = String(text || "").replace(/```json/gi, "").replace(/```/g, "").trim();
-  const s = cleaned.indexOf("{");
-  const e = cleaned.lastIndexOf("}");
-  if (s === -1 || e === -1) throw new Error("Resposta da IA sem JSON.");
-  return JSON.parse(cleaned.slice(s, e + 1));
+  const raw = String(text || "");
+  if (!raw.trim()) throw new Error("Resposta da IA vazia.");
+  let cleaned = raw
+    .replace(/```json/gi, "")
+    .replace(/```/g, "")
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "")
+    .trim();
+  const s = cleaned.search(/[\{\[]/);
+  if (s === -1) throw new Error(`Resposta da IA sem JSON. Trecho: ${cleaned.slice(0, 300)}`);
+  const balancedEnd = findJsonEnd(cleaned, s);
+  const end = balancedEnd !== -1
+    ? balancedEnd
+    : Math.max(cleaned.lastIndexOf("}"), cleaned.lastIndexOf("]"));
+  if (end === -1 || end < s) {
+    throw new Error(`Resposta da IA truncada (chaves desbalanceadas). Trecho: ${cleaned.slice(0, 300)}`);
+  }
+  const slice = cleaned.slice(s, end + 1);
+  try {
+    return JSON.parse(slice);
+  } catch {
+    const repaired = slice.replace(/,\s*([}\]])/g, "$1");
+    try {
+      return JSON.parse(repaired);
+    } catch (e2: any) {
+      throw new Error(`JSON inválido da IA: ${e2.message}. Trecho: ${slice.slice(0, 300)}`);
+    }
+  }
 };
 
 async function processContabilizacao(transcricaoId: string) {
