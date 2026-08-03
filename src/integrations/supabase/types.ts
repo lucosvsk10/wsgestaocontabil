@@ -1283,30 +1283,6 @@ export type Database = {
         }
         Relationships: []
       }
-      lancamentos: {
-        Row: {
-          credito: string | null
-          data: string | null
-          debito: string | null
-          historico: string | null
-          valor: string
-        }
-        Insert: {
-          credito?: string | null
-          data?: string | null
-          debito?: string | null
-          historico?: string | null
-          valor: string
-        }
-        Update: {
-          credito?: string | null
-          data?: string | null
-          debito?: string | null
-          historico?: string | null
-          valor?: string
-        }
-        Relationships: []
-      }
       lancamentos_alinhados: {
         Row: {
           centro_custo_credito: string | null
@@ -1755,21 +1731,6 @@ export type Database = {
           created_at?: string
           dados?: Json
           id?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      roles: {
-        Row: {
-          role: string
-          user_id: string
-        }
-        Insert: {
-          role?: string
-          user_id: string
-        }
-        Update: {
-          role?: string
           user_id?: string
         }
         Relationships: []
