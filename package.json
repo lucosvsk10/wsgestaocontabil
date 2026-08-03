@@ -51,7 +51,6 @@
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.3.0",
     "eslint-plugin-react": "^7.33.2",
-    "firebase": "^10.9.0",
     "framer-motion": "^12.10.4",
     "input-otp": "^1.2.4",
     "lint-staged": "^15.2.0",
@@ -71,7 +70,7 @@
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^9.0.1",
     "vaul": "^0.9.3",
-    "vitest": "^3.1.1",
+    "vitest": "^4.1.10",
     "xlsx": "^0.18.5",
     "zod": "^3.23.8"
   },

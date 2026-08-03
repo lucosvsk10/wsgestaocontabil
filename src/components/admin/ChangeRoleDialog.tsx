@@ -42,17 +42,23 @@ export const ChangeRoleDialog = ({
 
     setIsSubmitting(true);
     try {
-      // Update role in the roles table
+      // Roles are stored exclusively in the user_roles table
+      const { error: deleteError } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', authUser.id);
+
+      if (deleteError) throw deleteError;
+
       const { error } = await supabase
-        .from('roles')
-        .upsert({ 
-          user_id: authUser.id, 
-          role: selectedRole 
-        }, { 
-          onConflict: 'user_id' 
+        .from('user_roles')
+        .insert({
+          user_id: authUser.id,
+          role: selectedRole as "admin" | "client" | "fiscal" | "contabil" | "geral",
         });
 
       if (error) throw error;
+
 
       toast({
         title: "Função atualizada",
