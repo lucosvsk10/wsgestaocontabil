@@ -67,7 +67,8 @@ export const DeleteUserDialog = ({ open, onOpenChange, authUser, onSuccess }: De
       await supabase.from('company_data').delete().eq('user_id', authUser.id);
       
       // 7. Delete roles
-      await supabase.from('roles').delete().eq('user_id', authUser.id);
+      await supabase.from('user_roles').delete().eq('user_id', authUser.id);
+
       
       // 8. Delete user profile
       await supabase.from('users').delete().eq('id', authUser.id);
