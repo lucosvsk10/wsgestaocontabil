@@ -546,15 +546,17 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-muted/80 backdrop-blur-sm z-10">
                   <tr>
-                    <th className="text-left px-3 py-2 font-medium w-[140px]">C.R.</th>
+                    <th className="text-left px-3 py-2 font-medium w-[170px]">Conta</th>
+                    <th className="text-left px-3 py-2 font-medium w-[120px]">C.R.</th>
                     <th className="text-left px-3 py-2 font-medium">Descrição</th>
+                    <th className="text-left px-3 py-2 font-medium w-[110px]">Analítica</th>
                     <th className="w-10 px-2 py-2"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredItems.length === 0 ? (
                     <tr>
-                      <td colSpan={3} className="text-center py-12 text-muted-foreground">
+                      <td colSpan={5} className="text-center py-12 text-muted-foreground">
                         {isFiltered
                           ? "Nenhuma conta encontrada"
                           : "Nenhuma conta cadastrada. Importe um arquivo XLSX ou adicione manualmente."}
@@ -565,6 +567,14 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
                       const realIdx = isFiltered ? items.indexOf(item) : displayIdx;
                       return (
                         <tr key={realIdx} className="border-t border-border/50 hover:bg-muted/30">
+                          <td className="px-2 py-1">
+                            <Input
+                              value={item.conta || ""}
+                              onChange={(e) => updateRow(realIdx, "conta", e.target.value)}
+                              className="h-8 text-xs font-mono border-0 bg-transparent shadow-none focus:ring-1"
+                              placeholder="Ex: 4.1.01.0003"
+                            />
+                          </td>
                           <td className="px-2 py-1">
                             <Input
                               value={item.cr}
@@ -580,6 +590,20 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
                               className="h-8 text-xs border-0 bg-transparent shadow-none focus:ring-1"
                               placeholder="Ex: ATIVO"
                             />
+                          </td>
+                          <td className="px-2 py-1">
+                            <Select
+                              value={item.analitica !== false ? "sim" : "nao"}
+                              onValueChange={(v) => updateAnalitica(realIdx, v === "sim")}
+                            >
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="sim">Sim</SelectItem>
+                                <SelectItem value="nao">Não</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </td>
                           <td className="px-1 py-1">
                             <Button
