@@ -99,8 +99,29 @@ const DESC_NAMES = [
   "desc.",
   "nome",
 ];
+const CONTA_NAMES = [
+  "conta",
+  "conta contabil",
+  "conta contábil",
+  "codigo completo",
+  "código completo",
+  "classificacao",
+  "classificação",
+  "mascara",
+  "máscara",
+];
+const ANALITICA_NAMES = [
+  "analitica",
+  "analítica",
+  "analitico",
+  "analítico",
+  "tipo",
+  "a/s",
+  "sintetica",
+  "sintética",
+];
 
-const emptyItem = (): PlanoContasItem => ({ cr: "", descricao: "" });
+const emptyItem = (): PlanoContasItem => ({ cr: "", conta: "", descricao: "", analitica: true });
 
 export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: PlanoContasModalProps) => {
   const { user } = useAuth();
