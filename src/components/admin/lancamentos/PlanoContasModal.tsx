@@ -201,13 +201,20 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
 
         const crIdx = findColumnIndex(bestHeaders, CR_NAMES);
         const descricaoIdx = findColumnIndex(bestHeaders, DESC_NAMES);
+        const usedForConta = new Set([crIdx, descricaoIdx]);
+        let contaIdx = findColumnIndex(bestHeaders, CONTA_NAMES);
+        if (usedForConta.has(contaIdx)) contaIdx = -1;
+        let analiticaIdx = findColumnIndex(bestHeaders, ANALITICA_NAMES);
+        if (analiticaIdx === crIdx || analiticaIdx === descricaoIdx || analiticaIdx === contaIdx) analiticaIdx = -1;
 
         setPendingImport({
           headers: bestHeaders,
           headerRowIdx,
           rows,
+          contaIdx,
           crIdx: crIdx !== -1 ? crIdx : 0,
           descricaoIdx: descricaoIdx !== -1 ? descricaoIdx : Math.min(1, bestHeaders.length - 1),
+          analiticaIdx,
           autoDetected: crIdx !== -1 && descricaoIdx !== -1,
         });
       } catch (err) {
@@ -220,14 +227,16 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
 
   const confirmImport = () => {
     if (!pendingImport) return;
-    const { rows, headerRowIdx, crIdx, descricaoIdx } = pendingImport;
+    const { rows, headerRowIdx, crIdx, descricaoIdx, contaIdx, analiticaIdx } = pendingImport;
 
     const imported: PlanoContasItem[] = [];
     for (let i = headerRowIdx + 1; i < rows.length; i++) {
       const row = rows[i];
       const cr = String(row[crIdx] || "").trim();
       const descricao = String(row[descricaoIdx] || "").trim();
-      if (cr) imported.push({ cr, descricao });
+      const conta = contaIdx >= 0 ? String(row[contaIdx] || "").trim() : "";
+      const analitica = analiticaIdx >= 0 ? parseAnalitica(row[analiticaIdx]) : true;
+      if (cr) imported.push({ cr, conta, descricao, analitica });
     }
 
     if (imported.length === 0) {
