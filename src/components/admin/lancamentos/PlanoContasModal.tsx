@@ -303,8 +303,12 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
     setItems((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const updateRow = (index: number, field: "cr" | "descricao", value: string) => {
+  const updateRow = (index: number, field: "cr" | "descricao" | "conta", value: string) => {
     setItems((prev) => prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)));
+  };
+
+  const updateAnalitica = (index: number, value: boolean) => {
+    setItems((prev) => prev.map((item, i) => (i === index ? { ...item, analitica: value } : item)));
   };
 
   const filteredItems = useMemo(() => {
@@ -313,6 +317,7 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
     return items.filter(
       (item) =>
         item.cr.toLowerCase().includes(term) ||
+        (item.conta || "").toLowerCase().includes(term) ||
         item.descricao.toLowerCase().includes(term),
     );
   }, [items, searchTerm]);
