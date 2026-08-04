@@ -1,12 +1,14 @@
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { planoContasForAI } from "../_shared/planoContas.ts";
+import { planoContasForAI, PLANO_CONTAS_RULES } from "../_shared/planoContas.ts";
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-const SYSTEM_PROMPT = `Você é um CONTABILIZADOR de folha de pagamento. Você NÃO tem acesso ao PDF original. Você recebe apenas uma TABELA JÁ TRANSCRITA e o PLANO DE CONTAS da empresa.
+const SYSTEM_PROMPT = `${PLANO_CONTAS_RULES}
+
+Você é um CONTABILIZADOR de folha de pagamento. Você NÃO tem acesso ao PDF original. Você recebe apenas uma TABELA JÁ TRANSCRITA e o PLANO DE CONTAS da empresa.
 
 REGRAS ABSOLUTAS:
 - Use SOMENTE os valores que estão na tabela transcrita. NUNCA recalcule, arredonde, invente linha nova ou descarte linha existente.
@@ -194,7 +196,7 @@ async function processContabilizacao(transcricaoId: string) {
     let planoText = "[PLANO DE CONTAS não cadastrado para esta empresa]";
     if (planoRow?.conteudo) {
       const { text } = planoContasForAI(planoRow.conteudo);
-      if (text) planoText = "[PLANO DE CONTAS]\n" + text;
+      if (text) planoText = "[PLANO DE CONTAS]\n" + text + "\n\n" + PLANO_CONTAS_RULES;
     }
 
     const tabelaTexto = [
