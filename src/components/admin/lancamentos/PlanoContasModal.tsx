@@ -461,15 +461,19 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-muted/80 backdrop-blur-sm">
                   <tr>
-                    <th className="text-left px-3 py-2 font-medium w-[140px]">C.R.</th>
+                    <th className="text-left px-3 py-2 font-medium w-[160px]">Conta</th>
+                    <th className="text-left px-3 py-2 font-medium w-[120px]">C.R.</th>
                     <th className="text-left px-3 py-2 font-medium">Descrição</th>
+                    <th className="text-left px-3 py-2 font-medium w-[100px]">Analítica</th>
                   </tr>
                 </thead>
                 <tbody>
                   {previewRows.map((row, i) => (
                     <tr key={i} className="border-t border-border/50">
+                      <td className="px-3 py-2 font-mono text-xs">{row.conta || "—"}</td>
                       <td className="px-3 py-2 font-mono text-xs">{row.cr || "—"}</td>
                       <td className="px-3 py-2 text-xs">{row.descricao || "—"}</td>
+                      <td className="px-3 py-2 text-xs">{row.analitica ? "Sim" : "Não"}</td>
                     </tr>
                   ))}
                 </tbody>
