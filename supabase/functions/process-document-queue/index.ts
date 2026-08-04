@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import * as XLSX from "https://esm.sh/xlsx@0.18.5";
-import { planoContasForAI } from "../_shared/planoContas.ts";
+import { planoContasForAI, PLANO_CONTAS_RULES } from "../_shared/planoContas.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -278,6 +278,8 @@ serve(async (req) => {
             file_url: alignSignedUrl?.signedUrl || freshSignedUrl,
             file_type: 'pdf',
             plano_contas: JSON.stringify(planoContasForAI(planoData.conteudo).json),
+          plano_contas_texto: planoContasForAI(planoData.conteudo).text,
+          plano_contas_regras: PLANO_CONTAS_RULES,
             timestamp: new Date().toISOString()
           })
         });

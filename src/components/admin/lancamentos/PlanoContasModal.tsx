@@ -33,6 +33,7 @@ import * as XLSX from "xlsx";
 import {
   parsePlanoContasContent,
   serializePlanoContas,
+  parseAnalitica,
   type PlanoContasItem,
 } from "@/lib/planoContas";
 
@@ -47,8 +48,10 @@ interface PendingImport {
   headers: string[];
   headerRowIdx: number;
   rows: any[][];
+  contaIdx: number;
   crIdx: number;
   descricaoIdx: number;
+  analiticaIdx: number;
   autoDetected: boolean;
 }
 
@@ -96,8 +99,29 @@ const DESC_NAMES = [
   "desc.",
   "nome",
 ];
+const CONTA_NAMES = [
+  "conta",
+  "conta contabil",
+  "conta contábil",
+  "codigo completo",
+  "código completo",
+  "classificacao",
+  "classificação",
+  "mascara",
+  "máscara",
+];
+const ANALITICA_NAMES = [
+  "analitica",
+  "analítica",
+  "analitico",
+  "analítico",
+  "tipo",
+  "a/s",
+  "sintetica",
+  "sintética",
+];
 
-const emptyItem = (): PlanoContasItem => ({ cr: "", descricao: "" });
+const emptyItem = (): PlanoContasItem => ({ cr: "", conta: "", descricao: "", analitica: true });
 
 export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: PlanoContasModalProps) => {
   const { user } = useAuth();
@@ -177,13 +201,20 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
 
         const crIdx = findColumnIndex(bestHeaders, CR_NAMES);
         const descricaoIdx = findColumnIndex(bestHeaders, DESC_NAMES);
+        const usedForConta = new Set([crIdx, descricaoIdx]);
+        let contaIdx = findColumnIndex(bestHeaders, CONTA_NAMES);
+        if (usedForConta.has(contaIdx)) contaIdx = -1;
+        let analiticaIdx = findColumnIndex(bestHeaders, ANALITICA_NAMES);
+        if (analiticaIdx === crIdx || analiticaIdx === descricaoIdx || analiticaIdx === contaIdx) analiticaIdx = -1;
 
         setPendingImport({
           headers: bestHeaders,
           headerRowIdx,
           rows,
+          contaIdx,
           crIdx: crIdx !== -1 ? crIdx : 0,
           descricaoIdx: descricaoIdx !== -1 ? descricaoIdx : Math.min(1, bestHeaders.length - 1),
+          analiticaIdx,
           autoDetected: crIdx !== -1 && descricaoIdx !== -1,
         });
       } catch (err) {
@@ -196,14 +227,16 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
 
   const confirmImport = () => {
     if (!pendingImport) return;
-    const { rows, headerRowIdx, crIdx, descricaoIdx } = pendingImport;
+    const { rows, headerRowIdx, crIdx, descricaoIdx, contaIdx, analiticaIdx } = pendingImport;
 
     const imported: PlanoContasItem[] = [];
     for (let i = headerRowIdx + 1; i < rows.length; i++) {
       const row = rows[i];
       const cr = String(row[crIdx] || "").trim();
       const descricao = String(row[descricaoIdx] || "").trim();
-      if (cr) imported.push({ cr, descricao });
+      const conta = contaIdx >= 0 ? String(row[contaIdx] || "").trim() : "";
+      const analitica = analiticaIdx >= 0 ? parseAnalitica(row[analiticaIdx]) : true;
+      if (cr) imported.push({ cr, conta, descricao, analitica });
     }
 
     if (imported.length === 0) {
@@ -270,8 +303,12 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
     setItems((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const updateRow = (index: number, field: "cr" | "descricao", value: string) => {
+  const updateRow = (index: number, field: "cr" | "descricao" | "conta", value: string) => {
     setItems((prev) => prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)));
+  };
+
+  const updateAnalitica = (index: number, value: boolean) => {
+    setItems((prev) => prev.map((item, i) => (i === index ? { ...item, analitica: value } : item)));
   };
 
   const filteredItems = useMemo(() => {
@@ -280,6 +317,7 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
     return items.filter(
       (item) =>
         item.cr.toLowerCase().includes(term) ||
+        (item.conta || "").toLowerCase().includes(term) ||
         item.descricao.toLowerCase().includes(term),
     );
   }, [items, searchTerm]);
@@ -288,13 +326,15 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
 
   const previewRows = useMemo(() => {
     if (!pendingImport) return [];
-    const { rows, headerRowIdx, crIdx, descricaoIdx } = pendingImport;
-    const preview: { cr: string; descricao: string }[] = [];
+    const { rows, headerRowIdx, crIdx, descricaoIdx, contaIdx, analiticaIdx } = pendingImport;
+    const preview: { cr: string; conta: string; descricao: string; analitica: boolean }[] = [];
     for (let i = headerRowIdx + 1; i < Math.min(headerRowIdx + 6, rows.length); i++) {
       const row = rows[i];
       preview.push({
         cr: String(row[crIdx] || "").trim(),
+        conta: contaIdx >= 0 ? String(row[contaIdx] || "").trim() : "",
         descricao: String(row[descricaoIdx] || "").trim(),
+        analitica: analiticaIdx >= 0 ? parseAnalitica(row[analiticaIdx]) : true,
       });
     }
     return preview;
@@ -331,6 +371,27 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Conta (código completo)</label>
+                  <Select
+                    value={String(pendingImport.contaIdx)}
+                    onValueChange={(v) =>
+                      setPendingImport((prev) => (prev ? { ...prev, contaIdx: parseInt(v) } : null))
+                    }
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="-1">(não existe na planilha)</SelectItem>
+                      {pendingImport.headers.map((h, i) => (
+                        <SelectItem key={i} value={String(i)}>
+                          Coluna {i + 1}: {h || "(vazio)"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1.5 block">C.R. (reduzido)</label>
                   <Select
@@ -371,6 +432,27 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
                     </SelectContent>
                   </Select>
                 </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Analítica (Sim/Não)</label>
+                  <Select
+                    value={String(pendingImport.analiticaIdx)}
+                    onValueChange={(v) =>
+                      setPendingImport((prev) => (prev ? { ...prev, analiticaIdx: parseInt(v) } : null))
+                    }
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="-1">(não existe — usar Sim para todas)</SelectItem>
+                      {pendingImport.headers.map((h, i) => (
+                        <SelectItem key={i} value={String(i)}>
+                          Coluna {i + 1}: {h || "(vazio)"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
 
@@ -379,15 +461,19 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-muted/80 backdrop-blur-sm">
                   <tr>
-                    <th className="text-left px-3 py-2 font-medium w-[140px]">C.R.</th>
+                    <th className="text-left px-3 py-2 font-medium w-[160px]">Conta</th>
+                    <th className="text-left px-3 py-2 font-medium w-[120px]">C.R.</th>
                     <th className="text-left px-3 py-2 font-medium">Descrição</th>
+                    <th className="text-left px-3 py-2 font-medium w-[100px]">Analítica</th>
                   </tr>
                 </thead>
                 <tbody>
                   {previewRows.map((row, i) => (
                     <tr key={i} className="border-t border-border/50">
+                      <td className="px-3 py-2 font-mono text-xs">{row.conta || "—"}</td>
                       <td className="px-3 py-2 font-mono text-xs">{row.cr || "—"}</td>
                       <td className="px-3 py-2 text-xs">{row.descricao || "—"}</td>
+                      <td className="px-3 py-2 text-xs">{row.analitica ? "Sim" : "Não"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -460,15 +546,17 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-muted/80 backdrop-blur-sm z-10">
                   <tr>
-                    <th className="text-left px-3 py-2 font-medium w-[140px]">C.R.</th>
+                    <th className="text-left px-3 py-2 font-medium w-[170px]">Conta</th>
+                    <th className="text-left px-3 py-2 font-medium w-[120px]">C.R.</th>
                     <th className="text-left px-3 py-2 font-medium">Descrição</th>
+                    <th className="text-left px-3 py-2 font-medium w-[110px]">Analítica</th>
                     <th className="w-10 px-2 py-2"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredItems.length === 0 ? (
                     <tr>
-                      <td colSpan={3} className="text-center py-12 text-muted-foreground">
+                      <td colSpan={5} className="text-center py-12 text-muted-foreground">
                         {isFiltered
                           ? "Nenhuma conta encontrada"
                           : "Nenhuma conta cadastrada. Importe um arquivo XLSX ou adicione manualmente."}
@@ -479,6 +567,14 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
                       const realIdx = isFiltered ? items.indexOf(item) : displayIdx;
                       return (
                         <tr key={realIdx} className="border-t border-border/50 hover:bg-muted/30">
+                          <td className="px-2 py-1">
+                            <Input
+                              value={item.conta || ""}
+                              onChange={(e) => updateRow(realIdx, "conta", e.target.value)}
+                              className="h-8 text-xs font-mono border-0 bg-transparent shadow-none focus:ring-1"
+                              placeholder="Ex: 4.1.01.0003"
+                            />
+                          </td>
                           <td className="px-2 py-1">
                             <Input
                               value={item.cr}
@@ -494,6 +590,20 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
                               className="h-8 text-xs border-0 bg-transparent shadow-none focus:ring-1"
                               placeholder="Ex: ATIVO"
                             />
+                          </td>
+                          <td className="px-2 py-1">
+                            <Select
+                              value={item.analitica !== false ? "sim" : "nao"}
+                              onValueChange={(v) => updateAnalitica(realIdx, v === "sim")}
+                            >
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="sim">Sim</SelectItem>
+                                <SelectItem value="nao">Não</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </td>
                           <td className="px-1 py-1">
                             <Button
