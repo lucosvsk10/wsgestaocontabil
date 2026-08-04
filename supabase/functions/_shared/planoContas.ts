@@ -1,15 +1,24 @@
 // Shared helpers para parsear o plano de contas nas edge functions.
-// Simplificado: apenas C.R. (código reduzido). Mantém compatibilidade de leitura
-// com formatos legados (que continham codigo_completo/preferencia_ia).
+// Estrutura: cr (código reduzido, usado nos lançamentos), conta (código completo,
+// usado apenas para identificar grupo/subgrupo), descricao e analitica (Sim/Não).
 
 export interface PlanoContasItem {
   cr: string;
+  conta: string;
   descricao: string;
+  analitica: boolean;
 }
 
 export interface PlanoContasParsed {
   items: PlanoContasItem[];
 }
+
+export const parseAnalitica = (value: unknown): boolean => {
+  const raw = String(value ?? "").trim().toLowerCase();
+  if (!raw) return true;
+  if (["nao", "não", "n", "false", "0", "sintetica", "sintética", "sint"].includes(raw)) return false;
+  return true;
+};
 
 const codigoAliases = (codigo: string): string[] => {
   const clean = String(codigo ?? "").trim().replace(/\s+/g, "");
@@ -35,10 +44,16 @@ export const parsePlanoContas = (conteudo: string | null | undefined): PlanoCont
 
     if (parsed && !Array.isArray(parsed) && Array.isArray(parsed.items)) {
       const items: PlanoContasItem[] = parsed.items
-        .map((i: any) => ({
-          cr: String(i.cr ?? i.codigo_reduzido ?? i.codigo ?? i.codigo_completo ?? "").trim(),
-          descricao: String(i.descricao ?? "").trim(),
-        }))
+        .map((i: any) => {
+          const cr = String(i.cr ?? i.codigo_reduzido ?? i.codigo ?? "").trim();
+          const conta = String(i.conta ?? i.codigo_completo ?? "").trim();
+          return {
+            cr: cr || conta,
+            conta,
+            descricao: String(i.descricao ?? "").trim(),
+            analitica: i.analitica === undefined ? true : parseAnalitica(i.analitica),
+          };
+        })
         .filter((i: PlanoContasItem) => i.cr);
       return { items };
     }
@@ -47,7 +62,9 @@ export const parsePlanoContas = (conteudo: string | null | undefined): PlanoCont
       const items: PlanoContasItem[] = parsed
         .map((i: any) => ({
           cr: String(i.codigo ?? "").trim(),
+          conta: "",
           descricao: String(i.descricao ?? "").trim(),
+          analitica: true,
         }))
         .filter((i) => i.cr);
       return { items };
@@ -57,8 +74,9 @@ export const parsePlanoContas = (conteudo: string | null | undefined): PlanoCont
     const items: PlanoContasItem[] = [];
     for (const item of arr) {
       const cr = String(item["Codigo reduzido"] || item["codigo_reduzido"] || item["CR"] || item["C.R."] || "").trim();
+      const conta = String(item["Conta"] || item["conta"] || "").trim();
       const descricao = String(item["Descrição"] || item["descricao"] || item["Descrição da conta"] || "").trim();
-      if (cr) items.push({ cr, descricao });
+      if (cr) items.push({ cr, conta, descricao, analitica: parseAnalitica(item["Analitica"] ?? item["Analítica"]) });
     }
     return { items };
   } catch {
@@ -66,13 +84,18 @@ export const parsePlanoContas = (conteudo: string | null | undefined): PlanoCont
   }
 };
 
-/** Map do CR (com aliases de formatação) → descrição. */
+/** Map dos códigos (CR e conta completa, com aliases de formatação) → descrição. */
 export const buildPlanoMap = (items: PlanoContasItem[]): Record<string, string> => {
   const map: Record<string, string> = {};
-  for (const it of items) {
-    for (const alias of codigoAliases(it.cr)) {
-      if (alias && !map[alias]) map[alias] = it.descricao;
+  const add = (codigo: string, descricao: string) => {
+    if (!codigo || !descricao) return;
+    for (const alias of codigoAliases(codigo)) {
+      if (alias && !map[alias]) map[alias] = descricao;
     }
+  };
+  for (const it of items) {
+    add(it.cr, it.descricao);
+    add(it.conta, it.descricao);
   }
   return map;
 };
@@ -87,17 +110,40 @@ export const lookupPlanoDescricao = (map: Record<string, string>, codigo: string
 };
 
 /**
- * Versão compacta para mandar à IA: apenas CR + descrição.
- * A IA deve usar exclusivamente o CR — não existe mais código completo.
+ * Regras fixas de leitura do plano de contas — injetar no prompt de QUALQUER
+ * função de IA que gere lançamentos (folha, despesas, compras, faturamento, etc.).
+ */
+export const PLANO_CONTAS_RULES = `[REGRAS DO PLANO DE CONTAS — OBRIGATÓRIAS]
+O plano de contas vem no formato: CONTA | CR | DESCRIÇÃO | ANALÍTICA
+- CR (código reduzido) é o ÚNICO código que pode ser usado em conta_debito e conta_credito. NUNCA use o código completo (CONTA) como conta do lançamento.
+- CONTA (código completo) serve APENAS para você entender a qual grupo/subgrupo a conta pertence, pelo primeiro dígito:
+  1 = ativo
+  2 = passivo
+  3 = receita
+  4 = despesa
+  6 = resultados
+- Use o grupo para manter a coerência contábil (ex.: despesa (4) normalmente a débito, receita (3) a crédito, obrigações (2) a crédito).
+- Só é permitido lançar em contas ANALÍTICA = Sim. Contas com ANALÍTICA = Não são sintéticas (agrupadoras) e servem apenas como contexto de agrupamento — nunca as use em um lançamento.
+- Nenhum código é fixo: escolha sempre pela semântica dentro do plano de contas DESTA empresa.`;
+
+/**
+ * Versão compacta para mandar à IA: CONTA | CR | DESCRIÇÃO | ANALÍTICA.
  */
 export const planoContasForAI = (conteudo: string | null | undefined): {
   text: string;
-  json: { codigo: string; descricao: string }[];
+  json: { conta: string; codigo: string; descricao: string; analitica: boolean }[];
+  rules: string;
 } => {
   const { items } = parsePlanoContas(conteudo);
   const rows = items
-    .map((it) => ({ codigo: it.cr, descricao: it.descricao }))
+    .map((it) => ({
+      conta: it.conta || "",
+      codigo: it.cr,
+      descricao: it.descricao,
+      analitica: it.analitica !== false,
+    }))
     .filter((r) => r.codigo);
-  const text = rows.map((r) => `${r.codigo} - ${r.descricao}`).join("\n");
-  return { text, json: rows };
+  const header = "CONTA | CR | DESCRIÇÃO | ANALÍTICA";
+  const text = [header, ...rows.map((r) => `${r.conta || "-"} | ${r.codigo} | ${r.descricao} | ${r.analitica ? "Sim" : "Não"}`)].join("\n");
+  return { text, json: rows, rules: PLANO_CONTAS_RULES };
 };
