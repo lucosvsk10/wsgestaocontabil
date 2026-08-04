@@ -33,6 +33,7 @@ import * as XLSX from "xlsx";
 import {
   parsePlanoContasContent,
   serializePlanoContas,
+  parseAnalitica,
   type PlanoContasItem,
 } from "@/lib/planoContas";
 
@@ -47,8 +48,10 @@ interface PendingImport {
   headers: string[];
   headerRowIdx: number;
   rows: any[][];
+  contaIdx: number;
   crIdx: number;
   descricaoIdx: number;
+  analiticaIdx: number;
   autoDetected: boolean;
 }
 
