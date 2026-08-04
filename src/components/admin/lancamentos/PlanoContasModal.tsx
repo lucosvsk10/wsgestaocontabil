@@ -372,6 +372,27 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Conta (código completo)</label>
+                  <Select
+                    value={String(pendingImport.contaIdx)}
+                    onValueChange={(v) =>
+                      setPendingImport((prev) => (prev ? { ...prev, contaIdx: parseInt(v) } : null))
+                    }
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="-1">(não existe na planilha)</SelectItem>
+                      {pendingImport.headers.map((h, i) => (
+                        <SelectItem key={i} value={String(i)}>
+                          Coluna {i + 1}: {h || "(vazio)"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1.5 block">C.R. (reduzido)</label>
                   <Select
                     value={String(pendingImport.crIdx)}
@@ -403,6 +424,27 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      {pendingImport.headers.map((h, i) => (
+                        <SelectItem key={i} value={String(i)}>
+                          Coluna {i + 1}: {h || "(vazio)"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Analítica (Sim/Não)</label>
+                  <Select
+                    value={String(pendingImport.analiticaIdx)}
+                    onValueChange={(v) =>
+                      setPendingImport((prev) => (prev ? { ...prev, analiticaIdx: parseInt(v) } : null))
+                    }
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="-1">(não existe — usar Sim para todas)</SelectItem>
                       {pendingImport.headers.map((h, i) => (
                         <SelectItem key={i} value={String(i)}>
                           Coluna {i + 1}: {h || "(vazio)"}
