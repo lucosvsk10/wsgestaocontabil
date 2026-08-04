@@ -326,13 +326,15 @@ export const PlanoContasModal = ({ isOpen, onClose, clientId, clientName }: Plan
 
   const previewRows = useMemo(() => {
     if (!pendingImport) return [];
-    const { rows, headerRowIdx, crIdx, descricaoIdx } = pendingImport;
-    const preview: { cr: string; descricao: string }[] = [];
+    const { rows, headerRowIdx, crIdx, descricaoIdx, contaIdx, analiticaIdx } = pendingImport;
+    const preview: { cr: string; conta: string; descricao: string; analitica: boolean }[] = [];
     for (let i = headerRowIdx + 1; i < Math.min(headerRowIdx + 6, rows.length); i++) {
       const row = rows[i];
       preview.push({
         cr: String(row[crIdx] || "").trim(),
+        conta: contaIdx >= 0 ? String(row[contaIdx] || "").trim() : "",
         descricao: String(row[descricaoIdx] || "").trim(),
+        analitica: analiticaIdx >= 0 ? parseAnalitica(row[analiticaIdx]) : true,
       });
     }
     return preview;
