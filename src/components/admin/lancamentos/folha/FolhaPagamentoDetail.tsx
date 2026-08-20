@@ -19,6 +19,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 interface FolhaPagamentoDetailProps {
   clientId: string;
   clientName: string;
+  competencia?: string;
 }
 
 interface FolhaUpload {
@@ -52,12 +53,14 @@ const MONTHS = [
 
 const FUNCTIONS_BASE = "https://nadtoitgkukzbghtbohm.supabase.co/functions/v1";
 
-export const FolhaPagamentoDetail = ({ clientId, clientName }: FolhaPagamentoDetailProps) => {
+export const FolhaPagamentoDetail = ({ clientId, clientName, competencia: controlledCompetencia }: FolhaPagamentoDetailProps) => {
   const navigate = useNavigate();
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(String(now.getMonth() + 1).padStart(2, "0"));
   const [selectedYear, setSelectedYear] = useState(String(now.getFullYear()));
-  const competencia = `${selectedYear}-${selectedMonth}`;
+  const competencia = controlledCompetencia || `${selectedYear}-${selectedMonth}`;
+  const displayMonth = competencia.slice(5, 7);
+  const displayYear = competencia.slice(0, 4);
   const currentYear = now.getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => String(currentYear - 2 + i));
 
@@ -197,7 +200,7 @@ export const FolhaPagamentoDetail = ({ clientId, clientName }: FolhaPagamentoDet
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-card rounded-xl border border-border overflow-hidden">
       <div className="p-5 border-b border-border flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2">
+        {!controlledCompetencia && <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-muted-foreground" />
           <Select value={selectedMonth} onValueChange={setSelectedMonth}>
             <SelectTrigger className="w-[140px] h-9"><SelectValue /></SelectTrigger>
@@ -207,7 +210,7 @@ export const FolhaPagamentoDetail = ({ clientId, clientName }: FolhaPagamentoDet
             <SelectTrigger className="w-[100px] h-9"><SelectValue /></SelectTrigger>
             <SelectContent>{years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
           </Select>
-        </div>
+        </div>}
         <div className="ml-auto flex items-center gap-2">
           <Button size="sm" variant="outline" onClick={fetchData} className="h-9">
             <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Atualizar
@@ -234,7 +237,7 @@ export const FolhaPagamentoDetail = ({ clientId, clientName }: FolhaPagamentoDet
           <p className="text-sm font-medium text-foreground">
             {uploading ? "Enviando..." : isDragActive ? "Solte os PDFs aqui" : "Arraste PDFs da folha ou clique para selecionar"}
           </p>
-          <p className="text-xs text-muted-foreground mt-1">Processamento inicia automaticamente • {clientName} • {selectedMonth}/{selectedYear}</p>
+          <p className="text-xs text-muted-foreground mt-1">Processamento inicia automaticamente • {clientName} • {displayMonth}/{displayYear}</p>
         </div>
 
         <div>

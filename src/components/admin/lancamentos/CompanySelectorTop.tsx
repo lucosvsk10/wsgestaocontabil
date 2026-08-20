@@ -22,28 +22,28 @@ export const CompanySelectorTop = ({
   };
 
   return (
-    <div className="flex justify-center">
+    <div className="flex min-w-0">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="group flex items-center gap-3 px-6 py-3 rounded-xl bg-card hover:bg-muted/50 transition-all shadow-sm min-w-[280px] max-w-md"
+            className="group flex h-11 min-w-[260px] max-w-md items-center gap-3 border border-border bg-background px-3 transition-colors hover:bg-muted/40"
           >
-            <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center border border-border">
               <Building2 className="w-4 h-4 text-muted-foreground" />
             </div>
             <div className="flex-1 text-left">
-              <p className="text-[11px] text-muted-foreground uppercase tracking-wide">
+              <p className="text-[9px] text-muted-foreground uppercase tracking-[0.12em]">
                 Empresa
               </p>
-              <p className="text-sm font-medium text-foreground truncate">
+              <p className="text-xs font-medium text-foreground truncate">
                 {selectedClientName || "Selecionar empresa"}
               </p>
             </div>
             <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-[380px] p-0" align="center">
+        <PopoverContent className="w-[380px] p-0" align="end">
           <ClientStatusList
             selectedClientId={selectedClientId}
             onSelectClient={handleSelect}

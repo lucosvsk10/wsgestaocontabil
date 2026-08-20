@@ -75,18 +75,27 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { user_id, competencia, file_url, file_name, event, document_id } = await req.json();
+    const {
+      user_id,
+      competencia,
+      file_url,
+      file_name,
+      event,
+      document_id,
+      tipo_documento: requestedDocumentType,
+    } = await req.json();
 
     console.log(`Processing document: ${file_name} for user ${user_id}`);
 
     // Find or validate document
     let docId = document_id;
     let storagePath = file_url;
+    let storedDocumentType: string | null = null;
 
     if (!docId) {
       const { data: doc, error: docError } = await supabase
         .from('documentos_brutos')
-        .select('id, url_storage, tentativas_processamento')
+        .select('id, url_storage, tentativas_processamento, tipo_documento')
         .eq('user_id', user_id)
         .eq('competencia', competencia)
         .eq('url_storage', file_url)
@@ -101,10 +110,11 @@ serve(async (req) => {
       }
       docId = doc.id;
       storagePath = doc.url_storage;
+      storedDocumentType = doc.tipo_documento;
     } else {
       const { data: doc, error: docError } = await supabase
         .from('documentos_brutos')
-        .select('url_storage')
+        .select('url_storage, tipo_documento')
         .eq('id', docId)
         .single();
 
@@ -115,6 +125,7 @@ serve(async (req) => {
         });
       }
       storagePath = doc.url_storage;
+      storedDocumentType = doc.tipo_documento;
     }
 
     // Generate signed URL
@@ -133,6 +144,7 @@ serve(async (req) => {
     const freshSignedUrl = signedUrlData.signedUrl;
     const ext = (file_name || '').split('.').pop()?.toLowerCase() || '';
     const isPdf = ext === 'pdf';
+    const documentType = requestedDocumentType || storedDocumentType || (isPdf ? 'pdf' : 'arquivo');
 
     // Parse tabular file content
     let fileContent: string | null = null;
@@ -182,6 +194,7 @@ serve(async (req) => {
           file_type: ext,
           storage_path: storagePath,
           file_name,
+          tipo_documento: documentType,
           timestamp: new Date().toISOString()
         })
       });
@@ -202,7 +215,7 @@ serve(async (req) => {
           status_processamento: 'concluido',
           processado_em: new Date().toISOString(),
           dados_extraidos: dadosExtraidos,
-          tipo_documento: isPdf ? 'pdf' : undefined,
+          tipo_documento: documentType,
           tentativas_processamento: 0,
           status_alinhamento: 'pendente'
         })
@@ -272,7 +285,7 @@ serve(async (req) => {
             user_name: userInfo?.name,
             user_email: userInfo?.email,
             competencia,
-            tipo_documento: 'pdf',
+            tipo_documento: documentType,
             nome_arquivo: file_name,
             dados_extraidos: dadosExtraidos,
             file_url: alignSignedUrl?.signedUrl || freshSignedUrl,

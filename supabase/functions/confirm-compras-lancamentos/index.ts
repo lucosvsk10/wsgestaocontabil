@@ -13,17 +13,6 @@ const lastDayOfCompetencia = (competencia: string): string | null => {
   return `${m[1]}-${m[2]}-${String(lastDay).padStart(2, "0")}`;
 };
 
-const CFOP_RULES: Record<string, { debito: string; credito: string }> = {
-  "1101": { debito: "493", credito: "777" },
-  "2101": { debito: "493", credito: "777" },
-  "1407": { debito: "494", credito: "777" },
-  "1556": { debito: "494", credito: "777" },
-  "2407": { debito: "494", credito: "777" },
-  "2556": { debito: "494", credito: "777" },
-  "1102": { debito: "486", credito: "777" },
-  "2102": { debito: "486", credito: "777" },
-};
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
@@ -40,11 +29,25 @@ Deno.serve(async (req) => {
     if (upErr || !up) throw new Error("Upload não encontrado");
 
     const cfopsLinhas = [...new Set(linhas.map((l: any) => String(l.cfop)).filter(Boolean))];
-    const faltando = cfopsLinhas.filter((c) => !CFOP_RULES[c]);
+    const { data: mappingRows, error: mappingError } = await supa
+      .from("compras_cfop_mapping")
+      .select("cfop, conta_debito, conta_credito")
+      .eq("client_id", up.client_id)
+      .eq("ativo_padrao", true)
+      .in("cfop", cfopsLinhas);
+    if (mappingError) throw mappingError;
+
+    const mappings = new Map(
+      (mappingRows || []).map((row: any) => [
+        String(row.cfop),
+        { debito: String(row.conta_debito), credito: String(row.conta_credito) },
+      ]),
+    );
+    const faltando = cfopsLinhas.filter((cfop) => !mappings.has(cfop));
     if (faltando.length) {
       return new Response(JSON.stringify({
-        error: "cfop_nao_suportado",
-        message: `CFOP(s) não suportado(s) para lançamento de compras: ${faltando.join(", ")}. Desmarque essas linhas.`,
+        error: "mapeamento_necessario",
+        message: `Defina as contas de débito e crédito para o(s) CFOP(s): ${faltando.join(", ")}.`,
         cfops_faltando: faltando,
       }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -60,7 +63,7 @@ Deno.serve(async (req) => {
     const rows = linhas
       .filter((l: any) => Number(l.vr_contabil) > 0)
       .map((l: any, idx: number) => {
-        const rule = CFOP_RULES[String(l.cfop)];
+        const rule = mappings.get(String(l.cfop))!;
         const desc = String(l.descricao || "").toUpperCase().trim();
         return {
           client_id: up.client_id,

@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { fetchPlanoContas, type PlanoContasItem } from "@/lib/planoContas";
 
 const MONTHS = [
   { value: "01", label: "Janeiro" }, { value: "02", label: "Fevereiro" },
@@ -31,6 +32,7 @@ const formatBRL = (v: number | null) =>
 interface Props {
   clientId: string;
   clientName: string;
+  competencia?: string;
 }
 
 interface Linha {
@@ -60,12 +62,19 @@ interface ComprasLancamento {
   valor: number | null;
 }
 
-export const ComprasDetail = ({ clientId, clientName }: Props) => {
+interface CfopMapping {
+  debito: string;
+  credito: string;
+}
+
+export const ComprasDetail = ({ clientId, clientName, competencia: controlledCompetencia }: Props) => {
   const navigate = useNavigate();
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(String(now.getMonth() + 1).padStart(2, "0"));
   const [selectedYear, setSelectedYear] = useState(String(now.getFullYear()));
-  const competencia = `${selectedYear}-${selectedMonth}`;
+  const competencia = controlledCompetencia || `${selectedYear}-${selectedMonth}`;
+  const displayMonth = competencia.slice(5, 7);
+  const displayYear = competencia.slice(0, 4);
   const years = Array.from({ length: 5 }, (_, i) => String(now.getFullYear() - 2 + i));
 
   const [uploads, setUploads] = useState<ComprasUpload[]>([]);
@@ -76,6 +85,31 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [editedLinhas, setEditedLinhas] = useState<Record<string, Linha[]>>({});
   const [selectionUploadId, setSelectionUploadId] = useState<string | null>(null);
+  const [planoContas, setPlanoContas] = useState<PlanoContasItem[]>([]);
+  const [cfopMappings, setCfopMappings] = useState<Record<string, CfopMapping>>({});
+
+  const loadMappings = useCallback(async () => {
+    const [plan, { data: mappings }] = await Promise.all([
+      fetchPlanoContas(clientId),
+      supabase
+        .from("compras_cfop_mapping")
+        .select("cfop, conta_debito, conta_credito")
+        .eq("client_id", clientId),
+    ]);
+    setPlanoContas(
+      plan.items
+        .filter((item) => item.analitica)
+        .sort((a, b) => a.cr.localeCompare(b.cr, undefined, { numeric: true }))
+    );
+    setCfopMappings(
+      Object.fromEntries(
+        (mappings || []).map((mapping) => [
+          mapping.cfop,
+          { debito: mapping.conta_debito, credito: mapping.conta_credito },
+        ])
+      )
+    );
+  }, [clientId]);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -104,6 +138,7 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
   }, [clientId, competencia]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { void loadMappings(); }, [loadMappings]);
 
   const processUpload = useCallback(async (uploadId: string): Promise<Linha[] | null> => {
     setProcessingId(uploadId);
@@ -181,14 +216,30 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
   const handleConfirm = async (uploadId: string) => {
     const linhas = (editedLinhas[uploadId] || []).filter((l) => l.selecionado && l.vr_contabil > 0);
     if (!linhas.length) { toast.error("Selecione pelo menos uma linha"); return; }
-    const CFOPS_OK = new Set(["1101","2101","1102","2102","1407","1556","2407","2556"]);
-    const semMap = linhas.filter((l) => !CFOPS_OK.has(String(l.cfop)));
+    const semMap = linhas.filter((l) => {
+      const mapping = cfopMappings[String(l.cfop)];
+      return !mapping?.debito || !mapping?.credito;
+    });
     if (semMap.length) {
-      toast.error(`CFOP(s) não suportado(s): ${[...new Set(semMap.map(l => l.cfop))].join(", ")}. Desmarque essas linhas.`);
+      toast.error(`Defina débito e crédito para o(s) CFOP(s): ${[...new Set(semMap.map(l => l.cfop))].join(", ")}.`);
       return;
     }
     setConfirmingId(uploadId);
     try {
+      const mappingsToSave = [...new Map(linhas.map((linha) => [String(linha.cfop), linha])).values()]
+        .map((linha) => ({
+          client_id: clientId,
+          cfop: String(linha.cfop),
+          descricao: linha.descricao,
+          conta_debito: cfopMappings[String(linha.cfop)].debito,
+          conta_credito: cfopMappings[String(linha.cfop)].credito,
+          ativo_padrao: true,
+        }));
+      const { error: mappingError } = await supabase
+        .from("compras_cfop_mapping")
+        .upsert(mappingsToSave, { onConflict: "client_id,cfop" });
+      if (mappingError) throw mappingError;
+
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch(
         "https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/confirm-compras-lancamentos",
@@ -235,6 +286,17 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
     }));
   };
 
+  const updateMapping = (cfop: string, field: keyof CfopMapping, value: string) => {
+    setCfopMappings((previous) => ({
+      ...previous,
+      [cfop]: {
+        debito: previous[cfop]?.debito || "",
+        credito: previous[cfop]?.credito || "",
+        [field]: value,
+      },
+    }));
+  };
+
   const statusBadge = (s: string) => {
     if (s === "lancado") return <Badge className="bg-emerald-500/10 text-emerald-700 border-0"><CheckCircle2 className="w-3 h-3 mr-1" />Lançado</Badge>;
     if (s === "processado") return <Badge className="bg-blue-500/10 text-blue-700 border-0"><CheckCircle2 className="w-3 h-3 mr-1" />Processado</Badge>;
@@ -247,7 +309,7 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
     <>
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-card rounded-xl border border-border overflow-hidden">
         <div className="p-5 border-b border-border flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
+          {!controlledCompetencia && <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-muted-foreground" />
             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
               <SelectTrigger className="w-[140px] h-9"><SelectValue /></SelectTrigger>
@@ -257,7 +319,7 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
               <SelectTrigger className="w-[100px] h-9"><SelectValue /></SelectTrigger>
               <SelectContent>{years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
             </Select>
-          </div>
+          </div>}
           <div className="ml-auto flex items-center gap-2">
             <Button size="sm" variant="outline" onClick={fetchData} className="h-9">
               <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Atualizar
@@ -279,7 +341,7 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
             <p className="text-sm font-medium text-foreground">
               {uploading ? "Enviando..." : isDragActive ? "Solte os PDFs aqui" : "Arraste o Registro de Entradas (PDF) ou clique para selecionar"}
             </p>
-            <p className="text-xs text-muted-foreground mt-1">Apenas PDF • {clientName} • {selectedMonth}/{selectedYear}</p>
+            <p className="text-xs text-muted-foreground mt-1">Apenas PDF • {clientName} • {displayMonth}/{displayYear}</p>
           </div>
 
           {isLoading ? (
@@ -376,11 +438,11 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
 
 
       <Dialog open={!!selectionUploadId} onOpenChange={(o) => !o && setSelectionUploadId(null)}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-6xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Selecione as linhas a lançar</DialogTitle>
             <DialogDescription>
-              Itens pré-marcados seguem o mapeamento padrão de CFOPs. Ajuste se necessário e confirme para gerar os lançamentos.
+              Selecione as operações e confirme as contas desta empresa. O mapeamento será reutilizado nas próximas competências.
             </DialogDescription>
           </DialogHeader>
           {selectionUploadId && (() => {
@@ -399,6 +461,8 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
                         </TableHead>
                         <TableHead className="w-[80px]">CFOP</TableHead>
                         <TableHead>Descrição</TableHead>
+                        <TableHead className="min-w-[210px]">Débito</TableHead>
+                        <TableHead className="min-w-[210px]">Crédito</TableHead>
                         <TableHead className="text-right w-[150px]">Vr. Contábil (R$)</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -411,6 +475,42 @@ export const ComprasDetail = ({ clientId, clientName }: Props) => {
                             </TableCell>
                             <TableCell className="font-mono text-xs">{l.cfop}</TableCell>
                             <TableCell className="text-sm">{l.descricao}</TableCell>
+                            <TableCell>
+                              <Select
+                                value={cfopMappings[String(l.cfop)]?.debito || undefined}
+                                onValueChange={(value) => updateMapping(String(l.cfop), "debito", value)}
+                                disabled={!l.selecionado}
+                              >
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="Selecionar conta" />
+                                </SelectTrigger>
+                                <SelectContent className="max-h-[300px]">
+                                  {planoContas.map((conta) => (
+                                    <SelectItem key={`d-${conta.cr}`} value={conta.cr}>
+                                      {conta.cr} — {conta.descricao}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell>
+                              <Select
+                                value={cfopMappings[String(l.cfop)]?.credito || undefined}
+                                onValueChange={(value) => updateMapping(String(l.cfop), "credito", value)}
+                                disabled={!l.selecionado}
+                              >
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="Selecionar conta" />
+                                </SelectTrigger>
+                                <SelectContent className="max-h-[300px]">
+                                  {planoContas.map((conta) => (
+                                    <SelectItem key={`c-${conta.cr}`} value={conta.cr}>
+                                      {conta.cr} — {conta.descricao}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
                             <TableCell className="text-right font-mono text-sm">{formatBRL(l.vr_contabil)}</TableCell>
                           </TableRow>
                         );

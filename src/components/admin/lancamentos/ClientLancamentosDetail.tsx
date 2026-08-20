@@ -63,6 +63,7 @@ interface CloseMonthStatus {
 
 interface ClientLancamentosDetailProps {
   clientId: string;
+  competencia?: string;
 }
 
 const MONTHS = [
@@ -82,7 +83,7 @@ const MONTHS = [
 
 const MONTH_NAMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
-export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailProps) => {
+export const ClientLancamentosDetail = ({ clientId, competencia: controlledCompetencia }: ClientLancamentosDetailProps) => {
   const [clientInfo, setClientInfo] = useState<ClientInfo | null>(null);
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [documents, setDocuments] = useState<DocumentoBruto[]>([]);
@@ -111,7 +112,7 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(String(now.getMonth() + 1).padStart(2, '0'));
   const [selectedYear, setSelectedYear] = useState(String(now.getFullYear()));
-  const competencia = `${selectedYear}-${selectedMonth}`;
+  const competencia = controlledCompetencia || `${selectedYear}-${selectedMonth}`;
   
   const currentYear = now.getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => String(currentYear - 2 + i));
@@ -138,13 +139,28 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
         .eq('user_id', clientId)
         .eq('competencia', competencia)
         .order('data', { ascending: true });
-      setLancamentos(lancamentosData || []);
+
+      const { data: faturamentoDocuments } = await supabase
+        .from('documentos_brutos')
+        .select('id')
+        .eq('user_id', clientId)
+        .eq('competencia', competencia)
+        .eq('tipo_documento', 'faturamento');
+      const faturamentoDocumentIds = new Set((faturamentoDocuments || []).map(document => document.id));
+      setLancamentos(
+        (lancamentosData || []).filter(
+          lancamento =>
+            !lancamento.documento_origem_id ||
+            !faturamentoDocumentIds.has(lancamento.documento_origem_id)
+        )
+      );
 
       const { data: docsData } = await supabase
         .from('documentos_brutos')
         .select('id, nome_arquivo, status_processamento, status_alinhamento, ultimo_erro, tentativas_alinhamento')
         .eq('user_id', clientId)
-        .eq('competencia', competencia);
+        .eq('competencia', competencia)
+        .or('tipo_documento.is.null,tipo_documento.neq.faturamento');
       setDocuments(docsData || []);
 
       const { data: fechamentoData } = await supabase
@@ -420,7 +436,7 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
   };
 
   const formatMonth = () => {
-    return MONTH_NAMES[parseInt(selectedMonth) - 1];
+    return MONTH_NAMES[parseInt(competencia.slice(5, 7)) - 1];
   };
 
   
@@ -492,7 +508,7 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
         </div>
 
         {/* Seletores */}
-        <div className="flex flex-wrap items-center gap-3">
+        {!controlledCompetencia && <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Calendar className="w-4 h-4" />
             <span>Competência:</span>
@@ -517,7 +533,7 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
               ))}
             </SelectContent>
           </Select>
-        </div>
+        </div>}
       </div>
 
       {/* Fechamento Status ou Botão para Fechar */}

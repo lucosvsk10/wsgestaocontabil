@@ -21,6 +21,7 @@ interface AdminDocumentUploadAreaProps {
   competencia: string;
   monthLabel: string;
   onUploadComplete: () => void;
+  documentType?: "despesas" | "faturamento";
 }
 
 export const AdminDocumentUploadArea = ({
@@ -29,6 +30,7 @@ export const AdminDocumentUploadArea = ({
   competencia,
   monthLabel,
   onUploadComplete,
+  documentType = "despesas",
 }: AdminDocumentUploadAreaProps) => {
   const [files, setFiles] = useState<FileWithMeta[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -92,7 +94,7 @@ export const AdminDocumentUploadArea = ({
       try {
         const fileExt = fileData.file.name.split(".").pop();
         const fileName = `${Date.now()}_${uuidv4().slice(0, 8)}.${fileExt}`;
-        const storagePath = `${clientId}/${competencia}/${fileName}`;
+        const storagePath = `${clientId}/${competencia}/${documentType}/${fileName}`;
 
         // Upload to storage
         const { error: uploadError } = await supabase.storage
@@ -113,6 +115,7 @@ export const AdminDocumentUploadArea = ({
             competencia,
             nome_arquivo: fileData.file.name,
             url_storage: storagePath,
+            tipo_documento: documentType,
             status_processamento: "nao_processado",
             status_alinhamento: "pendente",
           })
@@ -143,6 +146,7 @@ export const AdminDocumentUploadArea = ({
               file_name: fileData.file.name,
               event: "arquivos-brutos",
               document_id: docData.id,
+              tipo_documento: documentType,
             }),
           }
         );
