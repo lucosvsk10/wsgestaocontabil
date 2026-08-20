@@ -50,8 +50,6 @@ export const DeleteUserDialog = ({ open, onOpenChange, authUser, onSuccess }: De
       // 4. Delete document-related records
       await supabase.from('processed_documents').delete().eq('user_id', authUser.id);
       await supabase.from('uploads').delete().eq('user_id', authUser.id);
-      await supabase.from('month_closures').delete().eq('user_id', authUser.id);
-      
       // 5. Delete documents (critical - may have storage files)
       const { error: documentsError } = await supabase
         .from('documents')
@@ -100,12 +98,12 @@ export const DeleteUserDialog = ({ open, onOpenChange, authUser, onSuccess }: De
 
       onOpenChange(false);
       onSuccess();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao excluir usuário:', error);
       toast({
         variant: "destructive",
         title: "Erro ao excluir usuário",
-        description: error.message
+        description: error instanceof Error ? error.message : "Não foi possível excluir o usuário"
       });
     } finally {
       setIsDeleting(false);

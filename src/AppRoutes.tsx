@@ -18,10 +18,6 @@ import { CompanyDataView } from "./components/admin/company/CompanyDataView";
 import SimpleCarouselManager from '@/components/admin/carousel/SimpleCarouselManager';
 import { AdminLayout } from '@/components/admin/layout/AdminLayout';
 import AdminLancamentos from "./pages/AdminLancamentos";
-import AdminLancamentosExport from "./pages/AdminLancamentosExport";
-import AdminFolhaEditor from "./pages/AdminFolhaEditor";
-import AdminComprasEditor from "./pages/AdminComprasEditor";
-import ClientLancamentos from "./pages/ClientLancamentos";
 
 const AppRoutes = () => {
   const { userData, user } = useAuth();
@@ -132,24 +128,6 @@ const AppRoutes = () => {
         </PrivateRoute>
       } />
 
-      <Route path="/admin/lancamentos/:clientId/exportar/:modo" element={
-        <PrivateRoute requiredRole="admin">
-          <AdminLancamentosExport />
-        </PrivateRoute>
-      } />
-
-      <Route path="/admin/lancamentos/folha/:clientId/editar" element={
-        <PrivateRoute requiredRole="admin">
-          <AdminFolhaEditor />
-        </PrivateRoute>
-      } />
-
-      <Route path="/admin/lancamentos/compras/:clientId/editar" element={
-        <PrivateRoute requiredRole="admin">
-          <AdminComprasEditor />
-        </PrivateRoute>
-      } />
-      
       {/* Client routes */}
       <Route path="/client/*" element={
         <PrivateRoute>
