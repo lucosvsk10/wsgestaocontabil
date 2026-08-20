@@ -26,21 +26,15 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
   return (
     <Link 
       to={to} 
-      className={`flex items-center space-x-4 px-6 py-4 rounded-lg transition-all duration-300 ease-in-out group ${
+      className={`flex items-center gap-3 px-4 py-2.5 rounded-sm transition-colors duration-200 group ${
         active 
-          ? "bg-[#efc349]/10 text-[#efc349] border-l-4 border-[#efc349]" 
-          : "text-gray-700 dark:text-white/80 hover:bg-gray-100 dark:hover:bg-[#efc349]/5 hover:text-[#020817] dark:hover:text-[#efc349]"
+          ? "bg-muted text-foreground border-l-2 border-foreground/60" 
+          : "text-muted-foreground border-l-2 border-transparent hover:bg-muted/60 hover:text-foreground"
       }`} 
       onClick={onClick}
     >
-      <div className={`transition-all duration-300 ${
-        active 
-          ? "text-[#efc349] scale-110" 
-          : "text-gray-500 dark:text-white/70 group-hover:text-[#efc349] group-hover:scale-105"
-      }`}>
-        <Icon size={20} />
-      </div>
-      <span className="tracking-wide text-sm font-extralight">{label}</span>
+      <Icon size={18} strokeWidth={1.75} />
+      <span className="text-sm font-medium tracking-tight">{label}</span>
     </Link>
   );
 };
