@@ -46,7 +46,7 @@ interface AdminSidebarProps {
 
 const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
   const { theme } = useTheme();
-  const { sidebarItems, currentPath } = useAdminSidebarNavigation();
+  const { sidebarSections, currentPath } = useAdminSidebarNavigation();
   
   // Use the custom hook for sidebar handlers
   useSidebarHandlers({ 
@@ -122,39 +122,58 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
       </div>
       
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-8 px-3 space-y-2">
-        {sidebarItems.map(item => (
-          <div key={item.label}>
-            {(open || isMobile) ? (
-              <SidebarItem 
-                icon={item.icon} 
-                label={item.label} 
-                active={item.active} 
-                to={item.to} 
-                onClick={isMobile ? onClose : undefined}
-              />
-            ) : (
-              <div 
-                className={`flex justify-center p-4 rounded-lg transition-all duration-300 hover:scale-110 ${
-                  item.active 
-                    ? "bg-[#efc349]/10 border-l-4 border-[#efc349]" 
-                    : "hover:bg-gray-100 dark:hover:bg-[#efc349]/10"
-                }`} 
-                title={item.label}
-              >
-                <Link 
-                  to={item.to} 
-                  className={`transition-colors duration-300 ${
-                    item.active 
-                      ? "text-[#efc349]" 
-                      : "text-gray-500 dark:text-white/70 hover:text-[#efc349]"
-                  }`}
-                >
-                  <item.icon size={20} />
-                </Link>
-              </div>
+      <nav className={`flex-1 overflow-y-auto px-3 py-6 ${open || isMobile ? "space-y-6" : "space-y-3"}`}>
+        {sidebarSections.map((section, sectionIndex) => (
+          <section
+            key={section.title}
+            className={
+              !open && !isMobile && sectionIndex > 0
+                ? "border-t border-gray-100 pt-3 dark:border-white/10"
+                : undefined
+            }
+          >
+            {(open || isMobile) && (
+              <p className="mb-2 px-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/65">
+                {section.title}
+              </p>
             )}
-          </div>
+
+            <div className="space-y-1">
+              {section.items.map(item => (
+                <div key={item.label}>
+                  {(open || isMobile) ? (
+                    <SidebarItem
+                      icon={item.icon}
+                      label={item.label}
+                      active={item.active}
+                      to={item.to}
+                      onClick={isMobile ? onClose : undefined}
+                    />
+                  ) : (
+                    <div
+                      className={`flex justify-center rounded-lg p-4 transition-all duration-300 hover:scale-110 ${
+                        item.active
+                          ? "bg-[#efc349]/10 border-l-4 border-[#efc349]"
+                          : "hover:bg-gray-100 dark:hover:bg-[#efc349]/10"
+                      }`}
+                      title={item.label}
+                    >
+                      <Link
+                        to={item.to}
+                        className={`transition-colors duration-300 ${
+                          item.active
+                            ? "text-[#efc349]"
+                            : "text-gray-500 dark:text-white/70 hover:text-[#efc349]"
+                        }`}
+                      >
+                        <item.icon size={20} />
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
         ))}
       </nav>
     </aside>

@@ -18,51 +18,53 @@ export const useAdminSidebarNavigation = () => {
   const location = useLocation();
 
   const getIsActive = (path: string): boolean => {
-    return location.pathname === path;
+    if (path === "/admin") {
+      return location.pathname === "/admin" || location.pathname === "/admin/";
+    }
+
+    return location.pathname.startsWith(path);
   };
 
   const sidebarSections: SidebarSection[] = [
     {
-      title: "Visão geral",
+      title: "Operação contábil",
       items: [
         {
           icon: LayoutDashboard,
           label: "Dashboard",
-          active: getIsActive("/admin") || getIsActive("/admin/"),
+          active: getIsActive("/admin"),
           to: "/admin"
-        }
-      ]
-    },
-    {
-      title: "Contabilidade",
-      items: [
+        },
         {
           icon: FileStack,
           label: "Lançamentos",
-          active: location.pathname.startsWith("/admin/lancamentos"),
+          active: getIsActive("/admin/lancamentos"),
           to: "/admin/lancamentos"
-        },
-        {
-          icon: Calculator,
-          label: "Simulações",
-          active: getIsActive("/admin/simulations"),
-          to: "/admin/simulations"
         },
         {
           icon: Calendar,
           label: "Agenda",
           active: getIsActive("/admin/agenda"),
           to: "/admin/agenda"
+        },
+        {
+          icon: Calculator,
+          label: "Simulações",
+          active: getIsActive("/admin/simulations"),
+          to: "/admin/simulations"
         }
       ]
     },
     {
-      title: "Clientes",
+      title: "Clientes e comunicação",
       items: [
         {
           icon: Users,
           label: "Usuários",
-          active: getIsActive("/admin/users"),
+          active:
+            getIsActive("/admin/users") ||
+            getIsActive("/admin/user-documents") ||
+            getIsActive("/admin/company-data"),
           to: "/admin/users"
         },
         {
@@ -70,12 +72,7 @@ export const useAdminSidebarNavigation = () => {
           label: "Armazenamento",
           active: getIsActive("/admin/storage"),
           to: "/admin/storage"
-        }
-      ]
-    },
-    {
-      title: "Comunicação",
-      items: [
+        },
         {
           icon: Megaphone,
           label: "Anúncios",
@@ -87,18 +84,18 @@ export const useAdminSidebarNavigation = () => {
           label: "Enquetes",
           active: getIsActive("/admin/polls"),
           to: "/admin/polls"
-        },
+        }
+      ]
+    },
+    {
+      title: "Administração",
+      items: [
         {
           icon: Images,
           label: "Carrossel",
           active: getIsActive("/admin/carousel"),
           to: "/admin/carousel"
-        }
-      ]
-    },
-    {
-      title: "Sistema",
-      items: [
+        },
         {
           icon: Wrench,
           label: "Ferramentas",
