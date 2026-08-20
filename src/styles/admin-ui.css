@@ -14,7 +14,7 @@
 }
 
 /* Cantos mais retos */
-.pro-ui [class*='rounded'] {
+.pro-ui [class*="rounded"] {
   border-radius: 0.25rem;
 }
 
@@ -28,51 +28,37 @@
 }
 
 /* Exceções: elementos que precisam continuar circulares/pill */
-.pro-ui [role='progressbar'],
-.pro-ui [role='progressbar'] > *,
-.pro-ui [role='switch'],
-.pro-ui [role='switch'] > span,
+.pro-ui [role="progressbar"],
+.pro-ui [role="progressbar"] > *,
+.pro-ui [role="switch"],
+.pro-ui [role="switch"] > span,
 .pro-ui .animate-spin,
-.pro-ui [class*='loader'] {
+.pro-ui [class*="loader"] {
   border-radius: 9999px;
 }
 
 /* Remoção das bordas douradas */
-.pro-ui [class*='border-[#efc349]'],
-.pro-ui [class*='border-[#F5C441]'],
-.pro-ui [class*='border-gold'],
+.pro-ui [class*="border-[#efc349]"],
+.pro-ui [class*="border-[#F5C441]"],
+.pro-ui [class*="border-gold"],
 .pro-ui .border-gold {
   border-color: hsl(var(--border));
 }
 
-.pro-ui [class*='border-l-4'][class*='#efc349'],
-.pro-ui [class*='border-l-4'][class*='gold'] {
+.pro-ui [class*="border-l-4"][class*="#efc349"],
+.pro-ui [class*="border-l-4"][class*="gold"] {
   border-left-color: hsl(var(--foreground) / 0.55);
 }
 
-.pro-ui [class*='ring-[#efc349]'],
-.pro-ui [class*='ring-gold'] {
+.pro-ui [class*="ring-[#efc349]"],
+.pro-ui [class*="ring-gold"] {
   --tw-ring-color: hsl(var(--border));
 }
 
-.dark .pro-ui [class*='border-[#efc349]'],
-.dark .pro-ui [class*='border-gold'],
+.dark .pro-ui [class*="border-[#efc349]"],
+.dark .pro-ui [class*="border-gold"],
 .dark .pro-ui .border-gold {
   border-color: hsl(0 0% 100% / 0.14);
-}
-
-/*
- * No painel administrativo, o dourado fica restrito à identidade da marca.
- * Títulos, links e ícones de interface usam branco no modo escuro para manter
- * contraste e consistência entre todas as áreas do sistema.
- */
-.dark body:has(.admin-pro-ui) [class*='text-[#efc349]'],
-.dark body:has(.admin-pro-ui) [class*='text-[#EFC349]'],
-.dark body:has(.admin-pro-ui) [class*='text-[#f5c441]'],
-.dark body:has(.admin-pro-ui) [class*='text-[#F5C441]'],
-.dark body:has(.admin-pro-ui) [class*='text-gold'],
-.dark body:has(.admin-pro-ui) [class*='text-yellow-'] {
-  color: hsl(0 0% 100% / 0.94);
 }
 
 /* Divisores e cartões mais discretos */
@@ -90,10 +76,10 @@
 }
 
 /* Ícones sem "chip" de fundo: mantém apenas o ícone */
-.pro-ui .w-10.h-10[class*='bg-'],
-.pro-ui .h-10.w-10[class*='bg-'],
-.pro-ui .w-9.h-9[class*='bg-'],
-.pro-ui .w-8.h-8[class*='bg-'] {
+.pro-ui .w-10.h-10[class*="bg-"],
+.pro-ui .h-10.w-10[class*="bg-"],
+.pro-ui .w-9.h-9[class*="bg-"],
+.pro-ui .w-8.h-8[class*="bg-"] {
   background-color: transparent;
   border: 0;
 }
