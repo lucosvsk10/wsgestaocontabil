@@ -87,23 +87,29 @@ export const SettingsView = () => {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error("Erro ao alterar senha:", error);
-      setPasswordError(error instanceof Error ? error.message : "Não foi possível alterar a senha.");
+      setPasswordError(error.message || "Não foi possível alterar a senha.");
     } finally {
       setIsLoading(false);
     }
   };
-  return <div className="admin-page">
-      <header className="admin-page-header"><div><p className="admin-eyebrow">Administração do ambiente</p><h1 className="admin-title">Configurações</h1><p className="admin-subtitle">Gerencie segurança, preferências visuais e informações técnicas do ambiente.</p></div></header>
+  return <div className="space-y-12">
+      <div className="mb-8">
+        <h1 className="text-3xl text-[#020817] dark:text-[#efc349] mb-4 font-extralight">Configurações</h1>
+        <p className="text-gray-600 dark:text-white/70">Gerencie suas configurações pessoais e do sistema</p>
+      </div>
       
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
         {/* Account Settings */}
-        <section className="admin-surface">
-          <div className="admin-surface-header"><div><h2 className="admin-section-title">Segurança da conta</h2><p className="admin-section-description">Atualize a credencial do seu acesso administrativo.</p></div></div>
+        <div className="space-y-8">
+          <div className="flex items-center gap-3 mb-6">
+            <Lock className="w-6 h-6 text-[#020817] dark:text-[#efc349]" />
+            <h2 className="text-xl font-semibold text-[#020817] dark:text-[#efc349]">Segurança da Conta</h2>
+          </div>
           
           {/* Password Change Form */}
-          <form onSubmit={handleChangePassword} className="space-y-5 p-5">
+          <form onSubmit={handleChangePassword} className="space-y-8">
             <div className="space-y-3">
               <Label htmlFor="currentPassword" className="text-[#020817] dark:text-white font-medium">Senha Atual</Label>
               <Input id="currentPassword" type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} required className="transition-all duration-300" />
@@ -121,51 +127,54 @@ export const SettingsView = () => {
             
             {passwordError && <div className="text-sm text-red-500 dark:text-red-400 p-3 rounded-lg">{passwordError}</div>}
             
-            <Button type="submit" className="admin-button-primary w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full transition-all duration-300 hover:scale-105" disabled={isLoading}>
               <Lock className="mr-2 h-4 w-4" />
               Alterar Senha
             </Button>
           </form>
           
-          <div className="border-t border-[var(--admin-line)] p-5"><Button variant="outline" className="w-full border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900/60 dark:text-red-400 dark:hover:bg-red-950/30" onClick={handleSignOut}>
+          <Button variant="destructive" className="w-full transition-all duration-300 hover:scale-105" onClick={handleSignOut}>
             <LogOut className="mr-2 h-4 w-4" />
             Fazer Logout
-          </Button></div>
-        </section>
+          </Button>
+        </div>
         
         {/* System Settings */}
-        <section className="admin-surface">
-          <div className="admin-surface-header"><div><h2 className="admin-section-title">Ambiente e preferências</h2><p className="admin-section-description">Aparência e informações da aplicação.</p></div></div>
+        <div className="space-y-8">
+          <div className="flex items-center gap-3 mb-6">
+            <Database className="w-6 h-6 text-[#020817] dark:text-[#efc349]" />
+            <h2 className="text-xl font-semibold text-[#020817] dark:text-[#efc349]">Sistema</h2>
+          </div>
           
-          <div className="space-y-5 p-5">
-            <div className="flex items-center justify-between rounded-md border border-[var(--admin-line)] bg-[var(--admin-canvas)]/60 p-4">
+          <div className="space-y-8">
+            <div className="flex items-center justify-between p-6 rounded-xl bg-gray-50 dark:bg-transparent">
               <div className="flex items-center space-x-3">
-                <Moon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                <span className="text-sm font-semibold text-[var(--admin-ink)]">Modo escuro</span>
+                <Moon className="h-5 w-5 text-[#020817] dark:text-[#efc349]" />
+                <span className="text-[#020817] dark:text-white font-medium">Modo Escuro</span>
               </div>
-              <Switch checked={theme === "dark"} onCheckedChange={toggleTheme} className="data-[state=checked]:bg-blue-600" />
+              <Switch checked={theme === "dark"} onCheckedChange={toggleTheme} className="data-[state=checked]:bg-[#efc349]" />
             </div>
             
-            <Button variant="outline" className="admin-button-secondary w-full" onClick={fetchDatabaseInfo} disabled={isLoading}>
+            <Button variant="outline" className="w-full transition-all duration-300 hover:scale-105" onClick={fetchDatabaseInfo} disabled={isLoading}>
               <Database className="mr-2 h-4 w-4" />
               Ver uso do banco de dados
             </Button>
             
             <div className="grid grid-cols-1 gap-6">
-              <div className="space-y-2 rounded-md border border-[var(--admin-line)] bg-[var(--admin-canvas)]/60 p-4">
+              <div className="p-6 rounded-xl bg-gray-50 dark:bg-transparent space-y-3">
                 <p className="text-sm font-medium text-gray-500 dark:text-white/70">Versão da aplicação</p>
-                <p className="text-xl font-bold text-[var(--admin-ink)]">2.0.0</p>
+                <p className="text-2xl font-bold text-[#020817] dark:text-white">2.0.0</p>
                 <p className="text-xs text-gray-500 dark:text-white/50">Última atualização: 27/05/2025</p>
               </div>
               
-              <div className="space-y-2 rounded-md border border-[var(--admin-line)] bg-[var(--admin-canvas)]/60 p-4">
+              <div className="p-6 rounded-xl bg-gray-50 dark:bg-transparent space-y-3">
                 <p className="text-sm font-medium text-gray-500 dark:text-white/70">Ambiente</p>
-                <p className="text-xl font-bold text-[var(--admin-ink)]">Produção</p>
+                <p className="text-2xl font-bold text-[#020817] dark:text-white">Produção</p>
                 <p className="text-xs text-gray-500 dark:text-white/50">Status: ONLINE</p>
               </div>
             </div>
           </div>
-        </section>
+        </div>
       </div>
       
       {/* Database Usage Dialog */}

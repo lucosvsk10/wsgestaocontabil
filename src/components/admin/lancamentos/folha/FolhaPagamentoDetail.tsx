@@ -19,8 +19,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 interface FolhaPagamentoDetailProps {
   clientId: string;
   clientName: string;
-  initialCompetencia?: string;
-  embedded?: boolean;
 }
 
 interface FolhaUpload {
@@ -54,24 +52,14 @@ const MONTHS = [
 
 const FUNCTIONS_BASE = "https://nadtoitgkukzbghtbohm.supabase.co/functions/v1";
 
-export const FolhaPagamentoDetail = ({ clientId, clientName, initialCompetencia, embedded = false }: FolhaPagamentoDetailProps) => {
+export const FolhaPagamentoDetail = ({ clientId, clientName }: FolhaPagamentoDetailProps) => {
   const navigate = useNavigate();
   const now = new Date();
-  const [selectedMonth, setSelectedMonth] = useState(
-    initialCompetencia?.slice(5, 7) || String(now.getMonth() + 1).padStart(2, "0")
-  );
-  const [selectedYear, setSelectedYear] = useState(
-    initialCompetencia?.slice(0, 4) || String(now.getFullYear())
-  );
+  const [selectedMonth, setSelectedMonth] = useState(String(now.getMonth() + 1).padStart(2, "0"));
+  const [selectedYear, setSelectedYear] = useState(String(now.getFullYear()));
   const competencia = `${selectedYear}-${selectedMonth}`;
   const currentYear = now.getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => String(currentYear - 2 + i));
-
-  useEffect(() => {
-    if (!initialCompetencia) return;
-    setSelectedYear(initialCompetencia.slice(0, 4));
-    setSelectedMonth(initialCompetencia.slice(5, 7));
-  }, [initialCompetencia]);
 
   const [uploads, setUploads] = useState<FolhaUpload[]>([]);
   const [transcricoes, setTranscricoes] = useState<Transcricao[]>([]);
@@ -185,18 +173,18 @@ export const FolhaPagamentoDetail = ({ clientId, clientName, initialCompetencia,
     switch (s) {
       case "processado":
       case "contabilizado":
-        return <Badge variant="outline" className="rounded-none font-normal">Concluído</Badge>;
+        return <Badge className="bg-green-500/10 text-green-700 border-0"><CheckCircle2 className="w-3 h-3 mr-1" />Concluído</Badge>;
       case "transcrito":
-        return <Badge variant="outline" className="rounded-none font-normal">Transcrito</Badge>;
+        return <Badge className="bg-blue-500/10 text-blue-700 border-0"><CheckCircle2 className="w-3 h-3 mr-1" />Transcrito</Badge>;
       case "transcrevendo":
-        return <Badge variant="outline" className="rounded-none font-normal">Transcrevendo</Badge>;
+        return <Badge variant="secondary"><Loader2 className="w-3 h-3 mr-1 animate-spin" />Transcrevendo</Badge>;
       case "contabilizando":
-        return <Badge variant="outline" className="rounded-none font-normal">Gerando lançamentos</Badge>;
+        return <Badge variant="secondary"><Loader2 className="w-3 h-3 mr-1 animate-spin" />Gerando lançamentos</Badge>;
       case "erro_transcricao":
       case "erro":
-        return <Badge variant="destructive" className="rounded-none font-normal">Erro</Badge>;
+        return <Badge variant="destructive"><AlertCircle className="w-3 h-3 mr-1" />Erro</Badge>;
       default:
-        return <Badge variant="outline" className="rounded-none font-normal">Pendente</Badge>;
+        return <Badge variant="outline">Pendente</Badge>;
     }
   };
 
@@ -207,11 +195,9 @@ export const FolhaPagamentoDetail = ({ clientId, clientName, initialCompetencia,
   }, [transcricoes]);
 
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className={`admin-process ${embedded ? "bg-transparent overflow-hidden" : "admin-surface"}`}>
-      <div className="flex flex-wrap items-center gap-3 border-b border-[var(--admin-line)] bg-[var(--admin-canvas)]/50 p-5">
-        {embedded ? (
-          <div><p className="text-xs font-semibold text-[var(--admin-ink)]">Documentos da folha</p><p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">Envio, transcrição, geração e conferência dos lançamentos.</p></div>
-        ) : <div className="flex items-center gap-2">
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-card rounded-xl border border-border overflow-hidden">
+      <div className="p-5 border-b border-border flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-muted-foreground" />
           <Select value={selectedMonth} onValueChange={setSelectedMonth}>
             <SelectTrigger className="w-[140px] h-9"><SelectValue /></SelectTrigger>
@@ -221,14 +207,14 @@ export const FolhaPagamentoDetail = ({ clientId, clientName, initialCompetencia,
             <SelectTrigger className="w-[100px] h-9"><SelectValue /></SelectTrigger>
             <SelectContent>{years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
           </Select>
-        </div>}
+        </div>
         <div className="ml-auto flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={fetchData} className="admin-button-secondary h-9 text-xs">
-            Atualizar
+          <Button size="sm" variant="outline" onClick={fetchData} className="h-9">
+            <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Atualizar
           </Button>
           {lancamentosCount > 0 && (
-            <Button size="sm" onClick={handleOpenEditor} className="admin-button-primary h-9 text-xs">
-              Conferir e exportar ({lancamentosCount})
+            <Button size="sm" onClick={handleOpenEditor} className="h-9">
+              <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5" /> Exportar ({lancamentosCount})
             </Button>
           )}
         </div>
@@ -238,12 +224,13 @@ export const FolhaPagamentoDetail = ({ clientId, clientName, initialCompetencia,
         <div
           {...getRootProps()}
           className={cn(
-            "cursor-pointer rounded-lg border border-dashed p-8 text-center transition-colors",
-            isDragActive ? "border-blue-500 bg-blue-500/5" : "border-[var(--admin-line)] hover:border-blue-400 hover:bg-[var(--admin-blue-soft)]",
+            "border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors",
+            isDragActive ? "border-primary bg-primary/5" : "border-border hover:border-primary/50",
             uploading && "opacity-60 pointer-events-none"
           )}
         >
           <input {...getInputProps()} />
+          <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
           <p className="text-sm font-medium text-foreground">
             {uploading ? "Enviando..." : isDragActive ? "Solte os PDFs aqui" : "Arraste PDFs da folha ou clique para selecionar"}
           </p>
@@ -255,7 +242,7 @@ export const FolhaPagamentoDetail = ({ clientId, clientName, initialCompetencia,
           {isLoading ? (
             <div className="py-8 text-center text-muted-foreground text-sm"><Loader2 className="w-4 h-4 inline animate-spin mr-2" />Carregando...</div>
           ) : uploads.length === 0 ? (
-            <div className="admin-empty min-h-36 border border-dashed border-[var(--admin-line)]">
+            <div className="py-8 text-center text-muted-foreground text-sm border border-dashed border-border rounded-lg">
               Nenhum arquivo enviado para esta competência.
             </div>
           ) : (
@@ -264,7 +251,7 @@ export const FolhaPagamentoDetail = ({ clientId, clientName, initialCompetencia,
                 const t = transByUpload[u.id];
                 const isOpen = expanded[u.id] ?? true;
                 return (
-                  <li key={u.id} className="overflow-hidden rounded-lg border border-[var(--admin-line)] bg-[var(--admin-panel)]">
+                  <li key={u.id} className="border border-border rounded-lg overflow-hidden">
                     <div className="flex items-center gap-3 px-4 py-3">
                       <button className="text-muted-foreground" onClick={() => setExpanded((p) => ({ ...p, [u.id]: !isOpen }))}>
                         {t ? (isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />) : <FileText className="w-4 h-4" />}

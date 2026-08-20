@@ -95,12 +95,11 @@ const SimpleCarouselManager = () => {
   };
 
   return (
-    <div className="admin-page">
-      <header className="admin-page-header"><div><p className="admin-eyebrow">Conteúdo institucional</p><h1 className="admin-title">Carrossel de empresas</h1><p className="admin-subtitle">Cadastre marcas, contatos e controle quais empresas aparecem na página principal.</p></div></header>
+    <div className="space-y-8">
       {/* Seção de Upload */}
-      <Card className="admin-surface rounded-[0.65rem] shadow-none">
-        <CardHeader className="border-b border-[var(--admin-line)]">
-          <CardTitle className="flex items-center gap-2 text-sm">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
             <Upload className="w-5 h-5" />
             Adicionar Novo Cliente
           </CardTitle>
@@ -194,9 +193,9 @@ const SimpleCarouselManager = () => {
       </Card>
 
       {/* Lista de Itens */}
-      <Card className="admin-surface rounded-[0.65rem] shadow-none">
-        <CardHeader className="border-b border-[var(--admin-line)]">
-          <CardTitle className="text-sm">Empresas cadastradas ({items.length})</CardTitle>
+      <Card>
+        <CardHeader>
+          <CardTitle>Itens do Carrossel ({items.length})</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (

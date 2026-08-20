@@ -63,8 +63,6 @@ interface CloseMonthStatus {
 
 interface ClientLancamentosDetailProps {
   clientId: string;
-  initialCompetencia?: string;
-  embedded?: boolean;
 }
 
 const MONTHS = [
@@ -84,7 +82,7 @@ const MONTHS = [
 
 const MONTH_NAMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
-export const ClientLancamentosDetail = ({ clientId, initialCompetencia, embedded = false }: ClientLancamentosDetailProps) => {
+export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailProps) => {
   const [clientInfo, setClientInfo] = useState<ClientInfo | null>(null);
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [documents, setDocuments] = useState<DocumentoBruto[]>([]);
@@ -111,22 +109,12 @@ export const ClientLancamentosDetail = ({ clientId, initialCompetencia, embedded
   
   
   const now = new Date();
-  const [selectedMonth, setSelectedMonth] = useState(
-    initialCompetencia?.slice(5, 7) || String(now.getMonth() + 1).padStart(2, '0')
-  );
-  const [selectedYear, setSelectedYear] = useState(
-    initialCompetencia?.slice(0, 4) || String(now.getFullYear())
-  );
+  const [selectedMonth, setSelectedMonth] = useState(String(now.getMonth() + 1).padStart(2, '0'));
+  const [selectedYear, setSelectedYear] = useState(String(now.getFullYear()));
   const competencia = `${selectedYear}-${selectedMonth}`;
   
   const currentYear = now.getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => String(currentYear - 2 + i));
-
-  useEffect(() => {
-    if (!initialCompetencia) return;
-    setSelectedYear(initialCompetencia.slice(0, 4));
-    setSelectedMonth(initialCompetencia.slice(5, 7));
-  }, [initialCompetencia]);
 
   useEffect(() => {
     if (clientId) {
@@ -466,9 +454,9 @@ export const ClientLancamentosDetail = ({ clientId, initialCompetencia, embedded
   }, [lancamentos, lancamentosSearch, planoContasMap]);
 
   return (
-    <div className={`admin-process ${embedded ? "bg-transparent overflow-hidden" : "admin-surface"}`}>
+    <div className="bg-card rounded-xl overflow-hidden">
       {/* Header */}
-      {!embedded && <div className="p-5">
+      <div className="p-5">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -530,16 +518,7 @@ export const ClientLancamentosDetail = ({ clientId, initialCompetencia, embedded
             </SelectContent>
           </Select>
         </div>
-      </div>}
-
-      {embedded && (
-        <div className="flex items-center justify-between border-b border-[var(--admin-line)] bg-[var(--admin-canvas)]/50 px-5 py-3">
-          <div><p className="text-xs font-semibold text-[var(--admin-ink)]">Documentos e lançamentos</p><p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">Processamento, conferência e fechamento da competência.</p></div>
-          <Button onClick={() => setIsPlanoModalOpen(true)} variant="outline" size="sm" className="admin-button-secondary h-8 text-[11px]">
-            Plano de contas
-          </Button>
-        </div>
-      )}
+      </div>
 
       {/* Fechamento Status ou Botão para Fechar */}
       <div className="mx-5 mt-2">
@@ -547,12 +526,15 @@ export const ClientLancamentosDetail = ({ clientId, initialCompetencia, embedded
           <motion.div 
             initial={{ opacity: 0, y: -10 }} 
             animate={{ opacity: 1, y: 0 }} 
-            className="border border-border p-4"
+            className="p-4 rounded-xl bg-green-500/10"
           >
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center shrink-0">
+                  <Lock className="w-5 h-5 text-green-500" />
+                </div>
                 <div>
-                  <p className="font-medium text-foreground text-sm">Competência fechada</p>
+                  <p className="font-medium text-foreground text-sm">Mês Fechado</p>
                   <p className="text-xs text-muted-foreground">
                     {fechamento.total_lancamentos} lançamentos exportados
                   </p>
@@ -565,7 +547,7 @@ export const ClientLancamentosDetail = ({ clientId, initialCompetencia, embedded
                     size="sm"
                     onClick={() => handleDownload(fechamento.arquivo_excel_url!, 'excel')}
                     disabled={downloadingFile === 'excel'}
-                    className="inline-flex h-auto items-center gap-1.5 rounded-none border border-border bg-transparent px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/20 text-green-600 text-xs font-medium hover:bg-green-500/30 transition-colors h-auto"
                   >
                     {downloadingFile === 'excel' ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -631,7 +613,7 @@ export const ClientLancamentosDetail = ({ clientId, initialCompetencia, embedded
             </div>
           </motion.div>
         ) : (
-          <div className="border border-border p-4">
+          <div className="p-4 rounded-xl bg-muted/30">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 {lancamentos.length > 0 && (
@@ -865,8 +847,9 @@ export const ClientLancamentosDetail = ({ clientId, initialCompetencia, embedded
       <div className="p-5 pt-6">
         {/* Title row */}
         <div className="flex items-center justify-between gap-3 mb-3">
-          <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--admin-ink)]">
-            <span>Lançamentos alinhados</span>
+          <h3 className="font-medium text-foreground text-sm flex items-center gap-2">
+            <FileSpreadsheet className="w-4 h-4 text-primary" />
+            <span className="text-foreground">Lançamentos Alinhados</span>
             <Badge variant="secondary" className="text-xs rounded-lg ml-1">
               {lancamentosSearch ? `${filteredLancamentos.length}/${lancamentos.length}` : lancamentos.length}
             </Badge>
@@ -876,11 +859,12 @@ export const ClientLancamentosDetail = ({ clientId, initialCompetencia, embedded
         {/* Search + toolbar */}
         <div className="flex flex-col gap-3 mb-4">
           <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar por histórico, conta, centro de custo, valor..."
               value={lancamentosSearch}
               onChange={(e) => setLancamentosSearch(e.target.value)}
-              className="h-9 border-[var(--admin-line)] bg-transparent shadow-none"
+              className="pl-9 h-9 bg-background"
             />
           </div>
 
@@ -905,17 +889,19 @@ export const ClientLancamentosDetail = ({ clientId, initialCompetencia, embedded
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-9 rounded-none text-xs"
+                    className="h-9 text-xs rounded-lg"
                     onClick={() => setIsAddModalOpen(true)}
                   >
+                    <Plus className="w-3.5 h-3.5 mr-1.5" />
                     Novo lançamento
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-9 rounded-none text-xs"
+                    className="h-9 text-xs rounded-lg"
                     onClick={() => setIsImportModalOpen(true)}
                   >
+                    <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5" />
                     Importar planilha
                   </Button>
                 </>
@@ -924,9 +910,10 @@ export const ClientLancamentosDetail = ({ clientId, initialCompetencia, embedded
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-9 rounded-none text-xs"
+                  className="h-9 text-xs rounded-lg"
                   onClick={() => setIsExportModalOpen(true)}
                 >
+                  <Download className="w-3.5 h-3.5 mr-1.5" />
                   Exportar
                 </Button>
               )}
@@ -934,12 +921,13 @@ export const ClientLancamentosDetail = ({ clientId, initialCompetencia, embedded
                 <Button
                   variant={isSelectionMode ? "default" : "outline"}
                   size="sm"
-                  className="h-9 rounded-none text-xs"
+                  className="h-9 text-xs rounded-lg"
                   onClick={() => {
                     setIsSelectionMode(!isSelectionMode);
                     setSelectedIds(new Set());
                   }}
                 >
+                  <CheckSquare className="w-3.5 h-3.5 mr-1.5" />
                   {isSelectionMode ? 'Cancelar' : 'Selecionar'}
                 </Button>
               )}

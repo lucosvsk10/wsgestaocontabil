@@ -31,8 +31,6 @@ const formatBRL = (v: number | null) =>
 interface Props {
   clientId: string;
   clientName: string;
-  initialCompetencia?: string;
-  embedded?: boolean;
 }
 
 interface Linha {
@@ -62,23 +60,13 @@ interface ComprasLancamento {
   valor: number | null;
 }
 
-export const ComprasDetail = ({ clientId, clientName, initialCompetencia, embedded = false }: Props) => {
+export const ComprasDetail = ({ clientId, clientName }: Props) => {
   const navigate = useNavigate();
   const now = new Date();
-  const [selectedMonth, setSelectedMonth] = useState(
-    initialCompetencia?.slice(5, 7) || String(now.getMonth() + 1).padStart(2, "0")
-  );
-  const [selectedYear, setSelectedYear] = useState(
-    initialCompetencia?.slice(0, 4) || String(now.getFullYear())
-  );
+  const [selectedMonth, setSelectedMonth] = useState(String(now.getMonth() + 1).padStart(2, "0"));
+  const [selectedYear, setSelectedYear] = useState(String(now.getFullYear()));
   const competencia = `${selectedYear}-${selectedMonth}`;
   const years = Array.from({ length: 5 }, (_, i) => String(now.getFullYear() - 2 + i));
-
-  useEffect(() => {
-    if (!initialCompetencia) return;
-    setSelectedYear(initialCompetencia.slice(0, 4));
-    setSelectedMonth(initialCompetencia.slice(5, 7));
-  }, [initialCompetencia]);
 
   const [uploads, setUploads] = useState<ComprasUpload[]>([]);
   const [lancamentos, setLancamentos] = useState<ComprasLancamento[]>([]);
@@ -248,20 +236,18 @@ export const ComprasDetail = ({ clientId, clientName, initialCompetencia, embedd
   };
 
   const statusBadge = (s: string) => {
-    if (s === "lancado") return <Badge variant="outline" className="rounded-none font-normal">Lançado</Badge>;
-    if (s === "processado") return <Badge variant="outline" className="rounded-none font-normal">Processado</Badge>;
-    if (s === "erro") return <Badge variant="destructive" className="rounded-none font-normal">Erro</Badge>;
-    if (s === "processando") return <Badge variant="outline" className="rounded-none font-normal">Processando</Badge>;
-    return <Badge variant="outline" className="rounded-none font-normal">Pendente</Badge>;
+    if (s === "lancado") return <Badge className="bg-emerald-500/10 text-emerald-700 border-0"><CheckCircle2 className="w-3 h-3 mr-1" />Lançado</Badge>;
+    if (s === "processado") return <Badge className="bg-blue-500/10 text-blue-700 border-0"><CheckCircle2 className="w-3 h-3 mr-1" />Processado</Badge>;
+    if (s === "erro") return <Badge variant="destructive"><AlertCircle className="w-3 h-3 mr-1" />Erro</Badge>;
+    if (s === "processando") return <Badge variant="secondary"><Loader2 className="w-3 h-3 mr-1 animate-spin" />Processando</Badge>;
+    return <Badge variant="outline">Pendente</Badge>;
   };
 
   return (
     <>
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className={`admin-process ${embedded ? "bg-transparent overflow-hidden" : "admin-surface"}`}>
-        <div className="flex flex-wrap items-center gap-3 border-b border-[var(--admin-line)] bg-[var(--admin-canvas)]/50 p-5">
-          {embedded ? (
-            <div><p className="text-xs font-semibold text-[var(--admin-ink)]">Documentos de compras</p><p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">Extração, seleção das entradas e conferência das partidas.</p></div>
-          ) : <div className="flex items-center gap-2">
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-card rounded-xl border border-border overflow-hidden">
+        <div className="p-5 border-b border-border flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-muted-foreground" />
             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
               <SelectTrigger className="w-[140px] h-9"><SelectValue /></SelectTrigger>
@@ -271,10 +257,10 @@ export const ComprasDetail = ({ clientId, clientName, initialCompetencia, embedd
               <SelectTrigger className="w-[100px] h-9"><SelectValue /></SelectTrigger>
               <SelectContent>{years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
             </Select>
-          </div>}
+          </div>
           <div className="ml-auto flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={fetchData} className="admin-button-secondary h-9 text-xs">
-              Atualizar
+            <Button size="sm" variant="outline" onClick={fetchData} className="h-9">
+              <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Atualizar
             </Button>
           </div>
         </div>
@@ -283,12 +269,13 @@ export const ComprasDetail = ({ clientId, clientName, initialCompetencia, embedd
           <div
             {...getRootProps()}
             className={cn(
-              "cursor-pointer rounded-lg border border-dashed p-8 text-center transition-colors",
-              isDragActive ? "border-blue-500 bg-blue-500/5" : "border-[var(--admin-line)] hover:border-blue-400 hover:bg-[var(--admin-blue-soft)]",
+              "border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors",
+              isDragActive ? "border-primary bg-primary/5" : "border-border hover:border-primary/50",
               uploading && "opacity-60 pointer-events-none"
             )}
           >
             <input {...getInputProps()} />
+            <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
             <p className="text-sm font-medium text-foreground">
               {uploading ? "Enviando..." : isDragActive ? "Solte os PDFs aqui" : "Arraste o Registro de Entradas (PDF) ou clique para selecionar"}
             </p>
@@ -300,7 +287,7 @@ export const ComprasDetail = ({ clientId, clientName, initialCompetencia, embedd
               <Loader2 className="w-4 h-4 inline animate-spin mr-2" />Carregando...
             </div>
           ) : uploads.length === 0 ? (
-            <div className="admin-empty min-h-36 border border-dashed border-[var(--admin-line)]">
+            <div className="py-8 text-center text-muted-foreground text-sm border border-dashed border-border rounded-lg">
               Nenhum arquivo enviado para esta competência.
             </div>
           ) : (
@@ -309,7 +296,7 @@ export const ComprasDetail = ({ clientId, clientName, initialCompetencia, embedd
                 const linhas = editedLinhas[u.id] || [];
                 const allChecked = linhas.length > 0 && linhas.every((l) => l.selecionado);
                 return (
-                  <div key={u.id} className="overflow-hidden rounded-lg border border-[var(--admin-line)] bg-[var(--admin-panel)]">
+                  <div key={u.id} className="border border-border rounded-lg overflow-hidden">
                     <div className="flex items-center gap-3 px-4 py-3 bg-muted/30">
                       <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
                       <div className="flex-1 min-w-0">
@@ -350,7 +337,7 @@ export const ComprasDetail = ({ clientId, clientName, initialCompetencia, embedd
               <h3 className="text-sm font-medium text-foreground mb-2">
                 Lançamentos gerados ({lancamentos.length})
               </h3>
-              <div className="admin-table-wrap border border-[var(--admin-line)]">
+              <div className="border border-border rounded-lg overflow-hidden">
                 <Table>
                   <TableHeader>
                     <TableRow>

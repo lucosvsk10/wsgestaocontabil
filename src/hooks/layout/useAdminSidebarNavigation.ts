@@ -13,17 +13,14 @@ export const useAdminSidebarNavigation = () => {
   const location = useLocation();
 
   const getIsActive = (path: string): boolean => {
-    if (path === "/admin") {
-      return location.pathname === "/admin" || location.pathname === "/admin/";
-    }
-    return location.pathname.startsWith(path);
+    return location.pathname === path;
   };
 
   const sidebarItems: SidebarItem[] = [
     {
       icon: LayoutDashboard,
       label: "Dashboard",
-      active: getIsActive("/admin"),
+      active: getIsActive("/admin") || getIsActive("/admin/"),
       to: "/admin"
     },
     {

@@ -80,8 +80,8 @@ export function AdminTabsView({
   selectedPoll
 }: AdminTabsViewProps) {
   return (
-    <div className={`admin-content w-full admin-tab-${activeTab || 'dashboard'}`}>
-      <div>
+    <div className="w-full">
+      <div className="mt-4">
         {/* Tab Content - Dashboard */}
         {activeTab === "dashboard" && <AdminDashboardView users={users || []} supabaseUsers={supabaseUsers || []} documents={documents || []} />}
 

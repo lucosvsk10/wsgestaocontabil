@@ -16,33 +16,36 @@ export const PollsTabView = () => {
   const handleViewResults = (poll: Poll) => {
     setSelectedPoll(poll);
   };
-  return <div className="admin-page">
-      <header className="admin-page-header"><div><p className="admin-eyebrow">Relacionamento com clientes</p><h1 className="admin-title">Enquetes</h1><p className="admin-subtitle">Crie consultas, acompanhe respostas e consolide os resultados enviados pelos clientes.</p></div></header>
+  return <div className="space-y-8">
+      <div className="mb-8">
+        <h1 className="text-[#020817] dark:text-[#efc349] mb-4 text-3xl font-thin">Gestão de Enquetes</h1>
+        <p className="text-gray-600 dark:text-white/70">Crie, gerencie e visualize resultados das enquetes</p>
+      </div>
 
-      <Tabs defaultValue="create" className="admin-surface">
-        <TabsList className="grid h-12 w-full grid-cols-3 rounded-none border-b border-[var(--admin-line)] bg-[var(--admin-canvas)]/60 p-1">
-          <TabsTrigger value="create" className="rounded-md text-xs data-[state=active]:bg-[var(--admin-panel)] data-[state=active]:text-blue-600 data-[state=active]:shadow-sm">
+      <Tabs defaultValue="create" className="space-y-8">
+        <TabsList className="grid w-full grid-cols-3 bg-gray-50 dark:bg-transparent rounded-xl p-1">
+          <TabsTrigger value="create" className="text-[#020817] data-[state=active]:bg-white data-[state=active]:text-[#020817] data-[state=active]:shadow-sm dark:text-white/80 dark:data-[state=active]:bg-[#efc349]/10 dark:data-[state=active]:text-[#efc349] transition-all duration-300 rounded-lg">
             Criar Enquete
           </TabsTrigger>
-          <TabsTrigger value="manage" className="rounded-md text-xs data-[state=active]:bg-[var(--admin-panel)] data-[state=active]:text-blue-600 data-[state=active]:shadow-sm">
+          <TabsTrigger value="manage" className="text-[#020817] data-[state=active]:bg-white data-[state=active]:text-[#020817] data-[state=active]:shadow-sm dark:text-white/80 dark:data-[state=active]:bg-[#efc349]/10 dark:data-[state=active]:text-[#efc349] transition-all duration-300 rounded-lg">
             Gerenciar
           </TabsTrigger>
-          <TabsTrigger value="results" className="rounded-md text-xs data-[state=active]:bg-[var(--admin-panel)] data-[state=active]:text-blue-600 data-[state=active]:shadow-sm">
+          <TabsTrigger value="results" className="text-[#020817] data-[state=active]:bg-white data-[state=active]:text-[#020817] data-[state=active]:shadow-sm dark:text-white/80 dark:data-[state=active]:bg-[#efc349]/10 dark:data-[state=active]:text-[#efc349] transition-all duration-300 rounded-lg">
             Resultados
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="create" className="m-0">
-          <div className="space-y-6 p-5">
+        <TabsContent value="create" className="space-y-8">
+          <div className="p-8 space-y-8">
             <Tabs value={pollTypeTab} onValueChange={setPollTypeTab} className="space-y-8">
-              <TabsList className="grid w-full grid-cols-3 rounded-md bg-[var(--admin-canvas)] p-1">
-                <TabsTrigger value="standard" className="rounded text-xs data-[state=active]:bg-[var(--admin-panel)] data-[state=active]:text-blue-600">
+              <TabsList className="grid w-full grid-cols-3 bg-gray-50 dark:bg-transparent rounded-xl p-1">
+                <TabsTrigger value="standard" className="text-[#020817] data-[state=active]:bg-white data-[state=active]:text-[#020817] data-[state=active]:shadow-sm dark:text-white/80 dark:data-[state=active]:bg-[#efc349]/10 dark:data-[state=active]:text-[#efc349] transition-all duration-300 rounded-lg">
                   Enquete Padrão
                 </TabsTrigger>
-                <TabsTrigger value="numerical" className="rounded text-xs data-[state=active]:bg-[var(--admin-panel)] data-[state=active]:text-blue-600">
+                <TabsTrigger value="numerical" className="text-[#020817] data-[state=active]:bg-white data-[state=active]:text-[#020817] data-[state=active]:shadow-sm dark:text-white/80 dark:data-[state=active]:bg-[#efc349]/10 dark:data-[state=active]:text-[#efc349] transition-all duration-300 rounded-lg">
                   Formulário Numeral
                 </TabsTrigger>
-                <TabsTrigger value="form" className="rounded text-xs data-[state=active]:bg-[var(--admin-panel)] data-[state=active]:text-blue-600">
+                <TabsTrigger value="form" className="text-[#020817] data-[state=active]:bg-white data-[state=active]:text-[#020817] data-[state=active]:shadow-sm dark:text-white/80 dark:data-[state=active]:bg-[#efc349]/10 dark:data-[state=active]:text-[#efc349] transition-all duration-300 rounded-lg">
                   Formulário Completo
                 </TabsTrigger>
               </TabsList>
@@ -62,16 +65,16 @@ export const PollsTabView = () => {
           </div>
         </TabsContent>
 
-        <TabsContent value="manage" className="m-0">
-          <div className="space-y-6 p-5">
-            <h3 className="admin-section-title">Enquetes cadastradas</h3>
+        <TabsContent value="manage" className="space-y-8">
+          <div className="p-8 space-y-8">
+            <h3 className="text-xl font-medium text-[#020817] dark:text-[#efc349]">Gerenciar Enquetes</h3>
             <ManagePolls refreshTrigger={refreshTrigger} onViewResults={handleViewResults} onPollDeleted={handlePollCreated} />
           </div>
         </TabsContent>
 
-        <TabsContent value="results" className="m-0">
-          <div className="space-y-6 p-5">
-            <h3 className="admin-section-title">Resultados consolidados</h3>
+        <TabsContent value="results" className="space-y-8">
+          <div className="p-8 space-y-8">
+            <h3 className="text-xl font-medium text-[#020817] dark:text-[#efc349]">Resultados de Enquetes</h3>
             <PollResults selectedPoll={selectedPoll} />
           </div>
         </TabsContent>

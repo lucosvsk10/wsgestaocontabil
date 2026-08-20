@@ -1,144 +1,285 @@
-import { ArrowUpRight, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router-dom';
-import { LoadingSpinner } from '@/components/common/LoadingSpinner';
-import { useDashboardData } from './useDashboardData';
-import type { UserType } from '@/types/admin';
-
-interface AuthUser {
-  id: string;
-}
-
+import { Users, FileText, PieChart, Clock, HardDrive, Bell, Calendar, Plus } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { useDashboardData } from "./useDashboardData";
 interface AdminDashboardProps {
-  users: UserType[];
-  supabaseUsers: AuthUser[];
-  documents: unknown[];
+  users: any[];
+  supabaseUsers: any[];
+  documents: any[];
 }
-
-const formatNumber = (value: number) => new Intl.NumberFormat('pt-BR').format(value || 0);
-
-export const AdminDashboard = ({ users, supabaseUsers }: AdminDashboardProps) => {
+export const AdminDashboard = ({
+  users,
+  supabaseUsers,
+  documents
+}: AdminDashboardProps) => {
   const navigate = useNavigate();
-  const { stats, formatRecentDate, isLoading, refetch } = useDashboardData();
   const clientUsers = supabaseUsers.filter(authUser => {
-    const userInfo = users.find(user => user.id === authUser.id);
+    const userInfo = users.find(u => u.id === authUser.id);
     return !['fiscal', 'contabil', 'geral'].includes(userInfo?.role || '');
   });
-
-  const storageUsed = stats.storageStats?.totalStorageGB || 0;
-  const storageLimit = stats.storageStats?.storageLimitGB || 100;
-  const storagePercentage = Math.min(100, (storageUsed / storageLimit) * 100);
-  const updatedAt = new Intl.DateTimeFormat('pt-BR', {
-    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
-  }).format(new Date());
-
+  const {
+    stats,
+    loading,
+    formatRecentDate,
+    isLoading
+  } = useDashboardData();
+  const statsData = [{
+    title: "Clientes Ativos",
+    value: clientUsers.length,
+    icon: <Users className="h-6 w-6" />,
+    link: "/admin/users",
+    color: "blue"
+  }, {
+    title: "Total Documentos",
+    value: stats.totalDocuments,
+    icon: <FileText className="h-6 w-6" />,
+    link: "/admin/storage",
+    color: "green"
+  }, {
+    title: "Enquetes Criadas",
+    value: stats.pollCount,
+    icon: <PieChart className="h-6 w-6" />,
+    link: "/admin/polls",
+    color: "purple"
+  }, {
+    title: "Armazenamento",
+    value: stats.storageStats ? `${stats.storageStats.totalStorageMB.toFixed(1)}MB` : "Calculando...",
+    icon: <HardDrive className="h-6 w-6" />,
+    link: "/admin/storage",
+    color: "orange"
+  }];
   if (isLoading) {
-    return <div className="flex min-h-[420px] items-center justify-center"><LoadingSpinner /></div>;
+    return <div className="flex justify-center items-center h-64">
+        <LoadingSpinner />
+      </div>;
   }
-
-  const metrics = [
-    { label: 'Clientes ativos', value: formatNumber(clientUsers.length), meta: 'Empresas com acesso ao portal' },
-    { label: 'Documentos ativos', value: formatNumber(stats.totalDocuments), meta: `${formatNumber(stats.recentDocumentsCount)} recebidos nos últimos 7 dias` },
-    { label: 'Prazos fiscais', value: formatNumber(stats.upcomingFiscalEvents), meta: 'Vencimentos nos próximos 30 dias' },
-    { label: 'Armazenamento', value: `${storageUsed.toFixed(2)} GB`, meta: `${storagePercentage.toFixed(2)}% de ${storageLimit} GB` },
-  ];
-
-  const operationalItems = [
-    { label: 'Documentos recebidos', value: formatNumber(stats.recentDocumentsCount), detail: 'Últimos 7 dias', status: stats.recentDocumentsCount > 0 ? 'Em atividade' : 'Sem movimento', path: '/admin/storage' },
-    { label: 'Agenda fiscal', value: formatNumber(stats.upcomingFiscalEvents), detail: 'Próximos 30 dias', status: stats.upcomingFiscalEvents > 0 ? 'Requer acompanhamento' : 'Sem vencimentos', path: '/admin/agenda' },
-    { label: 'Avisos publicados', value: formatNumber(stats.activeAnnouncements), detail: 'Ativos nos últimos 30 dias', status: stats.activeAnnouncements > 0 ? 'Publicado' : 'Sem avisos', path: '/admin/announcements' },
-    { label: 'Enquetes', value: formatNumber(stats.pollCount), detail: 'Total cadastrado', status: 'Base atual', path: '/admin/polls' },
-  ];
-
-  return (
-    <div className="admin-page">
-      <header className="admin-page-header">
+  return <div className="space-y-8 p-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <p className="admin-eyebrow">Visão geral</p>
-          <h1 className="admin-title">Painel de controle</h1>
-          <p className="admin-subtitle">Acompanhe a operação do escritório, os documentos recebidos e os próximos prazos em uma única visão.</p>
+          <h1 className="text-3xl text-[#020817] dark:text-[#efc349] mb-2 font-thin">Dashboard </h1>
+          <p className="text-gray-600 dark:text-[#b3b3b3]">
+            Visão geral do sistema e atividades recentes
+          </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="mr-2 hidden text-xs text-[var(--admin-muted)] md:inline">Atualizado em {updatedAt}</span>
-          <Button className="admin-button-secondary h-9" onClick={refetch}><RefreshCw className="mr-2 h-3.5 w-3.5" /> Atualizar</Button>
-          <Button className="admin-button-primary h-9" onClick={() => navigate('/admin/lancamentos')}>Central de lançamentos</Button>
+        <div className="flex gap-3">
+          <Button onClick={() => navigate("/admin/users")} className="bg-[#020817] hover:bg-[#0f172a] text-white dark:bg-transparent dark:border dark:border-[#efc349] dark:text-[#efc349] dark:hover:bg-[#efc349]/10">
+            <Users className="h-4 w-4 mr-2" />
+            Gerenciar Usuários
+          </Button>
+          <Button onClick={() => navigate("/admin/polls")} variant="outline" className="border-[#efc349] text-[#efc349] hover:bg-[#efc349]/10">
+            <PieChart className="h-4 w-4 mr-2" />
+            Enquetes
+          </Button>
         </div>
-      </header>
-
-      <section className="admin-kpi-grid" aria-label="Indicadores principais">
-        {metrics.map(metric => (
-          <div key={metric.label} className="admin-kpi">
-            <p className="admin-kpi-label">{metric.label}</p>
-            <p className="admin-kpi-value">{metric.value}</p>
-            <p className="admin-kpi-meta">{metric.meta}</p>
-          </div>
-        ))}
-      </section>
-
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(330px,0.75fr)]">
-        <section className="admin-surface">
-          <div className="admin-surface-header">
-            <div>
-              <h2 className="admin-section-title">Documentos recentes</h2>
-              <p className="admin-section-description">Últimos arquivos enviados pelas empresas.</p>
-            </div>
-            <button type="button" onClick={() => navigate('/admin/storage')} className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400">
-              Ver armazenamento <ArrowUpRight className="h-3.5 w-3.5" />
-            </button>
-          </div>
-          <div className="admin-table-wrap">
-            <table className="admin-data-table">
-              <thead><tr><th>Documento</th><th>Empresa</th><th>Recebido</th><th>Situação</th></tr></thead>
-              <tbody>
-                {stats.recentDocuments.length > 0 ? stats.recentDocuments.map(doc => (
-                  <tr key={doc.id}>
-                    <td className="max-w-[360px] font-semibold"><span className="block truncate">{doc.name}</span></td>
-                    <td>{doc.userName || 'Empresa não identificada'}</td>
-                    <td className="whitespace-nowrap text-[var(--admin-muted)]">{formatRecentDate(doc.uploaded_at)}</td>
-                    <td><span className="admin-status admin-status-blue">Disponível</span></td>
-                  </tr>
-                )) : (
-                  <tr><td colSpan={4}><div className="admin-empty min-h-40"><strong className="text-sm text-[var(--admin-ink)]">Nenhum documento recente</strong><span className="mt-1 text-xs">Os novos envios aparecerão nesta tabela.</span></div></td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section className="admin-surface">
-          <div className="admin-surface-header">
-            <div><h2 className="admin-section-title">Operação do escritório</h2><p className="admin-section-description">Indicadores que exigem acompanhamento.</p></div>
-          </div>
-          <div className="divide-y divide-[var(--admin-line)]">
-            {operationalItems.map(item => (
-              <button key={item.label} type="button" onClick={() => navigate(item.path)} className="grid w-full grid-cols-[1fr_auto] gap-4 px-[1.15rem] py-3.5 text-left transition-colors hover:bg-[var(--admin-blue-soft)]">
-                <span><span className="block text-xs font-semibold text-[var(--admin-ink)]">{item.label}</span><span className="mt-1 block text-[11px] text-[var(--admin-muted)]">{item.detail}</span></span>
-                <span className="text-right"><span className="block text-base font-bold text-[var(--admin-ink)]">{item.value}</span><span className="mt-1 block text-[10px] text-[var(--admin-muted)]">{item.status}</span></span>
-              </button>
-            ))}
-          </div>
-          <div className="border-t border-[var(--admin-line)] px-[1.15rem] py-4">
-            <div className="mb-2 flex items-center justify-between text-[11px]"><span className="font-semibold text-[var(--admin-ink)]">Capacidade utilizada</span><span className="text-[var(--admin-muted)]">{storagePercentage.toFixed(2)}%</span></div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800"><div className="h-full rounded-full bg-blue-600" style={{ width: `${storagePercentage}%` }} /></div>
-          </div>
-        </section>
       </div>
 
-      <section className="admin-surface">
-        <div className="admin-surface-header"><div><h2 className="admin-section-title">Atalhos operacionais</h2><p className="admin-section-description">Acesso direto às rotinas mais usadas.</p></div></div>
-        <div className="grid divide-y divide-[var(--admin-line)] md:grid-cols-3 md:divide-x md:divide-y-0">
-          {[
-            ['Empresas e usuários', 'Cadastros, acessos e documentos', '/admin/users'],
-            ['Agenda fiscal', 'Prazos e compromissos do escritório', '/admin/agenda'],
-            ['Lançamentos contábeis', 'Competências, conferência e exportação', '/admin/lancamentos'],
-          ].map(([title, description, path]) => (
-            <button key={title} type="button" onClick={() => navigate(path)} className="group flex items-center justify-between gap-4 p-4 text-left hover:bg-[var(--admin-blue-soft)]">
-              <span><span className="block text-xs font-semibold text-[var(--admin-ink)]">{title}</span><span className="mt-1 block text-[11px] text-[var(--admin-muted)]">{description}</span></span>
-              <ArrowUpRight className="h-4 w-4 shrink-0 text-[var(--admin-muted)] group-hover:text-blue-600" />
-            </button>
-          ))}
-        </div>
-      </section>
-    </div>
-  );
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {statsData.map((stat, index) => <Card key={index} className="cursor-pointer transition-all duration-300 hover:scale-105 bg-white dark:bg-[#0b0f1c] border border-gray-200 dark:border-[#efc349]/30 hover:border-[#efc349] dark:hover:border-[#efc349]" onClick={() => navigate(stat.link)}>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-[#b3b3b3] mb-1">
+                    {stat.title}
+                  </p>
+                  <p className="text-2xl font-bold text-[#020817] dark:text-[#f4f4f4]">
+                    {stat.value}
+                  </p>
+                </div>
+                <div className="p-3 rounded-full bg-gray-100 dark:bg-[#efc349]/10 text-[#020817] dark:text-[#efc349]">
+                  {stat.icon}
+                </div>
+              </div>
+            </CardContent>
+          </Card>)}
+      </div>
+
+      {/* Recent Activity & Storage */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recent Documents */}
+        <Card className="bg-white dark:bg-[#0b0f1c] border border-gray-200 dark:border-[#efc349]/30">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg text-[#020817] dark:text-[#efc349] font-extralight">
+                Documentos Recentes
+              </h3>
+              <FileText className="h-5 w-5 text-gray-400 dark:text-[#efc349]" />
+            </div>
+            <div className="space-y-3">
+              {stats.recentDocuments.slice(0, 5).map((doc, index) => <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-[#efc349]/20 last:border-0">
+                  <div>
+                    <p className="text-sm font-medium text-[#020817] dark:text-[#f4f4f4] truncate">
+                      {doc.name}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-[#b3b3b3]">
+                      Por: {doc.userName || 'Usuário desconhecido'}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-[#b3b3b3]">
+                      {formatRecentDate(doc.uploaded_at)}
+                    </p>
+                  </div>
+                  
+                </div>)}
+              {stats.recentDocuments.length === 0 && <p className="text-sm text-gray-500 dark:text-[#b3b3b3] text-center py-4">
+                  Nenhum documento recente encontrado
+                </p>}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* System Info */}
+        <Card className="bg-white dark:bg-[#0b0f1c] border border-gray-200 dark:border-[#efc349]/30">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg text-[#020817] dark:text-[#efc349] font-extralight">
+                Informações do Sistema
+              </h3>
+              <Bell className="h-5 w-5 text-gray-400 dark:text-[#efc349]" />
+            </div>
+            
+            <div className="space-y-3">
+              {/* Documentos Enviados Recentemente */}
+              <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700/30">
+                <div className="flex justify-between items-center mb-2">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    <span className="text-sm font-medium text-green-800 dark:text-green-300">
+                      Documentos Enviados
+                    </span>
+                  </div>
+                  <span className="text-lg font-bold text-green-600 dark:text-green-400">
+                    {stats.recentDocumentsCount}
+                  </span>
+                </div>
+                <p className="text-xs text-green-700 dark:text-green-400/80 mb-2">
+                  Últimos 7 dias
+                </p>
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  className="w-full text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30 h-8"
+                  onClick={() => navigate("/admin/storage")}
+                >
+                  Ver Documentos →
+                </Button>
+              </div>
+
+              {/* Eventos Fiscais */}
+              <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/30">
+                <div className="flex justify-between items-center mb-2">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                      Eventos Fiscais Próximos
+                    </span>
+                  </div>
+                  <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                    {stats.upcomingFiscalEvents}
+                  </span>
+                </div>
+                <p className="text-xs text-blue-700 dark:text-blue-400/80 mb-2">
+                  Nos próximos 30 dias
+                </p>
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  className="w-full text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 h-8"
+                  onClick={() => navigate("/admin/calendar")}
+                >
+                  Ver Agenda →
+                </Button>
+              </div>
+
+              {/* Armazenamento */}
+              {stats.storageStats && (
+                <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-700/30">
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="flex items-center gap-2">
+                      <HardDrive className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                      <span className="text-sm font-medium text-gray-800 dark:text-gray-300">
+                        Armazenamento
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                    {stats.storageStats.totalStorageGB?.toFixed(2) || '0'} GB de {stats.storageStats.storageLimitGB || 100} GB
+                  </p>
+                  <div className="w-full bg-gray-200 dark:bg-[#020817] rounded-full h-2 mb-2">
+                    <div 
+                      className="bg-[#efc349] h-2 rounded-full transition-all duration-300" 
+                      style={{ 
+                        width: `${Math.min(100, ((stats.storageStats.totalStorageGB || 0) / (stats.storageStats.storageLimitGB || 100)) * 100)}%` 
+                      }}
+                    />
+                  </div>
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    className="w-full text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900/30 h-8"
+                    onClick={() => navigate("/admin/storage")}
+                  >
+                    Ver Detalhes →
+                  </Button>
+                </div>
+              )}
+
+              {/* Avisos Ativos */}
+              <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700/30">
+                <div className="flex justify-between items-center mb-2">
+                  <div className="flex items-center gap-2">
+                    <Bell className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                    <span className="text-sm font-medium text-purple-800 dark:text-purple-300">
+                      Avisos Ativos
+                    </span>
+                  </div>
+                  <span className="text-lg font-bold text-purple-600 dark:text-purple-400">
+                    {stats.activeAnnouncements}
+                  </span>
+                </div>
+                <p className="text-xs text-purple-700 dark:text-purple-400/80 mb-2">
+                  Últimos 30 dias
+                </p>
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  className="w-full text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/30 h-8"
+                  onClick={() => navigate("/admin/announcements")}
+                >
+                  Gerenciar Avisos →
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Quick Actions */}
+      <Card className="bg-white dark:bg-[#0b0f1c] border border-gray-200 dark:border-[#efc349]/30">
+        <CardContent className="p-6">
+          <h3 className="text-lg text-[#020817] dark:text-[#efc349] mb-4 font-extralight">
+            Ações Rápidas
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Button onClick={() => navigate("/admin/users")} variant="outline" className="h-12 justify-start border-gray-200 dark:border-[#efc349]/30 hover:border-[#efc349] dark:hover:bg-[#efc349]/10">
+              <Users className="h-4 w-4 mr-2" />
+              Adicionar Usuário
+            </Button>
+            <Button onClick={() => navigate("/admin/polls")} variant="outline" className="h-12 justify-start border-gray-200 dark:border-[#efc349]/30 hover:border-[#efc349] dark:hover:bg-[#efc349]/10">
+              <PieChart className="h-4 w-4 mr-2" />
+              Nova Enquete
+            </Button>
+            <Button onClick={() => navigate("/admin/simulations")} variant="outline" className="h-12 justify-start border-gray-200 dark:border-[#efc349]/30 hover:border-[#efc349] dark:hover:bg-[#efc349]/10">
+              <Calendar className="h-4 w-4 mr-2" />
+              Simulação IRPF
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Floating Action Button */}
+      
+    </div>;
 };

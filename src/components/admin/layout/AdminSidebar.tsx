@@ -1,72 +1,168 @@
-import { Link } from 'react-router-dom';
-import { useSidebarHandlers } from '@/hooks/layout/useSidebarHandlers';
-import { useAdminSidebarNavigation } from '@/hooks/layout/useAdminSidebarNavigation';
-import { useIsMobile } from '@/hooks/use-mobile';
+
+import { useEffect } from "react";
+import { Link } from "react-router-dom";
+import { useSidebarHandlers } from "@/hooks/layout/useSidebarHandlers";
+import { useAdminSidebarNavigation } from "@/hooks/layout/useAdminSidebarNavigation";
+import { X } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
+import { Button } from "@/components/ui/button";
+import { LucideIcon } from "lucide-react";
+
+interface SidebarItemProps {
+  icon: LucideIcon;
+  label: string;
+  active: boolean;
+  to: string;
+  onClick?: () => void;
+}
+
+const SidebarItem: React.FC<SidebarItemProps> = ({
+  icon: Icon,
+  label,
+  active,
+  to,
+  onClick
+}) => {
+  return (
+    <Link 
+      to={to} 
+      className={`flex items-center space-x-4 px-6 py-4 rounded-lg transition-all duration-300 ease-in-out group ${
+        active 
+          ? "bg-[#efc349]/10 text-[#efc349] border-l-4 border-[#efc349]" 
+          : "text-gray-700 dark:text-white/80 hover:bg-gray-100 dark:hover:bg-[#efc349]/5 hover:text-[#020817] dark:hover:text-[#efc349]"
+      }`} 
+      onClick={onClick}
+    >
+      <div className={`transition-all duration-300 ${
+        active 
+          ? "text-[#efc349] scale-110" 
+          : "text-gray-500 dark:text-white/70 group-hover:text-[#efc349] group-hover:scale-105"
+      }`}>
+        <Icon size={20} />
+      </div>
+      <span className="tracking-wide text-sm font-extralight">{label}</span>
+    </Link>
+  );
+};
 
 interface AdminSidebarProps {
   open: boolean;
   onClose: () => void;
 }
 
-const AdminSidebar = ({ open, onClose }: AdminSidebarProps) => {
-  const { sidebarItems } = useAdminSidebarNavigation();
-  const isMobile = useIsMobile();
+const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
+  const { theme } = useTheme();
+  const { sidebarItems, currentPath } = useAdminSidebarNavigation();
+  
+  // Use the custom hook for sidebar handlers
+  useSidebarHandlers({ 
+    isMobile: window.innerWidth < 768, 
+    open, 
+    onClose 
+  });
 
-  useSidebarHandlers({ isMobile, open, onClose });
+  // Close sidebar on route change for mobile
+  useEffect(() => {
+    const isMobile = window.innerWidth < 768;
+    if (isMobile && open) {
+      onClose();
+    }
+  }, [currentPath, onClose, open]);
 
-  const primaryItems = sidebarItems.slice(0, 6);
-  const secondaryItems = sidebarItems.slice(6);
-
-  const renderItems = (items: typeof sidebarItems) =>
-    items.map(item => (
-      <Link
-        key={item.label}
-        to={item.to}
-        onClick={isMobile ? onClose : undefined}
-        className={`mx-3 block rounded-md border px-3 py-2.5 text-[13px] transition-colors ${
-          item.active
-            ? 'border-blue-500/35 bg-blue-500/12 font-semibold text-blue-100'
-            : 'border-transparent text-slate-400 hover:bg-white/[0.04] hover:text-slate-100'
-        }`}
-      >
-        {item.label}
-      </Link>
-    ));
+  const isMobile = window.innerWidth < 768;
 
   return (
-    <aside
-      data-sidebar="true"
-      className={`${isMobile ? 'fixed' : 'relative'} inset-y-0 left-0 z-50 flex shrink-0 flex-col overflow-hidden border-r border-[#20324a] bg-[#081321] text-white transition-[width,transform] duration-200 ${
-        isMobile
-          ? open
-            ? 'w-64 translate-x-0'
-            : 'w-64 -translate-x-full'
-          : open
-            ? 'w-64'
-            : 'w-0 border-r-0'
-      }`}
+    <aside 
+      data-sidebar="true" 
+      className={`
+        ${isMobile ? 'fixed' : 'relative'} 
+        inset-y-0 left-0 z-50 
+        w-72 flex flex-col 
+        transition-transform duration-300 ease-in-out 
+        bg-white dark:bg-[#020817] 
+        ${isMobile 
+          ? open 
+            ? 'translate-x-0 shadow-2xl' 
+            : '-translate-x-full'
+          : open 
+            ? 'translate-x-0' 
+            : '-translate-x-0 md:translate-x-0 md:w-20'
+        }
+      `}
     >
-      <div className="flex h-16 shrink-0 items-center border-b border-[#20324a] px-5">
-        <Link to="/" className="block">
-          <img
-            src="/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png"
-            alt="WS Gestão Contábil"
-            className="h-7 w-auto"
-          />
+      {/* Mobile close button */}
+      {isMobile && open && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
+          className="absolute top-4 right-4 z-10 text-gray-500 dark:text-white/70 hover:text-[#efc349]"
+        >
+          <X size={20} />
+        </Button>
+      )}
+
+      {/* Logo area */}
+      <div className="h-20 flex items-center justify-center px-6 border-b border-gray-100 dark:border-[#020817]">
+        <Link to="/" className="flex items-center justify-center transition-all duration-300 hover:scale-105">
+          {(open || isMobile) ? (
+            <img 
+              src={theme === 'light' 
+                ? "/lovable-uploads/f7fdf0cf-f16c-4df7-a92c-964aadea9539.png" 
+                : "/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png"
+              } 
+              alt="WS Gestão Contábil" 
+              className="h-8" 
+            />
+          ) : (
+            <img 
+              src={theme === 'light' 
+                ? "/lovable-uploads/83322e23-9ed8-4622-8631-8022a1d10c19.png" 
+                : "/lovable-uploads/ed055b1a-ba3e-4890-b78d-1d83e85b592b.png"
+              } 
+              alt="WS Gestão Contábil" 
+              className="h-10" 
+            />
+          )}
         </Link>
       </div>
-
-      <nav className="flex-1 overflow-y-auto py-5">
-        <p className="px-6 pb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-600">Operação</p>
-        <div className="space-y-0.5">{renderItems(primaryItems)}</div>
-        <p className="px-6 pb-2 pt-7 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-600">Gestão</p>
-        <div className="space-y-0.5">{renderItems(secondaryItems)}</div>
+      
+      {/* Navigation */}
+      <nav className="flex-1 overflow-y-auto py-8 px-3 space-y-2">
+        {sidebarItems.map(item => (
+          <div key={item.label}>
+            {(open || isMobile) ? (
+              <SidebarItem 
+                icon={item.icon} 
+                label={item.label} 
+                active={item.active} 
+                to={item.to} 
+                onClick={isMobile ? onClose : undefined}
+              />
+            ) : (
+              <div 
+                className={`flex justify-center p-4 rounded-lg transition-all duration-300 hover:scale-110 ${
+                  item.active 
+                    ? "bg-[#efc349]/10 border-l-4 border-[#efc349]" 
+                    : "hover:bg-gray-100 dark:hover:bg-[#efc349]/10"
+                }`} 
+                title={item.label}
+              >
+                <Link 
+                  to={item.to} 
+                  className={`transition-colors duration-300 ${
+                    item.active 
+                      ? "text-[#efc349]" 
+                      : "text-gray-500 dark:text-white/70 hover:text-[#efc349]"
+                  }`}
+                >
+                  <item.icon size={20} />
+                </Link>
+              </div>
+            )}
+          </div>
+        ))}
       </nav>
-
-      <div className="border-t border-[#20324a] px-5 py-4 text-[11px] text-slate-500">
-        <span className="mb-1 block font-semibold text-slate-400">WS Gestão Contábil</span>
-        Ambiente administrativo
-      </div>
     </aside>
   );
 };

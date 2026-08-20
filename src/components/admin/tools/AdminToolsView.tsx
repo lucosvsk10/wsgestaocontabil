@@ -1,25 +1,90 @@
-import { ArrowUpRight } from 'lucide-react';
+
+import React from 'react';
+import { Button } from '@/components/ui/button';
+import { Calculator, FileText, PieChart, Building2, CreditCard, Images } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-export const AdminToolsView = () => {
+export const AdminToolsView: React.FC = () => {
   const navigate = useNavigate();
+
   const tools = [
-    { area: 'Cálculos', title: 'Simulador de IRPF', description: 'Estimativa de imposto de renda para pessoa física.', path: '/simulador-irpf' },
-    { area: 'Cálculos', title: 'Calculadora de INSS', description: 'Contribuições previdenciárias por categoria.', path: '/calculadora-inss' },
-    { area: 'Cálculos', title: 'Simulador de pró-labore', description: 'Cálculo de valor líquido, INSS e IRRF.', path: '/simulador-prolabore' },
-    { area: 'Conteúdo', title: 'Carrossel institucional', description: 'Empresas e marcas exibidas na página principal.', path: '/admin/carousel' },
-    { area: 'Relacionamento', title: 'Gerador de enquetes', description: 'Consultas e formulários destinados aos clientes.', path: '/admin/polls' },
-    { area: 'Documentos', title: 'Documentos por empresa', description: 'Acesso aos arquivos e categorias de cada cliente.', path: '/admin/users' },
-    { area: 'Histórico', title: 'Simulações realizadas', description: 'Consultas anteriores de IRPF, INSS e pró-labore.', path: '/admin/simulations' },
+    {
+      title: "Simulador de IRPF",
+      description: "Calculadora para simulação de imposto de renda.",
+      icon: <Calculator className="h-12 w-12 text-green-600 dark:text-green-400" />,
+      action: () => navigate('/simulador-irpf')
+    },
+    {
+      title: "Calculadora de INSS",
+      description: "Calcule contribuições do INSS por categoria.",
+      icon: <CreditCard className="h-12 w-12 text-blue-600 dark:text-blue-400" />,
+      action: () => navigate('/calculadora-inss')
+    },
+    {
+      title: "Simulador de Pró-labore",
+      description: "Simule valores líquidos de pró-labore.",
+      icon: <Building2 className="h-12 w-12 text-purple-600 dark:text-purple-400" />,
+      action: () => navigate('/simulador-prolabore')
+    },
+    {
+      title: "Carrossel",
+      description: "Gerencie o carrossel da página principal.",
+      icon: <Images className="h-12 w-12 text-orange-600 dark:text-orange-400" />,
+      action: () => navigate('/admin/carousel')
+    },
+    {
+      title: "Gerador de Enquetes",
+      description: "Crie enquetes para seus clientes.",
+      icon: <PieChart className="h-12 w-12 text-orange-600 dark:text-orange-400" />,
+      action: () => navigate('/admin/polls')
+    },
+    {
+      title: "Gerenciador de Documentos",
+      description: "Gerencie documentos por cliente.",
+      icon: <FileText className="h-12 w-12 text-indigo-600 dark:text-indigo-400" />,
+      action: () => navigate('/admin/users')
+    },
+    {
+      title: "Histórico de Simulações",
+      description: "Visualize todas as simulações realizadas.",
+      icon: <Calculator className="h-12 w-12 text-red-600 dark:text-red-400" />,
+      action: () => navigate('/admin/simulations')
+    }
   ];
 
-  return <div className="admin-page">
-    <header className="admin-page-header"><div><p className="admin-eyebrow">Recursos do escritório</p><h1 className="admin-title">Ferramentas</h1><p className="admin-subtitle">Acesse utilitários de cálculo, comunicação e gestão sem sair do ambiente administrativo.</p></div></header>
-    <section className="admin-surface">
-      <div className="admin-surface-header"><div><h2 className="admin-section-title">Recursos disponíveis</h2><p className="admin-section-description">{tools.length} ferramentas organizadas por área de uso.</p></div></div>
-      <div className="divide-y divide-[var(--admin-line)]">
-        {tools.map(tool => <button key={tool.title} type="button" onClick={() => navigate(tool.path)} className="group grid w-full gap-2 px-4 py-3.5 text-left hover:bg-[var(--admin-blue-soft)] sm:grid-cols-[130px_220px_1fr_70px] sm:items-center"><span className="text-[10px] font-bold uppercase tracking-[0.07em] text-blue-600 dark:text-blue-400">{tool.area}</span><span className="text-xs font-semibold text-[var(--admin-ink)]">{tool.title}</span><span className="text-[11px] text-[var(--admin-muted)]">{tool.description}</span><span className="flex items-center justify-end gap-1 text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--admin-muted)] group-hover:text-blue-600">Abrir <ArrowUpRight className="h-3.5 w-3.5" /></span></button>)}
+  return (
+    <div className="space-y-8">
+      <div className="mb-8">
+        <h1 className="text-3xl text-[#020817] dark:text-[#efc349] mb-4 font-extralight">Ferramentas</h1>
+        <p className="text-gray-600 dark:text-white/70 font-extralight">Acesse as principais ferramentas do sistema</p>
       </div>
-    </section>
-  </div>;
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {tools.map((tool, index) => (
+          <div key={index} className="p-8 text-center space-y-6 transition-all duration-300 hover:scale-105 group bg-white dark:bg-transparent rounded-xl border border-gray-100 dark:border-[#efc349]/20 hover:shadow-lg dark:hover:shadow-none">
+            <div className="flex items-center justify-center">
+              <div className="rounded-full bg-gray-50 dark:bg-[#efc349]/10 p-6 group-hover:scale-110 transition-all duration-300">
+                {tool.icon}
+              </div>
+            </div>
+            <div className="space-y-3">
+              <h3 className="text-xl text-[#020817] dark:text-[#efc349] font-extralight">
+                {tool.title}
+              </h3>
+              <p className="text-gray-500 dark:text-white/70 font-extralight">
+                {tool.description}
+              </p>
+            </div>
+            <Button 
+              variant="outline" 
+              className="w-full transition-all duration-300 hover:scale-105 font-extralight border-[#efc349]/30 hover:bg-[#efc349]/10" 
+              onClick={tool.action}
+            >
+              Acessar
+            </Button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 };

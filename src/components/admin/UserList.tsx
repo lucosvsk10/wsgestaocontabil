@@ -23,7 +23,7 @@ interface UserListProps {
   isLoading: boolean;
   setSelectedUserId: (id: string) => void;
   setSelectedUserForPasswordChange: (user: UserType) => void;
-  passwordForm: unknown;
+  passwordForm: any;
   refreshUsers: () => void;
 }
 
@@ -55,14 +55,15 @@ export const UserList = ({
 
   if (isLoading) {
     return (
-      <div className="flex min-h-[420px] items-center justify-center">
+      <div className="min-h-screen bg-[#fdfdfd] dark:bg-[#020817] flex justify-center items-center">
         <LoadingSpinner />
       </div>
     );
   }
 
   return (
-    <div className="admin-page">
+    <div className="min-h-screen bg-[#fdfdfd] dark:bg-[#020817] p-8">
+      <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
         <UserListHeader onCreateUser={() => setIsUserCreationDialogOpen(true)} />
 
@@ -74,15 +75,25 @@ export const UserList = ({
           setSortOrder={setSortOrder}
         />
 
-        <section className="admin-kpi-grid">
-          <div className="admin-kpi"><p className="admin-kpi-label">Clientes</p><p className="admin-kpi-value">{clientUsers.length}</p><p className="admin-kpi-meta">Empresas cadastradas</p></div>
-          <div className="admin-kpi"><p className="admin-kpi-label">Equipe interna</p><p className="admin-kpi-value">{adminUsers.length}</p><p className="admin-kpi-meta">Acessos administrativos</p></div>
-          <div className="admin-kpi"><p className="admin-kpi-label">Total de acessos</p><p className="admin-kpi-value">{supabaseUsers.length}</p><p className="admin-kpi-meta">Usuários autenticados</p></div>
-          <div className="admin-kpi"><p className="admin-kpi-label">Resultado da busca</p><p className="admin-kpi-value">{clientUsers.filter(user => `${user.email || ''} ${user.user_metadata?.name || ''}`.toLowerCase().includes(searchTerm.toLowerCase())).length}</p><p className="admin-kpi-meta">Clientes encontrados</p></div>
-        </section>
-
-        <UserTableComponent usersList={clientUsers} users={users} title="Empresas e clientes" searchTerm={searchTerm} sortOrder={sortOrder} onDeleteUser={handleDeleteUser} />
-        <UserTableComponent usersList={adminUsers} users={users} title="Equipe administrativa" isAdmin={true} searchTerm={searchTerm} sortOrder={sortOrder} onDeleteUser={handleDeleteUser} />
+        {/* User Tables */}
+        <UserTableComponent
+          usersList={clientUsers}
+          users={users}
+          title="Clientes"
+          searchTerm={searchTerm}
+          sortOrder={sortOrder}
+          onDeleteUser={handleDeleteUser}
+        />
+        
+        <UserTableComponent
+          usersList={adminUsers}
+          users={users}
+          title="Administradores"
+          isAdmin={true}
+          searchTerm={searchTerm}
+          sortOrder={sortOrder}
+          onDeleteUser={handleDeleteUser}
+        />
 
         {/* User Creation Dialog */}
         <UserCreationDialog
@@ -101,6 +112,7 @@ export const UserList = ({
             onSuccess={handleDeleteSuccess}
           />
         )}
+      </div>
     </div>
   );
 };

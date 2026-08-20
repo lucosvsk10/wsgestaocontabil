@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Input } from '@/components/ui/input';
-import { supabase } from '@/integrations/supabase/client';
-import { PlanoContasModal } from './PlanoContasModal';
-
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { Users, Search, CheckCircle, ClipboardList, Building2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
+import { PlanoContasModal } from "./PlanoContasModal";
 interface ClientStatus {
   id: string;
   name: string;
@@ -11,156 +14,137 @@ interface ClientStatus {
   closedMonths: number;
   hasPlanoContas: boolean;
 }
-
 interface ClientStatusListProps {
   selectedClientId: string | null;
   onSelectClient: (clientId: string) => void;
 }
-
 export const ClientStatusList = ({
   selectedClientId,
-  onSelectClient,
+  onSelectClient
 }: ClientStatusListProps) => {
   const [clients, setClients] = useState<ClientStatus[]>([]);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [planoOpenFor, setPlanoOpenFor] = useState<{ id: string; name: string } | null>(null);
-
-  const fetchClients = useCallback(async () => {
+  useEffect(() => {
+    fetchClients();
+  }, []);
+  const fetchClients = async () => {
     try {
+      const {
+        data: users,
+        error: usersError
+      } = await supabase.from('users').select('id, name, email').eq('role', 'client');
+      if (usersError) throw usersError;
       const now = new Date();
       const currentCompetencia = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-
-      const [usersResult, alignedResult, closedResult, planosResult] = await Promise.all([
-        supabase.from('users').select('id, name, email').eq('role', 'client'),
-        supabase
-          .from('lancamentos_alinhados')
-          .select('user_id')
-          .eq('competencia', currentCompetencia),
-        supabase.from('fechamentos_exportados').select('user_id'),
-        supabase.from('planos_contas').select('user_id'),
-      ]);
-
-      if (usersResult.error) throw usersResult.error;
-      if (alignedResult.error) throw alignedResult.error;
-      if (closedResult.error) throw closedResult.error;
-      if (planosResult.error) throw planosResult.error;
-
-      const alignedByClient = new Map<string, number>();
-      const closedByClient = new Map<string, number>();
-      const clientsWithPlan = new Set<string>();
-
-      (alignedResult.data || []).forEach(({ user_id }) => {
-        alignedByClient.set(user_id, (alignedByClient.get(user_id) || 0) + 1);
-      });
-      (closedResult.data || []).forEach(({ user_id }) => {
-        closedByClient.set(user_id, (closedByClient.get(user_id) || 0) + 1);
-      });
-      (planosResult.data || []).forEach(({ user_id }) => clientsWithPlan.add(user_id));
-
-      setClients(
-        (usersResult.data || []).map(user => ({
+      const clientStatuses = await Promise.all((users || []).map(async user => {
+        const {
+          count: alignedCount
+        } = await supabase.from('lancamentos_alinhados').select('*', {
+          count: 'exact',
+          head: true
+        }).eq('user_id', user.id).eq('competencia', currentCompetencia);
+        const {
+          count: closedCount
+        } = await supabase.from('fechamentos_exportados').select('*', {
+          count: 'exact',
+          head: true
+        }).eq('user_id', user.id);
+        const {
+          count: planoCount
+        } = await supabase.from('planos_contas').select('*', {
+          count: 'exact',
+          head: true
+        }).eq('user_id', user.id);
+        return {
           id: user.id,
           name: user.name || 'Sem nome',
           email: user.email || '',
-          alignedCount: alignedByClient.get(user.id) || 0,
-          closedMonths: closedByClient.get(user.id) || 0,
-          hasPlanoContas: clientsWithPlan.has(user.id),
-        }))
-      );
+          alignedCount: alignedCount || 0,
+          closedMonths: closedCount || 0,
+          hasPlanoContas: (planoCount || 0) > 0
+        };
+      }));
+      setClients(clientStatuses);
     } catch (error) {
-      console.error('Erro ao carregar empresas:', error);
+      console.error('Error fetching clients:', error);
     } finally {
       setIsLoading(false);
     }
-  }, []);
-
-  useEffect(() => {
-    fetchClients();
-  }, [fetchClients]);
-
-  const normalizedSearch = search.trim().toLowerCase();
-  const filteredClients = clients.filter(
-    client =>
-      client.name.toLowerCase().includes(normalizedSearch) ||
-      client.email.toLowerCase().includes(normalizedSearch)
-  );
-
-  return (
-    <div className="flex max-h-[520px] flex-col bg-white dark:bg-[#111214]">
-      <div className="shrink-0 border-b border-black/10 p-4 dark:border-white/10">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold">Empresas</h2>
-          <span className="text-xs text-black/40 dark:text-white/40">{clients.length}</span>
+  };
+  const filteredClients = clients.filter(client => client.name.toLowerCase().includes(search.toLowerCase()) || client.email.toLowerCase().includes(search.toLowerCase()));
+  return <div className="bg-card rounded-xl overflow-hidden flex flex-col h-[calc(100vh-180px)]">
+      {/* Header */}
+      <div className="p-4 bg-transparent shrink-0">
+        <div className="flex items-center gap-2 mb-3">
+          
+          <h2 className="font-semibold text-foreground">Clientes</h2>
+          <Badge variant="secondary" className="ml-auto text-xs">
+            {clients.length}
+          </Badge>
         </div>
-        <Input
-          placeholder="Buscar por nome ou e-mail"
-          value={search}
-          onChange={event => setSearch(event.target.value)}
-          className="h-10 rounded-none border-black/15 bg-transparent text-sm dark:border-white/15"
-        />
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Buscar cliente..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 bg-background" />
+        </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        {isLoading ? (
-          <div className="p-8 text-center text-sm text-black/45 dark:text-white/40">Carregando...</div>
-        ) : filteredClients.length === 0 ? (
-          <div className="p-8 text-center text-sm text-black/45 dark:text-white/40">
-            Nenhuma empresa encontrada
-          </div>
-        ) : (
-          <div className="divide-y divide-black/10 dark:divide-white/10">
-            {filteredClients.map(client => (
-              <div
-                key={client.id}
-                className={
-                  selectedClientId === client.id
-                    ? 'grid grid-cols-[1fr_auto] bg-black/[0.035] dark:bg-white/[0.05]'
-                    : 'grid grid-cols-[1fr_auto] hover:bg-black/[0.02] dark:hover:bg-white/[0.025]'
-                }
-              >
-                <button
-                  type="button"
-                  onClick={() => onSelectClient(client.id)}
-                  className="min-w-0 px-4 py-3 text-left"
-                >
-                  <p className="truncate text-sm font-medium">{client.name}</p>
-                  <p className="mt-0.5 truncate text-xs text-black/45 dark:text-white/40">
+      {/* Client List */}
+      <div className="flex-1 overflow-y-auto min-h-0">
+        {isLoading ? <div className="p-8 text-center">
+            <div className="animate-pulse text-muted-foreground text-sm">Carregando...</div>
+          </div> : filteredClients.length === 0 ? <div className="p-8 text-center text-muted-foreground text-sm">
+            Nenhum cliente encontrado
+          </div> : <div className="divide-y divide-border/30">
+            {filteredClients.map((client, index) => <motion.div key={client.id} initial={{
+          opacity: 0
+        }} animate={{
+          opacity: 1
+        }} transition={{
+          delay: index * 0.02
+        }} className={cn("w-full flex items-stretch transition-all duration-200", selectedClientId === client.id ? "bg-primary/10" : "hover:bg-muted/50")}>
+                <button onClick={() => onSelectClient(client.id)} className="flex-1 p-4 text-left min-w-0">
+                  <div className="flex items-start justify-between gap-2 mb-1.5">
+                    <span className="font-medium text-foreground text-sm truncate flex-1">
+                      {client.name}
+                    </span>
+                    {client.alignedCount > 0 && <Badge variant="secondary" className="text-xs shrink-0">
+                        {client.alignedCount}
+                      </Badge>}
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate mb-2">
                     {client.email}
                   </p>
-                  <p className="mt-2 text-[10px] uppercase tracking-[0.06em] text-black/40 dark:text-white/35">
-                    {client.hasPlanoContas ? 'Plano cadastrado' : 'Plano não cadastrado'}
-                    {client.alignedCount > 0 ? ` · ${client.alignedCount} lançamentos` : ''}
-                    {client.closedMonths > 0 ? ` · ${client.closedMonths} fechamentos` : ''}
-                  </p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={cn("inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full", client.hasPlanoContas ? "bg-green-500/10 text-green-600" : "bg-destructive/10 text-destructive")}>
+                      <ClipboardList className="h-3 w-3" />
+                      {client.hasPlanoContas ? "Plano OK" : "Sem plano"}
+                    </span>
+                    {client.closedMonths > 0 && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                        <CheckCircle className="h-3 w-3 text-green-500" />
+                        {client.closedMonths} fechado(s)
+                      </span>}
+                  </div>
                 </button>
                 <button
                   type="button"
-                  onClick={event => {
-                    event.stopPropagation();
-                    setPlanoOpenFor({ id: client.id, name: client.name });
-                  }}
-                  className="border-l border-black/10 px-3 text-[10px] font-semibold uppercase tracking-[0.06em] text-black/45 hover:text-black dark:border-white/10 dark:text-white/40 dark:hover:text-white"
+                  onClick={(e) => { e.stopPropagation(); setPlanoOpenFor({ id: client.id, name: client.name }); }}
+                  title="Plano de Contas"
+                  className="px-3 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors border-l border-border/30"
                 >
-                  Plano
+                  <Building2 className="h-4 w-4" />
                 </button>
-              </div>
-            ))}
-          </div>
-        )}
+              </motion.div>)}
+          </div>}
       </div>
-
       {planoOpenFor && (
         <PlanoContasModal
-          isOpen
-          onClose={() => {
-            setPlanoOpenFor(null);
-            fetchClients();
-          }}
+          isOpen={!!planoOpenFor}
+          onClose={() => { setPlanoOpenFor(null); fetchClients(); }}
           clientId={planoOpenFor.id}
           clientName={planoOpenFor.name}
         />
       )}
-    </div>
-  );
+    </div>;
 };
