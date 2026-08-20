@@ -16,10 +16,8 @@ export const StatisticsCard = ({
 }: StatisticsCardProps) => {
   return <Card className="border border-gray-200 dark:border-navy-lighter/30 bg-transparent">
       <CardContent className="p-6 flex flex-col items-center text-center">
-        <div className={`rounded-full ${iconBgClass} p-3 mb-2`}>
-          <div className={`h-8 w-8 ${iconColor}`}>
-            {icon}
-          </div>
+        <div className={`h-8 w-8 mb-2 ${iconColor}`}>
+          {icon}
         </div>
         <CardTitle className="text-lg text-navy-dark dark:text-gold font-extralight">
           {title}

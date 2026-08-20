@@ -89,7 +89,7 @@ export const AdminDashboard = ({
                     {stat.value}
                   </p>
                 </div>
-                <div className="p-3 rounded-full bg-gray-100 dark:bg-[#efc349]/10 text-[#020817] dark:text-[#efc349]">
+                <div className="text-gray-500 dark:text-[#d9d9d9]">
                   {stat.icon}
                 </div>
               </div>
