@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Wand2, Trash2, ArrowLeftToLine, ArrowRightToLine, Type, ChevronDown, ChevronUp } from "lucide-react";
+import { SlidersHorizontal, Trash2, ArrowLeftToLine, ArrowRightToLine, Type, ChevronDown, ChevronUp } from "lucide-react";
 import type { SheetData, SheetCell } from "./exportBuilders";
 
 interface Props {
@@ -65,7 +65,7 @@ export const QuickEditPanel = ({ data, selectedCol, onChange }: Props) => {
         onClick={() => setExpanded((v) => !v)}
         className="w-full flex items-center gap-2 px-4 py-3 hover:bg-muted/50 transition-colors"
       >
-        <Wand2 className="w-4 h-4 text-primary" />
+        <SlidersHorizontal className="w-4 h-4 text-primary" />
         <h3 className="text-sm font-medium text-foreground flex-1 text-left">Edição rápida</h3>
         {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
       </button>
