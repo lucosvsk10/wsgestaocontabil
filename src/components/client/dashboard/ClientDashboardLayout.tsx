@@ -29,7 +29,7 @@ export const ClientDashboardLayout = ({ children, activeTab, setActiveTab }: Cli
   const toggleButtonProps = getToggleButtonProps();
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#020817] flex overflow-hidden">
+    <div className="pro-ui min-h-screen bg-white dark:bg-[#020817] flex overflow-hidden">
       {/* Sidebar */}
       <ClientSidebar 
         activeTab={activeTab} 
