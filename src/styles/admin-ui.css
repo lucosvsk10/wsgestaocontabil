@@ -74,3 +74,12 @@
   font-weight: 600;
   letter-spacing: -0.02em;
 }
+
+/* Ícones sem "chip" de fundo: mantém apenas o ícone */
+.pro-ui .w-10.h-10[class*="bg-"],
+.pro-ui .h-10.w-10[class*="bg-"],
+.pro-ui .w-9.h-9[class*="bg-"],
+.pro-ui .w-8.h-8[class*="bg-"] {
+  background-color: transparent;
+  border: 0;
+}
