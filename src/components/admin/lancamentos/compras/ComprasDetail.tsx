@@ -32,6 +32,7 @@ interface Props {
   clientId: string;
   clientName: string;
   initialCompetencia?: string;
+  embedded?: boolean;
 }
 
 interface Linha {
@@ -61,7 +62,7 @@ interface ComprasLancamento {
   valor: number | null;
 }
 
-export const ComprasDetail = ({ clientId, clientName, initialCompetencia }: Props) => {
+export const ComprasDetail = ({ clientId, clientName, initialCompetencia, embedded = false }: Props) => {
   const navigate = useNavigate();
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(
@@ -247,18 +248,20 @@ export const ComprasDetail = ({ clientId, clientName, initialCompetencia }: Prop
   };
 
   const statusBadge = (s: string) => {
-    if (s === "lancado") return <Badge className="bg-emerald-500/10 text-emerald-700 border-0"><CheckCircle2 className="w-3 h-3 mr-1" />Lançado</Badge>;
-    if (s === "processado") return <Badge className="bg-blue-500/10 text-blue-700 border-0"><CheckCircle2 className="w-3 h-3 mr-1" />Processado</Badge>;
-    if (s === "erro") return <Badge variant="destructive"><AlertCircle className="w-3 h-3 mr-1" />Erro</Badge>;
-    if (s === "processando") return <Badge variant="secondary"><Loader2 className="w-3 h-3 mr-1 animate-spin" />Processando</Badge>;
-    return <Badge variant="outline">Pendente</Badge>;
+    if (s === "lancado") return <Badge variant="outline" className="rounded-none font-normal">Lançado</Badge>;
+    if (s === "processado") return <Badge variant="outline" className="rounded-none font-normal">Processado</Badge>;
+    if (s === "erro") return <Badge variant="destructive" className="rounded-none font-normal">Erro</Badge>;
+    if (s === "processando") return <Badge variant="outline" className="rounded-none font-normal">Processando</Badge>;
+    return <Badge variant="outline" className="rounded-none font-normal">Pendente</Badge>;
   };
 
   return (
     <>
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-card rounded-xl border border-border overflow-hidden">
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className={embedded ? "bg-transparent overflow-hidden" : "bg-card rounded-xl border border-border overflow-hidden"}>
         <div className="p-5 border-b border-border flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
+          {embedded ? (
+            <p className="text-xs text-muted-foreground">Documentos e lançamentos de compras</p>
+          ) : <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-muted-foreground" />
             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
               <SelectTrigger className="w-[140px] h-9"><SelectValue /></SelectTrigger>
@@ -268,10 +271,10 @@ export const ComprasDetail = ({ clientId, clientName, initialCompetencia }: Prop
               <SelectTrigger className="w-[100px] h-9"><SelectValue /></SelectTrigger>
               <SelectContent>{years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
             </Select>
-          </div>
+          </div>}
           <div className="ml-auto flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={fetchData} className="h-9">
-              <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Atualizar
+            <Button size="sm" variant="outline" onClick={fetchData} className="h-9 rounded-none">
+              Atualizar
             </Button>
           </div>
         </div>
@@ -280,13 +283,12 @@ export const ComprasDetail = ({ clientId, clientName, initialCompetencia }: Prop
           <div
             {...getRootProps()}
             className={cn(
-              "border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors",
-              isDragActive ? "border-primary bg-primary/5" : "border-border hover:border-primary/50",
+              "border border-dashed p-8 text-center cursor-pointer transition-colors",
+              isDragActive ? "border-foreground bg-muted/40" : "border-border hover:border-foreground/40",
               uploading && "opacity-60 pointer-events-none"
             )}
           >
             <input {...getInputProps()} />
-            <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
             <p className="text-sm font-medium text-foreground">
               {uploading ? "Enviando..." : isDragActive ? "Solte os PDFs aqui" : "Arraste o Registro de Entradas (PDF) ou clique para selecionar"}
             </p>

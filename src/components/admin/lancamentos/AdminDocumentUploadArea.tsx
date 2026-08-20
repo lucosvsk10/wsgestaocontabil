@@ -1,6 +1,5 @@
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
-import { Upload, X, FileText, Loader2, AlertCircle, RefreshCw, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
@@ -150,11 +149,12 @@ export const AdminDocumentUploadArea = ({
         setFiles((prev) =>
           prev.map((f) => (f.id === fileData.id ? { ...f, status: "success", progress: 100 } : f))
         );
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("Upload error:", error);
+        const message = error instanceof Error ? error.message : "Erro desconhecido";
         setFiles((prev) =>
           prev.map((f) =>
-            f.id === fileData.id ? { ...f, status: "error", error: error.message, progress: 0 } : f
+            f.id === fileData.id ? { ...f, status: "error", error: message, progress: 0 } : f
           )
         );
       }
@@ -180,111 +180,76 @@ export const AdminDocumentUploadArea = ({
 
   return (
     <div className="space-y-3">
-      {/* Dropzone */}
       <div
         {...getRootProps()}
-        className={`
-          rounded-xl border border-dashed p-5 text-center cursor-pointer transition-all duration-200
-          ${isDragActive
-            ? "border-primary bg-primary/5"
-            : "border-border/50 hover:border-primary/40 hover:bg-muted/20"
-          }
-        `}
+        className={`cursor-pointer border border-dashed p-7 text-center transition-colors ${
+          isDragActive
+            ? "border-foreground bg-muted/30"
+            : "border-border hover:border-foreground/40"
+        }`}
       >
         <input {...getInputProps()} />
-        <div className="flex flex-col items-center gap-2">
-          <div className="w-10 h-10 rounded-full bg-muted/60 flex items-center justify-center">
-            <Upload className={`w-4.5 h-4.5 ${isDragActive ? "text-primary" : "text-muted-foreground"}`} />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-foreground">
-              {isDragActive ? "Solte aqui" : `Upload para ${clientName}`}
-            </p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Competência: {monthLabel} • Arraste ou clique para selecionar
-            </p>
-          </div>
-        </div>
+        <p className="text-sm font-medium text-foreground">
+          {isDragActive ? "Solte os arquivos aqui" : `Adicionar documentos de ${clientName}`}
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Competência {monthLabel} · PDF, imagem ou planilha
+        </p>
       </div>
 
-      {/* File list */}
       {files.length > 0 && (
-        <div className="space-y-2">
-          {files.map((fileData) => (
-            <div
-              key={fileData.id}
-              className={`
-                p-3 rounded-lg transition-colors
-                ${fileData.status === "success" ? "bg-green-500/5 border border-green-500/20" :
-                  fileData.status === "error" ? "bg-destructive/5 border border-destructive/20" :
-                  fileData.status === "uploading" || fileData.status === "processing" ? "bg-primary/5 border border-primary/20" :
-                  "bg-muted/40 border border-border/30"}
-              `}
-            >
-              <div className="flex items-center gap-2.5">
-                {/* Status icon */}
-                {fileData.status === "uploading" || fileData.status === "processing" ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" />
-                ) : fileData.status === "success" ? (
-                  <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
-                ) : fileData.status === "error" ? (
-                  <AlertCircle className="w-4 h-4 text-destructive shrink-0" />
-                ) : (
-                  <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
-                )}
+        <div className="border border-border">
+          <div className="divide-y divide-border">
+            {files.map(fileData => (
+              <div key={fileData.id} className="px-4 py-3">
+                <div className="flex items-start gap-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm text-foreground">{fileData.file.name}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {formatFileSize(fileData.file.size)}
+                      {fileData.status === "uploading" && " · Enviando"}
+                      {fileData.status === "processing" && " · Processando"}
+                      {fileData.status === "success" && " · Concluído"}
+                      {fileData.status === "pending" && " · Aguardando envio"}
+                      {fileData.error && (
+                        <span className="ml-1 text-destructive">· {fileData.error}</span>
+                      )}
+                    </p>
+                  </div>
 
-                {/* File info */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-foreground truncate">{fileData.file.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatFileSize(fileData.file.size)}
-                    {fileData.status === "uploading" && " • Enviando..."}
-                    {fileData.status === "processing" && " • Processando..."}
-                    {fileData.error && (
-                      <span className="text-destructive ml-1.5">• {fileData.error}</span>
-                    )}
-                  </p>
+                  {fileData.status === "pending" && (
+                    <button
+                      type="button"
+                      onClick={() => removeFile(fileData.id)}
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      Remover
+                    </button>
+                  )}
+                  {fileData.status === "error" && (
+                    <button
+                      type="button"
+                      onClick={() => retryFile(fileData.id)}
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      Tentar novamente
+                    </button>
+                  )}
                 </div>
 
-                {/* Actions */}
-                {fileData.status === "pending" && (
-                  <button
-                    onClick={() => removeFile(fileData.id)}
-                    className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-                {fileData.status === "error" && (
-                  <button
-                    onClick={() => retryFile(fileData.id)}
-                    className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                  </button>
+                {(fileData.status === "uploading" || fileData.status === "processing") && (
+                  <Progress value={fileData.progress} className="mt-3 h-1" />
                 )}
               </div>
+            ))}
+          </div>
 
-              {/* Progress bar */}
-              {(fileData.status === "uploading" || fileData.status === "processing") && (
-                <div className="mt-2">
-                  <Progress value={fileData.progress} className="h-1.5" />
-                </div>
-              )}
-            </div>
-          ))}
-
-          {/* Action buttons */}
-          <div className="flex items-center gap-2 mt-3">
+          <div className="flex flex-wrap items-center gap-2 border-t border-border p-3">
             {pendingCount > 0 && !isUploading && (
               <button
+                type="button"
                 onClick={uploadFiles}
-                className="
-                  flex-1 py-2.5 px-4 rounded-lg text-sm font-medium
-                  bg-primary text-primary-foreground
-                  hover:bg-primary/90
-                  transition-all duration-200
-                "
+                className="border border-foreground bg-foreground px-4 py-2 text-xs font-medium text-background hover:opacity-90"
               >
                 Enviar {pendingCount} arquivo{pendingCount > 1 ? "s" : ""}
               </button>
@@ -292,23 +257,24 @@ export const AdminDocumentUploadArea = ({
 
             {isUploading && (
               <>
-                <div className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-muted/50 text-sm text-muted-foreground">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  Enviando {uploadingCount} de {files.filter((f) => f.status !== "success").length}...
-                </div>
+                <span className="px-2 text-xs text-muted-foreground">
+                  Enviando {uploadingCount} de {files.filter(file => file.status !== "success").length}
+                </span>
                 <button
+                  type="button"
                   onClick={cancelUpload}
-                  className="py-2.5 px-4 rounded-lg text-sm font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+                  className="border border-border px-4 py-2 text-xs font-medium hover:bg-muted"
                 >
                   Cancelar
                 </button>
               </>
             )}
 
-            {files.length > 0 && !isUploading && (
+            {!isUploading && (
               <button
+                type="button"
                 onClick={() => setFiles([])}
-                className="py-2.5 px-3 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                className="px-3 py-2 text-xs text-muted-foreground hover:text-foreground"
               >
                 Limpar lista
               </button>
