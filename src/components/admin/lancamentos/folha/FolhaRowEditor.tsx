@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Check, ChevronsUpDown, Copy, Sparkles, Info } from "lucide-react";
+import { Check, ChevronsUpDown, Copy, FileText, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -188,7 +188,7 @@ export const FolhaRowEditor = ({ data, selectedRow, planoMap, competencia, justi
       </div>
 
       <div>
-        <label className="text-[11px] text-muted-foreground flex items-center gap-1"><Sparkles className="h-3 w-3" /> Histórico</label>
+        <label className="text-[11px] text-muted-foreground flex items-center gap-1"><FileText className="h-3 w-3" /> Histórico</label>
         <Input value={getVal(COL_HIST)} onChange={(e) => setHist(e.target.value)} className="h-9 text-xs" />
         <div className="mt-1 flex flex-wrap gap-1">
           {historicos.map((h) => (
