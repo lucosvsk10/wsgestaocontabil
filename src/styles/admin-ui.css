@@ -1,76 +1,85 @@
 /* Escopo exclusivo da área administrativa: visual mais sóbrio e corporativo */
 
-.admin-ui,
-.admin-ui input,
-.admin-ui textarea,
-.admin-ui select,
-.admin-ui button {
+.pro-ui,
+.pro-ui input,
+.pro-ui textarea,
+.pro-ui select,
+.pro-ui button {
   font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
   letter-spacing: -0.005em;
 }
 
-.admin-ui {
+.pro-ui {
   font-size: 15px;
 }
 
 /* Cantos mais retos */
-.admin-ui [class*="rounded"] {
+.pro-ui [class*="rounded"] {
   border-radius: 0.25rem;
 }
 
-.admin-ui .rounded-none {
+.pro-ui .rounded-none {
   border-radius: 0;
 }
 
 /* Avatares e badges circulares ficam levemente quadrados */
-.admin-ui .rounded-full {
+.pro-ui .rounded-full {
   border-radius: 0.25rem;
 }
 
 /* Exceções: elementos que precisam continuar circulares/pill */
-.admin-ui [role="progressbar"],
-.admin-ui [role="progressbar"] > *,
-.admin-ui [role="switch"],
-.admin-ui [role="switch"] > span,
-.admin-ui .animate-spin,
-.admin-ui [class*="loader"] {
+.pro-ui [role="progressbar"],
+.pro-ui [role="progressbar"] > *,
+.pro-ui [role="switch"],
+.pro-ui [role="switch"] > span,
+.pro-ui .animate-spin,
+.pro-ui [class*="loader"] {
   border-radius: 9999px;
 }
 
 /* Remoção das bordas douradas */
-.admin-ui [class*="border-[#efc349]"],
-.admin-ui [class*="border-[#F5C441]"],
-.admin-ui [class*="border-gold"],
-.admin-ui .border-gold {
+.pro-ui [class*="border-[#efc349]"],
+.pro-ui [class*="border-[#F5C441]"],
+.pro-ui [class*="border-gold"],
+.pro-ui .border-gold {
   border-color: hsl(var(--border));
 }
 
-.admin-ui [class*="border-l-4"][class*="#efc349"],
-.admin-ui [class*="border-l-4"][class*="gold"] {
+.pro-ui [class*="border-l-4"][class*="#efc349"],
+.pro-ui [class*="border-l-4"][class*="gold"] {
   border-left-color: hsl(var(--foreground) / 0.55);
 }
 
-.admin-ui [class*="ring-[#efc349]"],
-.admin-ui [class*="ring-gold"] {
+.pro-ui [class*="ring-[#efc349]"],
+.pro-ui [class*="ring-gold"] {
   --tw-ring-color: hsl(var(--border));
 }
 
-.dark .admin-ui [class*="border-[#efc349]"],
-.dark .admin-ui [class*="border-gold"],
-.dark .admin-ui .border-gold {
+.dark .pro-ui [class*="border-[#efc349]"],
+.dark .pro-ui [class*="border-gold"],
+.dark .pro-ui .border-gold {
   border-color: hsl(0 0% 100% / 0.14);
 }
 
 /* Divisores e cartões mais discretos */
-.admin-ui .shadow-xl,
-.admin-ui .shadow-2xl {
+.pro-ui .shadow-xl,
+.pro-ui .shadow-2xl {
   box-shadow: 0 6px 20px -12px hsl(222 47% 11% / 0.35);
 }
 
 /* Títulos com peso um pouco maior, mantendo sobriedade */
-.admin-ui h1,
-.admin-ui h2,
-.admin-ui h3 {
+.pro-ui h1,
+.pro-ui h2,
+.pro-ui h3 {
   font-weight: 600;
   letter-spacing: -0.02em;
+}
+
+/* Ícones sem "chip" de fundo: mantém apenas o ícone */
+.pro-ui .w-10.h-10[class*="bg-"],
+.pro-ui .h-10.w-10[class*="bg-"],
+.pro-ui .w-9.h-9[class*="bg-"],
+.pro-ui .w-8.h-8[class*="bg-"] {
+  background-color: transparent;
+  border: 0;
 }

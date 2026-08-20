@@ -45,9 +45,7 @@ export const QuickStats = ({
             onClick={() => onTabChange?.(stat.tab)}
           >
             <CardContent className="p-4 flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl bg-muted flex items-center justify-center`}>
-                <stat.icon className={`w-5 h-5 ${stat.color}`} />
-              </div>
+              <stat.icon className={`w-6 h-6 shrink-0 ${stat.color}`} strokeWidth={1.75} />
               <div>
                 <p className="text-2xl font-semibold">{stat.value}</p>
                 <p className="text-sm text-muted-foreground">{stat.title}</p>

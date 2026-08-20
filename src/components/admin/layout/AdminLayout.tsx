@@ -29,7 +29,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
   const toggleButtonProps = getToggleButtonProps();
 
   return (
-    <div className="admin-ui min-h-screen bg-[#fdfdfd] dark:bg-[#020817] flex">
+    <div className="pro-ui min-h-screen bg-[#fdfdfd] dark:bg-[#020817] flex">
       <AdminSidebar open={sidebarOpen} onClose={handleSidebarClose} />
       <div className="flex-1 flex flex-col">
         <AdminHeader 
