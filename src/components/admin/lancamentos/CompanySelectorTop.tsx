@@ -1,7 +1,7 @@
-import { useState } from "react";
-import { Building2, ChevronDown } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ClientStatusList } from "./ClientStatusList";
+import { useState } from 'react';
+import { Building2, CheckCircle2, ChevronDown } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ClientStatusList } from './ClientStatusList';
 
 interface CompanySelectorTopProps {
   selectedClientId: string | null;
@@ -22,32 +22,33 @@ export const CompanySelectorTop = ({
   };
 
   return (
-    <div className="flex justify-center">
+    <div className="w-full">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="group flex items-center gap-3 px-6 py-3 rounded-xl bg-card hover:bg-muted/50 transition-all shadow-sm min-w-[280px] max-w-md"
+            className="group flex min-h-[72px] w-full items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-left transition-all hover:border-[#d7aa2f]/60 hover:bg-white dark:border-white/10 dark:bg-white/[0.035] dark:hover:border-[#efc349]/50 dark:hover:bg-white/[0.055]"
           >
-            <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
-              <Building2 className="w-4 h-4 text-muted-foreground" />
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#101a2a] text-[#efc349]">
+              <Building2 className="h-5 w-5" />
             </div>
             <div className="flex-1 text-left">
-              <p className="text-[11px] text-muted-foreground uppercase tracking-wide">
-                Empresa
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                Empresa de trabalho
               </p>
-              <p className="text-sm font-medium text-foreground truncate">
-                {selectedClientName || "Selecionar empresa"}
+              <p className="mt-1 truncate text-sm font-semibold text-slate-900 dark:text-white">
+                {selectedClientName || 'Selecionar empresa'}
               </p>
             </div>
+            {selectedClientId && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
             <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-[380px] p-0" align="center">
-          <ClientStatusList
-            selectedClientId={selectedClientId}
-            onSelectClient={handleSelect}
-          />
+        <PopoverContent
+          className="w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-2xl border-slate-200 p-0 shadow-2xl dark:border-white/10"
+          align="start"
+        >
+          <ClientStatusList selectedClientId={selectedClientId} onSelectClient={handleSelect} />
         </PopoverContent>
       </Popover>
     </div>

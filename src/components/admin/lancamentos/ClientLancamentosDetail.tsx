@@ -63,6 +63,7 @@ interface CloseMonthStatus {
 
 interface ClientLancamentosDetailProps {
   clientId: string;
+  initialCompetencia?: string;
 }
 
 const MONTHS = [
@@ -82,7 +83,7 @@ const MONTHS = [
 
 const MONTH_NAMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
-export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailProps) => {
+export const ClientLancamentosDetail = ({ clientId, initialCompetencia }: ClientLancamentosDetailProps) => {
   const [clientInfo, setClientInfo] = useState<ClientInfo | null>(null);
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [documents, setDocuments] = useState<DocumentoBruto[]>([]);
@@ -109,12 +110,22 @@ export const ClientLancamentosDetail = ({ clientId }: ClientLancamentosDetailPro
   
   
   const now = new Date();
-  const [selectedMonth, setSelectedMonth] = useState(String(now.getMonth() + 1).padStart(2, '0'));
-  const [selectedYear, setSelectedYear] = useState(String(now.getFullYear()));
+  const [selectedMonth, setSelectedMonth] = useState(
+    initialCompetencia?.slice(5, 7) || String(now.getMonth() + 1).padStart(2, '0')
+  );
+  const [selectedYear, setSelectedYear] = useState(
+    initialCompetencia?.slice(0, 4) || String(now.getFullYear())
+  );
   const competencia = `${selectedYear}-${selectedMonth}`;
   
   const currentYear = now.getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => String(currentYear - 2 + i));
+
+  useEffect(() => {
+    if (!initialCompetencia) return;
+    setSelectedYear(initialCompetencia.slice(0, 4));
+    setSelectedMonth(initialCompetencia.slice(5, 7));
+  }, [initialCompetencia]);
 
   useEffect(() => {
     if (clientId) {

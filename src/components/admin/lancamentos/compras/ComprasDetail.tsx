@@ -31,6 +31,7 @@ const formatBRL = (v: number | null) =>
 interface Props {
   clientId: string;
   clientName: string;
+  initialCompetencia?: string;
 }
 
 interface Linha {
@@ -60,13 +61,23 @@ interface ComprasLancamento {
   valor: number | null;
 }
 
-export const ComprasDetail = ({ clientId, clientName }: Props) => {
+export const ComprasDetail = ({ clientId, clientName, initialCompetencia }: Props) => {
   const navigate = useNavigate();
   const now = new Date();
-  const [selectedMonth, setSelectedMonth] = useState(String(now.getMonth() + 1).padStart(2, "0"));
-  const [selectedYear, setSelectedYear] = useState(String(now.getFullYear()));
+  const [selectedMonth, setSelectedMonth] = useState(
+    initialCompetencia?.slice(5, 7) || String(now.getMonth() + 1).padStart(2, "0")
+  );
+  const [selectedYear, setSelectedYear] = useState(
+    initialCompetencia?.slice(0, 4) || String(now.getFullYear())
+  );
   const competencia = `${selectedYear}-${selectedMonth}`;
   const years = Array.from({ length: 5 }, (_, i) => String(now.getFullYear() - 2 + i));
+
+  useEffect(() => {
+    if (!initialCompetencia) return;
+    setSelectedYear(initialCompetencia.slice(0, 4));
+    setSelectedMonth(initialCompetencia.slice(5, 7));
+  }, [initialCompetencia]);
 
   const [uploads, setUploads] = useState<ComprasUpload[]>([]);
   const [lancamentos, setLancamentos] = useState<ComprasLancamento[]>([]);

@@ -31,41 +31,46 @@ export const ClientStatusList = ({
   }, []);
   const fetchClients = async () => {
     try {
-      const {
-        data: users,
-        error: usersError
-      } = await supabase.from('users').select('id, name, email').eq('role', 'client');
-      if (usersError) throw usersError;
       const now = new Date();
       const currentCompetencia = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-      const clientStatuses = await Promise.all((users || []).map(async user => {
-        const {
-          count: alignedCount
-        } = await supabase.from('lancamentos_alinhados').select('*', {
-          count: 'exact',
-          head: true
-        }).eq('user_id', user.id).eq('competencia', currentCompetencia);
-        const {
-          count: closedCount
-        } = await supabase.from('fechamentos_exportados').select('*', {
-          count: 'exact',
-          head: true
-        }).eq('user_id', user.id);
-        const {
-          count: planoCount
-        } = await supabase.from('planos_contas').select('*', {
-          count: 'exact',
-          head: true
-        }).eq('user_id', user.id);
+
+      const [usersResult, alignedResult, closedResult, planosResult] = await Promise.all([
+        supabase.from('users').select('id, name, email').eq('role', 'client'),
+        supabase
+          .from('lancamentos_alinhados')
+          .select('user_id')
+          .eq('competencia', currentCompetencia),
+        supabase.from('fechamentos_exportados').select('user_id'),
+        supabase.from('planos_contas').select('user_id')
+      ]);
+
+      if (usersResult.error) throw usersResult.error;
+      if (alignedResult.error) throw alignedResult.error;
+      if (closedResult.error) throw closedResult.error;
+      if (planosResult.error) throw planosResult.error;
+
+      const alignedByClient = new Map<string, number>();
+      const closedByClient = new Map<string, number>();
+      const clientsWithPlan = new Set<string>();
+
+      (alignedResult.data || []).forEach(({ user_id }) => {
+        alignedByClient.set(user_id, (alignedByClient.get(user_id) || 0) + 1);
+      });
+      (closedResult.data || []).forEach(({ user_id }) => {
+        closedByClient.set(user_id, (closedByClient.get(user_id) || 0) + 1);
+      });
+      (planosResult.data || []).forEach(({ user_id }) => clientsWithPlan.add(user_id));
+
+      const clientStatuses = (usersResult.data || []).map(user => {
         return {
           id: user.id,
           name: user.name || 'Sem nome',
           email: user.email || '',
-          alignedCount: alignedCount || 0,
-          closedMonths: closedCount || 0,
-          hasPlanoContas: (planoCount || 0) > 0
+          alignedCount: alignedByClient.get(user.id) || 0,
+          closedMonths: closedByClient.get(user.id) || 0,
+          hasPlanoContas: clientsWithPlan.has(user.id)
         };
-      }));
+      });
       setClients(clientStatuses);
     } catch (error) {
       console.error('Error fetching clients:', error);

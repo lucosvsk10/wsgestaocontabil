@@ -1,12 +1,11 @@
-
-import { useEffect } from "react";
-import { Link } from "react-router-dom";
-import { useSidebarHandlers } from "@/hooks/layout/useSidebarHandlers";
-import { useAdminSidebarNavigation } from "@/hooks/layout/useAdminSidebarNavigation";
-import { X } from "lucide-react";
-import { useTheme } from "@/contexts/ThemeContext";
-import { Button } from "@/components/ui/button";
-import { LucideIcon } from "lucide-react";
+import { useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { useSidebarHandlers } from '@/hooks/layout/useSidebarHandlers';
+import { useAdminSidebarNavigation } from '@/hooks/layout/useAdminSidebarNavigation';
+import { X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { LucideIcon } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface SidebarItemProps {
   icon: LucideIcon;
@@ -16,31 +15,25 @@ interface SidebarItemProps {
   onClick?: () => void;
 }
 
-const SidebarItem: React.FC<SidebarItemProps> = ({
-  icon: Icon,
-  label,
-  active,
-  to,
-  onClick
-}) => {
+const SidebarItem: React.FC<SidebarItemProps> = ({ icon: Icon, label, active, to, onClick }) => {
   return (
-    <Link 
-      to={to} 
-      className={`flex items-center space-x-4 px-6 py-4 rounded-lg transition-all duration-300 ease-in-out group ${
-        active 
-          ? "bg-[#efc349]/10 text-[#efc349] border-l-4 border-[#efc349]" 
-          : "text-gray-700 dark:text-white/80 hover:bg-gray-100 dark:hover:bg-[#efc349]/5 hover:text-[#020817] dark:hover:text-[#efc349]"
-      }`} 
+    <Link
+      to={to}
+      className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200 ${
+        active
+          ? 'bg-[#efc349] text-[#101827] shadow-[0_8px_24px_rgba(239,195,73,0.18)]'
+          : 'text-slate-300 hover:bg-white/[0.08] hover:text-white'
+      }`}
       onClick={onClick}
     >
-      <div className={`transition-all duration-300 ${
-        active 
-          ? "text-[#efc349] scale-110" 
-          : "text-gray-500 dark:text-white/70 group-hover:text-[#efc349] group-hover:scale-105"
-      }`}>
-        <Icon size={20} />
+      <div
+        className={`transition-all duration-200 ${
+          active ? 'text-[#101827]' : 'text-slate-400 group-hover:text-[#efc349]'
+        }`}
+      >
+        <Icon size={18} />
       </div>
-      <span className="tracking-wide text-sm font-extralight">{label}</span>
+      <span className="text-sm font-medium">{label}</span>
     </Link>
   );
 };
@@ -51,42 +44,70 @@ interface AdminSidebarProps {
 }
 
 const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
-  const { theme } = useTheme();
   const { sidebarItems, currentPath } = useAdminSidebarNavigation();
-  
+  const isMobile = useIsMobile();
+
   // Use the custom hook for sidebar handlers
-  useSidebarHandlers({ 
-    isMobile: window.innerWidth < 768, 
-    open, 
-    onClose 
+  useSidebarHandlers({
+    isMobile,
+    open,
+    onClose,
   });
 
   // Close sidebar on route change for mobile
   useEffect(() => {
-    const isMobile = window.innerWidth < 768;
     if (isMobile && open) {
       onClose();
     }
-  }, [currentPath, onClose, open]);
+  }, [currentPath, isMobile, onClose, open]);
 
-  const isMobile = window.innerWidth < 768;
+  const primaryItems = sidebarItems.slice(0, 6);
+  const secondaryItems = sidebarItems.slice(6);
+
+  const renderItems = (items: typeof sidebarItems) =>
+    items.map(item => (
+      <div key={item.label}>
+        {open || isMobile ? (
+          <SidebarItem
+            icon={item.icon}
+            label={item.label}
+            active={item.active}
+            to={item.to}
+            onClick={isMobile ? onClose : undefined}
+          />
+        ) : (
+          <Link
+            to={item.to}
+            title={item.label}
+            className={`flex justify-center rounded-xl p-3 transition-all duration-200 ${
+              item.active
+                ? 'bg-[#efc349] text-[#101827]'
+                : 'text-slate-400 hover:bg-white/10 hover:text-[#efc349]'
+            }`}
+          >
+            <item.icon size={19} />
+          </Link>
+        )}
+      </div>
+    ));
 
   return (
-    <aside 
-      data-sidebar="true" 
+    <aside
+      data-sidebar="true"
       className={`
         ${isMobile ? 'fixed' : 'relative'} 
         inset-y-0 left-0 z-50 
         w-72 flex flex-col 
         transition-transform duration-300 ease-in-out 
-        bg-white dark:bg-[#020817] 
-        ${isMobile 
-          ? open 
-            ? 'translate-x-0 shadow-2xl' 
-            : '-translate-x-full'
-          : open 
-            ? 'translate-x-0' 
-            : '-translate-x-0 md:translate-x-0 md:w-20'
+        border-r border-white/10 bg-[#0a1322] text-white shadow-[12px_0_40px_rgba(2,8,23,0.08)]
+        ${
+          isMobile
+            ? open
+              ? 'translate-x-0 shadow-2xl'
+              : '-translate-x-full'
+            : open
+              ? 'translate-x-0'
+              : '-translate-x-0 md:translate-x-0 md:w-20'
         }
       `}
     >
@@ -103,66 +124,54 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
       )}
 
       {/* Logo area */}
-      <div className="h-20 flex items-center justify-center px-6 border-b border-gray-100 dark:border-[#020817]">
-        <Link to="/" className="flex items-center justify-center transition-all duration-300 hover:scale-105">
-          {(open || isMobile) ? (
-            <img 
-              src={theme === 'light' 
-                ? "/lovable-uploads/f7fdf0cf-f16c-4df7-a92c-964aadea9539.png" 
-                : "/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png"
-              } 
-              alt="WS Gestão Contábil" 
-              className="h-8" 
+      <div className="flex h-[72px] items-center justify-center border-b border-white/10 px-5">
+        <Link
+          to="/"
+          className="flex items-center justify-center transition-all duration-300 hover:scale-105"
+        >
+          {open || isMobile ? (
+            <img
+              src="/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png"
+              alt="WS Gestão Contábil"
+              className="h-8"
             />
           ) : (
-            <img 
-              src={theme === 'light' 
-                ? "/lovable-uploads/83322e23-9ed8-4622-8631-8022a1d10c19.png" 
-                : "/lovable-uploads/ed055b1a-ba3e-4890-b78d-1d83e85b592b.png"
-              } 
-              alt="WS Gestão Contábil" 
-              className="h-10" 
+            <img
+              src="/lovable-uploads/ed055b1a-ba3e-4890-b78d-1d83e85b592b.png"
+              alt="WS Gestão Contábil"
+              className="h-10"
             />
           )}
         </Link>
       </div>
-      
+
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-8 px-3 space-y-2">
-        {sidebarItems.map(item => (
-          <div key={item.label}>
-            {(open || isMobile) ? (
-              <SidebarItem 
-                icon={item.icon} 
-                label={item.label} 
-                active={item.active} 
-                to={item.to} 
-                onClick={isMobile ? onClose : undefined}
-              />
-            ) : (
-              <div 
-                className={`flex justify-center p-4 rounded-lg transition-all duration-300 hover:scale-110 ${
-                  item.active 
-                    ? "bg-[#efc349]/10 border-l-4 border-[#efc349]" 
-                    : "hover:bg-gray-100 dark:hover:bg-[#efc349]/10"
-                }`} 
-                title={item.label}
-              >
-                <Link 
-                  to={item.to} 
-                  className={`transition-colors duration-300 ${
-                    item.active 
-                      ? "text-[#efc349]" 
-                      : "text-gray-500 dark:text-white/70 hover:text-[#efc349]"
-                  }`}
-                >
-                  <item.icon size={20} />
-                </Link>
-              </div>
-            )}
-          </div>
-        ))}
+      <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
+        <div className="space-y-1.5">
+          {(open || isMobile) && (
+            <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Operação
+            </p>
+          )}
+          {renderItems(primaryItems)}
+        </div>
+        <div className="space-y-1.5">
+          {(open || isMobile) && (
+            <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Gestão
+            </p>
+          )}
+          {renderItems(secondaryItems)}
+        </div>
       </nav>
+      {(open || isMobile) && (
+        <div className="m-3 rounded-xl border border-white/10 bg-white/5 p-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#efc349]">
+            WS Gestão
+          </p>
+          <p className="mt-1 text-xs leading-relaxed text-slate-400">Ambiente administrativo</p>
+        </div>
+      )}
     </aside>
   );
 };
