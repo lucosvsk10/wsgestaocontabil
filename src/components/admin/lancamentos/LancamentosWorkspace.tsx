@@ -47,14 +47,14 @@ interface LaunchRow {
 }
 
 const months: MonthItem[] = [
-  { key: "01", label: "Janeiro", status: "closed" },
-  { key: "02", label: "Fevereiro", status: "closed" },
-  { key: "03", label: "Março", status: "closed" },
-  { key: "04", label: "Abril", status: "closed" },
-  { key: "05", label: "Maio", status: "closed" },
-  { key: "06", label: "Junho", status: "closed" },
-  { key: "07", label: "Julho", status: "closed" },
-  { key: "08", label: "Agosto", status: "review" },
+  { key: "01", label: "Janeiro", status: "empty" },
+  { key: "02", label: "Fevereiro", status: "empty" },
+  { key: "03", label: "Março", status: "empty" },
+  { key: "04", label: "Abril", status: "empty" },
+  { key: "05", label: "Maio", status: "empty" },
+  { key: "06", label: "Junho", status: "empty" },
+  { key: "07", label: "Julho", status: "empty" },
+  { key: "08", label: "Agosto", status: "empty" },
   { key: "09", label: "Setembro", status: "empty" },
   { key: "10", label: "Outubro", status: "empty" },
   { key: "11", label: "Novembro", status: "empty" },
@@ -68,59 +68,20 @@ const modules: ModuleItem[] = [
   { key: "despesas", label: "Despesas", acceptedFiles: ".pdf,.xlsx,.xls,.csv" },
 ];
 
-const initialTranscription: TranscriptionRow[] = [
-  { id: 1, code: "011", description: "SALÁRIO-BASE", value: "54.327,01", classification: "Salários" },
-  { id: 2, code: "013", description: "PERICULOSIDADE", value: "6.965,75", classification: "Salários" },
-  { id: 3, code: "310", description: "INSS", value: "6.129,05", classification: "INSS a recolher" },
-  { id: 4, code: "FGTS", description: "FGTS APURADO", value: "5.784,77", classification: "FGTS a recolher" },
-];
-
-const initialLaunches: LaunchRow[] = [
-  {
-    id: 1,
-    date: "31/08/2025",
-    history: "SALÁRIOS E REMUNERAÇÕES A PAGAR 08/2025",
-    debit: "92",
-    credit: "823",
-    debitDescription: "Salários",
-    creditDescription: "Salários a pagar",
-    value: "68.442,76",
-  },
-  {
-    id: 2,
-    date: "31/08/2025",
-    history: "FGTS A PAGAR MÊS 08/2025",
-    debit: "96",
-    credit: "826",
-    debitDescription: "Despesa com FGTS",
-    creditDescription: "FGTS a recolher",
-    value: "5.784,77",
-  },
-  {
-    id: 3,
-    date: "31/08/2025",
-    history: "MERCADORIAS PARA REVENDA REF. 08/2025",
-    debit: "910",
-    credit: "777",
-    debitDescription: "Mercadorias para revenda",
-    creditDescription: "Fornecedores",
-    value: "27.845,31",
-  },
-];
-
 const statusDot: Record<MonthStatus, string> = {
-  closed: "bg-emerald-500",
-  review: "bg-amber-500",
-  empty: "bg-muted-foreground/35",
+  closed: "bg-foreground/70",
+  review: "bg-foreground/45",
+  empty: "bg-muted-foreground/25",
 };
 
 const inputCellClass =
-  "h-8 rounded-none border-0 bg-transparent px-2 shadow-none focus-visible:ring-1 focus-visible:ring-foreground/30 dark:bg-transparent";
+  "h-8 rounded-none border-0 bg-transparent px-2 shadow-none focus:border-foreground/30 focus:ring-foreground/10 focus-visible:ring-1 focus-visible:ring-foreground/30 dark:bg-transparent dark:focus:border-white/30 dark:focus:ring-white/10";
 
 export function LancamentosWorkspace() {
+  const today = new Date();
   const [company, setCompany] = useState("el-da-silva");
-  const [year, setYear] = useState("2025");
-  const [selectedMonth, setSelectedMonth] = useState("08");
+  const [year, setYear] = useState(String(today.getFullYear()));
+  const [selectedMonth, setSelectedMonth] = useState(String(today.getMonth() + 1).padStart(2, "0"));
   const [selectedModule, setSelectedModule] = useState<ModuleKey>("folha");
   const [activeTab, setActiveTab] = useState("transcricao");
   const [filesByModule, setFilesByModule] = useState<Record<ModuleKey, File[]>>({
@@ -130,11 +91,11 @@ export function LancamentosWorkspace() {
     despesas: [],
   });
   const [balanceteFiles, setBalanceteFiles] = useState<File[]>([]);
-  const [transcriptionRows, setTranscriptionRows] = useState(initialTranscription);
-  const [launchRows, setLaunchRows] = useState(initialLaunches);
+  const [transcriptionRows, setTranscriptionRows] = useState<TranscriptionRow[]>([]);
+  const [launchRows, setLaunchRows] = useState<LaunchRow[]>([]);
 
   const selectedMonthLabel = useMemo(
-    () => months.find((month) => month.key === selectedMonth)?.label ?? "Agosto",
+    () => months.find((month) => month.key === selectedMonth)?.label ?? "Competência",
     [selectedMonth],
   );
 
@@ -176,7 +137,7 @@ export function LancamentosWorkspace() {
   const addTranscriptionRow = () => {
     setTranscriptionRows((rows) => [
       ...rows,
-      { id: Date.now(), code: "", description: "", value: "0,00", classification: "" },
+      { id: Date.now(), code: "", description: "", value: "", classification: "" },
     ]);
   };
 
@@ -185,13 +146,13 @@ export function LancamentosWorkspace() {
       ...rows,
       {
         id: Date.now(),
-        date: `31/${selectedMonth}/${year}`,
+        date: "",
         history: "",
         debit: "",
         credit: "",
         debitDescription: "",
         creditDescription: "",
-        value: "0,00",
+        value: "",
       },
     ]);
   };
@@ -211,7 +172,7 @@ export function LancamentosWorkspace() {
             <span className="px-2 text-border">/</span>
             {selectedMonthLabel} de {year}
             <span className="px-2 text-border">/</span>
-            Em conferência
+            Não iniciado
           </p>
         </div>
 
@@ -230,9 +191,9 @@ export function LancamentosWorkspace() {
               <SelectValue placeholder="Ano" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="2024">2024</SelectItem>
-              <SelectItem value="2025">2025</SelectItem>
-              <SelectItem value="2026">2026</SelectItem>
+              {[today.getFullYear() - 2, today.getFullYear() - 1, today.getFullYear()].map((item) => (
+                <SelectItem key={item} value={String(item)}>{item}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -342,13 +303,13 @@ export function LancamentosWorkspace() {
               {[
                 ["transcricao", "Transcrição", transcriptionRows.length],
                 ["lancamentos", "Lançamentos", launchRows.length],
-                ["conferencia", "Conferência", 2],
+                ["conferencia", "Conferência", 0],
                 ["balancete", "Balancete", balanceteFiles.length],
               ].map(([value, label, count]) => (
                 <TabsTrigger
                   key={String(value)}
                   value={String(value)}
-                  className="h-11 rounded-none border-b-2 border-transparent bg-transparent px-4 text-muted-foreground shadow-none data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none dark:data-[state=active]:bg-transparent dark:data-[state=active]:text-white"
+                  className="h-11 rounded-none border-b-2 border-transparent bg-transparent px-4 text-muted-foreground shadow-none data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none dark:text-white/60 dark:data-[state=active]:border-white dark:data-[state=active]:bg-transparent dark:data-[state=active]:text-white"
                 >
                   {label}
                   <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[10px] tabular-nums text-muted-foreground">
@@ -366,7 +327,7 @@ export function LancamentosWorkspace() {
                     Documento original e dados extraídos no mesmo espaço.
                   </p>
                 </div>
-                <Badge variant="outline" className="rounded-sm font-normal text-muted-foreground">
+                <Badge variant="outline" className="rounded-sm border-border font-normal text-muted-foreground dark:border-white/15">
                   Edição local ativa
                 </Badge>
               </div>
@@ -376,23 +337,31 @@ export function LancamentosWorkspace() {
                   <div className="flex flex-wrap items-end justify-between gap-3">
                     <label className="min-w-0 flex-1">
                       <span className="mb-1.5 block text-xs font-medium text-muted-foreground">Arquivo</span>
-                      <Select defaultValue="principal">
+                      <Select value={filesByModule[selectedModule][0] ? "principal" : undefined}>
                         <SelectTrigger className="h-9 border-border shadow-none">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="principal">
-                            {filesByModule[selectedModule][0]?.name ?? `${selectedModule}-${selectedMonth}-${year}.pdf`}
-                          </SelectItem>
+                          {filesByModule[selectedModule][0] && (
+                            <SelectItem value="principal">{filesByModule[selectedModule][0].name}</SelectItem>
+                          )}
                         </SelectContent>
                       </Select>
                     </label>
-                    <span className="pb-2 text-xs text-muted-foreground">Página 1/12</span>
+                    {filesByModule[selectedModule][0] && (
+                      <span className="pb-2 text-xs text-muted-foreground">Arquivo selecionado</span>
+                    )}
                   </div>
                   <div className="mt-4 grid min-h-[370px] place-items-center bg-muted/60 px-6 text-center text-sm text-muted-foreground">
                     <div>
-                      <p className="font-medium text-foreground">Documento original</p>
-                      <p className="mt-1">A pré-visualização aparecerá aqui.</p>
+                      <p className="font-medium text-foreground">
+                        {filesByModule[selectedModule].length ? "Documento selecionado" : "Nenhum documento importado"}
+                      </p>
+                      <p className="mt-1">
+                        {filesByModule[selectedModule].length
+                          ? "A pré-visualização será habilitada na etapa de processamento."
+                          : `Importe um arquivo de ${activeModuleLabel.toLowerCase()} para começar.`}
+                      </p>
                     </div>
                   </div>
                 </section>
@@ -421,16 +390,22 @@ export function LancamentosWorkspace() {
                             <td><Input className={inputCellClass} value={row.classification} onChange={(event) => updateTranscription(row.id, "classification", event.target.value)} /></td>
                           </tr>
                         ))}
+                        {!transcriptionRows.length && (
+                          <tr>
+                            <td colSpan={4} className="h-32 px-4 text-center text-sm text-muted-foreground">
+                              Nenhum dado transcrito. Importe um documento ou adicione uma linha manualmente.
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3">
                     <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
                       <span>{transcriptionRows.length} linhas</span>
-                      <span>Total R$ 73.206,58</span>
-                      <span>Diferença R$ 0,00</span>
+                      <span>Totais serão calculados após a transcrição</span>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={addTranscriptionRow}>Adicionar linha</Button>
+                    <Button className="border-border bg-transparent text-foreground shadow-none hover:bg-muted dark:border-white/15 dark:hover:bg-white/5" variant="outline" size="sm" onClick={addTranscriptionRow}>Adicionar linha</Button>
                   </div>
                 </section>
               </div>
@@ -442,7 +417,7 @@ export function LancamentosWorkspace() {
                   <h3 className="text-base font-semibold text-foreground">Planilha de lançamentos</h3>
                   <p className="mt-1 text-sm text-muted-foreground">Mesmo formato do arquivo final para o Calima.</p>
                 </div>
-                <Badge variant="outline" className="rounded-sm font-normal text-muted-foreground">
+                <Badge variant="outline" className="rounded-sm border-border font-normal text-muted-foreground dark:border-white/15">
                   {launchRows.length} lançamentos
                 </Badge>
               </div>
@@ -489,16 +464,21 @@ export function LancamentosWorkspace() {
                           ))}
                         </tr>
                       ))}
+                      {!launchRows.length && (
+                        <tr>
+                          <td colSpan={7} className="h-32 px-4 text-center text-sm text-muted-foreground">
+                            Nenhum lançamento gerado. Revise a transcrição ou adicione um lançamento manualmente.
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3">
                   <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
-                    <span>Débitos R$ 284.196,47</span>
-                    <span>Créditos R$ 284.196,47</span>
-                    <span>Diferença R$ 0,00</span>
+                    <span>Débitos, créditos e diferenças serão calculados após a geração</span>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={addLaunchRow}>Adicionar lançamento</Button>
+                  <Button className="border-border bg-transparent text-foreground shadow-none hover:bg-muted dark:border-white/15 dark:hover:bg-white/5" variant="outline" size="sm" onClick={addLaunchRow}>Adicionar lançamento</Button>
                 </div>
               </section>
             </TabsContent>
@@ -512,17 +492,9 @@ export function LancamentosWorkspace() {
                 <div className="grid grid-cols-[minmax(120px,0.4fr)_minmax(220px,1fr)_minmax(160px,0.6fr)] bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground">
                   <span>Origem</span><span>Conferência</span><span>Resultado</span>
                 </div>
-                {[
-                  ["Folha", "Documento × lançamentos", "Diferença R$ 0,00"],
-                  ["Faturamento", "Conta da receita de revenda", "Definir conta"],
-                  ["Obrigações", "Pagamento sugerido", "Sem comprovante"],
-                ].map(([origin, check, result]) => (
-                  <div key={`${origin}-${check}`} className="grid grid-cols-[minmax(120px,0.4fr)_minmax(220px,1fr)_minmax(160px,0.6fr)] border-t border-border px-4 py-3 text-sm">
-                    <span className="font-medium text-foreground">{origin}</span>
-                    <span className="text-muted-foreground">{check}</span>
-                    <span className="text-foreground">{result}</span>
-                  </div>
-                ))}
+                <div className="grid min-h-32 place-items-center border-t border-border px-4 text-center text-sm text-muted-foreground">
+                  A conferência será exibida quando houver documentos processados e lançamentos gerados.
+                </div>
               </section>
             </TabsContent>
 
@@ -553,18 +525,9 @@ export function LancamentosWorkspace() {
                 <div className="grid grid-cols-[minmax(200px,1fr)_140px_minmax(160px,0.6fr)_minmax(180px,0.8fr)] bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground">
                   <span>Conta</span><span className="text-right">Saldo</span><span>Situação</span><span>Ação sugerida</span>
                 </div>
-                {[
-                  ["Banco SICOOB", "R$ 368.558,26", "Conferido", "Nenhuma"],
-                  ["FGTS a recolher", "R$ 5.784,77", "Verificar", "Localizar baixa"],
-                  ["Décimo terceiro a pagar", "R$ 602,76", "Pendente", "Analisar dezembro"],
-                ].map(([account, balance, status, action]) => (
-                  <div key={account} className="grid grid-cols-[minmax(200px,1fr)_140px_minmax(160px,0.6fr)_minmax(180px,0.8fr)] border-t border-border px-4 py-3 text-sm">
-                    <span className="font-medium text-foreground">{account}</span>
-                    <span className="text-right tabular-nums text-foreground">{balance}</span>
-                    <span className="text-muted-foreground">{status}</span>
-                    <span className="text-foreground">{action}</span>
-                  </div>
-                ))}
+                <div className="grid min-h-32 place-items-center border-t border-border px-4 text-center text-sm text-muted-foreground">
+                  Importe o balancete para iniciar a análise das contas e dos saldos da competência.
+                </div>
               </section>
             </TabsContent>
           </Tabs>
