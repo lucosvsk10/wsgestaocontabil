@@ -257,10 +257,10 @@ export const ComprasDetail = ({ clientId, clientName, initialCompetencia, embedd
 
   return (
     <>
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className={embedded ? "bg-transparent overflow-hidden" : "bg-card rounded-xl border border-border overflow-hidden"}>
-        <div className="p-5 border-b border-border flex flex-wrap items-center gap-3">
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className={`admin-process ${embedded ? "bg-transparent overflow-hidden" : "admin-surface"}`}>
+        <div className="flex flex-wrap items-center gap-3 border-b border-[var(--admin-line)] bg-[var(--admin-canvas)]/50 p-5">
           {embedded ? (
-            <p className="text-xs text-muted-foreground">Documentos e lançamentos de compras</p>
+            <div><p className="text-xs font-semibold text-[var(--admin-ink)]">Documentos de compras</p><p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">Extração, seleção das entradas e conferência das partidas.</p></div>
           ) : <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-muted-foreground" />
             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
@@ -273,7 +273,7 @@ export const ComprasDetail = ({ clientId, clientName, initialCompetencia, embedd
             </Select>
           </div>}
           <div className="ml-auto flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={fetchData} className="h-9 rounded-none">
+            <Button size="sm" variant="outline" onClick={fetchData} className="admin-button-secondary h-9 text-xs">
               Atualizar
             </Button>
           </div>
@@ -283,8 +283,8 @@ export const ComprasDetail = ({ clientId, clientName, initialCompetencia, embedd
           <div
             {...getRootProps()}
             className={cn(
-              "border border-dashed p-8 text-center cursor-pointer transition-colors",
-              isDragActive ? "border-foreground bg-muted/40" : "border-border hover:border-foreground/40",
+              "cursor-pointer rounded-lg border border-dashed p-8 text-center transition-colors",
+              isDragActive ? "border-blue-500 bg-blue-500/5" : "border-[var(--admin-line)] hover:border-blue-400 hover:bg-[var(--admin-blue-soft)]",
               uploading && "opacity-60 pointer-events-none"
             )}
           >
@@ -300,7 +300,7 @@ export const ComprasDetail = ({ clientId, clientName, initialCompetencia, embedd
               <Loader2 className="w-4 h-4 inline animate-spin mr-2" />Carregando...
             </div>
           ) : uploads.length === 0 ? (
-            <div className="py-8 text-center text-muted-foreground text-sm border border-dashed border-border rounded-lg">
+            <div className="admin-empty min-h-36 border border-dashed border-[var(--admin-line)]">
               Nenhum arquivo enviado para esta competência.
             </div>
           ) : (
@@ -309,7 +309,7 @@ export const ComprasDetail = ({ clientId, clientName, initialCompetencia, embedd
                 const linhas = editedLinhas[u.id] || [];
                 const allChecked = linhas.length > 0 && linhas.every((l) => l.selecionado);
                 return (
-                  <div key={u.id} className="border border-border rounded-lg overflow-hidden">
+                  <div key={u.id} className="overflow-hidden rounded-lg border border-[var(--admin-line)] bg-[var(--admin-panel)]">
                     <div className="flex items-center gap-3 px-4 py-3 bg-muted/30">
                       <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
                       <div className="flex-1 min-w-0">
@@ -350,7 +350,7 @@ export const ComprasDetail = ({ clientId, clientName, initialCompetencia, embedd
               <h3 className="text-sm font-medium text-foreground mb-2">
                 Lançamentos gerados ({lancamentos.length})
               </h3>
-              <div className="border border-border rounded-lg overflow-hidden">
+              <div className="admin-table-wrap border border-[var(--admin-line)]">
                 <Table>
                   <TableHeader>
                     <TableRow>

@@ -1,8 +1,7 @@
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { FileText, Trash2, Mail, Calendar, Settings, Users, UserCheck, Building2 } from "lucide-react";
+import { FileText, Trash2, Building2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { formatDate } from "../utils/dateUtils";
 import { UserType } from "@/types/admin";
@@ -43,7 +42,7 @@ export const UserTableComponent = ({
   };
 
   const filterAndSortUsers = (usersList: AuthUser[]) => {
-    let filtered = usersList.filter(user => {
+    const filtered = usersList.filter(user => {
       const name = getUserName(user).toLowerCase();
       const email = user.email?.toLowerCase() || "";
       const search = searchTerm.toLowerCase();
@@ -60,100 +59,68 @@ export const UserTableComponent = ({
   };
 
   return (
-    <div className="mb-12">
-      <div className="flex items-center gap-3 mb-6">
-        {isAdmin ? (
-          <UserCheck className="h-6 w-6 text-[#020817] dark:text-[#efc349]" />
-        ) : (
-          <Users className="h-6 w-6 text-[#020817] dark:text-[#efc349]" />
-        )}
-        <h2 className="text-2xl font-extralight uppercase tracking-wide text-[#020817] dark:text-[#efc349]">
-          {title}
-        </h2>
-        <Badge variant="outline" className="border-[#efc349] text-[#efc349]">
-          {usersList.length}
-        </Badge>
+    <section className="admin-surface">
+      <div className="admin-surface-header">
+        <div><h2 className="admin-section-title">{title}</h2><p className="admin-section-description">{usersList.length} {usersList.length === 1 ? 'registro cadastrado' : 'registros cadastrados'}</p></div>
+        <span className="admin-status admin-status-blue">{usersList.length} no total</span>
       </div>
-
-      <div className="bg-white dark:bg-[#0b0f1c] rounded-xl shadow-sm border-none overflow-hidden">
+      <div className="admin-table-wrap">
         <Table>
           <TableHeader>
-            <TableRow className="border-b border-gray-100 dark:border-[#efc349]/20 hover:bg-transparent">
+            <TableRow className="h-11 border-b border-[var(--admin-line)] bg-[var(--admin-canvas)]/60 hover:bg-[var(--admin-canvas)]/60">
               {!isAdmin && (
-                <TableHead className="text-[#020817] dark:text-[#efc349] font-extralight uppercase tracking-wider">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    Nome
-                  </div>
-                </TableHead>
+                <TableHead className="px-4 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--admin-muted)]">Empresa / cliente</TableHead>
               )}
-              <TableHead className="text-[#020817] dark:text-[#efc349] font-extralight uppercase tracking-wider">
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
-                  Email
-                </div>
-              </TableHead>
-              <TableHead className="text-[#020817] dark:text-[#efc349] font-extralight uppercase tracking-wider">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  Data de Cadastro
-                </div>
-              </TableHead>
+              <TableHead className="px-4 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--admin-muted)]">E-mail de acesso</TableHead>
+              <TableHead className="px-4 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--admin-muted)]">Cadastro</TableHead>
               {!isAdmin && (
-                <TableHead className="text-[#020817] dark:text-[#efc349] font-extralight uppercase tracking-wider">
-                  <div className="flex items-center gap-2">
-                    <Settings className="h-4 w-4" />
-                    Ações
-                  </div>
-                </TableHead>
+                <TableHead className="px-4 text-right text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--admin-muted)]">Ações</TableHead>
               )}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filterAndSortUsers(usersList).map((user, index) => (
+            {filterAndSortUsers(usersList).map((user) => (
               <TableRow
                 key={user.id}
-                className={`border-b border-gray-100 dark:border-[#efc349]/10 hover:bg-gray-50 dark:hover:bg-[#efc349]/5 transition-colors ${
-                  index % 2 === 1 ? 'bg-gray-50/50 dark:bg-white/[0.015]' : ''
-                }`}
+                className="border-b border-[var(--admin-line)] transition-colors last:border-0 hover:bg-[var(--admin-blue-soft)]"
               >
                 {!isAdmin && (
-                  <TableCell className="text-[#020817] dark:text-[#f4f4f4] font-extralight">
+                  <TableCell className="px-4 py-3 text-xs font-semibold text-[var(--admin-ink)]">
                     {getUserName(user)}
                   </TableCell>
                 )}
-                <TableCell className="text-gray-600 dark:text-[#b3b3b3] font-extralight">
+                <TableCell className="px-4 py-3 text-xs text-[var(--admin-muted)]">
                   {user.email || "Sem email"}
                 </TableCell>
-                <TableCell className="text-gray-600 dark:text-[#b3b3b3] font-extralight">
+                <TableCell className="px-4 py-3 text-xs text-[var(--admin-muted)]">
                   {formatDate(user.created_at)}
                 </TableCell>
                 {!isAdmin && (
-                  <TableCell>
-                    <div className="flex gap-2 flex-wrap">
+                  <TableCell className="px-4 py-3">
+                    <div className="flex flex-wrap justify-end gap-1.5">
                       <Button
                         size="sm"
                         variant="outline"
-                        className="bg-transparent border border-[#efc349] text-[#020817] dark:text-[#efc349] hover:bg-[#efc349]/10 font-extralight"
+                        className="admin-button-secondary h-8 px-2.5 text-[11px]"
                         onClick={() => navigate(`/admin/user-documents/${user.id}`)}
                       >
                         <FileText className="h-4 w-4 mr-1" />
-                        Docs
+                        Documentos
                       </Button>
                       
                       <Button
                         size="sm"
                         variant="outline"
-                        className="bg-transparent border border-[#efc349] text-[#020817] dark:text-[#efc349] hover:bg-[#efc349]/10 font-extralight"
+                        className="admin-button-secondary h-8 px-2.5 text-[11px]"
                         onClick={() => navigate(`/admin/company-data/${user.id}`)}
                       >
                         <Building2 className="h-4 w-4 mr-1" />
-                        Empresa
+                        Dados da empresa
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
-                        className="bg-transparent border border-red-400 text-red-600 dark:text-red-400 hover:bg-red-400/10 font-extralight"
+                        className="h-8 rounded-md border border-red-200 bg-transparent px-2.5 text-[11px] text-red-600 shadow-none hover:bg-red-50 dark:border-red-900/60 dark:text-red-400 dark:hover:bg-red-950/30"
                         onClick={() => onDeleteUser(user.id)}
                       >
                         <Trash2 className="h-4 w-4 mr-1" />
@@ -168,7 +135,7 @@ export const UserTableComponent = ({
               <TableRow>
                 <TableCell
                   colSpan={isAdmin ? 2 : 4}
-                  className="text-center py-8 text-gray-500 dark:text-[#b3b3b3] font-extralight"
+                  className="h-36 text-center text-xs text-[var(--admin-muted)]"
                 >
                   Nenhum usuário encontrado
                 </TableCell>
@@ -177,6 +144,6 @@ export const UserTableComponent = ({
           </TableBody>
         </Table>
       </div>
-    </div>
+    </section>
   );
 };

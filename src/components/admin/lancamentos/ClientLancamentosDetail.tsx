@@ -466,7 +466,7 @@ export const ClientLancamentosDetail = ({ clientId, initialCompetencia, embedded
   }, [lancamentos, lancamentosSearch, planoContasMap]);
 
   return (
-    <div className={embedded ? "bg-transparent overflow-hidden" : "bg-card rounded-xl overflow-hidden"}>
+    <div className={`admin-process ${embedded ? "bg-transparent overflow-hidden" : "admin-surface"}`}>
       {/* Header */}
       {!embedded && <div className="p-5">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
@@ -533,11 +533,9 @@ export const ClientLancamentosDetail = ({ clientId, initialCompetencia, embedded
       </div>}
 
       {embedded && (
-        <div className="flex items-center justify-between border-b border-black/10 px-5 py-3 dark:border-white/10">
-          <p className="text-xs text-black/50 dark:text-white/45">
-            Documentos, processamento e lançamentos da competência
-          </p>
-          <Button onClick={() => setIsPlanoModalOpen(true)} variant="outline" size="sm" className="rounded-none">
+        <div className="flex items-center justify-between border-b border-[var(--admin-line)] bg-[var(--admin-canvas)]/50 px-5 py-3">
+          <div><p className="text-xs font-semibold text-[var(--admin-ink)]">Documentos e lançamentos</p><p className="mt-0.5 text-[11px] text-[var(--admin-muted)]">Processamento, conferência e fechamento da competência.</p></div>
+          <Button onClick={() => setIsPlanoModalOpen(true)} variant="outline" size="sm" className="admin-button-secondary h-8 text-[11px]">
             Plano de contas
           </Button>
         </div>
@@ -867,8 +865,8 @@ export const ClientLancamentosDetail = ({ clientId, initialCompetencia, embedded
       <div className="p-5 pt-6">
         {/* Title row */}
         <div className="flex items-center justify-between gap-3 mb-3">
-          <h3 className="font-medium text-foreground text-sm flex items-center gap-2">
-            <span className="text-foreground">Lançamentos Alinhados</span>
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--admin-ink)]">
+            <span>Lançamentos alinhados</span>
             <Badge variant="secondary" className="text-xs rounded-lg ml-1">
               {lancamentosSearch ? `${filteredLancamentos.length}/${lancamentos.length}` : lancamentos.length}
             </Badge>
@@ -882,7 +880,7 @@ export const ClientLancamentosDetail = ({ clientId, initialCompetencia, embedded
               placeholder="Buscar por histórico, conta, centro de custo, valor..."
               value={lancamentosSearch}
               onChange={(e) => setLancamentosSearch(e.target.value)}
-              className="h-9 rounded-none bg-background"
+              className="h-9 border-[var(--admin-line)] bg-transparent shadow-none"
             />
           </div>
 

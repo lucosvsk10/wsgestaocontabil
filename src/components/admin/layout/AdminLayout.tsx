@@ -14,7 +14,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
   const { toggleSidebar } = useSidebarToggle({ isMobile, sidebarOpen, setSidebarOpen });
 
   return (
-    <div className="flex min-h-screen bg-[#f4f4f2] text-[#202124] dark:bg-[#0c0d0f] dark:text-[#ececea]">
+    <div className="admin-app flex min-h-screen bg-[#f4f7fb] text-[#122033] dark:bg-[#07111f] dark:text-[#e6edf7]">
       <AdminSidebar open={sidebarOpen} onClose={handleSidebarClose} />
       <div className="flex min-w-0 flex-1 flex-col">
         <AdminHeader sidebarOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
@@ -29,7 +29,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
         )}
 
         <main className="flex-1 overflow-auto">
-          <div className="mx-auto w-full max-w-[1560px] px-4 py-6 sm:px-6 lg:px-10 lg:py-8">
+          <div className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8 lg:py-7">
             {children}
           </div>
         </main>

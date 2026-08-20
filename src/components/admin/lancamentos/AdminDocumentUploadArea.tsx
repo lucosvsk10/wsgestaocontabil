@@ -179,13 +179,13 @@ export const AdminDocumentUploadArea = ({
   const uploadingCount = files.filter((f) => f.status === "uploading" || f.status === "processing").length;
 
   return (
-    <div className="space-y-3">
+    <div className="admin-process space-y-3">
       <div
         {...getRootProps()}
-        className={`cursor-pointer border border-dashed p-7 text-center transition-colors ${
+        className={`cursor-pointer rounded-lg border border-dashed p-7 text-center transition-colors ${
           isDragActive
-            ? "border-foreground bg-muted/30"
-            : "border-border hover:border-foreground/40"
+            ? "border-blue-500 bg-blue-500/5"
+            : "border-[var(--admin-line)] hover:border-blue-400 hover:bg-[var(--admin-blue-soft)]"
         }`}
       >
         <input {...getInputProps()} />
@@ -198,8 +198,8 @@ export const AdminDocumentUploadArea = ({
       </div>
 
       {files.length > 0 && (
-        <div className="border border-border">
-          <div className="divide-y divide-border">
+        <div className="overflow-hidden rounded-lg border border-[var(--admin-line)]">
+          <div className="divide-y divide-[var(--admin-line)]">
             {files.map(fileData => (
               <div key={fileData.id} className="px-4 py-3">
                 <div className="flex items-start gap-4">
@@ -244,12 +244,12 @@ export const AdminDocumentUploadArea = ({
             ))}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 border-t border-border p-3">
+          <div className="flex flex-wrap items-center gap-2 border-t border-[var(--admin-line)] bg-[var(--admin-canvas)]/50 p-3">
             {pendingCount > 0 && !isUploading && (
               <button
                 type="button"
                 onClick={uploadFiles}
-                className="border border-foreground bg-foreground px-4 py-2 text-xs font-medium text-background hover:opacity-90"
+                className="admin-button-primary px-4 py-2 text-xs"
               >
                 Enviar {pendingCount} arquivo{pendingCount > 1 ? "s" : ""}
               </button>

@@ -25,18 +25,18 @@ export const CompanySelectorTop = ({
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="flex h-11 w-full items-center justify-between border border-black/15 bg-white px-3 text-left text-sm transition-colors hover:border-black/35 dark:border-white/15 dark:bg-[#151618] dark:hover:border-white/35"
+          className="flex h-11 w-full items-center justify-between rounded-md border border-[var(--admin-line)] bg-[var(--admin-panel)] px-3 text-left text-sm transition-colors hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
         >
-          <span className={selectedClientId ? 'font-medium' : 'text-black/45 dark:text-white/45'}>
+          <span className={selectedClientId ? 'font-semibold text-[var(--admin-ink)]' : 'text-[var(--admin-muted)]'}>
             {selectedClientName || 'Selecione uma empresa'}
           </span>
-          <span aria-hidden="true" className="ml-3 text-[10px] text-black/40 dark:text-white/40">
-            ABRIR
+          <span aria-hidden="true" className="ml-3 text-[10px] font-bold uppercase tracking-[0.06em] text-blue-600 dark:text-blue-400">
+            Selecionar
           </span>
         </button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-[min(440px,calc(100vw-2rem))] overflow-hidden rounded-none border-black/15 p-0 shadow-xl dark:border-white/15"
+        className="w-[min(440px,calc(100vw-2rem))] overflow-hidden rounded-lg border-[var(--admin-line)] p-0 shadow-xl"
         align="start"
       >
         <ClientStatusList selectedClientId={selectedClientId} onSelectClient={handleSelect} />

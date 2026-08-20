@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Eye, Trash2, Search, Calendar, User, Calculator, Download, Copy } from 'lucide-react';
+import { Eye, Trash2, Search, Calculator, Download, Copy } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { currencyFormat } from '@/utils/taxCalculations';
@@ -38,12 +36,21 @@ interface TaxSimulation extends BaseSimulation {
 
 interface INSSSimulation extends BaseSimulation {
   type: 'inss';
-  dados: any;
+  dados: SimulationData;
 }
 
 interface ProlaboreSimulation extends BaseSimulation {
   type: 'prolabore';
-  dados: any;
+  dados: SimulationData;
+}
+
+interface SimulationData {
+  categoria?: string;
+  aliquota?: number;
+  contribuicao?: number;
+  valorBruto?: number;
+  valorLiquido?: number;
+  [key: string]: unknown;
 }
 
 type Simulation = TaxSimulation | INSSSimulation | ProlaboreSimulation;
@@ -59,6 +66,7 @@ export const SimulationsView: React.FC = () => {
   const { toast } = useToast();
   const { user, userData } = useAuth();
 
+  // A assinatura em tempo real deve ser criada apenas uma vez durante a montagem.
   useEffect(() => {
     fetchAllSimulations();
     
@@ -103,7 +111,7 @@ export const SimulationsView: React.FC = () => {
     return () => {
       channels.forEach(channel => supabase.removeChannel(channel));
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const filtered = simulations.filter(sim => {
@@ -222,15 +230,6 @@ export const SimulationsView: React.FC = () => {
     return format(new Date(dateString), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
   };
 
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'tax': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
-      case 'inss': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
-      case 'prolabore': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300';
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300';
-    }
-  };
-
   const getTypeLabel = (type: string) => {
     switch (type) {
       case 'tax': return 'IRPF';
@@ -262,15 +261,18 @@ export const SimulationsView: React.FC = () => {
 
   const getSimulationDescription = (simulation: Simulation) => {
     switch (simulation.type) {
-      case 'tax':
+      case 'tax': {
         const taxSim = simulation as TaxSimulation;
         return `Rend. Bruto: ${currencyFormat(taxSim.rendimento_bruto)} - Imposto: ${currencyFormat(taxSim.imposto_estimado)}`;
-      case 'inss':
+      }
+      case 'inss': {
         const inssSim = simulation as INSSSimulation;
         return `${inssSim.dados?.categoria || 'N/A'} - ${inssSim.dados?.aliquota || 0}% - Contrib.: ${currencyFormat(inssSim.dados?.contribuicao || 0)}`;
-      case 'prolabore':
+      }
+      case 'prolabore': {
         const prolaboreSim = simulation as ProlaboreSimulation;
         return `Bruto: ${currencyFormat(prolaboreSim.dados?.valorBruto || 0)} - Líquido: ${currencyFormat(prolaboreSim.dados?.valorLiquido || 0)}`;
+      }
       default:
         return '';
     }
@@ -365,161 +367,32 @@ export const SimulationsView: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8 p-6">
-      {/* Header */}
-      <div className="space-y-4">
-        <div>
-          <h1 className="text-3xl text-[#020817] dark:text-[#efc349] mb-4 font-extralight">
-            Histórico de Simulações
-          </h1>
-          <p className="text-gray-600 dark:text-white/70 font-extralight">
-            Visualize todas as simulações realizadas pelos usuários
-          </p>
-        </div>
+    <div className="admin-page">
+      <header className="admin-page-header"><div><p className="admin-eyebrow">Consultas e cálculos</p><h1 className="admin-title">Histórico de simulações</h1><p className="admin-subtitle">Consulte as simulações realizadas pelos usuários e acesse os dados usados em cada cálculo.</p></div></header>
 
-        {/* Search and Stats */}
-        <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Buscar por nome ou email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30 font-extralight"
-            />
-          </div>
-          
-          <div className="flex gap-4 text-sm font-extralight">
-            <div className="text-center">
-              <div className="text-2xl font-extralight text-[#020817] dark:text-[#efc349]">
-                {filteredSimulations.length}
-              </div>
-              <div className="text-gray-600 dark:text-white/70">Total</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-extralight text-blue-600 dark:text-blue-400">
-                {filteredSimulations.filter(s => s.type === 'tax').length}
-              </div>
-              <div className="text-gray-600 dark:text-white/70">IRPF</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-extralight text-green-600 dark:text-green-400">
-                {filteredSimulations.filter(s => s.type === 'inss').length}
-              </div>
-              <div className="text-gray-600 dark:text-white/70">INSS</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-extralight text-purple-600 dark:text-purple-400">
-                {filteredSimulations.filter(s => s.type === 'prolabore').length}
-              </div>
-              <div className="text-gray-600 dark:text-white/70">Pró-labore</div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <section className="admin-kpi-grid">
+        <div className="admin-kpi"><p className="admin-kpi-label">Total</p><p className="admin-kpi-value">{simulations.length}</p><p className="admin-kpi-meta">Simulações registradas</p></div>
+        <div className="admin-kpi"><p className="admin-kpi-label">IRPF</p><p className="admin-kpi-value">{simulations.filter(s => s.type === 'tax').length}</p><p className="admin-kpi-meta">Imposto de renda</p></div>
+        <div className="admin-kpi"><p className="admin-kpi-label">INSS</p><p className="admin-kpi-value">{simulations.filter(s => s.type === 'inss').length}</p><p className="admin-kpi-meta">Contribuição previdenciária</p></div>
+        <div className="admin-kpi"><p className="admin-kpi-label">Pró-labore</p><p className="admin-kpi-value">{simulations.filter(s => s.type === 'prolabore').length}</p><p className="admin-kpi-meta">Remuneração dos sócios</p></div>
+      </section>
 
       {/* Tabs Filter */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="all" className="font-extralight">Todas</TabsTrigger>
-          <TabsTrigger value="tax" className="font-extralight">IRPF</TabsTrigger>
-          <TabsTrigger value="inss" className="font-extralight">INSS</TabsTrigger>
-          <TabsTrigger value="prolabore" className="font-extralight">Pró-labore</TabsTrigger>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="admin-surface w-full">
+        <div className="flex flex-col gap-3 border-b border-[var(--admin-line)] p-3 sm:flex-row sm:items-center">
+          <div className="relative min-w-[240px] flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" /><Input placeholder="Buscar por nome ou e-mail" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="h-9 border-[var(--admin-line)] bg-transparent pl-10 shadow-none" /></div>
+        <TabsList className="grid h-9 w-full grid-cols-4 rounded-md bg-[var(--admin-canvas)] p-1 sm:w-[420px]">
+          <TabsTrigger value="all" className="rounded text-xs data-[state=active]:bg-[var(--admin-panel)] data-[state=active]:text-blue-600">Todas</TabsTrigger>
+          <TabsTrigger value="tax" className="rounded text-xs data-[state=active]:bg-[var(--admin-panel)] data-[state=active]:text-blue-600">IRPF</TabsTrigger>
+          <TabsTrigger value="inss" className="rounded text-xs data-[state=active]:bg-[var(--admin-panel)] data-[state=active]:text-blue-600">INSS</TabsTrigger>
+          <TabsTrigger value="prolabore" className="rounded text-xs data-[state=active]:bg-[var(--admin-panel)] data-[state=active]:text-blue-600">Pró-labore</TabsTrigger>
         </TabsList>
+        </div>
 
-        <TabsContent value={activeTab} className="mt-6">
-          {/* Simulations Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {filteredSimulations.map((simulation) => (
-              <Card 
-                key={`${simulation.type}-${simulation.id}`}
-                className="bg-white dark:bg-transparent border-gray-100 dark:border-[#efc349]/20 hover:shadow-lg dark:hover:shadow-none transition-all duration-300 hover:scale-[1.02]"
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-gray-500 dark:text-white/60" />
-                        <span className="text-sm font-extralight text-[#020817] dark:text-white">
-                          {getSimulationName(simulation)}
-                        </span>
-                      </div>
-                      <Badge className={`${getTypeColor(simulation.type)} font-extralight`}>
-                        {getTypeLabel(simulation.type)}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-white/60">
-                      <Calendar className="h-3 w-3" />
-                      <span className="font-extralight">{formatDate(getCreatedDate(simulation))}</span>
-                    </div>
-                  </div>
-                </CardHeader>
-
-                <CardContent className="space-y-4">
-                  {/* Results Summary */}
-                  <div className="space-y-2">
-                    <div className="text-2xl font-extralight text-[#020817] dark:text-[#efc349]">
-                      {getSimulationMainValue(simulation)}
-                    </div>
-                    <p className="text-sm text-gray-600 dark:text-white/70 font-extralight">
-                      {getSimulationDescription(simulation)}
-                    </p>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 h-8 text-xs font-extralight border-[#efc349]/30 hover:bg-[#efc349]/10"
-                      onClick={() => openDetails(simulation)}
-                    >
-                      <Eye className="h-3 w-3 mr-1" />
-                      Detalhes
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 text-xs font-extralight border-blue-500/30 hover:bg-blue-500/10"
-                      onClick={() => copySimulationData(simulation)}
-                    >
-                      <Copy className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 text-xs font-extralight border-red-500/30 hover:bg-red-500/10 text-red-600 dark:text-red-400"
-                      onClick={() => deleteSimulation(simulation)}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {/* Empty State */}
-          {filteredSimulations.length === 0 && (
-            <Card className="bg-white dark:bg-transparent border-gray-200 dark:border-[#efc349]/30">
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Calculator className="h-12 w-12 text-gray-400 dark:text-white/40 mb-4" />
-                <h3 className="text-lg font-extralight text-[#020817] dark:text-white mb-2">
-                  Nenhuma simulação encontrada
-                </h3>
-                <p className="text-gray-600 dark:text-white/70 text-center font-extralight">
-                  {searchTerm ? 'Nenhuma simulação corresponde aos termos de busca.' : 'Ainda não há simulações registradas no sistema.'}
-                </p>
-                {simulations.length === 0 && (
-                  <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                    <p className="text-sm text-blue-700 dark:text-blue-300 font-extralight">
-                      <strong>Dica:</strong> As simulações aparecem aqui quando os usuários utilizam os formulários de simulação de IRPF, INSS ou Pró-labore.
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+        <TabsContent value={activeTab} className="m-0">
+          <div className="admin-table-wrap"><table className="admin-data-table"><thead><tr><th>Usuário</th><th>Tipo</th><th>Resultado</th><th>Descrição</th><th>Data e hora</th><th className="text-right">Ações</th></tr></thead><tbody>
+            {filteredSimulations.length > 0 ? filteredSimulations.map(simulation => <tr key={`${simulation.type}-${simulation.id}`}><td className="font-semibold">{getSimulationName(simulation)}</td><td><span className="admin-status admin-status-blue">{getTypeLabel(simulation.type)}</span></td><td className="whitespace-nowrap font-semibold tabular-nums">{getSimulationMainValue(simulation)}</td><td className="max-w-[320px] text-[var(--admin-muted)]"><span className="block truncate">{getSimulationDescription(simulation)}</span></td><td className="whitespace-nowrap text-[var(--admin-muted)]">{formatDate(getCreatedDate(simulation))}</td><td><div className="flex justify-end gap-1"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openDetails(simulation)} aria-label="Detalhes"><Eye className="h-3.5 w-3.5" /></Button><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => copySimulationData(simulation)} aria-label="Copiar"><Copy className="h-3.5 w-3.5" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30" onClick={() => deleteSimulation(simulation)} aria-label="Excluir"><Trash2 className="h-3.5 w-3.5" /></Button></div></td></tr>) : <tr><td colSpan={6}><div className="admin-empty"><strong className="text-sm text-[var(--admin-ink)]">Nenhuma simulação encontrada</strong><span className="mt-1 text-xs">{searchTerm ? 'Revise os termos da busca.' : 'As novas simulações aparecerão nesta tabela.'}</span></div></td></tr>}
+          </tbody></table></div>
         </TabsContent>
       </Tabs>
 

@@ -36,12 +36,12 @@ const AdminHeader = ({ sidebarOpen, toggleSidebar }: AdminHeaderProps) => {
   const initials = (user?.email || 'WS').slice(0, 2).toUpperCase();
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-black/10 bg-white px-4 dark:border-white/10 dark:bg-[#111214] sm:px-6 lg:px-10">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[#dbe3ee] bg-white/95 px-4 backdrop-blur dark:border-[#20324a] dark:bg-[#0b1728]/95 sm:px-6 lg:px-8">
       <div className="flex min-w-0 items-center gap-4">
         <button
           type="button"
           onClick={toggleSidebar}
-          className="flex h-9 w-9 shrink-0 flex-col items-center justify-center gap-1 border border-black/15 bg-transparent hover:bg-black/[0.03] dark:border-white/15 dark:hover:bg-white/[0.04]"
+          className="flex h-9 w-9 shrink-0 flex-col items-center justify-center gap-1 rounded-md border border-[#dbe3ee] bg-white text-[#475569] transition-colors hover:border-blue-300 hover:text-blue-600 dark:border-[#20324a] dark:bg-[#0f1d30] dark:text-[#9fb0c6] dark:hover:border-blue-500/60 dark:hover:text-blue-300"
           aria-label={sidebarOpen ? 'Recolher menu lateral' : 'Expandir menu lateral'}
         >
           <span className="h-px w-4 bg-current" />
@@ -49,8 +49,8 @@ const AdminHeader = ({ sidebarOpen, toggleSidebar }: AdminHeaderProps) => {
           <span className="h-px w-4 bg-current" />
         </button>
         <div className="min-w-0">
-          <p className="text-[11px] text-black/45 dark:text-white/45">Administração</p>
-          <h1 className="truncate text-sm font-semibold tracking-[-0.01em]">{title}</h1>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-blue-600 dark:text-blue-400">Administração</p>
+          <h1 className="truncate text-sm font-semibold tracking-[-0.015em] text-[#122033] dark:text-[#e6edf7]">{title}</h1>
         </div>
       </div>
 
@@ -60,12 +60,12 @@ const AdminHeader = ({ sidebarOpen, toggleSidebar }: AdminHeaderProps) => {
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              className="flex h-9 min-w-9 items-center justify-center border border-black/15 px-2 text-[11px] font-semibold dark:border-white/15"
+              className="flex h-9 min-w-9 items-center justify-center rounded-md border border-[#dbe3ee] bg-[#f8fafc] px-2 text-[11px] font-bold text-[#334155] dark:border-[#20324a] dark:bg-[#0f1d30] dark:text-[#d7e2ef]"
             >
               {initials}
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-64 rounded-none">
+          <DropdownMenuContent align="end" className="w-64 rounded-lg border-[#dbe3ee] dark:border-[#20324a]">
             <div className="px-3 py-2 text-xs text-muted-foreground">{user?.email || 'Usuário'}</div>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
