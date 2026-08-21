@@ -24,6 +24,13 @@ export interface PayrollProcessingResult {
   referenceVerified: boolean;
   validated: boolean;
   processingMeta: PayrollProcessingMeta;
+  mappingSummary?: {
+    learnedCount: number;
+    predefinedCount: number;
+    aiSuggestionsCount: number;
+    unresolvedCount: number;
+    needsApprovalCount: number;
+  };
 }
 
 interface ProcessingJob {
@@ -98,28 +105,84 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
       if (error) throw await functionError(error);
       if (!data?.entries) throw new Error("O processamento não devolveu lançamentos estruturados.");
 
+      const baseEntries: PayrollEntry[] = data.entries.map((row: PayrollEntry, index: number) => ({
+        ...row,
+        id: row.id || `${Date.now()}-${index}`,
+      }));
+      const baseDeferred: PayrollEntry[] = (data.deferredEntries ?? []).map((row: PayrollEntry, index: number) => ({
+        ...row,
+        id: row.id || `deferred-${Date.now()}-${index}`,
+      }));
+
+      let resolvedEntries = baseEntries;
+      let resolvedDeferred = baseDeferred;
+      let mappingSummary = {
+        learnedCount: 0,
+        predefinedCount: baseEntries.filter(hasCompleteMapping).length,
+        aiSuggestionsCount: 0,
+        unresolvedCount: baseEntries.filter(row => !hasCompleteMapping(row)).length,
+        needsApprovalCount: 0,
+      };
+      let mappingRouting = "regras pré-definidas";
+      let mappingFailure: string | null = null;
+
+      const { data: mappingData, error: mappingError } = await supabase.functions.invoke("resolve-accounting-mappings", {
+        body: {
+          module: "folha",
+          company_id: company,
+          competence,
+          entries: baseEntries,
+          deferredEntries: baseDeferred,
+          chart_of_accounts: accounts,
+        },
+      });
+
+      if (mappingError) {
+        mappingFailure = (await functionError(mappingError)).message;
+      } else if (mappingData?.entries) {
+        resolvedEntries = mappingData.entries;
+        resolvedDeferred = mappingData.deferredEntries ?? baseDeferred;
+        mappingSummary = {
+          learnedCount: Number(mappingData.learnedCount ?? 0),
+          predefinedCount: Number(mappingData.predefinedCount ?? 0),
+          aiSuggestionsCount: Number(mappingData.aiSuggestionsCount ?? 0),
+          unresolvedCount: Number(mappingData.unresolvedCount ?? 0),
+          needsApprovalCount: Number(mappingData.needsApprovalCount ?? 0),
+        };
+        mappingRouting = mappingData.routing || mappingRouting;
+      }
+
+      const oldAccountLookupIssue = (issue: string) => issue.toLocaleLowerCase("pt-BR").includes("não foi possível localizar uma conta analítica inequívoca");
+      const validationIssues: string[] = (data.validationIssues ?? []).filter((issue: string) => !oldAccountLookupIssue(issue));
+      if (mappingFailure) validationIssues.push(`Falha na resolução adaptativa de contas: ${mappingFailure}`);
+      if (mappingSummary.unresolvedCount > 0) validationIssues.push(`${mappingSummary.unresolvedCount} lançamento(s) continuam sem débito/crédito completo.`);
+
+      const warnings = data.warnings ?? [];
+      const comparisons: PayrollComparison[] = data.comparisons ?? [];
+      const hasDifference = comparisons.some(row => row.differenceInCents !== 0);
+      const validated = Boolean(data.referenceVerified)
+        && !hasDifference
+        && warnings.length === 0
+        && validationIssues.length === 0
+        && mappingSummary.needsApprovalCount === 0;
+
       const result: PayrollProcessingResult = {
-        entries: data.entries.map((row: PayrollEntry, index: number) => ({
-          ...row,
-          id: row.id || `${Date.now()}-${index}`,
-        })),
-        deferredEntries: (data.deferredEntries ?? []).map((row: PayrollEntry, index: number) => ({
-          ...row,
-          id: row.id || `deferred-${Date.now()}-${index}`,
-        })),
+        entries: resolvedEntries,
+        deferredEntries: resolvedDeferred,
         documentTotals: data.documentTotals ?? [],
-        comparisons: data.comparisons ?? [],
-        warnings: data.warnings ?? [],
-        validationIssues: data.validationIssues ?? [],
+        comparisons,
+        warnings,
+        validationIssues: [...new Set(validationIssues)],
         referenceVerified: Boolean(data.referenceVerified),
-        validated: Boolean(data.validated),
+        validated,
         processingMeta: {
           model: data.model,
           primaryModel: data.primaryModel,
           reviewed: Boolean(data.reviewed),
           reviewModel: data.reviewModel,
-          routing: data.routing,
+          routing: `${data.routing || data.primaryModel} · ${mappingRouting}`,
         },
+        mappingSummary,
       };
 
       const scope = `${company}:${year}:${month}:folha`;
@@ -144,7 +207,9 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
         finishedAt: Date.now(),
         message: result.validated
           ? "Processamento concluído e conferido."
-          : "Processamento concluído, mas exige revisão antes da exportação.",
+          : mappingSummary.needsApprovalCount > 0
+            ? `Processamento concluído. ${mappingSummary.needsApprovalCount} mapeamento(s) sugerido(s) aguardam sua aprovação.`
+            : "Processamento concluído, mas exige revisão antes da exportação.",
       } : current);
       return result;
     } catch (error) {
@@ -244,6 +309,10 @@ function fileSummary(fileNames: string[]) {
   if (!fileNames.length) return "Nenhum arquivo";
   if (fileNames.length === 1) return fileNames[0];
   return `${fileNames[0]} + ${fileNames.length - 1} arquivo(s)`;
+}
+
+function hasCompleteMapping(row: PayrollEntry) {
+  return Boolean(row.debitCode && row.creditCode && row.debitDescription && row.creditDescription);
 }
 
 function asBase64(file: File) {
