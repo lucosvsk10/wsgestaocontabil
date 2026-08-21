@@ -10,14 +10,14 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-[#020817] text-white hover:bg-[#0f172a] shadow-sm hover:shadow-md dark:bg-transparent dark:border dark:border-[#efc349] dark:text-[#efc349] dark:hover:bg-[#efc349]/10 dark:hover:border-[#efc349]",
+        default: "bg-[#020817] text-white hover:bg-[#0f172a] shadow-sm hover:shadow-md dark:bg-white dark:text-[#020817] dark:hover:bg-white/90",
         destructive: "bg-red-500 text-white hover:bg-red-600 shadow-sm hover:shadow-md dark:bg-transparent dark:border dark:border-red-400 dark:text-red-400 dark:hover:bg-red-400/10 dark:hover:border-red-400",
-        outline: "border border-[#e6e6e6] bg-white hover:bg-gray-50 hover:text-[#020817] shadow-sm hover:shadow-md dark:border-[#efc349]/30 dark:bg-transparent dark:text-white dark:hover:bg-[#efc349]/10 dark:hover:border-[#efc349]",
-        secondary: "bg-[#f3f4f6] text-[#020817] hover:bg-[#e5e7eb] shadow-sm hover:shadow-md dark:bg-transparent dark:border dark:border-[#efc349]/30 dark:text-white dark:hover:bg-[#efc349]/10 dark:hover:border-[#efc349]",
-        ghost: "hover:bg-[#f3f4f6] hover:text-[#020817] dark:hover:bg-[#efc349]/10 dark:hover:text-[#efc349] dark:text-white/80",
-        link: "text-[#2563eb] underline-offset-4 hover:underline dark:text-[#efc349]",
-        document: "bg-blue-50 text-[#2563eb] hover:bg-blue-100 shadow-sm hover:shadow-md dark:bg-transparent dark:border dark:border-[#efc349]/30 dark:text-[#efc349] dark:hover:bg-[#efc349]/10 dark:hover:border-[#efc349]",
-        admin: "bg-[#020817] text-white hover:bg-[#0f172a] shadow-sm hover:shadow-md dark:bg-transparent dark:border dark:border-[#efc349] dark:text-[#efc349] dark:hover:bg-[#efc349]/10 dark:hover:border-[#efc349]"
+        outline: "border border-[#e6e6e6] bg-white hover:bg-gray-50 hover:text-[#020817] shadow-sm dark:border-white/15 dark:bg-transparent dark:text-white dark:hover:bg-white/5 dark:hover:border-white/30",
+        secondary: "bg-[#f3f4f6] text-[#020817] hover:bg-[#e5e7eb] shadow-sm dark:bg-white/10 dark:border dark:border-white/15 dark:text-white dark:hover:bg-white/15",
+        ghost: "hover:bg-[#f3f4f6] hover:text-[#020817] dark:hover:bg-white/5 dark:hover:text-white dark:text-white/80",
+        link: "text-[#2563eb] underline-offset-4 hover:underline dark:text-white",
+        document: "bg-blue-50 text-[#2563eb] hover:bg-blue-100 shadow-sm dark:bg-transparent dark:border dark:border-white/15 dark:text-white dark:hover:bg-white/5",
+        admin: "bg-[#020817] text-white hover:bg-[#0f172a] shadow-sm dark:bg-white dark:text-[#020817] dark:hover:bg-white/90"
       },
       size: {
         default: "h-10 px-4 py-2",
