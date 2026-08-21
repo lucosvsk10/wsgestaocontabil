@@ -304,6 +304,132 @@ export type Database = {
         }
         Relationships: []
       }
+      compras_cfop_mapping: {
+        Row: {
+          ativo_padrao: boolean
+          cfop: string
+          client_id: string
+          conta_credito: string
+          conta_debito: string
+          created_at: string
+          descricao: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          ativo_padrao?: boolean
+          cfop: string
+          client_id: string
+          conta_credito?: string
+          conta_debito: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          ativo_padrao?: boolean
+          cfop?: string
+          client_id?: string
+          conta_credito?: string
+          conta_debito?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      compras_lancamentos: {
+        Row: {
+          cfop: string | null
+          client_id: string
+          competencia: string
+          conta_credito: string | null
+          conta_debito: string | null
+          created_at: string
+          data: string | null
+          historico: string | null
+          id: string
+          ordem: number
+          source_upload_id: string | null
+          updated_at: string
+          valor: number | null
+        }
+        Insert: {
+          cfop?: string | null
+          client_id: string
+          competencia: string
+          conta_credito?: string | null
+          conta_debito?: string | null
+          created_at?: string
+          data?: string | null
+          historico?: string | null
+          id?: string
+          ordem?: number
+          source_upload_id?: string | null
+          updated_at?: string
+          valor?: number | null
+        }
+        Update: {
+          cfop?: string | null
+          client_id?: string
+          competencia?: string
+          conta_credito?: string | null
+          conta_debito?: string | null
+          created_at?: string
+          data?: string | null
+          historico?: string | null
+          id?: string
+          ordem?: number
+          source_upload_id?: string | null
+          updated_at?: string
+          valor?: number | null
+        }
+        Relationships: []
+      }
+      compras_uploads: {
+        Row: {
+          client_id: string
+          competencia: string
+          created_at: string
+          dados_extraidos: Json | null
+          id: string
+          nome_arquivo: string
+          status: string
+          storage_path: string
+          ultimo_erro: string | null
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          client_id: string
+          competencia: string
+          created_at?: string
+          dados_extraidos?: Json | null
+          id?: string
+          nome_arquivo: string
+          status?: string
+          storage_path: string
+          ultimo_erro?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          client_id?: string
+          competencia?: string
+          created_at?: string
+          dados_extraidos?: Json | null
+          id?: string
+          nome_arquivo?: string
+          status?: string
+          storage_path?: string
+          ultimo_erro?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
       document_categories: {
         Row: {
           color: string | null
@@ -325,6 +451,66 @@ export type Database = {
           id?: string
           name?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      documentos_brutos: {
+        Row: {
+          alinhado_em: string | null
+          arquivo_original: string | null
+          competencia: string
+          created_at: string | null
+          dados_extraidos: Json | null
+          id: string
+          nome_arquivo: string
+          processado_em: string | null
+          status_alinhamento: string | null
+          status_processamento: string | null
+          tentativas_alinhamento: number | null
+          tentativas_processamento: number | null
+          tipo_documento: string | null
+          ultimo_erro: string | null
+          updated_at: string | null
+          url_storage: string
+          user_id: string
+        }
+        Insert: {
+          alinhado_em?: string | null
+          arquivo_original?: string | null
+          competencia: string
+          created_at?: string | null
+          dados_extraidos?: Json | null
+          id?: string
+          nome_arquivo: string
+          processado_em?: string | null
+          status_alinhamento?: string | null
+          status_processamento?: string | null
+          tentativas_alinhamento?: number | null
+          tentativas_processamento?: number | null
+          tipo_documento?: string | null
+          ultimo_erro?: string | null
+          updated_at?: string | null
+          url_storage: string
+          user_id: string
+        }
+        Update: {
+          alinhado_em?: string | null
+          arquivo_original?: string | null
+          competencia?: string
+          created_at?: string | null
+          dados_extraidos?: Json | null
+          id?: string
+          nome_arquivo?: string
+          processado_em?: string | null
+          status_alinhamento?: string | null
+          status_processamento?: string | null
+          tentativas_alinhamento?: number | null
+          tentativas_processamento?: number | null
+          tipo_documento?: string | null
+          ultimo_erro?: string | null
+          updated_at?: string | null
+          url_storage?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -412,6 +598,7 @@ export type Database = {
           created_at: string | null
           data_transacao: string
           descricao: string
+          documento_id: string | null
           id: string
           status: string | null
           updated_at: string | null
@@ -423,6 +610,7 @@ export type Database = {
           created_at?: string | null
           data_transacao: string
           descricao: string
+          documento_id?: string | null
           id?: string
           status?: string | null
           updated_at?: string | null
@@ -434,11 +622,65 @@ export type Database = {
           created_at?: string | null
           data_transacao?: string
           descricao?: string
+          documento_id?: string | null
           id?: string
           status?: string | null
           updated_at?: string | null
           user_id?: string
           valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_extrato_documento"
+            columns: ["documento_id"]
+            isOneToOne: false
+            referencedRelation: "documentos_brutos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fechamentos_exportados: {
+        Row: {
+          arquivo_csv_url: string | null
+          arquivo_excel_url: string | null
+          competencia: string
+          created_at: string | null
+          id: string
+          n8n_status: string | null
+          status: string | null
+          total_lancamentos: number | null
+          user_email: string | null
+          user_id: string
+          user_name: string | null
+          verification_id: string | null
+        }
+        Insert: {
+          arquivo_csv_url?: string | null
+          arquivo_excel_url?: string | null
+          competencia: string
+          created_at?: string | null
+          id?: string
+          n8n_status?: string | null
+          status?: string | null
+          total_lancamentos?: number | null
+          user_email?: string | null
+          user_id: string
+          user_name?: string | null
+          verification_id?: string | null
+        }
+        Update: {
+          arquivo_csv_url?: string | null
+          arquivo_excel_url?: string | null
+          competencia?: string
+          created_at?: string | null
+          id?: string
+          n8n_status?: string | null
+          status?: string | null
+          total_lancamentos?: number | null
+          user_email?: string | null
+          user_id?: string
+          user_name?: string | null
+          verification_id?: string | null
         }
         Relationships: []
       }
@@ -766,6 +1008,181 @@ export type Database = {
           },
         ]
       }
+      folha_lancamentos: {
+        Row: {
+          client_id: string
+          competencia: string
+          conta_credito: string | null
+          conta_debito: string | null
+          created_at: string
+          data: string | null
+          historico: string | null
+          id: string
+          justificativa: string | null
+          ordem: number
+          source_upload_id: string | null
+          updated_at: string
+          valor: number | null
+        }
+        Insert: {
+          client_id: string
+          competencia: string
+          conta_credito?: string | null
+          conta_debito?: string | null
+          created_at?: string
+          data?: string | null
+          historico?: string | null
+          id?: string
+          justificativa?: string | null
+          ordem?: number
+          source_upload_id?: string | null
+          updated_at?: string
+          valor?: number | null
+        }
+        Update: {
+          client_id?: string
+          competencia?: string
+          conta_credito?: string | null
+          conta_debito?: string | null
+          created_at?: string
+          data?: string | null
+          historico?: string | null
+          id?: string
+          justificativa?: string | null
+          ordem?: number
+          source_upload_id?: string | null
+          updated_at?: string
+          valor?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folha_lancamentos_source_upload_id_fkey"
+            columns: ["source_upload_id"]
+            isOneToOne: false
+            referencedRelation: "folha_uploads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      folha_transcricoes: {
+        Row: {
+          client_id: string
+          competencia: string
+          created_at: string
+          erro: string | null
+          id: string
+          linhas: Json
+          observacoes_ia: string | null
+          status: string
+          total_descontos_pdf: number | null
+          total_recol_fgts_pdf: number | null
+          total_rendimentos_pdf: number | null
+          updated_at: string
+          upload_id: string
+        }
+        Insert: {
+          client_id: string
+          competencia: string
+          created_at?: string
+          erro?: string | null
+          id?: string
+          linhas?: Json
+          observacoes_ia?: string | null
+          status?: string
+          total_descontos_pdf?: number | null
+          total_recol_fgts_pdf?: number | null
+          total_rendimentos_pdf?: number | null
+          updated_at?: string
+          upload_id: string
+        }
+        Update: {
+          client_id?: string
+          competencia?: string
+          created_at?: string
+          erro?: string | null
+          id?: string
+          linhas?: Json
+          observacoes_ia?: string | null
+          status?: string
+          total_descontos_pdf?: number | null
+          total_recol_fgts_pdf?: number | null
+          total_rendimentos_pdf?: number | null
+          updated_at?: string
+          upload_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folha_transcricoes_upload_id_fkey"
+            columns: ["upload_id"]
+            isOneToOne: true
+            referencedRelation: "folha_uploads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      folha_uploads: {
+        Row: {
+          client_id: string
+          competencia: string
+          created_at: string
+          id: string
+          nome_arquivo: string
+          observacoes_ia: string | null
+          status: string
+          storage_path: string
+          total_descontos_documento: number | null
+          total_descontos_lancamentos: number | null
+          total_liquido_documento: number | null
+          total_liquido_lancamentos: number | null
+          total_recol_fgts_documento: number | null
+          total_rendimentos_documento: number | null
+          total_rendimentos_lancamentos: number | null
+          ultimo_erro: string | null
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          client_id: string
+          competencia: string
+          created_at?: string
+          id?: string
+          nome_arquivo: string
+          observacoes_ia?: string | null
+          status?: string
+          storage_path: string
+          total_descontos_documento?: number | null
+          total_descontos_lancamentos?: number | null
+          total_liquido_documento?: number | null
+          total_liquido_lancamentos?: number | null
+          total_recol_fgts_documento?: number | null
+          total_rendimentos_documento?: number | null
+          total_rendimentos_lancamentos?: number | null
+          ultimo_erro?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          client_id?: string
+          competencia?: string
+          created_at?: string
+          id?: string
+          nome_arquivo?: string
+          observacoes_ia?: string | null
+          status?: string
+          storage_path?: string
+          total_descontos_documento?: number | null
+          total_descontos_lancamentos?: number | null
+          total_liquido_documento?: number | null
+          total_liquido_lancamentos?: number | null
+          total_recol_fgts_documento?: number | null
+          total_rendimentos_documento?: number | null
+          total_rendimentos_lancamentos?: number | null
+          ultimo_erro?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
       form_questions: {
         Row: {
           created_at: string
@@ -863,6 +1280,98 @@ export type Database = {
           dados?: Json
           id?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      lancamentos_alinhados: {
+        Row: {
+          centro_custo_credito: string | null
+          centro_custo_debito: string | null
+          competencia: string
+          created_at: string | null
+          credito: string | null
+          data: string | null
+          debito: string | null
+          documento_origem_id: string | null
+          historico: string | null
+          id: string
+          user_id: string
+          valor: number | null
+        }
+        Insert: {
+          centro_custo_credito?: string | null
+          centro_custo_debito?: string | null
+          competencia: string
+          created_at?: string | null
+          credito?: string | null
+          data?: string | null
+          debito?: string | null
+          documento_origem_id?: string | null
+          historico?: string | null
+          id?: string
+          user_id: string
+          valor?: number | null
+        }
+        Update: {
+          centro_custo_credito?: string | null
+          centro_custo_debito?: string | null
+          competencia?: string
+          created_at?: string | null
+          credito?: string | null
+          data?: string | null
+          debito?: string | null
+          documento_origem_id?: string | null
+          historico?: string | null
+          id?: string
+          user_id?: string
+          valor?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lancamentos_alinhados_documento_origem_id_fkey"
+            columns: ["documento_origem_id"]
+            isOneToOne: false
+            referencedRelation: "documentos_brutos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      month_closures: {
+        Row: {
+          closed_at: string
+          created_at: string
+          id: string
+          month: string
+          status: string
+          tipo: string
+          user_email: string
+          user_id: string
+          user_name: string
+          year: number
+        }
+        Insert: {
+          closed_at?: string
+          created_at?: string
+          id?: string
+          month: string
+          status?: string
+          tipo?: string
+          user_email: string
+          user_id: string
+          user_name: string
+          year: number
+        }
+        Update: {
+          closed_at?: string
+          created_at?: string
+          id?: string
+          month?: string
+          status?: string
+          tipo?: string
+          user_email?: string
+          user_id?: string
+          user_name?: string
+          year?: number
         }
         Relationships: []
       }
@@ -1013,6 +1522,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      planos_contas: {
+        Row: {
+          conteudo: string
+          created_at: string | null
+          created_by: string
+          id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          conteudo: string
+          created_at?: string | null
+          created_by: string
+          id?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          conteudo?: string
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       poll_options: {
         Row: {
