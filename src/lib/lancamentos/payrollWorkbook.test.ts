@@ -18,7 +18,7 @@ const entry = (id: string, amountInCents: number, kind: PayrollEntry["kind"], se
 });
 
 describe("calculatePayrollComparisons", () => {
-  it("reconciles January/2025 while keeping future vacation INSS out of current INSS", () => {
+  it("reconciles January/2025 with the full vacation INSS in January and no carryover", () => {
     const entries: PayrollEntry[] = [
       entry("adiantamento", 2_738_466, "provento", "adiantamento", "advance_payment"),
       entry("folha-proventos", 9_611_773, "provento", "folha", "salary_earning"),
@@ -26,12 +26,10 @@ describe("calculatePayrollComparisons", () => {
       entry("folha-descontos-sem-inss", 4_336_873, "desconto", "folha", "payroll_discount"),
       entry("inss-folha", 666_191, "desconto", "folha", "inss"),
       entry("ferias-descontos-sem-inss", 13_651, "desconto", "ferias", "vacation_discount"),
-      entry("inss-ferias-atual", 89_080, "desconto", "ferias", "inss"),
+      entry("inss-ferias-integral", 98_188, "desconto", "ferias", "inss"),
       entry("fgts", 661_096, "encargo", "folha", "fgts"),
     ];
-    const deferredEntries: PayrollEntry[] = [
-      { ...entry("inss-ferias-futuro", 9_108, "desconto", "ferias", "inss"), date: "28/02/2025", targetCompetence: "02/2025" },
-    ];
+    const deferredEntries: PayrollEntry[] = [];
     const totals: PayrollDocumentTotal[] = [
       { key: "total_proventos", label: "Total de Proventos", amountInCents: 13_729_039, source: "Total Geral" },
       { key: "total_descontos", label: "Total de Descontos", amountInCents: 5_114_903, source: "Total Geral" },
@@ -46,8 +44,17 @@ describe("calculatePayrollComparisons", () => {
     ];
 
     const comparisons = calculatePayrollComparisons(entries, deferredEntries, totals);
-    expect(comparisons.every(row => row.differenceInCents === 0)).toBe(true);
-    expect(comparisons.find(row => row.key === "inss_total")?.entriesAmountInCents).toBe(755_271);
+    const blocking = comparisons.filter(row => row.blocking !== false);
+    const inss = comparisons.find(row => row.key === "inss_total");
+
+    expect(blocking.every(row => row.differenceInCents === 0)).toBe(true);
     expect(comparisons.find(row => row.key === "total_descontos")?.entriesAmountInCents).toBe(5_114_903);
+    expect(comparisons.find(row => row.key === "liquido")?.entriesAmountInCents).toBe(8_614_136);
+    expect(comparisons.find(row => row.key === "ferias_descontos")?.entriesAmountInCents).toBe(111_839);
+    expect(inss?.entriesAmountInCents).toBe(764_379);
+    expect(inss?.documentAmountInCents).toBe(755_271);
+    expect(inss?.differenceInCents).toBe(9_108);
+    expect(inss?.blocking).toBe(false);
+    expect(deferredEntries).toHaveLength(0);
   });
 });
