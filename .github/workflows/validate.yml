@@ -30,7 +30,7 @@ jobs:
         run: npm run build
 
       - name: Payroll regression
-        run: npx -y vitest@3.1.1 run src/lib/lancamentos/payrollWorkbook.test.ts
+        run: npx -y vitest@3.1.1 run --environment node src/lib/lancamentos/payrollWorkbook.test.ts
 
       - name: Lint changed payroll files
         run: >-
