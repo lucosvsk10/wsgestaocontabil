@@ -1,0 +1,41 @@
+name: Validate
+
+on:
+  push:
+    branches:
+      - "fix/**"
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Payroll regression
+        run: npx vitest run src/lib/lancamentos/payrollWorkbook.test.ts
+
+      - name: Lint changed payroll files
+        run: >-
+          npx eslint
+          src/App.tsx
+          src/contexts/AccountingProcessingContext.tsx
+          src/components/admin/lancamentos/LancamentosWorkspace.tsx
+          src/components/admin/lancamentos/FolhaWorkspace.tsx
+          src/lib/lancamentos/payrollWorkbook.ts
+          src/lib/lancamentos/payrollWorkbook.test.ts

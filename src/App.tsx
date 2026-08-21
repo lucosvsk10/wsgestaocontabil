@@ -5,6 +5,7 @@ import AppRoutes from "./AppRoutes";
 import { Toaster } from "./components/ui/toaster";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AuthProvider } from "./contexts/AuthContext";
+import { AccountingProcessingProvider } from "./contexts/AccountingProcessingContext";
 import { AnnouncementsContainer } from "./components/announcements/AnnouncementsContainer";
 import React from 'react';
 
@@ -24,11 +25,13 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <AuthProvider>
-            <BrowserRouter>
-              <AppRoutes />
-              <AnnouncementsContainer />
-              <Toaster />
-            </BrowserRouter>
+            <AccountingProcessingProvider>
+              <BrowserRouter>
+                <AppRoutes />
+                <AnnouncementsContainer />
+                <Toaster />
+              </BrowserRouter>
+            </AccountingProcessingProvider>
           </AuthProvider>
         </ThemeProvider>
       </QueryClientProvider>
