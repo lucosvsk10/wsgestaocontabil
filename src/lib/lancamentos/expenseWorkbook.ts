@@ -1,4 +1,5 @@
 import * as XLSX from "xlsx";
+import { exportAccountingWorkbook } from "./accountingExportWorkbook";
 
 export type ExpenseGroupSide = "debit" | "credit";
 
@@ -51,7 +52,6 @@ const aliases = {
 } as const;
 
 type ColumnKey = keyof typeof aliases;
-type RowRecord = Record<string, unknown>;
 
 export async function detectWorkbookCompetence(file: File): Promise<{ month: string; year: string } | null> {
   const named = file.name.match(/(?:^|\D)(0?[1-9]|1[0-2])[-_/](20\d{2})(?:\D|$)/);
@@ -63,11 +63,14 @@ export async function detectWorkbookCompetence(file: File): Promise<{ month: str
       const rows = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets[sheetName], { header: 1, defval: "", raw: true });
       for (const row of rows.slice(0, 80)) for (const value of row) {
         if (!(value instanceof Date) && !(typeof value === "string" && /^\d{1,2}[/-]\d{1,2}[/-]\d{2,4}$/.test(value.trim()))) continue;
-        const parsed = parseDate(value); const match = parsed.match(/^\d{2}\/(\d{2})\/(20\d{2})$/);
+        const parsed = parseDate(value);
+        const match = parsed.match(/^\d{2}\/(\d{2})\/(20\d{2})$/);
         if (match) return { month: match[1], year: match[2] };
       }
     }
-  } catch { return null; }
+  } catch {
+    return null;
+  }
   return null;
 }
 
@@ -169,7 +172,7 @@ export async function readExpenseWorkbook(file: File): Promise<ExpenseImportResu
       const debitCode = toText(rowValue(row, columns.debitCode));
       const creditCode = toText(rowValue(row, columns.creditCode));
       const amountInCents = parseAmount(rowValue(row, columns.amount));
-      const hasContent = row.some((cell) => toText(cell));
+      const hasContent = row.some((item) => toText(item));
 
       if (!hasContent) return;
       if (!debitCode && !creditCode && amountInCents === null) {
@@ -244,20 +247,35 @@ export function groupExpenseEntries(entries: ExpenseEntry[], side: ExpenseGroupS
 }
 
 export function exportGroupedExpenses(entries: GroupedExpenseEntry[], competence: string) {
-  const rows: RowRecord[] = entries.map((entry) => ({
-    DATA: entry.date,
-    "HISTÓRICO VARIÁVEL": entry.history,
-    DÉBITO: entry.debitCode,
-    CRÉDITO: entry.creditCode,
-    "DESCRIÇÃO DÉBITO": entry.debitDescription,
-    "C.C. DÉBITO": entry.debitCostCenter,
-    "DESCRIÇÃO CRÉDITO": entry.creditDescription,
-    "C.C. CRÉDITO": entry.creditCostCenter,
-    VALOR: entry.amountInCents / 100,
-  }));
-  const worksheet = XLSX.utils.json_to_sheet(rows);
-  worksheet["!cols"] = [{ wch: 13 }, { wch: 46 }, { wch: 12 }, { wch: 12 }, { wch: 30 }, { wch: 14 }, { wch: 30 }, { wch: 14 }, { wch: 16 }];
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Despesas agrupadas");
-  XLSX.writeFile(workbook, `despesas-agrupadas-${competence.replace("/", "-")}.xlsx`, { compression: true });
+  const total = entries.reduce((sum, entry) => sum + entry.amountInCents, 0);
+  exportAccountingWorkbook({
+    moduleTitle: "DE DESPESAS",
+    competence,
+    fileName: `despesas-agrupadas-${competence.replace("/", "-")}-calima.xlsx`,
+    entries: entries.map(entry => ({
+      date: entry.date,
+      amountInCents: entry.amountInCents,
+      debitCode: entry.debitCode,
+      creditCode: entry.creditCode,
+      history: entry.history,
+      debitCostCenter: entry.debitCostCenter,
+      creditCostCenter: entry.creditCostCenter,
+      debitDescription: entry.debitDescription,
+      creditDescription: entry.creditDescription,
+      referenceDescription: entry.history,
+      type: "despesa",
+      section: "despesas",
+      mappingSource: "Importado / agrupado",
+      mappingReason: `${entry.sourceCount} lançamento(s) original(is) consolidado(s) nesta linha.`,
+    })),
+    comparisons: [{
+      label: "Total para importação",
+      documentAmountInCents: total,
+      entriesAmountInCents: total,
+      differenceInCents: 0,
+      source: "Lançamentos agrupados validados no módulo Despesas",
+      blocking: true,
+    }],
+    note: "Controle: a primeira aba contém somente as sete colunas com os nomes esperados pelo Calima. O Mapeamento registra as contas e contrapartidas efetivamente usadas na consolidação.",
+  });
 }
