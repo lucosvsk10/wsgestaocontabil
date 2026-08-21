@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { DespesasWorkspace } from "./DespesasWorkspace";
 
 type ModuleKey = "folha" | "compras" | "faturamento" | "despesas";
 type MonthStatus = "closed" | "review" | "empty";
@@ -264,6 +265,10 @@ export function LancamentosWorkspace() {
             </p>
           </div>
 
+          {selectedModule === "despesas" ? (
+            <DespesasWorkspace key={`${year}-${selectedMonth}`} month={selectedMonth} year={year} />
+          ) : (
+          <>
           <section className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-4" aria-label="Importação de documentos">
             {modules.map((module) => {
               const count = filesByModule[module.key].length;
@@ -531,6 +536,8 @@ export function LancamentosWorkspace() {
               </section>
             </TabsContent>
           </Tabs>
+          </>
+          )}
         </main>
       </div>
     </div>
