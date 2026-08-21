@@ -1,5 +1,6 @@
 name: Validate
 
+# CI gate for accounting changes.
 on:
   push:
     branches:
@@ -23,13 +24,13 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+        run: npm install --legacy-peer-deps --no-audit --no-fund
 
       - name: Build
         run: npm run build
 
       - name: Payroll regression
-        run: npx vitest run src/lib/lancamentos/payrollWorkbook.test.ts
+        run: npx -y vitest@3.1.1 run --environment node src/lib/lancamentos/payrollWorkbook.test.ts
 
       - name: Lint changed payroll files
         run: >-
