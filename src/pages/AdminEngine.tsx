@@ -11,6 +11,13 @@ type EngineStatus = {
   apiConfigured: boolean;
   price: { input: number; cached: number; output: number } | null;
   totals: { requests: number; success: number; errors: number; inputTokens: number; outputTokens: number; totalTokens: number; estimatedCostUsd: number };
+  official: {
+    configured: boolean;
+    available: boolean;
+    error: string | null;
+    totals: { costUsd: number; inputTokens: number; cachedInputTokens: number; outputTokens: number; requests: number };
+    daily: Array<{ startTime: number; endTime: number; costUsd: number; inputTokens: number; cachedInputTokens: number; outputTokens: number; requests: number }>;
+  };
   lastRequest: { status: "success" | "error"; created_at: string; latency_ms: number; error_message?: string | null } | null;
   recent: Array<{ id: string; createdAt: string; companyKey?: string | null; competence?: string | null; module: string; model: string; status: "success" | "error"; inputTokens: number; outputTokens: number; totalTokens: number; estimatedCostUsd: number; latencyMs: number; errorCode?: string | null; errorMessage?: string | null }>;
 };
@@ -113,9 +120,14 @@ export default function AdminEngine() {
       {error && <div className="flex items-start gap-3 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0"/><span>{error}</span></div>}
       <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
         <Metric icon={Cpu} label="Modelo ativo" value={status?.model || "—"} detail={status?.provider || "OpenAI"}/>
-        <Metric icon={Activity} label="Chamadas · 30 dias" value={number.format(status?.totals.requests || 0)} detail={`${number.format(status?.totals.errors || 0)} com erro`}/>
-        <Metric icon={Gauge} label="Tokens · 30 dias" value={number.format(status?.totals.totalTokens || 0)} detail={`${number.format(status?.totals.inputTokens || 0)} entrada · ${number.format(status?.totals.outputTokens || 0)} saída`}/>
-        <Metric icon={DollarSign} label="Custo estimado · 30 dias" value={usd.format(status?.totals.estimatedCostUsd || 0)} detail="Estimativa por tokens registrados"/>
+        <Metric icon={Activity} label="Chamadas locais · 30 dias" value={number.format(status?.totals.requests || 0)} detail={`${number.format(status?.totals.errors || 0)} com erro`}/>
+        <Metric icon={Gauge} label="Tokens oficiais · 30 dias" value={status?.official.available ? number.format(status.official.totals.inputTokens + status.official.totals.outputTokens) : "—"} detail={status?.official.available ? `${number.format(status.official.totals.requests)} chamadas na organização` : "Admin API ainda não conectada"}/>
+        <Metric icon={DollarSign} label="Custo oficial · 30 dias" value={status?.official.available ? usd.format(status.official.totals.costUsd) : "—"} detail={status?.official.available ? "Valor informado pela OpenAI" : "Sem estimativa exibida como valor oficial"}/>
+      </section>
+
+      <section className="rounded-lg border border-border bg-background p-6"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Conta OpenAI</p><h2 className="mt-2 text-lg font-semibold text-foreground">Uso e cobrança oficiais</h2></div><StatusPill ok={Boolean(status?.official.available)} label={status?.official.available ? "Dados oficiais conectados" : status?.official.configured ? "Consulta recusada" : "Admin API pendente"}/></div>
+        {status?.official.available ? <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><OfficialValue label="Custo da organização" value={usd.format(status.official.totals.costUsd)}/><OfficialValue label="Requisições" value={number.format(status.official.totals.requests)}/><OfficialValue label="Tokens de entrada" value={number.format(status.official.totals.inputTokens)}/><OfficialValue label="Tokens de saída" value={number.format(status.official.totals.outputTokens)}/></div> : <div className="mt-6 rounded-md bg-muted/50 px-4 py-4"><p className="text-sm font-medium text-foreground">{status?.official.error || "A consulta oficial ainda não está disponível."}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">A chave normal processa documentos. A chave administrativa é separada e serve apenas para consultar uso e custos da organização; nenhum segredo é enviado ao navegador.</p></div>}
+        {status?.official.available && <div className="mt-6 overflow-x-auto border-t border-border pt-5"><table className="w-full min-w-[720px] text-sm"><thead className="text-left text-xs text-muted-foreground"><tr><th className="pb-3 font-medium">Dia</th><th className="pb-3 text-right font-medium">Chamadas</th><th className="pb-3 text-right font-medium">Entrada</th><th className="pb-3 text-right font-medium">Saída</th><th className="pb-3 text-right font-medium">Custo oficial</th></tr></thead><tbody>{status.official.daily.slice(0, 10).map((row) => <tr key={row.startTime} className="border-t border-border/70"><td className="py-3">{new Date(row.startTime * 1000).toLocaleDateString("pt-BR")}</td><td className="py-3 text-right tabular-nums">{number.format(row.requests)}</td><td className="py-3 text-right tabular-nums">{number.format(row.inputTokens)}</td><td className="py-3 text-right tabular-nums">{number.format(row.outputTokens)}</td><td className="py-3 text-right tabular-nums">{usd.format(row.costUsd)}</td></tr>)}</tbody></table></div>}
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1.2fr_.8fr]">
@@ -137,4 +149,5 @@ export default function AdminEngine() {
 function Metric({ icon: Icon, label, value, detail }: { icon: typeof Activity; label: string; value: string; detail: string }) { return <div className="rounded-lg border border-border bg-background p-5"><div className="flex items-center justify-between"><p className="text-xs font-medium text-muted-foreground">{label}</p><Icon className="h-4 w-4 text-muted-foreground"/></div><p className="mt-4 truncate text-2xl font-semibold text-foreground" title={value}>{value}</p><p className="mt-2 truncate text-xs text-muted-foreground">{detail}</p></div>; }
 function Info({ label, value }: { label: string; value: string }) { return <div><dt className="text-xs text-muted-foreground">{label}</dt><dd className="mt-1 text-sm font-medium text-foreground">{value}</dd></div>; }
 function Price({ label, value }: { label: string; value: number }) { return <div><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 font-medium text-foreground">US$ {value.toFixed(2)}<span className="text-xs font-normal text-muted-foreground"> / 1M</span></p></div>; }
+function OfficialValue({ label, value }: { label: string; value: string }) { return <div className="rounded-md bg-muted/40 px-4 py-4"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-2 text-xl font-semibold text-foreground">{value}</p></div>; }
 function StatusPill({ ok, label }: { ok: boolean; label: string }) { return <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${ok ? "bg-foreground text-background" : "bg-destructive/10 text-destructive"}`}>{ok ? <CheckCircle2 className="h-3 w-3"/> : <Clock3 className="h-3 w-3"/>}{label}</span>; }
