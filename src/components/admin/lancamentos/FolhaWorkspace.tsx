@@ -1,6 +1,7 @@
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChartAccount } from "@/lib/lancamentos/chartOfAccounts";
@@ -68,13 +69,21 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
     () => calculatePayrollComparisons(entries, deferredEntries, documentTotals),
     [deferredEntries, documentTotals, entries],
   );
-  const differences = comparisons.filter(row => row.differenceInCents !== 0);
+  const blockingDifferences = comparisons.filter(row => row.blocking !== false && row.differenceInCents !== 0);
+  const informationalDifferences = comparisons.filter(row => row.blocking === false && row.differenceInCents !== 0);
   const missing = entries.filter(row => !isCompleteMapping(row)).length;
   const mappingsToApprove = [...entries, ...deferredEntries].filter(row => row.mappingNeedsApproval && isCompleteMapping(row)).length;
   const learnedMappings = [...entries, ...deferredEntries].filter(row => row.mappingSource === "learned").length;
   const structuralIssues = validationIssues.filter(issue => !issue.toLocaleLowerCase("pt-BR").includes("diferença de"));
-  const conferenceCount = differences.length + missing + mappingsToApprove + warnings.length + structuralIssues.length + (referenceVerified ? 0 : 1);
-  const canReviewApprove = entries.length > 0 && referenceVerified && !processing && !learning && missing === 0 && differences.length === 0 && warnings.length === 0 && structuralIssues.length === 0;
+  const conferenceCount = blockingDifferences.length + missing + mappingsToApprove + warnings.length + structuralIssues.length + (referenceVerified ? 0 : 1);
+  const canReviewApprove = entries.length > 0
+    && referenceVerified
+    && !processing
+    && !learning
+    && missing === 0
+    && blockingDifferences.length === 0
+    && warnings.length === 0
+    && structuralIssues.length === 0;
   const canFinalize = canReviewApprove && mappingsToApprove === 0;
   const total = entries.reduce((sum, row) => sum + row.amountInCents, 0);
 
@@ -207,6 +216,7 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
     if (!canReviewApprove) return;
     if (mappingsToApprove === 0) {
       onStatusChange("done");
+      setActiveTab("lancamentos");
       return;
     }
 
@@ -235,6 +245,7 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
       setEntries(rows => rows.map(markLearned));
       setDeferredEntries(rows => rows.map(markLearned));
       onStatusChange("done");
+      setActiveTab("lancamentos");
     } catch (error) {
       setValidationIssues(current => [...new Set([
         ...current,
@@ -287,7 +298,7 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
 
       <TabsContent value="transcricao" className="mt-7">
         <Header title="Folha de pagamento · Transcrição" />
-        <Ledger rows={entries} editable update={update} />
+        <Ledger rows={entries} editable update={update} title={`Transcrição da folha · ${competence}`} />
         {deferredEntries.length > 0 && <div className="mt-6 rounded-md border border-border bg-muted/30 p-4">
           <p className="text-sm font-medium text-foreground">Valores separados para competência futura</p>
           <p className="mt-1 text-xs text-muted-foreground">Eles participam da conferência do documento original, mas não entram na exportação desta competência.</p>
@@ -303,7 +314,14 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
             <span className="text-sm text-muted-foreground">{entries.length} lançamentos · {money(total)}</span>
             <Button disabled={!canFinalize} onClick={() => exportPayroll(entries, competence)}>Exportar para o Calima</Button>
           </div>
-          <Ledger rows={entries} />
+          <Ledger rows={entries} title={`Lançamentos da folha · ${competence}`} />
+          {!canFinalize && entries.length > 0 && <p className="px-5 pb-4 text-xs text-muted-foreground">
+            {mappingsToApprove > 0
+              ? "Confirme os mapeamentos na aba Conferência para liberar a exportação."
+              : blockingDifferences.length > 0
+                ? "Existem diferenças contábeis bloqueantes que precisam ser corrigidas antes da exportação."
+                : "A exportação será liberada assim que a conferência obrigatória estiver concluída."}
+          </p>}
         </div>
       </TabsContent>
 
@@ -312,7 +330,7 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
         <div className="space-y-6 rounded-md border border-border bg-background p-6">
           <div className="grid gap-5 sm:grid-cols-5">
             <Stat label="Referências" value={comparisons.length} />
-            <Stat label="Diferenças" value={differences.length} />
+            <Stat label="Diferenças bloqueantes" value={blockingDifferences.length} />
             <Stat label="Contas incompletas" value={missing} />
             <Stat label="Aguardando aprovação" value={mappingsToApprove} />
             <Stat label="Conhecimento reutilizado" value={learnedMappings} />
@@ -320,9 +338,13 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
           {!referenceVerified && <div className="flex gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />A leitura independente do documento original ainda não passou pelos critérios de referência. A exportação permanece bloqueada.</div>}
           {mappingsToApprove > 0 && <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-4">
             <p className="text-sm font-medium text-foreground">{mappingsToApprove} mapeamento(s) novo(s) precisam da sua conferência</p>
-            <p className="mt-1 text-xs text-muted-foreground">Revise débito e crédito na Transcrição. Ao marcar a folha como OK, as combinações aprovadas serão salvas como conhecimento desta empresa e reutilizadas nos próximos meses.</p>
+            <p className="mt-1 text-xs text-muted-foreground">Revise débito e crédito na Transcrição. Ao confirmar, essas combinações serão salvas como conhecimento desta empresa e reutilizadas automaticamente nos próximos meses.</p>
           </div>}
-          <ComparisonTable rows={comparisons} referenceVerified={referenceVerified} />
+          {informationalDifferences.length > 0 && <div className="rounded-md border border-border bg-muted/30 p-4">
+            <p className="text-sm font-medium text-foreground">Diferenças informativas</p>
+            <p className="mt-1 text-xs text-muted-foreground">Essas diferenças explicam calendário de recolhimento ou outras referências do documento e não bloqueiam aprovação nem exportação.</p>
+          </div>}
+          <ComparisonTable rows={comparisons} referenceVerified={referenceVerified} title={`Conferência da folha · ${competence}`} />
           {deferredEntries.length > 0 && <div className="rounded-md border border-border p-4">
             <p className="text-sm font-medium text-foreground">Ajustes por competência de recolhimento</p>
             {deferredEntries.map(row => <p key={row.id} className="mt-2 text-sm text-muted-foreground">{row.rubricDescription || row.history}: {money(row.amountInCents)} → {row.targetCompetence}</p>)}
@@ -349,29 +371,95 @@ function Flow({ value, label, count }: { value: string; label: string; count: nu
 function Header({ title }: { title: string }) { return <div className="mb-5"><h3 className="font-semibold">{title}</h3></div>; }
 function Stat({ label, value }: { label: string; value: string | number }) { return <div><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 font-semibold">{value}</p></div>; }
 
-function ComparisonTable({ rows, referenceVerified }: { rows: PayrollComparison[]; referenceVerified: boolean }) {
-  return <div className="overflow-x-auto rounded-md border border-border"><table className="w-full min-w-[850px] text-sm">
-    <thead className="bg-muted/50 text-left text-xs text-muted-foreground"><tr><th className="px-3 py-3">Referência</th><th className="px-3 py-3 text-right">Documento original</th><th className="px-3 py-3 text-right">Lançamentos</th><th className="px-3 py-3 text-right">Diferença</th><th className="px-3 py-3">Resultado</th></tr></thead>
-    <tbody>{rows.map(row => <tr key={`${row.key}-${row.source}`} className="border-t border-border">
-      <td className="px-3 py-3"><p className="font-medium text-foreground">{row.label}</p><p className="mt-0.5 text-xs text-muted-foreground">{row.source}</p></td>
-      <td className="px-3 py-3 text-right tabular-nums">{money(row.documentAmountInCents)}</td>
-      <td className="px-3 py-3 text-right tabular-nums">{money(row.entriesAmountInCents)}</td>
-      <td className={cn("px-3 py-3 text-right tabular-nums", row.differenceInCents !== 0 && "font-medium text-destructive")}>{money(row.differenceInCents)}</td>
-      <td className="px-3 py-3">{referenceVerified && row.differenceInCents === 0 ? <span className="inline-flex items-center gap-1.5 text-sm text-foreground"><CheckCircle2 className="h-4 w-4" />Confere</span> : <span className="text-destructive">Revisar</span>}</td>
-    </tr>)}{!rows.length && <tr><td colSpan={5} className="h-28 text-center text-muted-foreground">Reprocesse o documento para gerar a conferência independente.</td></tr>}</tbody>
-  </table></div>;
+function ComparisonTable({ rows, referenceVerified, title }: { rows: PayrollComparison[]; referenceVerified: boolean; title: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const table = <ComparisonTableContent rows={rows} referenceVerified={referenceVerified} />;
+
+  return <>
+    <div className="rounded-md border border-border bg-background">
+      <TableExpandButton onClick={() => setExpanded(true)} />
+      <div className="overflow-x-auto">{table}</div>
+    </div>
+    <Dialog open={expanded} onOpenChange={setExpanded}>
+      <DialogContent className="max-h-[88vh] w-[94vw] max-w-[1480px] overflow-hidden border-border bg-background p-0">
+        <DialogHeader className="border-b border-border px-6 py-5 text-left">
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        <div className="max-h-[76vh] overflow-auto">{table}</div>
+      </DialogContent>
+    </Dialog>
+  </>;
 }
 
-function Ledger({ rows, editable, update }: { rows: PayrollEntry[]; editable?: boolean; update?: (id: string, field: keyof PayrollEntry, value: string) => void }) {
+function ComparisonTableContent({ rows, referenceVerified }: { rows: PayrollComparison[]; referenceVerified: boolean }) {
+  return <table className="w-full min-w-[850px] text-sm">
+    <thead className="bg-muted/50 text-left text-xs text-muted-foreground"><tr><th className="px-3 py-3">Referência</th><th className="px-3 py-3 text-right">Documento original</th><th className="px-3 py-3 text-right">Lançamentos</th><th className="px-3 py-3 text-right">Diferença</th><th className="px-3 py-3">Resultado</th></tr></thead>
+    <tbody>{rows.map(row => {
+      const informational = row.blocking === false;
+      const confers = referenceVerified && row.differenceInCents === 0;
+      return <tr key={`${row.key}-${row.source}`} className="border-t border-border">
+        <td className="px-3 py-3"><p className="font-medium text-foreground">{row.label}</p><p className="mt-0.5 text-xs text-muted-foreground">{row.source}</p>{row.note && <p className="mt-1 max-w-xl text-[11px] text-muted-foreground">{row.note}</p>}</td>
+        <td className="px-3 py-3 text-right tabular-nums">{money(row.documentAmountInCents)}</td>
+        <td className="px-3 py-3 text-right tabular-nums">{money(row.entriesAmountInCents)}</td>
+        <td className={cn("px-3 py-3 text-right tabular-nums", !informational && row.differenceInCents !== 0 && "font-medium text-destructive", informational && row.differenceInCents !== 0 && "text-muted-foreground")}>{money(row.differenceInCents)}</td>
+        <td className="px-3 py-3">
+          {informational
+            ? <span className="text-muted-foreground">Informativo</span>
+            : confers
+              ? <span className="inline-flex items-center gap-1.5 text-sm text-foreground"><CheckCircle2 className="h-4 w-4" />Confere</span>
+              : <span className="text-destructive">Revisar</span>}
+        </td>
+      </tr>;
+    })}{!rows.length && <tr><td colSpan={5} className="h-28 text-center text-muted-foreground">Reprocesse o documento para gerar a conferência independente.</td></tr>}</tbody>
+  </table>;
+}
+
+function Ledger({ rows, editable, update, title }: { rows: PayrollEntry[]; editable?: boolean; update?: (id: string, field: keyof PayrollEntry, value: string) => void; title: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const table = <LedgerTable rows={rows} editable={editable} update={update} />;
+
+  return <>
+    <div className="rounded-md border border-border bg-background">
+      <TableExpandButton onClick={() => setExpanded(true)} />
+      <div className="overflow-x-auto">{table}</div>
+    </div>
+    <Dialog open={expanded} onOpenChange={setExpanded}>
+      <DialogContent className="max-h-[88vh] w-[94vw] max-w-[1540px] overflow-hidden border-border bg-background p-0">
+        <DialogHeader className="border-b border-border px-6 py-5 text-left">
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        <div className="max-h-[76vh] overflow-auto">{table}</div>
+      </DialogContent>
+    </Dialog>
+  </>;
+}
+
+function LedgerTable({ rows, editable, update }: { rows: PayrollEntry[]; editable?: boolean; update?: (id: string, field: keyof PayrollEntry, value: string) => void }) {
   const columns: Array<[string, keyof PayrollEntry, string]> = [
     ["Data", "date", "w-28"], ["Histórico", "history", "min-w-[260px]"], ["Débito", "debitCode", "w-20"],
     ["Descrição débito", "debitDescription", "min-w-[180px]"], ["C.C. débito", "debitCostCenter", "w-24"], ["Crédito", "creditCode", "w-20"],
     ["Descrição crédito", "creditDescription", "min-w-[180px]"], ["C.C. crédito", "creditCostCenter", "w-24"],
   ];
-  return <div className="overflow-x-auto rounded-md border border-border bg-background"><table className="w-full min-w-[1580px] text-sm">
-    <thead className="bg-muted/50 text-left text-xs text-muted-foreground"><tr>{columns.map(([label, , width]) => <th key={label} className={cn("border-b border-r border-border px-3 py-2", width)}>{label}</th>)}<th className="w-32 border-b border-r border-border px-3 py-2">Mapeamento</th><th className="border-b border-border px-3 py-2 text-right">Valor</th></tr></thead>
-    <tbody>{rows.map(row => <tr key={row.id} className={cn("border-b border-border", row.mappingNeedsApproval && "bg-amber-500/[0.035]")}>{columns.map(([, field]) => <td key={field} className="border-r border-border">{editable ? <Input className={cell} value={String(row[field] ?? "")} onChange={event => update?.(row.id, field, event.target.value)} /> : <span className="block px-3 py-2">{String(row[field] || "—")}</span>}</td>)}<td className="border-r border-border px-3 py-2"><MappingLabel row={row} /></td><td className="px-3 py-2 text-right">{editable ? <Input className={cn(cell, "text-right")} value={(row.amountInCents / 100).toFixed(2).replace(".", ",")} onChange={event => update?.(row.id, "amountInCents", event.target.value)} /> : money(row.amountInCents)}</td></tr>)}{!rows.length && <tr><td colSpan={10} className="h-40 text-center text-muted-foreground">Importe a folha para iniciar.</td></tr>}</tbody>
-  </table></div>;
+  return <table className="w-full min-w-[1580px] text-sm">
+    <thead className="bg-muted/50 text-left text-xs text-muted-foreground"><tr>
+      {columns.map(([label, , width]) => <th key={label} className={cn("border-b border-r border-border px-3 py-2", width)}>{label}</th>)}
+      <th className="w-32 border-b border-r border-border px-3 py-2 text-right">Valor</th>
+      <th className="w-32 border-b border-border px-3 py-2">Mapeamento</th>
+    </tr></thead>
+    <tbody>{rows.map(row => <tr key={row.id} className={cn("border-b border-border", row.mappingNeedsApproval && "bg-amber-500/[0.035]")}>
+      {columns.map(([, field]) => <td key={field} className="border-r border-border">{editable ? <Input className={cell} value={String(row[field] ?? "")} onChange={event => update?.(row.id, field, event.target.value)} /> : <span className="block px-3 py-2">{String(row[field] || "—")}</span>}</td>)}
+      <td className="border-r border-border px-3 py-2 text-right">{editable ? <Input className={cn(cell, "text-right")} value={(row.amountInCents / 100).toFixed(2).replace(".", ",")} onChange={event => update?.(row.id, "amountInCents", event.target.value)} /> : money(row.amountInCents)}</td>
+      <td className="px-3 py-2"><MappingLabel row={row} /></td>
+    </tr>)}{!rows.length && <tr><td colSpan={10} className="h-40 text-center text-muted-foreground">Importe a folha para iniciar.</td></tr>}</tbody>
+  </table>;
+}
+
+function TableExpandButton({ onClick }: { onClick: () => void }) {
+  return <div className="flex h-9 items-center justify-end border-b border-border px-2">
+    <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={onClick} title="Expandir tabela" aria-label="Expandir tabela">
+      <Maximize2 className="h-4 w-4" />
+    </Button>
+  </div>;
 }
 
 function MappingLabel({ row }: { row: PayrollEntry }) {
