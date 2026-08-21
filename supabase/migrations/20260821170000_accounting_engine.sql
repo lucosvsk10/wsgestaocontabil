@@ -38,20 +38,9 @@ CREATE INDEX IF NOT EXISTS idx_accounting_ai_usage_context
 ALTER TABLE public.accounting_engine_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.accounting_ai_usage ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Admins manage accounting engine settings" ON public.accounting_engine_settings;
-CREATE POLICY "Admins manage accounting engine settings"
-  ON public.accounting_engine_settings FOR ALL TO authenticated
-  USING (public.is_any_admin(auth.uid()))
-  WITH CHECK (public.is_any_admin(auth.uid()));
-
-DROP POLICY IF EXISTS "Admins read accounting AI usage" ON public.accounting_ai_usage;
-CREATE POLICY "Admins read accounting AI usage"
-  ON public.accounting_ai_usage FOR SELECT TO authenticated
-  USING (public.is_any_admin(auth.uid()));
-
 REVOKE ALL ON public.accounting_engine_settings FROM anon;
+REVOKE ALL ON public.accounting_engine_settings FROM authenticated;
 REVOKE ALL ON public.accounting_ai_usage FROM anon;
-GRANT SELECT, INSERT, UPDATE ON public.accounting_engine_settings TO authenticated, service_role;
-GRANT SELECT ON public.accounting_ai_usage TO authenticated;
+REVOKE ALL ON public.accounting_ai_usage FROM authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.accounting_engine_settings TO service_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.accounting_ai_usage TO service_role;
-
