@@ -14,6 +14,84 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounting_workspace_data: {
+        Row: {
+          company_key: string
+          competence: string | null
+          created_at: string
+          created_by: string | null
+          module: string | null
+          payload: Json
+          scope: string
+          updated_at: string
+        }
+        Insert: {
+          company_key: string
+          competence?: string | null
+          created_at?: string
+          created_by?: string | null
+          module?: string | null
+          payload?: Json
+          scope: string
+          updated_at?: string
+        }
+        Update: {
+          company_key?: string
+          competence?: string | null
+          created_at?: string
+          created_by?: string | null
+          module?: string | null
+          payload?: Json
+          scope?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      accounting_workspace_documents: {
+        Row: {
+          checksum: string | null
+          company_key: string
+          competence: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          mime_type: string | null
+          module: string | null
+          original_name: string
+          scope: string
+          size_bytes: number
+          storage_path: string
+        }
+        Insert: {
+          checksum?: string | null
+          company_key: string
+          competence?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          mime_type?: string | null
+          module?: string | null
+          original_name: string
+          scope: string
+          size_bytes?: number
+          storage_path: string
+        }
+        Update: {
+          checksum?: string | null
+          company_key?: string
+          competence?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          mime_type?: string | null
+          module?: string | null
+          original_name?: string
+          scope?: string
+          size_bytes?: number
+          storage_path?: string
+        }
+        Relationships: []
+      }
       announcement_views: {
         Row: {
           announcement_id: string
