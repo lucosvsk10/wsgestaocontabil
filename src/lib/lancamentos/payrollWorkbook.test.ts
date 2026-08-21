@@ -25,7 +25,7 @@ describe("calculatePayrollComparisons", () => {
       entry("ferias-proventos", 1_378_800, "provento", "ferias", "vacation_earning"),
       entry("folha-descontos-sem-inss", 4_336_873, "desconto", "folha", "payroll_discount"),
       entry("inss-folha", 666_191, "desconto", "folha", "inss"),
-      entry("ferias-descontos-sem-inss", 22_711, "desconto", "ferias", "vacation_discount"),
+      entry("ferias-descontos-sem-inss", 13_651, "desconto", "ferias", "vacation_discount"),
       entry("inss-ferias-atual", 89_080, "desconto", "ferias", "inss"),
       entry("fgts", 661_096, "encargo", "folha", "fgts"),
     ];
