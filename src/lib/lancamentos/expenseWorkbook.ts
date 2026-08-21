@@ -12,7 +12,9 @@ export interface ExpenseEntry {
   debitCode: string;
   creditCode: string;
   debitDescription: string;
+  debitCostCenter: string;
   creditDescription: string;
+  creditCostCenter: string;
   amountInCents: number;
 }
 
@@ -33,6 +35,7 @@ export interface ExpenseImportResult {
 export interface GroupedExpenseEntry extends ExpenseEntry {
   sourceEntryIds: string[];
   sourceCount: number;
+  hasMixedCounterpart: boolean;
 }
 
 const aliases = {
@@ -41,7 +44,9 @@ const aliases = {
   debitCode: ["debito", "conta de debito", "conta debito", "cr debito", "codigo reduzido debito"],
   creditCode: ["credito", "conta de credito", "conta credito", "cr credito", "codigo reduzido credito"],
   debitDescription: ["descricao debito", "nome conta debito", "conta debito descricao"],
+  debitCostCenter: ["centro de custo debito", "cc debito", "c c debito"],
   creditDescription: ["descricao credito", "nome conta credito", "conta credito descricao"],
+  creditCostCenter: ["centro de custo credito", "cc credito", "c c credito"],
   amount: ["valor", "valor lancamento", "valor do lancamento"],
 } as const;
 
@@ -135,7 +140,9 @@ export async function readExpenseWorkbook(file: File): Promise<ExpenseImportResu
       debitCode: findColumn(headers, "debitCode"),
       creditCode: findColumn(headers, "creditCode"),
       debitDescription: findColumn(headers, "debitDescription"),
+      debitCostCenter: findColumn(headers, "debitCostCenter"),
       creditDescription: findColumn(headers, "creditDescription"),
+      creditCostCenter: findColumn(headers, "creditCostCenter"),
       amount: findColumn(headers, "amount"),
     };
 
@@ -173,7 +180,9 @@ export async function readExpenseWorkbook(file: File): Promise<ExpenseImportResu
         debitCode,
         creditCode,
         debitDescription: toText(rowValue(row, columns.debitDescription)),
+        debitCostCenter: toText(rowValue(row, columns.debitCostCenter)),
         creditDescription: toText(rowValue(row, columns.creditDescription)),
+        creditCostCenter: toText(rowValue(row, columns.creditCostCenter)),
         amountInCents,
       });
     });
@@ -186,27 +195,39 @@ export function groupExpenseEntries(entries: ExpenseEntry[], side: ExpenseGroupS
   const groups = new Map<string, GroupedExpenseEntry>();
 
   entries.forEach((entry) => {
-    // A contrapartida faz parte da chave para não gerar um lançamento contabilmente inválido.
     const selectedCode = side === "debit" ? entry.debitCode : entry.creditCode;
     const selectedDescription = side === "debit" ? entry.debitDescription : entry.creditDescription;
     const oppositeCode = side === "debit" ? entry.creditCode : entry.debitCode;
-    const oppositeDescription = side === "debit" ? entry.creditDescription : entry.debitDescription;
-    const key = [selectedCode, oppositeCode].join("::");
+    const key = selectedCode;
     const current = groups.get(key);
 
     if (current) {
       current.amountInCents += entry.amountInCents;
       current.sourceEntryIds.push(entry.id);
       current.sourceCount += 1;
+      const currentOppositeCode = side === "debit" ? current.creditCode : current.debitCode;
+      if (currentOppositeCode !== oppositeCode) {
+        current.hasMixedCounterpart = true;
+        if (side === "debit") {
+          current.creditCode = "";
+          current.creditDescription = "Múltiplas contrapartidas";
+          current.creditCostCenter = "";
+        } else {
+          current.debitCode = "";
+          current.debitDescription = "Múltiplas contrapartidas";
+          current.debitCostCenter = "";
+        }
+      }
       return;
     }
 
     groups.set(key, {
       ...entry,
       date: exportDate,
-      history: `DESPESAS AGRUPADAS - ${selectedDescription || `CONTA ${selectedCode}`}`.toUpperCase(),
+      history: (selectedDescription || `CONTA ${selectedCode}`).toUpperCase(),
       sourceEntryIds: [entry.id],
       sourceCount: 1,
+      hasMixedCounterpart: false,
     });
   });
 
@@ -224,11 +245,13 @@ export function exportGroupedExpenses(entries: GroupedExpenseEntry[], competence
     DÉBITO: entry.debitCode,
     CRÉDITO: entry.creditCode,
     "DESCRIÇÃO DÉBITO": entry.debitDescription,
+    "C.C. DÉBITO": entry.debitCostCenter,
     "DESCRIÇÃO CRÉDITO": entry.creditDescription,
+    "C.C. CRÉDITO": entry.creditCostCenter,
     VALOR: entry.amountInCents / 100,
   }));
   const worksheet = XLSX.utils.json_to_sheet(rows);
-  worksheet["!cols"] = [{ wch: 13 }, { wch: 46 }, { wch: 12 }, { wch: 12 }, { wch: 30 }, { wch: 30 }, { wch: 16 }];
+  worksheet["!cols"] = [{ wch: 13 }, { wch: 46 }, { wch: 12 }, { wch: 12 }, { wch: 30 }, { wch: 14 }, { wch: 30 }, { wch: 14 }, { wch: 16 }];
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Despesas agrupadas");
   XLSX.writeFile(workbook, `despesas-agrupadas-${competence.replace("/", "-")}.xlsx`, { compression: true });

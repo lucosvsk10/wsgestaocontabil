@@ -18,6 +18,8 @@ import { CompanyDataView } from "./components/admin/company/CompanyDataView";
 import SimpleCarouselManager from '@/components/admin/carousel/SimpleCarouselManager';
 import { AdminLayout } from '@/components/admin/layout/AdminLayout';
 import AdminLancamentos from "./pages/AdminLancamentos";
+import AdminBalancete from "./pages/AdminBalancete";
+import AdminPlanoContas from "./pages/AdminPlanoContas";
 
 const AppRoutes = () => {
   const { userData, user } = useAuth();
@@ -127,6 +129,8 @@ const AppRoutes = () => {
           <AdminLancamentos />
         </PrivateRoute>
       } />
+      <Route path="/admin/lancamentos/balancete" element={<PrivateRoute requiredRole="admin"><AdminBalancete /></PrivateRoute>} />
+      <Route path="/admin/lancamentos/plano-contas" element={<PrivateRoute requiredRole="admin"><AdminPlanoContas /></PrivateRoute>} />
 
       {/* Client routes */}
       <Route path="/client/*" element={
