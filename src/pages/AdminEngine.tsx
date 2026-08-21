@@ -22,7 +22,7 @@ type EngineStatus = {
   recent: Array<{ id: string; createdAt: string; companyKey?: string | null; competence?: string | null; module: string; model: string; status: "success" | "error"; inputTokens: number; outputTokens: number; totalTokens: number; estimatedCostUsd: number; latencyMs: number; errorCode?: string | null; errorMessage?: string | null }>;
 };
 
-const TOKEN_KEY = "ws-accounting-engine-token";
+const LEGACY_TOKEN_KEY = "ws-accounting-engine-token";
 const number = new Intl.NumberFormat("pt-BR");
 const usd = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "USD", minimumFractionDigits: 4, maximumFractionDigits: 6 });
 const dateTime = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "medium" });
@@ -43,7 +43,7 @@ async function invokeEngine<T>(body: Record<string, unknown>): Promise<T> {
 
 export default function AdminEngine() {
   const [configured, setConfigured] = useState<boolean | null>(null);
-  const [token, setToken] = useState(() => sessionStorage.getItem(TOKEN_KEY) || "");
+  const [token, setToken] = useState("");
   const [status, setStatus] = useState<EngineStatus | null>(null);
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
@@ -57,20 +57,21 @@ export default function AdminEngine() {
   }, []);
 
   useEffect(() => {
+    // A autorização da Engine vale somente enquanto esta tela estiver aberta.
+    // Remove também tokens persistidos por versões anteriores do painel.
+    sessionStorage.removeItem(LEGACY_TOKEN_KEY);
     let active = true;
     void (async () => {
       try {
         const bootstrap = await invokeEngine<{ configured: boolean }>({ action: "bootstrap" });
         if (!active) return;
         setConfigured(bootstrap.configured);
-        if (token) await loadStatus(token);
       } catch (reason) {
-        if (token) { sessionStorage.removeItem(TOKEN_KEY); setToken(""); }
         if (active) setError(reason instanceof Error ? reason.message : "Não foi possível abrir a Engine.");
       } finally { if (active) setLoading(false); }
     })();
     return () => { active = false; };
-  }, [loadStatus, token]);
+  }, []);
 
   const successRate = useMemo(() => status?.totals.requests ? (status.totals.success / status.totals.requests) * 100 : 0, [status]);
 
@@ -79,7 +80,7 @@ export default function AdminEngine() {
     try {
       if (!configured && password !== confirmation) throw new Error("As senhas não coincidem.");
       const result = await invokeEngine<{ token: string }>({ action: configured ? "unlock" : "set_password", password });
-      sessionStorage.setItem(TOKEN_KEY, result.token); setToken(result.token); setConfigured(true); setPassword(""); setConfirmation("");
+      setToken(result.token); setConfigured(true); setPassword(""); setConfirmation("");
       await loadStatus(result.token);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Falha ao desbloquear a Engine."); }
     finally { setLoading(false); }
@@ -99,7 +100,7 @@ export default function AdminEngine() {
     finally { setTesting(false); }
   };
 
-  const lock = () => { sessionStorage.removeItem(TOKEN_KEY); setToken(""); setStatus(null); setError(""); };
+  const lock = () => { setToken(""); setStatus(null); setError(""); };
 
   return <AdminLayout><main className="mx-auto w-full max-w-[1720px] px-6 py-6">
     <header className="flex flex-wrap items-end justify-between gap-5 border-b border-border pb-5">
@@ -122,11 +123,12 @@ export default function AdminEngine() {
         <Metric icon={Cpu} label="Modelo ativo" value={status?.model || "—"} detail={status?.provider || "OpenAI"}/>
         <Metric icon={Activity} label="Chamadas locais · 30 dias" value={number.format(status?.totals.requests || 0)} detail={`${number.format(status?.totals.errors || 0)} com erro`}/>
         <Metric icon={Gauge} label="Tokens oficiais · 30 dias" value={status?.official.available ? number.format(status.official.totals.inputTokens + status.official.totals.outputTokens) : "—"} detail={status?.official.available ? `${number.format(status.official.totals.requests)} chamadas na organização` : "Admin API ainda não conectada"}/>
-        <Metric icon={DollarSign} label="Custo oficial · 30 dias" value={status?.official.available ? usd.format(status.official.totals.costUsd) : "—"} detail={status?.official.available ? "Valor informado pela OpenAI" : "Sem estimativa exibida como valor oficial"}/>
+        <Metric icon={DollarSign} label="Custo oficial · 30 dias" value={status?.official.available ? usd.format(status.official.totals.costUsd) : "—"} detail={status?.official.available ? "Consumo realizado; não é o saldo pré-pago" : "Sem estimativa exibida como valor oficial"}/>
       </section>
 
       <section className="rounded-lg border border-border bg-background p-6"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Conta OpenAI</p><h2 className="mt-2 text-lg font-semibold text-foreground">Uso e cobrança oficiais</h2></div><StatusPill ok={Boolean(status?.official.available)} label={status?.official.available ? "Dados oficiais conectados" : status?.official.configured ? "Consulta recusada" : "Admin API pendente"}/></div>
         {status?.official.available ? <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><OfficialValue label="Custo da organização" value={usd.format(status.official.totals.costUsd)}/><OfficialValue label="Requisições" value={number.format(status.official.totals.requests)}/><OfficialValue label="Tokens de entrada" value={number.format(status.official.totals.inputTokens)}/><OfficialValue label="Tokens de saída" value={number.format(status.official.totals.outputTokens)}/></div> : <div className="mt-6 rounded-md bg-muted/50 px-4 py-4"><p className="text-sm font-medium text-foreground">{status?.official.error || "A consulta oficial ainda não está disponível."}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">A chave normal processa documentos. A chave administrativa é separada e serve apenas para consultar uso e custos da organização; nenhum segredo é enviado ao navegador.</p></div>}
+        <div className="mt-4 flex flex-col gap-1 rounded-md border border-border bg-muted/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6"><div><p className="text-sm font-medium text-foreground">Saldo pré-pago</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Os endpoints administrativos oficiais retornam uso e custos, mas não disponibilizam o saldo de créditos comprado.</p></div><span className="shrink-0 text-xs font-medium text-muted-foreground">Consultar no Billing da OpenAI</span></div>
         {status?.official.available && <div className="mt-6 overflow-x-auto border-t border-border pt-5"><table className="w-full min-w-[720px] text-sm"><thead className="text-left text-xs text-muted-foreground"><tr><th className="pb-3 font-medium">Dia</th><th className="pb-3 text-right font-medium">Chamadas</th><th className="pb-3 text-right font-medium">Entrada</th><th className="pb-3 text-right font-medium">Saída</th><th className="pb-3 text-right font-medium">Custo oficial</th></tr></thead><tbody>{status.official.daily.slice(0, 10).map((row) => <tr key={row.startTime} className="border-t border-border/70"><td className="py-3">{new Date(row.startTime * 1000).toLocaleDateString("pt-BR")}</td><td className="py-3 text-right tabular-nums">{number.format(row.requests)}</td><td className="py-3 text-right tabular-nums">{number.format(row.inputTokens)}</td><td className="py-3 text-right tabular-nums">{number.format(row.outputTokens)}</td><td className="py-3 text-right tabular-nums">{usd.format(row.costUsd)}</td></tr>)}</tbody></table></div>}
       </section>
 
