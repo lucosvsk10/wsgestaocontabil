@@ -7,6 +7,7 @@ const LEGACY_STORAGE_KEY = "ws-accounting-company";
 const STORAGE_ID_KEY = "ws-accounting-company-id";
 const GLOBAL_CONTEXT_KEY = "ws:lancamentos:last-context";
 const EMPTY_COMPANY: AccountingCompany = { id: "", name: "Carregando empresas…", chartModel: "" };
+const companyContextKey = (companyId: string) => `ws:lancamentos:last-context:${companyId}`;
 
 function readSavedCompanyId() {
   try {
@@ -27,6 +28,12 @@ function persistCompany(company: AccountingCompany) {
   if (!company.id) return;
   localStorage.setItem(STORAGE_ID_KEY, company.id);
   localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(company));
+  try {
+    const current = JSON.parse(localStorage.getItem(GLOBAL_CONTEXT_KEY) || "{}") as Record<string, unknown>;
+    localStorage.setItem(GLOBAL_CONTEXT_KEY, JSON.stringify({ ...current, companyId: company.id }));
+  } catch {
+    localStorage.setItem(GLOBAL_CONTEXT_KEY, JSON.stringify({ companyId: company.id }));
+  }
 }
 
 export function useAccountingCompany() {
@@ -86,10 +93,18 @@ export function useAccountingCompany() {
 
   const selectCompany = useCallback((next: AccountingCompany) => {
     if (!next.id) return;
+
+    // A competência/módulo/aba visualizada agora acompanha a troca de empresa.
+    // Isso evita que mudar a empresa jogue o usuário para "hoje" ou para um mês antigo daquela empresa.
+    if (company.id && company.id !== next.id) {
+      const currentContext = localStorage.getItem(companyContextKey(company.id));
+      if (currentContext) localStorage.setItem(companyContextKey(next.id), currentContext);
+    }
+
     setCompanyState(next);
     persistCompany(next);
     window.dispatchEvent(new StorageEvent("storage", { key: STORAGE_ID_KEY, newValue: next.id }));
-  }, []);
+  }, [company.id]);
 
   return { company, companies, selectCompany };
 }
