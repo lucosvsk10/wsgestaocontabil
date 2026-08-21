@@ -32,7 +32,6 @@ const kinds = ["provento", "desconto", "encargo"] as const;
 type TotalKey = typeof totalKeys[number];
 type Section = typeof sections[number];
 type Kind = typeof kinds[number];
-type Account = { reducedCode: string; description: string; analytical?: boolean; account?: string };
 type Fact = {
   rubricCode: string;
   description: string;
@@ -67,12 +66,24 @@ type DocumentTotal = { key: TotalKey; label: string; amountInCents: number; sour
 type ReferenceResult = { competence: string; totals: DocumentTotal[]; warnings: string[] };
 type FactsResult = { facts: Fact[]; warnings: string[] };
 
+type Comparison = {
+  key: TotalKey;
+  label: string;
+  documentAmountInCents: number;
+  entriesAmountInCents: number;
+  differenceInCents: number;
+  source: string;
+  blocking: boolean;
+  note?: string;
+};
+
 const normalize = (value: unknown) => String(value ?? "")
   .normalize("NFD")
   .replace(/[\u0300-\u036f]/g, "")
   .replace(/[^a-zA-Z0-9]+/g, " ")
   .trim()
   .toLowerCase();
+
 const estimateCost = (model: string, usage: any) => {
   const price = prices[model];
   if (!price) return 0;
@@ -80,58 +91,15 @@ const estimateCost = (model: string, usage: any) => {
   const input = Math.max(0, Number(usage?.input_tokens ?? 0) - cached);
   return (input * price.input + cached * price.cached + Number(usage?.output_tokens ?? 0) * price.output) / 1_000_000;
 };
+
 const parseCompetence = (value: string) => {
   const match = /^(0[1-9]|1[0-2])\/(20\d{2})$/.exec(value);
   return match ? { month: Number(match[1]), year: Number(match[2]) } : null;
 };
+
 const lastDayOfCompetence = (competence: string) => {
   const parsed = parseCompetence(competence);
   return parsed ? new Date(parsed.year, parsed.month, 0).toLocaleDateString("pt-BR") : "";
-};
-
-function findAccount(accounts: Account[], alternatives: string[][], prefix?: string) {
-  const analytical = accounts
-    .filter((account) => account.analytical !== false && account.reducedCode && (!prefix || String(account.account ?? "").startsWith(prefix)))
-    .map((account) => ({ account, text: normalize(account.description) }));
-  for (const terms of alternatives) {
-    const matches = analytical.filter(({ text }) => terms.every((term) => text.includes(normalize(term))));
-    if (matches.length === 1) return matches[0].account;
-  }
-  return undefined;
-}
-
-function accountBook(accounts: Account[]) {
-  const anywhere = (terms: string[][]) => findAccount(accounts, terms);
-  const expense = (terms: string[][]) => findAccount(accounts, terms, "4") ?? anywhere(terms);
-  const liability = (terms: string[][]) => findAccount(accounts, terms, "2") ?? anywhere(terms);
-  return {
-    salaryPayable: liability([["salarios", "pagar"], ["salarios", "remuneracoes", "pagar"]]),
-    prolaborePayable: liability([["pro labore", "pagar"], ["pro labore"]]),
-    vacationPayable: liability([["ferias", "pagar"]]),
-    thirteenthPayable: liability([["13", "salario", "pagar"], ["decimo", "terceiro", "pagar"]]),
-    severancePayable: liability([["rescisao", "pagar"]]),
-    inssPayable: liability([["inss", "recolher"], ["inss", "pagar"]]),
-    irrfPayable: liability([["irrf", "salarios", "recolher"], ["irrf", "recolher"], ["irrf", "pagar"]]),
-    fgtsPayable: liability([["fgts", "recolher"], ["fgts", "pagar"]]),
-    advanceSalary: anywhere([["adto", "salarios"], ["adiantamento", "salarios"], ["adiantamentos", "funcionarios"]]),
-    advanceThirteenth: anywhere([["adto", "13", "salario"], ["adiantamento", "13", "salario"]]),
-    salaryExpense: expense([["salarios"]]),
-    overtimeExpense: expense([["horas", "extras"], ["hora", "extra"]]),
-    prolaboreExpense: expense([["pro labore"]]),
-    vacationExpense: expense([["ferias"]]),
-    thirteenthExpense: expense([["13", "salarios"], ["13", "salario"], ["decimo", "terceiro"]]),
-    fgtsExpense: expense([["fgts"]]),
-    meal: expense([["vale", "alimentacao", "refeicao"], ["vale", "refeicao"], ["alimentacao", "trabalhador"]]),
-    health: expense([["seguro", "saude"], ["plano", "saude"], ["assistencia", "medica"]]),
-    dental: expense([["assist", "medica"], ["odontologica"], ["odontologico"]]),
-  };
-}
-
-const sectionPayable = (section: Section, book: ReturnType<typeof accountBook>) => {
-  if (section === "ferias") return book.vacationPayable;
-  if (section === "decimo") return book.thirteenthPayable;
-  if (section === "rescisao") return book.severancePayable;
-  return book.salaryPayable;
 };
 
 function classifyEvent(fact: Fact) {
@@ -140,7 +108,7 @@ function classifyEvent(fact: Fact) {
   if (text.includes("adiantamento") && text.includes("compens")) return "advance_compensation";
   if (fact.section === "adiantamento" && text.includes("adiantamento")) return "advance_payment";
   if (text.includes("pro labore")) return "prolabore";
-  if (text.includes("inss")) return fact.targetCompetence ? "inss" : "inss";
+  if (text.includes("inss")) return "inss";
   if (text.includes("irrf")) return "irrf";
   if (text.includes("plano") && text.includes("saude")) return "health_discount";
   if (text.includes("odonto")) return "dental_discount";
@@ -159,22 +127,26 @@ function historyFor(fact: Fact, competence: string) {
   return `${description} A PAGAR MÊS ${competence}`;
 }
 
-function applyRules(facts: Fact[], accounts: Account[], sourceCompetence: string) {
-  const book = accountBook(accounts);
-  const map = new Map(accounts.map((account) => [String(account.reducedCode), account]));
+function factsToEntries(facts: Fact[], competence: string) {
   const entries: Entry[] = [];
-  const deferredEntries: Entry[] = [];
   const issues: string[] = [];
 
   for (const fact of facts) {
-    const target = parseCompetence(fact.targetCompetence) ? fact.targetCompetence : sourceCompetence;
-    const deferred = target !== sourceCompetence;
-    const eventType = classifyEvent(fact);
-    const entry: Entry = {
+    if (!Number.isInteger(fact.amountInCents) || fact.amountInCents <= 0) {
+      issues.push(`${fact.description || fact.rubricCode}: valor inválido ou não literal.`);
+      continue;
+    }
+    if (!fact.source?.trim()) issues.push(`${fact.description || fact.rubricCode}: evidência documental ausente.`);
+    if (!Number.isFinite(fact.confidence) || fact.confidence < 0.8) issues.push(`${fact.description || fact.rubricCode}: leitura documental com confiança insuficiente.`);
+    if (fact.targetCompetence && fact.targetCompetence !== competence) {
+      issues.push(`${fact.description || fact.rubricCode}: a IA tentou mover a rubrica para ${fact.targetCompetence}; o lançamento foi mantido em ${competence}.`);
+    }
+
+    entries.push({
       id: crypto.randomUUID(),
-      date: lastDayOfCompetence(target),
-      history: historyFor(fact, target),
-      eventType,
+      date: lastDayOfCompetence(competence),
+      history: historyFor(fact, competence),
+      eventType: classifyEvent(fact),
       rubricCode: String(fact.rubricCode || ""),
       rubricDescription: fact.description,
       kind: fact.kind,
@@ -185,91 +157,37 @@ function applyRules(facts: Fact[], accounts: Account[], sourceCompetence: string
       creditCode: "",
       creditDescription: "",
       creditCostCenter: "",
-      amountInCents: Math.trunc(fact.amountInCents),
+      amountInCents: fact.amountInCents,
       source: fact.source,
       confidence: fact.confidence,
-      targetCompetence: deferred ? target : undefined,
-    };
-    const debit = (account?: Account) => { if (account) entry.debitCode = account.reducedCode; };
-    const credit = (account?: Account) => { if (account) entry.creditCode = account.reducedCode; };
-    const payable = sectionPayable(fact.section, book);
-    const text = normalize(fact.description);
-
-    if (eventType === "fgts") {
-      debit(book.fgtsExpense); credit(book.fgtsPayable);
-    } else if (eventType === "advance_payment") {
-      debit(book.advanceSalary); credit(book.salaryPayable);
-    } else if (eventType === "advance_compensation") {
-      debit(payable); credit(book.advanceSalary);
-    } else if (eventType === "prolabore" && fact.kind === "provento") {
-      debit(book.prolaboreExpense); credit(book.prolaborePayable);
-    } else if (eventType === "inss" && fact.kind === "desconto") {
-      debit(payable); credit(book.inssPayable);
-    } else if (eventType === "irrf" && fact.kind === "desconto") {
-      debit(payable); credit(book.irrfPayable);
-    } else if (eventType === "meal_discount") {
-      debit(payable); credit(book.meal);
-    } else if (eventType === "meal_earning") {
-      debit(book.meal); credit(payable);
-    } else if (eventType === "health_discount") {
-      debit(payable); credit(book.health);
-    } else if (eventType === "dental_discount") {
-      debit(payable); credit(book.dental ?? book.health);
-    } else if (fact.kind === "desconto") {
-      debit(payable);
-      if (text.includes("provento")) credit(book.salaryExpense);
-    } else if (fact.kind === "provento") {
-      credit(payable);
-      if (fact.section === "decimo") {
-        if (text.includes("adiantamento")) debit(book.advanceThirteenth);
-        else debit(book.thirteenthExpense);
-      } else if (fact.section === "ferias") {
-        if (text.includes("remuneracao") || text.includes("1 3 de ferias")) debit(book.vacationExpense);
-        else if (text.includes("hora extra")) debit(book.overtimeExpense);
-        else debit(book.salaryExpense);
-      } else if (text.includes("hora extra")) debit(book.overtimeExpense);
-      else debit(book.salaryExpense);
-    }
-
-    const debitAccount = map.get(String(entry.debitCode));
-    const creditAccount = map.get(String(entry.creditCode));
-    entry.debitDescription = debitAccount?.description ?? "";
-    entry.creditDescription = creditAccount?.description ?? "";
-    if (!debitAccount || !creditAccount) issues.push(`${entry.history}: não foi possível localizar uma conta analítica inequívoca no plano da empresa.`);
-    if (!Number.isInteger(entry.amountInCents) || entry.amountInCents <= 0) issues.push(`${entry.history}: valor inválido.`);
-    if (!entry.source.trim()) issues.push(`${entry.history}: evidência documental ausente.`);
-    if (fact.confidence < 0.8) issues.push(`${entry.history}: leitura documental com confiança insuficiente.`);
-    (deferred ? deferredEntries : entries).push(entry);
+    });
   }
-  return { entries, deferredEntries, issues: [...new Set(issues)] };
+
+  return { entries, issues: [...new Set(issues)] };
 }
 
-function sums(entries: Entry[], deferredEntries: Entry[]) {
-  const allDocumentEntries = [...entries, ...deferredEntries];
-  const sumWhere = (rows: Entry[], predicate: (entry: Entry) => boolean) => rows.filter(predicate).reduce((total, row) => total + row.amountInCents, 0);
-  const proventos = (rows: Entry[]) => sumWhere(rows, (row) => row.kind === "provento");
-  const descontos = (rows: Entry[]) => sumWhere(rows, (row) => row.kind === "desconto");
-  const sectionRows = (section: Section) => allDocumentEntries.filter((entry) => entry.section === section);
-  const inssCurrent = sumWhere(entries, (row) => row.eventType === "inss" && row.kind === "desconto");
-  const fgtsCurrent = sumWhere(entries, (row) => row.eventType === "fgts" && row.kind === "encargo");
-  const totalProventos = proventos(allDocumentEntries);
-  const totalDescontos = descontos(allDocumentEntries);
+function sums(entries: Entry[]) {
+  const sumWhere = (predicate: (entry: Entry) => boolean) => entries.filter(predicate).reduce((total, row) => total + row.amountInCents, 0);
+  const proventos = (section?: Section) => sumWhere(row => row.kind === "provento" && (!section || row.section === section));
+  const descontos = (section?: Section) => sumWhere(row => row.kind === "desconto" && (!section || row.section === section));
+  const totalProventos = proventos();
+  const totalDescontos = descontos();
   return {
     total_proventos: totalProventos,
     total_descontos: totalDescontos,
     liquido: totalProventos - totalDescontos,
-    adiantamento_proventos: proventos(sectionRows("adiantamento")),
-    adiantamento_descontos: descontos(sectionRows("adiantamento")),
-    folha_proventos: proventos(sectionRows("folha")),
-    folha_descontos: descontos(sectionRows("folha")),
-    ferias_proventos: proventos(sectionRows("ferias")),
-    ferias_descontos: descontos(sectionRows("ferias")),
-    decimo_proventos: proventos(sectionRows("decimo")),
-    decimo_descontos: descontos(sectionRows("decimo")),
-    rescisao_proventos: proventos(sectionRows("rescisao")),
-    rescisao_descontos: descontos(sectionRows("rescisao")),
-    inss_total: inssCurrent,
-    fgts_total: fgtsCurrent,
+    adiantamento_proventos: proventos("adiantamento"),
+    adiantamento_descontos: descontos("adiantamento"),
+    folha_proventos: proventos("folha"),
+    folha_descontos: descontos("folha"),
+    ferias_proventos: proventos("ferias"),
+    ferias_descontos: descontos("ferias"),
+    decimo_proventos: proventos("decimo"),
+    decimo_descontos: descontos("decimo"),
+    rescisao_proventos: proventos("rescisao"),
+    rescisao_descontos: descontos("rescisao"),
+    inss_total: sumWhere(row => row.eventType === "inss" && row.kind === "desconto"),
+    fgts_total: sumWhere(row => row.eventType === "fgts" && row.kind === "encargo"),
   } satisfies Record<TotalKey, number>;
 }
 
@@ -294,18 +212,28 @@ function validateReference(reference: ReferenceResult, requestedCompetence: stri
   return { verified: issues.length === 0, issues: [...new Set(issues)] };
 }
 
-function compare(entries: Entry[], deferredEntries: Entry[], totals: DocumentTotal[], structural: string[]) {
-  const calculated = sums(entries, deferredEntries);
-  const comparisons = totals.map((total) => ({
-    key: total.key,
-    label: total.label,
-    documentAmountInCents: total.amountInCents,
-    entriesAmountInCents: calculated[total.key],
-    differenceInCents: calculated[total.key] - total.amountInCents,
-    source: total.source,
-  }));
+function compare(entries: Entry[], totals: DocumentTotal[], structural: string[]) {
+  const calculated = sums(entries);
+  const comparisons: Comparison[] = totals.map((total) => {
+    const informational = total.key === "inss_total";
+    const entriesAmountInCents = calculated[total.key];
+    return {
+      key: total.key,
+      label: informational ? "INSS a recolher (informativo)" : total.label,
+      documentAmountInCents: total.amountInCents,
+      entriesAmountInCents,
+      differenceInCents: entriesAmountInCents - total.amountInCents,
+      source: total.source,
+      blocking: !informational,
+      note: informational
+        ? "O Total a Recolher segue o calendário de recolhimento. A soma dos descontos INSS das rubricas é contabilizada integralmente na competência e pode ser diferente."
+        : undefined,
+    };
+  });
   const issues = [...structural];
-  comparisons.filter((row) => row.differenceInCents !== 0).forEach((row) => issues.push(`${row.label}: diferença de ${(row.differenceInCents / 100).toFixed(2)}.`));
+  comparisons
+    .filter(row => row.blocking && row.differenceInCents !== 0)
+    .forEach(row => issues.push(`${row.label}: diferença de ${(row.differenceInCents / 100).toFixed(2)}.`));
   return { comparisons, issues: [...new Set(issues)], passed: issues.length === 0 };
 }
 
@@ -324,6 +252,7 @@ const referenceSchema = {
     warnings: { type: "array", items: { type: "string" } },
   }, required: ["competence", "totals", "warnings"],
 };
+
 const factsSchema = {
   type: "object", additionalProperties: false,
   properties: {
@@ -384,8 +313,7 @@ serve(async (req) => {
     if (!Array.isArray(body.documents) || !body.documents.length) return json({ error: "Nenhum documento" }, 400);
     const competence = String(body.competence || "");
     if (!parseCompetence(competence)) return json({ error: "Competência inválida" }, 422);
-    const accounts: Account[] = body.chart_of_accounts ?? [];
-    if (!accounts.length) return json({ error: "Importe o plano de contas da empresa antes de processar a folha." }, 422);
+    if (!Array.isArray(body.chart_of_accounts) || !body.chart_of_accounts.length) return json({ error: "Importe o plano de contas da empresa antes de processar a folha." }, 422);
     const apiKey = Deno.env.get("OPENAI_API_KEY");
     if (!apiKey) return json({ error: "A chave OPENAI_API_KEY ainda não foi configurada no Supabase." }, 503);
 
@@ -412,27 +340,32 @@ serve(async (req) => {
       catch { throw new Error("A resposta da IA não pôde ser validada como JSON estruturado."); }
     };
 
-    const referenceInstructions = `Você é um auditor documental de folha brasileira. Leia apenas referências monetárias explícitas da competência ${competence}. NÃO gere lançamentos, NÃO escolha contas e NÃO use inferências para fazer valores fecharem.\nExtraia, quando visíveis: Total Geral de Proventos, Total Geral de Descontos, Líquido; totais de proventos/descontos de cada seção (Adiantamento de Folha, Folha de Pagamento, Férias, 13º e Rescisão); e no Resumo de INSS e FGTS os valores da linha Total a Recolher para INSS e FGTS.\nPreserve centavos exatamente. source deve nomear a seção/linha. Não use como inss_total o desconto bruto da linha INSS de férias quando o demonstrativo separa recolhimentos por mês; use o Total a Recolher do resumo. Não inclua referência que não esteja visível. warnings somente para leitura realmente ambígua.`;
-    const factsInstructions = `Você é um transcritor factual de folha brasileira. Leia a competência ${competence} e extraia RUBRICA POR RUBRICA. Você NÃO recebe totais de conferência e NÃO deve escolher débito, crédito, C.R. ou conta contábil.\nPara cada linha monetária das seções Adiantamento de Folha, Folha de Pagamento, Férias, 13º salário e Rescisão, devolva rubricCode, descrição literal curta, kind=provento/desconto, section e valor exato em centavos. Não agrupe Salário-Base, Periculosidade, Hora Extra, Vale-Refeição, Bonificação, benefícios etc.\nREGRA CRÍTICA DE FÉRIAS/INSS: se a linha INSS da seção Férias incluir parcelas com meses de recolhimento diferentes no Demonstrativo de INSS e FGTS de Férias, NÃO devolva o INSS bruto como um único fato. Substitua-o pelas parcelas do demonstrativo: cada parcela vira um fato desconto, section=ferias, rubricCode=310, description=INSS, com targetCompetence igual ao mês de Recolhimento. A soma dessas parcelas deve igualar o desconto INSS exibido na seção Férias.\nFGTS: não transcreva o FGTS futuro do demonstrativo de férias como obrigação da competência atual. Gere um único fato kind=encargo, description=FGTS, section=folha, targetCompetence=${competence}, usando o valor FGTS da linha Total a Recolher do Resumo de INSS e FGTS.\nPara todos os demais fatos, targetCompetence=${competence}. Preserve centavos; source deve indicar seção/rubrica. confidence entre 0 e 1. Não crie pagamento, banco ou caixa. warnings apenas para algo que realmente não possa ser lido.`;
+    const referenceInstructions = `Você é um auditor documental de folha brasileira. Leia apenas referências monetárias explícitas da competência ${competence}. NÃO gere lançamentos, NÃO escolha contas e NÃO use inferências para fazer valores fecharem.\nExtraia, quando visíveis: Total Geral de Proventos, Total Geral de Descontos, Líquido; totais de proventos/descontos de cada seção (Adiantamento de Folha, Folha de Pagamento, Férias, 13º e Rescisão); e no Resumo de INSS e FGTS os valores da linha Total a Recolher para INSS e FGTS.\nPreserve os centavos exatamente como impressos. source deve nomear a seção/linha. inss_total significa somente o INSS da linha Total a Recolher do Resumo; ele é uma referência de calendário de recolhimento, não a soma contábil das rubricas INSS. warnings somente para leitura realmente ambígua.`;
+
+    const factsInstructions = `Você é um TRANSCRITOR FACTUAL de folha brasileira. Leia a competência ${competence}. Sua única tarefa é copiar rubrica por rubrica; você NÃO escolhe conta, débito, crédito ou C.R.\nREGRA ABSOLUTA DE VALOR: amountInCents deve ser cópia literal do valor monetário impresso na MESMA LINHA da rubrica na seção principal. É proibido somar, subtrair, ratear, ajustar, substituir, completar centavos ou alterar um valor para fazer totais fecharem. Se não conseguir ler a linha com segurança, use a melhor leitura literal e gere warning; jamais faça ajuste aritmético.\nPara cada linha monetária das seções Adiantamento de Folha, Folha de Pagamento, Férias, 13º Salário e Rescisão, devolva rubricCode, descrição literal curta, kind=provento/desconto, section e o valor exato da própria linha. Não agrupe rubricas.\nFÉRIAS/INSS: a rubrica 310 INSS da seção Férias é UM ÚNICO fato pelo valor INTEGRAL impresso na seção Férias. NÃO substitua nem decomponha essa rubrica usando o Demonstrativo de INSS e FGTS de Férias. As colunas Competência/Recolhimento desse demonstrativo são somente calendário de auditoria e NÃO geram fatos, deferredEntries ou lançamentos em outro mês. Exemplo de regressão 01/2025: rubrica 310 INSS em Férias = 981,88; o demonstrativo mostra INSS 890,80 e 91,08 por recolhimento e FGTS 895,28 e 97,15, mas esses números NÃO substituem os 981,88 da rubrica.\nFGTS: gere um único fato adicional kind=encargo, rubricCode=FGTS, description=FGTS, section=folha, usando literalmente o valor FGTS da linha Total a Recolher do Resumo de INSS e FGTS da competência. Não use o FGTS futuro do demonstrativo de férias.\nPara TODOS os fatos, targetCompetence deve ser exatamente ${competence}. Não crie pagamento, banco, caixa, ajuste ou carryover. source deve indicar a seção/rubrica exata. confidence entre 0 e 1.`;
 
     const [referenceAttempt, factsAttempt] = await Promise.all([
       callOpenAI(primaryModel, referenceInstructions, "Extraia somente referências independentes do documento original.", referenceSchema, "payroll_reference", 5000, "reference"),
-      callOpenAI(primaryModel, factsInstructions, "Transcreva todas as rubricas sem contabilizá-las.", factsSchema, "payroll_facts", 12000, "facts"),
+      callOpenAI(primaryModel, factsInstructions, "Transcreva todas as rubricas sem contabilizá-las e sem alterar nenhum valor.", factsSchema, "payroll_facts", 12000, "facts"),
     ]);
+
     const reference = referenceAttempt.parsed as ReferenceResult;
     let factsResult = factsAttempt.parsed as FactsResult;
     const referenceValidation = validateReference(reference, competence);
-    let normalized = applyRules(factsResult.facts ?? [], accounts, competence);
-    let validation = compare(normalized.entries, normalized.deferredEntries, reference.totals ?? [], [...referenceValidation.issues, ...normalized.issues]);
+    let normalized = factsToEntries(factsResult.facts ?? [], competence);
+    let validation = compare(normalized.entries, reference.totals ?? [], [...referenceValidation.issues, ...normalized.issues]);
     let reviewed = false;
 
-    const mismatches = validation.comparisons.filter((row) => row.differenceInCents !== 0).map((row) => row.key);
-    if (referenceValidation.verified && mismatches.length && normalized.issues.length === 0 && reviewModel) {
-      const reviewInstructions = `${factsInstructions}\nEsta é uma segunda transcrição independente porque a primeira não reconciliou as categorias: ${mismatches.join(", ")}. Releia o documento do zero. Você NÃO conhece os valores-alvo dessas categorias e NÃO deve inventar ajustes. Retorne o conjunto completo de rubricas apenas com o que o documento sustenta.`;
-      const reviewedFacts = await callOpenAI(reviewModel, reviewInstructions, "Faça uma segunda leitura factual independente do documento.", factsSchema, "payroll_facts_review", 12000, "facts_review");
+    const blockingMismatches = validation.comparisons
+      .filter(row => row.blocking && row.differenceInCents !== 0)
+      .map(row => row.key);
+
+    if (referenceValidation.verified && blockingMismatches.length && normalized.issues.length === 0 && reviewModel) {
+      const reviewInstructions = `${factsInstructions}\nEsta é uma segunda transcrição independente porque a primeira não reconciliou algumas categorias BLOQUEANTES. Releia o documento do zero. Você não recebe os valores-alvo e NÃO deve inventar correções. Copie cada valor diretamente da linha correspondente. Categorias a revisar: ${blockingMismatches.join(", ")}.`;
+      const reviewedFacts = await callOpenAI(reviewModel, reviewInstructions, "Faça uma segunda leitura factual independente, sem ajustar valores.", factsSchema, "payroll_facts_review", 12000, "facts_review");
       factsResult = reviewedFacts.parsed as FactsResult;
-      normalized = applyRules(factsResult.facts ?? [], accounts, competence);
-      validation = compare(normalized.entries, normalized.deferredEntries, reference.totals ?? [], [...referenceValidation.issues, ...normalized.issues]);
+      normalized = factsToEntries(factsResult.facts ?? [], competence);
+      validation = compare(normalized.entries, reference.totals ?? [], [...referenceValidation.issues, ...normalized.issues]);
       reviewed = true;
     }
 
@@ -442,7 +375,7 @@ serve(async (req) => {
 
     return json({
       entries: normalized.entries,
-      deferredEntries: normalized.deferredEntries,
+      deferredEntries: [],
       documentTotals: reference.totals,
       comparisons: validation.comparisons,
       validationIssues,
@@ -453,7 +386,7 @@ serve(async (req) => {
       primaryModel,
       reviewed,
       reviewModel: reviewed ? reviewModel : null,
-      routing: reviewed ? "terra-reference + terra-rubrics + terra-targeted-reread" : "terra-reference + terra-rubrics",
+      routing: reviewed ? "terra-reference + terra-rubrics-literal + terra-targeted-reread" : "terra-reference + terra-rubrics-literal",
       reference_response_id: referenceAttempt.raw.id,
       facts_response_id: factsAttempt.raw.id,
     });
