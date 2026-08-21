@@ -53,6 +53,24 @@ const aliases = {
 type ColumnKey = keyof typeof aliases;
 type RowRecord = Record<string, unknown>;
 
+export async function detectWorkbookCompetence(file: File): Promise<{ month: string; year: string } | null> {
+  const named = file.name.match(/(?:^|\D)(0?[1-9]|1[0-2])[-_/](20\d{2})(?:\D|$)/);
+  if (named) return { month: named[1].padStart(2, "0"), year: named[2] };
+  if (!/\.(xlsx?|csv)$/i.test(file.name)) return null;
+  try {
+    const workbook = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true });
+    for (const sheetName of workbook.SheetNames) {
+      const rows = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets[sheetName], { header: 1, defval: "", raw: true });
+      for (const row of rows.slice(0, 80)) for (const value of row) {
+        if (!(value instanceof Date) && !(typeof value === "string" && /^\d{1,2}[/-]\d{1,2}[/-]\d{2,4}$/.test(value.trim()))) continue;
+        const parsed = parseDate(value); const match = parsed.match(/^\d{2}\/(\d{2})\/(20\d{2})$/);
+        if (match) return { month: match[1], year: match[2] };
+      }
+    }
+  } catch { return null; }
+  return null;
+}
+
 function normalizeHeader(value: unknown) {
   return String(value ?? "")
     .normalize("NFD")
@@ -198,26 +216,13 @@ export function groupExpenseEntries(entries: ExpenseEntry[], side: ExpenseGroupS
     const selectedCode = side === "debit" ? entry.debitCode : entry.creditCode;
     const selectedDescription = side === "debit" ? entry.debitDescription : entry.creditDescription;
     const oppositeCode = side === "debit" ? entry.creditCode : entry.debitCode;
-    const key = selectedCode;
+    const key = `${selectedCode}::${oppositeCode}`;
     const current = groups.get(key);
 
     if (current) {
       current.amountInCents += entry.amountInCents;
       current.sourceEntryIds.push(entry.id);
       current.sourceCount += 1;
-      const currentOppositeCode = side === "debit" ? current.creditCode : current.debitCode;
-      if (currentOppositeCode !== oppositeCode) {
-        current.hasMixedCounterpart = true;
-        if (side === "debit") {
-          current.creditCode = "";
-          current.creditDescription = "Múltiplas contrapartidas";
-          current.creditCostCenter = "";
-        } else {
-          current.debitCode = "";
-          current.debitDescription = "Múltiplas contrapartidas";
-          current.debitCostCenter = "";
-        }
-      }
       return;
     }
 

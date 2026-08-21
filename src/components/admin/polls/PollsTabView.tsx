@@ -18,7 +18,7 @@ export const PollsTabView = () => {
   };
   return <div className="space-y-8">
       <div className="mb-8">
-        <h1 className="text-[#020817] dark:text-[#efc349] mb-4 text-3xl font-thin">Gestão de Enquetes</h1>
+        <h1 className="text-[#020817] dark:text-white mb-4 text-3xl font-thin">Gestão de Enquetes</h1>
         <p className="text-gray-600 dark:text-white/70">Crie, gerencie e visualize resultados das enquetes</p>
       </div>
 

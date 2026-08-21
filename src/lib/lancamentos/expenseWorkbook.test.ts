@@ -33,16 +33,15 @@ describe("groupExpenseEntries", () => {
     expect(grouped[0].date).toBe("31/01/2026");
   });
 
-  it("agrupa pelo C.R. escolhido e sinaliza contrapartidas diferentes", () => {
+  it("mantém contrapartidas diferentes em lançamentos válidos", () => {
     const grouped = groupExpenseEntries(
       [entry("1", "111", "374", 10_001), entry("2", "111", "777", 20_002)],
       "debit",
       "31/01/2026",
     );
 
-    expect(grouped).toHaveLength(1);
-    expect(grouped[0].hasMixedCounterpart).toBe(true);
-    expect(grouped[0].creditCode).toBe("");
+    expect(grouped).toHaveLength(2);
+    expect(grouped.every((item) => !item.hasMixedCounterpart)).toBe(true);
     expect(grouped.reduce((total, item) => total + item.amountInCents, 0)).toBe(30_003);
   });
 

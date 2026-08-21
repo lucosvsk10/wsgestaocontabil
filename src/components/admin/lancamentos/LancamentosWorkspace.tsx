@@ -13,6 +13,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { DespesasWorkspace, WorkspaceStatus } from "./DespesasWorkspace";
 import { loadWorkspaceData, saveWorkspaceData } from "@/lib/lancamentos/workspaceStorage";
+import { useAccountingCompany } from "@/hooks/lancamentos/useAccountingCompany";
+import { CompanySelector } from "./CompanySelector";
+import { detectWorkbookCompetence } from "@/lib/lancamentos/expenseWorkbook";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type ModuleKey = "folha" | "compras" | "faturamento" | "despesas";
 interface MonthItem {
@@ -76,7 +80,7 @@ const inputCellClass =
 
 export function LancamentosWorkspace() {
   const today = new Date();
-  const [company, setCompany] = useState("el-da-silva");
+  const { company, companies, selectCompany } = useAccountingCompany();
   const [year, setYear] = useState(String(today.getFullYear()));
   const [selectedMonth, setSelectedMonth] = useState(String(today.getMonth() + 1).padStart(2, "0"));
   const [selectedModule, setSelectedModule] = useState<ModuleKey>("despesas");
@@ -91,6 +95,7 @@ export function LancamentosWorkspace() {
   const [persistedModuleCounts, setPersistedModuleCounts] = useState<Record<ModuleKey, number>>({ despesas: 0, folha: 0, compras: 0, faturamento: 0 });
   const [transcriptionRows, setTranscriptionRows] = useState<TranscriptionRow[]>([]);
   const [launchRows, setLaunchRows] = useState<LaunchRow[]>([]);
+  const [moduleCompetenceWarning, setModuleCompetenceWarning] = useState<{ module: ModuleKey; files: File[]; month: string; year: string } | null>(null);
   const handleExpenseFileCount = useCallback((count: number) => {
     setPersistedModuleCounts((current) => current.despesas === count ? current : { ...current, despesas: count });
   }, []);
@@ -105,21 +110,24 @@ export function LancamentosWorkspace() {
     [selectedModule],
   );
 
-  const handleModuleFiles = (module: ModuleKey, event: ChangeEvent<HTMLInputElement>) => {
+  const applyModuleFiles = (module: ModuleKey, selectedFiles: File[], target?: { month: string; year: string }) => {
+    setFilesByModule((current) => ({ ...current, [module]: [...current[module], ...selectedFiles] }));
+    setSelectedModule(module); setActiveTab("transcricao");
+    if (target && (target.month !== selectedMonth || target.year !== year)) {
+      const targetKey = `${company.id}:${target.year}:module-statuses`;
+      void loadWorkspaceData<Record<string, Record<ModuleKey, WorkspaceStatus>>>(targetKey).then(saved => saveWorkspaceData(targetKey, { ...(saved ?? {}), [target.month]: { ...(saved?.[target.month] ?? emptyStatuses()), [module]: "review" } }));
+    } else setModuleStatus(module, "review");
+  };
+  const handleModuleFiles = async (module: ModuleKey, event: ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(event.target.files ?? []);
-    if (!selectedFiles.length) return;
-
-    setFilesByModule((current) => ({
-      ...current,
-      [module]: [...current[module], ...selectedFiles],
-    }));
-    setSelectedModule(module);
-    setModuleStatus(module, "review");
-    setActiveTab("transcricao");
     event.target.value = "";
+    if (!selectedFiles.length) return;
+    const detected = (await Promise.all(selectedFiles.map(detectWorkbookCompetence))).find(Boolean);
+    if (detected && (detected.month !== selectedMonth || detected.year !== year)) { setModuleCompetenceWarning({ module, files: selectedFiles, ...detected }); return; }
+    applyModuleFiles(module, selectedFiles);
   };
 
-  const statusKey = `${company}:${year}:module-statuses`;
+  const statusKey = `${company.id}:${year}:module-statuses`;
   useEffect(() => { void loadWorkspaceData<Record<string, Record<ModuleKey, WorkspaceStatus>>>(statusKey).then(saved => setYearStatuses(saved ?? {})); }, [statusKey]);
   const setModuleStatus = useCallback((module: ModuleKey, status: WorkspaceStatus) => { setYearStatuses(current => { const next = { ...current, [selectedMonth]: { ...(current[selectedMonth] ?? emptyStatuses()), [module]: status } }; void saveWorkspaceData(statusKey, next); return next; }); }, [selectedMonth, statusKey]);
 
@@ -169,7 +177,7 @@ export function LancamentosWorkspace() {
             Lançamentos
           </h1>
           <p className="mt-1 truncate text-sm text-muted-foreground">
-            {company === "el-da-silva" ? "E L DA SILVA SERVIÇOS DE REDES" : "Empresa selecionada"}
+            {company.name}
             <span className="px-2 text-border">/</span>
             {selectedMonthLabel} de {year}
             <span className="px-2 text-border">/</span>
@@ -178,14 +186,7 @@ export function LancamentosWorkspace() {
         </div>
 
         <div className="flex w-full flex-col gap-3 sm:flex-row xl:w-auto">
-          <Select value={company} onValueChange={setCompany}>
-            <SelectTrigger className="h-10 border-border bg-background shadow-none">
-              <SelectValue placeholder="Selecione a empresa" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="el-da-silva">E L DA SILVA SERVIÇOS DE REDES</SelectItem>
-            </SelectContent>
-          </Select>
+          <CompanySelector company={company} companies={companies} onSelect={selectCompany} />
         </div>
       </header>
 
@@ -228,7 +229,7 @@ export function LancamentosWorkspace() {
         <main className="min-w-0 py-5 lg:pl-6">
           <h2 className="text-xl font-semibold tracking-tight text-foreground">{selectedMonthLabel} de {year}</h2>
 
-          <nav className="mt-5 grid overflow-hidden rounded-md border border-border bg-background sm:grid-cols-2 xl:grid-cols-4" aria-label="Módulos contábeis">
+          <nav className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Módulos contábeis">
             {modules.map((module) => {
               const status = (yearStatuses[selectedMonth] ?? emptyStatuses())[module.key];
               const statusLabel = status === "done" ? "Concluído" : status === "review" ? "Aguardando conferência" : "Aguardando importação";
@@ -238,8 +239,8 @@ export function LancamentosWorkspace() {
                 type="button"
                 onClick={() => setSelectedModule(module.key)}
                 className={cn(
-                  "grid min-h-20 grid-cols-[minmax(0,1fr)_30%] overflow-hidden border-b border-border text-left transition-colors last:border-b-0 sm:border-r xl:border-b-0",
-                  selectedModule === module.key ? "ring-1 ring-inset ring-foreground" : "hover:bg-muted",
+                  "grid min-h-20 grid-cols-[minmax(0,1fr)_30%] overflow-hidden rounded-md bg-background text-left transition-colors",
+                  selectedModule === module.key ? "bg-muted/80" : "hover:bg-muted/45",
                 )}
               >
                 <span className="flex flex-col justify-center px-4 py-3"><span className="text-sm font-medium text-foreground">{module.label}</span><span className="mt-1 text-xs text-muted-foreground">{persistedModuleCounts[module.key] || filesByModule[module.key].length ? `${persistedModuleCounts[module.key] || filesByModule[module.key].length} arquivo(s)` : statusLabel}</span></span>
@@ -249,15 +250,12 @@ export function LancamentosWorkspace() {
           </nav>
 
           {selectedModule === "despesas" ? (
-            <DespesasWorkspace key={`${company}-${year}-${selectedMonth}`} company={company} month={selectedMonth} year={year} onFileCountChange={handleExpenseFileCount} onStatusChange={(status) => setModuleStatus("despesas", status)} />
+            <DespesasWorkspace key={`${company.id}-${year}-${selectedMonth}`} company={company.id} month={selectedMonth} year={year} onFileCountChange={handleExpenseFileCount} onStatusChange={(status) => setModuleStatus("despesas", status)} onCompetenceChange={(nextMonth, nextYear) => { setYear(nextYear); setSelectedMonth(nextMonth); }} />
           ) : (
           <>
-          <section className="mt-5 flex flex-col gap-4 rounded-md border border-border bg-background p-5 sm:flex-row sm:items-center sm:justify-between" aria-label="Importação de documentos">
-            <h3 className="text-base font-semibold text-foreground">{activeModuleLabel} de {selectedMonthLabel} de {year}</h3>
-            <label className="cursor-pointer rounded-md bg-foreground px-4 py-2.5 text-sm font-medium text-background transition-opacity hover:opacity-90">
-              Importar {activeModuleLabel.toLowerCase()} de {selectedMonthLabel} de {year}
-              <input type="file" multiple accept={modules.find((module) => module.key === selectedModule)?.acceptedFiles} className="sr-only" onChange={(event) => handleModuleFiles(selectedModule, event)} />
-            </label>
+          <section className="mt-5 rounded-md border border-border bg-background p-5" aria-label="Importação de documentos">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><h3 className="text-base font-semibold text-foreground">{activeModuleLabel} de {selectedMonthLabel} de {year}</h3><label className="cursor-pointer rounded-md border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted">Importar {activeModuleLabel.toLowerCase()} de {selectedMonthLabel} de {year}<input type="file" multiple accept={modules.find((module) => module.key === selectedModule)?.acceptedFiles} className="sr-only" onChange={(event) => void handleModuleFiles(selectedModule, event)} /></label></div>
+            <div className="mt-4 border-t border-border pt-4 text-sm text-muted-foreground">{filesByModule[selectedModule].length ? <div className="flex flex-wrap gap-4">{filesByModule[selectedModule].map((file, index) => <span key={`${file.name}-${index}`} className="text-foreground">{file.name}</span>)}</div> : "Nenhum arquivo selecionado nesta competência."}</div>
           </section>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
@@ -433,6 +431,7 @@ export function LancamentosWorkspace() {
           )}
         </main>
       </div>
+      <Dialog open={Boolean(moduleCompetenceWarning)} onOpenChange={open => !open && setModuleCompetenceWarning(null)}><DialogContent><DialogHeader><DialogTitle>Competência diferente do documento</DialogTitle><DialogDescription>O arquivo pertence a {moduleCompetenceWarning?.month}/{moduleCompetenceWarning?.year}, mas a tela está em {selectedMonth}/{year}.</DialogDescription></DialogHeader><p className="text-sm text-muted-foreground">Ao continuar, a competência correta será aberta automaticamente antes do processamento.</p><DialogFooter><Button variant="outline" onClick={() => setModuleCompetenceWarning(null)}>Voltar</Button><Button onClick={() => { if (!moduleCompetenceWarning) return; const warning = moduleCompetenceWarning; applyModuleFiles(warning.module, warning.files, warning); setSelectedMonth(warning.month); setYear(warning.year); setModuleCompetenceWarning(null); }}>Importar assim mesmo</Button></DialogFooter></DialogContent></Dialog>
     </div>
   );
 }

@@ -96,7 +96,7 @@ export const SettingsView = () => {
   };
   return <div className="space-y-12">
       <div className="mb-8">
-        <h1 className="text-3xl text-[#020817] dark:text-[#efc349] mb-4 font-extralight">Configurações</h1>
+        <h1 className="text-3xl text-[#020817] dark:text-white mb-4 font-extralight">Configurações</h1>
         <p className="text-gray-600 dark:text-white/70">Gerencie suas configurações pessoais e do sistema</p>
       </div>
       

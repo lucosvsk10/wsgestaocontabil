@@ -25,14 +25,14 @@ export async function readChartOfAccounts(file: File) {
     const rows = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets[sheetName], { header: 1, defval: "", raw: true });
     const headerIndex = rows.findIndex((row) => {
       const headers = row.map(normalize);
-      return headers.includes("conta") && headers.some((header) => ["cr", "codigo reduzido"].includes(header)) && headers.includes("descricao");
+      return headers.includes("conta") && headers.some((header) => ["cr", "c r", "codigo reduzido"].includes(header)) && headers.includes("descricao");
     });
     if (headerIndex < 0) return;
     const headers = rows[headerIndex].map(normalize);
     const index = {
       account: headers.findIndex((header) => header === "conta"),
       analytical: headers.findIndex((header) => ["analitica", "analitico"].includes(header)),
-      reducedCode: headers.findIndex((header) => ["cr", "codigo reduzido"].includes(header)),
+      reducedCode: headers.findIndex((header) => ["cr", "c r", "codigo reduzido"].includes(header)),
       description: headers.findIndex((header) => header === "descricao"),
       sped: headers.findIndex((header) => header.includes("sped ecd") || header === "sped"),
     };
