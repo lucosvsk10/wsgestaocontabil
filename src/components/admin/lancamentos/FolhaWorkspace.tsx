@@ -17,6 +17,7 @@ import { loadWorkspaceData, loadWorkspaceFiles, saveWorkspaceData, saveWorkspace
 import { WorkspaceStatus } from "./DespesasWorkspace";
 import { cn } from "@/lib/utils";
 import { PayrollProcessingResult, useAccountingProcessing } from "@/contexts/AccountingProcessingContext";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   company: string;
@@ -40,6 +41,7 @@ interface SavedPayroll {
 
 const cell = "h-8 rounded-none border-0 bg-transparent px-2 shadow-none focus-visible:ring-1";
 const money = (cents: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
+const isCompleteMapping = (row: PayrollEntry) => Boolean(row.debitCode && row.creditCode && row.debitDescription && row.creditDescription);
 
 export function FolhaWorkspace({ company, month, year, onStatusChange, onCompetenceChange }: Props) {
   const input = useRef<HTMLInputElement>(null);
@@ -54,6 +56,7 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
   const [loaded, setLoaded] = useState(false);
   const [accounts, setAccounts] = useState<ChartAccount[]>([]);
   const [activeTab, setActiveTab] = useState("transcricao");
+  const [learning, setLearning] = useState(false);
   const { processPayroll, isProcessingScope } = useAccountingProcessing();
   const processing = isProcessingScope(company, month, year);
   const scope = `${company}:${year}:${month}:folha`;
@@ -66,10 +69,13 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
     [deferredEntries, documentTotals, entries],
   );
   const differences = comparisons.filter(row => row.differenceInCents !== 0);
-  const missing = entries.filter(row => !row.debitCode || !row.creditCode || !row.debitDescription || !row.creditDescription).length;
+  const missing = entries.filter(row => !isCompleteMapping(row)).length;
+  const mappingsToApprove = [...entries, ...deferredEntries].filter(row => row.mappingNeedsApproval && isCompleteMapping(row)).length;
+  const learnedMappings = [...entries, ...deferredEntries].filter(row => row.mappingSource === "learned").length;
   const structuralIssues = validationIssues.filter(issue => !issue.toLocaleLowerCase("pt-BR").includes("diferença de"));
-  const conferenceCount = differences.length + missing + warnings.length + structuralIssues.length + (referenceVerified ? 0 : 1);
-  const canFinalize = entries.length > 0 && referenceVerified && !processing && missing === 0 && differences.length === 0 && warnings.length === 0 && structuralIssues.length === 0;
+  const conferenceCount = differences.length + missing + mappingsToApprove + warnings.length + structuralIssues.length + (referenceVerified ? 0 : 1);
+  const canReviewApprove = entries.length > 0 && referenceVerified && !processing && !learning && missing === 0 && differences.length === 0 && warnings.length === 0 && structuralIssues.length === 0;
+  const canFinalize = canReviewApprove && mappingsToApprove === 0;
   const total = entries.reduce((sum, row) => sum + row.amountInCents, 0);
 
   const hydrateSaved = (saved: SavedPayroll | PayrollProcessingResult) => {
@@ -129,9 +135,26 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
     if (field === "amountInCents") return { ...row, amountInCents: Math.round(Number(value.replace(/\D/g, ""))) };
     if (field === "debitCode" || field === "creditCode") {
       const account = accounts.find(item => item.reducedCode === value.trim());
-      return field === "debitCode"
+      const changed = field === "debitCode"
         ? { ...row, debitCode: value, debitDescription: account?.description ?? "" }
         : { ...row, creditCode: value, creditDescription: account?.description ?? "" };
+      return {
+        ...changed,
+        mappingSource: "manual" as const,
+        mappingNeedsApproval: true,
+        mappingConfidence: 1,
+        mappingReason: "Mapeamento ajustado manualmente e aguardando confirmação para virar conhecimento da empresa.",
+      };
+    }
+    if (["debitCostCenter", "creditCostCenter"].includes(String(field))) {
+      return {
+        ...row,
+        [field]: value,
+        mappingSource: "manual" as const,
+        mappingNeedsApproval: true,
+        mappingConfidence: 1,
+        mappingReason: "Mapeamento ajustado manualmente e aguardando confirmação para virar conhecimento da empresa.",
+      };
     }
     return { ...row, [field]: value };
   }));
@@ -180,6 +203,48 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
     await startProcessing(allFiles, "import", month, year);
   };
 
+  const approveAndFinalize = async () => {
+    if (!canReviewApprove) return;
+    if (mappingsToApprove === 0) {
+      onStatusChange("done");
+      return;
+    }
+
+    setLearning(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("learn-accounting-mappings", {
+        body: {
+          module: "folha",
+          company_id: company,
+          entries,
+          deferredEntries,
+        },
+      });
+      if (error) throw error;
+      if (!data || typeof data.learned !== "number") throw new Error("O sistema não confirmou o aprendizado dos mapeamentos.");
+
+      const markLearned = (row: PayrollEntry): PayrollEntry => row.mappingNeedsApproval && isCompleteMapping(row)
+        ? {
+            ...row,
+            mappingSource: "learned",
+            mappingNeedsApproval: false,
+            mappingConfidence: 1,
+            mappingReason: "Mapeamento conferido e salvo como conhecimento desta empresa.",
+          }
+        : row;
+      setEntries(rows => rows.map(markLearned));
+      setDeferredEntries(rows => rows.map(markLearned));
+      onStatusChange("done");
+    } catch (error) {
+      setValidationIssues(current => [...new Set([
+        ...current,
+        error instanceof Error ? `Não foi possível salvar o aprendizado: ${error.message}` : "Não foi possível salvar o aprendizado dos mapeamentos.",
+      ])]);
+    } finally {
+      setLearning(false);
+    }
+  };
+
   const add = () => setEntries(rows => [...rows, {
     id: String(Date.now()),
     date: `${new Date(+year, +month, 0).getDate()}/${month}/${year}`,
@@ -194,6 +259,8 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
     source: "manual",
     kind: "provento",
     section: "folha",
+    mappingSource: "manual",
+    mappingNeedsApproval: true,
   }]);
 
   return <section className="mt-8 space-y-8">
@@ -243,13 +310,18 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
       <TabsContent value="conferencia" className="mt-7">
         <Header title="Folha de pagamento · Conferência" />
         <div className="space-y-6 rounded-md border border-border bg-background p-6">
-          <div className="grid gap-5 sm:grid-cols-4">
+          <div className="grid gap-5 sm:grid-cols-5">
             <Stat label="Referências" value={comparisons.length} />
             <Stat label="Diferenças" value={differences.length} />
             <Stat label="Contas incompletas" value={missing} />
-            <Stat label="Próxima competência" value={deferredEntries.length} />
+            <Stat label="Aguardando aprovação" value={mappingsToApprove} />
+            <Stat label="Conhecimento reutilizado" value={learnedMappings} />
           </div>
           {!referenceVerified && <div className="flex gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />A leitura independente do documento original ainda não passou pelos critérios de referência. A exportação permanece bloqueada.</div>}
+          {mappingsToApprove > 0 && <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-4">
+            <p className="text-sm font-medium text-foreground">{mappingsToApprove} mapeamento(s) novo(s) precisam da sua conferência</p>
+            <p className="mt-1 text-xs text-muted-foreground">Revise débito e crédito na Transcrição. Ao marcar a folha como OK, as combinações aprovadas serão salvas como conhecimento desta empresa e reutilizadas nos próximos meses.</p>
+          </div>}
           <ComparisonTable rows={comparisons} referenceVerified={referenceVerified} />
           {deferredEntries.length > 0 && <div className="rounded-md border border-border p-4">
             <p className="text-sm font-medium text-foreground">Ajustes por competência de recolhimento</p>
@@ -260,7 +332,11 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
             <p className="text-sm font-medium text-foreground">Pontos que exigem decisão</p>
             {[...new Set([...warnings, ...structuralIssues])].map(issue => <p key={issue} className="mt-2 flex gap-2 text-sm text-muted-foreground"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{issue}</p>)}
           </div>}
-          <div className="flex justify-end"><Button disabled={!canFinalize} onClick={() => onStatusChange("done")}>Marcar folha como OK</Button></div>
+          <div className="flex justify-end">
+            <Button disabled={!canReviewApprove} onClick={() => void approveAndFinalize()}>
+              {learning ? "Salvando conhecimento..." : mappingsToApprove > 0 ? `Confirmar e aprender (${mappingsToApprove})` : "Marcar folha como OK"}
+            </Button>
+          </div>
         </div>
       </TabsContent>
     </Tabs>
@@ -292,10 +368,30 @@ function Ledger({ rows, editable, update }: { rows: PayrollEntry[]; editable?: b
     ["Descrição débito", "debitDescription", "min-w-[180px]"], ["C.C. débito", "debitCostCenter", "w-24"], ["Crédito", "creditCode", "w-20"],
     ["Descrição crédito", "creditDescription", "min-w-[180px]"], ["C.C. crédito", "creditCostCenter", "w-24"],
   ];
-  return <div className="overflow-x-auto rounded-md border border-border bg-background"><table className="w-full min-w-[1450px] text-sm">
-    <thead className="bg-muted/50 text-left text-xs text-muted-foreground"><tr>{columns.map(([label, , width]) => <th key={label} className={cn("border-b border-r border-border px-3 py-2", width)}>{label}</th>)}<th className="border-b border-border px-3 py-2 text-right">Valor</th></tr></thead>
-    <tbody>{rows.map(row => <tr key={row.id} className="border-b border-border">{columns.map(([, field]) => <td key={field} className="border-r border-border">{editable ? <Input className={cell} value={String(row[field] ?? "")} onChange={event => update?.(row.id, field, event.target.value)} /> : <span className="block px-3 py-2">{String(row[field] || "—")}</span>}</td>)}<td className="px-3 py-2 text-right">{editable ? <Input className={cn(cell, "text-right")} value={(row.amountInCents / 100).toFixed(2).replace(".", ",")} onChange={event => update?.(row.id, "amountInCents", event.target.value)} /> : money(row.amountInCents)}</td></tr>)}{!rows.length && <tr><td colSpan={9} className="h-40 text-center text-muted-foreground">Importe a folha para iniciar.</td></tr>}</tbody>
+  return <div className="overflow-x-auto rounded-md border border-border bg-background"><table className="w-full min-w-[1580px] text-sm">
+    <thead className="bg-muted/50 text-left text-xs text-muted-foreground"><tr>{columns.map(([label, , width]) => <th key={label} className={cn("border-b border-r border-border px-3 py-2", width)}>{label}</th>)}<th className="w-32 border-b border-r border-border px-3 py-2">Mapeamento</th><th className="border-b border-border px-3 py-2 text-right">Valor</th></tr></thead>
+    <tbody>{rows.map(row => <tr key={row.id} className={cn("border-b border-border", row.mappingNeedsApproval && "bg-amber-500/[0.035]")}>{columns.map(([, field]) => <td key={field} className="border-r border-border">{editable ? <Input className={cell} value={String(row[field] ?? "")} onChange={event => update?.(row.id, field, event.target.value)} /> : <span className="block px-3 py-2">{String(row[field] || "—")}</span>}</td>)}<td className="border-r border-border px-3 py-2"><MappingLabel row={row} /></td><td className="px-3 py-2 text-right">{editable ? <Input className={cn(cell, "text-right")} value={(row.amountInCents / 100).toFixed(2).replace(".", ",")} onChange={event => update?.(row.id, "amountInCents", event.target.value)} /> : money(row.amountInCents)}</td></tr>)}{!rows.length && <tr><td colSpan={10} className="h-40 text-center text-muted-foreground">Importe a folha para iniciar.</td></tr>}</tbody>
   </table></div>;
+}
+
+function MappingLabel({ row }: { row: PayrollEntry }) {
+  const complete = isCompleteMapping(row);
+  const source = row.mappingSource || (complete ? "predefined" : "unresolved");
+  const labels: Record<string, string> = {
+    learned: "Aprendido",
+    predefined: "Pré-definido",
+    ai: "IA · revisar",
+    manual: "Manual · revisar",
+    unresolved: "Pendente",
+  };
+  return <span title={row.mappingReason || ""} className={cn(
+    "text-xs",
+    source === "learned" && "text-emerald-600 dark:text-emerald-400",
+    source === "ai" && "font-medium text-amber-700 dark:text-amber-300",
+    source === "manual" && row.mappingNeedsApproval && "font-medium text-amber-700 dark:text-amber-300",
+    source === "unresolved" && "font-medium text-destructive",
+    source === "predefined" && "text-muted-foreground",
+  )}>{labels[source] || source}</span>;
 }
 
 function uniqueFiles(files: File[]) {
