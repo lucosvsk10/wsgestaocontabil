@@ -1,5 +1,5 @@
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, CheckCircle2, Maximize2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Info, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,7 @@ interface Props {
   onStatusChange: (status: WorkspaceStatus) => void;
   onCompetenceChange: (month: string, year: string) => void;
 }
+
 interface SavedPayroll {
   entries: PayrollEntry[];
   deferredEntries?: PayrollEntry[];
@@ -40,7 +41,7 @@ interface SavedPayroll {
   validated?: boolean;
 }
 
-const cell = "h-8 rounded-none border-0 bg-transparent px-2 shadow-none focus-visible:ring-1";
+const cellClass = "h-7 rounded-none border-0 bg-transparent px-1.5 text-xs shadow-none focus-visible:ring-1";
 const money = (cents: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
 const isCompleteMapping = (row: PayrollEntry) => Boolean(row.debitCode && row.creditCode && row.debitDescription && row.creditDescription);
 
@@ -111,6 +112,7 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
     setDocumentTotals([]);
     setProcessingMeta(null);
     setReferenceVerified(false);
+
     Promise.all([
       loadWorkspaceData<SavedPayroll>(key),
       loadWorkspaceFiles(scope),
@@ -122,6 +124,7 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
       setAccounts(chart ?? []);
       setLoaded(true);
     });
+
     return () => { active = false; };
   }, [company, key, scope]);
 
@@ -201,11 +204,13 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
     const targetYear = detected?.year ?? year;
     const targetScope = `${company}:${targetYear}:${targetMonth}:folha`;
     await saveWorkspaceFiles(targetScope, selected);
+
     if (targetMonth !== month || targetYear !== year) {
       onCompetenceChange(targetMonth, targetYear);
       await startProcessing(selected, "import", targetMonth, targetYear);
       return;
     }
+
     const allFiles = uniqueFiles([...files, ...selected]);
     setFiles(allFiles);
     onStatusChange("review");
@@ -223,12 +228,7 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
     setLearning(true);
     try {
       const { data, error } = await supabase.functions.invoke("learn-accounting-mappings", {
-        body: {
-          module: "folha",
-          company_id: company,
-          entries,
-          deferredEntries,
-        },
+        body: { module: "folha", company_id: company, entries, deferredEntries },
       });
       if (error) throw error;
       if (!data || typeof data.learned !== "number") throw new Error("O sistema não confirmou o aprendizado dos mapeamentos.");
@@ -312,7 +312,7 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
         <div className="rounded-md border border-border bg-background">
           <div className="flex items-center justify-between border-b border-border p-5">
             <span className="text-sm text-muted-foreground">{entries.length} lançamentos · {money(total)}</span>
-            <Button disabled={!canFinalize} onClick={() => exportPayroll(entries, competence)}>Exportar para o Calima</Button>
+            <Button disabled={!canFinalize} onClick={() => exportPayroll(entries, comparisons, competence)}>Exportar para o Calima</Button>
           </div>
           <Ledger rows={entries} title={`Lançamentos da folha · ${competence}`} />
           {!canFinalize && entries.length > 0 && <p className="px-5 pb-4 text-xs text-muted-foreground">
@@ -368,6 +368,7 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
 function Flow({ value, label, count }: { value: string; label: string; count: number }) {
   return <TabsTrigger value={value} className="min-h-16 border border-border data-[state=active]:bg-foreground data-[state=active]:text-background">{label}<span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{count}</span></TabsTrigger>;
 }
+
 function Header({ title }: { title: string }) { return <div className="mb-5"><h3 className="font-semibold">{title}</h3></div>; }
 function Stat({ label, value }: { label: string; value: string | number }) { return <div><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 font-semibold">{value}</p></div>; }
 
@@ -382,9 +383,7 @@ function ComparisonTable({ rows, referenceVerified, title }: { rows: PayrollComp
     </div>
     <Dialog open={expanded} onOpenChange={setExpanded}>
       <DialogContent className="max-h-[88vh] w-[94vw] max-w-[1480px] overflow-hidden border-border bg-background p-0">
-        <DialogHeader className="border-b border-border px-6 py-5 text-left">
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
+        <DialogHeader className="border-b border-border px-6 py-5 text-left"><DialogTitle>{title}</DialogTitle></DialogHeader>
         <div className="max-h-[76vh] overflow-auto">{table}</div>
       </DialogContent>
     </Dialog>
@@ -392,23 +391,23 @@ function ComparisonTable({ rows, referenceVerified, title }: { rows: PayrollComp
 }
 
 function ComparisonTableContent({ rows, referenceVerified }: { rows: PayrollComparison[]; referenceVerified: boolean }) {
-  return <table className="w-full min-w-[850px] text-sm">
-    <thead className="bg-muted/50 text-left text-xs text-muted-foreground"><tr><th className="px-3 py-3">Referência</th><th className="px-3 py-3 text-right">Documento original</th><th className="px-3 py-3 text-right">Lançamentos</th><th className="px-3 py-3 text-right">Diferença</th><th className="px-3 py-3">Resultado</th></tr></thead>
+  return <table className="w-full min-w-[760px] table-fixed text-xs">
+    <thead className="bg-muted/50 text-left text-[11px] text-muted-foreground"><tr>
+      <th className="w-[34%] px-2 py-2">Referência</th>
+      <th className="w-[16%] px-2 py-2 text-right">Documento original</th>
+      <th className="w-[16%] px-2 py-2 text-right">Lançamentos</th>
+      <th className="w-[14%] px-2 py-2 text-right">Diferença</th>
+      <th className="w-[20%] px-2 py-2">Resultado</th>
+    </tr></thead>
     <tbody>{rows.map(row => {
       const informational = row.blocking === false;
       const confers = referenceVerified && row.differenceInCents === 0;
       return <tr key={`${row.key}-${row.source}`} className="border-t border-border">
-        <td className="px-3 py-3"><p className="font-medium text-foreground">{row.label}</p><p className="mt-0.5 text-xs text-muted-foreground">{row.source}</p>{row.note && <p className="mt-1 max-w-xl text-[11px] text-muted-foreground">{row.note}</p>}</td>
-        <td className="px-3 py-3 text-right tabular-nums">{money(row.documentAmountInCents)}</td>
-        <td className="px-3 py-3 text-right tabular-nums">{money(row.entriesAmountInCents)}</td>
-        <td className={cn("px-3 py-3 text-right tabular-nums", !informational && row.differenceInCents !== 0 && "font-medium text-destructive", informational && row.differenceInCents !== 0 && "text-muted-foreground")}>{money(row.differenceInCents)}</td>
-        <td className="px-3 py-3">
-          {informational
-            ? <span className="text-muted-foreground">Informativo</span>
-            : confers
-              ? <span className="inline-flex items-center gap-1.5 text-sm text-foreground"><CheckCircle2 className="h-4 w-4" />Confere</span>
-              : <span className="text-destructive">Revisar</span>}
-        </td>
+        <td className="px-2 py-2"><p className="truncate font-medium text-foreground" title={row.label}>{row.label}</p><p className="mt-0.5 truncate text-[10px] text-muted-foreground" title={row.source}>{row.source}</p>{row.note && <p className="mt-1 line-clamp-2 text-[10px] text-muted-foreground">{row.note}</p>}</td>
+        <td className="px-2 py-2 text-right tabular-nums">{money(row.documentAmountInCents)}</td>
+        <td className="px-2 py-2 text-right tabular-nums">{money(row.entriesAmountInCents)}</td>
+        <td className={cn("px-2 py-2 text-right tabular-nums", !informational && row.differenceInCents !== 0 && "font-medium text-destructive", informational && row.differenceInCents !== 0 && "text-muted-foreground")}>{money(row.differenceInCents)}</td>
+        <td className="px-2 py-2">{informational ? <span className="text-muted-foreground">Informativo</span> : confers ? <span className="inline-flex items-center gap-1 text-foreground"><CheckCircle2 className="h-3.5 w-3.5" />Confere</span> : <span className="text-destructive">Revisar</span>}</td>
       </tr>;
     })}{!rows.length && <tr><td colSpan={5} className="h-28 text-center text-muted-foreground">Reprocesse o documento para gerar a conferência independente.</td></tr>}</tbody>
   </table>;
@@ -424,10 +423,8 @@ function Ledger({ rows, editable, update, title }: { rows: PayrollEntry[]; edita
       <div className="overflow-x-auto">{table}</div>
     </div>
     <Dialog open={expanded} onOpenChange={setExpanded}>
-      <DialogContent className="max-h-[88vh] w-[94vw] max-w-[1540px] overflow-hidden border-border bg-background p-0">
-        <DialogHeader className="border-b border-border px-6 py-5 text-left">
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
+      <DialogContent className="max-h-[88vh] w-[96vw] max-w-[1580px] overflow-hidden border-border bg-background p-0">
+        <DialogHeader className="border-b border-border px-6 py-5 text-left"><DialogTitle>{title}</DialogTitle></DialogHeader>
         <div className="max-h-[76vh] overflow-auto">{table}</div>
       </DialogContent>
     </Dialog>
@@ -435,30 +432,47 @@ function Ledger({ rows, editable, update, title }: { rows: PayrollEntry[]; edita
 }
 
 function LedgerTable({ rows, editable, update }: { rows: PayrollEntry[]; editable?: boolean; update?: (id: string, field: keyof PayrollEntry, value: string) => void }) {
-  const columns: Array<[string, keyof PayrollEntry, string]> = [
-    ["Data", "date", "w-28"], ["Histórico", "history", "min-w-[260px]"], ["Débito", "debitCode", "w-20"],
-    ["Descrição débito", "debitDescription", "min-w-[180px]"], ["C.C. débito", "debitCostCenter", "w-24"], ["Crédito", "creditCode", "w-20"],
-    ["Descrição crédito", "creditDescription", "min-w-[180px]"], ["C.C. crédito", "creditCostCenter", "w-24"],
-  ];
-  return <table className="w-full min-w-[1580px] text-sm">
-    <thead className="bg-muted/50 text-left text-xs text-muted-foreground"><tr>
-      {columns.map(([label, , width]) => <th key={label} className={cn("border-b border-r border-border px-3 py-2", width)}>{label}</th>)}
-      <th className="w-32 border-b border-r border-border px-3 py-2 text-right">Valor</th>
-      <th className="w-32 border-b border-border px-3 py-2">Mapeamento</th>
+  return <table className="w-full min-w-[920px] table-fixed text-xs">
+    <thead className="bg-muted/50 text-left text-[11px] text-muted-foreground"><tr>
+      <th className="w-[9%] border-b border-r border-border px-2 py-2">Data</th>
+      <th className="w-[31%] border-b border-r border-border px-2 py-2">Histórico</th>
+      <th className="w-[10%] border-b border-r border-border px-2 py-2">Débito</th>
+      <th className="w-[8%] border-b border-r border-border px-2 py-2">C.C. D.</th>
+      <th className="w-[10%] border-b border-r border-border px-2 py-2">Crédito</th>
+      <th className="w-[8%] border-b border-r border-border px-2 py-2">C.C. C.</th>
+      <th className="w-[12%] border-b border-r border-border px-2 py-2 text-right">Valor</th>
+      <th className="w-[12%] border-b border-border px-2 py-2">Mapeamento</th>
     </tr></thead>
     <tbody>{rows.map(row => <tr key={row.id} className={cn("border-b border-border", row.mappingNeedsApproval && "bg-amber-500/[0.035]")}>
-      {columns.map(([, field]) => <td key={field} className="border-r border-border">{editable ? <Input className={cell} value={String(row[field] ?? "")} onChange={event => update?.(row.id, field, event.target.value)} /> : <span className="block px-3 py-2">{String(row[field] || "—")}</span>}</td>)}
-      <td className="border-r border-border px-3 py-2 text-right">{editable ? <Input className={cn(cell, "text-right")} value={(row.amountInCents / 100).toFixed(2).replace(".", ",")} onChange={event => update?.(row.id, "amountInCents", event.target.value)} /> : money(row.amountInCents)}</td>
-      <td className="px-3 py-2"><MappingLabel row={row} /></td>
-    </tr>)}{!rows.length && <tr><td colSpan={10} className="h-40 text-center text-muted-foreground">Importe a folha para iniciar.</td></tr>}</tbody>
+      <td className="border-r border-border">{editable ? <Input className={cellClass} value={row.date} onChange={event => update?.(row.id, "date", event.target.value)} /> : <span className="block px-2 py-1.5 tabular-nums">{row.date || "—"}</span>}</td>
+      <td className="border-r border-border">{editable ? <Input className={cellClass} value={row.history} onChange={event => update?.(row.id, "history", event.target.value)} /> : <span className="block truncate px-2 py-1.5" title={row.history}>{row.history || "—"}</span>}</td>
+      <td className="border-r border-border"><AccountCodeCell code={row.debitCode} description={row.debitDescription} editable={editable} onChange={value => update?.(row.id, "debitCode", value)} /></td>
+      <td className="border-r border-border">{editable ? <Input className={cellClass} value={row.debitCostCenter || ""} onChange={event => update?.(row.id, "debitCostCenter", event.target.value)} /> : <span className="block truncate px-2 py-1.5" title={row.debitCostCenter}>{row.debitCostCenter || "—"}</span>}</td>
+      <td className="border-r border-border"><AccountCodeCell code={row.creditCode} description={row.creditDescription} editable={editable} onChange={value => update?.(row.id, "creditCode", value)} /></td>
+      <td className="border-r border-border">{editable ? <Input className={cellClass} value={row.creditCostCenter || ""} onChange={event => update?.(row.id, "creditCostCenter", event.target.value)} /> : <span className="block truncate px-2 py-1.5" title={row.creditCostCenter}>{row.creditCostCenter || "—"}</span>}</td>
+      <td className="border-r border-border px-2 py-1.5 text-right tabular-nums">{editable ? <Input className={cn(cellClass, "text-right")} value={(row.amountInCents / 100).toFixed(2).replace(".", ",")} onChange={event => update?.(row.id, "amountInCents", event.target.value)} /> : money(row.amountInCents)}</td>
+      <td className="px-2 py-1.5"><MappingLabel row={row} /></td>
+    </tr>)}{!rows.length && <tr><td colSpan={8} className="h-40 text-center text-muted-foreground">Importe a folha para iniciar.</td></tr>}</tbody>
   </table>;
 }
 
+function AccountCodeCell({ code, description, editable, onChange }: { code: string; description: string; editable?: boolean; onChange: (value: string) => void }) {
+  const hint = description || "Descrição da conta não encontrada no plano de contas";
+  if (editable) {
+    return <div className="flex items-center gap-1 pr-1" title={hint}>
+      <Input className={cellClass} value={code || ""} onChange={event => onChange(event.target.value)} />
+      <Info className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-label={hint} />
+    </div>;
+  }
+  return <span className="flex items-center gap-1 px-2 py-1.5 font-medium tabular-nums" title={hint}>
+    <span>{code || "—"}</span>
+    {code && <Info className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-label={hint} />}
+  </span>;
+}
+
 function TableExpandButton({ onClick }: { onClick: () => void }) {
-  return <div className="flex h-9 items-center justify-end border-b border-border px-2">
-    <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={onClick} title="Expandir tabela" aria-label="Expandir tabela">
-      <Maximize2 className="h-4 w-4" />
-    </Button>
+  return <div className="flex h-8 items-center justify-end border-b border-border px-2">
+    <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={onClick} title="Expandir tabela" aria-label="Expandir tabela"><Maximize2 className="h-3.5 w-3.5" /></Button>
   </div>;
 }
 
@@ -473,7 +487,7 @@ function MappingLabel({ row }: { row: PayrollEntry }) {
     unresolved: "Pendente",
   };
   return <span title={row.mappingReason || ""} className={cn(
-    "text-xs",
+    "text-[11px]",
     source === "learned" && "text-emerald-600 dark:text-emerald-400",
     source === "ai" && "font-medium text-amber-700 dark:text-amber-300",
     source === "manual" && row.mappingNeedsApproval && "font-medium text-amber-700 dark:text-amber-300",
