@@ -30,7 +30,16 @@ export interface PayrollEntry {
   mappingRuleId?: string;
 }
 export interface PayrollDocumentTotal { key: string; label: string; amountInCents: number; source: string; }
-export interface PayrollComparison { key: string; label: string; documentAmountInCents: number; entriesAmountInCents: number; differenceInCents: number; source: string; }
+export interface PayrollComparison {
+  key: string;
+  label: string;
+  documentAmountInCents: number;
+  entriesAmountInCents: number;
+  differenceInCents: number;
+  source: string;
+  blocking?: boolean;
+  note?: string;
+}
 export interface PayrollProcessingMeta { model: string; primaryModel: string; reviewed: boolean; reviewModel?: string | null; routing?: string | null; }
 
 export function calculatePayrollComparisons(entries: PayrollEntry[], deferredEntries: PayrollEntry[], totals: PayrollDocumentTotal[]) {
@@ -60,13 +69,18 @@ export function calculatePayrollComparisons(entries: PayrollEntry[], deferredEnt
   };
   return totals.map(total => {
     const entriesAmountInCents = calculated[total.key] ?? 0;
+    const informational = total.key === "inss_total";
     return {
       key: total.key,
-      label: total.label,
+      label: informational ? "INSS a recolher (informativo)" : total.label,
       documentAmountInCents: total.amountInCents,
       entriesAmountInCents,
       differenceInCents: entriesAmountInCents - total.amountInCents,
       source: total.source,
+      blocking: !informational,
+      note: informational
+        ? "O Total a Recolher segue o calendário de recolhimento e pode diferir do INSS contabilizado integralmente nas rubricas da competência."
+        : undefined,
     } satisfies PayrollComparison;
   });
 }
