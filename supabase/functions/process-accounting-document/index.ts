@@ -31,18 +31,19 @@ serve(async (req) => {
   let userId: string | null = null;
   let body: any = {};
   const model = Deno.env.get("OPENAI_ACCOUNTING_MODEL") || "gpt-5.6-terra";
-  const recordUsage = async (raw: any, status: "success" | "error") => {
+  const fallbackModel = Deno.env.get("OPENAI_ACCOUNTING_FALLBACK_MODEL") || "gpt-5.6-luna";
+  const recordUsage = async (raw: any, status: "success" | "error", requestedModel = model, metadata: Record<string, unknown> = {}) => {
     if (!admin) return;
     const usage = raw?.usage ?? {};
     const { error } = await admin.from("accounting_ai_usage").insert({
       created_by: userId, company_key: body.company_id ? String(body.company_id) : null,
       competence: body.competence ? String(body.competence) : null, module: body.module || "folha",
-      provider: "openai", model: raw?.model || model, status, response_id: raw?.id ?? null,
+      provider: "openai", model: raw?.model || requestedModel, status, response_id: raw?.id ?? null,
       input_tokens: usage.input_tokens ?? 0, cached_input_tokens: usage.input_tokens_details?.cached_tokens ?? 0,
       output_tokens: usage.output_tokens ?? 0, total_tokens: usage.total_tokens ?? 0,
-      estimated_cost_usd: estimateCost(raw?.model || model, usage), latency_ms: Date.now() - startedAt,
+      estimated_cost_usd: estimateCost(raw?.model || requestedModel, usage), latency_ms: Date.now() - startedAt,
       error_code: raw?.error?.code ?? raw?.error?.type ?? null, error_message: raw?.error?.message ?? null,
-      request_metadata: { document_count: Array.isArray(body.documents) ? body.documents.length : 0 },
+      request_metadata: { document_count: Array.isArray(body.documents) ? body.documents.length : 0, requested_model: requestedModel, ...metadata },
     });
     if (error) console.error("Falha ao registrar telemetria", error);
   };
@@ -64,6 +65,7 @@ serve(async (req) => {
     if (!apiKey) return json({ error: "A chave OPENAI_API_KEY ainda não foi configurada no Supabase." }, 503);
 
     const accounts = new Map((body.chart_of_accounts ?? []).map((account: any) => [String(account.reducedCode), String(account.description)]));
+    if (!accounts.size) return json({ error: "Importe o plano de contas da empresa antes de processar a folha." }, 422);
     const fileInputs = body.documents.map((document: any) => ({ type: "input_file", filename: document.name, file_data: `data:${document.mime_type};base64,${document.data}` }));
     const prompt = `Você é um motor contábil brasileiro especializado em folha de pagamento. Extraia somente fatos presentes nos documentos da competência ${body.competence}.
 Regras obrigatórias:
@@ -84,24 +86,51 @@ Plano da empresa: ${JSON.stringify(body.chart_of_accounts)}.`;
       warnings: { type: "array", items: { type: "string" } },
     }, required: ["entries", "warnings"] };
 
-    const response = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model, instructions: prompt,
+    const requestBody = { instructions: prompt,
         input: [{ role: "user", content: [{ type: "input_text", text: "Leia os documentos e gere os lançamentos estruturados da folha." }, ...fileInputs] }],
         text: { format: { type: "json_schema", name: "payroll_entries", strict: true, schema } },
-      }),
-    });
-    const raw = await response.json();
+        max_output_tokens: 12000,
+    };
+    const callOpenAI = async (requestedModel: string) => {
+      const response = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ model: requestedModel, ...requestBody }),
+        signal: AbortSignal.timeout(150_000),
+      });
+      return { response, raw: await response.json(), requestedModel };
+    };
+
+    let attempt = await callOpenAI(model);
+    const firstCode = String(attempt.raw?.error?.code ?? attempt.raw?.error?.type ?? "").toLowerCase();
+    const firstMessage = String(attempt.raw?.error?.message ?? "").toLowerCase();
+    const modelUnavailable = !attempt.response.ok && (
+      attempt.response.status === 404 || firstCode.includes("model") || firstMessage.includes("model") && (firstMessage.includes("access") || firstMessage.includes("exist") || firstMessage.includes("support"))
+    );
+    if (modelUnavailable && fallbackModel !== model) {
+      await recordUsage(attempt.raw, "error", model, { fallback_triggered: true, fallback_model: fallbackModel });
+      attempt = await callOpenAI(fallbackModel);
+    }
+    const { response, raw, requestedModel } = attempt;
     if (!response.ok) {
       console.error("OpenAI accounting error", { status: response.status, code: raw?.error?.code, type: raw?.error?.type, message: raw?.error?.message });
-      await recordUsage(raw, "error");
+      await recordUsage(raw, "error", requestedModel, { fallback_used: requestedModel !== model });
       return json({ error: raw?.error?.message || "Falha na OpenAI", code: raw?.error?.code || raw?.error?.type || null }, 502);
     }
 
-    await recordUsage(raw, "success");
-    const outputText = raw.output?.flatMap((item: any) => item.content ?? []).find((item: any) => item.type === "output_text")?.text;
-    if (!outputText) return json({ error: "Resposta vazia da IA" }, 502);
-    const parsed = JSON.parse(outputText);
+    const outputText = raw.output_text || raw.output?.flatMap((item: any) => item.content ?? []).find((item: any) => item.type === "output_text")?.text;
+    if (!outputText) {
+      const failure = { ...raw, error: { code: "empty_output", message: "A OpenAI concluiu a chamada sem devolver os lançamentos estruturados." } };
+      await recordUsage(failure, "error", requestedModel, { fallback_used: requestedModel !== model });
+      return json({ error: failure.error.message, code: failure.error.code }, 502);
+    }
+    let parsed: any;
+    try {
+      parsed = JSON.parse(outputText);
+    } catch {
+      const failure = { ...raw, error: { code: "invalid_structured_output", message: "A resposta da IA não pôde ser validada como lançamentos contábeis." } };
+      await recordUsage(failure, "error", requestedModel, { fallback_used: requestedModel !== model });
+      return json({ error: failure.error.message, code: failure.error.code }, 502);
+    }
     const warnings = [...(parsed.warnings ?? [])];
     const entries = (parsed.entries ?? []).map((entry: any, index: number) => {
       const debit = accounts.get(String(entry.debitCode));
@@ -109,9 +138,11 @@ Plano da empresa: ${JSON.stringify(body.chart_of_accounts)}.`;
       if (!debit || !credit) warnings.push(`Linha ${index + 1}: C.R. não localizado no plano da empresa.`);
       return { ...entry, id: crypto.randomUUID(), debitDescription: debit || "", creditDescription: credit || "", amountInCents: Math.trunc(entry.amountInCents) };
     });
-    return json({ entries, warnings, model: raw.model, response_id: raw.id });
+    await recordUsage(raw, "success", requestedModel, { fallback_used: requestedModel !== model, entry_count: entries.length, warning_count: warnings.length });
+    return json({ entries, warnings, model: raw.model || requestedModel, response_id: raw.id, fallback_used: requestedModel !== model });
   } catch (error) {
     console.error("process-accounting-document", error);
+    await recordUsage({ error: { code: error instanceof DOMException && error.name === "TimeoutError" ? "request_timeout" : "internal_error", message: error instanceof Error ? error.message : String(error) } }, "error").catch(() => undefined);
     return json({ error: error instanceof Error ? error.message : String(error) }, 500);
   }
 });

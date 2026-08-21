@@ -70,6 +70,74 @@ const estimateCost = (model: string, usage: any) => {
   return (input * price.input + cached * price.cached + output * price.output) / 1_000_000;
 };
 
+type OfficialBucket = { start_time?: number; end_time?: number; results?: any[] };
+
+async function fetchOfficialOpenAIUsage() {
+  const adminKey = Deno.env.get("OPENAI_ADMIN_KEY");
+  if (!adminKey) return {
+    configured: false,
+    available: false,
+    error: "Configure OPENAI_ADMIN_KEY no cofre do Supabase para consultar uso e custos oficiais.",
+    totals: { costUsd: 0, inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, requests: 0 },
+    daily: [],
+  };
+
+  const endTime = Math.floor(Date.now() / 1000);
+  const startTime = endTime - 30 * 24 * 60 * 60;
+  const params = new URLSearchParams({
+    start_time: String(startTime),
+    end_time: String(endTime),
+    bucket_width: "1d",
+    limit: "31",
+  });
+  const headers = { Authorization: `Bearer ${adminKey}` };
+  const [usageResponse, costResponse] = await Promise.all([
+    fetch(`https://api.openai.com/v1/organization/usage/completions?${params}`, { headers }),
+    fetch(`https://api.openai.com/v1/organization/costs?${params}`, { headers }),
+  ]);
+  const [usageRaw, costRaw] = await Promise.all([usageResponse.json(), costResponse.json()]);
+  if (!usageResponse.ok || !costResponse.ok) {
+    const failure = !usageResponse.ok ? usageRaw : costRaw;
+    return {
+      configured: true,
+      available: false,
+      error: failure?.error?.message || "A OpenAI recusou a consulta de uso oficial.",
+      totals: { costUsd: 0, inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, requests: 0 },
+      daily: [],
+    };
+  }
+
+  const daily = new Map<number, { startTime: number; endTime: number; costUsd: number; inputTokens: number; cachedInputTokens: number; outputTokens: number; requests: number }>();
+  const bucketFor = (bucket: OfficialBucket) => {
+    const start = Number(bucket.start_time ?? 0);
+    const current = daily.get(start) ?? { startTime: start, endTime: Number(bucket.end_time ?? 0), costUsd: 0, inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, requests: 0 };
+    daily.set(start, current);
+    return current;
+  };
+  for (const bucket of (usageRaw.data ?? []) as OfficialBucket[]) {
+    const current = bucketFor(bucket);
+    for (const result of bucket.results ?? []) {
+      current.inputTokens += Number(result.input_tokens ?? 0);
+      current.cachedInputTokens += Number(result.input_cached_tokens ?? 0);
+      current.outputTokens += Number(result.output_tokens ?? 0);
+      current.requests += Number(result.num_model_requests ?? 0);
+    }
+  }
+  for (const bucket of (costRaw.data ?? []) as OfficialBucket[]) {
+    const current = bucketFor(bucket);
+    for (const result of bucket.results ?? []) current.costUsd += Number(result.amount?.value ?? 0);
+  }
+  const rows = [...daily.values()].sort((a, b) => b.startTime - a.startTime);
+  const totals = rows.reduce((acc, row) => ({
+    costUsd: acc.costUsd + row.costUsd,
+    inputTokens: acc.inputTokens + row.inputTokens,
+    cachedInputTokens: acc.cachedInputTokens + row.cachedInputTokens,
+    outputTokens: acc.outputTokens + row.outputTokens,
+    requests: acc.requests + row.requests,
+  }), { costUsd: 0, inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, requests: 0 });
+  return { configured: true, available: true, error: null, totals, daily: rows };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
   try {
@@ -131,7 +199,7 @@ serve(async (req) => {
       const response = await fetch("https://api.openai.com/v1/responses", {
         method: "POST",
         headers: { Authorization: `Bearer ${Deno.env.get("OPENAI_API_KEY")}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model, input: "Responda somente: OK", max_output_tokens: 8 }),
+        body: JSON.stringify({ model, input: "Responda somente: OK", reasoning: { effort: "none" }, max_output_tokens: 32 }),
       });
       const raw = await response.json();
       const usage = raw.usage ?? {};
@@ -154,6 +222,7 @@ serve(async (req) => {
     const { data: usage, error } = await admin.from("accounting_ai_usage").select("*").gte("created_at", since).order("created_at", { ascending: false }).limit(250);
     if (error) throw error;
     const rows = usage ?? [];
+    const official = await fetchOfficialOpenAIUsage();
     const totals = rows.reduce((acc: any, row: any) => ({
       requests: acc.requests + 1,
       success: acc.success + (row.status === "success" ? 1 : 0),
@@ -164,7 +233,7 @@ serve(async (req) => {
       estimatedCostUsd: acc.estimatedCostUsd + Number(row.estimated_cost_usd),
     }), { requests: 0, success: 0, errors: 0, inputTokens: 0, outputTokens: 0, totalTokens: 0, estimatedCostUsd: 0 });
     return json({
-      provider: "OpenAI", model, apiConfigured, price: priceFor(model), totals,
+      provider: "OpenAI", model, apiConfigured, price: priceFor(model), totals, official,
       lastRequest: rows[0] ?? null,
       recent: rows.slice(0, 40).map((row: any) => ({
         id: row.id, createdAt: row.created_at, companyKey: row.company_key, competence: row.competence,
