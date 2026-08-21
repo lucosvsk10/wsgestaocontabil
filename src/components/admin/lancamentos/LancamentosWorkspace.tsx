@@ -12,11 +12,12 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { DespesasWorkspace, WorkspaceStatus } from "./DespesasWorkspace";
-import { loadWorkspaceData, saveWorkspaceData } from "@/lib/lancamentos/workspaceStorage";
+import { loadWorkspaceData, loadWorkspaceFiles, saveWorkspaceData, saveWorkspaceFiles } from "@/lib/lancamentos/workspaceStorage";
 import { useAccountingCompany } from "@/hooks/lancamentos/useAccountingCompany";
 import { CompanySelector } from "./CompanySelector";
 import { detectWorkbookCompetence } from "@/lib/lancamentos/expenseWorkbook";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FolhaWorkspace } from "./FolhaWorkspace";
 
 type ModuleKey = "folha" | "compras" | "faturamento" | "despesas";
 interface MonthItem {
@@ -96,6 +97,7 @@ export function LancamentosWorkspace() {
   const [transcriptionRows, setTranscriptionRows] = useState<TranscriptionRow[]>([]);
   const [launchRows, setLaunchRows] = useState<LaunchRow[]>([]);
   const [moduleCompetenceWarning, setModuleCompetenceWarning] = useState<{ module: ModuleKey; files: File[]; month: string; year: string } | null>(null);
+  const [genericLoaded, setGenericLoaded] = useState(false);
   const handleExpenseFileCount = useCallback((count: number) => {
     setPersistedModuleCounts((current) => current.despesas === count ? current : { ...current, despesas: count });
   }, []);
@@ -114,9 +116,10 @@ export function LancamentosWorkspace() {
     setFilesByModule((current) => ({ ...current, [module]: [...current[module], ...selectedFiles] }));
     setSelectedModule(module); setActiveTab("transcricao");
     if (target && (target.month !== selectedMonth || target.year !== year)) {
+      void saveWorkspaceFiles(`${company.id}:${target.year}:${target.month}:${module}`, selectedFiles);
       const targetKey = `${company.id}:${target.year}:module-statuses`;
       void loadWorkspaceData<Record<string, Record<ModuleKey, WorkspaceStatus>>>(targetKey).then(saved => saveWorkspaceData(targetKey, { ...(saved ?? {}), [target.month]: { ...(saved?.[target.month] ?? emptyStatuses()), [module]: "review" } }));
-    } else setModuleStatus(module, "review");
+    } else { void saveWorkspaceFiles(`${company.id}:${year}:${selectedMonth}:${module}`, selectedFiles); setModuleStatus(module, "review"); }
   };
   const handleModuleFiles = async (module: ModuleKey, event: ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(event.target.files ?? []);
@@ -130,6 +133,18 @@ export function LancamentosWorkspace() {
   const statusKey = `${company.id}:${year}:module-statuses`;
   useEffect(() => { void loadWorkspaceData<Record<string, Record<ModuleKey, WorkspaceStatus>>>(statusKey).then(saved => setYearStatuses(saved ?? {})); }, [statusKey]);
   const setModuleStatus = useCallback((module: ModuleKey, status: WorkspaceStatus) => { setYearStatuses(current => { const next = { ...current, [selectedMonth]: { ...(current[selectedMonth] ?? emptyStatuses()), [module]: status } }; void saveWorkspaceData(statusKey, next); return next; }); }, [selectedMonth, statusKey]);
+
+  const genericScope = `${company.id}:${year}:${selectedMonth}:${selectedModule}`;
+  const genericDataKey = `${genericScope}:workspace`;
+  useEffect(() => {
+    if (selectedModule === "despesas" || selectedModule === "folha") return;
+    setGenericLoaded(false);
+    Promise.all([loadWorkspaceData<{ transcriptionRows: TranscriptionRow[]; launchRows: LaunchRow[] }>(genericDataKey), loadWorkspaceFiles(genericScope)]).then(([saved, storedFiles]) => {
+      setTranscriptionRows(saved?.transcriptionRows ?? []); setLaunchRows(saved?.launchRows ?? []);
+      setFilesByModule(current => ({ ...current, [selectedModule]: storedFiles })); setGenericLoaded(true);
+    });
+  }, [genericDataKey, genericScope, selectedModule]);
+  useEffect(() => { if (genericLoaded && selectedModule !== "despesas" && selectedModule !== "folha") void saveWorkspaceData(genericDataKey, { transcriptionRows, launchRows }); }, [genericDataKey, genericLoaded, launchRows, selectedModule, transcriptionRows]);
 
   const updateTranscription = (id: number, field: keyof TranscriptionRow, value: string) => {
     setTranscriptionRows((rows) =>
@@ -193,7 +208,7 @@ export function LancamentosWorkspace() {
       <div className="grid min-h-[720px] lg:grid-cols-[220px_minmax(0,1fr)]">
         <aside className="border-b border-border py-5 lg:sticky lg:top-0 lg:h-screen lg:self-start lg:border-b-0 lg:border-r lg:pr-4">
           <div className="mb-3 flex items-center justify-between gap-2">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Competências</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-700 dark:text-cyan-300">Competências</p>
             <Select value={year} onValueChange={setYear}>
               <SelectTrigger className="h-8 w-24 border-border bg-transparent text-xs shadow-none"><SelectValue /></SelectTrigger>
               <SelectContent>{[today.getFullYear() - 2, today.getFullYear() - 1, today.getFullYear()].map((item) => <SelectItem key={item} value={String(item)}>{item}</SelectItem>)}</SelectContent>
@@ -213,12 +228,12 @@ export function LancamentosWorkspace() {
                   className={cn(
                     "group flex min-h-10 flex-col justify-center rounded-sm px-3 py-2 text-left text-sm transition-all duration-200",
                     active
-                      ? "bg-foreground text-background"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                      ? "bg-cyan-500/15 text-cyan-800 dark:bg-cyan-400/15 dark:text-cyan-200"
+                      : "text-cyan-700/80 hover:bg-cyan-500/10 hover:text-cyan-800 dark:text-cyan-300/75 dark:hover:text-cyan-200",
                   )}
                 >
                   <span className="flex w-full items-center justify-between"><span>{month.label}</span><span className={cn("h-2 w-2 rounded-full", complete === 4 ? "bg-emerald-500" : hasWork ? "bg-amber-400" : "bg-muted-foreground/25")} /></span>
-                  <span className={cn("grid grid-rows-[0fr] text-[10px] opacity-0 transition-all group-hover:mt-1 group-hover:grid-rows-[1fr] group-hover:opacity-100", active ? "text-background/70" : "text-muted-foreground")}><span className="overflow-hidden">{complete} de 4 módulos concluídos</span></span>
+                  <span className="grid grid-rows-[0fr] text-[10px] opacity-0 transition-all group-hover:mt-1 group-hover:grid-rows-[1fr] group-hover:opacity-100"><span className="overflow-hidden">{complete} de 4 módulos concluídos</span></span>
                 </button>
               );
             })}
@@ -227,9 +242,9 @@ export function LancamentosWorkspace() {
         </aside>
 
         <main className="min-w-0 py-5 lg:pl-6">
-          <h2 className="text-xl font-semibold tracking-tight text-foreground">{selectedMonthLabel} de {year}</h2>
+          <h2 className="text-xl font-semibold tracking-tight text-cyan-800 dark:text-cyan-200">{selectedMonthLabel} de {year}</h2>
 
-          <nav className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Módulos contábeis">
+          <nav className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Módulos contábeis">
             {modules.map((module) => {
               const status = (yearStatuses[selectedMonth] ?? emptyStatuses())[module.key];
               const statusLabel = status === "done" ? "Concluído" : status === "review" ? "Aguardando conferência" : "Aguardando importação";
@@ -239,7 +254,7 @@ export function LancamentosWorkspace() {
                 type="button"
                 onClick={() => setSelectedModule(module.key)}
                 className={cn(
-                  "grid min-h-20 grid-cols-[minmax(0,1fr)_30%] overflow-hidden rounded-md bg-background text-left transition-colors",
+                  "grid min-h-24 grid-cols-[minmax(0,1fr)_30%] overflow-hidden rounded-md bg-background text-left transition-colors",
                   selectedModule === module.key ? "bg-muted/80" : "hover:bg-muted/45",
                 )}
               >
@@ -251,14 +266,16 @@ export function LancamentosWorkspace() {
 
           {selectedModule === "despesas" ? (
             <DespesasWorkspace key={`${company.id}-${year}-${selectedMonth}`} company={company.id} month={selectedMonth} year={year} onFileCountChange={handleExpenseFileCount} onStatusChange={(status) => setModuleStatus("despesas", status)} onCompetenceChange={(nextMonth, nextYear) => { setYear(nextYear); setSelectedMonth(nextMonth); }} />
+          ) : selectedModule === "folha" ? (
+            <FolhaWorkspace key={`${company.id}-${year}-${selectedMonth}`} company={company.id} month={selectedMonth} year={year} onStatusChange={(status) => setModuleStatus("folha", status)} onCompetenceChange={(nextMonth,nextYear)=>{setYear(nextYear);setSelectedMonth(nextMonth)}} />
           ) : (
           <>
-          <section className="mt-5 rounded-md border border-border bg-background p-5" aria-label="Importação de documentos">
+          <section className="mt-8 rounded-md border border-border bg-background p-6" aria-label="Importação de documentos">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><h3 className="text-base font-semibold text-foreground">{activeModuleLabel} de {selectedMonthLabel} de {year}</h3><label className="cursor-pointer rounded-md border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted">Importar {activeModuleLabel.toLowerCase()} de {selectedMonthLabel} de {year}<input type="file" multiple accept={modules.find((module) => module.key === selectedModule)?.acceptedFiles} className="sr-only" onChange={(event) => void handleModuleFiles(selectedModule, event)} /></label></div>
             <div className="mt-4 border-t border-border pt-4 text-sm text-muted-foreground">{filesByModule[selectedModule].length ? <div className="flex flex-wrap gap-4">{filesByModule[selectedModule].map((file, index) => <span key={`${file.name}-${index}`} className="text-foreground">{file.name}</span>)}</div> : "Nenhum arquivo selecionado nesta competência."}</div>
           </section>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-8">
             <TabsList className="grid h-auto w-full grid-cols-3 gap-2 bg-transparent p-0 shadow-none dark:bg-transparent">
               {[
                 ["transcricao", "Transcrição", transcriptionRows.length],

@@ -133,7 +133,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
             }
           >
             {(open || isMobile) && (
-              <p className="mb-2 px-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/65">
+              <p className="mb-2 px-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/90">
                 {section.title}
               </p>
             )}
