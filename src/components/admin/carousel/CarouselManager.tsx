@@ -33,7 +33,7 @@ const CarouselManager = () => {
       <div className="pt-20 p-6 space-y-8">
         {/* Header */}
         <div className="text-center">
-          <h1 className="text-4xl font-extralight text-[#020817] dark:text-[#efc349] mb-4">
+          <h1 className="text-4xl font-extralight text-[#020817] dark:text-white mb-4">
             Gerenciar Carousel
           </h1>
           <p className="text-lg text-gray-600 dark:text-white/70 font-extralight max-w-3xl mx-auto">

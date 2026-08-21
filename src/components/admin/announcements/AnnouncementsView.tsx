@@ -8,7 +8,7 @@ export const AnnouncementsView = () => {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-3xl text-[#020817] dark:text-[#efc349] mb-4 font-extralight">
+        <h1 className="text-3xl text-[#020817] dark:text-white mb-4 font-extralight">
           Gerenciar Comunicação
         </h1>
         <p className="text-gray-600 dark:text-white/70 font-extralight">
