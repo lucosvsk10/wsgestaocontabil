@@ -190,7 +190,8 @@ serve(async (req) => {
 
     if (!await verifyToken(String(body.engine_token || ""), user.id)) return json({ error: "Sessão da Engine expirada." }, 401);
 
-    const model = Deno.env.get("OPENAI_ACCOUNTING_MODEL") || "gpt-5.5";
+    const model = Deno.env.get("OPENAI_ACCOUNTING_FAST_MODEL") || "gpt-5.6-luna";
+    const reviewModel = Deno.env.get("OPENAI_ACCOUNTING_REVIEW_MODEL") || "gpt-5.6-terra";
     const apiConfigured = Boolean(Deno.env.get("OPENAI_API_KEY"));
 
     if (action === "test_connection") {
@@ -233,7 +234,7 @@ serve(async (req) => {
       estimatedCostUsd: acc.estimatedCostUsd + Number(row.estimated_cost_usd),
     }), { requests: 0, success: 0, errors: 0, inputTokens: 0, outputTokens: 0, totalTokens: 0, estimatedCostUsd: 0 });
     return json({
-      provider: "OpenAI", model, apiConfigured, price: priceFor(model), totals, official,
+      provider: "OpenAI", model, reviewModel, routing: "validation_fallback", apiConfigured, price: priceFor(model), totals, official,
       lastRequest: rows[0] ?? null,
       recent: rows.slice(0, 40).map((row: any) => ({
         id: row.id, createdAt: row.created_at, companyKey: row.company_key, competence: row.competence,

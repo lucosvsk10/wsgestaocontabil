@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 type EngineStatus = {
   provider: string;
   model: string;
+  reviewModel: string;
+  routing: string;
   apiConfigured: boolean;
   price: { input: number; cached: number; output: number } | null;
   totals: { requests: number; success: number; errors: number; inputTokens: number; outputTokens: number; totalTokens: number; estimatedCostUsd: number };
@@ -120,7 +122,7 @@ export default function AdminEngine() {
     </section> : <div className="mt-8 space-y-8">
       {error && <div className="flex items-start gap-3 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0"/><span>{error}</span></div>}
       <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-        <Metric icon={Cpu} label="Modelo ativo" value={status?.model || "—"} detail={status?.provider || "OpenAI"}/>
+        <Metric icon={Cpu} label="Modelo de leitura" value={status?.model || "—"} detail={status ? `Revisão: ${status.reviewModel}` : "OpenAI"}/>
         <Metric icon={Activity} label="Chamadas locais · 30 dias" value={number.format(status?.totals.requests || 0)} detail={`${number.format(status?.totals.errors || 0)} com erro`}/>
         <Metric icon={Gauge} label="Tokens oficiais · 30 dias" value={status?.official.available ? number.format(status.official.totals.inputTokens + status.official.totals.outputTokens) : "—"} detail={status?.official.available ? `${number.format(status.official.totals.requests)} chamadas na organização` : "Admin API ainda não conectada"}/>
         <Metric icon={DollarSign} label="Custo oficial · 30 dias" value={status?.official.available ? usd.format(status.official.totals.costUsd) : "—"} detail={status?.official.available ? "Consumo realizado; não é o saldo pré-pago" : "Sem estimativa exibida como valor oficial"}/>
@@ -134,7 +136,7 @@ export default function AdminEngine() {
 
       <section className="grid gap-6 xl:grid-cols-[1.2fr_.8fr]">
         <div className="rounded-lg border border-border bg-background p-6"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Integração</p><h2 className="mt-2 text-lg font-semibold text-foreground">OpenAI Responses API</h2></div><StatusPill ok={Boolean(status?.apiConfigured)} label={status?.apiConfigured ? "Chave configurada" : "Chave ausente"}/></div>
-          <dl className="mt-7 grid gap-x-8 gap-y-5 sm:grid-cols-2"><Info label="Provedor" value={status?.provider || "—"}/><Info label="Modelo em produção" value={status?.model || "—"}/><Info label="Endpoint" value="Responses API"/><Info label="Autenticação" value="Secret no Supabase"/><Info label="Última chamada" value={status?.lastRequest ? dateTime.format(new Date(status.lastRequest.created_at)) : "Sem chamadas registradas"}/><Info label="Latência mais recente" value={status?.lastRequest ? `${number.format(status.lastRequest.latency_ms)} ms` : "—"}/></dl>
+          <dl className="mt-7 grid gap-x-8 gap-y-5 sm:grid-cols-2"><Info label="Provedor" value={status?.provider || "—"}/><Info label="Leitura principal" value={status?.model || "—"}/><Info label="Revisão por divergência" value={status?.reviewModel || "—"}/><Info label="Roteamento" value="Revisão somente quando a validação falhar"/><Info label="Endpoint" value="Responses API"/><Info label="Autenticação" value="Secret no Supabase"/><Info label="Última chamada" value={status?.lastRequest ? dateTime.format(new Date(status.lastRequest.created_at)) : "Sem chamadas registradas"}/><Info label="Latência mais recente" value={status?.lastRequest ? `${number.format(status.lastRequest.latency_ms)} ms` : "—"}/></dl>
           <div className="mt-7 flex flex-wrap items-center gap-3 border-t border-border pt-5"><Button onClick={testConnection} disabled={testing || !status?.apiConfigured}><TestTube2 className="mr-2 h-4 w-4"/>{testing ? "Testando..." : "Testar conexão"}</Button><p className="text-xs text-muted-foreground">O teste faz uma chamada mínima e também entra na telemetria.</p></div>
         </div>
         <div className="rounded-lg border border-border bg-background p-6"><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Saúde operacional</p><div className="mt-5 flex items-end justify-between"><div><p className="text-4xl font-semibold text-foreground">{status?.totals.requests ? `${successRate.toFixed(1).replace(".", ",")}%` : "—"}</p><p className="mt-2 text-sm text-muted-foreground">taxa de sucesso em 30 dias</p></div>{status?.lastRequest?.status === "error" ? <AlertTriangle className="h-8 w-8 text-destructive"/> : <ShieldCheck className="h-8 w-8 text-muted-foreground"/>}</div>
