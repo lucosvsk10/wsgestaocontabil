@@ -55,3 +55,6 @@ verify_jwt = true
 
 [functions.process-accounting-document]
 verify_jwt = true
+
+[functions.accounting-engine]
+verify_jwt = true
