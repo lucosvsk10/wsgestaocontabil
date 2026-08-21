@@ -1,5 +1,6 @@
 name: Validate
 
+# CI gate for accounting changes.
 on:
   push:
     branches:
