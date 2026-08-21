@@ -12,6 +12,11 @@ interface StoredFile {
   createdAt: string;
 }
 
+export interface WorkspaceSaveResult {
+  synced: boolean;
+  error?: string;
+}
+
 function openDatabase() {
   return new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open(DATABASE_NAME, DATABASE_VERSION);
@@ -114,17 +119,22 @@ export async function clearWorkspaceFiles(scope: string) {
   database.close();
 }
 
-export async function saveWorkspaceData<T>(id: string, value: T) {
+export async function saveWorkspaceData<T>(id: string, value: T): Promise<WorkspaceSaveResult> {
   const context = parseScope(id);
+  let syncError: string | undefined;
   try {
     const { error } = await (supabase as any).from("accounting_workspace_data").upsert({ scope: id, company_key: context.company, competence: context.competence, module: context.module, payload: value }, { onConflict: "scope" });
     if (error) throw error;
-  } catch (error) { console.error("Falha ao salvar dados contábeis no Supabase; mantendo cópia local.", error); }
+  } catch (error) {
+    syncError = error instanceof Error ? error.message : "Falha desconhecida ao sincronizar com o Supabase.";
+    console.error("Falha ao salvar dados contábeis no Supabase; mantendo cópia local.", error);
+  }
   const database = await openDatabase();
   const transaction = database.transaction(DATA_STORE, "readwrite");
   transaction.objectStore(DATA_STORE).put({ id, value, updatedAt: new Date().toISOString() });
   await complete(transaction);
   database.close();
+  return { synced: !syncError, error: syncError };
 }
 
 export async function loadWorkspaceData<T>(id: string) {
@@ -133,6 +143,31 @@ export async function loadWorkspaceData<T>(id: string) {
     if (error) throw error;
     if (data?.payload !== undefined) return data.payload as T;
   } catch (error) { console.error("Falha ao carregar dados contábeis do Supabase; buscando cópia local.", error); }
+  const localValue = await loadLocalWorkspaceData<T>(id);
+  if (localValue !== undefined) {
+    // Dados criados antes da persistência definitiva são promovidos ao servidor
+    // assim que o usuário autenticado volta a abrir o mesmo contexto.
+    void saveWorkspaceData(id, localValue);
+  }
+  return localValue;
+}
+
+export async function isWorkspaceDataSynced(id: string) {
+  try {
+    const { data, error } = await (supabase as any)
+      .from("accounting_workspace_data")
+      .select("scope")
+      .eq("scope", id)
+      .maybeSingle();
+    if (error) throw error;
+    return Boolean(data?.scope);
+  } catch (error) {
+    console.error("Falha ao verificar sincronização dos dados contábeis.", error);
+    return false;
+  }
+}
+
+export async function loadLocalWorkspaceData<T>(id: string) {
   const database = await openDatabase();
   const transaction = database.transaction(DATA_STORE, "readonly");
   const request = transaction.objectStore(DATA_STORE).get(id);
