@@ -20,6 +20,7 @@ import { AdminLayout } from '@/components/admin/layout/AdminLayout';
 import AdminLancamentos from "./pages/AdminLancamentos";
 import AdminBalancete from "./pages/AdminBalancete";
 import AdminPlanoContas from "./pages/AdminPlanoContas";
+import AdminEngine from "./pages/AdminEngine";
 
 const AppRoutes = () => {
   const { userData, user } = useAuth();
@@ -131,6 +132,7 @@ const AppRoutes = () => {
       } />
       <Route path="/admin/lancamentos/balancete" element={<PrivateRoute requiredRole="admin"><AdminBalancete /></PrivateRoute>} />
       <Route path="/admin/lancamentos/plano-contas" element={<PrivateRoute requiredRole="admin"><AdminPlanoContas /></PrivateRoute>} />
+      <Route path="/admin/lancamentos/engine" element={<PrivateRoute requiredRole="admin"><AdminEngine /></PrivateRoute>} />
 
       {/* Client routes */}
       <Route path="/client/*" element={
