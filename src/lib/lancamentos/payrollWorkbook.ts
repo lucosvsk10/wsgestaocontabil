@@ -2,6 +2,7 @@ import * as XLSX from "xlsx";
 
 export type PayrollEntryKind = "provento" | "desconto" | "encargo";
 export type PayrollEntrySection = "adiantamento" | "folha" | "ferias" | "decimo" | "rescisao" | "outro";
+export type PayrollMappingSource = "learned" | "predefined" | "ai" | "manual" | "unresolved";
 
 export interface PayrollEntry {
   id: string;
@@ -22,6 +23,11 @@ export interface PayrollEntry {
   source?: string;
   confidence?: number;
   targetCompetence?: string;
+  mappingSource?: PayrollMappingSource;
+  mappingNeedsApproval?: boolean;
+  mappingConfidence?: number;
+  mappingReason?: string;
+  mappingRuleId?: string;
 }
 export interface PayrollDocumentTotal { key: string; label: string; amountInCents: number; source: string; }
 export interface PayrollComparison { key: string; label: string; documentAmountInCents: number; entriesAmountInCents: number; differenceInCents: number; source: string; }
