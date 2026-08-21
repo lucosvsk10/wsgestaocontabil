@@ -159,7 +159,7 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
 
       const warnings = data.warnings ?? [];
       const comparisons: PayrollComparison[] = data.comparisons ?? [];
-      const hasDifference = comparisons.some(row => row.differenceInCents !== 0);
+      const hasDifference = comparisons.some(row => row.differenceInCents !== 0 && row.blocking !== false && row.key !== "inss_total");
       const validated = Boolean(data.referenceVerified)
         && !hasDifference
         && warnings.length === 0
@@ -188,18 +188,8 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
       const scope = `${company}:${year}:${month}:folha`;
       await saveWorkspaceData(`${scope}:parsed`, result);
 
-      if (result.deferredEntries?.length) {
-        const groups = new Map<string, PayrollEntry[]>();
-        result.deferredEntries.forEach((entry) => {
-          const target = entry.targetCompetence;
-          if (!target || !/^\d{2}\/20\d{2}$/.test(target)) return;
-          groups.set(target, [...(groups.get(target) ?? []), entry]);
-        });
-        await Promise.all([...groups.entries()].map(([target, entries]) => {
-          const [targetMonth, targetYear] = target.split("/");
-          return saveWorkspaceData(`${company}:${targetYear}:${targetMonth}:folha:carryover:${year}-${month}`, { entries, sourceCompetence: competence });
-        }));
-      }
+      // Folha usa a competência do documento para os lançamentos. O calendário de
+      // recolhimento de INSS/FGTS de férias é informação de auditoria e não gera carryover.
 
       setJob((current) => current?.id === id ? {
         ...current,
@@ -244,6 +234,21 @@ export function useAccountingProcessing() {
   return context;
 }
 
+function openProcessedCompetence(job: ProcessingJob) {
+  const [month, year] = job.competence.split("/");
+  const context = {
+    companyId: job.company,
+    year,
+    selectedMonth: month,
+    selectedModule: "folha",
+    activeTab: "lancamentos",
+  };
+  localStorage.setItem("ws-accounting-company-id", job.company);
+  localStorage.setItem("ws:lancamentos:last-context", JSON.stringify(context));
+  localStorage.setItem(`ws:lancamentos:last-context:${job.company}`, JSON.stringify(context));
+  window.location.assign("/admin/lancamentos");
+}
+
 function ProcessingPopup({ job, onDismiss }: { job: ProcessingJob | null; onDismiss: () => void }) {
   if (!job) return null;
   return (
@@ -275,6 +280,11 @@ function ProcessingPopup({ job, onDismiss }: { job: ProcessingJob | null; onDism
             <>
               <p className="mt-2 text-xs text-muted-foreground">{job.message}</p>
               <p className="mt-2 text-xs tabular-nums text-muted-foreground">Duração: {formatDuration((job.finishedAt ?? Date.now()) - job.startedAt)}</p>
+              {job.status === "success" && (
+                <Button type="button" variant="outline" size="sm" className="mt-3 h-8" onClick={() => openProcessedCompetence(job)}>
+                  Ir para {job.competence}
+                </Button>
+              )}
             </>
           )}
         </div>
