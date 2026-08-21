@@ -1,4 +1,4 @@
-import { ChangeEvent, useMemo, useState } from "react";
+import { ChangeEvent, useCallback, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { DespesasWorkspace } from "./DespesasWorkspace";
+import { ChartOfAccountsDialog } from "./ChartOfAccountsDialog";
 
 type ModuleKey = "folha" | "compras" | "faturamento" | "despesas";
 type MonthStatus = "closed" | "review" | "empty";
@@ -63,10 +64,10 @@ const months: MonthItem[] = [
 ];
 
 const modules: ModuleItem[] = [
-  { key: "folha", label: "Folha", acceptedFiles: ".pdf,.xlsx,.xls" },
+  { key: "despesas", label: "Despesas", acceptedFiles: ".pdf,.xlsx,.xls,.csv" },
+  { key: "folha", label: "Folha de pagamento", acceptedFiles: ".pdf,.xlsx,.xls" },
   { key: "compras", label: "Compras", acceptedFiles: ".pdf,.xlsx,.xls,.csv" },
   { key: "faturamento", label: "Faturamento", acceptedFiles: ".pdf,.xlsx,.xls,.csv" },
-  { key: "despesas", label: "Despesas", acceptedFiles: ".pdf,.xlsx,.xls,.csv" },
 ];
 
 const statusDot: Record<MonthStatus, string> = {
@@ -83,7 +84,7 @@ export function LancamentosWorkspace() {
   const [company, setCompany] = useState("el-da-silva");
   const [year, setYear] = useState(String(today.getFullYear()));
   const [selectedMonth, setSelectedMonth] = useState(String(today.getMonth() + 1).padStart(2, "0"));
-  const [selectedModule, setSelectedModule] = useState<ModuleKey>("folha");
+  const [selectedModule, setSelectedModule] = useState<ModuleKey>("despesas");
   const [activeTab, setActiveTab] = useState("transcricao");
   const [filesByModule, setFilesByModule] = useState<Record<ModuleKey, File[]>>({
     folha: [],
@@ -92,8 +93,12 @@ export function LancamentosWorkspace() {
     despesas: [],
   });
   const [balanceteFiles, setBalanceteFiles] = useState<File[]>([]);
+  const [persistedModuleCounts, setPersistedModuleCounts] = useState<Record<ModuleKey, number>>({ despesas: 0, folha: 0, compras: 0, faturamento: 0 });
   const [transcriptionRows, setTranscriptionRows] = useState<TranscriptionRow[]>([]);
   const [launchRows, setLaunchRows] = useState<LaunchRow[]>([]);
+  const handleExpenseFileCount = useCallback((count: number) => {
+    setPersistedModuleCounts((current) => current.despesas === count ? current : { ...current, despesas: count });
+  }, []);
 
   const selectedMonthLabel = useMemo(
     () => months.find((month) => month.key === selectedMonth)?.label ?? "Competência",
@@ -177,7 +182,7 @@ export function LancamentosWorkspace() {
           </p>
         </div>
 
-        <div className="grid w-full gap-3 sm:grid-cols-[minmax(220px,1fr)_110px] xl:w-auto xl:grid-cols-[320px_110px]">
+        <div className="flex w-full flex-col gap-3 sm:flex-row xl:w-auto">
           <Select value={company} onValueChange={setCompany}>
             <SelectTrigger className="h-10 border-border bg-background shadow-none">
               <SelectValue placeholder="Selecione a empresa" />
@@ -187,24 +192,19 @@ export function LancamentosWorkspace() {
             </SelectContent>
           </Select>
 
-          <Select value={year} onValueChange={setYear}>
-            <SelectTrigger className="h-10 border-border bg-background shadow-none">
-              <SelectValue placeholder="Ano" />
-            </SelectTrigger>
-            <SelectContent>
-              {[today.getFullYear() - 2, today.getFullYear() - 1, today.getFullYear()].map((item) => (
-                <SelectItem key={item} value={String(item)}>{item}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <ChartOfAccountsDialog company={company} />
         </div>
       </header>
 
-      <div className="grid min-h-[720px] lg:grid-cols-[176px_minmax(0,1fr)]">
+      <div className="grid min-h-[720px] lg:grid-cols-[220px_minmax(0,1fr)]">
         <aside className="border-b border-border py-5 lg:border-b-0 lg:border-r lg:pr-4">
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            Competências · {year}
-          </p>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Competências</p>
+            <Select value={year} onValueChange={setYear}>
+              <SelectTrigger className="h-8 w-24 border-border bg-transparent text-xs shadow-none"><SelectValue /></SelectTrigger>
+              <SelectContent>{[today.getFullYear() - 2, today.getFullYear() - 1, today.getFullYear()].map((item) => <SelectItem key={item} value={String(item)}>{item}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
           <nav className="grid grid-cols-3 gap-1 sm:grid-cols-4 lg:grid-cols-1" aria-label="Competências">
             {months.map((month) => {
               const active = selectedMonth === month.key;
@@ -214,45 +214,19 @@ export function LancamentosWorkspace() {
                   type="button"
                   onClick={() => setSelectedMonth(month.key)}
                   className={cn(
-                    "flex h-9 items-center justify-between rounded-sm px-3 text-left text-sm transition-colors",
+                    "group flex min-h-10 flex-col justify-center rounded-sm px-3 py-2 text-left text-sm transition-all duration-200",
                     active
                       ? "bg-foreground text-background"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground",
                   )}
                 >
-                  <span>{month.label}</span>
-                  <span className={cn("h-1.5 w-1.5 rounded-full", active ? "bg-background" : statusDot[month.status])} />
+                  <span className="flex w-full items-center justify-between"><span>{month.label}</span><span className={cn("h-1.5 w-1.5 rounded-full", active ? "bg-background" : statusDot[month.status])} /></span>
+                  <span className={cn("grid grid-rows-[0fr] text-[10px] opacity-0 transition-all group-hover:mt-1 group-hover:grid-rows-[1fr] group-hover:opacity-100", active ? "text-background/70" : "text-muted-foreground")}><span className="overflow-hidden">Nenhum processamento iniciado</span></span>
                 </button>
               );
             })}
           </nav>
 
-          <div className="my-5 border-t border-border" />
-
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            Documentos do mês
-          </p>
-          <nav className="grid grid-cols-2 gap-1 sm:grid-cols-4 lg:grid-cols-1" aria-label="Tipos de documento">
-            {modules.map((module) => {
-              const active = selectedModule === module.key;
-              return (
-                <button
-                  key={module.key}
-                  type="button"
-                  onClick={() => setSelectedModule(module.key)}
-                  className={cn(
-                    "flex h-9 items-center justify-between rounded-sm px-3 text-sm transition-colors",
-                    active
-                      ? "bg-muted font-medium text-foreground"
-                      : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
-                  )}
-                >
-                  <span>{module.label}</span>
-                  <span className="text-xs tabular-nums">{filesByModule[module.key].length}</span>
-                </button>
-              );
-            })}
-          </nav>
         </aside>
 
         <main className="min-w-0 py-5 lg:pl-6">
@@ -265,42 +239,35 @@ export function LancamentosWorkspace() {
             </p>
           </div>
 
+          <nav className="mt-5 grid overflow-hidden rounded-md border border-border bg-background sm:grid-cols-2 xl:grid-cols-4" aria-label="Módulos contábeis">
+            {modules.map((module) => (
+              <button
+                key={module.key}
+                type="button"
+                onClick={() => setSelectedModule(module.key)}
+                className={cn(
+                  "min-h-16 border-b border-border px-4 py-3 text-left transition-colors last:border-b-0 sm:border-r xl:border-b-0",
+                  selectedModule === module.key ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
+              >
+                <span className="block text-sm font-medium">{module.label}</span>
+                <span className={cn("mt-1 block text-xs", selectedModule === module.key ? "text-background/70" : "text-muted-foreground")}>
+                  {(persistedModuleCounts[module.key] || filesByModule[module.key].length) ? `${persistedModuleCounts[module.key] || filesByModule[module.key].length} arquivo(s)` : "Aguardando importação"}
+                </span>
+              </button>
+            ))}
+          </nav>
+
           {selectedModule === "despesas" ? (
-            <DespesasWorkspace key={`${year}-${selectedMonth}`} month={selectedMonth} year={year} />
+            <DespesasWorkspace key={`${company}-${year}-${selectedMonth}`} company={company} month={selectedMonth} year={year} onFileCountChange={handleExpenseFileCount} />
           ) : (
           <>
-          <section className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-4" aria-label="Importação de documentos">
-            {modules.map((module) => {
-              const count = filesByModule[module.key].length;
-              return (
-                <label
-                  key={module.key}
-                  className={cn(
-                    "group flex min-h-[84px] cursor-pointer items-center justify-between rounded-md border px-4 py-3 transition-colors",
-                    selectedModule === module.key
-                      ? "border-foreground/40 bg-muted/60"
-                      : "border-border bg-background hover:border-foreground/30 hover:bg-muted/40",
-                  )}
-                >
-                  <span className="min-w-0">
-                    <span className="block text-sm font-medium text-foreground">{module.label}</span>
-                    <span className="mt-1 block text-xs text-muted-foreground">
-                      {count ? `${count} ${count === 1 ? "arquivo importado" : "arquivos importados"}` : "Nenhum arquivo"}
-                    </span>
-                  </span>
-                  <span className="ml-3 shrink-0 rounded-sm border border-border px-2 py-1 text-xs font-medium text-foreground group-hover:border-foreground/40">
-                    {count ? "Adicionar" : "Importar"}
-                  </span>
-                  <input
-                    type="file"
-                    multiple
-                    accept={module.acceptedFiles}
-                    className="sr-only"
-                    onChange={(event) => handleModuleFiles(module.key, event)}
-                  />
-                </label>
-              );
-            })}
+          <section className="mt-5 flex flex-col gap-4 rounded-md border border-border bg-background p-5 sm:flex-row sm:items-center sm:justify-between" aria-label="Importação de documentos">
+            <div><h3 className="text-base font-semibold text-foreground">{activeModuleLabel} de {selectedMonthLabel} de {year}</h3><p className="mt-1 text-sm text-muted-foreground">Importe os documentos desta competência para iniciar a transcrição.</p></div>
+            <label className="cursor-pointer rounded-md bg-foreground px-4 py-2.5 text-sm font-medium text-background transition-opacity hover:opacity-90">
+              Importar {activeModuleLabel.toLowerCase()} de {selectedMonthLabel} de {year}
+              <input type="file" multiple accept={modules.find((module) => module.key === selectedModule)?.acceptedFiles} className="sr-only" onChange={(event) => handleModuleFiles(selectedModule, event)} />
+            </label>
           </section>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
@@ -336,40 +303,6 @@ export function LancamentosWorkspace() {
                   Edição local ativa
                 </Badge>
               </div>
-
-              <div className="grid gap-4 xl:grid-cols-[minmax(280px,0.7fr)_minmax(0,1.3fr)]">
-                <section className="min-w-0 rounded-md border border-border bg-background p-4">
-                  <div className="flex flex-wrap items-end justify-between gap-3">
-                    <label className="min-w-0 flex-1">
-                      <span className="mb-1.5 block text-xs font-medium text-muted-foreground">Arquivo</span>
-                      <Select value={filesByModule[selectedModule][0] ? "principal" : undefined}>
-                        <SelectTrigger className="h-9 border-border shadow-none">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {filesByModule[selectedModule][0] && (
-                            <SelectItem value="principal">{filesByModule[selectedModule][0].name}</SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </label>
-                    {filesByModule[selectedModule][0] && (
-                      <span className="pb-2 text-xs text-muted-foreground">Arquivo selecionado</span>
-                    )}
-                  </div>
-                  <div className="mt-4 grid min-h-[370px] place-items-center bg-muted/60 px-6 text-center text-sm text-muted-foreground">
-                    <div>
-                      <p className="font-medium text-foreground">
-                        {filesByModule[selectedModule].length ? "Documento selecionado" : "Nenhum documento importado"}
-                      </p>
-                      <p className="mt-1">
-                        {filesByModule[selectedModule].length
-                          ? "A pré-visualização será habilitada na etapa de processamento."
-                          : `Importe um arquivo de ${activeModuleLabel.toLowerCase()} para começar.`}
-                      </p>
-                    </div>
-                  </div>
-                </section>
 
                 <section className="min-w-0 rounded-md border border-border bg-background">
                   <div className="border-b border-border px-4 py-3">
@@ -413,7 +346,6 @@ export function LancamentosWorkspace() {
                     <Button className="border-border bg-transparent text-foreground shadow-none hover:bg-muted dark:border-white/15 dark:hover:bg-white/5" variant="outline" size="sm" onClick={addTranscriptionRow}>Adicionar linha</Button>
                   </div>
                 </section>
-              </div>
             </TabsContent>
 
             <TabsContent value="lancamentos" className="mt-5">

@@ -1,4 +1,4 @@
-import { ChangeEvent, useMemo, useRef, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,11 +10,26 @@ import {
   groupExpenseEntries,
   readExpenseWorkbook,
 } from "@/lib/lancamentos/expenseWorkbook";
+import {
+  clearWorkspaceFiles,
+  loadWorkspaceData,
+  loadWorkspaceFiles,
+  saveWorkspaceData,
+  saveWorkspaceFiles,
+} from "@/lib/lancamentos/workspaceStorage";
 import { cn } from "@/lib/utils";
 
 interface DespesasWorkspaceProps {
+  company: string;
   month: string;
+  onFileCountChange?: (count: number) => void;
   year: string;
+}
+
+interface PersistedExpenseData {
+  entries: ExpenseEntry[];
+  issues: ExpenseImportIssue[];
+  ignoredRows: number;
 }
 
 const tableInputClass =
@@ -45,7 +60,7 @@ function countDescriptionConflicts(entries: ExpenseEntry[]) {
   return Array.from(descriptions.values()).filter((values) => values.size > 1).length;
 }
 
-export function DespesasWorkspace({ month, year }: DespesasWorkspaceProps) {
+export function DespesasWorkspace({ company, month, onFileCountChange, year }: DespesasWorkspaceProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [entries, setEntries] = useState<ExpenseEntry[]>([]);
   const [issues, setIssues] = useState<ExpenseImportIssue[]>([]);
@@ -54,8 +69,13 @@ export function DespesasWorkspace({ month, year }: DespesasWorkspaceProps) {
   const [groupSide, setGroupSide] = useState<ExpenseGroupSide>("debit");
   const [view, setView] = useState("detalhada");
   const [isReading, setIsReading] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [pendingData, setPendingData] = useState<PersistedExpenseData | null>(null);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   const competence = `${month}/${year}`;
+  const storageScope = `${company}:${year}:${month}:despesas`;
+  const dataKey = `${storageScope}:parsed`;
   const exportDate = lastDayOfCompetence(month, year);
   const groupedEntries = useMemo(
     () => groupExpenseEntries(entries, groupSide, exportDate),
@@ -84,6 +104,33 @@ export function DespesasWorkspace({ month, year }: DespesasWorkspaceProps) {
     && missingDescriptions === 0
     && outsideCompetence === 0
     && descriptionConflicts === 0;
+
+  useEffect(() => {
+    onFileCountChange?.(files.length);
+  }, [files.length, onFileCountChange]);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      loadWorkspaceData<PersistedExpenseData>(dataKey),
+      loadWorkspaceFiles(storageScope),
+    ]).then(([savedData, savedFiles]) => {
+      if (!active) return;
+      if (savedData) {
+        setEntries(savedData.entries);
+        setIssues(savedData.issues);
+        setIgnoredRows(savedData.ignoredRows);
+      }
+      setFiles(savedFiles.map((file) => file.name));
+      setHasLoaded(true);
+    }).catch(() => setHasLoaded(true));
+    return () => { active = false; };
+  }, [dataKey, storageScope]);
+
+  useEffect(() => {
+    if (!hasLoaded) return;
+    void saveWorkspaceData<PersistedExpenseData>(dataKey, { entries, issues, ignoredRows });
+  }, [dataKey, entries, hasLoaded, ignoredRows, issues]);
 
   const updateEntry = (id: string, field: keyof ExpenseEntry, value: string) => {
     setEntries((current) => current.map((entry) => (entry.id === id ? { ...entry, [field]: value } : entry)));
@@ -116,22 +163,36 @@ export function DespesasWorkspace({ month, year }: DespesasWorkspaceProps) {
       }
     }
 
-    setEntries((current) => {
-      const existing = new Set(current.map((entry) => entry.id));
-      return [...current, ...importedEntries.filter((entry) => !existing.has(entry.id))];
-    });
-    setIssues((current) => [...current, ...importedIssues]);
-    setIgnoredRows((current) => current + importedIgnoredRows);
-    setFiles((current) => Array.from(new Set([...current, ...selectedFiles.map((file) => file.name)])));
+    setPendingFiles(selectedFiles);
+    setPendingData({ entries: importedEntries, issues: importedIssues, ignoredRows: importedIgnoredRows });
     setIsReading(false);
   };
 
-  const clearImport = () => {
+  const confirmImport = async () => {
+    if (!pendingData || !pendingFiles.length) return;
+    const existing = new Set(entries.map((entry) => entry.id));
+    setEntries((current) => [...current, ...pendingData.entries.filter((entry) => !existing.has(entry.id))]);
+    setIssues((current) => [...current, ...pendingData.issues]);
+    setIgnoredRows((current) => current + pendingData.ignoredRows);
+    setFiles((current) => Array.from(new Set([...current, ...pendingFiles.map((file) => file.name)])));
+    await saveWorkspaceFiles(storageScope, pendingFiles);
+    setPendingFiles([]);
+    setPendingData(null);
+  };
+
+  const cancelImport = () => {
+    setPendingFiles([]);
+    setPendingData(null);
+  };
+
+  const clearImport = async () => {
     setEntries([]);
     setIssues([]);
     setFiles([]);
     setIgnoredRows(0);
     setView("detalhada");
+    await clearWorkspaceFiles(storageScope);
+    await saveWorkspaceData<PersistedExpenseData>(dataKey, { entries: [], issues: [], ignoredRows: 0 });
   };
 
   return (
@@ -140,7 +201,7 @@ export function DespesasWorkspace({ month, year }: DespesasWorkspaceProps) {
         <div className="rounded-md border border-border bg-background p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h3 className="text-base font-semibold text-foreground">Importar despesas do Calima</h3>
+              <h3 className="text-base font-semibold text-foreground">Despesas de {competence}</h3>
               <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
                 Selecione o Excel exportado pelo Calima. A leitura é direta e não utiliza inteligência artificial.
               </p>
@@ -152,7 +213,7 @@ export function DespesasWorkspace({ month, year }: DespesasWorkspaceProps) {
               onClick={() => inputRef.current?.click()}
               className="border-border bg-transparent text-foreground shadow-none hover:bg-muted dark:border-white/15 dark:hover:bg-white/5"
             >
-              {isReading ? "Lendo arquivo..." : files.length ? "Adicionar Excel" : "Selecionar Excel"}
+              {isReading ? "Lendo arquivo..." : `Importar despesas de ${competence}`}
             </Button>
             <input
               ref={inputRef}
@@ -191,6 +252,27 @@ export function DespesasWorkspace({ month, year }: DespesasWorkspaceProps) {
         </div>
       </div>
 
+      {pendingData && (
+        <div className="rounded-md border border-border bg-background">
+          <div className="flex flex-col gap-3 border-b border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Prévia antes da importação</h3>
+              <p className="mt-1 text-xs text-muted-foreground">Confira as cinco primeiras linhas. Nada será salvo antes da confirmação.</p>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={cancelImport} className="border-border bg-transparent text-foreground shadow-none hover:bg-muted dark:border-white/15">Cancelar</Button>
+              <Button onClick={confirmImport} disabled={!pendingData.entries.length} className="bg-foreground text-background shadow-none hover:bg-foreground/90">Confirmar importação</Button>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[980px] text-sm">
+              <thead className="bg-muted/50 text-left text-xs text-muted-foreground"><tr><th className="px-3 py-2">Data</th><th className="px-3 py-2">Histórico</th><th className="px-3 py-2">Débito</th><th className="px-3 py-2">Crédito</th><th className="px-3 py-2 text-right">Valor</th></tr></thead>
+              <tbody>{pendingData.entries.slice(0, 5).map((entry) => <tr key={entry.id} className="border-t border-border"><td className="px-3 py-2">{entry.date}</td><td className="px-3 py-2">{entry.history || "—"}</td><td className="px-3 py-2">{entry.debitCode}</td><td className="px-3 py-2">{entry.creditCode}</td><td className="px-3 py-2 text-right tabular-nums">{formatCurrency(entry.amountInCents)}</td></tr>)}</tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {issues.length > 0 && (
         <div className="rounded-md border border-border bg-muted/25 p-4">
           <h3 className="text-sm font-semibold text-foreground">Linhas que precisam de atenção</h3>
@@ -205,6 +287,14 @@ export function DespesasWorkspace({ month, year }: DespesasWorkspaceProps) {
         </div>
       )}
 
+      <Tabs defaultValue="transcricao">
+        <TabsList className="h-auto w-full justify-start gap-1 rounded-none border-b border-border bg-transparent p-0 shadow-none dark:bg-transparent">
+          {[["transcricao", "Transcrição", entries.length], ["lancamentos", "Lançamentos", groupedEntries.length], ["conferencia", "Conferência", issues.length], ["balancete", "Balancete", 0]].map(([value, label, count]) => (
+            <TabsTrigger key={String(value)} value={String(value)} className="h-11 rounded-none border-b-2 border-transparent bg-transparent px-4 text-muted-foreground shadow-none data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground dark:data-[state=active]:bg-transparent dark:data-[state=active]:text-white">{label}<span className="ml-2 bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{count}</span></TabsTrigger>
+          ))}
+        </TabsList>
+
+      <TabsContent value="transcricao" className="mt-5">
       <div className="rounded-md border border-border bg-background">
         <div className="flex flex-col gap-4 border-b border-border px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
           <Tabs value={view} onValueChange={setView}>
@@ -320,6 +410,23 @@ export function DespesasWorkspace({ month, year }: DespesasWorkspaceProps) {
           </Button>
         </div>
       </div>
+      </TabsContent>
+
+      <TabsContent value="lancamentos" className="mt-5">
+        <div className="rounded-md border border-border bg-background">
+          <div className="flex items-center justify-between gap-4 border-b border-border px-5 py-4"><div><h3 className="text-sm font-semibold text-foreground">Lançamentos agrupados para exportação</h3><p className="mt-1 text-xs text-muted-foreground">Resultado consolidado sem alterar os registros originais.</p></div><Button disabled={!canExport} onClick={() => exportGroupedExpenses(groupedEntries, competence)} className="bg-foreground text-background hover:bg-foreground/90">Exportar para o Calima</Button></div>
+          <div className="overflow-x-auto"><table className="w-full min-w-[1080px] text-sm"><thead className="bg-muted/50 text-left text-xs text-muted-foreground"><tr><th className="px-3 py-2">Data</th><th className="px-3 py-2">Histórico variável</th><th className="px-3 py-2">Débito</th><th className="px-3 py-2">Crédito</th><th className="px-3 py-2 text-right">Valor</th></tr></thead><tbody>{groupedEntries.map((entry) => <tr key={entry.sourceEntryIds.join("-")} className="border-t border-border"><td className="px-3 py-2">{entry.date}</td><td className="px-3 py-2">{entry.history}</td><td className="px-3 py-2">{entry.debitCode} · {entry.debitDescription}</td><td className="px-3 py-2">{entry.creditCode} · {entry.creditDescription}</td><td className="px-3 py-2 text-right tabular-nums">{formatCurrency(entry.amountInCents)}</td></tr>)}</tbody></table></div>
+        </div>
+      </TabsContent>
+
+      <TabsContent value="conferencia" className="mt-5">
+        <div className="grid gap-3 rounded-md border border-border bg-background p-5 sm:grid-cols-2 xl:grid-cols-4"><div><p className="text-xs text-muted-foreground">Total detalhado</p><p className="mt-1 font-semibold tabular-nums">{formatCurrency(detailedTotal)}</p></div><div><p className="text-xs text-muted-foreground">Total agrupado</p><p className="mt-1 font-semibold tabular-nums">{formatCurrency(groupedTotal)}</p></div><div><p className="text-xs text-muted-foreground">Diferença</p><p className="mt-1 font-semibold tabular-nums">{formatCurrency(groupedTotal - detailedTotal)}</p></div><div><p className="text-xs text-muted-foreground">Pendências bloqueantes</p><p className="mt-1 font-semibold tabular-nums">{issues.length + missingDescriptions + outsideCompetence + descriptionConflicts}</p></div></div>
+      </TabsContent>
+
+      <TabsContent value="balancete" className="mt-5">
+        <div className="grid min-h-52 place-items-center rounded-md border border-border bg-background px-6 text-center"><div><h3 className="text-sm font-semibold text-foreground">Balancete da competência</h3><p className="mt-2 text-sm text-muted-foreground">Esta etapa será liberada após a planilha de lançamentos ser importada no Calima.</p></div></div>
+      </TabsContent>
+      </Tabs>
 
       <p className="text-xs leading-5 text-muted-foreground">
         Regra de segurança: o sistema agrupa pela conta escolhida, mas mantém contrapartidas diferentes em linhas separadas. Assim, nenhum lançamento é combinado de forma contabilmente inválida.
