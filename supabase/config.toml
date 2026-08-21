@@ -52,3 +52,6 @@ verify_jwt = false
 
 [functions.get-signed-url]
 verify_jwt = true
+
+[functions.process-accounting-document]
+verify_jwt = true
