@@ -1,4 +1,5 @@
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,70 +8,145 @@ import { ExpenseEntry, ExpenseGroupSide, ExpenseImportIssue, exportGroupedExpens
 import { clearWorkspaceFiles, loadWorkspaceData, loadWorkspaceFiles, saveWorkspaceData, saveWorkspaceFiles } from "@/lib/lancamentos/workspaceStorage";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AccountingWorkflowSteps, AccountCodeHover } from "./AccountingWorkflowUI";
 
 export type WorkspaceStatus = "waiting" | "review" | "done";
 interface Props { company: string; month: string; year: string; onFileCountChange?: (count: number) => void; onStatusChange?: (status: WorkspaceStatus) => void; onCompetenceChange?: (month: string, year: string) => void; }
 interface SavedData { entries: ExpenseEntry[]; issues: ExpenseImportIssue[]; ignoredRows: number; }
-const inputClass = "h-8 rounded-none border-0 bg-transparent px-2 shadow-none focus-visible:ring-1 focus-visible:ring-foreground/30";
+const inputClass = "h-8 rounded-none border-0 bg-transparent px-2 text-xs shadow-none focus-visible:ring-1 focus-visible:ring-foreground/30";
+const displayClass = "flex h-8 items-center px-2 text-xs";
 const currency = (cents: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
 const closingDate = (month: string, year: string) => `${new Date(+year, +month, 0).getDate().toString().padStart(2, "0")}/${month}/${year}`;
 
 function LedgerTable({ rows, editable, update }: { rows: ExpenseEntry[]; editable?: boolean; update?: (id: string, field: keyof ExpenseEntry, value: string) => void }) {
-  const columns: Array<[string, keyof ExpenseEntry, string]> = [
-    ["Data", "date", "w-28"], ["Histórico", "history", "min-w-[220px]"], ["Débito", "debitCode", "w-20"],
-    ["Descrição débito", "debitDescription", "min-w-[180px]"], ["C.C. débito", "debitCostCenter", "w-24"],
-    ["Crédito", "creditCode", "w-20"], ["Descrição crédito", "creditDescription", "min-w-[180px]"], ["C.C. crédito", "creditCostCenter", "w-24"],
-  ];
-  return <div className="overflow-x-auto"><table className="w-full min-w-[1450px] border-collapse text-sm"><thead className="bg-muted/50 text-left text-xs text-muted-foreground"><tr>{columns.map(([label,,width]) => <th key={label} className={cn("border-b border-r border-border px-3 py-2 font-medium", width)}>{label}</th>)}<th className="w-36 border-b border-border px-3 py-2 text-right font-medium">Valor</th></tr></thead><tbody>
-    {rows.map(row => <tr key={row.id} className="border-b border-border last:border-b-0">{columns.map(([,field]) => <td key={field} className="border-r border-border">{editable ? <Input className={inputClass} value={String(row[field] ?? "")} onChange={e => update?.(row.id, field, e.target.value)} /> : <span className="block px-3 py-2">{String(row[field] || "—")}</span>}</td>)}<td className="px-3 py-2 text-right tabular-nums">{currency(row.amountInCents)}</td></tr>)}
-    {!rows.length && <tr><td colSpan={9} className="h-40 text-center text-muted-foreground">Nenhum lançamento nesta competência.</td></tr>}
-  </tbody></table></div>;
+  return <div className="overflow-x-auto"><table className="w-full min-w-[900px] table-fixed border-collapse text-xs">
+    <thead className="bg-muted/50 text-left text-[11px] text-muted-foreground"><tr>
+      <th className="w-[10%] border-b border-r border-border px-2 py-2 font-medium">Data</th>
+      <th className="w-[34%] border-b border-r border-border px-2 py-2 font-medium">Histórico</th>
+      <th className="w-[10%] border-b border-r border-border px-2 py-2 font-medium">Débito</th>
+      <th className="w-[9%] border-b border-r border-border px-2 py-2 font-medium">C.C. D.</th>
+      <th className="w-[10%] border-b border-r border-border px-2 py-2 font-medium">Crédito</th>
+      <th className="w-[9%] border-b border-r border-border px-2 py-2 font-medium">C.C. C.</th>
+      <th className="w-[18%] border-b border-border px-2 py-2 text-right font-medium">Valor</th>
+    </tr></thead>
+    <tbody>{rows.map(row => <tr key={row.id} className="h-8 border-b border-border last:border-b-0">
+      <td className="border-r border-border">{editable ? <Input className={inputClass} value={row.date} onChange={e => update?.(row.id, "date", e.target.value)} /> : <span className={cn(displayClass, "tabular-nums")}>{row.date || "—"}</span>}</td>
+      <td className="border-r border-border">{editable ? <Input className={inputClass} value={row.history} onChange={e => update?.(row.id, "history", e.target.value)} /> : <span className={cn(displayClass, "truncate")} title={row.history}>{row.history || "—"}</span>}</td>
+      <td className="border-r border-border"><ExpenseAccountCell side="debit" code={row.debitCode} description={row.debitDescription} editable={editable} onChange={value => update?.(row.id, "debitCode", value)} /></td>
+      <td className="border-r border-border">{editable ? <Input className={inputClass} value={row.debitCostCenter || ""} onChange={e => update?.(row.id, "debitCostCenter", e.target.value)} /> : <span className={displayClass}>{row.debitCostCenter || "—"}</span>}</td>
+      <td className="border-r border-border"><ExpenseAccountCell side="credit" code={row.creditCode} description={row.creditDescription} editable={editable} onChange={value => update?.(row.id, "creditCode", value)} /></td>
+      <td className="border-r border-border">{editable ? <Input className={inputClass} value={row.creditCostCenter || ""} onChange={e => update?.(row.id, "creditCostCenter", e.target.value)} /> : <span className={displayClass}>{row.creditCostCenter || "—"}</span>}</td>
+      <td className="text-right tabular-nums"><span className={cn(displayClass, "justify-end")}>{currency(row.amountInCents)}</span></td>
+    </tr>)}{!rows.length && <tr><td colSpan={7} className="h-40 text-center text-muted-foreground">Nenhum lançamento nesta competência.</td></tr>}</tbody>
+  </table></div>;
+}
+
+function ExpenseAccountCell({ code, description, side, editable, onChange }: { code: string; description: string; side: "debit" | "credit"; editable?: boolean; onChange: (value: string) => void }) {
+  if (editable) return <AccountCodeHover code={code} description={description} side={side}><div className="flex h-8 cursor-help items-center gap-1 pr-1"><Input className={inputClass} value={code || ""} onChange={e => onChange(e.target.value)} /><Info className="h-3.5 w-3.5 shrink-0 text-muted-foreground" /></div></AccountCodeHover>;
+  return <div className={displayClass}><AccountCodeHover code={code} description={description} side={side} /></div>;
 }
 
 export function DespesasWorkspace({ company, month, year, onFileCountChange, onStatusChange, onCompetenceChange }: Props) {
   const fileInput = useRef<HTMLInputElement>(null);
-  const [entries, setEntries] = useState<ExpenseEntry[]>([]); const [issues, setIssues] = useState<ExpenseImportIssue[]>([]); const [files, setFiles] = useState<string[]>([]);
-  const [ignoredRows, setIgnoredRows] = useState(0); const [groupSide, setGroupSide] = useState<ExpenseGroupSide>("debit"); const [view, setView] = useState("detalhada");
-  const [reading, setReading] = useState(false); const [pendingFiles, setPendingFiles] = useState<File[]>([]); const [pending, setPending] = useState<SavedData | null>(null);
-  const [accounts, setAccounts] = useState<ChartAccount[]>([]); const [loaded, setLoaded] = useState(false);
+  const [entries, setEntries] = useState<ExpenseEntry[]>([]);
+  const [issues, setIssues] = useState<ExpenseImportIssue[]>([]);
+  const [files, setFiles] = useState<string[]>([]);
+  const [ignoredRows, setIgnoredRows] = useState(0);
+  const [groupSide, setGroupSide] = useState<ExpenseGroupSide>("debit");
+  const [view, setView] = useState("detalhada");
+  const [reading, setReading] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [pending, setPending] = useState<SavedData | null>(null);
+  const [accounts, setAccounts] = useState<ChartAccount[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [competenceWarning, setCompetenceWarning] = useState<{ month: string; year: string } | null>(null);
-  const scope = `${company}:${year}:${month}:despesas`; const dataKey = `${scope}:parsed`; const competence = `${month}/${year}`;
+  const scope = `${company}:${year}:${month}:despesas`;
+  const dataKey = `${scope}:parsed`;
+  const competence = `${month}/${year}`;
   const grouped = useMemo(() => groupExpenseEntries(entries, groupSide, closingDate(month, year)), [entries, groupSide, month, year]);
-  const detailedTotal = entries.reduce((sum, row) => sum + row.amountInCents, 0); const groupedTotal = grouped.reduce((sum, row) => sum + row.amountInCents, 0);
+  const detailedTotal = entries.reduce((sum, row) => sum + row.amountInCents, 0);
+  const groupedTotal = grouped.reduce((sum, row) => sum + row.amountInCents, 0);
   const outside = entries.filter(row => row.date && !row.date.endsWith(`/${month}/${year}`)).length;
   const chartCodes = useMemo(() => new Set(accounts.map(account => account.reducedCode)), [accounts]);
   const unknownAccounts = entries.filter(row => !chartCodes.has(row.debitCode) || !chartCodes.has(row.creditCode)).length;
-  const missing = entries.filter(row => !row.debitDescription || !row.creditDescription).length; const mixed = grouped.filter(row => row.hasMixedCounterpart).length;
+  const missing = entries.filter(row => !row.debitDescription || !row.creditDescription).length;
+  const mixed = grouped.filter(row => row.hasMixedCounterpart).length;
   const canExport = grouped.length > 0 && !outside && !unknownAccounts && !missing && !mixed && detailedTotal === groupedTotal;
 
-  useEffect(() => { let active = true; Promise.all([loadWorkspaceData<SavedData>(dataKey), loadWorkspaceFiles(scope), loadWorkspaceData<ChartAccount[]>(`${company}:chart-of-accounts`)]).then(([saved, storedFiles, chart]) => { if (!active) return; if (saved) { setEntries(saved.entries.map(row => ({ ...row, debitCostCenter: row.debitCostCenter ?? "", creditCostCenter: row.creditCostCenter ?? "" }))); setIssues(saved.issues); setIgnoredRows(saved.ignoredRows); } setFiles(storedFiles.map(file => file.name)); setAccounts(chart ?? []); setLoaded(true); }); return () => { active = false; }; }, [company, dataKey, scope]);
+  useEffect(() => {
+    let active = true;
+    Promise.all([loadWorkspaceData<SavedData>(dataKey), loadWorkspaceFiles(scope), loadWorkspaceData<ChartAccount[]>(`${company}:chart-of-accounts`)]).then(([saved, storedFiles, chart]) => {
+      if (!active) return;
+      if (saved) { setEntries(saved.entries.map(row => ({ ...row, debitCostCenter: row.debitCostCenter ?? "", creditCostCenter: row.creditCostCenter ?? "" }))); setIssues(saved.issues); setIgnoredRows(saved.ignoredRows); }
+      setFiles(storedFiles.map(file => file.name));
+      setAccounts(chart ?? []);
+      setLoaded(true);
+    });
+    return () => { active = false; };
+  }, [company, dataKey, scope]);
   useEffect(() => { if (loaded) void saveWorkspaceData(dataKey, { entries, issues, ignoredRows }); }, [dataKey, entries, ignoredRows, issues, loaded]);
   useEffect(() => { if (!accounts.length) return; const chart = new Map(accounts.map(account => [account.reducedCode, account.description])); setEntries(current => current.map(row => ({ ...row, debitDescription: chart.get(row.debitCode) || "", creditDescription: chart.get(row.creditCode) || "" }))); }, [accounts]);
   useEffect(() => onFileCountChange?.(files.length), [files.length, onFileCountChange]);
 
-  const update = (id: string, field: keyof ExpenseEntry, value: string) => setEntries(current => current.map(row => row.id === id ? { ...row, [field]: value } : row));
-  const readFiles = async (event: ChangeEvent<HTMLInputElement>) => { const selected = Array.from(event.target.files ?? []); event.target.value = ""; if (!selected.length) return; setReading(true); const result: SavedData = { entries: [], issues: [], ignoredRows: 0 }; for (const file of selected) { try { const parsed = await readExpenseWorkbook(file); result.entries.push(...parsed.entries); result.issues.push(...parsed.issues); result.ignoredRows += parsed.ignoredRows; } catch { result.issues.push({ id: `${file.name}-erro`, fileName: file.name, sheetName: "", row: 0, message: "Não foi possível ler este arquivo." }); } } setPendingFiles(selected); setPending(result); setReading(false); };
+  const update = (id: string, field: keyof ExpenseEntry, value: string) => setEntries(current => current.map(row => {
+    if (row.id !== id) return row;
+    if (field === "debitCode") return { ...row, debitCode: value, debitDescription: accounts.find(account => account.reducedCode === value.trim())?.description ?? "" };
+    if (field === "creditCode") return { ...row, creditCode: value, creditDescription: accounts.find(account => account.reducedCode === value.trim())?.description ?? "" };
+    return { ...row, [field]: value };
+  }));
+
+  const readFiles = async (event: ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(event.target.files ?? []); event.target.value = ""; if (!selected.length) return;
+    setReading(true);
+    const result: SavedData = { entries: [], issues: [], ignoredRows: 0 };
+    for (const file of selected) {
+      try { const parsed = await readExpenseWorkbook(file); result.entries.push(...parsed.entries); result.issues.push(...parsed.issues); result.ignoredRows += parsed.ignoredRows; }
+      catch { result.issues.push({ id: `${file.name}-erro`, fileName: file.name, sheetName: "", row: 0, message: "Não foi possível ler este arquivo." }); }
+    }
+    setPendingFiles(selected); setPending(result); setReading(false);
+  };
   const detectedCompetence = () => { const match = pending?.entries.map(row => row.date.match(/^\d{2}\/(\d{2})\/(\d{4})$/)).find(Boolean); return match ? { month: match[1], year: match[2] } : null; };
   const requestConfirm = () => { const detected = detectedCompetence(); if (detected && (detected.month !== month || detected.year !== year)) { setCompetenceWarning(detected); return; } void confirm(); };
-  const confirm = async (target = { month, year }) => { if (!pending) return; const chart = new Map(accounts.map(account => [account.reducedCode, account.description])); const resolved = pending.entries.map(row => ({ ...row, debitDescription: chart.get(row.debitCode) || "", creditDescription: chart.get(row.creditCode) || "" })); const targetScope = `${company}:${target.year}:${target.month}:despesas`; const targetKey = `${targetScope}:parsed`;
-    if (target.month === month && target.year === year) { setEntries(current => [...current, ...resolved.filter(row => !current.some(saved => saved.id === row.id))]); setIssues(current => [...current, ...pending.issues]); setIgnoredRows(current => current + pending.ignoredRows); setFiles(current => Array.from(new Set([...current, ...pendingFiles.map(file => file.name)]))); }
-    else { const saved = await loadWorkspaceData<SavedData>(targetKey); const current = saved ?? { entries: [], issues: [], ignoredRows: 0 }; await saveWorkspaceData(targetKey, { entries: [...current.entries, ...resolved.filter(row => !current.entries.some(savedRow => savedRow.id === row.id))], issues: [...current.issues, ...pending.issues], ignoredRows: current.ignoredRows + pending.ignoredRows }); }
-    await saveWorkspaceFiles(targetScope, pendingFiles); setPending(null); setPendingFiles([]); setCompetenceWarning(null); if (target.month !== month || target.year !== year) onCompetenceChange?.(target.month, target.year); else onStatusChange?.("review"); };
+  const confirm = async (target = { month, year }) => {
+    if (!pending) return;
+    const chart = new Map(accounts.map(account => [account.reducedCode, account.description]));
+    const resolved = pending.entries.map(row => ({ ...row, debitDescription: chart.get(row.debitCode) || "", creditDescription: chart.get(row.creditCode) || "" }));
+    const targetScope = `${company}:${target.year}:${target.month}:despesas`;
+    const targetKey = `${targetScope}:parsed`;
+    if (target.month === month && target.year === year) {
+      setEntries(current => [...current, ...resolved.filter(row => !current.some(saved => saved.id === row.id))]);
+      setIssues(current => [...current, ...pending.issues]);
+      setIgnoredRows(current => current + pending.ignoredRows);
+      setFiles(current => Array.from(new Set([...current, ...pendingFiles.map(file => file.name)])));
+    } else {
+      const saved = await loadWorkspaceData<SavedData>(targetKey);
+      const current = saved ?? { entries: [], issues: [], ignoredRows: 0 };
+      await saveWorkspaceData(targetKey, { entries: [...current.entries, ...resolved.filter(row => !current.entries.some(savedRow => savedRow.id === row.id))], issues: [...current.issues, ...pending.issues], ignoredRows: current.ignoredRows + pending.ignoredRows });
+    }
+    await saveWorkspaceFiles(targetScope, pendingFiles);
+    setPending(null); setPendingFiles([]); setCompetenceWarning(null);
+    if (target.month !== month || target.year !== year) onCompetenceChange?.(target.month, target.year); else onStatusChange?.("review");
+  };
   const clear = async () => { setEntries([]); setIssues([]); setFiles([]); setIgnoredRows(0); await clearWorkspaceFiles(scope); await saveWorkspaceData(dataKey, { entries: [], issues: [], ignoredRows: 0 }); onStatusChange?.("waiting"); };
   const displayGrouped = grouped.map(row => ({ ...row, id: row.sourceEntryIds.join("-") }));
 
   return <section className="mt-8 space-y-8">
     <div className="rounded-md border border-border bg-background p-6"><div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between"><h3 className="font-semibold">Despesas de {competence}</h3><Button variant="outline" disabled={reading} onClick={() => fileInput.current?.click()}>{reading ? "Lendo arquivo..." : `Importar despesas de ${competence}`}</Button><input ref={fileInput} type="file" multiple accept=".xlsx,.xls,.csv" className="sr-only" onChange={readFiles}/></div><div className="mt-5 border-t border-border pt-5 text-sm text-muted-foreground">{files.length ? <div className="flex flex-wrap gap-4">{files.map(file => <span key={file} className="text-foreground">{file}</span>)}<button className="underline" onClick={clear}>Limpar importação</button></div> : "Nenhum arquivo selecionado nesta competência."}</div></div>
     {pending && <div className="rounded-md border border-border bg-background"><div className="flex items-center justify-between border-b border-border p-4"><div><h3 className="font-semibold">Prévia da importação</h3><p className="text-xs text-muted-foreground">Cinco primeiras linhas</p></div><div className="flex gap-2"><Button variant="outline" onClick={() => setPending(null)}>Cancelar</Button><Button onClick={requestConfirm} disabled={!pending.entries.length}>Confirmar importação</Button></div></div><LedgerTable rows={pending.entries.slice(0,5)}/></div>}
-    <Tabs defaultValue="transcricao"><TabsList className="grid h-auto w-full grid-cols-3 gap-3 bg-transparent p-0"><WorkflowTab value="transcricao" label="Transcrição" count={entries.length}/><WorkflowTab value="lancamentos" label="Lançamentos" count={grouped.length}/><WorkflowTab value="conferencia" label="Conferência" count={issues.length+outside+unknownAccounts}/></TabsList>
-      <TabsContent value="transcricao" className="mt-7"><div className="mb-5"><h3 className="text-base font-semibold text-foreground">Despesas · Transcrição</h3><p className="mt-1 text-sm text-muted-foreground">Documento original e dados extraídos no mesmo espaço.</p></div><div className="rounded-md border border-border bg-background"><div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-5"><Tabs value={view} onValueChange={setView}><TabsList><TabsTrigger value="detalhada">Visão detalhada</TabsTrigger><TabsTrigger value="agrupada">Visão agrupada</TabsTrigger><TabsTrigger value="leitura">Conferência da leitura</TabsTrigger></TabsList></Tabs>{view === "agrupada" && <div className="flex items-center gap-2 text-xs"><span className="text-muted-foreground">Agrupar por</span>{(["debit","credit"] as ExpenseGroupSide[]).map(side => <button key={side} onClick={() => setGroupSide(side)} className={cn("rounded border px-3 py-1.5", groupSide === side && "bg-foreground text-background")}>{side === "debit" ? "Débito" : "Crédito"}</button>)}</div>}</div>
-        {view === "detalhada" && <LedgerTable rows={entries} editable update={update}/>} {view === "agrupada" && <LedgerTable rows={displayGrouped}/>} {view === "leitura" && <div className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-3"><Stat label="Lançamentos válidos" value={entries.length}/><Stat label="Linhas com problema" value={issues.length}/><Stat label="Linhas informativas" value={ignoredRows}/><Stat label="Fora da competência" value={outside}/><Stat label="Contas ausentes no plano" value={unknownAccounts}/><Stat label="Total identificado" value={currency(detailedTotal)}/>{issues.map(issue => <p key={issue.id} className="col-span-full text-sm text-muted-foreground">{issue.fileName} · linha {issue.row}: {issue.message}</p>)}</div>}
-        <div className="flex flex-wrap justify-between gap-3 border-t border-border p-4 text-xs text-muted-foreground"><span>{entries.length} originais → {grouped.length} agrupados · Diferença {currency(groupedTotal-detailedTotal)}</span>{mixed > 0 && <span className="text-foreground">{mixed} grupo(s) têm contrapartidas diferentes.</span>}</div></div></TabsContent>
-      <TabsContent value="lancamentos" className="mt-5"><div className="rounded-md border border-border bg-background"><div className="flex items-center justify-between border-b border-border p-4"><h3 className="font-semibold">Planilha agrupada para o Calima</h3><Button disabled={!canExport} onClick={() => exportGroupedExpenses(grouped, competence)}>Exportar para o Calima</Button></div><LedgerTable rows={displayGrouped}/></div></TabsContent>
-      <TabsContent value="conferencia" className="mt-5"><div className="flex flex-col gap-5 rounded-md border border-border bg-background p-5 sm:flex-row sm:items-center sm:justify-between"><div className="grid flex-1 gap-4 sm:grid-cols-4"><Stat label="Detalhado" value={currency(detailedTotal)}/><Stat label="Agrupado" value={currency(groupedTotal)}/><Stat label="Diferença" value={currency(groupedTotal-detailedTotal)}/><Stat label="Pendências" value={issues.length+outside+missing+unknownAccounts}/></div><Button disabled={!entries.length || detailedTotal !== groupedTotal} onClick={() => onStatusChange?.("done")}>Marcar despesas como OK</Button></div></TabsContent>
+
+    <Tabs defaultValue="transcricao">
+      <AccountingWorkflowSteps steps={[
+        { value: "transcricao", label: "Transcrição", count: entries.length },
+        { value: "lancamentos", label: "Lançamentos", count: grouped.length },
+        { value: "conferencia", label: "Conferência", count: issues.length + outside + unknownAccounts },
+      ]} />
+      <TabsContent value="transcricao" className="mt-6"><div className="mb-5"><h3 className="text-base font-semibold text-foreground">Despesas · Transcrição</h3><p className="mt-1 text-sm text-muted-foreground">Documento original e dados extraídos no mesmo espaço.</p></div><div className="rounded-md border border-border bg-background"><div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-5"><Tabs value={view} onValueChange={setView}><TabsList><TabsTrigger value="detalhada">Visão detalhada</TabsTrigger><TabsTrigger value="agrupada">Visão agrupada</TabsTrigger><TabsTrigger value="leitura">Conferência da leitura</TabsTrigger></TabsList></Tabs>{view === "agrupada" && <div className="flex items-center gap-2 text-xs"><span className="text-muted-foreground">Agrupar por</span>{(["debit","credit"] as ExpenseGroupSide[]).map(side => <button key={side} onClick={() => setGroupSide(side)} className={cn("rounded border px-3 py-1.5", groupSide === side && "bg-foreground text-background")}>{side === "debit" ? "Débito" : "Crédito"}</button>)}</div>}</div>{view === "detalhada" && <LedgerTable rows={entries} editable update={update}/>} {view === "agrupada" && <LedgerTable rows={displayGrouped}/>} {view === "leitura" && <div className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-3"><Stat label="Lançamentos válidos" value={entries.length}/><Stat label="Linhas com problema" value={issues.length}/><Stat label="Linhas informativas" value={ignoredRows}/><Stat label="Fora da competência" value={outside}/><Stat label="Contas ausentes no plano" value={unknownAccounts}/><Stat label="Total identificado" value={currency(detailedTotal)}/>{issues.map(issue => <p key={issue.id} className="col-span-full text-sm text-muted-foreground">{issue.fileName} · linha {issue.row}: {issue.message}</p>)}</div>}<div className="flex flex-wrap justify-between gap-3 border-t border-border p-4 text-xs text-muted-foreground"><span>{entries.length} originais → {grouped.length} agrupados · Diferença {currency(groupedTotal-detailedTotal)}</span>{mixed > 0 && <span className="text-foreground">{mixed} grupo(s) têm contrapartidas diferentes.</span>}</div></div></TabsContent>
+      <TabsContent value="lancamentos" className="mt-6"><div className="rounded-md border border-border bg-background"><div className="flex items-center justify-between border-b border-border p-4"><h3 className="font-semibold">Planilha agrupada para o Calima</h3><Button disabled={!canExport} onClick={() => exportGroupedExpenses(grouped, competence)}>Exportar para o Calima</Button></div><LedgerTable rows={displayGrouped}/></div></TabsContent>
+      <TabsContent value="conferencia" className="mt-6"><div className="flex flex-col gap-5 rounded-md border border-border bg-background p-5 sm:flex-row sm:items-center sm:justify-between"><div className="grid flex-1 gap-4 sm:grid-cols-4"><Stat label="Detalhado" value={currency(detailedTotal)}/><Stat label="Agrupado" value={currency(groupedTotal)}/><Stat label="Diferença" value={currency(groupedTotal-detailedTotal)}/><Stat label="Pendências" value={issues.length+outside+missing+unknownAccounts}/></div><Button disabled={!entries.length || detailedTotal !== groupedTotal} onClick={() => onStatusChange?.("done")}>Marcar despesas como OK</Button></div></TabsContent>
     </Tabs>
+
     <Dialog open={Boolean(competenceWarning)} onOpenChange={open => !open && setCompetenceWarning(null)}><DialogContent><DialogHeader><DialogTitle>Competência diferente do documento</DialogTitle><DialogDescription>Você está trabalhando em {competence}, mas o arquivo pertence a {competenceWarning?.month}/{competenceWarning?.year}.</DialogDescription></DialogHeader><p className="text-sm text-muted-foreground">Ao continuar, os dados serão salvos na competência correta do documento e você será levado automaticamente até ela.</p><DialogFooter><Button variant="outline" onClick={() => setCompetenceWarning(null)}>Voltar</Button><Button onClick={() => competenceWarning && void confirm(competenceWarning)}>Importar assim mesmo</Button></DialogFooter></DialogContent></Dialog>
   </section>;
 }
-function WorkflowTab({ value, label, count }: { value: string; label: string; count: number }) { return <TabsTrigger value={value} className="min-h-16 border border-border data-[state=active]:bg-foreground data-[state=active]:text-background">{label}<span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[10px] tabular-nums text-muted-foreground">{count}</span></TabsTrigger>; }
+
 function Stat({ label, value }: { label: string; value: string | number }) { return <div><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 font-semibold tabular-nums">{value}</p></div>; }
