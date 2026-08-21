@@ -69,7 +69,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
     <aside 
       data-sidebar="true" 
       className={`
-        ${isMobile ? 'fixed' : 'relative'} 
+        ${isMobile ? 'fixed' : 'sticky top-0 h-screen self-start shrink-0'}
         inset-y-0 left-0 z-50 
         w-72 flex flex-col 
         transition-transform duration-300 ease-in-out 
@@ -139,8 +139,11 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
             )}
 
             <div className="space-y-1">
-              {section.items.map(item => (
-                <div key={item.label}>
+              {section.items.map(item => {
+                const isLaunches = item.to === "/admin/lancamentos";
+                const keepOpen = currentPath.startsWith("/admin/lancamentos");
+                return (
+                <div key={item.label} className={isLaunches ? "group/lancamentos" : undefined}>
                   {(open || isMobile) ? (
                     <SidebarItem
                       icon={item.icon}
@@ -170,8 +173,9 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
                       </Link>
                     </div>
                   )}
+                  {isLaunches && (open || isMobile) && <div className={`ml-7 overflow-hidden border-l border-border pl-3 transition-all duration-200 ${keepOpen ? "mt-1 max-h-32 opacity-100" : "max-h-0 opacity-0 group-hover/lancamentos:mt-1 group-hover/lancamentos:max-h-32 group-hover/lancamentos:opacity-100"}`}>{[["Lançamentos mensais","/admin/lancamentos"],["Balancete","/admin/lancamentos/balancete"],["Plano de contas","/admin/lancamentos/plano-contas"]].map(([label,to]) => <Link key={to} to={to} onClick={isMobile ? onClose : undefined} className={`block rounded-sm px-3 py-2 text-xs transition-colors ${currentPath === to ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"}`}>{label}</Link>)}</div>}
                 </div>
-              ))}
+              )})}
             </div>
           </section>
         ))}

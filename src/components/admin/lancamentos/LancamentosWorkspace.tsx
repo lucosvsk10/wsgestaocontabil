@@ -1,4 +1,4 @@
-import { ChangeEvent, useCallback, useMemo, useState } from "react";
+import { ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,16 +11,13 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { DespesasWorkspace } from "./DespesasWorkspace";
-import { ChartOfAccountsDialog } from "./ChartOfAccountsDialog";
+import { DespesasWorkspace, WorkspaceStatus } from "./DespesasWorkspace";
+import { loadWorkspaceData, saveWorkspaceData } from "@/lib/lancamentos/workspaceStorage";
 
 type ModuleKey = "folha" | "compras" | "faturamento" | "despesas";
-type MonthStatus = "closed" | "review" | "empty";
-
 interface MonthItem {
   key: string;
   label: string;
-  status: MonthStatus;
 }
 
 interface ModuleItem {
@@ -44,23 +41,25 @@ interface LaunchRow {
   debit: string;
   credit: string;
   debitDescription: string;
+  debitCostCenter: string;
   creditDescription: string;
+  creditCostCenter: string;
   value: string;
 }
 
 const months: MonthItem[] = [
-  { key: "01", label: "Janeiro", status: "empty" },
-  { key: "02", label: "Fevereiro", status: "empty" },
-  { key: "03", label: "Março", status: "empty" },
-  { key: "04", label: "Abril", status: "empty" },
-  { key: "05", label: "Maio", status: "empty" },
-  { key: "06", label: "Junho", status: "empty" },
-  { key: "07", label: "Julho", status: "empty" },
-  { key: "08", label: "Agosto", status: "empty" },
-  { key: "09", label: "Setembro", status: "empty" },
-  { key: "10", label: "Outubro", status: "empty" },
-  { key: "11", label: "Novembro", status: "empty" },
-  { key: "12", label: "Dezembro", status: "empty" },
+  { key: "01", label: "Janeiro" },
+  { key: "02", label: "Fevereiro" },
+  { key: "03", label: "Março" },
+  { key: "04", label: "Abril" },
+  { key: "05", label: "Maio" },
+  { key: "06", label: "Junho" },
+  { key: "07", label: "Julho" },
+  { key: "08", label: "Agosto" },
+  { key: "09", label: "Setembro" },
+  { key: "10", label: "Outubro" },
+  { key: "11", label: "Novembro" },
+  { key: "12", label: "Dezembro" },
 ];
 
 const modules: ModuleItem[] = [
@@ -70,11 +69,7 @@ const modules: ModuleItem[] = [
   { key: "faturamento", label: "Faturamento", acceptedFiles: ".pdf,.xlsx,.xls,.csv" },
 ];
 
-const statusDot: Record<MonthStatus, string> = {
-  closed: "bg-foreground/70",
-  review: "bg-foreground/45",
-  empty: "bg-muted-foreground/25",
-};
+const emptyStatuses = (): Record<ModuleKey, WorkspaceStatus> => ({ despesas: "waiting", folha: "waiting", compras: "waiting", faturamento: "waiting" });
 
 const inputCellClass =
   "h-8 rounded-none border-0 bg-transparent px-2 shadow-none focus:border-foreground/30 focus:ring-foreground/10 focus-visible:ring-1 focus-visible:ring-foreground/30 dark:bg-transparent dark:focus:border-white/30 dark:focus:ring-white/10";
@@ -92,7 +87,7 @@ export function LancamentosWorkspace() {
     faturamento: [],
     despesas: [],
   });
-  const [balanceteFiles, setBalanceteFiles] = useState<File[]>([]);
+  const [yearStatuses, setYearStatuses] = useState<Record<string, Record<ModuleKey, WorkspaceStatus>>>({});
   const [persistedModuleCounts, setPersistedModuleCounts] = useState<Record<ModuleKey, number>>({ despesas: 0, folha: 0, compras: 0, faturamento: 0 });
   const [transcriptionRows, setTranscriptionRows] = useState<TranscriptionRow[]>([]);
   const [launchRows, setLaunchRows] = useState<LaunchRow[]>([]);
@@ -119,16 +114,14 @@ export function LancamentosWorkspace() {
       [module]: [...current[module], ...selectedFiles],
     }));
     setSelectedModule(module);
+    setModuleStatus(module, "review");
     setActiveTab("transcricao");
     event.target.value = "";
   };
 
-  const handleBalanceteFiles = (event: ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = Array.from(event.target.files ?? []);
-    if (!selectedFiles.length) return;
-    setBalanceteFiles((current) => [...current, ...selectedFiles]);
-    event.target.value = "";
-  };
+  const statusKey = `${company}:${year}:module-statuses`;
+  useEffect(() => { void loadWorkspaceData<Record<string, Record<ModuleKey, WorkspaceStatus>>>(statusKey).then(saved => setYearStatuses(saved ?? {})); }, [statusKey]);
+  const setModuleStatus = useCallback((module: ModuleKey, status: WorkspaceStatus) => { setYearStatuses(current => { const next = { ...current, [selectedMonth]: { ...(current[selectedMonth] ?? emptyStatuses()), [module]: status } }; void saveWorkspaceData(statusKey, next); return next; }); }, [selectedMonth, statusKey]);
 
   const updateTranscription = (id: number, field: keyof TranscriptionRow, value: string) => {
     setTranscriptionRows((rows) =>
@@ -157,7 +150,9 @@ export function LancamentosWorkspace() {
         debit: "",
         credit: "",
         debitDescription: "",
+        debitCostCenter: "",
         creditDescription: "",
+        creditCostCenter: "",
         value: "",
       },
     ]);
@@ -191,13 +186,11 @@ export function LancamentosWorkspace() {
               <SelectItem value="el-da-silva">E L DA SILVA SERVIÇOS DE REDES</SelectItem>
             </SelectContent>
           </Select>
-
-          <ChartOfAccountsDialog company={company} />
         </div>
       </header>
 
       <div className="grid min-h-[720px] lg:grid-cols-[220px_minmax(0,1fr)]">
-        <aside className="border-b border-border py-5 lg:border-b-0 lg:border-r lg:pr-4">
+        <aside className="border-b border-border py-5 lg:sticky lg:top-0 lg:h-screen lg:self-start lg:border-b-0 lg:border-r lg:pr-4">
           <div className="mb-3 flex items-center justify-between gap-2">
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Competências</p>
             <Select value={year} onValueChange={setYear}>
@@ -208,6 +201,9 @@ export function LancamentosWorkspace() {
           <nav className="grid grid-cols-3 gap-1 sm:grid-cols-4 lg:grid-cols-1" aria-label="Competências">
             {months.map((month) => {
               const active = selectedMonth === month.key;
+              const statuses = yearStatuses[month.key] ?? emptyStatuses();
+              const complete = Object.values(statuses).filter(status => status === "done").length;
+              const hasWork = Object.values(statuses).some(status => status !== "waiting");
               return (
                 <button
                   key={month.key}
@@ -220,8 +216,8 @@ export function LancamentosWorkspace() {
                       : "text-muted-foreground hover:bg-muted hover:text-foreground",
                   )}
                 >
-                  <span className="flex w-full items-center justify-between"><span>{month.label}</span><span className={cn("h-1.5 w-1.5 rounded-full", active ? "bg-background" : statusDot[month.status])} /></span>
-                  <span className={cn("grid grid-rows-[0fr] text-[10px] opacity-0 transition-all group-hover:mt-1 group-hover:grid-rows-[1fr] group-hover:opacity-100", active ? "text-background/70" : "text-muted-foreground")}><span className="overflow-hidden">Nenhum processamento iniciado</span></span>
+                  <span className="flex w-full items-center justify-between"><span>{month.label}</span><span className={cn("h-2 w-2 rounded-full", complete === 4 ? "bg-emerald-500" : hasWork ? "bg-amber-400" : "bg-muted-foreground/25")} /></span>
+                  <span className={cn("grid grid-rows-[0fr] text-[10px] opacity-0 transition-all group-hover:mt-1 group-hover:grid-rows-[1fr] group-hover:opacity-100", active ? "text-background/70" : "text-muted-foreground")}><span className="overflow-hidden">{complete} de 4 módulos concluídos</span></span>
                 </button>
               );
             })}
@@ -230,40 +226,34 @@ export function LancamentosWorkspace() {
         </aside>
 
         <main className="min-w-0 py-5 lg:pl-6">
-          <div>
-            <h2 className="text-xl font-semibold tracking-tight text-foreground">
-              {selectedMonthLabel} de {year}
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Importe os documentos, revise a transcrição e confira a planilha final.
-            </p>
-          </div>
+          <h2 className="text-xl font-semibold tracking-tight text-foreground">{selectedMonthLabel} de {year}</h2>
 
           <nav className="mt-5 grid overflow-hidden rounded-md border border-border bg-background sm:grid-cols-2 xl:grid-cols-4" aria-label="Módulos contábeis">
-            {modules.map((module) => (
+            {modules.map((module) => {
+              const status = (yearStatuses[selectedMonth] ?? emptyStatuses())[module.key];
+              const statusLabel = status === "done" ? "Concluído" : status === "review" ? "Aguardando conferência" : "Aguardando importação";
+              return (
               <button
                 key={module.key}
                 type="button"
                 onClick={() => setSelectedModule(module.key)}
                 className={cn(
-                  "min-h-16 border-b border-border px-4 py-3 text-left transition-colors last:border-b-0 sm:border-r xl:border-b-0",
-                  selectedModule === module.key ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  "grid min-h-20 grid-cols-[minmax(0,1fr)_30%] overflow-hidden border-b border-border text-left transition-colors last:border-b-0 sm:border-r xl:border-b-0",
+                  selectedModule === module.key ? "ring-1 ring-inset ring-foreground" : "hover:bg-muted",
                 )}
               >
-                <span className="block text-sm font-medium">{module.label}</span>
-                <span className={cn("mt-1 block text-xs", selectedModule === module.key ? "text-background/70" : "text-muted-foreground")}>
-                  {(persistedModuleCounts[module.key] || filesByModule[module.key].length) ? `${persistedModuleCounts[module.key] || filesByModule[module.key].length} arquivo(s)` : "Aguardando importação"}
-                </span>
+                <span className="flex flex-col justify-center px-4 py-3"><span className="text-sm font-medium text-foreground">{module.label}</span><span className="mt-1 text-xs text-muted-foreground">{persistedModuleCounts[module.key] || filesByModule[module.key].length ? `${persistedModuleCounts[module.key] || filesByModule[module.key].length} arquivo(s)` : statusLabel}</span></span>
+                <span className={cn("flex items-center justify-center px-2 text-center text-[10px] font-semibold uppercase tracking-wide", status === "done" ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300" : status === "review" ? "bg-amber-400/20 text-amber-700 dark:text-amber-300" : "bg-muted text-muted-foreground")}>{statusLabel}</span>
               </button>
-            ))}
+            )})}
           </nav>
 
           {selectedModule === "despesas" ? (
-            <DespesasWorkspace key={`${company}-${year}-${selectedMonth}`} company={company} month={selectedMonth} year={year} onFileCountChange={handleExpenseFileCount} />
+            <DespesasWorkspace key={`${company}-${year}-${selectedMonth}`} company={company} month={selectedMonth} year={year} onFileCountChange={handleExpenseFileCount} onStatusChange={(status) => setModuleStatus("despesas", status)} />
           ) : (
           <>
           <section className="mt-5 flex flex-col gap-4 rounded-md border border-border bg-background p-5 sm:flex-row sm:items-center sm:justify-between" aria-label="Importação de documentos">
-            <div><h3 className="text-base font-semibold text-foreground">{activeModuleLabel} de {selectedMonthLabel} de {year}</h3><p className="mt-1 text-sm text-muted-foreground">Importe os documentos desta competência para iniciar a transcrição.</p></div>
+            <h3 className="text-base font-semibold text-foreground">{activeModuleLabel} de {selectedMonthLabel} de {year}</h3>
             <label className="cursor-pointer rounded-md bg-foreground px-4 py-2.5 text-sm font-medium text-background transition-opacity hover:opacity-90">
               Importar {activeModuleLabel.toLowerCase()} de {selectedMonthLabel} de {year}
               <input type="file" multiple accept={modules.find((module) => module.key === selectedModule)?.acceptedFiles} className="sr-only" onChange={(event) => handleModuleFiles(selectedModule, event)} />
@@ -271,17 +261,16 @@ export function LancamentosWorkspace() {
           </section>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
-            <TabsList className="h-auto w-full justify-start gap-1 rounded-none border-b border-border bg-transparent p-0 shadow-none dark:bg-transparent">
+            <TabsList className="grid h-auto w-full grid-cols-3 gap-2 bg-transparent p-0 shadow-none dark:bg-transparent">
               {[
                 ["transcricao", "Transcrição", transcriptionRows.length],
                 ["lancamentos", "Lançamentos", launchRows.length],
                 ["conferencia", "Conferência", 0],
-                ["balancete", "Balancete", balanceteFiles.length],
               ].map(([value, label, count]) => (
                 <TabsTrigger
                   key={String(value)}
                   value={String(value)}
-                  className="h-11 rounded-none border-b-2 border-transparent bg-transparent px-4 text-muted-foreground shadow-none data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none dark:text-white/60 dark:data-[state=active]:border-white dark:data-[state=active]:bg-transparent dark:data-[state=active]:text-white"
+                  className="min-h-14 rounded-md border border-border bg-transparent px-4 text-muted-foreground shadow-none data-[state=active]:bg-foreground data-[state=active]:text-background data-[state=active]:shadow-none"
                 >
                   {label}
                   <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[10px] tabular-nums text-muted-foreground">
@@ -368,9 +357,11 @@ export function LancamentosWorkspace() {
                           ["Data", "w-32"],
                           ["Histórico variável", "min-w-[310px]"],
                           ["Débito", "w-24"],
-                          ["Crédito", "w-24"],
                           ["Descrição débito", "min-w-[200px]"],
+                          ["C.C. débito", "w-28"],
+                          ["Crédito", "w-24"],
                           ["Descrição crédito", "min-w-[200px]"],
+                          ["C.C. crédito", "w-28"],
                           ["Valor", "w-36 text-right"],
                         ].map(([label, width]) => (
                           <th key={label} className={cn("border-b border-r border-border px-3 py-2 font-medium last:border-r-0", width)}>{label}</th>
@@ -385,9 +376,11 @@ export function LancamentosWorkspace() {
                               ["date", row.date],
                               ["history", row.history],
                               ["debit", row.debit],
-                              ["credit", row.credit],
                               ["debitDescription", row.debitDescription],
+                              ["debitCostCenter", row.debitCostCenter],
+                              ["credit", row.credit],
                               ["creditDescription", row.creditDescription],
+                              ["creditCostCenter", row.creditCostCenter],
                               ["value", row.value],
                             ] as [keyof LaunchRow, string][]
                           ).map(([field, value]) => (
@@ -403,7 +396,7 @@ export function LancamentosWorkspace() {
                       ))}
                       {!launchRows.length && (
                         <tr>
-                          <td colSpan={7} className="h-32 px-4 text-center text-sm text-muted-foreground">
+                          <td colSpan={9} className="h-32 px-4 text-center text-sm text-muted-foreground">
                             Nenhum lançamento gerado. Revise a transcrição ou adicione um lançamento manualmente.
                           </td>
                         </tr>
@@ -432,39 +425,7 @@ export function LancamentosWorkspace() {
                 <div className="grid min-h-32 place-items-center border-t border-border px-4 text-center text-sm text-muted-foreground">
                   A conferência será exibida quando houver documentos processados e lançamentos gerados.
                 </div>
-              </section>
-            </TabsContent>
-
-            <TabsContent value="balancete" className="mt-5">
-              <div className="mb-4">
-                <h3 className="text-base font-semibold text-foreground">Balancete mensal</h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Importe o balancete após a primeira planilha entrar no Calima.
-                </p>
-              </div>
-
-              <label className="flex min-h-[118px] cursor-pointer items-center justify-between gap-4 rounded-md border border-dashed border-border bg-muted/20 px-5 py-4 transition-colors hover:border-foreground/40 hover:bg-muted/40">
-                <span>
-                  <span className="block text-sm font-medium text-foreground">Importar balancete da competência</span>
-                  <span className="mt-1 block text-xs text-muted-foreground">
-                    {balanceteFiles.length
-                      ? `${balanceteFiles.length} ${balanceteFiles.length === 1 ? "arquivo selecionado" : "arquivos selecionados"}`
-                      : "PDF, XLSX ou XLS exportado pelo Calima"}
-                  </span>
-                </span>
-                <span className="shrink-0 rounded-sm border border-foreground/30 px-3 py-2 text-xs font-medium text-foreground">
-                  Selecionar arquivo
-                </span>
-                <input type="file" accept=".pdf,.xlsx,.xls" multiple className="sr-only" onChange={handleBalanceteFiles} />
-              </label>
-
-              <section className="mt-4 overflow-hidden rounded-md border border-border bg-background">
-                <div className="grid grid-cols-[minmax(200px,1fr)_140px_minmax(160px,0.6fr)_minmax(180px,0.8fr)] bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground">
-                  <span>Conta</span><span className="text-right">Saldo</span><span>Situação</span><span>Ação sugerida</span>
-                </div>
-                <div className="grid min-h-32 place-items-center border-t border-border px-4 text-center text-sm text-muted-foreground">
-                  Importe o balancete para iniciar a análise das contas e dos saldos da competência.
-                </div>
+                <div className="flex justify-end border-t border-border p-4"><Button onClick={() => setModuleStatus(selectedModule, "done")}>Marcar como OK</Button></div>
               </section>
             </TabsContent>
           </Tabs>

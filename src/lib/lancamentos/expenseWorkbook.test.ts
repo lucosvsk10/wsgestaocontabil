@@ -12,7 +12,9 @@ function entry(id: string, debitCode: string, creditCode: string, amountInCents:
     debitCode,
     creditCode,
     debitDescription: `Conta ${debitCode}`,
+    debitCostCenter: "",
     creditDescription: `Conta ${creditCode}`,
+    creditCostCenter: "",
     amountInCents,
   };
 }
@@ -31,14 +33,16 @@ describe("groupExpenseEntries", () => {
     expect(grouped[0].date).toBe("31/01/2026");
   });
 
-  it("não mistura contrapartidas diferentes no mesmo lançamento", () => {
+  it("agrupa pelo C.R. escolhido e sinaliza contrapartidas diferentes", () => {
     const grouped = groupExpenseEntries(
       [entry("1", "111", "374", 10_001), entry("2", "111", "777", 20_002)],
       "debit",
       "31/01/2026",
     );
 
-    expect(grouped).toHaveLength(2);
+    expect(grouped).toHaveLength(1);
+    expect(grouped[0].hasMixedCounterpart).toBe(true);
+    expect(grouped[0].creditCode).toBe("");
     expect(grouped.reduce((total, item) => total + item.amountInCents, 0)).toBe(30_003);
   });
 
