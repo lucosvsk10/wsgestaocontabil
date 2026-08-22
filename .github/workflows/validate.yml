@@ -32,7 +32,7 @@ jobs:
         run: npm run build
 
       - name: Accounting regressions
-        run: npx -y vitest@3.1.1 run --environment node src/lib/lancamentos/payrollWorkbook.test.ts src/lib/lancamentos/historicalRegression.test.ts src/lib/lancamentos/trialBalance.test.ts src/lib/lancamentos/trialBalanceCriticalCorrection.test.ts src/lib/lancamentos/manualOnlyConference.test.ts
+        run: npx -y vitest@3.1.1 run --environment node src/lib/lancamentos/payrollWorkbook.test.ts src/lib/lancamentos/historicalRegression.test.ts src/lib/lancamentos/trialBalance.test.ts src/lib/lancamentos/trialBalanceCriticalCorrection.test.ts src/lib/lancamentos/spedRelationships.test.ts src/lib/lancamentos/manualOnlyConference.test.ts
 
       - name: Lint accounting files
         run: >-
@@ -49,6 +49,7 @@ jobs:
           src/components/admin/lancamentos/BalanceteWorkspaceV2.tsx
           src/components/admin/lancamentos/BalanceteWorkspaceShell.tsx
           src/components/admin/lancamentos/CostCentersWorkspace.tsx
+          src/components/admin/lancamentos/SpedRelationshipWorkspace.tsx
           src/components/admin/lancamentos/AccountingWorkflowUI.tsx
           src/components/admin/lancamentos/AccountingYearPicker.tsx
           src/components/admin/lancamentos/ConferenceActionBar.tsx
@@ -72,6 +73,8 @@ jobs:
           src/lib/lancamentos/trialBalanceCriticalCorrection.ts
           src/lib/lancamentos/trialBalanceCriticalCorrection.test.ts
           src/lib/lancamentos/trialBalanceReconciliationV3.ts
+          src/lib/lancamentos/spedRelationships.ts
+          src/lib/lancamentos/spedRelationships.test.ts
           src/lib/lancamentos/costCenters.ts
           src/lib/lancamentos/historicalRegression.ts
           src/lib/lancamentos/historicalRegression.test.ts
