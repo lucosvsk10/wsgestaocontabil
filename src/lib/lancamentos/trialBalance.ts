@@ -7,6 +7,7 @@ export interface TrialBalanceRow {
   reducedCode: string;
   previousBalanceInCents: number;
   previousNature: BalanceNature;
+  previousBalanceRead?: boolean;
   debitInCents: number;
   creditInCents: number;
   currentBalanceInCents: number;
@@ -27,6 +28,10 @@ export interface TrialBalanceResult {
   warnings: string[];
   validationIssues: string[];
   validated: boolean;
+  previousBalanceVerified?: boolean;
+  previousBalanceReadCount?: number;
+  periodStartCompetence?: string;
+  periodEndCompetence?: string;
   processingMeta: TrialBalanceProcessingMeta;
 }
 
