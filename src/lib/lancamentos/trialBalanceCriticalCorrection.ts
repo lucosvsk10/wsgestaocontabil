@@ -2,9 +2,9 @@ export {
   buildCriticalTrialBalancePlan,
   criticalTrialBalancePlanIsCorrected,
   __test,
-} from "./trialBalanceMonthlyReconciliation";
+} from "./trialBalanceReconciliationV2";
 
 export type {
   CriticalTrialBalancePlan,
   TrialBalanceClosingPolicy,
-} from "./trialBalanceMonthlyReconciliation";
+} from "./trialBalanceReconciliationV2";
