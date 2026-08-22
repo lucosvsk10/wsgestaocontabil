@@ -38,12 +38,16 @@ jobs:
         run: >-
           npx eslint
           src/App.tsx
+          src/pages/AdminBalancete.tsx
           src/contexts/AccountingProcessingContext.tsx
           src/components/admin/lancamentos/LancamentosWorkspace.tsx
           src/components/admin/lancamentos/FolhaWorkspace.tsx
           src/components/admin/lancamentos/ComprasWorkspace.tsx
           src/components/admin/lancamentos/FaturamentoWorkspace.tsx
+          src/components/admin/lancamentos/BalanceteWorkspace.tsx
           src/components/admin/lancamentos/AccountingWorkflowUI.tsx
+          src/components/admin/lancamentos/AccountingYearPicker.tsx
+          src/components/admin/lancamentos/ConferenceActionBar.tsx
           src/components/admin/lancamentos/WrongCompetenceImportDialog.tsx
           src/components/admin/lancamentos/WrongCompetenceImportGuard.tsx
           src/components/admin/lancamentos/RevenueImportSummaryDialog.tsx
@@ -53,6 +57,10 @@ jobs:
           src/lib/lancamentos/revenueWorkbook.ts
           src/lib/lancamentos/revenueBatch.ts
           src/lib/lancamentos/processRevenueBatch.ts
+          src/lib/lancamentos/accountingMonthState.ts
+          src/lib/lancamentos/completeMonthExport.ts
+          src/lib/lancamentos/trialBalance.ts
+          src/lib/lancamentos/trialBalanceClosing.ts
           src/lib/lancamentos/historicalRegression.ts
           src/lib/lancamentos/historicalRegression.test.ts
           src/lib/lancamentos/accountingExportWorkbook.ts
