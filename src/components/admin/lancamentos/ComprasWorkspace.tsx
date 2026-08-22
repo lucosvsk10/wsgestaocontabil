@@ -224,28 +224,26 @@ export function ComprasWorkspace({ company, month, year, onStatusChange, onCompe
   const deleteFile = async (file: File) => {
     setDeletingFile(file.name);
     const remaining = files.filter(item => !(item.name === file.name && item.size === file.size));
+    setLoaded(false);
+    onStatusChange("waiting");
     try {
       await removeWorkspaceFiles(scope, [file]);
-      onStatusChange("waiting");
-      if (!remaining.length) {
-        setLoaded(false);
-        setFiles([]);
-        resetWorkspaceState();
-        await deleteWorkspaceData(key);
-        setLoaded(true);
-        return;
-      }
-
-      setLoaded(false);
-      const result = await runProcessing(remaining, "reprocess", month, year);
+      await deleteWorkspaceData(key);
       setFiles(remaining);
+      resetWorkspaceState();
+
+      if (!remaining.length) return;
+
+      const result = await runProcessing(remaining, "reprocess", month, year);
       hydrateSaved(result);
-      setLoaded(true);
+      await saveWorkspaceData(key, result);
       onStatusChange("review");
     } catch (error) {
-      setLoaded(true);
-      setValidationIssues(current => [...new Set([...current, error instanceof Error ? error.message : "Falha ao excluir o documento e reconstruir Compras."])]);
+      resetWorkspaceState();
+      setFiles(remaining);
+      setValidationIssues([error instanceof Error ? `Documento removido, mas a reconstrução de Compras falhou: ${error.message}` : "Documento removido, mas a reconstrução de Compras falhou."]);
     } finally {
+      setLoaded(true);
       setDeletingFile(null);
     }
   };
