@@ -16,8 +16,8 @@ export interface WrongCompetenceImportRequest {
 }
 
 export class WrongCompetenceImportCancelledError extends Error {
-  constructor(message = "Importação removida pelo usuário após detectar competência diferente.") {
-    super(message);
+  constructor() {
+    super("Importação removida pelo usuário após detectar competência diferente.");
     this.name = "WrongCompetenceImportCancelledError";
   }
 }
@@ -31,14 +31,6 @@ interface StoredFile {
   scope: string;
   file: File;
   createdAt: string;
-}
-
-interface CompetenceDetection {
-  competences?: string[];
-  hasUndatedPeriodicBlocks?: boolean;
-  undatedBlockCount?: number;
-  evidence?: string[];
-  warning?: string;
 }
 
 export interface WorkspaceSaveResult {
@@ -55,7 +47,9 @@ function openDatabase() {
         const store = database.createObjectStore(FILE_STORE, { keyPath: "id" });
         store.createIndex("scope", "scope", { unique: false });
       }
-      if (!database.objectStoreNames.contains(DATA_STORE)) database.createObjectStore(DATA_STORE, { keyPath: "id" });
+      if (!database.objectStoreNames.contains(DATA_STORE)) {
+        database.createObjectStore(DATA_STORE, { keyPath: "id" });
+      }
       if (event.oldVersion < 2 && request.transaction) {
         request.transaction.objectStore(FILE_STORE).clear();
         request.transaction.objectStore(DATA_STORE).clear();
@@ -90,7 +84,8 @@ function selectedContext(company: string) {
   if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem(`ws:lancamentos:last-context:${company}`);
-    return raw ? JSON.parse(raw) as { year?: string; selectedMonth?: string; selectedModule?: string } : null;
+    if (!raw) return null;
+    return JSON.parse(raw) as { year?: string; selectedMonth?: string; selectedModule?: string };
   } catch {
     return null;
   }
@@ -99,51 +94,6 @@ function selectedContext(company: string) {
 function displayCompetence(value: string | null) {
   const match = /^(20\d{2})-(\d{2})$/.exec(value || "");
   return match ? `${match[2]}/${match[1]}` : value || "";
-}
-
-async function fileToBase64(file: File) {
-  return await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result).split(",")[1] || "");
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
-}
-
-async function detectDocumentCompetence(module: string, files: File[]): Promise<CompetenceDetection | null> {
-  try {
-    const documents = await Promise.all(files.map(async file => ({
-      name: file.name,
-      mime_type: file.type || "application/pdf",
-      data: await fileToBase64(file),
-    })));
-    const { data, error } = await supabase.functions.invoke("detect-accounting-competence", { body: { module, documents } });
-    if (error) throw error;
-    return data as CompetenceDetection;
-  } catch (error) {
-    console.error("Falha na detecção independente de competência documental.", error);
-    return null;
-  }
-}
-
-async function enforcePayrollDocumentCompetence(context: ReturnType<typeof parseScope>, files: File[]) {
-  if (context.module !== "folha" || !context.competence || !files.length) return;
-  const detection = await detectDocumentCompetence("folha", files);
-  if (!detection) return;
-
-  const detected = [...new Set((detection.competences ?? []).filter(value => /^(0[1-9]|1[0-2])\/(20\d{2})$/.test(value)))];
-  const target = displayCompetence(context.competence);
-
-  if (detected.length === 1 && detected[0] !== target) {
-    throw new WrongCompetenceImportCancelledError(`Este documento é da competência ${detected[0]}, mas você está importando em ${target}. Nada foi salvo. Abra ${detected[0]} ou escolha essa competência no aviso de importação.`);
-  }
-  if (detected.length > 1) {
-    throw new WrongCompetenceImportCancelledError(`Este documento contém várias competências (${detected.join(", ")}). Nada foi salvo. Use a seleção de competências para escolher quais meses devem receber os lançamentos.`);
-  }
-  if (!detected.length && detection.hasUndatedPeriodicBlocks) {
-    const count = Number(detection.undatedBlockCount || 0);
-    throw new WrongCompetenceImportCancelledError(`O documento contém ${count || "vários"} bloco(s) periódicos, mas não há data confiável para definir a competência. Nada foi salvo; informe manualmente MM/AAAA para os blocos antes de continuar.`);
-  }
 }
 
 async function confirmDifferentCompetence(context: ReturnType<typeof parseScope>, files: File[]) {
@@ -167,37 +117,24 @@ async function confirmDifferentCompetence(context: ReturnType<typeof parseScope>
 
 export async function saveWorkspaceFiles(scope: string, files: File[], options: SaveWorkspaceFilesOptions = {}) {
   const context = parseScope(scope);
-
-  // Segurança obrigatória: a competência da Folha é lida cegamente do conteúdo
-  // antes de qualquer upload/metadado/cache. A competência aberta na tela não é
-  // enviada ao detector, portanto não consegue contaminar a identificação.
-  await enforcePayrollDocumentCompetence(context, files);
-
   try {
     for (const file of files) {
       const storagePath = storagePathFor(scope, file);
       const { error: uploadError } = await supabase.storage.from("accounting-documents").upload(storagePath, file, { upsert: true, contentType: file.type || undefined });
       if (uploadError) throw uploadError;
-      const { error: metadataError } = await (supabase as any).from("accounting_workspace_documents").upsert({
-        scope,
-        company_key: context.company,
-        competence: context.competence,
-        module: context.module,
-        original_name: file.name,
-        storage_path: storagePath,
-        mime_type: file.type || null,
-        size_bytes: file.size,
-      }, { onConflict: "storage_path" });
+      const { error: metadataError } = await (supabase as any).from("accounting_workspace_documents").upsert({ scope, company_key: context.company, competence: context.competence, module: context.module, original_name: file.name, storage_path: storagePath, mime_type: file.type || null, size_bytes: file.size }, { onConflict: "storage_path" });
       if (metadataError) throw metadataError;
     }
   } catch (error) {
     console.error("Falha ao salvar documentos no Supabase; mantendo cópia local.", error);
   }
-
   const database = await openDatabase();
   const transaction = database.transaction(FILE_STORE, "readwrite");
   const store = transaction.objectStore(FILE_STORE);
-  files.forEach(file => store.put({ id: localFileId(scope, file), scope, file, createdAt: new Date().toISOString() } satisfies StoredFile));
+  files.forEach((file) => {
+    const record: StoredFile = { id: localFileId(scope, file), scope, file, createdAt: new Date().toISOString() };
+    store.put(record);
+  });
   await complete(transaction);
   database.close();
 
@@ -232,7 +169,7 @@ export async function loadWorkspaceFiles(scope: string) {
   });
   await complete(transaction);
   database.close();
-  return records.map(record => record.file);
+  return records.map((record) => record.file);
 }
 
 export async function removeWorkspaceFiles(scope: string, files: File[]) {
@@ -245,6 +182,7 @@ export async function removeWorkspaceFiles(scope: string, files: File[]) {
   } catch (error) {
     console.error("Falha ao remover os documentos selecionados do Supabase.", error);
   }
+
   const database = await openDatabase();
   const transaction = database.transaction(FILE_STORE, "readwrite");
   const store = transaction.objectStore(FILE_STORE);
@@ -257,17 +195,23 @@ export async function removeWorkspaceDocumentsByName(scope: string, fileNames: s
   const names = [...new Set(fileNames.filter(Boolean))];
   if (!names.length) return;
   try {
-    const { data, error } = await (supabase as any).from("accounting_workspace_documents").select("id, original_name, storage_path").eq("scope", scope).in("original_name", names);
+    const { data, error } = await (supabase as any)
+      .from("accounting_workspace_documents")
+      .select("id, original_name, storage_path")
+      .eq("scope", scope)
+      .in("original_name", names);
     if (error) throw error;
     const storagePaths = (data ?? []).map((record: any) => record.storage_path).filter(Boolean);
     if (storagePaths.length) await supabase.storage.from("accounting-documents").remove(storagePaths);
     if (data?.length) {
-      const { error: deleteError } = await (supabase as any).from("accounting_workspace_documents").delete().in("id", data.map((record: any) => record.id));
+      const ids = data.map((record: any) => record.id);
+      const { error: deleteError } = await (supabase as any).from("accounting_workspace_documents").delete().in("id", ids);
       if (deleteError) throw deleteError;
     }
   } catch (error) {
     console.error("Falha ao remover documentos por nome do Supabase.", error);
   }
+
   const database = await openDatabase();
   const transaction = database.transaction(FILE_STORE, "readwrite");
   const store = transaction.objectStore(FILE_STORE);
@@ -289,9 +233,7 @@ export async function clearWorkspaceFiles(scope: string) {
     if (error) throw error;
     if (data?.length) await supabase.storage.from("accounting-documents").remove(data.map((record: any) => record.storage_path));
     await (supabase as any).from("accounting_workspace_documents").delete().eq("scope", scope);
-  } catch (error) {
-    console.error("Falha ao remover documentos do Supabase.", error);
-  }
+  } catch (error) { console.error("Falha ao remover documentos do Supabase.", error); }
   const database = await openDatabase();
   const transaction = database.transaction(FILE_STORE, "readwrite");
   const store = transaction.objectStore(FILE_STORE);
@@ -351,7 +293,11 @@ export async function loadWorkspaceData<T>(id: string) {
 
 export async function isWorkspaceDataSynced(id: string) {
   try {
-    const { data, error } = await (supabase as any).from("accounting_workspace_data").select("scope").eq("scope", id).maybeSingle();
+    const { data, error } = await (supabase as any)
+      .from("accounting_workspace_data")
+      .select("scope")
+      .eq("scope", id)
+      .maybeSingle();
     if (error) throw error;
     return Boolean(data?.scope);
   } catch (error) {
@@ -375,10 +321,10 @@ export async function loadLocalWorkspaceData<T>(id: string) {
 
 function parseScope(scope: string) {
   const parts = scope.split(":");
-  const yearIndex = parts.findIndex(part => /^20\d{2}$/.test(part));
+  const yearIndex = parts.findIndex((part) => /^20\d{2}$/.test(part));
   const company = yearIndex > 0 ? parts.slice(0, yearIndex).join(":") : parts[0] || "unknown";
   const year = yearIndex >= 0 ? parts[yearIndex] : "";
   const month = yearIndex >= 0 && /^\d{2}$/.test(parts[yearIndex + 1] || "") ? parts[yearIndex + 1] : "";
-  const module = parts.find(part => ["despesas", "folha", "compras", "faturamento", "balancete", "chart-of-accounts"].includes(part)) || null;
+  const module = parts.find((part) => ["despesas", "folha", "compras", "faturamento", "balancete", "chart-of-accounts"].includes(part)) || null;
   return { company, competence: year && month ? `${year}-${month}` : year || null, module };
 }
