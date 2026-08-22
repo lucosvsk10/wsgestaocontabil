@@ -32,7 +32,7 @@ jobs:
         run: npm run build
 
       - name: Accounting regressions
-        run: npx -y vitest@3.1.1 run --environment node src/lib/lancamentos/payrollWorkbook.test.ts src/lib/lancamentos/historicalRegression.test.ts src/lib/lancamentos/trialBalance.test.ts src/lib/lancamentos/trialBalanceCriticalCorrection.test.ts src/lib/lancamentos/spedRelationships.test.ts src/lib/lancamentos/manualOnlyConference.test.ts
+        run: npx -y vitest@3.1.1 run --environment node src/lib/lancamentos/payrollWorkbook.test.ts src/lib/lancamentos/historicalRegression.test.ts src/lib/lancamentos/trialBalance.test.ts src/lib/lancamentos/trialBalanceCriticalCorrection.test.ts src/lib/lancamentos/spedRelationships.test.ts src/lib/lancamentos/accountPlanProfile.test.ts src/lib/lancamentos/spedAutoMapping.test.ts src/lib/lancamentos/manualOnlyConference.test.ts
 
       - name: Lint accounting files
         run: >-
@@ -56,6 +56,11 @@ jobs:
           src/components/admin/lancamentos/WrongCompetenceImportDialog.tsx
           src/components/admin/lancamentos/WrongCompetenceImportGuard.tsx
           src/components/admin/lancamentos/RevenueImportSummaryDialog.tsx
+          src/lib/lancamentos/chartOfAccounts.ts
+          src/lib/lancamentos/accountPlanProfile.ts
+          src/lib/lancamentos/accountPlanProfile.test.ts
+          src/lib/lancamentos/spedAutoMapping.ts
+          src/lib/lancamentos/spedAutoMapping.test.ts
           src/lib/lancamentos/payrollWorkbook.ts
           src/lib/lancamentos/payrollWorkbook.test.ts
           src/lib/lancamentos/purchaseWorkbook.ts
