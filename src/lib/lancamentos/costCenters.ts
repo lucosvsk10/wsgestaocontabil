@@ -18,7 +18,13 @@ export interface AccountCostCenterRule {
 }
 
 function normalize(value: unknown) {
-  return String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[._/()-]+/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[._/()-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
 }
 
 function toBoolean(value: unknown) {
@@ -33,9 +39,12 @@ export async function readCostCenters(file: File) {
     const rows = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets[sheetName], { header: 1, defval: "", raw: true });
     const headerIndex = rows.findIndex((row) => {
       const headers = row.map(normalize);
-      return headers.includes("codigo") && headers.some(header => ["cr", "c r", "codigo reduzido"].includes(header)) && headers.includes("descricao");
+      return headers.includes("codigo")
+        && headers.some(header => ["cr", "c r", "codigo reduzido"].includes(header))
+        && headers.includes("descricao");
     });
     if (headerIndex < 0) return;
+
     const headers = rows[headerIndex].map(normalize);
     const index = {
       code: headers.findIndex(header => header === "codigo"),
@@ -67,23 +76,31 @@ export function suggestCostCenterForAccount(account: ChartAccount, centers: Cost
   const candidates = centers.filter(center => center.analytical);
   const byMeaning = (term: string) => candidates.find(center => normalize(center.description).includes(term));
 
-  // Analítica só significa que aceita lançamento direto. Centro de custo é uma dimensão separada.
-  // Contas patrimoniais nunca recebem sugestão automática só por serem analíticas.
-  if (/a pagar|a recolher|fornecedor|cliente|caixa|banco|estoque|adiantamento|capital social|emprestimo|financiamento|imobilizado/.test(text)) return null;
+  // Conta analítica só significa que recebe lançamento direto. Centro de custo é outra dimensão.
+  // Patrimoniais e estoques nunca recebem sugestão automática só pelo texto da conta.
+  if (
+    /a pagar|a recolher|fornecedor|cliente|caixa|banco|estoque|adiantamento|capital social|emprestimo|financiamento|imobilizado|mercadorias? para revenda|mercadorias? p revenda|material aplicado|materiais aplicados/.test(text)
+  ) return null;
 
-  // Recuperações/créditos têm prioridade, pois algumas descrições também contêm palavras de despesa.
-  if (/recup|recupera|credito|crédito|ressarc|reembolso/.test(text)) return byMeaning("credito") ?? byMeaning("crédito") ?? null;
+  if (/recup|recupera|credito|ressarc|reembolso/.test(text)) {
+    return byMeaning("credito") ?? null;
+  }
 
-  // Custo explícito é diferente de despesa administrativa/operacional.
-  if (/\bcusto\b|custos|custo das|cmv|cpv|csp/.test(text)) return byMeaning("custo") ?? null;
+  if (/\bcusto\b|custos|custo das|cmv|cpv|csp/.test(text)) {
+    return byMeaning("custo") ?? null;
+  }
 
-  // Receita explícita, sem sinal de dedução, vai para RECEITAS.
-  if (/receita|revenda|venda de mercadoria|prestacao de servico|prestação de serviço|faturamento/.test(text) && !text.startsWith("- ") && !text.startsWith("(-")) {
+  // Receita apenas quando a descrição é inequivocamente de resultado.
+  if (
+    /receita|venda de mercadoria|prestacao de servico|faturamento/.test(text)
+    && !/estoque|material aplicado|mercadorias? para revenda|mercadorias? p revenda/.test(text)
+  ) {
     return byMeaning("receita") ?? null;
   }
 
-  // Deduções, folha e despesas operacionais seguem DESPESAS no padrão real fornecido pelo usuário.
-  if (/simples|salario|salário|remuner|pro labore|pro-labore|ferias|férias|fgts|inss|alimentacao|alimentação|assistencia|assistência|aluguel|energia|telefone|combust|seguro|propaganda|publicidade|ipva|agua|água|curso|manut|material|uniforme|licenciamento|imposto|encargo|despesa/.test(text) || text.startsWith("- ") || text.startsWith("(-")) {
+  if (
+    /simples|salario|remuner|pro labore|ferias|fgts|inss|alimentacao|assistencia|aluguel|energia|telefone|combust|seguro|propaganda|publicidade|ipva|agua|curso|manut|uniforme|licenciamento|imposto|encargo|despesa/.test(text)
+  ) {
     return byMeaning("despesa") ?? null;
   }
 
@@ -121,9 +138,15 @@ export async function validateRequiredCostCenters(company: string, entries: Acco
   if (!rules?.length) return [] as string[];
   const required = new Set(rules.filter(rule => rule.required).map(rule => rule.accountReducedCode));
   const issues: string[] = [];
+
   entries.forEach((entry, index) => {
-    if (required.has(entry.debitCode) && !entry.debitCostCenter) issues.push(`Linha ${index + 1}: a conta de débito C.R. ${entry.debitCode} exige centro de custo.`);
-    if (required.has(entry.creditCode) && !entry.creditCostCenter) issues.push(`Linha ${index + 1}: a conta de crédito C.R. ${entry.creditCode} exige centro de custo.`);
+    if (required.has(entry.debitCode) && !entry.debitCostCenter) {
+      issues.push(`Linha ${index + 1}: a conta de débito C.R. ${entry.debitCode} exige centro de custo.`);
+    }
+    if (required.has(entry.creditCode) && !entry.creditCostCenter) {
+      issues.push(`Linha ${index + 1}: a conta de crédito C.R. ${entry.creditCode} exige centro de custo.`);
+    }
   });
+
   return issues;
 }

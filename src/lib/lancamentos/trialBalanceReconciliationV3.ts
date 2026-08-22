@@ -52,7 +52,6 @@ export interface CriticalTrialBalancePlan {
 }
 
 type SavedEntry = ExpenseEntry | PayrollEntry | PurchaseEntry | RevenueEntry;
-type AliasKey = keyof typeof aliases;
 
 const aliases = {
   cash: ["caixa matriz", "caixa geral", "caixa"],
@@ -79,6 +78,24 @@ const aliases = {
   recoveredPersonnel: ["recup desp c pessoal", "recuperacao despesa pessoal", "recuperação despesa pessoal"],
   advanceSalary: ["adto salarios", "adiantamentos funcionarios", "adiantamentos funcionários"],
 } as const;
+
+type AliasKey = keyof typeof aliases;
+
+const naturalNature: Partial<Record<AliasKey, "D" | "C">> = {
+  cash: "D",
+  clients: "D",
+  inventory: "D",
+  suppliers: "C",
+  salariesPayable: "C",
+  vacationPayable: "C",
+  terminationPayable: "C",
+  thirteenthPayable: "C",
+  fgtsPayable: "C",
+  inssPayable: "C",
+  irrfPayable: "C",
+  prolaborePayable: "C",
+  simplesPayable: "C",
+};
 
 const money = (cents: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Math.abs(cents) / 100);
 const currentSigned = (row: TrialBalanceRow) => signedBalance(row.currentBalanceInCents, row.currentNature);
@@ -109,7 +126,8 @@ function findExact(rows: TrialBalanceRow[], reducedCode: string) {
 function tokenScore(a: string, b: string) {
   const ignored = new Set(["de", "da", "do", "das", "dos", "a", "e", "para", "no", "na", "em", "mercado", "interno", "gerais", "diversos"]);
   const tokens = (value: string) => new Set(normalizeTrialBalanceText(value).split(" ").filter(token => token.length > 2 && !ignored.has(token)));
-  const left = tokens(a); const right = tokens(b);
+  const left = tokens(a);
+  const right = tokens(b);
   if (!left.size || !right.size) return 0;
   let hit = 0;
   left.forEach(token => { if (right.has(token)) hit += 1; });
@@ -130,7 +148,6 @@ function semanticAlias(description: string, account: ChartAccount | null, side: 
   if (/caixa/.test(text) && !/banco/.test(text)) return "cash";
   if (/mercadorias? para revenda|material aplicado|estoque.*mercadoria/.test(text)) return "inventory";
   if (/adiantamento.*funcionario|adiantamento.*salario/.test(text)) return "advanceSalary";
-
   if (/salario|salário|ordenado|remunerac/.test(text)) return patrimonialLiability ? "salariesPayable" : "salaryExpense";
   if (/ferias|férias/.test(text)) return patrimonialLiability ? "vacationPayable" : "vacationExpense";
   if (/rescis/.test(text)) return "terminationPayable";
@@ -144,7 +161,6 @@ function semanticAlias(description: string, account: ChartAccount | null, side: 
   if (/recup|recupera/.test(text) && /pessoal|despesa/.test(text)) return "recoveredPersonnel";
   if (/prestacao de servico|prestação de serviço|venda de servico|venda de serviço/.test(text)) return "serviceRevenue";
   if (/receita.*revenda|revenda de mercadoria/.test(text) && !/estoque|material aplicado/.test(text)) return "merchandiseRevenue";
-
   if (side === "credit" && /receita.*servico|receita.*serviço/.test(text)) return "serviceRevenue";
   return null;
 }
@@ -152,6 +168,7 @@ function semanticAlias(description: string, account: ChartAccount | null, side: 
 function resolveBalanceRow(rows: TrialBalanceRow[], reducedCode: string, description: string, accounts: ChartAccount[], side: "debit" | "credit") {
   const exact = findExact(rows, reducedCode);
   if (exact) return exact;
+
   const account = currentAccount(accounts, reducedCode);
   const alias = semanticAlias(description, account, side);
   if (alias) {
@@ -164,7 +181,10 @@ function resolveBalanceRow(rows: TrialBalanceRow[], reducedCode: string, descrip
   let bestScore = 0;
   analytical(rows).forEach(row => {
     const score = tokenScore(sourceDescription, row.title);
-    if (score > bestScore) { bestScore = score; best = row; }
+    if (score > bestScore) {
+      bestScore = score;
+      best = row;
+    }
   });
   return bestScore >= 0.6 ? best : null;
 }
@@ -194,13 +214,14 @@ function bridgeEntry(entry: AccountingExportEntry, rows: TrialBalanceRow[], acco
   const debit = resolveBalanceRow(rows, entry.debitCode, entry.debitDescription ?? "", accounts, "debit");
   const credit = resolveBalanceRow(rows, entry.creditCode, entry.creditDescription ?? "", accounts, "credit");
   if (!debit || !credit) return null;
+
   return {
     ...entry,
     debitCode: debit.reducedCode,
     creditCode: credit.reducedCode,
     debitDescription: debit.title,
     creditDescription: credit.title,
-    mappingReason: `${entry.mappingReason ?? ""} Contas convertidas para o C.R. do Balancete importado.`,
+    mappingReason: `${entry.mappingReason ?? ""} Contas convertidas para C.R.s que existem no Balancete importado.`,
   } satisfies AccountingExportEntry;
 }
 
@@ -238,13 +259,15 @@ function journal(date: string, amount: number, debit: TrialBalanceRow, credit: T
 }
 
 function cashTarget(company: string, month: string, year: string, previousCash: number, policy: TrialBalanceClosingPolicy) {
-  const min = Math.max(0, policy.cashTargetMinInCents ?? 60_000);
-  const max = Math.max(min, policy.cashTargetMaxInCents ?? 180_000);
-  const anchor = previousCash >= min && previousCash <= max ? previousCash : Math.min(max, Math.max(min, policy.cashTargetAnchorInCents ?? 100_000));
+  const minimum = Math.max(0, policy.cashTargetMinInCents ?? 60_000);
+  const maximum = Math.max(minimum, policy.cashTargetMaxInCents ?? 180_000);
+  const anchor = previousCash >= minimum && previousCash <= maximum
+    ? previousCash
+    : Math.min(maximum, Math.max(minimum, policy.cashTargetAnchorInCents ?? 100_000));
   let hash = 0;
   for (const char of `${company}:${year}:${month}`) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-  const variation = 0.90 + (hash % 2601) / 10_000; // 0,90 a 1,1600
-  return Math.min(max, Math.max(min, Math.round(anchor * variation)));
+  const variation = 0.90 + (hash % 2601) / 10_000;
+  return Math.min(maximum, Math.max(minimum, Math.round(anchor * variation)));
 }
 
 function supplierRate(policy: TrialBalanceClosingPolicy, year: string, operatingScale: number, purchaseBase: number) {
@@ -268,20 +291,28 @@ function consume(rows: TrialBalanceRow[], expected: AccountingExportEntry[]) {
   const residual = movementMap(rows);
   const posted: AccountingExportEntry[] = [];
   const missing: AccountingExportEntry[] = [];
+
   expected.forEach(entry => {
-    const d = residual.debit.get(entry.debitCode) ?? 0;
-    const c = residual.credit.get(entry.creditCode) ?? 0;
-    if (d + 2 >= entry.amountInCents && c + 2 >= entry.amountInCents) {
-      residual.debit.set(entry.debitCode, Math.max(0, d - entry.amountInCents));
-      residual.credit.set(entry.creditCode, Math.max(0, c - entry.amountInCents));
+    const debitAvailable = residual.debit.get(entry.debitCode) ?? 0;
+    const creditAvailable = residual.credit.get(entry.creditCode) ?? 0;
+    if (debitAvailable + 2 >= entry.amountInCents && creditAvailable + 2 >= entry.amountInCents) {
+      residual.debit.set(entry.debitCode, Math.max(0, debitAvailable - entry.amountInCents));
+      residual.credit.set(entry.creditCode, Math.max(0, creditAvailable - entry.amountInCents));
       posted.push(entry);
-    } else missing.push(entry);
+    } else {
+      missing.push(entry);
+    }
   });
+
   return { posted, missing };
 }
 
 function signedMovement(entries: AccountingExportEntry[], reducedCode: string) {
-  return entries.reduce((sum, entry) => sum + (entry.debitCode === reducedCode ? entry.amountInCents : 0) - (entry.creditCode === reducedCode ? entry.amountInCents : 0), 0);
+  return entries.reduce((sum, entry) => (
+    sum
+    + (entry.debitCode === reducedCode ? entry.amountInCents : 0)
+    - (entry.creditCode === reducedCode ? entry.amountInCents : 0)
+  ), 0);
 }
 
 function paymentLabel(key: AliasKey, reference: string) {
@@ -302,68 +333,83 @@ function paymentLabel(key: AliasKey, reference: string) {
 function apply(rows: TrialBalanceRow[], adjustments: AccountingExportEntry[]) {
   const direct = rows.map(row => {
     if (!row.reducedCode) return row;
-    const debitAdded = adjustments.filter(entry => entry.debitCode === row.reducedCode).reduce((sum, entry) => sum + entry.amountInCents, 0);
-    const creditAdded = adjustments.filter(entry => entry.creditCode === row.reducedCode).reduce((sum, entry) => sum + entry.amountInCents, 0);
+    const debitAdded = adjustments
+      .filter(entry => entry.debitCode === row.reducedCode)
+      .reduce((sum, entry) => sum + entry.amountInCents, 0);
+    const creditAdded = adjustments
+      .filter(entry => entry.creditCode === row.reducedCode)
+      .reduce((sum, entry) => sum + entry.amountInCents, 0);
     if (!debitAdded && !creditAdded) return row;
+
     const debitInCents = row.debitInCents + debitAdded;
     const creditInCents = row.creditInCents + creditAdded;
     const signed = previousSigned(row) + debitInCents - creditInCents;
-    return { ...row, debitInCents, creditInCents, currentBalanceInCents: Math.abs(signed), currentNature: Math.abs(signed) <= 1 ? "" : signed > 0 ? "D" : "C" } as TrialBalanceRow;
+    return {
+      ...row,
+      debitInCents,
+      creditInCents,
+      currentBalanceInCents: Math.abs(signed),
+      currentNature: Math.abs(signed) <= 1 ? "" : signed > 0 ? "D" : "C",
+    } as TrialBalanceRow;
   });
 
   const leaves = analytical(direct);
   const leafIds = new Set(leaves.map(row => row.id));
-  const path = (value: string) => value.split(".").map(part => Number(part)).filter(part => Number.isFinite(part));
+  const accountPath = (value: string) => value.split(".").map(part => Number(part)).filter(part => Number.isFinite(part));
   const descendant = (parent: number[], child: number[]) => parent.length < child.length && parent.every((part, index) => child[index] === part);
-  const leafPaths = leaves.map(row => ({ row, path: path(row.accountCode) }));
+  const leafPaths = leaves.map(row => ({ row, path: accountPath(row.accountCode) }));
+
   return direct.map(row => {
     if (leafIds.has(row.id)) return row;
-    const parent = path(row.accountCode);
+    const parent = accountPath(row.accountCode);
     const children = leafPaths.filter(item => descendant(parent, item.path)).map(item => item.row);
     if (!children.length) return row;
-    const prev = children.reduce((sum, child) => sum + previousSigned(child), 0);
-    const cur = children.reduce((sum, child) => sum + currentSigned(child), 0);
+
+    const previous = children.reduce((sum, child) => sum + previousSigned(child), 0);
+    const current = children.reduce((sum, child) => sum + currentSigned(child), 0);
     return {
       ...row,
-      previousBalanceInCents: Math.abs(prev), previousNature: Math.abs(prev) <= 1 ? "" : prev > 0 ? "D" : "C",
+      previousBalanceInCents: Math.abs(previous),
+      previousNature: Math.abs(previous) <= 1 ? "" : previous > 0 ? "D" : "C",
       debitInCents: children.reduce((sum, child) => sum + child.debitInCents, 0),
       creditInCents: children.reduce((sum, child) => sum + child.creditInCents, 0),
-      currentBalanceInCents: Math.abs(cur), currentNature: Math.abs(cur) <= 1 ? "" : cur > 0 ? "D" : "C",
+      currentBalanceInCents: Math.abs(current),
+      currentNature: Math.abs(current) <= 1 ? "" : current > 0 ? "D" : "C",
     } as TrialBalanceRow;
   });
 }
 
-function threshold(scale: number) { return Math.max(100_000, Math.round(scale * 0.005)); }
-
-function observation(row: TrialBalanceRow, headline: string, message: string, source: string, suggested?: number): TrialBalanceObservation {
-  return { id: `${row.id}:${headline}`, rowId: row.id, reducedCode: row.reducedCode, title: row.title, severity: "critical", headline, message, currentSignedInCents: currentSigned(row), suggestedSignedInCents: suggested, source };
+function threshold(scale: number) {
+  return Math.max(100_000, Math.round(scale * 0.005));
 }
 
-const naturalNature: Partial<Record<AliasKey, "D" | "C">> = {
-  clients: "D",
-  inventory: "D",
-  cash: "D",
-  suppliers: "C",
-  salariesPayable: "C",
-  vacationPayable: "C",
-  terminationPayable: "C",
-  thirteenthPayable: "C",
-  fgtsPayable: "C",
-  inssPayable: "C",
-  irrfPayable: "C",
-  prolaborePayable: "C",
-  simplesPayable: "C",
-};
+function observation(row: TrialBalanceRow, headline: string, message: string, source: string, suggested?: number): TrialBalanceObservation {
+  return {
+    id: `${row.id}:${headline}`,
+    rowId: row.id,
+    reducedCode: row.reducedCode,
+    title: row.title,
+    severity: "critical",
+    headline,
+    message,
+    currentSignedInCents: currentSigned(row),
+    suggestedSignedInCents: suggested,
+    source,
+  };
+}
 
-function criticals(rows: TrialBalanceRow[], scale: number, target: number | null, unmapped: number, missingCodes: string[]) {
-  const out: TrialBalanceObservation[] = [];
-  const min = threshold(scale);
-  const push = (item: TrialBalanceObservation) => { if (!out.some(existing => existing.id === item.id)) out.push(item); };
+function criticals(rows: TrialBalanceRow[], scale: number, targetCash: number | null, unmapped: number, missingCodes: string[]) {
+  const observations: TrialBalanceObservation[] = [];
+  const material = threshold(scale);
+  const push = (item: TrialBalanceObservation) => {
+    if (!observations.some(existing => existing.id === item.id)) observations.push(item);
+  };
 
-  // Lançamento faltante normal NÃO é crítico: ele é corrigido na aba Lançamentos e a linha fica verde na prévia.
   analytical(rows).forEach(row => {
     const difference = validateTrialBalanceRow(row);
-    if (Math.abs(difference) > min) push(observation(row, "Linha não fecha", `Diferença aritmética de ${money(difference)}.`, "Saldo anterior + débitos - créditos × saldo atual"));
+    if (Math.abs(difference) > material) {
+      push(observation(row, "Linha não fecha", `Diferença aritmética de ${money(difference)}.`, "Saldo anterior + débitos - créditos × saldo atual"));
+    }
   });
 
   (Object.keys(naturalNature) as AliasKey[]).forEach(key => {
@@ -371,39 +417,74 @@ function criticals(rows: TrialBalanceRow[], scale: number, target: number | null
     const row = findAlias(rows, key);
     if (!row) return;
     const value = currentSigned(row);
-    if (Math.abs(value) <= min) return;
     const expected = naturalNature[key];
+    if (Math.abs(value) <= material) return;
     if ((expected === "D" && value < 0) || (expected === "C" && value > 0)) {
-      push(observation(row, "Natureza invertida", `${row.title} está ${money(value)} ${value > 0 ? "D" : "C"}, contrário à natureza esperada (${expected}).`, "Natureza patrimonial da conta"));
+      push(observation(
+        row,
+        "Natureza invertida",
+        `${row.title} está ${money(value)} ${value > 0 ? "D" : "C"}, contrário à natureza esperada (${expected}).`,
+        "Natureza patrimonial da conta",
+      ));
     }
   });
 
   const cash = findAlias(rows, "cash");
   if (cash) {
     const value = currentSigned(cash);
-    if (value < -1) push(observation(cash, "Caixa credor", `O Caixa está ${money(value)} C.`, "Política de fechamento de Caixa", target ?? undefined));
-    else if (target !== null && value > Math.max(target * 8, min * 4)) push(observation(cash, "Caixa muito alto", `O Caixa está ${money(value)} D e a faixa operacional calculada está perto de ${money(target)}.`, "Histórico da empresa + competência", target));
+    if (value < -1) {
+      push(observation(cash, "Caixa credor", `O Caixa está ${money(value)} C.`, "Política de fechamento de Caixa", targetCash ?? undefined));
+    } else if (targetCash !== null && value > Math.max(targetCash * 8, material * 4)) {
+      push(observation(cash, "Caixa muito alto", `O Caixa está ${money(value)} D e a faixa operacional calculada está perto de ${money(targetCash)}.`, "Histórico da empresa + competência", targetCash));
+    }
   }
 
   missingCodes.forEach(code => {
-    const anchor = findExact(rows, code) ?? cash ?? analytical(rows)[0];
+    const anchor = cash ?? analytical(rows)[0];
     if (!anchor) return;
-    push(observation(anchor, "Conta do ajuste não existe no Balancete", `O C.R. ${code} não é uma conta analítica do Balancete importado. O ajuste foi bloqueado: nenhuma conta do Plano de Contas do site pode substituí-la.`, "Balancete importado é a autoridade das contas"));
+    push(observation(
+      anchor,
+      "Conta do ajuste não existe no Balancete",
+      `O C.R. ${code} não é uma conta analítica do Balancete importado. O ajuste foi bloqueado.`,
+      "Balancete importado é a autoridade das contas",
+    ));
   });
 
   if (unmapped > 0) {
     const anchor = cash ?? analytical(rows)[0];
-    if (anchor) push(observation(anchor, "Existem contas não reconhecidas", `${unmapped} lançamento(s) esperado(s) ainda não puderam ser ligados a uma conta analítica deste Balancete.`, "Ponte semântica entre Plano de Contas e Balancete"));
+    if (anchor) {
+      push(observation(
+        anchor,
+        "Existem contas não reconhecidas",
+        `${unmapped} lançamento(s) esperado(s) não puderam ser ligados a uma conta analítica do Balancete.`,
+        "Ponte semântica entre Plano de Contas e Balancete",
+      ));
+    }
   }
-  return out;
+
+  return observations;
 }
 
 function targets(rows: TrialBalanceRow[], preview: TrialBalanceRow[], adjustments: AccountingExportEntry[]) {
-  const codes = new Set<string>(); adjustments.forEach(entry => { codes.add(entry.debitCode); codes.add(entry.creditCode); });
+  const codes = new Set<string>();
+  adjustments.forEach(entry => {
+    codes.add(entry.debitCode);
+    codes.add(entry.creditCode);
+  });
+
   return Array.from(codes).map(code => {
-    const current = findExact(rows, code); const projected = findExact(preview, code);
+    const current = findExact(rows, code);
+    const projected = findExact(preview, code);
     if (!current || !projected) return null;
-    return { key: `cr-${code}`, label: current.title, row: current, currentSignedInCents: currentSigned(current), targetSignedInCents: currentSigned(projected), source: "Reconciliação do movimento completo da competência.", confidence: 0.99 } satisfies TrialBalanceAutoTarget;
+    return {
+      key: `cr-${code}`,
+      label: current.title,
+      row: current,
+      currentSignedInCents: currentSigned(current),
+      targetSignedInCents: currentSigned(projected),
+      source: "Reconciliação do movimento completo da competência.",
+      confidence: 0.99,
+    } satisfies TrialBalanceAutoTarget;
   }).filter((item): item is TrialBalanceAutoTarget => Boolean(item));
 }
 
@@ -425,24 +506,27 @@ export function previewPreservesStructure(rows: TrialBalanceRow[], preview: Tria
   if (rows.length !== preview.length) return false;
   return rows.every((row, index) => {
     const other = preview[index];
-    return other.id === row.id && other.accountCode === row.accountCode && other.title === row.title && other.reducedCode === row.reducedCode;
+    return other.id === row.id
+      && other.accountCode === row.accountCode
+      && other.title === row.title
+      && other.reducedCode === row.reducedCode;
   });
 }
 
-
 export async function buildCriticalTrialBalancePlan(company: string, month: string, year: string, rows: TrialBalanceRow[]): Promise<CriticalTrialBalancePlan> {
   const prefix = `${company}:${year}:${month}`;
-  const prev = previousCompetence(month, year);
-  const prevPrefix = `${company}:${prev.year}:${prev.month}`;
+  const previous = previousCompetence(month, year);
+  const previousPrefix = `${company}:${previous.year}:${previous.month}`;
   const [expenses, payroll, purchases, revenue, previousPurchases, policy, accounts] = await Promise.all([
     loadWorkspaceData<ExpensePayload>(`${prefix}:despesas:parsed`),
     loadWorkspaceData<PayrollPayload>(`${prefix}:folha:parsed`),
     loadWorkspaceData<PurchasePayload>(`${prefix}:compras:parsed`),
     loadWorkspaceData<RevenuePayload>(`${prefix}:faturamento:parsed`),
-    loadWorkspaceData<PurchasePayload>(`${prevPrefix}:compras:parsed`),
+    loadWorkspaceData<PurchasePayload>(`${previousPrefix}:compras:parsed`),
     loadWorkspaceData<TrialBalanceClosingPolicy>(`${company}:balancete:closing-policy`),
     loadWorkspaceData<ChartAccount[]>(`${company}:chart-of-accounts`),
   ]);
+
   const chart = accounts ?? [];
   const rawOperational = [
     ...(expenses?.entries ?? []).map(entry => exportEntry(entry, "despesas")),
@@ -455,74 +539,166 @@ export async function buildCriticalTrialBalancePlan(company: string, month: stri
   const operational: AccountingExportEntry[] = bridged.filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
   const unmappedOperational = bridged.filter(entry => !entry).length;
 
-  const revenueTotal = revenue?.reference?.totalAmountInCents ?? total(rawOperational.filter(entry => entry.section === "faturamento" && !normalizeTrialBalanceText(entry.history).includes("pgdas")));
-  const purchaseTotal = purchases?.reference?.totalAmountInCents ?? total(rawOperational.filter(entry => entry.section === "compras"));
-  const operatingScale = Math.max(1, revenueTotal + purchaseTotal + total(rawOperational.filter(entry => entry.section === "despesas")) + Math.round(total(rawOperational.filter(entry => entry.section === "folha")) / 2));
+  const revenueTotal = revenue?.reference?.totalAmountInCents
+    ?? total(rawOperational.filter(entry => entry.section === "faturamento" && !normalizeTrialBalanceText(entry.history).includes("pgdas")));
+  const purchaseTotal = purchases?.reference?.totalAmountInCents
+    ?? total(rawOperational.filter(entry => entry.section === "compras"));
+  const operatingScale = Math.max(
+    1,
+    revenueTotal
+      + purchaseTotal
+      + total(rawOperational.filter(entry => entry.section === "despesas"))
+      + Math.round(total(rawOperational.filter(entry => entry.section === "folha")) / 2),
+  );
+
   const closingPolicy = policy ?? {};
-  const previousVerified = rows.length > 0 && rows.every(row => (row as TrialBalanceRow & { previousBalanceRead?: boolean }).previousBalanceRead === true);
+  const previousVerified = rows.length > 0
+    && rows.every(row => (row as TrialBalanceRow & { previousBalanceRead?: boolean }).previousBalanceRead === true);
   const date = closingDate(month, year);
   const cash = findAlias(rows, "cash");
   const clients = findAlias(rows, "clients");
   const suppliers = findAlias(rows, "suppliers");
   const inventory = findAlias(rows, "inventory");
-  const targetCash = cash ? cashTarget(company, month, year, Math.max(0, previousSigned(cash)), closingPolicy) : null;
-  const closing: AccountingExportEntry[] = [];
+  const targetCash = cash
+    ? cashTarget(company, month, year, Math.max(0, previousSigned(cash)), closingPolicy)
+    : null;
 
+  const closingPayments: AccountingExportEntry[] = [];
   if (cash && closingPolicy.payPriorLiabilitiesFully !== false) {
-    const keys: AliasKey[] = ["salariesPayable", "vacationPayable", "terminationPayable", "thirteenthPayable", "fgtsPayable", "inssPayable", "irrfPayable", "prolaborePayable", "simplesPayable"];
-    keys.forEach(key => {
+    const payableKeys: AliasKey[] = [
+      "salariesPayable",
+      "vacationPayable",
+      "terminationPayable",
+      "thirteenthPayable",
+      "fgtsPayable",
+      "inssPayable",
+      "irrfPayable",
+      "prolaborePayable",
+      "simplesPayable",
+    ];
+
+    payableKeys.forEach(key => {
       const row = findAlias(rows, key);
       if (!row || previousSigned(row) >= -1) return;
-      closing.push(journal(date, Math.abs(previousSigned(row)), row, cash, paymentLabel(key, `${prev.month}/${prev.year}`), `Quitação do saldo anterior de ${row.title}.`, `pagamento_${key}`));
+      closingPayments.push(journal(
+        date,
+        Math.abs(previousSigned(row)),
+        row,
+        cash,
+        paymentLabel(key, `${previous.month}/${previous.year}`),
+        `Quitação do saldo anterior de ${row.title}.`,
+        `pagamento_${key}`,
+      ));
     });
 
     if (suppliers) {
-      const previousPurchaseFromSite = previousPurchases?.reference?.totalAmountInCents ?? total((previousPurchases?.entries ?? []));
+      const previousPurchaseFromSite = previousPurchases?.reference?.totalAmountInCents
+        ?? total(previousPurchases?.entries ?? []);
       const previousInventory = inventory ? Math.max(0, previousSigned(inventory)) : 0;
-      const purchaseBase = previousPurchaseFromSite || previousInventory || Math.abs(Math.min(0, previousSigned(suppliers)));
+      const purchaseBase = previousPurchaseFromSite
+        || previousInventory
+        || Math.abs(Math.min(0, previousSigned(suppliers)));
       const rate = supplierRate(closingPolicy, year, operatingScale, purchaseBase);
       const amount = Math.round(purchaseBase * rate);
-      if (amount > 0) closing.push(journal(date, amount, suppliers, cash, `PAGTO. FORNECEDORES REF. ${prev.month}/${prev.year}`, `Pagamento calculado sobre a compra/estoque da competência anterior (${money(purchaseBase)}) × ${(rate * 100).toFixed(1)}%.`, "pagamento_fornecedores"));
+      if (amount > 0) {
+        closingPayments.push(journal(
+          date,
+          amount,
+          suppliers,
+          cash,
+          `PAGTO. FORNECEDORES REF. ${previous.month}/${previous.year}`,
+          `Pagamento calculado sobre a compra/estoque da competência anterior (${money(purchaseBase)}) × ${(rate * 100).toFixed(1)}%.`,
+          "pagamento_fornecedores",
+        ));
+      }
     }
   }
 
+  // Primeiro reconcilia tudo que deveria existir SEM o recebimento de clientes.
+  // O saldo atual do Balancete já contém os movimentos efetivamente lançados; por isso
+  // o recebimento deve partir de currentSigned + apenas os lançamentos ainda faltantes.
+  const expectedBeforeReceipt = [...operational, ...closingPayments]
+    .filter(entry => entry.amountInCents > 0 && entry.debitCode && entry.creditCode);
+  const beforeReceiptReconciliation = consume(rows, expectedBeforeReceipt);
+
+  const closing = [...closingPayments];
   if (cash && clients && targetCash !== null) {
-    const beforeReceipt = [...operational, ...closing];
-    const cashBefore = previousSigned(cash) + signedMovement(beforeReceipt, cash.reducedCode);
-    const clientBefore = previousSigned(clients) + signedMovement(beforeReceipt, clients.reducedCode);
-    const receipt = Math.min(Math.max(0, targetCash - cashBefore), Math.max(0, clientBefore));
-    if (receipt > 0) closing.push(journal(date, receipt, cash, clients, `RECEBIMENTO DE CLIENTES MÊS ${month}/${year}`, `Recebimento calculado para encerrar Caixa perto de ${money(targetCash)}, sem ultrapassar o saldo real disponível em Clientes.`, "recebimento_clientes"));
+    const cashBeforeReceipt = currentSigned(cash)
+      + signedMovement(beforeReceiptReconciliation.missing, cash.reducedCode);
+    const clientsBeforeReceipt = currentSigned(clients)
+      + signedMovement(beforeReceiptReconciliation.missing, clients.reducedCode);
+    const neededReceipt = targetCash - cashBeforeReceipt;
+    const receipt = Math.min(Math.max(0, neededReceipt), Math.max(0, clientsBeforeReceipt));
+
+    if (receipt > 0) {
+      closing.push(journal(
+        date,
+        receipt,
+        cash,
+        clients,
+        `RECEBIMENTO DE CLIENTES MÊS ${month}/${year}`,
+        `Recebimento calculado a partir do Saldo Atual do Caixa + somente movimentos ainda faltantes, para encerrar perto de ${money(targetCash)} sem ultrapassar Clientes.`,
+        "recebimento_clientes",
+      ));
+    }
   }
 
-  const expected = [...operational, ...closing].filter(entry => entry.amountInCents > 0 && entry.debitCode && entry.creditCode);
+  const expected = [...operational, ...closing]
+    .filter(entry => entry.amountInCents > 0 && entry.debitCode && entry.creditCode);
   const reconciliation = consume(rows, expected);
+  const adjustmentMissingCodes = adjustmentsOutsideTrialBalance(rows, reconciliation.missing);
   const previewRows = apply(rows, reconciliation.missing);
+  const structureOk = previewPreservesStructure(rows, previewRows);
   const secondPass = consume(previewRows, expected);
+  const secondPassMissingCodes = adjustmentsOutsideTrialBalance(rows, secondPass.missing);
+
   const projectedCashRow = cash ? findExact(previewRows, cash.reducedCode) : null;
   const projectedCash = projectedCashRow ? currentSigned(projectedCashRow) : null;
-  const originalCritical = criticals(rows, reconciliation.missing, operatingScale, targetCash, unmappedOperational);
-  const remainingCritical = criticals(previewRows, secondPass.missing, operatingScale, targetCash, unmappedOperational);
-  const materialArithmetic = analytical(previewRows).filter(row => Math.abs(validateTrialBalanceRow(row)) > threshold(operatingScale));
-  const movementDifference = analytical(previewRows).reduce((sum, row) => sum + row.debitInCents - row.creditInCents, 0);
+  const originalCritical = criticals(rows, operatingScale, targetCash, unmappedOperational, adjustmentMissingCodes);
+  const remainingCritical = criticals(previewRows, operatingScale, targetCash, unmappedOperational, secondPassMissingCodes);
+  const materialArithmetic = analytical(previewRows)
+    .filter(row => Math.abs(validateTrialBalanceRow(row)) > threshold(operatingScale));
+  const movementDifference = analytical(previewRows)
+    .reduce((sum, row) => sum + row.debitInCents - row.creditInCents, 0);
+
   const minCash = closingPolicy.cashTargetMinInCents ?? 60_000;
   const maxCash = closingPolicy.cashTargetMaxInCents ?? 180_000;
-  const cashOk = projectedCash === null || (projectedCash >= minCash && projectedCash <= maxCash);
-  const correctionComplete = previousVerified && unmappedOperational === 0 && secondPass.missing.length === 0 && remainingCritical.length === 0 && materialArithmetic.length === 0 && Math.abs(movementDifference) <= 1 && cashOk;
+  const cashOk = !cash || (
+    projectedCash !== null
+    && projectedCash > 0
+    && projectedCash >= minCash
+    && projectedCash <= maxCash
+  );
+  const correctionComplete = previousVerified
+    && unmappedOperational === 0
+    && adjustmentMissingCodes.length === 0
+    && structureOk
+    && secondPass.missing.length === 0
+    && remainingCritical.length === 0
+    && materialArithmetic.length === 0
+    && Math.abs(movementDifference) <= 1
+    && cashOk;
 
   const costCenterIssues = expected.flatMap((entry, index) => {
     const issues: string[] = [];
-    if (entry.section !== "balancete" && !entry.debitCostCenter && !entry.creditCostCenter && /receita|despesa|folha|faturamento/i.test(`${entry.section} ${entry.debitDescription} ${entry.creditDescription}`)) {
-      // Informação para conferência, não bloqueia contas patrimoniais.
+    if (
+      entry.section !== "balancete"
+      && !entry.debitCostCenter
+      && !entry.creditCostCenter
+      && /receita|despesa|folha|faturamento/i.test(`${entry.section} ${entry.debitDescription} ${entry.creditDescription}`)
+    ) {
       issues.push(`Linha ${index + 1}: confira se alguma das contas exige centro de custo.`);
     }
     return issues;
   });
 
   const contextSummary = [
-    `Esperados ${expected.length} lançamento(s): ${reconciliation.posted.length} já estão no Balancete e ${reconciliation.missing.length} serão gerados como ajuste.`,
+    `Esperados ${expected.length} lançamento(s): ${reconciliation.posted.length} já constam no movimento e ${reconciliation.missing.length} serão gerados como ajuste.`,
     `${unmappedOperational} lançamento(s) dos módulos não encontraram conta equivalente no Balancete${unmappedOperational ? " e bloqueiam o fechamento" : ""}.`,
-    cash ? `Caixa: saldo anterior ${money(previousSigned(cash))} ${previousSigned(cash) < 0 ? "C" : "D"}; alvo variável ${money(targetCash ?? 0)}; projetado ${projectedCash === null ? "—" : `${money(projectedCash)} ${projectedCash < 0 ? "C" : "D"}`}.` : "Caixa não localizado.",
-    `Pagamentos anteriores são reconstruídos pelo Saldo Anterior; Fornecedores usa compra/estoque anterior e política do exercício. Movimentos já lançados não são duplicados.`,
+    cash
+      ? `Caixa: saldo atual antes dos ajustes ${money(currentSigned(cash))} ${currentSigned(cash) < 0 ? "C" : "D"}; alvo variável ${money(targetCash ?? 0)}; projetado ${projectedCash === null ? "—" : `${money(projectedCash)} ${projectedCash < 0 ? "C" : "D"}`}.`
+      : "Caixa não localizado.",
+    `Prévia preserva ${structureOk ? "integralmente" : "NÃO preserva"} as mesmas linhas/IDs/títulos/C.R.s e ordem do Balancete importado.`,
   ];
 
   return {
@@ -549,7 +725,21 @@ export async function buildCriticalTrialBalancePlan(company: string, month: stri
 }
 
 export function criticalTrialBalancePlanIsCorrected(plan: CriticalTrialBalancePlan | null | undefined) {
-  return Boolean(plan?.correctionComplete && plan.previousBalanceVerified && plan.remainingCriticalObservations.length === 0 && plan.unmappedEntryCount === 0);
+  return Boolean(
+    plan?.correctionComplete
+    && plan.previousBalanceVerified
+    && plan.remainingCriticalObservations.length === 0
+    && plan.unmappedEntryCount === 0,
+  );
 }
 
-export const __test = { cashTarget, supplierRate, consume, apply, bridgeEntry, resolveBalanceRow };
+export const __test = {
+  cashTarget,
+  supplierRate,
+  consume,
+  apply,
+  bridgeEntry,
+  resolveBalanceRow,
+  adjustmentsOutsideTrialBalance,
+  previewPreservesStructure,
+};
