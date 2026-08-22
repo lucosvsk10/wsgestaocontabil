@@ -5,6 +5,23 @@ const DATABASE_VERSION = 1;
 const FILE_STORE = "files";
 const DATA_STORE = "data";
 
+export const WRONG_COMPETENCE_IMPORT_EVENT = "ws:wrong-competence-import";
+
+export interface WrongCompetenceImportRequest {
+  currentCompetence: string;
+  detectedCompetence: string;
+  module: string;
+  fileNames: string[];
+  resolve: (keep: boolean) => void;
+}
+
+export class WrongCompetenceImportCancelledError extends Error {
+  constructor() {
+    super("Importação removida pelo usuário após detectar competência diferente.");
+    this.name = "WrongCompetenceImportCancelledError";
+  }
+}
+
 interface StoredFile {
   id: string;
   scope: string;
@@ -55,6 +72,43 @@ function localFileId(scope: string, file: File) {
   return `${scope}:${file.name}:${file.size}:${file.lastModified}`;
 }
 
+function selectedContext(company: string) {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(`ws:lancamentos:last-context:${company}`);
+    if (!raw) return null;
+    return JSON.parse(raw) as { year?: string; selectedMonth?: string; selectedModule?: string };
+  } catch {
+    return null;
+  }
+}
+
+function displayCompetence(value: string | null) {
+  const match = /^(20\d{2})-(\d{2})$/.exec(value || "");
+  return match ? `${match[2]}/${match[1]}` : value || "";
+}
+
+async function confirmDifferentCompetence(context: ReturnType<typeof parseScope>, files: File[]) {
+  if (typeof window === "undefined") return true;
+  if (!context.competence || !context.module || !["folha", "compras", "faturamento"].includes(context.module)) return true;
+
+  const current = selectedContext(context.company);
+  if (!current?.year || !current.selectedMonth || current.selectedModule !== context.module) return true;
+  const currentCompetence = `${current.year}-${current.selectedMonth}`;
+  if (currentCompetence === context.competence) return true;
+
+  return await new Promise<boolean>((resolve) => {
+    const detail: WrongCompetenceImportRequest = {
+      currentCompetence: displayCompetence(currentCompetence),
+      detectedCompetence: displayCompetence(context.competence),
+      module: context.module!,
+      fileNames: files.map(file => file.name),
+      resolve,
+    };
+    window.dispatchEvent(new CustomEvent<WrongCompetenceImportRequest>(WRONG_COMPETENCE_IMPORT_EVENT, { detail }));
+  });
+}
+
 export async function saveWorkspaceFiles(scope: string, files: File[]) {
   const context = parseScope(scope);
   try {
@@ -82,6 +136,12 @@ export async function saveWorkspaceFiles(scope: string, files: File[]) {
   });
   await complete(transaction);
   database.close();
+
+  const keep = await confirmDifferentCompetence(context, files);
+  if (!keep) {
+    await removeWorkspaceFiles(scope, files);
+    throw new WrongCompetenceImportCancelledError();
+  }
 }
 
 export async function loadWorkspaceFiles(scope: string) {
