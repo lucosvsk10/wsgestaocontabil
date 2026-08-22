@@ -20,7 +20,7 @@ const checkIsAdmin = async (supabaseAdmin: any, userId: string): Promise<boolean
   }
   
   const adminRoles = ['admin', 'fiscal', 'contabil', 'geral'];
-  return roles?.some(r => adminRoles.includes(r.role)) || false;
+  return roles?.some((r: { role: string }) => adminRoles.includes(r.role)) || false;
 };
 
 serve(async (req) => {
