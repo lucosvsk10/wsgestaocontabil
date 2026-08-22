@@ -154,15 +154,15 @@ export async function loadWorkspaceFiles(scope: string) {
   try {
     const { data, error } = await (supabase as any).from("accounting_workspace_documents").select("original_name, storage_path, mime_type").eq("scope", scope).order("created_at");
     if (error) throw error;
-    if (data?.length) {
-      const downloaded = await Promise.all(data.map(async (record: any) => {
-        const { data: blob, error: downloadError } = await supabase.storage.from("accounting-documents").download(record.storage_path);
-        if (downloadError) throw downloadError;
-        return new File([blob], record.original_name, { type: record.mime_type || blob.type });
-      }));
-      return downloaded;
-    }
-  } catch (error) { console.error("Falha ao carregar documentos do Supabase; buscando cópia local.", error); }
+    if (!data?.length) return [];
+    return await Promise.all(data.map(async (record: any) => {
+      const { data: blob, error: downloadError } = await supabase.storage.from("accounting-documents").download(record.storage_path);
+      if (downloadError) throw downloadError;
+      return new File([blob], record.original_name, { type: record.mime_type || blob.type });
+    }));
+  } catch (error) {
+    console.error("Falha ao carregar documentos do Supabase; buscando cópia local.", error);
+  }
   const database = await openDatabase();
   const transaction = database.transaction(FILE_STORE, "readonly");
   const request = transaction.objectStore(FILE_STORE).index("scope").getAll(scope);
@@ -287,13 +287,11 @@ export async function loadWorkspaceData<T>(id: string) {
   try {
     const { data, error } = await (supabase as any).from("accounting_workspace_data").select("payload").eq("scope", id).maybeSingle();
     if (error) throw error;
-    if (data?.payload !== undefined) return data.payload as T;
-  } catch (error) { console.error("Falha ao carregar dados contábeis do Supabase; buscando cópia local.", error); }
-  const localValue = await loadLocalWorkspaceData<T>(id);
-  if (localValue !== undefined) {
-    void saveWorkspaceData(id, localValue);
+    return data?.payload !== undefined ? data.payload as T : undefined;
+  } catch (error) {
+    console.error("Falha ao carregar dados contábeis do Supabase; buscando cópia local.", error);
   }
-  return localValue;
+  return loadLocalWorkspaceData<T>(id);
 }
 
 export async function isWorkspaceDataSynced(id: string) {
