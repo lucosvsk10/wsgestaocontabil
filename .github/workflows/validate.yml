@@ -71,7 +71,7 @@ jobs:
           src/lib/lancamentos/trialBalanceAutoAdjustment.ts
           src/lib/lancamentos/trialBalanceCriticalCorrection.ts
           src/lib/lancamentos/trialBalanceCriticalCorrection.test.ts
-          src/lib/lancamentos/trialBalanceReconciliationV2.ts
+          src/lib/lancamentos/trialBalanceReconciliationV3.ts
           src/lib/lancamentos/costCenters.ts
           src/lib/lancamentos/historicalRegression.ts
           src/lib/lancamentos/historicalRegression.test.ts
