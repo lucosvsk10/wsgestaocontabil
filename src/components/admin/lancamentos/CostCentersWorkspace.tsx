@@ -1,10 +1,11 @@
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Trash2, Upload } from "lucide-react";
+import { CheckCircle2, Plus, Sparkles, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { ChartAccount } from "@/lib/lancamentos/chartOfAccounts";
-import { AccountCostCenterRule, CostCenter, readCostCenters, suggestCostCenterForAccount } from "@/lib/lancamentos/costCenters";
+import { detectNumberedWsPlan, groupFromAccountCode, groupLabel } from "@/lib/lancamentos/accountPlanProfile";
+import { AccountCostCenterRule, buildAutomaticCostCenterRules, CostCenter, readCostCenters } from "@/lib/lancamentos/costCenters";
 import { loadWorkspaceData, saveWorkspaceData } from "@/lib/lancamentos/workspaceStorage";
 
 export function CostCentersWorkspace({ company }: { company: string }) {
@@ -36,11 +37,11 @@ export function CostCentersWorkspace({ company }: { company: string }) {
     return () => { active = false; };
   }, [accountsKey, centersKey, rulesKey]);
 
+  const planProfile = useMemo(() => detectNumberedWsPlan(accounts), [accounts]);
   const analyticalAccounts = useMemo(() => {
     const term = query.trim().toLocaleLowerCase("pt-BR");
     return accounts.filter(account => account.analytical).filter(account => !term || `${account.account} ${account.reducedCode} ${account.description}`.toLocaleLowerCase("pt-BR").includes(term));
   }, [accounts, query]);
-
   const ruleMap = useMemo(() => new Map(rules.map(rule => [rule.accountReducedCode, rule])), [rules]);
 
   const importFile = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -56,8 +57,15 @@ export function CostCentersWorkspace({ company }: { company: string }) {
       }
       setPreview(parsed);
     } catch {
-      setError("Não foi possível abrir o arquivo. Use XLSX, XLS ou CSV exportado pelo Calima.");
+      setError("Não foi possível abrir o arquivo. Use XLSX, XLS ou CSV.");
     }
+  };
+
+  const applyAutomaticRules = async (nextCenters = centers) => {
+    if (!planProfile.detected || !nextCenters.length) return;
+    const nextRules = buildAutomaticCostCenterRules(accounts, nextCenters, rules);
+    setRules(nextRules);
+    await saveWorkspaceData(rulesKey, nextRules);
   };
 
   const confirmImport = async () => {
@@ -65,20 +73,7 @@ export function CostCentersWorkspace({ company }: { company: string }) {
     await saveWorkspaceData(centersKey, next);
     setCenters(next);
     setPreview([]);
-
-    // Só sugere C.C. para contas de resultado. Patrimoniais permanecem sem centro.
-    const existing = new Map(rules.map(rule => [rule.accountReducedCode, rule]));
-    accounts.filter(account => account.analytical).forEach(account => {
-      if (existing.has(account.reducedCode)) return;
-      const suggested = suggestCostCenterForAccount(account, next);
-      if (!suggested) return;
-      existing.set(account.reducedCode, {
-        accountReducedCode: account.reducedCode,
-        costCenterReducedCode: suggested.reducedCode,
-        required: true,
-      });
-    });
-    const nextRules = Array.from(existing.values());
+    const nextRules = buildAutomaticCostCenterRules(accounts, next, rules);
     setRules(nextRules);
     await saveWorkspaceData(rulesKey, nextRules);
   };
@@ -114,6 +109,7 @@ export function CostCentersWorkspace({ company }: { company: string }) {
         accountReducedCode: account.reducedCode,
         costCenterReducedCode,
         required: required ?? current?.required ?? true,
+        source: "manual",
       });
     }
     setRules(next);
@@ -123,21 +119,29 @@ export function CostCentersWorkspace({ company }: { company: string }) {
   const updateRequired = async (account: ChartAccount, required: boolean) => {
     const current = ruleMap.get(account.reducedCode);
     if (!current) return;
-    const next = rules.map(rule => rule.accountReducedCode === account.reducedCode ? { ...rule, required } : rule);
+    const next = rules.map(rule => rule.accountReducedCode === account.reducedCode ? { ...rule, required, source: "manual" as const } : rule);
     setRules(next);
     await saveWorkspaceData(rulesKey, next);
   };
 
   return <div className="space-y-6">
-    <section className="rounded-md border border-border bg-background p-5">
+    <section className="rounded-xl border border-border bg-background p-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h2 className="text-base font-semibold">Centros de custo</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Importe o cadastro do Calima com o mesmo fluxo do Plano de Contas. Conta analítica não implica C.C. obrigatório; a exigência é configurada por conta.</p>
+          <p className="mt-1 text-sm text-muted-foreground">O site pode preencher os centros automaticamente a partir da estrutura do Plano de Contas.</p>
         </div>
-        <Button variant="outline" onClick={() => inputRef.current?.click()}><Upload className="mr-2 h-4 w-4" />Importar centros de custo</Button>
+        <div className="flex flex-wrap gap-2">
+          {planProfile.detected && <Button onClick={() => void applyAutomaticRules()} disabled={!centers.length}><Sparkles className="mr-2 h-4 w-4" />Aplicar regra automática</Button>}
+          <Button variant="outline" onClick={() => inputRef.current?.click()}><Upload className="mr-2 h-4 w-4" />Importar centros de custo</Button>
+        </div>
         <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv" className="sr-only" onChange={event => void importFile(event)} />
       </div>
+
+      {planProfile.detected && <div className="mt-4 rounded-lg border border-emerald-500/30 bg-emerald-500/[0.06] p-4">
+        <div className="flex gap-3"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" /><div><p className="text-sm font-semibold">Estrutura 1 / 2 / 3 / 4 / 6 identificada</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">1 Ativo e 2 Passivo ficam sem centro de custo automático. Contas analíticas iniciadas em 3 recebem <strong>RECEITAS</strong>; contas iniciadas em 4 recebem <strong>DESPESAS</strong>. O grupo 6 Resultado não recebe C.C. automaticamente. Você ainda pode alterar qualquer conta manualmente abaixo.</p></div></div>
+      </div>}
+
       {error && <div className="mt-4 rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</div>}
       {preview.length > 0 && <div className="mt-4 overflow-hidden rounded-md border border-border">
         <div className="flex items-center justify-between border-b border-border p-4"><span className="text-sm">Prévia · {preview.length} centro(s)</span><div className="flex gap-2"><Button variant="outline" onClick={() => setPreview([])}>Cancelar</Button><Button onClick={() => void confirmImport()}>Confirmar importação</Button></div></div>
@@ -158,13 +162,13 @@ export function CostCentersWorkspace({ company }: { company: string }) {
 
     <section className="rounded-md border border-border bg-background">
       <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div><h3 className="text-sm font-semibold">Vinculação às contas analíticas</h3><p className="mt-1 text-xs text-muted-foreground">Defina o C.C. padrão apenas nas contas que realmente exigem rateio. O site usa essa configuração nas exportações e nos ajustes do Balancete.</p></div>
+        <div><h3 className="text-sm font-semibold">Vinculação às contas analíticas</h3><p className="mt-1 text-xs text-muted-foreground">As regras automáticas ficam visíveis aqui. Se você mudar uma linha manualmente, essa escolha passa a ter prioridade.</p></div>
         <Input className="max-w-sm" value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar conta, C.R. ou descrição" />
       </div>
-      <div className="max-h-[560px] overflow-auto"><table className="w-full min-w-[920px] text-sm"><thead className="sticky top-0 z-10 bg-muted/95 text-left text-xs text-muted-foreground"><tr><th className="border-b border-r border-border px-3 py-2">Conta</th><th className="border-b border-r border-border px-3 py-2">C.R.</th><th className="border-b border-r border-border px-3 py-2">Descrição</th><th className="border-b border-r border-border px-3 py-2">Centro de custo padrão</th><th className="border-b border-border px-3 py-2 text-center">Obrigatório</th></tr></thead><tbody>{analyticalAccounts.map(account => {
+      <div className="max-h-[560px] overflow-auto"><table className="w-full min-w-[980px] text-sm"><thead className="sticky top-0 z-10 bg-muted/95 text-left text-xs text-muted-foreground"><tr><th className="border-b border-r border-border px-3 py-2">Conta</th><th className="border-b border-r border-border px-3 py-2">Grupo</th><th className="border-b border-r border-border px-3 py-2">C.R.</th><th className="border-b border-r border-border px-3 py-2">Descrição</th><th className="border-b border-r border-border px-3 py-2">Centro de custo</th><th className="border-b border-border px-3 py-2 text-center">Obrigatório</th></tr></thead><tbody>{analyticalAccounts.map(account => {
         const rule = ruleMap.get(account.reducedCode);
-        return <tr key={account.id} className="border-b border-border last:border-0"><td className="border-r border-border px-3 py-2 font-mono text-xs">{account.account}</td><td className="border-r border-border px-3 py-2 tabular-nums">{account.reducedCode}</td><td className="border-r border-border px-3 py-2">{account.description}</td><td className="border-r border-border px-3 py-2"><select className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm" value={rule?.costCenterReducedCode ?? ""} onChange={event => void updateRule(account, event.target.value)}><option value="">Não usar centro de custo</option>{centers.filter(center => center.analytical).map(center => <option key={center.id} value={center.reducedCode}>{center.reducedCode} · {center.description}</option>)}</select></td><td className="px-3 py-2 text-center"><Checkbox checked={Boolean(rule?.required)} disabled={!rule?.costCenterReducedCode} onCheckedChange={checked => void updateRequired(account, checked === true)} /></td></tr>;
-      })}{!analyticalAccounts.length && <tr><td colSpan={5} className="h-40 text-center text-muted-foreground">Importe primeiro o plano de contas desta empresa.</td></tr>}</tbody></table></div>
+        return <tr key={account.id} className="border-b border-border last:border-0"><td className="border-r border-border px-3 py-2 font-mono text-xs">{account.account}</td><td className="border-r border-border px-3 py-2 text-xs">{groupLabel(groupFromAccountCode(account.account))}</td><td className="border-r border-border px-3 py-2 tabular-nums">{account.reducedCode}</td><td className="border-r border-border px-3 py-2">{account.description}</td><td className="border-r border-border px-3 py-2"><select className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm" value={rule?.costCenterReducedCode ?? ""} onChange={event => void updateRule(account, event.target.value)}><option value="">Não usar centro de custo</option>{centers.filter(center => center.analytical).map(center => <option key={center.id} value={center.reducedCode}>{center.reducedCode} · {center.description}</option>)}</select>{rule?.source === "automatic" && <span className="mt-1 block text-[10px] text-cyan-700 dark:text-cyan-300">Preenchido automaticamente pelo grupo da conta</span>}</td><td className="px-3 py-2 text-center"><Checkbox checked={Boolean(rule?.required)} disabled={!rule?.costCenterReducedCode} onCheckedChange={checked => void updateRequired(account, checked === true)} /></td></tr>;
+      })}{!analyticalAccounts.length && <tr><td colSpan={6} className="h-40 text-center text-muted-foreground">Importe primeiro o plano de contas desta empresa.</td></tr>}</tbody></table></div>
     </section>
   </div>;
 }
