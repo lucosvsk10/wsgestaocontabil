@@ -1,8 +1,9 @@
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
-import { CheckCircle2, Plus, Sparkles, Trash2, Upload } from "lucide-react";
+import { CheckCircle2, Loader2, Plus, Sparkles, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { toast } from "@/hooks/use-toast";
 import { ChartAccount } from "@/lib/lancamentos/chartOfAccounts";
 import { detectNumberedWsPlan, groupFromAccountCode, groupLabel } from "@/lib/lancamentos/accountPlanProfile";
 import { AccountCostCenterRule, buildAutomaticCostCenterRules, CostCenter, readCostCenters } from "@/lib/lancamentos/costCenters";
@@ -16,6 +17,8 @@ export function CostCentersWorkspace({ company }: { company: string }) {
   const [accounts, setAccounts] = useState<ChartAccount[]>([]);
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
+  const [applying, setApplying] = useState(false);
+  const [lastSummary, setLastSummary] = useState<string | null>(null);
   const [newCenter, setNewCenter] = useState({ code: "", reducedCode: "", description: "", analytical: true });
 
   const centersKey = `${company}:cost-centers`;
@@ -40,9 +43,12 @@ export function CostCentersWorkspace({ company }: { company: string }) {
   const planProfile = useMemo(() => detectNumberedWsPlan(accounts), [accounts]);
   const analyticalAccounts = useMemo(() => {
     const term = query.trim().toLocaleLowerCase("pt-BR");
-    return accounts.filter(account => account.analytical).filter(account => !term || `${account.account} ${account.reducedCode} ${account.description}`.toLocaleLowerCase("pt-BR").includes(term));
+    return accounts
+      .filter(account => account.analytical)
+      .filter(account => !term || `${account.account} ${account.reducedCode} ${account.description}`.toLocaleLowerCase("pt-BR").includes(term));
   }, [accounts, query]);
   const ruleMap = useMemo(() => new Map(rules.map(rule => [rule.accountReducedCode, rule])), [rules]);
+  const automaticRules = rules.filter(rule => rule.source === "automatic");
 
   const importFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -62,10 +68,40 @@ export function CostCentersWorkspace({ company }: { company: string }) {
   };
 
   const applyAutomaticRules = async (nextCenters = centers) => {
-    if (!planProfile.detected || !nextCenters.length) return;
-    const nextRules = buildAutomaticCostCenterRules(accounts, nextCenters, rules);
-    setRules(nextRules);
-    await saveWorkspaceData(rulesKey, nextRules);
+    setError("");
+    setLastSummary(null);
+    if (!planProfile.detected) {
+      const message = "O Plano de Contas 1/2/3/4/6 não foi reconhecido com segurança.";
+      setError(message);
+      toast({ title: "Regra automática não aplicada", description: message, variant: "destructive" });
+      return;
+    }
+    if (!nextCenters.length) {
+      const message = "Cadastre ou importe os centros de custo antes de gerar as regras.";
+      setError(message);
+      toast({ title: "Faltam centros de custo", description: message, variant: "destructive" });
+      return;
+    }
+
+    setApplying(true);
+    try {
+      const nextRules = buildAutomaticCostCenterRules(accounts, nextCenters, rules);
+      const auto = nextRules.filter(rule => rule.source === "automatic");
+      const revenue = auto.filter(rule => rule.costCenterReducedCode === "3").length;
+      const expense = auto.filter(rule => rule.costCenterReducedCode === "4").length;
+      const saveResult = await saveWorkspaceData(rulesKey, nextRules);
+      setRules(nextRules);
+      if (!saveResult.synced) throw new Error(saveResult.error || "As regras foram salvas somente neste navegador.");
+      const summary = `${auto.length} regras automáticas aplicadas: ${revenue} de Receita → C.C. 3 e ${expense} de Despesa → C.C. 4.`;
+      setLastSummary(summary);
+      toast({ title: "Regras automáticas aplicadas", description: summary });
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : "Não foi possível salvar as regras automáticas.";
+      setError(message);
+      toast({ title: "Falha ao gerar regras", description: message, variant: "destructive" });
+    } finally {
+      setApplying(false);
+    }
   };
 
   const confirmImport = async () => {
@@ -73,9 +109,7 @@ export function CostCentersWorkspace({ company }: { company: string }) {
     await saveWorkspaceData(centersKey, next);
     setCenters(next);
     setPreview([]);
-    const nextRules = buildAutomaticCostCenterRules(accounts, next, rules);
-    setRules(nextRules);
-    await saveWorkspaceData(rulesKey, nextRules);
+    await applyAutomaticRules(next);
   };
 
   const addCenter = async () => {
@@ -129,22 +163,28 @@ export function CostCentersWorkspace({ company }: { company: string }) {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h2 className="text-base font-semibold">Centros de custo</h2>
-          <p className="mt-1 text-sm text-muted-foreground">O site pode preencher os centros automaticamente a partir da estrutura do Plano de Contas.</p>
+          <p className="mt-1 text-sm text-muted-foreground">O site preenche os centros automaticamente a partir da estrutura do Plano de Contas.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {planProfile.detected && <Button onClick={() => void applyAutomaticRules()} disabled={!centers.length}><Sparkles className="mr-2 h-4 w-4" />Aplicar regra automática</Button>}
-          <Button variant="outline" onClick={() => inputRef.current?.click()}><Upload className="mr-2 h-4 w-4" />Importar centros de custo</Button>
+          <Button type="button" onClick={() => void applyAutomaticRules()} disabled={applying || !accounts.length}>
+            {applying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+            {applying ? "Gerando regras..." : "Gerar regras automáticas"}
+          </Button>
+          <Button type="button" variant="outline" onClick={() => inputRef.current?.click()}><Upload className="mr-2 h-4 w-4" />Importar centros de custo</Button>
         </div>
         <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv" className="sr-only" onChange={event => void importFile(event)} />
       </div>
 
       {planProfile.detected && <div className="mt-4 rounded-lg border border-emerald-500/30 bg-emerald-500/[0.06] p-4">
-        <div className="flex gap-3"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" /><div><p className="text-sm font-semibold">Estrutura 1 / 2 / 3 / 4 / 6 identificada</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">1 Ativo e 2 Passivo ficam sem centro de custo automático. Contas analíticas iniciadas em 3 recebem <strong>RECEITAS</strong>; contas iniciadas em 4 recebem <strong>DESPESAS</strong>. O grupo 6 Resultado não recebe C.C. automaticamente. Você ainda pode alterar qualquer conta manualmente abaixo.</p></div></div>
+        <div className="flex gap-3"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" /><div><p className="text-sm font-semibold">Estrutura 1 / 2 / 3 / 4 / 6 identificada</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">1 Ativo e 2 Passivo ficam sem C.C. automático. Contas analíticas iniciadas em 3 recebem <strong>RECEITAS</strong>; iniciadas em 4 recebem <strong>DESPESAS</strong>; grupo 6 Resultado fica sem C.C. automático.</p></div></div>
       </div>}
 
+      {automaticRules.length > 0 && !lastSummary && <div className="mt-4 rounded-lg border border-cyan-500/30 bg-cyan-500/[0.05] px-4 py-3 text-sm">Já existem <strong>{automaticRules.length}</strong> regras automáticas salvas para esta empresa.</div>}
+      {lastSummary && <div className="mt-4 rounded-lg border border-emerald-500/30 bg-emerald-500/[0.06] px-4 py-3 text-sm text-emerald-800 dark:text-emerald-200"><CheckCircle2 className="mr-2 inline h-4 w-4" />{lastSummary}</div>}
       {error && <div className="mt-4 rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</div>}
+
       {preview.length > 0 && <div className="mt-4 overflow-hidden rounded-md border border-border">
-        <div className="flex items-center justify-between border-b border-border p-4"><span className="text-sm">Prévia · {preview.length} centro(s)</span><div className="flex gap-2"><Button variant="outline" onClick={() => setPreview([])}>Cancelar</Button><Button onClick={() => void confirmImport()}>Confirmar importação</Button></div></div>
+        <div className="flex items-center justify-between border-b border-border p-4"><span className="text-sm">Prévia · {preview.length} centro(s)</span><div className="flex gap-2"><Button type="button" variant="outline" onClick={() => setPreview([])}>Cancelar</Button><Button type="button" onClick={() => void confirmImport()}>Confirmar importação</Button></div></div>
         <CostCenterTable centers={preview.slice(0, 8)} />
       </div>}
     </section>
@@ -154,7 +194,7 @@ export function CostCentersWorkspace({ company }: { company: string }) {
         <Input placeholder="Código" value={newCenter.code} onChange={event => setNewCenter(value => ({ ...value, code: event.target.value }))} />
         <Input placeholder="C.R." value={newCenter.reducedCode} onChange={event => setNewCenter(value => ({ ...value, reducedCode: event.target.value }))} />
         <Input placeholder="Descrição" value={newCenter.description} onChange={event => setNewCenter(value => ({ ...value, description: event.target.value }))} />
-        <Button onClick={() => void addCenter()} disabled={!newCenter.code.trim() || !newCenter.description.trim()}><Plus className="mr-2 h-4 w-4" />Adicionar</Button>
+        <Button type="button" onClick={() => void addCenter()} disabled={!newCenter.code.trim() || !newCenter.description.trim()}><Plus className="mr-2 h-4 w-4" />Adicionar</Button>
       </div>
       <CostCenterTable centers={centers} onRemove={removeCenter} />
       <div className="border-t border-border px-4 py-3 text-xs text-muted-foreground">{centers.length} centro(s) de custo vinculados a esta empresa</div>
@@ -162,7 +202,7 @@ export function CostCentersWorkspace({ company }: { company: string }) {
 
     <section className="rounded-md border border-border bg-background">
       <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div><h3 className="text-sm font-semibold">Vinculação às contas analíticas</h3><p className="mt-1 text-xs text-muted-foreground">As regras automáticas ficam visíveis aqui. Se você mudar uma linha manualmente, essa escolha passa a ter prioridade.</p></div>
+        <div><h3 className="text-sm font-semibold">Vinculação às contas analíticas</h3><p className="mt-1 text-xs text-muted-foreground">As regras automáticas ficam visíveis aqui. Uma alteração manual sempre tem prioridade.</p></div>
         <Input className="max-w-sm" value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar conta, C.R. ou descrição" />
       </div>
       <div className="max-h-[560px] overflow-auto"><table className="w-full min-w-[980px] text-sm"><thead className="sticky top-0 z-10 bg-muted/95 text-left text-xs text-muted-foreground"><tr><th className="border-b border-r border-border px-3 py-2">Conta</th><th className="border-b border-r border-border px-3 py-2">Grupo</th><th className="border-b border-r border-border px-3 py-2">C.R.</th><th className="border-b border-r border-border px-3 py-2">Descrição</th><th className="border-b border-r border-border px-3 py-2">Centro de custo</th><th className="border-b border-border px-3 py-2 text-center">Obrigatório</th></tr></thead><tbody>{analyticalAccounts.map(account => {
@@ -174,5 +214,5 @@ export function CostCentersWorkspace({ company }: { company: string }) {
 }
 
 function CostCenterTable({ centers, onRemove }: { centers: CostCenter[]; onRemove?: (center: CostCenter) => void | Promise<void> }) {
-  return <div className="overflow-auto"><table className="w-full min-w-[650px] text-sm"><thead className="bg-muted/50 text-left text-xs text-muted-foreground"><tr><th className="border-b border-r border-border px-3 py-2">Código</th><th className="border-b border-r border-border px-3 py-2">C.R.</th><th className="border-b border-r border-border px-3 py-2">Descrição</th><th className="border-b border-r border-border px-3 py-2">Analítica</th>{onRemove && <th className="w-12 border-b border-border px-3 py-2" />}</tr></thead><tbody>{centers.map(center => <tr key={center.id} className="border-b border-border last:border-0"><td className="border-r border-border px-3 py-2">{center.code}</td><td className="border-r border-border px-3 py-2">{center.reducedCode}</td><td className="border-r border-border px-3 py-2">{center.description}</td><td className="border-r border-border px-3 py-2">{center.analytical ? "Sim" : "Não"}</td>{onRemove && <td className="px-2 py-1.5"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => void onRemove(center)}><Trash2 className="h-4 w-4" /></Button></td>}</tr>)}{!centers.length && <tr><td colSpan={onRemove ? 5 : 4} className="h-32 text-center text-muted-foreground">Nenhum centro de custo cadastrado.</td></tr>}</tbody></table></div>;
+  return <div className="overflow-auto"><table className="w-full min-w-[650px] text-sm"><thead className="bg-muted/50 text-left text-xs text-muted-foreground"><tr><th className="border-b border-r border-border px-3 py-2">Código</th><th className="border-b border-r border-border px-3 py-2">C.R.</th><th className="border-b border-r border-border px-3 py-2">Descrição</th><th className="border-b border-r border-border px-3 py-2">Analítica</th>{onRemove && <th className="w-12 border-b border-border px-3 py-2" />}</tr></thead><tbody>{centers.map(center => <tr key={center.id} className="border-b border-border last:border-0"><td className="border-r border-border px-3 py-2">{center.code}</td><td className="border-r border-border px-3 py-2">{center.reducedCode}</td><td className="border-r border-border px-3 py-2">{center.description}</td><td className="border-r border-border px-3 py-2">{center.analytical ? "Sim" : "Não"}</td>{onRemove && <td className="px-2 py-1.5"><Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => void onRemove(center)}><Trash2 className="h-4 w-4" /></Button></td>}</tr>)}{!centers.length && <tr><td colSpan={onRemove ? 5 : 4} className="h-32 text-center text-muted-foreground">Nenhum centro de custo cadastrado.</td></tr>}</tbody></table></div>;
 }
