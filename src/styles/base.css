@@ -116,6 +116,35 @@
   }
 }
 
+@layer components {
+  /*
+   * Faixas visuais para as tabelas operacionais/contábeis.
+   * Linhas que já possuem fundo semântico (revisão, alerta, grupo do balancete)
+   * mantêm sua própria cor e não recebem o zebrado.
+   */
+  table > tbody > tr:not([class*="bg-"]):nth-child(odd) {
+    background-color: hsl(var(--background));
+    transition: background-color 140ms ease;
+  }
+
+  table > tbody > tr:not([class*="bg-"]):nth-child(even) {
+    background-color: hsl(199 89% 48% / 0.045);
+    transition: background-color 140ms ease;
+  }
+
+  table > tbody > tr:not([class*="bg-"]):hover {
+    background-color: hsl(199 89% 48% / 0.09);
+  }
+
+  .dark table > tbody > tr:not([class*="bg-"]):nth-child(even) {
+    background-color: hsl(199 89% 60% / 0.065);
+  }
+
+  .dark table > tbody > tr:not([class*="bg-"]):hover {
+    background-color: hsl(199 89% 60% / 0.12);
+  }
+}
+
 #lovable-badge {
   display: none !important;
 }
