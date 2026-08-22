@@ -26,6 +26,7 @@ export interface TrialBalanceAdjustment extends AccountingExportEntry {
 }
 
 const automaticKeys = new Set(["salaries", "vacation", "termination", "thirteenth", "fgts", "inss", "irrf", "prolabore", "simples"]);
+const brl = (cents: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Math.abs(cents) / 100);
 
 function accountMovement(entries: LaunchEntry[], reducedCode: string) {
   return entries.reduce((signed, entry) => {
@@ -52,6 +53,18 @@ export async function buildClosingTargets(company: string, month: string, year: 
     if (!row) return [];
     const currentSignedInCents = signedBalance(row.currentBalanceInCents, row.currentNature);
 
+    if (definition.key === "thirteenth" && month === "12") {
+      return [{
+        key: definition.key,
+        label: definition.label,
+        row,
+        currentSignedInCents,
+        suggestedSignedInCents: 0,
+        source: "Fechamento de dezembro: 13º salário a pagar deve encerrar zerado após a quitação.",
+        requiresManualReview: false,
+      }];
+    }
+
     if (automaticKeys.has(definition.key)) {
       const entries = definition.key === "simples" ? revenueEntries : payrollEntries;
       const movement = accountMovement(entries, row.reducedCode);
@@ -72,10 +85,10 @@ export async function buildClosingTargets(company: string, month: string, year: 
     let source = "Saldo atual mantido até definição do responsável";
     if (definition.key === "clients") {
       contextMovement = accountMovement(revenueEntries, row.reducedCode);
-      source = contextMovement ? `Faturamento gerou movimento líquido de ${contextMovement} centavos nesta conta; política de recebimento precisa ser definida.` : "Política de recebimento precisa ser definida.";
+      source = contextMovement ? `O faturamento movimentou ${brl(contextMovement)} nesta conta; o saldo-alvo depende da política de recebimento da empresa.` : "O saldo-alvo depende da política de recebimento da empresa.";
     } else if (definition.key === "suppliers") {
       contextMovement = accountMovement(purchaseEntries, row.reducedCode);
-      source = contextMovement ? `Compras geraram movimento líquido de ${contextMovement} centavos nesta conta; política de pagamento precisa ser definida.` : "Política de pagamento precisa ser definida.";
+      source = contextMovement ? `As compras movimentaram ${brl(contextMovement)} nesta conta; o saldo-alvo depende da política de pagamento da empresa.` : "O saldo-alvo depende da política de pagamento da empresa.";
     } else if (definition.key === "cash") {
       source = "Caixa é a contrapartida projetada dos ajustes; o saldo-alvo pode ser usado como conferência final.";
     }
