@@ -2,12 +2,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { ChartAccount } from "./chartOfAccounts";
 import { RevenueBatchResult, RevenueBatchPeriodResult } from "./revenueBatch";
 import { RevenueComparison, RevenueEntry, RevenueReference } from "./revenueWorkbook";
+import { WRONG_COMPETENCE_IMPORT_EVENT, WrongCompetenceImportCancelledError, WrongCompetenceImportRequest } from "./workspaceStorage";
 
 interface Args {
   company: string;
   files: File[];
   accounts: ChartAccount[];
 }
+
+type EncodedDocument = { name: string; mime_type: string; data: string };
 
 export interface RevenueCompetenceDetection {
   competences: string[];
@@ -33,7 +36,10 @@ const signature = (entry: RevenueEntry) => [entry.rubricCode, entry.section, ent
 
 export async function detectRevenueCompetences(files: File[]): Promise<RevenueCompetenceDetection> {
   if (!files.length) throw new Error("Nenhum relatório de faturamento foi selecionado.");
-  const documents = await encodeDocuments(files);
+  return detectRevenueCompetencesFromDocuments(await encodeDocuments(files));
+}
+
+async function detectRevenueCompetencesFromDocuments(documents: EncodedDocument[]): Promise<RevenueCompetenceDetection> {
   const { data, error } = await supabase.functions.invoke("detect-accounting-competence", {
     body: { module: "faturamento", documents },
   });
@@ -48,11 +54,51 @@ export async function detectRevenueCompetences(files: File[]): Promise<RevenueCo
   };
 }
 
+function currentCompetence(company: string) {
+  if (typeof window === "undefined") return "";
+  try {
+    const raw = localStorage.getItem(`ws:lancamentos:last-context:${company}`);
+    if (!raw) return "";
+    const context = JSON.parse(raw) as { year?: string; selectedMonth?: string; selectedModule?: string };
+    if (context.selectedModule !== "faturamento" || !context.year || !context.selectedMonth) return "";
+    return `${context.selectedMonth}/${context.year}`;
+  } catch {
+    return "";
+  }
+}
+
+async function confirmDetectedCompetence(company: string, files: File[], detectedCompetence: string) {
+  const current = currentCompetence(company);
+  if (!current || current === detectedCompetence || typeof window === "undefined") return true;
+  return new Promise<boolean>((resolve) => {
+    const detail: WrongCompetenceImportRequest = {
+      currentCompetence: current,
+      detectedCompetence,
+      module: "faturamento",
+      fileNames: files.map(file => file.name),
+      resolve,
+    };
+    window.dispatchEvent(new CustomEvent<WrongCompetenceImportRequest>(WRONG_COMPETENCE_IMPORT_EVENT, { detail }));
+  });
+}
+
 export async function processRevenueBatch({ company, files, accounts }: Args): Promise<RevenueBatchResult> {
   if (!files.length) throw new Error("Nenhum relatório de faturamento foi selecionado.");
   if (!accounts.length) throw new Error("Importe o plano de contas desta empresa antes de processar Faturamento.");
 
   const documents = await encodeDocuments(files);
+
+  // O detector não recebe a competência aberta. Se encontrar um único mês diferente,
+  // o usuário decide no modal ANTES da IA principal e antes de qualquer persistência.
+  const preflight = await detectRevenueCompetencesFromDocuments(documents);
+  if (preflight.competences.length === 1) {
+    const keep = await confirmDetectedCompetence(company, files, preflight.competences[0]);
+    if (!keep) throw new WrongCompetenceImportCancelledError();
+  } else if (!preflight.competences.length && preflight.hasUndatedPeriodicBlocks) {
+    throw new Error(`Faturamento: foram encontrados ${preflight.undatedBlockCount || "vários"} blocos periódicos sem competência confiável. Nada foi salvo; atribua as competências antes de continuar.`);
+  } else if (!preflight.competences.length) {
+    throw new Error("Faturamento: não foi possível confirmar a competência do documento. Nada foi salvo.");
+  }
 
   const { data, error } = await supabase.functions.invoke("process-revenue-document", {
     body: {
