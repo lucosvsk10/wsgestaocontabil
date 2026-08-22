@@ -5,11 +5,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { ChartAccount } from "@/lib/lancamentos/chartOfAccounts";
 import { PayrollComparison, PayrollDocumentTotal, PayrollEntry, PayrollProcessingMeta } from "@/lib/lancamentos/payrollWorkbook";
 import { PurchaseComparison, PurchaseEntry, PurchaseItem, PurchaseProcessingMeta, PurchaseReference } from "@/lib/lancamentos/purchaseWorkbook";
+import { RevenueComparison, RevenueEntry, RevenueProcessingMeta, RevenueReference } from "@/lib/lancamentos/revenueWorkbook";
 import { saveWorkspaceData } from "@/lib/lancamentos/workspaceStorage";
 
 export type AccountingOperation = "import" | "reprocess";
-type AccountingModule = "folha" | "compras";
+type AccountingModule = "folha" | "compras" | "faturamento";
 type JobStatus = "running" | "success" | "error";
+type AccountingEntry = PayrollEntry | PurchaseEntry | RevenueEntry;
 
 type MappingSummary = {
   learnedCount: number;
@@ -45,6 +47,18 @@ export interface PurchaseProcessingResult {
   mappingSummary?: MappingSummary;
 }
 
+export interface RevenueProcessingResult {
+  reference: RevenueReference | null;
+  entries: RevenueEntry[];
+  comparisons: RevenueComparison[];
+  warnings: string[];
+  validationIssues: string[];
+  referenceVerified: boolean;
+  validated: boolean;
+  processingMeta: RevenueProcessingMeta;
+  mappingSummary?: MappingSummary;
+}
+
 interface ProcessingJob {
   id: string;
   status: JobStatus;
@@ -71,6 +85,7 @@ interface AccountingProcessingContextValue {
   job: ProcessingJob | null;
   processPayroll: (args: StartArgs) => Promise<PayrollProcessingResult>;
   processPurchases: (args: StartArgs) => Promise<PurchaseProcessingResult>;
+  processRevenue: (args: StartArgs) => Promise<RevenueProcessingResult>;
   isProcessingScope: (company: string, month: string, year: string, module?: AccountingModule) => boolean;
   dismiss: () => void;
 }
@@ -89,7 +104,7 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
     const startedAt = Date.now();
     const competence = `${args.month}/${args.year}`;
     setJob({ id, status: "running", operation: args.operation, module, company: args.company, competence, fileNames: args.files.map(file => file.name), startedAt });
-    return { id, startedAt, competence };
+    return { id, competence };
   }, []);
 
   const finishJob = useCallback((id: string, message: string) => {
@@ -102,7 +117,7 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
   }, []);
 
   const processPayroll = useCallback(async (args: StartArgs) => {
-    const { company, month, year, files, accounts, operation } = args;
+    const { company, month, year, files, accounts } = args;
     const { id, competence } = beginJob("folha", args);
 
     try {
@@ -129,7 +144,7 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
 
       const result: PayrollProcessingResult = {
         entries: mapping.entries as PayrollEntry[],
-        deferredEntries: mapping.deferredEntries as PayrollEntry[],
+        deferredEntries: mapping.deferredEntries,
         documentTotals: data.documentTotals ?? [],
         comparisons,
         warnings,
@@ -206,11 +221,61 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
     }
   }, [beginJob, failJob, finishJob]);
 
+  const processRevenue = useCallback(async (args: StartArgs) => {
+    const { company, month, year, files, accounts } = args;
+    const { id, competence } = beginJob("faturamento", args);
+
+    try {
+      const documents = await encodeDocuments(files);
+      const { data, error } = await supabase.functions.invoke("process-revenue-document", {
+        body: { module: "faturamento", company_id: company, competence, documents, chart_of_accounts: accounts },
+      });
+      if (error) throw await functionError(error, "Falha ao processar Faturamento com IA.");
+      if (!Array.isArray(data?.entries)) throw new Error("O processamento de Faturamento não devolveu lançamentos estruturados.");
+
+      const baseEntries: RevenueEntry[] = data.entries.map((row: RevenueEntry, index: number) => ({ ...row, id: row.id || `revenue-${Date.now()}-${index}` }));
+      const mapping = await resolveMappings("faturamento", company, competence, baseEntries, [], accounts);
+      const validationIssues: string[] = [...(data.validationIssues ?? [])];
+      if (mapping.failure) validationIssues.push(`Falha na resolução adaptativa de contas: ${mapping.failure}`);
+      if (mapping.summary.unresolvedCount > 0) validationIssues.push(`${mapping.summary.unresolvedCount} lançamento(s) continuam sem débito/crédito completo.`);
+
+      const warnings = data.warnings ?? [];
+      const comparisons: RevenueComparison[] = data.comparisons ?? [];
+      const hasDifference = comparisons.some(row => row.blocking !== false && row.differenceInCents !== 0);
+      const validated = Boolean(data.referenceVerified) && !hasDifference && warnings.length === 0 && validationIssues.length === 0 && mapping.summary.needsApprovalCount === 0;
+
+      const result: RevenueProcessingResult = {
+        reference: data.reference ?? null,
+        entries: mapping.entries as RevenueEntry[],
+        comparisons,
+        warnings,
+        validationIssues: [...new Set(validationIssues)],
+        referenceVerified: Boolean(data.referenceVerified),
+        validated,
+        processingMeta: {
+          model: data.model,
+          primaryModel: data.primaryModel,
+          reviewed: Boolean(data.reviewed),
+          reviewModel: data.reviewModel,
+          routing: `${data.routing || data.primaryModel} · ${mapping.routing}`,
+        },
+        mappingSummary: mapping.summary,
+      };
+
+      await saveWorkspaceData(`${company}:${year}:${month}:faturamento:parsed`, result);
+      finishJob(id, completionMessage(result.validated, mapping.summary));
+      return result;
+    } catch (error) {
+      failJob(id, error, "Falha ao processar Faturamento.");
+      throw error;
+    }
+  }, [beginJob, failJob, finishJob]);
+
   const isProcessingScope = useCallback((company: string, month: string, year: string, module?: AccountingModule) => {
     return Boolean(job?.status === "running" && job.company === company && job.competence === `${month}/${year}` && (!module || job.module === module));
   }, [job]);
 
-  const value = useMemo(() => ({ job, processPayroll, processPurchases, isProcessingScope, dismiss }), [dismiss, isProcessingScope, job, processPayroll, processPurchases]);
+  const value = useMemo(() => ({ job, processPayroll, processPurchases, processRevenue, isProcessingScope, dismiss }), [dismiss, isProcessingScope, job, processPayroll, processPurchases, processRevenue]);
 
   return <AccountingProcessingContext.Provider value={value}>{children}<ProcessingPopup job={job} onDismiss={dismiss} /></AccountingProcessingContext.Provider>;
 }
@@ -221,7 +286,7 @@ export function useAccountingProcessing() {
   return context;
 }
 
-async function resolveMappings(module: AccountingModule, company: string, competence: string, entries: Array<PayrollEntry | PurchaseEntry>, deferredEntries: PayrollEntry[], accounts: ChartAccount[]) {
+async function resolveMappings(module: AccountingModule, company: string, competence: string, entries: AccountingEntry[], deferredEntries: PayrollEntry[], accounts: ChartAccount[]) {
   const defaultSummary: MappingSummary = {
     learnedCount: 0,
     predefinedCount: entries.filter(hasCompleteMapping).length,
@@ -229,7 +294,7 @@ async function resolveMappings(module: AccountingModule, company: string, compet
     unresolvedCount: entries.filter(row => !hasCompleteMapping(row)).length,
     needsApprovalCount: 0,
   };
-  let resolvedEntries = entries;
+  let resolvedEntries: AccountingEntry[] = entries;
   let resolvedDeferred = deferredEntries;
   let summary = defaultSummary;
   let routing = "regras pré-definidas";
@@ -275,7 +340,7 @@ function openProcessedCompetence(job: ProcessingJob) {
 
 function ProcessingPopup({ job, onDismiss }: { job: ProcessingJob | null; onDismiss: () => void }) {
   if (!job) return null;
-  const moduleLabel = job.module === "folha" ? "Folha" : "Compras";
+  const moduleLabel = job.module === "folha" ? "Folha" : job.module === "compras" ? "Compras" : "Faturamento";
   const actionLabel = job.operation === "reprocess" ? `Reprocessando ${moduleLabel.toLowerCase()}` : `Importando ${moduleLabel.toLowerCase()}`;
   return <div className="fixed bottom-5 right-5 z-[100] w-[min(390px,calc(100vw-2rem))] rounded-lg border border-border bg-background p-4 shadow-2xl">
     <div className="flex items-start gap-3">
@@ -320,7 +385,7 @@ function fileSummary(fileNames: string[]) {
   return `${fileNames[0]} + ${fileNames.length - 1} arquivo(s)`;
 }
 
-function hasCompleteMapping(row: PayrollEntry | PurchaseEntry) {
+function hasCompleteMapping(row: AccountingEntry) {
   return Boolean(row.debitCode && row.creditCode && row.debitDescription && row.creditDescription);
 }
 
