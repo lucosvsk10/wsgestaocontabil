@@ -1,6 +1,7 @@
 import * as XLSX from "xlsx";
 import { ChartAccount } from "./chartOfAccounts";
 import { AccountingExportEntry } from "./accountingExportWorkbook";
+import { automaticCostCenterForWsPlan, detectNumberedWsPlan } from "./accountPlanProfile";
 import { loadWorkspaceData } from "./workspaceStorage";
 
 export interface CostCenter {
@@ -15,6 +16,7 @@ export interface AccountCostCenterRule {
   accountReducedCode: string;
   costCenterReducedCode: string;
   required: boolean;
+  source?: "automatic" | "manual" | "imported";
 }
 
 function normalize(value: unknown) {
@@ -76,35 +78,42 @@ export function suggestCostCenterForAccount(account: ChartAccount, centers: Cost
   const candidates = centers.filter(center => center.analytical);
   const byMeaning = (term: string) => candidates.find(center => normalize(center.description).includes(term));
 
-  // Conta analítica só significa que recebe lançamento direto. Centro de custo é outra dimensão.
-  // Patrimoniais e estoques nunca recebem sugestão automática só pelo texto da conta.
   if (
     /a pagar|a recolher|fornecedor|cliente|caixa|banco|estoque|adiantamento|capital social|emprestimo|financiamento|imobilizado|mercadorias? para revenda|mercadorias? p revenda|material aplicado|materiais aplicados/.test(text)
   ) return null;
 
-  if (/recup|recupera|credito|ressarc|reembolso/.test(text)) {
-    return byMeaning("credito") ?? null;
-  }
-
-  if (/\bcusto\b|custos|custo das|cmv|cpv|csp/.test(text)) {
-    return byMeaning("custo") ?? null;
-  }
-
-  // Receita apenas quando a descrição é inequivocamente de resultado.
-  if (
-    /receita|venda de mercadoria|prestacao de servico|faturamento/.test(text)
-    && !/estoque|material aplicado|mercadorias? para revenda|mercadorias? p revenda/.test(text)
-  ) {
+  if (/recup|recupera|credito|ressarc|reembolso/.test(text)) return byMeaning("credito") ?? null;
+  if (/\bcusto\b|custos|custo das|cmv|cpv|csp/.test(text)) return byMeaning("custo") ?? null;
+  if (/receita|venda de mercadoria|prestacao de servico|faturamento/.test(text) && !/estoque|material aplicado|mercadorias? para revenda|mercadorias? p revenda/.test(text)) {
     return byMeaning("receita") ?? null;
   }
-
-  if (
-    /simples|salario|remuner|pro labore|ferias|fgts|inss|alimentacao|assistencia|aluguel|energia|telefone|combust|seguro|propaganda|publicidade|ipva|agua|curso|manut|uniforme|licenciamento|imposto|encargo|despesa/.test(text)
-  ) {
+  if (/simples|salario|remuner|pro labore|ferias|fgts|inss|alimentacao|assistencia|aluguel|energia|telefone|combust|seguro|propaganda|publicidade|ipva|agua|curso|manut|uniforme|licenciamento|imposto|encargo|despesa/.test(text)) {
     return byMeaning("despesa") ?? null;
   }
-
   return null;
+}
+
+export function buildAutomaticCostCenterRules(accounts: ChartAccount[], centers: CostCenter[], currentRules: AccountCostCenterRule[] = []) {
+  const profile = detectNumberedWsPlan(accounts);
+  if (!profile.detected) return currentRules;
+
+  const manual = new Map(currentRules.filter(rule => rule.source === "manual").map(rule => [rule.accountReducedCode, rule]));
+  const preserved = currentRules.filter(rule => rule.source === "manual" || !accounts.some(account => account.reducedCode === rule.accountReducedCode));
+  const automatic: AccountCostCenterRule[] = [];
+
+  accounts.filter(account => account.analytical && account.reducedCode).forEach(account => {
+    if (manual.has(account.reducedCode)) return;
+    const center = automaticCostCenterForWsPlan(account, centers);
+    if (!center) return;
+    automatic.push({
+      accountReducedCode: account.reducedCode,
+      costCenterReducedCode: center.reducedCode,
+      required: true,
+      source: "automatic",
+    });
+  });
+
+  return [...preserved, ...automatic];
 }
 
 export async function applyConfiguredCostCenters(company: string, entries: AccountingExportEntry[], accounts: ChartAccount[]) {
@@ -114,6 +123,7 @@ export async function applyConfiguredCostCenters(company: string, entries: Accou
   ]);
   if (!centers?.length) return entries;
 
+  const profile = detectNumberedWsPlan(accounts);
   const accountMap = new Map(accounts.map(account => [account.reducedCode, account]));
   const ruleMap = new Map((rules ?? []).map(rule => [rule.accountReducedCode, rule]));
 
@@ -122,8 +132,12 @@ export async function applyConfiguredCostCenters(company: string, entries: Accou
     const creditRule = ruleMap.get(entry.creditCode);
     const debitAccount = accountMap.get(entry.debitCode);
     const creditAccount = accountMap.get(entry.creditCode);
-    const debitSuggested = debitAccount ? suggestCostCenterForAccount(debitAccount, centers) : null;
-    const creditSuggested = creditAccount ? suggestCostCenterForAccount(creditAccount, centers) : null;
+    const debitSuggested = debitAccount
+      ? (profile.detected ? automaticCostCenterForWsPlan(debitAccount, centers) : suggestCostCenterForAccount(debitAccount, centers))
+      : null;
+    const creditSuggested = creditAccount
+      ? (profile.detected ? automaticCostCenterForWsPlan(creditAccount, centers) : suggestCostCenterForAccount(creditAccount, centers))
+      : null;
 
     return {
       ...entry,
@@ -140,12 +154,8 @@ export async function validateRequiredCostCenters(company: string, entries: Acco
   const issues: string[] = [];
 
   entries.forEach((entry, index) => {
-    if (required.has(entry.debitCode) && !entry.debitCostCenter) {
-      issues.push(`Linha ${index + 1}: a conta de débito C.R. ${entry.debitCode} exige centro de custo.`);
-    }
-    if (required.has(entry.creditCode) && !entry.creditCostCenter) {
-      issues.push(`Linha ${index + 1}: a conta de crédito C.R. ${entry.creditCode} exige centro de custo.`);
-    }
+    if (required.has(entry.debitCode) && !entry.debitCostCenter) issues.push(`Linha ${index + 1}: a conta de débito C.R. ${entry.debitCode} exige centro de custo.`);
+    if (required.has(entry.creditCode) && !entry.creditCostCenter) issues.push(`Linha ${index + 1}: a conta de crédito C.R. ${entry.creditCode} exige centro de custo.`);
   });
 
   return issues;
