@@ -13,11 +13,15 @@ const accounts: ChartAccount[] = [
   { id: "p", account: "211403108", reducedCode: "3108", description: "SALÁRIOS À PAGAR", analytical: true, sped: true },
   { id: "r", account: "310000010", reducedCode: "10", description: "REVENDA DE MERCADORIAS", analytical: true, sped: true },
   { id: "d", account: "441104241", reducedCode: "4241", description: "SALÁRIOS", analytical: true, sped: true },
+  { id: "c", account: "491105815", reducedCode: "5815", description: "CUSTOS DAS MERCADORIAS", analytical: true, sped: false },
+  { id: "cr", account: "112300539", reducedCode: "539", description: "CRÉDITOS A RECUPERAR", analytical: true, sped: false },
 ];
 
 const centers: CostCenter[] = [
   { id: "3", code: "3", reducedCode: "3", description: "RECEITAS", analytical: true },
   { id: "4", code: "4", reducedCode: "4", description: "DESPESAS", analytical: true },
+  { id: "5", code: "5", reducedCode: "5", description: "CRÉDITOS", analytical: true },
+  { id: "6", code: "6", reducedCode: "6", description: "CUSTOS", analytical: true },
 ];
 
 describe("numbered WS accounting plan", () => {
@@ -33,18 +37,20 @@ describe("numbered WS accounting plan", () => {
     expect(groupFromAccountCode("611100001")).toBe("result");
   });
 
-  it("assigns cost centers only to revenue and expense in this plan", () => {
+  it("fills revenue, expense, credit and cost centers from account meaning", () => {
     expect(automaticCostCenterForWsPlan(accounts[7], centers)?.reducedCode).toBe("3");
     expect(automaticCostCenterForWsPlan(accounts[8], centers)?.reducedCode).toBe("4");
+    expect(automaticCostCenterForWsPlan(accounts[9], centers)?.reducedCode).toBe("6");
+    expect(automaticCostCenterForWsPlan(accounts[10], centers)?.reducedCode).toBe("5");
     expect(automaticCostCenterForWsPlan(accounts[5], centers)).toBeNull();
     expect(automaticCostCenterForWsPlan(accounts[6], centers)).toBeNull();
   });
 
-  it("restricts the Receita candidate root before AI mapping", () => {
+  it("restricts referential candidates to the correct Receita group", () => {
     expect(referentialRootForWsGroup("asset")).toBe("1");
     expect(referentialRootForWsGroup("liability")).toBe("2");
     expect(referentialRootForWsGroup("revenue")).toBe("3");
     expect(referentialRootForWsGroup("expense")).toBe("3");
-    expect(referentialRootForWsGroup("result")).toBe("3");
+    expect(referentialRootForWsGroup("result")).toBe("");
   });
 });
