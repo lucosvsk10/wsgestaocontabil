@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { buildCriticalTrialBalancePlan } from "./trialBalanceCriticalCorrection";
 import { TrialBalanceRow } from "./trialBalance";
 
-const loadWorkspaceData = vi.fn();
-vi.mock("./workspaceStorage", () => ({ loadWorkspaceData }));
+const mocks = vi.hoisted(() => ({ loadWorkspaceData: vi.fn() }));
+vi.mock("./workspaceStorage", () => ({ loadWorkspaceData: mocks.loadWorkspaceData }));
 
 function row(partial: Partial<TrialBalanceRow> & { id: string; accountCode: string; title: string; reducedCode: string }): TrialBalanceRow {
   return {
@@ -21,8 +21,8 @@ function row(partial: Partial<TrialBalanceRow> & { id: string; accountCode: stri
 
 describe("critical trial balance correction", () => {
   beforeEach(() => {
-    loadWorkspaceData.mockReset();
-    loadWorkspaceData.mockImplementation(async (key: string) => {
+    mocks.loadWorkspaceData.mockReset();
+    mocks.loadWorkspaceData.mockImplementation(async (key: string) => {
       if (key.endsWith(":faturamento:parsed")) return { reference: { totalAmountInCents: 20_509_343 }, entries: [] };
       if (key.endsWith(":compras:parsed")) return { reference: { totalAmountInCents: 22_628_171 }, entries: [] };
       return { entries: [] };
