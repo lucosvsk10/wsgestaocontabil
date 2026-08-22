@@ -71,10 +71,10 @@ export function FaturamentoWorkspace({ company, month, year, onStatusChange, onC
   const [pendingWrongBatch, setPendingWrongBatch] = useState<RevenueBatchResult | null>(null);
   const [pendingWrongFiles, setPendingWrongFiles] = useState<File[]>([]);
   const [summary, setSummary] = useState<RevenueBatchResult | null>(null);
-  const [deletingDocument, setDeletingDocument] = useState(false);
+  const [deletingDocument, setDeletingDocument] = useState<string | null>(null);
   const { processRevenue, isProcessingScope } = useAccountingProcessing();
   const processing = isProcessingScope(company, month, year, "faturamento");
-  const busy = processing || batchProcessing || deletingDocument;
+  const busy = processing || batchProcessing || Boolean(deletingDocument);
   const scope = `${company}:${year}:${month}:faturamento`;
   const key = `${scope}:parsed`;
   const competence = `${month}/${year}`;
@@ -99,6 +99,17 @@ export function FaturamentoWorkspace({ company, month, year, onStatusChange, onC
   const canExport = canApprove && mappingsToApprove === 0;
   const conferenceCount = blockingDifferences.length + missing + mappingsToApprove + warnings.length + validationIssues.length + (referenceVerified ? 0 : 1);
 
+  const resetState = () => {
+    setReference(null);
+    setEntries([]);
+    setWarnings([]);
+    setValidationIssues([]);
+    setProcessingMeta(null);
+    setReferenceVerified(false);
+    setCurrentImportId(null);
+    setCurrentSourceFiles([]);
+  };
+
   const hydrate = (saved: SavedRevenue | RevenueProcessingResult | RevenueBatchPeriodResult) => {
     setReference(saved.reference ?? null);
     setEntries(saved.entries ?? []);
@@ -115,6 +126,8 @@ export function FaturamentoWorkspace({ company, month, year, onStatusChange, onC
   useEffect(() => {
     let active = true;
     setLoaded(false);
+    resetState();
+    setFiles([]);
     Promise.all([
       loadWorkspaceData<SavedRevenue>(key),
       loadWorkspaceFiles(scope),
@@ -122,9 +135,6 @@ export function FaturamentoWorkspace({ company, month, year, onStatusChange, onC
     ]).then(([saved, docs, chart]) => {
       if (!active) return;
       if (saved) hydrate(saved);
-      else {
-        setReference(null); setEntries([]); setWarnings([]); setValidationIssues([]); setProcessingMeta(null); setReferenceVerified(false); setCurrentImportId(null); setCurrentSourceFiles([]);
-      }
       setFiles(docs); setAccounts(chart ?? []); setLoaded(true);
     });
     return () => { active = false; };
@@ -167,17 +177,19 @@ export function FaturamentoWorkspace({ company, month, year, onStatusChange, onC
     setValidationIssues([]);
     setBatchProcessing(true);
     setBatchStartedAt(Date.now());
+    setPendingWrongFiles(selected);
     try {
       const result = await processRevenueBatch({ company, files: selected, accounts });
       if (result.periods.length === 1 && result.periods[0].competence !== competence) {
         setPendingWrongBatch(result);
-        setPendingWrongFiles(selected);
         return;
       }
       await persistBatch(result, selected);
       setSummary(result);
+      setPendingWrongFiles([]);
     } catch (error) {
       setValidationIssues([error instanceof Error ? error.message : "Falha ao importar o faturamento."]);
+      setPendingWrongFiles([]);
     } finally {
       setBatchProcessing(false);
       setBatchStartedAt(null);
@@ -215,7 +227,7 @@ export function FaturamentoWorkspace({ company, month, year, onStatusChange, onC
 
     const currentPeriod = result.periods.find(period => period.competence === competence);
     if (currentPeriod) {
-      hydrate(currentPeriod);
+      hydrate({ ...currentPeriod, importId: result.importId, sourceFiles: result.sourceFiles } as RevenueBatchPeriodResult & { importId: string; sourceFiles: string[] });
       const currentDocs = await loadWorkspaceFiles(scope);
       setFiles(currentDocs);
       onStatusChange("review");
@@ -266,46 +278,65 @@ export function FaturamentoWorkspace({ company, month, year, onStatusChange, onC
     onStatusChange("review");
   };
 
-  const deleteDocument = async () => {
-    if (!files.length && !currentImportId) return;
-    setDeletingDocument(true);
-    try {
-      const importId = currentImportId;
-      if (importId) {
-        const manifest = await loadWorkspaceData<RevenueImportManifest>(manifestKey(company, importId));
-        const periods = manifest?.periods?.length ? manifest.periods : [competence];
-        const sourceNames = manifest?.sourceFiles?.length ? manifest.sourceFiles : currentSourceFiles.length ? currentSourceFiles : files.map(file => file.name);
+  const deleteOldImportArtifacts = async (importId: string | null, fallbackSourceNames: string[]) => {
+    if (!importId) {
+      await removeWorkspaceDocumentsByName(scope, fallbackSourceNames);
+      await deleteWorkspaceData(key);
+      return;
+    }
 
-        for (const period of periods) {
-          const [targetMonth, targetYear] = period.split("/");
-          const targetScope = `${company}:${targetYear}:${targetMonth}:faturamento`;
-          const targetKey = `${targetScope}:parsed`;
-          const saved = await loadWorkspaceData<SavedRevenue>(targetKey);
-          if (saved?.importId === importId) {
-            await deleteWorkspaceData(targetKey);
-          } else if (saved?.entries?.some(entry => entry.importId === importId)) {
-            await saveWorkspaceData(targetKey, { ...saved, entries: saved.entries.filter(entry => entry.importId !== importId) });
-          }
-          await removeWorkspaceDocumentsByName(targetScope, sourceNames);
-        }
-        await deleteWorkspaceData(manifestKey(company, importId));
-      } else {
-        await removeWorkspaceDocumentsByName(scope, files.map(file => file.name));
-        await deleteWorkspaceData(key);
+    const manifest = await loadWorkspaceData<RevenueImportManifest>(manifestKey(company, importId));
+    const periods = manifest?.periods?.length ? manifest.periods : [competence];
+    const sourceNames = manifest?.sourceFiles?.length ? manifest.sourceFiles : fallbackSourceNames;
+
+    for (const period of periods) {
+      const [targetMonth, targetYear] = period.split("/");
+      const targetScope = `${company}:${targetYear}:${targetMonth}:faturamento`;
+      const targetKey = `${targetScope}:parsed`;
+      const saved = await loadWorkspaceData<SavedRevenue>(targetKey);
+      if (saved?.importId === importId) {
+        await deleteWorkspaceData(targetKey);
+      } else if (saved?.entries?.some(entry => entry.importId === importId)) {
+        await saveWorkspaceData(targetKey, { ...saved, entries: saved.entries.filter(entry => entry.importId !== importId) });
       }
+      await removeWorkspaceDocumentsByName(targetScope, sourceNames);
+    }
+    await deleteWorkspaceData(manifestKey(company, importId));
+  };
 
-      setReference(null);
-      setEntries([]);
-      setWarnings([]);
-      setValidationIssues([]);
-      setProcessingMeta(null);
-      setReferenceVerified(false);
-      setCurrentImportId(null);
-      setCurrentSourceFiles([]);
+  const deleteDocument = async (file: File) => {
+    if (!files.length) return;
+    setDeletingDocument(file.name);
+    setLoaded(false);
+    onStatusChange("waiting");
+    const remainingFiles = files.filter(item => !(item.name === file.name && item.size === file.size && item.lastModified === file.lastModified));
+    const sourceNames = currentSourceFiles.length ? currentSourceFiles : files.map(item => item.name);
+
+    try {
+      await deleteOldImportArtifacts(currentImportId, sourceNames);
+      resetState();
       setFiles([]);
-      onStatusChange("waiting");
+
+      if (!remainingFiles.length) return;
+
+      setBatchProcessing(true);
+      setBatchStartedAt(Date.now());
+      const rebuilt = await processRevenueBatch({ company, files: remainingFiles, accounts });
+      await persistBatch(rebuilt, remainingFiles);
+      if (!rebuilt.periods.some(period => period.competence === competence)) {
+        resetState();
+        setFiles([]);
+        onStatusChange("waiting");
+      }
+    } catch (error) {
+      resetState();
+      setFiles([]);
+      setValidationIssues([error instanceof Error ? `Documento removido, mas o reprocessamento dos restantes falhou: ${error.message}` : "Documento removido, mas o reprocessamento dos restantes falhou."]);
     } finally {
-      setDeletingDocument(false);
+      setBatchProcessing(false);
+      setBatchStartedAt(null);
+      setLoaded(true);
+      setDeletingDocument(null);
     }
   };
 
@@ -366,7 +397,7 @@ export function FaturamentoWorkspace({ company, month, year, onStatusChange, onC
         <input ref={input} type="file" multiple accept=".pdf" className="sr-only" onChange={event => void importFiles(event)} />
       </div>
       <div className="mt-5 border-t border-border pt-5 text-sm text-muted-foreground">
-        {files.length ? <div className="flex flex-wrap gap-2">{files.map(file => <span key={`${file.name}-${file.size}`} className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/25 px-2 py-1 text-xs text-foreground"><span className="max-w-[360px] truncate" title={file.name}>{file.name}</span><button type="button" className="rounded p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive" title="Excluir documento e lançamentos gerados" disabled={deletingDocument} onClick={() => void deleteDocument()}><Trash2 className="h-3.5 w-3.5" /></button></span>)}</div> : "Nenhum relatório importado."}
+        {files.length ? <div className="flex flex-wrap gap-2">{files.map(file => <span key={`${file.name}-${file.size}`} className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/25 px-2 py-1 text-xs text-foreground"><span className="max-w-[360px] truncate" title={file.name}>{file.name}</span><button type="button" className="rounded p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive" title="Excluir este documento e reconstruir seus lançamentos" disabled={busy} onClick={() => void deleteDocument(file)}><Trash2 className="h-3.5 w-3.5" /></button></span>)}</div> : "Nenhum relatório importado."}
       </div>
     </div>
 
