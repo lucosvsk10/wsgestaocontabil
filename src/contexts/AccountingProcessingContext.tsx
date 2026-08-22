@@ -6,10 +6,11 @@ import { ChartAccount } from "@/lib/lancamentos/chartOfAccounts";
 import { PayrollComparison, PayrollDocumentTotal, PayrollEntry, PayrollProcessingMeta } from "@/lib/lancamentos/payrollWorkbook";
 import { PurchaseComparison, PurchaseEntry, PurchaseItem, PurchaseProcessingMeta, PurchaseReference } from "@/lib/lancamentos/purchaseWorkbook";
 import { RevenueComparison, RevenueEntry, RevenueProcessingMeta, RevenueReference } from "@/lib/lancamentos/revenueWorkbook";
+import { TrialBalanceResult } from "@/lib/lancamentos/trialBalance";
 import { saveWorkspaceData } from "@/lib/lancamentos/workspaceStorage";
 
 export type AccountingOperation = "import" | "reprocess";
-type AccountingModule = "folha" | "compras" | "faturamento";
+type AccountingModule = "folha" | "compras" | "faturamento" | "balancete";
 type JobStatus = "running" | "success" | "error";
 type AccountingEntry = PayrollEntry | PurchaseEntry | RevenueEntry;
 
@@ -72,13 +73,16 @@ interface ProcessingJob {
   message?: string;
 }
 
-interface StartArgs {
+interface JobStartArgs {
   company: string;
   month: string;
   year: string;
   files: File[];
-  accounts: ChartAccount[];
   operation: AccountingOperation;
+}
+
+interface StartArgs extends JobStartArgs {
+  accounts: ChartAccount[];
 }
 
 interface AccountingProcessingContextValue {
@@ -86,6 +90,7 @@ interface AccountingProcessingContextValue {
   processPayroll: (args: StartArgs) => Promise<PayrollProcessingResult>;
   processPurchases: (args: StartArgs) => Promise<PurchaseProcessingResult>;
   processRevenue: (args: StartArgs) => Promise<RevenueProcessingResult>;
+  processTrialBalance: (args: JobStartArgs) => Promise<TrialBalanceResult>;
   isProcessingScope: (company: string, month: string, year: string, module?: AccountingModule) => boolean;
   dismiss: () => void;
 }
@@ -99,7 +104,7 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
     setJob(current => current?.status === "running" ? current : null);
   }, []);
 
-  const beginJob = useCallback((module: AccountingModule, args: StartArgs) => {
+  const beginJob = useCallback((module: AccountingModule, args: JobStartArgs) => {
     const id = crypto.randomUUID();
     const startedAt = Date.now();
     const competence = `${args.month}/${args.year}`;
@@ -107,8 +112,8 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
     return { id, competence };
   }, []);
 
-  const finishJob = useCallback((id: string, message: string) => {
-    setJob(current => current?.id === id ? { ...current, status: "success", finishedAt: Date.now(), message } : current);
+  const finishJob = useCallback((id: string, message: string, competence?: string) => {
+    setJob(current => current?.id === id ? { ...current, competence: competence || current.competence, status: "success", finishedAt: Date.now(), message } : current);
   }, []);
 
   const failJob = useCallback((id: string, error: unknown, fallback: string) => {
@@ -271,11 +276,28 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
     }
   }, [beginJob, failJob, finishJob]);
 
+  const processTrialBalance = useCallback(async (args: JobStartArgs) => {
+    const { company, files } = args;
+    const { id } = beginJob("balancete", args);
+    try {
+      const documents = await encodeDocuments(files);
+      const { data, error } = await supabase.functions.invoke("process-trial-balance-document", { body: { company_id: company, documents } });
+      if (error) throw await functionError(error, "Falha ao ler o Balancete do Calima.");
+      if (!Array.isArray(data?.rows) || !data.competence) throw new Error("O balancete não devolveu linhas estruturadas.");
+      const result = data as TrialBalanceResult;
+      finishJob(id, result.validated ? "Balancete importado e validado." : "Balancete importado. Existem pontos para revisar antes da correção.", result.competence);
+      return result;
+    } catch (error) {
+      failJob(id, error, "Falha ao importar o Balancete.");
+      throw error;
+    }
+  }, [beginJob, failJob, finishJob]);
+
   const isProcessingScope = useCallback((company: string, month: string, year: string, module?: AccountingModule) => {
     return Boolean(job?.status === "running" && job.company === company && job.competence === `${month}/${year}` && (!module || job.module === module));
   }, [job]);
 
-  const value = useMemo(() => ({ job, processPayroll, processPurchases, processRevenue, isProcessingScope, dismiss }), [dismiss, isProcessingScope, job, processPayroll, processPurchases, processRevenue]);
+  const value = useMemo(() => ({ job, processPayroll, processPurchases, processRevenue, processTrialBalance, isProcessingScope, dismiss }), [dismiss, isProcessingScope, job, processPayroll, processPurchases, processRevenue, processTrialBalance]);
 
   return <AccountingProcessingContext.Provider value={value}>{children}<ProcessingPopup job={job} onDismiss={dismiss} /></AccountingProcessingContext.Provider>;
 }
@@ -286,7 +308,7 @@ export function useAccountingProcessing() {
   return context;
 }
 
-async function resolveMappings(module: AccountingModule, company: string, competence: string, entries: AccountingEntry[], deferredEntries: PayrollEntry[], accounts: ChartAccount[]) {
+async function resolveMappings(module: Exclude<AccountingModule, "balancete">, company: string, competence: string, entries: AccountingEntry[], deferredEntries: PayrollEntry[], accounts: ChartAccount[]) {
   const defaultSummary: MappingSummary = {
     learnedCount: 0,
     predefinedCount: entries.filter(hasCompleteMapping).length,
@@ -331,8 +353,13 @@ function completionMessage(validated: boolean, summary: MappingSummary) {
 
 function openProcessedCompetence(job: ProcessingJob) {
   const [month, year] = job.competence.split("/");
-  const context = { companyId: job.company, year, selectedMonth: month, selectedModule: job.module, activeTab: "lancamentos" };
   localStorage.setItem("ws-accounting-company-id", job.company);
+  if (job.module === "balancete") {
+    localStorage.setItem(`ws:balancete:last-context:${job.company}`, JSON.stringify({ year, month, tab: "balancete" }));
+    window.location.assign("/admin/balancete");
+    return;
+  }
+  const context = { companyId: job.company, year, selectedMonth: month, selectedModule: job.module, activeTab: "lancamentos" };
   localStorage.setItem("ws:lancamentos:last-context", JSON.stringify(context));
   localStorage.setItem(`ws:lancamentos:last-context:${job.company}`, JSON.stringify(context));
   window.location.assign("/admin/lancamentos");
@@ -340,7 +367,7 @@ function openProcessedCompetence(job: ProcessingJob) {
 
 function ProcessingPopup({ job, onDismiss }: { job: ProcessingJob | null; onDismiss: () => void }) {
   if (!job) return null;
-  const moduleLabel = job.module === "folha" ? "Folha" : job.module === "compras" ? "Compras" : "Faturamento";
+  const moduleLabel = job.module === "folha" ? "Folha" : job.module === "compras" ? "Compras" : job.module === "faturamento" ? "Faturamento" : "Balancete";
   const actionLabel = job.operation === "reprocess" ? `Reprocessando ${moduleLabel.toLowerCase()}` : `Importando ${moduleLabel.toLowerCase()}`;
   return <div className="fixed bottom-5 right-5 z-[100] w-[min(390px,calc(100vw-2rem))] rounded-lg border border-border bg-background p-4 shadow-2xl">
     <div className="flex items-start gap-3">
