@@ -339,30 +339,58 @@ function observation(row: TrialBalanceRow, headline: string, message: string, so
   return { id: `${row.id}:${headline}`, rowId: row.id, reducedCode: row.reducedCode, title: row.title, severity: "critical", headline, message, currentSignedInCents: currentSigned(row), suggestedSignedInCents: suggested, source };
 }
 
-function criticals(rows: TrialBalanceRow[], missing: AccountingExportEntry[], scale: number, target: number | null, unmapped: number) {
+const naturalNature: Partial<Record<AliasKey, "D" | "C">> = {
+  clients: "D",
+  inventory: "D",
+  cash: "D",
+  suppliers: "C",
+  salariesPayable: "C",
+  vacationPayable: "C",
+  terminationPayable: "C",
+  thirteenthPayable: "C",
+  fgtsPayable: "C",
+  inssPayable: "C",
+  irrfPayable: "C",
+  prolaborePayable: "C",
+  simplesPayable: "C",
+};
+
+function criticals(rows: TrialBalanceRow[], scale: number, target: number | null, unmapped: number, missingCodes: string[]) {
   const out: TrialBalanceObservation[] = [];
   const min = threshold(scale);
   const push = (item: TrialBalanceObservation) => { if (!out.some(existing => existing.id === item.id)) out.push(item); };
-  const impact = new Map<string, number>();
-  missing.forEach(entry => {
-    impact.set(entry.debitCode, (impact.get(entry.debitCode) ?? 0) + entry.amountInCents);
-    impact.set(entry.creditCode, (impact.get(entry.creditCode) ?? 0) + entry.amountInCents);
-  });
-  impact.forEach((amount, code) => {
-    if (amount < min) return;
-    const row = findExact(rows, code); if (!row) return;
-    push(observation(row, "Movimento material faltando", `Faltam ${money(amount)} em lançamentos que atingem esta conta.`, "Reconciliação dos módulos e pagamentos mensais"));
-  });
+
+  // Lançamento faltante normal NÃO é crítico: ele é corrigido na aba Lançamentos e a linha fica verde na prévia.
   analytical(rows).forEach(row => {
     const difference = validateTrialBalanceRow(row);
     if (Math.abs(difference) > min) push(observation(row, "Linha não fecha", `Diferença aritmética de ${money(difference)}.`, "Saldo anterior + débitos - créditos × saldo atual"));
   });
+
+  (Object.keys(naturalNature) as AliasKey[]).forEach(key => {
+    if (key === "cash") return;
+    const row = findAlias(rows, key);
+    if (!row) return;
+    const value = currentSigned(row);
+    if (Math.abs(value) <= min) return;
+    const expected = naturalNature[key];
+    if ((expected === "D" && value < 0) || (expected === "C" && value > 0)) {
+      push(observation(row, "Natureza invertida", `${row.title} está ${money(value)} ${value > 0 ? "D" : "C"}, contrário à natureza esperada (${expected}).`, "Natureza patrimonial da conta"));
+    }
+  });
+
   const cash = findAlias(rows, "cash");
   if (cash) {
     const value = currentSigned(cash);
-    if (value < -min) push(observation(cash, "Caixa credor", `O Caixa está ${money(value)} C.`, "Política de fechamento de Caixa", target ?? undefined));
+    if (value < -1) push(observation(cash, "Caixa credor", `O Caixa está ${money(value)} C.`, "Política de fechamento de Caixa", target ?? undefined));
     else if (target !== null && value > Math.max(target * 8, min * 4)) push(observation(cash, "Caixa muito alto", `O Caixa está ${money(value)} D e a faixa operacional calculada está perto de ${money(target)}.`, "Histórico da empresa + competência", target));
   }
+
+  missingCodes.forEach(code => {
+    const anchor = findExact(rows, code) ?? cash ?? analytical(rows)[0];
+    if (!anchor) return;
+    push(observation(anchor, "Conta do ajuste não existe no Balancete", `O C.R. ${code} não é uma conta analítica do Balancete importado. O ajuste foi bloqueado: nenhuma conta do Plano de Contas do site pode substituí-la.`, "Balancete importado é a autoridade das contas"));
+  });
+
   if (unmapped > 0) {
     const anchor = cash ?? analytical(rows)[0];
     if (anchor) push(observation(anchor, "Existem contas não reconhecidas", `${unmapped} lançamento(s) esperado(s) ainda não puderam ser ligados a uma conta analítica deste Balancete.`, "Ponte semântica entre Plano de Contas e Balancete"));
@@ -378,6 +406,29 @@ function targets(rows: TrialBalanceRow[], preview: TrialBalanceRow[], adjustment
     return { key: `cr-${code}`, label: current.title, row: current, currentSignedInCents: currentSigned(current), targetSignedInCents: currentSigned(projected), source: "Reconciliação do movimento completo da competência.", confidence: 0.99 } satisfies TrialBalanceAutoTarget;
   }).filter((item): item is TrialBalanceAutoTarget => Boolean(item));
 }
+
+export function analyticalReducedCodes(rows: TrialBalanceRow[]) {
+  return new Set(analytical(rows).map(row => row.reducedCode));
+}
+
+export function adjustmentsOutsideTrialBalance(rows: TrialBalanceRow[], adjustments: AccountingExportEntry[]) {
+  const codes = analyticalReducedCodes(rows);
+  const missing = new Set<string>();
+  adjustments.forEach(entry => {
+    if (!codes.has(entry.debitCode)) missing.add(entry.debitCode);
+    if (!codes.has(entry.creditCode)) missing.add(entry.creditCode);
+  });
+  return Array.from(missing);
+}
+
+export function previewPreservesStructure(rows: TrialBalanceRow[], preview: TrialBalanceRow[]) {
+  if (rows.length !== preview.length) return false;
+  return rows.every((row, index) => {
+    const other = preview[index];
+    return other.id === row.id && other.accountCode === row.accountCode && other.title === row.title && other.reducedCode === row.reducedCode;
+  });
+}
+
 
 export async function buildCriticalTrialBalancePlan(company: string, month: string, year: string, rows: TrialBalanceRow[]): Promise<CriticalTrialBalancePlan> {
   const prefix = `${company}:${year}:${month}`;
