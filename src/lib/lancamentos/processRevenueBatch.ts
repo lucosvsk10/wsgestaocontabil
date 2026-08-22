@@ -1,12 +1,23 @@
 import { supabase } from "@/integrations/supabase/client";
 import { ChartAccount } from "./chartOfAccounts";
 import { RevenueBatchResult, RevenueBatchPeriodResult } from "./revenueBatch";
-import { RevenueEntry } from "./revenueWorkbook";
+import { RevenueComparison, RevenueEntry, RevenueReference } from "./revenueWorkbook";
 
 interface Args {
   company: string;
   files: File[];
   accounts: ChartAccount[];
+}
+
+interface RawRevenuePeriod {
+  competence: string;
+  reference: RevenueReference;
+  entries: RevenueEntry[];
+  comparisons: RevenueComparison[];
+  warnings: string[];
+  validationIssues: string[];
+  referenceVerified: boolean;
+  validated: boolean;
 }
 
 const complete = (entry: RevenueEntry) => Boolean(entry.debitCode && entry.creditCode && entry.debitDescription && entry.creditDescription);
@@ -36,9 +47,9 @@ export async function processRevenueBatch({ company, files, accounts }: Args): P
 
   const importId = crypto.randomUUID();
   const sourceFiles = files.map(file => file.name);
-  const rawPeriods = data.periods.map((period: any) => ({
+  const rawPeriods: RawRevenuePeriod[] = (data.periods as RawRevenuePeriod[]).map(period => ({
     ...period,
-    entries: (period.entries ?? []).map((entry: RevenueEntry, index: number) => ({
+    entries: (period.entries ?? []).map((entry, index) => ({
       ...entry,
       id: entry.id || `${importId}-${period.competence}-${index}`,
       importId,
@@ -48,7 +59,7 @@ export async function processRevenueBatch({ company, files, accounts }: Args): P
 
   const representatives = new Map<string, RevenueEntry>();
   for (const period of rawPeriods) {
-    for (const entry of period.entries as RevenueEntry[]) {
+    for (const entry of period.entries) {
       if (!representatives.has(signature(entry))) representatives.set(signature(entry), entry);
     }
   }
@@ -72,14 +83,14 @@ export async function processRevenueBatch({ company, files, accounts }: Args): P
     if (mappingError) {
       mappingFailure = (await functionError(mappingError, "Falha ao resolver as contas do faturamento.")).message;
     } else if (Array.isArray(mappingData?.entries)) {
-      mappedRepresentatives = mappingData.entries;
+      mappedRepresentatives = mappingData.entries as RevenueEntry[];
       mappingRouting = mappingData.routing || "memória da empresa → plano de contas";
     }
   }
 
   const mappedBySignature = new Map(mappedRepresentatives.map(entry => [signature(entry), entry]));
-  const periods: RevenueBatchPeriodResult[] = rawPeriods.map((period: any) => {
-    const entries = (period.entries as RevenueEntry[]).map(entry => {
+  const periods: RevenueBatchPeriodResult[] = rawPeriods.map(period => {
+    const entries = period.entries.map(entry => {
       const mapped = mappedBySignature.get(signature(entry));
       if (!mapped) return entry;
       return {
@@ -104,7 +115,7 @@ export async function processRevenueBatch({ company, files, accounts }: Args): P
     if (unresolved) validationIssues.push(`${unresolved} lançamento(s) continuam sem débito/crédito completo.`);
     const comparisons = period.comparisons ?? [];
     const warnings = period.warnings ?? [];
-    const hasDifference = comparisons.some((row: any) => row.blocking !== false && row.differenceInCents !== 0);
+    const hasDifference = comparisons.some(row => row.blocking !== false && row.differenceInCents !== 0);
     const needsApproval = entries.some(entry => entry.mappingNeedsApproval && complete(entry));
     const validated = Boolean(period.referenceVerified) && !hasDifference && !warnings.length && !validationIssues.length && !needsApproval;
 
