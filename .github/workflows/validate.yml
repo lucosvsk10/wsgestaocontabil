@@ -45,6 +45,7 @@ jobs:
           src/components/admin/lancamentos/ComprasWorkspace.tsx
           src/components/admin/lancamentos/FaturamentoWorkspace.tsx
           src/components/admin/lancamentos/BalanceteWorkspace.tsx
+          src/components/admin/lancamentos/BalanceteWorkspaceV2.tsx
           src/components/admin/lancamentos/AccountingWorkflowUI.tsx
           src/components/admin/lancamentos/AccountingYearPicker.tsx
           src/components/admin/lancamentos/ConferenceActionBar.tsx
@@ -64,6 +65,7 @@ jobs:
           src/lib/lancamentos/trialBalance.ts
           src/lib/lancamentos/trialBalance.test.ts
           src/lib/lancamentos/trialBalanceClosing.ts
+          src/lib/lancamentos/trialBalanceAutoAdjustment.ts
           src/lib/lancamentos/historicalRegression.ts
           src/lib/lancamentos/historicalRegression.test.ts
           src/lib/lancamentos/accountingExportWorkbook.ts
