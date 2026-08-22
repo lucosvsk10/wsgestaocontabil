@@ -9,6 +9,14 @@ interface Args {
   accounts: ChartAccount[];
 }
 
+export interface RevenueCompetenceDetection {
+  competences: string[];
+  hasUndatedPeriodicBlocks: boolean;
+  undatedBlockCount: number;
+  evidence: string[];
+  warning: string;
+}
+
 interface RawRevenuePeriod {
   competence: string;
   reference: RevenueReference;
@@ -23,15 +31,28 @@ interface RawRevenuePeriod {
 const complete = (entry: RevenueEntry) => Boolean(entry.debitCode && entry.creditCode && entry.debitDescription && entry.creditDescription);
 const signature = (entry: RevenueEntry) => [entry.rubricCode, entry.section, entry.kind, entry.eventType].join("|");
 
+export async function detectRevenueCompetences(files: File[]): Promise<RevenueCompetenceDetection> {
+  if (!files.length) throw new Error("Nenhum relatório de faturamento foi selecionado.");
+  const documents = await encodeDocuments(files);
+  const { data, error } = await supabase.functions.invoke("detect-accounting-competence", {
+    body: { module: "faturamento", documents },
+  });
+  if (error) throw await functionError(error, "Não foi possível identificar a competência do faturamento antes do processamento.");
+  const competences = [...new Set((data?.competences ?? []).map(String).filter((value: string) => /^(0[1-9]|1[0-2])\/(20\d{2})$/.test(value)))];
+  return {
+    competences,
+    hasUndatedPeriodicBlocks: Boolean(data?.hasUndatedPeriodicBlocks),
+    undatedBlockCount: Math.max(0, Number(data?.undatedBlockCount || 0)),
+    evidence: Array.isArray(data?.evidence) ? data.evidence.map(String) : [],
+    warning: String(data?.warning || ""),
+  };
+}
+
 export async function processRevenueBatch({ company, files, accounts }: Args): Promise<RevenueBatchResult> {
   if (!files.length) throw new Error("Nenhum relatório de faturamento foi selecionado.");
   if (!accounts.length) throw new Error("Importe o plano de contas desta empresa antes de processar Faturamento.");
 
-  const documents = await Promise.all(files.map(async file => ({
-    name: file.name,
-    mime_type: file.type || "application/pdf",
-    data: await asBase64(file),
-  })));
+  const documents = await encodeDocuments(files);
 
   const { data, error } = await supabase.functions.invoke("process-revenue-document", {
     body: {
@@ -150,6 +171,14 @@ export async function processRevenueBatch({ company, files, accounts }: Args): P
     model: data.model,
     routing: `${data.routing || data.model} · ${mappingRouting}`,
   };
+}
+
+function encodeDocuments(files: File[]) {
+  return Promise.all(files.map(async file => ({
+    name: file.name,
+    mime_type: file.type || "application/pdf",
+    data: await asBase64(file),
+  })));
 }
 
 function asBase64(file: File) {
