@@ -44,10 +44,16 @@ jobs:
           src/components/admin/lancamentos/ComprasWorkspace.tsx
           src/components/admin/lancamentos/FaturamentoWorkspace.tsx
           src/components/admin/lancamentos/AccountingWorkflowUI.tsx
+          src/components/admin/lancamentos/WrongCompetenceImportDialog.tsx
+          src/components/admin/lancamentos/WrongCompetenceImportGuard.tsx
+          src/components/admin/lancamentos/RevenueImportSummaryDialog.tsx
           src/lib/lancamentos/payrollWorkbook.ts
           src/lib/lancamentos/payrollWorkbook.test.ts
           src/lib/lancamentos/purchaseWorkbook.ts
           src/lib/lancamentos/revenueWorkbook.ts
+          src/lib/lancamentos/revenueBatch.ts
+          src/lib/lancamentos/processRevenueBatch.ts
+          src/lib/lancamentos/workspaceStorage.ts
           src/lib/lancamentos/historicalRegression.ts
           src/lib/lancamentos/historicalRegression.test.ts
           src/lib/lancamentos/accountingExportWorkbook.ts
