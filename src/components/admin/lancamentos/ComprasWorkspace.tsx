@@ -1,5 +1,5 @@
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, CheckCircle2, Maximize2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Maximize2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -8,11 +8,12 @@ import { AccountingWorkflowSteps, AccountCodeHover } from "./AccountingWorkflowU
 import { ChartAccount } from "@/lib/lancamentos/chartOfAccounts";
 import { exportAccountingWorkbook } from "@/lib/lancamentos/accountingExportWorkbook";
 import { PurchaseComparison, PurchaseEntry, PurchaseItem, PurchaseProcessingMeta, PurchaseReference } from "@/lib/lancamentos/purchaseWorkbook";
-import { loadWorkspaceData, loadWorkspaceFiles, saveWorkspaceData, saveWorkspaceFiles } from "@/lib/lancamentos/workspaceStorage";
+import { deleteWorkspaceData, loadWorkspaceData, loadWorkspaceFiles, removeWorkspaceFiles, saveWorkspaceData, saveWorkspaceFiles } from "@/lib/lancamentos/workspaceStorage";
 import { WorkspaceStatus } from "./DespesasWorkspace";
 import { cn } from "@/lib/utils";
 import { PurchaseProcessingResult, useAccountingProcessing } from "@/contexts/AccountingProcessingContext";
 import { supabase } from "@/integrations/supabase/client";
+import { WrongCompetenceImportDialog } from "./WrongCompetenceImportDialog";
 
 interface Props {
   company: string;
@@ -34,6 +35,11 @@ interface SavedPurchases {
   validated?: boolean;
 }
 
+interface PendingWrongImport {
+  files: File[];
+  detectedCompetence: string;
+}
+
 const cellClass = "h-7 rounded-none border-0 bg-transparent px-1.5 text-xs shadow-none focus-visible:ring-1";
 const money = (cents: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
 const isCompleteMapping = (row: PurchaseEntry) => Boolean(row.debitCode && row.creditCode && row.debitDescription && row.creditDescription);
@@ -52,6 +58,9 @@ export function ComprasWorkspace({ company, month, year, onStatusChange, onCompe
   const [loaded, setLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState("transcricao");
   const [learning, setLearning] = useState(false);
+  const [deletingFile, setDeletingFile] = useState<string | null>(null);
+  const [pendingWrongImport, setPendingWrongImport] = useState<PendingWrongImport | null>(null);
+  const [resolvingWrongImport, setResolvingWrongImport] = useState(false);
   const { processPurchases, isProcessingScope } = useAccountingProcessing();
   const processing = isProcessingScope(company, month, year, "compras");
   const scope = `${company}:${year}:${month}:compras`;
@@ -88,12 +97,24 @@ export function ComprasWorkspace({ company, month, year, onStatusChange, onCompe
     setReferenceVerified(Boolean(saved.referenceVerified));
   };
 
+  const resetWorkspaceState = () => {
+    setItems([]);
+    setEntries([]);
+    setReference(null);
+    setWarnings([]);
+    setValidationIssues([]);
+    setProcessingMeta(null);
+    setReferenceVerified(false);
+  };
+
   useEffect(() => { setActiveTab(localStorage.getItem(tabKey) || "transcricao"); }, [tabKey]);
   useEffect(() => { localStorage.setItem(tabKey, activeTab); }, [activeTab, tabKey]);
 
   useEffect(() => {
     let active = true;
     setLoaded(false);
+    resetWorkspaceState();
+    setFiles([]);
     Promise.all([
       loadWorkspaceData<SavedPurchases>(key),
       loadWorkspaceFiles(scope),
@@ -101,7 +122,6 @@ export function ComprasWorkspace({ company, month, year, onStatusChange, onCompe
     ]).then(([saved, docs, chart]) => {
       if (!active) return;
       if (saved) hydrateSaved(saved);
-      else { setItems([]); setEntries([]); setReference(null); setWarnings([]); setValidationIssues([]); setProcessingMeta(null); setReferenceVerified(false); }
       setFiles(docs);
       setAccounts(chart ?? []);
       setLoaded(true);
@@ -130,15 +150,25 @@ export function ComprasWorkspace({ company, month, year, onStatusChange, onCompe
     return { ...row, [field]: value };
   }));
 
+  const runProcessing = async (selected: File[], operation: "import" | "reprocess", targetMonth: string, targetYear: string) => {
+    if (!accounts.length) throw new Error("Importe o plano de contas desta empresa antes de processar Compras.");
+    if (!selected.length) throw new Error("Nenhum relatório de compras está disponível para processamento.");
+    return processPurchases({ company, month: targetMonth, year: targetYear, files: selected, accounts, operation });
+  };
+
   const startProcessing = async (selected: File[], operation: "import" | "reprocess", targetMonth: string, targetYear: string) => {
-    if (!accounts.length) { setValidationIssues(["Importe o plano de contas desta empresa antes de processar Compras."]); return; }
-    if (!selected.length) { setValidationIssues(["Nenhum relatório de compras está disponível para processamento."]); return; }
-    setWarnings([]); setValidationIssues([]);
+    setWarnings([]);
+    setValidationIssues([]);
     try {
-      const result = await processPurchases({ company, month: targetMonth, year: targetYear, files: selected, accounts, operation });
-      if (targetMonth === month && targetYear === year) { hydrateSaved(result); onStatusChange("review"); }
+      const result = await runProcessing(selected, operation, targetMonth, targetYear);
+      if (targetMonth === month && targetYear === year) {
+        hydrateSaved(result);
+        onStatusChange("review");
+      }
+      return result;
     } catch (error) {
       if (targetMonth === month && targetYear === year) setValidationIssues([error instanceof Error ? error.message : "Falha ao processar Compras com IA."]);
+      return null;
     }
   };
 
@@ -146,20 +176,78 @@ export function ComprasWorkspace({ company, month, year, onStatusChange, onCompe
     const selected = Array.from(event.target.files ?? []);
     event.target.value = "";
     if (!selected.length) return;
-    const detected = detectPurchaseCompetence(selected[0]);
-    const targetMonth = detected?.month ?? month;
-    const targetYear = detected?.year ?? year;
-    const targetScope = `${company}:${targetYear}:${targetMonth}:compras`;
-    await saveWorkspaceFiles(targetScope, selected);
-    if (targetMonth !== month || targetYear !== year) {
-      onCompetenceChange(targetMonth, targetYear);
-      await startProcessing(selected, "import", targetMonth, targetYear);
-      return;
+    if (!accounts.length) { setValidationIssues(["Importe o plano de contas desta empresa antes de processar Compras."]); return; }
+
+    setWarnings([]);
+    setValidationIssues([]);
+    try {
+      const probe = await runProcessing(selected, "import", month, year);
+      if (probe.detectedCompetence && probe.detectedCompetence !== competence) {
+        setPendingWrongImport({ files: selected, detectedCompetence: probe.detectedCompetence });
+        return;
+      }
+
+      const allFiles = uniqueFiles([...files, ...selected]);
+      const finalResult = files.length ? await runProcessing(allFiles, "import", month, year) : probe;
+      await saveWorkspaceFiles(scope, selected, { skipCompetencePrompt: true });
+      setFiles(allFiles);
+      hydrateSaved(finalResult);
+      onStatusChange("review");
+    } catch (error) {
+      setValidationIssues([error instanceof Error ? error.message : "Falha ao processar Compras com IA."]);
     }
-    const allFiles = uniqueFiles([...files, ...selected]);
-    setFiles(allFiles);
-    onStatusChange("review");
-    await startProcessing(allFiles, "import", month, year);
+  };
+
+  const keepWrongImport = async () => {
+    const pending = pendingWrongImport;
+    if (!pending) return;
+    const [targetMonth, targetYear] = pending.detectedCompetence.split("/");
+    if (!targetMonth || !targetYear) return;
+    setResolvingWrongImport(true);
+    try {
+      const targetScope = `${company}:${targetYear}:${targetMonth}:compras`;
+      const targetKey = `${targetScope}:parsed`;
+      const existingTargetFiles = await loadWorkspaceFiles(targetScope);
+      const targetFiles = uniqueFiles([...existingTargetFiles, ...pending.files]);
+      const result = await runProcessing(targetFiles, "import", targetMonth, targetYear);
+      await saveWorkspaceFiles(targetScope, pending.files, { skipCompetencePrompt: true });
+      await saveWorkspaceData(targetKey, result);
+      setPendingWrongImport(null);
+      onCompetenceChange(targetMonth, targetYear);
+    } catch (error) {
+      setValidationIssues([error instanceof Error ? error.message : "Não foi possível mover Compras para a competência detectada."]);
+    } finally {
+      setResolvingWrongImport(false);
+    }
+  };
+
+  const deleteFile = async (file: File) => {
+    setDeletingFile(file.name);
+    const remaining = files.filter(item => !(item.name === file.name && item.size === file.size));
+    try {
+      await removeWorkspaceFiles(scope, [file]);
+      onStatusChange("waiting");
+      if (!remaining.length) {
+        setLoaded(false);
+        setFiles([]);
+        resetWorkspaceState();
+        await deleteWorkspaceData(key);
+        setLoaded(true);
+        return;
+      }
+
+      setLoaded(false);
+      const result = await runProcessing(remaining, "reprocess", month, year);
+      setFiles(remaining);
+      hydrateSaved(result);
+      setLoaded(true);
+      onStatusChange("review");
+    } catch (error) {
+      setLoaded(true);
+      setValidationIssues(current => [...new Set([...current, error instanceof Error ? error.message : "Falha ao excluir o documento e reconstruir Compras."])]);
+    } finally {
+      setDeletingFile(null);
+    }
   };
 
   const approveAndFinalize = async () => {
@@ -199,60 +287,75 @@ export function ComprasWorkspace({ company, month, year, onStatusChange, onCompe
     note: "Compras são consolidadas em um único lançamento por competência, somando todas as entradas do Relatório de Entrada de Mercadoria.",
   });
 
-  return <section className="mt-8 space-y-8">
-    <div className="rounded-md border border-border bg-background p-6">
-      <div className="flex items-center justify-between gap-5">
-        <div><h3 className="font-semibold">Compras de {competence}</h3><p className="mt-1 text-xs text-muted-foreground">Relatório de Entrada de Mercadoria → transcrição individual → lançamento mensal consolidado.</p></div>
-        <div className="flex flex-wrap justify-end gap-2">
-          {files.length > 0 && <Button variant="outline" onClick={() => void startProcessing(files, "reprocess", month, year)} disabled={processing}>{processing ? "Processando..." : "Reprocessar com IA"}</Button>}
-          <Button variant="outline" onClick={() => input.current?.click()} disabled={processing}>Importar compras de {competence}</Button>
+  return <>
+    <section className="mt-8 space-y-8">
+      <div className="rounded-md border border-border bg-background p-6">
+        <div className="flex items-center justify-between gap-5">
+          <div><h3 className="font-semibold">Compras de {competence}</h3><p className="mt-1 text-xs text-muted-foreground">Relatório de Entrada de Mercadoria → transcrição individual → lançamento mensal consolidado.</p></div>
+          <div className="flex flex-wrap justify-end gap-2">
+            {files.length > 0 && <Button variant="outline" onClick={() => void startProcessing(files, "reprocess", month, year)} disabled={processing}>{processing ? "Processando..." : "Reprocessar com IA"}</Button>}
+            <Button variant="outline" onClick={() => input.current?.click()} disabled={processing}>Importar compras de {competence}</Button>
+          </div>
+          <input ref={input} type="file" multiple accept=".pdf" className="sr-only" onChange={event => void importFiles(event)} />
         </div>
-        <input ref={input} type="file" multiple accept=".pdf" className="sr-only" onChange={event => void importFiles(event)} />
+        <div className="mt-5 flex flex-wrap gap-2 border-t border-border pt-5 text-sm text-muted-foreground">
+          {files.length ? files.map(file => <span key={`${file.name}-${file.size}`} className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-border bg-muted/25 px-2.5 py-1.5 text-xs text-foreground"><span className="max-w-[420px] truncate" title={file.name}>{file.name}</span><Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive" disabled={Boolean(deletingFile) || processing} onClick={() => void deleteFile(file)} title="Excluir documento e seus lançamentos"><Trash2 className="h-3.5 w-3.5" /></Button></span>) : "Nenhum relatório importado."}
+        </div>
       </div>
-      <div className="mt-5 border-t border-border pt-5 text-sm text-muted-foreground">{files.length ? files.map(file => <span key={`${file.name}-${file.size}`} className="mr-5 text-foreground">{file.name}</span>) : "Nenhum relatório importado."}</div>
-    </div>
 
-    <Tabs value={activeTab} onValueChange={setActiveTab}>
-      <AccountingWorkflowSteps steps={[
-        { value: "transcricao", label: "Transcrição", count: items.length },
-        { value: "lancamentos", label: "Lançamentos", count: entries.length },
-        { value: "conferencia", label: "Conferência", count: conferenceCount },
-      ]} />
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <AccountingWorkflowSteps steps={[
+          { value: "transcricao", label: "Transcrição", count: items.length },
+          { value: "lancamentos", label: "Lançamentos", count: entries.length },
+          { value: "conferencia", label: "Conferência", count: conferenceCount },
+        ]} />
 
-      <TabsContent value="transcricao" className="mt-7">
-        <Header title="Compras · Transcrição" subtitle="Cada entrada do relatório permanece individual para conferência; a consolidação acontece só no lançamento contábil." />
-        {reference && <div className="mb-4 grid gap-3 sm:grid-cols-2"><ReferenceCard label="Quantidade de entradas" value={String(reference.quantity)} /><ReferenceCard label="Valor Total do PDF" value={money(reference.totalAmountInCents)} /></div>}
-        <PurchaseItemsTable rows={items} title={`Transcrição de compras · ${competence}`} />
-      </TabsContent>
+        <TabsContent value="transcricao" className="mt-7">
+          <Header title="Compras · Transcrição" subtitle="Cada entrada do relatório permanece individual para conferência; a consolidação acontece só no lançamento contábil." />
+          {reference && <div className="mb-4 grid gap-3 sm:grid-cols-2"><ReferenceCard label="Quantidade de entradas" value={String(reference.quantity)} /><ReferenceCard label="Valor Total do PDF" value={money(reference.totalAmountInCents)} /></div>}
+          <PurchaseItemsTable rows={items} title={`Transcrição de compras · ${competence}`} />
+        </TabsContent>
 
-      <TabsContent value="lancamentos" className="mt-7">
-        <Header title="Compras · Lançamentos" subtitle="Um lançamento consolidado no último dia do mês, somando todas as entradas." />
-        <div className="rounded-md border border-border bg-background">
-          <div className="flex items-center justify-between border-b border-border p-5"><span className="text-sm text-muted-foreground">{entries.length ? `${entries.length} lançamento consolidado · ${money(entries[0].amountInCents)}` : "Sem lançamento nesta competência"}</span><Button disabled={!canFinalize || !entries.length} onClick={exportToCalima}>Exportar para o Calima</Button></div>
-          <PurchaseLedger rows={entries} editable update={updateEntry} title={`Lançamentos de compras · ${competence}`} />
-          {!canFinalize && entries.length > 0 && <p className="px-5 pb-4 text-xs text-muted-foreground">{mappingsToApprove > 0 ? "Confirme o mapeamento na aba Conferência para liberar a exportação." : "A exportação será liberada quando quantidade, valor e mapeamento estiverem conferidos."}</p>}
-        </div>
-      </TabsContent>
-
-      <TabsContent value="conferencia" className="mt-7">
-        <Header title="Compras · Conferência" subtitle="Quantidade e valor do documento original precisam fechar com a transcrição e com o lançamento consolidado." />
-        <div className="rounded-md border border-border bg-background">
-          <div className="flex flex-col gap-3 border-b border-border bg-muted/20 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <div><p className="text-sm font-semibold text-foreground">Fechar conferência de compras</p><p className="mt-1 text-xs text-muted-foreground">Confirme o mês aqui depois de revisar quantidade, valor consolidado e mapeamento.</p></div>
-            <Button className="shrink-0" disabled={!canReviewApprove || !entries.length} onClick={() => void approveAndFinalize()}>{learning ? "Salvando conhecimento..." : mappingsToApprove > 0 ? "Confirmar e aprender" : "Marcar compras como OK"}</Button>
+        <TabsContent value="lancamentos" className="mt-7">
+          <Header title="Compras · Lançamentos" subtitle="Um lançamento consolidado no último dia do mês, somando todas as entradas." />
+          <div className="rounded-md border border-border bg-background">
+            <div className="flex items-center justify-between border-b border-border p-5"><span className="text-sm text-muted-foreground">{entries.length ? `${entries.length} lançamento consolidado · ${money(entries[0].amountInCents)}` : "Sem lançamento nesta competência"}</span><Button disabled={!canFinalize || !entries.length} onClick={exportToCalima}>Exportar para o Calima</Button></div>
+            <PurchaseLedger rows={entries} editable update={updateEntry} title={`Lançamentos de compras · ${competence}`} />
+            {!canFinalize && entries.length > 0 && <p className="px-5 pb-4 text-xs text-muted-foreground">{mappingsToApprove > 0 ? "Confirme o mapeamento na aba Conferência para liberar a exportação." : "A exportação será liberada quando quantidade, valor e mapeamento estiverem conferidos."}</p>}
           </div>
-          <div className="space-y-6 p-6">
-            <div className="grid gap-5 sm:grid-cols-5"><Stat label="Entradas PDF" value={reference?.quantity ?? 0} /><Stat label="Entradas transcritas" value={items.length} /><Stat label="Diferenças" value={blockingDifferences.length} /><Stat label="Aguardando aprovação" value={mappingsToApprove} /><Stat label="Conhecimento reutilizado" value={learnedMappings} /></div>
-            {!referenceVerified && <div className="flex gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />A conferência independente do relatório ainda não fechou. A exportação permanece bloqueada.</div>}
-            {mappingsToApprove > 0 && <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-4"><p className="text-sm font-medium text-foreground">Mapeamento novo aguardando sua conferência</p><p className="mt-1 text-xs text-muted-foreground">Depois de aprovado, Mercadoria para Revenda → Fornecedores será reaproveitado automaticamente para esta empresa.</p></div>}
-            <PurchaseComparisonTable rows={comparisons} referenceVerified={referenceVerified} />
-            {(warnings.length > 0 || validationIssues.length > 0) && <div className="rounded-md bg-muted/50 p-4"><p className="text-sm font-medium text-foreground">Pontos que exigem decisão</p>{[...new Set([...warnings, ...validationIssues])].map(issue => <p key={issue} className="mt-2 flex gap-2 text-sm text-muted-foreground"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{issue}</p>)}</div>}
-            {processingMeta && <p className="text-xs text-muted-foreground">Fluxo: {processingMeta.routing || processingMeta.primaryModel}</p>}
+        </TabsContent>
+
+        <TabsContent value="conferencia" className="mt-7">
+          <Header title="Compras · Conferência" subtitle="Quantidade e valor do documento original precisam fechar com a transcrição e com o lançamento consolidado." />
+          <div className="rounded-md border border-border bg-background">
+            <div className="flex flex-col gap-3 border-b border-border bg-muted/20 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div><p className="text-sm font-semibold text-foreground">Fechar conferência de compras</p><p className="mt-1 text-xs text-muted-foreground">Confirme o mês aqui depois de revisar quantidade, valor consolidado e mapeamento.</p></div>
+              <Button className="shrink-0" disabled={!canReviewApprove || !entries.length} onClick={() => void approveAndFinalize()}>{learning ? "Salvando conhecimento..." : mappingsToApprove > 0 ? "Confirmar e aprender" : "Marcar compras como OK"}</Button>
+            </div>
+            <div className="space-y-6 p-6">
+              <div className="grid gap-5 sm:grid-cols-5"><Stat label="Entradas PDF" value={reference?.quantity ?? 0} /><Stat label="Entradas transcritas" value={items.length} /><Stat label="Diferenças" value={blockingDifferences.length} /><Stat label="Aguardando aprovação" value={mappingsToApprove} /><Stat label="Conhecimento reutilizado" value={learnedMappings} /></div>
+              {!referenceVerified && <div className="flex gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />A conferência independente do relatório ainda não fechou. A exportação permanece bloqueada.</div>}
+              {mappingsToApprove > 0 && <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-4"><p className="text-sm font-medium text-foreground">Mapeamento novo aguardando sua conferência</p><p className="mt-1 text-xs text-muted-foreground">Depois de aprovado, Mercadoria para Revenda → Fornecedores será reaproveitado automaticamente para esta empresa.</p></div>}
+              <PurchaseComparisonTable rows={comparisons} referenceVerified={referenceVerified} />
+              {(warnings.length > 0 || validationIssues.length > 0) && <div className="rounded-md bg-muted/50 p-4"><p className="text-sm font-medium text-foreground">Pontos que exigem decisão</p>{[...new Set([...warnings, ...validationIssues])].map(issue => <p key={issue} className="mt-2 flex gap-2 text-sm text-muted-foreground"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{issue}</p>)}</div>}
+              {processingMeta && <p className="text-xs text-muted-foreground">Fluxo: {processingMeta.routing || processingMeta.primaryModel}</p>}
+            </div>
           </div>
-        </div>
-      </TabsContent>
-    </Tabs>
-  </section>;
+        </TabsContent>
+      </Tabs>
+    </section>
+
+    <WrongCompetenceImportDialog
+      open={Boolean(pendingWrongImport)}
+      currentCompetence={competence}
+      detectedCompetence={pendingWrongImport?.detectedCompetence ?? ""}
+      fileNames={pendingWrongImport?.files.map(file => file.name) ?? []}
+      keeping={resolvingWrongImport}
+      removing={false}
+      onKeep={() => void keepWrongImport()}
+      onRemove={() => setPendingWrongImport(null)}
+    />
+  </>;
 }
 
 function Header({ title, subtitle }: { title: string; subtitle: string }) { return <div className="mb-5"><h3 className="font-semibold">{title}</h3><p className="mt-1 text-sm text-muted-foreground">{subtitle}</p></div>; }
@@ -290,5 +393,4 @@ function PurchaseComparisonTable({ rows, referenceVerified }: { rows: PurchaseCo
 }
 
 function TableExpandButton({ onClick }: { onClick: () => void }) { return <div className="flex h-8 items-center justify-end border-b border-border px-2"><Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={onClick} title="Expandir tabela"><Maximize2 className="h-3.5 w-3.5" /></Button></div>; }
-function detectPurchaseCompetence(file: File) { const match = file.name.match(/compras?[^0-9]*(0?[1-9]|1[0-2])[-_/](20\d{2})/i); return match ? { month: match[1].padStart(2, "0"), year: match[2] } : null; }
 function uniqueFiles(files: File[]) { const seen = new Set<string>(); return files.filter(file => { const key = `${file.name}:${file.size}:${file.lastModified}`; if (seen.has(key)) return false; seen.add(key); return true; }); }
