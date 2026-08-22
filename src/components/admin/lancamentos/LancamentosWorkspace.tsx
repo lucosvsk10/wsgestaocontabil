@@ -133,6 +133,9 @@ export function LancamentosWorkspace() {
   const changeCompetence = (nextMonth: string, nextYear: string) => {
     setYear(nextYear);
     setSelectedMonth(nextMonth);
+    void loadDynamicYearStatuses(company.id, nextYear)
+      .then(setYearStatuses)
+      .catch(error => console.error("Não foi possível atualizar imediatamente os indicadores da nova competência.", error));
   };
 
   const exportCompleteMonth = async (month: string) => {
