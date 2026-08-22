@@ -1,11 +1,10 @@
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, CheckCircle2, Info, Maximize2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Info, Maximize2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { ChartAccount } from "@/lib/lancamentos/chartOfAccounts";
-import { detectWorkbookCompetence } from "@/lib/lancamentos/expenseWorkbook";
 import { isManualOnlyConference } from "@/lib/lancamentos/manualOnlyConference";
 import {
   PayrollComparison,
@@ -15,12 +14,13 @@ import {
   calculatePayrollComparisons,
   exportPayroll,
 } from "@/lib/lancamentos/payrollWorkbook";
-import { loadWorkspaceData, loadWorkspaceFiles, saveWorkspaceData, saveWorkspaceFiles } from "@/lib/lancamentos/workspaceStorage";
+import { deleteWorkspaceData, loadWorkspaceData, loadWorkspaceFiles, removeWorkspaceFiles, saveWorkspaceData, saveWorkspaceFiles } from "@/lib/lancamentos/workspaceStorage";
 import { WorkspaceStatus } from "./DespesasWorkspace";
 import { cn } from "@/lib/utils";
 import { PayrollProcessingResult, useAccountingProcessing } from "@/contexts/AccountingProcessingContext";
 import { supabase } from "@/integrations/supabase/client";
 import { AccountingWorkflowSteps, AccountCodeHover } from "./AccountingWorkflowUI";
+import { WrongCompetenceImportDialog } from "./WrongCompetenceImportDialog";
 
 interface Props {
   company: string;
@@ -43,6 +43,11 @@ interface SavedPayroll {
   validated?: boolean;
 }
 
+interface PendingWrongImport {
+  files: File[];
+  detectedCompetence: string;
+}
+
 const cellClass = "h-7 rounded-none border-0 bg-transparent px-1.5 text-xs shadow-none focus-visible:ring-1";
 const displayCellClass = "flex h-7 items-center px-1.5 text-xs";
 const money = (cents: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
@@ -62,6 +67,9 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
   const [accounts, setAccounts] = useState<ChartAccount[]>([]);
   const [activeTab, setActiveTab] = useState("transcricao");
   const [learning, setLearning] = useState(false);
+  const [deletingFile, setDeletingFile] = useState<string | null>(null);
+  const [pendingWrongImport, setPendingWrongImport] = useState<PendingWrongImport | null>(null);
+  const [resolvingWrongImport, setResolvingWrongImport] = useState(false);
   const { processPayroll, isProcessingScope } = useAccountingProcessing();
   const processing = isProcessingScope(company, month, year);
   const scope = `${company}:${year}:${month}:folha`;
@@ -94,20 +102,24 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
     setReferenceVerified(Boolean(saved.referenceVerified));
   };
 
+  const resetWorkspaceState = () => {
+    setEntries([]);
+    setDeferredEntries([]);
+    setWarnings([]);
+    setValidationIssues([]);
+    setDocumentTotals([]);
+    setProcessingMeta(null);
+    setReferenceVerified(false);
+  };
+
   useEffect(() => { setActiveTab(localStorage.getItem(tabKey) || "transcricao"); }, [tabKey]);
   useEffect(() => { localStorage.setItem(tabKey, activeTab); }, [activeTab, tabKey]);
 
   useEffect(() => {
     let active = true;
     setLoaded(false);
-    setEntries([]);
-    setDeferredEntries([]);
+    resetWorkspaceState();
     setFiles([]);
-    setWarnings([]);
-    setValidationIssues([]);
-    setDocumentTotals([]);
-    setProcessingMeta(null);
-    setReferenceVerified(false);
     Promise.all([
       loadWorkspaceData<SavedPayroll>(key),
       loadWorkspaceFiles(scope),
@@ -143,16 +155,25 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
     return { ...row, [field]: value };
   }));
 
+  const runProcessing = async (selected: File[], operation: "import" | "reprocess", targetMonth: string, targetYear: string) => {
+    if (!accounts.length) throw new Error("Importe o plano de contas desta empresa antes de processar a folha.");
+    if (!selected.length) throw new Error("Nenhum documento de folha está disponível para processamento.");
+    return processPayroll({ company, month: targetMonth, year: targetYear, files: selected, accounts, operation });
+  };
+
   const startProcessing = async (selected: File[], operation: "import" | "reprocess", targetMonth: string, targetYear: string) => {
-    if (!accounts.length) { setValidationIssues(["Importe o plano de contas desta empresa antes de processar a folha."]); return; }
-    if (!selected.length) { setValidationIssues(["Nenhum documento de folha está disponível para processamento."]); return; }
     setWarnings([]);
     setValidationIssues([]);
     try {
-      const result = await processPayroll({ company, month: targetMonth, year: targetYear, files: selected, accounts, operation });
-      if (targetMonth === month && targetYear === year) { hydrateSaved(result); onStatusChange("review"); }
+      const result = await runProcessing(selected, operation, targetMonth, targetYear);
+      if (targetMonth === month && targetYear === year) {
+        hydrateSaved(result);
+        onStatusChange("review");
+      }
+      return result;
     } catch (error) {
       if (targetMonth === month && targetYear === year) setValidationIssues([error instanceof Error ? error.message : "Falha ao processar a folha com IA."]);
+      return null;
     }
   };
 
@@ -160,20 +181,78 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
     const selected = Array.from(event.target.files ?? []);
     event.target.value = "";
     if (!selected.length) return;
-    const detected = (await Promise.all(selected.map(detectWorkbookCompetence))).find(Boolean);
-    const targetMonth = detected?.month ?? month;
-    const targetYear = detected?.year ?? year;
-    const targetScope = `${company}:${targetYear}:${targetMonth}:folha`;
-    await saveWorkspaceFiles(targetScope, selected);
-    if (targetMonth !== month || targetYear !== year) {
-      onCompetenceChange(targetMonth, targetYear);
-      await startProcessing(selected, "import", targetMonth, targetYear);
-      return;
+    if (!accounts.length) { setValidationIssues(["Importe o plano de contas desta empresa antes de processar a folha."]); return; }
+
+    setWarnings([]);
+    setValidationIssues([]);
+    try {
+      const probe = await runProcessing(selected, "import", month, year);
+      if (probe.detectedCompetence && probe.detectedCompetence !== competence) {
+        setPendingWrongImport({ files: selected, detectedCompetence: probe.detectedCompetence });
+        return;
+      }
+
+      const allFiles = uniqueFiles([...files, ...selected]);
+      const finalResult = files.length ? await runProcessing(allFiles, "import", month, year) : probe;
+      await saveWorkspaceFiles(scope, selected, { skipCompetencePrompt: true });
+      setFiles(allFiles);
+      hydrateSaved(finalResult);
+      onStatusChange("review");
+    } catch (error) {
+      setValidationIssues([error instanceof Error ? error.message : "Falha ao processar a folha com IA."]);
     }
-    const allFiles = uniqueFiles([...files, ...selected]);
-    setFiles(allFiles);
-    onStatusChange("review");
-    await startProcessing(allFiles, "import", month, year);
+  };
+
+  const keepWrongImport = async () => {
+    const pending = pendingWrongImport;
+    if (!pending) return;
+    const [targetMonth, targetYear] = pending.detectedCompetence.split("/");
+    if (!targetMonth || !targetYear) return;
+    setResolvingWrongImport(true);
+    try {
+      const targetScope = `${company}:${targetYear}:${targetMonth}:folha`;
+      const targetKey = `${targetScope}:parsed`;
+      const existingTargetFiles = await loadWorkspaceFiles(targetScope);
+      const targetFiles = uniqueFiles([...existingTargetFiles, ...pending.files]);
+      const result = await runProcessing(targetFiles, "import", targetMonth, targetYear);
+      await saveWorkspaceFiles(targetScope, pending.files, { skipCompetencePrompt: true });
+      await saveWorkspaceData(targetKey, result);
+      setPendingWrongImport(null);
+      onCompetenceChange(targetMonth, targetYear);
+    } catch (error) {
+      setValidationIssues([error instanceof Error ? error.message : "Não foi possível mover a folha para a competência detectada."]);
+    } finally {
+      setResolvingWrongImport(false);
+    }
+  };
+
+  const deleteFile = async (file: File) => {
+    setDeletingFile(file.name);
+    const remaining = files.filter(item => !(item.name === file.name && item.size === file.size));
+    try {
+      await removeWorkspaceFiles(scope, [file]);
+      onStatusChange("waiting");
+      if (!remaining.length) {
+        setLoaded(false);
+        setFiles([]);
+        resetWorkspaceState();
+        await deleteWorkspaceData(key);
+        setLoaded(true);
+        return;
+      }
+
+      setLoaded(false);
+      const result = await runProcessing(remaining, "reprocess", month, year);
+      setFiles(remaining);
+      hydrateSaved(result);
+      setLoaded(true);
+      onStatusChange("review");
+    } catch (error) {
+      setLoaded(true);
+      setValidationIssues(current => [...new Set([...current, error instanceof Error ? error.message : "Falha ao excluir o documento e reconstruir a folha."])]);
+    } finally {
+      setDeletingFile(null);
+    }
   };
 
   const approveAndFinalize = async () => {
@@ -210,68 +289,83 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
     id: String(Date.now()), date: `${new Date(+year, +month, 0).getDate()}/${month}/${year}`, history: "", debitCode: "", debitDescription: "", debitCostCenter: "", creditCode: "", creditDescription: "", creditCostCenter: "", amountInCents: 0, source: "manual", kind: "provento", section: "folha", mappingSource: "manual", mappingNeedsApproval: true,
   }]);
 
-  return <section className="mt-8 space-y-8">
-    <div className="rounded-md border border-border bg-background p-6">
-      <div className="flex items-center justify-between gap-5">
-        <h3 className="font-semibold">Folha de pagamento de {competence}</h3>
-        <div className="flex flex-wrap justify-end gap-2">
-          {files.length > 0 && <Button variant="outline" onClick={() => void startProcessing(files, "reprocess", month, year)} disabled={processing}>{processing ? "Processando..." : "Reprocessar com IA"}</Button>}
-          <Button variant="outline" onClick={() => input.current?.click()} disabled={processing}>{`Importar folha de ${competence}`}</Button>
+  return <>
+    <section className="mt-8 space-y-8">
+      <div className="rounded-md border border-border bg-background p-6">
+        <div className="flex items-center justify-between gap-5">
+          <h3 className="font-semibold">Folha de pagamento de {competence}</h3>
+          <div className="flex flex-wrap justify-end gap-2">
+            {files.length > 0 && <Button variant="outline" onClick={() => void startProcessing(files, "reprocess", month, year)} disabled={processing}>{processing ? "Processando..." : "Reprocessar com IA"}</Button>}
+            <Button variant="outline" onClick={() => input.current?.click()} disabled={processing}>{`Importar folha de ${competence}`}</Button>
+          </div>
+          <input ref={input} type="file" multiple accept=".pdf,.xlsx,.xls" className="sr-only" onChange={event => void importFiles(event)} />
         </div>
-        <input ref={input} type="file" multiple accept=".pdf,.xlsx,.xls" className="sr-only" onChange={event => void importFiles(event)} />
+        <div className="mt-5 flex flex-wrap gap-2 border-t border-border pt-5 text-sm text-muted-foreground">
+          {files.length ? files.map(file => <span key={`${file.name}-${file.size}`} className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-border bg-muted/25 px-2.5 py-1.5 text-xs text-foreground"><span className="max-w-[420px] truncate" title={file.name}>{file.name}</span><Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive" disabled={Boolean(deletingFile) || processing} onClick={() => void deleteFile(file)} title="Excluir documento e seus lançamentos"><Trash2 className="h-3.5 w-3.5" /></Button></span>) : "Nenhum documento importado."}
+        </div>
       </div>
-      <div className="mt-5 border-t border-border pt-5 text-sm text-muted-foreground">{files.length ? files.map(file => <span key={`${file.name}-${file.size}`} className="mr-5 text-foreground">{file.name}</span>) : "Nenhum documento importado."}</div>
-    </div>
 
-    <Tabs value={activeTab} onValueChange={setActiveTab}>
-      <AccountingWorkflowSteps steps={[
-        { value: "transcricao", label: "Transcrição", count: entries.length + deferredEntries.length },
-        { value: "lancamentos", label: "Lançamentos", count: entries.length },
-        { value: "conferencia", label: "Conferência", count: conferenceCount },
-      ]} />
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <AccountingWorkflowSteps steps={[
+          { value: "transcricao", label: "Transcrição", count: entries.length + deferredEntries.length },
+          { value: "lancamentos", label: "Lançamentos", count: entries.length },
+          { value: "conferencia", label: "Conferência", count: conferenceCount },
+        ]} />
 
-      <TabsContent value="transcricao" className="mt-6">
-        <Header title="Folha de pagamento · Transcrição" />
-        <Ledger rows={entries} editable update={update} title={`Transcrição da folha · ${competence}`} />
-        {deferredEntries.length > 0 && <div className="mt-6 rounded-md border border-border bg-muted/30 p-4">
-          <p className="text-sm font-medium text-foreground">Valores separados para competência futura</p>
-          <p className="mt-1 text-xs text-muted-foreground">Eles participam da conferência do documento original, mas não entram na exportação desta competência.</p>
-          <div className="mt-3 space-y-2">{deferredEntries.map(row => <div key={row.id} className="flex items-center justify-between gap-4 text-sm"><span>{row.history}</span><span className="tabular-nums">{money(row.amountInCents)}</span></div>)}</div>
-        </div>}
-        <div className="mt-4 flex justify-end"><Button variant="outline" onClick={add}>Adicionar linha</Button></div>
-      </TabsContent>
+        <TabsContent value="transcricao" className="mt-6">
+          <Header title="Folha de pagamento · Transcrição" />
+          <Ledger rows={entries} editable update={update} title={`Transcrição da folha · ${competence}`} />
+          {deferredEntries.length > 0 && <div className="mt-6 rounded-md border border-border bg-muted/30 p-4">
+            <p className="text-sm font-medium text-foreground">Valores separados para competência futura</p>
+            <p className="mt-1 text-xs text-muted-foreground">Eles participam da conferência do documento original, mas não entram na exportação desta competência.</p>
+            <div className="mt-3 space-y-2">{deferredEntries.map(row => <div key={row.id} className="flex items-center justify-between gap-4 text-sm"><span>{row.history}</span><span className="tabular-nums">{money(row.amountInCents)}</span></div>)}</div>
+          </div>}
+          <div className="mt-4 flex justify-end"><Button variant="outline" onClick={add}>Adicionar linha</Button></div>
+        </TabsContent>
 
-      <TabsContent value="lancamentos" className="mt-6">
-        <Header title="Folha de pagamento · Lançamentos" />
-        <div className="rounded-md border border-border bg-background">
-          <div className="flex items-center justify-between border-b border-border p-5"><span className="text-sm text-muted-foreground">{entries.length} lançamentos · {money(total)}</span><Button disabled={!canFinalize} onClick={() => exportPayroll(entries, comparisons, competence)}>Exportar para o Calima</Button></div>
-          <Ledger rows={entries} title={`Lançamentos da folha · ${competence}`} />
-          {!canFinalize && entries.length > 0 && <p className="px-5 pb-4 text-xs text-muted-foreground">{manualOnly ? "Preencha as contas de débito e crédito das linhas manuais para liberar a exportação." : mappingsToApprove > 0 ? "Confirme os mapeamentos na aba Conferência para liberar a exportação." : blockingDifferences.length > 0 ? "Existem diferenças contábeis bloqueantes que precisam ser corrigidas antes da exportação." : "A exportação será liberada assim que a conferência obrigatória estiver concluída."}</p>}
-        </div>
-      </TabsContent>
-
-      <TabsContent value="conferencia" className="mt-6">
-        <Header title="Folha de pagamento · Conferência" />
-        <div className="rounded-md border border-border bg-background">
-          <div className="flex flex-col gap-3 border-b border-border bg-muted/20 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <div><p className="text-sm font-semibold text-foreground">Fechar conferência da folha</p><p className="mt-1 text-xs text-muted-foreground">{manualOnly ? "Todos os lançamentos desta competência foram digitados manualmente; basta revisar as contas e confirmar." : "Depois de revisar valores e mapeamentos, confirme o mês aqui sem precisar descer até o fim da tabela."}</p></div>
-            <Button className="shrink-0" disabled={!canReviewApprove} onClick={() => void approveAndFinalize()}>{learning ? "Salvando conhecimento..." : manualOnly ? "Marcar folha manual como OK" : mappingsToApprove > 0 ? `Confirmar e aprender (${mappingsToApprove})` : "Marcar folha como OK"}</Button>
+        <TabsContent value="lancamentos" className="mt-6">
+          <Header title="Folha de pagamento · Lançamentos" />
+          <div className="rounded-md border border-border bg-background">
+            <div className="flex items-center justify-between border-b border-border p-5"><span className="text-sm text-muted-foreground">{entries.length} lançamentos · {money(total)}</span><Button disabled={!canFinalize} onClick={() => exportPayroll(entries, comparisons, competence)}>Exportar para o Calima</Button></div>
+            <Ledger rows={entries} title={`Lançamentos da folha · ${competence}`} />
+            {!canFinalize && entries.length > 0 && <p className="px-5 pb-4 text-xs text-muted-foreground">{manualOnly ? "Preencha as contas de débito e crédito das linhas manuais para liberar a exportação." : mappingsToApprove > 0 ? "Confirme os mapeamentos na aba Conferência para liberar a exportação." : blockingDifferences.length > 0 ? "Existem diferenças contábeis bloqueantes que precisam ser corrigidas antes da exportação." : "A exportação será liberada assim que a conferência obrigatória estiver concluída."}</p>}
           </div>
-          <div className="space-y-6 p-6">
-            <div className="grid gap-5 sm:grid-cols-5"><Stat label="Referências" value={comparisons.length} /><Stat label="Diferenças bloqueantes" value={manualOnly ? 0 : blockingDifferences.length} /><Stat label="Contas incompletas" value={missing} /><Stat label="Aguardando aprovação" value={mappingsToApprove} /><Stat label="Conhecimento reutilizado" value={learnedMappings} /></div>
-            {manualOnly && <div className="flex gap-2 rounded-md border border-border bg-muted/30 p-4 text-sm text-muted-foreground"><Info className="mt-0.5 h-4 w-4 shrink-0" /><div><p className="font-medium text-foreground">Conferência exclusivamente manual</p><p className="mt-1 text-xs">Como não existe nenhum lançamento de IA/importação nesta competência, o sistema não exige documento original. Esta confirmação valida apenas o que foi digitado manualmente e não cria conhecimento automático para a empresa.</p></div></div>}
-            {!manualOnly && !referenceVerified && <div className="flex gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />A leitura independente do documento original ainda não passou pelos critérios de referência. A exportação permanece bloqueada.</div>}
-            {mappingsToApprove > 0 && <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-4"><p className="text-sm font-medium text-foreground">{mappingsToApprove} mapeamento(s) novo(s) precisam da sua conferência</p><p className="mt-1 text-xs text-muted-foreground">Revise débito e crédito na Transcrição. Ao confirmar, essas combinações serão salvas como conhecimento desta empresa e reutilizadas automaticamente nos próximos meses.</p></div>}
-            {informationalDifferences.length > 0 && !manualOnly && <div className="rounded-md border border-border bg-muted/30 p-4"><p className="text-sm font-medium text-foreground">Diferenças informativas</p><p className="mt-1 text-xs text-muted-foreground">Essas diferenças explicam calendário de recolhimento ou outras referências do documento e não bloqueiam aprovação nem exportação.</p></div>}
-            {manualOnly ? <div className="rounded-md border border-border bg-background p-5 text-sm text-muted-foreground"><p className="font-medium text-foreground">Sem comparação com documento</p><p className="mt-1 text-xs">A competência contém somente linhas com origem manual. Se qualquer linha de IA/importação for adicionada, esta exceção deixa de valer automaticamente e a conferência documental volta a ser obrigatória.</p></div> : <ComparisonTable rows={comparisons} referenceVerified={referenceVerified} title={`Conferência da folha · ${competence}`} />}
-            {deferredEntries.length > 0 && <div className="rounded-md border border-border p-4"><p className="text-sm font-medium text-foreground">Ajustes por competência de recolhimento</p>{deferredEntries.map(row => <p key={row.id} className="mt-2 text-sm text-muted-foreground">{row.rubricDescription || row.history}: {money(row.amountInCents)} → {row.targetCompetence}</p>)}</div>}
-            {processingMeta && <p className="text-xs text-muted-foreground">Fluxo: {processingMeta.routing || processingMeta.primaryModel}{processingMeta.reviewed ? ` · releitura: ${processingMeta.reviewModel || processingMeta.model}` : ""}</p>}
-            {!manualOnly && (warnings.length > 0 || structuralIssues.length > 0) && <div className="rounded-md bg-muted/50 p-4"><p className="text-sm font-medium text-foreground">Pontos que exigem decisão</p>{[...new Set([...warnings, ...structuralIssues])].map(issue => <p key={issue} className="mt-2 flex gap-2 text-sm text-muted-foreground"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{issue}</p>)}</div>}
+        </TabsContent>
+
+        <TabsContent value="conferencia" className="mt-6">
+          <Header title="Folha de pagamento · Conferência" />
+          <div className="rounded-md border border-border bg-background">
+            <div className="flex flex-col gap-3 border-b border-border bg-muted/20 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div><p className="text-sm font-semibold text-foreground">Fechar conferência da folha</p><p className="mt-1 text-xs text-muted-foreground">{manualOnly ? "Todos os lançamentos desta competência foram digitados manualmente; basta revisar as contas e confirmar." : "Depois de revisar valores e mapeamentos, confirme o mês aqui sem precisar descer até o fim da tabela."}</p></div>
+              <Button className="shrink-0" disabled={!canReviewApprove} onClick={() => void approveAndFinalize()}>{learning ? "Salvando conhecimento..." : manualOnly ? "Marcar folha manual como OK" : mappingsToApprove > 0 ? `Confirmar e aprender (${mappingsToApprove})` : "Marcar folha como OK"}</Button>
+            </div>
+            <div className="space-y-6 p-6">
+              <div className="grid gap-5 sm:grid-cols-5"><Stat label="Referências" value={comparisons.length} /><Stat label="Diferenças bloqueantes" value={manualOnly ? 0 : blockingDifferences.length} /><Stat label="Contas incompletas" value={missing} /><Stat label="Aguardando aprovação" value={mappingsToApprove} /><Stat label="Conhecimento reutilizado" value={learnedMappings} /></div>
+              {manualOnly && <div className="flex gap-2 rounded-md border border-border bg-muted/30 p-4 text-sm text-muted-foreground"><Info className="mt-0.5 h-4 w-4 shrink-0" /><div><p className="font-medium text-foreground">Conferência exclusivamente manual</p><p className="mt-1 text-xs">Como não existe nenhum lançamento de IA/importação nesta competência, o sistema não exige documento original. Esta confirmação valida apenas o que foi digitado manualmente e não cria conhecimento automático para a empresa.</p></div></div>}
+              {!manualOnly && !referenceVerified && <div className="flex gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />A leitura independente do documento original ainda não passou pelos critérios de referência. A exportação permanece bloqueada.</div>}
+              {mappingsToApprove > 0 && <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-4"><p className="text-sm font-medium text-foreground">{mappingsToApprove} mapeamento(s) novo(s) precisam da sua conferência</p><p className="mt-1 text-xs text-muted-foreground">Revise débito e crédito na Transcrição. Ao confirmar, essas combinações serão salvas como conhecimento desta empresa e reutilizadas automaticamente nos próximos meses.</p></div>}
+              {informationalDifferences.length > 0 && !manualOnly && <div className="rounded-md border border-border bg-muted/30 p-4"><p className="text-sm font-medium text-foreground">Diferenças informativas</p><p className="mt-1 text-xs text-muted-foreground">Essas diferenças explicam calendário de recolhimento ou outras referências do documento e não bloqueiam aprovação nem exportação.</p></div>}
+              {manualOnly ? <div className="rounded-md border border-border bg-background p-5 text-sm text-muted-foreground"><p className="font-medium text-foreground">Sem comparação com documento</p><p className="mt-1 text-xs">A competência contém somente linhas com origem manual. Se qualquer linha de IA/importação for adicionada, esta exceção deixa de valer automaticamente e a conferência documental volta a ser obrigatória.</p></div> : <ComparisonTable rows={comparisons} referenceVerified={referenceVerified} title={`Conferência da folha · ${competence}`} />}
+              {deferredEntries.length > 0 && <div className="rounded-md border border-border p-4"><p className="text-sm font-medium text-foreground">Ajustes por competência de recolhimento</p>{deferredEntries.map(row => <p key={row.id} className="mt-2 text-sm text-muted-foreground">{row.rubricDescription || row.history}: {money(row.amountInCents)} → {row.targetCompetence}</p>)}</div>}
+              {processingMeta && <p className="text-xs text-muted-foreground">Fluxo: {processingMeta.routing || processingMeta.primaryModel}{processingMeta.reviewed ? ` · releitura: ${processingMeta.reviewModel || processingMeta.model}` : ""}</p>}
+              {!manualOnly && (warnings.length > 0 || structuralIssues.length > 0) && <div className="rounded-md bg-muted/50 p-4"><p className="text-sm font-medium text-foreground">Pontos que exigem decisão</p>{[...new Set([...warnings, ...structuralIssues])].map(issue => <p key={issue} className="mt-2 flex gap-2 text-sm text-muted-foreground"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{issue}</p>)}</div>}
+            </div>
           </div>
-        </div>
-      </TabsContent>
-    </Tabs>
-  </section>;
+        </TabsContent>
+      </Tabs>
+    </section>
+
+    <WrongCompetenceImportDialog
+      open={Boolean(pendingWrongImport)}
+      currentCompetence={competence}
+      detectedCompetence={pendingWrongImport?.detectedCompetence ?? ""}
+      fileNames={pendingWrongImport?.files.map(file => file.name) ?? []}
+      keeping={resolvingWrongImport}
+      removing={false}
+      onKeep={() => void keepWrongImport()}
+      onRemove={() => setPendingWrongImport(null)}
+    />
+  </>;
 }
 
 function Header({ title }: { title: string }) { return <div className="mb-5"><h3 className="font-semibold">{title}</h3></div>; }
