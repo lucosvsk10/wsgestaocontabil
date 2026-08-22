@@ -1,4 +1,3 @@
-import { supabase } from "@/integrations/supabase/client";
 import { ChartAccount } from "./chartOfAccounts";
 import { groupFromAccountCode, groupLabel, referentialRootForWsGroup } from "./accountPlanProfile";
 import { SpedReferentialAccount, SpedRelationship } from "./spedRelationships";
@@ -10,7 +9,7 @@ export interface SpedMappingCandidate {
 }
 
 export type GeneratedSpedRelationship = SpedRelationship & {
-  generatedBy?: "auto" | "ai";
+  generatedBy?: "auto";
   confidence?: number;
   reason?: string;
 };
@@ -82,7 +81,6 @@ function resultNatureBonus(account: ChartAccount, reference: SpedReferentialAcco
   const ref = normalize(reference.description);
   if (group === "revenue" && /receita|venda|servico|faturamento/.test(ref)) return 0.08;
   if (group === "expense" && /despesa|custo|salario|encargo|imposto|aluguel|energia|depreciacao/.test(ref)) return 0.08;
-  if (group === "result" && /resultado|lucro|prejuizo/.test(ref)) return 0.08;
   return 0;
 }
 
@@ -103,115 +101,51 @@ export function candidatesForSpedAccount(account: ChartAccount, referential: Spe
     .slice(0, limit);
 }
 
-function deterministicDecision(account: ChartAccount, candidates: SpedMappingCandidate[]) {
-  const first = candidates[0];
-  const second = candidates[1];
-  if (!first) return null;
-  const margin = first.score - (second?.score ?? 0);
-  const exact = semanticText(account.description) === semanticText(first.description);
-  if (exact || first.score >= 0.93 || (first.score >= 0.82 && margin >= 0.14)) {
-    return {
-      code: first.code,
-      confidence: exact ? 0.99 : Math.max(0.84, Math.min(0.98, first.score)),
-      reason: exact ? "Descrição equivalente na base referencial." : "Correspondência semântica forte dentro do grupo contábil correto.",
-    };
-  }
-  return null;
-}
-
-function chunks<T>(items: T[], size: number) {
-  const result: T[][] = [];
-  for (let index = 0; index < items.length; index += size) result.push(items.slice(index, index + size));
-  return result;
-}
-
 export async function generateAutomaticSpedMappings(
-  company: string,
+  _company: string,
   accounts: ChartAccount[],
   referential: SpedReferentialAccount[],
 ): Promise<AutomaticSpedMappingResult> {
-  if (!accounts.length) throw new Error("Importe o Plano de Contas da empresa antes de gerar o relacionamento SPED.");
-  if (!referential.length) throw new Error("A base referencial da Receita ainda não está disponível para esta empresa.");
+  if (!accounts.length) throw new Error("Importe o Plano de Contas da empresa antes de gerar o relacionamento.");
+  if (!referential.length) throw new Error("O Plano Referencial da Receita ainda não está carregado.");
 
-  // Só contas analíticas explicitamente marcadas para SPED entram na ponte. O plano pode ter
-  // centenas de contas auxiliares que nunca devem gerar I051.
-  const analytical = accounts.filter(account => account.analytical && account.sped && account.reducedCode && referentialRootForWsGroup(groupFromAccountCode(account.account)));
-  if (!analytical.length) throw new Error("Nenhuma conta analítica está marcada para SPED neste Plano de Contas.");
+  // Resultado/encerramento não recebe conta referencial. Para os demais grupos,
+  // basta escolher a referência analítica mais próxima dentro do grupo correto.
+  const analytical = accounts.filter(account =>
+    account.analytical
+    && account.reducedCode
+    && referentialRootForWsGroup(groupFromAccountCode(account.account)),
+  );
 
   const relationships: GeneratedSpedRelationship[] = [];
-  const pending: Array<{ account: ChartAccount; candidates: SpedMappingCandidate[] }> = [];
+  const unresolved: AutomaticSpedMappingResult["unresolved"] = [];
 
   analytical.forEach(account => {
-    const candidates = candidatesForSpedAccount(account, referential, 7);
-    const decision = deterministicDecision(account, candidates);
-    if (decision) {
-      relationships.push({
-        id: `auto-${account.reducedCode}`,
-        accountReducedCode: account.reducedCode,
-        accountCode: account.account,
-        costCenterReducedCode: "",
-        referentialCode: decision.code,
-        source: "imported",
-        generatedBy: "auto",
-        confidence: decision.confidence,
-        reason: decision.reason,
-      });
-    } else {
-      pending.push({ account, candidates });
+    const candidates = candidatesForSpedAccount(account, referential, 8);
+    const best = candidates[0];
+    if (!best) {
+      unresolved.push({ account, candidates });
+      return;
     }
-  });
 
-  let aiCount = 0;
-  const stillUnresolved: typeof pending = [];
-
-  for (const batch of chunks(pending, 45)) {
-    const { data, error } = await supabase.functions.invoke("auto-map-sped-accounts", {
-      body: {
-        company_id: company,
-        accounts: batch.map(({ account, candidates }) => ({
-          reducedCode: account.reducedCode,
-          accountCode: account.account,
-          description: account.description,
-          group: groupLabel(groupFromAccountCode(account.account)),
-          candidates,
-        })),
-      },
+    const confidence = Math.max(0.5, Math.min(0.99, best.score || 0.5));
+    relationships.push({
+      id: `auto-${account.reducedCode}`,
+      accountReducedCode: account.reducedCode,
+      accountCode: account.account,
+      costCenterReducedCode: "",
+      referentialCode: best.code,
+      source: "imported",
+      generatedBy: "auto",
+      confidence,
+      reason: `Referência mais próxima dentro do grupo ${groupLabel(groupFromAccountCode(account.account))}.`,
     });
-
-    if (error || !Array.isArray(data?.mappings)) {
-      stillUnresolved.push(...batch);
-      continue;
-    }
-
-    const byCr = new Map(batch.map(item => [item.account.reducedCode, item]));
-    const mapped = new Set<string>();
-    for (const suggestion of data.mappings as Array<{ reducedCode: string; referentialCode: string; confidence: number; reason: string }>) {
-      const item = byCr.get(String(suggestion.reducedCode));
-      if (!item) continue;
-      const candidate = item.candidates.find(option => option.code === suggestion.referentialCode);
-      const confidence = Number(suggestion.confidence ?? 0);
-      if (!candidate || confidence < 0.72) continue;
-      relationships.push({
-        id: `ai-${item.account.reducedCode}`,
-        accountReducedCode: item.account.reducedCode,
-        accountCode: item.account.account,
-        costCenterReducedCode: "",
-        referentialCode: candidate.code,
-        source: "imported",
-        generatedBy: "ai",
-        confidence,
-        reason: suggestion.reason || "Conta referencial escolhida pela IA entre as opções compatíveis.",
-      });
-      mapped.add(item.account.reducedCode);
-      aiCount += 1;
-    }
-    batch.forEach(item => { if (!mapped.has(item.account.reducedCode)) stillUnresolved.push(item); });
-  }
+  });
 
   return {
     relationships,
-    unresolved: stillUnresolved,
-    deterministicCount: relationships.filter(item => item.generatedBy === "auto").length,
-    aiCount,
+    unresolved,
+    deterministicCount: relationships.length,
+    aiCount: 0,
   };
 }

@@ -67,20 +67,34 @@ export function detectNumberedWsPlan(accounts: ChartAccount[]): NumberedPlanProf
   return { id: "ws-1-2-3-4-6", detected: present >= 4 && confidence >= 0.68, confidence };
 }
 
-function centerByMeaning(centers: CostCenter[], term: string) {
-  return centers.find(center => center.analytical && normalize(center.description).includes(term));
+function centerByMeaning(centers: CostCenter[], term: string, fallbackCode?: string) {
+  return centers.find(center => center.analytical && normalize(center.description).includes(term))
+    ?? (fallbackCode ? centers.find(center => center.analytical && center.reducedCode === fallbackCode) : undefined)
+    ?? null;
 }
 
 export function automaticCostCenterForWsPlan(account: ChartAccount, centers: CostCenter[]) {
+  const text = normalize(account.description);
+
+  // Primeiro usamos o significado da própria conta. Assim contas de custo e de crédito
+  // não ficam presas ao grupo 4/1 quando existe um centro específico para elas.
+  if (/\bcusto\b|custos|cmv|cpv|csp/.test(text)) {
+    return centerByMeaning(centers, "custo", "6");
+  }
+  if (/recup|credito|ressarc|reembolso/.test(text)) {
+    return centerByMeaning(centers, "credito", "5");
+  }
+
   const group = groupFromAccountCode(account.account);
-  if (group === "revenue") return centerByMeaning(centers, "receita") ?? centers.find(center => center.reducedCode === "3") ?? null;
-  if (group === "expense") return centerByMeaning(centers, "despesa") ?? centers.find(center => center.reducedCode === "4") ?? null;
+  if (group === "revenue") return centerByMeaning(centers, "receita", "3");
+  if (group === "expense") return centerByMeaning(centers, "despesa", "4");
+
   return null;
 }
 
 export function referentialRootForWsGroup(group: WsAccountGroup) {
   if (group === "asset") return "1";
   if (group === "liability") return "2";
-  if (["revenue", "expense", "result"].includes(group)) return "3";
+  if (["revenue", "expense"].includes(group)) return "3";
   return "";
 }
