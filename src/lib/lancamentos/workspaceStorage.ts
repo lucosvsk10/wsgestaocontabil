@@ -22,6 +22,10 @@ export class WrongCompetenceImportCancelledError extends Error {
   }
 }
 
+export interface SaveWorkspaceFilesOptions {
+  skipCompetencePrompt?: boolean;
+}
+
 interface StoredFile {
   id: string;
   scope: string;
@@ -109,7 +113,7 @@ async function confirmDifferentCompetence(context: ReturnType<typeof parseScope>
   });
 }
 
-export async function saveWorkspaceFiles(scope: string, files: File[]) {
+export async function saveWorkspaceFiles(scope: string, files: File[], options: SaveWorkspaceFilesOptions = {}) {
   const context = parseScope(scope);
   try {
     for (const file of files) {
@@ -137,10 +141,12 @@ export async function saveWorkspaceFiles(scope: string, files: File[]) {
   await complete(transaction);
   database.close();
 
-  const keep = await confirmDifferentCompetence(context, files);
-  if (!keep) {
-    await removeWorkspaceFiles(scope, files);
-    throw new WrongCompetenceImportCancelledError();
+  if (!options.skipCompetencePrompt) {
+    const keep = await confirmDifferentCompetence(context, files);
+    if (!keep) {
+      await removeWorkspaceFiles(scope, files);
+      throw new WrongCompetenceImportCancelledError();
+    }
   }
 }
 
@@ -188,6 +194,42 @@ export async function removeWorkspaceFiles(scope: string, files: File[]) {
   database.close();
 }
 
+export async function removeWorkspaceDocumentsByName(scope: string, fileNames: string[]) {
+  const names = [...new Set(fileNames.filter(Boolean))];
+  if (!names.length) return;
+  try {
+    const { data, error } = await (supabase as any)
+      .from("accounting_workspace_documents")
+      .select("id, original_name, storage_path")
+      .eq("scope", scope)
+      .in("original_name", names);
+    if (error) throw error;
+    const storagePaths = (data ?? []).map((record: any) => record.storage_path).filter(Boolean);
+    if (storagePaths.length) await supabase.storage.from("accounting-documents").remove(storagePaths);
+    if (data?.length) {
+      const ids = data.map((record: any) => record.id);
+      const { error: deleteError } = await (supabase as any).from("accounting_workspace_documents").delete().in("id", ids);
+      if (deleteError) throw deleteError;
+    }
+  } catch (error) {
+    console.error("Falha ao remover documentos por nome do Supabase.", error);
+  }
+
+  const database = await openDatabase();
+  const transaction = database.transaction(FILE_STORE, "readwrite");
+  const store = transaction.objectStore(FILE_STORE);
+  const request = store.index("scope").openCursor(IDBKeyRange.only(scope));
+  request.onsuccess = () => {
+    const cursor = request.result;
+    if (!cursor) return;
+    const record = cursor.value as StoredFile;
+    if (names.includes(record.file.name)) cursor.delete();
+    cursor.continue();
+  };
+  await complete(transaction);
+  database.close();
+}
+
 export async function clearWorkspaceFiles(scope: string) {
   try {
     const { data, error } = await (supabase as any).from("accounting_workspace_documents").select("storage_path").eq("scope", scope);
@@ -225,6 +267,20 @@ export async function saveWorkspaceData<T>(id: string, value: T): Promise<Worksp
   await complete(transaction);
   database.close();
   return { synced: !syncError, error: syncError };
+}
+
+export async function deleteWorkspaceData(id: string) {
+  try {
+    const { error } = await (supabase as any).from("accounting_workspace_data").delete().eq("scope", id);
+    if (error) throw error;
+  } catch (error) {
+    console.error("Falha ao remover dados do workspace no Supabase.", error);
+  }
+  const database = await openDatabase();
+  const transaction = database.transaction(DATA_STORE, "readwrite");
+  transaction.objectStore(DATA_STORE).delete(id);
+  await complete(transaction);
+  database.close();
 }
 
 export async function loadWorkspaceData<T>(id: string) {
