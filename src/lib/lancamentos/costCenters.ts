@@ -63,15 +63,27 @@ export async function readCostCenters(file: File) {
 }
 
 export function suggestCostCenterForAccount(account: ChartAccount, centers: CostCenter[]) {
+  const description = normalize(account.description);
+  const accountCode = String(account.account ?? "").trim();
   const accountText = normalize(`${account.account} ${account.description}`);
   const candidates = centers.filter(center => center.analytical);
   const byMeaning = (term: string) => candidates.find(center => normalize(center.description).includes(term));
 
-  // A conta analítica, por si só, NÃO torna C.C. obrigatório. A sugestão é semântica.
+  // Ser analítica NÃO implica exigir centro de custo. Contas patrimoniais ficam protegidas.
+  if (/a pagar|a recolher|fornecedor|cliente|caixa|banco|estoque|adiantamento/.test(description)) return null;
+  if (accountCode.startsWith("1") || accountCode.startsWith("2")) return null;
+
+  if (accountCode.startsWith("3")) return byMeaning("receita") ?? null;
+  if (accountCode.startsWith("4")) {
+    if (/recup|credito|crédito/.test(accountText)) return byMeaning("credito") ?? byMeaning("crédito") ?? null;
+    if (/custo/.test(accountText)) return byMeaning("custo") ?? null;
+    return byMeaning("despesa") ?? null;
+  }
+
   if (/receita|venda|faturamento|servic/.test(accountText)) return byMeaning("receita") ?? null;
-  if (/despesa|salario|salário|ferias|férias|fgts|simples|aluguel|energia|telefone|combust|seguro|propaganda|publicidade|ipva|agua|água|curso|manut/.test(accountText)) return byMeaning("despesa") ?? null;
   if (/recup|credito|crédito/.test(accountText)) return byMeaning("credito") ?? byMeaning("crédito") ?? null;
   if (/custo/.test(accountText)) return byMeaning("custo") ?? null;
+  if (/despesa|salario|salário|ferias|férias|aluguel|energia|telefone|combust|seguro|propaganda|publicidade|ipva|agua|água|curso|manut/.test(accountText)) return byMeaning("despesa") ?? null;
   return null;
 }
 
