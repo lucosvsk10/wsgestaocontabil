@@ -53,7 +53,6 @@ jobs:
           src/lib/lancamentos/revenueWorkbook.ts
           src/lib/lancamentos/revenueBatch.ts
           src/lib/lancamentos/processRevenueBatch.ts
-          src/lib/lancamentos/workspaceStorage.ts
           src/lib/lancamentos/historicalRegression.ts
           src/lib/lancamentos/historicalRegression.test.ts
           src/lib/lancamentos/accountingExportWorkbook.ts
