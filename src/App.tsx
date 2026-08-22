@@ -7,6 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { AccountingProcessingProvider } from "./contexts/AccountingProcessingContext";
 import { AnnouncementsContainer } from "./components/announcements/AnnouncementsContainer";
+import { WrongCompetenceImportGuard } from "./components/admin/lancamentos/WrongCompetenceImportGuard";
 import React from 'react';
 
 // Create a client
@@ -29,6 +30,7 @@ function App() {
               <BrowserRouter>
                 <AppRoutes />
                 <AnnouncementsContainer />
+                <WrongCompetenceImportGuard />
                 <Toaster />
               </BrowserRouter>
             </AccountingProcessingProvider>
