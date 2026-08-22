@@ -48,6 +48,13 @@ interface PendingWrongImport {
   detectedCompetence: string;
 }
 
+interface CompetenceDetection {
+  competences?: string[];
+  hasUndatedPeriodicBlocks?: boolean;
+  undatedBlockCount?: number;
+  warning?: string;
+}
+
 const cellClass = "h-7 rounded-none border-0 bg-transparent px-1.5 text-xs shadow-none focus-visible:ring-1";
 const displayCellClass = "flex h-7 items-center px-1.5 text-xs";
 const money = (cents: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
@@ -127,7 +134,7 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
     ]).then(([saved, docs, chart]) => {
       if (!active) return;
       if (saved) hydrateSaved(saved);
-      setFiles(docs);
+      setFiles(uniqueFiles(docs));
       setAccounts(chart ?? []);
       setLoaded(true);
     });
@@ -186,15 +193,22 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
     setWarnings([]);
     setValidationIssues([]);
     try {
-      const probe = await runProcessing(selected, "import", month, year);
-      if (probe.detectedCompetence && probe.detectedCompetence !== competence) {
-        setPendingWrongImport({ files: selected, detectedCompetence: probe.detectedCompetence });
+      const detection = await detectPayrollCompetence(selected);
+      const detected = normalizedCompetences(detection);
+      if (detected.length > 1) throw new Error(`Este documento contém várias competências (${detected.join(", ")}). Nada foi salvo.`);
+      if (!detected.length && detection.hasUndatedPeriodicBlocks) throw new Error("O documento contém blocos periódicos, mas não há competência confiável. Nada foi salvo.");
+      if (!detected.length) throw new Error("Não foi possível confirmar a competência deste documento. Nada foi salvo.");
+
+      if (detected[0] !== competence) {
+        onStatusChange("waiting");
+        setPendingWrongImport({ files: selected, detectedCompetence: detected[0] });
         return;
       }
 
       const allFiles = uniqueFiles([...files, ...selected]);
-      const finalResult = files.length ? await runProcessing(allFiles, "import", month, year) : probe;
-      await saveWorkspaceFiles(scope, selected, { skipCompetencePrompt: true });
+      const finalResult = await runProcessing(allFiles, "import", month, year);
+      const newFiles = filesMissingFrom(files, selected);
+      if (newFiles.length) await saveWorkspaceFiles(scope, newFiles, { skipCompetencePrompt: true });
       setFiles(allFiles);
       hydrateSaved(finalResult);
       onStatusChange("review");
@@ -212,10 +226,11 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
     try {
       const targetScope = `${company}:${targetYear}:${targetMonth}:folha`;
       const targetKey = `${targetScope}:parsed`;
-      const existingTargetFiles = await loadWorkspaceFiles(targetScope);
+      const existingTargetFiles = uniqueFiles(await loadWorkspaceFiles(targetScope));
       const targetFiles = uniqueFiles([...existingTargetFiles, ...pending.files]);
       const result = await runProcessing(targetFiles, "import", targetMonth, targetYear);
-      await saveWorkspaceFiles(targetScope, pending.files, { skipCompetencePrompt: true });
+      const newFiles = filesMissingFrom(existingTargetFiles, pending.files);
+      if (newFiles.length) await saveWorkspaceFiles(targetScope, newFiles, { skipCompetencePrompt: true });
       await saveWorkspaceData(targetKey, result);
       setPendingWrongImport(null);
       onCompetenceChange(targetMonth, targetYear);
@@ -228,7 +243,7 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
 
   const deleteFile = async (file: File) => {
     setDeletingFile(file.name);
-    const remaining = files.filter(item => !(item.name === file.name && item.size === file.size));
+    const remaining = files.filter(item => !sameFile(item, file));
     setLoaded(false);
     onStatusChange("waiting");
     try {
@@ -418,7 +433,39 @@ function MappingLabel({ row }: { row: PayrollEntry }) {
   return <span title={row.mappingReason || ""} className={cn("text-[11px]", source === "learned" && "text-emerald-600 dark:text-emerald-400", source === "ai" && "font-medium text-amber-700 dark:text-amber-300", source === "manual" && row.mappingNeedsApproval && "font-medium text-amber-700 dark:text-amber-300", source === "manual" && !row.mappingNeedsApproval && "text-emerald-600 dark:text-emerald-400", source === "unresolved" && "font-medium text-destructive", source === "predefined" && "text-muted-foreground")}>{labels[source] || source}</span>;
 }
 
+async function detectPayrollCompetence(files: File[]): Promise<CompetenceDetection> {
+  const documents = await Promise.all(files.map(async file => ({
+    name: file.name,
+    mime_type: file.type || "application/pdf",
+    data: await asBase64(file),
+  })));
+  const { data, error } = await supabase.functions.invoke("detect-accounting-competence", { body: { module: "folha", documents } });
+  if (error) throw new Error("Não foi possível identificar a competência do documento antes do processamento.");
+  return data ?? {};
+}
+
+function normalizedCompetences(detection: CompetenceDetection) {
+  return [...new Set((detection.competences ?? []).filter(value => /^(0[1-9]|1[0-2])\/(20\d{2})$/.test(value)))];
+}
+
+function sameFile(a: File, b: File) {
+  return a.name === b.name && a.size === b.size;
+}
+
+function filesMissingFrom(existing: File[], incoming: File[]) {
+  return incoming.filter(file => !existing.some(saved => sameFile(saved, file)));
+}
+
 function uniqueFiles(files: File[]) {
   const seen = new Set<string>();
-  return files.filter(file => { const key = `${file.name}:${file.size}:${file.lastModified}`; if (seen.has(key)) return false; seen.add(key); return true; });
+  return files.filter(file => { const key = `${file.name}:${file.size}`; if (seen.has(key)) return false; seen.add(key); return true; });
+}
+
+function asBase64(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(",")[1] || "");
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
 }
