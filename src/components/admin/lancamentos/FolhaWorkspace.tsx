@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { ChartAccount } from "@/lib/lancamentos/chartOfAccounts";
 import { detectWorkbookCompetence } from "@/lib/lancamentos/expenseWorkbook";
+import { isManualOnlyConference } from "@/lib/lancamentos/manualOnlyConference";
 import {
   PayrollComparison,
   PayrollDocumentTotal,
@@ -72,12 +73,15 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
   const blockingDifferences = comparisons.filter(row => row.blocking !== false && row.differenceInCents !== 0);
   const informationalDifferences = comparisons.filter(row => row.blocking === false && row.differenceInCents !== 0);
   const missing = entries.filter(row => !isCompleteMapping(row)).length;
-  const mappingsToApprove = [...entries, ...deferredEntries].filter(row => row.mappingNeedsApproval && isCompleteMapping(row)).length;
-  const learnedMappings = [...entries, ...deferredEntries].filter(row => row.mappingSource === "learned").length;
+  const allRows = [...entries, ...deferredEntries];
+  const manualOnly = isManualOnlyConference(allRows);
+  const mappingsToApprove = allRows.filter(row => row.source !== "manual" && row.mappingNeedsApproval && isCompleteMapping(row)).length;
+  const learnedMappings = allRows.filter(row => row.mappingSource === "learned").length;
   const structuralIssues = validationIssues.filter(issue => !issue.toLocaleLowerCase("pt-BR").includes("diferença de"));
-  const conferenceCount = blockingDifferences.length + missing + mappingsToApprove + warnings.length + structuralIssues.length + (referenceVerified ? 0 : 1);
-  const canReviewApprove = entries.length > 0 && referenceVerified && !processing && !learning && missing === 0 && blockingDifferences.length === 0 && warnings.length === 0 && structuralIssues.length === 0;
-  const canFinalize = canReviewApprove && mappingsToApprove === 0;
+  const conferenceCount = blockingDifferences.length + missing + mappingsToApprove + warnings.length + structuralIssues.length + (manualOnly || referenceVerified ? 0 : 1);
+  const documentConferenceValid = referenceVerified && blockingDifferences.length === 0 && warnings.length === 0 && structuralIssues.length === 0;
+  const canReviewApprove = entries.length > 0 && !processing && !learning && missing === 0 && (manualOnly || documentConferenceValid);
+  const canFinalize = canReviewApprove && (manualOnly || mappingsToApprove === 0);
   const total = entries.reduce((sum, row) => sum + row.amountInCents, 0);
 
   const hydrateSaved = (saved: SavedPayroll | PayrollProcessingResult) => {
@@ -131,10 +135,10 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
       const changed = field === "debitCode"
         ? { ...row, debitCode: value, debitDescription: account?.description ?? "" }
         : { ...row, creditCode: value, creditDescription: account?.description ?? "" };
-      return { ...changed, mappingSource: "manual" as const, mappingNeedsApproval: true, mappingConfidence: 1, mappingReason: "Mapeamento ajustado manualmente e aguardando confirmação para virar conhecimento da empresa." };
+      return { ...changed, mappingSource: "manual" as const, mappingNeedsApproval: true, mappingConfidence: 1, mappingReason: "Mapeamento ajustado manualmente e aguardando conferência." };
     }
     if (["debitCostCenter", "creditCostCenter"].includes(String(field))) {
-      return { ...row, [field]: value, mappingSource: "manual" as const, mappingNeedsApproval: true, mappingConfidence: 1, mappingReason: "Mapeamento ajustado manualmente e aguardando confirmação para virar conhecimento da empresa." };
+      return { ...row, [field]: value, mappingSource: "manual" as const, mappingNeedsApproval: true, mappingConfidence: 1, mappingReason: "Mapeamento ajustado manualmente e aguardando conferência." };
     }
     return { ...row, [field]: value };
   }));
@@ -174,6 +178,16 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
 
   const approveAndFinalize = async () => {
     if (!canReviewApprove) return;
+    if (manualOnly) {
+      const markManualReviewed = (row: PayrollEntry): PayrollEntry => row.source === "manual"
+        ? { ...row, mappingNeedsApproval: false, mappingConfidence: 1, mappingReason: "Lançamento manual conferido pelo usuário; nenhuma regra automática foi criada." }
+        : row;
+      setEntries(rows => rows.map(markManualReviewed));
+      setDeferredEntries(rows => rows.map(markManualReviewed));
+      onStatusChange("done");
+      setActiveTab("lancamentos");
+      return;
+    }
     if (mappingsToApprove === 0) { onStatusChange("done"); setActiveTab("lancamentos"); return; }
     setLearning(true);
     try {
@@ -232,7 +246,7 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
         <div className="rounded-md border border-border bg-background">
           <div className="flex items-center justify-between border-b border-border p-5"><span className="text-sm text-muted-foreground">{entries.length} lançamentos · {money(total)}</span><Button disabled={!canFinalize} onClick={() => exportPayroll(entries, comparisons, competence)}>Exportar para o Calima</Button></div>
           <Ledger rows={entries} title={`Lançamentos da folha · ${competence}`} />
-          {!canFinalize && entries.length > 0 && <p className="px-5 pb-4 text-xs text-muted-foreground">{mappingsToApprove > 0 ? "Confirme os mapeamentos na aba Conferência para liberar a exportação." : blockingDifferences.length > 0 ? "Existem diferenças contábeis bloqueantes que precisam ser corrigidas antes da exportação." : "A exportação será liberada assim que a conferência obrigatória estiver concluída."}</p>}
+          {!canFinalize && entries.length > 0 && <p className="px-5 pb-4 text-xs text-muted-foreground">{manualOnly ? "Preencha as contas de débito e crédito das linhas manuais para liberar a exportação." : mappingsToApprove > 0 ? "Confirme os mapeamentos na aba Conferência para liberar a exportação." : blockingDifferences.length > 0 ? "Existem diferenças contábeis bloqueantes que precisam ser corrigidas antes da exportação." : "A exportação será liberada assim que a conferência obrigatória estiver concluída."}</p>}
         </div>
       </TabsContent>
 
@@ -240,18 +254,19 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
         <Header title="Folha de pagamento · Conferência" />
         <div className="rounded-md border border-border bg-background">
           <div className="flex flex-col gap-3 border-b border-border bg-muted/20 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <div><p className="text-sm font-semibold text-foreground">Fechar conferência da folha</p><p className="mt-1 text-xs text-muted-foreground">Depois de revisar valores e mapeamentos, confirme o mês aqui sem precisar descer até o fim da tabela.</p></div>
-            <Button className="shrink-0" disabled={!canReviewApprove} onClick={() => void approveAndFinalize()}>{learning ? "Salvando conhecimento..." : mappingsToApprove > 0 ? `Confirmar e aprender (${mappingsToApprove})` : "Marcar folha como OK"}</Button>
+            <div><p className="text-sm font-semibold text-foreground">Fechar conferência da folha</p><p className="mt-1 text-xs text-muted-foreground">{manualOnly ? "Todos os lançamentos desta competência foram digitados manualmente; basta revisar as contas e confirmar." : "Depois de revisar valores e mapeamentos, confirme o mês aqui sem precisar descer até o fim da tabela."}</p></div>
+            <Button className="shrink-0" disabled={!canReviewApprove} onClick={() => void approveAndFinalize()}>{learning ? "Salvando conhecimento..." : manualOnly ? "Marcar folha manual como OK" : mappingsToApprove > 0 ? `Confirmar e aprender (${mappingsToApprove})` : "Marcar folha como OK"}</Button>
           </div>
           <div className="space-y-6 p-6">
-            <div className="grid gap-5 sm:grid-cols-5"><Stat label="Referências" value={comparisons.length} /><Stat label="Diferenças bloqueantes" value={blockingDifferences.length} /><Stat label="Contas incompletas" value={missing} /><Stat label="Aguardando aprovação" value={mappingsToApprove} /><Stat label="Conhecimento reutilizado" value={learnedMappings} /></div>
-            {!referenceVerified && <div className="flex gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />A leitura independente do documento original ainda não passou pelos critérios de referência. A exportação permanece bloqueada.</div>}
+            <div className="grid gap-5 sm:grid-cols-5"><Stat label="Referências" value={comparisons.length} /><Stat label="Diferenças bloqueantes" value={manualOnly ? 0 : blockingDifferences.length} /><Stat label="Contas incompletas" value={missing} /><Stat label="Aguardando aprovação" value={mappingsToApprove} /><Stat label="Conhecimento reutilizado" value={learnedMappings} /></div>
+            {manualOnly && <div className="flex gap-2 rounded-md border border-border bg-muted/30 p-4 text-sm text-muted-foreground"><Info className="mt-0.5 h-4 w-4 shrink-0" /><div><p className="font-medium text-foreground">Conferência exclusivamente manual</p><p className="mt-1 text-xs">Como não existe nenhum lançamento de IA/importação nesta competência, o sistema não exige documento original. Esta confirmação valida apenas o que foi digitado manualmente e não cria conhecimento automático para a empresa.</p></div></div>}
+            {!manualOnly && !referenceVerified && <div className="flex gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />A leitura independente do documento original ainda não passou pelos critérios de referência. A exportação permanece bloqueada.</div>}
             {mappingsToApprove > 0 && <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-4"><p className="text-sm font-medium text-foreground">{mappingsToApprove} mapeamento(s) novo(s) precisam da sua conferência</p><p className="mt-1 text-xs text-muted-foreground">Revise débito e crédito na Transcrição. Ao confirmar, essas combinações serão salvas como conhecimento desta empresa e reutilizadas automaticamente nos próximos meses.</p></div>}
-            {informationalDifferences.length > 0 && <div className="rounded-md border border-border bg-muted/30 p-4"><p className="text-sm font-medium text-foreground">Diferenças informativas</p><p className="mt-1 text-xs text-muted-foreground">Essas diferenças explicam calendário de recolhimento ou outras referências do documento e não bloqueiam aprovação nem exportação.</p></div>}
-            <ComparisonTable rows={comparisons} referenceVerified={referenceVerified} title={`Conferência da folha · ${competence}`} />
+            {informationalDifferences.length > 0 && !manualOnly && <div className="rounded-md border border-border bg-muted/30 p-4"><p className="text-sm font-medium text-foreground">Diferenças informativas</p><p className="mt-1 text-xs text-muted-foreground">Essas diferenças explicam calendário de recolhimento ou outras referências do documento e não bloqueiam aprovação nem exportação.</p></div>}
+            {manualOnly ? <div className="rounded-md border border-border bg-background p-5 text-sm text-muted-foreground"><p className="font-medium text-foreground">Sem comparação com documento</p><p className="mt-1 text-xs">A competência contém somente linhas com origem manual. Se qualquer linha de IA/importação for adicionada, esta exceção deixa de valer automaticamente e a conferência documental volta a ser obrigatória.</p></div> : <ComparisonTable rows={comparisons} referenceVerified={referenceVerified} title={`Conferência da folha · ${competence}`} />}
             {deferredEntries.length > 0 && <div className="rounded-md border border-border p-4"><p className="text-sm font-medium text-foreground">Ajustes por competência de recolhimento</p>{deferredEntries.map(row => <p key={row.id} className="mt-2 text-sm text-muted-foreground">{row.rubricDescription || row.history}: {money(row.amountInCents)} → {row.targetCompetence}</p>)}</div>}
             {processingMeta && <p className="text-xs text-muted-foreground">Fluxo: {processingMeta.routing || processingMeta.primaryModel}{processingMeta.reviewed ? ` · releitura: ${processingMeta.reviewModel || processingMeta.model}` : ""}</p>}
-            {(warnings.length > 0 || structuralIssues.length > 0) && <div className="rounded-md bg-muted/50 p-4"><p className="text-sm font-medium text-foreground">Pontos que exigem decisão</p>{[...new Set([...warnings, ...structuralIssues])].map(issue => <p key={issue} className="mt-2 flex gap-2 text-sm text-muted-foreground"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{issue}</p>)}</div>}
+            {!manualOnly && (warnings.length > 0 || structuralIssues.length > 0) && <div className="rounded-md bg-muted/50 p-4"><p className="text-sm font-medium text-foreground">Pontos que exigem decisão</p>{[...new Set([...warnings, ...structuralIssues])].map(issue => <p key={issue} className="mt-2 flex gap-2 text-sm text-muted-foreground"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{issue}</p>)}</div>}
           </div>
         </div>
       </TabsContent>
@@ -307,8 +322,8 @@ function TableExpandButton({ onClick }: { onClick: () => void }) { return <div c
 function MappingLabel({ row }: { row: PayrollEntry }) {
   const complete = isCompleteMapping(row);
   const source = row.mappingSource || (complete ? "predefined" : "unresolved");
-  const labels: Record<string, string> = { learned: "Aprendido", predefined: "Pré-definido", ai: "IA · revisar", manual: "Manual · revisar", unresolved: "Pendente" };
-  return <span title={row.mappingReason || ""} className={cn("text-[11px]", source === "learned" && "text-emerald-600 dark:text-emerald-400", source === "ai" && "font-medium text-amber-700 dark:text-amber-300", source === "manual" && row.mappingNeedsApproval && "font-medium text-amber-700 dark:text-amber-300", source === "unresolved" && "font-medium text-destructive", source === "predefined" && "text-muted-foreground")}>{labels[source] || source}</span>;
+  const labels: Record<string, string> = { learned: "Aprendido", predefined: "Pré-definido", ai: "IA · revisar", manual: row.mappingNeedsApproval ? "Manual · revisar" : "Manual · conferido", unresolved: "Pendente" };
+  return <span title={row.mappingReason || ""} className={cn("text-[11px]", source === "learned" && "text-emerald-600 dark:text-emerald-400", source === "ai" && "font-medium text-amber-700 dark:text-amber-300", source === "manual" && row.mappingNeedsApproval && "font-medium text-amber-700 dark:text-amber-300", source === "manual" && !row.mappingNeedsApproval && "text-emerald-600 dark:text-emerald-400", source === "unresolved" && "font-medium text-destructive", source === "predefined" && "text-muted-foreground")}>{labels[source] || source}</span>;
 }
 
 function uniqueFiles(files: File[]) {
