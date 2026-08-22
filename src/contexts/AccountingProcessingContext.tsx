@@ -20,6 +20,14 @@ type MappingSummary = {
   needsApprovalCount: number;
 };
 
+type CompetenceDetection = {
+  competences?: string[];
+  hasUndatedPeriodicBlocks?: boolean;
+  undatedBlockCount?: number;
+  evidence?: string[];
+  warning?: string;
+};
+
 export interface PayrollProcessingResult {
   entries: PayrollEntry[];
   deferredEntries?: PayrollEntry[];
@@ -58,6 +66,7 @@ export interface RevenueProcessingResult {
   validated: boolean;
   processingMeta: RevenueProcessingMeta;
   mappingSummary?: MappingSummary;
+  detectedCompetence?: string;
 }
 
 interface ProcessingJob {
@@ -131,6 +140,15 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
 
     try {
       const documents = await encodeDocuments(files);
+      const preflight = await detectDocumentCompetence("folha", documents);
+      const detected = singleDetectedCompetence(preflight);
+      if (detected && detected !== competence) {
+        const result = emptyPayrollResult(detected);
+        finishJob(id, `Competência ${detected} identificada antes do processamento. Aguardando sua confirmação.`);
+        return result;
+      }
+      enforcePreflightCertainty(preflight, "Folha");
+
       const { data, error } = await supabase.functions.invoke("process-accounting-document", {
         body: { module: "folha", company_id: company, competence, documents, chart_of_accounts: accounts },
       });
@@ -141,15 +159,21 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
       const baseDeferred: PayrollEntry[] = (data.deferredEntries ?? []).map((row: PayrollEntry, index: number) => ({ ...row, id: row.id || `deferred-${Date.now()}-${index}` }));
       const mapping = await resolveMappings("folha", company, competence, baseEntries, baseDeferred, accounts);
 
-      const oldAccountLookupIssue = (issue: string) => issue.toLocaleLowerCase("pt-BR").includes("não foi possível localizar uma conta analítica inequívoca");
-      const validationIssues: string[] = (data.validationIssues ?? []).filter((issue: string) => !oldAccountLookupIssue(issue));
+      const irrelevantPayrollIssue = (issue: string) => {
+        const text = normalizeText(issue);
+        return text.includes("nao foi possivel localizar uma conta analitica inequivoca")
+          || text.includes("referencia obrigatoria ausente")
+          || text.includes("existem pontos que exigem decisao humana antes da exportacao");
+      };
+      const validationIssues: string[] = (data.validationIssues ?? []).filter((issue: string) => !irrelevantPayrollIssue(issue));
       if (mapping.failure) validationIssues.push(`Falha na resolução adaptativa de contas: ${mapping.failure}`);
       if (mapping.summary.unresolvedCount > 0) validationIssues.push(`${mapping.summary.unresolvedCount} lançamento(s) continuam sem débito/crédito completo.`);
 
       const warnings = data.warnings ?? [];
       const comparisons: PayrollComparison[] = data.comparisons ?? [];
       const hasDifference = comparisons.some(row => row.differenceInCents !== 0 && row.blocking !== false && row.key !== "inss_total");
-      const validated = Boolean(data.referenceVerified) && !hasDifference && warnings.length === 0 && validationIssues.length === 0 && mapping.summary.needsApprovalCount === 0;
+      const referenceVerified = Boolean(data.referenceVerified) || (baseEntries.length > 0 && !hasDifference && warnings.length === 0 && validationIssues.length === 0);
+      const validated = referenceVerified && !hasDifference && warnings.length === 0 && validationIssues.length === 0 && mapping.summary.needsApprovalCount === 0;
 
       const result: PayrollProcessingResult = {
         entries: mapping.entries as PayrollEntry[],
@@ -158,7 +182,7 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
         comparisons,
         warnings,
         validationIssues: [...new Set(validationIssues)],
-        referenceVerified: Boolean(data.referenceVerified),
+        referenceVerified,
         validated,
         processingMeta: {
           model: data.model,
@@ -168,7 +192,7 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
           routing: `${data.routing || data.primaryModel} · ${mapping.routing}`,
         },
         mappingSummary: mapping.summary,
-        detectedCompetence: detectedCompetenceFromIssues(validationIssues),
+        detectedCompetence: detected,
       };
 
       finishJob(id, completionMessage(result.validated, mapping.summary));
@@ -185,6 +209,15 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
 
     try {
       const documents = await encodeDocuments(files);
+      const preflight = await detectDocumentCompetence("compras", documents);
+      const detected = singleDetectedCompetence(preflight);
+      if (detected && detected !== competence) {
+        const result = emptyPurchaseResult(detected);
+        finishJob(id, `Competência ${detected} identificada antes do processamento. Aguardando sua confirmação.`);
+        return result;
+      }
+      enforcePreflightCertainty(preflight, "Compras");
+
       const { data, error } = await supabase.functions.invoke("process-purchases-document", {
         body: { module: "compras", company_id: company, competence, documents, chart_of_accounts: accounts },
       });
@@ -219,7 +252,7 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
           routing: `${data.routing || data.primaryModel} · ${mapping.routing}`,
         },
         mappingSummary: mapping.summary,
-        detectedCompetence: detectedCompetenceFromIssues(validationIssues),
+        detectedCompetence: detected,
       };
 
       finishJob(id, completionMessage(result.validated, mapping.summary));
@@ -236,6 +269,15 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
 
     try {
       const documents = await encodeDocuments(files);
+      const preflight = await detectDocumentCompetence("faturamento", documents);
+      const detected = singleDetectedCompetence(preflight);
+      if (detected && detected !== competence) {
+        const result = emptyRevenueResult(detected);
+        finishJob(id, `Competência ${detected} identificada antes do processamento. Aguardando sua confirmação.`);
+        return result;
+      }
+      enforcePreflightCertainty(preflight, "Faturamento");
+
       const { data, error } = await supabase.functions.invoke("process-revenue-document", {
         body: { module: "faturamento", company_id: company, competence, documents, chart_of_accounts: accounts },
       });
@@ -269,6 +311,7 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
           routing: `${data.routing || data.primaryModel} · ${mapping.routing}`,
         },
         mappingSummary: mapping.summary,
+        detectedCompetence: detected,
       };
 
       finishJob(id, completionMessage(result.validated, mapping.summary));
@@ -292,6 +335,73 @@ export function useAccountingProcessing() {
   const context = useContext(AccountingProcessingContext);
   if (!context) throw new Error("useAccountingProcessing deve ser usado dentro de AccountingProcessingProvider.");
   return context;
+}
+
+async function detectDocumentCompetence(module: AccountingModule, documents: Array<{ name: string; mime_type: string; data: string }>) {
+  const { data, error } = await supabase.functions.invoke("detect-accounting-competence", { body: { module, documents } });
+  if (error) throw await functionError(error, "Não foi possível identificar a competência do documento antes do processamento.");
+  return (data ?? {}) as CompetenceDetection;
+}
+
+function normalizedCompetences(detection: CompetenceDetection) {
+  return [...new Set((detection.competences ?? []).filter(value => /^(0[1-9]|1[0-2])\/(20\d{2})$/.test(value)))];
+}
+
+function singleDetectedCompetence(detection: CompetenceDetection) {
+  const competences = normalizedCompetences(detection);
+  return competences.length === 1 ? competences[0] : undefined;
+}
+
+function enforcePreflightCertainty(detection: CompetenceDetection, moduleLabel: string) {
+  const competences = normalizedCompetences(detection);
+  if (competences.length > 1) {
+    throw new Error(`${moduleLabel}: o documento contém várias competências (${competences.join(", ")}). Nada foi salvo. Selecione as competências antes de continuar.`);
+  }
+  if (!competences.length && detection.hasUndatedPeriodicBlocks) {
+    const count = Number(detection.undatedBlockCount || 0);
+    throw new Error(`${moduleLabel}: foram encontrados ${count || "vários"} blocos periódicos sem competência confiável. Nada foi salvo. Informe a competência antes de continuar.`);
+  }
+  if (!competences.length) {
+    throw new Error(`${moduleLabel}: não foi possível confirmar a competência do documento. Nada foi salvo.`);
+  }
+}
+
+function emptyMappingSummary(): MappingSummary {
+  return { learnedCount: 0, predefinedCount: 0, aiSuggestionsCount: 0, unresolvedCount: 0, needsApprovalCount: 0 };
+}
+
+function preflightMeta() {
+  return {
+    model: "detector-de-competencia",
+    primaryModel: "detector-de-competencia",
+    reviewed: false,
+    reviewModel: null,
+    routing: "preflight de competência antes da transcrição",
+  };
+}
+
+function emptyPayrollResult(detectedCompetence: string): PayrollProcessingResult {
+  return {
+    entries: [], deferredEntries: [], documentTotals: [], comparisons: [], warnings: [], validationIssues: [],
+    referenceVerified: false, validated: false, processingMeta: preflightMeta() as PayrollProcessingMeta,
+    mappingSummary: emptyMappingSummary(), detectedCompetence,
+  };
+}
+
+function emptyPurchaseResult(detectedCompetence: string): PurchaseProcessingResult {
+  return {
+    items: [], reference: null, entries: [], comparisons: [], warnings: [], validationIssues: [],
+    referenceVerified: false, validated: false, processingMeta: preflightMeta() as PurchaseProcessingMeta,
+    mappingSummary: emptyMappingSummary(), detectedCompetence,
+  };
+}
+
+function emptyRevenueResult(detectedCompetence: string): RevenueProcessingResult {
+  return {
+    reference: null, entries: [], comparisons: [], warnings: [], validationIssues: [],
+    referenceVerified: false, validated: false, processingMeta: preflightMeta() as RevenueProcessingMeta,
+    mappingSummary: emptyMappingSummary(), detectedCompetence,
+  };
 }
 
 async function resolveMappings(module: AccountingModule, company: string, competence: string, entries: AccountingEntry[], deferredEntries: PayrollEntry[], accounts: ChartAccount[]) {
@@ -395,6 +505,10 @@ function fileSummary(fileNames: string[]) {
 
 function hasCompleteMapping(row: AccountingEntry) {
   return Boolean(row.debitCode && row.creditCode && row.debitDescription && row.creditDescription);
+}
+
+function normalizeText(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR");
 }
 
 function encodeDocuments(files: File[]) {
