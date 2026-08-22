@@ -393,13 +393,18 @@ export function FaturamentoWorkspace({ company, month, year, onStatusChange, onC
 
       <TabsContent value="conferencia" className="mt-7">
         <Header title="Faturamento · Conferência" subtitle="NFS, NF-e, total faturado e PGDAS comparados diretamente com os lançamentos." />
-        <div className="space-y-6 rounded-md border border-border bg-background p-6">
-          <div className="grid gap-5 sm:grid-cols-5"><Stat label="Lançamentos" value={entries.length} /><Stat label="Diferenças" value={blockingDifferences.length} /><Stat label="Sem mapeamento" value={missing} /><Stat label="Aguardando aprovação" value={mappingsToApprove} /><Stat label="Conhecimento reutilizado" value={learnedMappings} /></div>
-          {!referenceVerified && <div className="flex gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"><AlertTriangle className="mt-0.5 h-4 w-4" />A leitura independente do relatório ainda não fechou.</div>}
-          <RevenueComparisonTable rows={comparisons} referenceVerified={referenceVerified} />
-          {(warnings.length > 0 || validationIssues.length > 0) && <div className="rounded-md bg-muted/50 p-4"><p className="text-sm font-medium">Pontos que exigem decisão</p>{[...new Set([...warnings, ...validationIssues])].map(issue => <p key={issue} className="mt-2 flex gap-2 text-sm text-muted-foreground"><AlertTriangle className="mt-0.5 h-4 w-4" />{issue}</p>)}</div>}
-          {processingMeta && <p className="text-xs text-muted-foreground">Fluxo: {processingMeta.routing || processingMeta.primaryModel}</p>}
-          <div className="flex justify-end"><Button disabled={!canApprove || !entries.length} onClick={() => void approve()}>{learning ? "Salvando conhecimento..." : mappingsToApprove ? "Confirmar e aprender" : "Marcar faturamento como OK"}</Button></div>
+        <div className="rounded-md border border-border bg-background">
+          <div className="flex flex-col gap-3 border-b border-border bg-muted/20 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div><p className="text-sm font-semibold text-foreground">Fechar conferência de faturamento</p><p className="mt-1 text-xs text-muted-foreground">Confirme o mês aqui depois de revisar NFS, NF-e, total faturado, PGDAS e mapeamentos.</p></div>
+            <Button className="shrink-0" disabled={!canApprove || !entries.length} onClick={() => void approve()}>{learning ? "Salvando conhecimento..." : mappingsToApprove ? "Confirmar e aprender" : "Marcar faturamento como OK"}</Button>
+          </div>
+          <div className="space-y-6 p-6">
+            <div className="grid gap-5 sm:grid-cols-5"><Stat label="Lançamentos" value={entries.length} /><Stat label="Diferenças" value={blockingDifferences.length} /><Stat label="Sem mapeamento" value={missing} /><Stat label="Aguardando aprovação" value={mappingsToApprove} /><Stat label="Conhecimento reutilizado" value={learnedMappings} /></div>
+            {!referenceVerified && <div className="flex gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"><AlertTriangle className="mt-0.5 h-4 w-4" />A leitura independente do relatório ainda não fechou.</div>}
+            <RevenueComparisonTable rows={comparisons} referenceVerified={referenceVerified} />
+            {(warnings.length > 0 || validationIssues.length > 0) && <div className="rounded-md bg-muted/50 p-4"><p className="text-sm font-medium">Pontos que exigem decisão</p>{[...new Set([...warnings, ...validationIssues])].map(issue => <p key={issue} className="mt-2 flex gap-2 text-sm text-muted-foreground"><AlertTriangle className="mt-0.5 h-4 w-4" />{issue}</p>)}</div>}
+            {processingMeta && <p className="text-xs text-muted-foreground">Fluxo: {processingMeta.routing || processingMeta.primaryModel}</p>}
+          </div>
         </div>
       </TabsContent>
     </Tabs>
