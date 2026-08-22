@@ -6,7 +6,6 @@ import { ChartAccount } from "@/lib/lancamentos/chartOfAccounts";
 import { PayrollComparison, PayrollDocumentTotal, PayrollEntry, PayrollProcessingMeta } from "@/lib/lancamentos/payrollWorkbook";
 import { PurchaseComparison, PurchaseEntry, PurchaseItem, PurchaseProcessingMeta, PurchaseReference } from "@/lib/lancamentos/purchaseWorkbook";
 import { RevenueComparison, RevenueEntry, RevenueProcessingMeta, RevenueReference } from "@/lib/lancamentos/revenueWorkbook";
-import { saveWorkspaceData } from "@/lib/lancamentos/workspaceStorage";
 
 export type AccountingOperation = "import" | "reprocess";
 type AccountingModule = "folha" | "compras" | "faturamento";
@@ -32,6 +31,7 @@ export interface PayrollProcessingResult {
   validated: boolean;
   processingMeta: PayrollProcessingMeta;
   mappingSummary?: MappingSummary;
+  detectedCompetence?: string;
 }
 
 export interface PurchaseProcessingResult {
@@ -45,6 +45,7 @@ export interface PurchaseProcessingResult {
   validated: boolean;
   processingMeta: PurchaseProcessingMeta;
   mappingSummary?: MappingSummary;
+  detectedCompetence?: string;
 }
 
 export interface RevenueProcessingResult {
@@ -92,6 +93,14 @@ interface AccountingProcessingContextValue {
 
 const AccountingProcessingContext = createContext<AccountingProcessingContextValue | null>(null);
 
+export function detectedCompetenceFromIssues(issues: string[] | undefined) {
+  for (const issue of issues ?? []) {
+    const match = issue.match(/(?:refer[eê]ncia\s+(?:foi\s+)?lida\s+como|documento\s+foi\s+lido\s+como)\s+(0[1-9]|1[0-2])\/(20\d{2})/i);
+    if (match) return `${match[1]}/${match[2]}`;
+  }
+  return undefined;
+}
+
 export function AccountingProcessingProvider({ children }: { children: ReactNode }) {
   const [job, setJob] = useState<ProcessingJob | null>(null);
 
@@ -117,7 +126,7 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
   }, []);
 
   const processPayroll = useCallback(async (args: StartArgs) => {
-    const { company, month, year, files, accounts } = args;
+    const { company, files, accounts } = args;
     const { id, competence } = beginJob("folha", args);
 
     try {
@@ -159,9 +168,9 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
           routing: `${data.routing || data.primaryModel} · ${mapping.routing}`,
         },
         mappingSummary: mapping.summary,
+        detectedCompetence: detectedCompetenceFromIssues(validationIssues),
       };
 
-      await saveWorkspaceData(`${company}:${year}:${month}:folha:parsed`, result);
       finishJob(id, completionMessage(result.validated, mapping.summary));
       return result;
     } catch (error) {
@@ -171,7 +180,7 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
   }, [beginJob, failJob, finishJob]);
 
   const processPurchases = useCallback(async (args: StartArgs) => {
-    const { company, month, year, files, accounts } = args;
+    const { company, files, accounts } = args;
     const { id, competence } = beginJob("compras", args);
 
     try {
@@ -210,9 +219,9 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
           routing: `${data.routing || data.primaryModel} · ${mapping.routing}`,
         },
         mappingSummary: mapping.summary,
+        detectedCompetence: detectedCompetenceFromIssues(validationIssues),
       };
 
-      await saveWorkspaceData(`${company}:${year}:${month}:compras:parsed`, result);
       finishJob(id, completionMessage(result.validated, mapping.summary));
       return result;
     } catch (error) {
@@ -222,7 +231,7 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
   }, [beginJob, failJob, finishJob]);
 
   const processRevenue = useCallback(async (args: StartArgs) => {
-    const { company, month, year, files, accounts } = args;
+    const { company, files, accounts } = args;
     const { id, competence } = beginJob("faturamento", args);
 
     try {
@@ -262,7 +271,6 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
         mappingSummary: mapping.summary,
       };
 
-      await saveWorkspaceData(`${company}:${year}:${month}:faturamento:parsed`, result);
       finishJob(id, completionMessage(result.validated, mapping.summary));
       return result;
     } catch (error) {

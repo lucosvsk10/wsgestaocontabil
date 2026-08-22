@@ -1,11 +1,11 @@
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
-import { Info } from "lucide-react";
+import { AlertTriangle, Info, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChartAccount } from "@/lib/lancamentos/chartOfAccounts";
 import { ExpenseEntry, ExpenseGroupSide, ExpenseImportIssue, exportGroupedExpenses, groupExpenseEntries, readExpenseWorkbook } from "@/lib/lancamentos/expenseWorkbook";
-import { clearWorkspaceFiles, loadWorkspaceData, loadWorkspaceFiles, saveWorkspaceData, saveWorkspaceFiles } from "@/lib/lancamentos/workspaceStorage";
+import { clearWorkspaceFiles, deleteWorkspaceData, loadWorkspaceData, loadWorkspaceFiles, removeWorkspaceDocumentsByName, saveWorkspaceData, saveWorkspaceFiles } from "@/lib/lancamentos/workspaceStorage";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AccountingWorkflowSteps, AccountCodeHover } from "./AccountingWorkflowUI";
@@ -59,7 +59,9 @@ export function DespesasWorkspace({ company, month, year, onFileCountChange, onS
   const [pending, setPending] = useState<SavedData | null>(null);
   const [accounts, setAccounts] = useState<ChartAccount[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [deletingFile, setDeletingFile] = useState<string | null>(null);
   const [competenceWarning, setCompetenceWarning] = useState<{ month: string; year: string } | null>(null);
+  const [mixedCompetences, setMixedCompetences] = useState<string[]>([]);
   const scope = `${company}:${year}:${month}:despesas`;
   const dataKey = `${scope}:parsed`;
   const competence = `${month}/${year}`;
@@ -73,8 +75,15 @@ export function DespesasWorkspace({ company, month, year, onFileCountChange, onS
   const mixed = grouped.filter(row => row.hasMixedCounterpart).length;
   const canExport = grouped.length > 0 && !outside && !unknownAccounts && !missing && !mixed && detailedTotal === groupedTotal;
 
+  const applyChart = (rows: ExpenseEntry[]) => {
+    const chart = new Map(accounts.map(account => [account.reducedCode, account.description]));
+    return rows.map(row => ({ ...row, debitDescription: chart.get(row.debitCode) || "", creditDescription: chart.get(row.creditCode) || "", debitCostCenter: row.debitCostCenter ?? "", creditCostCenter: row.creditCostCenter ?? "" }));
+  };
+
   useEffect(() => {
     let active = true;
+    setLoaded(false);
+    setEntries([]); setIssues([]); setFiles([]); setIgnoredRows(0);
     Promise.all([loadWorkspaceData<SavedData>(dataKey), loadWorkspaceFiles(scope), loadWorkspaceData<ChartAccount[]>(`${company}:chart-of-accounts`)]).then(([saved, storedFiles, chart]) => {
       if (!active) return;
       if (saved) { setEntries(saved.entries.map(row => ({ ...row, debitCostCenter: row.debitCostCenter ?? "", creditCostCenter: row.creditCostCenter ?? "" }))); setIssues(saved.issues); setIgnoredRows(saved.ignoredRows); }
@@ -98,6 +107,7 @@ export function DespesasWorkspace({ company, month, year, onFileCountChange, onS
   const readFiles = async (event: ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(event.target.files ?? []); event.target.value = ""; if (!selected.length) return;
     setReading(true);
+    setMixedCompetences([]);
     const result: SavedData = { entries: [], issues: [], ignoredRows: 0 };
     for (const file of selected) {
       try { const parsed = await readExpenseWorkbook(file); result.entries.push(...parsed.entries); result.issues.push(...parsed.issues); result.ignoredRows += parsed.ignoredRows; }
@@ -105,12 +115,31 @@ export function DespesasWorkspace({ company, month, year, onFileCountChange, onS
     }
     setPendingFiles(selected); setPending(result); setReading(false);
   };
-  const detectedCompetence = () => { const match = pending?.entries.map(row => row.date.match(/^\d{2}\/(\d{2})\/(\d{4})$/)).find(Boolean); return match ? { month: match[1], year: match[2] } : null; };
-  const requestConfirm = () => { const detected = detectedCompetence(); if (detected && (detected.month !== month || detected.year !== year)) { setCompetenceWarning(detected); return; } void confirm(); };
+
+  const detectedCompetences = () => [...new Set((pending?.entries ?? []).flatMap(row => {
+    const match = row.date.match(/^\d{2}\/(\d{2})\/(20\d{2})$/);
+    return match ? [`${match[1]}/${match[2]}`] : [];
+  }))].sort();
+
+  const requestConfirm = () => {
+    const detected = detectedCompetences();
+    if (detected.length > 1) {
+      setMixedCompetences(detected);
+      return;
+    }
+    if (detected.length === 1) {
+      const [detectedMonth, detectedYear] = detected[0].split("/");
+      if (detectedMonth !== month || detectedYear !== year) {
+        setCompetenceWarning({ month: detectedMonth, year: detectedYear });
+        return;
+      }
+    }
+    void confirm();
+  };
+
   const confirm = async (target = { month, year }) => {
     if (!pending) return;
-    const chart = new Map(accounts.map(account => [account.reducedCode, account.description]));
-    const resolved = pending.entries.map(row => ({ ...row, debitDescription: chart.get(row.debitCode) || "", creditDescription: chart.get(row.creditCode) || "" }));
+    const resolved = applyChart(pending.entries);
     const targetScope = `${company}:${target.year}:${target.month}:despesas`;
     const targetKey = `${targetScope}:parsed`;
     if (target.month === month && target.year === year) {
@@ -123,16 +152,64 @@ export function DespesasWorkspace({ company, month, year, onFileCountChange, onS
       const current = saved ?? { entries: [], issues: [], ignoredRows: 0 };
       await saveWorkspaceData(targetKey, { entries: [...current.entries, ...resolved.filter(row => !current.entries.some(savedRow => savedRow.id === row.id))], issues: [...current.issues, ...pending.issues], ignoredRows: current.ignoredRows + pending.ignoredRows });
     }
-    await saveWorkspaceFiles(targetScope, pendingFiles);
-    setPending(null); setPendingFiles([]); setCompetenceWarning(null);
+    await saveWorkspaceFiles(targetScope, pendingFiles, { skipCompetencePrompt: true });
+    setPending(null); setPendingFiles([]); setCompetenceWarning(null); setMixedCompetences([]);
     if (target.month !== month || target.year !== year) onCompetenceChange?.(target.month, target.year); else onStatusChange?.("review");
   };
-  const clear = async () => { setEntries([]); setIssues([]); setFiles([]); setIgnoredRows(0); await clearWorkspaceFiles(scope); await saveWorkspaceData(dataKey, { entries: [], issues: [], ignoredRows: 0 }); onStatusChange?.("waiting"); };
+
+  const deleteDocument = async (fileName: string) => {
+    setDeletingFile(fileName);
+    setLoaded(false);
+    onStatusChange?.("waiting");
+    try {
+      await removeWorkspaceDocumentsByName(scope, [fileName]);
+      await deleteWorkspaceData(dataKey);
+      const remainingFiles = await loadWorkspaceFiles(scope);
+      if (!remainingFiles.length) {
+        setEntries([]); setIssues([]); setFiles([]); setIgnoredRows(0);
+        return;
+      }
+
+      const rebuilt: SavedData = { entries: [], issues: [], ignoredRows: 0 };
+      for (const file of remainingFiles) {
+        try {
+          const parsed = await readExpenseWorkbook(file);
+          rebuilt.entries.push(...parsed.entries);
+          rebuilt.issues.push(...parsed.issues);
+          rebuilt.ignoredRows += parsed.ignoredRows;
+        } catch {
+          rebuilt.issues.push({ id: `${file.name}-erro`, fileName: file.name, sheetName: "", row: 0, message: "Não foi possível reler este arquivo após a exclusão." });
+        }
+      }
+      const rebuiltResolved = { ...rebuilt, entries: applyChart(rebuilt.entries) };
+      setEntries(rebuiltResolved.entries);
+      setIssues(rebuiltResolved.issues);
+      setIgnoredRows(rebuiltResolved.ignoredRows);
+      setFiles(remainingFiles.map(file => file.name));
+      await saveWorkspaceData(dataKey, rebuiltResolved);
+      onStatusChange?.("review");
+    } finally {
+      setLoaded(true);
+      setDeletingFile(null);
+    }
+  };
+
+  const clear = async () => {
+    setLoaded(false);
+    setEntries([]); setIssues([]); setFiles([]); setIgnoredRows(0);
+    await clearWorkspaceFiles(scope);
+    await deleteWorkspaceData(dataKey);
+    setLoaded(true);
+    onStatusChange?.("waiting");
+  };
   const displayGrouped = grouped.map(row => ({ ...row, id: row.sourceEntryIds.join("-") }));
 
   return <section className="mt-8 space-y-8">
-    <div className="rounded-md border border-border bg-background p-6"><div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between"><h3 className="font-semibold">Despesas de {competence}</h3><Button variant="outline" disabled={reading} onClick={() => fileInput.current?.click()}>{reading ? "Lendo arquivo..." : `Importar despesas de ${competence}`}</Button><input ref={fileInput} type="file" multiple accept=".xlsx,.xls,.csv" className="sr-only" onChange={readFiles}/></div><div className="mt-5 border-t border-border pt-5 text-sm text-muted-foreground">{files.length ? <div className="flex flex-wrap gap-4">{files.map(file => <span key={file} className="text-foreground">{file}</span>)}<button className="underline" onClick={clear}>Limpar importação</button></div> : "Nenhum arquivo selecionado nesta competência."}</div></div>
-    {pending && <div className="rounded-md border border-border bg-background"><div className="flex items-center justify-between border-b border-border p-4"><div><h3 className="font-semibold">Prévia da importação</h3><p className="text-xs text-muted-foreground">Cinco primeiras linhas</p></div><div className="flex gap-2"><Button variant="outline" onClick={() => setPending(null)}>Cancelar</Button><Button onClick={requestConfirm} disabled={!pending.entries.length}>Confirmar importação</Button></div></div><LedgerTable rows={pending.entries.slice(0,5)}/></div>}
+    <div className="rounded-md border border-border bg-background p-6">
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between"><h3 className="font-semibold">Despesas de {competence}</h3><Button variant="outline" disabled={reading} onClick={() => fileInput.current?.click()}>{reading ? "Lendo arquivo..." : `Importar despesas de ${competence}`}</Button><input ref={fileInput} type="file" multiple accept=".xlsx,.xls,.csv" className="sr-only" onChange={readFiles}/></div>
+      <div className="mt-5 border-t border-border pt-5 text-sm text-muted-foreground">{files.length ? <div className="flex flex-wrap gap-2">{files.map(file => <span key={file} className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-border bg-muted/25 px-2.5 py-1.5 text-xs text-foreground"><span className="max-w-[420px] truncate" title={file}>{file}</span><Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive" disabled={Boolean(deletingFile)} onClick={() => void deleteDocument(file)} title="Excluir documento e seus lançamentos"><Trash2 className="h-3.5 w-3.5" /></Button></span>)}<button className="ml-2 text-xs underline" onClick={() => void clear()}>Limpar importação</button></div> : "Nenhum arquivo selecionado nesta competência."}</div>
+    </div>
+    {pending && <div className="rounded-md border border-border bg-background"><div className="flex items-center justify-between border-b border-border p-4"><div><h3 className="font-semibold">Prévia da importação</h3><p className="text-xs text-muted-foreground">Cinco primeiras linhas</p></div><div className="flex gap-2"><Button variant="outline" onClick={() => { setPending(null); setPendingFiles([]); setMixedCompetences([]); }}>Cancelar</Button><Button onClick={requestConfirm} disabled={!pending.entries.length}>Confirmar importação</Button></div></div>{mixedCompetences.length > 1 && <div className="m-4 flex gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><div><p className="font-medium">O arquivo mistura competências diferentes.</p><p className="mt-1 text-xs">Foram encontrados {mixedCompetences.join(", ")}. Separe os documentos/linhas por competência antes de importar. Nada foi salvo.</p></div></div>}<LedgerTable rows={pending.entries.slice(0,5)}/></div>}
 
     <Tabs defaultValue="transcricao">
       <AccountingWorkflowSteps steps={[
@@ -142,10 +219,10 @@ export function DespesasWorkspace({ company, month, year, onFileCountChange, onS
       ]} />
       <TabsContent value="transcricao" className="mt-6"><div className="mb-5"><h3 className="text-base font-semibold text-foreground">Despesas · Transcrição</h3><p className="mt-1 text-sm text-muted-foreground">Documento original e dados extraídos no mesmo espaço.</p></div><div className="rounded-md border border-border bg-background"><div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-5"><Tabs value={view} onValueChange={setView}><TabsList><TabsTrigger value="detalhada">Visão detalhada</TabsTrigger><TabsTrigger value="agrupada">Visão agrupada</TabsTrigger><TabsTrigger value="leitura">Conferência da leitura</TabsTrigger></TabsList></Tabs>{view === "agrupada" && <div className="flex items-center gap-2 text-xs"><span className="text-muted-foreground">Agrupar por</span>{(["debit","credit"] as ExpenseGroupSide[]).map(side => <button key={side} onClick={() => setGroupSide(side)} className={cn("rounded border px-3 py-1.5", groupSide === side && "bg-foreground text-background")}>{side === "debit" ? "Débito" : "Crédito"}</button>)}</div>}</div>{view === "detalhada" && <LedgerTable rows={entries} editable update={update}/>} {view === "agrupada" && <LedgerTable rows={displayGrouped}/>} {view === "leitura" && <div className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-3"><Stat label="Lançamentos válidos" value={entries.length}/><Stat label="Linhas com problema" value={issues.length}/><Stat label="Linhas informativas" value={ignoredRows}/><Stat label="Fora da competência" value={outside}/><Stat label="Contas ausentes no plano" value={unknownAccounts}/><Stat label="Total identificado" value={currency(detailedTotal)}/>{issues.map(issue => <p key={issue.id} className="col-span-full text-sm text-muted-foreground">{issue.fileName} · linha {issue.row}: {issue.message}</p>)}</div>}<div className="flex flex-wrap justify-between gap-3 border-t border-border p-4 text-xs text-muted-foreground"><span>{entries.length} originais → {grouped.length} agrupados · Diferença {currency(groupedTotal-detailedTotal)}</span>{mixed > 0 && <span className="text-foreground">{mixed} grupo(s) têm contrapartidas diferentes.</span>}</div></div></TabsContent>
       <TabsContent value="lancamentos" className="mt-6"><div className="rounded-md border border-border bg-background"><div className="flex items-center justify-between border-b border-border p-4"><h3 className="font-semibold">Planilha agrupada para o Calima</h3><Button disabled={!canExport} onClick={() => exportGroupedExpenses(grouped, competence)}>Exportar para o Calima</Button></div><LedgerTable rows={displayGrouped}/></div></TabsContent>
-      <TabsContent value="conferencia" className="mt-6"><div className="flex flex-col gap-5 rounded-md border border-border bg-background p-5 sm:flex-row sm:items-center sm:justify-between"><div className="grid flex-1 gap-4 sm:grid-cols-4"><Stat label="Detalhado" value={currency(detailedTotal)}/><Stat label="Agrupado" value={currency(groupedTotal)}/><Stat label="Diferença" value={currency(groupedTotal-detailedTotal)}/><Stat label="Pendências" value={issues.length+outside+missing+unknownAccounts}/></div><Button disabled={!entries.length || detailedTotal !== groupedTotal} onClick={() => onStatusChange?.("done")}>Marcar despesas como OK</Button></div></TabsContent>
+      <TabsContent value="conferencia" className="mt-6"><div className="flex flex-col gap-5 rounded-md border border-border bg-background p-5 sm:flex-row sm:items-center sm:justify-between"><div className="grid flex-1 gap-4 sm:grid-cols-4"><Stat label="Detalhado" value={currency(detailedTotal)}/><Stat label="Agrupado" value={currency(groupedTotal)}/><Stat label="Diferença" value={currency(groupedTotal-detailedTotal)}/><Stat label="Pendências" value={issues.length+outside+missing+unknownAccounts}/></div><Button disabled={!entries.length || detailedTotal !== groupedTotal || issues.length > 0 || outside > 0 || missing > 0 || unknownAccounts > 0 || mixed > 0} onClick={() => onStatusChange?.("done")}>Marcar despesas como OK</Button></div></TabsContent>
     </Tabs>
 
-    <Dialog open={Boolean(competenceWarning)} onOpenChange={open => !open && setCompetenceWarning(null)}><DialogContent><DialogHeader><DialogTitle>Competência diferente do documento</DialogTitle><DialogDescription>Você está trabalhando em {competence}, mas o arquivo pertence a {competenceWarning?.month}/{competenceWarning?.year}.</DialogDescription></DialogHeader><p className="text-sm text-muted-foreground">Ao continuar, os dados serão salvos na competência correta do documento e você será levado automaticamente até ela.</p><DialogFooter><Button variant="outline" onClick={() => setCompetenceWarning(null)}>Voltar</Button><Button onClick={() => competenceWarning && void confirm(competenceWarning)}>Importar assim mesmo</Button></DialogFooter></DialogContent></Dialog>
+    <Dialog open={Boolean(competenceWarning)} onOpenChange={open => !open && setCompetenceWarning(null)}><DialogContent><DialogHeader><DialogTitle>Competência diferente do documento</DialogTitle><DialogDescription>Você está trabalhando em {competence}, mas o arquivo pertence a {competenceWarning?.month}/{competenceWarning?.year}.</DialogDescription></DialogHeader><p className="text-sm text-muted-foreground">Nada foi salvo ainda. Ao continuar, os dados serão gravados na competência correta do documento e você será levado automaticamente até ela.</p><DialogFooter><Button variant="outline" onClick={() => { setCompetenceWarning(null); setPending(null); setPendingFiles([]); }}>Excluir importação</Button><Button onClick={() => competenceWarning && void confirm(competenceWarning)}>Manter em {competenceWarning?.month}/{competenceWarning?.year}</Button></DialogFooter></DialogContent></Dialog>
   </section>;
 }
 
