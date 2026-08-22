@@ -28,6 +28,8 @@ export interface RevenueEntry {
   amountInCents: number;
   source: string;
   confidence: number;
+  importId?: string;
+  sourceFileName?: string;
   mappingSource?: "learned" | "predefined" | "ai" | "manual" | "unresolved";
   mappingNeedsApproval?: boolean;
   mappingConfidence?: number;
