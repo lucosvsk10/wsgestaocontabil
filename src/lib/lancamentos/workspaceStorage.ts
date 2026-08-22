@@ -43,12 +43,23 @@ function complete(transaction: IDBTransaction) {
   });
 }
 
+function safeFileName(file: File) {
+  return file.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9._-]+/g, "-");
+}
+
+function storagePathFor(scope: string, file: File) {
+  return `${encodeURIComponent(scope)}/${file.lastModified}-${file.size}-${safeFileName(file)}`;
+}
+
+function localFileId(scope: string, file: File) {
+  return `${scope}:${file.name}:${file.size}:${file.lastModified}`;
+}
+
 export async function saveWorkspaceFiles(scope: string, files: File[]) {
   const context = parseScope(scope);
   try {
     for (const file of files) {
-      const safeName = file.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9._-]+/g, "-");
-      const storagePath = `${encodeURIComponent(scope)}/${file.lastModified}-${file.size}-${safeName}`;
+      const storagePath = storagePathFor(scope, file);
       const { error: uploadError } = await supabase.storage.from("accounting-documents").upload(storagePath, file, { upsert: true, contentType: file.type || undefined });
       if (uploadError) throw uploadError;
       const { error: metadataError } = await (supabase as any).from("accounting_workspace_documents").upsert({ scope, company_key: context.company, competence: context.competence, module: context.module, original_name: file.name, storage_path: storagePath, mime_type: file.type || null, size_bytes: file.size }, { onConflict: "storage_path" });
@@ -62,7 +73,7 @@ export async function saveWorkspaceFiles(scope: string, files: File[]) {
   const store = transaction.objectStore(FILE_STORE);
   files.forEach((file) => {
     const record: StoredFile = {
-      id: `${scope}:${file.name}:${file.size}:${file.lastModified}`,
+      id: localFileId(scope, file),
       scope,
       file,
       createdAt: new Date().toISOString(),
@@ -96,6 +107,25 @@ export async function loadWorkspaceFiles(scope: string) {
   await complete(transaction);
   database.close();
   return records.map((record) => record.file);
+}
+
+export async function removeWorkspaceFiles(scope: string, files: File[]) {
+  if (!files.length) return;
+  const storagePaths = files.map(file => storagePathFor(scope, file));
+  try {
+    await supabase.storage.from("accounting-documents").remove(storagePaths);
+    const { error } = await (supabase as any).from("accounting_workspace_documents").delete().in("storage_path", storagePaths);
+    if (error) throw error;
+  } catch (error) {
+    console.error("Falha ao remover os documentos selecionados do Supabase.", error);
+  }
+
+  const database = await openDatabase();
+  const transaction = database.transaction(FILE_STORE, "readwrite");
+  const store = transaction.objectStore(FILE_STORE);
+  files.forEach(file => store.delete(localFileId(scope, file)));
+  await complete(transaction);
+  database.close();
 }
 
 export async function clearWorkspaceFiles(scope: string) {
@@ -145,8 +175,6 @@ export async function loadWorkspaceData<T>(id: string) {
   } catch (error) { console.error("Falha ao carregar dados contábeis do Supabase; buscando cópia local.", error); }
   const localValue = await loadLocalWorkspaceData<T>(id);
   if (localValue !== undefined) {
-    // Dados criados antes da persistência definitiva são promovidos ao servidor
-    // assim que o usuário autenticado volta a abrir o mesmo contexto.
     void saveWorkspaceData(id, localValue);
   }
   return localValue;
