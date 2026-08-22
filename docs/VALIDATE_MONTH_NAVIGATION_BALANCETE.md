@@ -1,0 +1,1 @@
+Validation marker for dynamic month status, 3x3 year picker, complete-month Calima export, and Balancete import/closing workspace.
