@@ -32,7 +32,7 @@ jobs:
         run: npm run build
 
       - name: Accounting regressions
-        run: npx -y vitest@3.1.1 run --environment node src/lib/lancamentos/payrollWorkbook.test.ts src/lib/lancamentos/historicalRegression.test.ts
+        run: npx -y vitest@3.1.1 run --environment node src/lib/lancamentos/payrollWorkbook.test.ts src/lib/lancamentos/historicalRegression.test.ts src/lib/lancamentos/trialBalance.test.ts
 
       - name: Lint accounting files
         run: >-
@@ -60,6 +60,7 @@ jobs:
           src/lib/lancamentos/accountingMonthState.ts
           src/lib/lancamentos/completeMonthExport.ts
           src/lib/lancamentos/trialBalance.ts
+          src/lib/lancamentos/trialBalance.test.ts
           src/lib/lancamentos/trialBalanceClosing.ts
           src/lib/lancamentos/historicalRegression.ts
           src/lib/lancamentos/historicalRegression.test.ts
