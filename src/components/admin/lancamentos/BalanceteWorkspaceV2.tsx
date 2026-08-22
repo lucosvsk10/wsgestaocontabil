@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { useAccountingProcessing } from "@/contexts/AccountingProcessingContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccountingCompany } from "@/hooks/lancamentos/useAccountingCompany";
 import { exportAccountingWorkbook } from "@/lib/lancamentos/accountingExportWorkbook";
@@ -35,17 +36,16 @@ const months = [
 interface PendingImport { result: TrialBalanceResult; files: File[]; }
 interface MonthState { hasData: boolean; issues: number; corrected: boolean; conferenceOk: boolean; }
 interface SavedContext { year: string; month: string; tab: string; }
-type TrialBalanceResultWithPrevious = TrialBalanceResult & { previousBalanceVerified?: boolean; previousBalanceReadCount?: number; };
-type TrialBalanceRowWithPrevious = TrialBalanceRow & { previousBalanceRead?: boolean; };
 
 const contextKey = (company: string) => `ws:balancete:last-context:${company}`;
 const money = (cents: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Math.abs(cents) / 100);
 const balance = (signed: number) => Math.abs(signed) <= 1 ? "R$ 0,00" : `${money(signed)} ${signed > 0 ? "D" : "C"}`;
-const previousBalancesAreVerified = (result: TrialBalanceResult | null) => Boolean(result?.rows.length && result.rows.every(row => (row as TrialBalanceRowWithPrevious).previousBalanceRead === true));
+const previousBalancesAreVerified = (result: TrialBalanceResult | null) => Boolean(result?.rows.length && result.rows.every(row => row.previousBalanceRead === true));
 
 export function BalanceteWorkspaceV2() {
   const today = new Date();
   const { company, companies, selectCompany } = useAccountingCompany();
+  const { processTrialBalance } = useAccountingProcessing();
   const initial = readContext(company.id);
   const [year, setYear] = useState(initial?.year ?? String(today.getFullYear()));
   const [month, setMonth] = useState(initial?.month ?? String(today.getMonth() + 1).padStart(2, "0"));
@@ -93,8 +93,9 @@ export function BalanceteWorkspaceV2() {
         loadWorkspaceData<boolean>(`${prefix}:conference-ok`),
       ]);
       const corrected = criticalTrialBalancePlanIsCorrected(savedPlan);
-      const issues = savedPlan?.remainingCriticalObservations?.length
-        ?? (saved?.validationIssues.length ?? 0) + (saved?.rows.filter(row => Math.abs(validateTrialBalanceRow(row)) > 10_000).length ?? 0);
+      const issues = savedPlan
+        ? (savedPlan.remainingCriticalObservations?.length ?? 0) + (savedPlan.referenceIssues?.length ?? 0)
+        : (saved?.validationIssues.length ?? 0) + (saved?.rows.filter(row => Math.abs(validateTrialBalanceRow(row)) > 10_000).length ?? 0);
       return [key, { hasData: Boolean(saved?.rows?.length), issues, corrected, conferenceOk: Boolean(ok && corrected) }] as const;
     }));
     setYearStates(Object.fromEntries(entries));
@@ -150,11 +151,7 @@ export function BalanceteWorkspaceV2() {
     if (!selected.length) return;
     setProcessing(true); setError(null);
     try {
-      const documents = await Promise.all(selected.map(async file => ({ name: file.name, mime_type: file.type || "application/pdf", data: await asBase64(file) })));
-      const { data, error: invokeError } = await supabase.functions.invoke("process-trial-balance-document", { body: { company_id: company.id, documents } });
-      if (invokeError) throw await functionError(invokeError, "Falha ao ler o Balancete do Calima.");
-      if (!Array.isArray(data?.rows) || !data.competence) throw new Error("O balancete não devolveu linhas estruturadas.");
-      const parsed = data as TrialBalanceResultWithPrevious;
+      const parsed = await processTrialBalance({ company: company.id, month, year, files: selected, operation: "import" });
       if (!parsed.previousBalanceVerified) throw new Error(`A coluna SALDO ANT não foi confirmada em todas as linhas (${parsed.previousBalanceReadCount ?? 0}/${parsed.rows.length}). A importação foi interrompida para não calcular o fechamento com dados incompletos.`);
       if (parsed.competence !== competence) setPending({ result: parsed, files: selected });
       else await persistImport(parsed, selected);
@@ -213,7 +210,8 @@ export function BalanceteWorkspaceV2() {
       await saveWorkspaceData(conferenceKey, false);
       await refreshYearStates();
       if (!nextPlan.correctionComplete) {
-        setError(`Correção incompleta: ainda restam ${nextPlan.remainingCriticalObservations.length} problema(s) crítico(s). A competência NÃO foi marcada como corrigida.`);
+        const count = nextPlan.remainingCriticalObservations.length + (nextPlan.referenceIssues?.length ?? 0);
+        setError(`Correção incompleta: ainda restam ${count} pendência(s) material(is). A competência NÃO foi marcada como corrigida.`);
       }
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Falha ao gerar os ajustes automáticos.");
@@ -243,7 +241,7 @@ export function BalanceteWorkspaceV2() {
         blocking: false,
         note: `${balance(target.currentSignedInCents)} → ${balance(target.targetSignedInCents)}`,
       })),
-      note: "Ajustes gerados apenas para inconsistências materiais. A Conferência não altera saldos; apenas valida a prévia antes da exportação.",
+      note: `Ajustes do Balancete. Referência: ${plan.referenceSource || "motor de fechamento"}. A Conferência não altera saldos; apenas valida a prévia antes da exportação.`,
     });
   };
 
@@ -281,14 +279,14 @@ export function BalanceteWorkspaceV2() {
             <div><h2 className="font-semibold">{monthLabel} de {year}</h2><p className="mt-1 text-xs text-muted-foreground">O documento original fica intacto. A correção é gerada depois, em Lançamentos.</p></div>
             <div className="flex flex-wrap gap-2">
               {files.length > 0 && <Button type="button" variant="outline" onClick={() => void clearImport()}><Trash2 className="mr-2 h-4 w-4" />Excluir documento</Button>}
-              <Button type="button" variant="outline" disabled={processing} onClick={() => inputRef.current?.click()}>{processing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Lendo Saldo Anterior...</> : <><FileSpreadsheet className="mr-2 h-4 w-4" />Importar Balancete</>}</Button>
+              <Button type="button" variant="outline" disabled={processing} onClick={() => inputRef.current?.click()}>{processing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Lendo Balancete...</> : <><FileSpreadsheet className="mr-2 h-4 w-4" />Importar Balancete</>}</Button>
               <input ref={inputRef} type="file" accept=".pdf" className="sr-only" onChange={event => void importFile(event)} />
             </div>
           </div>
           {files.length > 0 && <div className="mt-4 border-t border-border pt-3 text-xs text-muted-foreground">{files.map(file => <span key={`${file.name}-${file.size}`} className="mr-4 text-foreground">{file.name}</span>)}</div>}
           {result?.rows.length ? <div className={cn("mt-4 flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-medium", previousBalanceVerified ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "border-red-500/40 bg-red-500/15 text-red-700 dark:text-red-300")}>
             {previousBalanceVerified ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
-            {previousBalanceVerified ? "Saldo Anterior confirmado linha por linha." : "Saldo Anterior não foi verificado nesta importação antiga. Reimporte o PDF antes de corrigir."}
+            {previousBalanceVerified ? "Saldo Anterior confirmado linha por linha — inclusive 0,00 literal." : "Saldo Anterior não foi verificado nesta importação antiga. Reimporte o PDF antes de corrigir."}
           </div> : null}
           {error && <div className="mt-4 flex gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm font-medium text-destructive"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{error}</div>}
         </section>
@@ -297,7 +295,7 @@ export function BalanceteWorkspaceV2() {
           <AccountingWorkflowSteps steps={[
             { value: "balancete", label: "Balancete", count: result?.rows.length ?? 0 },
             { value: "lancamentos", label: "Lançamentos", count: plan?.adjustments.length ?? observations.length },
-            { value: "conferencia", label: "Conferência", count: conferenceOk ? 0 : plan?.remainingCriticalObservations.length ?? 1 },
+            { value: "conferencia", label: "Conferência", count: conferenceOk ? 0 : (plan?.remainingCriticalObservations.length ?? 0) + (plan?.referenceIssues?.length ?? 0) || 1 },
           ]} />
 
           <TabsContent value="balancete" className="mt-7 space-y-5">
@@ -311,21 +309,22 @@ export function BalanceteWorkspaceV2() {
           <TabsContent value="lancamentos" className="mt-7 space-y-6">
             <div className="rounded-md border border-border bg-background p-5">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div><h3 className="font-semibold">Correção do Balancete</h3><p className="mt-1 max-w-3xl text-sm text-muted-foreground">A correção tenta explicar o saldo pela manobra contábil real. Ex.: Caixa credor + Clientes devedor do faturamento → recebimento D Caixa / C Clientes. Não força uma meta fixa de Caixa.</p></div>
+                <div><h3 className="font-semibold">Correção do Balancete</h3><p className="mt-1 max-w-3xl text-sm text-muted-foreground">Quando existe fechamento manual aprovado da competência, ele é a referência principal. Fora disso, o motor cruza módulos, pagamentos do mês anterior e a faixa de Caixa aprendida da empresa — sempre usando os C.R. existentes neste próprio Balancete.</p></div>
                 <Button disabled={!result?.rows.length || correcting || !previousBalanceVerified} onClick={() => void correctAutomatically()}>{correcting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Recalculando saldos...</> : <><Sparkles className="mr-2 h-4 w-4" />Corrigir automaticamente</>}</Button>
               </div>
               {analysis?.contextSummary?.length ? <div className="mt-4 grid gap-2 border-t border-border pt-4 text-xs text-muted-foreground md:grid-cols-2">{analysis.contextSummary.map(text => <p key={text}>{text}</p>)}</div> : null}
             </div>
 
-            {!plan ? <div className="grid min-h-52 place-items-center rounded-md border border-dashed border-border bg-muted/20 p-8 text-center"><div><Sparkles className="mx-auto h-6 w-6 text-muted-foreground" /><p className="mt-3 text-sm font-medium">Nenhuma prévia gerada ainda</p><p className="mt-1 text-xs text-muted-foreground">Clique em Corrigir automaticamente para transformar os problemas críticos em lançamentos de ajuste.</p></div></div> : <>
-              <div className="grid gap-3 sm:grid-cols-4"><Metric label="Ajustes gerados" value={String(plan.adjustments.length)} /><Metric label="Críticos restantes" value={String(plan.remainingCriticalObservations.length)} /><Metric label="Caixa atual" value={plan.currentCashSignedInCents === null ? "Não localizado" : balance(plan.currentCashSignedInCents)} /><Metric label="Caixa projetado" value={plan.projectedCashSignedInCents === null ? "Não localizado" : balance(plan.projectedCashSignedInCents)} /></div>
+            {!plan ? <div className="grid min-h-52 place-items-center rounded-md border border-dashed border-border bg-muted/20 p-8 text-center"><div><Sparkles className="mx-auto h-6 w-6 text-muted-foreground" /><p className="mt-3 text-sm font-medium">Nenhuma prévia gerada ainda</p><p className="mt-1 text-xs text-muted-foreground">Clique em Corrigir automaticamente para reconstruir os lançamentos realmente ausentes.</p></div></div> : <>
+              <div className="grid gap-3 sm:grid-cols-5"><Metric label="Ajustes gerados" value={String(plan.adjustments.length)} /><Metric label="Já estavam lançados" value={String(plan.referenceCoveredCount ?? 0)} /><Metric label="Críticos restantes" value={String(plan.remainingCriticalObservations.length + (plan.referenceIssues?.length ?? 0))} /><Metric label="Caixa atual" value={plan.currentCashSignedInCents === null ? "Não localizado" : balance(plan.currentCashSignedInCents)} /><Metric label="Caixa projetado" value={plan.projectedCashSignedInCents === null ? "Não localizado" : balance(plan.projectedCashSignedInCents)} /></div>
 
-              {!plan.correctionComplete && <div className="flex gap-2 rounded-md border-2 border-red-600/50 bg-red-600/15 p-4 text-sm font-semibold text-red-800 dark:text-red-200"><AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />Esta prévia ainda NÃO está corrigida. Existem {plan.remainingCriticalObservations.length} problema(s) crítico(s) ou a conferência matemática não fechou. Ela não recebe status verde e não pode ser exportada.</div>}
-              {plan.correctionComplete && <div className="flex gap-2 rounded-md border-2 border-emerald-600/50 bg-emerald-500/15 p-4 text-sm font-semibold text-emerald-800 dark:text-emerald-200"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />Os problemas críticos foram resolvidos na prévia. As linhas realmente alteradas aparecem em verde forte abaixo.</div>}
+              {!plan.correctionComplete && <div className="flex gap-2 rounded-md border-2 border-red-600/50 bg-red-600/15 p-4 text-sm font-semibold text-red-800 dark:text-red-200"><AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />Esta prévia ainda NÃO está corrigida. Existem {plan.remainingCriticalObservations.length + (plan.referenceIssues?.length ?? 0)} pendência(s) material(is) ou a conferência matemática não fechou.</div>}
+              {plan.correctionComplete && <div className="flex gap-2 rounded-md border-2 border-emerald-600/50 bg-emerald-500/15 p-4 text-sm font-semibold text-emerald-800 dark:text-emerald-200"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />A prévia reproduziu o fechamento esperado. As linhas realmente alteradas aparecem em verde forte abaixo.</div>}
+              {plan.referenceIssues?.length ? <div className="rounded-md border border-red-600/40 bg-red-600/10 p-4 text-xs text-red-800 dark:text-red-200">{plan.referenceIssues.map(issue => <p key={issue}>• {issue}</p>)}</div> : null}
 
               <section className="overflow-hidden rounded-md border border-border bg-background">
-                <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3"><div><h4 className="text-sm font-semibold">Lançamentos de ajuste</h4><p className="mt-0.5 text-xs text-muted-foreground">Somente estes lançamentos serão levados ao Calima; o balancete original não é reescrito.</p></div><Button disabled={!conferenceOk || !planConferable || !plan.adjustments.length} onClick={exportAdjustments}>Exportar ajustes para o Calima</Button></div>
-                <div className="overflow-x-auto"><table className="w-full min-w-[980px] table-fixed text-xs"><thead className="bg-muted/50 text-left text-[11px] text-muted-foreground"><tr><th className="w-[11%] border-b border-r border-border px-2 py-2">Data</th><th className="w-[31%] border-b border-r border-border px-2 py-2">Histórico</th><th className="w-[10%] border-b border-r border-border px-2 py-2">Débito</th><th className="w-[10%] border-b border-r border-border px-2 py-2">Crédito</th><th className="w-[15%] border-b border-r border-border px-2 py-2 text-right">Valor</th><th className="w-[23%] border-b border-border px-2 py-2">Motivo</th></tr></thead><tbody>{plan.adjustments.map(row => <tr key={`${row.targetKey}-${row.debitCode}-${row.creditCode}`}><td className="border-r border-border px-2 py-2">{row.date}</td><td className="border-r border-border px-2 py-2">{row.history}</td><td className="border-r border-border px-2 py-2 tabular-nums">{row.debitCode}</td><td className="border-r border-border px-2 py-2 tabular-nums">{row.creditCode}</td><td className="border-r border-border px-2 py-2 text-right tabular-nums">{money(row.amountInCents)}</td><td className="px-2 py-2 text-[11px] text-muted-foreground">{row.mappingReason}</td></tr>)}</tbody></table></div>
+                <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3"><div><h4 className="text-sm font-semibold">Lançamentos de ajuste</h4><p className="mt-0.5 text-xs text-muted-foreground">Só aparecem lançamentos ausentes. O que já existe no Balancete não é duplicado.</p></div><Button disabled={!conferenceOk || !planConferable || !plan.adjustments.length} onClick={exportAdjustments}>Exportar ajustes para o Calima</Button></div>
+                <div className="overflow-x-auto"><table className="w-full min-w-[1140px] table-fixed text-xs"><thead className="bg-muted/50 text-left text-[11px] text-muted-foreground"><tr><th className="w-[9%] border-b border-r border-border px-2 py-2">Data</th><th className="w-[29%] border-b border-r border-border px-2 py-2">Histórico</th><th className="w-[8%] border-b border-r border-border px-2 py-2">Débito</th><th className="w-[7%] border-b border-r border-border px-2 py-2">C.C. D.</th><th className="w-[8%] border-b border-r border-border px-2 py-2">Crédito</th><th className="w-[7%] border-b border-r border-border px-2 py-2">C.C. C.</th><th className="w-[13%] border-b border-r border-border px-2 py-2 text-right">Valor</th><th className="w-[19%] border-b border-border px-2 py-2">Motivo</th></tr></thead><tbody>{plan.adjustments.map(row => <tr key={`${row.targetKey}-${row.debitCode}-${row.creditCode}-${row.history}`}><td className="border-r border-border px-2 py-2">{row.date}</td><td className="border-r border-border px-2 py-2">{row.history}</td><td className="border-r border-border px-2 py-2 tabular-nums">{row.debitCode}</td><td className="border-r border-border px-2 py-2 tabular-nums">{row.debitCostCenter || "—"}</td><td className="border-r border-border px-2 py-2 tabular-nums">{row.creditCode}</td><td className="border-r border-border px-2 py-2 tabular-nums">{row.creditCostCenter || "—"}</td><td className="border-r border-border px-2 py-2 text-right tabular-nums">{money(row.amountInCents)}</td><td className="px-2 py-2 text-[11px] text-muted-foreground">{row.mappingReason}</td></tr>)}</tbody></table></div>
                 {!conferenceOk && <p className="border-t border-border px-4 py-3 text-xs text-muted-foreground">A exportação só é liberada depois que a prévia estiver realmente corrigida e a Conferência for marcada como OK.</p>}
               </section>
 
@@ -336,13 +335,13 @@ export function BalanceteWorkspaceV2() {
           <TabsContent value="conferencia" className="mt-7">
             <section className="rounded-md border border-border bg-background p-6">
               <div className="flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:items-center sm:justify-between">
-                <div><h3 className="font-semibold">Conferência</h3><p className="mt-1 text-sm text-muted-foreground">Aqui nada é ajustado. Esta aba apenas verifica se a prévia realmente resolveu os críticos antes da exportação.</p></div>
+                <div><h3 className="font-semibold">Conferência</h3><p className="mt-1 text-sm text-muted-foreground">Aqui nada é ajustado. Esta aba verifica se a prévia realmente reproduz o fechamento esperado antes da exportação.</p></div>
                 <Button disabled={!planConferable || conferenceOk} onClick={() => void markConferenceOk()}>{conferenceOk ? <><CheckCircle2 className="mr-2 h-4 w-4" />Conferência OK</> : "Marcar conferência como OK"}</Button>
               </div>
 
               {!plan ? <div className="grid min-h-48 place-items-center text-sm text-muted-foreground">Gere primeiro a correção automática na aba Lançamentos.</div> : <div className="mt-5 space-y-5">
-                <div className="grid gap-4 sm:grid-cols-5"><CheckCard label="Saldo Anterior" ok={plan.previousBalanceVerified} detail={plan.previousBalanceVerified ? "Confirmado em todas as linhas" : "Leitura incompleta"} /><CheckCard label="Críticos restantes" ok={plan.remainingCriticalObservations.length === 0} detail={`${plan.remainingCriticalObservations.length} crítico(s)`} /><CheckCard label="Débitos x créditos" ok={Math.abs(previewSummary.movementDifferenceInCents) <= 1} detail={`Diferença ${money(previewSummary.movementDifferenceInCents)}`} /><CheckCard label="Saldos atuais" ok={Math.abs(previewSummary.currentSignedInCents) <= 1} detail={`Diferença ${money(previewSummary.currentSignedInCents)}`} /><CheckCard label="Linhas matemáticas" ok={!plan.previewRows.some(row => Math.abs(validateTrialBalanceRow(row)) > 10_000)} detail={`${plan.previewRows.filter(row => Math.abs(validateTrialBalanceRow(row)) > 10_000).length} divergência(s) material(is)`} /></div>
-                <div className="rounded-md bg-muted/40 p-4 text-xs text-muted-foreground"><p className="font-medium text-foreground">Regra desta Conferência</p><p className="mt-2">• Detalhes pequenos não recebem alerta vermelho.</p><p className="mt-1">• Uma prévia só é considerada corrigida quando os críticos somem de verdade.</p><p className="mt-1">• O Saldo Anterior precisa ter sido lido do documento, inclusive quando o valor literal é 0,00.</p></div>
+                <div className="grid gap-4 sm:grid-cols-5"><CheckCard label="Saldo Anterior" ok={plan.previousBalanceVerified} detail={plan.previousBalanceVerified ? "Confirmado em todas as linhas" : "Leitura incompleta"} /><CheckCard label="Referência" ok={!(plan.referenceIssues?.length)} detail={plan.referenceSource || "Motor de fechamento"} /><CheckCard label="Críticos restantes" ok={plan.remainingCriticalObservations.length === 0} detail={`${plan.remainingCriticalObservations.length} crítico(s)`} /><CheckCard label="Débitos x créditos" ok={Math.abs(previewSummary.movementDifferenceInCents) <= 1} detail={`Diferença ${money(previewSummary.movementDifferenceInCents)}`} /><CheckCard label="Linhas matemáticas" ok={!plan.previewRows.some(row => Math.abs(validateTrialBalanceRow(row)) > 10_000)} detail={`${plan.previewRows.filter(row => Math.abs(validateTrialBalanceRow(row)) > 10_000).length} divergência(s) material(is)`} /></div>
+                <div className="rounded-md bg-muted/40 p-4 text-xs text-muted-foreground"><p className="font-medium text-foreground">Regra desta Conferência</p><p className="mt-2">• 0,00 em Saldo Anterior é válido quando foi realmente lido do documento.</p><p className="mt-1">• O Balancete da própria competência define quais C.R. existem; C.R. de outro plano/ano não é copiado.</p><p className="mt-1">• Lançamentos já presentes são consumidos pela reconciliação e não aparecem de novo nos ajustes.</p><p className="mt-1">• Centro de custo é preservado por lançamento quando a conta/evento exige — não por ser simplesmente analítica.</p></div>
                 {conferenceOk && <div className="flex items-center gap-2 rounded-md border-2 border-emerald-600/40 bg-emerald-500/15 p-4 text-sm font-semibold text-emerald-800 dark:text-emerald-200"><CheckCircle2 className="h-4 w-4" />Conferência marcada como OK. A exportação dos ajustes está liberada na aba Lançamentos.</div>}
               </div>}
             </section>
@@ -388,5 +387,3 @@ function CheckCard({ label, ok, detail }: { label: string; ok: boolean; detail: 
 function formatAmountNature(amount: number, nature: string) { return !amount || !nature ? "0,00" : `${new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount / 100)} ${nature}`; }
 function groupObservations(items: TrialBalanceObservation[]) { const map = new Map<string, TrialBalanceObservation[]>(); for (const item of items) map.set(item.rowId, [...(map.get(item.rowId) ?? []), item]); return map; }
 function readContext(company: string): SavedContext | null { try { const raw = localStorage.getItem(contextKey(company)); return raw ? JSON.parse(raw) as SavedContext : null; } catch { return null; } }
-function asBase64(file: File) { return new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result).split(",")[1] || ""); reader.onerror = () => reject(reader.error); reader.readAsDataURL(file); }); }
-async function functionError(reason: unknown, fallback: string) { let message = reason instanceof Error ? reason.message : fallback; try { const response = (reason as { context?: Response }).context; if (response) { const payload = await response.clone().json(); message = payload?.error || message; } } catch { /* mantém mensagem original */ } return new Error(message); }
