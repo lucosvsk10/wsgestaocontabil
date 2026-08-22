@@ -1,0 +1,1 @@
+Validation marker for conference approval buttons moved into the top of each accounting conference card.
