@@ -238,16 +238,21 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
 
       <TabsContent value="conferencia" className="mt-6">
         <Header title="Folha de pagamento · Conferência" />
-        <div className="space-y-6 rounded-md border border-border bg-background p-6">
-          <div className="grid gap-5 sm:grid-cols-5"><Stat label="Referências" value={comparisons.length} /><Stat label="Diferenças bloqueantes" value={blockingDifferences.length} /><Stat label="Contas incompletas" value={missing} /><Stat label="Aguardando aprovação" value={mappingsToApprove} /><Stat label="Conhecimento reutilizado" value={learnedMappings} /></div>
-          {!referenceVerified && <div className="flex gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />A leitura independente do documento original ainda não passou pelos critérios de referência. A exportação permanece bloqueada.</div>}
-          {mappingsToApprove > 0 && <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-4"><p className="text-sm font-medium text-foreground">{mappingsToApprove} mapeamento(s) novo(s) precisam da sua conferência</p><p className="mt-1 text-xs text-muted-foreground">Revise débito e crédito na Transcrição. Ao confirmar, essas combinações serão salvas como conhecimento desta empresa e reutilizadas automaticamente nos próximos meses.</p></div>}
-          {informationalDifferences.length > 0 && <div className="rounded-md border border-border bg-muted/30 p-4"><p className="text-sm font-medium text-foreground">Diferenças informativas</p><p className="mt-1 text-xs text-muted-foreground">Essas diferenças explicam calendário de recolhimento ou outras referências do documento e não bloqueiam aprovação nem exportação.</p></div>}
-          <ComparisonTable rows={comparisons} referenceVerified={referenceVerified} title={`Conferência da folha · ${competence}`} />
-          {deferredEntries.length > 0 && <div className="rounded-md border border-border p-4"><p className="text-sm font-medium text-foreground">Ajustes por competência de recolhimento</p>{deferredEntries.map(row => <p key={row.id} className="mt-2 text-sm text-muted-foreground">{row.rubricDescription || row.history}: {money(row.amountInCents)} → {row.targetCompetence}</p>)}</div>}
-          {processingMeta && <p className="text-xs text-muted-foreground">Fluxo: {processingMeta.routing || processingMeta.primaryModel}{processingMeta.reviewed ? ` · releitura: ${processingMeta.reviewModel || processingMeta.model}` : ""}</p>}
-          {(warnings.length > 0 || structuralIssues.length > 0) && <div className="rounded-md bg-muted/50 p-4"><p className="text-sm font-medium text-foreground">Pontos que exigem decisão</p>{[...new Set([...warnings, ...structuralIssues])].map(issue => <p key={issue} className="mt-2 flex gap-2 text-sm text-muted-foreground"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{issue}</p>)}</div>}
-          <div className="flex justify-end"><Button disabled={!canReviewApprove} onClick={() => void approveAndFinalize()}>{learning ? "Salvando conhecimento..." : mappingsToApprove > 0 ? `Confirmar e aprender (${mappingsToApprove})` : "Marcar folha como OK"}</Button></div>
+        <div className="rounded-md border border-border bg-background">
+          <div className="flex flex-col gap-3 border-b border-border bg-muted/20 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div><p className="text-sm font-semibold text-foreground">Fechar conferência da folha</p><p className="mt-1 text-xs text-muted-foreground">Depois de revisar valores e mapeamentos, confirme o mês aqui sem precisar descer até o fim da tabela.</p></div>
+            <Button className="shrink-0" disabled={!canReviewApprove} onClick={() => void approveAndFinalize()}>{learning ? "Salvando conhecimento..." : mappingsToApprove > 0 ? `Confirmar e aprender (${mappingsToApprove})` : "Marcar folha como OK"}</Button>
+          </div>
+          <div className="space-y-6 p-6">
+            <div className="grid gap-5 sm:grid-cols-5"><Stat label="Referências" value={comparisons.length} /><Stat label="Diferenças bloqueantes" value={blockingDifferences.length} /><Stat label="Contas incompletas" value={missing} /><Stat label="Aguardando aprovação" value={mappingsToApprove} /><Stat label="Conhecimento reutilizado" value={learnedMappings} /></div>
+            {!referenceVerified && <div className="flex gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />A leitura independente do documento original ainda não passou pelos critérios de referência. A exportação permanece bloqueada.</div>}
+            {mappingsToApprove > 0 && <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-4"><p className="text-sm font-medium text-foreground">{mappingsToApprove} mapeamento(s) novo(s) precisam da sua conferência</p><p className="mt-1 text-xs text-muted-foreground">Revise débito e crédito na Transcrição. Ao confirmar, essas combinações serão salvas como conhecimento desta empresa e reutilizadas automaticamente nos próximos meses.</p></div>}
+            {informationalDifferences.length > 0 && <div className="rounded-md border border-border bg-muted/30 p-4"><p className="text-sm font-medium text-foreground">Diferenças informativas</p><p className="mt-1 text-xs text-muted-foreground">Essas diferenças explicam calendário de recolhimento ou outras referências do documento e não bloqueiam aprovação nem exportação.</p></div>}
+            <ComparisonTable rows={comparisons} referenceVerified={referenceVerified} title={`Conferência da folha · ${competence}`} />
+            {deferredEntries.length > 0 && <div className="rounded-md border border-border p-4"><p className="text-sm font-medium text-foreground">Ajustes por competência de recolhimento</p>{deferredEntries.map(row => <p key={row.id} className="mt-2 text-sm text-muted-foreground">{row.rubricDescription || row.history}: {money(row.amountInCents)} → {row.targetCompetence}</p>)}</div>}
+            {processingMeta && <p className="text-xs text-muted-foreground">Fluxo: {processingMeta.routing || processingMeta.primaryModel}{processingMeta.reviewed ? ` · releitura: ${processingMeta.reviewModel || processingMeta.model}` : ""}</p>}
+            {(warnings.length > 0 || structuralIssues.length > 0) && <div className="rounded-md bg-muted/50 p-4"><p className="text-sm font-medium text-foreground">Pontos que exigem decisão</p>{[...new Set([...warnings, ...structuralIssues])].map(issue => <p key={issue} className="mt-2 flex gap-2 text-sm text-muted-foreground"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{issue}</p>)}</div>}
+          </div>
         </div>
       </TabsContent>
     </Tabs>
@@ -255,7 +260,7 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
 }
 
 function Header({ title }: { title: string }) { return <div className="mb-5"><h3 className="font-semibold">{title}</h3></div>; }
-function Stat({ label, value }: { label: string; value: string | number }) { return <div><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 font-semibold">{value}</p></div>; }
+function Stat({ label, value }: { label: string | number; value: string | number }) { return <div><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 font-semibold">{value}</p></div>; }
 
 function ComparisonTable({ rows, referenceVerified, title }: { rows: PayrollComparison[]; referenceVerified: boolean; title: string }) {
   const [expanded, setExpanded] = useState(false);
