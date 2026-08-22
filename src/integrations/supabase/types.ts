@@ -14,6 +14,186 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounting_ai_usage: {
+        Row: {
+          cached_input_tokens: number
+          company_key: string | null
+          competence: string | null
+          created_at: string
+          created_by: string | null
+          error_code: string | null
+          error_message: string | null
+          estimated_cost_usd: number
+          id: string
+          input_tokens: number
+          latency_ms: number
+          model: string
+          module: string
+          output_tokens: number
+          provider: string
+          request_metadata: Json
+          response_id: string | null
+          status: string
+          total_tokens: number
+        }
+        Insert: {
+          cached_input_tokens?: number
+          company_key?: string | null
+          competence?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          estimated_cost_usd?: number
+          id?: string
+          input_tokens?: number
+          latency_ms?: number
+          model: string
+          module?: string
+          output_tokens?: number
+          provider?: string
+          request_metadata?: Json
+          response_id?: string | null
+          status: string
+          total_tokens?: number
+        }
+        Update: {
+          cached_input_tokens?: number
+          company_key?: string | null
+          competence?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          estimated_cost_usd?: number
+          id?: string
+          input_tokens?: number
+          latency_ms?: number
+          model?: string
+          module?: string
+          output_tokens?: number
+          provider?: string
+          request_metadata?: Json
+          response_id?: string | null
+          status?: string
+          total_tokens?: number
+        }
+        Relationships: []
+      }
+      accounting_engine_settings: {
+        Row: {
+          configured_at: string
+          configured_by: string | null
+          id: number
+          password_hash: string
+          password_iterations: number
+          password_salt: string
+          updated_at: string
+        }
+        Insert: {
+          configured_at?: string
+          configured_by?: string | null
+          id?: number
+          password_hash: string
+          password_iterations?: number
+          password_salt: string
+          updated_at?: string
+        }
+        Update: {
+          configured_at?: string
+          configured_by?: string | null
+          id?: number
+          password_hash?: string
+          password_iterations?: number
+          password_salt?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      accounting_mapping_rules: {
+        Row: {
+          company_key: string
+          created_at: string
+          created_by: string | null
+          credit_code: string
+          credit_cost_center: string
+          credit_description: string
+          debit_code: string
+          debit_cost_center: string
+          debit_description: string
+          event_type: string
+          history_template: string
+          id: string
+          is_active: boolean
+          kind: string
+          module: string
+          normalized_description: string
+          rubric_code: string
+          rubric_description: string
+          section: string
+          signature: string
+          source: string
+          times_confirmed: number
+          times_used: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          company_key: string
+          created_at?: string
+          created_by?: string | null
+          credit_code: string
+          credit_cost_center?: string
+          credit_description?: string
+          debit_code: string
+          debit_cost_center?: string
+          debit_description?: string
+          event_type?: string
+          history_template?: string
+          id?: string
+          is_active?: boolean
+          kind?: string
+          module?: string
+          normalized_description?: string
+          rubric_code?: string
+          rubric_description?: string
+          section?: string
+          signature: string
+          source?: string
+          times_confirmed?: number
+          times_used?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          company_key?: string
+          created_at?: string
+          created_by?: string | null
+          credit_code?: string
+          credit_cost_center?: string
+          credit_description?: string
+          debit_code?: string
+          debit_cost_center?: string
+          debit_description?: string
+          event_type?: string
+          history_template?: string
+          id?: string
+          is_active?: boolean
+          kind?: string
+          module?: string
+          normalized_description?: string
+          rubric_code?: string
+          rubric_description?: string
+          section?: string
+          signature?: string
+          source?: string
+          times_confirmed?: number
+          times_used?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       accounting_workspace_data: {
         Row: {
           company_key: string
@@ -1998,20 +2178,7 @@ export type Database = {
     }
     Functions: {
       delete_expired_documents: { Args: never; Returns: undefined }
-      foldername:
-        | { Args: never; Returns: string }
-        | { Args: { name: string }; Returns: string }
-      get_user_company_id: { Args: never; Returns: string }
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
-      is_admin: { Args: never; Returns: boolean }
-      is_any_admin: { Args: { _user_id: string }; Returns: boolean }
-      is_user_admin: { Args: never; Returns: boolean }
+      foldername: { Args: never; Returns: string }
       mark_expired_documents: { Args: never; Returns: undefined }
       set_document_expiration: { Args: never; Returns: undefined }
     }

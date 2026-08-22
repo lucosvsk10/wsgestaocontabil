@@ -401,7 +401,7 @@ export async function buildCriticalTrialBalancePlan(company: string, month: stri
   ];
   const withCenters = await applyConfiguredCostCenters(company, rawOperational, chart);
   const bridged = withCenters.map(entry => bridgeEntry(entry, rows, chart));
-  const operational = bridged.filter((entry): entry is AccountingExportEntry => Boolean(entry));
+  const operational: AccountingExportEntry[] = bridged.filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
   const unmappedOperational = bridged.filter(entry => !entry).length;
 
   const revenueTotal = revenue?.reference?.totalAmountInCents ?? total(rawOperational.filter(entry => entry.section === "faturamento" && !normalizeTrialBalanceText(entry.history).includes("pgdas")));
