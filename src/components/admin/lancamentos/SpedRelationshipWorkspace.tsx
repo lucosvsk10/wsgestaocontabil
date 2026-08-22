@@ -1,11 +1,11 @@
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, CheckCircle2, ChevronDown, CircleHelp, FileSpreadsheet, Link2, Settings2, ShieldCheck, Trash2, Upload } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronDown, FileSpreadsheet, Link2, Settings2, ShieldCheck, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChartAccount } from "@/lib/lancamentos/chartOfAccounts";
 import { AccountCostCenterRule, CostCenter } from "@/lib/lancamentos/costCenters";
 import {
-  readSpedRelationships,
+  readSpedRelationshipFiles,
   relationshipKey,
   SpedImportResult,
   SpedReferentialAccount,
@@ -23,8 +23,6 @@ export function SpedRelationshipWorkspace({ company }: { company: string }) {
   const [relationships, setRelationships] = useState<SpedRelationship[]>([]);
   const [referentialAccounts, setReferentialAccounts] = useState<SpedReferentialAccount[]>([]);
   const [preview, setPreview] = useState<SpedImportResult | null>(null);
-  const [query, setQuery] = useState("");
-  const [onlySped, setOnlySped] = useState(true);
   const [error, setError] = useState("");
   const [manual, setManual] = useState({ accountReducedCode: "", costCenterReducedCode: "", referentialCode: "" });
 
@@ -54,51 +52,54 @@ export function SpedRelationshipWorkspace({ company }: { company: string }) {
     () => validateSpedRelationships(accounts, centers, costCenterRules, relationships, referentialAccounts),
     [accounts, centers, costCenterRules, relationships, referentialAccounts],
   );
-
-  const impacted = useMemo(() => {
-    const map = new Map<string, { critical: boolean; messages: string[] }>();
-    validation.groups.forEach(group => {
-      group.impactedReducedCodes.forEach(code => {
-        const current = map.get(code) ?? { critical: false, messages: [] };
-        current.critical ||= group.severity === "critical";
-        current.messages.push(group.title);
-        map.set(code, current);
-      });
-    });
-    return map;
-  }, [validation]);
-
-  const filteredAccounts = useMemo(() => {
-    const term = query.trim().toLocaleLowerCase("pt-BR");
-    return accounts
-      .filter(account => account.analytical)
-      .filter(account => !onlySped || account.sped)
-      .filter(account => !term || `${account.account} ${account.reducedCode} ${account.description}`.toLocaleLowerCase("pt-BR").includes(term))
-      .slice(0, 250);
-  }, [accounts, onlySped, query]);
-
-  const centerMap = useMemo(() => new Map(centers.map(center => [center.reducedCode, center])), [centers]);
-  const referentialMap = useMemo(() => new Map(referentialAccounts.map(account => [account.code, account])), [referentialAccounts]);
   const criticalGroups = validation.groups.filter(group => group.severity === "critical");
   const warningGroups = validation.groups.filter(group => group.severity === "warning");
-  const hasImportedData = relationships.length > 0;
+  const accountMap = useMemo(() => new Map(accounts.map(account => [account.reducedCode, account])), [accounts]);
+  const centerMap = useMemo(() => new Map(centers.map(center => [center.reducedCode, center])), [centers]);
+  const referentialMap = useMemo(() => new Map(referentialAccounts.map(account => [account.code, account])), [referentialAccounts]);
 
-  const importFile = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const importFiles = async (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
     event.target.value = "";
-    if (!file) return;
+    if (!files.length) return;
     setError("");
     try {
-      setPreview(await readSpedRelationships(file));
+      const result = await readSpedRelationshipFiles(files);
+      if (!(result.detectedFiles ?? []).some(item => item.type !== "unknown")) {
+        setError("Nenhum dos arquivos corresponde ao relatório de relacionamento ou ao Plano de Contas Referencial do Calima.");
+        return;
+      }
+      setPreview(result);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Não foi possível ler o arquivo exportado do Calima.");
+      setError(reason instanceof Error ? reason.message : "Não foi possível ler os arquivos exportados do Calima.");
     }
   };
 
   const confirmImport = async () => {
     if (!preview) return;
-    const nextRelationships = preview.relationships;
-    const nextReferential = Array.from(new Map(preview.referentialAccounts.map(account => [account.code, account])).values());
+
+    const relationshipMap = new Map<string, SpedRelationship>();
+    // Mantém o que já existe. Novos vínculos importados substituem o mesmo par Conta + C.C.;
+    // vínculos manuais continuam com prioridade por último.
+    relationships.filter(item => item.source !== "manual").forEach(item => relationshipMap.set(relationshipKey(item.accountReducedCode, item.costCenterReducedCode), item));
+    preview.relationships.forEach(item => relationshipMap.set(relationshipKey(item.accountReducedCode, item.costCenterReducedCode), item));
+    relationships.filter(item => item.source === "manual").forEach(item => relationshipMap.set(relationshipKey(item.accountReducedCode, item.costCenterReducedCode), item));
+    const nextRelationships = Array.from(relationshipMap.values());
+
+    const referenceMap = new Map<string, SpedReferentialAccount>();
+    referentialAccounts.forEach(item => referenceMap.set(item.code, item));
+    preview.referentialAccounts.forEach(item => {
+      const previous = referenceMap.get(item.code);
+      referenceMap.set(item.code, previous ? {
+        ...previous,
+        ...item,
+        description: item.description || previous.description,
+        nature: item.nature || previous.nature,
+        analytical: item.analytical ?? previous.analytical,
+      } : item);
+    });
+    const nextReferential = Array.from(referenceMap.values());
+
     setRelationships(nextRelationships);
     setReferentialAccounts(nextReferential);
     await Promise.all([
@@ -109,7 +110,7 @@ export function SpedRelationshipWorkspace({ company }: { company: string }) {
   };
 
   const addManual = async () => {
-    if (!manual.accountReducedCode || !manual.referentialCode) return;
+    if (!manual.accountReducedCode || !manual.referentialCode.trim()) return;
     const nextRelation: SpedRelationship = {
       id: `manual-${crypto.randomUUID()}`,
       accountReducedCode: manual.accountReducedCode,
@@ -118,10 +119,7 @@ export function SpedRelationshipWorkspace({ company }: { company: string }) {
       source: "manual",
     };
     const key = relationshipKey(nextRelation.accountReducedCode, nextRelation.costCenterReducedCode);
-    const next = [
-      ...relationships.filter(item => relationshipKey(item.accountReducedCode, item.costCenterReducedCode) !== key),
-      nextRelation,
-    ];
+    const next = [...relationships.filter(item => relationshipKey(item.accountReducedCode, item.costCenterReducedCode) !== key), nextRelation];
     setRelationships(next);
     await saveWorkspaceData(relationshipsKey, next);
     setManual({ accountReducedCode: "", costCenterReducedCode: "", referentialCode: "" });
@@ -133,145 +131,83 @@ export function SpedRelationshipWorkspace({ company }: { company: string }) {
     await saveWorkspaceData(relationshipsKey, next);
   };
 
+  const hasRelations = relationships.length > 0;
+  const hasCatalog = referentialAccounts.length > 0;
+
   return <div className="space-y-6">
     <section className="overflow-hidden rounded-xl border border-border bg-background">
       <div className="border-b border-border bg-muted/20 p-5 sm:p-6">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="max-w-3xl">
             <div className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-cyan-600" /><h2 className="text-lg font-semibold">Conferência antes do SPED</h2></div>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Esta área serve para evitar aquele problema de <strong className="font-medium text-foreground">um erro gerar dezenas de críticas</strong>. Você importa o relacionamento do Calima e o site procura a causa do problema antes de enviar para a Receita.</p>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Você não precisa conhecer os códigos. Selecione os arquivos exportados do Calima e o site identifica sozinho qual é o relacionamento da empresa e qual é o catálogo referencial.</p>
           </div>
-          <Button size="lg" onClick={() => inputRef.current?.click()}><Upload className="mr-2 h-4 w-4" />Importar arquivo do Calima</Button>
-          <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv" className="sr-only" onChange={event => void importFile(event)} />
+          <Button size="lg" onClick={() => inputRef.current?.click()}><Upload className="mr-2 h-4 w-4" />Importar arquivos do Calima</Button>
+          <input ref={inputRef} multiple type="file" accept=".xlsx,.xls,.csv" className="sr-only" onChange={event => void importFiles(event)} />
         </div>
       </div>
-
       <div className="grid gap-px bg-border md:grid-cols-3">
-        <Step number="1" title="Importe" text="Exporte o relacionamento no Calima e envie o arquivo aqui." />
-        <Step number="2" title="O site confere" text="Nós cruzamos contas, centros de custo e os vínculos usados pelo SPED." />
-        <Step number="3" title="Corrija a causa" text="Você vê o problema principal, sem receber uma lista enorme de erros repetidos." />
+        <Step number="1" title="Selecione os arquivos" text="Pode escolher os dois de uma vez. O site descobre qual é qual." />
+        <Step number="2" title="Confira o resumo" text="Mostramos quantos vínculos e quantas contas referenciais foram encontrados." />
+        <Step number="3" title="Veja só os problemas" text="Erros repetidos são agrupados para você atacar a causa principal." />
       </div>
     </section>
 
     {error && <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">{error}</div>}
 
-    {preview && <section className="rounded-xl border border-cyan-500/30 bg-cyan-500/[0.04] p-5">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    {preview && <section className="rounded-xl border-2 border-cyan-500/30 bg-cyan-500/[0.04] p-5 sm:p-6">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-cyan-700 dark:text-cyan-300">Arquivo reconhecido</p>
-          <h3 className="mt-1 font-semibold">Pronto para analisar</h3>
-          <p className="mt-1 text-sm text-muted-foreground">Encontramos {preview.relationships.length} vínculo(s) entre contas. Clique em analisar para substituir os dados anteriores desta empresa.</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-cyan-700 dark:text-cyan-300">Arquivos reconhecidos</p>
+          <h3 className="mt-1 text-lg font-semibold">Pronto para analisar</h3>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <span className="rounded-full bg-cyan-500/10 px-3 py-1 text-xs font-medium">{preview.relationships.length} vínculos encontrados</span>
+            <span className="rounded-full bg-cyan-500/10 px-3 py-1 text-xs font-medium">{preview.referentialAccounts.length} contas referenciais encontradas</span>
+          </div>
+          <div className="mt-3 space-y-1 text-xs text-muted-foreground">{(preview.detectedFiles ?? []).map(item => <p key={`${item.name}-${item.type}`}><strong className="text-foreground">{item.name}</strong> — {fileTypeLabel(item.type)}</p>)}</div>
           {preview.warnings.map(warning => <p key={warning} className="mt-2 text-xs text-amber-700 dark:text-amber-300">{warning}</p>)}
         </div>
         <div className="flex gap-2"><Button variant="outline" onClick={() => setPreview(null)}>Cancelar</Button><Button onClick={() => void confirmImport()}>Importar e analisar</Button></div>
       </div>
     </section>}
 
-    {!hasImportedData ? <EmptyState onImport={() => inputRef.current?.click()} /> : <>
-      {validation.criticalGroups > 0 ? <section className="rounded-xl border-2 border-red-500/50 bg-red-500/[0.07] p-5 sm:p-6">
-        <div className="flex items-start gap-4">
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-red-500/15 text-red-600"><AlertTriangle className="h-6 w-6" /></div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-red-700 dark:text-red-300">Precisa de correção</p>
-            <h3 className="mt-1 text-xl font-semibold text-foreground">Encontramos {validation.criticalGroups} problema(s) importante(s)</h3>
-            <p className="mt-2 max-w-3xl text-sm text-muted-foreground">Não significa que existem {validation.impactedAccounts} erros diferentes. Um único relacionamento errado pode afetar várias contas. Abaixo mostramos as causas principais.</p>
-          </div>
-        </div>
-      </section> : <section className="rounded-xl border-2 border-emerald-500/40 bg-emerald-500/[0.06] p-5 sm:p-6">
-        <div className="flex items-start gap-4"><div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-emerald-500/15 text-emerald-600"><CheckCircle2 className="h-6 w-6" /></div><div><p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">Estrutura conferida</p><h3 className="mt-1 text-xl font-semibold">Nenhum problema impeditivo encontrado</h3><p className="mt-2 text-sm text-muted-foreground">Os vínculos disponíveis estão estruturalmente coerentes. {warningGroups.length ? `Ainda existem ${warningGroups.length} aviso(s) não impeditivo(s) para revisar.` : "Não há avisos pendentes."}</p></div></div>
-      </section>}
+    {!hasRelations ? <section className="rounded-xl border border-dashed border-border bg-muted/15 p-8 text-center sm:p-12">
+      <FileSpreadsheet className="mx-auto h-9 w-9 text-muted-foreground" />
+      <h3 className="mt-4 text-lg font-semibold">Primeiro, importe o relatório do Calima</h3>
+      <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">Use o relatório que mostra <strong>Plano de Contas da Empresa</strong> de um lado e <strong>Plano de Contas Referencial</strong> do outro. Você também pode selecionar junto o catálogo completo do Plano Referencial.</p>
+      <Button className="mt-5" onClick={() => inputRef.current?.click()}><Upload className="mr-2 h-4 w-4" />Escolher arquivos</Button>
+      {hasCatalog && <p className="mt-4 text-xs text-emerald-700 dark:text-emerald-300">O catálogo referencial já está carregado. Falta apenas o arquivo com os vínculos da empresa.</p>}
+    </section> : <>
+      {validation.criticalGroups > 0 ? <section className="rounded-xl border-2 border-red-500/50 bg-red-500/[0.07] p-5 sm:p-6"><div className="flex items-start gap-4"><div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-red-500/15 text-red-600"><AlertTriangle className="h-6 w-6" /></div><div><p className="text-sm font-semibold text-red-700 dark:text-red-300">Precisa de correção</p><h3 className="mt-1 text-xl font-semibold">Encontramos {validation.criticalGroups} problema(s) importante(s)</h3><p className="mt-2 text-sm text-muted-foreground">Um problema pode afetar várias contas. Corrija as causas abaixo em vez de perseguir dezenas de críticas repetidas.</p></div></div></section>
+      : <section className="rounded-xl border-2 border-emerald-500/40 bg-emerald-500/[0.06] p-5 sm:p-6"><div className="flex items-start gap-4"><CheckCircle2 className="mt-0.5 h-8 w-8 text-emerald-600" /><div><p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">Estrutura conferida</p><h3 className="mt-1 text-xl font-semibold">Nenhum problema impeditivo encontrado</h3><p className="mt-2 text-sm text-muted-foreground">{validation.validRelationships} vínculo(s) foram analisados. {warningGroups.length ? `Há ${warningGroups.length} aviso(s) não impeditivo(s).` : "Não há avisos pendentes."}</p></div></div></section>}
 
-      {criticalGroups.length > 0 && <section className="rounded-xl border border-border bg-background">
-        <div className="border-b border-border p-5"><h3 className="font-semibold">O que precisa ser corrigido</h3><p className="mt-1 text-sm text-muted-foreground">Comece pelo primeiro item. Corrigir uma causa pode eliminar várias críticas de uma vez.</p></div>
-        <div className="divide-y divide-border">{criticalGroups.map((group, index) => <ProblemCard key={group.id} index={index + 1} title={plainTitle(group.code, group.title)} explanation={plainExplanation(group.code, group.message)} impactedCount={group.impactedCount} codes={group.impactedReducedCodes} />)}</div>
-      </section>}
+      {criticalGroups.length > 0 && <section className="rounded-xl border border-border bg-background"><div className="border-b border-border p-5"><h3 className="font-semibold">O que precisa ser corrigido</h3><p className="mt-1 text-sm text-muted-foreground">Comece pelo primeiro item.</p></div><div className="divide-y divide-border">{criticalGroups.map((group, index) => <ProblemCard key={group.id} index={index + 1} title={plainTitle(group.code, group.title)} text={plainExplanation(group.code, group.message)} count={group.impactedCount} codes={group.impactedReducedCodes} />)}</div></section>}
 
-      {warningGroups.length > 0 && <details className="rounded-xl border border-border bg-background">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5"><div><h3 className="text-sm font-semibold">Avisos que não bloqueiam o processo</h3><p className="mt-1 text-xs text-muted-foreground">{warningGroups.length} aviso(s) para revisar depois dos problemas importantes.</p></div><ChevronDown className="h-4 w-4 text-muted-foreground" /></summary>
-        <div className="border-t border-border p-5 space-y-3">{warningGroups.map(group => <div key={group.id} className="rounded-lg bg-amber-500/[0.06] p-4"><p className="text-sm font-medium">{plainTitle(group.code, group.title)}</p><p className="mt-1 text-xs text-muted-foreground">{plainExplanation(group.code, group.message)}</p></div>)}</div>
-      </details>}
+      {warningGroups.length > 0 && <details className="rounded-xl border border-border bg-background"><summary className="flex cursor-pointer list-none items-center justify-between p-5"><div><h3 className="text-sm font-semibold">Avisos não impeditivos</h3><p className="mt-1 text-xs text-muted-foreground">{warningGroups.length} item(ns) para revisar depois.</p></div><ChevronDown className="h-4 w-4" /></summary><div className="space-y-3 border-t border-border p-5">{warningGroups.map(group => <div key={group.id} className="rounded-lg bg-amber-500/[0.07] p-4"><p className="text-sm font-medium">{plainTitle(group.code, group.title)}</p><p className="mt-1 text-xs text-muted-foreground">{plainExplanation(group.code, group.message)}</p></div>)}</div></details>}
     </>}
 
     <details className="rounded-xl border border-border bg-background">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5">
-        <div className="flex items-center gap-3"><Settings2 className="h-5 w-5 text-muted-foreground" /><div><h3 className="font-semibold">Configurações avançadas</h3><p className="mt-1 text-xs text-muted-foreground">Códigos, vínculos manuais e tabela técnica. Normalmente você não precisa mexer aqui.</p></div></div>
-        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-      </summary>
-
+      <summary className="flex cursor-pointer list-none items-center justify-between p-5"><div className="flex items-center gap-3"><Settings2 className="h-5 w-5 text-muted-foreground" /><div><h3 className="font-semibold">Configurações avançadas</h3><p className="mt-1 text-xs text-muted-foreground">Normalmente você não precisa mexer aqui.</p></div></div><ChevronDown className="h-4 w-4" /></summary>
       <div className="space-y-6 border-t border-border p-5">
-        <div className="rounded-lg border border-border bg-muted/20 p-4">
-          <div className="flex gap-3"><CircleHelp className="mt-0.5 h-4 w-4 shrink-0 text-cyan-600" /><div><p className="text-sm font-medium">O que é “conta referencial”?</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">É o código usado para dizer ao SPED a qual categoria oficial da Receita uma conta da empresa corresponde. Você não precisa decorar isso: o objetivo desta tela é conferir se os vínculos importados do Calima fazem sentido.</p></div></div>
+        <div className="grid gap-3 lg:grid-cols-[minmax(260px,1.4fr)_minmax(200px,1fr)_minmax(220px,1fr)_auto]">
+          <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={manual.accountReducedCode} onChange={event => setManual(value => ({ ...value, accountReducedCode: event.target.value }))}><option value="">Escolha a conta...</option>{accounts.filter(account => account.analytical).map(account => <option key={account.id} value={account.reducedCode}>{account.reducedCode} · {account.description}</option>)}</select>
+          <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={manual.costCenterReducedCode} onChange={event => setManual(value => ({ ...value, costCenterReducedCode: event.target.value }))}><option value="">Sem centro de custo</option>{centers.map(center => <option key={center.id} value={center.reducedCode}>{center.reducedCode} · {center.description}</option>)}</select>
+          <Input list="sped-reference-list" placeholder="Código referencial" value={manual.referentialCode} onChange={event => setManual(value => ({ ...value, referentialCode: event.target.value }))} />
+          <Button disabled={!manual.accountReducedCode || !manual.referentialCode.trim()} onClick={() => void addManual()}><Link2 className="mr-2 h-4 w-4" />Vincular</Button>
+          <datalist id="sped-reference-list">{referentialAccounts.filter(item => item.analytical !== false).map(item => <option key={item.code} value={item.code}>{item.description}</option>)}</datalist>
         </div>
 
-        <section>
-          <div><h4 className="text-sm font-semibold">Corrigir um vínculo manualmente</h4><p className="mt-1 text-xs text-muted-foreground">Use somente quando souber exatamente qual vínculo precisa substituir.</p></div>
-          <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(260px,1.4fr)_minmax(200px,1fr)_minmax(220px,1fr)_auto]">
-            <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={manual.accountReducedCode} onChange={event => setManual(value => ({ ...value, accountReducedCode: event.target.value }))}><option value="">Escolha a conta...</option>{accounts.filter(account => account.analytical).map(account => <option key={account.id} value={account.reducedCode}>{account.reducedCode} · {account.description}</option>)}</select>
-            <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={manual.costCenterReducedCode} onChange={event => setManual(value => ({ ...value, costCenterReducedCode: event.target.value }))}><option value="">Sem centro de custo</option>{centers.map(center => <option key={center.id} value={center.reducedCode}>{center.reducedCode} · {center.description}</option>)}</select>
-            <Input list="sped-reference-list" placeholder="Código referencial" value={manual.referentialCode} onChange={event => setManual(value => ({ ...value, referentialCode: event.target.value }))} />
-            <Button disabled={!manual.accountReducedCode || !manual.referentialCode.trim()} onClick={() => void addManual()}><Link2 className="mr-2 h-4 w-4" />Salvar vínculo</Button>
-            <datalist id="sped-reference-list">{referentialAccounts.map(account => <option key={account.code} value={account.code}>{account.description}</option>)}</datalist>
-          </div>
-        </section>
-
-        <section className="overflow-hidden rounded-lg border border-border">
-          <div className="flex flex-col gap-3 border-b border-border p-4 lg:flex-row lg:items-center lg:justify-between">
-            <div><h4 className="text-sm font-semibold">Tabela técnica de relacionamentos</h4><p className="mt-1 text-xs text-muted-foreground">Conta da empresa → centro de custo → código referencial usado no SPED.</p></div>
-            <div className="flex flex-wrap gap-2"><Button size="sm" variant={onlySped ? "default" : "outline"} onClick={() => setOnlySped(value => !value)}>{onlySped ? "Somente contas SPED" : "Todas as contas"}</Button><Input className="w-72" placeholder="Buscar conta ou descrição" value={query} onChange={event => setQuery(event.target.value)} /></div>
-          </div>
-          <div className="max-h-[620px] overflow-auto"><table className="w-full min-w-[1050px] text-xs"><thead className="sticky top-0 z-10 bg-muted/95 text-left text-[11px] text-muted-foreground"><tr><th className="border-b border-r border-border px-3 py-2">Conta</th><th className="border-b border-r border-border px-3 py-2">C.R.</th><th className="border-b border-r border-border px-3 py-2">Descrição</th><th className="border-b border-r border-border px-3 py-2">Centro de custo</th><th className="border-b border-r border-border px-3 py-2">Código referencial</th><th className="border-b border-border px-3 py-2">Status</th></tr></thead><tbody>{filteredAccounts.map(account => {
-            const relation = relationships.find(item => item.accountReducedCode === account.reducedCode);
-            const status = impacted.get(account.reducedCode);
-            const center = relation?.costCenterReducedCode ? centerMap.get(relation.costCenterReducedCode) : null;
-            const reference = relation ? referentialMap.get(relation.referentialCode) : null;
-            return <tr key={account.id} className={cn("border-b border-border last:border-0", status?.critical ? "bg-red-500/[0.12]" : status ? "bg-amber-500/[0.07]" : relation ? "bg-emerald-500/[0.07]" : "")}><td className="border-r border-border px-3 py-2 font-mono">{account.account}</td><td className="border-r border-border px-3 py-2 tabular-nums">{account.reducedCode}</td><td className="border-r border-border px-3 py-2">{account.description}</td><td className="border-r border-border px-3 py-2">{center ? `${center.reducedCode} · ${center.description}` : relation?.costCenterReducedCode || "—"}</td><td className="border-r border-border px-3 py-2">{relation ? <div><span className="font-mono">{relation.referentialCode}</span>{reference?.description && <p className="mt-0.5 max-w-[280px] truncate text-[10px] text-muted-foreground">{reference.description}</p>}</div> : "—"}</td><td className="px-3 py-2">{status?.critical ? <span className="font-medium text-red-700 dark:text-red-300">Corrigir</span> : status ? <span className="font-medium text-amber-700 dark:text-amber-300">Revisar</span> : relation ? <span className="font-medium text-emerald-700 dark:text-emerald-300">OK</span> : <span className="text-muted-foreground">Sem vínculo</span>}</td></tr>;
-          })}{!filteredAccounts.length && <tr><td colSpan={6} className="h-36 text-center text-muted-foreground">Nenhuma conta encontrada.</td></tr>}</tbody></table></div>
-        </section>
-
-        {relationships.length > 0 && <section>
-          <h4 className="text-sm font-semibold">Vínculos importados</h4><div className="mt-3 space-y-2">{relationships.slice(0, 150).map(item => <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2 text-xs"><div className="min-w-0"><span className="font-medium">C.R. {item.accountReducedCode}</span><span className="mx-2 text-muted-foreground">→</span><span>{item.costCenterReducedCode ? `C.C. ${item.costCenterReducedCode} → ` : ""}{item.referentialCode}</span></div><Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => void removeRelationship(item.id)}><Trash2 className="h-3.5 w-3.5" /></Button></div>)}</div>
-        </section>}
+        <div className="overflow-hidden rounded-lg border border-border"><div className="border-b border-border px-4 py-3 text-sm font-semibold">Vínculos importados</div><div className="max-h-[520px] overflow-auto"><table className="w-full min-w-[900px] text-xs"><thead className="sticky top-0 bg-muted/95 text-left text-muted-foreground"><tr><th className="border-b border-r border-border px-3 py-2">Conta da empresa</th><th className="border-b border-r border-border px-3 py-2">Centro de custo</th><th className="border-b border-r border-border px-3 py-2">Conta referencial</th><th className="w-12 border-b border-border" /></tr></thead><tbody>{relationships.slice(0, 500).map(relation => { const account = accountMap.get(relation.accountReducedCode); const center = relation.costCenterReducedCode ? centerMap.get(relation.costCenterReducedCode) : null; const reference = referentialMap.get(relation.referentialCode); return <tr key={relation.id} className="border-b border-border last:border-0"><td className="border-r border-border px-3 py-2">{relation.accountReducedCode} · {account?.description ?? relation.accountCode ?? "Conta não localizada"}</td><td className="border-r border-border px-3 py-2">{center ? `${center.reducedCode} · ${center.description}` : "Sem C.C."}</td><td className="border-r border-border px-3 py-2"><span className="font-mono">{relation.referentialCode}</span>{reference?.description ? ` · ${reference.description}` : ""}</td><td className="px-2 py-1"><Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => void removeRelationship(relation.id)}><Trash2 className="h-3.5 w-3.5" /></Button></td></tr>; })}{!relationships.length && <tr><td colSpan={4} className="h-28 text-center text-muted-foreground">Nenhum vínculo importado.</td></tr>}</tbody></table></div></div>
       </div>
     </details>
   </div>;
 }
 
-function Step({ number, title, text }: { number: string; title: string; text: string }) {
-  return <div className="bg-background p-5"><div className="flex items-start gap-3"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-cyan-500/15 text-xs font-bold text-cyan-700 dark:text-cyan-300">{number}</span><div><p className="text-sm font-semibold">{title}</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">{text}</p></div></div></div>;
-}
+function Step({ number, title, text }: { number: string; title: string; text: string }) { return <div className="bg-background p-4 sm:p-5"><div className="flex gap-3"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-cyan-500/10 text-xs font-bold text-cyan-700 dark:text-cyan-300">{number}</span><div><p className="text-sm font-semibold">{title}</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">{text}</p></div></div></div>; }
 
-function EmptyState({ onImport }: { onImport: () => void }) {
-  return <section className="grid min-h-[280px] place-items-center rounded-xl border border-dashed border-border bg-muted/10 p-8 text-center"><div className="max-w-lg"><FileSpreadsheet className="mx-auto h-9 w-9 text-muted-foreground" /><h3 className="mt-4 text-lg font-semibold">Comece pelo arquivo do Calima</h3><p className="mt-2 text-sm leading-relaxed text-muted-foreground">Você não precisa preencher nenhuma tabela agora. Exporte o arquivo de relacionamento do Calima, importe aqui e deixe o site apontar o que precisa ser corrigido.</p><Button className="mt-5" onClick={onImport}><Upload className="mr-2 h-4 w-4" />Selecionar arquivo</Button></div></section>;
-}
+function ProblemCard({ index, title, text, count, codes }: { index: number; title: string; text: string; count: number; codes: string[] }) { return <div className="p-5"><div className="flex items-start gap-3"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-red-500/15 text-xs font-bold text-red-700 dark:text-red-300">{index}</span><div className="min-w-0 flex-1"><p className="text-sm font-semibold">{title}</p><p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{text}</p><details className="mt-3"><summary className="cursor-pointer text-xs font-medium text-muted-foreground">Ver {count} conta(s) afetada(s)</summary><div className="mt-2 flex flex-wrap gap-1.5">{codes.slice(0, 80).map(code => <span key={code} className="rounded border border-border bg-muted/50 px-2 py-1 text-[10px]">C.R. {code}</span>)}</div></details></div></div></div>; }
 
-function ProblemCard({ index, title, explanation, impactedCount, codes }: { index: number; title: string; explanation: string; impactedCount: number; codes: string[] }) {
-  return <div className="p-5"><div className="flex items-start gap-4"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-red-500/15 text-sm font-bold text-red-700 dark:text-red-300">{index}</span><div className="min-w-0 flex-1"><div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div><p className="font-semibold">{title}</p><p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-muted-foreground">{explanation}</p></div><span className="shrink-0 rounded-full bg-red-500/10 px-2.5 py-1 text-[11px] font-semibold text-red-700 dark:text-red-300">Afeta {impactedCount} conta(s)</span></div><details className="mt-3"><summary className="cursor-pointer text-xs font-medium text-cyan-700 dark:text-cyan-300">Ver contas afetadas</summary><div className="mt-2 flex flex-wrap gap-1.5">{codes.slice(0, 80).map(code => <span key={code} className="rounded border border-border bg-muted/50 px-2 py-1 text-[10px]">C.R. {code}</span>)}</div></details></div></div></div>;
-}
+function fileTypeLabel(type: NonNullable<SpedImportResult["detectedFiles"]>[number]["type"]) { if (type === "calima_relationship") return "relacionamento da empresa com o plano referencial"; if (type === "calima_catalog") return "catálogo completo do plano referencial"; if (type === "generic") return "arquivo de relacionamento reconhecido"; return "formato não reconhecido"; }
 
-function plainTitle(code: string, fallback: string) {
-  const titles: Record<string, string> = {
-    ACCOUNT_NOT_FOUND: "Há vínculos apontando para contas que não existem",
-    PARENT_MISSING: "A hierarquia do plano de contas está quebrada",
-    COST_CENTER_NOT_FOUND: "Há centro de custo usado que não existe no cadastro",
-    I051_DUPLICATE: "A mesma conta está ligada a dois destinos diferentes",
-    REFERENCE_NOT_FOUND: "Alguns códigos de referência ainda não puderam ser conferidos",
-    NATURE_MISMATCH: "Uma conta foi ligada a uma categoria incompatível",
-    REQUIRED_CENTER_RELATION_MISSING: "Falta o vínculo de uma conta que exige centro de custo",
-    SPED_ACCOUNT_UNMAPPED: "Há contas do SPED ainda sem vínculo",
-  };
-  return titles[code] ?? fallback;
-}
-
-function plainExplanation(code: string, fallback: string) {
-  const explanations: Record<string, string> = {
-    ACCOUNT_NOT_FOUND: "O arquivo importado cita uma conta que não está no Plano de Contas desta empresa. Isso costuma acontecer quando o cadastro do Calima e o cadastro do site não estão iguais.",
-    PARENT_MISSING: "Uma conta filha não encontrou a conta superior que deveria organizar o grupo. Esse é exatamente o tipo de erro que pode gerar muitas críticas em sequência.",
-    COST_CENTER_NOT_FOUND: "O relacionamento usa um centro de custo que não existe na aba Centros de Custo. Primeiro corrija ou importe esse cadastro.",
-    I051_DUPLICATE: "A mesma combinação de conta e centro de custo está apontando para mais de um código da Receita. É preciso deixar apenas um destino correto.",
-    REFERENCE_NOT_FOUND: "O vínculo existe, mas ainda não temos informação suficiente sobre o código oficial usado do outro lado. Não é necessariamente um erro, mas precisa ser conferido.",
-    NATURE_MISMATCH: "Uma conta de ativo, passivo, receita ou despesa foi ligada a uma categoria de natureza diferente. Esse vínculo precisa ser corrigido.",
-    REQUIRED_CENTER_RELATION_MISSING: "A conta foi configurada para usar centro de custo, mas ainda não existe um vínculo completo para ela no relacionamento do SPED.",
-    SPED_ACCOUNT_UNMAPPED: "A conta está marcada para participar do SPED, mas ainda não tem um código de referência relacionado.",
-  };
-  return explanations[code] ?? fallback;
-}
+function plainTitle(code: string, fallback: string) { const map: Record<string, string> = { ACCOUNT_NOT_FOUND: "Há vínculos apontando para contas que não existem", PARENT_MISSING: "A hierarquia do plano de contas está quebrada", COST_CENTER_NOT_FOUND: "Um centro de custo usado não existe", I051_DUPLICATE: "A mesma conta está ligada a dois destinos diferentes", NATURE_MISMATCH: "Uma conta está ligada à categoria errada", REQUIRED_CENTER_RELATION_MISSING: "Falta completar o vínculo de uma conta que exige centro de custo", REFERENCE_NOT_FOUND: "Falta o catálogo de algumas contas referenciais", SPED_ACCOUNT_UNMAPPED: "Existem contas do SPED ainda sem vínculo" }; return map[code] ?? fallback; }
+function plainExplanation(code: string, fallback: string) { const map: Record<string, string> = { ACCOUNT_NOT_FOUND: "O arquivo do Calima trouxe um vínculo para uma conta que não foi encontrada no Plano de Contas desta empresa.", PARENT_MISSING: "Uma conta filha não encontrou a conta superior correta. Esse tipo de erro pode gerar muitas críticas em cascata.", COST_CENTER_NOT_FOUND: "Um vínculo usa um centro de custo que não está cadastrado na empresa.", I051_DUPLICATE: "A mesma combinação de conta e centro de custo está apontando para mais de uma conta referencial. Ela precisa ter apenas um destino.", NATURE_MISMATCH: "A conta da empresa e a categoria oficial escolhida têm naturezas contábeis incompatíveis.", REQUIRED_CENTER_RELATION_MISSING: "A conta foi configurada para exigir centro de custo, mas ainda falta ligar essa combinação a uma conta referencial.", REFERENCE_NOT_FOUND: "O vínculo existe, mas o catálogo completo da Receita ainda não foi importado para conferir descrição e natureza.", SPED_ACCOUNT_UNMAPPED: "Algumas contas marcadas para participar do SPED ainda não possuem vínculo referencial." }; return map[code] ?? fallback; }
