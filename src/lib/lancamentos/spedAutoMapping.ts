@@ -9,8 +9,14 @@ export interface SpedMappingCandidate {
   score: number;
 }
 
+export type GeneratedSpedRelationship = SpedRelationship & {
+  generatedBy?: "auto" | "ai";
+  confidence?: number;
+  reason?: string;
+};
+
 export interface AutomaticSpedMappingResult {
-  relationships: SpedRelationship[];
+  relationships: GeneratedSpedRelationship[];
   unresolved: Array<{ account: ChartAccount; candidates: SpedMappingCandidate[] }>;
   deterministicCount: number;
   aiCount: number;
@@ -128,7 +134,7 @@ export async function generateAutomaticSpedMappings(
   if (!referential.length) throw new Error("A base referencial da Receita ainda não está disponível para esta empresa.");
 
   const analytical = accounts.filter(account => account.analytical && account.reducedCode && referentialRootForWsGroup(groupFromAccountCode(account.account)));
-  const relationships: SpedRelationship[] = [];
+  const relationships: GeneratedSpedRelationship[] = [];
   const pending: Array<{ account: ChartAccount; candidates: SpedMappingCandidate[] }> = [];
 
   analytical.forEach(account => {
@@ -141,7 +147,8 @@ export async function generateAutomaticSpedMappings(
         accountCode: account.account,
         costCenterReducedCode: "",
         referentialCode: decision.code,
-        source: "auto",
+        source: "imported",
+        generatedBy: "auto",
         confidence: decision.confidence,
         reason: decision.reason,
       });
@@ -186,7 +193,8 @@ export async function generateAutomaticSpedMappings(
         accountCode: item.account.account,
         costCenterReducedCode: "",
         referentialCode: candidate.code,
-        source: "ai",
+        source: "imported",
+        generatedBy: "ai",
         confidence,
         reason: suggestion.reason || "Conta referencial escolhida pela IA entre as opções compatíveis.",
       });
@@ -199,7 +207,7 @@ export async function generateAutomaticSpedMappings(
   return {
     relationships,
     unresolved: stillUnresolved,
-    deterministicCount: relationships.filter(item => item.source === "auto").length,
+    deterministicCount: relationships.filter(item => item.generatedBy === "auto").length,
     aiCount,
   };
 }
