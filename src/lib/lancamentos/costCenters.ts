@@ -63,27 +63,30 @@ export async function readCostCenters(file: File) {
 }
 
 export function suggestCostCenterForAccount(account: ChartAccount, centers: CostCenter[]) {
-  const description = normalize(account.description);
-  const accountCode = String(account.account ?? "").trim();
-  const accountText = normalize(`${account.account} ${account.description}`);
+  const text = normalize(account.description);
   const candidates = centers.filter(center => center.analytical);
   const byMeaning = (term: string) => candidates.find(center => normalize(center.description).includes(term));
 
-  // Ser analítica NÃO implica exigir centro de custo. Contas patrimoniais ficam protegidas.
-  if (/a pagar|a recolher|fornecedor|cliente|caixa|banco|estoque|adiantamento/.test(description)) return null;
-  if (accountCode.startsWith("1") || accountCode.startsWith("2")) return null;
+  // Analítica só significa que aceita lançamento direto. Centro de custo é uma dimensão separada.
+  // Contas patrimoniais nunca recebem sugestão automática só por serem analíticas.
+  if (/a pagar|a recolher|fornecedor|cliente|caixa|banco|estoque|adiantamento|capital social|emprestimo|financiamento|imobilizado/.test(text)) return null;
 
-  if (accountCode.startsWith("3")) return byMeaning("receita") ?? null;
-  if (accountCode.startsWith("4")) {
-    if (/recup|credito|crédito/.test(accountText)) return byMeaning("credito") ?? byMeaning("crédito") ?? null;
-    if (/custo/.test(accountText)) return byMeaning("custo") ?? null;
+  // Recuperações/créditos têm prioridade, pois algumas descrições também contêm palavras de despesa.
+  if (/recup|recupera|credito|crédito|ressarc|reembolso/.test(text)) return byMeaning("credito") ?? byMeaning("crédito") ?? null;
+
+  // Custo explícito é diferente de despesa administrativa/operacional.
+  if (/\bcusto\b|custos|custo das|cmv|cpv|csp/.test(text)) return byMeaning("custo") ?? null;
+
+  // Receita explícita, sem sinal de dedução, vai para RECEITAS.
+  if (/receita|revenda|venda de mercadoria|prestacao de servico|prestação de serviço|faturamento/.test(text) && !text.startsWith("- ") && !text.startsWith("(-")) {
+    return byMeaning("receita") ?? null;
+  }
+
+  // Deduções, folha e despesas operacionais seguem DESPESAS no padrão real fornecido pelo usuário.
+  if (/simples|salario|salário|remuner|pro labore|pro-labore|ferias|férias|fgts|inss|alimentacao|alimentação|assistencia|assistência|aluguel|energia|telefone|combust|seguro|propaganda|publicidade|ipva|agua|água|curso|manut|material|uniforme|licenciamento|imposto|encargo|despesa/.test(text) || text.startsWith("- ") || text.startsWith("(-")) {
     return byMeaning("despesa") ?? null;
   }
 
-  if (/receita|venda|faturamento|servic/.test(accountText)) return byMeaning("receita") ?? null;
-  if (/recup|credito|crédito/.test(accountText)) return byMeaning("credito") ?? byMeaning("crédito") ?? null;
-  if (/custo/.test(accountText)) return byMeaning("custo") ?? null;
-  if (/despesa|salario|salário|ferias|férias|aluguel|energia|telefone|combust|seguro|propaganda|publicidade|ipva|agua|água|curso|manut/.test(accountText)) return byMeaning("despesa") ?? null;
   return null;
 }
 
