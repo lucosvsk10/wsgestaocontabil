@@ -136,7 +136,7 @@ export function ComprasWorkspace({ company, month, year, onStatusChange, onCompe
     setWarnings([]); setValidationIssues([]);
     try {
       const result = await processPurchases({ company, month: targetMonth, year: targetYear, files: selected, accounts, operation });
-      if (targetMonth === month && targetYear === year) { hydrateSaved(result); onStatusChange(result.validated ? "review" : "review"); }
+      if (targetMonth === month && targetYear === year) { hydrateSaved(result); onStatusChange("review"); }
     } catch (error) {
       if (targetMonth === month && targetYear === year) setValidationIssues([error instanceof Error ? error.message : "Falha ao processar Compras com IA."]);
     }
@@ -236,14 +236,19 @@ export function ComprasWorkspace({ company, month, year, onStatusChange, onCompe
 
       <TabsContent value="conferencia" className="mt-7">
         <Header title="Compras · Conferência" subtitle="Quantidade e valor do documento original precisam fechar com a transcrição e com o lançamento consolidado." />
-        <div className="space-y-6 rounded-md border border-border bg-background p-6">
-          <div className="grid gap-5 sm:grid-cols-5"><Stat label="Entradas PDF" value={reference?.quantity ?? 0} /><Stat label="Entradas transcritas" value={items.length} /><Stat label="Diferenças" value={blockingDifferences.length} /><Stat label="Aguardando aprovação" value={mappingsToApprove} /><Stat label="Conhecimento reutilizado" value={learnedMappings} /></div>
-          {!referenceVerified && <div className="flex gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />A conferência independente do relatório ainda não fechou. A exportação permanece bloqueada.</div>}
-          {mappingsToApprove > 0 && <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-4"><p className="text-sm font-medium text-foreground">Mapeamento novo aguardando sua conferência</p><p className="mt-1 text-xs text-muted-foreground">Depois de aprovado, Mercadoria para Revenda → Fornecedores será reaproveitado automaticamente para esta empresa.</p></div>}
-          <PurchaseComparisonTable rows={comparisons} referenceVerified={referenceVerified} />
-          {(warnings.length > 0 || validationIssues.length > 0) && <div className="rounded-md bg-muted/50 p-4"><p className="text-sm font-medium text-foreground">Pontos que exigem decisão</p>{[...new Set([...warnings, ...validationIssues])].map(issue => <p key={issue} className="mt-2 flex gap-2 text-sm text-muted-foreground"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{issue}</p>)}</div>}
-          {processingMeta && <p className="text-xs text-muted-foreground">Fluxo: {processingMeta.routing || processingMeta.primaryModel}</p>}
-          <div className="flex justify-end"><Button disabled={!canReviewApprove || !entries.length} onClick={() => void approveAndFinalize()}>{learning ? "Salvando conhecimento..." : mappingsToApprove > 0 ? "Confirmar e aprender" : "Marcar compras como OK"}</Button></div>
+        <div className="rounded-md border border-border bg-background">
+          <div className="flex flex-col gap-3 border-b border-border bg-muted/20 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div><p className="text-sm font-semibold text-foreground">Fechar conferência de compras</p><p className="mt-1 text-xs text-muted-foreground">Confirme o mês aqui depois de revisar quantidade, valor consolidado e mapeamento.</p></div>
+            <Button className="shrink-0" disabled={!canReviewApprove || !entries.length} onClick={() => void approveAndFinalize()}>{learning ? "Salvando conhecimento..." : mappingsToApprove > 0 ? "Confirmar e aprender" : "Marcar compras como OK"}</Button>
+          </div>
+          <div className="space-y-6 p-6">
+            <div className="grid gap-5 sm:grid-cols-5"><Stat label="Entradas PDF" value={reference?.quantity ?? 0} /><Stat label="Entradas transcritas" value={items.length} /><Stat label="Diferenças" value={blockingDifferences.length} /><Stat label="Aguardando aprovação" value={mappingsToApprove} /><Stat label="Conhecimento reutilizado" value={learnedMappings} /></div>
+            {!referenceVerified && <div className="flex gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />A conferência independente do relatório ainda não fechou. A exportação permanece bloqueada.</div>}
+            {mappingsToApprove > 0 && <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-4"><p className="text-sm font-medium text-foreground">Mapeamento novo aguardando sua conferência</p><p className="mt-1 text-xs text-muted-foreground">Depois de aprovado, Mercadoria para Revenda → Fornecedores será reaproveitado automaticamente para esta empresa.</p></div>}
+            <PurchaseComparisonTable rows={comparisons} referenceVerified={referenceVerified} />
+            {(warnings.length > 0 || validationIssues.length > 0) && <div className="rounded-md bg-muted/50 p-4"><p className="text-sm font-medium text-foreground">Pontos que exigem decisão</p>{[...new Set([...warnings, ...validationIssues])].map(issue => <p key={issue} className="mt-2 flex gap-2 text-sm text-muted-foreground"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{issue}</p>)}</div>}
+            {processingMeta && <p className="text-xs text-muted-foreground">Fluxo: {processingMeta.routing || processingMeta.primaryModel}</p>}
+          </div>
         </div>
       </TabsContent>
     </Tabs>
