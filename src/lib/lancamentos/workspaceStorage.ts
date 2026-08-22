@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 const DATABASE_NAME = "ws-lancamentos";
-const DATABASE_VERSION = 1;
+const DATABASE_VERSION = 2;
 const FILE_STORE = "files";
 const DATA_STORE = "data";
 
@@ -41,7 +41,7 @@ export interface WorkspaceSaveResult {
 function openDatabase() {
   return new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open(DATABASE_NAME, DATABASE_VERSION);
-    request.onupgradeneeded = () => {
+    request.onupgradeneeded = (event) => {
       const database = request.result;
       if (!database.objectStoreNames.contains(FILE_STORE)) {
         const store = database.createObjectStore(FILE_STORE, { keyPath: "id" });
@@ -49,6 +49,14 @@ function openDatabase() {
       }
       if (!database.objectStoreNames.contains(DATA_STORE)) {
         database.createObjectStore(DATA_STORE, { keyPath: "id" });
+      }
+
+      // v2 invalida todo o cache operacional antigo. O Supabase volta a ser a
+      // única fonte inicial depois do reset dos testes, impedindo que um
+      // fallback local ressuscite documentos/lançamentos já apagados.
+      if (event.oldVersion < 2 && request.transaction) {
+        request.transaction.objectStore(FILE_STORE).clear();
+        request.transaction.objectStore(DATA_STORE).clear();
       }
     };
     request.onsuccess = () => resolve(request.result);
