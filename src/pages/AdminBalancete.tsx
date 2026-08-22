@@ -1,6 +1,6 @@
 import { AdminLayout } from "@/components/admin/layout/AdminLayout";
-import { BalanceteWorkspace } from "@/components/admin/lancamentos/BalanceteWorkspace";
+import { BalanceteWorkspaceV2 } from "@/components/admin/lancamentos/BalanceteWorkspaceV2";
 
 export default function AdminBalancete() {
-  return <AdminLayout><BalanceteWorkspace /></AdminLayout>;
+  return <AdminLayout><BalanceteWorkspaceV2 /></AdminLayout>;
 }
