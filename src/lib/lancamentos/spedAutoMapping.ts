@@ -133,7 +133,11 @@ export async function generateAutomaticSpedMappings(
   if (!accounts.length) throw new Error("Importe o Plano de Contas da empresa antes de gerar o relacionamento SPED.");
   if (!referential.length) throw new Error("A base referencial da Receita ainda não está disponível para esta empresa.");
 
-  const analytical = accounts.filter(account => account.analytical && account.reducedCode && referentialRootForWsGroup(groupFromAccountCode(account.account)));
+  // Só contas analíticas explicitamente marcadas para SPED entram na ponte. O plano pode ter
+  // centenas de contas auxiliares que nunca devem gerar I051.
+  const analytical = accounts.filter(account => account.analytical && account.sped && account.reducedCode && referentialRootForWsGroup(groupFromAccountCode(account.account)));
+  if (!analytical.length) throw new Error("Nenhuma conta analítica está marcada para SPED neste Plano de Contas.");
+
   const relationships: GeneratedSpedRelationship[] = [];
   const pending: Array<{ account: ChartAccount; candidates: SpedMappingCandidate[] }> = [];
 
