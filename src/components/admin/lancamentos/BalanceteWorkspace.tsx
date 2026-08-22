@@ -1,4 +1,4 @@
-import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, CheckCircle2, FileSpreadsheet, Loader2, Maximize2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAccountingCompany } from "@/hooks/lancamentos/useAccountingCompany";
 import { exportAccountingWorkbook } from "@/lib/lancamentos/accountingExportWorkbook";
 import { buildClosingTargets, buildTrialBalanceAdjustments, TrialBalanceClosingTarget } from "@/lib/lancamentos/trialBalanceClosing";
-import { signedBalance, trialBalanceDepth, TrialBalanceResult, TrialBalanceRow, validateTrialBalanceRow } from "@/lib/lancamentos/trialBalance";
+import { signedBalance, summarizeTrialBalance, trialBalanceDepth, TrialBalanceResult, TrialBalanceRow, validateTrialBalanceRow } from "@/lib/lancamentos/trialBalance";
 import { clearWorkspaceFiles, deleteWorkspaceData, loadWorkspaceData, loadWorkspaceFiles, saveWorkspaceData, saveWorkspaceFiles } from "@/lib/lancamentos/workspaceStorage";
 import { cn } from "@/lib/utils";
 import { AccountingWorkflowSteps } from "./AccountingWorkflowUI";
@@ -22,12 +22,22 @@ const months = [
 
 interface PendingImport { result: TrialBalanceResult; files: File[]; }
 interface TargetValue { amountInCents: number; nature: "D" | "C"; }
+interface TrialBalanceMonthState { hasData: boolean; validated: boolean; issues: number; }
 
 const contextKey = (company: string) => `ws:balancete:last-context:${company}`;
 const money = (cents: number) => new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(cents / 100);
 const balanceLabel = (signed: number) => signed === 0 ? "0,00" : `${money(Math.abs(signed))} ${signed > 0 ? "D" : "C"}`;
 const toTargetValue = (signed: number): TargetValue => ({ amountInCents: Math.abs(signed), nature: signed < 0 ? "C" : "D" });
 const fromTargetValue = (value: TargetValue) => value.nature === "C" ? -Math.abs(value.amountInCents) : Math.abs(value.amountInCents);
+const globalSummaryIssues = (result: TrialBalanceResult | null) => {
+  if (!result?.rows.length) return [] as string[];
+  const summary = summarizeTrialBalance(result.rows);
+  const issues: string[] = [];
+  if (Math.abs(summary.movementDifferenceInCents) > 1) issues.push(`Débitos e créditos das contas analíticas diferem em R$ ${money(Math.abs(summary.movementDifferenceInCents))}.`);
+  if (Math.abs(summary.previousSignedInCents) > 1) issues.push(`Os saldos anteriores analíticos não zeram: diferença de R$ ${money(Math.abs(summary.previousSignedInCents))}.`);
+  if (Math.abs(summary.currentSignedInCents) > 1) issues.push(`Os saldos atuais analíticos não zeram: diferença de R$ ${money(Math.abs(summary.currentSignedInCents))}.`);
+  return issues;
+};
 
 export function BalanceteWorkspace() {
   const today = new Date();
@@ -44,6 +54,8 @@ export function BalanceteWorkspace() {
   const [expanded, setExpanded] = useState(false);
   const [targets, setTargets] = useState<TrialBalanceClosingTarget[]>([]);
   const [targetValues, setTargetValues] = useState<Record<string, TargetValue>>({});
+  const [targetConfirmations, setTargetConfirmations] = useState<Record<string, boolean>>({});
+  const [yearStates, setYearStates] = useState<Record<string, TrialBalanceMonthState>>({});
   const [closingLoaded, setClosingLoaded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const previousCompany = useRef(company.id);
@@ -52,6 +64,7 @@ export function BalanceteWorkspace() {
   const scope = `${company.id}:${year}:${month}:balancete`;
   const dataKey = `${scope}:parsed`;
   const targetKey = `${scope}:closing-targets`;
+  const confirmationKey = `${scope}:closing-confirmations`;
   const monthLabel = months.find(item => item[0] === month)?.[1] ?? month;
 
   useEffect(() => {
@@ -67,6 +80,26 @@ export function BalanceteWorkspace() {
     localStorage.setItem(contextKey(company.id), JSON.stringify({ year, month, tab: activeTab }));
   }, [activeTab, company.id, month, year]);
 
+  const refreshYearStates = useCallback(async () => {
+    const states = await Promise.all(months.map(async ([key]) => {
+      const saved = await loadWorkspaceData<TrialBalanceResult>(`${company.id}:${year}:${key}:balancete:parsed`);
+      const globalIssues = globalSummaryIssues(saved ?? null);
+      const issues = (saved?.warnings.length ?? 0) + (saved?.validationIssues.length ?? 0) + globalIssues.length;
+      return [key, { hasData: Boolean(saved?.rows?.length), validated: Boolean(saved?.validated && globalIssues.length === 0), issues }] as const;
+    }));
+    setYearStates(Object.fromEntries(states));
+  }, [company.id, year]);
+
+  useEffect(() => { void refreshYearStates(); }, [refreshYearStates]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`balancete-year-status-${company.id}-${year}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "accounting_workspace_data", filter: `company_key=eq.${company.id}` }, () => { void refreshYearStates(); })
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [company.id, refreshYearStates, year]);
+
   useEffect(() => {
     let active = true;
     setClosingLoaded(false);
@@ -74,32 +107,49 @@ export function BalanceteWorkspace() {
       loadWorkspaceData<TrialBalanceResult>(dataKey),
       loadWorkspaceFiles(scope),
       loadWorkspaceData<Record<string, TargetValue>>(targetKey),
-    ]).then(async ([saved, docs, savedTargets]) => {
+      loadWorkspaceData<Record<string, boolean>>(confirmationKey),
+    ]).then(async ([saved, docs, savedTargets, savedConfirmations]) => {
       if (!active) return;
       setResult(saved ?? null);
       setFiles(docs);
+      setTargetConfirmations(savedConfirmations ?? {});
       if (saved?.rows?.length) {
         const nextTargets = await buildClosingTargets(company.id, month, year, saved.rows);
         if (!active) return;
         setTargets(nextTargets);
         setTargetValues(Object.fromEntries(nextTargets.map(target => [target.key, savedTargets?.[target.key] ?? toTargetValue(target.suggestedSignedInCents)])));
       } else {
-        setTargets([]); setTargetValues({});
+        setTargets([]); setTargetValues({}); setTargetConfirmations({});
       }
       setClosingLoaded(true);
     });
     return () => { active = false; };
-  }, [company.id, dataKey, month, scope, targetKey, year]);
+  }, [company.id, confirmationKey, dataKey, month, scope, targetKey, year]);
 
   useEffect(() => {
     if (!closingLoaded || !Object.keys(targetValues).length) return;
     void saveWorkspaceData(targetKey, targetValues);
   }, [closingLoaded, targetKey, targetValues]);
 
+  useEffect(() => {
+    if (!closingLoaded || !targets.length) return;
+    void saveWorkspaceData(confirmationKey, targetConfirmations);
+  }, [closingLoaded, confirmationKey, targetConfirmations, targets.length]);
+
   const signedTargets = useMemo(() => Object.fromEntries(Object.entries(targetValues).map(([key, value]) => [key, fromTargetValue(value)])), [targetValues]);
   const closing = useMemo(() => buildTrialBalanceAdjustments(targets, signedTargets, competence), [competence, signedTargets, targets]);
   const arithmeticIssues = useMemo(() => result?.rows.filter(row => Math.abs(validateTrialBalanceRow(row)) > 1) ?? [], [result]);
-  const conferenceCount = (result?.warnings.length ?? 0) + (result?.validationIssues.length ?? 0) + arithmeticIssues.length;
+  const globalSummary = useMemo(() => summarizeTrialBalance(result?.rows ?? []), [result]);
+  const globalIssues = useMemo(() => globalSummaryIssues(result), [result]);
+  const conferenceCount = (result?.warnings.length ?? 0) + (result?.validationIssues.length ?? 0) + arithmeticIssues.length + globalIssues.length;
+  const needsTargetConfirmation = useCallback((target: TrialBalanceClosingTarget) => {
+    const targetSigned = signedTargets[target.key] ?? target.suggestedSignedInCents;
+    return target.requiresManualReview || targetSigned !== target.suggestedSignedInCents;
+  }, [signedTargets]);
+  const pendingTargetConfirmations = targets.filter(target => needsTargetConfirmation(target) && !targetConfirmations[target.key]);
+  const cashTarget = targets.find(target => target.key === "cash");
+  const cashResidualOk = closing.cashResidualInCents !== null && Math.abs(closing.cashResidualInCents) <= 1;
+  const canExportAdjustments = Boolean(result?.validated) && globalIssues.length === 0 && closing.adjustments.length > 0 && pendingTargetConfirmations.length === 0 && cashResidualOk;
 
   const importFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(event.target.files ?? []);
@@ -129,15 +179,18 @@ export function BalanceteWorkspace() {
     const targetScope = `${company.id}:${targetYear}:${targetMonth}:balancete`;
     await saveWorkspaceFiles(targetScope, selected, { skipCompetencePrompt: true });
     await saveWorkspaceData(`${targetScope}:parsed`, parsed);
+    await deleteWorkspaceData(`${targetScope}:closing-confirmations`);
     if (targetMonth === month && targetYear === year) {
       setResult(parsed); setFiles(await loadWorkspaceFiles(targetScope));
       const nextTargets = await buildClosingTargets(company.id, targetMonth, targetYear, parsed.rows);
       setTargets(nextTargets);
       setTargetValues(Object.fromEntries(nextTargets.map(target => [target.key, toTargetValue(target.suggestedSignedInCents)])));
+      setTargetConfirmations({});
       setActiveTab("balancete");
     } else {
       setYear(targetYear); setMonth(targetMonth);
     }
+    await refreshYearStates();
   };
 
   const keepDetected = async () => {
@@ -151,17 +204,29 @@ export function BalanceteWorkspace() {
     await clearWorkspaceFiles(scope);
     await deleteWorkspaceData(dataKey);
     await deleteWorkspaceData(targetKey);
-    setResult(null); setFiles([]); setTargets([]); setTargetValues({});
+    await deleteWorkspaceData(confirmationKey);
+    setResult(null); setFiles([]); setTargets([]); setTargetValues({}); setTargetConfirmations({});
+    await refreshYearStates();
   };
 
   const updateTargetAmount = (key: string, text: string) => {
     const digits = text.replace(/\D/g, "");
     setTargetValues(current => ({ ...current, [key]: { ...(current[key] ?? { nature: "D" as const }), amountInCents: Number(digits || 0) } }));
+    setTargetConfirmations(current => ({ ...current, [key]: false }));
   };
-  const toggleNature = (key: string) => setTargetValues(current => ({ ...current, [key]: { ...(current[key] ?? { amountInCents: 0 }), nature: current[key]?.nature === "C" ? "D" : "C" } }));
+  const toggleNature = (key: string) => {
+    setTargetValues(current => ({ ...current, [key]: { ...(current[key] ?? { amountInCents: 0 }), nature: current[key]?.nature === "C" ? "D" : "C" } }));
+    setTargetConfirmations(current => ({ ...current, [key]: false }));
+  };
+  const confirmTarget = (key: string) => setTargetConfirmations(current => ({ ...current, [key]: true }));
+  const useProjectedCash = () => {
+    if (!cashTarget || closing.projectedCashSignedInCents === null) return;
+    setTargetValues(current => ({ ...current, cash: toTargetValue(closing.projectedCashSignedInCents!) }));
+    setTargetConfirmations(current => ({ ...current, cash: true }));
+  };
 
   const exportAdjustments = () => {
-    if (!result || !closing.adjustments.length) return;
+    if (!result || !canExportAdjustments) return;
     const comparisons = targets.filter(target => target.key !== "cash").map(target => {
       const targetSigned = signedTargets[target.key] ?? target.suggestedSignedInCents;
       return {
@@ -180,7 +245,7 @@ export function BalanceteWorkspace() {
       fileName: `ajustes-balancete-${year}-${month}.xlsx`,
       entries: closing.adjustments,
       comparisons,
-      note: `Ajustes propostos a partir do Balancete do Calima. Caixa projetado após os ajustes: ${closing.projectedCashSignedInCents === null ? "não localizado" : balanceLabel(closing.projectedCashSignedInCents)}. Revise os saldos-alvo antes de importar no Calima.`,
+      note: `Ajustes propostos a partir do Balancete do Calima. Caixa projetado após os ajustes: ${closing.projectedCashSignedInCents === null ? "não localizado" : balanceLabel(closing.projectedCashSignedInCents)}. Saldos-alvo manuais foram confirmados antes da exportação.`,
     });
   };
 
@@ -193,7 +258,7 @@ export function BalanceteWorkspace() {
     <div className="grid min-h-[720px] lg:grid-cols-[236px_minmax(0,1fr)]">
       <aside className="border-b border-border py-5 lg:sticky lg:top-0 lg:h-screen lg:self-start lg:border-b-0 lg:border-r lg:pr-4">
         <div className="mb-3 flex items-center justify-between gap-2"><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-700 dark:text-cyan-300">Competência</p><AccountingYearPicker value={year} onChange={setYear} /></div>
-        <nav className="grid grid-cols-3 gap-1 sm:grid-cols-4 lg:grid-cols-1">{months.map(([key, label]) => <button key={key} type="button" onClick={() => setMonth(key)} className={cn("rounded-sm px-3 py-2 text-left text-sm transition-colors", key === month ? "bg-cyan-500/15 text-cyan-800 dark:text-cyan-200" : "text-cyan-700/80 hover:bg-cyan-500/10 dark:text-cyan-300/75")}><span className="flex items-center justify-between"><span>{label}</span>{key === month && result?.rows.length ? <span className={cn("h-2 w-2 rounded-full", result.validated ? "bg-emerald-500" : "bg-amber-400")} /> : null}</span></button>)}</nav>
+        <nav className="grid grid-cols-3 gap-1 sm:grid-cols-4 lg:grid-cols-1">{months.map(([key, label]) => { const state = yearStates[key] ?? { hasData: false, validated: false, issues: 0 }; return <button key={key} type="button" onClick={() => setMonth(key)} className={cn("rounded-sm px-3 py-2 text-left text-sm transition-colors", key === month ? "bg-cyan-500/15 text-cyan-800 dark:text-cyan-200" : "text-cyan-700/80 hover:bg-cyan-500/10 dark:text-cyan-300/75")}><span className="flex items-center justify-between gap-2"><span>{label}</span><span className={cn("h-2.5 w-2.5 shrink-0 rounded-full", state.validated ? "bg-emerald-500" : state.hasData ? "bg-amber-400" : "bg-muted-foreground/25")} /></span><span className="mt-0.5 block text-[10px] text-muted-foreground">{state.validated ? "Balancete validado" : state.hasData ? `${state.issues} pendência(s)` : "Sem balancete"}</span></button>; })}</nav>
       </aside>
 
       <main className="min-w-0 py-5 lg:pl-6">
@@ -207,9 +272,9 @@ export function BalanceteWorkspace() {
 
           <TabsContent value="balancete" className="mt-6"><div className="mb-4 flex items-end justify-between gap-3"><div><h3 className="text-base font-semibold">Visão hierárquica</h3><p className="mt-1 text-sm text-muted-foreground">Grupos, subgrupos e contas preservados na mesma estrutura do Balancete Analítico do Calima.</p></div>{result?.rows.length ? <Button variant="ghost" size="icon" onClick={() => setExpanded(true)} title="Expandir balancete"><Maximize2 className="h-4 w-4" /></Button> : null}</div>{result?.rows.length ? <TrialBalanceTable rows={result.rows} /> : <Empty text="Importe o Balancete do Calima para visualizar as contas." />}</TabsContent>
 
-          <TabsContent value="fechamento" className="mt-6"><div className="mb-4"><h3 className="text-base font-semibold">Fechamento e saldos-alvo</h3><p className="mt-1 text-sm text-muted-foreground">Os alvos automáticos vêm dos módulos já conferidos. Clientes e Fornecedores permanecem editáveis porque a política de recebimento/pagamento varia por empresa.</p></div>{targets.length ? <div className="space-y-5"><div className="overflow-x-auto rounded-md border border-border"><table className="w-full min-w-[980px] text-xs"><thead className="bg-muted/50 text-left text-[11px] text-muted-foreground"><tr><th className="px-3 py-2">Conta</th><th className="px-3 py-2">C.R.</th><th className="px-3 py-2 text-right">Saldo atual</th><th className="px-3 py-2">Saldo-alvo</th><th className="px-3 py-2">Origem / critério</th><th className="px-3 py-2 text-right">Ajuste</th></tr></thead><tbody>{targets.map(target => { const value = targetValues[target.key] ?? toTargetValue(target.suggestedSignedInCents); const targetSigned = fromTargetValue(value); const delta = targetSigned - target.currentSignedInCents; return <tr key={target.key} className="border-t border-border"><td className="px-3 py-2"><p className="font-medium">{target.label}</p><p className="text-[10px] text-muted-foreground">{target.row.title}</p></td><td className="px-3 py-2 tabular-nums">{target.row.reducedCode}</td><td className="px-3 py-2 text-right tabular-nums">{balanceLabel(target.currentSignedInCents)}</td><td className="px-3 py-2"><div className="flex items-center gap-1"><Input className="h-8 w-32 text-right text-xs tabular-nums" value={money(value.amountInCents)} onChange={event => updateTargetAmount(target.key, event.target.value)} /><Button type="button" variant="outline" size="sm" className="h-8 w-10 px-0" onClick={() => toggleNature(target.key)}>{value.nature}</Button></div></td><td className="max-w-[360px] px-3 py-2 text-muted-foreground">{target.source}{target.requiresManualReview ? <span className="ml-1 font-medium text-amber-700 dark:text-amber-300">· revisar</span> : <span className="ml-1 text-emerald-600 dark:text-emerald-400">· sugerido</span>}</td><td className={cn("px-3 py-2 text-right tabular-nums", delta !== 0 && "font-medium")}>{delta === 0 ? "—" : balanceLabel(delta)}</td></tr>; })}</tbody></table></div><div className="grid gap-4 rounded-md border border-border bg-muted/20 p-5 sm:grid-cols-3"><Stat label="Ajustes propostos" value={closing.adjustments.length} /><Stat label="Caixa atual" value={targets.find(target => target.key === "cash") ? balanceLabel(targets.find(target => target.key === "cash")!.currentSignedInCents) : "Não localizado"} /><Stat label="Caixa projetado" value={closing.projectedCashSignedInCents === null ? "Não localizado" : balanceLabel(closing.projectedCashSignedInCents)} /></div><div className="flex justify-end"><Button disabled={!result?.validated || !closing.adjustments.length} onClick={exportAdjustments}>Exportar ajustes para o Calima</Button></div></div> : <Empty text="Importe e valide o balancete para preparar o fechamento." />}</TabsContent>
+          <TabsContent value="fechamento" className="mt-6"><div className="mb-4"><h3 className="text-base font-semibold">Fechamento e saldos-alvo</h3><p className="mt-1 text-sm text-muted-foreground">Os alvos automáticos vêm dos módulos já conferidos. Saldos manuais precisam ser confirmados explicitamente antes da exportação.</p></div>{targets.length ? <div className="space-y-5"><div className="overflow-x-auto rounded-md border border-border"><table className="w-full min-w-[1120px] text-xs"><thead className="bg-muted/50 text-left text-[11px] text-muted-foreground"><tr><th className="px-3 py-2">Conta</th><th className="px-3 py-2">C.R.</th><th className="px-3 py-2 text-right">Saldo atual</th><th className="px-3 py-2">Saldo-alvo</th><th className="px-3 py-2">Origem / critério</th><th className="px-3 py-2 text-right">Ajuste</th><th className="px-3 py-2">Conferência</th></tr></thead><tbody>{targets.map(target => { const value = targetValues[target.key] ?? toTargetValue(target.suggestedSignedInCents); const targetSigned = fromTargetValue(value); const delta = targetSigned - target.currentSignedInCents; const needsConfirmation = needsTargetConfirmation(target); const confirmed = !needsConfirmation || targetConfirmations[target.key]; return <tr key={target.key} className="border-t border-border"><td className="px-3 py-2"><p className="font-medium">{target.label}</p><p className="text-[10px] text-muted-foreground">{target.row.title}</p></td><td className="px-3 py-2 tabular-nums">{target.row.reducedCode}</td><td className="px-3 py-2 text-right tabular-nums">{balanceLabel(target.currentSignedInCents)}</td><td className="px-3 py-2"><div className="flex items-center gap-1"><Input className="h-8 w-32 text-right text-xs tabular-nums" value={money(value.amountInCents)} onChange={event => updateTargetAmount(target.key, event.target.value)} /><Button type="button" variant="outline" size="sm" className="h-8 w-10 px-0" onClick={() => toggleNature(target.key)}>{value.nature}</Button></div></td><td className="max-w-[360px] px-3 py-2 text-muted-foreground">{target.source}{target.requiresManualReview ? <span className="ml-1 font-medium text-amber-700 dark:text-amber-300">· revisar</span> : <span className="ml-1 text-emerald-600 dark:text-emerald-400">· sugerido</span>}</td><td className={cn("px-3 py-2 text-right tabular-nums", delta !== 0 && "font-medium")}>{delta === 0 ? "—" : balanceLabel(delta)}</td><td className="px-3 py-2">{confirmed ? <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400"><CheckCircle2 className="h-3.5 w-3.5" />{needsConfirmation ? "Confirmado" : "Automático"}</span> : <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => confirmTarget(target.key)}>Confirmar saldo</Button>}</td></tr>; })}</tbody></table></div><div className="grid gap-4 rounded-md border border-border bg-muted/20 p-5 sm:grid-cols-2 xl:grid-cols-4"><Stat label="Ajustes propostos" value={closing.adjustments.length} /><Stat label="Saldos aguardando confirmação" value={pendingTargetConfirmations.length} /><Stat label="Caixa atual" value={cashTarget ? balanceLabel(cashTarget.currentSignedInCents) : "Não localizado"} /><Stat label="Caixa projetado" value={closing.projectedCashSignedInCents === null ? "Não localizado" : balanceLabel(closing.projectedCashSignedInCents)} /></div>{closing.cashResidualInCents !== null && Math.abs(closing.cashResidualInCents) > 1 && <div className="flex flex-col gap-3 rounded-md border border-amber-500/30 bg-amber-500/5 p-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-300" /><div><p className="text-sm font-medium text-foreground">Caixa-alvo ainda não fecha com os ajustes</p><p className="mt-1 text-xs text-muted-foreground">Diferença: {balanceLabel(closing.cashResidualInCents)}. Revise os saldos-alvo ou assuma explicitamente o Caixa projetado antes de exportar.</p></div></div><Button type="button" variant="outline" size="sm" onClick={useProjectedCash}>Usar Caixa projetado</Button></div>} {!cashTarget && <div className="flex gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />Nenhuma conta de Caixa/Bancos foi localizada no balancete. O sistema não consegue montar contrapartidas de ajuste com segurança.</div>}<div className="flex items-center justify-between gap-3"><p className="text-xs text-muted-foreground">{canExportAdjustments ? "Fechamento auditado e pronto para exportação." : pendingTargetConfirmations.length ? `Confirme ${pendingTargetConfirmations.length} saldo(s)-alvo antes de exportar.` : !cashResidualOk ? "Faça o Caixa-alvo coincidir com o Caixa projetado." : globalIssues.length ? "O balancete ainda possui diferença global." : "A exportação será liberada quando o fechamento estiver consistente."}</p><Button disabled={!canExportAdjustments} onClick={exportAdjustments}>Exportar ajustes para o Calima</Button></div></div> : <Empty text="Importe e valide o balancete para preparar o fechamento." />}</TabsContent>
 
-          <TabsContent value="conferencia" className="mt-6"><div className="rounded-md border border-border bg-background"><div className="flex flex-col gap-3 border-b border-border bg-muted/20 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="text-sm font-semibold">Conferência do balancete</h3><p className="mt-1 text-xs text-muted-foreground">Cada linha é validada matematicamente antes de qualquer ajuste ser exportado.</p></div>{result?.validated ? <span className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400"><CheckCircle2 className="h-4 w-4" />Balancete confere</span> : <span className="inline-flex items-center gap-1.5 text-sm font-medium text-amber-700 dark:text-amber-300"><AlertTriangle className="h-4 w-4" />Revisão necessária</span>}</div><div className="grid gap-4 p-5 sm:grid-cols-4"><Stat label="Linhas" value={result?.rows.length ?? 0} /><Stat label="Erros aritméticos" value={arithmeticIssues.length} /><Stat label="Avisos" value={result?.warnings.length ?? 0} /><Stat label="Pendências" value={result?.validationIssues.length ?? 0} /></div>{result && (result.validationIssues.length > 0 || result.warnings.length > 0) && <div className="border-t border-border p-5">{[...new Set([...result.validationIssues, ...result.warnings])].map(issue => <p key={issue} className="mt-2 flex gap-2 text-sm text-muted-foreground"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{issue}</p>)}</div>}{result?.processingMeta.routing && <p className="border-t border-border px-5 py-3 text-xs text-muted-foreground">Fluxo: {result.processingMeta.routing}</p>}</div></TabsContent>
+          <TabsContent value="conferencia" className="mt-6"><div className="rounded-md border border-border bg-background"><div className="flex flex-col gap-3 border-b border-border bg-muted/20 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="text-sm font-semibold">Conferência do balancete</h3><p className="mt-1 text-xs text-muted-foreground">Além de validar cada linha, o sistema soma somente as contas analíticas para conferir débitos, créditos e saldos globais sem duplicar grupos.</p></div>{result?.validated && globalIssues.length === 0 ? <span className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400"><CheckCircle2 className="h-4 w-4" />Balancete confere</span> : <span className="inline-flex items-center gap-1.5 text-sm font-medium text-amber-700 dark:text-amber-300"><AlertTriangle className="h-4 w-4" />Revisão necessária</span>}</div><div className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"><Stat label="Contas analíticas" value={globalSummary.analyticalRows.length} /><Stat label="Débitos analíticos" value={`R$ ${money(globalSummary.debitInCents)}`} /><Stat label="Créditos analíticos" value={`R$ ${money(globalSummary.creditInCents)}`} /><Stat label="Dif. movimento" value={`R$ ${money(Math.abs(globalSummary.movementDifferenceInCents))}`} /><Stat label="Dif. saldo anterior" value={`R$ ${money(Math.abs(globalSummary.previousSignedInCents))}`} /><Stat label="Dif. saldo atual" value={`R$ ${money(Math.abs(globalSummary.currentSignedInCents))}`} /></div><div className="grid gap-4 border-t border-border p-5 sm:grid-cols-4"><Stat label="Linhas lidas" value={result?.rows.length ?? 0} /><Stat label="Erros aritméticos" value={arithmeticIssues.length} /><Stat label="Avisos" value={result?.warnings.length ?? 0} /><Stat label="Pendências de leitura" value={result?.validationIssues.length ?? 0} /></div>{globalIssues.length > 0 && <div className="border-t border-border bg-amber-500/[0.035] p-5"><p className="text-sm font-medium text-foreground">Conferência global</p>{globalIssues.map(issue => <p key={issue} className="mt-2 flex gap-2 text-sm text-muted-foreground"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-300" />{issue}</p>)}</div>}{result && (result.validationIssues.length > 0 || result.warnings.length > 0) && <div className="border-t border-border p-5">{[...new Set([...result.validationIssues, ...result.warnings])].map(issue => <p key={issue} className="mt-2 flex gap-2 text-sm text-muted-foreground"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{issue}</p>)}</div>}{result?.processingMeta.routing && <p className="border-t border-border px-5 py-3 text-xs text-muted-foreground">Fluxo: {result.processingMeta.routing}</p>}</div></TabsContent>
         </Tabs>
       </main>
     </div>
