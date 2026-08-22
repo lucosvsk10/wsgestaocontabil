@@ -14,10 +14,25 @@ export interface RevenueBatchPeriodResult {
   sourceFiles: string[];
 }
 
+export interface RevenueUndatedBlock {
+  id: string;
+  label: string;
+  position: number;
+  reference: RevenueReference;
+  entries: RevenueEntry[];
+  comparisons: RevenueComparison[];
+  warnings: string[];
+  validationIssues: string[];
+  referenceVerified: boolean;
+  validated: boolean;
+  processingMeta: RevenueProcessingMeta;
+}
+
 export interface RevenueBatchResult {
   importId: string;
   sourceFiles: string[];
   periods: RevenueBatchPeriodResult[];
+  undatedBlocks?: RevenueUndatedBlock[];
   years: number[];
   warnings: string[];
   validationIssues: string[];
