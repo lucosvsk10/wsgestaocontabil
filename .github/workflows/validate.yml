@@ -39,6 +39,7 @@ jobs:
           npx eslint
           src/App.tsx
           src/pages/AdminBalancete.tsx
+          src/pages/AdminPlanoContas.tsx
           src/contexts/AccountingProcessingContext.tsx
           src/components/admin/lancamentos/LancamentosWorkspace.tsx
           src/components/admin/lancamentos/FolhaWorkspace.tsx
@@ -46,6 +47,8 @@ jobs:
           src/components/admin/lancamentos/FaturamentoWorkspace.tsx
           src/components/admin/lancamentos/BalanceteWorkspace.tsx
           src/components/admin/lancamentos/BalanceteWorkspaceV2.tsx
+          src/components/admin/lancamentos/BalanceteWorkspaceShell.tsx
+          src/components/admin/lancamentos/CostCentersWorkspace.tsx
           src/components/admin/lancamentos/AccountingWorkflowUI.tsx
           src/components/admin/lancamentos/AccountingYearPicker.tsx
           src/components/admin/lancamentos/ConferenceActionBar.tsx
@@ -68,6 +71,8 @@ jobs:
           src/lib/lancamentos/trialBalanceAutoAdjustment.ts
           src/lib/lancamentos/trialBalanceCriticalCorrection.ts
           src/lib/lancamentos/trialBalanceCriticalCorrection.test.ts
+          src/lib/lancamentos/trialBalanceReconciliationV2.ts
+          src/lib/lancamentos/costCenters.ts
           src/lib/lancamentos/historicalRegression.ts
           src/lib/lancamentos/historicalRegression.test.ts
           src/lib/lancamentos/accountingExportWorkbook.ts
