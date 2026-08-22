@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - "fix/**"
+      - "validate/**"
   pull_request:
     branches:
       - main
@@ -32,12 +33,16 @@ jobs:
       - name: Payroll regression
         run: npx -y vitest@3.1.1 run --environment node src/lib/lancamentos/payrollWorkbook.test.ts
 
-      - name: Lint changed payroll files
+      - name: Lint accounting files
         run: >-
           npx eslint
           src/App.tsx
           src/contexts/AccountingProcessingContext.tsx
           src/components/admin/lancamentos/LancamentosWorkspace.tsx
           src/components/admin/lancamentos/FolhaWorkspace.tsx
+          src/components/admin/lancamentos/ComprasWorkspace.tsx
+          src/components/admin/lancamentos/AccountingWorkflowUI.tsx
           src/lib/lancamentos/payrollWorkbook.ts
           src/lib/lancamentos/payrollWorkbook.test.ts
+          src/lib/lancamentos/purchaseWorkbook.ts
+          src/lib/lancamentos/accountingExportWorkbook.ts
