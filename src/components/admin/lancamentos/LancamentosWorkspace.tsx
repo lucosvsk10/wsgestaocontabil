@@ -1,15 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Download, Info } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { supabase } from "@/integrations/supabase/client";
 import { useAccountingCompany } from "@/hooks/lancamentos/useAccountingCompany";
-import { loadWorkspaceData, saveWorkspaceData } from "@/lib/lancamentos/workspaceStorage";
+import { AccountingModuleKey, emptyMonthStatuses, loadDynamicYearStatuses, YearModuleStatuses } from "@/lib/lancamentos/accountingMonthState";
+import { exportCompleteAccountingMonth } from "@/lib/lancamentos/completeMonthExport";
+import { saveWorkspaceData } from "@/lib/lancamentos/workspaceStorage";
 import { cn } from "@/lib/utils";
+import { AccountingYearPicker } from "./AccountingYearPicker";
 import { CompanySelector } from "./CompanySelector";
 import { ComprasWorkspace } from "./ComprasWorkspace";
 import { DespesasWorkspace, WorkspaceStatus } from "./DespesasWorkspace";
 import { FaturamentoWorkspace } from "./FaturamentoWorkspace";
 import { FolhaWorkspace } from "./FolhaWorkspace";
 
-type ModuleKey = "folha" | "compras" | "faturamento" | "despesas";
+type ModuleKey = AccountingModuleKey;
 interface MonthItem { key: string; label: string; }
 interface ModuleItem { key: ModuleKey; label: string; }
 interface LastContext { year: string; selectedMonth: string; selectedModule: ModuleKey; activeTab: string; }
@@ -27,7 +33,6 @@ const modules: ModuleItem[] = [
   { key: "faturamento", label: "Faturamento" },
 ];
 
-const emptyStatuses = (): Record<ModuleKey, WorkspaceStatus> => ({ despesas: "waiting", folha: "waiting", compras: "waiting", faturamento: "waiting" });
 const contextKey = (companyId: string) => `ws:lancamentos:last-context:${companyId}`;
 
 function readLastContext(companyId: string): LastContext | null {
@@ -43,14 +48,16 @@ function readLastContext(companyId: string): LastContext | null {
 }
 
 export function LancamentosWorkspace() {
-  const today = new Date();
+  const currentYear = new Date().getFullYear();
+  const currentMonth = String(new Date().getMonth() + 1).padStart(2, "0");
   const { company, companies, selectCompany } = useAccountingCompany();
   const initialContext = readLastContext(company.id);
-  const [year, setYear] = useState(() => initialContext?.year ?? String(today.getFullYear()));
-  const [selectedMonth, setSelectedMonth] = useState(() => initialContext?.selectedMonth ?? String(today.getMonth() + 1).padStart(2, "0"));
+  const [year, setYear] = useState(() => initialContext?.year ?? String(currentYear));
+  const [selectedMonth, setSelectedMonth] = useState(() => initialContext?.selectedMonth ?? currentMonth);
   const [selectedModule, setSelectedModule] = useState<ModuleKey>(() => initialContext?.selectedModule ?? "despesas");
-  const [yearStatuses, setYearStatuses] = useState<Record<string, Record<ModuleKey, WorkspaceStatus>>>({});
+  const [yearStatuses, setYearStatuses] = useState<YearModuleStatuses>({});
   const [expenseFileCount, setExpenseFileCount] = useState(0);
+  const [exportingMonth, setExportingMonth] = useState<string | null>(null);
   const previousCompanyRef = useRef(company.id);
   const skipContextSaveRef = useRef(false);
 
@@ -59,10 +66,10 @@ export function LancamentosWorkspace() {
     previousCompanyRef.current = company.id;
     skipContextSaveRef.current = true;
     const saved = readLastContext(company.id);
-    setYear(saved?.year ?? String(today.getFullYear()));
-    setSelectedMonth(saved?.selectedMonth ?? String(today.getMonth() + 1).padStart(2, "0"));
+    setYear(saved?.year ?? String(currentYear));
+    setSelectedMonth(saved?.selectedMonth ?? currentMonth);
     setSelectedModule(saved?.selectedModule ?? "despesas");
-  }, [company.id]);
+  }, [company.id, currentMonth, currentYear]);
 
   useEffect(() => {
     if (skipContextSaveRef.current) {
@@ -75,13 +82,27 @@ export function LancamentosWorkspace() {
   const selectedMonthLabel = useMemo(() => months.find(month => month.key === selectedMonth)?.label ?? "Competência", [selectedMonth]);
   const statusKey = `${company.id}:${year}:module-statuses`;
 
+  const refreshStatuses = useCallback(async () => {
+    try {
+      setYearStatuses(await loadDynamicYearStatuses(company.id, year));
+    } catch (error) {
+      console.error("Não foi possível atualizar os indicadores mensais.", error);
+    }
+  }, [company.id, year]);
+
+  useEffect(() => { void refreshStatuses(); }, [refreshStatuses]);
+
   useEffect(() => {
-    void loadWorkspaceData<Record<string, Record<ModuleKey, WorkspaceStatus>>>(statusKey).then(saved => setYearStatuses(saved ?? {}));
-  }, [statusKey]);
+    const channel = supabase
+      .channel(`accounting-month-status-${company.id}-${year}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "accounting_workspace_data", filter: `company_key=eq.${company.id}` }, () => { void refreshStatuses(); })
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [company.id, refreshStatuses, year]);
 
   const setModuleStatus = useCallback((module: ModuleKey, status: WorkspaceStatus) => {
     setYearStatuses(current => {
-      const next = { ...current, [selectedMonth]: { ...(current[selectedMonth] ?? emptyStatuses()), [module]: status } };
+      const next = { ...current, [selectedMonth]: { ...(current[selectedMonth] ?? emptyMonthStatuses()), [module]: status } };
       void saveWorkspaceData(statusKey, next);
       return next;
     });
@@ -92,7 +113,18 @@ export function LancamentosWorkspace() {
     setSelectedMonth(nextMonth);
   };
 
-  return <div className="mx-auto w-full max-w-[1720px] px-4 pb-12 pt-5 sm:px-6 lg:px-8">
+  const exportCompleteMonth = async (month: string) => {
+    setExportingMonth(month);
+    try {
+      await exportCompleteAccountingMonth(company.id, month, year);
+    } catch (error) {
+      console.error("Falha ao exportar a competência completa.", error);
+    } finally {
+      setExportingMonth(null);
+    }
+  };
+
+  return <TooltipProvider delayDuration={180}><div className="mx-auto w-full max-w-[1720px] px-4 pb-12 pt-5 sm:px-6 lg:px-8">
     <header className="flex flex-col gap-4 border-b border-border pb-5 xl:flex-row xl:items-end xl:justify-between">
       <div className="min-w-0">
         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Operação contábil</p>
@@ -102,34 +134,40 @@ export function LancamentosWorkspace() {
       <div className="flex w-full flex-col gap-3 sm:flex-row xl:w-auto"><CompanySelector company={company} companies={companies} onSelect={selectCompany} /></div>
     </header>
 
-    <div className="grid min-h-[720px] lg:grid-cols-[220px_minmax(0,1fr)]">
+    <div className="grid min-h-[720px] lg:grid-cols-[236px_minmax(0,1fr)]">
       <aside className="border-b border-border py-5 lg:sticky lg:top-0 lg:h-screen lg:self-start lg:border-b-0 lg:border-r lg:pr-4">
         <div className="mb-3 flex items-center justify-between gap-2">
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-700 dark:text-cyan-300">Competências</p>
-          <Select value={year} onValueChange={setYear}>
-            <SelectTrigger className="h-8 w-24 border-border bg-transparent text-xs shadow-none"><SelectValue /></SelectTrigger>
-            <SelectContent>{[today.getFullYear() - 2, today.getFullYear() - 1, today.getFullYear()].map(item => <SelectItem key={item} value={String(item)}>{item}</SelectItem>)}</SelectContent>
-          </Select>
+          <AccountingYearPicker value={year} onChange={setYear} />
         </div>
         <nav className="grid grid-cols-3 gap-1 sm:grid-cols-4 lg:grid-cols-1" aria-label="Competências">
           {months.map(month => {
             const active = selectedMonth === month.key;
-            const statuses = yearStatuses[month.key] ?? emptyStatuses();
+            const statuses = yearStatuses[month.key] ?? emptyMonthStatuses();
             const complete = Object.values(statuses).filter(status => status === "done").length;
-            const hasWork = Object.values(statuses).some(status => status !== "waiting");
-            return <button key={month.key} type="button" onClick={() => setSelectedMonth(month.key)} className={cn("group flex min-h-10 flex-col justify-center rounded-sm px-3 py-2 text-left text-sm transition-all duration-200", active ? "bg-cyan-500/15 text-cyan-800 dark:bg-cyan-400/15 dark:text-cyan-200" : "text-cyan-700/80 hover:bg-cyan-500/10 hover:text-cyan-800 dark:text-cyan-300/75 dark:hover:text-cyan-200")}>
-              <span className="flex w-full items-center justify-between"><span>{month.label}</span><span className={cn("h-2 w-2 rounded-full", complete === 4 ? "bg-emerald-500" : hasWork ? "bg-amber-400" : "bg-muted-foreground/25")} /></span>
-              <span className="grid grid-rows-[0fr] text-[10px] opacity-0 transition-all group-hover:mt-1 group-hover:grid-rows-[1fr] group-hover:opacity-100"><span className="overflow-hidden">{complete} de 4 módulos concluídos</span></span>
-            </button>;
+            const inReview = Object.values(statuses).filter(status => status === "review").length;
+            const hasWork = complete > 0 || inReview > 0;
+            const monthDone = complete === 4;
+            return <div key={month.key} className={cn("group/month flex min-h-12 items-center gap-1 rounded-sm transition-colors", active ? "bg-cyan-500/15" : "hover:bg-cyan-500/10")}>
+              <button type="button" onClick={() => setSelectedMonth(month.key)} className={cn("min-w-0 flex-1 px-3 py-2 text-left transition-colors", active ? "text-cyan-800 dark:text-cyan-200" : "text-cyan-700/80 hover:text-cyan-800 dark:text-cyan-300/75 dark:hover:text-cyan-200")}>
+                <span className="flex items-center justify-between gap-2"><span className="text-sm">{month.label}</span><span className={cn("h-2.5 w-2.5 shrink-0 rounded-full transition-all", monthDone ? "animate-pulse bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.12)]" : hasWork ? "bg-amber-400" : "bg-muted-foreground/25")} /></span>
+                <span className="mt-0.5 block text-[10px] text-muted-foreground">{complete} de 4 concluídos{inReview > 0 ? ` · ${inReview} em conferência` : ""}</span>
+              </button>
+              {monthDone && <Tooltip>
+                <TooltipTrigger asChild><Button type="button" variant="ghost" size="icon" className="mr-1 h-8 w-8 shrink-0 text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700 dark:text-emerald-400" disabled={exportingMonth === month.key} onClick={() => void exportCompleteMonth(month.key)} aria-label={`Exportar ${month.label} completo`}><Info className="h-3.5 w-3.5" /></Button></TooltipTrigger>
+                <TooltipContent side="right" className="max-w-56"><p className="font-medium">Exportar mês completo</p><p className="mt-0.5 text-xs opacity-80">Junta Despesas, Folha, Compras e Faturamento em um único Excel do Calima.</p></TooltipContent>
+              </Tooltip>}
+            </div>;
           })}
         </nav>
+        {Object.values(yearStatuses[selectedMonth] ?? emptyMonthStatuses()).every(status => status === "done") && <Button type="button" variant="outline" size="sm" className="mt-4 w-full gap-2" disabled={exportingMonth === selectedMonth} onClick={() => void exportCompleteMonth(selectedMonth)}><Download className="h-3.5 w-3.5" />{exportingMonth === selectedMonth ? "Gerando..." : "Exportar mês completo"}</Button>}
       </aside>
 
       <main className="min-w-0 py-5 lg:pl-6">
         <h2 className="text-xl font-semibold tracking-tight text-cyan-800 dark:text-cyan-200">{selectedMonthLabel} de {year}</h2>
         <nav className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Módulos contábeis">
           {modules.map(module => {
-            const status = (yearStatuses[selectedMonth] ?? emptyStatuses())[module.key];
+            const status = (yearStatuses[selectedMonth] ?? emptyMonthStatuses())[module.key];
             const statusLabel = status === "done" ? "Concluído" : status === "review" ? "Aguardando conferência" : "Aguardando importação";
             const fileInfo = module.key === "despesas" && expenseFileCount ? `${expenseFileCount} arquivo(s)` : statusLabel;
             return <button key={module.key} type="button" onClick={() => setSelectedModule(module.key)} className={cn("grid min-h-24 grid-cols-[minmax(0,1fr)_30%] overflow-hidden rounded-md bg-background text-left transition-colors", selectedModule === module.key ? "bg-muted/80" : "hover:bg-muted/45")}>
@@ -150,5 +188,5 @@ export function LancamentosWorkspace() {
         )}
       </main>
     </div>
-  </div>;
+  </div></TooltipProvider>;
 }
