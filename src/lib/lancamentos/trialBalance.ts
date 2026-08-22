@@ -36,6 +36,15 @@ export interface TrialBalanceClosingAccount {
   aliases: string[];
 }
 
+export interface TrialBalanceGlobalSummary {
+  analyticalRows: TrialBalanceRow[];
+  debitInCents: number;
+  creditInCents: number;
+  movementDifferenceInCents: number;
+  previousSignedInCents: number;
+  currentSignedInCents: number;
+}
+
 export const closingAccounts: TrialBalanceClosingAccount[] = [
   { key: "cash", label: "Caixa / Bancos", aliases: ["caixa geral", "caixa matriz", "banco sicoob", "banco"] },
   { key: "clients", label: "Clientes", aliases: ["clientes diversos", "clientes", "duplicatas a receber"] },
@@ -71,6 +80,35 @@ export function validateTrialBalanceRow(row: TrialBalanceRow) {
   const expected = previous + row.debitInCents - row.creditInCents;
   const current = signedBalance(row.currentBalanceInCents, row.currentNature);
   return current - expected;
+}
+
+function accountPath(accountCode: string) {
+  const parts = accountCode.split(".").map(part => Number(part));
+  let lastNonZero = parts.length - 1;
+  while (lastNonZero >= 0 && (!Number.isFinite(parts[lastNonZero]) || parts[lastNonZero] === 0)) lastNonZero -= 1;
+  return parts.slice(0, lastNonZero + 1).map(part => Number.isFinite(part) ? part : 0);
+}
+
+function isAncestorPath(parent: number[], child: number[]) {
+  if (!parent.length || child.length <= parent.length) return false;
+  return parent.every((part, index) => child[index] === part);
+}
+
+export function analyticalTrialBalanceRows(rows: TrialBalanceRow[]) {
+  const paths = rows.map(row => ({ row, path: accountPath(row.accountCode) }));
+  return paths.filter(candidate => !paths.some(other => other.row.id !== candidate.row.id && isAncestorPath(candidate.path, other.path))).map(candidate => candidate.row);
+}
+
+export function summarizeTrialBalance(rows: TrialBalanceRow[]): TrialBalanceGlobalSummary {
+  const analyticalRows = analyticalTrialBalanceRows(rows);
+  return analyticalRows.reduce<TrialBalanceGlobalSummary>((summary, row) => {
+    summary.debitInCents += row.debitInCents;
+    summary.creditInCents += row.creditInCents;
+    summary.previousSignedInCents += signedBalance(row.previousBalanceInCents, row.previousNature);
+    summary.currentSignedInCents += signedBalance(row.currentBalanceInCents, row.currentNature);
+    summary.movementDifferenceInCents = summary.debitInCents - summary.creditInCents;
+    return summary;
+  }, { analyticalRows, debitInCents: 0, creditInCents: 0, movementDifferenceInCents: 0, previousSignedInCents: 0, currentSignedInCents: 0 });
 }
 
 export function findClosingAccountRow(rows: TrialBalanceRow[], aliases: string[]) {
