@@ -2,7 +2,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { WorkspaceStatus } from "@/components/admin/lancamentos/DespesasWorkspace";
 
 export type AccountingModuleKey = "despesas" | "folha" | "compras" | "faturamento";
-export type MonthModuleStatuses = Record<AccountingModuleKey, WorkspaceStatus>;
+export type MonthModuleStatus = WorkspaceStatus | "error";
+export type MonthModuleStatuses = Record<AccountingModuleKey, MonthModuleStatus>;
 export type YearModuleStatuses = Record<string, MonthModuleStatuses>;
 
 export const accountingModules: AccountingModuleKey[] = ["despesas", "folha", "compras", "faturamento"];
@@ -44,7 +45,7 @@ export function hasModuleError(payload: unknown) {
   return ["issues", "errors", "validationIssues", "warnings"].some(key => hasArray(payload, key));
 }
 
-export function resolveDynamicStatus(hasActivity: boolean, hasError: boolean, confirmedDone: boolean): WorkspaceStatus {
+export function resolveDynamicStatus(hasActivity: boolean, hasError: boolean, confirmedDone: boolean): MonthModuleStatus {
   if (!hasActivity) return "waiting";
   if (hasError) return "error";
   return confirmedDone ? "done" : "review";
