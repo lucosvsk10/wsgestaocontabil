@@ -1,5 +1,5 @@
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Info, Loader2, Sparkles, Trash2 } from "lucide-react";
+import { AlertTriangle, Info, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChartAccount } from "@/lib/lancamentos/chartOfAccounts";
@@ -104,6 +104,10 @@ export function DespesasWorkspace({ company, month, year, onFileCountChange, onS
 
   const readFiles = async (event: ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(event.target.files ?? []); event.target.value = ""; if (!selected.length) return;
+    if (!accounts.length) {
+      setIssues([{ id: "missing-chart-of-accounts", fileName: selected[0]?.name ?? "", sheetName: "", row: 0, message: "Importe o Plano de Contas desta empresa antes de importar Despesas." }]);
+      return;
+    }
     setReading(true); setMixedCompetences([]);
     const result: SavedData = { entries: [], issues: [], ignoredRows: 0 };
     for (const file of selected) {
@@ -143,17 +147,17 @@ export function DespesasWorkspace({ company, month, year, onFileCountChange, onS
     if (!entries.length || aligning) return;
     const paymentRows = entries.filter(row => isPaymentHistory(row.history));
     const cash = findCashAccount(accounts);
-    if (paymentRows.length && !cash) { setAlignmentMessage("Não encontrei uma conta analítica Caixa Matriz ou Caixa Geral no plano desta empresa. O alinhamento foi bloqueado para não usar banco específico."); return; }
+    if (paymentRows.length && !cash) { setAlignmentMessage("Não encontrei uma conta analítica Caixa Matriz ou Caixa Geral no plano desta empresa. O agrupamento foi bloqueado para não usar banco específico."); return; }
     setAligning(true); setAlignmentMessage("");
     try {
       const result = await alignExpenseEntriesWithAI(entries, accounts, closingDate(month, year));
       setAlignedEntries(result.rows); setAlignmentUsedAI(result.usedAI);
       setAlignmentMessage(result.usedAI
-        ? `${entries.length} lançamentos foram alinhados em ${result.rows.length} linha(s). Históricos revisados com IA${result.cashAccount ? ` · pagamentos em ${result.cashAccount.description}` : ""}.`
-        : `${entries.length} lançamentos foram alinhados em ${result.rows.length} linha(s)${result.cashAccount ? ` · pagamentos em ${result.cashAccount.description}` : ""}. A revisão de históricos por IA ficou indisponível nesta execução e foi aplicada a padronização segura.`);
+        ? `${entries.length} lançamentos foram agrupados em ${result.rows.length} linha(s). Históricos revisados com IA${result.cashAccount ? ` · pagamentos em ${result.cashAccount.description}` : ""}.`
+        : `${entries.length} lançamentos foram agrupados em ${result.rows.length} linha(s)${result.cashAccount ? ` · pagamentos em ${result.cashAccount.description}` : ""}. A revisão de históricos por IA ficou indisponível nesta execução e foi aplicada a padronização segura.`);
       onStatusChange?.("review");
     } catch (error) {
-      setAlignmentMessage(error instanceof Error ? error.message : "Não foi possível alinhar as despesas.");
+      setAlignmentMessage(error instanceof Error ? error.message : "Não foi possível agrupar as despesas.");
     } finally { setAligning(false); }
   };
 
@@ -182,7 +186,7 @@ export function DespesasWorkspace({ company, month, year, onFileCountChange, onS
 
   return <section className="mt-8 space-y-8">
     <div className="rounded-md border border-border bg-background p-6">
-      <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between"><h3 className="font-semibold">Despesas de {competence}</h3><Button variant="outline" disabled={reading} onClick={() => fileInput.current?.click()}>{reading ? "Lendo arquivo..." : `Importar despesas de ${competence}`}</Button><input ref={fileInput} type="file" multiple accept=".xlsx,.xls,.csv" className="sr-only" onChange={readFiles}/></div>
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between"><h3 className="font-semibold">Despesas de {competence}</h3><Button variant="outline" disabled={reading || (loaded && !accounts.length)} onClick={() => fileInput.current?.click()}>{reading ? "Lendo arquivo..." : `Importar despesas de ${competence}`}</Button><input ref={fileInput} type="file" multiple accept=".xlsx,.xls,.csv" className="sr-only" onChange={readFiles}/></div>
       <div className="mt-5 border-t border-border pt-5 text-sm text-muted-foreground">{files.length ? <div className="flex flex-wrap gap-2">{files.map(file => <span key={file} className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-border bg-muted/25 px-2.5 py-1.5 text-xs text-foreground"><span className="max-w-[420px] truncate" title={file}>{file}</span><Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive" disabled={Boolean(deletingFile)} onClick={() => void deleteDocument(file)} title="Excluir documento e seus lançamentos"><Trash2 className="h-3.5 w-3.5" /></Button></span>)}<button className="ml-2 text-xs underline" onClick={() => void clear()}>Limpar importação</button></div> : "Nenhum arquivo selecionado nesta competência."}</div>
     </div>
 
@@ -206,10 +210,10 @@ export function DespesasWorkspace({ company, month, year, onFileCountChange, onS
 
       <TabsContent value="lancamentos" className="mt-6">
         <div className="rounded-md border border-border bg-background">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-4"><div><h3 className="font-semibold">Lançamentos para o Calima</h3><p className="mt-1 text-xs text-muted-foreground">Sem alinhamento, exporta exatamente os lançamentos importados. O alinhamento é opcional e só roda quando você solicitar.</p></div><div className="flex gap-2"><Button variant="outline" disabled={!entries.length || aligning} onClick={() => void alignWithAI()}>{aligning ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Alinhando...</> : <><Sparkles className="mr-2 h-4 w-4"/>Alinhar com IA</>}</Button>{alignedEntries.length > 0 && <Button variant="outline" onClick={() => { setAlignedEntries([]); setAlignmentUsedAI(false); setAlignmentMessage("Versão alinhada descartada. O original do Calima voltou a ser usado."); }}>Usar original</Button>}<Button disabled={!canExport} onClick={() => exportGroupedExpenses(exportRows, competence)}>Exportar para o Calima</Button></div></div>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-4"><div><h3 className="font-semibold">Lançamentos para o Calima</h3><p className="mt-1 text-xs text-muted-foreground">Sem agrupamento, exporta exatamente os lançamentos importados. O agrupamento é opcional e só roda quando você solicitar.</p></div><div className="flex gap-2"><Button variant="outline" disabled={!entries.length || aligning} onClick={() => void alignWithAI()}>{aligning ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Agrupando...</> : <>Agrupar lançamentos</>}</Button>{alignedEntries.length > 0 && <Button variant="outline" onClick={() => { setAlignedEntries([]); setAlignmentUsedAI(false); setAlignmentMessage("Versão agrupada descartada. O original do Calima voltou a ser usado."); }}>Usar original</Button>}<Button disabled={!canExport} onClick={() => exportGroupedExpenses(exportRows, competence)}>Exportar para o Calima</Button></div></div>
           {alignmentMessage && <div className="border-b border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground">{alignmentMessage}</div>}
           <LedgerTable rows={exportRows}/>
-          <div className="flex flex-wrap gap-4 border-t border-border p-4 text-xs text-muted-foreground"><span>{alignedEntries.length ? `${entries.length} originais → ${alignedEntries.length} alinhados` : `${entries.length} lançamentos originais`}</span><span>Total: {currency(exportTotal)}</span>{alignedEntries.length > 0 && <span>{alignmentUsedAI ? "Históricos revisados com IA" : "Históricos padronizados sem alterar valores/contas de despesa"}</span>}</div>
+          <div className="flex flex-wrap gap-4 border-t border-border p-4 text-xs text-muted-foreground"><span>{alignedEntries.length ? `${entries.length} originais → ${alignedEntries.length} agrupados` : `${entries.length} lançamentos originais`}</span><span>Total: {currency(exportTotal)}</span>{alignedEntries.length > 0 && <span>{alignmentUsedAI ? "Históricos revisados com IA" : "Históricos padronizados sem alterar valores/contas de despesa"}</span>}</div>
         </div>
       </TabsContent>
 
