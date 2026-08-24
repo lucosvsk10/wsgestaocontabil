@@ -9,6 +9,7 @@ import { exportCompleteAccountingMonth } from "@/lib/lancamentos/completeMonthEx
 import { saveWorkspaceData } from "@/lib/lancamentos/workspaceStorage";
 import { cn } from "@/lib/utils";
 import { AccountingYearPicker } from "./AccountingYearPicker";
+import { AccountingImportPrerequisites } from "./AccountingImportPrerequisites";
 import { CompanySelector } from "./CompanySelector";
 import { ComprasWorkspace } from "./ComprasWorkspace";
 import { DespesasWorkspace, WorkspaceStatus } from "./DespesasWorkspace";
@@ -197,6 +198,7 @@ export function LancamentosWorkspace() {
 
       <main className="min-w-0 py-5 lg:pl-6">
         <h2 className="text-xl font-semibold tracking-tight text-cyan-800 dark:text-cyan-200">{selectedMonthLabel} de {year}</h2>
+        <AccountingImportPrerequisites company={company.id} />
         <nav className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Módulos contábeis">
           {modules.map(module => {
             const status = (yearStatuses[selectedMonth] ?? emptyMonthStatuses())[module.key];
