@@ -25,10 +25,7 @@ import AdminFeature from "./pages/AdminFeature";
 
 const AppRoutes = () => {
   const { userData, user } = useAuth();
-  
-  const isAdmin = () => {
-    return checkIsAdmin(userData, user?.email);
-  };
+  const isAdmin = () => checkIsAdmin(userData, user?.email);
 
   return (
     <Routes>
@@ -41,116 +38,33 @@ const AppRoutes = () => {
       <Route path="/calculadora-inss" element={<INSSCalculator />} />
       <Route path="/simulador-prolabore" element={<ProLaboreCalculator />} />
       <Route path="/changelog" element={<ChangeLog />} />
-      
-      {/* Admin routes */}
-      <Route path="/admin" element={
-        <PrivateRoute requiredRole="admin">
-          <AdminDashboard activeTab="dashboard" />
-        </PrivateRoute>
-      } />
-      
-      <Route path="/admin/users" element={
-        <PrivateRoute requiredRole="admin">
-          <AdminDashboard activeTab="users" />
-        </PrivateRoute>
-      } />
-      
-      <Route path="/admin/user-documents/:userId" element={
-        <PrivateRoute requiredRole="admin">
-          <AdminDashboard activeTab="user-documents" />
-        </PrivateRoute>
-      } />
 
-      <Route path="/admin/company-data/:userId" element={
-        <PrivateRoute requiredRole="admin">
-          <CompanyDataView />
-        </PrivateRoute>
-      } />
-      
-      <Route path="/admin/storage" element={
-        <PrivateRoute requiredRole="admin">
-          <AdminDashboard activeTab="storage" />
-        </PrivateRoute>
-      } />
-      
-      <Route path="/admin/polls" element={
-        <PrivateRoute requiredRole="admin">
-          <AdminDashboard activeTab="polls" />
-        </PrivateRoute>
-      } />
-      
-      <Route path="/admin/tools" element={
-        <PrivateRoute requiredRole="admin">
-          <AdminDashboard activeTab="tools" />
-        </PrivateRoute>
-      } />
-      
-      <Route path="/admin/simulations" element={
-        <PrivateRoute requiredRole="admin">
-          <AdminDashboard activeTab="simulations" />
-        </PrivateRoute>
-      } />
-      
-      <Route path="/admin/announcements" element={
-        <PrivateRoute requiredRole="admin">
-          <AdminDashboard activeTab="announcements" />
-        </PrivateRoute>
-      } />
-      
-      <Route path="/admin/agenda" element={
-        <PrivateRoute requiredRole="admin">
-          <AdminDashboard activeTab="agenda" />
-        </PrivateRoute>
-      } />
-      
-      <Route path="/admin/settings" element={
-        <PrivateRoute requiredRole="admin">
-          <AdminDashboard activeTab="settings" />
-        </PrivateRoute>
-      } />
-      
-      {/* Manter compatibilidade com rotas antigas */}
+      <Route path="/admin" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="dashboard" /></PrivateRoute>} />
+      <Route path="/admin/users" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="users" /></PrivateRoute>} />
+      <Route path="/admin/user-documents/:userId" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="user-documents" /></PrivateRoute>} />
+      <Route path="/admin/company-data/:userId" element={<PrivateRoute requiredRole="admin"><CompanyDataView /></PrivateRoute>} />
+      <Route path="/admin/storage" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="storage" /></PrivateRoute>} />
+      <Route path="/admin/polls" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="polls" /></PrivateRoute>} />
+      <Route path="/admin/tools" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="tools" /></PrivateRoute>} />
+      <Route path="/admin/simulations" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="simulations" /></PrivateRoute>} />
+      <Route path="/admin/announcements" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="announcements" /></PrivateRoute>} />
+      <Route path="/admin/agenda" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="agenda" /></PrivateRoute>} />
+      <Route path="/admin/settings" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="settings" /></PrivateRoute>} />
+      <Route path="/admin/feature" element={<PrivateRoute requiredRole="admin"><AdminFeature /></PrivateRoute>} />
+
       <Route path="/admin-dashboard" element={<Navigate to="/admin" replace />} />
       <Route path="/admin/tax-simulations" element={<Navigate to="/admin/simulations" replace />} />
-      
-      {/* Nova rota simplificada do carousel com layout completo */}
-      <Route 
-        path="/admin/carousel" 
-        element={
-          <PrivateRoute requiredRole="admin">
-            <AdminLayout>
-              <SimpleCarouselManager />
-            </AdminLayout>
-          </PrivateRoute>
-        } 
-      />
-      
-      {/* Rota de Lançamentos Admin */}
-      <Route path="/admin/lancamentos" element={
-        <PrivateRoute requiredRole="admin">
-          <AdminLancamentos />
-        </PrivateRoute>
-      } />
+
+      <Route path="/admin/carousel" element={<PrivateRoute requiredRole="admin"><AdminLayout><SimpleCarouselManager /></AdminLayout></PrivateRoute>} />
+
+      <Route path="/admin/lancamentos" element={<PrivateRoute requiredRole="admin"><AdminLancamentos /></PrivateRoute>} />
       <Route path="/admin/lancamentos/balancete" element={<PrivateRoute requiredRole="admin"><AdminBalancete /></PrivateRoute>} />
       <Route path="/admin/lancamentos/plano-contas" element={<PrivateRoute requiredRole="admin"><AdminPlanoContas /></PrivateRoute>} />
       <Route path="/admin/lancamentos/engine" element={<PrivateRoute requiredRole="admin"><AdminEngine /></PrivateRoute>} />
-      <Route path="/admin/lancamentos/feature" element={<PrivateRoute requiredRole="admin"><AdminFeature /></PrivateRoute>} />
+      <Route path="/admin/lancamentos/feature" element={<Navigate to="/admin/feature" replace />} />
 
-      {/* Client routes */}
-      <Route path="/client/*" element={
-        <PrivateRoute>
-          <ClientDashboard />
-        </PrivateRoute>
-      } />
-      
-      {/* Redirect route after login */}
-      <Route path="/dashboard" element={
-        <PrivateRoute>
-          {isAdmin() ? <Navigate to="/admin" replace /> : <Navigate to="/client" replace />}
-        </PrivateRoute>
-      } />
-      
-      {/* 404 route - must be last */}
+      <Route path="/client/*" element={<PrivateRoute><ClientDashboard /></PrivateRoute>} />
+      <Route path="/dashboard" element={<PrivateRoute>{isAdmin() ? <Navigate to="/admin" replace /> : <Navigate to="/client" replace />}</PrivateRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
