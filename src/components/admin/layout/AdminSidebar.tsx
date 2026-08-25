@@ -48,14 +48,12 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
   const { theme } = useTheme();
   const { sidebarSections, currentPath } = useAdminSidebarNavigation();
   
-  // Use the custom hook for sidebar handlers
   useSidebarHandlers({ 
     isMobile: window.innerWidth < 768, 
     open, 
     onClose 
   });
 
-  // Close sidebar on route change for mobile
   useEffect(() => {
     const isMobile = window.innerWidth < 768;
     if (isMobile && open) {
@@ -84,7 +82,6 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
         }
       `}
     >
-      {/* Mobile close button */}
       {isMobile && open && (
         <Button
           variant="ghost"
@@ -96,7 +93,6 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
         </Button>
       )}
 
-      {/* Logo area */}
       <div className="h-20 flex items-center justify-center px-6 border-b border-gray-100 dark:border-[#020817]">
         <Link to="/" className="flex items-center justify-center transition-all duration-300 hover:scale-105">
           {(open || isMobile) ? (
@@ -121,7 +117,6 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
         </Link>
       </div>
       
-      {/* Navigation */}
       <nav className={`flex-1 overflow-y-auto px-3 py-6 ${open || isMobile ? "space-y-6" : "space-y-3"}`}>
         {sidebarSections.map((section, sectionIndex) => (
           <section
@@ -173,7 +168,11 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
                       </Link>
                     </div>
                   )}
-                  {isLaunches && (open || isMobile) && <div className={`ml-7 overflow-hidden border-l border-border pl-3 transition-all duration-200 ${keepOpen ? "mt-1 max-h-44 opacity-100" : "max-h-0 opacity-0 group-hover/lancamentos:mt-1 group-hover/lancamentos:max-h-44 group-hover/lancamentos:opacity-100"}`}>{[["Lançamentos mensais","/admin/lancamentos"],["Balancete","/admin/lancamentos/balancete"],["Plano de contas","/admin/lancamentos/plano-contas"]].map(([label,to]) => <Link key={to} to={to} onClick={isMobile ? onClose : undefined} className={`block rounded-sm px-3 py-2 text-xs transition-colors ${currentPath === to ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"}`}>{label}</Link>)}<Link to="/admin/lancamentos/engine" onClick={isMobile ? onClose : undefined} className={`flex items-center justify-between rounded-sm px-3 py-2 text-xs transition-colors ${currentPath === "/admin/lancamentos/engine" ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"}`}><span className="inline-flex items-center gap-2"><Settings2 className="h-3.5 w-3.5"/>Engine</span><LockKeyhole className="h-3 w-3"/></Link></div>}
+                  {isLaunches && (open || isMobile) && <div className={`ml-7 overflow-hidden border-l border-border pl-3 transition-all duration-200 ${keepOpen ? "mt-1 max-h-52 opacity-100" : "max-h-0 opacity-0 group-hover/lancamentos:mt-1 group-hover/lancamentos:max-h-52 group-hover/lancamentos:opacity-100"}`}>
+                    {[["Lançamentos mensais","/admin/lancamentos"],["Balancete","/admin/lancamentos/balancete"],["Plano de contas","/admin/lancamentos/plano-contas"]].map(([label,to]) => <Link key={to} to={to} onClick={isMobile ? onClose : undefined} className={`block rounded-sm px-3 py-2 text-xs transition-colors ${currentPath === to ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"}`}>{label}</Link>)}
+                    <Link to="/admin/lancamentos/engine" onClick={isMobile ? onClose : undefined} className={`flex items-center justify-between rounded-sm px-3 py-2 text-xs transition-colors ${currentPath === "/admin/lancamentos/engine" ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"}`}><span className="inline-flex items-center gap-2"><Settings2 className="h-3.5 w-3.5"/>Engine</span><LockKeyhole className="h-3 w-3"/></Link>
+                    <Link to="/admin/lancamentos/feature" onClick={isMobile ? onClose : undefined} className={`flex items-center justify-between rounded-sm px-3 py-2 text-xs transition-colors ${currentPath === "/admin/lancamentos/feature" ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"}`}><span>Feature</span><LockKeyhole className="h-3 w-3"/></Link>
+                  </div>}
                 </div>
               )})}
             </div>
