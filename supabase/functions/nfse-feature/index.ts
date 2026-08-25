@@ -4,7 +4,7 @@ import { Buffer } from "node:buffer";
 import { lerCertificado } from "npm:nfse-node@0.3.2/certificado";
 import { assinarXml, assinaturaValida } from "npm:nfse-node@0.3.2/assinatura";
 import { gerarIdDps, montarXmlDps } from "npm:nfse-node@0.3.2/dps";
-import { criarClienteSefin, ErroComunicacaoSefin } from "npm:nfse-node@0.3.2/cliente";
+import { criarClienteSefin } from "npm:nfse-node@0.3.2/cliente";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -197,22 +197,25 @@ function clientFor(cert: ReturnType<typeof lerCertificado>) {
   });
 }
 
-function serializeError(reason: unknown) {
-  if (reason instanceof ErroComunicacaoSefin) {
-    return {
-      error: reason.message,
-      status: reason.status ?? null,
-      errors: reason.erros ?? [],
-      response: reason.corpoResposta ?? null,
-    };
-  }
-  const anyReason = reason as any;
+function sefinError(reason: unknown) {
+  const value = reason as any;
   return {
-    error: reason instanceof Error ? reason.message : "Falha interna na Feature.",
-    status: anyReason?.status ?? null,
-    errors: anyReason?.validation?.errors ?? [],
+    message: reason instanceof Error ? reason.message : "Falha ao comunicar com a SEFIN Nacional.",
+    status: typeof value?.status === "number" ? value.status : null,
+    errors: Array.isArray(value?.erros) ? value.erros : [],
+    response: value?.corpoResposta ?? null,
+  };
+}
+
+function serializeError(reason: unknown) {
+  const anyReason = reason as any;
+  const remote = sefinError(reason);
+  return {
+    error: remote.message,
+    status: remote.status,
+    errors: anyReason?.validation?.errors ?? remote.errors,
     warnings: anyReason?.validation?.warnings ?? [],
-    response: anyReason?.corpoResposta ?? null,
+    response: remote.response,
   };
 }
 
@@ -267,8 +270,9 @@ serve(async (req) => {
         const response = await client.consultarDps(idDps);
         return json({ ok: true, connected: true, certificate: info, idDps, status: response.status, response: response.corpo });
       } catch (reason) {
-        if (reason instanceof ErroComunicacaoSefin && [400, 404].includes(reason.status ?? 0)) {
-          return json({ ok: true, connected: true, certificate: info, idDps, status: reason.status, note: "A SEFIN respondeu ao certificado. A DPS consultada apenas ainda não existe.", response: reason.corpoResposta });
+        const remote = sefinError(reason);
+        if ([400, 404].includes(remote.status ?? 0)) {
+          return json({ ok: true, connected: true, certificate: info, idDps, status: remote.status, note: "A SEFIN respondeu ao certificado. A DPS consultada apenas ainda não existe.", response: remote.response });
         }
         throw reason;
       }
