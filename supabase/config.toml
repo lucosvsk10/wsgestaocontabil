@@ -58,3 +58,6 @@ verify_jwt = true
 
 [functions.accounting-engine]
 verify_jwt = true
+
+[functions.nfse-feature]
+verify_jwt = true
