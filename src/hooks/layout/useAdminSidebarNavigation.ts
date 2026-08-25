@@ -1,6 +1,6 @@
 
 import { useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, PieChart, Calculator, Settings, Wrench, HardDrive, Megaphone, Calendar, Images, FileStack, LucideIcon } from "lucide-react";
+import { LayoutDashboard, Users, PieChart, Calculator, Settings, Wrench, HardDrive, Megaphone, Calendar, Images, FileStack, LucideIcon, LockKeyhole } from "lucide-react";
 
 interface SidebarItem {
   icon: LucideIcon;
@@ -107,6 +107,12 @@ export const useAdminSidebarNavigation = () => {
           label: "Configurações",
           active: getIsActive("/admin/settings"),
           to: "/admin/settings"
+        },
+        {
+          icon: LockKeyhole,
+          label: "Feature",
+          active: getIsActive("/admin/feature"),
+          to: "/admin/feature"
         }
       ]
     }
