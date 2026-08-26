@@ -1,7 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
 import { Buffer } from "node:buffer";
-import https from "node:https";
 import { lerCertificado } from "npm:nfse-node@0.3.2/certificado";
 
 const cors = {
@@ -77,49 +76,6 @@ function extractReturn(xml: string) {
   return { cStat: pick("cStat"), xMotivo: pick("xMotivo"), chNFe: pick("chNFe"), nProt: pick("nProt"), raw: xml };
 }
 
-function testSefazStatus(pfx: Buffer, password: string, model: "55" | "65") {
-  const endpoint = model === "65"
-    ? "https://nfce-homologacao.svrs.rs.gov.br/ws/NfeStatusServico/NfeStatusServico4.asmx"
-    : "https://nfe-homologacao.svrs.rs.gov.br/ws/NfeStatusServico/NfeStatusServico4.asmx";
-  const soap = `<?xml version="1.0" encoding="utf-8"?>
-<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
-  <soap12:Body>
-    <nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeStatusServico4">
-      <consStatServ xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><tpAmb>2</tpAmb><cUF>27</cUF><xServ>STATUS</xServ></consStatServ>
-    </nfeDadosMsg>
-  </soap12:Body>
-</soap12:Envelope>`;
-  return new Promise<string>((resolve, reject) => {
-    const url = new URL(endpoint);
-    const req = https.request({
-      hostname: url.hostname,
-      port: 443,
-      path: url.pathname,
-      method: "POST",
-      pfx,
-      passphrase: password,
-      rejectUnauthorized: true,
-      headers: {
-        "Content-Type": "application/soap+xml; charset=utf-8",
-        "Content-Length": Buffer.byteLength(soap, "utf8"),
-      },
-      timeout: 20000,
-    }, (res) => {
-      const chunks: Buffer[] = [];
-      res.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
-      res.on("end", () => {
-        const body = Buffer.concat(chunks).toString("utf8");
-        if ((res.statusCode || 500) >= 400) reject(new Error(`SVRS respondeu HTTP ${res.statusCode}: ${body.slice(0, 700)}`));
-        else resolve(body);
-      });
-    });
-    req.on("timeout", () => req.destroy(new Error("Tempo limite ao conectar com a SVRS.")));
-    req.on("error", reject);
-    req.write(soap);
-    req.end();
-  });
-}
-
 async function loadSped() {
   return await import("npm:node-sped-nfe@1.2.52");
 }
@@ -187,7 +143,8 @@ serve(async (req) => {
     if (cert.titular.cnpj && digits(raw.cnpjEmitente) && cert.titular.cnpj !== digits(raw.cnpjEmitente)) return json({ error: "O CNPJ informado não corresponde ao certificado.", certificate }, 422);
     if (action === "inspect_certificate") return json({ ok: true, certificate });
     if (action === "test_connection") {
-      const response = await testSefazStatus(pfx, password, model);
+      const tools = await toolsFor(model, raw, pfx, password);
+      const response = await tools.sefazStatus();
       const parsed = extractReturn(response);
       return json({ ok: parsed.cStat === "107", connected: parsed.cStat === "107", certificate, model, environment: "homologacao", endpoint: model === "65" ? "SVRS NFC-e homologação" : "SVRS NF-e homologação", response: parsed });
     }
