@@ -8,6 +8,7 @@ const esc = (value: unknown) => String(value ?? "")
   .replaceAll('"', "&quot;")
   .replaceAll("'", "&apos;");
 const n2 = (value: unknown) => Number(value || 0).toFixed(2);
+const HOMOLOGATION_ITEM_DESCRIPTION = "NOTA FISCAL EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL";
 
 function dvModulo11(base: string) {
   let weight = 2;
@@ -61,7 +62,7 @@ export function buildNativeNfeXml(model: "55" | "65", raw: SaleData) {
   const cfop = digits(raw.cfop);
   const ncm = digits(raw.ncm);
   const destDoc = digits(raw.destDocumento);
-  const xProd = String(raw.produto || "PRODUTO PARA TESTE EM HOMOLOGACAO");
+  const xProd = HOMOLOGATION_ITEM_DESCRIPTION;
   const taxXml = crt === "1"
     ? `<ICMS><ICMSSN102><orig>${esc(raw.origem || "0")}</orig><CSOSN>${esc(csosn)}</CSOSN></ICMSSN102></ICMS>`
     : `<ICMS><ICMS00><orig>${esc(raw.origem || "0")}</orig><CST>${esc(cst)}</CST><modBC>3</modBC><vBC>0.00</vBC><pICMS>0.00</pICMS><vICMS>0.00</vICMS></ICMS00></ICMS>`;
