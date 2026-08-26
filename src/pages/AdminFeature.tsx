@@ -1,66 +1,24 @@
-import { FormEvent, useMemo, useState } from "react";
-import { AlertTriangle, CheckCircle2, FileKey2, KeyRound, LockKeyhole, RefreshCw, Send } from "lucide-react";
+import { FormEvent, useState } from "react";
+import { AlertTriangle, FileKey2, KeyRound, LockKeyhole, RefreshCw, Send } from "lucide-react";
 import { AdminLayout } from "@/components/admin/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 
-type FiscalForm = {
-  cnpjPrestador: string;
-  municipioEmissor: string;
-  simples: string;
-  cnpjTomador: string;
-  cpfTomador: string;
-  nomeTomador: string;
-  municipioPrestacao: string;
-  codigoTributacao: string;
-  descricao: string;
-  valor: string;
-  tributacaoIss: string;
-  serie: string;
-  numero: string;
-};
+type Mode = "nfce" | "nfe" | "nfse";
+type CertificateInfo = { cnpj?: string | null; cpf?: string | null; nome?: string | null; validadeFim?: string; validoAgora?: boolean };
+type Result = { ok?: boolean; connected?: boolean; valid?: boolean; errors?: unknown[]; warnings?: string[]; certificate?: CertificateInfo; response?: unknown; xml?: string; chaveAcesso?: string; [key: string]: unknown };
 
-type CertificateInfo = {
-  cnpj?: string | null;
-  cpf?: string | null;
-  nome?: string | null;
-  validadeInicio?: string;
-  validadeFim?: string;
-  validoAgora?: boolean;
+const serviceInitial = {
+  cnpjPrestador: "", municipioEmissor: "2704401", simples: "3", cnpjTomador: "", cpfTomador: "", nomeTomador: "",
+  municipioPrestacao: "2704401", codigoTributacao: "", descricao: "", valor: "", tributacaoIss: "1", serie: "1", numero: "1",
 };
-
-type FeatureResult = {
-  ok?: boolean;
-  connected?: boolean;
-  valid?: boolean;
-  signed?: boolean;
-  errors?: Array<string | Record<string, unknown>>;
-  warnings?: string[];
-  certificate?: CertificateInfo;
-  idDps?: string;
-  chaveAcesso?: string;
-  status?: number | null;
-  note?: string;
-  response?: unknown;
-  xml?: string;
-  nfseXml?: string;
-};
-
-const emptyForm: FiscalForm = {
-  cnpjPrestador: "",
-  municipioEmissor: "",
-  simples: "1",
-  cnpjTomador: "",
-  cpfTomador: "",
-  nomeTomador: "",
-  municipioPrestacao: "",
-  codigoTributacao: "",
-  descricao: "",
-  valor: "",
-  tributacaoIss: "1",
-  serie: "1",
-  numero: "1",
+const saleInitial = {
+  cnpjEmitente: "64038361000100", razaoSocial: "A G MATOS PORTUGUES COMERCIO", nomeFantasia: "", ie: "", crt: "1",
+  codigoMunicipio: "2704401", nomeMunicipio: "Major Isidoro", logradouro: "", numeroEndereco: "", complemento: "", bairro: "", cep: "", telefone: "",
+  cscId: "", csc: "", serie: "1", numeroNota: "1",
+  codigoProduto: "1", produto: "", ncm: "", cfop: "5102", unidade: "UN", quantidade: "1", valorUnitario: "", origem: "0", csosn: "400", cst: "00", formaPagamento: "17",
+  destDocumento: "", destNome: "", destLogradouro: "", destNumero: "", destBairro: "", destCodigoMunicipio: "2704401", destMunicipio: "Major Isidoro", destUF: "AL", destCep: "",
 };
 
 async function invoke<T>(name: string, body: Record<string, unknown>): Promise<T> {
@@ -71,229 +29,60 @@ async function invoke<T>(name: string, body: Record<string, unknown>): Promise<T
     const context = (error as { context?: Response }).context;
     if (context) {
       const payload = await context.clone().json();
-      const details = Array.isArray(payload?.errors)
-        ? payload.errors.map((item: unknown) => typeof item === "string" ? item : JSON.stringify(item)).join(" · ")
-        : "";
+      const details = Array.isArray(payload?.errors) ? payload.errors.map((x: unknown) => typeof x === "string" ? x : JSON.stringify(x)).join(" · ") : "";
       message = [payload?.error || message, details].filter(Boolean).join(" — ");
     }
   } catch { /* noop */ }
   throw new Error(message);
 }
-
 async function fileToBase64(file: File) {
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  let binary = "";
-  const chunk = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunk) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
-  }
+  const bytes = new Uint8Array(await file.arrayBuffer()); let binary = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   return btoa(binary);
 }
 
 export default function AdminFeature() {
-  const [token, setToken] = useState("");
-  const [password, setPassword] = useState("");
-  const [certificateBase64, setCertificateBase64] = useState("");
-  const [certificatePassword, setCertificatePassword] = useState("");
-  const [certificateName, setCertificateName] = useState("");
-  const [certificate, setCertificate] = useState<CertificateInfo | null>(null);
-  const [form, setForm] = useState<FiscalForm>(emptyForm);
-  const [reference, setReference] = useState("");
-  const [result, setResult] = useState<FeatureResult | null>(null);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [action, setAction] = useState<string | null>(null);
+  const [token, setToken] = useState(""); const [password, setPassword] = useState(""); const [mode, setMode] = useState<Mode>("nfce");
+  const [certificateBase64, setCertificateBase64] = useState(""); const [certificatePassword, setCertificatePassword] = useState(""); const [certificateName, setCertificateName] = useState(""); const [certificate, setCertificate] = useState<CertificateInfo | null>(null);
+  const [service, setService] = useState(serviceInitial); const [sale, setSale] = useState(saleInitial); const [reference, setReference] = useState("");
+  const [result, setResult] = useState<Result | null>(null); const [error, setError] = useState(""); const [action, setAction] = useState<string | null>(null); const [loading, setLoading] = useState(false);
+  const hasCert = Boolean(certificateBase64 && certificatePassword);
 
-  const hasCertificate = Boolean(certificateBase64 && certificatePassword);
-  const canIssue = useMemo(() => Boolean(
-    hasCertificate &&
-    form.cnpjPrestador &&
-    form.municipioEmissor &&
-    form.codigoTributacao &&
-    form.descricao &&
-    Number(form.valor) > 0
-  ), [hasCertificate, form]);
+  const authenticate = async (e: FormEvent) => { e.preventDefault(); setLoading(true); setError(""); try { const data = await invoke<{token:string}>("accounting-engine", { action: "unlock", password }); setToken(data.token); setPassword(""); } catch (x) { setError(x instanceof Error ? x.message : "Falha ao desbloquear."); } finally { setLoading(false); } };
+  const chooseCertificate = async (file?: File) => { setCertificate(null); setResult(null); setError(""); if (!file) { setCertificateBase64(""); setCertificateName(""); return; } setCertificateName(file.name); try { setCertificateBase64(await fileToBase64(file)); } catch { setError("Não foi possível ler o certificado."); } };
+  const inspectCertificate = async () => { setAction("certificate"); setError(""); try { const data = await invoke<Result>("nfse-feature", { action: "inspect_certificate", engine_token: token, environment: "homologacao", certificate_base64: certificateBase64, certificate_password: certificatePassword, data: service }); setCertificate(data.certificate || null); if (data.certificate?.cnpj) { setService(s => ({...s, cnpjPrestador: data.certificate!.cnpj!})); setSale(s => ({...s, cnpjEmitente: data.certificate!.cnpj!})); } setResult(data); } catch (x) { setError(x instanceof Error ? x.message : "Falha no certificado."); } finally { setAction(null); } };
 
-  const authenticate = async (event: FormEvent) => {
-    event.preventDefault();
-    setLoading(true); setError("");
-    try {
-      const data = await invoke<{ token: string }>("accounting-engine", { action: "unlock", password });
-      setToken(data.token); setPassword("");
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Falha ao desbloquear.");
-    } finally { setLoading(false); }
-  };
-
-  const update = (key: keyof FiscalForm, value: string) => setForm((current) => ({ ...current, [key]: value }));
-
-  const securePayload = (kind: string, extra: Record<string, unknown> = {}) => ({
-    action: kind,
-    engine_token: token,
-    environment: "homologacao",
-    certificate_base64: certificateBase64,
-    certificate_password: certificatePassword,
-    data: form,
-    ...extra,
-  });
-
-  const chooseCertificate = async (file?: File) => {
-    setCertificate(null); setResult(null); setError("");
-    if (!file) {
-      setCertificateBase64(""); setCertificateName("");
-      return;
-    }
-    setCertificateName(file.name);
-    try {
-      setCertificateBase64(await fileToBase64(file));
-    } catch {
-      setError("Não foi possível ler o certificado selecionado.");
-    }
-  };
-
-  const inspectCertificate = async () => {
-    setAction("certificate"); setError(""); setResult(null);
-    try {
-      const data = await invoke<FeatureResult>("nfse-feature", securePayload("inspect_certificate"));
-      setCertificate(data.certificate || null);
-      if (data.certificate?.cnpj) update("cnpjPrestador", data.certificate.cnpj);
-      setResult(data);
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Falha ao abrir o certificado.");
-    } finally { setAction(null); }
-  };
-
-  const request = async (kind: "validate" | "test_connection" | "preview" | "issue") => {
+  const request = async (kind: "validate" | "test_connection" | "preview" | "issue" | "query") => {
     setAction(kind); setError(""); setResult(null);
     try {
-      const body = kind === "validate"
-        ? { action: kind, engine_token: token, environment: "homologacao", data: form }
-        : securePayload(kind);
-      const data = await invoke<FeatureResult>("nfse-feature", body);
-      setResult(data);
-      if (data.certificate) setCertificate(data.certificate);
-      if (data.chaveAcesso) setReference(data.chaveAcesso);
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Falha no teste da NFS-e.");
-    } finally { setAction(null); }
+      const common = { action: kind, engine_token: token, environment: "homologacao", certificate_base64: certificateBase64, certificate_password: certificatePassword };
+      const data = mode === "nfse"
+        ? await invoke<Result>("nfse-feature", { ...common, data: service, ...(kind === "query" ? { reference } : {}) })
+        : await invoke<Result>("dfe-feature", { ...common, model: mode === "nfce" ? "65" : "55", data: sale, ...(kind === "query" ? { reference } : {}) });
+      setResult(data); if (data.certificate) setCertificate(data.certificate); if (data.chaveAcesso) setReference(String(data.chaveAcesso));
+    } catch (x) { setError(x instanceof Error ? x.message : "Falha no teste fiscal."); } finally { setAction(null); }
   };
-
-  const query = async () => {
-    setAction("query"); setError(""); setResult(null);
-    try {
-      const data = await invoke<FeatureResult>("nfse-feature", securePayload("query", { reference }));
-      setResult(data);
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Falha ao consultar a NFS-e.");
-    } finally { setAction(null); }
-  };
-
-  const lock = () => {
-    setToken(""); setResult(null); setError(""); setCertificate(null);
-    setCertificateBase64(""); setCertificatePassword(""); setCertificateName("");
-  };
+  const switchMode = (next: Mode) => { setMode(next); setResult(null); setError(""); setReference(""); };
+  const lock = () => { setToken(""); setCertificateBase64(""); setCertificatePassword(""); setCertificateName(""); setCertificate(null); setResult(null); setError(""); };
 
   return <AdminLayout><main className="mx-auto w-full max-w-[1500px] px-6 py-6">
-    <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5">
-      <div>
-        <p className="text-xs uppercase tracking-wider text-muted-foreground">Laboratório interno</p>
-        <div className="mt-1 flex items-center gap-3">
-          <h1 className="text-3xl font-semibold text-foreground">Feature</h1>
-          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"><LockKeyhole className="h-3 w-3"/>Protegido</span>
-        </div>
-      </div>
-      {token && <Button variant="ghost" onClick={lock}><LockKeyhole className="mr-2 h-4 w-4"/>Bloquear</Button>}
-    </header>
-
-    {!token ? <section className="mx-auto mt-16 max-w-md rounded-lg border border-border bg-background p-8 shadow-sm">
-      <div className="mb-6 flex h-11 w-11 items-center justify-center rounded-full bg-muted"><KeyRound className="h-5 w-5"/></div>
-      <h2 className="text-xl font-semibold">Desbloquear Feature</h2>
-      <p className="mt-2 text-sm text-muted-foreground">Use a mesma senha da Engine.</p>
-      <form onSubmit={authenticate} className="mt-6 space-y-4">
-        <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Senha da Engine" required />
-        {error && <ErrorText>{error}</ErrorText>}
-        <Button className="w-full" type="submit" disabled={loading}>{loading ? "Verificando..." : "Entrar"}</Button>
-      </form>
-    </section> : <div className="mt-7 space-y-6">
-      <section className="grid gap-3 md:grid-cols-3">
-        <MiniStatus label="Ambiente" value="Produção restrita" />
-        <MiniStatus label="Destino" value="SEFIN Nacional" />
-        <MiniStatus label="API por nota" value="R$ 0,00" />
-      </section>
-
-      <section className="rounded-lg border border-border bg-background p-5">
-        <div className="mb-4"><p className="text-xs uppercase tracking-wider text-muted-foreground">Credencial fiscal</p><h2 className="mt-1 text-lg font-semibold">Certificado A1</h2></div>
-        <div className="grid gap-4 lg:grid-cols-[1fr_320px_auto] lg:items-end">
-          <div><FieldLabel>Arquivo .pfx ou .p12</FieldLabel><Input type="file" accept=".pfx,.p12,application/x-pkcs12" onChange={(e) => chooseCertificate(e.target.files?.[0])}/>{certificateName && <p className="mt-1 text-xs text-muted-foreground">{certificateName}</p>}</div>
-          <div><FieldLabel>Senha do certificado</FieldLabel><Input type="password" value={certificatePassword} onChange={(e) => setCertificatePassword(e.target.value)} placeholder="Senha do A1"/></div>
-          <Button variant="outline" onClick={inspectCertificate} disabled={!hasCertificate || Boolean(action)}>{action === "certificate" ? <RefreshCw className="mr-2 h-4 w-4 animate-spin"/> : <FileKey2 className="mr-2 h-4 w-4"/>}Ler certificado</Button>
-        </div>
-        {certificate && <div className="mt-4 grid gap-3 border-t border-border pt-4 sm:grid-cols-3">
-          <Info label="Titular" value={certificate.nome || "—"}/>
-          <Info label="CNPJ" value={certificate.cnpj || certificate.cpf || "—"}/>
-          <Info label="Validade" value={certificate.validadeFim ? new Date(certificate.validadeFim).toLocaleDateString("pt-BR") : "—"}/>
-        </div>}
-        <p className="mt-3 text-xs text-muted-foreground">O arquivo e a senha são usados somente nesta sessão de teste e não são gravados no banco.</p>
-      </section>
-
+    <header className="flex items-end justify-between gap-4 border-b border-border pb-5"><div><p className="text-xs uppercase tracking-wider text-muted-foreground">Laboratório fiscal</p><div className="mt-1 flex items-center gap-3"><h1 className="text-3xl font-semibold">Feature</h1><span className="rounded-full bg-muted px-2.5 py-1 text-[10px] font-semibold uppercase text-muted-foreground">Homologação</span></div></div>{token && <Button variant="ghost" onClick={lock}><LockKeyhole className="mr-2 h-4 w-4"/>Bloquear</Button>}</header>
+    {!token ? <section className="mx-auto mt-16 max-w-md rounded-lg border bg-background p-8"><KeyRound className="mb-5 h-6 w-6"/><h2 className="text-xl font-semibold">Desbloquear Feature</h2><p className="mt-2 text-sm text-muted-foreground">Mesma senha da Engine.</p><form onSubmit={authenticate} className="mt-6 space-y-4"><Input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Senha" required/>{error && <ErrorText>{error}</ErrorText>}<Button className="w-full" disabled={loading}>{loading ? "Verificando..." : "Entrar"}</Button></form></section> : <div className="mt-7 space-y-6">
+      <section className="flex flex-wrap gap-2">{([['nfce','NFC-e · Venda consumidor'],['nfe','NF-e · Venda mercadoria'],['nfse','NFS-e · Serviço']] as [Mode,string][]).map(([id,label])=><button key={id} onClick={()=>switchMode(id)} className={`rounded-md border px-4 py-2 text-sm font-medium ${mode===id?'bg-foreground text-background':'bg-background hover:bg-muted'}`}>{label}</button>)}</section>
+      <section className="grid gap-3 md:grid-cols-3"><Mini label="Ambiente" value="Homologação"/><Mini label="Destino" value={mode==='nfse'?'SEFIN Nacional':'SEFAZ / SVRS'}/><Mini label="Custo por nota" value="R$ 0,00"/></section>
+      <section className="rounded-lg border bg-background p-5"><div className="mb-4"><p className="text-xs uppercase text-muted-foreground">Credencial</p><h2 className="mt-1 text-lg font-semibold">Certificado A1</h2></div><div className="grid gap-4 lg:grid-cols-[1fr_300px_auto] lg:items-end"><Field label="Arquivo .pfx/.p12"><Input type="file" accept=".pfx,.p12,application/x-pkcs12" onChange={e=>chooseCertificate(e.target.files?.[0])}/>{certificateName&&<p className="mt-1 text-xs text-muted-foreground">{certificateName}</p>}</Field><Field label="Senha"><Input type="password" value={certificatePassword} onChange={e=>setCertificatePassword(e.target.value)}/></Field><Button variant="outline" onClick={inspectCertificate} disabled={!hasCert||!!action}>{action==='certificate'?<RefreshCw className="mr-2 h-4 w-4 animate-spin"/>:<FileKey2 className="mr-2 h-4 w-4"/>}Ler certificado</Button></div>{certificate&&<div className="mt-4 grid gap-3 border-t pt-4 sm:grid-cols-3"><Info label="Titular" value={certificate.nome||'—'}/><Info label="CNPJ" value={certificate.cnpj||certificate.cpf||'—'}/><Info label="Validade" value={certificate.validadeFim?new Date(certificate.validadeFim).toLocaleDateString('pt-BR'):'—'}/></div>}<p className="mt-3 text-xs text-muted-foreground">Certificado, senha e CSC não são salvos.</p></section>
       <div className="grid gap-6 xl:grid-cols-[1.15fr_.85fr]">
-        <section className="rounded-lg border border-border bg-background p-5">
-          <div className="mb-5"><p className="text-xs uppercase tracking-wider text-muted-foreground">Emissão</p><h2 className="mt-1 text-lg font-semibold">DPS de teste</h2></div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field label="CNPJ prestador"><Input value={form.cnpjPrestador} onChange={(e) => update("cnpjPrestador", e.target.value)} placeholder="Preenchido pelo certificado"/></Field>
-            <Field label="Município emissor · IBGE"><Input value={form.municipioEmissor} onChange={(e) => update("municipioEmissor", e.target.value)} placeholder="7 dígitos"/></Field>
-            <Field label="Simples Nacional"><select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.simples} onChange={(e) => update("simples", e.target.value)}><option value="1">Não optante</option><option value="2">MEI</option><option value="3">ME/EPP</option></select></Field>
-            <Field label="Município da prestação · IBGE"><Input value={form.municipioPrestacao} onChange={(e) => update("municipioPrestacao", e.target.value)} placeholder="Se igual, repita o emissor"/></Field>
-            <Field label="CNPJ tomador"><Input value={form.cnpjTomador} onChange={(e) => update("cnpjTomador", e.target.value)} placeholder="Opcional"/></Field>
-            <Field label="CPF tomador"><Input value={form.cpfTomador} onChange={(e) => update("cpfTomador", e.target.value)} placeholder="Opcional"/></Field>
-            <div className="md:col-span-2"><Field label="Nome / razão social do tomador"><Input value={form.nomeTomador} onChange={(e) => update("nomeTomador", e.target.value)} placeholder="Obrigatório se informar CPF/CNPJ do tomador"/></Field></div>
-            <Field label="Código tributação nacional"><Input value={form.codigoTributacao} onChange={(e) => update("codigoTributacao", e.target.value)} placeholder="6 dígitos · ex.: 010101"/></Field>
-            <Field label="Valor do serviço"><Input type="number" min="0" step="0.01" value={form.valor} onChange={(e) => update("valor", e.target.value)} placeholder="0,00"/></Field>
-            <Field label="Série DPS"><Input inputMode="numeric" value={form.serie} onChange={(e) => update("serie", e.target.value)}/></Field>
-            <Field label="Número DPS"><Input inputMode="numeric" value={form.numero} onChange={(e) => update("numero", e.target.value)}/></Field>
-            <Field label="Tributação ISS"><select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.tributacaoIss} onChange={(e) => update("tributacaoIss", e.target.value)}><option value="1">Tributável</option><option value="2">Imune</option><option value="3">Exportação</option><option value="4">Não incidência</option></select></Field>
-            <div className="md:col-span-2"><FieldLabel>Descrição do serviço</FieldLabel><textarea className="min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.descricao} onChange={(e) => update("descricao", e.target.value)} placeholder="Serviço prestado"/></div>
-          </div>
-          <div className="mt-5 flex flex-wrap gap-3 border-t border-border pt-5">
-            <Button variant="outline" onClick={() => request("validate")} disabled={Boolean(action)}>{action === "validate" ? <RefreshCw className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle2 className="mr-2 h-4 w-4"/>}Validar dados</Button>
-            <Button variant="outline" onClick={() => request("test_connection")} disabled={!canIssue || Boolean(action)}>{action === "test_connection" ? <RefreshCw className="mr-2 h-4 w-4 animate-spin"/> : null}Testar governo</Button>
-            <Button variant="outline" onClick={() => request("preview")} disabled={!canIssue || Boolean(action)}>{action === "preview" ? <RefreshCw className="mr-2 h-4 w-4 animate-spin"/> : null}Gerar DPS</Button>
-            <Button onClick={() => request("issue")} disabled={!canIssue || Boolean(action)}>{action === "issue" ? <RefreshCw className="mr-2 h-4 w-4 animate-spin"/> : <Send className="mr-2 h-4 w-4"/>}Emitir teste</Button>
-          </div>
-        </section>
-
-        <div className="space-y-6">
-          <section className="rounded-lg border border-border bg-background p-5">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">Consultar NFS-e</p>
-            <div className="mt-3 flex gap-2"><Input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Chave de acesso · 50 dígitos"/><Button variant="outline" onClick={query} disabled={!reference || !hasCertificate || Boolean(action)}>{action === "query" ? <RefreshCw className="h-4 w-4 animate-spin"/> : "Consultar"}</Button></div>
-          </section>
-
-          <section className="rounded-lg border border-border bg-background p-5">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">Retorno</p>
-            {error ? <div className="mt-4"><ErrorText>{error}</ErrorText></div> : result ? <div className="mt-4 space-y-4">
-              <div className="flex flex-wrap gap-2 text-xs">
-                {result.connected && <Badge ok>Conectado à SEFIN</Badge>}
-                {typeof result.valid === "boolean" && <Badge ok={result.valid}>{result.valid ? "Dados válidos" : "Pendências"}</Badge>}
-                {result.signed && <Badge ok>DPS assinada</Badge>}
-                {result.status && <span className="rounded-full bg-muted px-2.5 py-1">HTTP {result.status}</span>}
-              </div>
-              {result.chaveAcesso && <div><p className="text-xs text-muted-foreground">Chave de acesso</p><p className="mt-1 break-all text-sm font-medium">{result.chaveAcesso}</p></div>}
-              {result.idDps && <Info label="ID da DPS" value={result.idDps}/>}              
-              {result.note && <p className="text-sm text-muted-foreground">{result.note}</p>}
-              {result.warnings?.length ? <div><p className="text-xs font-medium text-amber-700 dark:text-amber-300">Avisos</p><ul className="mt-2 space-y-1 text-sm text-muted-foreground">{result.warnings.map((item) => <li key={item}>• {item}</li>)}</ul></div> : null}
-              {result.errors?.length ? <div><p className="text-xs font-medium text-destructive">Pendências</p><ul className="mt-2 space-y-1 text-sm text-destructive">{result.errors.map((item, index) => <li key={index}>• {typeof item === "string" ? item : JSON.stringify(item)}</li>)}</ul></div> : null}
-              {(result.nfseXml || result.xml || result.response) && <pre className="max-h-[520px] overflow-auto rounded-md bg-muted/50 p-4 text-[11px] leading-5 text-foreground">{result.nfseXml || result.xml || JSON.stringify(result.response, null, 2)}</pre>}
-            </div> : <p className="mt-4 text-sm text-muted-foreground">Comece lendo o certificado.</p>}
-          </section>
-        </div>
+        <section className="rounded-lg border bg-background p-5">{mode==='nfse'?<ServiceForm data={service} setData={setService}/>:<SaleForm mode={mode} data={sale} setData={setSale}/>}<div className="mt-5 flex flex-wrap gap-3 border-t pt-5"><Button variant="outline" onClick={()=>request('validate')} disabled={!!action}>Validar</Button><Button variant="outline" onClick={()=>request('test_connection')} disabled={!hasCert||!!action}>{action==='test_connection'&&<RefreshCw className="mr-2 h-4 w-4 animate-spin"/>}Testar governo</Button><Button variant="outline" onClick={()=>request('preview')} disabled={!hasCert||!!action}>Gerar XML</Button><Button onClick={()=>request('issue')} disabled={!hasCert||!!action}>{action==='issue'?<RefreshCw className="mr-2 h-4 w-4 animate-spin"/>:<Send className="mr-2 h-4 w-4"/>}Emitir teste</Button></div></section>
+        <div className="space-y-6"><section className="rounded-lg border bg-background p-5"><p className="text-xs uppercase text-muted-foreground">Consulta</p><div className="mt-3 flex gap-2"><Input value={reference} onChange={e=>setReference(e.target.value)} placeholder={mode==='nfse'?'Chave / referência':'Chave de acesso · 44 dígitos'}/><Button variant="outline" onClick={()=>request('query')} disabled={!reference||!hasCert||!!action}>Consultar</Button></div></section><section className="rounded-lg border bg-background p-5"><p className="text-xs uppercase text-muted-foreground">Retorno</p>{error?<ErrorText>{error}</ErrorText>:result?<ResultBox result={result}/>:<p className="mt-4 text-sm text-muted-foreground">O retorno da Receita/SEFAZ aparece aqui.</p>}</section></div>
       </div>
     </div>}
   </main></AdminLayout>;
 }
 
-function FieldLabel({ children }: { children: React.ReactNode }) { return <label className="mb-2 block text-xs font-medium text-muted-foreground">{children}</label>; }
-function Field({ label, children }: { label: string; children: React.ReactNode }) { return <div><FieldLabel>{label}</FieldLabel>{children}</div>; }
-function MiniStatus({ label, value }: { label: string; value: string }) { return <div className="rounded-lg border border-border bg-background px-4 py-3"><p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p><p className="mt-1 text-sm font-medium">{value}</p></div>; }
-function Info({ label, value }: { label: string; value: string }) { return <div><p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p><p className="mt-1 break-all text-sm font-medium">{value}</p></div>; }
-function Badge({ ok, children }: { ok: boolean; children: React.ReactNode }) { return <span className={`rounded-full px-2.5 py-1 ${ok ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "bg-destructive/10 text-destructive"}`}>{children}</span>; }
-function ErrorText({ children }: { children: React.ReactNode }) { return <p className="flex gap-2 text-sm text-destructive"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0"/>{children}</p>; }
+function SaleForm({mode,data,setData}:{mode:Mode;data:typeof saleInitial;setData:React.Dispatch<React.SetStateAction<typeof saleInitial>>}) { const u=(k:keyof typeof saleInitial,v:string)=>setData(s=>({...s,[k]:v})); return <><div className="mb-5"><p className="text-xs uppercase text-muted-foreground">{mode==='nfce'?'Modelo 65':'Modelo 55'}</p><h2 className="mt-1 text-lg font-semibold">Venda de mercadoria</h2></div><div className="grid gap-4 md:grid-cols-2"><Field label="CNPJ emitente"><Input value={data.cnpjEmitente} onChange={e=>u('cnpjEmitente',e.target.value)}/></Field><Field label="Inscrição estadual"><Input value={data.ie} onChange={e=>u('ie',e.target.value)}/></Field><Field label="Razão social"><Input value={data.razaoSocial} onChange={e=>u('razaoSocial',e.target.value)}/></Field><Field label="CRT"><select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={data.crt} onChange={e=>u('crt',e.target.value)}><option value="1">1 · Simples Nacional</option><option value="3">3 · Regime normal</option></select></Field><Field label="Município IBGE"><Input value={data.codigoMunicipio} onChange={e=>u('codigoMunicipio',e.target.value)}/></Field><Field label="Município"><Input value={data.nomeMunicipio} onChange={e=>u('nomeMunicipio',e.target.value)}/></Field><Field label="Logradouro"><Input value={data.logradouro} onChange={e=>u('logradouro',e.target.value)}/></Field><Field label="Número"><Input value={data.numeroEndereco} onChange={e=>u('numeroEndereco',e.target.value)}/></Field><Field label="Bairro"><Input value={data.bairro} onChange={e=>u('bairro',e.target.value)}/></Field><Field label="CEP"><Input value={data.cep} onChange={e=>u('cep',e.target.value)}/></Field>{mode==='nfce'&&<><Field label="ID CSC"><Input value={data.cscId} onChange={e=>u('cscId',e.target.value)} placeholder="Ex.: 000001"/></Field><Field label="CSC"><Input type="password" value={data.csc} onChange={e=>u('csc',e.target.value)}/></Field></>}<Field label="Número da nota"><Input value={data.numeroNota} onChange={e=>u('numeroNota',e.target.value)}/></Field><Field label="Série"><Input value={data.serie} onChange={e=>u('serie',e.target.value)}/></Field><div className="md:col-span-2 border-t pt-4"><p className="text-sm font-medium">Item</p></div><Field label="Produto"><Input value={data.produto} onChange={e=>u('produto',e.target.value)}/></Field><Field label="NCM"><Input value={data.ncm} onChange={e=>u('ncm',e.target.value)} placeholder="8 dígitos"/></Field><Field label="CFOP"><Input value={data.cfop} onChange={e=>u('cfop',e.target.value)}/></Field><Field label={data.crt==='1'?'CSOSN':'CST ICMS'}><Input value={data.crt==='1'?data.csosn:data.cst} onChange={e=>u(data.crt==='1'?'csosn':'cst',e.target.value)}/></Field><Field label="Quantidade"><Input type="number" step="0.0001" value={data.quantidade} onChange={e=>u('quantidade',e.target.value)}/></Field><Field label="Valor unitário"><Input type="number" step="0.01" value={data.valorUnitario} onChange={e=>u('valorUnitario',e.target.value)}/></Field>{mode==='nfe'&&<><Field label="CPF/CNPJ destinatário"><Input value={data.destDocumento} onChange={e=>u('destDocumento',e.target.value)}/></Field><Field label="Nome destinatário"><Input value={data.destNome} onChange={e=>u('destNome',e.target.value)}/></Field></>}</div></>; }
+function ServiceForm({data,setData}:{data:typeof serviceInitial;setData:React.Dispatch<React.SetStateAction<typeof serviceInitial>>}) { const u=(k:keyof typeof serviceInitial,v:string)=>setData(s=>({...s,[k]:v})); return <><div className="mb-5"><p className="text-xs uppercase text-muted-foreground">NFS-e Nacional</p><h2 className="mt-1 text-lg font-semibold">Prestação de serviço</h2></div><div className="grid gap-4 md:grid-cols-2"><Field label="CNPJ prestador"><Input value={data.cnpjPrestador} onChange={e=>u('cnpjPrestador',e.target.value)}/></Field><Field label="Município IBGE"><Input value={data.municipioEmissor} onChange={e=>u('municipioEmissor',e.target.value)}/></Field><Field label="Código tributação nacional"><Input value={data.codigoTributacao} onChange={e=>u('codigoTributacao',e.target.value)}/></Field><Field label="Valor"><Input type="number" step="0.01" value={data.valor} onChange={e=>u('valor',e.target.value)}/></Field><div className="md:col-span-2"><Field label="Descrição"><Input value={data.descricao} onChange={e=>u('descricao',e.target.value)}/></Field></div></div></>; }
+function Field({label,children}:{label:string;children:React.ReactNode}) { return <div><label className="mb-2 block text-xs font-medium text-muted-foreground">{label}</label>{children}</div>; }
+function Mini({label,value}:{label:string;value:string}) { return <div className="rounded-lg border bg-background px-4 py-3"><p className="text-[10px] uppercase text-muted-foreground">{label}</p><p className="mt-1 text-sm font-medium">{value}</p></div>; }
+function Info({label,value}:{label:string;value:string}) { return <div><p className="text-[10px] uppercase text-muted-foreground">{label}</p><p className="mt-1 text-sm font-medium">{value}</p></div>; }
+function ErrorText({children}:{children:React.ReactNode}) { return <p className="mt-4 flex gap-2 text-sm text-destructive"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0"/>{children}</p>; }
+function ResultBox({result}:{result:Result}) { return <div className="mt-4 space-y-3">{result.connected&&<p className="text-sm font-medium">Conexão com o governo confirmada.</p>}{result.warnings?.length?<div><p className="text-xs font-medium">Avisos</p>{result.warnings.map((x,i)=><p key={i} className="mt-1 text-xs text-muted-foreground">• {x}</p>)}</div>:null}<pre className="max-h-[520px] overflow-auto rounded-md bg-muted/50 p-4 text-[11px] leading-5">{JSON.stringify(result.response ?? result, null, 2)}</pre></div>; }
