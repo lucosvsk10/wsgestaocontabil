@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
 import { Buffer } from "node:buffer";
-import { Make, Tools } from "npm:node-sped-nfe@1.2.52";
+import https from "node:https";
 import { lerCertificado } from "npm:nfse-node@0.3.2/certificado";
 
 const cors = {
@@ -67,30 +67,75 @@ function validateSale(raw: Record<string, unknown>, model: "55" | "65") {
   if (!(Number(raw.quantidade) > 0)) errors.push("Quantidade deve ser maior que zero.");
   if (!(Number(raw.valorUnitario) > 0)) errors.push("Valor unitário deve ser maior que zero.");
   if (!String(raw.csosn || "").trim() && String(raw.crt || "1") === "1") errors.push("Informe o CSOSN.");
-  if (model === "65" && (!String(raw.cscId || "").trim() || !String(raw.csc || "").trim())) warnings.push("CSC/ID CSC não informado. O teste de status funciona, mas a emissão NFC-e pode precisar deles conforme o leiaute aceito pela SEFAZ.");
+  if (model === "65" && (!String(raw.cscId || "").trim() || !String(raw.csc || "").trim())) warnings.push("CSC/ID CSC de homologação não informado. Isso não impede o teste de conexão, mas impede a NFC-e completa.");
   if (model === "55" && !digits(raw.destDocumento)) errors.push("NF-e modelo 55 exige destinatário identificado neste laboratório.");
   return { valid: errors.length === 0, errors, warnings };
 }
 
-function toolsFor(model: "55" | "65", raw: Record<string, unknown>, pfx: Buffer, password: string) {
-  return new Tools({
-    mod: model,
-    tpAmb: 2,
-    UF: "AL",
-    versao: "4.00",
-    CSC: String(raw.csc || ""),
-    CSCid: String(raw.cscId || ""),
-    timeout: 45,
-  }, { pfx, senha: password });
+function extractReturn(xml: string) {
+  const pick = (tag: string) => xml.match(new RegExp(`<${tag}>([^<]+)</${tag}>`))?.[1] || null;
+  return { cStat: pick("cStat"), xMotivo: pick("xMotivo"), chNFe: pick("chNFe"), nProt: pick("nProt"), raw: xml };
 }
 
-function buildXml(model: "55" | "65", raw: Record<string, unknown>) {
+function testSefazStatus(pfx: Buffer, password: string, model: "55" | "65") {
+  const endpoint = model === "65"
+    ? "https://nfce-homologacao.svrs.rs.gov.br/ws/NfeStatusServico/NfeStatusServico4.asmx"
+    : "https://nfe-homologacao.svrs.rs.gov.br/ws/NfeStatusServico/NfeStatusServico4.asmx";
+  const soap = `<?xml version="1.0" encoding="utf-8"?>
+<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
+  <soap12:Body>
+    <nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeStatusServico4">
+      <consStatServ xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><tpAmb>2</tpAmb><cUF>27</cUF><xServ>STATUS</xServ></consStatServ>
+    </nfeDadosMsg>
+  </soap12:Body>
+</soap12:Envelope>`;
+  return new Promise<string>((resolve, reject) => {
+    const url = new URL(endpoint);
+    const req = https.request({
+      hostname: url.hostname,
+      port: 443,
+      path: url.pathname,
+      method: "POST",
+      pfx,
+      passphrase: password,
+      rejectUnauthorized: true,
+      headers: {
+        "Content-Type": "application/soap+xml; charset=utf-8",
+        "Content-Length": Buffer.byteLength(soap, "utf8"),
+      },
+      timeout: 20000,
+    }, (res) => {
+      const chunks: Buffer[] = [];
+      res.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+      res.on("end", () => {
+        const body = Buffer.concat(chunks).toString("utf8");
+        if ((res.statusCode || 500) >= 400) reject(new Error(`SVRS respondeu HTTP ${res.statusCode}: ${body.slice(0, 700)}`));
+        else resolve(body);
+      });
+    });
+    req.on("timeout", () => req.destroy(new Error("Tempo limite ao conectar com a SVRS.")));
+    req.on("error", reject);
+    req.write(soap);
+    req.end();
+  });
+}
+
+async function loadSped() {
+  return await import("npm:node-sped-nfe@1.2.52");
+}
+async function toolsFor(model: "55" | "65", raw: Record<string, unknown>, pfx: Buffer, password: string) {
+  const { Tools } = await loadSped();
+  return new Tools({ mod: model, tpAmb: 2, UF: "AL", versao: "4.00", CSC: String(raw.csc || ""), CSCid: String(raw.cscId || ""), timeout: 45 }, { pfx, senha: password });
+}
+
+async function buildXml(model: "55" | "65", raw: Record<string, unknown>) {
   const validation = validateSale(raw, model);
   if (!validation.valid) {
     const error = new Error(validation.errors.join(" "));
     (error as any).validation = validation;
     throw error;
   }
+  const { Make } = await loadSped();
   const nfe = new Make();
   const qty = Number(raw.quantidade);
   const unit = Number(raw.valorUnitario);
@@ -98,44 +143,16 @@ function buildXml(model: "55" | "65", raw: Record<string, unknown>) {
   const numero = String(raw.numeroNota || "1");
   const serie = String(raw.serie || "1");
   const cNF = String(Math.floor(Math.random() * 100000000)).padStart(8, "0");
-
   nfe.tagInfNFe({ Id: null, versao: "4.00" });
-  nfe.tagIde({
-    cUF: "27", cNF, natOp: "VENDA", mod: model, serie, nNF: numero,
-    dhEmi: nfe.formatData(), tpNF: "1", idDest: "1", cMunFG: digits(raw.codigoMunicipio),
-    tpImp: model === "65" ? "4" : "1", tpEmis: "1", cDV: "0", tpAmb: "2", finNFe: "1",
-    indFinal: "1", indPres: "1", indIntermed: "0", procEmi: "0", verProc: "WS-FEATURE-1.0",
-  });
-  nfe.tagEmit({
-    CNPJ: digits(raw.cnpjEmitente), xNome: String(raw.razaoSocial), xFant: String(raw.nomeFantasia || raw.razaoSocial),
-    IE: String(raw.ie), CRT: String(raw.crt || "1"),
-  });
-  nfe.tagEnderEmit({
-    xLgr: String(raw.logradouro), nro: String(raw.numeroEndereco), xCpl: String(raw.complemento || "") || null,
-    xBairro: String(raw.bairro), cMun: digits(raw.codigoMunicipio), xMun: String(raw.nomeMunicipio), UF: "AL",
-    CEP: digits(raw.cep), cPais: "1058", xPais: "BRASIL", fone: digits(raw.telefone) || null,
-  });
-
+  nfe.tagIde({ cUF: "27", cNF, natOp: "VENDA", mod: model, serie, nNF: numero, dhEmi: nfe.formatData(), tpNF: "1", idDest: "1", cMunFG: digits(raw.codigoMunicipio), tpImp: model === "65" ? "4" : "1", tpEmis: "1", cDV: "0", tpAmb: "2", finNFe: "1", indFinal: "1", indPres: "1", indIntermed: "0", procEmi: "0", verProc: "WS-FEATURE-1.1" });
+  nfe.tagEmit({ CNPJ: digits(raw.cnpjEmitente), xNome: String(raw.razaoSocial), xFant: String(raw.nomeFantasia || raw.razaoSocial), IE: String(raw.ie), CRT: String(raw.crt || "1") });
+  nfe.tagEnderEmit({ xLgr: String(raw.logradouro), nro: String(raw.numeroEndereco), xCpl: String(raw.complemento || "") || null, xBairro: String(raw.bairro), cMun: digits(raw.codigoMunicipio), xMun: String(raw.nomeMunicipio), UF: "AL", CEP: digits(raw.cep), cPais: "1058", xPais: "BRASIL", fone: digits(raw.telefone) || null });
   const destDoc = digits(raw.destDocumento);
   if (destDoc) {
-    nfe.tagDest({
-      ...(destDoc.length === 14 ? { CNPJ: destDoc } : { CPF: destDoc }),
-      xNome: String(raw.destNome || (model === "65" ? "CONSUMIDOR" : "DESTINATARIO")), indIEDest: "9",
-    });
-    if (model === "55") {
-      nfe.tagEnderDest({
-        xLgr: String(raw.destLogradouro || "RUA TESTE"), nro: String(raw.destNumero || "1"), xBairro: String(raw.destBairro || "CENTRO"),
-        cMun: digits(raw.destCodigoMunicipio || raw.codigoMunicipio), xMun: String(raw.destMunicipio || raw.nomeMunicipio), UF: String(raw.destUF || "AL"),
-        CEP: digits(raw.destCep || raw.cep), cPais: "1058", xPais: "BRASIL",
-      });
-    }
+    nfe.tagDest({ ...(destDoc.length === 14 ? { CNPJ: destDoc } : { CPF: destDoc }), xNome: String(raw.destNome || (model === "65" ? "CONSUMIDOR" : "DESTINATARIO")), indIEDest: "9" });
+    if (model === "55") nfe.tagEnderDest({ xLgr: String(raw.destLogradouro || "RUA TESTE"), nro: String(raw.destNumero || "1"), xBairro: String(raw.destBairro || "CENTRO"), cMun: digits(raw.destCodigoMunicipio || raw.codigoMunicipio), xMun: String(raw.destMunicipio || raw.nomeMunicipio), UF: String(raw.destUF || "AL"), CEP: digits(raw.destCep || raw.cep), cPais: "1058", xPais: "BRASIL" });
   }
-
-  nfe.tagProd([{
-    cProd: String(raw.codigoProduto || "1"), cEAN: "SEM GTIN", xProd: String(raw.produto), NCM: digits(raw.ncm),
-    CFOP: digits(raw.cfop), uCom: String(raw.unidade || "UN"), qCom: qty.toFixed(4), vUnCom: unit.toFixed(10), vProd: total.toFixed(2),
-    cEANTrib: "SEM GTIN", uTrib: String(raw.unidade || "UN"), qTrib: qty.toFixed(4), vUnTrib: unit.toFixed(10), indTot: "1",
-  }]);
+  nfe.tagProd([{ cProd: String(raw.codigoProduto || "1"), cEAN: "SEM GTIN", xProd: String(raw.produto), NCM: digits(raw.ncm), CFOP: digits(raw.cfop), uCom: String(raw.unidade || "UN"), qCom: qty.toFixed(4), vUnCom: unit.toFixed(10), vProd: total.toFixed(2), cEANTrib: "SEM GTIN", uTrib: String(raw.unidade || "UN"), qTrib: qty.toFixed(4), vUnTrib: unit.toFixed(10), indTot: "1" }]);
   if (String(raw.crt || "1") === "1") nfe.tagProdICMSSN(0, { orig: String(raw.origem || "0"), CSOSN: String(raw.csosn || "400") });
   else nfe.tagProdICMS(0, { orig: String(raw.origem || "0"), CST: String(raw.cst || "00"), modBC: 3, vBC: 0, pICMS: 0, vICMS: 0 });
   nfe.tagProdPIS(0, { CST: "49", qBCProd: 0, vAliqProd: 0, vPIS: 0 });
@@ -145,11 +162,6 @@ function buildXml(model: "55" | "65", raw: Record<string, unknown>) {
   nfe.tagDetPag([{ indPag: 0, tPag: String(raw.formaPagamento || "17"), vPag: money(total) }]);
   nfe.tagTroco("0.00");
   return { xml: nfe.xml(), total, validation };
-}
-
-function extractReturn(xml: string) {
-  const pick = (tag: string) => xml.match(new RegExp(`<${tag}>([^<]+)</${tag}>`))?.[1] || null;
-  return { cStat: pick("cStat"), xMotivo: pick("xMotivo"), chNFe: pick("chNFe"), nProt: pick("nProt"), raw: xml };
 }
 
 serve(async (req) => {
@@ -162,37 +174,31 @@ serve(async (req) => {
     if (!user) return json({ error: "Não autenticado" }, 401);
     const { data: roles } = await admin.from("user_roles").select("role").eq("user_id", user.id);
     if (!roles?.some((row: any) => row.role === "admin")) return json({ error: "Acesso exclusivo para administradores" }, 403);
-
     const body = await req.json() as Record<string, unknown>;
     if (!await verifyEngineToken(String(body.engine_token || ""), user.id)) return json({ error: "Sessão da Feature expirada. Desbloqueie novamente." }, 401);
     if (body.environment === "producao") return json({ error: "Produção bloqueada. Este laboratório usa somente homologação." }, 403);
-
     const model: "55" | "65" = body.model === "55" ? "55" : "65";
     const raw = (body.data || {}) as Record<string, unknown>;
     const action = String(body.action || "validate");
-
     if (action === "validate") return json({ ...validateSale(raw, model), model, environment: "homologacao", provider: "sefaz-svrs" });
-
     const { pfx, password, cert } = certificateFromBody(body);
     const certificate = certInfo(cert);
     if (!certificate.validoAgora) return json({ error: "Certificado fora do período de validade.", certificate }, 422);
     if (cert.titular.cnpj && digits(raw.cnpjEmitente) && cert.titular.cnpj !== digits(raw.cnpjEmitente)) return json({ error: "O CNPJ informado não corresponde ao certificado.", certificate }, 422);
-
     if (action === "inspect_certificate") return json({ ok: true, certificate });
-    const tools = toolsFor(model, raw, pfx, password);
-
     if (action === "test_connection") {
-      const response = await tools.sefazStatus();
+      const response = await testSefazStatus(pfx, password, model);
       const parsed = extractReturn(response);
-      return json({ ok: true, connected: true, certificate, model, environment: "homologacao", response: parsed });
+      return json({ ok: parsed.cStat === "107", connected: parsed.cStat === "107", certificate, model, environment: "homologacao", endpoint: model === "65" ? "SVRS NFC-e homologação" : "SVRS NF-e homologação", response: parsed });
     }
+    const tools = await toolsFor(model, raw, pfx, password);
     if (action === "preview") {
-      const built = buildXml(model, raw);
+      const built = await buildXml(model, raw);
       const signed = await tools.xmlSign(built.xml);
       return json({ ok: true, valid: true, signed: true, certificate, model, total: built.total, xml: signed, warnings: built.validation.warnings });
     }
     if (action === "issue") {
-      const built = buildXml(model, raw);
+      const built = await buildXml(model, raw);
       const signed = await tools.xmlSign(built.xml);
       const response = await tools.sefazEnviaLote(signed, { indSinc: 1 });
       const parsed = extractReturn(response);
@@ -208,10 +214,6 @@ serve(async (req) => {
   } catch (reason) {
     console.error("dfe-feature", reason);
     const anyReason = reason as any;
-    return json({
-      error: reason instanceof Error ? reason.message : String(reason),
-      errors: anyReason?.validation?.errors ?? [], warnings: anyReason?.validation?.warnings ?? [],
-      detail: anyReason?.stderr || anyReason?.code || null,
-    }, 500);
+    return json({ error: reason instanceof Error ? reason.message : String(reason), errors: anyReason?.validation?.errors ?? [], warnings: anyReason?.validation?.warnings ?? [], detail: anyReason?.stderr || anyReason?.code || null }, 500);
   }
 });
