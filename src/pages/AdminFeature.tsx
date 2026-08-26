@@ -1,13 +1,14 @@
 import { FormEvent, useState } from "react";
 import { AlertTriangle, FileKey2, KeyRound, LockKeyhole, RefreshCw, Send } from "lucide-react";
 import { AdminLayout } from "@/components/admin/layout/AdminLayout";
+import { AuthorizedNfceCard } from "@/components/admin/fiscal/AuthorizedNfceCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 
 type Mode = "nfce" | "nfe" | "nfse";
 type CertificateInfo = { cnpj?: string | null; cpf?: string | null; nome?: string | null; validadeFim?: string; validoAgora?: boolean };
-type Result = { ok?: boolean; connected?: boolean; valid?: boolean; errors?: unknown[]; warnings?: string[]; certificate?: CertificateInfo; response?: unknown; xml?: string; chaveAcesso?: string; [key: string]: unknown };
+type Result = { ok?: boolean; authorized?: boolean; connected?: boolean; valid?: boolean; errors?: unknown[]; warnings?: string[]; certificate?: CertificateInfo; response?: any; xml?: string; chaveAcesso?: string; [key: string]: unknown };
 
 const DEFAULT_A1_PASSWORD = "12345678";
 
@@ -170,7 +171,7 @@ export default function AdminFeature() {
           <Button className="w-full xl:w-auto" variant="outline" onClick={inspectCertificate} disabled={!hasCert||!!action}>{action==='certificate'?<RefreshCw className="mr-2 h-4 w-4 animate-spin"/>:<FileKey2 className="mr-2 h-4 w-4"/>}Ler certificado</Button>
         </div>
         {certificate&&<div className="mt-4 grid min-w-0 gap-3 border-t pt-4 sm:grid-cols-3"><Info label="Titular" value={certificate.nome||'—'}/><Info label="CNPJ" value={certificate.cnpj||certificate.cpf||'—'}/><Info label="Validade" value={certificate.validadeFim?new Date(certificate.validadeFim).toLocaleDateString('pt-BR'):'—'}/></div>}
-        <p className="mt-3 text-xs text-muted-foreground">Certificado, senha e CSC não são salvos.</p>
+        <p className="mt-3 text-xs text-muted-foreground">Certificado e senha não são salvos.</p>
       </section>
 
       <div className="grid min-w-0 gap-6 2xl:grid-cols-[minmax(460px,.9fr)_minmax(0,1.35fr)]">
@@ -185,7 +186,7 @@ export default function AdminFeature() {
         </section>
         <div className="min-w-0 space-y-6">
           <section className="min-w-0 rounded-lg border bg-background p-4 sm:p-5"><p className="text-xs uppercase text-muted-foreground">Consulta</p><div className="mt-3 flex min-w-0 flex-col gap-2 sm:flex-row"><Input className="min-w-0" value={reference} onChange={e=>setReference(e.target.value)} placeholder={mode==='nfse'?'Chave / referência':'Chave de acesso · 44 dígitos'}/><Button className="sm:shrink-0" variant="outline" onClick={()=>request('query')} disabled={!reference||!hasCert||!!action}>Consultar</Button></div></section>
-          <section className="min-w-0 rounded-lg border bg-background p-4 sm:p-5"><p className="text-xs uppercase text-muted-foreground">Retorno</p>{error?<ErrorText>{error}</ErrorText>:result?<ResultBox result={result}/>:<p className="mt-4 text-sm text-muted-foreground">O retorno da Receita/SEFAZ aparece aqui.</p>}</section>
+          <section className="min-w-0 rounded-lg border bg-background p-4 sm:p-5"><p className="text-xs uppercase text-muted-foreground">Retorno</p>{mode==='nfce'&&result?.authorized?<AuthorizedNfceCard token={token} sale={sale} result={result}/>:null}{error?<ErrorText>{error}</ErrorText>:result?<ResultBox result={result}/>:<p className="mt-4 text-sm text-muted-foreground">O retorno da Receita/SEFAZ aparece aqui.</p>}</section>
         </div>
       </div>
     </div>}
@@ -207,7 +208,6 @@ function SaleForm({mode,data,setData}:{mode:Mode;data:typeof saleInitial;setData
       <Field label="Número"><Input value={data.numeroEndereco} onChange={e=>u('numeroEndereco',e.target.value)}/></Field>
       <Field label="Bairro"><Input value={data.bairro} onChange={e=>u('bairro',e.target.value)}/></Field>
       <Field label="CEP"><Input value={data.cep} onChange={e=>u('cep',e.target.value)}/></Field>
-      {mode==='nfce'&&<><Field label="ID CSC · Homologação"><Input value={data.cscId} onChange={e=>u('cscId',e.target.value)} placeholder="Seu CSC enviado é de produção"/></Field><Field label="CSC · Homologação"><Input type="password" value={data.csc} onChange={e=>u('csc',e.target.value)} placeholder="Gerar na SEFAZ em Homologação"/></Field></>}
       <Field label="Número da nota"><Input value={data.numeroNota} onChange={e=>u('numeroNota',e.target.value)}/></Field>
       <Field label="Série"><Input value={data.serie} onChange={e=>u('serie',e.target.value)}/></Field>
       <div className="border-t pt-4 md:col-span-2"><p className="text-sm font-medium">Item de homologação</p><p className="mt-1 text-xs text-muted-foreground">Dados de exemplo apenas para testar o fluxo; troque pelo produto real antes de qualquer uso fora da homologação.</p></div>
@@ -231,4 +231,4 @@ function Field({label,children}:{label:string;children:React.ReactNode}) { retur
 function Mini({label,value}:{label:string;value:string}) { return <div className="min-w-0 rounded-lg border bg-background px-4 py-3"><p className="text-[10px] uppercase text-muted-foreground">{label}</p><p className="mt-1 truncate text-sm font-medium" title={value}>{value}</p></div>; }
 function Info({label,value}:{label:string;value:string}) { return <div className="min-w-0"><p className="text-[10px] uppercase text-muted-foreground">{label}</p><p className="mt-1 break-words text-sm font-medium">{value}</p></div>; }
 function ErrorText({children}:{children:React.ReactNode}) { return <p className="mt-4 flex min-w-0 gap-2 break-words text-sm text-destructive"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0"/><span className="min-w-0">{children}</span></p>; }
-function ResultBox({result}:{result:Result}) { return <div className="mt-4 min-w-0 space-y-3">{result.connected&&<p className="text-sm font-medium">Conexão com o governo confirmada.</p>}{result.warnings?.length?<div><p className="text-xs font-medium">Avisos</p>{result.warnings.map((x,i)=><p key={i} className="mt-1 break-words text-xs text-muted-foreground">• {x}</p>)}</div>:null}<pre className="max-h-[520px] max-w-full overflow-auto whitespace-pre-wrap break-all rounded-md bg-muted/50 p-4 text-[11px] leading-5">{JSON.stringify(result.response ?? result, null, 2)}</pre></div>; }
+function ResultBox({result}:{result:Result}) { return <div className="mt-4 min-w-0 space-y-3">{result.connected&&<p className="text-sm font-medium">Conexão com o governo confirmada.</p>}{result.warnings?.length?<div><p className="text-xs font-medium">Avisos</p>{result.warnings.map((x,i)=><p key={i} className="mt-1 break-words text-xs text-muted-foreground">• {x}</p>)}</div>:null}<details className="rounded-md border"><summary className="cursor-pointer px-3 py-2 text-xs font-medium text-muted-foreground">Detalhes técnicos</summary><pre className="max-h-[520px] max-w-full overflow-auto whitespace-pre-wrap break-all border-t bg-muted/50 p-4 text-[11px] leading-5">{JSON.stringify(result.response ?? result, null, 2)}</pre></details></div>; }
