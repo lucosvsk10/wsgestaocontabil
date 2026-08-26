@@ -5,6 +5,7 @@ import { lerCertificado } from "npm:nfse-node@0.3.2/certificado";
 import { buildNativeNfeXml } from "./xml.ts";
 import { signNfeXml } from "./sign.ts";
 import { authorizeNfeNative, parseAuthorization } from "./sefaz.ts";
+import { addNfceSupplement } from "./qrcode.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -75,7 +76,8 @@ serve(async (req) => {
     if (cert.titular.cnpj && cert.titular.cnpj !== digits(raw.cnpjEmitente)) return json({ error: "O CNPJ do XML não corresponde ao certificado A1." }, 422);
 
     const built = buildNativeNfeXml(model, raw);
-    const signedXml = signNfeXml(built.xml, cert.chavePrivadaPem, cert.certificadoPem);
+    const signedBase = signNfeXml(built.xml, cert.chavePrivadaPem, cert.certificadoPem);
+    const signedXml = addNfceSupplement(signedBase, model, built.chaveAcesso);
     const authResult = await authorizeNfeNative(cert, model, signedXml);
     const parsed = parseAuthorization(authResult.text);
 
