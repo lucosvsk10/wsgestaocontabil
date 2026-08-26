@@ -18,7 +18,7 @@ const saleInitial = {
   cnpjEmitente: "64038361000100",
   razaoSocial: "A G MATOS PORTUGUES COMERCIO",
   nomeFantasia: "PORTUGUES",
-  ie: "",
+  ie: "241696534",
   crt: "1",
   codigoMunicipio: "2704401",
   nomeMunicipio: "Major Isidoro",
@@ -192,7 +192,7 @@ function SaleForm({mode,data,setData}:{mode:Mode;data:typeof saleInitial;setData
     <div className="mb-5"><p className="text-xs uppercase text-muted-foreground">{mode==='nfce'?'Modelo 65':'Modelo 55'}</p><h2 className="mt-1 text-lg font-semibold">Venda de mercadoria</h2></div>
     <div className="grid gap-4 md:grid-cols-2">
       <Field label="CNPJ emitente"><Input value={data.cnpjEmitente} onChange={e=>u('cnpjEmitente',e.target.value)}/></Field>
-      <Field label="Inscrição estadual"><Input value={data.ie} onChange={e=>u('ie',e.target.value)} placeholder="Única pendência cadastral"/></Field>
+      <Field label="Inscrição estadual"><Input value={data.ie} onChange={e=>u('ie',e.target.value)} placeholder="CACEAL / IE"/></Field>
       <Field label="Razão social"><Input value={data.razaoSocial} onChange={e=>u('razaoSocial',e.target.value)}/></Field>
       <Field label="CRT"><select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={data.crt} onChange={e=>u('crt',e.target.value)}><option value="1">1 · Simples Nacional</option><option value="3">3 · Regime normal</option></select></Field>
       <Field label="Município IBGE"><Input value={data.codigoMunicipio} onChange={e=>u('codigoMunicipio',e.target.value)}/></Field>
