@@ -63,7 +63,7 @@ export function buildNativeNfeXml(model: "55" | "65", raw: SaleData) {
   const destDoc = digits(raw.destDocumento);
   const xProd = String(raw.produto || "PRODUTO PARA TESTE EM HOMOLOGACAO");
   const taxXml = crt === "1"
-    ? `<ICMS><ICMSSN400><orig>${esc(raw.origem || "0")}</orig><CSOSN>${esc(csosn)}</CSOSN></ICMSSN400></ICMS>`
+    ? `<ICMS><ICMSSN102><orig>${esc(raw.origem || "0")}</orig><CSOSN>${esc(csosn)}</CSOSN></ICMSSN102></ICMS>`
     : `<ICMS><ICMS00><orig>${esc(raw.origem || "0")}</orig><CST>${esc(cst)}</CST><modBC>3</modBC><vBC>0.00</vBC><pICMS>0.00</pICMS><vICMS>0.00</vICMS></ICMS00></ICMS>`;
 
   const destXml = destDoc
