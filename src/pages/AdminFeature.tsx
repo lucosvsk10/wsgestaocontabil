@@ -132,7 +132,9 @@ export default function AdminFeature() {
       const common = { action: kind, engine_token: token, environment: "homologacao", certificate_base64: certificateBase64, certificate_password: certificatePassword };
       const data = mode === "nfse"
         ? await invoke<Result>("nfse-feature", { ...common, data: service, ...(kind === "query" ? { reference } : {}) })
-        : await invoke<Result>("dfe-feature", { ...common, model: mode === "nfce" ? "65" : "55", data: sale, ...(kind === "query" ? { reference } : {}) });
+        : kind === "preview"
+          ? await invoke<Result>("dfe-preview-native", { ...common, model: mode === "nfce" ? "65" : "55", data: sale })
+          : await invoke<Result>("dfe-feature", { ...common, model: mode === "nfce" ? "65" : "55", data: sale, ...(kind === "query" ? { reference } : {}) });
       setResult(data);
       if (data.certificate) setCertificate(data.certificate);
       if (data.chaveAcesso) setReference(String(data.chaveAcesso));
