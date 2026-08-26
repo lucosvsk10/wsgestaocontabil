@@ -2,7 +2,8 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
 import { Buffer } from "node:buffer";
 import https from "node:https";
-import { rootCertificates } from "node:tls";
+import { checkServerIdentity, rootCertificates } from "node:tls";
+import { X509Certificate } from "node:crypto";
 import { lerCertificado } from "npm:nfse-node@0.3.2/certificado";
 
 const ICP_BRASIL_V10_PEM = `-----BEGIN CERTIFICATE-----
@@ -118,7 +119,58 @@ function extractReturn(xml: string) {
   return { cStat: pick("cStat"), xMotivo: pick("xMotivo"), chNFe: pick("chNFe"), nProt: pick("nProt"), raw: xml };
 }
 
-function testSefazStatus(pfx: Buffer, password: string, model: "55" | "65") {
+const pemFromRaw = (raw: Buffer) => {
+  const base64 = raw.toString("base64").match(/.{1,64}/g)?.join("\n") || "";
+  return `-----BEGIN CERTIFICATE-----\n${base64}\n-----END CERTIFICATE-----\n`;
+};
+
+function validatedServerChain(hostname: string) {
+  return new Promise<string[]>((resolve, reject) => {
+    const req = https.request({ hostname, port: 443, method: "HEAD", rejectUnauthorized: false, agent: false });
+    req.once("socket", (socket: any) => socket.once("secureConnect", () => {
+      try {
+        const peer = socket.getPeerCertificate(true);
+        if (!peer?.raw) throw new Error("A SVRS não apresentou certificado TLS.");
+        const hostnameError = checkServerIdentity(hostname, peer);
+        if (hostnameError) throw hostnameError;
+        const now = Date.now();
+        const leaf = new X509Certificate(peer.raw);
+        if (now < Date.parse(leaf.validFrom) || now > Date.parse(leaf.validTo)) throw new Error("Certificado TLS da SVRS fora da validade.");
+        const root = new X509Certificate(ICP_BRASIL_V10_PEM);
+        const intermediates: string[] = [];
+        let currentPeer = peer;
+        let current = leaf;
+        const seen = new Set<string>();
+        for (let depth = 0; depth < 8; depth++) {
+          if (current.verify(root.publicKey)) {
+            socket.destroy();
+            resolve(intermediates);
+            return;
+          }
+          const issuerPeer = currentPeer.issuerCertificate;
+          if (!issuerPeer?.raw) throw new Error("Cadeia TLS incompleta apresentada pela SVRS.");
+          const issuer = new X509Certificate(issuerPeer.raw);
+          if (issuer.fingerprint256 === current.fingerprint256 || seen.has(issuer.fingerprint256)) throw new Error("Cadeia TLS da SVRS não termina na raiz ICP-Brasil confiável.");
+          if (!current.verify(issuer.publicKey)) throw new Error("Assinatura inválida na cadeia TLS da SVRS.");
+          if (now < Date.parse(issuer.validFrom) || now > Date.parse(issuer.validTo)) throw new Error("Certificado intermediário da SVRS fora da validade.");
+          seen.add(issuer.fingerprint256);
+          intermediates.push(pemFromRaw(Buffer.from(issuer.raw)));
+          currentPeer = issuerPeer;
+          current = issuer;
+        }
+        throw new Error("Cadeia TLS da SVRS excede o limite de validação.");
+      } catch (error) {
+        socket.destroy();
+        reject(error);
+      }
+    }));
+    req.once("error", reject);
+    req.setTimeout(15000, () => req.destroy(new Error("Tempo limite ao validar o certificado TLS da SVRS.")));
+    req.end();
+  });
+}
+
+async function testSefazStatus(pfx: Buffer, password: string, model: "55" | "65") {
   const endpoint = model === "65"
     ? "https://nfce-homologacao.svrs.rs.gov.br/ws/NfeStatusServico/NfeStatusServico4.asmx"
     : "https://nfe-homologacao.svrs.rs.gov.br/ws/NfeStatusServico/NfeStatusServico4.asmx";
@@ -130,8 +182,9 @@ function testSefazStatus(pfx: Buffer, password: string, model: "55" | "65") {
     </nfeDadosMsg>
   </soap12:Body>
 </soap12:Envelope>`;
+  const url = new URL(endpoint);
+  const serverChain = await validatedServerChain(url.hostname);
   return new Promise<string>((resolve, reject) => {
-    const url = new URL(endpoint);
     const req = https.request({
       hostname: url.hostname,
       port: 443,
@@ -140,7 +193,7 @@ function testSefazStatus(pfx: Buffer, password: string, model: "55" | "65") {
       pfx,
       passphrase: password,
       rejectUnauthorized: true,
-      ca: [...rootCertificates, ICP_BRASIL_V10_PEM],
+      ca: [...rootCertificates, ICP_BRASIL_V10_PEM, ...serverChain],
       headers: {
         "Content-Type": "application/soap+xml; charset=utf-8",
         "Content-Length": Buffer.byteLength(soap, "utf8"),
