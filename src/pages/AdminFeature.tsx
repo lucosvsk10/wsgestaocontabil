@@ -44,7 +44,7 @@ const saleInitial = {
   origem: "0",
   csosn: "400",
   cst: "00",
-  formaPagamento: "17",
+  formaPagamento: "01",
   destDocumento: "",
   destNome: "",
   destLogradouro: "",
