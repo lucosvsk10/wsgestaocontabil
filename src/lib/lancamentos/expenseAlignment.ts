@@ -20,7 +20,7 @@ function fallbackHistory(entry: GroupedExpenseEntry, payment: boolean) {
 
 export function findCashAccount(accounts: ChartAccount[]) {
   const candidates = accounts.filter(account => account.analytical && account.reducedCode);
-  return candidates.find(account => normalize(account.description).includes("caixa matriz"))
+  return candidates.find(account => account.reducedCode.trim() === "1" && normalize(account.description).includes("caixa geral"))
     ?? candidates.find(account => normalize(account.description).includes("caixa geral"))
     ?? null;
 }
