@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Download, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccountingCompany } from "@/hooks/lancamentos/useAccountingCompany";
 import { AccountingModuleKey, emptyMonthStatuses, loadDynamicYearStatuses, MonthModuleStatus, YearModuleStatuses } from "@/lib/lancamentos/accountingMonthState";
+import { exportAccountingMonthsBatch } from "@/lib/lancamentos/batchAccountingExport";
 import { exportCompleteAccountingMonth } from "@/lib/lancamentos/completeMonthExport";
 import { saveWorkspaceData } from "@/lib/lancamentos/workspaceStorage";
 import { cn } from "@/lib/utils";
@@ -73,6 +75,9 @@ export function LancamentosWorkspace() {
   const [yearStatuses, setYearStatuses] = useState<YearModuleStatuses>({});
   const [expenseFileCount, setExpenseFileCount] = useState(0);
   const [exportingMonth, setExportingMonth] = useState<string | null>(null);
+  const [batchDialogOpen, setBatchDialogOpen] = useState(false);
+  const [selectedBatchMonths, setSelectedBatchMonths] = useState<string[]>([]);
+  const [exportingBatch, setExportingBatch] = useState(false);
   const previousCompanyRef = useRef(company.id);
   const skipContextSaveRef = useRef(false);
 
@@ -84,6 +89,8 @@ export function LancamentosWorkspace() {
     setYear(saved?.year ?? String(currentYear));
     setSelectedMonth(saved?.selectedMonth ?? currentMonth);
     setSelectedModule(saved?.selectedModule ?? "despesas");
+    setBatchDialogOpen(false);
+    setSelectedBatchMonths([]);
   }, [company.id, currentMonth, currentYear]);
 
   useEffect(() => {
@@ -94,7 +101,13 @@ export function LancamentosWorkspace() {
     localStorage.setItem(contextKey(company.id), JSON.stringify({ year, selectedMonth, selectedModule, activeTab: "transcricao" } satisfies LastContext));
   }, [company.id, selectedModule, selectedMonth, year]);
 
+  useEffect(() => {
+    setBatchDialogOpen(false);
+    setSelectedBatchMonths([]);
+  }, [year]);
+
   const selectedMonthLabel = useMemo(() => months.find(month => month.key === selectedMonth)?.label ?? "Competência", [selectedMonth]);
+  const completedMonths = useMemo(() => months.filter(month => Object.values(yearStatuses[month.key] ?? emptyMonthStatuses()).every(status => status === "done")), [yearStatuses]);
   const statusKey = `${company.id}:${year}:module-statuses`;
 
   const refreshStatuses = useCallback(async () => {
@@ -152,6 +165,30 @@ export function LancamentosWorkspace() {
     }
   };
 
+  const openBatchDialog = () => {
+    setSelectedBatchMonths([]);
+    setBatchDialogOpen(true);
+  };
+
+  const toggleBatchMonth = (month: string) => {
+    setSelectedBatchMonths(current => current.includes(month) ? current.filter(item => item !== month) : [...current, month]);
+  };
+
+  const exportBatch = async () => {
+    const allowedMonths = selectedBatchMonths.filter(month => completedMonths.some(item => item.key === month));
+    if (!allowedMonths.length || exportingBatch) return;
+    setExportingBatch(true);
+    try {
+      await exportAccountingMonthsBatch(company.id, allowedMonths, year);
+      setBatchDialogOpen(false);
+      setSelectedBatchMonths([]);
+    } catch (error) {
+      console.error("Falha ao exportar as competências em lote.", error);
+    } finally {
+      setExportingBatch(false);
+    }
+  };
+
   return <TooltipProvider delayDuration={180}><div className="mx-auto w-full max-w-[1720px] px-4 pb-12 pt-5 sm:px-6 lg:px-8">
     <header className="flex flex-col gap-4 border-b border-border pb-5 xl:flex-row xl:items-end xl:justify-between">
       <div className="min-w-0">
@@ -193,7 +230,10 @@ export function LancamentosWorkspace() {
             </div>;
           })}
         </nav>
-        {Object.values(yearStatuses[selectedMonth] ?? emptyMonthStatuses()).every(status => status === "done") && <Button type="button" variant="outline" size="sm" className="mt-4 w-full gap-2" disabled={exportingMonth === selectedMonth} onClick={() => void exportCompleteMonth(selectedMonth)}><Download className="h-3.5 w-3.5" />{exportingMonth === selectedMonth ? "Gerando..." : "Exportar mês completo"}</Button>}
+        {completedMonths.length > 0 && <div className="mt-4 space-y-2">
+          <Button type="button" variant="outline" size="sm" className="w-full gap-2" onClick={openBatchDialog}><Download className="h-3.5 w-3.5" />Baixar em lote</Button>
+          {Object.values(yearStatuses[selectedMonth] ?? emptyMonthStatuses()).every(status => status === "done") && <Button type="button" variant="outline" size="sm" className="w-full gap-2" disabled={exportingMonth === selectedMonth} onClick={() => void exportCompleteMonth(selectedMonth)}><Download className="h-3.5 w-3.5" />{exportingMonth === selectedMonth ? "Gerando..." : "Exportar mês completo"}</Button>}
+        </div>}
       </aside>
 
       <main className="min-w-0 py-5 lg:pl-6">
@@ -222,5 +262,34 @@ export function LancamentosWorkspace() {
         )}
       </main>
     </div>
+
+    <Dialog open={batchDialogOpen} onOpenChange={open => { if (!exportingBatch) setBatchDialogOpen(open); }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Baixar lançamentos em lote</DialogTitle>
+          <DialogDescription>Selecione as competências concluídas de {year}. O arquivo será gerado somente para este ano.</DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-2 py-2 sm:grid-cols-2">
+          {completedMonths.map(month => {
+            const checked = selectedBatchMonths.includes(month.key);
+            return <label key={month.key} className={cn("flex cursor-pointer items-center gap-3 rounded-md border px-3 py-3 text-sm transition-colors", checked ? "border-cyan-500/50 bg-cyan-500/10" : "border-border hover:bg-muted/50")}>
+              <input type="checkbox" checked={checked} onChange={() => toggleBatchMonth(month.key)} className="h-4 w-4 accent-cyan-600" />
+              <span className="flex-1">{month.label}</span>
+              <span className="text-xs tabular-nums text-muted-foreground">{Number(month.key)}/{year}</span>
+            </label>;
+          })}
+        </div>
+        <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
+          <button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={() => setSelectedBatchMonths(selectedBatchMonths.length === completedMonths.length ? [] : completedMonths.map(month => month.key))}>
+            {selectedBatchMonths.length === completedMonths.length ? "Desmarcar todos" : "Selecionar todos"}
+          </button>
+          <span className="text-xs text-muted-foreground">{selectedBatchMonths.length} selecionado(s)</span>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="ghost" disabled={exportingBatch} onClick={() => setBatchDialogOpen(false)}>Cancelar</Button>
+          <Button type="button" disabled={!selectedBatchMonths.length || exportingBatch} onClick={() => void exportBatch()}>{exportingBatch ? "Gerando..." : "Gerar documento"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div></TooltipProvider>;
 }

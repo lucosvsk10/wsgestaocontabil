@@ -8,6 +8,7 @@ on:
       - "fix/**"
       - "validate/**"
       - "feat/**"
+      - "feature/**"
   pull_request:
     branches:
       - main
@@ -69,6 +70,7 @@ jobs:
           src/lib/lancamentos/processRevenueBatch.ts
           src/lib/lancamentos/accountingMonthState.ts
           src/lib/lancamentos/completeMonthExport.ts
+          src/lib/lancamentos/batchAccountingExport.ts
           src/lib/lancamentos/manualOnlyConference.ts
           src/lib/lancamentos/manualOnlyConference.test.ts
           src/lib/lancamentos/trialBalance.ts
