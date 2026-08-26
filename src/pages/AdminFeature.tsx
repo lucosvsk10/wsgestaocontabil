@@ -136,7 +136,9 @@ export default function AdminFeature() {
         ? await invoke<Result>("nfse-feature", { ...common, data: service, ...(kind === "query" ? { reference } : {}) })
         : kind === "preview"
           ? await invoke<Result>("dfe-preview-native", { ...common, model: mode === "nfce" ? "65" : "55", data: sale })
-          : await invoke<Result>("dfe-feature", { ...common, model: mode === "nfce" ? "65" : "55", data: sale, ...(kind === "query" ? { reference } : {}) });
+          : kind === "issue"
+            ? await invoke<Result>("dfe-issue-native", { ...common, model: mode === "nfce" ? "65" : "55", data: sale })
+            : await invoke<Result>("dfe-feature", { ...common, model: mode === "nfce" ? "65" : "55", data: sale, ...(kind === "query" ? { reference } : {}) });
       setResult(data);
       if (data.certificate) setCertificate(data.certificate);
       if (data.chaveAcesso) setReference(String(data.chaveAcesso));
