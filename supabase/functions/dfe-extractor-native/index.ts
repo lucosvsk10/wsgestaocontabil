@@ -133,6 +133,7 @@ async function requestDistribution(cert: ReturnType<typeof lerCertificado>, cnpj
     cert: [cert.certificadoPem, ...cert.cadeiaPem].join("\n"),
     key: cert.chavePrivadaPem,
     http1: true,
+    http2: false,
   });
   try {
     const response = await fetch(endpoint, {
