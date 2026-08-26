@@ -8,6 +8,7 @@ on:
       - "fix/**"
       - "validate/**"
       - "feat/**"
+      - "feature/**"
   pull_request:
     branches:
       - main
