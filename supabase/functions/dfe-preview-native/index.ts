@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
 import { Buffer } from "node:buffer";
 import { lerCertificado } from "npm:nfse-node@0.3.2/certificado";
 import { buildNativeNfeXml } from "./xml.ts";
+import { addNfceSupplement } from "./qrcode.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -73,6 +74,7 @@ serve(async (req) => {
     if (cert.titular.cnpj && cert.titular.cnpj !== digits(raw.cnpjEmitente)) return json({ error: "O CNPJ do XML não corresponde ao certificado A1." }, 422);
 
     const built = buildNativeNfeXml(model, raw);
+    const xml = addNfceSupplement(built.xml, model, built.chaveAcesso);
     return json({
       ok: true,
       valid: true,
@@ -82,8 +84,8 @@ serve(async (req) => {
       generator: "ws-native-nfe-4.00",
       chaveAcesso: built.chaveAcesso,
       total: built.total,
-      xml: built.xml,
-      warnings: ["XML estrutural gerado no Edge Runtime. Ainda não assinado nem enviado à SEFAZ."],
+      xml,
+      warnings: [model === "65" ? "XML estrutural com QR-Code v3 gerado. Ainda não assinado nem enviado à SEFAZ." : "XML estrutural gerado no Edge Runtime. Ainda não assinado nem enviado à SEFAZ."],
     });
   } catch (reason) {
     console.error("dfe-preview-native", reason);
