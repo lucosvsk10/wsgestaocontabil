@@ -4,7 +4,9 @@ import { LancamentosWorkspace } from '@/components/admin/lancamentos/Lancamentos
 const AdminLancamentos = () => {
   return (
     <AdminLayout>
-      <LancamentosWorkspace />
+      <div className="lancamentos-clean">
+        <LancamentosWorkspace />
+      </div>
     </AdminLayout>
   );
 };
