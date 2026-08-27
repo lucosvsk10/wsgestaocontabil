@@ -1,5 +1,5 @@
 import { useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, PieChart, Calculator, Settings, Wrench, HardDrive, Megaphone, Calendar, Images, FileStack, LucideIcon, Building2, ReceiptText, Send, Truck } from "lucide-react";
+import { LayoutDashboard, Users, PieChart, Calculator, Settings, Wrench, HardDrive, Megaphone, Calendar, Images, FileStack, LucideIcon, Building2, ReceiptText, Send } from "lucide-react";
 
 interface SidebarItem { icon: LucideIcon; label: string; active: boolean; to: string; }
 export interface SidebarSection { title: string; items: SidebarItem[]; }
@@ -18,8 +18,7 @@ export const useAdminSidebarNavigation = () => {
     { title: "Fiscal", items: [
       { icon: Building2, label: "Empresas", active: getIsActive("/admin/fiscal/empresas"), to: "/admin/fiscal/empresas" },
       { icon: ReceiptText, label: "Notas Fiscais", active: getIsActive("/admin/feature"), to: "/admin/feature" },
-      { icon: Send, label: "Emissão fiscal", active: getIsActive("/admin/fiscal/emissao"), to: "/admin/fiscal/emissao" },
-      { icon: Truck, label: "CT-e", active: getIsActive("/admin/fiscal/cte"), to: "/admin/fiscal/cte" }
+      { icon: Send, label: "Emissão fiscal", active: getIsActive("/admin/fiscal/emissao"), to: "/admin/fiscal/emissao" }
     ]},
     { title: "Clientes e comunicação", items: [
       { icon: Users, label: "Usuários", active: getIsActive("/admin/users") || getIsActive("/admin/user-documents") || getIsActive("/admin/company-data"), to: "/admin/users" },
