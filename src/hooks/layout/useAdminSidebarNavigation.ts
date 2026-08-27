@@ -1,5 +1,5 @@
 import { useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, PieChart, Calculator, Settings, Wrench, HardDrive, Megaphone, Calendar, Images, FileStack, LucideIcon, LockKeyhole, Building2, ReceiptText } from "lucide-react";
+import { LayoutDashboard, Users, PieChart, Calculator, Settings, Wrench, HardDrive, Megaphone, Calendar, Images, FileStack, LucideIcon, Building2, ReceiptText } from "lucide-react";
 
 interface SidebarItem { icon: LucideIcon; label: string; active: boolean; to: string; }
 export interface SidebarSection { title: string; items: SidebarItem[]; }
@@ -28,8 +28,7 @@ export const useAdminSidebarNavigation = () => {
     { title: "Administração", items: [
       { icon: Images, label: "Carrossel", active: getIsActive("/admin/carousel"), to: "/admin/carousel" },
       { icon: Wrench, label: "Ferramentas", active: getIsActive("/admin/tools"), to: "/admin/tools" },
-      { icon: Settings, label: "Configurações", active: getIsActive("/admin/settings"), to: "/admin/settings" },
-      { icon: LockKeyhole, label: "Laboratório fiscal", active: getIsActive("/admin/fiscal/laboratorio"), to: "/admin/fiscal/laboratorio" }
+      { icon: Settings, label: "Configurações", active: getIsActive("/admin/settings"), to: "/admin/settings" }
     ]}
   ];
 
