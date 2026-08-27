@@ -21,6 +21,7 @@ import AdminLancamentos from "./pages/AdminLancamentos";
 import AdminBalancete from "./pages/AdminBalancete";
 import AdminPlanoContas from "./pages/AdminPlanoContas";
 import AdminEngine from "./pages/AdminEngine";
+import AdminFeature from "./pages/AdminFeature";
 import AdminFiscalCompanies from "./pages/AdminFiscalCompanies";
 import AdminFiscalNotes from "./pages/AdminFiscalNotes";
 
@@ -53,7 +54,8 @@ const AppRoutes = () => {
       <Route path="/admin/settings" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="settings" /></PrivateRoute>} />
       <Route path="/admin/fiscal/empresas" element={<PrivateRoute requiredRole="admin"><AdminFiscalCompanies /></PrivateRoute>} />
       <Route path="/admin/feature" element={<PrivateRoute requiredRole="admin"><AdminFiscalNotes /></PrivateRoute>} />
-      <Route path="/admin/fiscal/laboratorio" element={<Navigate to="/admin/feature" replace />} />
+      <Route path="/admin/fiscal/emissao" element={<PrivateRoute requiredRole="admin"><AdminFeature /></PrivateRoute>} />
+      <Route path="/admin/fiscal/laboratorio" element={<Navigate to="/admin/fiscal/emissao" replace />} />
 
       <Route path="/admin-dashboard" element={<Navigate to="/admin" replace />} />
       <Route path="/admin/tax-simulations" element={<Navigate to="/admin/simulations" replace />} />
@@ -62,7 +64,7 @@ const AppRoutes = () => {
       <Route path="/admin/lancamentos/balancete" element={<PrivateRoute requiredRole="admin"><AdminBalancete /></PrivateRoute>} />
       <Route path="/admin/lancamentos/plano-contas" element={<PrivateRoute requiredRole="admin"><AdminPlanoContas /></PrivateRoute>} />
       <Route path="/admin/lancamentos/engine" element={<PrivateRoute requiredRole="admin"><AdminEngine /></PrivateRoute>} />
-      <Route path="/admin/lancamentos/feature" element={<Navigate to="/admin/feature" replace />} />
+      <Route path="/admin/lancamentos/feature" element={<Navigate to="/admin/fiscal/emissao" replace />} />
 
       <Route path="/client/*" element={<PrivateRoute><ClientDashboard /></PrivateRoute>} />
       <Route path="/dashboard" element={<PrivateRoute>{isAdmin() ? <Navigate to="/admin" replace /> : <Navigate to="/client" replace />}</PrivateRoute>} />
