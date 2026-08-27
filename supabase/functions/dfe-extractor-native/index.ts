@@ -94,15 +94,21 @@ function decodeChunked(body: Uint8Array) {
 
 async function postRawMtls(endpoint: string, soap: string, cert: ReturnType<typeof lerCertificado>) {
   const url = new URL(endpoint);
-  const certChain = cert.certificadoPem;
-  const conn = await Deno.connectTls({
-    hostname: url.hostname,
-    port: 443,
-    cert: certChain,
-    key: cert.chavePrivadaPem,
-    caCerts: [ICP_BRASIL_V10_PEM],
-    alpnProtocols: ["http/1.1"],
-  });
+  const chain = Array.isArray(cert.cadeiaPem) ? cert.cadeiaPem : [];
+  const certChain = [cert.certificadoPem, ...chain].join("\n");
+  let conn: Deno.TlsConn;
+  try {
+    conn = await Deno.connectTls({
+      hostname: url.hostname,
+      port: 443,
+      cert: certChain,
+      key: cert.chavePrivadaPem,
+      caCerts: [ICP_BRASIL_V10_PEM],
+      alpnProtocols: ["http/1.1"],
+    });
+  } catch (error) {
+    throw new Error(`Falha no handshake mTLS com o Ambiente Nacional: ${error instanceof Error ? error.message : String(error)}`);
+  }
   try {
     const action = "http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe/nfeDistDFeInteresse";
     const body = encoder.encode(soap);
@@ -113,18 +119,26 @@ async function postRawMtls(endpoint: string, soap: string, cert: ReturnType<type
       "Accept: application/soap+xml, text/xml, */*",
       `Content-Length: ${body.length}`,
       "Connection: close",
-      "User-Agent: WS-Gestao-DFe/1.2",
+      "User-Agent: WS-Gestao-DFe/1.3",
       "",
       "",
     ].join("\r\n");
-    await conn.write(encoder.encode(head));
-    await conn.write(body);
+    try {
+      await conn.write(encoder.encode(head));
+      await conn.write(body);
+    } catch (error) {
+      throw new Error(`Conexão mTLS abriu, mas o Ambiente Nacional encerrou durante o envio HTTP/1.1: ${error instanceof Error ? error.message : String(error)}`);
+    }
     const parts: Uint8Array[] = [];
     const buffer = new Uint8Array(32768);
-    while (true) {
-      const n = await conn.read(buffer);
-      if (n === null) break;
-      parts.push(buffer.slice(0, n));
+    try {
+      while (true) {
+        const n = await conn.read(buffer);
+        if (n === null) break;
+        parts.push(buffer.slice(0, n));
+      }
+    } catch (error) {
+      if (!parts.length) throw new Error(`Ambiente Nacional encerrou a conexão antes de responder: ${error instanceof Error ? error.message : String(error)}`);
     }
     const total = parts.reduce((sum, p) => sum + p.length, 0);
     const raw = new Uint8Array(total);
@@ -138,7 +152,7 @@ async function postRawMtls(endpoint: string, soap: string, cert: ReturnType<type
     if (/transfer-encoding:\s*chunked/i.test(headerText)) responseBody = decodeChunked(responseBody);
     const text = decoder.decode(responseBody);
     if (status < 200 || status >= 300) throw new Error(`Ambiente Nacional respondeu HTTP ${status}: ${text.slice(0, 900)}`);
-    return { text, transport: "Deno.connectTls + HTTP/1.1 (leaf-only)", presentedChain: 1 };
+    return { text, transport: "Deno.connectTls + HTTP/1.1 + full client chain", presentedChain: 1 + chain.length };
   } finally {
     conn.close();
   }
