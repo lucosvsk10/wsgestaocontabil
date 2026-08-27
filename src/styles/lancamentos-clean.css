@@ -1,0 +1,83 @@
+/* Visual language for the accounting workspace.
+   Keep structure and interaction intact while reducing visual noise. */
+.lancamentos-clean {
+  --ws-soft-border: hsl(var(--border) / 0.34);
+  --ws-hairline: hsl(var(--border) / 0.22);
+  --ws-soft-surface: hsl(var(--muted) / 0.20);
+  --ws-soft-surface-hover: hsl(var(--muted) / 0.34);
+}
+
+/* Borders remain where they communicate grouping, but stop dominating the page. */
+.lancamentos-clean .border,
+.lancamentos-clean .border-b,
+.lancamentos-clean .border-t,
+.lancamentos-clean .border-l,
+.lancamentos-clean .border-r {
+  border-color: var(--ws-soft-border);
+}
+
+/* Accounting grids should read by rows, not like spreadsheet graph paper. */
+.lancamentos-clean table .border-r {
+  border-right-color: transparent !important;
+}
+
+.lancamentos-clean table tr.border-b,
+.lancamentos-clean table tr.border-t,
+.lancamentos-clean table td.border-b,
+.lancamentos-clean table th.border-b {
+  border-color: var(--ws-hairline) !important;
+}
+
+.lancamentos-clean table thead {
+  background: var(--ws-soft-surface) !important;
+}
+
+.lancamentos-clean table tbody tr {
+  transition: background-color 140ms ease;
+}
+
+.lancamentos-clean table tbody tr:hover {
+  background: var(--ws-soft-surface) !important;
+}
+
+/* Tabs should feel like a compact control instead of a stack of outlined buttons. */
+.lancamentos-clean [role="tablist"] {
+  border-color: transparent !important;
+  background: var(--ws-soft-surface);
+  box-shadow: none !important;
+}
+
+.lancamentos-clean [role="tab"] {
+  box-shadow: none !important;
+}
+
+/* De-emphasize nested cards. The outer workspace provides enough framing. */
+.lancamentos-clean .shadow-sm,
+.lancamentos-clean .shadow {
+  box-shadow: none !important;
+}
+
+/* Inputs still need a boundary, but a subtle one. */
+.lancamentos-clean input,
+.lancamentos-clean select,
+.lancamentos-clean textarea {
+  border-color: var(--ws-soft-border);
+}
+
+.lancamentos-clean input:focus,
+.lancamentos-clean select:focus,
+.lancamentos-clean textarea:focus {
+  border-color: hsl(var(--ring) / 0.55);
+}
+
+/* Small status/details blocks gain hierarchy through surface instead of heavy outlines. */
+.lancamentos-clean .bg-muted\/50,
+.lancamentos-clean .bg-muted\/40,
+.lancamentos-clean .bg-muted\/30 {
+  background-color: var(--ws-soft-surface) !important;
+}
+
+/* Dialogs keep stronger framing because they sit outside the document flow. */
+.lancamentos-clean [role="dialog"] {
+  border-color: hsl(var(--border) / 0.72);
+}
