@@ -22,6 +22,7 @@ import AdminBalancete from "./pages/AdminBalancete";
 import AdminPlanoContas from "./pages/AdminPlanoContas";
 import AdminEngine from "./pages/AdminEngine";
 import AdminFeature from "./pages/AdminFeature";
+import AdminCte from "./pages/AdminCte";
 import AdminFiscalCompanies from "./pages/AdminFiscalCompanies";
 import AdminFiscalNotes from "./pages/AdminFiscalNotes";
 
@@ -55,6 +56,7 @@ const AppRoutes = () => {
       <Route path="/admin/fiscal/empresas" element={<PrivateRoute requiredRole="admin"><AdminFiscalCompanies /></PrivateRoute>} />
       <Route path="/admin/feature" element={<PrivateRoute requiredRole="admin"><AdminFiscalNotes /></PrivateRoute>} />
       <Route path="/admin/fiscal/emissao" element={<PrivateRoute requiredRole="admin"><AdminFeature /></PrivateRoute>} />
+      <Route path="/admin/fiscal/cte" element={<PrivateRoute requiredRole="admin"><AdminCte /></PrivateRoute>} />
       <Route path="/admin/fiscal/laboratorio" element={<Navigate to="/admin/fiscal/emissao" replace />} />
 
       <Route path="/admin-dashboard" element={<Navigate to="/admin" replace />} />
