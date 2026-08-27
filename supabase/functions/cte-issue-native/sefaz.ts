@@ -1,3 +1,5 @@
+import { ICP_BRASIL_V10_PEM } from "./ca.ts";
+
 export type CertificadoMtls = {
   chavePrivadaPem: string;
   certificadoPem: string;
@@ -6,20 +8,58 @@ export type CertificadoMtls = {
 
 const STATUS_URL = "https://cte-homologacao.svrs.rs.gov.br/ws/CTeStatusServicoV4/CTeStatusServicoV4.asmx";
 const ISSUE_URL = "https://cte-homologacao.svrs.rs.gov.br/ws/CTeRecepcaoSincV4/CTeRecepcaoSincV4.asmx";
-const HOMOLOG_HOST = "cte-homologacao.svrs.rs.gov.br";
+const SERPRO_SSL_V1_URL = "http://repositorio.serpro.gov.br/cadeias/serprossl.crt";
+const SERPRO_SSL_V1_SHA256 = "08fc942d5176e568acbef9c595f36a20de6acf9ea30c6f5fcedd48216ed5b070";
+
+let serproCaPromise: Promise<string> | null = null;
+
+function pemDer(pem: string) {
+  const match = pem.match(/-----BEGIN CERTIFICATE-----([\s\S]*?)-----END CERTIFICATE-----/);
+  if (!match) throw new Error("Certificado da CA SERPRO SSLv1 inválido.");
+  const base64 = match[1].replace(/\s/g, "");
+  return Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
+}
+
+async function sha256Hex(bytes: Uint8Array) {
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+  return [...digest].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function loadSerproSslV1() {
+  if (!serproCaPromise) {
+    serproCaPromise = (async () => {
+      const response = await fetch(SERPRO_SSL_V1_URL);
+      if (!response.ok) throw new Error(`Não foi possível carregar a CA SERPRO SSLv1: HTTP ${response.status}.`);
+      const pem = (await response.text()).trim();
+      const fingerprint = await sha256Hex(pemDer(pem));
+      if (fingerprint !== SERPRO_SSL_V1_SHA256) {
+        throw new Error("Fingerprint da CA SERPRO SSLv1 não confere com o certificado oficial pinado.");
+      }
+      return pem;
+    })().catch((error) => {
+      serproCaPromise = null;
+      throw error;
+    });
+  }
+  return await serproCaPromise;
+}
 
 async function postSoap(cert: CertificadoMtls, endpoint: string, namespace: string, innerXml: string) {
   const soap = `<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><cteDadosMsg xmlns="${namespace}">${innerXml}</cteDadosMsg></soap12:Body></soap12:Envelope>`;
+  const serproSslV1 = await loadSerproSslV1();
   const client = Deno.createHttpClient({
+    caCerts: [ICP_BRASIL_V10_PEM, serproSslV1],
     cert: [cert.certificadoPem, ...cert.cadeiaPem].join("\n"),
     key: cert.chavePrivadaPem,
     http1: true,
-    unsafelyIgnoreCertificateErrors: [HOMOLOG_HOST],
   });
   try {
     const response = await fetch(endpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/soap+xml; charset=utf-8", "Accept": "application/soap+xml, text/xml, */*" },
+      headers: {
+        "Content-Type": "application/soap+xml; charset=utf-8",
+        "Accept": "application/soap+xml, text/xml, */*",
+      },
       body: soap,
       client,
     } as RequestInit & { client: Deno.HttpClient });
@@ -42,7 +82,8 @@ export async function authorizeCte(cert: CertificadoMtls, signedXml: string) {
   return { endpoint: ISSUE_URL, text };
 }
 
-const all = (xml: string, tag: string) => [...xml.matchAll(new RegExp(`<(?:\\w+:)?${tag}(?:\\s[^>]*)?>([^<]*)<\\/(?:\\w+:)?${tag}>`, "g"))].map(m => m[1]);
+const all = (xml: string, tag: string) => [...xml.matchAll(new RegExp(`<(?:\\w+:)?${tag}(?:\\s[^>]*)?>([^<]*)<\\/(?:\\w+:)?${tag}>`, "g"))].map((match) => match[1]);
+
 export function parseCteResponse(xml: string) {
   const cStats = all(xml, "cStat");
   const motivos = all(xml, "xMotivo");
