@@ -22,6 +22,7 @@ import AdminBalancete from "./pages/AdminBalancete";
 import AdminPlanoContas from "./pages/AdminPlanoContas";
 import AdminEngine from "./pages/AdminEngine";
 import AdminFeature from "./pages/AdminFeature";
+import AdminFiscalCompanies from "./pages/AdminFiscalCompanies";
 
 const AppRoutes = () => {
   const { userData, user } = useAuth();
@@ -50,13 +51,13 @@ const AppRoutes = () => {
       <Route path="/admin/announcements" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="announcements" /></PrivateRoute>} />
       <Route path="/admin/agenda" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="agenda" /></PrivateRoute>} />
       <Route path="/admin/settings" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="settings" /></PrivateRoute>} />
+      <Route path="/admin/fiscal/empresas" element={<PrivateRoute requiredRole="admin"><AdminFiscalCompanies /></PrivateRoute>} />
       <Route path="/admin/feature" element={<PrivateRoute requiredRole="admin"><AdminFeature /></PrivateRoute>} />
 
       <Route path="/admin-dashboard" element={<Navigate to="/admin" replace />} />
       <Route path="/admin/tax-simulations" element={<Navigate to="/admin/simulations" replace />} />
 
       <Route path="/admin/carousel" element={<PrivateRoute requiredRole="admin"><AdminLayout><SimpleCarouselManager /></AdminLayout></PrivateRoute>} />
-
       <Route path="/admin/lancamentos" element={<PrivateRoute requiredRole="admin"><AdminLancamentos /></PrivateRoute>} />
       <Route path="/admin/lancamentos/balancete" element={<PrivateRoute requiredRole="admin"><AdminBalancete /></PrivateRoute>} />
       <Route path="/admin/lancamentos/plano-contas" element={<PrivateRoute requiredRole="admin"><AdminPlanoContas /></PrivateRoute>} />
