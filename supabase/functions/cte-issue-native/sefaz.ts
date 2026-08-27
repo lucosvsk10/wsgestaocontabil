@@ -6,6 +6,7 @@ export type CertificadoMtls = {
 
 const STATUS_URL = "https://cte-homologacao.svrs.rs.gov.br/ws/CTeStatusServicoV4/CTeStatusServicoV4.asmx";
 const ISSUE_URL = "https://cte-homologacao.svrs.rs.gov.br/ws/CTeRecepcaoSincV4/CTeRecepcaoSincV4.asmx";
+const HOMOLOG_HOST = "cte-homologacao.svrs.rs.gov.br";
 
 async function postSoap(cert: CertificadoMtls, endpoint: string, namespace: string, innerXml: string) {
   const soap = `<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><cteDadosMsg xmlns="${namespace}">${innerXml}</cteDadosMsg></soap12:Body></soap12:Envelope>`;
@@ -13,6 +14,7 @@ async function postSoap(cert: CertificadoMtls, endpoint: string, namespace: stri
     cert: [cert.certificadoPem, ...cert.cadeiaPem].join("\n"),
     key: cert.chavePrivadaPem,
     http1: true,
+    unsafelyIgnoreCertificateErrors: [HOMOLOG_HOST],
   });
   try {
     const response = await fetch(endpoint, {
