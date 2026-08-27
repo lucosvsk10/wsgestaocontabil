@@ -94,8 +94,7 @@ function decodeChunked(body: Uint8Array) {
 
 async function postRawMtls(endpoint: string, soap: string, cert: ReturnType<typeof lerCertificado>) {
   const url = new URL(endpoint);
-  const intermediates = Array.isArray(cert.cadeiaPem) ? cert.cadeiaPem.slice(0, 1) : [];
-  const certChain = [cert.certificadoPem, ...intermediates].join("\n");
+  const certChain = cert.certificadoPem;
   const conn = await Deno.connectTls({
     hostname: url.hostname,
     port: 443,
@@ -114,7 +113,7 @@ async function postRawMtls(endpoint: string, soap: string, cert: ReturnType<type
       "Accept: application/soap+xml, text/xml, */*",
       `Content-Length: ${body.length}`,
       "Connection: close",
-      "User-Agent: WS-Gestao-DFe/1.1",
+      "User-Agent: WS-Gestao-DFe/1.2",
       "",
       "",
     ].join("\r\n");
@@ -139,7 +138,7 @@ async function postRawMtls(endpoint: string, soap: string, cert: ReturnType<type
     if (/transfer-encoding:\s*chunked/i.test(headerText)) responseBody = decodeChunked(responseBody);
     const text = decoder.decode(responseBody);
     if (status < 200 || status >= 300) throw new Error(`Ambiente Nacional respondeu HTTP ${status}: ${text.slice(0, 900)}`);
-    return { text, transport: "Deno.connectTls + HTTP/1.1", presentedChain: 1 + intermediates.length };
+    return { text, transport: "Deno.connectTls + HTTP/1.1 (leaf-only)", presentedChain: 1 };
   } finally {
     conn.close();
   }
