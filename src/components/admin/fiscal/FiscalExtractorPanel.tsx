@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Clock3, Database, Download, FileSearch, Info, RefreshCw } from "lucide-react";
+import { CheckCircle2, Clock3, Database, Eye, FileSearch, Info, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
+import { FiscalDocumentPreview } from "@/components/admin/fiscal/FiscalDocumentPreview";
 
 type CertificateInfo = { cnpj?: string | null; cpf?: string | null; nome?: string | null; validadeFim?: string; validoAgora?: boolean };
 type DfeDocument = {
@@ -33,7 +34,6 @@ const padNsu = (v?: string | null) => digits(v || "0").padStart(15, "0").slice(-
 const money = (v?: number) => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const date = (v?: string) => { if (!v) return "—"; const d = new Date(v); return Number.isNaN(d.getTime()) ? v : d.toLocaleDateString("pt-BR"); };
 const dateTime = (v?: string | null) => { if (!v) return "Ainda não sincronizado"; const d = new Date(v); return Number.isNaN(d.getTime()) ? v : d.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }); };
-function downloadXml(doc: DfeDocument) { if (!doc.xml) return; const blob = new Blob([doc.xml], { type: "application/xml;charset=utf-8" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${doc.accessKey || doc.nsu || "documento-fiscal"}.xml`; a.click(); URL.revokeObjectURL(url); }
 function rowToDoc(row: any): DfeDocument { return { nsu: row.nsu, schema: row.schema_name, documentKind: row.document_kind, fullXml: row.full_xml, direction: row.direction, accessKey: row.access_key, issueDate: row.issue_date, value: Number(row.value || 0), issuerCnpj: row.issuer_cnpj, issuerName: row.issuer_name, recipientCnpj: row.recipient_cnpj, number: row.note_number, series: row.series, statusCode: row.status_code, xml: row.xml, parseError: row.parse_error }; }
 
 export function FiscalExtractorPanel({ token, certificateBase64, certificatePassword, certificate }: { token: string; certificateBase64: string; certificatePassword: string; certificate: CertificateInfo | null }) {
@@ -48,6 +48,7 @@ export function FiscalExtractorPanel({ token, certificateBase64, certificatePass
   const [result, setResult] = useState<DfeResult | null>(null);
   const [filter, setFilter] = useState<Filter>("todos");
   const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState<DfeDocument | null>(null);
 
   const hasCert = Boolean(certificateBase64 && certificatePassword);
   const cnpj = digits(certificate?.cnpj);
@@ -129,9 +130,10 @@ export function FiscalExtractorPanel({ token, certificateBase64, certificatePass
       <section className="overflow-hidden rounded-xl border bg-background">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4 sm:p-5"><div><p className="text-xs uppercase text-muted-foreground">Documentos fiscais</p><h3 className="mt-1 font-semibold">Histórico da empresa</h3><p className="mt-1 text-xs text-muted-foreground">NSU {ultNSU} / {maxNSU}</p></div><div className="flex flex-wrap gap-2">{([['todos','Todos'],['entrada','Entradas'],['saida','Saídas'],['evento','Eventos']] as [Filter,string][]).map(([id,label])=><button key={id} onClick={()=>setFilter(id)} className={`rounded-md border px-3 py-2 text-xs font-medium ${filter===id?"bg-foreground text-background":"bg-background hover:bg-muted"}`}>{label}</button>)}</div></div>
         <div className="border-b p-4 sm:px-5"><Input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Buscar por chave, empresa, CNPJ, número ou NSU..."/></div>
-        <div className="overflow-x-auto"><table className="w-full min-w-[1050px] text-left text-sm"><thead className="bg-muted/40 text-xs text-muted-foreground"><tr><th className="px-4 py-3 font-medium">Tipo</th><th className="px-4 py-3 font-medium">Emissão</th><th className="px-4 py-3 font-medium">Nota / chave</th><th className="px-4 py-3 font-medium">Emitente</th><th className="px-4 py-3 font-medium">Valor</th><th className="px-4 py-3 font-medium">NSU</th><th className="px-4 py-3 font-medium">XML</th></tr></thead><tbody>{docs.length?docs.map((doc,i)=><tr key={`${doc.nsu}-${i}`} className="border-t transition-colors hover:bg-muted/20"><td className="px-4 py-3"><Badge doc={doc}/></td><td className="whitespace-nowrap px-4 py-3">{date(doc.issueDate)}</td><td className="px-4 py-3"><p className="font-medium">{doc.number?`${doc.number}${doc.series?` / ${doc.series}`:""}`:doc.documentKind==='evento'?"Evento fiscal":"—"}</p><p className="mt-1 max-w-[290px] truncate text-xs text-muted-foreground" title={doc.accessKey}>{doc.accessKey||doc.schema||"—"}</p></td><td className="px-4 py-3"><p className="max-w-[280px] truncate font-medium" title={doc.issuerName}>{doc.issuerName||"—"}</p><p className="mt-1 text-xs text-muted-foreground">{doc.issuerCnpj||"—"}</p></td><td className="whitespace-nowrap px-4 py-3 font-medium">{doc.documentKind==='evento'?"—":money(doc.value)}</td><td className="px-4 py-3 font-mono text-xs">{doc.nsu||"—"}</td><td className="px-4 py-3"><Button size="sm" variant="outline" disabled={!doc.xml} onClick={()=>downloadXml(doc)}><Download className="mr-2 h-3.5 w-3.5"/>XML</Button></td></tr>):<tr><td colSpan={7} className="px-5 py-14 text-center text-sm text-muted-foreground">Nenhum documento neste filtro.</td></tr>}</tbody></table></div>
+        <div className="overflow-x-auto"><table className="w-full min-w-[1050px] text-left text-sm"><thead className="bg-muted/40 text-xs text-muted-foreground"><tr><th className="px-4 py-3 font-medium">Tipo</th><th className="px-4 py-3 font-medium">Emissão</th><th className="px-4 py-3 font-medium">Nota / chave</th><th className="px-4 py-3 font-medium">Emitente</th><th className="px-4 py-3 font-medium">Valor</th><th className="px-4 py-3 font-medium">NSU</th><th className="px-4 py-3 font-medium">Ações</th></tr></thead><tbody>{docs.length?docs.map((doc,i)=><tr key={`${doc.nsu}-${i}`} className="cursor-pointer border-t transition-colors hover:bg-muted/20" onDoubleClick={()=>setSelected(doc)}><td className="px-4 py-3"><Badge doc={doc}/></td><td className="whitespace-nowrap px-4 py-3">{date(doc.issueDate)}</td><td className="px-4 py-3"><p className="font-medium">{doc.number?`${doc.number}${doc.series?` / ${doc.series}`:""}`:doc.documentKind==='evento'?"Evento fiscal":"—"}</p><p className="mt-1 max-w-[290px] truncate text-xs text-muted-foreground" title={doc.accessKey}>{doc.accessKey||doc.schema||"—"}</p></td><td className="px-4 py-3"><p className="max-w-[280px] truncate font-medium" title={doc.issuerName}>{doc.issuerName||"—"}</p><p className="mt-1 text-xs text-muted-foreground">{doc.issuerCnpj||"—"}</p></td><td className="whitespace-nowrap px-4 py-3 font-medium">{doc.documentKind==='evento'?"—":money(doc.value)}</td><td className="px-4 py-3 font-mono text-xs">{doc.nsu||"—"}</td><td className="px-4 py-3"><Button size="sm" variant="outline" onClick={()=>setSelected(doc)}><Eye className="mr-2 h-3.5 w-3.5"/>Visualizar</Button></td></tr>):<tr><td colSpan={7} className="px-5 py-14 text-center text-sm text-muted-foreground">Nenhum documento neste filtro.</td></tr>}</tbody></table></div>
       </section>
     </>}
+    {selected&&<FiscalDocumentPreview doc={selected} onClose={()=>setSelected(null)}/>} 
   </div>;
 }
 
