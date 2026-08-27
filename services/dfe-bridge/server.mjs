@@ -74,6 +74,57 @@ function postToAmbienteNacional({ pfxBase64, password, cnpj, ufCode, ultNSU, env
   });
 }
 
+function probeSvrs({ pfxBase64, password, url }) {
+  const target = new URL(url);
+  if (target.protocol !== 'https:' || !target.hostname.endsWith('.svrs.rs.gov.br')) {
+    throw new Error('Host de probe não permitido');
+  }
+
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: target.hostname,
+      port: 443,
+      path: `${target.pathname}${target.search}`,
+      method: 'GET',
+      pfx: Buffer.from(pfxBase64, 'base64'),
+      passphrase: password,
+      minVersion: 'TLSv1.2',
+      maxVersion: 'TLSv1.2',
+      ALPNProtocols: ['http/1.1'],
+      servername: target.hostname,
+      // Restrito ao endpoint interno de diagnóstico. Alguns hosts legados do SVRS
+      // entregam uma cadeia que a imagem atual do Node não reconhece.
+      rejectUnauthorized: false,
+      agent: false,
+      headers: {
+        Accept: '*/*',
+        Connection: 'close',
+        'User-Agent': 'WS-Gestao-SVRS-Probe/1.0',
+      },
+    }, (res) => {
+      const chunks = [];
+      res.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+      res.on('end', () => {
+        const text = Buffer.concat(chunks).toString('utf8');
+        resolve({
+          url,
+          status: res.statusCode || 0,
+          contentType: res.headers['content-type'] || null,
+          location: res.headers.location || null,
+          tlsProtocol: typeof res.socket?.getProtocol === 'function' ? res.socket.getProtocol() : null,
+          alpn: res.socket?.alpnProtocol || null,
+          size: text.length,
+          body: text.slice(0, 12000),
+        });
+      });
+    });
+
+    req.setTimeout(15000, () => req.destroy(new Error('Timeout de 15s no SVRS')));
+    req.on('error', reject);
+    req.end();
+  });
+}
+
 async function readJson(req) {
   const chunks = [];
   for await (const chunk of req) chunks.push(Buffer.from(chunk));
@@ -88,7 +139,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  if (req.method !== 'POST' || req.url !== '/distribuicao') {
+  if (req.method !== 'POST' || !['/distribuicao', '/svrs-probe'].includes(req.url || '')) {
     res.statusCode = 404;
     res.end(JSON.stringify({ error: 'Not found' }));
     return;
@@ -104,14 +155,33 @@ const server = http.createServer(async (req, res) => {
     const body = await readJson(req);
     const pfxBase64 = String(body.certificate_base64 || '');
     const password = String(body.certificate_password || '');
+
+    if (!pfxBase64 || !password) {
+      res.statusCode = 400;
+      res.end(JSON.stringify({ error: 'certificate_base64 e certificate_password são obrigatórios' }));
+      return;
+    }
+
+    if (req.url === '/svrs-probe') {
+      const url = String(body.url || '');
+      if (!url) {
+        res.statusCode = 400;
+        res.end(JSON.stringify({ error: 'url é obrigatória' }));
+        return;
+      }
+      const result = await probeSvrs({ pfxBase64, password, url });
+      res.end(JSON.stringify({ ok: true, transport: 'Node/OpenSSL mTLS probe', result }));
+      return;
+    }
+
     const cnpj = digits(body.cnpj || '');
     const ufCode = digits(body.uf_code || '27');
     const ultNSU = digits(body.ult_nsu || '0');
     const environment = body.environment === 'homologacao' ? 'homologacao' : 'producao';
 
-    if (!pfxBase64 || !password || cnpj.length !== 14) {
+    if (cnpj.length !== 14) {
       res.statusCode = 400;
-      res.end(JSON.stringify({ error: 'certificate_base64, certificate_password e CNPJ válido são obrigatórios' }));
+      res.end(JSON.stringify({ error: 'CNPJ válido é obrigatório' }));
       return;
     }
 
