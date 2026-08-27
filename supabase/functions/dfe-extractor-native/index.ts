@@ -1,8 +1,8 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
 import { Buffer } from "node:buffer";
-import * as https from "node:https";
 import { lerCertificado } from "npm:nfse-node@0.3.2/certificado";
+import { ICP_BRASIL_V10_PEM } from "./ca.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -67,80 +67,45 @@ function extractResponse(xml: string) {
   return { cStat: tag(xml, "cStat"), xMotivo: tag(xml, "xMotivo"), dhResp: tag(xml, "dhResp"), ultNSU: tag(xml, "ultNSU"), maxNSU: tag(xml, "maxNSU") };
 }
 
-function postNodeHttpsTls12(endpoint: string, soap: string, pfx: Buffer, password: string): Promise<{ text: string; status: number; tlsProtocol: string; alpn: string | false }> {
-  const url = new URL(endpoint);
-  const action = "http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe/nfeDistDFeInteresse";
-  const body = Buffer.from(soap, "utf8");
-
-  return new Promise((resolve, reject) => {
-    const req = https.request({
-      hostname: url.hostname,
-      port: 443,
-      path: url.pathname,
-      method: "POST",
-      pfx,
-      passphrase: password,
-      minVersion: "TLSv1.2",
-      maxVersion: "TLSv1.2",
-      ALPNProtocols: ["http/1.1"],
-      servername: url.hostname,
-      rejectUnauthorized: true,
-      agent: false,
-      headers: {
-        "Content-Type": "text/xml; charset=utf-8",
-        "SOAPAction": `"${action}"`,
-        "Accept": "text/xml, */*",
-        "Content-Length": String(body.length),
-        "Connection": "close",
-        "User-Agent": "WS-Gestao-DFe/2.0",
-      },
-    }, (res) => {
-      const chunks: Buffer[] = [];
-      res.on("data", (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
-      res.on("end", () => {
-        const text = Buffer.concat(chunks).toString("utf8");
-        const socket = res.socket as any;
-        resolve({
-          text,
-          status: res.statusCode || 0,
-          tlsProtocol: typeof socket?.getProtocol === "function" ? String(socket.getProtocol() || "") : "",
-          alpn: socket?.alpnProtocol || false,
-        });
-      });
-    });
-
-    req.setTimeout(30000, () => req.destroy(new Error("Timeout de 30s no Ambiente Nacional.")));
-    req.on("error", (error) => reject(new Error(`Falha HTTPS TLS 1.2 no Ambiente Nacional: ${error.message}`)));
-    req.write(body);
-    req.end();
-  });
-}
-
-async function requestDistribution(pfx: Buffer, password: string, cnpj: string, ufCode: string, ultNSU: string, environment: "homologacao" | "producao") {
+async function requestDistribution(cert: ReturnType<typeof lerCertificado>, cnpj: string, ufCode: string, ultNSU: string, environment: "homologacao" | "producao") {
   const endpoint = environment === "producao"
     ? "https://www1.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx"
-    : "https://hom.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx";
+    : "https://hom1.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx";
   const tpAmb = environment === "producao" ? "1" : "2";
   const nsu = digits(ultNSU || "0").padStart(15, "0").slice(-15);
-  const soap = `<?xml version="1.0" encoding="UTF-8"?>
-<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  <soap:Body>
-    <nfeDistDFeInteresse xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe">
-      <nfeDadosMsg>
-        <distDFeInt xmlns="http://www.portalfiscal.inf.br/nfe" versao="1.01">
-          <tpAmb>${tpAmb}</tpAmb>
-          <cUFAutor>${ufCode}</cUFAutor>
-          <CNPJ>${cnpj}</CNPJ>
-          <distNSU><ultNSU>${nsu}</ultNSU></distNSU>
-        </distDFeInt>
-      </nfeDadosMsg>
-    </nfeDistDFeInteresse>
-  </soap:Body>
-</soap:Envelope>`;
+  const dist = `<distDFeInt xmlns="http://www.portalfiscal.inf.br/nfe" versao="1.01"><tpAmb>${tpAmb}</tpAmb><cUFAutor>${ufCode}</cUFAutor><CNPJ>${cnpj}</CNPJ><distNSU><ultNSU>${nsu}</ultNSU></distNSU></distDFeInt>`;
+  const soap = `<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDistDFeInteresse xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe"><nfeDadosMsg>${dist}</nfeDadosMsg></nfeDistDFeInteresse></soap12:Body></soap12:Envelope>`;
 
-  const result = await postNodeHttpsTls12(endpoint, soap, pfx, password);
-  if (result.status < 200 || result.status >= 300) throw new Error(`Ambiente Nacional respondeu HTTP ${result.status}: ${result.text.slice(0, 1200)}`);
-  return { endpoint, ...result, transport: "node:https + PFX nativo + TLS 1.2 + HTTP/1.1 + SOAP 1.1" };
+  const chain = Array.isArray(cert.cadeiaPem) ? cert.cadeiaPem.filter(Boolean) : [];
+  const client = Deno.createHttpClient({
+    caCerts: [ICP_BRASIL_V10_PEM],
+    cert: [cert.certificadoPem, ...chain].join("\n"),
+    key: cert.chavePrivadaPem,
+    http1: true,
+    http2: false,
+    poolIdleTimeout: false,
+    poolMaxIdlePerHost: 0,
+  });
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/soap+xml; charset=utf-8; action=\"http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe/nfeDistDFeInteresse\"",
+        "Accept": "application/soap+xml, text/xml, */*",
+        "Connection": "close",
+      },
+      body: soap,
+      client,
+    } as RequestInit & { client: Deno.HttpClient });
+    const text = await response.text();
+    if (!response.ok) throw new Error(`Ambiente Nacional respondeu HTTP ${response.status}: ${text.slice(0, 1200)}`);
+    return { endpoint, text, transport: "Deno.createHttpClient igual emissor; HTTP/2 desativado; SOAP 1.2", presentedChain: 1 + chain.length };
+  } catch (error) {
+    throw new Error(`Falha no transporte nativo do Supabase para o Ambiente Nacional: ${error instanceof Error ? error.message : String(error)}`);
+  } finally {
+    client.close();
+  }
 }
 
 serve(async (req) => {
@@ -160,8 +125,7 @@ serve(async (req) => {
     const password = String(body.certificate_password || "");
     if (!pfxBase64 || !password) return json({ error: "Informe o certificado A1 e a senha." }, 400);
 
-    const pfx = Buffer.from(pfxBase64, "base64");
-    const cert = lerCertificado(pfx, password);
+    const cert = lerCertificado(Buffer.from(pfxBase64, "base64"), password);
     const cnpj = digits(cert.titular.cnpj);
     if (cnpj.length !== 14) return json({ error: "O certificado precisa pertencer a uma pessoa jurídica com CNPJ." }, 422);
     if (cert.validadeInicio > new Date() || cert.validadeFim < new Date()) return json({ error: "Certificado fora do período de validade." }, 422);
@@ -169,7 +133,7 @@ serve(async (req) => {
     const environment = body.environment === "homologacao" ? "homologacao" : "producao";
     const ufCode = digits(body.uf_code || "27").padStart(2, "0").slice(-2);
     const ultNSU = digits(body.ult_nsu || "0").padStart(15, "0").slice(-15);
-    const { endpoint, text, transport, tlsProtocol, alpn } = await requestDistribution(pfx, password, cnpj, ufCode, ultNSU, environment);
+    const { endpoint, text, transport, presentedChain } = await requestDistribution(cert, cnpj, ufCode, ultNSU, environment);
     const response = extractResponse(text);
     const docs: Array<Record<string, unknown>> = [];
     const re = /<docZip\b([^>]*)>([\s\S]*?)<\/docZip>/gi;
@@ -191,8 +155,7 @@ serve(async (req) => {
       provider: "Ambiente Nacional NF-e",
       endpoint,
       transport,
-      tlsProtocol,
-      alpn,
+      presentedChain,
       certificate: { cnpj, nome: cert.titular.nome, validadeFim: cert.validadeFim.toISOString(), validoAgora: true },
       response,
       documents: docs,
