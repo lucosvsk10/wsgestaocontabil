@@ -79,12 +79,11 @@ function decodeChunked(body: Uint8Array) {
   const out: number[] = [];
   let pos = 0;
   while (pos < body.length) {
-    const lineEnd = indexOfBytes(body.slice(pos), encoder.encode("\r\n"));
-    if (lineEnd < 0) break;
-    const sizeText = decoder.decode(body.slice(pos, pos + lineEnd)).split(";", 1)[0].trim();
-    const size = Number.parseInt(sizeText, 16);
+    const relEnd = indexOfBytes(body.slice(pos), encoder.encode("\r\n"));
+    if (relEnd < 0) break;
+    const size = Number.parseInt(decoder.decode(body.slice(pos, pos + relEnd)).split(";", 1)[0].trim(), 16);
     if (!Number.isFinite(size)) throw new Error("Resposta HTTP chunked inválida do Ambiente Nacional.");
-    pos += lineEnd + 2;
+    pos += relEnd + 2;
     if (size === 0) break;
     out.push(...body.slice(pos, pos + size));
     pos += size + 2;
@@ -109,26 +108,30 @@ async function postRawMtls(endpoint: string, soap: string, cert: ReturnType<type
   } catch (error) {
     throw new Error(`Falha no handshake mTLS com o Ambiente Nacional: ${error instanceof Error ? error.message : String(error)}`);
   }
+
   try {
     const action = "http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe/nfeDistDFeInteresse";
     const body = encoder.encode(soap);
-    const head = [
+    const headers = [
       `POST ${url.pathname} HTTP/1.1`,
       `Host: ${url.hostname}`,
-      `Content-Type: application/soap+xml; charset=utf-8; action=\"${action}\"`,
-      "Accept: application/soap+xml, text/xml, */*",
+      "Content-Type: text/xml; charset=utf-8",
+      `SOAPAction: "${action}"`,
+      "Accept: text/xml, */*",
       `Content-Length: ${body.length}`,
       "Connection: close",
-      "User-Agent: WS-Gestao-DFe/1.3",
+      "User-Agent: WS-Gestao-DFe/1.4",
       "",
       "",
     ].join("\r\n");
+
     try {
-      await conn.write(encoder.encode(head));
+      await conn.write(encoder.encode(headers));
       await conn.write(body);
     } catch (error) {
-      throw new Error(`Conexão mTLS abriu, mas falhou ao enviar a requisição SOAP: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Conexão mTLS abriu, mas falhou ao enviar SOAP 1.1: ${error instanceof Error ? error.message : String(error)}`);
     }
+
     const parts: Uint8Array[] = [];
     const buffer = new Uint8Array(32768);
     try {
@@ -138,23 +141,24 @@ async function postRawMtls(endpoint: string, soap: string, cert: ReturnType<type
         parts.push(buffer.slice(0, n));
       }
     } catch (error) {
-      if (parts.length === 0) throw new Error(`Ambiente Nacional encerrou a conexão antes de responder: ${error instanceof Error ? error.message : String(error)}`);
+      if (parts.length === 0) throw new Error(`Ambiente Nacional encerrou a conexão antes de responder ao SOAP 1.1: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
+
     const total = parts.reduce((sum, p) => sum + p.length, 0);
-    if (total === 0) throw new Error("Ambiente Nacional encerrou a conexão sem retornar dados.");
+    if (total === 0) throw new Error("Ambiente Nacional encerrou a conexão sem retornar dados ao SOAP 1.1.");
     const raw = new Uint8Array(total);
     let offset = 0;
     for (const p of parts) { raw.set(p, offset); offset += p.length; }
     const sep = indexOfBytes(raw, encoder.encode("\r\n\r\n"));
-    if (sep < 0) throw new Error("Resposta HTTP inválida do Ambiente Nacional.");
+    if (sep < 0) throw new Error(`Resposta HTTP inválida do Ambiente Nacional: ${decoder.decode(raw.slice(0, 400))}`);
     const headerText = decoder.decode(raw.slice(0, sep));
     const status = Number(headerText.match(/^HTTP\/\d(?:\.\d)?\s+(\d{3})/i)?.[1] || 0);
     let responseBody = raw.slice(sep + 4);
     if (/transfer-encoding:\s*chunked/i.test(headerText)) responseBody = decodeChunked(responseBody);
     const text = decoder.decode(responseBody);
-    if (status < 200 || status >= 300) throw new Error(`Ambiente Nacional respondeu HTTP ${status}: ${text.slice(0, 900)}`);
-    return { text, transport: "Deno.connectTls + HTTP/1.1 + SOAP 1.2", presentedChain: 1 + chain.length };
+    if (status < 200 || status >= 300) throw new Error(`Ambiente Nacional respondeu HTTP ${status}: ${text.slice(0, 1000)}`);
+    return { text, transport: "Deno.connectTls + HTTP/1.1 + SOAP 1.1", presentedChain: 1 + chain.length };
   } finally {
     conn.close();
   }
@@ -166,17 +170,11 @@ async function requestDistribution(cert: ReturnType<typeof lerCertificado>, cnpj
     : "https://hom1.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx";
   const tpAmb = environment === "producao" ? "1" : "2";
   const nsu = digits(ultNSU || "0").padStart(15, "0").slice(-15);
-  const soap = `<?xml version="1.0" encoding="utf-8"?>
-<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
-  <soap12:Header>
-    <nfeCabecMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe">
-      <cUF>91</cUF>
-      <versaoDados>1.01</versaoDados>
-    </nfeCabecMsg>
-  </soap12:Header>
-  <soap12:Body>
+  const soap = `<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <soap:Body>
     <nfeDistDFeInteresse xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe">
-      <nfeDadosMsg>
+      <nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe">
         <distDFeInt xmlns="http://www.portalfiscal.inf.br/nfe" versao="1.01">
           <tpAmb>${tpAmb}</tpAmb>
           <cUFAutor>${ufCode}</cUFAutor>
@@ -185,8 +183,8 @@ async function requestDistribution(cert: ReturnType<typeof lerCertificado>, cnpj
         </distDFeInt>
       </nfeDadosMsg>
     </nfeDistDFeInteresse>
-  </soap12:Body>
-</soap12:Envelope>`;
+  </soap:Body>
+</soap:Envelope>`;
   const result = await postRawMtls(endpoint, soap, cert);
   return { endpoint, ...result };
 }
@@ -207,6 +205,7 @@ serve(async (req) => {
     const pfxBase64 = String(body.certificate_base64 || "").trim();
     const password = String(body.certificate_password || "");
     if (!pfxBase64 || !password) return json({ error: "Informe o certificado A1 e a senha." }, 400);
+
     const cert = lerCertificado(Buffer.from(pfxBase64, "base64"), password);
     const cnpj = digits(cert.titular.cnpj);
     if (cnpj.length !== 14) return json({ error: "O certificado precisa pertencer a uma pessoa jurídica com CNPJ." }, 422);
@@ -230,6 +229,7 @@ serve(async (req) => {
         docs.push({ nsu, schema, parseError: error instanceof Error ? error.message : String(error), fullXml: false, direction: "relacionada" });
       }
     }
+
     return json({
       ok: response.cStat === "137" || response.cStat === "138",
       environment,
