@@ -2,7 +2,6 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
 import { Buffer } from "node:buffer";
 import { lerCertificado } from "npm:nfse-node@0.3.2/certificado";
-import { ICP_BRASIL_V10_PEM } from "./ca.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -11,6 +10,7 @@ const cors = {
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
+const BRIDGE_URL = "https://ws-dfe-bridge.vercel.app/distribuicao";
 
 const toBase64Url = (value: Uint8Array | string) => {
   const bytes = typeof value === "string" ? encoder.encode(value) : value;
@@ -59,53 +59,31 @@ function parseDocument(xml: string, schema: string, nsu: string, companyCnpj: st
   const series = tag(clean, "serie");
   const statusCode = tag(clean, "cSitNFe") || tag(clean, "cStat");
   const fullXml = /procNFe|NFe/i.test(schema) && !/resNFe/i.test(schema);
-  const direction = emitCnpj === companyCnpj ? "saida" : destCnpj === companyCnpj ? "entrada" : "relacionada";
+  const direction = /resNFe/i.test(schema)
+    ? (emitCnpj === companyCnpj ? "saida" : "entrada")
+    : emitCnpj === companyCnpj ? "saida" : destCnpj === companyCnpj ? "entrada" : "relacionada";
   return { nsu, schema, fullXml, direction, accessKey, issueDate, value, issuerCnpj: emitCnpj, issuerName, recipientCnpj: destCnpj, number, series, statusCode, xml: clean };
 }
 
-function extractResponse(xml: string) {
-  return { cStat: tag(xml, "cStat"), xMotivo: tag(xml, "xMotivo"), dhResp: tag(xml, "dhResp"), ultNSU: tag(xml, "ultNSU"), maxNSU: tag(xml, "maxNSU") };
-}
-
-async function requestDistribution(cert: ReturnType<typeof lerCertificado>, cnpj: string, ufCode: string, ultNSU: string, environment: "homologacao" | "producao") {
-  const endpoint = environment === "producao"
-    ? "https://www1.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx"
-    : "https://hom1.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx";
-  const tpAmb = environment === "producao" ? "1" : "2";
-  const nsu = digits(ultNSU || "0").padStart(15, "0").slice(-15);
-  const dist = `<distDFeInt xmlns="http://www.portalfiscal.inf.br/nfe" versao="1.01"><tpAmb>${tpAmb}</tpAmb><cUFAutor>${ufCode}</cUFAutor><CNPJ>${cnpj}</CNPJ><distNSU><ultNSU>${nsu}</ultNSU></distNSU></distDFeInt>`;
-  const soap = `<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDistDFeInteresse xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe"><nfeDadosMsg>${dist}</nfeDadosMsg></nfeDistDFeInteresse></soap12:Body></soap12:Envelope>`;
-
-  const chain = Array.isArray(cert.cadeiaPem) ? cert.cadeiaPem.filter(Boolean) : [];
-  const client = Deno.createHttpClient({
-    caCerts: [ICP_BRASIL_V10_PEM],
-    cert: [cert.certificadoPem, ...chain].join("\n"),
-    key: cert.chavePrivadaPem,
-    http1: true,
-    http2: false,
-    poolIdleTimeout: false,
-    poolMaxIdlePerHost: 0,
+async function requestDistribution(auth: string, pfxBase64: string, password: string, cnpj: string, ufCode: string, ultNSU: string, environment: "homologacao" | "producao") {
+  const response = await fetch(BRIDGE_URL, {
+    method: "POST",
+    headers: { "Authorization": auth, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      certificate_base64: pfxBase64,
+      certificate_password: password,
+      cnpj,
+      ufCode,
+      uf_code: ufCode,
+      ultNSU,
+      ult_nsu: ultNSU,
+      environment,
+    }),
   });
-
-  try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/soap+xml; charset=utf-8; action=\"http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe/nfeDistDFeInteresse\"",
-        "Accept": "application/soap+xml, text/xml, */*",
-        "Connection": "close",
-      },
-      body: soap,
-      client,
-    } as RequestInit & { client: Deno.HttpClient });
-    const text = await response.text();
-    if (!response.ok) throw new Error(`Ambiente Nacional respondeu HTTP ${response.status}: ${text.slice(0, 1200)}`);
-    return { endpoint, text, transport: "Deno.createHttpClient igual emissor; HTTP/2 desativado; SOAP 1.2", presentedChain: 1 + chain.length };
-  } catch (error) {
-    throw new Error(`Falha no transporte nativo do Supabase para o Ambiente Nacional: ${error instanceof Error ? error.message : String(error)}`);
-  } finally {
-    client.close();
-  }
+  const payload = await response.json().catch(() => ({})) as Record<string, any>;
+  if (!response.ok) throw new Error(`Bridge fiscal respondeu HTTP ${response.status}: ${payload.error || "erro desconhecido"}${payload.raw ? ` — ${String(payload.raw).slice(0, 500)}` : ""}`);
+  if (!payload.raw_xml) throw new Error("Bridge fiscal respondeu sem XML bruto.");
+  return payload;
 }
 
 serve(async (req) => {
@@ -133,8 +111,10 @@ serve(async (req) => {
     const environment = body.environment === "homologacao" ? "homologacao" : "producao";
     const ufCode = digits(body.uf_code || "27").padStart(2, "0").slice(-2);
     const ultNSU = digits(body.ult_nsu || "0").padStart(15, "0").slice(-15);
-    const { endpoint, text, transport, presentedChain } = await requestDistribution(cert, cnpj, ufCode, ultNSU, environment);
-    const response = extractResponse(text);
+    const bridge = await requestDistribution(auth, pfxBase64, password, cnpj, ufCode, ultNSU, environment);
+    const text = String(bridge.raw_xml || "");
+    const response = bridge.response || { cStat: tag(text, "cStat"), xMotivo: tag(text, "xMotivo"), dhResp: tag(text, "dhResp"), ultNSU: tag(text, "ultNSU"), maxNSU: tag(text, "maxNSU") };
+
     const docs: Array<Record<string, unknown>> = [];
     const re = /<docZip\b([^>]*)>([\s\S]*?)<\/docZip>/gi;
     let match: RegExpExecArray | null;
@@ -153,9 +133,10 @@ serve(async (req) => {
       ok: response.cStat === "137" || response.cStat === "138",
       environment,
       provider: "Ambiente Nacional NF-e",
-      endpoint,
-      transport,
-      presentedChain,
+      endpoint: BRIDGE_URL,
+      transport: bridge.transport || "Vercel Node/OpenSSL bridge",
+      tlsProtocol: bridge.tlsProtocol || null,
+      alpn: bridge.alpn || null,
       certificate: { cnpj, nome: cert.titular.nome, validadeFim: cert.validadeFim.toISOString(), validoAgora: true },
       response,
       documents: docs,
