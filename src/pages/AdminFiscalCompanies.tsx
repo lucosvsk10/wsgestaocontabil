@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Building2, CheckCircle2, ChevronRight, FileKey2, Plus, Search, ShieldCheck, X } from "lucide-react";
+import { Building2, ChevronRight, FileKey2, Plus, Search, ShieldCheck, X } from "lucide-react";
 import { AdminLayout } from "@/components/admin/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ type FiscalCompany = {
   status?:string; endereco?:Record<string,string>; fiscal_certificates?:Cert[];
 };
 
-const emptyCompany = { razao_social:"", nome_fantasia:"", cnpj:"", inscricao_estadual:"", inscricao_municipal:"", uf:"AL", municipio:"", codigo_municipio:"", regime_tributario:"simples_nacional", ambiente_padrao:"producao" as const, endereco:{logradouro:"",numero:"",bairro:"",cep:""} };
+const blankCompany = () => ({ razao_social:"", nome_fantasia:"", cnpj:"", inscricao_estadual:"", inscricao_municipal:"", uf:"AL", municipio:"", codigo_municipio:"", regime_tributario:"simples_nacional", ambiente_padrao:"producao" as const, status:"ativa", endereco:{logradouro:"",numero:"",bairro:"",cep:""} });
 
 async function callVault(body:Record<string,unknown>) {
   const { data, error } = await supabase.functions.invoke("fiscal-company-vault", { body });
@@ -31,8 +31,9 @@ export default function AdminFiscalCompanies(){
   const [companies,setCompanies]=useState<FiscalCompany[]>([]);
   const [loading,setLoading]=useState(true);
   const [query,setQuery]=useState("");
+  const [drawerOpen,setDrawerOpen]=useState(false);
   const [editing,setEditing]=useState<FiscalCompany|null>(null);
-  const [form,setForm]=useState<any>(emptyCompany);
+  const [form,setForm]=useState<any>(blankCompany());
   const [certificateFile,setCertificateFile]=useState<File|null>(null);
   const [certificatePassword,setCertificatePassword]=useState("");
   const [saving,setSaving]=useState(false);
@@ -42,9 +43,9 @@ export default function AdminFiscalCompanies(){
   useEffect(()=>{void load();},[]);
 
   const filtered=useMemo(()=>companies.filter(c=>[c.razao_social,c.nome_fantasia,c.cnpj,c.municipio].some(v=>String(v||"").toLowerCase().includes(query.toLowerCase()))),[companies,query]);
-  const openNew=()=>{setEditing(null);setForm(emptyCompany);setCertificateFile(null);setCertificatePassword("");setError("");};
-  const openEdit=(c:FiscalCompany)=>{setEditing(c);setForm({...emptyCompany,...c,endereco:{...emptyCompany.endereco,...(c.endereco||{})}});setCertificateFile(null);setCertificatePassword("");setError("");};
-  const close=()=>{setEditing(undefined as any);setForm(emptyCompany);setCertificateFile(null);setCertificatePassword("");};
+  const openNew=()=>{setEditing(null);setForm(blankCompany());setCertificateFile(null);setCertificatePassword("");setError("");setDrawerOpen(true);};
+  const openEdit=(c:FiscalCompany)=>{setEditing(c);setForm({...blankCompany(),...c,endereco:{...blankCompany().endereco,...(c.endereco||{})}});setCertificateFile(null);setCertificatePassword("");setError("");setDrawerOpen(true);};
+  const close=()=>{setDrawerOpen(false);setEditing(null);setForm(blankCompany());setCertificateFile(null);setCertificatePassword("");setError("");};
   const fileToBase64=async(file:File)=>{ const bytes=new Uint8Array(await file.arrayBuffer()); let binary=""; for(let i=0;i<bytes.length;i+=0x8000) binary+=String.fromCharCode(...bytes.subarray(i,i+0x8000)); return btoa(binary); };
   const save=async()=>{
     setSaving(true);setError("");
@@ -81,7 +82,7 @@ export default function AdminFiscalCompanies(){
       </div>
     </section>
 
-    {(editing!==null || form!==emptyCompany) && <div className="fixed inset-0 z-[120] flex justify-end bg-black/45" onMouseDown={e=>{if(e.target===e.currentTarget)close();}}>
+    {drawerOpen && <div className="fixed inset-0 z-[120] flex justify-end bg-black/45" onMouseDown={e=>{if(e.target===e.currentTarget)close();}}>
       <aside className="h-full w-full max-w-2xl overflow-y-auto bg-background shadow-2xl">
         <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-background/95 px-6 py-5 backdrop-blur"><div><p className="text-[10px] uppercase tracking-[.16em] text-muted-foreground">Empresa fiscal</p><h2 className="mt-1 text-xl font-semibold">{editing?"Configurar empresa":"Nova empresa"}</h2></div><Button variant="ghost" size="icon" onClick={close}><X className="h-4 w-4"/></Button></div>
         <div className="space-y-7 p-6">
