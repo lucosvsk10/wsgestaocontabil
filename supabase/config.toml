@@ -61,3 +61,6 @@ verify_jwt = true
 
 [functions.nfse-feature]
 verify_jwt = true
+
+[functions.cte-issue-native]
+verify_jwt = true
