@@ -48,7 +48,20 @@ function parseDocument(xml: string, schema: string, nsu: string, companyCnpj: st
 }
 
 async function requestDistribution(auth: string, pfxBase64: string, password: string, cnpj: string, ufCode: string, ultNSU: string, environment: "homologacao" | "producao") {
-  const response = await fetch(BRIDGE_URL, { method: "POST", headers: { Authorization: auth, "Content-Type": "application/json" }, body: JSON.stringify({ certificate_base64: pfxBase64, certificate_password: password, cnpj, uf_code: ufCode, ult_nsu: ultNSU, environment }) });
+  const response = await fetch(BRIDGE_URL, {
+    method: "POST",
+    headers: { Authorization: auth, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      certificate_base64: pfxBase64,
+      certificate_password: password,
+      cnpj,
+      ufCode,
+      uf_code: ufCode,
+      ultNSU,
+      ult_nsu: ultNSU,
+      environment,
+    }),
+  });
   const payload = await response.json().catch(() => ({})) as Record<string, any>;
   if (!response.ok) throw new Error(`Bridge fiscal respondeu HTTP ${response.status}: ${payload.error || "erro desconhecido"}${payload.raw ? ` — ${String(payload.raw).slice(0, 500)}` : ""}`);
   if (!payload.raw_xml) throw new Error("Bridge fiscal respondeu sem XML bruto.");
