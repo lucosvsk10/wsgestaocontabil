@@ -37,7 +37,7 @@ type Doc = {
   parseError?: string;
 };
 
-type Filter = "saida" | "entrada" | "todos" | "cancelada";
+type Filter = "saida" | "entrada" | "todos" | "cancelada" | "evento";
 type PeriodMode = "month" | "custom";
 
 const MONTHS = ["Ano", "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"] as const;
@@ -64,6 +64,11 @@ const isoDate = (d: Date) => {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+};
+const xmlTag = (xml: string | undefined, name: string) => xml?.match(new RegExp(`<(?:\\w+:)?${name}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/(?:\\w+:)?${name}>`, "i"))?.[1]?.trim() || "";
+const eventDescription = (doc: Doc) => {
+  if (doc.documentKind !== "evento") return "";
+  return xmlTag(doc.xml, "descEvento") || xmlTag(doc.xml, "xEvento") || "Evento fiscal";
 };
 function rowToDoc(r: any): Doc {
   return {
@@ -107,11 +112,12 @@ export default function AdminFiscalNotes() {
   const [customOpen, setCustomOpen] = useState(false);
   const [customStart, setCustomStart] = useState(isoDate(new Date(currentYear, currentMonth, 1)));
   const [customEnd, setCustomEnd] = useState(today);
-  const [filter, setFilter] = useState<Filter>("saida");
+  const [filter, setFilter] = useState<Filter>("todos");
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState("");
+  const [syncNotice, setSyncNotice] = useState("");
   const [selected, setSelected] = useState<Doc | null>(null);
   const [page, setPage] = useState(1);
 
@@ -127,7 +133,7 @@ export default function AdminFiscalNotes() {
   const loadDocs = async (c: Company | null) => {
     if (!c) {
       setDocs([]);
-      return;
+      return [] as Doc[];
     }
     const db = supabase as any;
     const { data, error } = await db
@@ -138,7 +144,9 @@ export default function AdminFiscalNotes() {
       .order("issue_date", { ascending: false })
       .limit(5000);
     if (error) throw error;
-    setDocs((data || []).map(rowToDoc));
+    const mapped = (data || []).map(rowToDoc);
+    setDocs(mapped);
+    return mapped as Doc[];
   };
 
   useEffect(() => {
@@ -158,6 +166,8 @@ export default function AdminFiscalNotes() {
     if (company) void loadDocs(company).catch(e => setError(e instanceof Error ? e.message : String(e)));
     setPage(1);
     setQuery("");
+    setFilter("todos");
+    setSyncNotice("");
   }, [company?.id]);
 
   useEffect(() => setPage(1), [year, month, periodMode, customStart, customEnd, filter, query]);
@@ -179,17 +189,19 @@ export default function AdminFiscalNotes() {
 
   const emitted = periodDocs.filter(d => d.direction === "saida" && d.documentKind !== "evento");
   const received = periodDocs.filter(d => d.direction === "entrada" && d.documentKind !== "evento");
-  const cancelled = periodDocs.filter(d => ["101", "135", "155"].includes(String(d.statusCode || "")));
+  const events = periodDocs.filter(d => d.documentKind === "evento");
+  const cancelled = periodDocs.filter(d => d.documentKind !== "evento" && ["101", "155"].includes(String(d.statusCode || "")));
   const fiscalDocs = periodDocs.filter(d => d.documentKind !== "evento");
   const withXml = fiscalDocs.filter(d => d.fullXml && d.xml);
 
   const filtered = useMemo(() => periodDocs.filter(d => {
-    if (filter === "saida" && d.direction !== "saida") return false;
-    if (filter === "entrada" && d.direction !== "entrada") return false;
-    if (filter === "cancelada" && !["101", "135", "155"].includes(String(d.statusCode || ""))) return false;
+    if (filter === "saida" && (d.direction !== "saida" || d.documentKind === "evento")) return false;
+    if (filter === "entrada" && (d.direction !== "entrada" || d.documentKind === "evento")) return false;
+    if (filter === "evento" && d.documentKind !== "evento") return false;
+    if (filter === "cancelada" && (d.documentKind === "evento" || !["101", "155"].includes(String(d.statusCode || "")))) return false;
     const q = query.trim().toLowerCase();
     if (!q) return true;
-    return [d.number, d.accessKey, d.issuerName, d.issuerCnpj, d.recipientCnpj, d.nsu, d.series]
+    return [d.number, d.accessKey, d.issuerName, d.issuerCnpj, d.recipientCnpj, d.nsu, d.series, eventDescription(d)]
       .some(v => String(v || "").toLowerCase().includes(q));
   }), [periodDocs, filter, query]);
 
@@ -204,6 +216,7 @@ export default function AdminFiscalNotes() {
     if (!company || !certValid) return;
     setSyncing(true);
     setError("");
+    setSyncNotice("");
     try {
       const { data, error } = await supabase.functions.invoke("dfe-extractor-native", {
         body: { company_id: company.id, environment: company.ambiente_padrao || "producao" },
@@ -216,11 +229,28 @@ export default function AdminFiscalNotes() {
         } catch { /* noop */ }
         throw new Error(message);
       }
-      await loadDocs(company);
+      const loaded = await loadDocs(company);
       const list = await vaultList();
       setCompanies(list);
       setCompany(list.find(x => x.id === company.id) || company);
-      if (data?.response?.cStat === "656") setError("Consumo temporariamente bloqueado pelo Ambiente Nacional. Aguarde antes de sincronizar novamente.");
+
+      const cStat = String(data?.response?.cStat || "");
+      const newCount = Number(data?.newDocuments || 0);
+      if (cStat === "656") {
+        setError("Consumo temporariamente bloqueado pelo Ambiente Nacional. Aguarde antes de sincronizar novamente.");
+      } else if (newCount > 0) {
+        const returned = Array.isArray(data?.documents) ? data.documents as Doc[] : loaded;
+        const recentEvents = returned.filter(d => d.documentKind === "evento").length;
+        setFilter("todos");
+        setPage(1);
+        setSyncNotice(recentEvents === newCount
+          ? `Sincronização concluída · ${newCount} novo(s) evento(s) fiscal(is) recebido(s).`
+          : `Sincronização concluída · ${newCount} novo(s) documento(s) recebido(s).`);
+      } else if (cStat === "137") {
+        setSyncNotice("Sincronização concluída · nenhum documento novo disponível neste momento.");
+      } else {
+        setSyncNotice("Sincronização concluída com sucesso.");
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -262,8 +292,8 @@ export default function AdminFiscalNotes() {
   const exportCsv = () => {
     if (!filtered.length) return;
     const rows = [
-      ["Emissão", "Tipo", "Nota", "Série", "Chave", "Emitente", "CNPJ Emitente", "CNPJ Destinatário", "Valor", "NSU"],
-      ...filtered.map(d => [date(d.issueDate), d.direction || "", d.number || "", d.series || "", d.accessKey || "", d.issuerName || "", d.issuerCnpj || "", d.recipientCnpj || "", String(d.value || 0).replace(".", ","), d.nsu || ""]),
+      ["Emissão", "Tipo", "Nota", "Série", "Chave", "Emitente", "CNPJ Emitente", "CNPJ Destinatário", "Valor", "NSU", "Evento"],
+      ...filtered.map(d => [date(d.issueDate), d.documentKind === "evento" ? "evento" : d.direction || "", d.number || "", d.series || "", d.accessKey || "", d.issuerName || "", d.issuerCnpj || "", d.recipientCnpj || "", String(d.value || 0).replace(".", ","), d.nsu || "", eventDescription(d)]),
     ];
     const csv = rows.map(r => r.map(v => `"${String(v).replaceAll('"', '""')}"`).join(";")).join("\n");
     const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
@@ -339,37 +369,43 @@ export default function AdminFiscalNotes() {
           <div className="flex flex-wrap gap-2">
             <FilterPill active={filter === "saida"} onClick={() => setFilter("saida")}>↗ Emitidas <b>{emitted.length}</b></FilterPill>
             <FilterPill active={filter === "entrada"} onClick={() => setFilter("entrada")}>↙ Recebidas <b>{received.length}</b></FilterPill>
-            <FilterPill active={filter === "todos"} onClick={() => setFilter("todos")}>Todas <b>{fiscalDocs.length}</b></FilterPill>
+            <FilterPill active={filter === "todos"} onClick={() => setFilter("todos")}>Todas <b>{periodDocs.length}</b></FilterPill>
+            <FilterPill active={filter === "evento"} onClick={() => setFilter("evento")}>Eventos <b>{events.length}</b></FilterPill>
             <FilterPill active={filter === "cancelada"} onClick={() => setFilter("cancelada")}>⊘ Canceladas <b>{cancelled.length}</b></FilterPill>
           </div>
           <div className="text-xs text-muted-foreground">Última busca: {company?.last_sync_at ? `${date(company.last_sync_at)} ${time(company.last_sync_at)}` : "ainda não sincronizada"}</div>
         </div>
 
         <div className="flex items-center gap-2 px-4 pb-3">
-          <div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input className="border-0 bg-muted/30 pl-9 shadow-none focus-visible:ring-1" value={query} onChange={e => setQuery(e.target.value)} placeholder="Buscar por número, chave, empresa, CNPJ ou NSU..." /></div>
+          <div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input className="border-0 bg-muted/30 pl-9 shadow-none focus-visible:ring-1" value={query} onChange={e => setQuery(e.target.value)} placeholder="Buscar por número, chave, empresa, CNPJ, NSU ou evento..." /></div>
           <Button variant="ghost" size="icon" title={certValid ? "Sincronizar" : "Configure um certificado válido"} onClick={sync} disabled={syncing || !certValid}>{syncing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}</Button>
           <Button variant="ghost" onClick={exportCsv} disabled={!filtered.length}><Download className="mr-2 h-4 w-4" />Download</Button>
         </div>
 
+        {syncNotice && <div className="mx-4 mb-3 rounded-xl bg-emerald-500/8 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300">{syncNotice}</div>}
         {error && <div className="mx-4 mb-3 rounded-xl bg-destructive/8 px-4 py-3 text-sm text-destructive">{error}</div>}
 
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1120px] text-left text-sm">
-            <thead className="bg-muted/20 text-[11px] uppercase tracking-wide text-muted-foreground"><tr><th className="px-4 py-3">Emissão</th><th className="px-4 py-3">XML</th><th className="px-4 py-3">Nota</th><th className="px-4 py-3">Destinatário / Emitente</th><th className="px-4 py-3">Operação</th><th className="px-4 py-3 text-right">Valor</th><th className="px-4 py-3 text-right">Ações</th></tr></thead>
-            <tbody>{pageDocs.length ? pageDocs.map((d, i) => <tr key={`${d.nsu}-${d.accessKey}-${i}`} className="transition hover:bg-muted/10">
-              <td className="px-4 py-3.5"><p className="font-semibold">{date(d.issueDate)}</p><p className="text-xs text-muted-foreground">{time(d.issueDate)}</p></td>
-              <td className="px-4 py-3.5"><p className={d.fullXml ? "font-medium" : "text-muted-foreground"}>{d.fullXml ? "Disponível" : "Resumo"}</p><p className="text-xs text-muted-foreground">{d.fullXml ? "XML completo" : "Sem XML completo"}</p></td>
-              <td className="px-4 py-3.5"><div className="flex items-center gap-2"><b>{d.number || "—"}</b><span className="text-xs text-muted-foreground">/ {d.series || "1"}</span><span className="rounded-full bg-muted/50 px-2 py-0.5 text-[10px] font-semibold">{d.direction === "saida" ? "NF-e" : "NF-e ent."}</span></div><p className="mt-1 max-w-44 truncate text-[10px] text-muted-foreground">{d.accessKey}</p></td>
-              <td className="px-4 py-3.5"><p className="max-w-[280px] truncate font-medium">{d.direction === "saida" ? (d.recipientCnpj || "Consumidor") : (d.issuerName || "—")}</p><p className="text-xs text-muted-foreground">{d.direction === "saida" ? d.recipientCnpj : d.issuerCnpj}</p></td>
-              <td className="px-4 py-3.5"><p className="max-w-[280px] truncate">{d.direction === "saida" ? "Venda de mercadoria" : "Compra / documento recebido"}</p><p className="text-xs text-muted-foreground">{d.schema || "DF-e"}</p></td>
-              <td className="px-4 py-3.5 text-right font-semibold">{money(Number(d.value || 0))}</td>
-              <td className="px-4 py-3.5"><div className="flex justify-end"><Button size="sm" variant="ghost" onClick={() => setSelected(d)}><FileText className="mr-1.5 h-4 w-4" />Visualizar</Button></div></td>
-            </tr>) : <tr><td colSpan={7} className="h-48 px-4 text-center text-sm text-muted-foreground">Nenhuma nota neste filtro/período.</td></tr>}</tbody>
+            <thead className="bg-muted/20 text-[11px] uppercase tracking-wide text-muted-foreground"><tr><th className="px-4 py-3">Emissão</th><th className="px-4 py-3">XML</th><th className="px-4 py-3">Nota / Chave</th><th className="px-4 py-3">Destinatário / Emitente</th><th className="px-4 py-3">Operação</th><th className="px-4 py-3 text-right">Valor</th><th className="px-4 py-3 text-right">Ações</th></tr></thead>
+            <tbody>{pageDocs.length ? pageDocs.map((d, i) => {
+              const isEvent = d.documentKind === "evento";
+              const eventName = eventDescription(d);
+              return <tr key={`${d.nsu}-${d.accessKey}-${i}`} className="transition hover:bg-muted/10">
+                <td className="px-4 py-3.5"><p className="font-semibold">{date(d.issueDate)}</p><p className="text-xs text-muted-foreground">{time(d.issueDate)}</p></td>
+                <td className="px-4 py-3.5"><p className={d.fullXml ? "font-medium" : "text-muted-foreground"}>{isEvent ? "Evento" : d.fullXml ? "Disponível" : "Resumo"}</p><p className="text-xs text-muted-foreground">{isEvent ? "XML do evento" : d.fullXml ? "XML completo" : "Sem XML completo"}</p></td>
+                <td className="px-4 py-3.5">{isEvent ? <><div className="flex items-center gap-2"><span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">EVENTO</span><b className="text-xs">{eventName}</b></div><p className="mt-1 max-w-64 truncate text-[10px] text-muted-foreground">{d.accessKey}</p></> : <><div className="flex items-center gap-2"><b>{d.number || "—"}</b><span className="text-xs text-muted-foreground">/ {d.series || "1"}</span><span className="rounded-full bg-muted/50 px-2 py-0.5 text-[10px] font-semibold">{d.direction === "saida" ? "NF-e" : "NF-e ent."}</span></div><p className="mt-1 max-w-44 truncate text-[10px] text-muted-foreground">{d.accessKey}</p></>}</td>
+                <td className="px-4 py-3.5"><p className="max-w-[280px] truncate font-medium">{isEvent ? "Documento fiscal relacionado" : d.direction === "saida" ? (d.recipientCnpj || "Consumidor") : (d.issuerName || "—")}</p><p className="text-xs text-muted-foreground">{isEvent ? d.accessKey : d.direction === "saida" ? d.recipientCnpj : d.issuerCnpj}</p></td>
+                <td className="px-4 py-3.5"><p className="max-w-[280px] truncate">{isEvent ? eventName : d.direction === "saida" ? "Venda de mercadoria" : "Compra / documento recebido"}</p><p className="text-xs text-muted-foreground">{isEvent ? `cStat ${d.statusCode || "—"} · NSU ${d.nsu || "—"}` : d.schema || "DF-e"}</p></td>
+                <td className="px-4 py-3.5 text-right font-semibold">{isEvent ? "—" : money(Number(d.value || 0))}</td>
+                <td className="px-4 py-3.5"><div className="flex justify-end"><Button size="sm" variant="ghost" onClick={() => setSelected(d)}><FileText className="mr-1.5 h-4 w-4" />Visualizar</Button></div></td>
+              </tr>;
+            }) : <tr><td colSpan={7} className="h-48 px-4 text-center text-sm text-muted-foreground">Nenhum documento neste filtro/período.</td></tr>}</tbody>
           </table>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-xs text-muted-foreground">
-          <span>{filtered.length ? `${(safePage - 1) * PAGE_SIZE + 1}–${Math.min(safePage * PAGE_SIZE, filtered.length)} de ${filtered.length} nota(s)` : "0 nota(s)"}</span>
+          <span>{filtered.length ? `${(safePage - 1) * PAGE_SIZE + 1}–${Math.min(safePage * PAGE_SIZE, filtered.length)} de ${filtered.length} documento(s)` : "0 documento(s)"}</span>
           <div className="flex items-center gap-1"><button disabled={safePage <= 1} onClick={() => setPage(p => Math.max(1, p - 1))} className="rounded-lg px-3 py-2 hover:bg-muted disabled:opacity-25">‹</button><span className="px-2">{safePage} / {totalPages}</span><button disabled={safePage >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))} className="rounded-lg px-3 py-2 hover:bg-muted disabled:opacity-25">›</button></div>
         </div>
       </section>
