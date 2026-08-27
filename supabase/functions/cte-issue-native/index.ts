@@ -35,6 +35,25 @@ async function verifyEngineToken(token: string, userId: string) {
   } catch { return false; }
 }
 
+async function resolveCertificate(admin: ReturnType<typeof createClient>, body: Record<string, any>) {
+  let pfxBase64 = String(body.certificate_base64 || "").trim();
+  let password = String(body.certificate_password || "");
+  let source = "request";
+
+  if (!pfxBase64 || !password) {
+    const { data, error } = await admin.rpc("get_ws_test_a1_credentials");
+    if (error) throw new Error("Não foi possível carregar o certificado A1 padrão do laboratório.");
+    const row = Array.isArray(data) ? data[0] : data;
+    pfxBase64 = String(row?.pfx_base64 || "").trim();
+    password = String(row?.certificate_password || "");
+    source = "vault";
+  }
+
+  if (!pfxBase64 || !password) throw new Error("Certificado A1 padrão não configurado.");
+  const cert = lerCertificado(Buffer.from(pfxBase64, "base64"), password);
+  return { cert, source };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
   try {
@@ -50,15 +69,12 @@ serve(async (req) => {
     if (!await verifyEngineToken(String(body.engine_token || ""), user.id)) return json({ error: "Sessão da Feature expirada. Desbloqueie novamente." }, 401);
     if (body.environment === "producao") return json({ error: "Produção CT-e permanece bloqueada. Use homologação." }, 403);
 
-    const pfxBase64 = String(body.certificate_base64 || "").trim();
-    const password = String(body.certificate_password || "");
-    if (!pfxBase64 || !password) return json({ error: "Informe o certificado A1 e a senha." }, 400);
-    const cert = lerCertificado(Buffer.from(pfxBase64, "base64"), password);
+    const { cert, source } = await resolveCertificate(admin, body);
     const cnpj = digits(cert.titular.cnpj);
     if (cnpj.length !== 14) return json({ error: "O certificado precisa possuir CNPJ." }, 422);
     if (cert.validadeInicio > new Date() || cert.validadeFim < new Date()) return json({ error: "Certificado fora do período de validade." }, 422);
 
-    const certificate = { cnpj, nome: cert.titular.nome, validadeFim: cert.validadeFim.toISOString(), validoAgora: true };
+    const certificate = { cnpj, nome: cert.titular.nome, validadeFim: cert.validadeFim.toISOString(), validoAgora: true, source };
     const action = String(body.action || "status");
 
     if (action === "inspect_certificate") return json({ ok: true, environment: "homologacao", certificate });
