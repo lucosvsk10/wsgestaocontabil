@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
 import { Buffer } from "node:buffer";
 import { lerCertificado } from "npm:nfse-node@0.3.2/certificado";
+import { ICP_BRASIL_V10_PEM } from "./ca.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -10,45 +11,6 @@ const cors = {
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
-
-const ICP_BRASIL_V10_PEM = `-----BEGIN CERTIFICATE-----
-MIIGrDCCBJSgAwIBAgIJANLVi0S/gZNCMA0GCSqGSIb3DQEBDQUAMIGYMQswCQYD
-VQQGEwJCUjETMBEGA1UECgwKSUNQLUJyYXNpbDE9MDsGA1UECww0SW5zdGl0dXRv
-IE5hY2lvbmFsIGRlIFRlY25vbG9naWEgZGEgSW5mb3JtYWNhbyAtIElUSTE1MDMG
-A1UEAwwsQXV0b3JpZGFkZSBDZXJ0aWZpY2Fkb3JhIFJhaXogQnJhc2lsZWlyYSB2
-MTAwHhcNMTkwNzAxMTkxNTU5WhcNMzIwNzAxMTIwMDU5WjCBmDELMAkGA1UEBhMC
-QlIxEzARBgNVBAoMCklDUC1CcmFzaWwxPTA7BgNVBAsMNEluc3RpdHV0byBOYWNp
-b25hbCBkZSBUZWNub2xvZ2lhIGRhIEluZm9ybWFjYW8gLSBJVEkxNTAzBgNVBAMM
-LEF1dG9yaWRhZGUgQ2VydGlmaWNhZG9yYSBSYWl6IEJyYXNpbGVpcmEgdjEwMIIC
-IjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAk3AxKl1ZtP0pNyjChqO7qNkn
-+/sClZeqiV/Kd7KnnbkDbI2y3VWcUG7feCE/deIxot6GH6JXncRG794UZl+4doD0
-D0/cEwBd4DvrDSZm0RT40xhmYYOTxZDJxv+coTHdmsT5aNmSkktfjzYX4HQHh/7M
-em+kTOpT/3E4K6B7KVs9HkOT7nXx5yU1qYbVWqI0qpJM9mOTSFx8C9HiKcHvLCvt
-1ioXKPAmFuHPkayOcXP2MXeb+VRNjWKU4E+L2t5uZPKVx1M/9i1DztlLb4K8OfYg
-GaPDUSF1sxnoGk5qZHLleO6KjCpmuQepmgsBvxi2YNO7X2YUwQQx1AXNSolgtkAR
-5gt+1WzxhbFUhItQqlhqxgWHefLmiT5T/Ctz/P2v+zSO4efkkIzsi1iwD+ypZvM2
-lnIvB24RcSN6jzmCahLPX4CwjwIK6JsSoMVxIhpZHCguUP4LXqP8IWUZ6WgS/4zB
-7B9E0EICl2rM1PRy+6ulv+ZOW256e8a0pijUB+hXM1msUq9L92476FAAX8va3sP7
-+Uut94+bGHmubcTLImWUPrxNT7QyrvE3FyHicfiHioeFL2oV4cXTLZrEq2wS8R4P
-KPdSzNn5Z9e2uMEGYQaSNO+OwvVycpIhOBOqrm12wJ9ZhWKtM5UOo34/o37r5ZBI
-TYXAGbhqQDB9mWXwH+0CAwEAAaOB9jCB8zBOBgNVHSAERzBFMEMGBWBMAQEAMDow
-OAYIKwYBBQUHAgEWLGh0dHA6Ly9hY3JhaXouaWNwYnJhc2lsLmdvdi5ici9EUENh
-Y3JhaXoucGRmMEAGA1UdHwQ5MDcwNaAzoDGGL2h0dHA6Ly9hY3JhaXouaWNwYnJh
-c2lsLmdvdi5ici9MQ1JhY3JhaXp2MTAuY3JsMB8GA1UdIwQYMBaAFHTzfv/8n1N6
-8Xzrqz6kptoYukVjMB0GA1UdDgQWBBR0837//J9TevF866s+pKbaGLpFYzAPBgNV
-HRMBAf8EBTADAQH/MA4GA1UdDwEB/wQEAwIBBjANBgkqhkiG9w0BAQ0FAAOCAgEA
-eCNhBSuy/Ih/T+1VOtAJju85SrtoE3vET1qXASpmjQllDHG/ph7VFNRAkC+gha+B
-CbjoA5oJ/8wwl+Qdp1KGz6nXXFTLx3osU+kjm0srmBf9nyXHPqvFyvBeB0A7sYb7
-TmII9GKD20oCxsdkccR/oE/JuTaNnGq0GYZ2aDb5v62uLi21Y6P9UBiTxZqQ4ojW
-ET6kXNjlK238jpXv17FR8Sg3VusCvX7Q8eJkavvHHZDeWck2fSA+ycAc2JeL2Z0B
-MSxGWpH32WM9J8+6XqCJUXHiWEV0zCE8wDYiYC+047pTxQI/gB/FcU7jvylh98DJ
-kQPHd/Tp6Og3ynlDA9n9uBbxYHVRZs9vsZ/7xTFaxRe+zk8dhgKgZ/3RrcMFB570
-2t8LFbyuUE/kQVY6rZ0QJ9qMWQ7VPLRwRhiMeU3k8WDJb/tBbOXHBqldTbWyQ+mp
-MEDWhbrzE/IED82wAuO23Tb05cYk2xC7+Izef8fSc3XdJDuPSbcDpWukzyCDtSEH
-isLiGEtIbYRiPsF3czlQPsnIEVoTTCWxHCH1zYR6zScSv18Qh69qVe2J40K5jZoP
-GEOhq/oKhVJQAdvAFW5Odp7mF3Tk9nivjjsctJSxY26LFiV5GRV+07SSse4ti0aO
-jO5PLg5SWjfcOtBG2rz02EIvQAmLcb0kGBtfdj0lW/w=
------END CERTIFICATE-----`;
 
 const toBase64Url = (value: Uint8Array | string) => {
   const bytes = typeof value === "string" ? encoder.encode(value) : value;
@@ -70,6 +32,7 @@ async function verifyEngineToken(token: string, userId: string) {
     return decoded.uid === userId && Number(decoded.exp) > Date.now();
   } catch { return false; }
 }
+
 const digits = (value: unknown) => String(value ?? "").replace(/\D/g, "");
 const tag = (xml: string, name: string) => xml.match(new RegExp(`<(?:\\w+:)?${name}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/(?:\\w+:)?${name}>`, "i"))?.[1]?.trim() || "";
 const attr = (source: string, name: string) => source.match(new RegExp(`${name}=["']([^"']+)["']`, "i"))?.[1] || "";
@@ -101,13 +64,85 @@ function parseDocument(xml: string, schema: string, nsu: string, companyCnpj: st
 }
 
 function extractResponse(xml: string) {
-  return {
-    cStat: tag(xml, "cStat"),
-    xMotivo: tag(xml, "xMotivo"),
-    dhResp: tag(xml, "dhResp"),
-    ultNSU: tag(xml, "ultNSU"),
-    maxNSU: tag(xml, "maxNSU"),
-  };
+  return { cStat: tag(xml, "cStat"), xMotivo: tag(xml, "xMotivo"), dhResp: tag(xml, "dhResp"), ultNSU: tag(xml, "ultNSU"), maxNSU: tag(xml, "maxNSU") };
+}
+
+function indexOfBytes(haystack: Uint8Array, needle: Uint8Array) {
+  outer: for (let i = 0; i <= haystack.length - needle.length; i++) {
+    for (let j = 0; j < needle.length; j++) if (haystack[i + j] !== needle[j]) continue outer;
+    return i;
+  }
+  return -1;
+}
+
+function decodeChunked(body: Uint8Array) {
+  const out: number[] = [];
+  let pos = 0;
+  while (pos < body.length) {
+    const lineEnd = indexOfBytes(body.slice(pos), encoder.encode("\r\n"));
+    if (lineEnd < 0) break;
+    const sizeText = decoder.decode(body.slice(pos, pos + lineEnd)).split(";", 1)[0].trim();
+    const size = Number.parseInt(sizeText, 16);
+    if (!Number.isFinite(size)) throw new Error("Resposta HTTP chunked inválida do Ambiente Nacional.");
+    pos += lineEnd + 2;
+    if (size === 0) break;
+    out.push(...body.slice(pos, pos + size));
+    pos += size + 2;
+  }
+  return Uint8Array.from(out);
+}
+
+async function postRawMtls(endpoint: string, soap: string, cert: ReturnType<typeof lerCertificado>) {
+  const url = new URL(endpoint);
+  const intermediates = Array.isArray(cert.cadeiaPem) ? cert.cadeiaPem.slice(0, 1) : [];
+  const certChain = [cert.certificadoPem, ...intermediates].join("\n");
+  const conn = await Deno.connectTls({
+    hostname: url.hostname,
+    port: 443,
+    cert: certChain,
+    key: cert.chavePrivadaPem,
+    caCerts: [ICP_BRASIL_V10_PEM],
+    alpnProtocols: ["http/1.1"],
+  });
+  try {
+    const action = "http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe/nfeDistDFeInteresse";
+    const body = encoder.encode(soap);
+    const head = [
+      `POST ${url.pathname} HTTP/1.1`,
+      `Host: ${url.hostname}`,
+      `Content-Type: application/soap+xml; charset=utf-8; action=\"${action}\"`,
+      "Accept: application/soap+xml, text/xml, */*",
+      `Content-Length: ${body.length}`,
+      "Connection: close",
+      "User-Agent: WS-Gestao-DFe/1.1",
+      "",
+      "",
+    ].join("\r\n");
+    await conn.write(encoder.encode(head));
+    await conn.write(body);
+    const parts: Uint8Array[] = [];
+    const buffer = new Uint8Array(32768);
+    while (true) {
+      const n = await conn.read(buffer);
+      if (n === null) break;
+      parts.push(buffer.slice(0, n));
+    }
+    const total = parts.reduce((sum, p) => sum + p.length, 0);
+    const raw = new Uint8Array(total);
+    let offset = 0;
+    for (const p of parts) { raw.set(p, offset); offset += p.length; }
+    const sep = indexOfBytes(raw, encoder.encode("\r\n\r\n"));
+    if (sep < 0) throw new Error("Resposta HTTP inválida do Ambiente Nacional.");
+    const headerText = decoder.decode(raw.slice(0, sep));
+    const status = Number(headerText.match(/^HTTP\/\d(?:\.\d)?\s+(\d{3})/i)?.[1] || 0);
+    let responseBody = raw.slice(sep + 4);
+    if (/transfer-encoding:\s*chunked/i.test(headerText)) responseBody = decodeChunked(responseBody);
+    const text = decoder.decode(responseBody);
+    if (status < 200 || status >= 300) throw new Error(`Ambiente Nacional respondeu HTTP ${status}: ${text.slice(0, 900)}`);
+    return { text, transport: "Deno.connectTls + HTTP/1.1", presentedChain: 1 + intermediates.length };
+  } finally {
+    conn.close();
+  }
 }
 
 async function requestDistribution(cert: ReturnType<typeof lerCertificado>, cnpj: string, ufCode: string, ultNSU: string, environment: "homologacao" | "producao") {
@@ -116,36 +151,9 @@ async function requestDistribution(cert: ReturnType<typeof lerCertificado>, cnpj
     : "https://hom1.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx";
   const tpAmb = environment === "producao" ? "1" : "2";
   const nsu = digits(ultNSU || "0").padStart(15, "0").slice(-15);
-  const soap = `<?xml version="1.0" encoding="utf-8"?>
-<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
-  <soap12:Body>
-    <nfeDistDFeInteresse xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe">
-      <nfeDadosMsg>
-        <distDFeInt xmlns="http://www.portalfiscal.inf.br/nfe" versao="1.01">
-          <tpAmb>${tpAmb}</tpAmb><cUFAutor>${ufCode}</cUFAutor><CNPJ>${cnpj}</CNPJ><distNSU><ultNSU>${nsu}</ultNSU></distNSU>
-        </distDFeInt>
-      </nfeDadosMsg>
-    </nfeDistDFeInteresse>
-  </soap12:Body>
-</soap12:Envelope>`;
-  const client = Deno.createHttpClient({
-    caCerts: [ICP_BRASIL_V10_PEM],
-    cert: [cert.certificadoPem, ...cert.cadeiaPem].join("\n"),
-    key: cert.chavePrivadaPem,
-    http1: true,
-    http2: false,
-  });
-  try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/soap+xml; charset=utf-8", "Accept": "application/soap+xml, text/xml, */*" },
-      body: soap,
-      client,
-    } as RequestInit & { client: Deno.HttpClient });
-    const text = await response.text();
-    if (!response.ok) throw new Error(`Ambiente Nacional respondeu HTTP ${response.status}: ${text.slice(0, 700)}`);
-    return { endpoint, text };
-  } finally { client.close(); }
+  const soap = `<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDistDFeInteresse xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe"><nfeDadosMsg><distDFeInt xmlns="http://www.portalfiscal.inf.br/nfe" versao="1.01"><tpAmb>${tpAmb}</tpAmb><cUFAutor>${ufCode}</cUFAutor><CNPJ>${cnpj}</CNPJ><distNSU><ultNSU>${nsu}</ultNSU></distNSU></distDFeInt></nfeDadosMsg></nfeDistDFeInteresse></soap12:Body></soap12:Envelope>`;
+  const result = await postRawMtls(endpoint, soap, cert);
+  return { endpoint, ...result };
 }
 
 serve(async (req) => {
@@ -168,11 +176,11 @@ serve(async (req) => {
     const cnpj = digits(cert.titular.cnpj);
     if (cnpj.length !== 14) return json({ error: "O certificado precisa pertencer a uma pessoa jurídica com CNPJ." }, 422);
     if (cert.validadeInicio > new Date() || cert.validadeFim < new Date()) return json({ error: "Certificado fora do período de validade." }, 422);
+
     const environment = body.environment === "homologacao" ? "homologacao" : "producao";
     const ufCode = digits(body.uf_code || "27").padStart(2, "0").slice(-2);
     const ultNSU = digits(body.ult_nsu || "0").padStart(15, "0").slice(-15);
-
-    const { endpoint, text } = await requestDistribution(cert, cnpj, ufCode, ultNSU, environment);
+    const { endpoint, text, transport, presentedChain } = await requestDistribution(cert, cnpj, ufCode, ultNSU, environment);
     const response = extractResponse(text);
     const docs: Array<Record<string, unknown>> = [];
     const re = /<docZip\b([^>]*)>([\s\S]*?)<\/docZip>/gi;
@@ -192,6 +200,9 @@ serve(async (req) => {
       environment,
       provider: "Ambiente Nacional NF-e",
       endpoint,
+      transport,
+      presentedChain,
+      availableChainCertificates: Array.isArray(cert.cadeiaPem) ? cert.cadeiaPem.length : 0,
       certificate: { cnpj, nome: cert.titular.nome, validadeFim: cert.validadeFim.toISOString(), validoAgora: true },
       response,
       documents: docs,
