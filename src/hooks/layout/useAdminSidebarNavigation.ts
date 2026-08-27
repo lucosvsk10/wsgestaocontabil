@@ -29,7 +29,7 @@ export const useAdminSidebarNavigation = () => {
       { icon: Images, label: "Carrossel", active: getIsActive("/admin/carousel"), to: "/admin/carousel" },
       { icon: Wrench, label: "Ferramentas", active: getIsActive("/admin/tools"), to: "/admin/tools" },
       { icon: Settings, label: "Configurações", active: getIsActive("/admin/settings"), to: "/admin/settings" },
-      { icon: LockKeyhole, label: "Laboratório", active: getIsActive("/admin/lancamentos/engine"), to: "/admin/lancamentos/engine" }
+      { icon: LockKeyhole, label: "Laboratório fiscal", active: getIsActive("/admin/fiscal/laboratorio"), to: "/admin/fiscal/laboratorio" }
     ]}
   ];
 
