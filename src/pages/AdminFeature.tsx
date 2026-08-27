@@ -1,5 +1,5 @@
 import { FormEvent, useState } from "react";
-import { AlertTriangle, FileKey2, KeyRound, LockKeyhole, RefreshCw, Send } from "lucide-react";
+import { AlertTriangle, KeyRound, LockKeyhole, RefreshCw, Send } from "lucide-react";
 import { AdminLayout } from "@/components/admin/layout/AdminLayout";
 import { AuthorizedNfceCard } from "@/components/admin/fiscal/AuthorizedNfceCard";
 import { CteIssuerPanel } from "@/components/admin/fiscal/CteIssuerPanel";
@@ -84,16 +84,6 @@ export default function AdminFeature() {
     setCertificateName(file.name);
     try { setCertificateBase64(await fileToBase64(file)); } catch { setError("Não foi possível ler o certificado."); }
   };
-  const inspectCertificate = async () => {
-    setAction("certificate"); setError("");
-    try {
-      const data = await invoke<Result>("nfse-feature", { action: "inspect_certificate", engine_token: token, environment: "homologacao", certificate_base64: certificateBase64, certificate_password: certificatePassword, data: service });
-      setCertificate(data.certificate || null);
-      if (data.certificate?.cnpj) { setService(s => ({ ...s, cnpjPrestador: data.certificate!.cnpj! })); setSale(s => ({ ...s, cnpjEmitente: data.certificate!.cnpj! })); }
-      setResult(data);
-    } catch (x) { setError(x instanceof Error ? x.message : "Falha no certificado."); }
-    finally { setAction(null); }
-  };
   const request = async (kind: "validate" | "test_connection" | "preview" | "issue" | "query") => {
     setAction(kind); setError(""); setResult(null);
     try {
@@ -128,21 +118,20 @@ export default function AdminFeature() {
         <LockKeyhole className="mb-5 h-6 w-6"/><h2 className="text-xl font-semibold">Extrator protegido</h2><p className="mt-2 text-sm text-muted-foreground">Confirme a senha da Feature para acessar certificados e consultas do extrator.</p>
         <form onSubmit={unlockExtractor} className="mt-6 space-y-4"><Input type="password" value={extractorPassword} onChange={e=>setExtractorPassword(e.target.value)} placeholder="Senha" autoFocus required/>{extractorError && <ErrorText>{extractorError}</ErrorText>}<Button className="w-full" disabled={extractorLoading}>{extractorLoading ? "Verificando..." : "Desbloquear extrator"}</Button></form>
       </section> : <>
-        <section className="min-w-0 rounded-lg border bg-background p-4 sm:p-5">
+        {(section === "extrator" || mode !== "cte") && <section className="min-w-0 rounded-lg border bg-background p-4 sm:p-5">
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3"><div><p className="text-xs uppercase text-muted-foreground">Credencial compartilhada</p><h2 className="mt-1 text-lg font-semibold">Certificado A1</h2></div>{section === "extrator" && <Button variant="ghost" size="sm" onClick={()=>{setExtractorUnlocked(false);setExtractorPassword("");}}><LockKeyhole className="mr-2 h-4 w-4"/>Bloquear extrator</Button>}</div>
-          <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(220px,300px)_auto] xl:items-end">
+          <div className="grid min-w-0 gap-4 md:grid-cols-2">
             <Field label="Arquivo .pfx/.p12"><Input className="min-w-0" type="file" accept=".pfx,.p12,application/x-pkcs12" onChange={e=>chooseCertificate(e.target.files?.[0])}/>{certificateName&&<p className="mt-1 break-all text-xs text-muted-foreground">{certificateName}</p>}</Field>
             <Field label="Senha"><Input type="password" value={certificatePassword} onChange={e=>setCertificatePassword(e.target.value)}/></Field>
-            <Button className="w-full xl:w-auto" variant="outline" onClick={inspectCertificate} disabled={!hasCert||!!action}>{action==='certificate'?<RefreshCw className="mr-2 h-4 w-4 animate-spin"/>:<FileKey2 className="mr-2 h-4 w-4"/>}Ler certificado</Button>
           </div>
           {certificate&&<div className="mt-4 grid min-w-0 gap-3 border-t pt-4 sm:grid-cols-3"><Info label="Titular" value={certificate.nome||'—'}/><Info label="CNPJ" value={certificate.cnpj||certificate.cpf||'—'}/><Info label="Validade" value={certificate.validadeFim?new Date(certificate.validadeFim).toLocaleDateString('pt-BR'):'—'}/></div>}
-          <p className="mt-3 text-xs text-muted-foreground">Certificado e senha ficam apenas nesta sessão e não são salvos.</p>
-        </section>
+          <p className="mt-3 text-xs text-muted-foreground">No CT-e o A1 padrão de teste é carregado automaticamente do backend.</p>
+        </section>}
 
         {section === "extrator" ? <FiscalExtractorPanel token={token} certificateBase64={certificateBase64} certificatePassword={certificatePassword} certificate={certificate} /> : <>
           <section className="flex flex-wrap gap-2">{([['nfce','NFC-e · Venda consumidor'],['nfe','NF-e · Venda mercadoria'],['nfse','NFS-e · Serviço'],['cte','CT-e · Transporte']] as [Mode,string][]).map(([id,label])=><button key={id} onClick={()=>{setMode(id);setResult(null);setError("");setReference("");}} className={`rounded-md border px-4 py-2 text-sm font-medium ${mode===id?'bg-foreground text-background':'bg-background hover:bg-muted'}`}>{label}</button>)}</section>
           <section className="grid min-w-0 gap-3 md:grid-cols-3"><Mini label="Ambiente" value="Homologação"/><Mini label="Destino" value={mode==='nfse'?'SEFIN Nacional':'SEFAZ / SVRS'}/><Mini label="Custo por documento" value="R$ 0,00"/></section>
-          {mode === "cte" ? <CteIssuerPanel token={token} certificateBase64={certificateBase64} certificatePassword={certificatePassword} /> : <div className="grid min-w-0 gap-6 2xl:grid-cols-[minmax(460px,.9fr)_minmax(0,1.35fr)]">
+          {mode === "cte" ? <CteIssuerPanel token={token} /> : <div className="grid min-w-0 gap-6 2xl:grid-cols-[minmax(460px,.9fr)_minmax(0,1.35fr)]">
             <section className="min-w-0 rounded-lg border bg-background p-4 sm:p-5">
               {mode==='nfse'?<ServiceForm data={service} setData={setService}/>:<SaleForm mode={mode} data={sale} setData={setSale}/>} 
               <div className="mt-5 flex flex-wrap gap-3 border-t pt-5"><Button variant="outline" onClick={()=>request('validate')} disabled={!!action}>Validar</Button><Button variant="outline" onClick={()=>request('test_connection')} disabled={!hasCert||!!action}>{action==='test_connection'&&<RefreshCw className="mr-2 h-4 w-4 animate-spin"/>}Testar governo</Button><Button variant="outline" onClick={()=>request('preview')} disabled={!hasCert||!!action}>Gerar XML</Button><Button onClick={()=>request('issue')} disabled={!hasCert||!!action}>{action==='issue'?<RefreshCw className="mr-2 h-4 w-4 animate-spin"/>:<Send className="mr-2 h-4 w-4"/>}Emitir teste</Button></div>
