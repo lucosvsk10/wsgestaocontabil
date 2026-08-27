@@ -94,7 +94,7 @@ function decodeChunked(body: Uint8Array) {
 
 async function postRawMtls(endpoint: string, soap: string, cert: ReturnType<typeof lerCertificado>) {
   const url = new URL(endpoint);
-  const chain = Array.isArray(cert.cadeiaPem) ? cert.cadeiaPem : [];
+  const chain = Array.isArray(cert.cadeiaPem) ? cert.cadeiaPem.filter(Boolean) : [];
   const certChain = [cert.certificadoPem, ...chain].join("\n");
   let conn: Deno.TlsConn;
   try {
@@ -127,7 +127,7 @@ async function postRawMtls(endpoint: string, soap: string, cert: ReturnType<type
       await conn.write(encoder.encode(head));
       await conn.write(body);
     } catch (error) {
-      throw new Error(`Conexão mTLS abriu, mas o Ambiente Nacional encerrou durante o envio HTTP/1.1: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Conexão mTLS abriu, mas falhou ao enviar a requisição SOAP: ${error instanceof Error ? error.message : String(error)}`);
     }
     const parts: Uint8Array[] = [];
     const buffer = new Uint8Array(32768);
@@ -138,9 +138,11 @@ async function postRawMtls(endpoint: string, soap: string, cert: ReturnType<type
         parts.push(buffer.slice(0, n));
       }
     } catch (error) {
-      if (!parts.length) throw new Error(`Ambiente Nacional encerrou a conexão antes de responder: ${error instanceof Error ? error.message : String(error)}`);
+      if (parts.length === 0) throw new Error(`Ambiente Nacional encerrou a conexão antes de responder: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
     }
     const total = parts.reduce((sum, p) => sum + p.length, 0);
+    if (total === 0) throw new Error("Ambiente Nacional encerrou a conexão sem retornar dados.");
     const raw = new Uint8Array(total);
     let offset = 0;
     for (const p of parts) { raw.set(p, offset); offset += p.length; }
@@ -152,7 +154,7 @@ async function postRawMtls(endpoint: string, soap: string, cert: ReturnType<type
     if (/transfer-encoding:\s*chunked/i.test(headerText)) responseBody = decodeChunked(responseBody);
     const text = decoder.decode(responseBody);
     if (status < 200 || status >= 300) throw new Error(`Ambiente Nacional respondeu HTTP ${status}: ${text.slice(0, 900)}`);
-    return { text, transport: "Deno.connectTls + HTTP/1.1 + full client chain", presentedChain: 1 + chain.length };
+    return { text, transport: "Deno.connectTls + HTTP/1.1 + SOAP 1.2", presentedChain: 1 + chain.length };
   } finally {
     conn.close();
   }
@@ -164,7 +166,27 @@ async function requestDistribution(cert: ReturnType<typeof lerCertificado>, cnpj
     : "https://hom1.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx";
   const tpAmb = environment === "producao" ? "1" : "2";
   const nsu = digits(ultNSU || "0").padStart(15, "0").slice(-15);
-  const soap = `<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDistDFeInteresse xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe"><nfeDadosMsg><distDFeInt xmlns="http://www.portalfiscal.inf.br/nfe" versao="1.01"><tpAmb>${tpAmb}</tpAmb><cUFAutor>${ufCode}</cUFAutor><CNPJ>${cnpj}</CNPJ><distNSU><ultNSU>${nsu}</ultNSU></distNSU></distDFeInt></nfeDadosMsg></nfeDistDFeInteresse></soap12:Body></soap12:Envelope>`;
+  const soap = `<?xml version="1.0" encoding="utf-8"?>
+<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
+  <soap12:Header>
+    <nfeCabecMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe">
+      <cUF>91</cUF>
+      <versaoDados>1.01</versaoDados>
+    </nfeCabecMsg>
+  </soap12:Header>
+  <soap12:Body>
+    <nfeDistDFeInteresse xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe">
+      <nfeDadosMsg>
+        <distDFeInt xmlns="http://www.portalfiscal.inf.br/nfe" versao="1.01">
+          <tpAmb>${tpAmb}</tpAmb>
+          <cUFAutor>${ufCode}</cUFAutor>
+          <CNPJ>${cnpj}</CNPJ>
+          <distNSU><ultNSU>${nsu}</ultNSU></distNSU>
+        </distDFeInt>
+      </nfeDadosMsg>
+    </nfeDistDFeInteresse>
+  </soap12:Body>
+</soap12:Envelope>`;
   const result = await postRawMtls(endpoint, soap, cert);
   return { endpoint, ...result };
 }
