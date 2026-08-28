@@ -8,34 +8,24 @@
   :root {
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
-
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
-
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-
     --primary: 222.2 47.4% 11.2%;
     --primary-foreground: 210 40% 98%;
-
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
-
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
-
     --accent: 210 40% 96.1%;
     --accent-foreground: 222.2 47.4% 11.2%;
-
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
-
     --radius: 0.5rem;
-
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
@@ -44,37 +34,31 @@
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    --ws-page-surface: #fff1de;
+    --ws-nav-surface: #fff1de;
+    --ws-footer-surface: #020817;
   }
 
   .dark {
     --background: 222 84% 5%;
     --foreground: 0 0% 85%;
-
     --card: 222 84% 5%;
     --card-foreground: 0 0% 85%;
-
     --popover: 222 84% 5%;
     --popover-foreground: 0 0% 85%;
-
     --primary: 210 40% 98%;
     --primary-foreground: 222.2 47.4% 11.2%;
-
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 0 0% 85%;
-
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 0 0% 85%;
-
     --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 0 0% 85%;
-
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 85%;
-
     --border: 217 19% 24%;
     --input: 217 19% 24%;
     --ring: 0 0% 72%;
-
     --sidebar-background: 222 84% 5%;
     --sidebar-foreground: 0 0% 85%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -85,36 +69,32 @@
     --sidebar-ring: 0 0% 72%;
   }
 
-  /* Tema escuro alternativo da paleta WS. O fundo-base é exatamente #46413d. */
+  .theme-default {
+    --ws-page-surface: #020817;
+    --ws-nav-surface: #020817;
+    --ws-footer-surface: #1e1c1a;
+  }
+
   .theme-ws-dark {
     --background: 27 7% 26%;
     --foreground: 0 0% 100%;
-
     --card: 27 7% 29%;
     --card-foreground: 0 0% 100%;
-
     --popover: 27 7% 29%;
     --popover-foreground: 0 0% 100%;
-
     --primary: 0 0% 100%;
     --primary-foreground: 27 7% 26%;
-
     --secondary: 27 7% 33%;
     --secondary-foreground: 0 0% 92%;
-
     --muted: 27 6% 32%;
     --muted-foreground: 24 7% 76%;
-
     --accent: 27 7% 35%;
     --accent-foreground: 0 0% 96%;
-
     --destructive: 0 47% 39%;
     --destructive-foreground: 0 0% 100%;
-
     --border: 27 6% 38%;
     --input: 27 6% 38%;
     --ring: 42 79% 61%;
-
     --sidebar-background: 27 7% 26%;
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 42 79% 61%;
@@ -123,6 +103,9 @@
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 27 6% 38%;
     --sidebar-ring: 42 79% 61%;
+    --ws-page-surface: #46413d;
+    --ws-nav-surface: #46413d;
+    --ws-footer-surface: #46413d;
   }
 }
 
@@ -133,84 +116,58 @@
     scrollbar-color: hsl(var(--muted-foreground) / 0.55) transparent;
   }
 
-  *::-webkit-scrollbar {
-    width: 9px;
-    height: 9px;
-  }
-
-  *::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
+  *::-webkit-scrollbar { width: 9px; height: 9px; }
+  *::-webkit-scrollbar-track { background: transparent; }
   *::-webkit-scrollbar-thumb {
     background: hsl(var(--muted-foreground) / 0.5);
     border: 2px solid transparent;
     border-radius: 999px;
     background-clip: padding-box;
   }
-
   *::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--muted-foreground) / 0.72);
     border: 2px solid transparent;
     background-clip: padding-box;
   }
 
-  html {
-    @apply antialiased;
-    scroll-behavior: smooth;
-  }
-
-  body {
-    @apply bg-background text-foreground font-prompt overflow-x-hidden;
-  }
+  html { @apply antialiased; scroll-behavior: smooth; }
+  body { @apply bg-background text-foreground font-prompt overflow-x-hidden; }
 
   #main-content {
-    transform: scale(var(--zoom-scale, 1));
+    zoom: var(--zoom-scale, 1);
+    transform: none;
     transform-origin: top left;
-    width: calc(100% / var(--zoom-scale, 1));
-    min-height: calc(100vh / var(--zoom-scale, 1));
-    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), filter 0.2s ease-in-out;
-    will-change: transform, filter;
+    width: 100%;
+    min-height: auto;
+    transition: filter 0.2s ease-in-out;
   }
 
-  img {
-    @apply max-w-full;
-  }
+  img { @apply max-w-full; }
 }
 
 @layer components {
+  .ws-page-surface { background-color: var(--ws-page-surface); }
+  .ws-nav-surface { background-color: var(--ws-nav-surface); }
+  .ws-footer-surface { background-color: var(--ws-footer-surface); }
+
   table > tbody > tr:not([class*="bg-"]):nth-child(odd) {
     background-color: hsl(var(--background));
     transition: background-color 140ms ease;
   }
-
   table > tbody > tr:not([class*="bg-"]):nth-child(even) {
     background-color: hsl(199 89% 48% / 0.045);
     transition: background-color 140ms ease;
   }
-
-  table > tbody > tr:not([class*="bg-"]):hover {
-    background-color: hsl(199 89% 48% / 0.09);
-  }
-
-  .dark table > tbody > tr:not([class*="bg-"]):nth-child(even) {
-    background-color: hsl(199 89% 60% / 0.065);
-  }
-
-  .dark table > tbody > tr:not([class*="bg-"]):hover {
-    background-color: hsl(199 89% 60% / 0.12);
-  }
+  table > tbody > tr:not([class*="bg-"]):hover { background-color: hsl(199 89% 48% / 0.09); }
+  .dark table > tbody > tr:not([class*="bg-"]):nth-child(even) { background-color: hsl(199 89% 60% / 0.065); }
+  .dark table > tbody > tr:not([class*="bg-"]):hover { background-color: hsl(199 89% 60% / 0.12); }
 
   .theme-ws-dark h1,
   .theme-ws-dark h2,
   .theme-ws-dark h3,
   .theme-ws-dark h4,
   .theme-ws-dark h5,
-  .theme-ws-dark h6 {
-    color: #fff;
-  }
+  .theme-ws-dark h6 { color: #fff; }
 }
 
-#lovable-badge {
-  display: none !important;
-}
+#lovable-badge { display: none !important; }
