@@ -13,7 +13,7 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 });
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
-const BRIDGE_URL = "https://ws-dfe-bridge.vercel.app/distribuicao";
+const BRIDGE_URL = "https://ws-dfe-bridge.vercel.app/api/distribuicao";
 const MAX_BATCHES = 5;
 const BATCH_WAIT_MS = 1200;
 const COOLDOWN_MS = 60 * 60 * 1000;
