@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { FiscalDocumentPreview } from "@/components/admin/fiscal/FiscalDocumentPreview";
 
 type CertificateInfo = { cnpj?: string | null; cpf?: string | null; nome?: string | null; validadeFim?: string; validoAgora?: boolean };
+type FiscalCompany = { id: string; cnpj?: string | null; razao_social?: string | null; nome_fantasia?: string | null; uf?: string | null; status?: string | null; ambiente_padrao?: string | null; fiscal_certificates?: Array<{ is_active?: boolean; holder_cnpj?: string | null; holder_name?: string | null; valid_until?: string | null }> };
 type DfeDocument = {
   nsu?: string; schema?: string; documentKind?: "nfe" | "resumo" | "evento" | "documento"; fullXml?: boolean;
   direction?: "entrada" | "saida" | "relacionada"; accessKey?: string; issueDate?: string; value?: number;
@@ -52,9 +53,34 @@ export function FiscalExtractorPanel({ token, certificateBase64, certificatePass
   const [selected, setSelected] = useState<DfeDocument | null>(null);
   const [year, setYear] = useState(new Date().getFullYear());
   const [month, setMonth] = useState(0);
+  const [company, setCompany] = useState<FiscalCompany | null>(null);
 
   const hasCert = Boolean(certificateBase64 && certificatePassword);
-  const cnpj = digits(certificate?.cnpj);
+  const certificateCnpj = digits(certificate?.cnpj);
+  const cnpj = digits(company?.cnpj || certificate?.cnpj);
+  const companyName = company?.nome_fantasia || company?.razao_social || certificate?.nome || "Empresa fiscal";
+  const companyId = company?.id || "";
+
+  useEffect(() => {
+    let active = true;
+    const resolveCompany = async () => {
+      try {
+        const vault = await invoke<{ ok?: boolean; companies?: FiscalCompany[] }>("fiscal-company-vault", { action: "list" });
+        if (!active) return;
+        const activeCompanies = (vault.companies || []).filter(c => c.status !== "inativa");
+        const byCertificate = certificateCnpj.length === 14 ? activeCompanies.find(c => digits(c.cnpj) === certificateCnpj) : null;
+        const alCompanies = activeCompanies.filter(c => String(c.uf || "").toUpperCase() === "AL");
+        const resolved = byCertificate || (alCompanies.length === 1 ? alCompanies[0] : activeCompanies.length === 1 ? activeCompanies[0] : null);
+        setCompany(resolved || null);
+        if (resolved?.ambiente_padrao === "homologacao") setEnvironment("homologacao");
+        if (String(resolved?.uf || "").toUpperCase() === "AL") setUfCode("27");
+      } catch (x) {
+        if (active) setError(x instanceof Error ? x.message : "Não foi possível localizar a empresa fiscal.");
+      }
+    };
+    void resolveCompany();
+    return () => { active = false; };
+  }, [certificateCnpj]);
 
   useEffect(() => {
     let active = true;
@@ -100,32 +126,59 @@ export function FiscalExtractorPanel({ token, certificateBase64, certificatePass
     });
   }, [periodDocs, filter, query]);
 
+  const reloadStored = async () => {
+    if (cnpj.length !== 14) return;
+    const db = supabase as any;
+    const [{ data: state }, { data: stored }] = await Promise.all([
+      db.from("fiscal_dfe_sync_state").select("ult_nsu,max_nsu,last_synced_at").eq("cnpj", cnpj).eq("environment", environment).eq("uf_code", ufCode).maybeSingle(),
+      db.from("fiscal_dfe_documents").select("*").eq("cnpj", cnpj).eq("environment", environment).eq("uf_code", ufCode).order("received_at", { ascending: false }).limit(2000),
+    ]);
+    const sync = (state || null) as SyncState | null;
+    setUltNSU(padNsu(sync?.ult_nsu)); setMaxNSU(padNsu(sync?.max_nsu)); setLastSyncedAt(sync?.last_synced_at || new Date().toISOString());
+    setResult({ ok: true, documents: (stored || []).map(rowToDoc), response: { ultNSU: padNsu(sync?.ult_nsu), maxNSU: padNsu(sync?.max_nsu) }, retentionDays: 90 });
+  };
+
   const fetchDocuments = async () => {
+    if (!companyId) { setError("Empresa fiscal não identificada."); return; }
     setLoading(true); setError("");
+    const warnings: string[] = [];
     try {
-      const data = await invoke<DfeResult>("dfe-extractor-native", { engine_token: token, environment, uf_code: ufCode, ult_nsu: ultNSU, certificate_base64: certificateBase64, certificate_password: certificatePassword });
-      setResult(data);
-      setUltNSU(padNsu(data.response?.ultNSU || ultNSU)); setMaxNSU(padNsu(data.response?.maxNSU || maxNSU)); setLastSyncedAt(new Date().toISOString());
-      if (!data.ok && data.response?.xMotivo) setError(`${data.response.cStat || ""} · ${data.response.xMotivo}`);
+      try {
+        const data = await invoke<DfeResult>("dfe-extractor-native", { company_id: companyId, engine_token: token, environment, uf_code: ufCode, ult_nsu: ultNSU });
+        setUltNSU(padNsu(data.response?.ultNSU || ultNSU)); setMaxNSU(padNsu(data.response?.maxNSU || maxNSU));
+        if (!data.ok && data.response?.xMotivo) warnings.push(`${data.response.cStat || ""} · ${data.response.xMotivo}`);
+      } catch (x) {
+        warnings.push(x instanceof Error ? x.message : "Falha ao consultar entradas fiscais.");
+      }
+
+      if (ufCode === "27" && environment === "producao") {
+        try { await invoke("fiscal-sales-sync", { company_id: companyId }); }
+        catch (x) { warnings.push(x instanceof Error ? x.message : "Não foi possível atualizar as notas emitidas agora."); }
+      }
+
+      await reloadStored();
+      setLastSyncedAt(new Date().toISOString());
+      if (warnings.length) setError(warnings.join(" · "));
     } catch (x) { setError(x instanceof Error ? x.message : "Falha ao consultar documentos fiscais."); }
     finally { setLoading(false); }
   };
 
   const totalValue = periodDocs.filter(d => d.documentKind !== "evento").reduce((s,d)=>s+Number(d.value||0),0);
   const currentUf = UF_CODES.find(([code]) => code === ufCode)?.[1] || ufCode;
+  const alOperational = ufCode === "27" && environment === "producao";
 
   return <div className="min-w-0 space-y-4">
     <section className="rounded-2xl border bg-background p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="grid h-11 w-11 place-items-center rounded-xl border bg-muted/30"><Building2 className="h-5 w-5"/></div>
-          <div><p className="text-[10px] uppercase tracking-[.18em] text-muted-foreground">Empresa selecionada</p><h2 className="mt-1 text-base font-semibold">{certificate?.nome || "Carregue um certificado A1"}</h2><p className="text-xs text-muted-foreground">{certificate?.cnpj || "CNPJ não identificado"}</p></div>
+          <div><p className="text-[10px] uppercase tracking-[.18em] text-muted-foreground">Empresa selecionada</p><h2 className="mt-1 text-base font-semibold">{companyName}</h2><p className="text-xs text-muted-foreground">{cnpj || "CNPJ não identificado"}</p></div>
         </div>
         <div className="flex flex-wrap gap-2 text-[11px]">
           <SourcePill label="NF-e entrada" state="on" />
-          <SourcePill label={`NF-e saída · ${currentUf}`} state="building" />
-          <SourcePill label={`NFC-e · ${currentUf}`} state="building" />
-          <SourcePill label="Certificado válido" state={certificate?.validoAgora === false ? "off" : "on"} />
+          <SourcePill label={`NF-e saída · ${currentUf}`} state={alOperational ? "on" : "building"} />
+          <SourcePill label={`NFC-e · ${currentUf}`} state={alOperational ? "on" : "building"} />
+          <SourcePill label="Certificado válido" state={certificate?.validoAgora === false ? "off" : company?.fiscal_certificates?.some(c=>c.is_active) ? "on" : hasCert ? "on" : "building"} />
         </div>
       </div>
     </section>
@@ -158,7 +211,7 @@ export function FiscalExtractorPanel({ token, certificateBase64, certificatePass
           <div className="ml-auto flex flex-wrap gap-2">
             <select className="h-9 rounded-lg border bg-background px-3 text-xs" value={environment} onChange={e=>setEnvironment(e.target.value as any)}><option value="producao">Produção</option><option value="homologacao">Homologação</option></select>
             <select className="h-9 rounded-lg border bg-background px-3 text-xs" value={ufCode} onChange={e=>setUfCode(e.target.value)}>{UF_CODES.map(([code,uf])=><option key={code} value={code}>{uf} · {code}</option>)}</select>
-            <Button size="sm" onClick={fetchDocuments} disabled={!hasCert||loading||loadingState}>{loading?<RefreshCw className="mr-2 h-4 w-4 animate-spin"/>:<FileSearch className="mr-2 h-4 w-4"/>}{loading?"Buscando...":"Atualizar"}</Button>
+            <Button size="sm" onClick={fetchDocuments} disabled={!companyId||loading||loadingState}>{loading?<RefreshCw className="mr-2 h-4 w-4 animate-spin"/>:<FileSearch className="mr-2 h-4 w-4"/>}{loading?"Buscando...":"Atualizar"}</Button>
           </div>
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-muted-foreground"><span className="inline-flex items-center gap-1"><Database className="h-3.5 w-3.5"/>NSU {ultNSU} / {maxNSU}</span><span>Entradas: Ambiente Nacional · até 90 dias</span><span>Saídas: conector estadual por UF</span></div>
@@ -176,8 +229,8 @@ export function FiscalExtractorPanel({ token, certificateBase64, certificatePass
 
     <section className="grid gap-3 lg:grid-cols-3">
       <SourceCard title="Recebidas · NF-e" status="Operacional" text="Ambiente Nacional / DistDFe. Sincronização incremental por NSU, com histórico persistente no WS." />
-      <SourceCard title={`Emitidas · NF-e · ${currentUf}`} status="Conector estadual" text="Arquitetura separada por UF. Alagoas é o primeiro adaptador de saída em desenvolvimento." />
-      <SourceCard title={`Emitidas · NFC-e · ${currentUf}`} status="Conector estadual" text="Consulta estadual/SVRS, separada do DistDFe. O WS vai unificar tudo nesta mesma tabela." />
+      <SourceCard title={`Emitidas · NF-e · ${currentUf}`} status={alOperational?"Operacional":"Conector estadual"} text={alOperational?"Saídas estaduais conectadas à SEFAZ/SVRS e persistidas no mesmo extrato.":"Arquitetura separada por UF."} />
+      <SourceCard title={`Emitidas · NFC-e · ${currentUf}`} status={alOperational?"Operacional":"Conector estadual"} text={alOperational?"NFC-e emitidas em Alagoas são descobertas, baixadas e exibidas com XML completo.":"Consulta estadual/SVRS separada do DistDFe."} />
     </section>
 
     {selected&&<FiscalDocumentPreview doc={selected} onClose={()=>setSelected(null)}/>} 
