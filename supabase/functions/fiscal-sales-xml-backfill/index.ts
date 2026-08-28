@@ -119,7 +119,7 @@ Deno.serve(async req=>{
         await admin.from("fiscal_sales_sync_state").update({xml_expected:expected,xml_saved:xmlSaved,xml_pending:xmlPending,xml_failed:0,xml_complete:complete,updated_at:new Date().toISOString()}).eq("company_id",company.id);
         out.push({company_id:company.id,processed:(rows||[]).length,saved,failed,xml_expected:expected,xml_saved:xmlSaved,xml_pending:xmlPending,xml_failed:0,xml_complete:complete});
       }finally{
-        await admin.rpc("release_fiscal_sales_worker_lease",{p_company_id:company.id,p_worker:"xml"}).catch(()=>{});
+        try{await admin.rpc("release_fiscal_sales_worker_lease",{p_company_id:company.id,p_worker:"xml"});}catch{}
       }
     }
     return json({ok:true,companies:out});
