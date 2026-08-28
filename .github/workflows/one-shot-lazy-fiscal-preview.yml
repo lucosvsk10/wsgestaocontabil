@@ -1,0 +1,41 @@
+name: One-shot lazy fiscal preview
+on: push
+jobs:
+  patch:
+    if: contains(github.event.head_commit.message, 'trigger lazy fiscal preview patch')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch fiscal notes lazy preview
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/pages/AdminFiscalNotes.tsx')
+          s=p.read_text()
+          old='const[year,setYear]=useState(currentYear),[month,setMonth]=useState<(typeof MONTHS)[number]>(MONTHS[currentMonth+1]),[periodMode,setPeriodMode]=useState<PeriodMode>("month"),[customOpen,setCustomOpen]=useState(false),[customStart,setCustomStart]=useState(isoDate(new Date(currentYear,currentMonth,1))),[customEnd,setCustomEnd]=useState(today),[filter,setFilter]=useState<Filter>("todos"),[typeFilter,setTypeFilter]=useState<TypeFilter>("todos"),[query,setQuery]=useState(""),[selected,setSelected]=useState<Doc|null>(null),[page,setPage]=useState(1);'
+          new=old+'\n const[previewLoading,setPreviewLoading]=useState(false),[previewNotice,setPreviewNotice]=useState("");'
+          assert old in s, 'state anchor missing'
+          s=s.replace(old,new,1)
+          anchor=' const toggleType=(t:Exclude<TypeFilter,"todos">)=>setTypeFilter(v=>v===t?"todos":t);'
+          add=''' const openPreview=async(d:Doc)=>{\n  if(d.documentKind==="evento"||(d.fullXml&&d.xml)){setSelected(d);return}\n  if(!company)return;setPreviewLoading(true);setPreviewNotice("Carregando o documento fiscal...");setError("");\n  try{const{data,error}=await supabase.functions.invoke("fiscal-document-recover",{body:{company_id:company.id,access_key:d.accessKey,nsu:d.nsu}});if(error)throw error;if(data?.ready&&data?.document){const recovered=rowToDoc(data.document);setDocs(prev=>prev.map(x=>(x.accessKey&&x.accessKey===recovered.accessKey)||(x.nsu&&x.nsu===recovered.nsu)?recovered:x));setSelected(recovered)}else{setError(String(data?.reason||"O documento ainda não foi disponibilizado pela fonte fiscal. Tente novamente em alguns instantes."))}}catch(e){setError(e instanceof Error?e.message:String(e))}finally{setPreviewLoading(false);setPreviewNotice("")}\n };\n'''
+          assert anchor in s, 'toggle anchor missing'
+          s=s.replace(anchor,anchor+'\n'+add,1)
+          old='onClick={()=>setSelected(d)}><FileText className="mr-1.5 h-4 w-4"/>Visualizar</Button>'
+          new='onClick={()=>void openPreview(d)}><FileText className="mr-1.5 h-4 w-4"/>Visualizar</Button>'
+          assert old in s, 'preview button anchor missing'
+          s=s.replace(old,new,1)
+          anchor=' {selected&&<FiscalDocumentPreview doc={selected} onClose={()=>setSelected(null)}/>}'
+          overlay=''' {previewLoading&&<div className="fixed inset-0 z-[140] flex items-center justify-center bg-black/55 p-4"><div className="w-full max-w-sm rounded-2xl bg-background p-6 text-center shadow-2xl"><div className="mx-auto h-9 w-9 animate-spin rounded-full border-4 border-muted border-t-foreground"/><p className="mt-4 font-semibold">{previewNotice||"Carregando o documento fiscal..."}</p><p className="mt-1 text-xs text-muted-foreground">Buscando o arquivo completo na fonte fiscal. Isso pode levar alguns segundos.</p></div></div>}'''
+          assert anchor in s, 'selected preview anchor missing'
+          s=s.replace(anchor,overlay+anchor,1)
+          p.write_text(s)
+          PY
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/AdminFiscalNotes.tsx
+          git commit -m "feat: recover fiscal documents on preview demand"
+          git push
