@@ -377,14 +377,14 @@ export default function AdminFiscalNotes() {
         <Kpi label="Total notas" value={String(fiscalDocs.length)} />
         <Kpi label="Com XML" value={`${withXml.length}`} sub={`${fiscalDocs.length ? Math.round(withXml.length / fiscalDocs.length * 100) : 0}% dos documentos`} />
         <Kpi label="Sem XML" value={String(fiscalDocs.length - withXml.length)} />
-        <Kpi label="Faturamento" value={money(emitted.reduce((s, d) => s + Number(d.value || 0), 0))} sub={`Recebidas: ${money(received.reduce((s, d) => s + Number(d.value || 0), 0))}`} />
+        <Kpi label="Faturamento" value={money(emitted.reduce((s, d) => s + Number(d.value || 0), 0))} sub={`Compras: ${money(received.reduce((s, d) => s + Number(d.value || 0), 0))}`} />
       </section>
 
       <section className="mt-3 overflow-hidden rounded-2xl bg-background shadow-sm ring-1 ring-black/[.04] dark:ring-white/[.06]">
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
           <div className="flex flex-wrap gap-2">
-            <FilterPill active={filter === "saida"} onClick={() => setFilter("saida")}>↗ Emitidas <b>{emitted.length}</b></FilterPill>
-            <FilterPill active={filter === "entrada"} onClick={() => setFilter("entrada")}>↙ Recebidas <b>{received.length}</b></FilterPill>
+            <FilterPill active={filter === "saida"} onClick={() => setFilter("saida")}>↗ Vendas <b>{emitted.length}</b></FilterPill>
+            <FilterPill active={filter === "entrada"} onClick={() => setFilter("entrada")}>↙ Compras <b>{received.length}</b></FilterPill>
             <FilterPill active={filter === "todos"} onClick={() => setFilter("todos")}>Todas <b>{periodDocs.length}</b></FilterPill>
             <FilterPill active={filter === "evento"} onClick={() => setFilter("evento")}>Eventos <b>{events.length}</b></FilterPill>
             <FilterPill active={filter === "cancelada"} onClick={() => setFilter("cancelada")}>⊘ Canceladas <b>{cancelled.length}</b></FilterPill>
