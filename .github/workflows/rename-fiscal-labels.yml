@@ -1,0 +1,34 @@
+name: Rename fiscal labels
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/rename-fiscal-labels.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  rename:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rename labels
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/pages/AdminFiscalNotes.tsx')
+          s = p.read_text()
+          s = s.replace('↗ Emitidas <b>{emitted.length}</b>', '↗ Vendas <b>{emitted.length}</b>')
+          s = s.replace('↙ Recebidas <b>{received.length}</b>', '↙ Compras <b>{received.length}</b>')
+          s = s.replace('sub={`Recebidas: ${money(received.reduce((s, d) => s + Number(d.value || 0), 0))}`}', 'sub={`Compras: ${money(received.reduce((s, d) => s + Number(d.value || 0), 0))}`}')
+          p.write_text(s)
+          PY
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/AdminFiscalNotes.tsx
+          git diff --cached --quiet || git commit -m "fix: rename emitted and received fiscal labels"
+          git push
