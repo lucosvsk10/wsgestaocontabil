@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Building2, CalendarDays, ChevronDown, Download, FileText, RefreshCw, Search, ShieldCheck, X } from "lucide-react";
+import { Building2, CalendarDays, ChevronDown, Download, FileText, Search, ShieldCheck, X } from "lucide-react";
 import { AdminLayout } from "@/components/admin/layout/AdminLayout";
 import { FiscalDocumentPreview } from "@/components/admin/fiscal/FiscalDocumentPreview";
 import { Button } from "@/components/ui/button";
@@ -138,9 +138,7 @@ export default function AdminFiscalNotes() {
   const [filter, setFilter] = useState<Filter>("todos");
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState("");
-  const [syncNotice, setSyncNotice] = useState("");
   const [selected, setSelected] = useState<Doc | null>(null);
   const [page, setPage] = useState(1);
 
@@ -190,7 +188,6 @@ export default function AdminFiscalNotes() {
     setPage(1);
     setQuery("");
     setFilter("todos");
-    setSyncNotice("");
   }, [company?.id]);
 
   useEffect(() => setPage(1), [year, month, periodMode, customStart, customEnd, filter, query]);
@@ -246,56 +243,6 @@ export default function AdminFiscalNotes() {
 
   const cert = company?.fiscal_certificates?.find(x => x.is_active) || company?.fiscal_certificates?.[0];
   const certValid = !!cert?.valid_until && new Date(`${cert.valid_until}T23:59:59`) > now;
-
-  const sync = async () => {
-    if (!company || !certValid) return;
-    setSyncing(true);
-    setError("");
-    setSyncNotice("");
-    try {
-      const { data, error } = await supabase.functions.invoke("dfe-extractor-native", {
-        body: { company_id: company.id, environment: company.ambiente_padrao || "producao" },
-      });
-      if (error) {
-        let message = error.message;
-        try {
-          const ctx = (error as any).context;
-          if (ctx) message = (await ctx.clone().json())?.error || message;
-        } catch { /* noop */ }
-        throw new Error(message);
-      }
-      if (String(company.uf || "").toUpperCase() === "AL" && (company.ambiente_padrao || "producao") === "producao") {
-        const { error: salesError } = await supabase.functions.invoke("fiscal-sales-sync", { body: { company_id: company.id } });
-        if (salesError) console.warn("fiscal-sales-sync", salesError.message);
-      }
-      const loaded = await loadDocs(company);
-      const list = await vaultList();
-      setCompanies(list);
-      setCompany(list.find(x => x.id === company.id) || company);
-
-      const cStat = String(data?.response?.cStat || "");
-      const newCount = Number(data?.newDocuments || 0);
-      if (cStat === "656") {
-        setError("Consumo temporariamente bloqueado pelo Ambiente Nacional. Aguarde antes de sincronizar novamente.");
-      } else if (newCount > 0) {
-        const returned = Array.isArray(data?.documents) ? data.documents as Doc[] : loaded;
-        const recentEvents = returned.filter(d => d.documentKind === "evento").length;
-        setFilter("todos");
-        setPage(1);
-        setSyncNotice(recentEvents === newCount
-          ? `Sincronização concluída · ${newCount} novo(s) evento(s) fiscal(is) recebido(s).`
-          : `Sincronização concluída · ${newCount} novo(s) documento(s) recebido(s).`);
-      } else if (cStat === "137") {
-        setSyncNotice("Sincronização concluída · nenhum documento novo disponível neste momento.");
-      } else {
-        setSyncNotice("Sincronização concluída com sucesso.");
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setSyncing(false);
-    }
-  };
 
   const choose = (id: string) => {
     const c = companies.find(x => x.id === id) || null;
@@ -417,11 +364,9 @@ export default function AdminFiscalNotes() {
 
         <div className="flex items-center gap-2 px-4 pb-3">
           <div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input className="border-0 bg-muted/30 pl-9 shadow-none focus-visible:ring-1" value={query} onChange={e => setQuery(e.target.value)} placeholder="Buscar por número, chave, empresa, CNPJ, NSU, tipo, situação ou evento..." /></div>
-          <Button variant="ghost" size="icon" title={certValid ? "Sincronizar" : "Configure um certificado válido"} onClick={sync} disabled={syncing || !certValid}>{syncing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}</Button>
           <Button variant="ghost" onClick={exportCsv} disabled={!filtered.length}><Download className="mr-2 h-4 w-4" />Download</Button>
         </div>
 
-        {syncNotice && <div className="mx-4 mb-3 rounded-xl bg-emerald-500/8 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300">{syncNotice}</div>}
         {error && <div className="mx-4 mb-3 rounded-xl bg-destructive/8 px-4 py-3 text-sm text-destructive">{error}</div>}
 
         <div className="overflow-x-auto">
