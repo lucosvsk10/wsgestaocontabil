@@ -8,34 +8,24 @@
   :root {
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
-
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
-
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-
     --primary: 222.2 47.4% 11.2%;
     --primary-foreground: 210 40% 98%;
-
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
-
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
-
     --accent: 210 40% 96.1%;
     --accent-foreground: 222.2 47.4% 11.2%;
-
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
-
     --radius: 0.5rem;
-
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
@@ -49,32 +39,23 @@
   .dark {
     --background: 222 84% 5%;
     --foreground: 0 0% 85%;
-
     --card: 222 84% 5%;
     --card-foreground: 0 0% 85%;
-
     --popover: 222 84% 5%;
     --popover-foreground: 0 0% 85%;
-
     --primary: 210 40% 98%;
     --primary-foreground: 222.2 47.4% 11.2%;
-
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 0 0% 85%;
-
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 0 0% 85%;
-
     --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 0 0% 85%;
-
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 85%;
-
     --border: 217 19% 24%;
     --input: 217 19% 24%;
     --ring: 0 0% 72%;
-
     --sidebar-background: 222 84% 5%;
     --sidebar-foreground: 0 0% 85%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -85,48 +66,37 @@
     --sidebar-ring: 0 0% 72%;
   }
 
-  /*
-   * Tema escuro alternativo WS.
-   * A cor-base antiga (#46413d) foi aprofundada em ~25% para #35312e.
-   * Superfícies, cards, botões e divisórias usam #3c3734 (~15% abaixo da base original),
-   * criando contraste sem voltar ao azul-marinho do tema Padrão.
-   */
   .theme-ws-dark {
-    --background: 26 7% 19.4%; /* #35312e */
+    /* #35312e escurecido em ~35% */
+    --background: 30 6% 12.5%; /* #22201e */
     --foreground: 0 0% 100%;
 
-    --card: 23 7% 22%; /* #3c3734 */
+    /* superfícies atuais escurecidas em ~20% */
+    --card: 20 7% 17.6%; /* #302c2a */
     --card-foreground: 0 0% 100%;
-
-    --popover: 23 7% 22%;
+    --popover: 20 7% 17.6%;
     --popover-foreground: 0 0% 100%;
-
     --primary: 0 0% 100%;
-    --primary-foreground: 26 7% 19.4%;
-
-    --secondary: 23 7% 22%;
+    --primary-foreground: 30 6% 12.5%;
+    --secondary: 20 7% 17.6%;
     --secondary-foreground: 0 0% 92%;
-
-    --muted: 23 7% 22%;
-    --muted-foreground: 26 6% 76%;
-
-    --accent: 24 7% 25%;
+    --muted: 20 7% 17.6%;
+    --muted-foreground: 26 6% 75%;
+    --accent: 22 7% 20%;
     --accent-foreground: 0 0% 96%;
-
-    --destructive: 0 47% 39%;
+    --destructive: 0 47% 34%;
     --destructive-foreground: 0 0% 100%;
-
-    --border: 23 7% 31%;
-    --input: 23 7% 29%;
+    --border: 22 7% 25%;
+    --input: 22 7% 23%;
     --ring: 42 79% 61%;
 
-    --sidebar-background: 26 7% 19.4%;
+    --sidebar-background: 24 6% 15.5%; /* #2a2725 */
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 42 79% 61%;
-    --sidebar-primary-foreground: 26 7% 16%;
-    --sidebar-accent: 23 7% 22%;
+    --sidebar-primary-foreground: 30 6% 11%;
+    --sidebar-accent: 20 7% 17.6%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 23 7% 31%;
+    --sidebar-border: 22 7% 25%;
     --sidebar-ring: 42 79% 61%;
   }
 }
@@ -138,26 +108,15 @@
     scrollbar-color: hsl(var(--muted-foreground) / 0.55) transparent;
   }
 
-  *::-webkit-scrollbar {
-    width: 9px;
-    height: 9px;
-  }
-
-  *::-webkit-scrollbar-track {
-    background: transparent !important;
-  }
-
-  *::-webkit-scrollbar-corner {
-    background: transparent !important;
-  }
-
+  *::-webkit-scrollbar { width: 9px; height: 9px; }
+  *::-webkit-scrollbar-track,
+  *::-webkit-scrollbar-corner { background: transparent !important; }
   *::-webkit-scrollbar-thumb {
     background: hsl(var(--muted-foreground) / 0.5);
     border: 2px solid transparent;
     border-radius: 999px;
     background-clip: padding-box;
   }
-
   *::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--muted-foreground) / 0.72);
     border: 2px solid transparent;
@@ -187,9 +146,7 @@
     transition: filter 0.2s ease-in-out;
   }
 
-  img {
-    @apply max-w-full;
-  }
+  img { @apply max-w-full; }
 }
 
 @layer components {
@@ -197,20 +154,16 @@
     background-color: hsl(var(--background));
     transition: background-color 140ms ease;
   }
-
   table > tbody > tr:not([class*="bg-"]):nth-child(even) {
     background-color: hsl(199 89% 48% / 0.045);
     transition: background-color 140ms ease;
   }
-
   table > tbody > tr:not([class*="bg-"]):hover {
     background-color: hsl(199 89% 48% / 0.09);
   }
-
   .dark table > tbody > tr:not([class*="bg-"]):nth-child(even) {
     background-color: hsl(199 89% 60% / 0.065);
   }
-
   .dark table > tbody > tr:not([class*="bg-"]):hover {
     background-color: hsl(199 89% 60% / 0.12);
   }
@@ -220,51 +173,79 @@
   .theme-ws-dark h3,
   .theme-ws-dark h4,
   .theme-ws-dark h5,
-  .theme-ws-dark h6 {
-    color: #fff;
-  }
+  .theme-ws-dark h6 { color: #fff; }
 
-  /*
-   * Compatibilidade com telas antigas que ainda usam cores dark hardcoded.
-   * Isso evita "ilhas" azul-marinho dentro do novo tema WS e cobre o site inteiro
-   * enquanto os componentes são gradualmente migrados para tokens semânticos.
-   */
+  /* Site público: remove azul-marinho residual no tema WS escuro. */
   .theme-ws-dark [class*="dark:bg-[#020817]"],
   .theme-ws-dark [class*="dark:bg-deepNavy"],
   .theme-ws-dark [class*="dark:bg-deepNavy-80"],
   .theme-ws-dark [class*="dark:bg-navy"],
   .theme-ws-dark [class*="dark:bg-navy-dark"] {
-    background-color: #35312e !important;
+    background-color: #22201e !important;
   }
 
   .theme-ws-dark [class*="bg-[#020817]"],
   .theme-ws-dark [class*="bg-deepNavy"],
-  .theme-ws-dark [class*="bg-deepNavy-80"] {
-    background-color: #3c3734 !important;
-  }
-
+  .theme-ws-dark [class*="bg-deepNavy-80"],
+  .theme-ws-dark [class*="dark:bg-[#0b0f1c]"],
+  .theme-ws-dark [class*="dark:bg-[#0f172a]"],
   .theme-ws-dark [class*="dark:bg-[#1a1a1a]"],
-  .theme-ws-dark [class*="dark:bg-[#1e1c1a]"],
-  .theme-ws-dark [class*="dark:bg-transparent"] {
-    background-color: #3c3734 !important;
+  .theme-ws-dark [class*="dark:bg-[#1e1c1a]"] {
+    background-color: #302c2a !important;
   }
 
-  .theme-ws-dark [class*="dark:border-[#020817]"],
-  .theme-ws-dark [class*="dark:border-white/10"],
-  .theme-ws-dark [class*="dark:border-[#efc349]"] {
-    border-color: rgba(255, 255, 255, 0.14) !important;
+  /* Admin: força a paleta WS em todos os contêineres neutros antigos. */
+  .theme-ws-dark .pro-ui {
+    background-color: #22201e !important;
+    color: #fff;
+  }
+
+  .theme-ws-dark .pro-ui > div,
+  .theme-ws-dark .pro-ui main {
+    background-color: #22201e;
+  }
+
+  .theme-ws-dark .pro-ui aside,
+  .theme-ws-dark .pro-ui header {
+    background-color: #2a2725 !important;
+    border-color: #403b38 !important;
+  }
+
+  .theme-ws-dark .pro-ui [class*="dark:bg-[#020817]"],
+  .theme-ws-dark .pro-ui [class*="dark:bg-[#0b0f1c]"],
+  .theme-ws-dark .pro-ui [class*="dark:bg-[#0f172a]"],
+  .theme-ws-dark .pro-ui [class*="dark:bg-[#111827]"],
+  .theme-ws-dark .pro-ui [class*="dark:bg-[#1a1a1a]"],
+  .theme-ws-dark .pro-ui [class*="dark:bg-gray-900"],
+  .theme-ws-dark .pro-ui [class*="dark:bg-slate-900"],
+  .theme-ws-dark .pro-ui [class*="bg-[#020817]"],
+  .theme-ws-dark .pro-ui [class*="bg-[#0b0f1c]"] {
+    background-color: #302c2a !important;
+  }
+
+  .theme-ws-dark .pro-ui [class*="dark:bg-transparent"] {
+    background-color: transparent !important;
+  }
+
+  .theme-ws-dark .pro-ui button:not([class*="bg-green"]):not([class*="bg-red"]):not([class*="bg-blue"]):not([class*="bg-purple"]),
+  .theme-ws-dark .pro-ui [role="button"]:not([class*="bg-green"]):not([class*="bg-red"]):not([class*="bg-blue"]):not([class*="bg-purple"]) {
+    border-color: #4a4541;
+  }
+
+  .theme-ws-dark .pro-ui [class*="border-[#020817]"],
+  .theme-ws-dark .pro-ui [class*="dark:border-[#020817]"],
+  .theme-ws-dark .pro-ui [class*="dark:border-white/10"],
+  .theme-ws-dark .pro-ui [class*="dark:border-[#efc349]"] {
+    border-color: #4a4541 !important;
   }
 
   .theme-ws-dark [class*="dark:text-white/70"],
   .theme-ws-dark [class*="dark:text-white/80"] {
     color: rgba(255, 255, 255, 0.72) !important;
   }
-
   .theme-ws-dark [class*="dark:text-white/50"] {
-    color: rgba(255, 255, 255, 0.58) !important;
+    color: rgba(255, 255, 255, 0.56) !important;
   }
 }
 
-#lovable-badge {
-  display: none !important;
-}
+#lovable-badge { display: none !important; }
