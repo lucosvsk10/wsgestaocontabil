@@ -138,6 +138,18 @@ export function FiscalExtractorPanel({ token, certificateBase64, certificatePass
     setResult({ ok: true, documents: (stored || []).map(rowToDoc), response: { ultNSU: padNsu(sync?.ult_nsu), maxNSU: padNsu(sync?.max_nsu) }, retentionDays: 90 });
   };
 
+  useEffect(() => {
+    if (cnpj.length !== 14) return;
+    const refresh = () => { void reloadStored(); };
+    const timer = window.setInterval(refresh, 15000);
+    const onFocus = () => { void reloadStored(); };
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [cnpj, environment, ufCode]);
+
   const fetchDocuments = async () => {
     if (!companyId) { setError("Empresa fiscal não identificada."); return; }
     setLoading(true); setError("");
