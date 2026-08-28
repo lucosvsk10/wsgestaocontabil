@@ -1,0 +1,50 @@
+name: One-shot fiscal UX batch
+on: push
+jobs:
+  patch:
+    if: contains(github.event.head_commit.message, 'one-shot fiscal ux patch trigger')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch fiscal notes and companies
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          notes=Path('src/pages/AdminFiscalNotes.tsx')
+          s=notes.read_text()
+          old='className={`${cancelledDoc?"bg-red-500/[.035]":""} hover:bg-muted/10`}'
+          new='className={`${cancelledDoc?"bg-red-500/[.055]":i%2===0?"bg-muted/[.025]":"bg-muted/[.11]"} transition-colors hover:bg-muted/20`}'
+          assert old in s, 'notes row class not found'
+          s=s.replace(old,new,1)
+          old='<Button disabled={!downloadInfo?.ready||downloading||downloadInfo.total===0} onClick={()=>void downloadZip()}><Download className="mr-2 h-4 w-4"/>{downloading?"Gerando ZIP...":`Baixar ${downloadInfo?.total||0} completas`}</Button>'
+          new='<Button disabled={downloading||checking||downloadStart>downloadEnd||downloadInfo?.total===0} onClick={()=>void (downloadInfo?.ready?downloadZip():preflight())}><Download className="mr-2 h-4 w-4"/>{downloading?"Gerando ZIP...":checking?"Conferindo...":downloadInfo?.ready?`Baixar ${downloadInfo.total} completas`:"Conferir e liberar download"}</Button>'
+          assert old in s, 'download button not found'
+          s=s.replace(old,new,1)
+          notes.write_text(s)
+
+          p=Path('src/pages/AdminFiscalCompanies.tsx')
+          s=p.read_text()
+          imp='import { supabase } from "@/integrations/supabase/client";'
+          repl=imp+'\nimport { BulkCertificateImporter, SmartCertificateInput } from "@/components/admin/fiscal/CertificateImportTools";'
+          assert imp in s, 'companies import anchor missing'
+          s=s.replace(imp,repl,1)
+          old='<Button onClick={openNew}><Plus className="mr-2 h-4 w-4"/>Nova empresa</Button>'
+          new='<div className="flex flex-wrap gap-2"><BulkCertificateImporter companies={companies} onDone={()=>void load()}/><Button onClick={openNew}><Plus className="mr-2 h-4 w-4"/>Nova empresa</Button></div>'
+          assert old in s, 'companies new button missing'
+          s=s.replace(old,new,1)
+          old='<div className="grid gap-4 sm:grid-cols-[1fr_220px]"><Field label={editing?"Substituir certificado (.pfx/.p12)":"Certificado (.pfx/.p12)"}><Input type="file" accept=".pfx,.p12,application/x-pkcs12" onChange={e=>setCertificateFile(e.target.files?.[0]||null)}/></Field><Field label="Senha do A1"><Input type="password" value={certificatePassword} onChange={e=>setCertificatePassword(e.target.value)} placeholder={editing?"Só informe ao substituir":"Senha"}/></Field></div>'
+          new='<SmartCertificateInput editing={!!editing} onFile={setCertificateFile} onPassword={setCertificatePassword} onMetadata={m=>setForm((f:any)=>({...f,cnpj:m.holder_cnpj||f.cnpj,razao_social:m.holder_name||f.razao_social,nome_fantasia:f.nome_fantasia||m.holder_name||"",uf:f.uf||"AL",regime_tributario:f.regime_tributario||"simples_nacional",ambiente_padrao:f.ambiente_padrao||"producao",status:f.status||"ativa"}))}/>'
+          assert old in s, 'certificate input block missing'
+          s=s.replace(old,new,1)
+          p.write_text(s)
+          PY
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/AdminFiscalNotes.tsx src/pages/AdminFiscalCompanies.tsx
+          git commit -m "feat: improve fiscal preview downloads and certificate imports"
+          git push
