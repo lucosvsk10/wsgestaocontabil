@@ -67,36 +67,36 @@
   }
 
   .theme-ws-dark {
-    /* #35312e escurecido em ~35% */
-    --background: 30 6% 12.5%; /* #22201e */
+    /* Fundo principal: ~25% mais escuro que #46413d */
+    --background: 26 7% 19.4%; /* #35312e */
     --foreground: 0 0% 100%;
 
-    /* superfícies atuais escurecidas em ~20% */
-    --card: 20 7% 17.6%; /* #302c2a */
+    /* Cards, navbar, sidebar e botões: ~35% mais escuros */
+    --card: 20 7% 16.9%; /* #2e2a28 */
     --card-foreground: 0 0% 100%;
-    --popover: 20 7% 17.6%;
+    --popover: 20 7% 16.9%;
     --popover-foreground: 0 0% 100%;
-    --primary: 0 0% 100%;
-    --primary-foreground: 30 6% 12.5%;
-    --secondary: 20 7% 17.6%;
-    --secondary-foreground: 0 0% 92%;
-    --muted: 20 7% 17.6%;
-    --muted-foreground: 26 6% 75%;
-    --accent: 22 7% 20%;
-    --accent-foreground: 0 0% 96%;
+    --primary: 20 7% 16.9%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 22 7% 18.2%;
+    --secondary-foreground: 0 0% 94%;
+    --muted: 20 7% 16.9%;
+    --muted-foreground: 26 6% 76%;
+    --accent: 23 7% 21%;
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 47% 34%;
     --destructive-foreground: 0 0% 100%;
-    --border: 22 7% 25%;
-    --input: 22 7% 23%;
+    --border: 24 8% 25%;
+    --input: 24 8% 23%;
     --ring: 42 79% 61%;
 
-    --sidebar-background: 24 6% 15.5%; /* #2a2725 */
+    --sidebar-background: 20 7% 16.9%; /* #2e2a28 */
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 42 79% 61%;
-    --sidebar-primary-foreground: 30 6% 11%;
-    --sidebar-accent: 20 7% 17.6%;
+    --sidebar-primary-foreground: 26 7% 14%;
+    --sidebar-accent: 23 7% 21%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 22 7% 25%;
+    --sidebar-border: 24 8% 25%;
     --sidebar-ring: 42 79% 61%;
   }
 }
@@ -168,6 +168,38 @@
     background-color: hsl(199 89% 60% / 0.12);
   }
 
+  /* Zebra explícito da área fiscal nos três temas. */
+  :root:not(.dark) table > tbody > tr.ws-zebra-row:nth-child(odd) {
+    background-color: #ffffff !important;
+  }
+  :root:not(.dark) table > tbody > tr.ws-zebra-row:nth-child(even) {
+    background-color: #f3f4f6 !important;
+  }
+  :root:not(.dark) table > tbody > tr.ws-zebra-row:hover {
+    background-color: #e9ecef !important;
+  }
+  .dark:not(.theme-ws-dark) table > tbody > tr.ws-zebra-row:nth-child(odd) {
+    background-color: hsl(222 84% 5%) !important;
+  }
+  .dark:not(.theme-ws-dark) table > tbody > tr.ws-zebra-row:nth-child(even) {
+    background-color: hsl(217 32% 12.5%) !important;
+  }
+  .dark:not(.theme-ws-dark) table > tbody > tr.ws-zebra-row:hover {
+    background-color: hsl(217 32% 17%) !important;
+  }
+  .theme-ws-dark table > tbody > tr.ws-zebra-row:nth-child(odd) {
+    background-color: #2e2a28 !important;
+  }
+  .theme-ws-dark table > tbody > tr.ws-zebra-row:nth-child(even) {
+    background-color: #393431 !important;
+  }
+  .theme-ws-dark table > tbody > tr.ws-zebra-row:hover {
+    background-color: #403a36 !important;
+  }
+  table > tbody > tr.ws-zebra-row.ws-zebra-cancelled {
+    background-color: hsl(var(--destructive) / 0.13) !important;
+  }
+
   .theme-ws-dark h1,
   .theme-ws-dark h2,
   .theme-ws-dark h3,
@@ -181,7 +213,7 @@
   .theme-ws-dark [class*="dark:bg-deepNavy-80"],
   .theme-ws-dark [class*="dark:bg-navy"],
   .theme-ws-dark [class*="dark:bg-navy-dark"] {
-    background-color: #22201e !important;
+    background-color: #35312e !important;
   }
 
   .theme-ws-dark [class*="bg-[#020817]"],
@@ -191,24 +223,34 @@
   .theme-ws-dark [class*="dark:bg-[#0f172a]"],
   .theme-ws-dark [class*="dark:bg-[#1a1a1a]"],
   .theme-ws-dark [class*="dark:bg-[#1e1c1a]"] {
-    background-color: #302c2a !important;
+    background-color: #2e2a28 !important;
   }
 
-  /* Admin: força a paleta WS em todos os contêineres neutros antigos. */
+  /* Admin: mantém o fundo principal separado das superfícies internas. */
   .theme-ws-dark .pro-ui {
-    background-color: #22201e !important;
+    background-color: #35312e !important;
     color: #fff;
   }
 
-  .theme-ws-dark .pro-ui > div,
   .theme-ws-dark .pro-ui main {
-    background-color: #22201e;
+    background-color: #35312e !important;
   }
 
   .theme-ws-dark .pro-ui aside,
   .theme-ws-dark .pro-ui header {
-    background-color: #2a2725 !important;
-    border-color: #403b38 !important;
+    background-color: #2e2a28 !important;
+    border-color: #4a4541 !important;
+  }
+
+  .theme-ws-dark .pro-ui section,
+  .theme-ws-dark .pro-ui [class*="bg-muted/10"],
+  .theme-ws-dark .pro-ui [class*="bg-muted/15"],
+  .theme-ws-dark .pro-ui [class*="bg-muted/20"],
+  .theme-ws-dark .pro-ui [class*="bg-muted/25"],
+  .theme-ws-dark .pro-ui [class*="bg-muted/30"],
+  .theme-ws-dark .pro-ui [class*="bg-muted/35"] {
+    background-color: #2e2a28 !important;
+    border-color: #4a4541;
   }
 
   .theme-ws-dark .pro-ui [class*="dark:bg-[#020817]"],
@@ -220,16 +262,22 @@
   .theme-ws-dark .pro-ui [class*="dark:bg-slate-900"],
   .theme-ws-dark .pro-ui [class*="bg-[#020817]"],
   .theme-ws-dark .pro-ui [class*="bg-[#0b0f1c]"] {
-    background-color: #302c2a !important;
+    background-color: #2e2a28 !important;
   }
 
   .theme-ws-dark .pro-ui [class*="dark:bg-transparent"] {
     background-color: transparent !important;
   }
 
-  .theme-ws-dark .pro-ui button:not([class*="bg-green"]):not([class*="bg-red"]):not([class*="bg-blue"]):not([class*="bg-purple"]),
-  .theme-ws-dark .pro-ui [role="button"]:not([class*="bg-green"]):not([class*="bg-red"]):not([class*="bg-blue"]):not([class*="bg-purple"]) {
+  .theme-ws-dark .pro-ui button:not([class*="bg-emerald"]):not([class*="bg-red"]):not([class*="bg-destructive"]):not([class*="bg-blue"]):not([class*="bg-purple"]),
+  .theme-ws-dark .pro-ui [role="button"]:not([class*="bg-emerald"]):not([class*="bg-red"]):not([class*="bg-destructive"]):not([class*="bg-blue"]):not([class*="bg-purple"]) {
+    background-color: #2e2a28;
     border-color: #4a4541;
+  }
+
+  .theme-ws-dark .pro-ui button:hover:not([class*="bg-emerald"]):not([class*="bg-red"]):not([class*="bg-destructive"]):not([class*="bg-blue"]):not([class*="bg-purple"]),
+  .theme-ws-dark .pro-ui [role="button"]:hover:not([class*="bg-emerald"]):not([class*="bg-red"]):not([class*="bg-destructive"]):not([class*="bg-blue"]):not([class*="bg-purple"]) {
+    background-color: #3a3532;
   }
 
   .theme-ws-dark .pro-ui [class*="border-[#020817]"],
