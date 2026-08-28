@@ -1,0 +1,37 @@
+name: One-shot fiscal theme and zip fix
+on: push
+jobs:
+  patch:
+    if: contains(github.event.head_commit.message, 'trigger fiscal theme zip fix')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch fiscal notes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/pages/AdminFiscalNotes.tsx')
+          s=p.read_text()
+
+          old='className={`${cancelledDoc?"bg-red-500/[.055]":i%2===0?"bg-muted/[.025]":"bg-muted/[.11]"} transition-colors hover:bg-muted/20`}'
+          new='className={`ws-zebra-row ${cancelledDoc?"ws-zebra-cancelled":""} transition-colors`}'
+          if old not in s:
+              raise SystemExit('zebra row anchor missing')
+          s=s.replace(old,new,1)
+
+          old=''' const downloadZip=async()=>{if(!company||!downloadInfo?.ready)return;setDownloading(true);setError("");try{const{data,error}=await supabase.functions.invoke("fiscal-bulk-download",{body:{company_id:company.id,start:downloadStart,end:downloadEnd,direction:downloadScope}});if(error)throw error;const blob=data instanceof Blob?data:new Blob([data],{type:"application/zip"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`notas-completas-${downloadStart}-a-${downloadEnd}.zip`;a.click();URL.revokeObjectURL(url);setDownloadOpen(false)}catch(e){setError(e instanceof Error?e.message:String(e))}finally{setDownloading(false)}};'''
+          new=''' const downloadZip=async()=>{if(!company||!downloadInfo?.ready)return;setDownloading(true);setError("");try{const{data:{session}}=await supabase.auth.getSession();if(!session?.access_token)throw new Error("Sessão expirada. Entre novamente para baixar o arquivo.");const res=await fetch("https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/fiscal-bulk-download",{method:"POST",headers:{Authorization:`Bearer ${session.access_token}`,"Content-Type":"application/json"},body:JSON.stringify({company_id:company.id,start:downloadStart,end:downloadEnd,direction:downloadScope})});if(!res.ok){const j=await res.json().catch(()=>({}));throw new Error(String(j?.error||`Falha ao gerar ZIP (${res.status})`))}const bytes=new Uint8Array(await res.arrayBuffer());if(bytes.length<4||bytes[0]!==0x50||bytes[1]!==0x4b||![0x03,0x05,0x07].includes(bytes[2]))throw new Error("O servidor não retornou um arquivo ZIP válido. O download foi cancelado para evitar salvar um arquivo corrompido.");const blob=new Blob([bytes],{type:"application/zip"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`notas-completas-${downloadStart}-a-${downloadEnd}.zip`;document.body.appendChild(a);a.click();a.remove();window.setTimeout(()=>URL.revokeObjectURL(url),1500);setDownloadOpen(false)}catch(e){setError(e instanceof Error?e.message:String(e))}finally{setDownloading(false)}};'''
+          if old not in s:
+              raise SystemExit('downloadZip anchor missing')
+          s=s.replace(old,new,1)
+          p.write_text(s)
+          PY
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/AdminFiscalNotes.tsx
+          git commit -m "fix: make fiscal zebra theme-aware and download valid zip"
+          git push
