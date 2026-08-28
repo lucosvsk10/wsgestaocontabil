@@ -29,16 +29,15 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
   const toggleButtonProps = getToggleButtonProps();
 
   return (
-    <div className="pro-ui min-h-screen bg-[#fdfdfd] dark:bg-[#020817] flex">
+    <div className="pro-ui min-h-screen bg-background text-foreground flex transition-colors duration-200">
       <AdminSidebar open={sidebarOpen} onClose={handleSidebarClose} />
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
         <AdminHeader 
           sidebarOpen={sidebarOpen} 
           setSidebarOpen={setSidebarOpen}
           toggleSidebar={toggleSidebar}
         />
         
-        {/* Mobile sidebar toggle button */}
         {isMobile && (
           <Button 
             variant="ghost" 
@@ -48,11 +47,10 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
             data-sidebar-toggle="true"
             aria-label={toggleButtonProps['aria-label']}
           >
-            <Menu size={20} className="text-[#020817] dark:text-[#efc349]" />
+            <Menu size={20} className="text-foreground dark:text-[#efc349]" />
           </Button>
         )}
         
-        {/* Desktop sidebar toggle button */}
         {!isMobile && (
           <Button 
             variant="ghost" 
@@ -62,13 +60,12 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
             aria-label={toggleButtonProps['aria-label']}
           >
             {sidebarOpen ? 
-              <ChevronLeft size={20} className="text-[#020817] dark:text-[#efc349]" /> : 
-              <ChevronRight size={20} className="text-[#020817] dark:text-[#efc349]" />
+              <ChevronLeft size={20} className="text-foreground dark:text-[#efc349]" /> : 
+              <ChevronRight size={20} className="text-foreground dark:text-[#efc349]" />
             }
           </Button>
         )}
         
-        {/* Overlay para mobile quando sidebar está aberta */}
         {isMobile && sidebarOpen && (
           <div 
             className="fixed inset-0 bg-black/50 z-30"
@@ -76,12 +73,11 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
           />
         )}
         
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto bg-background transition-colors duration-200">
           {children}
         </main>
       </div>
       
-      {/* Container de Pop-ups de Notificações para Admins */}
       <NotificationPopupContainer />
     </div>
   );
