@@ -5,6 +5,7 @@ import { AdminLayout } from "@/components/admin/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
+import { BulkCertificateImporter, SmartCertificateInput } from "@/components/admin/fiscal/CertificateImportTools";
 
 type Cert = { id:string; certificate_name:string; holder_cnpj?:string; holder_name?:string; valid_from?:string; valid_until?:string; is_active?:boolean; inspected_at?:string };
 type StateCredential = { id:string; company_id:string; uf:string; portal_name:string; is_active?:boolean; last_verified_at?:string; last_verification_status?:string; updated_at?:string };
@@ -72,7 +73,7 @@ export default function AdminFiscalCompanies(){
   return <AdminLayout><main className="mx-auto w-full max-w-[1480px] px-5 py-6 lg:px-8">
     <div className="flex flex-wrap items-center justify-between gap-4">
       <div><p className="text-[11px] font-semibold uppercase tracking-[.16em] text-muted-foreground">Fiscal</p><h1 className="mt-1 text-2xl font-semibold tracking-tight">Empresas</h1><p className="mt-1 text-sm text-muted-foreground">Cadastre empresas e mantenha as credenciais fiscais centralizadas.</p></div>
-      <Button onClick={openNew}><Plus className="mr-2 h-4 w-4"/>Nova empresa</Button>
+      <div className="flex flex-wrap gap-2"><BulkCertificateImporter companies={companies} onDone={()=>void load()}/><Button onClick={openNew}><Plus className="mr-2 h-4 w-4"/>Nova empresa</Button></div>
     </div>
 
     <section className="mt-6 overflow-hidden rounded-2xl bg-background shadow-sm ring-1 ring-black/[.04] dark:ring-white/[.06]">
@@ -105,7 +106,7 @@ export default function AdminFiscalCompanies(){
 
           <Section title="Certificado digital A1" subtitle="Usado nas consultas nacionais e nas operações fiscais que exigem certificado.">
             {editing?.fiscal_certificates?.find(x=>x.is_active)&&<div className="mb-4 flex items-center justify-between rounded-xl bg-muted/15 p-4"><div className="flex items-center gap-3"><div className="rounded-lg bg-background p-2"><FileKey2 className="h-5 w-5"/></div><div><p className="text-sm font-medium">{editing.fiscal_certificates.find(x=>x.is_active)?.certificate_name}</p><p className="text-xs text-muted-foreground">Validade até {date(editing.fiscal_certificates.find(x=>x.is_active)?.valid_until)}</p></div></div><div className="inline-flex items-center gap-1.5 text-xs font-medium"><ShieldCheck className="h-4 w-4"/>Criptografado</div></div>}
-            <div className="grid gap-4 sm:grid-cols-[1fr_220px]"><Field label={editing?"Substituir certificado (.pfx/.p12)":"Certificado (.pfx/.p12)"}><Input type="file" accept=".pfx,.p12,application/x-pkcs12" onChange={e=>setCertificateFile(e.target.files?.[0]||null)}/></Field><Field label="Senha do A1"><Input type="password" value={certificatePassword} onChange={e=>setCertificatePassword(e.target.value)} placeholder={editing?"Só informe ao substituir":"Senha"}/></Field></div>
+            <SmartCertificateInput editing={!!editing} onFile={setCertificateFile} onPassword={setCertificatePassword} onMetadata={m=>setForm((f:any)=>({...f,cnpj:m.holder_cnpj||f.cnpj,razao_social:m.holder_name||f.razao_social,nome_fantasia:f.nome_fantasia||m.holder_name||"",uf:f.uf||"AL",regime_tributario:f.regime_tributario||"simples_nacional",ambiente_padrao:f.ambiente_padrao||"producao",status:f.status||"ativa"}))}/>
           </Section>
 
           <Section title={`SEFAZ Estadual · ${form.uf||"UF"}`} subtitle="Credenciais usadas somente no backend para buscar notas emitidas no portal estadual.">
