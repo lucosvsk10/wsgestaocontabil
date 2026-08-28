@@ -172,6 +172,18 @@ export default function AdminFiscalNotes() {
 
   useEffect(() => setPage(1), [year, month, periodMode, customStart, customEnd, filter, query]);
 
+  useEffect(() => {
+    if (!company) return;
+    const refresh = () => { void loadDocs(company).catch(e => setError(e instanceof Error ? e.message : String(e))); };
+    const timer = window.setInterval(refresh, 15000);
+    const onFocus = () => refresh();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [company?.id]);
+
   const periodDocs = useMemo(() => docs.filter(d => {
     if (!d.issueDate) return periodMode === "month" && month === "Ano";
     const dt = new Date(d.issueDate);
@@ -228,6 +240,10 @@ export default function AdminFiscalNotes() {
           if (ctx) message = (await ctx.clone().json())?.error || message;
         } catch { /* noop */ }
         throw new Error(message);
+      }
+      if (String(company.uf || "").toUpperCase() === "AL" && (company.ambiente_padrao || "producao") === "producao") {
+        const { error: salesError } = await supabase.functions.invoke("fiscal-sales-sync", { body: { company_id: company.id } });
+        if (salesError) console.warn("fiscal-sales-sync", salesError.message);
       }
       const loaded = await loadDocs(company);
       const list = await vaultList();
