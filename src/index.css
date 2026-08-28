@@ -13,3 +13,6 @@
 @import './styles/zoom.css';
 @import './styles/admin-ui.css';
 @import './styles/lancamentos-clean.css';
+
+/* Final WS dark-theme reconciliation layer */
+@import './styles/ws-dark-v2.css';
