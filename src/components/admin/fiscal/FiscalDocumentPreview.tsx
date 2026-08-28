@@ -3,48 +3,37 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
 export type PreviewDocument = {
-  nsu?: string; schema?: string; documentKind?: "nfe" | "resumo" | "evento" | "documento"; fullXml?: boolean;
-  direction?: "entrada" | "saida" | "relacionada"; accessKey?: string; issueDate?: string; value?: number;
+  nsu?: string; schema?: string; documentKind?: "nfe"|"nfse"|"resumo"|"evento"|"documento"; fullXml?: boolean;
+  direction?: "entrada"|"saida"|"relacionada"; accessKey?: string; issueDate?: string; value?: number;
   issuerCnpj?: string; issuerName?: string; recipientCnpj?: string; number?: string; series?: string;
-  statusCode?: string; xml?: string; parseError?: string;
+  statusCode?: string; statusText?: string; model?: string; xml?: string; parseError?: string;
 };
+const money=(v?:number|string)=>Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+const dateTime=(v?:string)=>{if(!v)return"—";const d=new Date(v);return Number.isNaN(d.getTime())?v:d.toLocaleString("pt-BR")};
+const digits=(v?:string)=>String(v||"").replace(/\D/g,"");
+const formatCnpj=(v?:string)=>{const d=digits(v);return d.length===14?d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,"$1.$2.$3/$4-$5"):v||"—"};
+const tag=(xml:string|undefined,name:string)=>xml?.match(new RegExp(`<(?:\\w+:)?${name}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/(?:\\w+:)?${name}>`,`i`))?.[1]?.trim()||"";
+const sections=(xml:string|undefined,name:string)=>xml?[...xml.matchAll(new RegExp(`<(?:\\w+:)?${name}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/(?:\\w+:)?${name}>`,`gi`))].map(m=>m[1]):[];
+function downloadXml(doc:PreviewDocument){if(!doc.xml)return;const blob=new Blob([doc.xml],{type:"application/xml;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`${doc.accessKey||doc.nsu||"documento-fiscal"}.xml`;a.click();URL.revokeObjectURL(url)}
+async function downloadPdf(doc:PreviewDocument){const{data,error}=await supabase.functions.invoke("dfe-danfe-pdf",{body:{document:doc}});if(error)throw error;const base64=String(data?.pdf_base64||"");if(!base64)throw new Error("PDF não foi gerado.");const bytes=Uint8Array.from(atob(base64),c=>c.charCodeAt(0)),blob=new Blob([bytes],{type:"application/pdf"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`${doc.accessKey||doc.nsu||"danfe"}.pdf`;a.click();URL.revokeObjectURL(url)}
 
-const money = (v?: number) => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-const dateTime = (v?: string) => { if (!v) return "—"; const d = new Date(v); return Number.isNaN(d.getTime()) ? v : d.toLocaleString("pt-BR"); };
-const digits = (v?: string) => String(v || "").replace(/\D/g, "");
-const formatCnpj = (v?: string) => { const d = digits(v); return d.length === 14 ? d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5") : v || "—"; };
-
-function downloadXml(doc: PreviewDocument) { if (!doc.xml) return; const blob = new Blob([doc.xml], { type: "application/xml;charset=utf-8" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${doc.accessKey || doc.nsu || "documento-fiscal"}.xml`; a.click(); URL.revokeObjectURL(url); }
-async function downloadPdf(doc: PreviewDocument) { const { data, error } = await supabase.functions.invoke("dfe-danfe-pdf", { body: { document: doc } }); if (error) throw error; const base64 = String(data?.pdf_base64 || ""); if (!base64) throw new Error("PDF não foi gerado."); const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0)); const blob = new Blob([bytes], { type: "application/pdf" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${doc.accessKey || doc.nsu || "danfe"}.pdf`; a.click(); URL.revokeObjectURL(url); }
-
-export function FiscalDocumentPreview({ doc, onClose }: { doc: PreviewDocument; onClose: () => void }) {
-  const event = doc.documentKind === "evento" || doc.direction === "relacionada";
-  const complete = Boolean(doc.fullXml || doc.direction === "saida");
-  const title = event ? "Evento / documento relacionado" : complete ? `NF-e ${doc.number || ""}${doc.series ? ` · Série ${doc.series}` : ""}` : "Resumo de NF-e";
-  return <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
-    <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border bg-background shadow-2xl">
-      <div className="flex items-center justify-between gap-4 border-b px-5 py-4">
-        <div><p className="text-xs uppercase text-muted-foreground">Visualização do documento</p><h2 className="mt-1 text-lg font-semibold">{title}</h2></div>
-        <div className="flex items-center gap-2"><Button variant="outline" size="sm" disabled={!doc.xml} onClick={() => downloadXml(doc)}><Download className="mr-2 h-4 w-4"/>XML</Button><Button size="sm" disabled={event || !complete} onClick={() => void downloadPdf(doc)}><FileText className="mr-2 h-4 w-4"/>Baixar PDF</Button><Button variant="ghost" size="icon" onClick={onClose}><X className="h-4 w-4"/></Button></div>
-      </div>
-      {!event && !complete && <div className="border-b bg-muted/30 px-5 py-3 text-xs text-muted-foreground">O Ambiente Nacional entregou apenas o resumo desta NF-e. O PDF completo fica disponível quando o XML integral da nota estiver armazenado.</div>}
-      <div className="overflow-y-auto bg-muted/20 p-4 sm:p-6">
-        <div className="mx-auto max-w-4xl bg-white text-black shadow-xl">
-          <div className="border-2 border-black p-3">
-            <div className="grid grid-cols-[1.2fr_1fr] border-b-2 border-black pb-3">
-              <div className="pr-4"><p className="text-[10px] font-bold uppercase">Emitente</p><p className="mt-1 text-lg font-bold">{doc.issuerName || "Emitente não informado"}</p><p className="mt-1 text-xs">CNPJ {formatCnpj(doc.issuerCnpj)}</p></div>
-              <div className="border-l-2 border-black pl-4 text-center"><p className="text-2xl font-black tracking-tight">{complete ? "DANFE" : "RESUMO"}</p><p className="text-[10px] font-bold uppercase">{complete ? "Documento Auxiliar da Nota Fiscal Eletrônica" : "Dados disponíveis no Ambiente Nacional"}</p><div className="mt-2 grid grid-cols-2 gap-2 text-left text-xs"><div><b>Nº</b><br/>{doc.number || "—"}</div><div><b>Série</b><br/>{doc.series || "—"}</div></div></div>
-            </div>
-            <div className="border-b border-black py-3"><p className="text-[9px] font-bold uppercase">Chave de acesso</p><p className="mt-1 break-all font-mono text-sm font-bold tracking-wide">{doc.accessKey || "—"}</p></div>
-            <div className="grid grid-cols-3 border-b border-black text-xs"><Cell label="Data de emissão" value={dateTime(doc.issueDate)}/><Cell label="Tipo" value={doc.direction === "saida" ? "Saída" : doc.direction === "entrada" ? "Entrada" : "Relacionado"}/><Cell label="Valor total" value={event ? "—" : money(doc.value)}/></div>
-            <div className="grid grid-cols-2 border-b border-black text-xs"><Cell label="CNPJ emitente" value={formatCnpj(doc.issuerCnpj)}/><Cell label="CNPJ destinatário" value={formatCnpj(doc.recipientCnpj)}/></div>
-            <div className="grid grid-cols-3 text-xs"><Cell label="Status" value={doc.statusCode || "—"}/><Cell label="NSU" value={doc.nsu || "—"}/><Cell label="Schema" value={doc.schema || "—"}/></div>
-          </div>
-          <div className="px-3 py-2 text-[9px] text-neutral-600">Visualização gerada pelo WS Gestão a partir do XML/DF-e armazenado. Para validade fiscal, prevalecem o XML autorizado e o protocolo da SEFAZ.</div>
-        </div>
-      </div>
-    </div>
-  </div>;
+export function FiscalDocumentPreview({doc,onClose}:{doc:PreviewDocument;onClose:()=>void}){
+ const event=doc.documentKind==="evento"||doc.direction==="relacionada",complete=Boolean(doc.fullXml&&doc.xml),isNFSe=doc.documentKind==="nfse"||/nfse/i.test(`${doc.schema||""} ${doc.model||""}`),items=!isNFSe?sections(doc.xml,"det"):[];
+ const emit=tag(doc.xml,"emit"),dest=tag(doc.xml,"dest"),ide=tag(doc.xml,"ide"),tot=tag(doc.xml,"ICMSTot"),serv=tag(doc.xml,"serv");
+ const title=event?"Evento / documento relacionado":isNFSe?`NFS-e ${doc.number||""}`:`${doc.model==="65"?"NFC-e":"NF-e"} ${doc.number||""}${doc.series?` · Série ${doc.series}`:""}`;
+ return <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4" onMouseDown={e=>{if(e.target===e.currentTarget)onClose()}}><div className="flex max-h-[94vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border bg-background shadow-2xl">
+  <div className="flex items-center justify-between gap-4 border-b px-5 py-4"><div><p className="text-xs uppercase text-muted-foreground">Documento fiscal</p><h2 className="mt-1 text-lg font-semibold">{title}</h2></div><div className="flex items-center gap-2"><Button variant="outline" size="sm" disabled={!doc.xml} onClick={()=>downloadXml(doc)}><Download className="mr-2 h-4 w-4"/>XML</Button><Button size="sm" disabled={event} onClick={()=>void downloadPdf(doc)}><FileText className="mr-2 h-4 w-4"/>DANFE PDF</Button><Button variant="ghost" size="icon" onClick={onClose}><X className="h-4 w-4"/></Button></div></div>
+  {!event&&!complete&&<div className="border-b bg-amber-500/10 px-5 py-3 text-xs text-amber-800 dark:text-amber-200">O documento foi localizado, mas o XML completo ainda está na fila automática de recuperação. Quando chegar, itens, CFOP e tributos aparecerão aqui automaticamente.</div>}
+  <div className="overflow-y-auto bg-muted/20 p-4 sm:p-6"><div className="mx-auto max-w-5xl bg-white text-black shadow-xl">
+   <div className="border-2 border-black p-3"><div className="grid grid-cols-[1.2fr_1fr] border-b-2 border-black pb-3"><div className="pr-4"><p className="text-[10px] font-bold uppercase">Emitente</p><p className="mt-1 text-lg font-bold">{tag(emit,"xNome")||doc.issuerName||"Emitente não informado"}</p><p className="mt-1 text-xs">CNPJ {formatCnpj(tag(emit,"CNPJ")||doc.issuerCnpj)}</p></div><div className="border-l-2 border-black pl-4 text-center"><p className="text-2xl font-black">{isNFSe?"DANFSe":"DANFE"}</p><p className="text-[10px] font-bold uppercase">{complete?"Documento completo a partir do XML fiscal":"Dados fiscais disponíveis"}</p><div className="mt-2 grid grid-cols-2 gap-2 text-left text-xs"><div><b>Nº</b><br/>{doc.number||tag(ide,"nNF")||"—"}</div><div><b>Série</b><br/>{doc.series||tag(ide,"serie")||"—"}</div></div></div></div>
+   <div className="border-b border-black py-3"><p className="text-[9px] font-bold uppercase">Chave de acesso</p><p className="mt-1 break-all font-mono text-sm font-bold tracking-wide">{doc.accessKey||"—"}</p></div>
+   <div className="grid grid-cols-3 border-b border-black text-xs"><Cell label="Data de emissão" value={dateTime(doc.issueDate||tag(ide,"dhEmi"))}/><Cell label="Tipo" value={doc.direction==="saida"?"Saída":doc.direction==="entrada"?"Entrada":"Relacionado"}/><Cell label="Valor total" value={event?"—":money(tag(tot,"vNF")||doc.value)}/></div>
+   <div className="grid grid-cols-2 border-b border-black text-xs"><Cell label="CNPJ emitente" value={formatCnpj(tag(emit,"CNPJ")||doc.issuerCnpj)}/><Cell label="CNPJ destinatário" value={formatCnpj(tag(dest,"CNPJ")||doc.recipientCnpj)}/></div>
+   {!isNFSe&&complete&&<><div className="border-b border-black p-2 text-xs"><p className="text-[9px] font-bold uppercase">Natureza da operação</p><p className="mt-1 font-semibold">{tag(ide,"natOp")||"—"}</p></div><div className="grid grid-cols-4 border-b border-black text-xs"><Cell label="Produtos" value={money(tag(tot,"vProd"))}/><Cell label="ICMS" value={money(tag(tot,"vICMS"))}/><Cell label="IPI" value={money(tag(tot,"vIPI"))}/><Cell label="Total NF" value={money(tag(tot,"vNF")||doc.value)}/></div></>}
+   {isNFSe&&complete&&<div className="border-b border-black p-3 text-xs"><p className="text-[9px] font-bold uppercase">Serviço</p><p className="mt-1 font-semibold">{tag(serv,"xDescServ")||tag(doc.xml,"xDescServ")||tag(doc.xml,"xTribNac")||"Serviço constante no XML"}</p></div>}
+   <div className="grid grid-cols-3 text-xs"><Cell label="Status" value={doc.statusText||doc.statusCode||"—"}/><Cell label="NSU" value={doc.nsu||"—"}/><Cell label="Schema" value={doc.schema||"—"}/></div></div>
+   {!isNFSe&&complete&&<div className="border-x-2 border-b-2 border-black"><div className="border-b border-black bg-neutral-100 px-3 py-2 text-[10px] font-black uppercase">Itens da nota · {items.length}</div><div className="overflow-x-auto"><table className="w-full min-w-[900px] border-collapse text-[10px]"><thead><tr className="border-b border-black"><th className="p-2 text-left">Item / Produto</th><th className="p-2 text-left">NCM</th><th className="p-2 text-left">CFOP</th><th className="p-2 text-right">Qtd</th><th className="p-2 text-right">Unit.</th><th className="p-2 text-right">Total</th><th className="p-2 text-right">ICMS</th></tr></thead><tbody>{items.map((det,i)=>{const p=tag(det,"prod"),imp=tag(det,"imposto"),icms=tag(imp,"ICMS");return <tr key={i} className="border-b border-neutral-300 last:border-0"><td className="p-2"><b>{i+1}. {tag(p,"xProd")||"Produto"}</b><br/><span className="text-neutral-600">Cód. {tag(p,"cProd")||"—"}</span></td><td className="p-2">{tag(p,"NCM")||"—"}</td><td className="p-2 font-bold">{tag(p,"CFOP")||"—"}</td><td className="p-2 text-right">{tag(p,"qCom")||"—"} {tag(p,"uCom")||""}</td><td className="p-2 text-right">{money(tag(p,"vUnCom"))}</td><td className="p-2 text-right font-bold">{money(tag(p,"vProd"))}</td><td className="p-2 text-right">{money(tag(icms,"vICMS"))}</td></tr>})}</tbody></table></div></div>}
+   <div className="px-3 py-2 text-[9px] text-neutral-600">Para validade fiscal, prevalecem o XML autorizado e o protocolo da SEFAZ. Quando o XML está disponível, esta visualização é montada diretamente a partir dele.</div>
+  </div></div></div></div>
 }
-
-function Cell({ label, value }: { label: string; value: string }) { return <div className="min-h-16 border-r border-black p-2 last:border-r-0"><p className="text-[9px] font-bold uppercase">{label}</p><p className="mt-1 break-words font-semibold">{value}</p></div>; }
+function Cell({label,value}:{label:string;value:string}){return <div className="min-h-16 border-r border-black p-2 last:border-r-0"><p className="text-[9px] font-bold uppercase">{label}</p><p className="mt-1 break-words font-semibold">{value}</p></div>}
