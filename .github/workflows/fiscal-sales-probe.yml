@@ -1,0 +1,96 @@
+name: Fiscal sales probe
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/fiscal-sales-probe.yml'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  backfill-sales:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Extract NFC-e sales
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os, re, json, time, requests
+
+          SUPABASE='https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/github-fiscal-runner'
+          CONSIT='https://ws-svrs-consit.vercel.app/api/consit'
+          DOWNLOAD='https://ws-svrs-consit.vercel.app/api/download'
+
+          oidc_url=os.environ['ACTIONS_ID_TOKEN_REQUEST_URL']
+          sep='&' if '?' in oidc_url else '?'
+          rr=requests.get(oidc_url+sep+'audience=ws-fiscal-runner',headers={'Authorization':'Bearer '+os.environ['ACTIONS_ID_TOKEN_REQUEST_TOKEN']},timeout=20)
+          rr.raise_for_status()
+          oidc=rr.json()['value']
+          h={'Authorization':'Bearer '+oidc,'content-type':'application/json'}
+          lease=requests.post(SUPABASE,headers=h,json={'mode':'lease'},timeout=30)
+          lease.raise_for_status()
+          sec=lease.json()
+          pfx=sec['pfx_base64']; pwd=sec['password']; cnpj=sec['cnpj']
+
+          def dv(base):
+              total=0; w=2
+              for ch in reversed(base):
+                  total += int(ch)*w
+                  w = 2 if w==9 else w+1
+              d=11-(total%11)
+              return str(0 if d>=10 else d)
+
+          def fake_key(month,n):
+              base='27'+month+cnpj+'65'+'001'+str(n).zfill(9)+'1'+'00000000'
+              return base+dv(base)
+
+          found=[]; probes=[]
+          month='2608'
+          for n in range(1189,1099,-1):
+              fake=fake_key(month,n)
+              cons=f'<consSitNFe versao="4.00" xmlns="http://www.portalfiscal.inf.br/nfe"><tpAmb>1</tpAmb><xServ>CONSULTAR</xServ><chNFe>{fake}</chNFe></consSitNFe>'
+              soap='<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeConsultaProtocolo4">'+cons+'</nfeDadosMsg></soap12:Body></soap12:Envelope>'
+              try:
+                  cr=requests.post(CONSIT,json={'certificate_base64':pfx,'certificate_password':pwd,'soap_body':soap},timeout=30)
+                  co=cr.json(); txt=str(co.get('body') or '')
+                  sm=re.search(r'<cStat>(\d+)</cStat>',txt); mm=re.search(r'<xMotivo>([\s\S]*?)</xMotivo>',txt)
+                  stat=sm.group(1) if sm else None; motivo=mm.group(1) if mm else None
+                  real=None
+                  if motivo:
+                      km=re.search(r'\[(\d{44})\]',motivo)
+                      if km: real=km.group(1)
+                  if not real:
+                      keys=[k for k in re.findall(r'\b\d{44}\b',txt) if k!=fake]
+                      if keys: real=keys[0]
+                  probes.append({'note_number':n,'synthetic_key':fake,'cstat':stat,'xmotivo':motivo,'real_key':real,'raw_response':txt[:30000]})
+                  if real:
+                      dr=requests.post(DOWNLOAD,json={'certificate_base64':pfx,'certificate_password':pwd,'access_key':real},timeout=30)
+                      dj=dr.json(); html=str(dj.get('body_text') or '')
+                      jm=re.search(r'var\s+stringJson\s*=\s*(\{[\s\S]*?\})\s*;',html)
+                      xml=None
+                      if jm:
+                          try: xml=json.loads(jm.group(1)).get('xml')
+                          except Exception: pass
+                      if xml:
+                          found.append({'note_number':n,'access_key':real,'xml':xml,'month':month,'cstat':stat})
+                          if len(found)%8==0:
+                              sr=requests.post(SUPABASE,headers=h,json={'mode':'sales_result','results':found[-8:]},timeout=45)
+                              sr.raise_for_status()
+                  time.sleep(0.15)
+              except Exception as e:
+                  print(f'note {n}: {type(e).__name__}')
+
+          if found:
+              rem=len(found)%8
+              if rem:
+                  sr=requests.post(SUPABASE,headers=h,json={'mode':'sales_result','results':found[-rem:]},timeout=45)
+                  sr.raise_for_status()
+          if probes:
+              pr=requests.post(SUPABASE,headers=h,json={'mode':'result','results':probes},timeout=45)
+              pr.raise_for_status()
+          print(json.dumps({'scanned':90,'found_xml':len(found),'numbers':[x['note_number'] for x in found]},ensure_ascii=False))
+          PY
