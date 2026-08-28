@@ -35,9 +35,9 @@ jobs:
           def fake_key(month,n):
               base='27'+month+cnpj+'65'+'001'+str(n).zfill(9)+'1'+'00000000'; return base+dv(base)
           found=[]; probes=[]
-          for n in range(1099,999,-1):
+          for n in range(999,899,-1):
               got=False
-              for month in ('2608','2607'):
+              for month in ('2607','2606'):
                   fake=fake_key(month,n)
                   cons=f'<consSitNFe versao="4.00" xmlns="http://www.portalfiscal.inf.br/nfe"><tpAmb>1</tpAmb><xServ>CONSULTAR</xServ><chNFe>{fake}</chNFe></consSitNFe>'
                   soap='<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeConsultaProtocolo4">'+cons+'</nfeDadosMsg></soap12:Body></soap12:Envelope>'
@@ -58,8 +58,7 @@ jobs:
                               except Exception: pass
                           if xml:
                               found.append({'note_number':n,'access_key':real,'xml':xml,'month':month,'cstat':stat}); got=True
-                              if len(found)%8==0:
-                                  sr=requests.post(SUPABASE,headers=h,json={'mode':'sales_result','results':found[-8:]},timeout=45); sr.raise_for_status()
+                              if len(found)%8==0: requests.post(SUPABASE,headers=h,json={'mode':'sales_result','results':found[-8:]},timeout=45).raise_for_status()
                               break
                   except Exception as e: print(f'note {n}/{month}: {type(e).__name__}')
                   time.sleep(0.1)
