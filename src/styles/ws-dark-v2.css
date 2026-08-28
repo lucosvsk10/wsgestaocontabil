@@ -1,0 +1,115 @@
+/* WS dark theme v2: principal 25% mais escuro que #46413d; superfícies 35% mais escuras. */
+.theme-ws-dark {
+  --background: 26 7% 19.4%; /* #35312e */
+  --foreground: 0 0% 100%;
+  --card: 20 7% 16.86%; /* #2e2a28 */
+  --card-foreground: 0 0% 100%;
+  --popover: 20 7% 16.86%;
+  --popover-foreground: 0 0% 100%;
+  --secondary: 20 7% 16.86%;
+  --secondary-foreground: 0 0% 92%;
+  --muted: 20 7% 16.86%;
+  --muted-foreground: 24 6% 74%;
+  --accent: 20 7% 19%;
+  --accent-foreground: 0 0% 98%;
+  --border: 22 7% 24%;
+  --input: 22 7% 21%;
+  --sidebar-background: 20 7% 16.86%; /* #2e2a28 */
+  --sidebar-foreground: 0 0% 100%;
+  --sidebar-accent: 22 7% 20%;
+  --sidebar-accent-foreground: 0 0% 100%;
+  --sidebar-border: 22 7% 24%;
+}
+
+/* A área principal fica no tom 25% mais escuro. */
+.theme-ws-dark body,
+.theme-ws-dark #root,
+.theme-ws-dark .pro-ui,
+.theme-ws-dark .pro-ui main {
+  background-color: #35312e !important;
+}
+
+/* Não aplique cor forçada nos wrappers intermediários: isso estava achatando/quebrando visualmente abas e painéis. */
+.theme-ws-dark .pro-ui > div {
+  background-color: transparent !important;
+}
+
+/* Navbar, sidebar e superfícies estruturais ficam 35% mais escuras. */
+.theme-ws-dark .pro-ui aside,
+.theme-ws-dark .pro-ui header,
+.theme-ws-dark header,
+.theme-ws-dark nav {
+  background-color: #2e2a28 !important;
+  border-color: #403b38 !important;
+}
+
+/* Componentes semânticos seguem o tom de superfície. */
+.theme-ws-dark .bg-card,
+.theme-ws-dark .bg-popover,
+.theme-ws-dark .bg-secondary,
+.theme-ws-dark .bg-muted {
+  background-color: #2e2a28 !important;
+}
+
+/* Compatibilidade apenas com fundos legados azul-marinho; sem atingir wrappers genéricos. */
+.theme-ws-dark .pro-ui [class*="dark:bg-[#020817]"],
+.theme-ws-dark .pro-ui [class*="dark:bg-[#0b0f1c]"],
+.theme-ws-dark .pro-ui [class*="dark:bg-[#0f172a]"],
+.theme-ws-dark .pro-ui [class*="dark:bg-[#111827]"],
+.theme-ws-dark .pro-ui [class*="bg-[#020817]"],
+.theme-ws-dark .pro-ui [class*="bg-[#0b0f1c]"] {
+  background-color: #2e2a28 !important;
+}
+
+/* Cards/painéis/tabelas: preserva estrutura e contraste. */
+.theme-ws-dark .pro-ui [data-radix-tabs-content],
+.theme-ws-dark .pro-ui [role="tabpanel"],
+.theme-ws-dark .pro-ui .rounded-lg[class*="border"],
+.theme-ws-dark .pro-ui .rounded-xl[class*="border"] {
+  border-color: #403b38;
+}
+
+.theme-ws-dark .pro-ui table > tbody > tr:not([class*="bg-"]):nth-child(odd) {
+  background-color: #35312e;
+}
+
+.theme-ws-dark .pro-ui table > tbody > tr:not([class*="bg-"]):nth-child(even) {
+  background-color: #322e2b;
+}
+
+/* Botões: fundo de superfície quando forem neutros, preservando cores funcionais. */
+.theme-ws-dark .pro-ui button:not([class*="bg-green"]):not([class*="bg-red"]):not([class*="bg-blue"]):not([class*="bg-purple"]):not([class*="bg-yellow"]):not([class*="bg-emerald"]),
+.theme-ws-dark .pro-ui [role="button"]:not([class*="bg-green"]):not([class*="bg-red"]):not([class*="bg-blue"]):not([class*="bg-purple"]):not([class*="bg-yellow"]):not([class*="bg-emerald"]) {
+  border-color: #403b38;
+}
+
+/* Tabs e itens ativos ganham separação sem perder a paleta WS. */
+.theme-ws-dark .pro-ui [role="tablist"] {
+  background-color: #2e2a28;
+  border-color: #403b38;
+}
+
+.theme-ws-dark .pro-ui [role="tab"][data-state="active"],
+.theme-ws-dark .pro-ui [aria-current="page"] {
+  background-color: #393431 !important;
+}
+
+/* Texto: títulos brancos, subtítulos degradando suavemente. */
+.theme-ws-dark h1,
+.theme-ws-dark h2,
+.theme-ws-dark h3,
+.theme-ws-dark h4,
+.theme-ws-dark h5,
+.theme-ws-dark h6 {
+  color: #fff;
+}
+
+.theme-ws-dark .text-muted-foreground {
+  color: rgba(255,255,255,.68) !important;
+}
+
+/* Scrollbar sem trilho branco. */
+.theme-ws-dark *::-webkit-scrollbar-track,
+.theme-ws-dark *::-webkit-scrollbar-corner {
+  background: transparent !important;
+}
