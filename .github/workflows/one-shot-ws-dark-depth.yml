@@ -1,0 +1,136 @@
+name: One-shot WS dark depth
+on: push
+jobs:
+  patch:
+    if: contains(github.event.head_commit.message, 'trigger ws dark depth fix')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch theme depth and zebra rows
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/styles/base.css')
+          s=p.read_text()
+          start=s.index('  .theme-ws-dark {')
+          end=s.index('\n  }\n}', start)+5
+          block='''  .theme-ws-dark {
+    /* Fundo principal: ~25% mais escuro que #46413d */
+    --background: 26 7% 19.4%; /* #35312e */
+    --foreground: 0 0% 100%;
+
+    /* Cards, navbar, sidebar, botões e superfícies: ~35% mais escuros */
+    --card: 20 7% 16.9%; /* #2e2a28 */
+    --card-foreground: 0 0% 100%;
+    --popover: 20 7% 16.9%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 20 7% 16.9%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 22 7% 18.2%;
+    --secondary-foreground: 0 0% 94%;
+    --muted: 20 7% 16.9%;
+    --muted-foreground: 26 6% 76%;
+    --accent: 23 7% 21%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 47% 34%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 24 8% 25%;
+    --input: 24 8% 23%;
+    --ring: 42 79% 61%;
+
+    --sidebar-background: 20 7% 16.9%; /* #2e2a28 */
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 42 79% 61%;
+    --sidebar-primary-foreground: 26 7% 14%;
+    --sidebar-accent: 23 7% 21%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 24 8% 25%;
+    --sidebar-ring: 42 79% 61%;
+  }
+}'''
+          s=s[:start]+block+s[end:]
+
+          s=s.replace('background-color: #22201e !important;', 'background-color: #35312e !important;')
+          s=s.replace('background-color: #302c2a !important;', 'background-color: #2e2a28 !important;')
+          s=s.replace('background-color: #22201e !important;\n    color: #fff;', 'background-color: #35312e !important;\n    color: #fff;')
+          s=s.replace('''  .theme-ws-dark .pro-ui > div,
+  .theme-ws-dark .pro-ui main {
+    background-color: #22201e;
+  }
+
+''','')
+          s=s.replace('background-color: #2a2725 !important;', 'background-color: #2e2a28 !important;')
+
+          marker='''  .dark table > tbody > tr:not([class*="bg-"]):hover {
+    background-color: hsl(199 89% 60% / 0.12);
+  }
+'''
+          zebra='''
+
+  /* Linhas alternadas consistentes nos três temas. */
+  :root:not(.dark) table > tbody > tr.ws-zebra-row:nth-child(odd) {
+    background-color: #ffffff !important;
+  }
+  :root:not(.dark) table > tbody > tr.ws-zebra-row:nth-child(even) {
+    background-color: #f3f4f6 !important;
+  }
+  :root:not(.dark) table > tbody > tr.ws-zebra-row:hover {
+    background-color: #e9ecef !important;
+  }
+  .dark:not(.theme-ws-dark) table > tbody > tr.ws-zebra-row:nth-child(odd) {
+    background-color: hsl(222 84% 5%) !important;
+  }
+  .dark:not(.theme-ws-dark) table > tbody > tr.ws-zebra-row:nth-child(even) {
+    background-color: hsl(217 32% 12.5%) !important;
+  }
+  .dark:not(.theme-ws-dark) table > tbody > tr.ws-zebra-row:hover {
+    background-color: hsl(217 32% 17%) !important;
+  }
+  .theme-ws-dark table > tbody > tr.ws-zebra-row:nth-child(odd) {
+    background-color: #2e2a28 !important;
+  }
+  .theme-ws-dark table > tbody > tr.ws-zebra-row:nth-child(even) {
+    background-color: #393431 !important;
+  }
+  .theme-ws-dark table > tbody > tr.ws-zebra-row:hover {
+    background-color: #403a36 !important;
+  }
+  table > tbody > tr.ws-zebra-row.ws-zebra-cancelled {
+    background-color: hsl(var(--destructive) / 0.13) !important;
+  }
+
+  /* O admin deve manter o fundo principal separado das superfícies internas. */
+  .theme-ws-dark .pro-ui main {
+    background-color: #35312e !important;
+  }
+  .theme-ws-dark .pro-ui section,
+  .theme-ws-dark .pro-ui [class*="bg-muted/10"],
+  .theme-ws-dark .pro-ui [class*="bg-muted/15"],
+  .theme-ws-dark .pro-ui [class*="bg-muted/20"],
+  .theme-ws-dark .pro-ui [class*="bg-muted/25"],
+  .theme-ws-dark .pro-ui [class*="bg-muted/30"],
+  .theme-ws-dark .pro-ui [class*="bg-muted/35"] {
+    background-color: #2e2a28 !important;
+    border-color: #4a4541;
+  }
+  .theme-ws-dark .pro-ui button:not([class*="bg-emerald"]):not([class*="bg-red"]):not([class*="bg-destructive"]):not([class*="bg-blue"]):not([class*="bg-purple"]) {
+    background-color: #2e2a28;
+  }
+  .theme-ws-dark .pro-ui button:hover:not([class*="bg-emerald"]):not([class*="bg-red"]):not([class*="bg-destructive"]):not([class*="bg-blue"]):not([class*="bg-purple"]) {
+    background-color: #3a3532;
+  }
+'''
+          if marker not in s:
+              raise SystemExit('zebra marker missing')
+          s=s.replace(marker,marker+zebra,1)
+          p.write_text(s)
+          PY
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/styles/base.css
+          git commit -m "fix: restore theme depth and zebra rows in all modes"
+          git push
