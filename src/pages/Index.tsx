@@ -35,7 +35,7 @@ const Index = () => {
       });
     };
   }, []);
-  return <div className="relative min-h-screen bg-[#FFF1DE] dark:bg-[#020817]">
+  return <div className="ws-page-surface relative min-h-screen">
       <Navbar />
       <div id="main-content">
         <main>
@@ -49,19 +49,9 @@ const Index = () => {
         </main>
         <Footer />
       </div>
-      
-      {/* Poll Widget */}
       <PollWidget />
-      
-      {/* Zoom Control */}
       <ZoomControl />
-      
-      {/* Fixed navigation dots */}
-      <div className="fixed right-6 top-1/2 transform -translate-y-1/2 z-40 hidden lg:block">
-        
-      </div>
-      
-      {/* Floating Tools Menu */}
+      <div className="fixed right-6 top-1/2 transform -translate-y-1/2 z-40 hidden lg:block" />
       <FloatingToolsMenu />
     </div>;
 };
