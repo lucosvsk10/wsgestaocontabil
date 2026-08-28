@@ -21,10 +21,12 @@ type Company = {
 type Doc = {
   nsu?: string;
   schema?: string;
-  documentKind?: "nfe" | "resumo" | "evento" | "documento";
+  source?: string;
+  documentKind?: "nfe" | "nfse" | "resumo" | "evento" | "documento";
   fullXml?: boolean;
   direction?: "entrada" | "saida" | "relacionada";
   accessKey?: string;
+  model?: string;
   issueDate?: string;
   value?: number;
   issuerCnpj?: string;
@@ -33,6 +35,7 @@ type Doc = {
   number?: string;
   series?: string;
   statusCode?: string;
+  statusText?: string;
   xml?: string;
   parseError?: string;
 };
@@ -70,14 +73,33 @@ const eventDescription = (doc: Doc) => {
   if (doc.documentKind !== "evento") return "";
   return xmlTag(doc.xml, "descEvento") || xmlTag(doc.xml, "xEvento") || "Evento fiscal";
 };
+const docModel = (d: Doc) => String(d.model || (d.accessKey && /^\d{44}$/.test(d.accessKey) ? d.accessKey.slice(20, 22) : ""));
+const docType = (d: Doc) => {
+  if (d.documentKind === "evento") return "Evento";
+  const hint = `${d.documentKind || ""} ${d.schema || ""} ${d.source || ""}`.toLowerCase();
+  if (hint.includes("nfse") || hint.includes("nfs-e")) return "NFS-e";
+  if (docModel(d) === "65") return "NFC-e";
+  if (docModel(d) === "55") return "NF-e";
+  return "Documento";
+};
+const isCancelledDoc = (d: Doc) => ["101", "151", "155"].includes(String(d.statusCode || "")) || /cancel/i.test(String(d.statusText || ""));
+const statusLabel = (d: Doc) => {
+  if (d.documentKind === "evento") return "Evento";
+  if (isCancelledDoc(d)) return "Cancelada";
+  if (/deneg/i.test(String(d.statusText || "")) || ["110", "301", "302"].includes(String(d.statusCode || ""))) return "Denegada";
+  if (["1", "100", "150"].includes(String(d.statusCode || "")) || /autoriz|ativa/i.test(String(d.statusText || ""))) return "Autorizada";
+  return d.statusText || "Fiscal";
+};
 function rowToDoc(r: any): Doc {
   return {
     nsu: r.nsu,
     schema: r.schema_name,
+    source: r.source,
     documentKind: r.document_kind,
     fullXml: r.full_xml,
     direction: r.direction,
     accessKey: r.access_key,
+    model: r.model,
     issueDate: r.issue_date,
     value: Number(r.value || 0),
     issuerCnpj: r.issuer_cnpj,
@@ -86,6 +108,7 @@ function rowToDoc(r: any): Doc {
     number: r.note_number,
     series: r.series,
     statusCode: r.status_code,
+    statusText: r.status_text,
     xml: r.xml,
     parseError: r.parse_error,
   };
@@ -202,7 +225,7 @@ export default function AdminFiscalNotes() {
   const emitted = periodDocs.filter(d => d.direction === "saida" && d.documentKind !== "evento");
   const received = periodDocs.filter(d => d.direction === "entrada" && d.documentKind !== "evento");
   const events = periodDocs.filter(d => d.documentKind === "evento");
-  const cancelled = periodDocs.filter(d => d.documentKind !== "evento" && ["101", "155"].includes(String(d.statusCode || "")));
+  const cancelled = periodDocs.filter(d => d.documentKind !== "evento" && isCancelledDoc(d));
   const fiscalDocs = periodDocs.filter(d => d.documentKind !== "evento");
   const withXml = fiscalDocs.filter(d => d.fullXml && d.xml);
 
@@ -210,10 +233,10 @@ export default function AdminFiscalNotes() {
     if (filter === "saida" && (d.direction !== "saida" || d.documentKind === "evento")) return false;
     if (filter === "entrada" && (d.direction !== "entrada" || d.documentKind === "evento")) return false;
     if (filter === "evento" && d.documentKind !== "evento") return false;
-    if (filter === "cancelada" && (d.documentKind === "evento" || !["101", "155"].includes(String(d.statusCode || "")))) return false;
+    if (filter === "cancelada" && (d.documentKind === "evento" || !isCancelledDoc(d))) return false;
     const q = query.trim().toLowerCase();
     if (!q) return true;
-    return [d.number, d.accessKey, d.issuerName, d.issuerCnpj, d.recipientCnpj, d.nsu, d.series, eventDescription(d)]
+    return [d.number, d.accessKey, d.issuerName, d.issuerCnpj, d.recipientCnpj, d.nsu, d.series, d.statusText, docType(d), eventDescription(d)]
       .some(v => String(v || "").toLowerCase().includes(q));
   }), [periodDocs, filter, query]);
 
@@ -308,8 +331,8 @@ export default function AdminFiscalNotes() {
   const exportCsv = () => {
     if (!filtered.length) return;
     const rows = [
-      ["Emissão", "Tipo", "Nota", "Série", "Chave", "Emitente", "CNPJ Emitente", "CNPJ Destinatário", "Valor", "NSU", "Evento"],
-      ...filtered.map(d => [date(d.issueDate), d.documentKind === "evento" ? "evento" : d.direction || "", d.number || "", d.series || "", d.accessKey || "", d.issuerName || "", d.issuerCnpj || "", d.recipientCnpj || "", String(d.value || 0).replace(".", ","), d.nsu || "", eventDescription(d)]),
+      ["Emissão", "Tipo", "Situação", "Nota", "Série", "Chave", "Emitente", "CNPJ Emitente", "CNPJ Destinatário", "Valor", "NSU", "Evento"],
+      ...filtered.map(d => [date(d.issueDate), docType(d), statusLabel(d), d.number || "", d.series || "", d.accessKey || "", d.issuerName || "", d.issuerCnpj || "", d.recipientCnpj || "", String(d.value || 0).replace(".", ","), d.nsu || "", eventDescription(d)]),
     ];
     const csv = rows.map(r => r.map(v => `"${String(v).replaceAll('"', '""')}"`).join(";")).join("\n");
     const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
@@ -342,7 +365,7 @@ export default function AdminFiscalNotes() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <SoftPill>NF-e</SoftPill><SoftPill>NFC-e</SoftPill><SoftPill>NF-e ent.</SoftPill>
+            <SoftPill>NF-e</SoftPill><SoftPill>NFC-e</SoftPill><SoftPill>NFS-e</SoftPill>
             <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${certValid ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-destructive/10 text-destructive"}`}>
               <ShieldCheck className="h-3.5 w-3.5" />{certValid ? "Certificado válido" : "Certificado pendente"}
             </span>
@@ -393,7 +416,7 @@ export default function AdminFiscalNotes() {
         </div>
 
         <div className="flex items-center gap-2 px-4 pb-3">
-          <div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input className="border-0 bg-muted/30 pl-9 shadow-none focus-visible:ring-1" value={query} onChange={e => setQuery(e.target.value)} placeholder="Buscar por número, chave, empresa, CNPJ, NSU ou evento..." /></div>
+          <div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input className="border-0 bg-muted/30 pl-9 shadow-none focus-visible:ring-1" value={query} onChange={e => setQuery(e.target.value)} placeholder="Buscar por número, chave, empresa, CNPJ, NSU, tipo, situação ou evento..." /></div>
           <Button variant="ghost" size="icon" title={certValid ? "Sincronizar" : "Configure um certificado válido"} onClick={sync} disabled={syncing || !certValid}>{syncing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}</Button>
           <Button variant="ghost" onClick={exportCsv} disabled={!filtered.length}><Download className="mr-2 h-4 w-4" />Download</Button>
         </div>
@@ -407,12 +430,16 @@ export default function AdminFiscalNotes() {
             <tbody>{pageDocs.length ? pageDocs.map((d, i) => {
               const isEvent = d.documentKind === "evento";
               const eventName = eventDescription(d);
-              return <tr key={`${d.nsu}-${d.accessKey}-${i}`} className="transition hover:bg-muted/10">
+              const type = docType(d);
+              const status = statusLabel(d);
+              const cancelledDoc = isCancelledDoc(d);
+              const denegada = status === "Denegada";
+              return <tr key={`${d.nsu}-${d.accessKey}-${i}`} className={`transition hover:bg-muted/10 ${cancelledDoc ? "bg-red-500/[.035]" : ""}`}>
                 <td className="px-4 py-3.5"><p className="font-semibold">{date(d.issueDate)}</p><p className="text-xs text-muted-foreground">{time(d.issueDate)}</p></td>
                 <td className="px-4 py-3.5"><p className={d.fullXml ? "font-medium" : "text-muted-foreground"}>{isEvent ? "Evento" : d.fullXml ? "Disponível" : "Resumo"}</p><p className="text-xs text-muted-foreground">{isEvent ? "XML do evento" : d.fullXml ? "XML completo" : "Sem XML completo"}</p></td>
-                <td className="px-4 py-3.5">{isEvent ? <><div className="flex items-center gap-2"><span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">EVENTO</span><b className="text-xs">{eventName}</b></div><p className="mt-1 max-w-64 truncate text-[10px] text-muted-foreground">{d.accessKey}</p></> : <><div className="flex items-center gap-2"><b>{d.number || "—"}</b><span className="text-xs text-muted-foreground">/ {d.series || "1"}</span><span className="rounded-full bg-muted/50 px-2 py-0.5 text-[10px] font-semibold">{d.direction === "saida" ? "NF-e" : "NF-e ent."}</span></div><p className="mt-1 max-w-44 truncate text-[10px] text-muted-foreground">{d.accessKey}</p></>}</td>
+                <td className="px-4 py-3.5">{isEvent ? <><div className="flex items-center gap-2"><TypeTag type="Evento" /><b className="text-xs">{eventName}</b></div><p className="mt-1 max-w-64 truncate text-[10px] text-muted-foreground">{d.accessKey}</p></> : <><div className="flex flex-wrap items-center gap-2"><b>{d.number || "—"}</b><span className="text-xs text-muted-foreground">/ {d.series || "1"}</span><TypeTag type={type} /><StatusTag status={status} danger={cancelledDoc} warning={denegada} /></div><p className="mt-1 max-w-44 truncate text-[10px] text-muted-foreground">{d.accessKey}</p></>}</td>
                 <td className="px-4 py-3.5"><p className="max-w-[280px] truncate font-medium">{isEvent ? "Documento fiscal relacionado" : d.direction === "saida" ? (d.recipientCnpj || "Consumidor") : (d.issuerName || "—")}</p><p className="text-xs text-muted-foreground">{isEvent ? d.accessKey : d.direction === "saida" ? d.recipientCnpj : d.issuerCnpj}</p></td>
-                <td className="px-4 py-3.5"><p className="max-w-[280px] truncate">{isEvent ? eventName : d.direction === "saida" ? "Venda de mercadoria" : "Compra / documento recebido"}</p><p className="text-xs text-muted-foreground">{isEvent ? `cStat ${d.statusCode || "—"} · NSU ${d.nsu || "—"}` : d.schema || "DF-e"}</p></td>
+                <td className="px-4 py-3.5"><p className="max-w-[280px] truncate">{isEvent ? eventName : d.direction === "saida" ? "Venda de mercadoria" : "Compra / documento recebido"}</p><p className="text-xs text-muted-foreground">{isEvent ? `cStat ${d.statusCode || "—"} · NSU ${d.nsu || "—"}` : `${type} · ${status}`}</p></td>
                 <td className="px-4 py-3.5 text-right font-semibold">{isEvent ? "—" : money(Number(d.value || 0))}</td>
                 <td className="px-4 py-3.5"><div className="flex justify-end"><Button size="sm" variant="ghost" onClick={() => setSelected(d)}><FileText className="mr-1.5 h-4 w-4" />Visualizar</Button></div></td>
               </tr>;
@@ -432,6 +459,14 @@ export default function AdminFiscalNotes() {
 
 function SoftPill({ children }: { children: React.ReactNode }) {
   return <span className="rounded-full bg-muted/45 px-3 py-1 text-xs font-medium text-muted-foreground">{children}</span>;
+}
+function TypeTag({ type }: { type: string }) {
+  const cls = type === "NFS-e" ? "bg-violet-500/10 text-violet-700 dark:text-violet-300" : type === "NFC-e" ? "bg-orange-500/10 text-orange-700 dark:text-orange-300" : type === "Evento" ? "bg-amber-500/10 text-amber-700 dark:text-amber-300" : "bg-sky-500/10 text-sky-700 dark:text-sky-300";
+  return <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${cls}`}>{type}</span>;
+}
+function StatusTag({ status, danger, warning }: { status: string; danger?: boolean; warning?: boolean }) {
+  const cls = danger ? "bg-red-500/10 text-red-700 dark:text-red-300" : warning ? "bg-amber-500/10 text-amber-700 dark:text-amber-300" : status === "Autorizada" ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "bg-muted/55 text-muted-foreground";
+  return <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${cls}`}>{status}</span>;
 }
 function FilterPill({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return <button onClick={onClick} className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${active ? "bg-foreground text-background shadow-sm" : "bg-muted/35 text-muted-foreground hover:bg-muted/60 hover:text-foreground"}`}>{children}</button>;
