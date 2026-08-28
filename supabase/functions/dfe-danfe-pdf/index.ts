@@ -1,82 +1,12 @@
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
-import { PDFDocument, StandardFonts, rgb } from "npm:pdf-lib@1.17.1";
-
-const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
-const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
-const digits = (v: unknown) => String(v ?? "").replace(/\D/g, "");
-const money = (v: unknown) => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-const fmtCnpj = (v: unknown) => { const d = digits(v); return d.length === 14 ? d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5") : String(v || "-"); };
-const fmtDate = (v: unknown) => { const d = new Date(String(v || "")); return Number.isNaN(d.getTime()) ? String(v || "-") : d.toLocaleString("pt-BR"); };
-const clean = (v: unknown) => String(v ?? "").replace(/[\r\n\t]+/g, " ").trim();
-
-function wrap(text: string, max: number) {
-  const words = text.split(/\s+/).filter(Boolean); const lines: string[] = []; let line = "";
-  for (const word of words) { const next = line ? `${line} ${word}` : word; if (next.length > max && line) { lines.push(line); line = word; } else line = next; }
-  if (line) lines.push(line); return lines.length ? lines : ["-"];
-}
-
-serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
-  try {
-    const auth = req.headers.get("Authorization"); if (!auth) return json({ error: "Não autenticado" }, 401);
-    const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const { data: { user } } = await admin.auth.getUser(auth.replace("Bearer ", "")); if (!user) return json({ error: "Não autenticado" }, 401);
-    const { data: roles } = await admin.from("user_roles").select("role").eq("user_id", user.id);
-    if (!roles?.some((r: any) => r.role === "admin")) return json({ error: "Acesso exclusivo para administradores" }, 403);
-
-    const body = await req.json() as Record<string, any>; const doc = body.document || {};
-    if (doc.documentKind === "evento" || doc.direction === "relacionada") return json({ error: "PDF DANFE disponível apenas para NF-e/NFC-e." }, 422);
-
-    const pdf = await PDFDocument.create();
-    const page = pdf.addPage([595.28, 841.89]);
-    const font = await pdf.embedFont(StandardFonts.Helvetica);
-    const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
-    const black = rgb(0, 0, 0);
-    const margin = 28; const width = 595.28 - margin * 2;
-    const drawText = (text: string, x: number, y: number, size = 9, isBold = false) => page.drawText(clean(text) || "-", { x, y, size, font: isBold ? bold : font, color: black });
-    const box = (x: number, y: number, w: number, h: number) => page.drawRectangle({ x, y, width: w, height: h, borderColor: black, borderWidth: 1 });
-
-    drawText("DANFE", margin + width - 125, 793, 22, true);
-    drawText("Documento Auxiliar da Nota Fiscal Eletrônica", margin + width - 205, 777, 7, true);
-    drawText(doc.issuerName || "Emitente não informado", margin + 8, 799, 13, true);
-    drawText(`CNPJ: ${fmtCnpj(doc.issuerCnpj)}`, margin + 8, 782, 8);
-    box(margin, 762, width, 58);
-    page.drawLine({ start: { x: margin + 330, y: 762 }, end: { x: margin + 330, y: 820 }, thickness: 1, color: black });
-    drawText(`NF-e nº ${doc.number || "-"}`, margin + 344, 750 + 42, 10, true);
-    drawText(`Série ${doc.series || "-"}`, margin + 344, 750 + 27, 9);
-
-    box(margin, 712, width, 42);
-    drawText("CHAVE DE ACESSO", margin + 8, 740, 7, true);
-    const keyLines = wrap(clean(doc.accessKey || "-"), 55);
-    drawText(keyLines[0], margin + 8, 723, 10, true);
-
-    const rowY = 646; box(margin, rowY, width, 58);
-    page.drawLine({ start: { x: margin + width / 3, y: rowY }, end: { x: margin + width / 3, y: rowY + 58 }, thickness: 1, color: black });
-    page.drawLine({ start: { x: margin + 2 * width / 3, y: rowY }, end: { x: margin + 2 * width / 3, y: rowY + 58 }, thickness: 1, color: black });
-    drawText("DATA DE EMISSÃO", margin + 8, rowY + 43, 7, true); drawText(fmtDate(doc.issueDate), margin + 8, rowY + 25, 8);
-    drawText("TIPO", margin + width / 3 + 8, rowY + 43, 7, true); drawText(doc.direction === "saida" ? "SAÍDA" : "ENTRADA", margin + width / 3 + 8, rowY + 25, 10, true);
-    drawText("VALOR TOTAL", margin + 2 * width / 3 + 8, rowY + 43, 7, true); drawText(money(doc.value), margin + 2 * width / 3 + 8, rowY + 25, 11, true);
-
-    box(margin, 578, width, 58);
-    page.drawLine({ start: { x: margin + width / 2, y: 578 }, end: { x: margin + width / 2, y: 636 }, thickness: 1, color: black });
-    drawText("CNPJ EMITENTE", margin + 8, 621, 7, true); drawText(fmtCnpj(doc.issuerCnpj), margin + 8, 602, 9);
-    drawText("CNPJ DESTINATÁRIO", margin + width / 2 + 8, 621, 7, true); drawText(fmtCnpj(doc.recipientCnpj), margin + width / 2 + 8, 602, 9);
-
-    box(margin, 500, width, 66);
-    drawText("DADOS DO DOCUMENTO", margin + 8, 551, 7, true);
-    drawText(`Status: ${doc.statusCode || "-"}`, margin + 8, 532, 8);
-    drawText(`NSU: ${doc.nsu || "-"}`, margin + 8, 516, 8);
-    drawText(`Schema: ${doc.schema || "-"}`, margin + 250, 532, 8);
-
-    drawText("Visualização gerada pelo WS Gestão a partir do XML/DF-e armazenado.", margin, 462, 7);
-    drawText("Para validade fiscal, prevalecem o XML autorizado e o protocolo da SEFAZ.", margin, 450, 7, true);
-
-    const bytes = await pdf.save();
-    let binary = ""; for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-    return json({ ok: true, pdf_base64: btoa(binary), filename: `${doc.accessKey || doc.nsu || "danfe"}.pdf` });
-  } catch (reason) {
-    console.error("dfe-danfe-pdf", reason);
-    return json({ error: reason instanceof Error ? reason.message : String(reason) }, 500);
-  }
-});
+import { PDFDocument, StandardFonts } from "npm:pdf-lib@1.17.1";
+const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type"};
+const J=(b:unknown,s=200)=>new Response(JSON.stringify(b),{status:s,headers:{...cors,"content-type":"application/json"}});
+const clean=(v:unknown)=>String(v??"").replace(/[\r\n\t]+/g," ").replace(/\s+/g," ").trim(),dg=(v:unknown)=>String(v??"").replace(/\D/g,"");
+const tag=(x:string,n:string)=>x.match(new RegExp(`<(?:\\w+:)?${n}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/(?:\\w+:)?${n}>`,`i`))?.[1]?.trim()||"";
+const sections=(x:string,n:string)=>[...x.matchAll(new RegExp(`<(?:\\w+:)?${n}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/(?:\\w+:)?${n}>`,`gi`))].map(m=>m[1]);
+const money=(v:unknown)=>Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+const cnpj=(v:unknown)=>{const d=dg(v);return d.length===14?d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,"$1.$2.$3/$4-$5"):d||"-"};
+function wrap(text:string,max=92){const ws=clean(text).split(" ").filter(Boolean),out:string[]=[];let line="";for(const w of ws){const n=line?`${line} ${w}`:w;if(n.length>max&&line){out.push(line);line=w}else line=n}if(line)out.push(line);return out.length?out:["-"]}
+Deno.serve(async req=>{if(req.method==="OPTIONS")return new Response(null,{headers:cors});try{const auth=req.headers.get("authorization")||"";if(!auth)return J({error:"Não autenticado"},401);const admin=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);const{data:{user}}=await admin.auth.getUser(auth.replace(/^Bearer\s+/i,""));if(!user)return J({error:"Não autenticado"},401);const{data:roles}=await admin.from("user_roles").select("role").eq("user_id",user.id);if(!roles?.some((r:any)=>r.role==="admin"))return J({error:"Acesso exclusivo para administradores"},403);const body=await req.json().catch(()=>({})) as any,doc=body.document||{};if(doc.documentKind==="evento"||doc.direction==="relacionada")return J({error:"PDF não disponível para evento fiscal"},422);const xml=String(doc.xml||""),isNFSe=doc.documentKind==="nfse"||/nfse/i.test(`${doc.schema||""} ${doc.model||""}`),full=Boolean(doc.fullXml&&xml);const pdf=await PDFDocument.create(),font=await pdf.embedFont(StandardFonts.Helvetica),bold=await pdf.embedFont(StandardFonts.HelveticaBold);let page=pdf.addPage([595.28,841.89]),y=805;const margin=34;const line=(txt:string,size=8,b=false,indent=0)=>{for(const l of wrap(txt,Math.max(30,Math.floor((520-indent)/(size*.52))))){if(y<48){page=pdf.addPage([595.28,841.89]);y=805}page.drawText(clean(l)||"-",{x:margin+indent,y,size,font:b?bold:font});y-=size+4}};const gap=(n=5)=>y-=n;line(isNFSe?"DANFSe / Documento Auxiliar da NFS-e":String(doc.model)==="65"?"DANFE NFC-e":"DANFE NF-e",16,true);line(full?"Gerado a partir do XML fiscal completo armazenado.":"XML completo ainda em recuperação — dados fiscais disponíveis.",7,true);line(`Chave: ${doc.accessKey||"-"}`,8,true);line(`Nota ${doc.number||"-"} | Série ${doc.series||"-"} | Emissão ${doc.issueDate?new Date(doc.issueDate).toLocaleString("pt-BR"):"-"} | ${doc.statusText||doc.statusCode||"-"}`);line(`Valor total: ${money(doc.value)}`,10,true);gap(8);if(full){if(isNFSe){const emit=tag(xml,"emit"),toma=tag(xml,"toma"),serv=tag(xml,"serv");line("PRESTADOR",9,true);line(`${tag(emit,"xNome")||doc.issuerName||"-"} — ${cnpj(tag(emit,"CNPJ")||doc.issuerCnpj)}`);line("TOMADOR",9,true);line(`${tag(toma,"xNome")||"-"} — ${cnpj(tag(toma,"CNPJ")||doc.recipientCnpj)}`);gap();line("SERVIÇO",9,true);line(tag(serv,"xDescServ")||tag(xml,"xDescServ")||tag(xml,"xTribNac")||"Serviço constante no XML");line(`Valor do serviço: ${money(tag(xml,"vServ")||tag(xml,"vLiq")||doc.value)}`)}else{const emit=tag(xml,"emit"),dest=tag(xml,"dest"),ide=tag(xml,"ide"),tot=tag(xml,"ICMSTot");line("EMITENTE",9,true);line(`${tag(emit,"xNome")||doc.issuerName||"-"} — CNPJ ${cnpj(tag(emit,"CNPJ")||doc.issuerCnpj)} — IE ${tag(emit,"IE")||"-"}`);line("DESTINATÁRIO",9,true);line(`${tag(dest,"xNome")||"-"} — ${cnpj(tag(dest,"CNPJ")||doc.recipientCnpj)}`);line(`Natureza: ${tag(ide,"natOp")||"-"}`);gap();line("TOTAIS",9,true);line(`Produtos ${money(tag(tot,"vProd"))} | Frete ${money(tag(tot,"vFrete"))} | Desconto ${money(tag(tot,"vDesc"))} | ICMS ${money(tag(tot,"vICMS"))} | IPI ${money(tag(tot,"vIPI"))} | PIS ${money(tag(tot,"vPIS"))} | COFINS ${money(tag(tot,"vCOFINS"))} | NF ${money(tag(tot,"vNF")||doc.value)}`);gap();const itens=sections(xml,"det");line(`ITENS (${itens.length})`,9,true);for(let i=0;i<itens.length;i++){const det=itens[i],prod=tag(det,"prod"),imp=tag(det,"imposto"),icms=tag(imp,"ICMS"),ipi=tag(imp,"IPI"),pis=tag(imp,"PIS"),cof=tag(imp,"COFINS");line(`${i+1}. ${tag(prod,"xProd")||"Produto"}`,8,true);line(`Código ${tag(prod,"cProd")||"-"} | NCM ${tag(prod,"NCM")||"-"} | CFOP ${tag(prod,"CFOP")||"-"} | Qtd ${tag(prod,"qCom")||"-"} ${tag(prod,"uCom")||""} | Unit. ${money(tag(prod,"vUnCom"))} | Total ${money(tag(prod,"vProd"))}`,7,false,8);const tx=[tag(icms,"vICMS")&&`ICMS ${money(tag(icms,"vICMS"))}`,tag(ipi,"vIPI")&&`IPI ${money(tag(ipi,"vIPI"))}`,tag(pis,"vPIS")&&`PIS ${money(tag(pis,"vPIS"))}`,tag(cof,"vCOFINS")&&`COFINS ${money(tag(cof,"vCOFINS"))}`].filter(Boolean).join(" | ");if(tx)line(tx,7,false,8);gap(2)}const prot=tag(xml,"infProt");if(prot){line("PROTOCOLO",9,true);line(`${tag(prot,"nProt")||"-"} — ${tag(prot,"xMotivo")||"-"} — ${tag(prot,"dhRecbto")||"-"}`)}}}else line("O XML completo está sendo recuperado automaticamente. O PDF será enriquecido assim que o arquivo fiscal chegar.",8);const bytes=await pdf.save();let bin="";for(let i=0;i<bytes.length;i+=0x8000)bin+=String.fromCharCode(...bytes.subarray(i,i+0x8000));return J({ok:true,pdf_base64:btoa(bin),filename:`${doc.accessKey||doc.nsu||"danfe"}.pdf`,full_xml:full})}catch(e){return J({error:e instanceof Error?e.message:String(e)},500)}});
