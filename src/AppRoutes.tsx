@@ -23,6 +23,8 @@ import AdminPlanoContas from "./pages/AdminPlanoContas";
 import AdminEngine from "./pages/AdminEngine";
 import AdminFeature from "./pages/AdminFeature";
 import AdminCompanies from "./pages/AdminCompanies";
+import AdminClientProfile from "./pages/AdminClientProfile";
+import AdminClientDocuments from "./pages/AdminClientDocuments";
 import AdminClientFiscalSetup from "./pages/AdminClientFiscalSetup";
 import AdminFiscalCompanies from "./pages/AdminFiscalCompanies";
 import AdminFiscalNotes from "./pages/AdminFiscalNotes";
@@ -45,9 +47,10 @@ const AppRoutes = () => {
 
       <Route path="/admin" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="dashboard" /></PrivateRoute>} />
       <Route path="/admin/clientes" element={<PrivateRoute requiredRole="admin"><AdminCompanies /></PrivateRoute>} />
+      <Route path="/admin/clientes/:companyId" element={<PrivateRoute requiredRole="admin"><AdminClientProfile /></PrivateRoute>} />
       <Route path="/admin/clientes/:companyId/fiscal" element={<PrivateRoute requiredRole="admin"><AdminClientFiscalSetup /></PrivateRoute>} />
       <Route path="/admin/empresas" element={<Navigate to="/admin/clientes" replace />} />
-      <Route path="/admin/users" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="users" /></PrivateRoute>} />
+      <Route path="/admin/users" element={<PrivateRoute requiredRole="admin"><AdminClientDocuments /></PrivateRoute>} />
       <Route path="/admin/user-documents/:userId" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="user-documents" /></PrivateRoute>} />
       <Route path="/admin/company-data/:userId" element={<PrivateRoute requiredRole="admin"><CompanyDataView /></PrivateRoute>} />
       <Route path="/admin/storage" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="storage" /></PrivateRoute>} />
