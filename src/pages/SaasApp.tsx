@@ -7,6 +7,7 @@ import SaasEmission from "@/components/saas/SaasEmission";
 import SaasCompanyProfile from "@/components/saas/SaasCompanyProfile";
 import SaasReports from "@/components/saas/SaasReports";
 import SaasDashboard from "@/components/saas/SaasDashboard";
+import "@/styles/saas-admin-light.css";
 
 const WS_LOGO="/lovable-uploads/f7fdf0cf-f16c-4df7-a92c-964aadea9539.png";
 const cadastroSections=new Set(["Clientes","Fornecedores","Produtos","Serviços","Transportadoras"]);
@@ -32,7 +33,7 @@ export default function SaasApp(){
  else if(active==="Emissão")content=<SaasEmission organizationId={organization?.id||null} documentType={selectedDocument} onChoose={setSelectedDocument}/>;
  else if(active==="Minha Empresa")content=<SaasCompanyProfile organizationId={organization?.id||null} organizationName={organization?.name} onLogoChanged={setLogoUrl}/>;
  else if(active==="Relatórios")content=<SaasReports organizationId={organization?.id||null}/>;
- return <div className="flex min-h-screen bg-background text-foreground" style={lightVars}>
+ return <div className="saas-admin-light flex min-h-screen bg-background text-foreground" style={lightVars}>
   <aside className="sticky top-0 flex h-screen w-72 shrink-0 flex-col border-r border-border/60 bg-background">
    <div className="flex h-20 shrink-0 items-center justify-center border-b border-border/60 px-5"><img src={WS_LOGO} alt="WS Gestão Contábil" className="h-7 object-contain"/></div>
    <div className="border-b border-border/50 px-4 py-4"><button onClick={()=>setActive("Minha Empresa")} className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition hover:bg-muted/45"><div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-xl border border-border/60 bg-muted/25">{logoUrl?<img src={logoUrl} alt="Logo da empresa" className="max-h-7 max-w-7 object-contain"/>:<Building2 className="h-4 w-4 text-muted-foreground"/>}</div><div className="min-w-0"><p className="truncate text-sm font-medium tracking-tight">{organization?.name||"Sua empresa"}</p><p className="mt-0.5 text-[10px] uppercase tracking-[.12em] text-muted-foreground">Ambiente fiscal</p></div></button></div>
