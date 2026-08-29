@@ -1,6 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
-.saas-admin-light { min-height: 100vh; color-scheme: light; font-family: 'Prompt', sans-serif !important; }
+.saas-admin-light { min-height: 100vh; color-scheme: light; font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif !important; font-size: 15px; letter-spacing: -0.005em; }
 .saas-admin-light,
 .saas-admin-light *,
 .saas-admin-light input,
@@ -10,7 +10,10 @@
 .saas-admin-light table,
 .saas-admin-light th,
 .saas-admin-light td,
-.saas-admin-light svg text { font-family: 'Prompt', sans-serif !important; }
+.saas-admin-light svg text { font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif !important; letter-spacing: -0.005em; }
+.saas-admin-light h1,
+.saas-admin-light h2,
+.saas-admin-light h3 { font-weight: 600; letter-spacing: -0.02em; }
 .saas-topbar { background: #202833 !important; border-color: #303946 !important; }
 .saas-emission-group { box-shadow: inset 0 0 0 1px rgba(100,116,139,.10); }
 .saas-emission-group:hover { box-shadow: inset 0 0 0 1px rgba(100,116,139,.16); }
