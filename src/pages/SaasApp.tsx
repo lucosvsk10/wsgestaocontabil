@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import SaasCadastros, { CadastroSection } from "@/components/saas/SaasCadastros";
 
-const WS_LOGO = "/lovable-uploads/4b269729-8d34-4824-8425-cc8c319161a8.png";
+const WS_LOGO = "/lovable-uploads/f7fdf0cf-f16c-4df7-a92c-964aadea9539.png";
 const fieldClass = "!border-[#d9e0e8] !bg-white !text-[#0f1f3d] dark:!bg-white dark:!text-[#0f1f3d] placeholder:!text-[#9aa6b5]";
 
 const groups = [
@@ -128,24 +128,24 @@ const SaasApp = () => {
   const Generic = ({ title, description }: { title: string; description: string }) => <div><h1 className="text-3xl font-semibold tracking-[-0.04em] text-[#10203e]">{title}</h1><p className="mt-2 text-sm text-[#6d7a90]">{description}</p><div className="mt-7 min-h-[360px] rounded-2xl border border-[#e0e5ec] bg-white p-7"><p className="text-sm font-medium text-[#536077]">Esta área será desenvolvida na próxima etapa.</p></div></div>;
 
   const content = useMemo(() => {
-    if (active === "Início") return <Dashboard/>;
+    if (active === "Início") return Dashboard();
     if (cadastroSections.has(active)) return <SaasCadastros organizationId={organization?.id || null} section={active as CadastroSection}/>;
-    if (active === "Emissão") return <Emission/>;
-    if (active === "Relatórios") return <Generic title="Relatórios" description="Indicadores, faturamento e análises das emissões."/>;
-    if (active === "Configurações") return <Generic title="Configurações" description="Dados fiscais da empresa, certificado e preferências de emissão."/>;
-    return <Generic title={active} description="Área em preparação."/>;
-  }, [active, organization?.id, selectedDocument, logoUrl, filter, month]);
+    if (active === "Emissão") return Emission();
+    if (active === "Relatórios") return Generic({title:"Relatórios",description:"Indicadores, faturamento e análises das emissões."});
+    if (active === "Configurações") return Generic({title:"Configurações",description:"Dados fiscais da empresa, certificado e preferências de emissão."});
+    return Generic({title:active,description:"Área em preparação."});
+  }, [active, organization?.id, selectedDocument, filter, month]);
 
   return <div className="min-h-screen bg-[#f6f8fb] text-[#10203e]">
-    <header className="fixed inset-x-0 top-0 z-40 flex h-[74px] items-center border-b border-[#e2e7ee] bg-white px-6"><div className="flex w-[250px] items-center"><img src={WS_LOGO} alt="WS Assessoria Contábil" className="h-12 max-w-[210px] object-contain"/></div><div className="ml-auto flex items-center gap-3"><div className="grid h-9 w-9 place-items-center rounded-full bg-[#eef3fb] text-xs font-semibold text-[#4f6590]">WS</div></div></header>
-    <aside className="fixed bottom-0 left-0 top-[74px] z-30 w-[250px] overflow-y-auto border-r border-[#e3e7ed] bg-white">
+    <header className="fixed inset-x-0 top-0 z-40 flex h-[82px] items-center border-b border-[#e2e7ee] bg-white px-7"><div className="flex w-[250px] items-center"><img src={WS_LOGO} alt="WS Assessoria Contábil" className="h-14 max-w-[230px] object-contain"/></div></header>
+    <aside className="fixed bottom-0 left-0 top-[82px] z-30 w-[250px] overflow-y-auto border-r border-[#e3e7ed] bg-white">
       <div className="border-b border-[#edf0f4] p-4"><input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={handleLogo}/>{logoUrl ? <button onClick={()=>fileRef.current?.click()} className="flex h-[126px] w-full items-center justify-center overflow-hidden rounded-2xl bg-white"><img src={logoUrl} alt="Logomarca da empresa" className="max-h-full max-w-full object-contain"/></button> : <button onClick={()=>fileRef.current?.click()} className="flex h-[126px] w-full flex-col items-center justify-center rounded-2xl border border-dashed border-[#cfd7e2] bg-[#fbfcfe] text-center"><span className="text-sm font-semibold text-[#41516d]">Sua logomarca</span><span className="mt-1 text-xs text-[#8a96a8]">Clique para enviar</span></button>}</div>
       <nav className="p-3"><button onClick={()=>chooseNav("Início")} className={`w-full rounded-xl px-4 py-3 text-left text-sm font-semibold ${active === "Início" ? "bg-[#eaf2ff] text-[#1e63c6]" : "text-[#43526b] hover:bg-[#f5f7fa]"}`}>Início</button>
         <div className="mt-2 space-y-1">{groups.map(group=><div key={group.title}><button onClick={()=>setOpenGroups(prev=>({...prev,[group.title]:!prev[group.title]}))} className="flex w-full items-center justify-between rounded-xl px-4 py-3 text-left text-sm font-semibold text-[#273953] hover:bg-[#f5f7fa]"><span>{group.title}</span><span className="text-xs text-[#8793a4]">{openGroups[group.title] ? "−" : "+"}</span></button>{openGroups[group.title] && <div className="mb-2 ml-3 border-l border-[#e5e9ef] pl-2">{group.items.map(item=><button key={item} onClick={()=>chooseNav(item)} className={`block w-full rounded-lg px-3 py-2.5 text-left text-sm ${active === item || (item.startsWith("Emitir ") && selectedDocument === item.replace("Emitir ","")) ? "bg-[#eef4fd] font-semibold text-[#2468c7]" : "text-[#657289] hover:bg-[#f6f8fb] hover:text-[#273953]"}`}>{item}</button>)}</div>}</div>)}</div>
         <div className="mt-3 border-t border-[#edf0f4] pt-3"><button onClick={()=>chooseNav("Relatórios")} className={`w-full rounded-xl px-4 py-3 text-left text-sm font-semibold ${active === "Relatórios" ? "bg-[#eaf2ff] text-[#1e63c6]" : "text-[#43526b] hover:bg-[#f5f7fa]"}`}>Relatórios</button><button onClick={()=>chooseNav("Configurações")} className={`w-full rounded-xl px-4 py-3 text-left text-sm font-semibold ${active === "Configurações" ? "bg-[#eaf2ff] text-[#1e63c6]" : "text-[#43526b] hover:bg-[#f5f7fa]"}`}>Configurações</button></div>
       </nav>
     </aside>
-    <main className="min-h-screen pl-[250px] pt-[74px]"><div className="mx-auto max-w-[1540px] p-7 xl:p-9">{content}</div></main>
+    <main className="min-h-screen pl-[250px] pt-[82px]"><div className="mx-auto max-w-[1540px] p-7 xl:p-9">{content}</div></main>
   </div>;
 };
 
