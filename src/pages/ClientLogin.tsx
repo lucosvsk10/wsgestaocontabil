@@ -1,5 +1,5 @@
 import { FormEvent, useState } from "react";
-import { ArrowRight, Eye, EyeOff, FileCheck2, LockKeyhole, ShieldCheck } from "lucide-react";
+import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
@@ -48,31 +48,29 @@ const ClientLogin = () => {
     <main className="min-h-screen bg-[#f3f4f6] text-[#111827]">
       <div className="grid min-h-screen lg:grid-cols-[1.08fr_0.92fr]">
         <section className="relative hidden overflow-hidden border-r border-[#dde2e7] bg-[#eaedf0] lg:flex lg:flex-col lg:justify-between lg:p-10 xl:p-14">
-          <div className="absolute -left-28 top-1/3 h-80 w-80 rounded-full border border-[#d4d9df]" />
-          <div className="absolute -left-12 top-[38%] h-56 w-56 rounded-full border border-[#d7dce1]" />
-          <div className="absolute bottom-[-120px] right-[-80px] h-96 w-96 rounded-full bg-[#e2e6ea]" />
+          <div className="absolute -left-44 top-[27%] h-[520px] w-[520px] rounded-full border border-[#d3d8de]" />
+          <div className="absolute -left-20 top-[35%] h-[380px] w-[380px] rounded-full border border-[#d6dbe0]" />
+          <div className="absolute bottom-[-150px] right-[-100px] h-[460px] w-[460px] rounded-full bg-[#e2e6ea]" />
 
           <div className="relative z-10">
             <img src="/lovable-uploads/f7fdf0cf-f16c-4df7-a92c-964aadea9539.png" alt="WS Gestão Contábil" className="h-8 object-contain" />
           </div>
 
-          <div className="relative z-10 max-w-xl pb-10">
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#d2d7dd] bg-[#f3f4f6] px-3 py-1.5 text-xs font-medium text-[#5f6875]">
-              <ShieldCheck size={14} /> Ambiente seguro e organizado
+          <div className="relative z-10 max-w-2xl pb-10">
+            <div className="mb-6 inline-flex rounded-full border border-[#d2d7dd] bg-[#f3f4f6] px-3.5 py-1.5 text-xs font-medium text-[#5f6875]">
+              Ambiente seguro e organizado
             </div>
-            <h1 className="max-w-lg text-4xl font-semibold leading-[1.08] tracking-[-0.045em] xl:text-5xl">Sua operação fiscal em um lugar só.</h1>
-            <p className="mt-5 max-w-lg text-[15px] leading-7 text-[#66707d]">Acesse documentos, empresas e ferramentas da WS com uma experiência simples, clara e feita para o trabalho do dia a dia.</p>
+            <h1 className="max-w-2xl text-5xl font-semibold leading-[1.03] tracking-[-0.055em] xl:text-6xl 2xl:text-7xl">Sua operação fiscal em um lugar só.</h1>
+            <p className="mt-6 max-w-xl text-[15px] leading-7 text-[#66707d]">Acesse documentos, empresas e ferramentas da WS com uma experiência simples, clara e feita para o trabalho do dia a dia.</p>
 
-            <div className="mt-9 grid max-w-lg grid-cols-2 gap-3">
-              <div className="rounded-xl border border-[#d7dce2] bg-[#f0f2f4]/90 p-4 backdrop-blur-sm">
-                <div className="mb-7 grid h-9 w-9 place-items-center rounded-lg bg-[#dde1e5] text-[#374151]"><FileCheck2 size={18} /></div>
+            <div className="mt-10 grid max-w-xl grid-cols-2 gap-3">
+              <div className="rounded-xl border border-[#d7dce2] bg-[#f0f2f4]/90 p-5 backdrop-blur-sm">
                 <p className="text-sm font-semibold">Documentos fiscais</p>
-                <p className="mt-1 text-xs leading-5 text-[#727b87]">Emissão e acompanhamento em um fluxo único.</p>
+                <p className="mt-2 text-xs leading-5 text-[#727b87]">Emissão e acompanhamento em um fluxo único.</p>
               </div>
-              <div className="rounded-xl border border-[#d7dce2] bg-[#f0f2f4]/90 p-4 backdrop-blur-sm">
-                <div className="mb-7 grid h-9 w-9 place-items-center rounded-lg bg-[#dde1e5] text-[#374151]"><LockKeyhole size={18} /></div>
+              <div className="rounded-xl border border-[#d7dce2] bg-[#f0f2f4]/90 p-5 backdrop-blur-sm">
                 <p className="text-sm font-semibold">Acesso protegido</p>
-                <p className="mt-1 text-xs leading-5 text-[#727b87]">Cada ambiente permanece separado e controlado.</p>
+                <p className="mt-2 text-xs leading-5 text-[#727b87]">Cada ambiente permanece separado e controlado.</p>
               </div>
             </div>
           </div>
@@ -95,14 +93,14 @@ const ClientLogin = () => {
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
                 <label htmlFor="email" className="text-sm font-medium">E-mail</label>
-                <Input id="email" type="email" autoComplete="email" placeholder="seu@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="h-12 rounded-lg border-[#d6dbe1] bg-[#eaedf0] px-3.5 text-[#111827] shadow-none placeholder:text-[#9aa1aa] focus-visible:ring-1 focus-visible:ring-[#9ca3af]" />
+                <Input id="email" type="email" autoComplete="email" placeholder="seu@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="h-12 rounded-lg border-[#cfd5dc] bg-white px-3.5 text-[#111827] caret-[#111827] shadow-sm placeholder:text-[#9aa1aa] focus-visible:border-[#9ca3af] focus-visible:ring-1 focus-visible:ring-[#c4c9cf]" />
               </div>
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between"><label htmlFor="password" className="text-sm font-medium">Senha</label><button type="button" className="text-xs font-medium text-[#6b7280] transition-colors hover:text-[#111827]">Esqueci minha senha</button></div>
                 <div className="relative">
-                  <Input id="password" type={showPassword ? "text" : "password"} autoComplete="current-password" placeholder="Sua senha" value={password} onChange={(e) => setPassword(e.target.value)} required className="h-12 rounded-lg border-[#d6dbe1] bg-[#eaedf0] px-3.5 pr-11 text-[#111827] shadow-none placeholder:text-[#9aa1aa] focus-visible:ring-1 focus-visible:ring-[#9ca3af]" />
-                  <button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-[#7b8491] transition-colors hover:bg-[#dde1e5] hover:text-[#111827]" aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+                  <Input id="password" type={showPassword ? "text" : "password"} autoComplete="current-password" placeholder="Sua senha" value={password} onChange={(e) => setPassword(e.target.value)} required className="h-12 rounded-lg border-[#cfd5dc] bg-white px-3.5 pr-11 text-[#111827] caret-[#111827] shadow-sm placeholder:text-[#9aa1aa] focus-visible:border-[#9ca3af] focus-visible:ring-1 focus-visible:ring-[#c4c9cf]" />
+                  <button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-[#7b8491] transition-colors hover:bg-[#eef0f2] hover:text-[#111827]" aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
                 </div>
               </div>
 
@@ -114,7 +112,7 @@ const ClientLogin = () => {
             </form>
 
             <div className="mt-8 border-t border-[#dde2e7] pt-6 text-center">
-              <p className="text-sm text-[#727b87]">Ainda não utiliza a plataforma? <span className="font-medium text-[#374151]">Conheça o produto em breve.</span></p>
+              <p className="text-sm text-[#727b87]">Acesso exclusivo para usuários autorizados.</p>
             </div>
           </div>
         </section>
