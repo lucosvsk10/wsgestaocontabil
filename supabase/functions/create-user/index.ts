@@ -1,176 +1,74 @@
-
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Handle CORS preflight requests
-const handleCORS = (req: Request) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders, status: 204 })
-  }
-}
-
-// Create a Supabase admin client
-const createAdminClient = () => {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
-  
-  if (!supabaseUrl || !supabaseServiceKey) {
-    throw new Error('Missing environment variables for Supabase')
-  }
-  
-  return createClient(supabaseUrl, supabaseServiceKey)
-}
-
-// Check if the user has admin privileges using user_roles table
-const isAdmin = async (token: string) => {
-  try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || ''
-    
-    if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error('Missing environment variables for Supabase')
-    }
-    
-    const supabaseClient = createClient(
-      supabaseUrl,
-      supabaseAnonKey,
-      {
-        global: {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      }
-    )
-
-    // Get the user from the token
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
-    
-    if (userError || !user) {
-      console.error('Error getting user:', userError)
-      throw new Error('Unauthorized: User not found')
-    }
-    
-    // Check if the user is an admin using user_roles table
-    const { data: roles, error: roleError } = await supabaseClient
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-    
-    if (roleError) {
-      console.error('Error fetching user role:', roleError)
-      return false
-    }
-    
-    // Check if user has any admin role
-    const adminRoles = ['admin', 'fiscal', 'contabil', 'geral']
-    return roles?.some(r => adminRoles.includes(r.role)) || false
-  } catch (error) {
-    console.error('Error checking admin status:', error)
-    return false
-  }
-}
-
 Deno.serve(async (req) => {
-  // Handle CORS
-  const corsResponse = handleCORS(req)
-  if (corsResponse) return corsResponse
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders, status: 204 })
 
   try {
-    // Verify authentication
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new Error('Missing or invalid authorization header')
-    }
+    if (!authHeader?.startsWith('Bearer ')) throw new Error('Unauthorized')
 
-    const token = authHeader.substring(7)
-    const adminAuthorized = await isAdmin(token)
+    const url = Deno.env.get('SUPABASE_URL') || ''
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || ''
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
+    const userClient = createClient(url, anonKey, { global: { headers: { Authorization: authHeader } } })
+    const admin = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
 
-    if (!adminAuthorized) {
-      throw new Error('Unauthorized: Admin privileges required')
-    }
+    const { data: { user: caller }, error: authError } = await userClient.auth.getUser()
+    if (authError || !caller) throw new Error('Unauthorized')
 
-    // Parse the request body
+    const { data: roles } = await admin.from('user_roles').select('role').eq('user_id', caller.id)
+    const isFullAdmin = roles?.some((r: any) => r.role === 'admin') || false
+    if (!isFullAdmin) return new Response(JSON.stringify({ error: 'Admin privileges required' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+
     const body = await req.json()
-    
-    if (!body.email || !body.name || !body.password) {
-      throw new Error('Missing required fields: email, name, and password are required')
-    }
-    
-    // Admin supabase client
-    const adminClient = createAdminClient()
+    const email = String(body.email || '').trim().toLowerCase()
+    const name = String(body.name || '').trim().slice(0, 160)
+    const password = String(body.password || '')
+    const role = ['client','admin','fiscal','contabil','geral'].includes(body.role) ? body.role : 'client'
 
-    console.log('Creating user with data:', { email: body.email, name: body.name, role: body.role })
+    if (!email || !name || password.length < 8) {
+      return new Response(JSON.stringify({ error: 'Email, nome e senha de pelo menos 8 caracteres são obrigatórios' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
 
-    // 1. Create user in auth.users with metadata including name
-    const { data: authUser, error: authError } = await adminClient.auth.admin.createUser({
-      email: body.email,
-      password: body.password,
-      user_metadata: {
-        name: body.name
-      },
-      email_confirm: true
+    const { data: authUser, error: authCreateError } = await admin.auth.admin.createUser({
+      email,
+      password,
+      user_metadata: { name },
+      email_confirm: true,
     })
-    
-    if (authError) {
-      console.error('Error creating auth user:', authError)
-      throw authError
+    if (authCreateError || !authUser.user) throw authCreateError || new Error('Falha ao criar usuário')
+
+    const { error: profileError } = await admin.from('users').insert({ id: authUser.user.id, email, name, role })
+    if (profileError) {
+      await admin.auth.admin.deleteUser(authUser.user.id)
+      throw profileError
     }
-    
-    if (!authUser.user) {
-      throw new Error('Failed to create user')
+
+    if (role !== 'client') {
+      const { error: roleError } = await admin.from('user_roles').insert({ user_id: authUser.user.id, role })
+      if (roleError) {
+        await admin.auth.admin.deleteUser(authUser.user.id)
+        throw roleError
+      }
     }
-    
-    const userRole = body.role || 'client'
-    console.log('Creating user profile with role:', userRole, 'and name:', body.name)
-    
-    // 2. Create user in public.users with name field properly set
-    const { error: userError } = await adminClient
-      .from('users')
-      .insert({
-        id: authUser.user.id,
-        email: body.email,
-        name: body.name, // Explicitly set the name field
-        role: userRole
-      })
-    
-    if (userError) {
-      // If user profile creation fails, delete the auth user
-      console.error('Error creating user profile:', userError)
-      await adminClient.auth.admin.deleteUser(authUser.user.id)
-      throw userError
-    }
-    
-    console.log('User created successfully:', {
-      id: authUser.user.id,
-      email: authUser.user.email,
-      name: body.name,
-      role: userRole
+
+    await admin.from('saas_audit_logs').insert({
+      actor_user_id: caller.id,
+      action: 'create_user',
+      resource_type: 'auth_user',
+      resource_id: authUser.user.id,
+      is_sensitive: true,
+      metadata: { source: 'edge_function', function: 'create-user', assigned_role: role }
     })
-    
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: 'User created successfully',
-        user: {
-          id: authUser.user.id,
-          email: authUser.user.email,
-          name: body.name,
-          role: userRole
-        }
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-    )
+
+    return new Response(JSON.stringify({ success: true, user: { id: authUser.user.id, email, name, role } }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   } catch (error) {
-    console.error('Error creating user:', error.message)
-    
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-    )
+    console.error('create-user:', error)
+    return new Response(JSON.stringify({ error: error?.message || 'Internal server error' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 })
