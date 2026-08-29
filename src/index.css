@@ -16,3 +16,6 @@
 
 /* Final WS dark-theme reconciliation layer */
 @import './styles/ws-dark-v2.css';
+
+/* Storage-inspired pilot for Dashboard, Lancamentos and Fiscal Notes */
+@import './styles/storage-card-pilot.css';
