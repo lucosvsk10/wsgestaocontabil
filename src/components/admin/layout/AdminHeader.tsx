@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import ThemeToggle from "@/components/ThemeToggle";
 import { UserCircle } from "lucide-react";
@@ -6,6 +5,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Button } from "@/components/ui/button";
 import { useNavigation } from "@/components/navbar/hooks/useNavigation";
 import { Link } from "react-router-dom";
+import { AdminCompanySelector } from "./AdminCompanySelector";
 
 interface AdminHeaderProps {
   sidebarOpen: boolean;
@@ -13,34 +13,27 @@ interface AdminHeaderProps {
   toggleSidebar: () => void;
 }
 
-const AdminHeader = ({ sidebarOpen, setSidebarOpen, toggleSidebar }: AdminHeaderProps) => {
+const AdminHeader = (_props: AdminHeaderProps) => {
   const { user } = useAuth();
   const { handleLogout } = useNavigation();
 
   return (
-    <header className="py-6 px-8 flex items-center justify-between bg-background text-foreground border-b border-border/60 transition-colors duration-200">
-      <div className="flex items-center" />
-      
-      <div className="flex items-center space-x-6">
+    <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-border/60 bg-background px-4 text-foreground transition-colors duration-200 sm:px-5 lg:px-6">
+      <AdminCompanySelector />
+
+      <div className="flex shrink-0 items-center gap-2">
         <ThemeToggle />
-        
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative h-12 w-12 rounded-full transition-all duration-300 ease-in-out hover:scale-105 border border-border hover:bg-muted/60 dark:hover:border-[#efc349]/70">
-              <UserCircle className="h-6 w-6 text-muted-foreground dark:text-[#efc349]" />
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg border border-border/60 hover:bg-muted/50">
+              <UserCircle className="h-4.5 w-4.5 text-muted-foreground" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-64 bg-popover text-popover-foreground border border-border shadow-xl rounded-xl backdrop-blur-sm">
-            <div className="px-4 py-3 text-sm font-medium border-b border-border/60">
-              {user?.email || "Usuário"}
-            </div>
+          <DropdownMenuContent align="end" className="w-64 rounded-xl border border-border bg-popover text-popover-foreground shadow-xl">
+            <div className="border-b border-border/60 px-4 py-3 text-sm font-medium">{user?.email || "Usuário"}</div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild className="hover:bg-muted/60 focus:bg-muted/60 transition-all duration-300">
-              <Link to="/" className="flex items-center px-4 py-2">Voltar ao site</Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleLogout} className="hover:bg-muted/60 focus:bg-muted/60 transition-all duration-300">
-              <span className="flex items-center px-4 py-2">Sair</span>
-            </DropdownMenuItem>
+            <DropdownMenuItem asChild><Link to="/" className="flex items-center px-4 py-2">Voltar ao site</Link></DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout}><span className="flex items-center px-4 py-2">Sair</span></DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
