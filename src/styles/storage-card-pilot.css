@@ -1,0 +1,77 @@
+/* Pilot visual language based on Storage: Dashboard, Lancamentos and Fiscal Notes only. */
+.ws-storage-style {
+  --ws-pilot-card-dark: #0b0f1c;
+  --ws-pilot-card-light: #ffffff;
+  --ws-pilot-title-dark: #efc349;
+  --ws-pilot-text-dark: #f4f4f4;
+  --ws-pilot-muted-dark: #b3b3b3;
+}
+
+.ws-storage-style .ws-storage-card,
+.ws-storage-style [data-ws-storage-card="true"],
+.ws-storage-style [class*="bg-card"] {
+  background-color: var(--ws-pilot-card-light);
+  border-color: rgb(226 232 240 / .8);
+  box-shadow: 0 1px 2px rgb(15 23 42 / .04);
+}
+
+.dark .ws-storage-style .ws-storage-card,
+.dark .ws-storage-style [data-ws-storage-card="true"],
+.dark .ws-storage-style [class*="bg-card"],
+.theme-ws-dark .ws-storage-style .ws-storage-card,
+.theme-ws-dark .ws-storage-style [data-ws-storage-card="true"],
+.theme-ws-dark .ws-storage-style [class*="bg-card"] {
+  background-color: var(--ws-pilot-card-dark) !important;
+  border-color: transparent !important;
+  box-shadow: 0 1px 2px rgb(0 0 0 / .18);
+}
+
+.dark .ws-storage-style .ws-storage-card h2,
+.dark .ws-storage-style .ws-storage-card h3,
+.dark .ws-storage-style [data-ws-storage-card="true"] h2,
+.dark .ws-storage-style [data-ws-storage-card="true"] h3,
+.theme-ws-dark .ws-storage-style .ws-storage-card h2,
+.theme-ws-dark .ws-storage-style .ws-storage-card h3,
+.theme-ws-dark .ws-storage-style [data-ws-storage-card="true"] h2,
+.theme-ws-dark .ws-storage-style [data-ws-storage-card="true"] h3 {
+  color: var(--ws-pilot-title-dark) !important;
+  font-weight: 300;
+}
+
+.dark .ws-storage-style .ws-storage-card,
+.dark .ws-storage-style [data-ws-storage-card="true"],
+.theme-ws-dark .ws-storage-style .ws-storage-card,
+.theme-ws-dark .ws-storage-style [data-ws-storage-card="true"] {
+  color: var(--ws-pilot-text-dark);
+}
+
+.dark .ws-storage-style .ws-storage-card .text-muted-foreground,
+.dark .ws-storage-style [data-ws-storage-card="true"] .text-muted-foreground,
+.theme-ws-dark .ws-storage-style .ws-storage-card .text-muted-foreground,
+.theme-ws-dark .ws-storage-style [data-ws-storage-card="true"] .text-muted-foreground {
+  color: var(--ws-pilot-muted-dark) !important;
+}
+
+/* Lançamentos uses semantic sections instead of the Card component. */
+.dark .ws-storage-style.lancamentos-clean main > section,
+.dark .ws-storage-style.lancamentos-clean main > div > section,
+.theme-ws-dark .ws-storage-style.lancamentos-clean main > section,
+.theme-ws-dark .ws-storage-style.lancamentos-clean main > div > section {
+  background-color: var(--ws-pilot-card-dark) !important;
+  border-color: transparent !important;
+}
+
+/* Fiscal Notes has hand-built panels; opt-in only through this wrapper. */
+.dark .ws-storage-style .fiscal-storage-card,
+.theme-ws-dark .ws-storage-style .fiscal-storage-card {
+  background-color: var(--ws-pilot-card-dark) !important;
+  border-color: transparent !important;
+  color: var(--ws-pilot-text-dark);
+}
+.dark .ws-storage-style .fiscal-storage-card h2,
+.dark .ws-storage-style .fiscal-storage-card h3,
+.theme-ws-dark .ws-storage-style .fiscal-storage-card h2,
+.theme-ws-dark .ws-storage-style .fiscal-storage-card h3 {
+  color: var(--ws-pilot-title-dark) !important;
+  font-weight: 300;
+}
