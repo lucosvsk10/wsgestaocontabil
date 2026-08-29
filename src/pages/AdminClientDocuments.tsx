@@ -15,7 +15,7 @@ export default function AdminClientDocuments() {
 
   return (
     <AdminLayout>
-      <AdminPage>
+      <AdminPage className="ws-admin-polish">
         <AdminPageHeader eyebrow="Clientes do escritório" title="Documentos do cliente" description="Os documentos acompanham a empresa selecionada no topo do Admin." />
         <AdminSection className="mt-6">
           {loading ? <div className="py-14 text-center text-sm text-muted-foreground">Carregando empresa...</div> : !selectedCompany ? (
