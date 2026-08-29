@@ -1,5 +1,21 @@
-.saas-admin-light { min-height: 100vh; color-scheme: light; }
+.saas-admin-light { min-height: 100vh; color-scheme: light; font-family: 'Prompt', sans-serif; }
 .saas-topbar { background: #202833 !important; border-color: #303946 !important; }
+.saas-emission-group { box-shadow: inset 0 0 0 1px rgba(100,116,139,.10); }
+.saas-emission-group:hover { box-shadow: inset 0 0 0 1px rgba(100,116,139,.16); }
+.saas-dashboard { color: hsl(var(--foreground)); }
+.saas-dashboard h1,
+.saas-dashboard h2,
+.saas-dashboard h3,
+.saas-dashboard h4 { color: hsl(var(--foreground)) !important; }
+.saas-dashboard p[class*="text-white"],
+.saas-dashboard span[class*="text-white"] { color: hsl(var(--foreground)) !important; }
+.saas-kpi-card { position: relative; overflow: hidden; background: #fff !important; }
+.saas-kpi-card::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--kpi-color); }
+.saas-kpi-ring { position: absolute; top: 50%; right: -82px; width: 138px; height: 138px; transform: translateY(-50%); border: 10px solid var(--kpi-ring); border-radius: 9999px; pointer-events: none; }
+.saas-kpi-green { --kpi-color: #22a45a; --kpi-ring: rgba(34,164,90,.25); border-color: rgba(34,164,90,.27) !important; }
+.saas-kpi-orange { --kpi-color: #f59e0b; --kpi-ring: rgba(245,158,11,.26); border-color: rgba(245,158,11,.29) !important; }
+.saas-kpi-red { --kpi-color: #e34f4f; --kpi-ring: rgba(227,79,79,.24); border-color: rgba(227,79,79,.27) !important; }
+.saas-kpi-blue { --kpi-color: #3b82c4; --kpi-ring: rgba(59,130,196,.24); border-color: rgba(59,130,196,.27) !important; }
 .saas-admin-light [class*="text-[#10203e]"],
 .saas-admin-light [class*="text-[#12213f]"],
 .saas-admin-light [class*="text-[#263652]"],
