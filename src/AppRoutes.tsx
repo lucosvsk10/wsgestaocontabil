@@ -1,9 +1,11 @@
+import { useEffect, useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import ClientLogin from "./pages/ClientLogin";
 import PrivateRoute from "./components/PrivateRoute";
 import { useAuth } from "./contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import AdminDashboard from "./pages/AdminDashboard";
 import ClientDashboard from "./pages/ClientDashboard";
 import PollPage from "./pages/PollPage";
@@ -32,8 +34,38 @@ import AdminFiscalNotes from "./pages/AdminFiscalNotes";
 import AdminSubscribers from "./pages/AdminSubscribers";
 import SaasApp from "./pages/SaasApp";
 
+const DashboardRouter = () => {
+  const { userData, user } = useAuth();
+  const [isSaasMember, setIsSaasMember] = useState<boolean | null>(null);
+  const admin = checkIsAdmin(userData, user?.email);
+
+  useEffect(() => {
+    if (!user || admin) {
+      setIsSaasMember(false);
+      return;
+    }
+
+    let active = true;
+    supabase
+      .from("organization_members")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .limit(1)
+      .then(({ data, error }) => {
+        if (!active) return;
+        setIsSaasMember(!error && Boolean(data?.length));
+      });
+
+    return () => { active = false; };
+  }, [user?.id, admin]);
+
+  if (admin) return <Navigate to="/admin" replace />;
+  if (isSaasMember === null) return <div className="grid min-h-screen place-items-center bg-[#f3f4f6] text-sm text-[#6b7280]">Carregando...</div>;
+  return <Navigate to={isSaasMember ? "/app" : "/client"} replace />;
+};
+
 const AppRoutes=()=>{
- const {userData,user}=useAuth();const isAdmin=()=>checkIsAdmin(userData,user?.email);
  return <Routes>
   <Route path="/" element={<Index/>}/><Route path="/login" element={<ClientLogin/>}/><Route path="/enquete/:id" element={<PollPage/>}/><Route path="/enquete-numerica/:id" element={<NumericalPollPage/>}/><Route path="/formulario/:id" element={<FormPollPage/>}/><Route path="/simulador-irpf" element={<TaxCalculator/>}/><Route path="/calculadora-inss" element={<INSSCalculator/>}/><Route path="/simulador-prolabore" element={<ProLaboreCalculator/>}/><Route path="/changelog" element={<ChangeLog/>}/>
   <Route path="/admin" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="dashboard"/></PrivateRoute>}/>
@@ -43,7 +75,7 @@ const AppRoutes=()=>{
   <Route path="/admin/storage" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="storage"/></PrivateRoute>}/><Route path="/admin/polls" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="polls"/></PrivateRoute>}/><Route path="/admin/tools" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="tools"/></PrivateRoute>}/><Route path="/admin/simulations" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="simulations"/></PrivateRoute>}/><Route path="/admin/announcements" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="announcements"/></PrivateRoute>}/><Route path="/admin/agenda" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="agenda"/></PrivateRoute>}/><Route path="/admin/settings" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="settings"/></PrivateRoute>}/>
   <Route path="/admin/fiscal/empresas" element={<PrivateRoute requiredRole="admin"><AdminFiscalCompanies/></PrivateRoute>}/><Route path="/admin/feature" element={<PrivateRoute requiredRole="admin"><AdminFiscalNotes/></PrivateRoute>}/><Route path="/admin/fiscal/emissao" element={<PrivateRoute requiredRole="admin"><AdminFeature/></PrivateRoute>}/><Route path="/admin/fiscal/cte" element={<Navigate to="/admin/fiscal/emissao" replace/>}/><Route path="/admin/fiscal/laboratorio" element={<Navigate to="/admin/fiscal/emissao" replace/>}/>
   <Route path="/admin-dashboard" element={<Navigate to="/admin" replace/>}/><Route path="/admin/tax-simulations" element={<Navigate to="/admin/simulations" replace/>}/><Route path="/admin/carousel" element={<PrivateRoute requiredRole="admin"><AdminLayout><AdminPage><SimpleCarouselManager/></AdminPage></AdminLayout></PrivateRoute>}/><Route path="/admin/lancamentos" element={<PrivateRoute requiredRole="admin"><AdminLancamentos/></PrivateRoute>}/><Route path="/admin/lancamentos/balancete" element={<PrivateRoute requiredRole="admin"><AdminBalancete/></PrivateRoute>}/><Route path="/admin/lancamentos/plano-contas" element={<PrivateRoute requiredRole="admin"><AdminPlanoContas/></PrivateRoute>}/><Route path="/admin/lancamentos/engine" element={<PrivateRoute requiredRole="admin"><AdminEngine/></PrivateRoute>}/><Route path="/admin/lancamentos/feature" element={<Navigate to="/admin/fiscal/emissao" replace/>}/>
-  <Route path="/app/*" element={<PrivateRoute><SaasApp/></PrivateRoute>}/><Route path="/client/*" element={<PrivateRoute><ClientDashboard/></PrivateRoute>}/><Route path="/dashboard" element={<PrivateRoute>{isAdmin()?<Navigate to="/admin" replace/>:<Navigate to="/client" replace/>}</PrivateRoute>}/><Route path="*" element={<NotFound/>}/>
+  <Route path="/app/*" element={<PrivateRoute><SaasApp/></PrivateRoute>}/><Route path="/client/*" element={<PrivateRoute><ClientDashboard/></PrivateRoute>}/><Route path="/dashboard" element={<PrivateRoute><DashboardRouter/></PrivateRoute>}/><Route path="*" element={<NotFound/>}/>
  </Routes>;
 };
 export default AppRoutes;
