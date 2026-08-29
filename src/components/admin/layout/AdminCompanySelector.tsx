@@ -40,12 +40,12 @@ export function AdminCompanySelector() {
           <Button variant="ghost" className="h-14 min-w-[360px] max-w-[560px] justify-between gap-4 rounded-xl border border-border/60 bg-card px-4 shadow-sm hover:bg-muted/30">
             <span className="flex min-w-0 items-center gap-3">
               <CompanyAvatar logo={selectedCompany?.logo_url} name={title} />
-              <span className="min-w-0 text-left">
-                <span className="flex min-w-0 items-center gap-2">
-                  {selectedCompany && <CompanyStatusDot company={selectedCompany} />}
+              <span className="flex min-w-0 items-center gap-3 text-left">
+                <span className="min-w-0">
                   <span className="block truncate text-sm font-semibold leading-5">{loading ? 'Carregando empresa...' : title}</span>
+                  {selectedCompany && <span className="block truncate text-[10px] leading-4 text-muted-foreground">{formatCnpj(selectedCompany.cnpj)}</span>}
                 </span>
-                {selectedCompany && <span className="block truncate pl-[18px] text-[10px] leading-4 text-muted-foreground">{formatCnpj(selectedCompany.cnpj)}</span>}
+                {selectedCompany && <CompanyStatusDot company={selectedCompany} />}
               </span>
             </span>
             <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -60,9 +60,9 @@ export function AdminCompanySelector() {
               const active = company.id === selectedCompany?.id;
               return <DropdownMenuItem key={company.id} onSelect={() => selectCompany(company.id)} className={`gap-3 rounded-lg py-2.5 ${active ? 'bg-muted/60' : ''}`}>
                 <CompanyAvatar logo={company.logo_url} name={name} compact />
-                <span className="min-w-0 flex-1">
-                  <span className="flex min-w-0 items-center gap-2"><CompanyStatusDot company={company} /><span className="block truncate text-sm font-medium">{name}</span></span>
-                  <span className="block truncate pl-[18px] text-xs text-muted-foreground">{formatCnpj(company.cnpj)}</span>
+                <span className="flex min-w-0 flex-1 items-center gap-3">
+                  <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{name}</span><span className="block truncate text-xs text-muted-foreground">{formatCnpj(company.cnpj)}</span></span>
+                  <CompanyStatusDot company={company} />
                 </span>
                 {active && <span className="text-[10px] font-medium text-muted-foreground">Ativa</span>}
               </DropdownMenuItem>;
