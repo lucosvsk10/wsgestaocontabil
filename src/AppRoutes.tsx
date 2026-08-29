@@ -46,13 +46,13 @@ const DashboardRouter = () => {
     }
 
     let active = true;
-    supabase
+    (supabase as any)
       .from("organization_members")
       .select("id")
       .eq("user_id", user.id)
       .eq("status", "active")
       .limit(1)
-      .then(({ data, error }) => {
+      .then(({ data, error }: { data: Array<{ id: string }> | null; error: any }) => {
         if (!active) return;
         setIsSaasMember(!error && Boolean(data?.length));
       });
