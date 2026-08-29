@@ -11,7 +11,7 @@ export const AdminToolsView: React.FC = () => {
   {title:'Simulador de Pró-labore',description:'Simulação de valores líquidos de pró-labore.',icon:Building2,to:'/simulador-prolabore'},
   {title:'Carrossel',description:'Gerencie as empresas exibidas na página principal.',icon:Images,to:'/admin/carousel'},
   {title:'Enquetes',description:'Crie e acompanhe enquetes para clientes.',icon:PieChart,to:'/admin/polls'},
-  {title:'Documentos dos clientes',description:'Envie e organize documentos da empresa ativa.',icon:FileText,to:'/admin/users'},
+  {title:'Documentos dos clientes',description:'Envie e organize documentos da empresa ativa.',icon:FileText,to:'/admin/documentos'},
   {title:'Histórico de simulações',description:'Consulte as simulações realizadas.',icon:Calculator,to:'/admin/simulations'}
  ];
  return <div>
