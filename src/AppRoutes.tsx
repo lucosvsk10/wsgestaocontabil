@@ -43,7 +43,8 @@ const AppRoutes = () => {
       <Route path="/changelog" element={<ChangeLog />} />
 
       <Route path="/admin" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="dashboard" /></PrivateRoute>} />
-      <Route path="/admin/empresas" element={<PrivateRoute requiredRole="admin"><AdminCompanies /></PrivateRoute>} />
+      <Route path="/admin/clientes" element={<PrivateRoute requiredRole="admin"><AdminCompanies /></PrivateRoute>} />
+      <Route path="/admin/empresas" element={<Navigate to="/admin/clientes" replace />} />
       <Route path="/admin/users" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="users" /></PrivateRoute>} />
       <Route path="/admin/user-documents/:userId" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="user-documents" /></PrivateRoute>} />
       <Route path="/admin/company-data/:userId" element={<PrivateRoute requiredRole="admin"><CompanyDataView /></PrivateRoute>} />
