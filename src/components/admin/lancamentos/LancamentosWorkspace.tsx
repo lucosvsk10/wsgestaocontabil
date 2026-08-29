@@ -12,7 +12,6 @@ import { saveWorkspaceData } from "@/lib/lancamentos/workspaceStorage";
 import { cn } from "@/lib/utils";
 import { AccountingYearPicker } from "./AccountingYearPicker";
 import { AccountingImportPrerequisites } from "./AccountingImportPrerequisites";
-import { CompanySelector } from "./CompanySelector";
 import { ComprasWorkspace } from "./ComprasWorkspace";
 import { DespesasWorkspace, WorkspaceStatus } from "./DespesasWorkspace";
 import { FaturamentoWorkspace } from "./FaturamentoWorkspace";
@@ -67,7 +66,7 @@ function progressBarClass(status: MonthModuleStatus) {
 export function LancamentosWorkspace() {
   const currentYear = new Date().getFullYear();
   const currentMonth = String(new Date().getMonth() + 1).padStart(2, "0");
-  const { company, companies, selectCompany } = useAccountingCompany();
+  const { company } = useAccountingCompany();
   const initialContext = readLastContext(company.id);
   const [year, setYear] = useState(() => initialContext?.year ?? String(currentYear));
   const [selectedMonth, setSelectedMonth] = useState(() => initialContext?.selectedMonth ?? currentMonth);
@@ -196,7 +195,7 @@ export function LancamentosWorkspace() {
         <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Lançamentos</h1>
         <p className="mt-1 truncate text-sm text-muted-foreground">{company.name}<span className="px-2 text-border">/</span>{selectedMonthLabel} de {year}</p>
       </div>
-      <div className="flex w-full flex-col gap-3 sm:flex-row xl:w-auto"><CompanySelector company={company} companies={companies} onSelect={selectCompany} /></div>
+      
     </header>
 
     <div className="grid min-h-[720px] lg:grid-cols-[236px_minmax(0,1fr)]">

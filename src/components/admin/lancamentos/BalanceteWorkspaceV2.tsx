@@ -25,7 +25,6 @@ import { clearWorkspaceFiles, deleteWorkspaceData, loadWorkspaceData, loadWorksp
 import { cn } from "@/lib/utils";
 import { AccountingWorkflowSteps } from "./AccountingWorkflowUI";
 import { AccountingYearPicker } from "./AccountingYearPicker";
-import { CompanySelector } from "./CompanySelector";
 
 const months = [
   ["01", "Janeiro"], ["02", "Fevereiro"], ["03", "Março"], ["04", "Abril"], ["05", "Maio"], ["06", "Junho"],
@@ -45,7 +44,7 @@ const previousBalancesAreVerified = (result: TrialBalanceResult | null) => Boole
 
 export function BalanceteWorkspaceV2() {
   const today = new Date();
-  const { company, companies, selectCompany } = useAccountingCompany();
+  const { company } = useAccountingCompany();
   const initial = readContext(company.id);
   const [year, setYear] = useState(initial?.year ?? String(today.getFullYear()));
   const [month, setMonth] = useState(initial?.month ?? String(today.getMonth() + 1).padStart(2, "0"));
@@ -254,7 +253,7 @@ export function BalanceteWorkspaceV2() {
         <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Balancete</h1>
         <p className="mt-1 text-sm text-muted-foreground">Importe o balancete bruto do Calima, identifique apenas inconsistências materiais e gere os lançamentos necessários para corrigi-las.</p>
       </div>
-      <CompanySelector company={company} companies={companies} onSelect={selectCompany} />
+      
     </header>
 
     <div className="grid min-h-[720px] lg:grid-cols-[220px_minmax(0,1fr)]">
