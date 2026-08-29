@@ -22,6 +22,7 @@ import AdminBalancete from "./pages/AdminBalancete";
 import AdminPlanoContas from "./pages/AdminPlanoContas";
 import AdminEngine from "./pages/AdminEngine";
 import AdminFeature from "./pages/AdminFeature";
+import AdminCompanies from "./pages/AdminCompanies";
 import AdminFiscalCompanies from "./pages/AdminFiscalCompanies";
 import AdminFiscalNotes from "./pages/AdminFiscalNotes";
 
@@ -42,6 +43,7 @@ const AppRoutes = () => {
       <Route path="/changelog" element={<ChangeLog />} />
 
       <Route path="/admin" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="dashboard" /></PrivateRoute>} />
+      <Route path="/admin/empresas" element={<PrivateRoute requiredRole="admin"><AdminCompanies /></PrivateRoute>} />
       <Route path="/admin/users" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="users" /></PrivateRoute>} />
       <Route path="/admin/user-documents/:userId" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="user-documents" /></PrivateRoute>} />
       <Route path="/admin/company-data/:userId" element={<PrivateRoute requiredRole="admin"><CompanyDataView /></PrivateRoute>} />
