@@ -1,148 +1,124 @@
 import { useMemo, useState } from "react";
-import {
-  Bell,
-  Building2,
-  ChevronDown,
-  FileCheck2,
-  FileClock,
-  FilePlus2,
-  FileText,
-  HelpCircle,
-  LayoutDashboard,
-  Menu,
-  ReceiptText,
-  Search,
-  Settings,
-  ShieldCheck,
-  Truck,
-  UserRound,
-  X,
-} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 const documentTypes = [
-  { label: "NF-e", description: "Nota Fiscal Eletrônica", icon: ReceiptText },
-  { label: "NFC-e", description: "Nota Fiscal de Consumidor", icon: FileText },
-  { label: "NFS-e", description: "Nota Fiscal de Serviço", icon: FileCheck2 },
-  { label: "CT-e", description: "Conhecimento de Transporte", icon: Truck },
-  { label: "MDF-e", description: "Manifesto Eletrônico", icon: FileClock },
-  { label: "Outros", description: "Demais documentos fiscais", icon: FilePlus2 },
+  { label: "NF-e", description: "Venda de produtos, circulação de mercadorias e operações fiscais." },
+  { label: "NFC-e", description: "Venda direta ao consumidor final em operações de varejo." },
+  { label: "NFS-e", description: "Prestação de serviços municipais e padrão nacional." },
+  { label: "CT-e", description: "Prestação de serviço de transporte de cargas." },
+  { label: "MDF-e", description: "Manifesto de documentos fiscais eletrônicos em transporte." },
+  { label: "Outros documentos", description: "Acesse os demais modelos fiscais disponíveis para sua empresa." },
 ];
 
-const nav = [
-  { label: "Visão geral", icon: LayoutDashboard },
-  { label: "Emitir documento", icon: FilePlus2 },
-  { label: "Documentos", icon: FileText },
-  { label: "Empresas", icon: Building2 },
-];
+const nav = ["Visão geral", "Emitir documento", "Documentos", "Empresas"];
 
 const SaasApp = () => {
   const [active, setActive] = useState("Visão geral");
   const [mobileOpen, setMobileOpen] = useState(false);
-  const currentTitle = useMemo(() => active, [active]);
+  const [selectedDocument, setSelectedDocument] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const currentTitle = useMemo(() => selectedDocument ? `Emitir ${selectedDocument}` : active, [active, selectedDocument]);
+
+  const goTo = (page: string) => { setSelectedDocument(null); setActive(page); setMobileOpen(false); };
+  const startEmission = (label: string) => { setSelectedDocument(label); setActive("Emitir documento"); };
+
+  const emissionCards = (compact = false) => (
+    <div className={`grid gap-4 ${compact ? "md:grid-cols-2 xl:grid-cols-3" : "md:grid-cols-2 xl:grid-cols-3"}`}>
+      {documentTypes.map((item) => (
+        <button key={item.label} onClick={() => startEmission(item.label)} className="group min-h-[178px] rounded-2xl border border-[#d8dde3] bg-[#eaedf0] p-6 text-left transition-all hover:-translate-y-0.5 hover:border-[#bfc6ce] hover:bg-[#e4e8eb] hover:shadow-sm">
+          <p className="text-2xl font-semibold tracking-[-0.03em] text-[#111827]">{item.label}</p>
+          <p className="mt-3 max-w-sm text-sm leading-6 text-[#66707d]">{item.description}</p>
+          <p className="mt-7 text-xs font-semibold uppercase tracking-[0.12em] text-[#4b5563]">Iniciar emissão</p>
+        </button>
+      ))}
+    </div>
+  );
+
+  const renderOverview = () => (
+    <div className="space-y-8">
+      <section className="rounded-2xl border border-[#d8dde3] bg-[#eaedf0] p-7 md:p-9">
+        <p className="text-sm text-[#68717d]">Olá,</p>
+        <h2 className="mt-1 text-3xl font-semibold tracking-[-0.04em] md:text-4xl">Empresa Teste</h2>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-[#66707d]">Seu ambiente fiscal está sendo preparado. Aqui você encontra somente o que importa para emitir e acompanhar documentos da empresa.</p>
+        <div className="mt-7 grid gap-x-10 gap-y-5 border-t border-[#d5dae0] pt-6 sm:grid-cols-2 xl:grid-cols-4">
+          <div><p className="text-xs text-[#7b8491]">CNPJ</p><p className="mt-1 text-sm font-medium">Não informado</p></div>
+          <div><p className="text-xs text-[#7b8491]">Regime tributário</p><p className="mt-1 text-sm font-medium">Não informado</p></div>
+          <div><p className="text-xs text-[#7b8491]">Certificado digital</p><p className="mt-1 text-sm font-medium">Pendente</p></div>
+          <div><p className="text-xs text-[#7b8491]">Ambiente</p><p className="mt-1 text-sm font-medium">Configuração inicial</p></div>
+        </div>
+      </section>
+
+      <section>
+        <div className="mb-4 flex items-end justify-between gap-4"><div><h3 className="text-xl font-semibold tracking-tight">Emitir documento</h3><p className="mt-1 text-sm text-[#6b7280]">Atalhos para os principais modelos fiscais.</p></div><button onClick={() => goTo("Emitir documento")} className="text-sm font-medium text-[#4b5563] hover:text-[#111827]">Ver todos</button></div>
+        {emissionCards(true)}
+      </section>
+    </div>
+  );
+
+  const renderEmission = () => {
+    if (!selectedDocument) return <div><div className="mb-6"><h2 className="text-2xl font-semibold tracking-[-0.03em]">Escolha o documento que deseja emitir</h2><p className="mt-2 text-sm text-[#6b7280]">O fluxo muda de acordo com o modelo fiscal selecionado.</p></div>{emissionCards()}</div>;
+    return (
+      <div className="max-w-5xl">
+        <button onClick={() => setSelectedDocument(null)} className="mb-5 text-sm font-medium text-[#5f6875] hover:text-[#111827]">Voltar para tipos de documento</button>
+        <div className="rounded-2xl border border-[#d8dde3] bg-[#eaedf0] p-7 md:p-9">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#77808b]">Nova emissão</p>
+          <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em]">{selectedDocument}</h2>
+          <p className="mt-3 text-sm leading-6 text-[#66707d]">Este é o início do fluxo de emissão. Os campos fiscais específicos desse documento serão construídos na próxima etapa.</p>
+          <div className="mt-8 grid gap-4 md:grid-cols-2">
+            <label className="text-sm font-medium">Destinatário<Input placeholder="Nome ou razão social" className="mt-2 h-11 !border-[#cfd5dc] !bg-white !text-[#111827] dark:!bg-white dark:!text-[#111827]" /></label>
+            <label className="text-sm font-medium">CPF ou CNPJ<Input placeholder="Documento" className="mt-2 h-11 !border-[#cfd5dc] !bg-white !text-[#111827] dark:!bg-white dark:!text-[#111827]" /></label>
+          </div>
+          <div className="mt-6 flex gap-3"><Button className="bg-[#111827] text-white hover:bg-[#202938]">Continuar</Button><Button variant="outline" onClick={() => setSelectedDocument(null)}>Cancelar</Button></div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderDocuments = () => (
+    <div className="overflow-hidden rounded-2xl border border-[#d8dde3] bg-[#eaedf0]">
+      <div className="flex flex-col gap-4 border-b border-[#d8dde3] p-5 md:flex-row md:items-center md:justify-between"><div><h2 className="text-lg font-semibold">Documentos fiscais</h2><p className="mt-1 text-sm text-[#6b7280]">Consulte emissões e acompanhe o status de cada documento.</p></div><Button onClick={() => goTo("Emitir documento")} className="bg-[#111827] text-white hover:bg-[#202938]">Nova emissão</Button></div>
+      <div className="p-5"><Input placeholder="Buscar por número, cliente ou documento" className="h-11 max-w-lg !border-[#cfd5dc] !bg-white !text-[#111827] dark:!bg-white dark:!text-[#111827]" /><div className="mt-5 rounded-xl border border-dashed border-[#cbd1d8] p-14 text-center"><p className="text-sm font-medium">Nenhum documento emitido ainda.</p><p className="mt-1 text-xs text-[#7b8491]">Quando houver emissões, elas aparecerão aqui.</p></div></div>
+    </div>
+  );
+
+  const renderCompanies = () => (
+    <div className="max-w-5xl rounded-2xl border border-[#d8dde3] bg-[#eaedf0] p-7 md:p-9"><p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#77808b]">Empresa ativa</p><h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em]">Empresa Teste</h2><div className="mt-7 grid gap-6 border-t border-[#d5dae0] pt-6 md:grid-cols-2"><div><p className="text-xs text-[#7b8491]">Razão social</p><p className="mt-1 text-sm font-medium">Empresa Teste</p></div><div><p className="text-xs text-[#7b8491]">CNPJ</p><p className="mt-1 text-sm font-medium">Não informado</p></div><div><p className="text-xs text-[#7b8491]">Inscrição Estadual</p><p className="mt-1 text-sm font-medium">Não informada</p></div><div><p className="text-xs text-[#7b8491]">Regime tributário</p><p className="mt-1 text-sm font-medium">Não informado</p></div></div><Button onClick={() => goTo("Configurações")} className="mt-7 bg-[#111827] text-white hover:bg-[#202938]">Configurar empresa</Button></div>
+  );
+
+  const renderSettings = () => (
+    <div className="max-w-5xl space-y-5">
+      <div><h2 className="text-2xl font-semibold tracking-[-0.03em]">Configurações da empresa</h2><p className="mt-2 text-sm text-[#6b7280]">Cadastre as informações necessárias para habilitar a emissão fiscal.</p></div>
+      <div className="rounded-2xl border border-[#d8dde3] bg-[#eaedf0] p-6 md:p-8">
+        <h3 className="font-semibold">Dados cadastrais</h3>
+        <div className="mt-5 grid gap-4 md:grid-cols-2"><label className="text-sm font-medium">Razão social<Input defaultValue="Empresa Teste" className="mt-2 h-11 !border-[#cfd5dc] !bg-white !text-[#111827] dark:!bg-white dark:!text-[#111827]" /></label><label className="text-sm font-medium">CNPJ<Input placeholder="00.000.000/0000-00" className="mt-2 h-11 !border-[#cfd5dc] !bg-white !text-[#111827] dark:!bg-white dark:!text-[#111827]" /></label><label className="text-sm font-medium">Inscrição Estadual<Input placeholder="Inscrição estadual" className="mt-2 h-11 !border-[#cfd5dc] !bg-white !text-[#111827] dark:!bg-white dark:!text-[#111827]" /></label><label className="text-sm font-medium">Regime tributário<select className="mt-2 h-11 w-full rounded-lg border border-[#cfd5dc] bg-white px-3 text-sm text-[#111827]"><option>Selecione</option><option>Simples Nacional</option><option>Lucro Presumido</option><option>Lucro Real</option></select></label></div>
+        <div className="mt-7 border-t border-[#d5dae0] pt-6"><h3 className="font-semibold">Certificado digital</h3><p className="mt-2 text-sm text-[#6b7280]">Nenhum certificado vinculado a esta empresa.</p><Button variant="outline" className="mt-4">Adicionar certificado A1</Button></div>
+        <div className="mt-7 flex items-center gap-3"><Button onClick={() => { setSaved(true); setTimeout(() => setSaved(false), 2500); }} className="bg-[#111827] text-white hover:bg-[#202938]">Salvar alterações</Button>{saved && <span className="text-sm text-[#4b5563]">Alterações salvas.</span>}</div>
+      </div>
+    </div>
+  );
+
+  const renderContent = () => {
+    if (active === "Emitir documento") return renderEmission();
+    if (active === "Documentos") return renderDocuments();
+    if (active === "Empresas") return renderCompanies();
+    if (active === "Configurações") return renderSettings();
+    return renderOverview();
+  };
 
   return (
     <div className="min-h-screen bg-[#f3f4f6] text-[#111827]">
       <div className="flex min-h-screen">
         <aside className={`fixed inset-y-0 left-0 z-50 flex w-[268px] flex-col border-r border-[#dfe3e8] bg-[#eaedf0] transition-transform duration-200 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
-          <div className="flex h-20 items-center justify-between border-b border-[#d9dde2] px-6">
-            <img src="/lovable-uploads/f7fdf0cf-f16c-4df7-a92c-964aadea9539.png" alt="WS" className="h-7 object-contain" />
-            <button className="text-[#6b7280] lg:hidden" onClick={() => setMobileOpen(false)} aria-label="Fechar menu"><X size={20} /></button>
-          </div>
-
-          <div className="p-4">
-            <button className="flex w-full items-center justify-between rounded-xl border border-[#d6dbe1] bg-[#f7f8f9] px-3.5 py-3 text-left shadow-sm">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold">Minha organização</p>
-                <p className="mt-0.5 truncate text-xs text-[#6b7280]">Empresa principal</p>
-              </div>
-              <ChevronDown size={16} className="shrink-0 text-[#6b7280]" />
-            </button>
-          </div>
-
-          <nav className="flex-1 px-3 py-2">
-            <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#7b8491]">Emissão fiscal</p>
-            <div className="space-y-1">
-              {nav.map((item) => {
-                const Icon = item.icon;
-                const selected = active === item.label;
-                return (
-                  <button key={item.label} onClick={() => { setActive(item.label); setMobileOpen(false); }} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${selected ? "bg-[#d9dde2] text-[#111827]" : "text-[#5f6875] hover:bg-[#e1e5e9] hover:text-[#111827]"}`}>
-                    <Icon size={18} strokeWidth={1.8} />
-                    {item.label}
-                  </button>
-                );
-              })}
-            </div>
-          </nav>
-
-          <div className="border-t border-[#d9dde2] p-3">
-            {[{ label: "Configurações", icon: Settings }, { label: "Ajuda", icon: HelpCircle }].map((item) => (
-              <button key={item.label} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-[#5f6875] transition-colors hover:bg-[#e1e5e9] hover:text-[#111827]">
-                <item.icon size={18} strokeWidth={1.8} />{item.label}
-              </button>
-            ))}
-          </div>
+          <div className="relative flex h-20 shrink-0 items-center justify-center border-b border-[#d9dde2] px-5"><img src="/lovable-uploads/f7fdf0cf-f16c-4df7-a92c-964aadea9539.png" alt="WS Gestão Contábil" className="h-7 object-contain" /><button className="absolute right-4 text-sm text-[#6b7280] lg:hidden" onClick={() => setMobileOpen(false)}>Fechar</button></div>
+          <div className="border-b border-[#d9dde2] px-5 py-4"><p className="truncate text-sm font-semibold">Empresa Teste</p><p className="mt-1 text-xs text-[#79818c]">Ambiente fiscal</p></div>
+          <nav className="flex-1 px-3 py-4"><p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#7b8491]">Navegação</p><div className="space-y-1">{nav.map((item) => <button key={item} onClick={() => goTo(item)} className={`flex w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${active === item && !selectedDocument ? "bg-[#d9dde2] text-[#111827]" : "text-[#5f6875] hover:bg-[#e1e5e9] hover:text-[#111827]"}`}>{item}</button>)}</div></nav>
+          <div className="border-t border-[#d9dde2] p-3"><button onClick={() => goTo("Configurações")} className={`flex w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${active === "Configurações" ? "bg-[#d9dde2] text-[#111827]" : "text-[#5f6875] hover:bg-[#e1e5e9] hover:text-[#111827]"}`}>Configurações</button><button className="flex w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium text-[#5f6875] hover:bg-[#e1e5e9] hover:text-[#111827]">Ajuda</button></div>
         </aside>
-
         {mobileOpen && <button className="fixed inset-0 z-40 bg-black/20 lg:hidden" onClick={() => setMobileOpen(false)} aria-label="Fechar menu" />}
-
         <main className="min-w-0 flex-1">
-          <header className="sticky top-0 z-30 flex h-20 items-center gap-4 border-b border-[#dfe3e8] bg-[#f3f4f6]/95 px-5 backdrop-blur md:px-8">
-            <button className="text-[#4b5563] lg:hidden" onClick={() => setMobileOpen(true)} aria-label="Abrir menu"><Menu size={22} /></button>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-medium text-[#7b8491]">WS / Emissão fiscal</p>
-              <h1 className="truncate text-lg font-semibold tracking-tight">{currentTitle}</h1>
-            </div>
-            <div className="hidden w-full max-w-sm md:block">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#89919c]" />
-                <Input readOnly placeholder="Buscar documentos..." className="h-10 border-[#d8dde3] bg-[#eaedf0] pl-9 shadow-none placeholder:text-[#89919c]" />
-              </div>
-            </div>
-            <button className="grid h-10 w-10 place-items-center rounded-lg border border-[#d8dde3] bg-[#eaedf0] text-[#5f6875]"><Bell size={18} /></button>
-            <button className="grid h-10 w-10 place-items-center rounded-lg bg-[#111827] text-white"><UserRound size={18} /></button>
-          </header>
-
-          <div className="mx-auto max-w-[1440px] px-5 py-7 md:px-8 md:py-9">
-            <section className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end">
-              <div>
-                <p className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-[#d8dde3] bg-[#eaedf0] px-2.5 py-1 text-xs font-medium text-[#5f6875]"><ShieldCheck size={13} /> Ambiente fiscal</p>
-                <h2 className="text-2xl font-semibold tracking-[-0.03em] md:text-3xl">Tudo para emitir, acompanhar e organizar seus documentos.</h2>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-[#6b7280]">Estrutura inicial do novo produto. Os módulos serão conectados às rotinas fiscais nas próximas etapas.</p>
-              </div>
-              <Button className="h-11 gap-2 rounded-lg bg-[#111827] px-5 text-white hover:bg-[#202938]"><FilePlus2 size={17} /> Nova emissão</Button>
-            </section>
-
-            <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {[['Documentos hoje','0'],['Autorizados','0'],['Em processamento','0'],['Com pendência','0']].map(([label,value]) => (
-                <div key={label} className="rounded-xl border border-[#dce1e6] bg-[#eaedf0] p-5">
-                  <p className="text-sm text-[#6b7280]">{label}</p><p className="mt-3 text-2xl font-semibold tracking-tight">{value}</p>
-                </div>
-              ))}
-            </section>
-
-            <section className="mt-8">
-              <div className="mb-4 flex items-center justify-between"><div><h3 className="text-lg font-semibold">Emitir documento</h3><p className="mt-1 text-sm text-[#6b7280]">Escolha o tipo de documento fiscal.</p></div></div>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-                {documentTypes.map(({ label, description, icon: Icon }) => (
-                  <button key={label} className="group rounded-xl border border-[#dce1e6] bg-[#eaedf0] p-4 text-left transition-all hover:-translate-y-0.5 hover:border-[#c8ced5] hover:bg-[#e5e8eb] hover:shadow-sm">
-                    <div className="mb-6 grid h-9 w-9 place-items-center rounded-lg border border-[#d3d8de] bg-[#f3f4f6] text-[#374151]"><Icon size={18} /></div>
-                    <p className="font-semibold">{label}</p><p className="mt-1 text-xs leading-5 text-[#6b7280]">{description}</p>
-                  </button>
-                ))}
-              </div>
-            </section>
-
-            <section className="mt-8 grid gap-5 xl:grid-cols-[1.55fr_1fr]">
-              <div className="overflow-hidden rounded-xl border border-[#dce1e6] bg-[#eaedf0]">
-                <div className="flex items-center justify-between border-b border-[#dce1e6] px-5 py-4"><div><h3 className="font-semibold">Emissões recentes</h3><p className="mt-0.5 text-xs text-[#6b7280]">Últimos documentos movimentados</p></div><button className="text-sm font-medium text-[#4b5563]">Ver todos</button></div>
-                <div className="grid min-h-56 place-items-center p-8 text-center"><div><div className="mx-auto grid h-11 w-11 place-items-center rounded-full bg-[#f3f4f6] text-[#7b8491]"><FileText size={20} /></div><p className="mt-3 text-sm font-medium">Nenhuma emissão por enquanto</p><p className="mt-1 text-xs text-[#7b8491]">Seus documentos aparecerão aqui.</p></div></div>
-              </div>
-              <div className="rounded-xl border border-[#dce1e6] bg-[#eaedf0] p-5"><h3 className="font-semibold">Configuração da empresa</h3><p className="mt-1 text-xs leading-5 text-[#6b7280]">Acompanhe o que falta para começar a emitir.</p><div className="mt-5 space-y-3">{['Dados cadastrais','Certificado digital','Configuração fiscal'].map((item,index)=><div key={item} className="flex items-center gap-3 rounded-lg border border-[#d9dee4] bg-[#f0f2f4] px-3.5 py-3"><div className={`grid h-7 w-7 place-items-center rounded-full text-xs font-semibold ${index===0?'bg-[#d9dde2] text-[#374151]':'bg-[#e4e7ea] text-[#89919c]'}`}>{index+1}</div><span className="text-sm font-medium">{item}</span></div>)}</div></div>
-            </section>
-          </div>
+          <header className="sticky top-0 z-30 flex h-20 items-center gap-4 border-b border-[#dfe3e8] bg-[#f3f4f6]/95 px-5 backdrop-blur md:px-8"><button className="text-sm font-medium text-[#4b5563] lg:hidden" onClick={() => setMobileOpen(true)}>Menu</button><div className="min-w-0 flex-1"><p className="text-xs font-medium text-[#7b8491]">WS / Emissão fiscal</p><h1 className="truncate text-lg font-semibold tracking-tight">{currentTitle}</h1></div><div className="hidden w-full max-w-sm md:block"><Input placeholder="Buscar documentos..." className="h-10 !border-[#cfd5dc] !bg-white !text-[#111827] dark:!bg-white dark:!text-[#111827] placeholder:!text-[#89919c]" /></div><button className="rounded-lg border border-[#d8dde3] bg-[#eaedf0] px-3.5 py-2 text-sm font-medium text-[#4b5563]">Conta</button></header>
+          <div className="mx-auto max-w-[1440px] px-5 py-7 md:px-8 md:py-9">{renderContent()}</div>
         </main>
       </div>
     </div>
