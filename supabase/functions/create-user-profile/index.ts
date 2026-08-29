@@ -1,111 +1,47 @@
-
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
 
-// CORS headers for browser access
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Helper function to handle CORS preflight requests
-function handleCors(req: Request) {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      headers: corsHeaders,
-      status: 204,
-    })
-  }
-  return null
-}
-
-serve(async (req) => {
-  // Handle CORS preflight request
-  const corsResponse = handleCors(req)
-  if (corsResponse) return corsResponse
-
-  // Parse request body
-  let input
-  try {
-    input = await req.json()
-  } catch (error) {
-    return new Response(
-      JSON.stringify({ error: 'Invalid request body' }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
-  }
-
-  const { userId, email, name, adminApiKey } = input
-
-  if (!userId) {
-    return new Response(
-      JSON.stringify({ error: 'UserId is required' }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
-  }
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders, status: 204 })
 
   try {
-    // Get environment variables
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
-    const supabaseServiceKey = adminApiKey || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || ''
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
+    const userClient = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: authHeader } } })
+    const adminClient = createClient(supabaseUrl, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
 
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('Missing Supabase URL or service role key')
+    const { data: { user }, error: authError } = await userClient.auth.getUser()
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
-    // Create Supabase client with admin rights
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      }
-    })
-
-    console.log(`Attempting to create/verify user profile for ID: ${userId}`)
-
-    // First check if user already exists
-    const { data: existingUser, error: checkError } = await supabaseAdmin
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle()
-
-    if (checkError) {
-      throw new Error(`Error checking for existing user: ${checkError.message}`)
+    const body = await req.json().catch(() => ({}))
+    if (body.userId && body.userId !== user.id) {
+      return new Response(JSON.stringify({ error: 'Cannot create a profile for another user' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
-    // Only create if user doesn't exist
-    if (!existingUser) {
-      const { data: insertData, error: insertError } = await supabaseAdmin
-        .from('users')
-        .insert({
-          id: userId,
-          email: email || null,
-          name: name || 'Usuário',
-          role: 'client',
-          created_at: new Date().toISOString()
-        })
-        .select()
+    const name = String(body.name || user.user_metadata?.name || 'Usuário').slice(0, 160)
+    const email = user.email || body.email || null
 
-      if (insertError) {
-        throw new Error(`Error creating user profile: ${insertError.message}`)
-      }
-
-      return new Response(
-        JSON.stringify({ success: true, message: 'User profile created', data: insertData }),
-        { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    const { data: existing } = await adminClient.from('users').select('id').eq('id', user.id).maybeSingle()
+    if (!existing) {
+      const { error } = await adminClient.from('users').insert({ id: user.id, email, name, role: 'client' })
+      if (error) throw error
     }
 
-    return new Response(
-      JSON.stringify({ success: true, message: 'User profile already exists', data: existingUser }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    return new Response(JSON.stringify({ success: true }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   } catch (error) {
-    console.error('Error in create-user-profile function:', error)
-    return new Response(
-      JSON.stringify({ error: error.message || 'Unknown error occurred' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    console.error('create-user-profile:', error)
+    return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 })
