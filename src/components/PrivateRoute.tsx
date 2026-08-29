@@ -1,45 +1,75 @@
-
-import { Navigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { checkIsAdmin } from "@/utils/auth/userChecks";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PrivateRouteProps {
   children: JSX.Element;
   requiredRole?: string;
 }
 
+const LoadingScreen = () => (
+  <div className="flex h-screen items-center justify-center bg-background">
+    <div className="h-9 w-9 animate-spin rounded-full border-2 border-muted border-b-foreground/70" />
+  </div>
+);
+
 const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
   const { user, userData, isLoading } = useAuth();
-  
-  const isAdmin = () => {
-    return checkIsAdmin(userData, user?.email);
-  };
+  const location = useLocation();
+  const admin = checkIsAdmin(userData, user?.email);
+  const [isSaasMember, setIsSaasMember] = useState<boolean | null>(null);
 
-  // While loading, show a loading indicator
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
-      </div>
-    );
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!user) {
+      setIsSaasMember(false);
+      return () => { cancelled = true; };
+    }
+
+    if (admin) {
+      setIsSaasMember(false);
+      return () => { cancelled = true; };
+    }
+
+    setIsSaasMember(null);
+    (async () => {
+      const { data, error } = await (supabase as any)
+        .from("organization_members")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .limit(1);
+
+      if (!cancelled) {
+        setIsSaasMember(!error && Boolean(data?.length));
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [user?.id, admin]);
+
+  if (isLoading) return <LoadingScreen />;
+  if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+
+  if (requiredRole === "admin") {
+    if (!admin) return <Navigate to="/dashboard" replace />;
+    return children;
   }
 
-  // If no user, redirect to login
-  if (!user) {
-    return <Navigate to="/login" replace />;
+  if (admin) return <Navigate to="/admin" replace />;
+  if (isSaasMember === null) return <LoadingScreen />;
+
+  if (location.pathname.startsWith("/client") && isSaasMember) {
+    return <Navigate to="/app" replace />;
   }
-  
-  // If admin role is required but user is not admin, redirect to client area
-  if (requiredRole === 'admin' && !isAdmin()) {
+
+  if (location.pathname.startsWith("/app") && !isSaasMember) {
     return <Navigate to="/client" replace />;
   }
-  
-  // If user is admin but accessing client page, redirect to admin area
-  if (!requiredRole && isAdmin()) {
-    return <Navigate to="/admin" replace />;
-  }
-  
-  // If everything is ok, render the child component
+
   return children;
 };
 
