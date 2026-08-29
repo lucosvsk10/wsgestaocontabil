@@ -21,7 +21,7 @@ export const useAdminSidebarNavigation = () => {
     ]},
     { title: "Clientes do escritório", items: [
       { icon: Building2, label: "Clientes", active: getIsActive("/admin/clientes") || getIsActive("/admin/fiscal/empresas"), to: "/admin/clientes" },
-      { icon: Users, label: "Acessos do portal", active: getIsActive("/admin/users") || getIsActive("/admin/user-documents") || getIsActive("/admin/company-data"), to: "/admin/users" },
+      { icon: Users, label: "Documentos dos clientes", active: getIsActive("/admin/users") || getIsActive("/admin/user-documents"), to: "/admin/users" },
       { icon: HardDrive, label: "Armazenamento", active: getIsActive("/admin/storage"), to: "/admin/storage" },
       { icon: Megaphone, label: "Anúncios", active: getIsActive("/admin/announcements"), to: "/admin/announcements" },
       { icon: PieChart, label: "Enquetes", active: getIsActive("/admin/polls"), to: "/admin/polls" }
