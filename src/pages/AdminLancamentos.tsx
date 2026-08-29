@@ -4,7 +4,7 @@ import { LancamentosWorkspace } from '@/components/admin/lancamentos/Lancamentos
 const AdminLancamentos = () => {
   return (
     <AdminLayout>
-      <div className="lancamentos-clean">
+      <div className="lancamentos-clean ws-storage-style">
         <LancamentosWorkspace />
       </div>
     </AdminLayout>
