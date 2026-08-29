@@ -1,0 +1,31 @@
+name: One Shot Storage Notes
+on:
+  push:
+    paths:
+      - '.github/workflows/one-shot-storage-notes.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply pilot class
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/pages/AdminFiscalNotes.tsx')
+          s=p.read_text()
+          old='return <AdminLayout><main className="mx-auto w-full max-w-[1560px] px-4 py-5 lg:px-7">'
+          new='return <AdminLayout><main className="ws-storage-style mx-auto w-full max-w-[1560px] px-4 py-5 lg:px-7">'
+          if old not in s:
+              raise SystemExit('target not found')
+          p.write_text(s.replace(old,new,1))
+          PY
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/AdminFiscalNotes.tsx
+          git commit -m "style: apply storage visual language to fiscal notes"
+          git push
