@@ -1,6 +1,5 @@
 /* Final admin theme reconciliation. Keep the shell full-bleed and preserve the default navy chrome. */
 
-/* All admin modes must paint the entire viewport without exposed outer background. */
 html,
 body,
 #root,
@@ -78,44 +77,60 @@ body,
 }
 
 /* Lançamentos: module cards must visibly be surfaces, not extensions of the canvas. */
-.theme-default .lancamentos-clean nav[aria-label="Módulos contábeis"] > button,
-.theme-default .lancamentos-clean nav[aria-label="Módulos contábeis"] > div,
-.theme-default .lancamentos-clean nav[aria-label="Módulos contábeis"] > * {
+.theme-default .lancamentos-clean nav[aria-label="Módulos contábeis"] > *,
+.theme-default .lancamentos-clean [role="tabpanel"] > .rounded-md,
+.theme-default .lancamentos-clean [role="tabpanel"] > .rounded-lg,
+.theme-default .lancamentos-clean [role="tabpanel"] > .rounded-xl {
   background-color: #0b0f1c !important;
   border-color: #20293a !important;
 }
-.theme-ws-dark .lancamentos-clean nav[aria-label="Módulos contábeis"] > * {
+.theme-ws-dark .lancamentos-clean nav[aria-label="Módulos contábeis"] > *,
+.theme-ws-dark .lancamentos-clean [role="tabpanel"] > .rounded-md,
+.theme-ws-dark .lancamentos-clean [role="tabpanel"] > .rounded-lg,
+.theme-ws-dark .lancamentos-clean [role="tabpanel"] > .rounded-xl {
   background-color: #2e2a28 !important;
   border-color: #4a4541 !important;
 }
-.light .lancamentos-clean nav[aria-label="Módulos contábeis"] > * {
+.light .lancamentos-clean nav[aria-label="Módulos contábeis"] > *,
+.light .lancamentos-clean [role="tabpanel"] > .rounded-md,
+.light .lancamentos-clean [role="tabpanel"] > .rounded-lg,
+.light .lancamentos-clean [role="tabpanel"] > .rounded-xl {
   background-color: #e9ecef !important;
   border-color: #d2d7dc !important;
 }
 
-/* Selected tabs and segmented controls: never allow text to blend into the surface. */
-.theme-default .lancamentos-clean [data-state="active"],
-.theme-default .lancamentos-clean [aria-selected="true"],
-.theme-default .lancamentos-clean [aria-pressed="true"] {
+/* Only selectable controls receive active-state paint. Never paint TabsContent panels. */
+.theme-default .lancamentos-clean [role="tab"][data-state="active"],
+.theme-default .lancamentos-clean button[aria-selected="true"],
+.theme-default .lancamentos-clean button[aria-pressed="true"] {
   background-color: #273244 !important;
   color: #ffffff !important;
 }
-.theme-default .lancamentos-clean [data-state="active"] *,
-.theme-default .lancamentos-clean [aria-selected="true"] *,
-.theme-default .lancamentos-clean [aria-pressed="true"] * {
+.theme-default .lancamentos-clean [role="tab"][data-state="active"] *,
+.theme-default .lancamentos-clean button[aria-selected="true"] *,
+.theme-default .lancamentos-clean button[aria-pressed="true"] * {
   color: #ffffff !important;
 }
-.theme-ws-dark .lancamentos-clean [data-state="active"],
-.theme-ws-dark .lancamentos-clean [aria-selected="true"],
-.theme-ws-dark .lancamentos-clean [aria-pressed="true"] {
+.theme-ws-dark .lancamentos-clean [role="tab"][data-state="active"],
+.theme-ws-dark .lancamentos-clean button[aria-selected="true"],
+.theme-ws-dark .lancamentos-clean button[aria-pressed="true"] {
   background-color: #49423e !important;
   color: #ffffff !important;
 }
-.light .lancamentos-clean [data-state="active"],
-.light .lancamentos-clean [aria-selected="true"],
-.light .lancamentos-clean [aria-pressed="true"] {
+.light .lancamentos-clean [role="tab"][data-state="active"],
+.light .lancamentos-clean button[aria-selected="true"],
+.light .lancamentos-clean button[aria-pressed="true"] {
   background-color: #d4d9de !important;
   color: #111827 !important;
+}
+
+/* The explanatory block above each accounting table must stay on the page/card palette. */
+.lancamentos-clean [role="tabpanel"] > div:first-child:not(.rounded-md):not(.rounded-lg):not(.rounded-xl) {
+  background: transparent !important;
+  color: hsl(var(--foreground)) !important;
+}
+.lancamentos-clean [role="tabpanel"] > div:first-child:not(.rounded-md):not(.rounded-lg):not(.rounded-xl) p {
+  color: hsl(var(--muted-foreground)) !important;
 }
 
 /* Accounting table zebra: readable but subtle in every theme. */
