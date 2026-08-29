@@ -1,8 +1,8 @@
-
+import { useMemo, useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Trash2, Mail, Calendar, Settings, Users, UserCheck, Building2 } from "lucide-react";
+import { ChevronDown, ChevronRight, FileText, Trash2, Mail, Calendar, Users, UserCheck, Building2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { formatDate } from "../utils/dateUtils";
 import { UserType } from "@/types/admin";
@@ -11,9 +11,7 @@ interface AuthUser {
   id: string;
   email: string;
   created_at: string;
-  user_metadata?: {
-    name?: string;
-  };
+  user_metadata?: { name?: string };
 }
 
 interface UserTableComponentProps {
@@ -26,157 +24,85 @@ interface UserTableComponentProps {
   onDeleteUser: (userId: string) => void;
 }
 
-export const UserTableComponent = ({
-  usersList,
-  users,
-  title,
-  isAdmin = false,
-  searchTerm,
-  sortOrder,
-  onDeleteUser
-}: UserTableComponentProps) => {
+export const UserTableComponent = ({ usersList, users, title, isAdmin = false, searchTerm, sortOrder, onDeleteUser }: UserTableComponentProps) => {
   const navigate = useNavigate();
+  const [expanded, setExpanded] = useState<string | null>(null);
 
-  const getUserName = (authUser: AuthUser) => {
-    const userInfo = users.find(u => u.id === authUser.id);
-    return userInfo?.name || authUser.user_metadata?.name || "Sem nome";
-  };
+  const getUserName = (authUser: AuthUser) => users.find(user => user.id === authUser.id)?.name || authUser.user_metadata?.name || "Sem nome";
 
-  const filterAndSortUsers = (usersList: AuthUser[]) => {
-    let filtered = usersList.filter(user => {
-      const name = getUserName(user).toLowerCase();
-      const email = user.email?.toLowerCase() || "";
-      const search = searchTerm.toLowerCase();
-      return name.includes(search) || email.includes(search);
-    });
-
-    return filtered.sort((a, b) => {
-      if (sortOrder === "newest") {
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      } else {
-        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-      }
-    });
-  };
+  const filteredUsers = useMemo(() => {
+    const search = searchTerm.toLowerCase();
+    return [...usersList]
+      .filter(user => getUserName(user).toLowerCase().includes(search) || (user.email || "").toLowerCase().includes(search))
+      .sort((a, b) => sortOrder === "newest"
+        ? new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        : new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  }, [usersList, users, searchTerm, sortOrder]);
 
   return (
-    <div className="mb-12">
-      <div className="flex items-center gap-3 mb-6">
-        {isAdmin ? (
-          <UserCheck className="h-6 w-6 text-[#020817] dark:text-[#efc349]" />
-        ) : (
-          <Users className="h-6 w-6 text-[#020817] dark:text-[#efc349]" />
-        )}
-        <h2 className="text-2xl font-extralight uppercase tracking-wide text-[#020817] dark:text-[#efc349]">
-          {title}
-        </h2>
-        <Badge variant="outline" className="border-[#efc349] text-[#efc349]">
-          {usersList.length}
-        </Badge>
+    <section className="overflow-hidden rounded-2xl border border-border/60 bg-card/70 shadow-sm">
+      <div className="flex items-center justify-between gap-3 border-b border-border/60 px-5 py-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted/60">
+            {isAdmin ? <UserCheck className="h-4 w-4" /> : <Users className="h-4 w-4" />}
+          </div>
+          <div>
+            <h2 className="font-semibold">{title}</h2>
+            <p className="text-xs text-muted-foreground">{isAdmin ? "Acessos administrativos" : "Credenciais usadas pelos clientes no portal"}</p>
+          </div>
+        </div>
+        <Badge variant="secondary" className="rounded-full">{usersList.length}</Badge>
       </div>
 
-      <div className="bg-white dark:bg-[#0b0f1c] rounded-xl shadow-sm border-none overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-b border-gray-100 dark:border-[#efc349]/20 hover:bg-transparent">
-              {!isAdmin && (
-                <TableHead className="text-[#020817] dark:text-[#efc349] font-extralight uppercase tracking-wider">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    Nome
-                  </div>
-                </TableHead>
-              )}
-              <TableHead className="text-[#020817] dark:text-[#efc349] font-extralight uppercase tracking-wider">
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
-                  Email
-                </div>
-              </TableHead>
-              <TableHead className="text-[#020817] dark:text-[#efc349] font-extralight uppercase tracking-wider">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  Data de Cadastro
-                </div>
-              </TableHead>
-              {!isAdmin && (
-                <TableHead className="text-[#020817] dark:text-[#efc349] font-extralight uppercase tracking-wider">
-                  <div className="flex items-center gap-2">
-                    <Settings className="h-4 w-4" />
-                    Ações
-                  </div>
-                </TableHead>
-              )}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filterAndSortUsers(usersList).map((user, index) => (
-              <TableRow
-                key={user.id}
-                className={`border-b border-gray-100 dark:border-[#efc349]/10 hover:bg-gray-50 dark:hover:bg-[#efc349]/5 transition-colors ${
-                  index % 2 === 1 ? 'bg-gray-50/50 dark:bg-white/[0.015]' : ''
-                }`}
-              >
-                {!isAdmin && (
-                  <TableCell className="text-[#020817] dark:text-[#f4f4f4] font-extralight">
-                    {getUserName(user)}
-                  </TableCell>
-                )}
-                <TableCell className="text-gray-600 dark:text-[#b3b3b3] font-extralight">
-                  {user.email || "Sem email"}
-                </TableCell>
-                <TableCell className="text-gray-600 dark:text-[#b3b3b3] font-extralight">
-                  {formatDate(user.created_at)}
-                </TableCell>
-                {!isAdmin && (
-                  <TableCell>
-                    <div className="flex gap-2 flex-wrap">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="bg-transparent border border-[#efc349] text-[#020817] dark:text-[#efc349] hover:bg-[#efc349]/10 font-extralight"
-                        onClick={() => navigate(`/admin/user-documents/${user.id}`)}
-                      >
-                        <FileText className="h-4 w-4 mr-1" />
-                        Docs
-                      </Button>
-                      
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="bg-transparent border border-[#efc349] text-[#020817] dark:text-[#efc349] hover:bg-[#efc349]/10 font-extralight"
-                        onClick={() => navigate(`/admin/company-data/${user.id}`)}
-                      >
-                        <Building2 className="h-4 w-4 mr-1" />
-                        Empresa
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="bg-transparent border border-red-400 text-red-600 dark:text-red-400 hover:bg-red-400/10 font-extralight"
-                        onClick={() => onDeleteUser(user.id)}
-                      >
-                        <Trash2 className="h-4 w-4 mr-1" />
-                        Excluir
-                      </Button>
-                    </div>
-                  </TableCell>
-                )}
-              </TableRow>
-            ))}
-            {filterAndSortUsers(usersList).length === 0 && (
-              <TableRow>
-                <TableCell
-                  colSpan={isAdmin ? 2 : 4}
-                  className="text-center py-8 text-gray-500 dark:text-[#b3b3b3] font-extralight"
+      <Table>
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            {!isAdmin && <TableHead>Nome</TableHead>}
+            <TableHead><span className="inline-flex items-center gap-2"><Mail className="h-3.5 w-3.5" />E-mail</span></TableHead>
+            <TableHead><span className="inline-flex items-center gap-2"><Calendar className="h-3.5 w-3.5" />Criado em</span></TableHead>
+            {!isAdmin && <TableHead className="w-12" />}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {filteredUsers.map((user, index) => {
+            const isExpanded = expanded === user.id;
+            return (
+              <>
+                <TableRow
+                  key={user.id}
+                  className={`cursor-pointer border-border/50 transition-colors hover:bg-muted/30 ${index % 2 ? "bg-muted/[0.12]" : "bg-transparent"}`}
+                  onClick={() => !isAdmin && setExpanded(current => current === user.id ? null : user.id)}
                 >
-                  Nenhum usuário encontrado
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+                  {!isAdmin && <TableCell className="font-medium">{getUserName(user)}</TableCell>}
+                  <TableCell className="text-muted-foreground">{user.email || "Sem e-mail"}</TableCell>
+                  <TableCell className="text-muted-foreground">{formatDate(user.created_at)}</TableCell>
+                  {!isAdmin && <TableCell>{isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}</TableCell>}
+                </TableRow>
+                {!isAdmin && isExpanded && (
+                  <TableRow key={`${user.id}-actions`} className="bg-muted/[0.18] hover:bg-muted/[0.18]">
+                    <TableCell colSpan={4} className="px-5 py-4">
+                      <div className="flex flex-wrap gap-2">
+                        <Button size="sm" variant="outline" onClick={(event) => { event.stopPropagation(); navigate(`/admin/user-documents/${user.id}`); }}>
+                          <FileText className="mr-1.5 h-4 w-4" />Docs
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={(event) => { event.stopPropagation(); navigate(`/admin/company-data/${user.id}`); }}>
+                          <Building2 className="mr-1.5 h-4 w-4" />Dados da empresa
+                        </Button>
+                        <Button size="sm" variant="outline" className="border-destructive/30 text-destructive hover:bg-destructive/10" onClick={(event) => { event.stopPropagation(); onDeleteUser(user.id); }}>
+                          <Trash2 className="mr-1.5 h-4 w-4" />Excluir acesso
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </>
+            );
+          })}
+          {filteredUsers.length === 0 && (
+            <TableRow><TableCell colSpan={isAdmin ? 2 : 4} className="py-10 text-center text-muted-foreground">Nenhum acesso encontrado</TableCell></TableRow>
+          )}
+        </TableBody>
+      </Table>
+    </section>
   );
 };
