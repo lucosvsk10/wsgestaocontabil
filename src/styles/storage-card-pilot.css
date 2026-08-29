@@ -1,96 +1,92 @@
-/* Pilot visual language based on Storage: Dashboard, Lancamentos and Fiscal Notes only. */
+/* Two-surface pilot based on Storage: Dashboard, Lancamentos and Fiscal Notes only. */
 .ws-storage-style {
-  --ws-pilot-card-dark: #0b0f1c;
-  --ws-pilot-card-light: #ffffff;
-  --ws-pilot-title-dark: #efc349;
-  --ws-pilot-text-dark: #f4f4f4;
-  --ws-pilot-muted-dark: #b3b3b3;
+  --ws-surface-light-page: #f5f5f3;
+  --ws-surface-light-card: #ececea;
+  --ws-surface-blue-page: #020817;
+  --ws-surface-blue-card: #0b0f1c;
+  --ws-surface-warm-page: #35312e;
+  --ws-surface-warm-card: #2e2a28;
 }
 
-.ws-storage-style .ws-storage-card,
-.ws-storage-style [data-ws-storage-card="true"],
-.ws-storage-style [class*="bg-card"] {
-  background-color: var(--ws-pilot-card-light);
-  border-color: rgb(226 232 240 / .8);
-  box-shadow: 0 1px 2px rgb(15 23 42 / .04);
+/* Light mode: still white/clean, but without the blown-out all-white look. */
+:root:not(.dark) .pro-ui .ws-storage-style {
+  background: var(--ws-surface-light-page);
+}
+:root:not(.dark) .ws-storage-style [class*="bg-card"],
+:root:not(.dark) .ws-storage-style .ws-storage-card,
+:root:not(.dark) main.ws-storage-style > section[class*="rounded"],
+:root:not(.dark) main.ws-storage-style > div > section[class*="rounded"],
+:root:not(.dark) .ws-storage-style.lancamentos-clean nav[aria-label="Módulos contábeis"] > * {
+  background-color: var(--ws-surface-light-card) !important;
+  border-color: rgba(15,23,42,.07) !important;
+  box-shadow: none !important;
 }
 
-.dark .ws-storage-style .ws-storage-card,
-.dark .ws-storage-style [data-ws-storage-card="true"],
-.dark .ws-storage-style [class*="bg-card"],
-.theme-ws-dark .ws-storage-style .ws-storage-card,
-.theme-ws-dark .ws-storage-style [data-ws-storage-card="true"],
-.theme-ws-dark .ws-storage-style [class*="bg-card"] {
-  background-color: var(--ws-pilot-card-dark) !important;
+/* Default blue dark: exactly two dominant surfaces. */
+.dark:not(.theme-ws-dark) .pro-ui .ws-storage-style { background: var(--ws-surface-blue-page); }
+.dark:not(.theme-ws-dark) .ws-storage-style [class*="bg-card"],
+.dark:not(.theme-ws-dark) .ws-storage-style .ws-storage-card,
+.dark:not(.theme-ws-dark) main.ws-storage-style > section[class*="rounded"],
+.dark:not(.theme-ws-dark) main.ws-storage-style > div > section[class*="rounded"],
+.dark:not(.theme-ws-dark) .ws-storage-style.lancamentos-clean nav[aria-label="Módulos contábeis"] > * {
+  background-color: var(--ws-surface-blue-card) !important;
   border-color: transparent !important;
-  box-shadow: 0 1px 2px rgb(0 0 0 / .18);
+  box-shadow: none !important;
 }
 
-.dark .ws-storage-style .ws-storage-card h2,
-.dark .ws-storage-style .ws-storage-card h3,
-.dark .ws-storage-style [data-ws-storage-card="true"] h2,
-.dark .ws-storage-style [data-ws-storage-card="true"] h3,
-.dark .ws-storage-style [class*="bg-card"] h2,
-.dark .ws-storage-style [class*="bg-card"] h3,
-.theme-ws-dark .ws-storage-style .ws-storage-card h2,
-.theme-ws-dark .ws-storage-style .ws-storage-card h3,
-.theme-ws-dark .ws-storage-style [data-ws-storage-card="true"] h2,
-.theme-ws-dark .ws-storage-style [data-ws-storage-card="true"] h3,
-.theme-ws-dark .ws-storage-style [class*="bg-card"] h2,
-.theme-ws-dark .ws-storage-style [class*="bg-card"] h3 {
-  color: var(--ws-pilot-title-dark) !important;
-  font-weight: 300;
-}
-
-.dark .ws-storage-style .ws-storage-card,
-.dark .ws-storage-style [data-ws-storage-card="true"],
+/* Warm dark: do not inject blue cards into the brown theme. */
+.theme-ws-dark .pro-ui .ws-storage-style { background: var(--ws-surface-warm-page) !important; }
+.theme-ws-dark .ws-storage-style [class*="bg-card"],
 .theme-ws-dark .ws-storage-style .ws-storage-card,
-.theme-ws-dark .ws-storage-style [data-ws-storage-card="true"] {
-  color: var(--ws-pilot-text-dark);
-}
-
-.dark .ws-storage-style .ws-storage-card .text-muted-foreground,
-.dark .ws-storage-style [data-ws-storage-card="true"] .text-muted-foreground,
-.theme-ws-dark .ws-storage-style .ws-storage-card .text-muted-foreground,
-.theme-ws-dark .ws-storage-style [data-ws-storage-card="true"] .text-muted-foreground {
-  color: var(--ws-pilot-muted-dark) !important;
-}
-
-/* Lançamentos uses semantic sections instead of the Card component. */
-.dark .ws-storage-style.lancamentos-clean main > section,
-.dark .ws-storage-style.lancamentos-clean main > div > section,
-.theme-ws-dark .ws-storage-style.lancamentos-clean main > section,
-.theme-ws-dark .ws-storage-style.lancamentos-clean main > div > section {
-  background-color: var(--ws-pilot-card-dark) !important;
-  border-color: transparent !important;
-  box-shadow: 0 1px 2px rgb(0 0 0 / .18);
-}
-.dark .ws-storage-style.lancamentos-clean main > section h2,
-.dark .ws-storage-style.lancamentos-clean main > section h3,
-.theme-ws-dark .ws-storage-style.lancamentos-clean main > section h2,
-.theme-ws-dark .ws-storage-style.lancamentos-clean main > section h3 {
-  color: var(--ws-pilot-title-dark) !important;
-  font-weight: 300;
-}
-
-/* Fiscal Notes is hand-built. Only direct visual panels inside this opted-in page get Storage surfaces. */
-.dark main.ws-storage-style > section[class*="rounded"],
-.dark main.ws-storage-style > div > section[class*="rounded"],
 .theme-ws-dark main.ws-storage-style > section[class*="rounded"],
-.theme-ws-dark main.ws-storage-style > div > section[class*="rounded"] {
-  background-color: var(--ws-pilot-card-dark) !important;
+.theme-ws-dark main.ws-storage-style > div > section[class*="rounded"],
+.theme-ws-dark .ws-storage-style.lancamentos-clean nav[aria-label="Módulos contábeis"] > * {
+  background-color: var(--ws-surface-warm-card) !important;
   border-color: transparent !important;
-  box-shadow: 0 1px 2px rgb(0 0 0 / .18);
-  color: var(--ws-pilot-text-dark);
+  box-shadow: none !important;
 }
-.dark main.ws-storage-style > section[class*="rounded"] h2,
-.dark main.ws-storage-style > section[class*="rounded"] h3,
-.dark main.ws-storage-style > div > section[class*="rounded"] h2,
-.dark main.ws-storage-style > div > section[class*="rounded"] h3,
-.theme-ws-dark main.ws-storage-style > section[class*="rounded"] h2,
-.theme-ws-dark main.ws-storage-style > section[class*="rounded"] h3,
-.theme-ws-dark main.ws-storage-style > div > section[class*="rounded"] h2,
-.theme-ws-dark main.ws-storage-style > div > section[class*="rounded"] h3 {
-  color: var(--ws-pilot-title-dark) !important;
-  font-weight: 300;
+
+/* Lançamentos: cards dos quatro módulos ganham superfície real; conteúdo interno não é pintado indiscriminadamente. */
+.ws-storage-style.lancamentos-clean nav[aria-label="Módulos contábeis"] > * {
+  border-radius: .75rem;
+  min-height: 72px;
 }
+
+/* Corrige o bloco Transcrição / Lançamentos / Conferência: controle compacto, sem faixa de fundo quebrada. */
+.ws-storage-style.lancamentos-clean [role="tablist"] {
+  background: transparent !important;
+  border: 0 !important;
+  padding: 0 !important;
+}
+.ws-storage-style.lancamentos-clean [role="tab"] {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+:root:not(.dark) .ws-storage-style.lancamentos-clean [role="tab"][data-state="active"] {
+  background: var(--ws-surface-light-card) !important;
+}
+.dark:not(.theme-ws-dark) .ws-storage-style.lancamentos-clean [role="tab"][data-state="active"] {
+  background: var(--ws-surface-blue-card) !important;
+}
+.theme-ws-dark .ws-storage-style.lancamentos-clean [role="tab"][data-state="active"] {
+  background: var(--ws-surface-warm-card) !important;
+}
+.ws-storage-style.lancamentos-clean [role="tabpanel"] {
+  background: transparent !important;
+}
+
+/* Tables: stronger zebra without introducing a third dominant surface. */
+:root:not(.dark) .ws-storage-style table tbody tr:nth-child(odd) { background: #f7f7f5 !important; }
+:root:not(.dark) .ws-storage-style table tbody tr:nth-child(even) { background: #e8e8e5 !important; }
+:root:not(.dark) .ws-storage-style table tbody tr:hover { background: #dfdfdb !important; }
+.dark:not(.theme-ws-dark) .ws-storage-style table tbody tr:nth-child(odd) { background: #0b0f1c !important; }
+.dark:not(.theme-ws-dark) .ws-storage-style table tbody tr:nth-child(even) { background: #161d2a !important; }
+.dark:not(.theme-ws-dark) .ws-storage-style table tbody tr:hover { background: #1d2636 !important; }
+.theme-ws-dark .ws-storage-style table tbody tr:nth-child(odd) { background: #2e2a28 !important; }
+.theme-ws-dark .ws-storage-style table tbody tr:nth-child(even) { background: #393431 !important; }
+.theme-ws-dark .ws-storage-style table tbody tr:hover { background: #403a36 !important; }
+
+/* Keep typography neutral. Storage's hierarchy comes from surface contrast, not forced gold headings. */
+.ws-storage-style h2,
+.ws-storage-style h3 { font-weight: inherit; }
