@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 
@@ -8,22 +7,15 @@ interface UserListHeaderProps {
 
 export const UserListHeader = ({ onCreateUser }: UserListHeaderProps) => {
   return (
-    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div>
-        <h1 className="text-3xl font-extralight text-[#020817] dark:text-white mb-2">
-          Gerenciamento de Usuários
-        </h1>
-        <p className="text-gray-600 dark:text-[#b3b3b3] font-extralight">
-          Gerencie todos os usuários do sistema
-        </p>
+        <p className="text-[10px] font-semibold uppercase tracking-[.16em] text-muted-foreground">Clientes do escritório</p>
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">Acessos do portal</h1>
+        <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">Gerencie somente as credenciais usadas pelos clientes para entrar no portal e acessar os documentos enviados pela WS Gestão.</p>
       </div>
-      
-      <Button
-        onClick={onCreateUser}
-        className="bg-[#020817] hover:bg-[#0f172a] text-white dark:bg-transparent dark:border dark:border-[#efc349] dark:text-[#efc349] dark:hover:bg-[#efc349]/10 font-extralight"
-      >
-        <Plus className="h-4 w-4 mr-2" />
-        Criar Novo Usuário
+      <Button onClick={onCreateUser}>
+        <Plus className="mr-2 h-4 w-4" />
+        Novo acesso
       </Button>
     </div>
   );
