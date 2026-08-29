@@ -4,9 +4,9 @@ import { useCompanySelection, OfficeCompanySelection } from '@/contexts/CompanyS
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
-const formatCnpj = (value?: string) => {
+const formatCnpj = (value?: string | null) => {
   const digits = String(value || '').replace(/\D/g, '');
-  return digits.length === 14 ? digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : value || 'Sem CNPJ';
+  return digits.length === 14 ? digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : value || 'Cadastro pendente';
 };
 
 const initial = (name?: string | null) => String(name || '?').trim().charAt(0).toUpperCase() || '?';
@@ -40,15 +40,15 @@ export function AdminCompanySelector() {
           <Button variant="ghost" className="h-14 min-w-[360px] max-w-[560px] justify-between gap-4 rounded-xl border border-border/60 bg-card px-4 shadow-sm hover:bg-muted/30">
             <span className="flex min-w-0 items-center gap-3">
               <CompanyAvatar logo={selectedCompany?.logo_url} name={title} />
-              <span className="flex min-w-0 items-center gap-3 text-left">
-                <span className="min-w-0">
-                  <span className="block truncate text-sm font-semibold leading-5">{loading ? 'Carregando empresa...' : title}</span>
-                  {selectedCompany && <span className="block truncate text-[10px] leading-4 text-muted-foreground">{formatCnpj(selectedCompany.cnpj)}</span>}
-                </span>
-                {selectedCompany && <CompanyStatusDot company={selectedCompany} />}
+              <span className="min-w-0 text-left">
+                <span className="block truncate text-sm font-semibold leading-5">{loading ? 'Carregando empresa...' : title}</span>
+                {selectedCompany && <span className="block truncate text-[10px] leading-4 text-muted-foreground">{formatCnpj(selectedCompany.cnpj)}</span>}
               </span>
             </span>
-            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <span className="flex shrink-0 items-center gap-2.5">
+              {selectedCompany && <CompanyStatusDot company={selectedCompany} />}
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            </span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="center" className="w-[420px] max-w-[calc(100vw-2rem)]">
@@ -60,10 +60,8 @@ export function AdminCompanySelector() {
               const active = company.id === selectedCompany?.id;
               return <DropdownMenuItem key={company.id} onSelect={() => selectCompany(company.id)} className={`gap-3 rounded-lg py-2.5 ${active ? 'bg-muted/60' : ''}`}>
                 <CompanyAvatar logo={company.logo_url} name={name} compact />
-                <span className="flex min-w-0 flex-1 items-center gap-3">
-                  <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{name}</span><span className="block truncate text-xs text-muted-foreground">{formatCnpj(company.cnpj)}</span></span>
-                  <CompanyStatusDot company={company} />
-                </span>
+                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{name}</span><span className="block truncate text-xs text-muted-foreground">{formatCnpj(company.cnpj)}</span></span>
+                <CompanyStatusDot company={company} />
                 {active && <span className="text-[10px] font-medium text-muted-foreground">Ativa</span>}
               </DropdownMenuItem>;
             })}
