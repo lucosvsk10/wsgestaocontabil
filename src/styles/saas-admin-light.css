@@ -1,4 +1,16 @@
-.saas-admin-light { min-height: 100vh; color-scheme: light; font-family: 'Prompt', sans-serif; }
+@import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
+
+.saas-admin-light { min-height: 100vh; color-scheme: light; font-family: 'Prompt', sans-serif !important; }
+.saas-admin-light,
+.saas-admin-light *,
+.saas-admin-light input,
+.saas-admin-light select,
+.saas-admin-light textarea,
+.saas-admin-light button,
+.saas-admin-light table,
+.saas-admin-light th,
+.saas-admin-light td,
+.saas-admin-light svg text { font-family: 'Prompt', sans-serif !important; }
 .saas-topbar { background: #202833 !important; border-color: #303946 !important; }
 .saas-emission-group { box-shadow: inset 0 0 0 1px rgba(100,116,139,.10); }
 .saas-emission-group:hover { box-shadow: inset 0 0 0 1px rgba(100,116,139,.16); }
