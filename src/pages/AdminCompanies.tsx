@@ -114,7 +114,7 @@ export default function AdminCompanies() {
       }));
     } catch (loadError) {
       console.error(loadError);
-      setError(loadError instanceof Error ? loadError.message : 'Não foi possível carregar as empresas.');
+      setError(loadError instanceof Error ? loadError.message : 'Não foi possível carregar os clientes.');
     } finally {
       setLoading(false);
     }
@@ -187,10 +187,21 @@ export default function AdminCompanies() {
     } catch (saveError) {
       console.error(saveError);
       const message = saveError instanceof Error ? saveError.message : String(saveError);
-      setError(message.includes('companies_cnpj_key') ? 'Já existe uma empresa cadastrada com este CNPJ.' : message);
+      setError(message.includes('companies_cnpj_key') ? 'Já existe um cliente cadastrado com este CNPJ.' : message);
     } finally {
       setSaving(false);
     }
+  };
+
+  const openExtractor = (company: CompanyState) => {
+    if (!company.fiscalCompanyId) {
+      navigate(`/admin/fiscal/empresas?company=${company.id}`);
+      return;
+    }
+    localStorage.setItem('ws_fiscal_company_id', company.fiscalCompanyId);
+    localStorage.setItem('ws_fiscal_company_name', company.trade_name || company.company_name);
+    localStorage.setItem('ws_office_client_company_id', company.id);
+    navigate('/admin/feature');
   };
 
   return (
@@ -198,11 +209,11 @@ export default function AdminCompanies() {
       <main className="mx-auto w-full max-w-[1480px] px-5 py-6 lg:px-8">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[.16em] text-muted-foreground">Cadastro central</p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight">Empresas</h1>
-            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Uma empresa é cadastrada uma única vez e depois vinculada às funções do sistema.</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[.16em] text-muted-foreground">Clientes do escritório</p>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight">Clientes</h1>
+            <p className="mt-1 max-w-3xl text-sm text-muted-foreground">Este cadastro representa somente as empresas atendidas pela WS Gestão. A mesma empresa é reutilizada no portal de documentos, no certificado A1 e nas ferramentas fiscais internas.</p>
           </div>
-          <Button onClick={openNew}><Plus className="mr-2 h-4 w-4" />Nova empresa</Button>
+          <Button onClick={openNew}><Plus className="mr-2 h-4 w-4" />Novo cliente</Button>
         </div>
 
         {error && !drawerOpen && <div className="mt-5 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">{error}</div>}
@@ -211,15 +222,15 @@ export default function AdminCompanies() {
           <div className="flex flex-wrap items-center justify-between gap-3 bg-muted/10 p-4">
             <div className="relative w-full max-w-xl">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input className="border-0 bg-muted/30 pl-9 shadow-none" value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar por razão social, nome fantasia ou CNPJ..." />
+              <Input className="border-0 bg-muted/30 pl-9 shadow-none" value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar cliente por razão social, nome fantasia ou CNPJ..." />
             </div>
-            <span className="text-xs text-muted-foreground">{filtered.length} empresa(s)</span>
+            <span className="text-xs text-muted-foreground">{filtered.length} cliente(s)</span>
           </div>
 
           {loading ? (
-            <div className="p-12 text-center text-sm text-muted-foreground">Carregando empresas...</div>
+            <div className="p-12 text-center text-sm text-muted-foreground">Carregando clientes...</div>
           ) : filtered.length === 0 ? (
-            <div className="p-14 text-center"><Building2 className="mx-auto h-8 w-8 text-muted-foreground" /><p className="mt-3 font-medium">Nenhuma empresa encontrada</p><p className="mt-1 text-sm text-muted-foreground">Cadastre a empresa uma vez aqui. Os demais módulos passam a reutilizar este cadastro.</p></div>
+            <div className="p-14 text-center"><Building2 className="mx-auto h-8 w-8 text-muted-foreground" /><p className="mt-3 font-medium">Nenhum cliente encontrado</p><p className="mt-1 text-sm text-muted-foreground">Cadastre a empresa cliente uma única vez. Depois vincule o acesso ao portal e o certificado A1 quando necessário.</p></div>
           ) : (
             <div className="divide-y divide-border/60">
               {filtered.map(company => (
@@ -235,14 +246,14 @@ export default function AdminCompanies() {
 
                   <div className="flex flex-wrap gap-2">
                     <StatusPill active={Boolean(company.portalUserId)}>Portal {company.portalUserName ? `· ${company.portalUserName}` : ''}</StatusPill>
-                    <StatusPill active={Boolean(company.fiscalCompanyId)}>Fiscal</StatusPill>
+                    <StatusPill active={Boolean(company.fiscalCompanyId)}>Certificado / Fiscal</StatusPill>
                     <StatusPill active={Boolean(company.carouselItemId)}>Carrossel</StatusPill>
                     <StatusPill active={company.documentsCount > 0}>{company.documentsCount} documento(s)</StatusPill>
                   </div>
 
                   <div className="flex flex-wrap justify-end gap-2">
                     <Button variant="ghost" size="sm" onClick={() => openEdit(company)}><Pencil className="mr-1.5 h-4 w-4" />Editar</Button>
-                    <Button variant="outline" size="sm" onClick={() => navigate(`/admin/fiscal/empresas?company=${company.id}`)}><ReceiptText className="mr-1.5 h-4 w-4" />Fiscal</Button>
+                    <Button variant="outline" size="sm" onClick={() => openExtractor(company)}><ReceiptText className="mr-1.5 h-4 w-4" />{company.fiscalCompanyId ? 'Extrato' : 'Configurar A1'}</Button>
                     <Button variant="outline" size="sm" onClick={() => navigate(`/admin/carousel?company=${company.id}`)}><Images className="mr-1.5 h-4 w-4" />Carrossel</Button>
                     {company.portalUserId && <Button variant="outline" size="sm" onClick={() => navigate(`/admin/user-documents/${company.portalUserId}`)}><FileText className="mr-1.5 h-4 w-4" />Documentos</Button>}
                   </div>
@@ -257,7 +268,7 @@ export default function AdminCompanies() {
         <div className="fixed inset-0 z-[120] flex justify-end bg-black/45" onMouseDown={event => { if (event.target === event.currentTarget) closeDrawer(); }}>
           <aside className="h-full w-full max-w-xl overflow-y-auto bg-background shadow-2xl">
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border/60 bg-background/95 px-6 py-5 backdrop-blur">
-              <div><p className="text-[10px] uppercase tracking-[.16em] text-muted-foreground">Cadastro central</p><h2 className="mt-1 text-xl font-semibold">{editing ? 'Editar empresa' : 'Nova empresa'}</h2></div>
+              <div><p className="text-[10px] uppercase tracking-[.16em] text-muted-foreground">Cliente do escritório</p><h2 className="mt-1 text-xl font-semibold">{editing ? 'Editar cliente' : 'Novo cliente'}</h2></div>
               <Button variant="ghost" size="icon" onClick={closeDrawer}><X className="h-4 w-4" /></Button>
             </div>
             <div className="space-y-5 p-6">
@@ -267,7 +278,7 @@ export default function AdminCompanies() {
               <Field label="Endereço"><Input value={form.address} onChange={event => setForm(current => ({ ...current, address: event.target.value }))} /></Field>
               <Field label="Porte"><Input value={form.company_size} onChange={event => setForm(current => ({ ...current, company_size: event.target.value }))} placeholder="Opcional" /></Field>
               {error && <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">{error}</div>}
-              <div className="flex justify-end gap-2 pt-3"><Button variant="ghost" onClick={closeDrawer}>Cancelar</Button><Button onClick={save} disabled={saving}>{saving ? 'Salvando...' : 'Salvar empresa'}</Button></div>
+              <div className="flex justify-end gap-2 pt-3"><Button variant="ghost" onClick={closeDrawer}>Cancelar</Button><Button onClick={save} disabled={saving}>{saving ? 'Salvando...' : 'Salvar cliente'}</Button></div>
             </div>
           </aside>
         </div>
