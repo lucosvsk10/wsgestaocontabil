@@ -8,18 +8,18 @@ import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { useCompanySelection } from '@/contexts/CompanySelectionContext';
 
-type Company = { id:string; cnpj:string; company_name:string; trade_name:string|null; address:string|null; company_size:string|null; logo_url?:string|null; created_at:string; };
+type Company = { id:string; cnpj:string|null; company_name:string; trade_name:string|null; address:string|null; company_size:string|null; logo_url?:string|null; created_at:string; };
 type Form = { company_name:string; trade_name:string; cnpj:string; address:string; company_size:string };
 const blank=():Form=>({company_name:'',trade_name:'',cnpj:'',address:'',company_size:''});
-const digits=(v:string)=>v.replace(/\D/g,'');
-const formatCnpj=(v:string)=>{const d=digits(v);return d.length===14?d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,'$1.$2.$3/$4-$5'):v};
+const digits=(v:string|null|undefined)=>String(v||'').replace(/\D/g,'');
+const formatCnpj=(v:string|null|undefined)=>{const d=digits(v);return d.length===14?d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,'$1.$2.$3/$4-$5'):'Cadastro pendente'};
 const initial=(name:string)=>name.trim().charAt(0).toUpperCase()||'?';
 
 export default function AdminCompanies(){
  const navigate=useNavigate();
  const {refreshCompanies,selectCompany}=useCompanySelection();
  const [companies,setCompanies]=useState<Company[]>([]),[query,setQuery]=useState(''),[loading,setLoading]=useState(true),[open,setOpen]=useState(false),[form,setForm]=useState<Form>(blank()),[saving,setSaving]=useState(false),[error,setError]=useState('');
- const load=async()=>{setLoading(true);const {data,error}=await (supabase as any).from('companies').select('id,cnpj,company_name,trade_name,address,company_size,logo_url,created_at').order('company_name');if(error)setError(error.message);else setCompanies((data||[]) as Company[]);setLoading(false)};
+ const load=async()=>{setLoading(true);setError('');const {data,error}=await (supabase as any).from('companies').select('id,cnpj,company_name,trade_name,address,company_size,logo_url,created_at').order('company_name');if(error)setError(error.message);else setCompanies((data||[]) as Company[]);setLoading(false)};
  useEffect(()=>{void load()},[]);
  const filtered=useMemo(()=>{const q=query.trim().toLowerCase();return !q?companies:companies.filter(c=>[c.company_name,c.trade_name,c.cnpj].some(v=>String(v||'').toLowerCase().includes(q)))},[companies,query]);
  const save=async()=>{const cnpj=digits(form.cnpj);if(!form.company_name.trim()||cnpj.length!==14){setError('Informe a razão social e um CNPJ válido.');return}setSaving(true);setError('');const {error:e}=await (supabase as any).from('companies').insert({company_name:form.company_name.trim(),trade_name:form.trade_name.trim()||null,cnpj,address:form.address.trim()||null,company_size:form.company_size.trim()||null});if(e)setError(e.message);else{setOpen(false);setForm(blank());await Promise.all([load(),refreshCompanies()])}setSaving(false)};
