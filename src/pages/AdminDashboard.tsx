@@ -22,8 +22,14 @@ const AdminDashboard = ({ activeTab = "dashboard" }: AdminDashboardProps) => {
   const { documents, selectedUserId, setSelectedUserId, isUploading, documentName, setDocumentName, documentCategory, setDocumentCategory, documentObservations, setDocumentObservations, expirationDate, setExpirationDate, noExpiration, setNoExpiration, isLoadingDocuments, handleFileChange, handleUpload, handleDeleteDocument } = useDocumentManager(users, supabaseUsers);
   const [passwordChangeModalOpen, setPasswordChangeModalOpen] = useState(false);
   const documentCategories = ["Imposto de Renda", "Documentações", "Certidões"];
+  const needsUserData = activeTab === "users" || activeTab === "user-documents";
 
-  useEffect(() => { if (!isInitialized) { fetchUsers(); fetchAuthUsers(); setIsInitialized(true); } }, [isInitialized, fetchUsers, fetchAuthUsers]);
+  useEffect(() => {
+    if (!needsUserData || isInitialized) return;
+    fetchUsers();
+    fetchAuthUsers();
+    setIsInitialized(true);
+  }, [needsUserData, isInitialized, fetchUsers, fetchAuthUsers]);
   useEffect(() => { if (activeTab === "user-documents" && userId) setSelectedUserId(userId); }, [activeTab, userId, setSelectedUserId]);
   useEffect(() => {
     if (activeTab !== "user-documents" || !selectedCompany?.portal_user_id) return;
