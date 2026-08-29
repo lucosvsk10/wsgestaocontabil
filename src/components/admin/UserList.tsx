@@ -1,4 +1,3 @@
-
 import { LoadingSpinner } from "../common/LoadingSpinner";
 import { UserCreationDialog } from "./components/UserCreationDialog";
 import { DeleteUserDialog } from "./DeleteUserDialog";
@@ -12,9 +11,7 @@ interface AuthUser {
   id: string;
   email: string;
   created_at: string;
-  user_metadata?: {
-    name?: string;
-  };
+  user_metadata?: { name?: string };
 }
 
 interface UserListProps {
@@ -27,15 +24,7 @@ interface UserListProps {
   refreshUsers: () => void;
 }
 
-export const UserList = ({
-  supabaseUsers,
-  users,
-  isLoading,
-  setSelectedUserId,
-  setSelectedUserForPasswordChange,
-  passwordForm,
-  refreshUsers
-}: UserListProps) => {
+export const UserList = ({ supabaseUsers, users, isLoading, refreshUsers }: UserListProps) => {
   const {
     searchTerm,
     setSearchTerm,
@@ -53,65 +42,22 @@ export const UserList = ({
     handleDeleteSuccess
   } = useUserManagement({ supabaseUsers, users, refreshUsers });
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-[#fdfdfd] dark:bg-[#020817] flex justify-center items-center">
-        <LoadingSpinner />
-      </div>
-    );
-  }
+  if (isLoading) return <div className="flex min-h-[60vh] items-center justify-center bg-background"><LoadingSpinner /></div>;
 
   return (
-    <div className="min-h-screen bg-[#fdfdfd] dark:bg-[#020817] p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* Header */}
+    <div className="bg-background px-4 py-5 text-foreground sm:px-5 sm:py-6 lg:px-8">
+      <div className="mx-auto max-w-[1480px] space-y-6">
         <UserListHeader onCreateUser={() => setIsUserCreationDialogOpen(true)} />
 
-        {/* Search and Filter */}
-        <UserSearchAndFilter
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          sortOrder={sortOrder}
-          setSortOrder={setSortOrder}
-        />
+        <div className="rounded-2xl border border-border/55 bg-card p-4 shadow-sm">
+          <UserSearchAndFilter searchTerm={searchTerm} setSearchTerm={setSearchTerm} sortOrder={sortOrder} setSortOrder={setSortOrder} />
+        </div>
 
-        {/* User Tables */}
-        <UserTableComponent
-          usersList={clientUsers}
-          users={users}
-          title="Clientes"
-          searchTerm={searchTerm}
-          sortOrder={sortOrder}
-          onDeleteUser={handleDeleteUser}
-        />
-        
-        <UserTableComponent
-          usersList={adminUsers}
-          users={users}
-          title="Administradores"
-          isAdmin={true}
-          searchTerm={searchTerm}
-          sortOrder={sortOrder}
-          onDeleteUser={handleDeleteUser}
-        />
+        <UserTableComponent usersList={clientUsers} users={users} title="Acessos de clientes" searchTerm={searchTerm} sortOrder={sortOrder} onDeleteUser={handleDeleteUser} />
+        <UserTableComponent usersList={adminUsers} users={users} title="Administradores" isAdmin={true} searchTerm={searchTerm} sortOrder={sortOrder} onDeleteUser={handleDeleteUser} />
 
-        {/* User Creation Dialog */}
-        <UserCreationDialog
-          isOpen={isUserCreationDialogOpen}
-          onClose={() => setIsUserCreationDialogOpen(false)}
-          onSubmit={handleUserCreation}
-          isCreating={isCreatingUser}
-        />
-
-        {/* User Deletion Dialog */}
-        {selectedUserForDeletion && (
-          <DeleteUserDialog
-            open={true}
-            onOpenChange={(open) => !open && setSelectedUserForDeletion(null)}
-            authUser={selectedUserForDeletion}
-            onSuccess={handleDeleteSuccess}
-          />
-        )}
+        <UserCreationDialog isOpen={isUserCreationDialogOpen} onClose={() => setIsUserCreationDialogOpen(false)} onSubmit={handleUserCreation} isCreating={isCreatingUser} />
+        {selectedUserForDeletion && <DeleteUserDialog open={true} onOpenChange={(open) => !open && setSelectedUserForDeletion(null)} authUser={selectedUserForDeletion} onSuccess={handleDeleteSuccess} />}
       </div>
     </div>
   );
