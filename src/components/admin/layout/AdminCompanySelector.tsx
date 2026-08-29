@@ -1,6 +1,6 @@
 import { ChevronDown, Settings2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useCompanySelection } from '@/contexts/CompanySelectionContext';
+import { useCompanySelection, OfficeCompanySelection } from '@/contexts/CompanySelectionContext';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
@@ -17,6 +17,17 @@ function CompanyAvatar({ logo, name, compact = false }: { logo?: string | null; 
   </span>;
 }
 
+function CompanyStatusDot({ company }: { company?: OfficeCompanySelection | null }) {
+  const status = company?.certificate_status || 'missing';
+  const classes = status === 'valid'
+    ? 'bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,.12)]'
+    : status === 'expired'
+      ? 'bg-red-500 shadow-[0_0_0_3px_rgba(239,68,68,.12)]'
+      : 'bg-zinc-400/80';
+  const label = status === 'valid' ? 'A1 válido' : status === 'expired' ? 'A1 vencido' : 'Sem A1';
+  return <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${classes}`} aria-label={label} title={label} />;
+}
+
 export function AdminCompanySelector() {
   const navigate = useNavigate();
   const { companies, selectedCompany, selectCompany, loading } = useCompanySelection();
@@ -30,9 +41,11 @@ export function AdminCompanySelector() {
             <span className="flex min-w-0 items-center gap-3">
               <CompanyAvatar logo={selectedCompany?.logo_url} name={title} />
               <span className="min-w-0 text-left">
-                <span className="block text-[9px] font-semibold uppercase tracking-[.15em] text-muted-foreground">Empresa ativa</span>
-                <span className="block truncate text-sm font-semibold leading-5">{loading ? 'Carregando empresa...' : title}</span>
-                {selectedCompany && <span className="block truncate text-[10px] leading-4 text-muted-foreground">{formatCnpj(selectedCompany.cnpj)}</span>}
+                <span className="flex min-w-0 items-center gap-2">
+                  {selectedCompany && <CompanyStatusDot company={selectedCompany} />}
+                  <span className="block truncate text-sm font-semibold leading-5">{loading ? 'Carregando empresa...' : title}</span>
+                </span>
+                {selectedCompany && <span className="block truncate pl-[18px] text-[10px] leading-4 text-muted-foreground">{formatCnpj(selectedCompany.cnpj)}</span>}
               </span>
             </span>
             <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -47,7 +60,10 @@ export function AdminCompanySelector() {
               const active = company.id === selectedCompany?.id;
               return <DropdownMenuItem key={company.id} onSelect={() => selectCompany(company.id)} className={`gap-3 rounded-lg py-2.5 ${active ? 'bg-muted/60' : ''}`}>
                 <CompanyAvatar logo={company.logo_url} name={name} compact />
-                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{name}</span><span className="block truncate text-xs text-muted-foreground">{formatCnpj(company.cnpj)}</span></span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex min-w-0 items-center gap-2"><CompanyStatusDot company={company} /><span className="block truncate text-sm font-medium">{name}</span></span>
+                  <span className="block truncate pl-[18px] text-xs text-muted-foreground">{formatCnpj(company.cnpj)}</span>
+                </span>
                 {active && <span className="text-[10px] font-medium text-muted-foreground">Ativa</span>}
               </DropdownMenuItem>;
             })}
