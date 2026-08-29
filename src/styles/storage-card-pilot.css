@@ -30,10 +30,14 @@
 .dark .ws-storage-style .ws-storage-card h3,
 .dark .ws-storage-style [data-ws-storage-card="true"] h2,
 .dark .ws-storage-style [data-ws-storage-card="true"] h3,
+.dark .ws-storage-style [class*="bg-card"] h2,
+.dark .ws-storage-style [class*="bg-card"] h3,
 .theme-ws-dark .ws-storage-style .ws-storage-card h2,
 .theme-ws-dark .ws-storage-style .ws-storage-card h3,
 .theme-ws-dark .ws-storage-style [data-ws-storage-card="true"] h2,
-.theme-ws-dark .ws-storage-style [data-ws-storage-card="true"] h3 {
+.theme-ws-dark .ws-storage-style [data-ws-storage-card="true"] h3,
+.theme-ws-dark .ws-storage-style [class*="bg-card"] h2,
+.theme-ws-dark .ws-storage-style [class*="bg-card"] h3 {
   color: var(--ws-pilot-title-dark) !important;
   font-weight: 300;
 }
@@ -59,19 +63,34 @@
 .theme-ws-dark .ws-storage-style.lancamentos-clean main > div > section {
   background-color: var(--ws-pilot-card-dark) !important;
   border-color: transparent !important;
+  box-shadow: 0 1px 2px rgb(0 0 0 / .18);
+}
+.dark .ws-storage-style.lancamentos-clean main > section h2,
+.dark .ws-storage-style.lancamentos-clean main > section h3,
+.theme-ws-dark .ws-storage-style.lancamentos-clean main > section h2,
+.theme-ws-dark .ws-storage-style.lancamentos-clean main > section h3 {
+  color: var(--ws-pilot-title-dark) !important;
+  font-weight: 300;
 }
 
-/* Fiscal Notes has hand-built panels; opt-in only through this wrapper. */
-.dark .ws-storage-style .fiscal-storage-card,
-.theme-ws-dark .ws-storage-style .fiscal-storage-card {
+/* Fiscal Notes is hand-built. Only direct visual panels inside this opted-in page get Storage surfaces. */
+.dark main.ws-storage-style > section[class*="rounded"],
+.dark main.ws-storage-style > div > section[class*="rounded"],
+.theme-ws-dark main.ws-storage-style > section[class*="rounded"],
+.theme-ws-dark main.ws-storage-style > div > section[class*="rounded"] {
   background-color: var(--ws-pilot-card-dark) !important;
   border-color: transparent !important;
+  box-shadow: 0 1px 2px rgb(0 0 0 / .18);
   color: var(--ws-pilot-text-dark);
 }
-.dark .ws-storage-style .fiscal-storage-card h2,
-.dark .ws-storage-style .fiscal-storage-card h3,
-.theme-ws-dark .ws-storage-style .fiscal-storage-card h2,
-.theme-ws-dark .ws-storage-style .fiscal-storage-card h3 {
+.dark main.ws-storage-style > section[class*="rounded"] h2,
+.dark main.ws-storage-style > section[class*="rounded"] h3,
+.dark main.ws-storage-style > div > section[class*="rounded"] h2,
+.dark main.ws-storage-style > div > section[class*="rounded"] h3,
+.theme-ws-dark main.ws-storage-style > section[class*="rounded"] h2,
+.theme-ws-dark main.ws-storage-style > section[class*="rounded"] h3,
+.theme-ws-dark main.ws-storage-style > div > section[class*="rounded"] h2,
+.theme-ws-dark main.ws-storage-style > div > section[class*="rounded"] h3 {
   color: var(--ws-pilot-title-dark) !important;
   font-weight: 300;
 }
