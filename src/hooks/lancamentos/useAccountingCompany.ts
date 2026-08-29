@@ -5,26 +5,16 @@ export interface AccountingCompany { id: string; name: string; tradeName?: strin
 
 const LEGACY_STORAGE_KEY = "ws-accounting-company";
 const STORAGE_ID_KEY = "ws-accounting-company-id";
+const GLOBAL_SELECTION_KEY = "ws_selected_company_id";
 const GLOBAL_CONTEXT_KEY = "ws:lancamentos:last-context";
-const EMPTY_COMPANY: AccountingCompany = { id: "", name: "Carregando empresas…", chartModel: "" };
+const EMPTY_COMPANY: AccountingCompany = { id: "", name: "Selecione uma empresa", chartModel: "" };
 const companyContextKey = (companyId: string) => `ws:lancamentos:last-context:${companyId}`;
 
-function readSavedCompanyId() {
-  try {
-    const direct = localStorage.getItem(STORAGE_ID_KEY);
-    if (direct) return direct;
-
-    const legacy = JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY) || "null") as Partial<AccountingCompany> | null;
-    if (legacy?.id && legacy.id !== "el-da-silva") return legacy.id;
-
-    const context = JSON.parse(localStorage.getItem(GLOBAL_CONTEXT_KEY) || "null") as { companyId?: string } | null;
-    return context?.companyId || "";
-  } catch {
-    return "";
-  }
+function readSelectedCompanyId() {
+  return localStorage.getItem(GLOBAL_SELECTION_KEY) || localStorage.getItem(STORAGE_ID_KEY) || "";
 }
 
-function persistCompany(company: AccountingCompany) {
+function persistAccountingCompatibility(company: AccountingCompany) {
   if (!company.id) return;
   localStorage.setItem(STORAGE_ID_KEY, company.id);
   localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(company));
@@ -38,72 +28,57 @@ function persistCompany(company: AccountingCompany) {
 
 export function useAccountingCompany() {
   const [companies, setCompanies] = useState<AccountingCompany[]>([]);
-  const [company, setCompanyState] = useState<AccountingCompany>(() => {
-    try {
-      const legacy = JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY) || "null") as AccountingCompany | null;
-      return legacy?.id && legacy.id !== "el-da-silva" ? legacy : EMPTY_COMPANY;
-    } catch {
-      return EMPTY_COMPANY;
-    }
-  });
+  const [company, setCompanyState] = useState<AccountingCompany>(EMPTY_COMPANY);
 
   useEffect(() => {
-    void Promise.all([
-      supabase.from("company_data").select("id, user_id, name, fantasy_name, cnpj, tax_regime").order("name"),
-      supabase.from("companies").select("id, company_name, trade_name, cnpj").order("company_name"),
-    ]).then(([clientResult, fiscalResult]) => {
-      const clients = (clientResult.data ?? []).map(item => ({
-        id: item.user_id || item.id,
-        name: item.name,
-        tradeName: item.fantasy_name,
-        cnpj: item.cnpj,
-        chartModel: item.tax_regime ? `Plano próprio · ${item.tax_regime}` : "Plano próprio da empresa",
-      }));
-      const fiscal = (fiscalResult.data ?? []).map(item => ({
+    void supabase.from("companies").select("id,company_name,trade_name,cnpj").order("company_name").then(result => {
+      if (result.error) {
+        console.error("Não foi possível carregar as empresas contábeis.", result.error);
+        return;
+      }
+      const next = (result.data ?? []).map(item => ({
         id: item.id,
         name: item.company_name,
         tradeName: item.trade_name,
         cnpj: item.cnpj,
         chartModel: "Plano próprio da empresa",
       }));
-      const next = Array.from(new Map([...clients, ...fiscal].map(item => [item.id, item])).values());
       setCompanies(next);
-      if (!next.length) {
-        setCompanyState(EMPTY_COMPANY);
-        return;
-      }
-
-      const savedId = readSavedCompanyId();
-      const selected = next.find(item => item.id === savedId) ?? next[0];
+      const selected = next.find(item => item.id === readSelectedCompanyId()) ?? next[0] ?? EMPTY_COMPANY;
       setCompanyState(selected);
-      persistCompany(selected);
+      persistAccountingCompatibility(selected);
     });
   }, []);
 
   useEffect(() => {
-    const sync = (event: StorageEvent) => {
-      if (![STORAGE_ID_KEY, LEGACY_STORAGE_KEY, GLOBAL_CONTEXT_KEY].includes(event.key || "")) return;
-      const savedId = readSavedCompanyId();
-      const selected = companies.find(item => item.id === savedId);
-      if (selected) setCompanyState(selected);
+    const sync = () => {
+      const selected = companies.find(item => item.id === readSelectedCompanyId());
+      if (selected) {
+        setCompanyState(selected);
+        persistAccountingCompatibility(selected);
+      }
     };
-    window.addEventListener("storage", sync);
-    return () => window.removeEventListener("storage", sync);
+    const storageSync = (event: StorageEvent) => {
+      if ([GLOBAL_SELECTION_KEY, STORAGE_ID_KEY].includes(event.key || "")) sync();
+    };
+    window.addEventListener("storage", storageSync);
+    window.addEventListener("ws:company-changed", sync as EventListener);
+    return () => {
+      window.removeEventListener("storage", storageSync);
+      window.removeEventListener("ws:company-changed", sync as EventListener);
+    };
   }, [companies]);
 
   const selectCompany = useCallback((next: AccountingCompany) => {
     if (!next.id) return;
-
-    // A competência/módulo/aba visualizada agora acompanha a troca de empresa.
-    // Isso evita que mudar a empresa jogue o usuário para "hoje" ou para um mês antigo daquela empresa.
     if (company.id && company.id !== next.id) {
       const currentContext = localStorage.getItem(companyContextKey(company.id));
       if (currentContext) localStorage.setItem(companyContextKey(next.id), currentContext);
     }
-
+    localStorage.setItem(GLOBAL_SELECTION_KEY, next.id);
     setCompanyState(next);
-    persistCompany(next);
-    window.dispatchEvent(new StorageEvent("storage", { key: STORAGE_ID_KEY, newValue: next.id }));
+    persistAccountingCompatibility(next);
+    window.dispatchEvent(new CustomEvent("ws:company-changed", { detail: next }));
   }, [company.id]);
 
   return { company, companies, selectCompany };
