@@ -1,4 +1,4 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { AlertTriangle, KeyRound, LockKeyhole, RefreshCw, Send } from "lucide-react";
 import { AdminLayout } from "@/components/admin/layout/AdminLayout";
 import { AuthorizedNfceCard } from "@/components/admin/fiscal/AuthorizedNfceCard";
@@ -7,6 +7,7 @@ import { FiscalExtractorPanel } from "@/components/admin/fiscal/FiscalExtractorP
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
+import { useCompanySelection } from "@/contexts/CompanySelectionContext";
 
 type Section = "emissor" | "extrator";
 type Mode = "nfce" | "nfe" | "nfse" | "cte";
@@ -42,6 +43,7 @@ async function fileToBase64(file: File) {
 }
 
 export default function AdminFeature() {
+  const { selectedCompany } = useCompanySelection();
   const [token, setToken] = useState("");
   const [password, setPassword] = useState("");
   const [section, setSection] = useState<Section>("emissor");
@@ -62,6 +64,14 @@ export default function AdminFeature() {
   const [extractorLoading, setExtractorLoading] = useState(false);
   const [extractorError, setExtractorError] = useState("");
   const hasCert = Boolean(certificateBase64 && certificatePassword);
+
+  useEffect(() => {
+    if (!selectedCompany) return;
+    const cnpj = String(selectedCompany.cnpj || "").replace(/\D/g, "");
+    setSale(current => ({ ...current, cnpjEmitente: cnpj, razaoSocial: selectedCompany.company_name, nomeFantasia: selectedCompany.trade_name || selectedCompany.company_name }));
+    setService(current => ({ ...current, cnpjPrestador: cnpj }));
+  }, [selectedCompany?.id]);
+
 
   const authenticate = async (e: FormEvent) => {
     e.preventDefault(); setLoading(true); setError("");
