@@ -24,9 +24,9 @@ export const UserDocumentView = ({ users = [], supabaseUsers = [] }: UserDocumen
     setUserEmail(auth?.email||fallback?.email||'');
   },[userId,setSelectedUserId,supabaseUsers,users,selectedCompany?.id]);
 
-  if(!userId)return <AdminPage><AdminSection className="mt-6"><AdminEmptyState icon={<FileText className="h-8 w-8"/>} title="Nenhum cliente selecionado" description="Escolha uma empresa no topo do Admin."/></AdminSection></AdminPage>;
+  if(!userId)return <AdminPage className="ws-admin-polish"><AdminSection className="mt-6"><AdminEmptyState icon={<FileText className="h-8 w-8"/>} title="Nenhum cliente selecionado" description="Escolha uma empresa no topo do Admin."/></AdminSection></AdminPage>;
 
-  return <AdminPage>
+  return <AdminPage className="ws-admin-polish">
     <AdminPageHeader eyebrow="Clientes do escritório" title="Documentos do cliente" description={`Envie, acompanhe e organize os documentos de ${selectedCompany?.trade_name||selectedCompany?.company_name||userName}. A empresa acompanha o seletor global do topo.`}/>
     <div className="mt-6"><AdminDocumentManager userId={userId} userName={userName} userEmail={userEmail} documents={documents} isLoadingDocuments={isLoadingDocuments} loadingDocumentIds={loadingDocumentIds} handleDownload={handleDownload} handleDeleteDocument={handleDeleteDocument}/></div>
   </AdminPage>;
