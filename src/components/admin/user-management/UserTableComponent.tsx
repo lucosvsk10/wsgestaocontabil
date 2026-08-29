@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -67,9 +67,8 @@ export const UserTableComponent = ({ usersList, users, title, isAdmin = false, s
           {filteredUsers.map((user, index) => {
             const isExpanded = expanded === user.id;
             return (
-              <>
+              <Fragment key={user.id}>
                 <TableRow
-                  key={user.id}
                   className={`cursor-pointer border-border/50 transition-colors hover:bg-muted/30 ${index % 2 ? "bg-muted/[0.12]" : "bg-transparent"}`}
                   onClick={() => !isAdmin && setExpanded(current => current === user.id ? null : user.id)}
                 >
@@ -79,7 +78,7 @@ export const UserTableComponent = ({ usersList, users, title, isAdmin = false, s
                   {!isAdmin && <TableCell>{isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}</TableCell>}
                 </TableRow>
                 {!isAdmin && isExpanded && (
-                  <TableRow key={`${user.id}-actions`} className="bg-muted/[0.18] hover:bg-muted/[0.18]">
+                  <TableRow className="bg-muted/[0.18] hover:bg-muted/[0.18]">
                     <TableCell colSpan={4} className="px-5 py-4">
                       <div className="flex flex-wrap gap-2">
                         <Button size="sm" variant="outline" onClick={(event) => { event.stopPropagation(); navigate(`/admin/user-documents/${user.id}`); }}>
@@ -95,7 +94,7 @@ export const UserTableComponent = ({ usersList, users, title, isAdmin = false, s
                     </TableCell>
                   </TableRow>
                 )}
-              </>
+              </Fragment>
             );
           })}
           {filteredUsers.length === 0 && (
