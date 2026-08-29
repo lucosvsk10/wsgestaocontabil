@@ -1,5 +1,4 @@
 import { FormEvent, useState } from "react";
-import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
@@ -99,15 +98,15 @@ const ClientLogin = () => {
               <div className="space-y-2">
                 <div className="flex items-center justify-between"><label htmlFor="password" className="text-sm font-medium">Senha</label><button type="button" className="text-xs font-medium text-[#6b7280] transition-colors hover:text-[#111827]">Esqueci minha senha</button></div>
                 <div className="relative">
-                  <Input id="password" type={showPassword ? "text" : "password"} autoComplete="current-password" placeholder="Sua senha" value={password} onChange={(e) => setPassword(e.target.value)} required className="h-12 rounded-lg border-[#cfd5dc] bg-white px-3.5 pr-11 text-[#111827] caret-[#111827] shadow-sm placeholder:text-[#9aa1aa] focus-visible:border-[#9ca3af] focus-visible:ring-1 focus-visible:ring-[#c4c9cf]" />
-                  <button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-[#7b8491] transition-colors hover:bg-[#eef0f2] hover:text-[#111827]" aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+                  <Input id="password" type={showPassword ? "text" : "password"} autoComplete="current-password" placeholder="Sua senha" value={password} onChange={(e) => setPassword(e.target.value)} required className="h-12 rounded-lg border-[#cfd5dc] bg-white px-3.5 pr-20 text-[#111827] caret-[#111827] shadow-sm placeholder:text-[#9aa1aa] focus-visible:border-[#9ca3af] focus-visible:ring-1 focus-visible:ring-[#c4c9cf]" />
+                  <button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md px-1.5 py-1 text-xs font-medium text-[#6b7280] transition-colors hover:bg-[#eef0f2] hover:text-[#111827]">{showPassword ? "Ocultar" : "Mostrar"}</button>
                 </div>
               </div>
 
               {error && <div role="alert" className="rounded-lg border border-[#e4b8b8] bg-[#f8eaea] px-3.5 py-3 text-sm text-[#9f3030]">{error}</div>}
 
-              <Button type="submit" disabled={isLoading} className="h-12 w-full gap-2 rounded-lg bg-[#111827] text-sm font-semibold text-white shadow-none hover:bg-[#202938]">
-                {isLoading ? "Entrando..." : <><span>Entrar</span><ArrowRight size={17} /></>}
+              <Button type="submit" disabled={isLoading} className="h-12 w-full rounded-lg bg-[#111827] text-sm font-semibold text-white shadow-none hover:bg-[#202938]">
+                {isLoading ? "Entrando..." : "Entrar"}
               </Button>
             </form>
 
