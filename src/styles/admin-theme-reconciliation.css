@@ -1,0 +1,132 @@
+/* Final admin theme reconciliation. Keep the whole shell on one coherent palette. */
+
+/* Light: off-white canvas + slightly darker surfaces, never pure-white everywhere. */
+.light {
+  --background: 220 14% 96%;
+  --foreground: 222 47% 11%;
+  --card: 220 13% 92%;
+  --card-foreground: 222 47% 11%;
+  --popover: 220 13% 94%;
+  --popover-foreground: 222 47% 11%;
+  --secondary: 220 12% 89%;
+  --secondary-foreground: 222 47% 11%;
+  --muted: 220 12% 90%;
+  --muted-foreground: 215 16% 40%;
+  --accent: 220 12% 87%;
+  --accent-foreground: 222 47% 11%;
+  --border: 220 12% 82%;
+  --input: 220 12% 84%;
+  --sidebar-background: 220 13% 92%;
+  --sidebar-foreground: 222 47% 11%;
+  --sidebar-accent: 220 12% 86%;
+  --sidebar-accent-foreground: 222 47% 11%;
+  --sidebar-border: 220 12% 80%;
+}
+
+.light body,
+.light #root,
+.light .pro-ui,
+.light .pro-ui > div,
+.light .pro-ui main {
+  background-color: #f3f4f6 !important;
+  min-height: 100%;
+}
+
+.light .pro-ui > aside,
+.light .pro-ui > div > header {
+  background-color: #eaedf0 !important;
+}
+
+.light .bg-card,
+.light [class*="bg-card"],
+.light .ws-storage-card,
+.light [data-ws-storage-card="true"] {
+  background-color: #e9ecef !important;
+}
+
+/* Default navy: exactly two main surfaces. */
+.theme-default .pro-ui,
+.theme-default .pro-ui main {
+  background-color: #020817 !important;
+}
+.theme-default .pro-ui > aside,
+.theme-default .pro-ui > div > header,
+.theme-default .bg-card,
+.theme-default [class*="bg-card"],
+.theme-default .ws-storage-card,
+.theme-default [data-ws-storage-card="true"] {
+  background-color: #0b0f1c !important;
+}
+
+/* WS dark: exactly two main surfaces. */
+.theme-ws-dark .pro-ui,
+.theme-ws-dark .pro-ui main {
+  background-color: #35312e !important;
+}
+.theme-ws-dark .pro-ui > aside,
+.theme-ws-dark .pro-ui > div > header,
+.theme-ws-dark .bg-card,
+.theme-ws-dark [class*="bg-card"],
+.theme-ws-dark .ws-storage-card,
+.theme-ws-dark [data-ws-storage-card="true"] {
+  background-color: #2e2a28 !important;
+}
+
+/* Lançamentos: module cards must visibly be surfaces, not extensions of the canvas. */
+.theme-default .lancamentos-clean nav[aria-label="Módulos contábeis"] > button,
+.theme-default .lancamentos-clean nav[aria-label="Módulos contábeis"] > div,
+.theme-default .lancamentos-clean nav[aria-label="Módulos contábeis"] > * {
+  background-color: #0b0f1c !important;
+  border-color: #20293a !important;
+}
+.theme-ws-dark .lancamentos-clean nav[aria-label="Módulos contábeis"] > * {
+  background-color: #2e2a28 !important;
+  border-color: #4a4541 !important;
+}
+.light .lancamentos-clean nav[aria-label="Módulos contábeis"] > * {
+  background-color: #e9ecef !important;
+  border-color: #d2d7dc !important;
+}
+
+/* Selected tabs and segmented controls: never allow text to blend into the surface. */
+.theme-default .lancamentos-clean [data-state="active"],
+.theme-default .lancamentos-clean [aria-selected="true"],
+.theme-default .lancamentos-clean [aria-pressed="true"] {
+  background-color: #273244 !important;
+  color: #ffffff !important;
+}
+.theme-default .lancamentos-clean [data-state="active"] *,
+.theme-default .lancamentos-clean [aria-selected="true"] *,
+.theme-default .lancamentos-clean [aria-pressed="true"] * {
+  color: #ffffff !important;
+}
+.theme-ws-dark .lancamentos-clean [data-state="active"],
+.theme-ws-dark .lancamentos-clean [aria-selected="true"],
+.theme-ws-dark .lancamentos-clean [aria-pressed="true"] {
+  background-color: #49423e !important;
+  color: #ffffff !important;
+}
+.light .lancamentos-clean [data-state="active"],
+.light .lancamentos-clean [aria-selected="true"],
+.light .lancamentos-clean [aria-pressed="true"] {
+  background-color: #d4d9de !important;
+  color: #111827 !important;
+}
+
+/* Accounting table zebra: readable but subtle in every theme. */
+.theme-default .lancamentos-clean tbody tr:nth-child(odd) { background-color: #020817 !important; }
+.theme-default .lancamentos-clean tbody tr:nth-child(even) { background-color: #0b0f1c !important; }
+.theme-default .lancamentos-clean tbody tr:hover { background-color: #151d2c !important; }
+.theme-ws-dark .lancamentos-clean tbody tr:nth-child(odd) { background-color: #35312e !important; }
+.theme-ws-dark .lancamentos-clean tbody tr:nth-child(even) { background-color: #2e2a28 !important; }
+.theme-ws-dark .lancamentos-clean tbody tr:hover { background-color: #403a36 !important; }
+.light .lancamentos-clean tbody tr:nth-child(odd) { background-color: #f3f4f6 !important; }
+.light .lancamentos-clean tbody tr:nth-child(even) { background-color: #e9ecef !important; }
+.light .lancamentos-clean tbody tr:hover { background-color: #dde2e6 !important; }
+
+/* Fiscal rows follow the same two-surface discipline. */
+.theme-default table > tbody > tr.ws-zebra-row:nth-child(odd) { background-color: #020817 !important; }
+.theme-default table > tbody > tr.ws-zebra-row:nth-child(even) { background-color: #0b0f1c !important; }
+.light table > tbody > tr.ws-zebra-row:nth-child(odd) { background-color: #f3f4f6 !important; }
+.light table > tbody > tr.ws-zebra-row:nth-child(even) { background-color: #e9ecef !important; }
+.light table > tbody > tr.ws-zebra-row:hover { background-color: #dde2e6 !important; }
