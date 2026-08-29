@@ -23,7 +23,6 @@ type CompanySelectionContextValue = {
 };
 
 const STORAGE_KEY = 'ws_selected_company_id';
-
 const CompanySelectionContext = createContext<CompanySelectionContextValue | undefined>(undefined);
 
 function persistCompatibility(company: OfficeCompanySelection | null) {
@@ -47,10 +46,7 @@ function persistCompatibility(company: OfficeCompanySelection | null) {
   }
   if (company.portal_user_id) localStorage.setItem('ws_portal_user_id', company.portal_user_id);
   else localStorage.removeItem('ws_portal_user_id');
-
   window.dispatchEvent(new CustomEvent('ws:company-changed', { detail: company }));
-  window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY, newValue: company.id }));
-  window.dispatchEvent(new StorageEvent('storage', { key: 'ws-accounting-company-id', newValue: company.id }));
 }
 
 export function CompanySelectionProvider({ children }: { children: React.ReactNode }) {
@@ -61,34 +57,57 @@ export function CompanySelectionProvider({ children }: { children: React.ReactNo
   const refreshCompanies = useCallback(async () => {
     setLoading(true);
     try {
-      const [companiesResult, fiscalResult, portalResult, certificateResult] = await Promise.all([
-        supabase.from('companies').select('id,company_name,trade_name,cnpj,logo_url').order('company_name'),
+      // A lista principal do seletor depende SOMENTE de companies.
+      // Dados fiscais, portal e certificado são enriquecimentos opcionais e nunca podem zerar o seletor.
+      const companiesResult = await supabase
+        .from('companies')
+        .select('id,company_name,trade_name,cnpj,logo_url')
+        .order('company_name');
+
+      if (companiesResult.error) {
+        console.error('[CompanySelection] Falha ao carregar empresas:', companiesResult.error);
+        setCompanies([]);
+        return;
+      }
+
+      const baseCompanies = ((companiesResult.data || []) as unknown as Array<{
+        id: string; company_name: string; trade_name: string | null; cnpj: string | null; logo_url?: string | null;
+      }>);
+
+      // Exibe imediatamente, antes das consultas auxiliares.
+      let next: OfficeCompanySelection[] = baseCompanies.map(company => ({
+        ...company,
+        fiscal_company_id: null,
+        portal_user_id: null,
+        certificate_status: 'missing',
+        certificate_valid_until: null,
+      }));
+      setCompanies(next);
+
+      const [fiscalResult, portalResult, certificateResult] = await Promise.all([
         supabase.from('fiscal_companies').select('id,company_id'),
         supabase.from('company_user_links' as never).select('company_id,user_id'),
         supabase.from('fiscal_certificates').select('company_id,valid_until,is_active').eq('is_active', true),
       ]);
-      if (companiesResult.error) throw companiesResult.error;
-      if (fiscalResult.error) throw fiscalResult.error;
-      if (portalResult.error) throw portalResult.error;
-      if (certificateResult.error) throw certificateResult.error;
 
-      const fiscalByCompany = new Map(((fiscalResult.data || []) as Array<{ id: string; company_id: string | null }>).filter(item => item.company_id).map(item => [item.company_id as string, item.id]));
-      const portalByCompany = new Map(((portalResult.data || []) as unknown as Array<{ company_id: string; user_id: string }>).map(item => [item.company_id, item.user_id]));
-      const certificateByFiscalCompany = new Map(((certificateResult.data || []) as unknown as Array<{ company_id: string; valid_until: string | null; is_active: boolean }>).map(item => [item.company_id, item]));
+      const fiscalRows = fiscalResult.error ? [] : ((fiscalResult.data || []) as Array<{ id: string; company_id: string | null }>);
+      const portalRows = portalResult.error ? [] : ((portalResult.data || []) as unknown as Array<{ company_id: string; user_id: string }>);
+      const certificateRows = certificateResult.error ? [] : ((certificateResult.data || []) as unknown as Array<{ company_id: string; valid_until: string | null; is_active: boolean }>);
+
+      const fiscalByCompany = new Map(fiscalRows.filter(item => item.company_id).map(item => [item.company_id as string, item.id]));
+      const portalByCompany = new Map(portalRows.map(item => [item.company_id, item.user_id]));
+      const certificateByFiscalCompany = new Map(certificateRows.map(item => [item.company_id, item]));
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const next = ((companiesResult.data || []) as unknown as Array<{ id: string; company_name: string; trade_name: string | null; cnpj: string | null; logo_url?: string | null }>).map(company => {
+      next = baseCompanies.map(company => {
         const fiscalCompanyId = fiscalByCompany.get(company.id) || null;
         const certificate = fiscalCompanyId ? certificateByFiscalCompany.get(fiscalCompanyId) : undefined;
         const validUntil = certificate?.valid_until || null;
         const expiry = validUntil ? new Date(`${validUntil}T23:59:59`) : null;
         const certificateStatus: OfficeCompanySelection['certificate_status'] = !certificate
           ? 'missing'
-          : expiry && expiry.getTime() >= today.getTime()
-            ? 'valid'
-            : 'expired';
-
+          : expiry && expiry.getTime() >= today.getTime() ? 'valid' : 'expired';
         return {
           ...company,
           fiscal_company_id: fiscalCompanyId,
@@ -104,7 +123,11 @@ export function CompanySelectionProvider({ children }: { children: React.ReactNo
       if (selected) {
         setSelectedCompanyId(selected.id);
         persistCompatibility(selected);
+      } else {
+        setSelectedCompanyId('');
       }
+    } catch (error) {
+      console.error('[CompanySelection] Erro inesperado:', error);
     } finally {
       setLoading(false);
     }
@@ -112,7 +135,10 @@ export function CompanySelectionProvider({ children }: { children: React.ReactNo
 
   useEffect(() => { void refreshCompanies(); }, [refreshCompanies]);
 
-  const selectedCompany = useMemo(() => companies.find(company => company.id === selectedCompanyId) || null, [companies, selectedCompanyId]);
+  const selectedCompany = useMemo(
+    () => companies.find(company => company.id === selectedCompanyId) || companies[0] || null,
+    [companies, selectedCompanyId],
+  );
 
   const selectCompany = useCallback((companyId: string) => {
     const company = companies.find(item => item.id === companyId);
