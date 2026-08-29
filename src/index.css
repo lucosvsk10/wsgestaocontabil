@@ -19,3 +19,6 @@
 
 /* Storage-inspired pilot for Dashboard, Lancamentos and Fiscal Notes */
 @import './styles/storage-card-pilot.css';
+
+/* Final admin palette + selected-control reconciliation */
+@import './styles/admin-theme-reconciliation.css';
