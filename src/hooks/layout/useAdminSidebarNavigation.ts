@@ -19,9 +19,9 @@ export const useAdminSidebarNavigation = () => {
       { icon: ReceiptText, label: "Notas Fiscais", active: getIsActive("/admin/feature"), to: "/admin/feature" },
       { icon: Send, label: "Emissão fiscal", active: getIsActive("/admin/fiscal/emissao"), to: "/admin/fiscal/emissao" }
     ]},
-    { title: "Clientes e comunicação", items: [
-      { icon: Building2, label: "Empresas", active: getIsActive("/admin/empresas") || getIsActive("/admin/fiscal/empresas"), to: "/admin/empresas" },
-      { icon: Users, label: "Usuários", active: getIsActive("/admin/users") || getIsActive("/admin/user-documents") || getIsActive("/admin/company-data"), to: "/admin/users" },
+    { title: "Clientes do escritório", items: [
+      { icon: Building2, label: "Clientes", active: getIsActive("/admin/clientes") || getIsActive("/admin/fiscal/empresas"), to: "/admin/clientes" },
+      { icon: Users, label: "Acessos do portal", active: getIsActive("/admin/users") || getIsActive("/admin/user-documents") || getIsActive("/admin/company-data"), to: "/admin/users" },
       { icon: HardDrive, label: "Armazenamento", active: getIsActive("/admin/storage"), to: "/admin/storage" },
       { icon: Megaphone, label: "Anúncios", active: getIsActive("/admin/announcements"), to: "/admin/announcements" },
       { icon: PieChart, label: "Enquetes", active: getIsActive("/admin/polls"), to: "/admin/polls" }
