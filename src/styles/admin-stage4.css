@@ -1,0 +1,62 @@
+/* Stage 4 — shared polish for admin screens that are not part of the approved Dashboard/Lancamentos/Fiscal Notes surfaces. */
+.ws-admin-polish {
+  min-height: 100%;
+}
+
+.ws-admin-polish section {
+  border-color: hsl(var(--border) / .46);
+  box-shadow: 0 1px 2px hsl(var(--foreground) / .025), 0 12px 32px -28px hsl(var(--foreground) / .28);
+}
+
+.ws-admin-polish input,
+.ws-admin-polish select,
+.ws-admin-polish textarea {
+  background: hsl(var(--background) / .72);
+  border-color: hsl(var(--border) / .58);
+}
+
+.ws-admin-polish input:focus,
+.ws-admin-polish select:focus,
+.ws-admin-polish textarea:focus {
+  border-color: hsl(var(--foreground) / .22);
+}
+
+.ws-admin-polish [role="tablist"] {
+  border-color: hsl(var(--border) / .48);
+  background: hsl(var(--muted) / .18);
+}
+
+.ws-admin-polish table thead {
+  background: hsl(var(--muted) / .2);
+}
+
+.ws-admin-polish table tbody tr:nth-child(even) {
+  background: hsl(var(--muted) / .055);
+}
+
+.ws-admin-polish table tbody tr:hover {
+  background: hsl(var(--muted) / .14);
+}
+
+.ws-admin-polish .ws-stage4-soft-panel {
+  border: 1px solid hsl(var(--border) / .46);
+  background: hsl(var(--muted) / .1);
+  border-radius: 1rem;
+}
+
+.ws-admin-polish .ws-stage4-primary-action {
+  min-height: 2.75rem;
+  padding-inline: 1.15rem;
+  font-weight: 600;
+  box-shadow: 0 10px 24px -16px hsl(var(--foreground) / .45);
+}
+
+.theme-ws-dark .ws-admin-polish section {
+  box-shadow: 0 1px 2px rgba(0,0,0,.18), 0 18px 38px -30px rgba(0,0,0,.78);
+}
+
+@media (max-width: 640px) {
+  .ws-admin-polish .ws-stage4-primary-action {
+    width: 100%;
+  }
+}
