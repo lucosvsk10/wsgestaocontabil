@@ -1,113 +1,35 @@
-
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Handle CORS preflight requests
-const handleCORS = (req: Request) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders, status: 204 })
-  }
-}
-
-// Create a Supabase admin client
-const createAdminClient = () => {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
-  
-  if (!supabaseUrl || !supabaseServiceKey) {
-    throw new Error('Missing environment variables for Supabase')
-  }
-  
-  return createClient(supabaseUrl, supabaseServiceKey)
-}
-
-// Check if the user has admin privileges using user_roles table
-const isAdmin = async (token: string) => {
-  const supabaseClient = createClient(
-    Deno.env.get('SUPABASE_URL') || '',
-    Deno.env.get('SUPABASE_ANON_KEY') || '',
-    {
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    }
-  )
-
-  const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
-  
-  if (userError || !user) {
-    throw new Error('Unauthorized')
-  }
-  
-  // Check if the user is an admin using user_roles table
-  const { data: roles, error: roleError } = await supabaseClient
-    .from('user_roles')
-    .select('role')
-    .eq('user_id', user.id)
-  
-  if (roleError) {
-    throw new Error('Error fetching user role')
-  }
-  
-  // Only database role determines admin status
-  return roles?.some(r => r.role === 'admin') || false
-}
-
 Deno.serve(async (req) => {
-  // Handle CORS
-  const corsResponse = handleCORS(req)
-  if (corsResponse) return corsResponse
-
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders, status: 204 })
   try {
-    // Verify authentication
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new Error('Missing or invalid authorization header')
-    }
+    if (!authHeader?.startsWith('Bearer ')) throw new Error('Unauthorized')
 
-    const token = authHeader.substring(7)
-    const adminAuthorized = await isAdmin(token)
+    const url = Deno.env.get('SUPABASE_URL') || ''
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
+    const admin = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
+    const { data: { user: caller }, error: authError } = await admin.auth.getUser(authHeader.slice(7))
+    if (authError || !caller) throw new Error('Unauthorized')
 
-    if (!adminAuthorized) {
-      throw new Error('Unauthorized: Admin privileges required')
-    }
+    const { data: roles } = await admin.from('user_roles').select('role').eq('user_id', caller.id)
+    if (!roles?.some((r: any) => r.role === 'admin')) return new Response(JSON.stringify({ error: 'Admin privileges required' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 
-    // Parse the request body
     const { userId, newPassword } = await req.json()
-    
-    if (!userId || !newPassword) {
-      throw new Error('Missing required fields: userId and newPassword')
-    }
-    
-    // Create an admin client to update the user password
-    const adminClient = createAdminClient()
-    
-    const { error } = await adminClient.auth.admin.updateUserById(
-      userId,
-      { password: newPassword }
-    )
-    
-    if (error) {
-      throw error
-    }
-    
-    return new Response(
-      JSON.stringify({ success: true, message: 'Password changed successfully' }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-    )
-    
+    if (!userId || typeof newPassword !== 'string' || newPassword.length < 8) return new Response(JSON.stringify({ error: 'Invalid data' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+
+    const { error } = await admin.auth.admin.updateUserById(userId, { password: newPassword })
+    if (error) throw error
+
+    await admin.from('saas_audit_logs').insert({ actor_user_id: caller.id, action: 'change_user_password', resource_type: 'auth_user', resource_id: userId, is_sensitive: true, metadata: { source: 'edge_function', function: 'changeUserPassword' } })
+    return new Response(JSON.stringify({ success: true }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   } catch (error) {
-    console.error('Error:', error.message)
-    
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-    )
+    console.error('changeUserPassword:', error)
+    return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 })
