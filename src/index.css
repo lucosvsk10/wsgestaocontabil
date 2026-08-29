@@ -22,3 +22,6 @@
 
 /* Final admin palette + selected-control reconciliation */
 @import './styles/admin-theme-reconciliation.css';
+
+/* Stage 4 polish for the remaining admin screens */
+@import './styles/admin-stage4.css';
