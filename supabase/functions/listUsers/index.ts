@@ -1,121 +1,38 @@
-
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
+import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
-// Check if user has admin privileges using user_roles table
-const checkIsAdmin = async (supabaseAdmin: any, userId: string): Promise<boolean> => {
-  const { data: roles, error } = await supabaseAdmin
-    .from('user_roles')
-    .select('role')
-    .eq('user_id', userId);
-  
-  if (error) {
-    console.error('Error checking admin role:', error);
-    return false;
-  }
-  
-  const adminRoles = ['admin', 'fiscal', 'contabil', 'geral'];
-  return roles?.some(r => adminRoles.includes(r.role)) || false;
-};
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
 
 serve(async (req) => {
-  console.log("=== listUsers function called ===");
-  
-  // Handle CORS preflight requests
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-    const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-    
-    console.log("Creating admin client...");
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader?.startsWith('Bearer ')) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 
-    // Criar cliente admin para todas as operações
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
+    const url = Deno.env.get('SUPABASE_URL') || ''
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || ''
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
+    const userClient = createClient(url, anonKey, { global: { headers: { Authorization: authHeader } } })
+    const admin = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
 
-    // Verificar autenticação usando o JWT do header
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      console.log("No auth header");
-      return new Response(JSON.stringify({ error: "Autenticação inválida" }), { 
-        status: 401, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" } 
-      });
+    const { data: { user: caller }, error: authError } = await userClient.auth.getUser()
+    if (authError || !caller) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+
+    const { data: roles } = await admin.from('user_roles').select('role').eq('user_id', caller.id)
+    if (!roles?.some((r: any) => r.role === 'admin')) {
+      return new Response(JSON.stringify({ error: 'Admin privileges required' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
-    const jwt = authHeader.replace("Bearer ", "");
-    console.log("Validating JWT...");
-    
-    // Validar JWT criando um cliente com o header Authorization do usuário
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
-    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
-
-    const { data: { user: caller }, error: authError } = await userClient.auth.getUser();
-
-    if (authError || !caller) {
-      console.error("Auth error:", authError?.message || "no user");
-      return new Response(JSON.stringify({ error: "Usuário não autenticado", details: authError?.message || "Invalid token" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
-    }
-
-    console.log("User authenticated:", caller.id, caller.email);
-
-    // Verificar se o usuário tem permissão usando role do banco de dados
-    const isAdmin = await checkIsAdmin(supabaseAdmin, caller.id);
-    console.log("Is admin:", isAdmin);
-    
-    if (!isAdmin) {
-      return new Response(JSON.stringify({ error: "Acesso negado. Apenas administradores podem acessar esta função." }), { 
-        status: 403, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" } 
-      });
-    }
-
-    // Listar usuários do auth.users
-    const { data, error: usersError } = await supabaseAdmin.auth.admin.listUsers();
-    
-    if (usersError) {
-      console.error("Error listing users:", usersError);
-      return new Response(JSON.stringify({ error: "Erro ao buscar usuários", details: usersError }), { 
-        status: 500, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" } 
-      });
-    }
-    
-    // Filtrar apenas os campos necessários
-    const filteredUsers = data.users.map(user => ({
-      id: user.id,
-      email: user.email,
-      created_at: user.created_at,
-      user_metadata: user.user_metadata
-    }));
-    
-    console.log("Returning", filteredUsers.length, "users");
-    return new Response(JSON.stringify({ users: filteredUsers }), { 
-      headers: { ...corsHeaders, "Content-Type": "application/json" } 
-    });
+    const { data, error } = await admin.auth.admin.listUsers()
+    if (error) throw error
+    const users = data.users.map((u: any) => ({ id: u.id, email: u.email, created_at: u.created_at, user_metadata: u.user_metadata }))
+    return new Response(JSON.stringify({ users }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   } catch (error) {
-    console.error("Erro na função:", error);
-    return new Response(JSON.stringify({ error: "Erro interno no servidor", details: String(error) }), { 
-      status: 500, 
-      headers: { ...corsHeaders, "Content-Type": "application/json" } 
-    });
+    console.error('listUsers:', error)
+    return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
-});
+})
