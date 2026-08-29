@@ -5,7 +5,7 @@ export type OfficeCompanySelection = {
   id: string;
   company_name: string;
   trade_name: string | null;
-  cnpj: string;
+  cnpj: string | null;
   logo_url?: string | null;
   fiscal_company_id?: string | null;
   portal_user_id?: string | null;
@@ -35,7 +35,7 @@ function persistCompatibility(company: OfficeCompanySelection | null) {
     id: company.id,
     name: company.company_name,
     tradeName: company.trade_name,
-    cnpj: company.cnpj,
+    cnpj: company.cnpj || '',
     chartModel: 'Plano próprio da empresa',
   }));
   if (company.fiscal_company_id) {
@@ -78,7 +78,7 @@ export function CompanySelectionProvider({ children }: { children: React.ReactNo
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const next = ((companiesResult.data || []) as unknown as Array<{ id: string; company_name: string; trade_name: string | null; cnpj: string; logo_url?: string | null }>).map(company => {
+      const next = ((companiesResult.data || []) as unknown as Array<{ id: string; company_name: string; trade_name: string | null; cnpj: string | null; logo_url?: string | null }>).map(company => {
         const fiscalCompanyId = fiscalByCompany.get(company.id) || null;
         const certificate = fiscalCompanyId ? certificateByFiscalCompany.get(fiscalCompanyId) : undefined;
         const validUntil = certificate?.valid_until || null;
