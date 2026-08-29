@@ -16,11 +16,11 @@ export const useAdminSidebarNavigation = () => {
       { icon: Calculator, label: "Simulações", active: getIsActive("/admin/simulations"), to: "/admin/simulations" }
     ]},
     { title: "Fiscal", items: [
-      { icon: Building2, label: "Empresas", active: getIsActive("/admin/fiscal/empresas"), to: "/admin/fiscal/empresas" },
       { icon: ReceiptText, label: "Notas Fiscais", active: getIsActive("/admin/feature"), to: "/admin/feature" },
       { icon: Send, label: "Emissão fiscal", active: getIsActive("/admin/fiscal/emissao"), to: "/admin/fiscal/emissao" }
     ]},
     { title: "Clientes e comunicação", items: [
+      { icon: Building2, label: "Empresas", active: getIsActive("/admin/empresas") || getIsActive("/admin/fiscal/empresas"), to: "/admin/empresas" },
       { icon: Users, label: "Usuários", active: getIsActive("/admin/users") || getIsActive("/admin/user-documents") || getIsActive("/admin/company-data"), to: "/admin/users" },
       { icon: HardDrive, label: "Armazenamento", active: getIsActive("/admin/storage"), to: "/admin/storage" },
       { icon: Megaphone, label: "Anúncios", active: getIsActive("/admin/announcements"), to: "/admin/announcements" },
