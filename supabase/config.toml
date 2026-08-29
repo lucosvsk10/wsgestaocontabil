@@ -42,7 +42,22 @@ enabled = true
 port = 54329
 
 [functions.listUsers]
-verify_jwt = false
+verify_jwt = true
+
+[functions.create-user]
+verify_jwt = true
+
+[functions.create-user-profile]
+verify_jwt = true
+
+[functions.admin-operations]
+verify_jwt = true
+
+[functions.update-user-password]
+verify_jwt = true
+
+[functions.changeUserPassword]
+verify_jwt = true
 
 [functions.storage-stats]
 verify_jwt = false
