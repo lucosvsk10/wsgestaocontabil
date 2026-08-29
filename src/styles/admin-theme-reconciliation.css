@@ -1,4 +1,21 @@
-/* Final admin theme reconciliation. Keep the whole shell on one coherent palette. */
+/* Final admin theme reconciliation. Keep the shell full-bleed and preserve the default navy chrome. */
+
+/* All admin modes must paint the entire viewport without exposed outer background. */
+html,
+body,
+#root,
+.pro-ui,
+.pro-ui > div {
+  min-height: 100dvh;
+}
+.pro-ui,
+.pro-ui > div,
+.pro-ui main {
+  background-color: hsl(var(--background));
+}
+.pro-ui main {
+  min-height: calc(100dvh - 5rem);
+}
 
 /* Light: off-white canvas + slightly darker surfaces, never pure-white everywhere. */
 .light {
@@ -29,7 +46,6 @@
 .light .pro-ui > div,
 .light .pro-ui main {
   background-color: #f3f4f6 !important;
-  min-height: 100%;
 }
 
 .light .pro-ui > aside,
@@ -44,21 +60,10 @@
   background-color: #e9ecef !important;
 }
 
-/* Default navy: exactly two main surfaces. */
-.theme-default .pro-ui,
-.theme-default .pro-ui main {
-  background-color: #020817 !important;
-}
-.theme-default .pro-ui > aside,
-.theme-default .pro-ui > div > header,
-.theme-default .bg-card,
-.theme-default [class*="bg-card"],
-.theme-default .ws-storage-card,
-.theme-default [data-ws-storage-card="true"] {
-  background-color: #0b0f1c !important;
-}
+/* Default navy shell intentionally inherits the original app variables/classes.
+   Do not recolor sidebar or navbar here. */
 
-/* WS dark: exactly two main surfaces. */
+/* WS dark: two main surfaces. */
 .theme-ws-dark .pro-ui,
 .theme-ws-dark .pro-ui main {
   background-color: #35312e !important;
