@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, FileText, Images, Pencil, Plus, ReceiptText, Search, X } from 'lucide-react';
+import { Building2, FileKey2, FileText, Images, Pencil, Plus, ReceiptText, Search, X } from 'lucide-react';
 import { AdminLayout } from '@/components/admin/layout/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,16 +34,8 @@ type CompanyForm = {
   company_size: string;
 };
 
-const blankForm = (): CompanyForm => ({
-  company_name: '',
-  trade_name: '',
-  cnpj: '',
-  address: '',
-  company_size: ''
-});
-
+const blankForm = (): CompanyForm => ({ company_name: '', trade_name: '', cnpj: '', address: '', company_size: '' });
 const onlyDigits = (value: string) => value.replace(/\D/g, '');
-
 const formatCnpj = (value: string) => {
   const digits = onlyDigits(value);
   if (digits.length !== 14) return value;
@@ -51,9 +43,7 @@ const formatCnpj = (value: string) => {
 };
 
 const StatusPill = ({ active, children }: { active: boolean; children: React.ReactNode }) => (
-  <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium ${active ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' : 'bg-muted text-muted-foreground'}`}>
-    {children}
-  </span>
+  <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium ${active ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' : 'bg-muted text-muted-foreground'}`}>{children}</span>
 );
 
 export default function AdminCompanies() {
@@ -78,7 +68,6 @@ export default function AdminCompanies() {
         supabase.from('company_user_links' as never).select('company_id,user_id'),
         supabase.from('documents').select('company_id')
       ]);
-
       const firstError = companiesResult.error || fiscalResult.error || carouselResult.error || linksResult.error || documentsResult.error;
       if (firstError) throw firstError;
 
@@ -128,32 +117,14 @@ export default function AdminCompanies() {
     return companies.filter(company => [company.company_name, company.trade_name, company.cnpj].some(value => String(value || '').toLowerCase().includes(term)));
   }, [companies, query]);
 
-  const openNew = () => {
-    setEditing(null);
-    setForm(blankForm());
-    setError('');
-    setDrawerOpen(true);
-  };
-
+  const openNew = () => { setEditing(null); setForm(blankForm()); setError(''); setDrawerOpen(true); };
   const openEdit = (company: Company) => {
     setEditing(company);
-    setForm({
-      company_name: company.company_name,
-      trade_name: company.trade_name || '',
-      cnpj: company.cnpj,
-      address: company.address || '',
-      company_size: company.company_size || ''
-    });
+    setForm({ company_name: company.company_name, trade_name: company.trade_name || '', cnpj: company.cnpj, address: company.address || '', company_size: company.company_size || '' });
     setError('');
     setDrawerOpen(true);
   };
-
-  const closeDrawer = () => {
-    setDrawerOpen(false);
-    setEditing(null);
-    setForm(blankForm());
-    setError('');
-  };
+  const closeDrawer = () => { setDrawerOpen(false); setEditing(null); setForm(blankForm()); setError(''); };
 
   const save = async () => {
     const cnpj = onlyDigits(form.cnpj);
@@ -161,19 +132,10 @@ export default function AdminCompanies() {
       setError('Informe a razão social e um CNPJ válido com 14 dígitos.');
       return;
     }
-
     setSaving(true);
     setError('');
     try {
-      const payload = {
-        company_name: form.company_name.trim(),
-        trade_name: form.trade_name.trim() || null,
-        cnpj,
-        address: form.address.trim() || null,
-        company_size: form.company_size.trim() || null,
-        updated_at: new Date().toISOString()
-      };
-
+      const payload = { company_name: form.company_name.trim(), trade_name: form.trade_name.trim() || null, cnpj, address: form.address.trim() || null, company_size: form.company_size.trim() || null, updated_at: new Date().toISOString() };
       if (editing) {
         const { error: updateError } = await supabase.from('companies').update(payload).eq('id', editing.id);
         if (updateError) throw updateError;
@@ -181,7 +143,6 @@ export default function AdminCompanies() {
         const { error: insertError } = await supabase.from('companies').insert(payload);
         if (insertError) throw insertError;
       }
-
       closeDrawer();
       await load();
     } catch (saveError) {
@@ -194,10 +155,7 @@ export default function AdminCompanies() {
   };
 
   const openExtractor = (company: CompanyState) => {
-    if (!company.fiscalCompanyId) {
-      navigate(`/admin/fiscal/empresas?company=${company.id}`);
-      return;
-    }
+    if (!company.fiscalCompanyId) return;
     localStorage.setItem('ws_fiscal_company_id', company.fiscalCompanyId);
     localStorage.setItem('ws_fiscal_company_name', company.trade_name || company.company_name);
     localStorage.setItem('ws_office_client_company_id', company.id);
@@ -211,7 +169,7 @@ export default function AdminCompanies() {
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[.16em] text-muted-foreground">Clientes do escritório</p>
             <h1 className="mt-1 text-2xl font-semibold tracking-tight">Clientes</h1>
-            <p className="mt-1 max-w-3xl text-sm text-muted-foreground">Este cadastro representa somente as empresas atendidas pela WS Gestão. A mesma empresa é reutilizada no portal de documentos, no certificado A1 e nas ferramentas fiscais internas.</p>
+            <p className="mt-1 max-w-3xl text-sm text-muted-foreground">Aqui ficam somente as empresas atendidas pela WS Gestão. O acesso ao portal, os documentos e o certificado A1 são extensões deste mesmo cadastro.</p>
           </div>
           <Button onClick={openNew}><Plus className="mr-2 h-4 w-4" />Novo cliente</Button>
         </div>
@@ -220,40 +178,22 @@ export default function AdminCompanies() {
 
         <section className="mt-6 overflow-hidden rounded-2xl bg-background shadow-sm ring-1 ring-black/[.04] dark:ring-white/[.06]">
           <div className="flex flex-wrap items-center justify-between gap-3 bg-muted/10 p-4">
-            <div className="relative w-full max-w-xl">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input className="border-0 bg-muted/30 pl-9 shadow-none" value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar cliente por razão social, nome fantasia ou CNPJ..." />
-            </div>
+            <div className="relative w-full max-w-xl"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input className="border-0 bg-muted/30 pl-9 shadow-none" value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar cliente por razão social, nome fantasia ou CNPJ..." /></div>
             <span className="text-xs text-muted-foreground">{filtered.length} cliente(s)</span>
           </div>
 
-          {loading ? (
-            <div className="p-12 text-center text-sm text-muted-foreground">Carregando clientes...</div>
-          ) : filtered.length === 0 ? (
-            <div className="p-14 text-center"><Building2 className="mx-auto h-8 w-8 text-muted-foreground" /><p className="mt-3 font-medium">Nenhum cliente encontrado</p><p className="mt-1 text-sm text-muted-foreground">Cadastre a empresa cliente uma única vez. Depois vincule o acesso ao portal e o certificado A1 quando necessário.</p></div>
+          {loading ? <div className="p-12 text-center text-sm text-muted-foreground">Carregando clientes...</div> : filtered.length === 0 ? (
+            <div className="p-14 text-center"><Building2 className="mx-auto h-8 w-8 text-muted-foreground" /><p className="mt-3 font-medium">Nenhum cliente encontrado</p><p className="mt-1 text-sm text-muted-foreground">Cadastre a empresa cliente uma única vez. Depois vincule o acesso ao portal e o A1.</p></div>
           ) : (
             <div className="divide-y divide-border/60">
               {filtered.map(company => (
                 <article key={company.id} className="grid gap-5 px-5 py-5 transition hover:bg-muted/10 xl:grid-cols-[minmax(280px,1.3fr)_1fr_auto] xl:items-center">
-                  <div className="flex min-w-0 items-center gap-4">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-muted/30"><Building2 className="h-5 w-5" /></div>
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold">{company.trade_name || company.company_name}</p>
-                      {company.trade_name && <p className="truncate text-xs text-muted-foreground">{company.company_name}</p>}
-                      <p className="mt-1 text-xs text-muted-foreground">{formatCnpj(company.cnpj)}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    <StatusPill active={Boolean(company.portalUserId)}>Portal {company.portalUserName ? `· ${company.portalUserName}` : ''}</StatusPill>
-                    <StatusPill active={Boolean(company.fiscalCompanyId)}>Certificado / Fiscal</StatusPill>
-                    <StatusPill active={Boolean(company.carouselItemId)}>Carrossel</StatusPill>
-                    <StatusPill active={company.documentsCount > 0}>{company.documentsCount} documento(s)</StatusPill>
-                  </div>
-
+                  <div className="flex min-w-0 items-center gap-4"><div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-muted/30"><Building2 className="h-5 w-5" /></div><div className="min-w-0"><p className="truncate font-semibold">{company.trade_name || company.company_name}</p>{company.trade_name && <p className="truncate text-xs text-muted-foreground">{company.company_name}</p>}<p className="mt-1 text-xs text-muted-foreground">{formatCnpj(company.cnpj)}</p></div></div>
+                  <div className="flex flex-wrap gap-2"><StatusPill active={Boolean(company.portalUserId)}>Portal {company.portalUserName ? `· ${company.portalUserName}` : ''}</StatusPill><StatusPill active={Boolean(company.fiscalCompanyId)}>A1 / Fiscal</StatusPill><StatusPill active={Boolean(company.carouselItemId)}>Carrossel</StatusPill><StatusPill active={company.documentsCount > 0}>{company.documentsCount} documento(s)</StatusPill></div>
                   <div className="flex flex-wrap justify-end gap-2">
                     <Button variant="ghost" size="sm" onClick={() => openEdit(company)}><Pencil className="mr-1.5 h-4 w-4" />Editar</Button>
-                    <Button variant="outline" size="sm" onClick={() => openExtractor(company)}><ReceiptText className="mr-1.5 h-4 w-4" />{company.fiscalCompanyId ? 'Extrato' : 'Configurar A1'}</Button>
+                    <Button variant="outline" size="sm" onClick={() => navigate(`/admin/clientes/${company.id}/fiscal`)}><FileKey2 className="mr-1.5 h-4 w-4" />A1</Button>
+                    {company.fiscalCompanyId && <Button variant="outline" size="sm" onClick={() => openExtractor(company)}><ReceiptText className="mr-1.5 h-4 w-4" />Extrato</Button>}
                     <Button variant="outline" size="sm" onClick={() => navigate(`/admin/carousel?company=${company.id}`)}><Images className="mr-1.5 h-4 w-4" />Carrossel</Button>
                     {company.portalUserId && <Button variant="outline" size="sm" onClick={() => navigate(`/admin/user-documents/${company.portalUserId}`)}><FileText className="mr-1.5 h-4 w-4" />Documentos</Button>}
                   </div>
@@ -264,25 +204,7 @@ export default function AdminCompanies() {
         </section>
       </main>
 
-      {drawerOpen && (
-        <div className="fixed inset-0 z-[120] flex justify-end bg-black/45" onMouseDown={event => { if (event.target === event.currentTarget) closeDrawer(); }}>
-          <aside className="h-full w-full max-w-xl overflow-y-auto bg-background shadow-2xl">
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border/60 bg-background/95 px-6 py-5 backdrop-blur">
-              <div><p className="text-[10px] uppercase tracking-[.16em] text-muted-foreground">Cliente do escritório</p><h2 className="mt-1 text-xl font-semibold">{editing ? 'Editar cliente' : 'Novo cliente'}</h2></div>
-              <Button variant="ghost" size="icon" onClick={closeDrawer}><X className="h-4 w-4" /></Button>
-            </div>
-            <div className="space-y-5 p-6">
-              <Field label="Razão social"><Input value={form.company_name} onChange={event => setForm(current => ({ ...current, company_name: event.target.value }))} /></Field>
-              <Field label="Nome fantasia"><Input value={form.trade_name} onChange={event => setForm(current => ({ ...current, trade_name: event.target.value }))} /></Field>
-              <Field label="CNPJ"><Input value={form.cnpj} onChange={event => setForm(current => ({ ...current, cnpj: event.target.value }))} /></Field>
-              <Field label="Endereço"><Input value={form.address} onChange={event => setForm(current => ({ ...current, address: event.target.value }))} /></Field>
-              <Field label="Porte"><Input value={form.company_size} onChange={event => setForm(current => ({ ...current, company_size: event.target.value }))} placeholder="Opcional" /></Field>
-              {error && <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">{error}</div>}
-              <div className="flex justify-end gap-2 pt-3"><Button variant="ghost" onClick={closeDrawer}>Cancelar</Button><Button onClick={save} disabled={saving}>{saving ? 'Salvando...' : 'Salvar cliente'}</Button></div>
-            </div>
-          </aside>
-        </div>
-      )}
+      {drawerOpen && <div className="fixed inset-0 z-[120] flex justify-end bg-black/45" onMouseDown={event => { if (event.target === event.currentTarget) closeDrawer(); }}><aside className="h-full w-full max-w-xl overflow-y-auto bg-background shadow-2xl"><div className="sticky top-0 z-10 flex items-center justify-between border-b border-border/60 bg-background/95 px-6 py-5 backdrop-blur"><div><p className="text-[10px] uppercase tracking-[.16em] text-muted-foreground">Cliente do escritório</p><h2 className="mt-1 text-xl font-semibold">{editing ? 'Editar cliente' : 'Novo cliente'}</h2></div><Button variant="ghost" size="icon" onClick={closeDrawer}><X className="h-4 w-4" /></Button></div><div className="space-y-5 p-6"><Field label="Razão social"><Input value={form.company_name} onChange={event => setForm(current => ({ ...current, company_name: event.target.value }))} /></Field><Field label="Nome fantasia"><Input value={form.trade_name} onChange={event => setForm(current => ({ ...current, trade_name: event.target.value }))} /></Field><Field label="CNPJ"><Input value={form.cnpj} onChange={event => setForm(current => ({ ...current, cnpj: event.target.value }))} /></Field><Field label="Endereço"><Input value={form.address} onChange={event => setForm(current => ({ ...current, address: event.target.value }))} /></Field><Field label="Porte"><Input value={form.company_size} onChange={event => setForm(current => ({ ...current, company_size: event.target.value }))} placeholder="Opcional" /></Field>{error && <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">{error}</div>}<div className="flex justify-end gap-2 pt-3"><Button variant="ghost" onClick={closeDrawer}>Cancelar</Button><Button onClick={save} disabled={saving}>{saving ? 'Salvando...' : 'Salvar cliente'}</Button></div></div></aside></div>}
     </AdminLayout>
   );
 }
