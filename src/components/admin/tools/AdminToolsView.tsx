@@ -1,90 +1,21 @@
-
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Calculator, FileText, PieChart, Building2, CreditCard, Images } from 'lucide-react';
+import { Calculator, FileText, PieChart, Building2, CreditCard, Images, ArrowUpRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { AdminPageHeader, AdminSection } from '@/components/admin/ui/AdminPage';
 
 export const AdminToolsView: React.FC = () => {
-  const navigate = useNavigate();
-
-  const tools = [
-    {
-      title: "Simulador de IRPF",
-      description: "Calculadora para simulação de imposto de renda.",
-      icon: <Calculator className="h-12 w-12 text-green-600 dark:text-green-400" />,
-      action: () => navigate('/simulador-irpf')
-    },
-    {
-      title: "Calculadora de INSS",
-      description: "Calcule contribuições do INSS por categoria.",
-      icon: <CreditCard className="h-12 w-12 text-blue-600 dark:text-blue-400" />,
-      action: () => navigate('/calculadora-inss')
-    },
-    {
-      title: "Simulador de Pró-labore",
-      description: "Simule valores líquidos de pró-labore.",
-      icon: <Building2 className="h-12 w-12 text-purple-600 dark:text-purple-400" />,
-      action: () => navigate('/simulador-prolabore')
-    },
-    {
-      title: "Carrossel",
-      description: "Gerencie o carrossel da página principal.",
-      icon: <Images className="h-12 w-12 text-orange-600 dark:text-orange-400" />,
-      action: () => navigate('/admin/carousel')
-    },
-    {
-      title: "Gerador de Enquetes",
-      description: "Crie enquetes para seus clientes.",
-      icon: <PieChart className="h-12 w-12 text-orange-600 dark:text-orange-400" />,
-      action: () => navigate('/admin/polls')
-    },
-    {
-      title: "Gerenciador de Documentos",
-      description: "Gerencie documentos por cliente.",
-      icon: <FileText className="h-12 w-12 text-indigo-600 dark:text-indigo-400" />,
-      action: () => navigate('/admin/users')
-    },
-    {
-      title: "Histórico de Simulações",
-      description: "Visualize todas as simulações realizadas.",
-      icon: <Calculator className="h-12 w-12 text-red-600 dark:text-red-400" />,
-      action: () => navigate('/admin/simulations')
-    }
-  ];
-
-  return (
-    <div className="space-y-8">
-      <div className="mb-8">
-        <h1 className="text-3xl text-[#020817] dark:text-white mb-4 font-extralight">Ferramentas</h1>
-        <p className="text-gray-600 dark:text-white/70 font-extralight">Acesse as principais ferramentas do sistema</p>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {tools.map((tool, index) => (
-          <div key={index} className="p-8 text-center space-y-6 transition-all duration-300 hover:scale-105 group bg-white dark:bg-transparent rounded-xl border border-gray-100 dark:border-[#efc349]/20 hover:shadow-lg dark:hover:shadow-none">
-            <div className="flex items-center justify-center">
-              <div className="rounded-full bg-gray-50 dark:bg-[#efc349]/10 p-6 group-hover:scale-110 transition-all duration-300">
-                {tool.icon}
-              </div>
-            </div>
-            <div className="space-y-3">
-              <h3 className="text-xl text-[#020817] dark:text-[#efc349] font-extralight">
-                {tool.title}
-              </h3>
-              <p className="text-gray-500 dark:text-white/70 font-extralight">
-                {tool.description}
-              </p>
-            </div>
-            <Button 
-              variant="outline" 
-              className="w-full transition-all duration-300 hover:scale-105 font-extralight border-[#efc349]/30 hover:bg-[#efc349]/10" 
-              onClick={tool.action}
-            >
-              Acessar
-            </Button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+ const navigate=useNavigate();
+ const tools=[
+  {title:'Simulador de IRPF',description:'Simulação de imposto de renda.',icon:Calculator,to:'/simulador-irpf'},
+  {title:'Calculadora de INSS',description:'Contribuições do INSS por categoria.',icon:CreditCard,to:'/calculadora-inss'},
+  {title:'Simulador de Pró-labore',description:'Simulação de valores líquidos de pró-labore.',icon:Building2,to:'/simulador-prolabore'},
+  {title:'Carrossel',description:'Gerencie as empresas exibidas na página principal.',icon:Images,to:'/admin/carousel'},
+  {title:'Enquetes',description:'Crie e acompanhe enquetes para clientes.',icon:PieChart,to:'/admin/polls'},
+  {title:'Documentos dos clientes',description:'Envie e organize documentos da empresa ativa.',icon:FileText,to:'/admin/users'},
+  {title:'Histórico de simulações',description:'Consulte as simulações realizadas.',icon:Calculator,to:'/admin/simulations'}
+ ];
+ return <div>
+  <AdminPageHeader eyebrow="Administração" title="Ferramentas" description="Atalhos para utilitários e rotinas auxiliares do sistema."/>
+  <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">{tools.map(tool=>{const Icon=tool.icon;return <button key={tool.title} onClick={()=>navigate(tool.to)} className="group text-left"><AdminSection className="h-full p-5 transition hover:-translate-y-0.5 hover:border-border hover:shadow-md"><div className="flex items-start justify-between gap-4"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted/45"><Icon className="h-5 w-5"/></span><ArrowUpRight className="h-4 w-4 text-muted-foreground transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5"/></div><h3 className="mt-5 font-semibold">{tool.title}</h3><p className="mt-1 text-sm leading-6 text-muted-foreground">{tool.description}</p></AdminSection></button>})}</div>
+ </div>;
 };
