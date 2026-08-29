@@ -1,285 +1,113 @@
-import { Users, FileText, PieChart, Clock, HardDrive, Bell, Calendar, Plus } from "lucide-react";
+import { Users, FileText, PieChart, HardDrive, Bell, Calendar } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { AdminPageHeader } from "@/components/admin/ui/AdminPage";
 import { useDashboardData } from "./useDashboardData";
+
 interface AdminDashboardProps {
   users: any[];
   supabaseUsers: any[];
   documents: any[];
 }
-export const AdminDashboard = ({
-  users,
-  supabaseUsers,
-  documents
-}: AdminDashboardProps) => {
+
+export const AdminDashboard = ({ users, supabaseUsers }: AdminDashboardProps) => {
   const navigate = useNavigate();
   const clientUsers = supabaseUsers.filter(authUser => {
-    const userInfo = users.find(u => u.id === authUser.id);
+    const userInfo = users.find(user => user.id === authUser.id);
     return !['fiscal', 'contabil', 'geral'].includes(userInfo?.role || '');
   });
-  const {
-    stats,
-    loading,
-    formatRecentDate,
-    isLoading
-  } = useDashboardData();
-  const statsData = [{
-    title: "Clientes Ativos",
-    value: clientUsers.length,
-    icon: <Users className="h-6 w-6" />,
-    link: "/admin/users",
-    color: "blue"
-  }, {
-    title: "Total Documentos",
-    value: stats.totalDocuments,
-    icon: <FileText className="h-6 w-6" />,
-    link: "/admin/storage",
-    color: "green"
-  }, {
-    title: "Enquetes Criadas",
-    value: stats.pollCount,
-    icon: <PieChart className="h-6 w-6" />,
-    link: "/admin/polls",
-    color: "purple"
-  }, {
-    title: "Armazenamento",
-    value: stats.storageStats ? `${stats.storageStats.totalStorageMB.toFixed(1)}MB` : "Calculando...",
-    icon: <HardDrive className="h-6 w-6" />,
-    link: "/admin/storage",
-    color: "orange"
-  }];
-  if (isLoading) {
-    return <div className="flex justify-center items-center h-64">
-        <LoadingSpinner />
-      </div>;
-  }
-  return <div className="space-y-8 p-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl text-[#020817] dark:text-white mb-2 font-thin">Dashboard </h1>
-          <p className="text-gray-600 dark:text-[#b3b3b3]">
-            Visão geral do sistema e atividades recentes
-          </p>
-        </div>
-        <div className="flex gap-3">
-          <Button onClick={() => navigate("/admin/users")} className="bg-[#020817] hover:bg-[#0f172a] text-white dark:bg-transparent dark:border dark:border-[#efc349] dark:text-[#efc349] dark:hover:bg-[#efc349]/10">
-            <Users className="h-4 w-4 mr-2" />
-            Gerenciar Usuários
-          </Button>
-          <Button onClick={() => navigate("/admin/polls")} variant="outline" className="border-[#efc349] text-[#efc349] hover:bg-[#efc349]/10">
-            <PieChart className="h-4 w-4 mr-2" />
-            Enquetes
-          </Button>
-        </div>
+
+  const { stats, formatRecentDate, isLoading } = useDashboardData();
+
+  const statsData = [
+    { title: "Acessos de clientes", value: clientUsers.length, icon: Users, link: "/admin/users" },
+    { title: "Total de documentos", value: stats.totalDocuments, icon: FileText, link: "/admin/storage" },
+    { title: "Enquetes criadas", value: stats.pollCount, icon: PieChart, link: "/admin/polls" },
+    { title: "Armazenamento", value: stats.storageStats ? `${stats.storageStats.totalStorageMB.toFixed(1)} MB` : "Calculando...", icon: HardDrive, link: "/admin/storage" }
+  ];
+
+  if (isLoading) return <div className="flex min-h-[55vh] items-center justify-center"><LoadingSpinner /></div>;
+
+  return (
+    <div className="mx-auto w-full max-w-[1480px] space-y-6 px-4 py-5 sm:px-5 sm:py-6 lg:px-8">
+      <AdminPageHeader
+        eyebrow="Visão geral"
+        title="Dashboard"
+        description="Resumo da operação, acessos, documentos e atividades recentes."
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => navigate('/admin/empresas')}><Users className="mr-2 h-4 w-4" />Clientes</Button>
+            <Button onClick={() => navigate('/admin/polls')} variant="outline"><PieChart className="mr-2 h-4 w-4" />Enquetes</Button>
+          </div>
+        }
+      />
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {statsData.map(stat => {
+          const Icon = stat.icon;
+          return (
+            <Card key={stat.title} className="cursor-pointer border-border/60 bg-card/70 shadow-sm transition hover:-translate-y-0.5 hover:bg-card" onClick={() => navigate(stat.link)}>
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div><p className="text-xs font-medium uppercase tracking-[.08em] text-muted-foreground">{stat.title}</p><p className="mt-2 text-2xl font-semibold tracking-tight">{stat.value}</p></div>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted/55 text-muted-foreground"><Icon className="h-5 w-5" /></div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {statsData.map((stat, index) => <Card key={index} className="cursor-pointer transition-all duration-300 hover:scale-105 bg-white dark:bg-[#0b0f1c] border border-gray-200 dark:border-[#efc349]/30 hover:border-[#efc349] dark:hover:border-[#efc349]" onClick={() => navigate(stat.link)}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-[#b3b3b3] mb-1">
-                    {stat.title}
-                  </p>
-                  <p className="text-2xl font-bold text-[#020817] dark:text-[#f4f4f4]">
-                    {stat.value}
-                  </p>
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+        <Card className="border-border/60 bg-card/70 shadow-sm">
+          <CardContent className="p-0">
+            <div className="flex items-center justify-between border-b border-border/60 px-5 py-4"><div><h3 className="font-semibold">Documentos recentes</h3><p className="text-xs text-muted-foreground">Últimos arquivos enviados no sistema</p></div><FileText className="h-4 w-4 text-muted-foreground" /></div>
+            <div>
+              {stats.recentDocuments.slice(0, 5).map((doc, index) => (
+                <div key={`${doc.name}-${index}`} className={`flex items-center justify-between gap-4 border-b border-border/40 px-5 py-3.5 last:border-b-0 ${index % 2 ? 'bg-muted/[.08]' : ''}`}>
+                  <div className="min-w-0"><p className="truncate text-sm font-medium">{doc.name}</p><p className="mt-0.5 text-xs text-muted-foreground">{doc.userName || 'Usuário desconhecido'} · {formatRecentDate(doc.uploaded_at)}</p></div>
                 </div>
-                <div className="text-gray-500 dark:text-[#d9d9d9]">
-                  {stat.icon}
-                </div>
-              </div>
-            </CardContent>
-          </Card>)}
-      </div>
-
-      {/* Recent Activity & Storage */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Documents */}
-        <Card className="bg-white dark:bg-[#0b0f1c] border border-gray-200 dark:border-[#efc349]/30">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg text-[#020817] dark:text-[#efc349] font-extralight">
-                Documentos Recentes
-              </h3>
-              <FileText className="h-5 w-5 text-gray-400 dark:text-[#efc349]" />
-            </div>
-            <div className="space-y-3">
-              {stats.recentDocuments.slice(0, 5).map((doc, index) => <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-[#efc349]/20 last:border-0">
-                  <div>
-                    <p className="text-sm font-medium text-[#020817] dark:text-[#f4f4f4] truncate">
-                      {doc.name}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-[#b3b3b3]">
-                      Por: {doc.userName || 'Usuário desconhecido'}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-[#b3b3b3]">
-                      {formatRecentDate(doc.uploaded_at)}
-                    </p>
-                  </div>
-                  
-                </div>)}
-              {stats.recentDocuments.length === 0 && <p className="text-sm text-gray-500 dark:text-[#b3b3b3] text-center py-4">
-                  Nenhum documento recente encontrado
-                </p>}
+              ))}
+              {stats.recentDocuments.length === 0 && <p className="px-5 py-10 text-center text-sm text-muted-foreground">Nenhum documento recente encontrado.</p>}
             </div>
           </CardContent>
         </Card>
 
-        {/* System Info */}
-        <Card className="bg-white dark:bg-[#0b0f1c] border border-gray-200 dark:border-[#efc349]/30">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg text-[#020817] dark:text-[#efc349] font-extralight">
-                Informações do Sistema
-              </h3>
-              <Bell className="h-5 w-5 text-gray-400 dark:text-[#efc349]" />
-            </div>
-            
-            <div className="space-y-3">
-              {/* Documentos Enviados Recentemente */}
-              <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700/30">
-                <div className="flex justify-between items-center mb-2">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-green-600 dark:text-green-400" />
-                    <span className="text-sm font-medium text-green-800 dark:text-green-300">
-                      Documentos Enviados
-                    </span>
-                  </div>
-                  <span className="text-lg font-bold text-green-600 dark:text-green-400">
-                    {stats.recentDocumentsCount}
-                  </span>
-                </div>
-                <p className="text-xs text-green-700 dark:text-green-400/80 mb-2">
-                  Últimos 7 dias
-                </p>
-                <Button 
-                  size="sm" 
-                  variant="ghost" 
-                  className="w-full text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30 h-8"
-                  onClick={() => navigate("/admin/storage")}
-                >
-                  Ver Documentos →
-                </Button>
-              </div>
-
-              {/* Eventos Fiscais */}
-              <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/30">
-                <div className="flex justify-between items-center mb-2">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                    <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
-                      Eventos Fiscais Próximos
-                    </span>
-                  </div>
-                  <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                    {stats.upcomingFiscalEvents}
-                  </span>
-                </div>
-                <p className="text-xs text-blue-700 dark:text-blue-400/80 mb-2">
-                  Nos próximos 30 dias
-                </p>
-                <Button 
-                  size="sm" 
-                  variant="ghost" 
-                  className="w-full text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 h-8"
-                  onClick={() => navigate("/admin/calendar")}
-                >
-                  Ver Agenda →
-                </Button>
-              </div>
-
-              {/* Armazenamento */}
+        <Card className="border-border/60 bg-card/70 shadow-sm">
+          <CardContent className="p-0">
+            <div className="flex items-center justify-between border-b border-border/60 px-5 py-4"><div><h3 className="font-semibold">Operação</h3><p className="text-xs text-muted-foreground">Indicadores rápidos do sistema</p></div><Bell className="h-4 w-4 text-muted-foreground" /></div>
+            <div className="divide-y divide-border/40">
+              <MetricRow icon={<FileText className="h-4 w-4" />} label="Documentos enviados" description="Últimos 7 dias" value={stats.recentDocumentsCount} action="Ver documentos" onClick={() => navigate('/admin/storage')} />
+              <MetricRow icon={<Calendar className="h-4 w-4" />} label="Eventos fiscais próximos" description="Próximos 30 dias" value={stats.upcomingFiscalEvents} action="Ver agenda" onClick={() => navigate('/admin/agenda')} />
+              <MetricRow icon={<Bell className="h-4 w-4" />} label="Avisos ativos" description="Últimos 30 dias" value={stats.activeAnnouncements} action="Gerenciar avisos" onClick={() => navigate('/admin/announcements')} />
               {stats.storageStats && (
-                <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-700/30">
-                  <div className="flex justify-between items-center mb-2">
-                    <div className="flex items-center gap-2">
-                      <HardDrive className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                      <span className="text-sm font-medium text-gray-800 dark:text-gray-300">
-                        Armazenamento
-                      </span>
-                    </div>
-                  </div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                    {stats.storageStats.totalStorageGB?.toFixed(2) || '0'} GB de {stats.storageStats.storageLimitGB || 100} GB
-                  </p>
-                  <div className="w-full bg-gray-200 dark:bg-[#020817] rounded-full h-2 mb-2">
-                    <div 
-                      className="bg-[#efc349] h-2 rounded-full transition-all duration-300" 
-                      style={{ 
-                        width: `${Math.min(100, ((stats.storageStats.totalStorageGB || 0) / (stats.storageStats.storageLimitGB || 100)) * 100)}%` 
-                      }}
-                    />
-                  </div>
-                  <Button 
-                    size="sm" 
-                    variant="ghost" 
-                    className="w-full text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900/30 h-8"
-                    onClick={() => navigate("/admin/storage")}
-                  >
-                    Ver Detalhes →
-                  </Button>
+                <div className="px-5 py-4">
+                  <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2 text-sm font-medium"><HardDrive className="h-4 w-4 text-muted-foreground" />Armazenamento</div><span className="text-xs text-muted-foreground">{stats.storageStats.totalStorageGB?.toFixed(2) || '0'} / {stats.storageStats.storageLimitGB || 100} GB</span></div>
+                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary transition-all" style={{ width: `${Math.min(100, ((stats.storageStats.totalStorageGB || 0) / (stats.storageStats.storageLimitGB || 100)) * 100)}%` }} /></div>
+                  <Button size="sm" variant="ghost" className="mt-2 px-0 text-xs" onClick={() => navigate('/admin/storage')}>Ver detalhes</Button>
                 </div>
               )}
-
-              {/* Avisos Ativos */}
-              <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700/30">
-                <div className="flex justify-between items-center mb-2">
-                  <div className="flex items-center gap-2">
-                    <Bell className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                    <span className="text-sm font-medium text-purple-800 dark:text-purple-300">
-                      Avisos Ativos
-                    </span>
-                  </div>
-                  <span className="text-lg font-bold text-purple-600 dark:text-purple-400">
-                    {stats.activeAnnouncements}
-                  </span>
-                </div>
-                <p className="text-xs text-purple-700 dark:text-purple-400/80 mb-2">
-                  Últimos 30 dias
-                </p>
-                <Button 
-                  size="sm" 
-                  variant="ghost" 
-                  className="w-full text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/30 h-8"
-                  onClick={() => navigate("/admin/announcements")}
-                >
-                  Gerenciar Avisos →
-                </Button>
-              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      <Card className="bg-white dark:bg-[#0b0f1c] border border-gray-200 dark:border-[#efc349]/30">
-        <CardContent className="p-6">
-          <h3 className="text-lg text-[#020817] dark:text-[#efc349] mb-4 font-extralight">
-            Ações Rápidas
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button onClick={() => navigate("/admin/users")} variant="outline" className="h-12 justify-start border-gray-200 dark:border-[#efc349]/30 hover:border-[#efc349] dark:hover:bg-[#efc349]/10">
-              <Users className="h-4 w-4 mr-2" />
-              Adicionar Usuário
-            </Button>
-            <Button onClick={() => navigate("/admin/polls")} variant="outline" className="h-12 justify-start border-gray-200 dark:border-[#efc349]/30 hover:border-[#efc349] dark:hover:bg-[#efc349]/10">
-              <PieChart className="h-4 w-4 mr-2" />
-              Nova Enquete
-            </Button>
-            <Button onClick={() => navigate("/admin/simulations")} variant="outline" className="h-12 justify-start border-gray-200 dark:border-[#efc349]/30 hover:border-[#efc349] dark:hover:bg-[#efc349]/10">
-              <Calendar className="h-4 w-4 mr-2" />
-              Simulação IRPF
-            </Button>
+      <Card className="border-border/60 bg-card/70 shadow-sm">
+        <CardContent className="p-5">
+          <div className="mb-4"><h3 className="font-semibold">Ações rápidas</h3><p className="text-xs text-muted-foreground">Atalhos para as tarefas mais usadas</p></div>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            <Button onClick={() => navigate('/admin/users')} variant="outline" className="h-11 justify-start"><Users className="mr-2 h-4 w-4" />Acessos do portal</Button>
+            <Button onClick={() => navigate('/admin/polls')} variant="outline" className="h-11 justify-start"><PieChart className="mr-2 h-4 w-4" />Nova enquete</Button>
+            <Button onClick={() => navigate('/admin/simulations')} variant="outline" className="h-11 justify-start"><Calendar className="mr-2 h-4 w-4" />Simulações</Button>
           </div>
         </CardContent>
       </Card>
-
-      {/* Floating Action Button */}
-      
-    </div>;
+    </div>
+  );
 };
+
+function MetricRow({ icon, label, description, value, action, onClick }: { icon: React.ReactNode; label: string; description: string; value: number; action: string; onClick: () => void }) {
+  return <div className="flex items-center justify-between gap-4 px-5 py-4"><div className="flex min-w-0 items-center gap-3"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted/55 text-muted-foreground">{icon}</div><div><p className="text-sm font-medium">{label}</p><p className="text-xs text-muted-foreground">{description}</p></div></div><div className="flex items-center gap-3"><span className="text-xl font-semibold">{value}</span><Button size="sm" variant="ghost" onClick={onClick}>{action}</Button></div></div>;
+}
