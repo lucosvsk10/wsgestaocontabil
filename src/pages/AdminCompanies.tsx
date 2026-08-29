@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, X } from 'lucide-react';
+import { AlertTriangle, Plus, Search, X } from 'lucide-react';
 import { AdminLayout } from '@/components/admin/layout/AdminLayout';
 import { AdminEmptyState, AdminLoadingState, AdminPage, AdminPageHeader, AdminSection } from '@/components/admin/ui/AdminPage';
 import { Button } from '@/components/ui/button';
@@ -29,10 +29,10 @@ export default function AdminCompanies(){
    {error&&!open&&<div className="mt-5 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">{error}</div>}
    <div className="mt-6 flex items-center gap-3"><div className="relative w-full max-w-xl"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"/><Input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Buscar cliente por nome ou CNPJ..." className="pl-9"/></div><span className="whitespace-nowrap text-xs text-muted-foreground">{filtered.length} cliente(s)</span></div>
    <AdminSection className="mt-4">
-    {loading?<AdminLoadingState label="Carregando clientes..."/>:filtered.length===0?<AdminEmptyState title="Nenhum cliente encontrado"/>:<div>{filtered.map((c,i)=>{const name=c.trade_name||c.company_name;return <button key={c.id} onClick={()=>openCompany(c)} className={`flex w-full items-center gap-4 border-b border-border/45 px-5 py-4 text-left transition hover:bg-muted/20 last:border-b-0 ${i%2?'bg-muted/[.06]':'bg-card'}`}>
-      <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border/50 bg-muted/35 text-sm font-semibold text-muted-foreground">{c.logo_url?<img src={c.logo_url} alt="" className="h-full w-full object-contain"/>:initial(name)}</span>
-      <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">{name}</span><span className="mt-0.5 block truncate text-xs text-muted-foreground">{c.company_name}</span></span>
-      <span className="hidden text-xs text-muted-foreground sm:block">{formatCnpj(c.cnpj)}</span>
+    {loading?<AdminLoadingState label="Carregando clientes..."/>:filtered.length===0?<AdminEmptyState title="Nenhum cliente encontrado"/>:<div>{filtered.map((c,i)=>{const name=c.trade_name||c.company_name;const pending=digits(c.cnpj).length!==14;return <button key={c.id} onClick={()=>openCompany(c)} className={`flex w-full items-center gap-4 border-b px-5 py-4 text-left transition last:border-b-0 ${pending?'border-amber-400/20 bg-amber-500/[.045] hover:bg-amber-500/[.08]':'border-border/45 hover:bg-muted/20'} ${!pending&&(i%2?'bg-muted/[.06]':'bg-card')}`}>
+      <span className={`flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border text-sm font-semibold ${pending?'border-amber-400/25 bg-amber-500/10 text-amber-500':'border-border/50 bg-muted/35 text-muted-foreground'}`}>{c.logo_url?<img src={c.logo_url} alt="" className="h-full w-full object-contain"/>:initial(name)}</span>
+      <span className="min-w-0 flex-1"><span className="flex min-w-0 flex-wrap items-center gap-2"><span className="truncate text-sm font-semibold">{name}</span>{pending&&<span className="inline-flex items-center gap-1 rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-500"><AlertTriangle className="h-3 w-3"/>Cadastro pendente</span>}</span><span className="mt-0.5 block truncate text-xs text-muted-foreground">{pending?'Faltam dados obrigatórios para concluir o cadastro.':c.company_name}</span></span>
+      <span className={`hidden text-xs sm:block ${pending?'font-medium text-amber-500':'text-muted-foreground'}`}>{formatCnpj(c.cnpj)}</span>
       <span className="text-lg text-muted-foreground/60">›</span>
     </button>})}</div>}
    </AdminSection>
