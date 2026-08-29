@@ -1,0 +1,39 @@
+name: One Shot Stage2 Emission
+on:
+  push:
+    paths:
+      - '.github/workflows/one-shot-stage2-emission.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sync issuer with global company
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/pages/AdminFeature.tsx')
+          s=p.read_text()
+          s=s.replace('import { FormEvent, useState } from "react";', 'import { FormEvent, useEffect, useState } from "react";')
+          marker='import { supabase } from "@/integrations/supabase/client";\n'
+          if 'useCompanySelection' not in s:
+              s=s.replace(marker, marker+'import { useCompanySelection } from "@/contexts/CompanySelectionContext";\n')
+          start='export default function AdminFeature() {\n'
+          if 'const { selectedCompany } = useCompanySelection();' not in s:
+              s=s.replace(start, start+'  const { selectedCompany } = useCompanySelection();\n')
+          anchor='  const hasCert = Boolean(certificateBase64 && certificatePassword);\n'
+          effect='''  useEffect(() => {\n    if (!selectedCompany) return;\n    const cnpj = String(selectedCompany.cnpj || "").replace(/\\D/g, "");\n    setSale(current => ({ ...current, cnpjEmitente: cnpj, razaoSocial: selectedCompany.company_name, nomeFantasia: selectedCompany.trade_name || selectedCompany.company_name }));\n    setService(current => ({ ...current, cnpjPrestador: cnpj }));\n  }, [selectedCompany?.id]);\n\n'''
+          if 'setSale(current => ({ ...current, cnpjEmitente:' not in s:
+              s=s.replace(anchor, anchor+'\n'+effect)
+          p.write_text(s)
+          PY
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/AdminFeature.tsx
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "refactor: sync fiscal emission with global company"
+          git push
