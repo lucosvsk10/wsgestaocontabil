@@ -17,7 +17,8 @@ export interface AdminTabsViewProps { activeTab?: string; users?: UserType[]; su
 export function AdminTabsView(props:AdminTabsViewProps){
  const {activeTab,users=[],supabaseUsers=[],isLoadingUsers,isLoadingAuthUsers,handleDocumentButtonClick,setSelectedUserForPasswordChange,passwordForm,refreshUsers,documents=[]}=props;
  if(activeTab==='user-documents') return <UserDocumentView users={users} supabaseUsers={supabaseUsers}/>;
- return <AdminPage className="min-h-full">
+ const preserveApprovedSurface=activeTab==='dashboard'||activeTab==='storage';
+ return <AdminPage className={`min-h-full ${preserveApprovedSurface?'':'ws-admin-polish'}`}>
    {activeTab==='dashboard'&&<AdminDashboardView users={users} supabaseUsers={supabaseUsers} documents={documents}/>} 
    {activeTab==='users'&&<UserList supabaseUsers={supabaseUsers} users={users} isLoading={isLoadingUsers||isLoadingAuthUsers} setSelectedUserId={handleDocumentButtonClick||(()=>{})} setSelectedUserForPasswordChange={setSelectedUserForPasswordChange||(()=>{})} passwordForm={passwordForm||{}} refreshUsers={refreshUsers||(()=>{})}/>} 
    {activeTab==='storage'&&<StorageView/>}
