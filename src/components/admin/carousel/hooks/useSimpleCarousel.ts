@@ -30,50 +30,23 @@ export const useSimpleCarousel = () => {
 
   const fetchItems = async () => {
     try {
-      const { data, error } = await supabase
-        .from('carousel_items')
-        .select('*')
-        .order('created_at', { ascending: false });
-
+      const { data, error } = await supabase.from('carousel_items').select('*').order('created_at', { ascending: false });
       if (error) throw error;
       setItems((data || []) as CarouselItem[]);
     } catch (error) {
       console.error('Erro ao buscar itens:', error);
       toast({ title: 'Erro', description: 'Falha ao carregar itens do carrossel', variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
-  const uploadLogo = async (file: File): Promise<string | null> => {
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}.${fileExt}`;
-      const filePath = `logos/${fileName}`;
-      const { error: uploadError } = await supabase.storage.from('carousel-logos').upload(filePath, file);
-      if (uploadError) throw uploadError;
-      const { data: { publicUrl } } = supabase.storage.from('carousel-logos').getPublicUrl(filePath);
-      return publicUrl;
-    } catch (error) {
-      console.error('Erro no upload:', error);
-      toast({ title: 'Erro', description: 'Falha no upload da logo', variant: 'destructive' });
-      return null;
+  const addItem = async (itemData: NewCarouselItem): Promise<boolean> => {
+    if (!itemData.logo_url) {
+      toast({ title: 'Logo necessária', description: 'Adicione a logo no cadastro central da empresa antes de publicá-la no carrossel.', variant: 'destructive' });
+      return false;
     }
-  };
-
-  const addItem = async (itemData: NewCarouselItem, logoFile: File): Promise<boolean> => {
     setUploading(true);
     try {
-      const logoUrl = await uploadLogo(logoFile);
-      if (!logoUrl) return false;
-
-      const payload = { ...itemData, logo_url: logoUrl };
-      const { data, error } = await supabase
-        .from('carousel_items')
-        .insert([payload as never])
-        .select()
-        .single();
-
+      const { data, error } = await supabase.from('carousel_items').insert([itemData as never]).select().single();
       if (error) throw error;
       setItems(prev => [data as CarouselItem, ...prev]);
       toast({ title: 'Sucesso', description: 'Empresa adicionada ao carrossel' });
@@ -82,23 +55,14 @@ export const useSimpleCarousel = () => {
       console.error('Erro ao adicionar item:', error);
       toast({ title: 'Erro', description: 'Falha ao adicionar empresa ao carrossel', variant: 'destructive' });
       return false;
-    } finally {
-      setUploading(false);
-    }
+    } finally { setUploading(false); }
   };
 
   const updateItem = async (id: string, updates: Partial<CarouselItem>): Promise<boolean> => {
     try {
-      const { data, error } = await supabase
-        .from('carousel_items')
-        .update(updates as never)
-        .eq('id', id)
-        .select()
-        .single();
-
+      const { data, error } = await supabase.from('carousel_items').update(updates as never).eq('id', id).select().single();
       if (error) throw error;
       setItems(prev => prev.map(item => item.id === id ? { ...item, ...(data as CarouselItem) } : item));
-      toast({ title: 'Sucesso', description: 'Item atualizado com sucesso' });
       return true;
     } catch (error) {
       console.error('Erro ao atualizar item:', error);
@@ -109,19 +73,8 @@ export const useSimpleCarousel = () => {
 
   const deleteItem = async (id: string): Promise<void> => {
     try {
-      const item = items.find(i => i.id === id);
       const { error } = await supabase.from('carousel_items').delete().eq('id', id);
       if (error) throw error;
-
-      if (item?.logo_url) {
-        try {
-          const path = item.logo_url.split('/').pop();
-          if (path) await supabase.storage.from('carousel-logos').remove([`logos/${path}`]);
-        } catch (storageError) {
-          console.warn('Erro ao deletar logo do storage:', storageError);
-        }
-      }
-
       setItems(prev => prev.filter(item => item.id !== id));
       toast({ title: 'Sucesso', description: 'Item removido do carrossel' });
     } catch (error) {
@@ -135,6 +88,5 @@ export const useSimpleCarousel = () => {
   };
 
   useEffect(() => { void fetchItems(); }, []);
-
   return { items, loading, uploading, addItem, updateItem, deleteItem, toggleStatus, refetchItems: fetchItems };
 };
