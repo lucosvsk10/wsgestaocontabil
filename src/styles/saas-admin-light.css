@@ -1,4 +1,5 @@
 .saas-admin-light { min-height: 100vh; color-scheme: light; }
+.saas-topbar { background: #202833 !important; border-color: #303946 !important; }
 .saas-admin-light [class*="text-[#10203e]"],
 .saas-admin-light [class*="text-[#12213f]"],
 .saas-admin-light [class*="text-[#263652]"],
@@ -15,19 +16,22 @@
 .saas-admin-light [class*="border-[#d9e0e8]"],
 .saas-admin-light [class*="border-[#dfe5ec]"],
 .saas-admin-light [class*="border-[#e3e7ed]"],
-.saas-admin-light [class*="border-[#edf0f4]"] { border-color: hsl(var(--border) / .58) !important; }
+.saas-admin-light [class*="border-[#edf0f4]"] { border-color: #d4dae2 !important; }
 .saas-admin-light [class*="bg-[#fbfcfe]"],
-.saas-admin-light [class*="bg-[#f6f8fb]"] { background: hsl(var(--muted) / .14) !important; }
+.saas-admin-light [class*="bg-[#f6f8fb]"] { background: #f4f6f8 !important; }
 .saas-admin-light [class*="bg-[#eaf2ff]"],
-.saas-admin-light [class*="bg-[#eef4fd]"] { background: hsl(var(--muted)) !important; color: hsl(var(--foreground)) !important; }
+.saas-admin-light [class*="bg-[#eef4fd]"] { background: #eef1f4 !important; color: hsl(var(--foreground)) !important; }
 .saas-admin-light [class*="bg-[#0b5bd7]"] { background: hsl(var(--primary)) !important; color: hsl(var(--primary-foreground)) !important; }
 .saas-admin-light input,
 .saas-admin-light select,
-.saas-admin-light textarea { background: hsl(var(--background)) !important; color: hsl(var(--foreground)) !important; border-color: hsl(var(--border) / .62) !important; box-shadow: none !important; }
+.saas-admin-light textarea { background: #ffffff !important; color: hsl(var(--foreground)) !important; border-color: #cbd3dc !important; box-shadow: inset 0 0 0 1px rgba(15,23,42,.015) !important; }
 .saas-admin-light input:focus,
 .saas-admin-light select:focus,
-.saas-admin-light textarea:focus { border-color: hsl(var(--foreground) / .22) !important; }
+.saas-admin-light textarea:focus { border-color: #97a5b6 !important; box-shadow: 0 0 0 2px rgba(71,85,105,.08) !important; }
+.saas-admin-light .bg-card { background-color: #ffffff !important; }
+.saas-admin-light [class*="rounded-2xl"][class*="border"] { border-color: #d5dbe3; }
 .saas-admin-light [class*="rounded-2xl"][class*="border-[#e0e5ec]"] { box-shadow: 0 1px 2px hsl(var(--foreground) / .025), 0 12px 32px -28px hsl(var(--foreground) / .28) !important; }
-.saas-admin-light table thead { background: hsl(var(--muted) / .2); }
-.saas-admin-light table tbody tr:nth-child(even) { background: hsl(var(--muted) / .055); }
-.saas-admin-light table tbody tr:hover { background: hsl(var(--muted) / .14); }
+.saas-admin-light table { background: #ffffff; }
+.saas-admin-light table thead { background: #eef1f4; }
+.saas-admin-light table tbody tr:nth-child(even) { background: #fafbfc; }
+.saas-admin-light table tbody tr:hover { background: #f2f4f7; }
