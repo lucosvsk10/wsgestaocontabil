@@ -1,109 +1,231 @@
-import { useEffect, useMemo, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Bell,
+  CalendarDays,
+  Check,
+  ChevronDown,
+  CircleDollarSign,
+  CircleSlash2,
+  Clock3,
+  FileCheck2,
+  FilePlus2,
+  HelpCircle,
+  Home,
+  Package,
+  Settings,
+  ShoppingBag,
+  Truck,
+  Upload,
+  UserRound,
+  UsersRound,
+  Wrench,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
-const nav = ["Visão geral", "Emitir documento", "Emissões", "Cadastros", "Relatórios"];
-const allDocumentTypes = [
-  { label: "NF-e", modes: ["goods","mixed"], description: "Venda de produtos e circulação de mercadorias." },
-  { label: "NFC-e", modes: ["goods","mixed"], description: "Venda direta ao consumidor final no varejo." },
-  { label: "NFS-e", modes: ["services","mixed"], description: "Prestação de serviços municipais ou padrão nacional." },
-  { label: "CT-e", modes: ["transport"], description: "Prestação de serviço de transporte de cargas." },
-  { label: "MDF-e", modes: ["transport"], description: "Manifesto de documentos fiscais em transporte." },
-  { label: "NFCom", modes: ["communication"], description: "Serviços de comunicação e telecomunicação." },
+const fieldClass = "!border-[#d9e0e8] !bg-white !text-[#0f1f3d] dark:!bg-white dark:!text-[#0f1f3d] placeholder:!text-[#9aa6b5]";
+
+const navGroups = [
+  {
+    title: "CADASTROS",
+    items: [
+      { label: "Clientes", icon: UsersRound },
+      { label: "Fornecedores", icon: ShoppingBag },
+      { label: "Produtos", icon: Package },
+      { label: "Serviços", icon: Wrench },
+      { label: "Transportadoras", icon: Truck },
+    ],
+  },
+  {
+    title: "NOTAS DE PRODUTOS",
+    items: [
+      { label: "Emitir NF-e", icon: FileCheck2, doc: "NF-e" },
+      { label: "Emitir NFC-e", icon: FileCheck2, doc: "NFC-e" },
+      { label: "Emitir DF-e", icon: FileCheck2, doc: "DF-e" },
+    ],
+  },
+  {
+    title: "NOTAS DE SERVIÇOS",
+    items: [{ label: "Emitir NFS-e", icon: FileCheck2, doc: "NFS-e" }],
+  },
+  {
+    title: "NOTAS DE TRANSPORTES",
+    items: [
+      { label: "Emitir CT-e", icon: FileCheck2, doc: "CT-e" },
+      { label: "Emitir MDF-e", icon: FileCheck2, doc: "MDF-e" },
+    ],
+  },
 ];
 
-const fieldClass = "h-11 !border-[#cfd5dc] !bg-white !text-[#111827] dark:!bg-white dark:!text-[#111827] placeholder:!text-[#9aa1aa]";
-const sectionClass = "rounded-2xl border border-[#d8dde3] bg-[#eaedf0] p-6 md:p-7";
+const kpis = [
+  { label: "Notas aprovadas", value: "R$ 0,00", status: "Nenhuma nota aprovada", tone: "green", icon: Check },
+  { label: "Notas pendentes", value: "R$ 0,00", status: "Nenhuma nota pendente", tone: "orange", icon: Clock3 },
+  { label: "Notas canceladas", value: "R$ 0,00", status: "Nenhuma nota cancelada", tone: "red", icon: CircleSlash2 },
+  { label: "Ticket médio", value: "R$ 0,00", status: "Nenhuma nota no período", tone: "blue", icon: CircleDollarSign },
+] as const;
+
+const toneMap = {
+  green: { border: "#b9e8ca", accent: "#16a34a", pale: "#e9f8ef", text: "#13933f" },
+  orange: { border: "#f6d7a8", accent: "#f59e0b", pale: "#fff4df", text: "#ea8c00" },
+  red: { border: "#f4c8c8", accent: "#ef4444", pale: "#fdecec", text: "#e23b3b" },
+  blue: { border: "#c3d7f4", accent: "#3b82f6", pale: "#eaf2ff", text: "#2d6fca" },
+};
 
 const SaasApp = () => {
   const { user } = useAuth();
-  const [active, setActive] = useState("Visão geral");
+  const [active, setActive] = useState("Início");
   const [organization, setOrganization] = useState<any>(null);
-  const [profile, setProfile] = useState<any>({ business_mode: "mixed", tax_regime: "", crt: "", state_registration: "", municipal_registration: "", cnae_primary: "", fiscal_environment: "homologation", enabled_documents: [] });
-  const [catalog, setCatalog] = useState<any[]>([]);
-  const [catalogType, setCatalogType] = useState<"product"|"service">("product");
-  const [editingItem, setEditingItem] = useState<any>(null);
   const [selectedDocument, setSelectedDocument] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
-  const [search, setSearch] = useState("");
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [filter, setFilter] = useState("Todas as notas");
+  const [month, setMonth] = useState("Agosto de 2026");
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data: membership } = await (supabase as any).from("organization_members").select("organization_id, role, organizations(id,name,slug)").eq("user_id", user.id).eq("status","active").limit(1).maybeSingle();
-      const org = membership?.organizations || (membership?.organization_id ? { id: membership.organization_id, name: "Minha empresa" } : null);
-      if (!org) return;
-      setOrganization(org);
-      const { data: fiscalProfile } = await (supabase as any).from("saas_company_fiscal_profiles").select("*").eq("organization_id", org.id).maybeSingle();
-      if (fiscalProfile) setProfile(fiscalProfile);
-      const { data: items } = await (supabase as any).from("saas_fiscal_catalog_items").select("*").eq("organization_id", org.id).order("name");
-      setCatalog(items || []);
+      const { data } = await (supabase as any)
+        .from("organization_members")
+        .select("organization_id, organizations(id,name,slug)")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .limit(1)
+        .maybeSingle();
+      const org = data?.organizations || (data?.organization_id ? { id: data.organization_id, name: "Empresa Teste" } : null);
+      setOrganization(org || { name: "Empresa Teste" });
     })();
   }, [user?.id]);
 
-  const availableDocuments = useMemo(() => {
-    const filtered = allDocumentTypes.filter(d => d.modes.includes(profile.business_mode));
-    return filtered.length ? filtered : allDocumentTypes;
-  }, [profile.business_mode]);
+  const companyName = organization?.name || "Empresa Teste";
 
-  const goTo = (page: string) => { setSelectedDocument(null); setActive(page); };
-  const startEmission = (label: string) => { setSelectedDocument(label); setActive("Emitir documento"); };
-
-  const saveProfile = async () => {
-    if (!organization?.id) return;
-    const payload = { ...profile, organization_id: organization.id, updated_at: new Date().toISOString() };
-    delete payload.id; delete payload.created_at;
-    const { data, error } = await (supabase as any).from("saas_company_fiscal_profiles").upsert(payload, { onConflict: "organization_id,company_id" }).select().maybeSingle();
-    if (!error && data) { setProfile(data); setSaved(true); setTimeout(()=>setSaved(false),1800); }
+  const openEmission = (doc?: string) => {
+    setSelectedDocument(doc || null);
+    setActive("Emissão");
   };
 
-  const saveCatalogItem = async () => {
-    if (!organization?.id || !editingItem?.name) return;
-    const payload = { ...editingItem, organization_id: organization.id, item_type: catalogType, updated_at: new Date().toISOString() };
-    const { data, error } = editingItem.id
-      ? await (supabase as any).from("saas_fiscal_catalog_items").update(payload).eq("id", editingItem.id).select().maybeSingle()
-      : await (supabase as any).from("saas_fiscal_catalog_items").insert(payload).select().maybeSingle();
-    if (!error && data) {
-      setCatalog(prev => [...prev.filter(x=>x.id!==data.id), data].sort((a,b)=>a.name.localeCompare(b.name)));
-      setEditingItem(null);
-    }
+  const handleLogo = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setLogoPreview(String(reader.result));
+    reader.readAsDataURL(file);
   };
 
-  const renderOverview = () => <div className="space-y-8">
-    <section className={sectionClass}>
-      <p className="text-sm font-medium text-[#6b7280]">Olá</p>
-      <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em]">{organization?.name || "Sua empresa"}</h2>
-      <p className="mt-3 max-w-2xl text-sm leading-6 text-[#66707d]">Seu ambiente fiscal foi pensado para mostrar apenas o que faz sentido para a atividade da empresa.</p>
-      <div className="mt-6 grid gap-5 border-t border-[#d6dbe1] pt-6 md:grid-cols-3">
-        <div><p className="text-xs uppercase tracking-[0.12em] text-[#7b8491]">Atividade</p><p className="mt-2 text-sm font-semibold">{profile.business_mode === 'goods' ? 'Venda de produtos' : profile.business_mode === 'services' ? 'Prestação de serviços' : profile.business_mode === 'transport' ? 'Transporte' : profile.business_mode === 'communication' ? 'Comunicação' : 'Mista'}</p></div>
-        <div><p className="text-xs uppercase tracking-[0.12em] text-[#7b8491]">Ambiente</p><p className="mt-2 text-sm font-semibold">{profile.fiscal_environment === 'production' ? 'Produção' : 'Homologação'}</p></div>
-        <div><p className="text-xs uppercase tracking-[0.12em] text-[#7b8491]">Catálogo fiscal</p><p className="mt-2 text-sm font-semibold">{catalog.length} itens cadastrados</p></div>
+  const title = useMemo(() => selectedDocument ? `Emitir ${selectedDocument}` : active, [active, selectedDocument]);
+
+  const EmptyChart = ({ title, type = "bars" }: { title: string; type?: "bars" | "lines" | "horizontal" }) => (
+    <section className="rounded-2xl border border-[#e1e6ec] bg-white p-5 shadow-[0_1px_2px_rgba(15,31,61,0.02)]">
+      <div className="flex items-center justify-between">
+        <h3 className="text-[15px] font-semibold text-[#12213f]">{title}</h3>
+        <HelpCircle className="h-4 w-4 text-[#74819a]" />
+      </div>
+      <div className="relative mt-6 h-[250px] overflow-hidden rounded-xl bg-[#fbfcfe] px-5 pb-5 pt-6">
+        <div className="absolute inset-x-5 top-10 space-y-9">
+          {[0, 1, 2, 3].map(i => <div key={i} className="border-t border-dashed border-[#e4e8ee]" />)}
+        </div>
+        {type === "bars" && (
+          <div className="absolute inset-x-12 bottom-8 flex h-36 items-end justify-between gap-3 opacity-70">
+            {[48, 35, 27, 41, 31, 22, 44, 62].map((h, i) => <div key={i} className="w-full rounded-t-md bg-[#dce9fa]" style={{ height: `${h}%` }} />)}
+          </div>
+        )}
+        {type === "lines" && (
+          <div className="absolute inset-x-12 top-16 h-24">
+            <svg viewBox="0 0 500 110" className="h-full w-full opacity-60"><polyline fill="none" stroke="#8db5ec" strokeWidth="4" points="0,80 70,55 145,68 225,32 300,48 380,22 500,38" /><polyline fill="none" stroke="#f2a5a5" strokeWidth="3" points="0,96 75,88 160,92 235,78 315,83 395,70 500,75" /></svg>
+          </div>
+        )}
+        {type === "horizontal" && (
+          <div className="absolute inset-x-10 top-14 space-y-5 opacity-70">
+            {[78, 64, 51, 42, 32].map((w, i) => <div key={i} className="flex items-center gap-4"><div className="h-2 w-20 rounded bg-[#e6ebf2]"/><div className="h-3 rounded bg-[#dce6f5]" style={{ width: `${w}%` }}/></div>)}
+          </div>
+        )}
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+          <div className="grid h-12 w-12 place-items-center rounded-full bg-[#f0f4f9] text-[#8a98ad]"><span className="text-xl font-semibold">—</span></div>
+          <p className="mt-3 text-sm font-medium text-[#536077]">Sem dados para exibir</p>
+          <p className="mt-1 text-xs text-[#97a1af]">Emita notas para acompanhar estas informações.</p>
+        </div>
       </div>
     </section>
-    <section>
-      <div className="mb-4 flex items-end justify-between"><div><h3 className="text-xl font-semibold">Emitir agora</h3><p className="mt-1 text-sm text-[#6b7280]">Atalhos filtrados de acordo com a atividade da empresa.</p></div><button onClick={()=>goTo('Emitir documento')} className="text-sm font-semibold text-[#374151]">Ver emissão completa</button></div>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{availableDocuments.slice(0,3).map(item=><button key={item.label} onClick={()=>startEmission(item.label)} className="min-h-[150px] rounded-2xl border border-[#d8dde3] bg-[#eaedf0] p-6 text-left transition-all hover:border-[#bfc6ce] hover:bg-[#e4e8eb]"><p className="text-2xl font-semibold tracking-[-0.03em]">{item.label}</p><p className="mt-3 text-sm leading-6 text-[#66707d]">{item.description}</p><p className="mt-6 text-xs font-semibold uppercase tracking-[0.12em] text-[#4b5563]">Iniciar emissão</p></button>)}</div>
-    </section>
-  </div>;
+  );
 
-  const renderEmission = () => selectedDocument ? <div className="space-y-6"><button onClick={()=>setSelectedDocument(null)} className="text-sm font-semibold text-[#4b5563]">Voltar para tipos de emissão</button><section className={sectionClass}><p className="text-xs uppercase tracking-[0.12em] text-[#7b8491]">Nova emissão</p><h2 className="mt-2 text-3xl font-semibold">{selectedDocument}</h2><p className="mt-2 text-sm text-[#66707d]">O próximo passo será montar o formulário real usando os dados cadastrais da empresa e os itens do catálogo fiscal.</p><div className="mt-7 grid gap-4 md:grid-cols-2"><div><label className="text-sm font-medium">Cliente / destinatário</label><Input className={`${fieldClass} mt-2`} placeholder="Buscar ou cadastrar destinatário"/></div><div><label className="text-sm font-medium">Produto ou serviço</label><Input className={`${fieldClass} mt-2`} placeholder="Buscar no catálogo fiscal"/></div></div></section></div> : <div><div className="mb-6"><h2 className="text-2xl font-semibold">Escolha o documento</h2><p className="mt-2 text-sm text-[#66707d]">Exibimos apenas os documentos compatíveis com a atividade configurada para a empresa.</p></div><div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{availableDocuments.map(item=><button key={item.label} onClick={()=>startEmission(item.label)} className="min-h-[190px] rounded-2xl border border-[#d8dde3] bg-[#eaedf0] p-7 text-left transition-all hover:border-[#bfc6ce] hover:bg-[#e4e8eb]"><p className="text-3xl font-semibold tracking-[-0.04em]">{item.label}</p><p className="mt-4 max-w-sm text-sm leading-6 text-[#66707d]">{item.description}</p><p className="mt-9 text-xs font-semibold uppercase tracking-[0.12em] text-[#4b5563]">Começar</p></button>)}</div></div>;
+  const Dashboard = () => (
+    <div>
+      <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+        <div>
+          <h1 className="text-[27px] font-semibold tracking-[-0.035em] text-[#101f3c]">Bom dia, {companyName}</h1>
+          <p className="mt-2 text-sm text-[#68758c]">Veja o resumo da sua atividade fiscal e gerencie suas notas.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <button onClick={() => setFilter(filter === "Todas as notas" ? "Notas aprovadas" : "Todas as notas")} className="flex h-11 items-center gap-2 rounded-xl border border-[#dce2ea] bg-white px-4 text-sm font-medium text-[#1c2944] shadow-sm">{filter}<ChevronDown className="h-4 w-4"/></button>
+          <button onClick={() => setMonth(month === "Agosto de 2026" ? "Julho de 2026" : "Agosto de 2026")} className="flex h-11 items-center gap-2 rounded-xl border border-[#dce2ea] bg-white px-4 text-sm font-medium text-[#1c2944] shadow-sm"><CalendarDays className="h-4 w-4"/>{month}<ChevronDown className="h-4 w-4"/></button>
+          <Button onClick={() => openEmission()} className="h-11 rounded-xl bg-[#0b5bd7] px-5 font-semibold text-white shadow-[0_8px_18px_rgba(11,91,215,0.18)] hover:bg-[#084db9]"><FilePlus2 className="mr-2 h-4 w-4"/>Emitir nova nota</Button>
+        </div>
+      </div>
 
-  const renderEmissions = () => <div className="space-y-5"><div><h2 className="text-2xl font-semibold">Emissões</h2><p className="mt-1 text-sm text-[#66707d]">Notas e documentos emitidos pela sua empresa.</p></div><Input value={search} onChange={e=>setSearch(e.target.value)} style={{backgroundColor:'#fff',color:'#111827'}} className={`${fieldClass} max-w-lg`} placeholder="Buscar por número, cliente ou documento"/><section className={sectionClass}><div className="grid min-h-56 place-items-center text-center"><div><p className="font-semibold">Nenhuma emissão registrada</p><p className="mt-2 text-sm text-[#6b7280]">Quando a emissão real for conectada, todo o histórico aparecerá aqui.</p></div></div></section></div>;
+      <div className="mt-8 grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
+        {kpis.map(item => {
+          const tone = toneMap[item.tone];
+          const Icon = item.icon;
+          return <div key={item.label} className="relative min-h-[146px] overflow-hidden rounded-2xl border bg-white px-6 py-5 shadow-[0_2px_10px_rgba(16,31,60,0.025)]" style={{ borderColor: tone.border }}>
+            <div className="absolute inset-y-0 left-0 w-1" style={{ backgroundColor: tone.accent }}/>
+            <div className="absolute right-5 top-1/2 grid h-16 w-16 -translate-y-1/2 place-items-center rounded-full" style={{ backgroundColor: tone.pale }}><Icon className="h-8 w-8" style={{ color: tone.accent }}/></div>
+            <p className="text-sm font-medium" style={{ color: tone.text }}>{item.label}</p>
+            <p className="mt-4 text-2xl font-semibold tracking-[-0.03em] text-[#111f3a]">{item.value}</p>
+            <p className="mt-5 max-w-[70%] text-xs font-medium" style={{ color: tone.text }}>{item.status}</p>
+          </div>
+        })}
+      </div>
 
-  const blankItem = () => ({ name:"", code:"", description:"", unit: catalogType==='product'?"UN":"", sale_price:"", gtin:"", ncm:"", cest:"", product_origin:"0", cfop_in_state:"", cfop_out_state:"", icms_cst:"", csosn:"", icms_rate:"", ipi_cst:"", ipi_rate:"", pis_cst:"", pis_rate:"", cofins_cst:"", cofins_rate:"", service_code_national:"", service_code_municipal:"", cnae:"", iss_rate:"", iss_withheld:false, inss_withheld:false, ir_withheld:false, csll_withheld:false, pis_withheld:false, cofins_withheld:false, stock_managed:false, stock_quantity:"", stock_minimum:"", weight_net:"", weight_gross:"", fiscal_notes:"" });
-  const F = ({label,keyName,placeholder,type="text"}:{label:string,keyName:string,placeholder?:string,type?:string}) => <div><label className="text-sm font-medium">{label}</label><Input type={type} value={editingItem?.[keyName] ?? ""} onChange={e=>setEditingItem((p:any)=>({...p,[keyName]:e.target.value}))} className={`${fieldClass} mt-2`} placeholder={placeholder}/></div>;
+      <div className="mt-6 grid gap-5 xl:grid-cols-2">
+        <EmptyChart title="Faturamento por modalidade" type="bars"/>
+        <EmptyChart title="Notas aprovadas x notas canceladas" type="lines"/>
+        <EmptyChart title="Notas emitidas por cliente" type="horizontal"/>
+        <EmptyChart title="Produtos mais vendidos" type="horizontal"/>
+      </div>
+    </div>
+  );
 
-  const renderCadastros = () => <div className="space-y-6"><div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><h2 className="text-2xl font-semibold">Cadastros fiscais</h2><p className="mt-1 text-sm text-[#66707d]">Produtos e serviços completos para preencher as notas automaticamente.</p></div><Button onClick={()=>setEditingItem(blankItem())} className="bg-[#111827] text-white">Novo {catalogType==='product'?'produto':'serviço'}</Button></div><div className="flex gap-2"><button onClick={()=>{setCatalogType('product');setEditingItem(null)}} className={`rounded-lg px-4 py-2 text-sm font-semibold ${catalogType==='product'?'bg-[#111827] text-white':'bg-[#eaedf0] text-[#4b5563]'}`}>Produtos</button><button onClick={()=>{setCatalogType('service');setEditingItem(null)}} className={`rounded-lg px-4 py-2 text-sm font-semibold ${catalogType==='service'?'bg-[#111827] text-white':'bg-[#eaedf0] text-[#4b5563]'}`}>Serviços</button></div>{editingItem?<section className={sectionClass}><div className="mb-6"><h3 className="text-xl font-semibold">{editingItem.id?'Editar':'Novo'} {catalogType==='product'?'produto':'serviço'}</h3><p className="mt-1 text-sm text-[#6b7280]">Preencha o máximo possível. Estes dados serão reutilizados automaticamente na emissão.</p></div><div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3"><F label="Nome" keyName="name"/><F label="Código interno / SKU" keyName="code"/><F label="Preço de venda" keyName="sale_price" type="number"/><F label="Descrição completa" keyName="description"/>{catalogType==='product'?<><F label="Unidade comercial" keyName="unit" placeholder="UN, KG, CX..."/><F label="GTIN / EAN" keyName="gtin"/><F label="NCM" keyName="ncm"/><F label="CEST" keyName="cest"/><F label="Origem da mercadoria" keyName="product_origin"/><F label="CFOP dentro do estado" keyName="cfop_in_state"/><F label="CFOP fora do estado" keyName="cfop_out_state"/><F label="CST ICMS" keyName="icms_cst"/><F label="CSOSN" keyName="csosn"/><F label="Alíquota ICMS (%)" keyName="icms_rate" type="number"/><F label="CST IPI" keyName="ipi_cst"/><F label="Alíquota IPI (%)" keyName="ipi_rate" type="number"/><F label="CST PIS" keyName="pis_cst"/><F label="Alíquota PIS (%)" keyName="pis_rate" type="number"/><F label="CST COFINS" keyName="cofins_cst"/><F label="Alíquota COFINS (%)" keyName="cofins_rate" type="number"/><F label="Estoque atual" keyName="stock_quantity" type="number"/><F label="Estoque mínimo" keyName="stock_minimum" type="number"/><F label="Peso líquido" keyName="weight_net" type="number"/><F label="Peso bruto" keyName="weight_gross" type="number"/></>:<><F label="Código de serviço nacional" keyName="service_code_national"/><F label="Código de serviço municipal" keyName="service_code_municipal"/><F label="CNAE do serviço" keyName="cnae"/><F label="Alíquota ISS (%)" keyName="iss_rate" type="number"/><F label="CST PIS" keyName="pis_cst"/><F label="Alíquota PIS (%)" keyName="pis_rate" type="number"/><F label="CST COFINS" keyName="cofins_cst"/><F label="Alíquota COFINS (%)" keyName="cofins_rate" type="number"/></>}</div><div className="mt-6"><label className="text-sm font-medium">Observações fiscais</label><textarea value={editingItem.fiscal_notes||""} onChange={e=>setEditingItem((p:any)=>({...p,fiscal_notes:e.target.value}))} className="mt-2 min-h-24 w-full rounded-lg border border-[#cfd5dc] bg-white p-3 text-sm text-[#111827]"/></div>{catalogType==='service'&&<div className="mt-6 grid gap-3 md:grid-cols-3">{[['iss_withheld','ISS retido'],['inss_withheld','INSS retido'],['ir_withheld','IR retido'],['csll_withheld','CSLL retida'],['pis_withheld','PIS retido'],['cofins_withheld','COFINS retida']].map(([k,l])=><label key={k} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={!!editingItem[k]} onChange={e=>setEditingItem((p:any)=>({...p,[k]:e.target.checked}))}/>{l}</label>)}</div>}<div className="mt-7 flex gap-3"><Button onClick={saveCatalogItem} className="bg-[#111827] text-white">Salvar cadastro</Button><Button variant="outline" onClick={()=>setEditingItem(null)}>Cancelar</Button></div></section>:<section className={sectionClass}>{catalog.filter(x=>x.item_type===catalogType).length===0?<div className="py-14 text-center"><p className="font-semibold">Nenhum {catalogType==='product'?'produto':'serviço'} cadastrado</p><p className="mt-2 text-sm text-[#6b7280]">Cadastre o primeiro item para reutilizar na emissão.</p></div>:<div className="divide-y divide-[#d3d8de]">{catalog.filter(x=>x.item_type===catalogType).map(item=><button key={item.id} onClick={()=>setEditingItem(item)} className="flex w-full items-center justify-between py-4 text-left"><div><p className="font-semibold">{item.name}</p><p className="mt-1 text-xs text-[#6b7280]">{item.code || 'Sem código'} {item.ncm?`· NCM ${item.ncm}`:''} {item.service_code_national?`· Serviço ${item.service_code_national}`:''}</p></div><span className="text-sm text-[#4b5563]">Editar</span></button>)}</div>}</section>}</div>;
+  const Emission = () => {
+    const docs = ["NF-e", "NFC-e", "NFS-e", "CT-e", "MDF-e", "DF-e"];
+    if (selectedDocument) return <div className="max-w-5xl"><button className="mb-5 text-sm font-semibold text-[#536077]" onClick={() => setSelectedDocument(null)}>Voltar</button><div className="rounded-2xl border border-[#e0e5ec] bg-white p-7"><p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#728099]">Nova emissão</p><h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-[#10203e]">{selectedDocument}</h1><p className="mt-2 text-sm text-[#69768b]">Este é o início do fluxo de emissão. Os campos reais serão conectados etapa por etapa.</p><div className="mt-7 grid gap-5 md:grid-cols-2"><div><label className="text-sm font-medium">Cliente / destinatário</label><Input className={`${fieldClass} mt-2 h-11`} placeholder="Buscar cliente"/></div><div><label className="text-sm font-medium">Produto / serviço</label><Input className={`${fieldClass} mt-2 h-11`} placeholder="Buscar item cadastrado"/></div></div></div></div>;
+    return <div><div className="mb-7"><h1 className="text-3xl font-semibold tracking-[-0.04em] text-[#10203e]">Emitir nova nota</h1><p className="mt-2 text-sm text-[#69768b]">Escolha o documento fiscal que deseja emitir.</p></div><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{docs.map(doc => <button key={doc} onClick={() => setSelectedDocument(doc)} className="min-h-[150px] rounded-2xl border border-[#dfe5ec] bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#9fc0ef] hover:shadow-md"><p className="text-2xl font-semibold tracking-[-0.03em] text-[#10203e]">{doc}</p><p className="mt-2 text-sm text-[#6d7a90]">Iniciar emissão de {doc}.</p><p className="mt-7 text-xs font-semibold uppercase tracking-[0.12em] text-[#2d6fca]">Emitir agora</p></button>)}</div></div>;
+  };
 
-  const renderReports = () => <div className="space-y-6"><div><h2 className="text-2xl font-semibold">Relatórios</h2><p className="mt-1 text-sm text-[#66707d]">Visão de volume e valores emitidos pela empresa.</p></div><div className="grid gap-4 md:grid-cols-3"><div className={sectionClass}><p className="text-sm text-[#6b7280]">Notas emitidas</p><p className="mt-3 text-3xl font-semibold">0</p></div><div className={sectionClass}><p className="text-sm text-[#6b7280]">Valor emitido</p><p className="mt-3 text-3xl font-semibold">R$ 0,00</p></div><div className={sectionClass}><p className="text-sm text-[#6b7280]">Ticket médio</p><p className="mt-3 text-3xl font-semibold">R$ 0,00</p></div></div><section className={sectionClass}><div className="flex h-64 items-end gap-3">{[20,34,28,50,44,70,58,76,52,64,82,72].map((h,i)=><div key={i} className="flex flex-1 flex-col items-center gap-2"><div className="w-full rounded-t-md bg-[#c9ced4]" style={{height:`${h}%`}}/><span className="text-[10px] text-[#7b8491]">{i+1}</span></div>)}</div><p className="mt-4 text-center text-xs text-[#7b8491]">Estrutura visual do relatório mensal. Será ligada às emissões reais.</p></section></div>;
+  const GenericPage = ({ label }: { label: string }) => <div><h1 className="text-3xl font-semibold tracking-[-0.04em] text-[#10203e]">{label}</h1><p className="mt-2 text-sm text-[#6d7a90]">Estrutura criada. Esta área será conectada à funcionalidade real na próxima etapa.</p><div className="mt-7 min-h-[360px] rounded-2xl border border-[#e0e5ec] bg-white p-7"><p className="text-sm font-medium text-[#536077]">Nenhum registro ainda.</p></div></div>;
 
-  const renderSettings = () => <div className="space-y-6"><div><h2 className="text-2xl font-semibold">Configuração da empresa</h2><p className="mt-1 text-sm text-[#66707d]">Essas definições controlam quais emissões aparecem e como o sistema prepara os documentos.</p></div><section className={sectionClass}><div className="grid gap-5 md:grid-cols-2"><div><label className="text-sm font-medium">Atividade principal para emissão</label><select value={profile.business_mode} onChange={e=>setProfile((p:any)=>({...p,business_mode:e.target.value}))} className="mt-2 h-11 w-full rounded-lg border border-[#cfd5dc] bg-white px-3 text-sm"><option value="goods">Venda de produtos</option><option value="services">Prestação de serviços</option><option value="mixed">Produtos e serviços</option><option value="transport">Transporte</option><option value="communication">Comunicação / telecom</option><option value="other">Outra atividade</option></select></div><div><label className="text-sm font-medium">Ambiente fiscal</label><select value={profile.fiscal_environment} onChange={e=>setProfile((p:any)=>({...p,fiscal_environment:e.target.value}))} className="mt-2 h-11 w-full rounded-lg border border-[#cfd5dc] bg-white px-3 text-sm"><option value="homologation">Homologação</option><option value="production">Produção</option></select></div><div><label className="text-sm font-medium">Regime tributário</label><Input value={profile.tax_regime||""} onChange={e=>setProfile((p:any)=>({...p,tax_regime:e.target.value}))} className={`${fieldClass} mt-2`}/></div><div><label className="text-sm font-medium">CRT</label><Input value={profile.crt||""} onChange={e=>setProfile((p:any)=>({...p,crt:e.target.value}))} className={`${fieldClass} mt-2`}/></div><div><label className="text-sm font-medium">Inscrição estadual</label><Input value={profile.state_registration||""} onChange={e=>setProfile((p:any)=>({...p,state_registration:e.target.value}))} className={`${fieldClass} mt-2`}/></div><div><label className="text-sm font-medium">Inscrição municipal</label><Input value={profile.municipal_registration||""} onChange={e=>setProfile((p:any)=>({...p,municipal_registration:e.target.value}))} className={`${fieldClass} mt-2`}/></div><div><label className="text-sm font-medium">CNAE principal</label><Input value={profile.cnae_primary||""} onChange={e=>setProfile((p:any)=>({...p,cnae_primary:e.target.value}))} className={`${fieldClass} mt-2`}/></div><div><label className="text-sm font-medium">Certificado A1</label><div className="mt-2 rounded-lg border border-[#cfd5dc] bg-white px-3 py-3 text-sm text-[#6b7280]">{profile.certificate_subject ? `Configurado · ${profile.certificate_subject}` : 'Nenhum certificado configurado'}</div></div></div><div className="mt-7"><Button onClick={saveProfile} className="bg-[#111827] text-white">{saved?'Salvo':'Salvar configurações'}</Button></div></section></div>;
+  return (
+    <div className="min-h-screen bg-[#f6f8fb] text-[#10203e]">
+      <header className="fixed inset-x-0 top-0 z-40 flex h-[74px] items-center border-b border-[#e2e7ee] bg-white px-7">
+        <div className="flex w-[220px] items-center gap-3"><div className="text-4xl font-black italic tracking-[-0.09em] text-[#4d7fe0]">WS</div><span className="text-sm font-semibold text-[#1a2946]">Soluções Fiscais</span></div>
+        <div className="ml-auto flex items-center gap-3"><button className="grid h-9 w-9 place-items-center rounded-full text-[#40516e] hover:bg-[#f2f5f9]"><Bell className="h-4 w-4"/></button><button className="grid h-9 w-9 place-items-center rounded-full text-[#40516e] hover:bg-[#f2f5f9]"><HelpCircle className="h-4 w-4"/></button><button className="flex items-center gap-2 rounded-full pl-1 pr-2 text-[#40516e]"><span className="grid h-9 w-9 place-items-center rounded-full bg-[#d9e3f4] text-sm font-semibold">WS</span><ChevronDown className="h-4 w-4"/></button></div>
+      </header>
 
-  const content = active === "Visão geral" ? renderOverview() : active === "Emitir documento" ? renderEmission() : active === "Emissões" ? renderEmissions() : active === "Cadastros" ? renderCadastros() : active === "Relatórios" ? renderReports() : renderSettings();
+      <aside className="fixed bottom-0 left-0 top-[74px] z-30 w-[240px] overflow-y-auto border-r border-[#e2e7ee] bg-white px-4 pb-6 pt-5">
+        <div className="rounded-2xl border border-dashed border-[#cfd7e2] bg-[#fbfcfe] p-4 text-center">
+          <input ref={fileRef} type="file" accept="image/*" onChange={handleLogo} className="hidden"/>
+          {logoPreview ? <img src={logoPreview} alt="Logomarca da empresa" className="mx-auto h-20 max-w-full object-contain"/> : <div className="mx-auto grid h-14 w-14 place-items-center rounded-xl border border-[#d9e0e8] bg-white text-[#8794a8]"><Upload className="h-5 w-5"/></div>}
+          <p className="mt-3 text-sm font-semibold text-[#21304d]">Sua logomarca</p>
+          <p className="mt-1 text-xs text-[#8995a8]">Envie sua logo</p>
+          <button onClick={() => fileRef.current?.click()} className="mt-3 rounded-lg border border-[#d8dfe8] bg-white px-3 py-1.5 text-xs font-semibold text-[#44536e] shadow-sm">Alterar</button>
+        </div>
 
-  return <div className="min-h-screen bg-[#f3f4f6] text-[#111827]"><div className="flex min-h-screen"><aside className="sticky top-0 hidden h-screen w-[270px] shrink-0 border-r border-[#dfe3e8] bg-[#eaedf0] lg:flex lg:flex-col"><div className="flex h-20 items-center justify-center border-b border-[#d9dde2]"><img src="/lovable-uploads/f7fdf0cf-f16c-4df7-a92c-964aadea9539.png" alt="WS" className="h-7 object-contain"/></div><button onClick={()=>setActive('Configurações')} className="m-4 rounded-xl border border-[#d6dbe1] bg-[#f7f8f9] px-4 py-3 text-left"><p className="truncate text-sm font-semibold">{organization?.name || 'Minha empresa'}</p><p className="mt-1 text-xs text-[#6b7280]">Configurar empresa e emissão</p></button><nav className="flex-1 px-3"><p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[.14em] text-[#7b8491]">Emissão fiscal</p><div className="space-y-1">{nav.map(item=><button key={item} onClick={()=>goTo(item)} className={`w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium ${active===item?'bg-[#d9dde2] text-[#111827]':'text-[#5f6875] hover:bg-[#e1e5e9]'}`}>{item}</button>)}</div></nav><div className="border-t border-[#d9dde2] p-3"><button onClick={()=>setActive('Configurações')} className={`w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium ${active==='Configurações'?'bg-[#d9dde2]':'text-[#5f6875]'}`}>Configurações</button></div></aside><main className="min-w-0 flex-1"><header className="sticky top-0 z-20 flex h-20 items-center gap-4 border-b border-[#dfe3e8] bg-[#f3f4f6]/95 px-5 md:px-8"><button onClick={()=>setMobileOpen(v=>!v)} className="text-sm font-semibold lg:hidden">Menu</button><div className="min-w-0 flex-1"><p className="text-xs text-[#7b8491]">WS / Emissão fiscal</p><h1 className="truncate text-lg font-semibold">{selectedDocument?`Emitir ${selectedDocument}`:active}</h1></div><Input style={{backgroundColor:'#fff',color:'#111827',WebkitTextFillColor:'#111827'}} className={`${fieldClass} hidden max-w-sm md:block`} placeholder="Buscar emissões..."/><button className="rounded-lg border border-[#d8dde3] bg-white px-3 py-2 text-sm font-semibold">Conta</button></header>{mobileOpen&&<div className="border-b border-[#dfe3e8] bg-[#eaedf0] p-3 lg:hidden">{[...nav,'Configurações'].map(item=><button key={item} onClick={()=>{setActive(item);setMobileOpen(false)}} className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium">{item}</button>)}</div>}<div className="mx-auto max-w-[1440px] px-5 py-7 md:px-8 md:py-9">{content}</div></main></div></div>;
+        <button onClick={() => { setActive("Início"); setSelectedDocument(null); }} className={`mt-5 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold ${active === "Início" ? "bg-[#eef4fd] text-[#145fc9]" : "text-[#4f5d73] hover:bg-[#f5f7fa]"}`}><Home className="h-4 w-4"/>Início</button>
+
+        {navGroups.map(group => <div key={group.title} className="mt-5 border-t border-[#edf0f4] pt-4"><div className="flex items-center justify-between px-2"><p className="text-[10px] font-semibold tracking-[0.08em] text-[#6e7b90]">{group.title}</p><ChevronDown className="h-3.5 w-3.5 text-[#8290a4]"/></div><div className="mt-2 space-y-0.5">{group.items.map(item => { const Icon = item.icon; return <button key={item.label} onClick={() => item.doc ? openEmission(item.doc) : setActive(item.label)} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-[13px] ${active === item.label ? "bg-[#f0f5fc] font-semibold text-[#145fc9]" : "text-[#5d687a] hover:bg-[#f7f8fa]"}`}><Icon className="h-4 w-4 text-[#75849a]"/>{item.label}</button>})}</div></div>)}
+
+        <div className="mt-5 border-t border-[#edf0f4] pt-4 space-y-1"><button onClick={() => setActive("Relatórios")} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-[#566275] hover:bg-[#f7f8fa]"><CircleDollarSign className="h-4 w-4"/>Relatórios</button><button onClick={() => setActive("Configurações")} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-[#566275] hover:bg-[#f7f8fa]"><Settings className="h-4 w-4"/>Configurações</button></div>
+      </aside>
+
+      <main className="ml-[240px] pt-[74px]">
+        <div className="mx-auto max-w-[1500px] px-8 py-8">
+          {active === "Início" && <Dashboard/>}
+          {active === "Emissão" && <Emission/>}
+          {active !== "Início" && active !== "Emissão" && <GenericPage label={title}/>} 
+        </div>
+      </main>
+    </div>
+  );
 };
 
 export default SaasApp;
