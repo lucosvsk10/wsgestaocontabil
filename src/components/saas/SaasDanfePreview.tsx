@@ -9,10 +9,10 @@ const statusLabel=(s:any)=>s==="authorized"?"AUTORIZADA":s==="rejected"?"REJEITA
 export function printDanfe(elementId:string,title="DANFE"){
  const node=document.getElementById(elementId); if(!node)return;
  const w=window.open("","_blank","width=1000,height=850"); if(!w)return;
- w.document.write(`<!doctype html><html><head><title>${title}</title><meta charset="utf-8"/><style>*{box-sizing:border-box}body{font-family:Arial,sans-serif;margin:0;padding:10mm;color:#000}.danfe-sheet{width:100%!important;max-width:none!important;border:0!important;box-shadow:none!important;background:#fff!important}.danfe-actions{display:none!important}.danfe-sheet *{color:#000!important}@page{size:A4 portrait;margin:8mm}</style></head><body>${node.outerHTML}</body></html>`);w.document.close();w.focus();setTimeout(()=>w.print(),250);
+ w.document.write(`<!doctype html><html><head><title>${title}</title><meta charset="utf-8"/><style>*{box-sizing:border-box}body{font-family:Arial,sans-serif;margin:0;padding:10mm;color:#000;background:#fff}.danfe-sheet,.receipt-sheet{width:100%!important;max-width:none!important;border:0!important;box-shadow:none!important;background:#fff!important}.receipt-sheet{max-width:80mm!important;margin:0 auto!important}.danfe-actions{display:none!important}.danfe-sheet *,.receipt-sheet *{color:#000!important}@page{size:auto;margin:8mm}</style></head><body>${node.outerHTML}</body></html>`);w.document.close();w.focus();setTimeout(()=>w.print(),250);
 }
 
-export default function SaasDanfePreview({id="danfe-preview",documentType="NF-e",environment="homologation",profile,data={},result=null,emission=null,showActions=false}:{id?:string;documentType?:string;environment?:string;profile?:any;data?:any;result?:any;emission?:any;showActions?:boolean}){
+export default function SaasDanfePreview({id="danfe-preview",documentType="NF-e",environment="homologation",profile,data={},result=null,emission=null,showActions=false,mode="danfe"}:{id?:string;documentType?:string;environment?:string;profile?:any;data?:any;result?:any;emission?:any;showActions?:boolean;mode?:"danfe"|"receipt"}){
  const p=emission?.payload||data||{};
  const number=emission?.number||p.numeroNota||p.numero||p.nDPS||"—";
  const series=emission?.series||p.serie||"—";
@@ -30,6 +30,23 @@ export default function SaasDanfePreview({id="danfe-preview",documentType="NF-e"
  const model=documentType==="NF-e"?"55":documentType==="NFC-e"?"65":documentType==="CT-e"?"57":documentType==="MDF-e"?"58":"NFS-e";
  const date=useMemo(()=>new Date(emission?.external_issue_date||emission?.authorized_at||emission?.created_at||Date.now()).toLocaleString("pt-BR"),[emission]);
  const imported=emission?.source==="imported";
+ if(mode==="receipt")return <div className="space-y-3">{showActions&&<div className="danfe-actions flex flex-wrap gap-2"><button onClick={()=>printDanfe(id,`Notinha-${number}`)} className="rounded-md border border-[#202833] bg-[#202833] px-4 py-2 text-xs font-semibold text-white">Imprimir / salvar PDF</button></div>}<div id={id} className="receipt-sheet mx-auto w-full max-w-[380px] border border-[#aeb7c2] bg-white px-5 py-6 font-mono text-[11px] leading-[1.45] text-black shadow-sm">
+  <div className="text-center"><div className="text-[15px] font-bold">{emitName}</div><div>{emitLegal}</div><div>CNPJ {doc(emitDoc)}</div><div>IE {p.ie||profile?.state_registration||"—"}</div></div>
+  <div className="my-4 border-t border-dashed border-black"/>
+  <div className="text-center font-bold">{documentType} · Nº {number} · SÉRIE {series}</div><div className="mt-1 text-center">{date}</div>
+  {environment!=="production"&&<div className="mt-3 border border-black px-2 py-2 text-center font-bold">SEM VALOR FISCAL · HOMOLOGAÇÃO</div>}
+  {status==="rejected"&&<div className="mt-3 border border-black bg-[#fff1f1] px-2 py-2"><b>REJEITADA</b>{rejection?` · ${rejection}`:""}</div>}
+  {imported&&<div className="mt-3 border border-black px-2 py-2"><b>DOCUMENTO EXTRAÍDO</b></div>}
+  <div className="my-4 border-t border-dashed border-black"/>
+  <div><b>DESTINATÁRIO</b></div><div>{recipient}</div><div>{recipientDoc?doc(recipientDoc):"Consumidor não identificado"}</div>
+  <div className="my-4 border-t border-dashed border-black"/>
+  <div className="grid grid-cols-[1fr_52px_74px] gap-2 border-b border-black pb-1 font-bold"><span>ITEM</span><span className="text-right">QTD</span><span className="text-right">TOTAL</span></div>
+  <div className="grid grid-cols-[1fr_52px_74px] gap-2 py-2"><span>{item}</span><span className="text-right">{p.quantidade||p.qCarga||"1"}</span><span className="text-right">{money(total)}</span></div>
+  <div className="border-t border-black pt-2"><div className="flex justify-between text-[14px] font-bold"><span>TOTAL</span><span>{money(total)}</span></div></div>
+  <div className="my-4 border-t border-dashed border-black"/>
+  <div className="text-center text-[9px]">Status: {statusLabel(status)}</div>{access&&<><div className="mt-2 text-center text-[8px] font-bold">CHAVE DE ACESSO</div><div className="mt-1 break-all text-center text-[8px]">{key(access)}</div></>}{protocol&&<div className="mt-2 text-center text-[8px]">Protocolo: {protocol}</div>}
+  <div className="mt-5 text-center text-[9px]">Documento auxiliar para conferência e impressão.</div>
+ </div></div>;
  return <div className="space-y-3">
   {showActions&&<div className="danfe-actions flex flex-wrap gap-2"><button onClick={()=>printDanfe(id,`${documentType}-${number}`)} className="rounded-md border border-[#202833] bg-[#202833] px-4 py-2 text-xs font-semibold text-white">Imprimir / salvar PDF</button></div>}
   <div id={id} className="danfe-sheet mx-auto w-full max-w-[760px] border-2 border-black bg-white p-2 text-[10px] leading-tight text-black shadow-sm">
