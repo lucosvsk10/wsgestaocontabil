@@ -18,7 +18,6 @@
 .saas-emission-group { box-shadow: inset 0 0 0 1px rgba(100,116,139,.10); }
 .saas-emission-group:hover { box-shadow: inset 0 0 0 1px rgba(100,116,139,.16); }
 
-/* Workspace centralizado e mais editorial nas páginas operacionais. */
 .saas-main-content { background: #f2f4f7 !important; }
 .saas-main-content > div { width: min(100%, 1180px) !important; max-width: 1180px !important; margin-inline: auto !important; padding-inline: 28px !important; }
 .saas-main-content h1 { text-align: center; color: #111827 !important; }
@@ -30,7 +29,6 @@
 .saas-main-content [class*="sm:flex-row"][class*="sm:justify-between"] [class*="flex"],
 .saas-main-content [class*="md:flex-row"][class*="md:justify-between"] [class*="flex"] { justify-content: center; }
 
-/* A Home mantém o desenho original: ampla e alinhada à esquerda. */
 .saas-main-content > div:has(.saas-dashboard) { width: 100% !important; max-width: 1540px !important; padding-inline: 32px !important; }
 .saas-dashboard h1 { text-align: left !important; }
 .saas-dashboard h1 + p { margin-left: 0 !important; margin-right: 0 !important; max-width: 760px; text-align: left !important; }
@@ -94,10 +92,17 @@
 .saas-admin-light select:focus,
 .saas-admin-light textarea:focus { border-color: #7f8da0 !important; box-shadow: 0 0 0 3px rgba(71,85,105,.09) !important; }
 .saas-admin-light .bg-card { background-color: #ffffff !important; }
-.saas-admin-light table { background: #ffffff; }
-.saas-admin-light table thead { background: #e9edf2; }
-.saas-admin-light table tbody tr:nth-child(even) { background: #fafbfc; }
-.saas-admin-light table tbody tr:hover { background: #f0f3f6; }
+
+/* Tabelas: sempre claras, legíveis e com zebra striping. */
+.saas-admin-light table { width: 100%; background: #ffffff !important; border-collapse: separate; border-spacing: 0; color: #1f2937 !important; }
+.saas-admin-light table thead { background: #e9edf2 !important; }
+.saas-admin-light table thead th { color: #667085 !important; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .09em !important; }
+.saas-admin-light table tbody tr { background: #ffffff !important; color: #1f2937 !important; transition: background-color .15s ease; }
+.saas-admin-light table tbody tr:nth-child(even) { background: #f7f9fb !important; }
+.saas-admin-light table tbody tr:hover { background: #edf2f7 !important; }
+.saas-admin-light table td { color: inherit; }
+.saas-admin-light table tbody tr button { background: transparent !important; color: inherit !important; border: 0 !important; box-shadow: none !important; }
+
 .saas-admin-light .ws-storage-style { color: #111827 !important; }
 .saas-admin-light .ws-storage-style h1,
 .saas-admin-light .ws-storage-style h2,
