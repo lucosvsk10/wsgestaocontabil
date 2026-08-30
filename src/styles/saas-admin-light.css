@@ -74,3 +74,13 @@
 .saas-admin-light .ws-storage-style p[class*="text-3xl"],
 .saas-admin-light .ws-storage-style p[class*="text-4xl"],
 .saas-admin-light .ws-storage-style [class*="font-light"] { color: #111827 !important; }
+
+/* Ações do conteúdo usam a cor principal do produto, sem afetar sidebar e navbar. */
+.saas-main-content button:not(:disabled) {
+  background: #202833 !important;
+  color: #ffffff !important;
+  border-color: #202833 !important;
+}
+.saas-main-content button:not(:disabled):hover { background: #151c26 !important; border-color: #151c26 !important; }
+.saas-main-content button:disabled { opacity: .48; }
+.saas-main-content button svg { color: currentColor !important; }
