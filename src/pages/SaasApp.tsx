@@ -43,6 +43,9 @@ export default function SaasApp() {
     setOrganization(org || { name: "Empresa Teste" });
     if (!org?.id) return;
     setSetupDismissed(localStorage.getItem(`ws_fiscal_setup_dismissed_${org.id}`) === "1");
+
+    await supabase.functions.invoke("saas-sales-history-sync", { body: { organization_id: org.id, mode: "auto" } }).catch(() => null);
+
     const [{ data: config }, { data: e }, { data: s }] = await Promise.all([
       supabase.functions.invoke("saas-fiscal-config", { body: { action: "get", organization_id: org.id } }),
       (supabase as any).from("saas_fiscal_emissions").select("*").eq("organization_id", org.id).order("created_at", { ascending: false }).limit(800),
