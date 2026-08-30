@@ -119,6 +119,10 @@
 .saas-main-content button[class*="text-xs"] { min-height: 32px; padding: 0 12px !important; }
 .saas-main-content button[class*="text-sm"] { min-height: 36px; padding: 0 14px !important; }
 
+.saas-issued-notes button[class*="bg-white"] { background:#fff !important; color:#263652 !important; border-color:#cbd3dc !important; }
+.saas-issued-notes button[class*="underline"] { background:transparent !important; color:#455468 !important; border:0 !important; box-shadow:none !important; padding:0 !important; min-height:auto !important; transform:none !important; }
+.saas-issued-notes button:disabled { background:#fff !important; color:#7d8997 !important; border-color:#cbd3dc !important; }
+
 .saas-main-content button[class*="mb-3"][class*="text-sm"][class*="font-semibold"],
 .saas-main-content button[class*="mb-4"][class*="text-sm"][class*="font-semibold"] {
   display: inline-flex !important;
