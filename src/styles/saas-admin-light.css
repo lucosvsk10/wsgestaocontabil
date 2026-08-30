@@ -20,6 +20,7 @@
 
 .saas-main-content { background: #f2f4f7 !important; }
 .saas-main-content > div { width: min(100%, 1180px) !important; max-width: 1180px !important; margin-inline: auto !important; padding-inline: 28px !important; }
+.saas-main-content > .saas-issued-notes { width: min(100%, 1460px) !important; max-width: 1460px !important; padding-inline: 20px !important; }
 .saas-main-content h1 { text-align: center; color: #111827 !important; }
 .saas-main-content h1 + p { margin-left: auto; margin-right: auto; max-width: 760px; text-align: center; }
 .saas-main-content [class*="sm:flex-row"][class*="sm:justify-between"],
@@ -92,17 +93,10 @@
 .saas-admin-light select:focus,
 .saas-admin-light textarea:focus { border-color: #7f8da0 !important; box-shadow: 0 0 0 3px rgba(71,85,105,.09) !important; }
 .saas-admin-light .bg-card { background-color: #ffffff !important; }
-
-/* Tabelas: sempre claras, legíveis e com zebra striping. */
-.saas-admin-light table { width: 100%; background: #ffffff !important; border-collapse: separate; border-spacing: 0; color: #1f2937 !important; }
-.saas-admin-light table thead { background: #e9edf2 !important; }
-.saas-admin-light table thead th { color: #667085 !important; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .09em !important; }
-.saas-admin-light table tbody tr { background: #ffffff !important; color: #1f2937 !important; transition: background-color .15s ease; }
-.saas-admin-light table tbody tr:nth-child(even) { background: #f7f9fb !important; }
-.saas-admin-light table tbody tr:hover { background: #edf2f7 !important; }
-.saas-admin-light table td { color: inherit; }
-.saas-admin-light table tbody tr button { background: transparent !important; color: inherit !important; border: 0 !important; box-shadow: none !important; }
-
+.saas-admin-light table { background: #ffffff; }
+.saas-admin-light table thead { background: #e9edf2; }
+.saas-admin-light table tbody tr:nth-child(even) { background: #fafbfc; }
+.saas-admin-light table tbody tr:hover { background: #f0f3f6; }
 .saas-admin-light .ws-storage-style { color: #111827 !important; }
 .saas-admin-light .ws-storage-style h1,
 .saas-admin-light .ws-storage-style h2,
@@ -148,6 +142,5 @@
 
 @media (max-width: 900px) {
   .saas-main-content > div { padding-inline: 18px !important; }
-  .saas-main-content > div:has(.saas-dashboard) { padding-inline: 18px !important; }
-  .saas-dashboard > div[class*="sm:flex-row"][class*="sm:justify-between"] { flex-direction: column !important; }
+  .saas-main-content > .saas-issued-notes { padding-inline: 12px !important; }
 }
