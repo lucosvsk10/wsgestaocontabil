@@ -21,12 +21,12 @@
 .saas-main-content { background: #f2f4f7 !important; }
 .saas-main-content > div { width: min(100%, 1180px) !important; max-width: 1180px !important; margin-inline: auto !important; padding-inline: 28px !important; }
 
-/* Páginas fiscais que precisam usar a largura real da área útil. */
-.saas-main-content > .saas-issued-notes,
+/* As telas de histórico usam praticamente toda a largura disponível do painel. */
+.saas-main-content > div:has(> .saas-issued-notes),
 .saas-main-content > div:has(.saas-emission-history) {
-  width: calc(100% - 24px) !important;
-  max-width: 1600px !important;
-  padding-inline: 12px !important;
+  width: calc(100% - 12px) !important;
+  max-width: 1640px !important;
+  padding-inline: 6px !important;
 }
 
 .saas-main-content h1 { text-align: center; color: #111827 !important; }
@@ -127,7 +127,7 @@
 .saas-main-content button[class*="text-xs"] { min-height: 32px; padding: 0 12px !important; }
 .saas-main-content button[class*="text-sm"] { min-height: 36px; padding: 0 14px !important; }
 
-/* Notas emitidas: botões claros precisam continuar claros; só ação primária/selecionada fica escura. */
+/* Botões secundários e de documento não podem herdar o fundo escuro global. */
 .saas-issued-notes button[class*="bg-white"],
 .saas-emission-history button[class*="bg-white"] {
   background:#fff !important;
@@ -143,6 +143,10 @@
 }
 .saas-issued-notes button[class*="underline"] { background:transparent !important; color:#455468 !important; border:0 !important; box-shadow:none !important; padding:0 !important; min-height:auto !important; transform:none !important; }
 .saas-issued-notes button:disabled { background:#fff !important; color:#7d8997 !important; border-color:#cbd3dc !important; }
+
+/* Alternância DANFE / Notinha: apenas a opção ativa fica escura. */
+.saas-issued-notes button[class*="min-h-[48px]"][class*="bg-white"] { background:#fff !important; color:#263652 !important; border-color:#cbd3dc !important; }
+.saas-issued-notes button[class*="min-h-[48px]"]:not([class*="bg-white"]) { background:#202833 !important; color:#fff !important; border-color:#202833 !important; }
 
 /* As tabelas fiscais devem caber no desktop sem barra horizontal. */
 .saas-issued-notes table,
@@ -188,7 +192,7 @@
 
 @media (max-width: 900px) {
   .saas-main-content > div { padding-inline: 18px !important; }
-  .saas-main-content > .saas-issued-notes,
+  .saas-main-content > div:has(> .saas-issued-notes),
   .saas-main-content > div:has(.saas-emission-history) { width:100% !important; padding-inline: 12px !important; }
   .saas-emission-history > div[class*="overflow-x-auto"] { overflow-x:auto !important; }
   .saas-emission-history table { min-width:980px !important; }
