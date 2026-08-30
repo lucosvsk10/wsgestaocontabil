@@ -23,6 +23,12 @@
 .saas-main-content > div { width: min(100%, 1180px) !important; max-width: 1180px !important; margin-inline: auto !important; padding-inline: 28px !important; }
 .saas-main-content h1 { text-align: center; color: #111827 !important; }
 .saas-main-content h1 + p { margin-left: auto; margin-right: auto; max-width: 760px; text-align: center; }
+.saas-main-content [class*="sm:flex-row"][class*="sm:justify-between"],
+.saas-main-content [class*="md:flex-row"][class*="md:justify-between"] { flex-direction: column !important; align-items: center !important; justify-content: center !important; text-align: center; }
+.saas-main-content [class*="sm:flex-row"][class*="sm:justify-between"] > div,
+.saas-main-content [class*="md:flex-row"][class*="md:justify-between"] > div { margin-left: auto; margin-right: auto; }
+.saas-main-content [class*="sm:flex-row"][class*="sm:justify-between"] [class*="flex"],
+.saas-main-content [class*="md:flex-row"][class*="md:justify-between"] [class*="flex"] { justify-content: center; }
 .saas-main-content [class*="rounded-2xl"] { border-radius: 8px !important; }
 .saas-main-content [class*="rounded-xl"] { border-radius: 6px !important; }
 .saas-main-content [class*="rounded-lg"] { border-radius: 5px !important; }
