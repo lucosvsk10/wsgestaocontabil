@@ -20,7 +20,15 @@
 
 .saas-main-content { background: #f2f4f7 !important; }
 .saas-main-content > div { width: min(100%, 1180px) !important; max-width: 1180px !important; margin-inline: auto !important; padding-inline: 28px !important; }
-.saas-main-content > .saas-issued-notes { width: min(100%, 1460px) !important; max-width: 1460px !important; padding-inline: 20px !important; }
+
+/* Páginas fiscais que precisam usar a largura real da área útil. */
+.saas-main-content > .saas-issued-notes,
+.saas-main-content > div:has(.saas-emission-history) {
+  width: calc(100% - 24px) !important;
+  max-width: 1600px !important;
+  padding-inline: 12px !important;
+}
+
 .saas-main-content h1 { text-align: center; color: #111827 !important; }
 .saas-main-content h1 + p { margin-left: auto; margin-right: auto; max-width: 760px; text-align: center; }
 .saas-main-content [class*="sm:flex-row"][class*="sm:justify-between"],
@@ -119,9 +127,43 @@
 .saas-main-content button[class*="text-xs"] { min-height: 32px; padding: 0 12px !important; }
 .saas-main-content button[class*="text-sm"] { min-height: 36px; padding: 0 14px !important; }
 
-.saas-issued-notes button[class*="bg-white"] { background:#fff !important; color:#263652 !important; border-color:#cbd3dc !important; }
+/* Notas emitidas: botões claros precisam continuar claros; só ação primária/selecionada fica escura. */
+.saas-issued-notes button[class*="bg-white"],
+.saas-emission-history button[class*="bg-white"] {
+  background:#fff !important;
+  color:#263652 !important;
+  border-color:#cbd3dc !important;
+  box-shadow:0 1px 2px rgba(15,23,42,.04) !important;
+}
+.saas-issued-notes button[class*="bg-white"]:hover,
+.saas-emission-history button[class*="bg-white"]:hover {
+  background:#eef2f5 !important;
+  color:#111827 !important;
+  border-color:#9eabb9 !important;
+}
 .saas-issued-notes button[class*="underline"] { background:transparent !important; color:#455468 !important; border:0 !important; box-shadow:none !important; padding:0 !important; min-height:auto !important; transform:none !important; }
 .saas-issued-notes button:disabled { background:#fff !important; color:#7d8997 !important; border-color:#cbd3dc !important; }
+
+/* As tabelas fiscais devem caber no desktop sem barra horizontal. */
+.saas-issued-notes table,
+.saas-emission-history table {
+  width:100% !important;
+  min-width:0 !important;
+  table-layout:fixed !important;
+}
+.saas-emission-history > div[class*="overflow-x-auto"] { overflow-x:hidden !important; }
+.saas-emission-history th,
+.saas-emission-history td { padding-left:10px !important; padding-right:10px !important; }
+.saas-emission-history th:nth-child(1), .saas-emission-history td:nth-child(1) { width:6%; }
+.saas-emission-history th:nth-child(2), .saas-emission-history td:nth-child(2) { width:7%; }
+.saas-emission-history th:nth-child(3), .saas-emission-history td:nth-child(3) { width:18%; }
+.saas-emission-history th:nth-child(4), .saas-emission-history td:nth-child(4) { width:20%; }
+.saas-emission-history th:nth-child(5), .saas-emission-history td:nth-child(5) { width:10%; }
+.saas-emission-history th:nth-child(6), .saas-emission-history td:nth-child(6) { width:10%; }
+.saas-emission-history th:nth-child(7), .saas-emission-history td:nth-child(7) { width:12%; }
+.saas-emission-history th:nth-child(8), .saas-emission-history td:nth-child(8) { width:8%; }
+.saas-emission-history th:nth-child(9), .saas-emission-history td:nth-child(9) { width:9%; }
+.saas-emission-history td { overflow:hidden; text-overflow:ellipsis; }
 
 .saas-main-content button[class*="mb-3"][class*="text-sm"][class*="font-semibold"],
 .saas-main-content button[class*="mb-4"][class*="text-sm"][class*="font-semibold"] {
@@ -146,5 +188,8 @@
 
 @media (max-width: 900px) {
   .saas-main-content > div { padding-inline: 18px !important; }
-  .saas-main-content > .saas-issued-notes { padding-inline: 12px !important; }
+  .saas-main-content > .saas-issued-notes,
+  .saas-main-content > div:has(.saas-emission-history) { width:100% !important; padding-inline: 12px !important; }
+  .saas-emission-history > div[class*="overflow-x-auto"] { overflow-x:auto !important; }
+  .saas-emission-history table { min-width:980px !important; }
 }
