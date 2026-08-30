@@ -1,10 +1,5 @@
-export type CertificadoMtls = {
-  chavePrivadaPem: string;
-  certificadoPem: string;
-  cadeiaPem: string[];
-};
-
-const ICP_BRASIL_V10_PEM = `-----BEGIN CERTIFICATE-----
+export type CertificadoMtls={chavePrivadaPem:string;certificadoPem:string;cadeiaPem:string[]};
+const ICP_BRASIL_V10_PEM=`-----BEGIN CERTIFICATE-----
 MIIGrDCCBJSgAwIBAgIJANLVi0S/gZNCMA0GCSqGSIb3DQEBDQUAMIGYMQswCQYD
 VQQGEwJCUjETMBEGA1UECgwKSUNQLUJyYXNpbDE9MDsGA1UECww0SW5zdGl0dXRv
 IE5hY2lvbmFsIGRlIFRlY25vbG9naWEgZGEgSW5mb3JtYWNhbyAtIElUSTE1MDMG
@@ -42,63 +37,12 @@ isLiGEtIbYRiPsF3czlQPsnIEVoTTCWxHCH1zYR6zScSv18Qh69qVe2J40K5jZoP
 GEOhq/oKhVJQAdvAFW5Odp7mF3Tk9nivjjsctJSxY26LFiV5GRV+07SSse4ti0aO
 jO5PLg5SWjfcOtBG2rz02EIvQAmLcb0kGBtfdj0lW/w=
 -----END CERTIFICATE-----`;
-
-function stripXmlDeclaration(xml: string) {
-  return xml.replace(/^<\?xml[^>]*\?>\s*/i, "");
+function stripXmlDeclaration(xml:string){return xml.replace(/^<\?xml[^>]*\?>\s*/i,"")}
+export async function authorizeNfeNative(cert:CertificadoMtls,model:"55"|"65",signedXml:string,environment:"homologation"|"production"="homologation"){
+ const production=environment==="production";
+ const endpoint=model==="65"?(production?"https://nfce.svrs.rs.gov.br/ws/NfeAutorizacao/NFeAutorizacao4.asmx":"https://nfce-homologacao.svrs.rs.gov.br/ws/NfeAutorizacao/NFeAutorizacao4.asmx"):(production?"https://nfe.svrs.rs.gov.br/ws/NfeAutorizacao/NFeAutorizacao4.asmx":"https://nfe-homologacao.svrs.rs.gov.br/ws/NfeAutorizacao/NFeAutorizacao4.asmx");
+ const idLote=String(Date.now()).slice(-15).padStart(15,"0"),enviNFe=`<enviNFe xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><idLote>${idLote}</idLote><indSinc>1</indSinc>${stripXmlDeclaration(signedXml)}</enviNFe>`,soap=`<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeAutorizacao4">${enviNFe}</nfeDadosMsg></soap12:Body></soap12:Envelope>`;
+ const client=Deno.createHttpClient({caCerts:[ICP_BRASIL_V10_PEM],cert:[cert.certificadoPem,...cert.cadeiaPem].join("\n"),key:cert.chavePrivadaPem,http1:true});
+ try{const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/soap+xml; charset=utf-8","Accept":"application/soap+xml, text/xml, */*"},body:soap,client} as RequestInit&{client:Deno.HttpClient});const text=await response.text();if(!response.ok)throw new Error(`SVRS respondeu HTTP ${response.status}: ${text.slice(0,1200)}`);return{text,endpoint,idLote}}finally{client.close()}
 }
-
-export async function authorizeNfeNative(cert: CertificadoMtls, model: "55" | "65", signedXml: string) {
-  const endpoint = model === "65"
-    ? "https://nfce-homologacao.svrs.rs.gov.br/ws/NfeAutorizacao/NFeAutorizacao4.asmx"
-    : "https://nfe-homologacao.svrs.rs.gov.br/ws/NfeAutorizacao/NFeAutorizacao4.asmx";
-
-  const idLote = String(Date.now()).slice(-15).padStart(15, "0");
-  const enviNFe = `<enviNFe xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><idLote>${idLote}</idLote><indSinc>1</indSinc>${stripXmlDeclaration(signedXml)}</enviNFe>`;
-  const soap = `<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeAutorizacao4">${enviNFe}</nfeDadosMsg></soap12:Body></soap12:Envelope>`;
-
-  const client = Deno.createHttpClient({
-    caCerts: [ICP_BRASIL_V10_PEM],
-    cert: [cert.certificadoPem, ...cert.cadeiaPem].join("\n"),
-    key: cert.chavePrivadaPem,
-    http1: true,
-  });
-
-  try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/soap+xml; charset=utf-8",
-        "Accept": "application/soap+xml, text/xml, */*",
-      },
-      body: soap,
-      client,
-    } as RequestInit & { client: Deno.HttpClient });
-    const text = await response.text();
-    if (!response.ok) throw new Error(`SVRS respondeu HTTP ${response.status}: ${text.slice(0, 1200)}`);
-    return { text, endpoint, idLote };
-  } finally {
-    client.close();
-  }
-}
-
-export function parseAuthorization(xml: string) {
-  const all = (tag: string) => [...xml.matchAll(new RegExp(`<${tag}>([^<]*)</${tag}>`, "g"))].map(m => m[1]);
-  const cStats = all("cStat");
-  const motivos = all("xMotivo");
-  const chaves = all("chNFe");
-  const protocolos = all("nProt");
-  const lotStatus = cStats[0] || null;
-  const protocolStatus = cStats.length > 1 ? cStats[cStats.length - 1] : null;
-  const authorized = protocolStatus === "100" || lotStatus === "100";
-  return {
-    authorized,
-    lot: { cStat: lotStatus, xMotivo: motivos[0] || null },
-    protocol: {
-      cStat: protocolStatus,
-      xMotivo: motivos.length > 1 ? motivos[motivos.length - 1] : null,
-      chNFe: chaves[chaves.length - 1] || null,
-      nProt: protocolos[protocolos.length - 1] || null,
-    },
-    raw: xml,
-  };
-}
+export function parseAuthorization(xml:string){const all=(tag:string)=>[...xml.matchAll(new RegExp(`<${tag}>([^<]*)</${tag}>`,`g`))].map(m=>m[1]),cStats=all("cStat"),motivos=all("xMotivo"),chaves=all("chNFe"),protocolos=all("nProt"),lotStatus=cStats[0]||null,protocolStatus=cStats.length>1?cStats[cStats.length-1]:null,authorized=protocolStatus==="100"||lotStatus==="100";return{authorized,lot:{cStat:lotStatus,xMotivo:motivos[0]||null},protocol:{cStat:protocolStatus,xMotivo:motivos.length>1?motivos[motivos.length-1]:null,chNFe:chaves[chaves.length-1]||null,nProt:protocolos[protocolos.length-1]||null},raw:xml}}
