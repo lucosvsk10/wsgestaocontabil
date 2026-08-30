@@ -18,7 +18,7 @@
 .saas-emission-group { box-shadow: inset 0 0 0 1px rgba(100,116,139,.10); }
 .saas-emission-group:hover { box-shadow: inset 0 0 0 1px rgba(100,116,139,.16); }
 
-/* Workspace centralizado e mais editorial: menos cantos soltos e mais estrutura. */
+/* Workspace centralizado e mais editorial nas páginas operacionais. */
 .saas-main-content { background: #f2f4f7 !important; }
 .saas-main-content > div { width: min(100%, 1180px) !important; max-width: 1180px !important; margin-inline: auto !important; padding-inline: 28px !important; }
 .saas-main-content h1 { text-align: center; color: #111827 !important; }
@@ -29,6 +29,15 @@
 .saas-main-content [class*="md:flex-row"][class*="md:justify-between"] > div { margin-left: auto; margin-right: auto; }
 .saas-main-content [class*="sm:flex-row"][class*="sm:justify-between"] [class*="flex"],
 .saas-main-content [class*="md:flex-row"][class*="md:justify-between"] [class*="flex"] { justify-content: center; }
+
+/* A Home mantém o desenho original: ampla e alinhada à esquerda. */
+.saas-main-content > div:has(.saas-dashboard) { width: 100% !important; max-width: 1540px !important; padding-inline: 32px !important; }
+.saas-dashboard h1 { text-align: left !important; }
+.saas-dashboard h1 + p { margin-left: 0 !important; margin-right: 0 !important; max-width: 760px; text-align: left !important; }
+.saas-dashboard > div[class*="sm:flex-row"][class*="sm:justify-between"] { flex-direction: row !important; align-items: flex-start !important; justify-content: space-between !important; text-align: left !important; }
+.saas-dashboard > div[class*="sm:flex-row"][class*="sm:justify-between"] > div { margin-left: 0 !important; margin-right: 0 !important; }
+.saas-dashboard > div[class*="sm:flex-row"][class*="sm:justify-between"] [class*="flex"] { justify-content: flex-start; }
+
 .saas-main-content [class*="rounded-2xl"] { border-radius: 8px !important; }
 .saas-main-content [class*="rounded-xl"] { border-radius: 6px !important; }
 .saas-main-content [class*="rounded-lg"] { border-radius: 5px !important; }
@@ -98,7 +107,6 @@
 .saas-admin-light .ws-storage-style p[class*="text-4xl"],
 .saas-admin-light .ws-storage-style [class*="font-light"] { color: #111827 !important; }
 
-/* Todos os controles viram ações visuais consistentes. */
 .saas-main-content button:not(:disabled) {
   background: #202833 !important;
   color: #ffffff !important;
@@ -112,7 +120,6 @@
 .saas-main-content button[class*="text-xs"] { min-height: 32px; padding: 0 12px !important; }
 .saas-main-content button[class*="text-sm"] { min-height: 36px; padding: 0 14px !important; }
 
-/* Botões de voltar deixam de parecer links quebrados. */
 .saas-main-content button[class*="mb-3"][class*="text-sm"][class*="font-semibold"],
 .saas-main-content button[class*="mb-4"][class*="text-sm"][class*="font-semibold"] {
   display: inline-flex !important;
@@ -136,4 +143,6 @@
 
 @media (max-width: 900px) {
   .saas-main-content > div { padding-inline: 18px !important; }
+  .saas-main-content > div:has(.saas-dashboard) { padding-inline: 18px !important; }
+  .saas-dashboard > div[class*="sm:flex-row"][class*="sm:justify-between"] { flex-direction: column !important; }
 }
