@@ -10,7 +10,7 @@ const downloadXml=(x:any,documentType:string)=>{if(!x?.xml)return;const a=docume
 export default function SaasEmissionHistory({items,documentType}:{items:any[];documentType:string}){
  const [selected,setSelected]=useState<any>(null);
  return <>
-  <section className="rounded-lg border border-[#c5ccd6] bg-white p-5 md:p-6">
+  <section className="saas-emission-history rounded-lg border border-[#c5ccd6] bg-white p-5 md:p-6">
    <div className="flex items-center justify-between gap-4"><div><h2 className="font-semibold">Últimas emissões</h2><p className="mt-1 text-xs text-muted-foreground">Histórico fiscal recente. Clique na linha para abrir o DANFE.</p></div><span className="text-xs font-medium text-muted-foreground">{items.length} registro{items.length===1?"":"s"}</span></div>
    <div className="mt-4 overflow-x-auto rounded-md border border-[#c7cfd9] bg-white">
     <table className="w-full min-w-[1120px] text-left text-sm">
