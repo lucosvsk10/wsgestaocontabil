@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { AlertTriangle, KeyRound, LockKeyhole, RefreshCw, Send } from "lucide-react";
 import { AdminLayout } from "@/components/admin/layout/AdminLayout";
 import { AuthorizedNfceCard } from "@/components/admin/fiscal/AuthorizedNfceCard";
@@ -14,12 +15,25 @@ type Mode = "nfce" | "nfe" | "nfse" | "cte";
 type CertificateInfo = { cnpj?: string | null; cpf?: string | null; nome?: string | null; validadeFim?: string; validoAgora?: boolean };
 type Result = { ok?: boolean; authorized?: boolean; connected?: boolean; valid?: boolean; errors?: unknown[]; warnings?: string[]; certificate?: CertificateInfo; response?: any; xml?: string; chaveAcesso?: string; [key: string]: unknown };
 
+type FiscalCompanyProfile = {
+  id: string;
+  cnpj?: string | null;
+  razao_social?: string | null;
+  nome_fantasia?: string | null;
+  inscricao_estadual?: string | null;
+  uf?: string | null;
+  municipio?: string | null;
+  codigo_municipio?: string | null;
+  regime_tributario?: string | null;
+  endereco?: Record<string, string> | null;
+};
+
 const serviceInitial = { cnpjPrestador: "", municipioEmissor: "2704401", simples: "3", cnpjTomador: "", cpfTomador: "", nomeTomador: "", municipioPrestacao: "2704401", codigoTributacao: "", descricao: "", valor: "", tributacaoIss: "1", serie: "1", numero: "1" };
 const saleInitial = {
-  cnpjEmitente: "64038361000100", razaoSocial: "A G MATOS PORTUGUES COMERCIO", nomeFantasia: "PORTUGUES", ie: "241696534", crt: "1",
-  codigoMunicipio: "2704401", nomeMunicipio: "Major Isidoro", logradouro: "Avenida Deputado Antonio Guedes do Amaral", numeroEndereco: "282", complemento: "", bairro: "Centro", cep: "57580000", telefone: "82999324884",
-  cscId: "", csc: "", serie: "1", numeroNota: "1", codigoProduto: "1", produto: "PRODUTO PARA TESTE EM HOMOLOGACAO", ncm: "21069090", cfop: "5102", unidade: "UN", quantidade: "1", valorUnitario: "10.00", origem: "0", csosn: "400", cst: "00", formaPagamento: "01",
-  destDocumento: "", destNome: "", destLogradouro: "", destNumero: "", destBairro: "", destCodigoMunicipio: "2704401", destMunicipio: "Major Isidoro", destUF: "AL", destCep: ""
+  cnpjEmitente: "", razaoSocial: "", nomeFantasia: "", ie: "", crt: "1",
+  codigoMunicipio: "", nomeMunicipio: "", logradouro: "", numeroEndereco: "", complemento: "", bairro: "", cep: "", telefone: "",
+  cscId: "", csc: "", serie: "1", numeroNota: "1", codigoProduto: "1", produto: "PRODUTO PARA TESTE EM HOMOLOGACAO", ncm: "21069090", cfop: "5102", unidade: "UN", quantidade: "1", valorUnitario: "10.00", origem: "0", csosn: "102", cst: "00", formaPagamento: "01",
+  destDocumento: "", destNome: "", destLogradouro: "", destNumero: "", destBairro: "", destCodigoMunicipio: "", destMunicipio: "", destUF: "AL", destCep: ""
 };
 
 async function invoke<T>(name: string, body: Record<string, unknown>): Promise<T> {
@@ -43,7 +57,10 @@ async function fileToBase64(file: File) {
 }
 
 export default function AdminFeature() {
+  const navigate = useNavigate();
   const { selectedCompany } = useCompanySelection();
+  const [fiscalProfile, setFiscalProfile] = useState<FiscalCompanyProfile | null>(null);
+  const [fiscalLoading, setFiscalLoading] = useState(false);
   const [token, setToken] = useState("");
   const [password, setPassword] = useState("");
   const [section, setSection] = useState<Section>("emissor");
@@ -63,15 +80,78 @@ export default function AdminFeature() {
   const [extractorUnlocked, setExtractorUnlocked] = useState(false);
   const [extractorLoading, setExtractorLoading] = useState(false);
   const [extractorError, setExtractorError] = useState("");
-  const hasCert = Boolean(certificateBase64 && certificatePassword);
+  const hasManualCert = Boolean(certificateBase64 && certificatePassword);
 
   useEffect(() => {
-    if (!selectedCompany) return;
-    const cnpj = String(selectedCompany.cnpj || "").replace(/\D/g, "");
-    setSale(current => ({ ...current, cnpjEmitente: cnpj, razaoSocial: selectedCompany.company_name, nomeFantasia: selectedCompany.trade_name || selectedCompany.company_name }));
-    setService(current => ({ ...current, cnpjPrestador: cnpj }));
-  }, [selectedCompany?.id]);
+    let active = true;
+    const loadSelectedFiscalCompany = async () => {
+      setFiscalLoading(true);
+      setResult(null);
+      setError("");
+      setCertificate(null);
+      setCertificateBase64("");
+      setCertificatePassword("");
+      setCertificateName("");
 
+      if (!selectedCompany) {
+        if (active) setFiscalProfile(null);
+        setFiscalLoading(false);
+        return;
+      }
+
+      const baseCnpj = String(selectedCompany.cnpj || "").replace(/\D/g, "");
+      let profile: FiscalCompanyProfile | null = null;
+      if (selectedCompany.fiscal_company_id) {
+        const { data, error: profileError } = await supabase
+          .from("fiscal_companies")
+          .select("*")
+          .eq("id", selectedCompany.fiscal_company_id)
+          .maybeSingle();
+        if (!profileError) profile = data as FiscalCompanyProfile | null;
+      }
+      if (!active) return;
+      setFiscalProfile(profile);
+
+      const endereco = profile?.endereco || {};
+      const cnpj = String(profile?.cnpj || baseCnpj).replace(/\D/g, "");
+      const companyName = profile?.razao_social || selectedCompany.company_name;
+      const tradeName = profile?.nome_fantasia || selectedCompany.trade_name || companyName;
+      const simple = profile?.regime_tributario === "simples_nacional" || !profile?.regime_tributario;
+      const municipalityCode = profile?.codigo_municipio || "";
+      const municipality = profile?.municipio || "";
+      const uf = profile?.uf || "AL";
+
+      setSale(current => ({
+        ...current,
+        cnpjEmitente: cnpj,
+        razaoSocial: companyName,
+        nomeFantasia: tradeName,
+        ie: profile?.inscricao_estadual || "",
+        crt: simple ? "1" : "3",
+        codigoMunicipio: municipalityCode,
+        nomeMunicipio: municipality,
+        logradouro: endereco.logradouro || endereco.street || "",
+        numeroEndereco: endereco.numero || endereco.number || "",
+        complemento: endereco.complemento || endereco.complement || "",
+        bairro: endereco.bairro || endereco.district || "",
+        cep: endereco.cep || endereco.postal_code || "",
+        destCodigoMunicipio: municipalityCode,
+        destMunicipio: municipality,
+        destUF: uf,
+      }));
+      setService(current => ({ ...current, cnpjPrestador: cnpj, municipioEmissor: municipalityCode || current.municipioEmissor, municipioPrestacao: municipalityCode || current.municipioPrestacao }));
+      setFiscalLoading(false);
+    };
+    void loadSelectedFiscalCompany();
+    return () => { active = false; };
+  }, [selectedCompany?.id, selectedCompany?.fiscal_company_id]);
+
+  const certificateBlocked = !fiscalLoading && (!selectedCompany || selectedCompany.certificate_status !== "valid");
+  const certificateBlockTitle = !selectedCompany
+    ? "Selecione uma empresa"
+    : selectedCompany.certificate_status === "expired"
+      ? "O certificado A1 da empresa selecionada está vencido"
+      : "A empresa selecionada não contém certificado A1";
 
   const authenticate = async (e: FormEvent) => {
     e.preventDefault(); setLoading(true); setError("");
@@ -85,7 +165,7 @@ export default function AdminFeature() {
       await invoke<{token:string}>("accounting-engine", { action: "unlock", password: extractorPassword });
       setExtractorUnlocked(true);
       setExtractorPassword("");
-    } catch (x) { setExtractorError(x instanceof Error ? x.message : "Senha incorreta."); }
+    } catch (x) { setExtractorError(x instanceof Error ? x.message : "Senha incorreta." ); }
     finally { setExtractorLoading(false); }
   };
   const chooseCertificate = async (file?: File) => {
@@ -97,7 +177,7 @@ export default function AdminFeature() {
   const request = async (kind: "validate" | "test_connection" | "preview" | "issue" | "query") => {
     setAction(kind); setError(""); setResult(null);
     try {
-      const common = { action: kind, engine_token: token, environment: "homologacao", certificate_base64: certificateBase64, certificate_password: certificatePassword };
+      const common = { action: kind, engine_token: token, environment: "homologacao", certificate_base64: certificateBase64, certificate_password: certificatePassword, company_id: selectedCompany?.id || null, fiscal_company_id: selectedCompany?.fiscal_company_id || null };
       const data = mode === "nfse"
         ? await invoke<Result>("nfse-feature", { ...common, data: service, ...(kind === "query" ? { reference } : {}) })
         : kind === "preview" ? await invoke<Result>("dfe-preview-native", { ...common, model: mode === "nfce" ? "65" : "55", data: sale })
@@ -109,50 +189,61 @@ export default function AdminFeature() {
   };
   const lock = () => { setToken(""); setCertificateBase64(""); setCertificatePassword(""); setCertificateName(""); setCertificate(null); setResult(null); setError(""); setSection("emissor"); setMode("nfce"); setExtractorUnlocked(false); setExtractorPassword(""); setExtractorError(""); };
 
-  return <AdminLayout><main className="mx-auto min-w-0 w-full max-w-[1500px] overflow-x-hidden px-4 py-5 sm:px-6 sm:py-6">
-    <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5">
-      <div className="min-w-0"><p className="text-xs uppercase tracking-wider text-muted-foreground">Laboratório fiscal</p><div className="mt-1 flex flex-wrap items-center gap-3"><h1 className="text-3xl font-semibold">Feature</h1><span className="rounded-full bg-muted px-2.5 py-1 text-[10px] font-semibold uppercase text-muted-foreground">Fiscal direto</span></div></div>
-      {token && <Button variant="ghost" onClick={lock}><LockKeyhole className="mr-2 h-4 w-4"/>Bloquear</Button>}
-    </header>
+  return <AdminLayout><main className="relative mx-auto min-w-0 w-full max-w-[1500px] overflow-x-hidden px-4 py-5 sm:px-6 sm:py-6">
+    <div className={certificateBlocked ? "pointer-events-none select-none blur-[3px] opacity-50" : ""}>
+      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5">
+        <div className="min-w-0"><p className="text-xs uppercase tracking-wider text-muted-foreground">Laboratório fiscal</p><div className="mt-1 flex flex-wrap items-center gap-3"><h1 className="text-3xl font-semibold">Feature</h1><span className="rounded-full bg-muted px-2.5 py-1 text-[10px] font-semibold uppercase text-muted-foreground">Fiscal direto</span></div><p className="mt-2 text-sm text-muted-foreground">Empresa ativa: <span className="font-medium text-foreground">{selectedCompany?.trade_name || selectedCompany?.company_name || "Nenhuma"}</span></p></div>
+        {token && <Button variant="ghost" onClick={lock}><LockKeyhole className="mr-2 h-4 w-4"/>Bloquear</Button>}
+      </header>
 
-    {!token ? <section className="mx-auto mt-16 max-w-md rounded-lg border bg-background p-8">
-      <KeyRound className="mb-5 h-6 w-6"/><h2 className="text-xl font-semibold">Desbloquear Feature</h2><p className="mt-2 text-sm text-muted-foreground">Mesma senha da Engine.</p>
-      <form onSubmit={authenticate} className="mt-6 space-y-4"><Input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Senha" required/>{error && <ErrorText>{error}</ErrorText>}<Button className="w-full" disabled={loading}>{loading ? "Verificando..." : "Entrar"}</Button></form>
-    </section> : <div className="mt-7 min-w-0 space-y-6">
-      <nav className="inline-flex rounded-lg border bg-muted/30 p-1">
-        <button onClick={()=>{setSection("emissor");setError("");}} className={`rounded-md px-5 py-2.5 text-sm font-medium transition ${section==="emissor"?"bg-background shadow-sm":"text-muted-foreground hover:text-foreground"}`}>Emissor fiscal</button>
-        <button onClick={()=>{setSection("extrator");setError("");setExtractorError("");}} className={`rounded-md px-5 py-2.5 text-sm font-medium transition ${section==="extrator"?"bg-background shadow-sm":"text-muted-foreground hover:text-foreground"}`}>Extrator de notas</button>
-      </nav>
+      {!token ? <section className="mx-auto mt-16 max-w-md rounded-lg border bg-background p-8">
+        <KeyRound className="mb-5 h-6 w-6"/><h2 className="text-xl font-semibold">Desbloquear Feature</h2><p className="mt-2 text-sm text-muted-foreground">Mesma senha da Engine.</p>
+        <form onSubmit={authenticate} className="mt-6 space-y-4"><Input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Senha" required/>{error && <ErrorText>{error}</ErrorText>}<Button className="w-full" disabled={loading}>{loading ? "Verificando..." : "Entrar"}</Button></form>
+      </section> : <div className="mt-7 min-w-0 space-y-6">
+        <nav className="inline-flex rounded-lg border bg-muted/30 p-1">
+          <button onClick={()=>{setSection("emissor");setError("");}} className={`rounded-md px-5 py-2.5 text-sm font-medium transition ${section==="emissor"?"bg-background shadow-sm":"text-muted-foreground hover:text-foreground"}`}>Emissor fiscal</button>
+          <button onClick={()=>{setSection("extrator");setError("");setExtractorError("");}} className={`rounded-md px-5 py-2.5 text-sm font-medium transition ${section==="extrator"?"bg-background shadow-sm":"text-muted-foreground hover:text-foreground"}`}>Extrator de notas</button>
+        </nav>
 
-      {section === "extrator" && !extractorUnlocked ? <section className="mx-auto mt-10 max-w-md rounded-lg border bg-background p-8">
-        <LockKeyhole className="mb-5 h-6 w-6"/><h2 className="text-xl font-semibold">Extrator protegido</h2><p className="mt-2 text-sm text-muted-foreground">Confirme a senha da Feature para acessar certificados e consultas do extrator.</p>
-        <form onSubmit={unlockExtractor} className="mt-6 space-y-4"><Input type="password" value={extractorPassword} onChange={e=>setExtractorPassword(e.target.value)} placeholder="Senha" autoFocus required/>{extractorError && <ErrorText>{extractorError}</ErrorText>}<Button className="w-full" disabled={extractorLoading}>{extractorLoading ? "Verificando..." : "Desbloquear extrator"}</Button></form>
-      </section> : <>
-        {(section === "extrator" || mode !== "cte") && <section className="min-w-0 rounded-lg border bg-background p-4 sm:p-5">
-          <div className="mb-4 flex flex-wrap items-start justify-between gap-3"><div><p className="text-xs uppercase text-muted-foreground">Credencial compartilhada</p><h2 className="mt-1 text-lg font-semibold">Certificado A1</h2></div>{section === "extrator" && <Button variant="ghost" size="sm" onClick={()=>{setExtractorUnlocked(false);setExtractorPassword("");}}><LockKeyhole className="mr-2 h-4 w-4"/>Bloquear extrator</Button>}</div>
-          <div className="grid min-w-0 gap-4 md:grid-cols-2">
-            <Field label="Arquivo .pfx/.p12"><Input className="min-w-0" type="file" accept=".pfx,.p12,application/x-pkcs12" onChange={e=>chooseCertificate(e.target.files?.[0])}/>{certificateName&&<p className="mt-1 break-all text-xs text-muted-foreground">{certificateName}</p>}</Field>
-            <Field label="Senha"><Input type="password" value={certificatePassword} onChange={e=>setCertificatePassword(e.target.value)}/></Field>
-          </div>
-          {certificate&&<div className="mt-4 grid min-w-0 gap-3 border-t pt-4 sm:grid-cols-3"><Info label="Titular" value={certificate.nome||'—'}/><Info label="CNPJ" value={certificate.cnpj||certificate.cpf||'—'}/><Info label="Validade" value={certificate.validadeFim?new Date(certificate.validadeFim).toLocaleDateString('pt-BR'):'—'}/></div>}
-          <p className="mt-3 text-xs text-muted-foreground">No CT-e o A1 padrão de teste é carregado automaticamente do backend.</p>
-        </section>}
-
-        {section === "extrator" ? <FiscalExtractorPanel token={token} certificateBase64={certificateBase64} certificatePassword={certificatePassword} certificate={certificate} /> : <>
-          <section className="flex flex-wrap gap-2">{([['nfce','NFC-e · Venda consumidor'],['nfe','NF-e · Venda mercadoria'],['nfse','NFS-e · Serviço'],['cte','CT-e · Transporte']] as [Mode,string][]).map(([id,label])=><button key={id} onClick={()=>{setMode(id);setResult(null);setError("");setReference("");}} className={`rounded-md border px-4 py-2 text-sm font-medium ${mode===id?'bg-foreground text-background':'bg-background hover:bg-muted'}`}>{label}</button>)}</section>
-          <section className="grid min-w-0 gap-3 md:grid-cols-3"><Mini label="Ambiente" value="Homologação"/><Mini label="Destino" value={mode==='nfse'?'SEFIN Nacional':'SEFAZ / SVRS'}/><Mini label="Custo por documento" value="R$ 0,00"/></section>
-          {mode === "cte" ? <CteIssuerPanel token={token} /> : <div className="grid min-w-0 gap-6 2xl:grid-cols-[minmax(460px,.9fr)_minmax(0,1.35fr)]">
-            <section className="min-w-0 rounded-lg border bg-background p-4 sm:p-5">
-              {mode==='nfse'?<ServiceForm data={service} setData={setService}/>:<SaleForm mode={mode} data={sale} setData={setSale}/>} 
-              <div className="mt-5 flex flex-wrap gap-3 border-t pt-5"><Button variant="outline" onClick={()=>request('validate')} disabled={!!action}>Validar</Button><Button variant="outline" onClick={()=>request('test_connection')} disabled={!hasCert||!!action}>{action==='test_connection'&&<RefreshCw className="mr-2 h-4 w-4 animate-spin"/>}Testar governo</Button><Button variant="outline" onClick={()=>request('preview')} disabled={!hasCert||!!action}>Gerar XML</Button><Button onClick={()=>request('issue')} disabled={!hasCert||!!action}>{action==='issue'?<RefreshCw className="mr-2 h-4 w-4 animate-spin"/>:<Send className="mr-2 h-4 w-4"/>}Emitir teste</Button></div>
-            </section>
-            <div className="min-w-0 space-y-6">
-              <section className="min-w-0 rounded-lg border bg-background p-4 sm:p-5"><p className="text-xs uppercase text-muted-foreground">Consulta</p><div className="mt-3 flex min-w-0 flex-col gap-2 sm:flex-row"><Input className="min-w-0" value={reference} onChange={e=>setReference(e.target.value)} placeholder={mode==='nfse'?'Chave / referência':'Chave de acesso · 44 dígitos'}/><Button className="sm:shrink-0" variant="outline" onClick={()=>request('query')} disabled={!reference||!hasCert||!!action}>Consultar</Button></div></section>
-              <section className="min-w-0 rounded-lg border bg-background p-4 sm:p-5"><p className="text-xs uppercase text-muted-foreground">Retorno</p>{mode==='nfce'&&result?.authorized?<AuthorizedNfceCard token={token} sale={sale} result={result}/>:null}{error?<ErrorText>{error}</ErrorText>:result?<ResultBox result={result}/>:<p className="mt-4 text-sm text-muted-foreground">O retorno da Receita/SEFAZ aparece aqui.</p>}</section>
+        {section === "extrator" && !extractorUnlocked ? <section className="mx-auto mt-10 max-w-md rounded-lg border bg-background p-8">
+          <LockKeyhole className="mb-5 h-6 w-6"/><h2 className="text-xl font-semibold">Extrator protegido</h2><p className="mt-2 text-sm text-muted-foreground">Confirme a senha da Feature para acessar certificados e consultas do extrator.</p>
+          <form onSubmit={unlockExtractor} className="mt-6 space-y-4"><Input type="password" value={extractorPassword} onChange={e=>setExtractorPassword(e.target.value)} placeholder="Senha" autoFocus required/>{extractorError && <ErrorText>{extractorError}</ErrorText>}<Button className="w-full" disabled={extractorLoading}>{extractorLoading ? "Verificando..." : "Desbloquear extrator"}</Button></form>
+        </section> : <>
+          {(section === "extrator" || mode !== "cte") && <section className="min-w-0 rounded-lg border bg-background p-4 sm:p-5">
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3"><div><p className="text-xs uppercase text-muted-foreground">Empresa selecionada</p><h2 className="mt-1 text-lg font-semibold">Certificado A1</h2><p className="mt-1 text-xs text-muted-foreground">{selectedCompany?.certificate_status === "valid" ? `A1 cadastrado até ${selectedCompany.certificate_valid_until ? new Date(`${selectedCompany.certificate_valid_until}T12:00:00`).toLocaleDateString("pt-BR") : "a validade registrada"}.` : "Nenhum A1 válido cadastrado."}</p></div>{section === "extrator" && <Button variant="ghost" size="sm" onClick={()=>{setExtractorUnlocked(false);setExtractorPassword("");}}><LockKeyhole className="mr-2 h-4 w-4"/>Bloquear extrator</Button>}</div>
+            <div className="grid min-w-0 gap-4 md:grid-cols-2">
+              <Field label="Arquivo temporário para laboratório"><Input className="min-w-0" type="file" accept=".pfx,.p12,application/x-pkcs12" onChange={e=>chooseCertificate(e.target.files?.[0])}/>{certificateName&&<p className="mt-1 break-all text-xs text-muted-foreground">{certificateName}</p>}</Field>
+              <Field label="Senha do arquivo temporário"><Input type="password" value={certificatePassword} onChange={e=>setCertificatePassword(e.target.value)}/></Field>
             </div>
-          </div>}
+            {certificate&&<div className="mt-4 grid min-w-0 gap-3 border-t pt-4 sm:grid-cols-3"><Info label="Titular" value={certificate.nome||'—'}/><Info label="CNPJ" value={certificate.cnpj||certificate.cpf||'—'}/><Info label="Validade" value={certificate.validadeFim?new Date(certificate.validadeFim).toLocaleDateString('pt-BR'):'—'}/></div>}
+            <p className="mt-3 text-xs text-muted-foreground">Os dados fiscais acima sempre acompanham a empresa escolhida no seletor do topo. O arquivo temporário não altera o A1 cadastrado da empresa.</p>
+          </section>}
+
+          {section === "extrator" ? <FiscalExtractorPanel token={token} certificateBase64={certificateBase64} certificatePassword={certificatePassword} certificate={certificate} /> : <>
+            <section className="flex flex-wrap gap-2">{([['nfce','NFC-e · Venda consumidor'],['nfe','NF-e · Venda mercadoria'],['nfse','NFS-e · Serviço'],['cte','CT-e · Transporte']] as [Mode,string][]).map(([id,label])=><button key={id} onClick={()=>{setMode(id);setResult(null);setError("");setReference("");}} className={`rounded-md border px-4 py-2 text-sm font-medium ${mode===id?'bg-foreground text-background':'bg-background hover:bg-muted'}`}>{label}</button>)}</section>
+            <section className="grid min-w-0 gap-3 md:grid-cols-3"><Mini label="Ambiente" value="Homologação"/><Mini label="Empresa" value={selectedCompany?.trade_name || selectedCompany?.company_name || "—"}/><Mini label="Destino" value={mode==='nfse'?'SEFIN Nacional':'SEFAZ / SVRS'}/></section>
+            {mode === "cte" ? <CteIssuerPanel token={token} certificateBase64={certificateBase64} certificatePassword={certificatePassword} fiscalProfile={fiscalProfile} expectedCnpj={String(selectedCompany?.cnpj || "").replace(/\D/g, "")} /> : <div className="grid min-w-0 gap-6 2xl:grid-cols-[minmax(460px,.9fr)_minmax(0,1.35fr)]">
+              <section className="min-w-0 rounded-lg border bg-background p-4 sm:p-5">
+                {mode==='nfse'?<ServiceForm data={service} setData={setService}/>:<SaleForm mode={mode} data={sale} setData={setSale}/>} 
+                <div className="mt-5 flex flex-wrap gap-3 border-t pt-5"><Button variant="outline" onClick={()=>request('validate')} disabled={!!action}>Validar</Button><Button variant="outline" onClick={()=>request('test_connection')} disabled={!hasManualCert||!!action}>{action==='test_connection'&&<RefreshCw className="mr-2 h-4 w-4 animate-spin"/>}Testar governo</Button><Button variant="outline" onClick={()=>request('preview')} disabled={!hasManualCert||!!action}>Gerar XML</Button><Button onClick={()=>request('issue')} disabled={!hasManualCert||!!action}>{action==='issue'?<RefreshCw className="mr-2 h-4 w-4 animate-spin"/>:<Send className="mr-2 h-4 w-4"/>}Emitir teste</Button></div>
+              </section>
+              <div className="min-w-0 space-y-6">
+                <section className="min-w-0 rounded-lg border bg-background p-4 sm:p-5"><p className="text-xs uppercase text-muted-foreground">Consulta</p><div className="mt-3 flex min-w-0 flex-col gap-2 sm:flex-row"><Input className="min-w-0" value={reference} onChange={e=>setReference(e.target.value)} placeholder={mode==='nfse'?'Chave / referência':'Chave de acesso · 44 dígitos'}/><Button className="sm:shrink-0" variant="outline" onClick={()=>request('query')} disabled={!reference||!hasManualCert||!!action}>Consultar</Button></div></section>
+                <section className="min-w-0 rounded-lg border bg-background p-4 sm:p-5"><p className="text-xs uppercase text-muted-foreground">Retorno</p>{mode==='nfce'&&result?.authorized?<AuthorizedNfceCard token={token} sale={sale} result={result}/>:null}{error?<ErrorText>{error}</ErrorText>:result?<ResultBox result={result}/>:<p className="mt-4 text-sm text-muted-foreground">O retorno da Receita/SEFAZ aparece aqui.</p>}</section>
+              </div>
+            </div>}
+          </>}
         </>}
-      </>}
+      </div>}
+    </div>
+
+    {certificateBlocked && <div className="absolute inset-0 z-20 flex items-center justify-center px-6 py-12">
+      <div className="w-full max-w-lg rounded-xl border border-border bg-background/95 p-7 text-center shadow-2xl backdrop-blur-xl">
+        <p className="text-[11px] font-semibold uppercase tracking-[.16em] text-muted-foreground">Emissor fiscal indisponível</p>
+        <h2 className="mt-2 text-xl font-semibold">{certificateBlockTitle}</h2>
+        <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">{selectedCompany ? `Configure um certificado A1 válido para ${selectedCompany.trade_name || selectedCompany.company_name} antes de usar emissão ou extração fiscal.` : "Escolha uma empresa no seletor do topo para continuar."}</p>
+        {selectedCompany && <Button className="mt-5" onClick={() => navigate(`/admin/clientes/${selectedCompany.id}/fiscal`)}>Configurar certificado A1 desta empresa</Button>}
+      </div>
     </div>}
   </main></AdminLayout>;
 }
