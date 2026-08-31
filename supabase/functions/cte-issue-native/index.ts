@@ -72,6 +72,8 @@ serve(async (req) => {
     const { cert, source } = await resolveCertificate(admin, body);
     const cnpj = digits(cert.titular.cnpj);
     if (cnpj.length !== 14) return json({ error: "O certificado precisa possuir CNPJ." }, 422);
+    const expectedCnpj = digits(body.expected_cnpj);
+    if (expectedCnpj && cnpj !== expectedCnpj) return json({ error: `O certificado A1 carregado pertence ao CNPJ ${cnpj} e não à empresa selecionada (${expectedCnpj}).` }, 422);
     if (cert.validadeInicio > new Date() || cert.validadeFim < new Date()) return json({ error: "Certificado fora do período de validade." }, 422);
 
     const certificate = { cnpj, nome: cert.titular.nome, validadeFim: cert.validadeFim.toISOString(), validoAgora: true, source };
