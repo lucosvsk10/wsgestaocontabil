@@ -9,9 +9,34 @@ const GLOBAL_SELECTION_KEY = "ws_selected_company_id";
 const GLOBAL_CONTEXT_KEY = "ws:lancamentos:last-context";
 const EMPTY_COMPANY: AccountingCompany = { id: "", name: "Selecione uma empresa", chartModel: "" };
 const companyContextKey = (companyId: string) => `ws:lancamentos:last-context:${companyId}`;
+const digits = (value?: string | null) => String(value || "").replace(/\D/g, "");
+const normalize = (value?: string | null) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]+/g, " ").trim().toLowerCase();
 
-function readSelectedCompanyId() {
-  return localStorage.getItem(GLOBAL_SELECTION_KEY) || localStorage.getItem(STORAGE_ID_KEY) || "";
+function readLegacyIdentity() {
+  try { return JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY) || "{}") as { id?: string; name?: string; tradeName?: string | null; cnpj?: string }; }
+  catch { return {}; }
+}
+
+function resolveCompany(companies: AccountingCompany[], candidate?: { id?: string; name?: string; tradeName?: string | null; cnpj?: string } | null) {
+  if (!candidate) return null;
+  if (candidate.id) {
+    const byId = companies.find(item => item.id === candidate.id);
+    if (byId) return byId;
+  }
+  const cnpj = digits(candidate.cnpj);
+  if (cnpj) {
+    const byCnpj = companies.find(item => digits(item.cnpj) === cnpj);
+    if (byCnpj) return byCnpj;
+  }
+  const aliases = new Set([normalize(candidate.name), normalize(candidate.tradeName)].filter(Boolean));
+  if (!aliases.size) return null;
+  const matches = companies.filter(item => aliases.has(normalize(item.name)) || aliases.has(normalize(item.tradeName)));
+  return matches.length === 1 ? matches[0] : null;
+}
+
+function readSelectedCompany(companies: AccountingCompany[]) {
+  const selectedId = localStorage.getItem(GLOBAL_SELECTION_KEY) || localStorage.getItem(STORAGE_ID_KEY) || "";
+  return resolveCompany(companies, { id: selectedId, ...readLegacyIdentity() });
 }
 
 function persistAccountingCompatibility(company: AccountingCompany) {
@@ -44,15 +69,15 @@ export function useAccountingCompany() {
         chartModel: "Plano próprio da empresa",
       }));
       setCompanies(next);
-      const selected = next.find(item => item.id === readSelectedCompanyId()) ?? next[0] ?? EMPTY_COMPANY;
+      const selected = readSelectedCompany(next) ?? next[0] ?? EMPTY_COMPANY;
       setCompanyState(selected);
       persistAccountingCompatibility(selected);
     });
   }, []);
 
   useEffect(() => {
-    const sync = () => {
-      const selected = companies.find(item => item.id === readSelectedCompanyId());
+    const sync = (candidate?: { id?: string; name?: string; tradeName?: string | null; cnpj?: string } | null) => {
+      const selected = resolveCompany(companies, candidate) ?? readSelectedCompany(companies);
       if (selected) {
         setCompanyState(selected);
         persistAccountingCompatibility(selected);
@@ -61,11 +86,12 @@ export function useAccountingCompany() {
     const storageSync = (event: StorageEvent) => {
       if ([GLOBAL_SELECTION_KEY, STORAGE_ID_KEY].includes(event.key || "")) sync();
     };
+    const companySync = (event: Event) => sync((event as CustomEvent).detail || null);
     window.addEventListener("storage", storageSync);
-    window.addEventListener("ws:company-changed", sync as EventListener);
+    window.addEventListener("ws:company-changed", companySync as EventListener);
     return () => {
       window.removeEventListener("storage", storageSync);
-      window.removeEventListener("ws:company-changed", sync as EventListener);
+      window.removeEventListener("ws:company-changed", companySync as EventListener);
     };
   }, [companies]);
 
