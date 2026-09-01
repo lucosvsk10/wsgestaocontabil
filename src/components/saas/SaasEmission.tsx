@@ -17,6 +17,38 @@ const TEST_VEHICLE={plate:"MUI7179",driverName:"FABIO MARCOS MARTINS CAVALCANTE"
 function digits(v:any){return String(v??"").replace(/\D/g,"")}
 function Field({label,value,onChange,type="text",placeholder}:{label:string;value:any;onChange:(v:string)=>void;type?:string;placeholder?:string}){return <label className="text-sm font-medium text-[#263652]">{label}<Input type={type} value={value??""} onChange={e=>onChange(e.target.value)} placeholder={placeholder} className={inputClass}/></label>}
 function Select({label,value,onChange,children}:{label:string;value:any;onChange:(v:string)=>void;children:any}){return <label className="text-sm font-medium text-[#263652]">{label}<select value={value??""} onChange={e=>onChange(e.target.value)} className="mt-2 h-11 w-full rounded-md border border-[#cbd3dc] bg-white px-3 text-sm text-[#10203e]">{children}</select></label>}
+function pickParty(parties:any[],cnpj:string,fallbackIndex:number){return parties.find(x=>digits(x.tax_id)===cnpj)||parties[fallbackIndex]}
+function scenarioPatch(f:any,parties:any[],hist:any[],force=false){
+ const fill=(cur:any,val:any,dflt?:any)=>force?(val??cur):(cur===""||cur==null||(dflt!==undefined&&cur===dflt)?val:cur);
+ const rem=pickParty(parties,TEST_REMETENTE_CNPJ,0),dest=pickParty(parties,TEST_DESTINATARIO_CNPJ,1)||parties.find((x:any)=>x.id!==rem?.id);
+ const nfe=hist.find(x=>x.document_type==="nfe"&&x.status==="authorized"&&digits(x.access_key).length===44);
+ const key=nfe?.access_key||PLACEHOLDER_NFE_KEY;
+ return {...f,
+  remetenteId:fill(f.remetenteId,rem?.id||f.remetenteId),
+  destinatarioId:fill(f.destinatarioId,dest?.id||f.destinatarioId),
+  cfopCte:fill(f.cfopCte,"5353","5353"),
+  vTPrest:fill(f.vTPrest,"250.00"),
+  vCarga:fill(f.vCarga,"5000.00"),
+  qCarga:fill(f.qCarga,"1000.0000","1"),
+  munIniCodigo:fill(f.munIniCodigo,rem?.city_ibge_code||"2701209"),
+  munIniNome:fill(f.munIniNome,rem?.city||"Cacimbinhas"),
+  ufIni:fill(f.ufIni,rem?.state||"AL","AL"),
+  munFimCodigo:fill(f.munFimCodigo,dest?.city_ibge_code||"2704401"),
+  munFimNome:fill(f.munFimNome,dest?.city||"Major Isidoro"),
+  ufFim:fill(f.ufFim,dest?.state||"AL","AL"),
+  chNFe:fill(f.chNFe,key),
+  keys:fill(f.keys,key),
+  rntrc:fill(f.rntrc,PLACEHOLDER_RNTRC),
+  plate:fill(f.plate,TEST_VEHICLE.plate),
+  driverName:fill(f.driverName,TEST_VEHICLE.driverName),
+  driverCpf:fill(f.driverCpf,TEST_VEHICLE.driverCpf),
+  tara:fill(f.tara,TEST_VEHICLE.tara,"1000"),
+  capacity:fill(f.capacity,TEST_VEHICLE.capacity,"5000"),
+  unloadCode:fill(f.unloadCode,dest?.city_ibge_code||"2704401"),
+  unloadName:fill(f.unloadName,dest?.city||"Major Isidoro"),
+  cargoValue:fill(f.cargoValue,"5000.00"),
+  cargoWeight:fill(f.cargoWeight,"1000.0000")};
+}
 function downloadXml(xml:string,name:string){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([xml],{type:"application/xml"}));a.download=name;a.click();URL.revokeObjectURL(a.href)}
 
 export default function SaasEmission({organizationId,documentType,onChoose}:{organizationId:string|null;documentType:string|null;onChoose:(d:string|null)=>void}){
