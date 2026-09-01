@@ -8,9 +8,11 @@ import SaasDanfePreview,{printDanfe} from "./SaasDanfePreview";
 const inputClass="mt-2 h-11 !border-[#cbd3dc] !bg-white !text-[#10203e] dark:!bg-white dark:!text-[#10203e]";
 const panel="rounded-lg border border-[#cfd6df] bg-white p-5 md:p-6";
 const docs=["NF-e","NFC-e","NFS-e","CT-e","MDF-e"];
-const TEST_TRANSPORT_ORG_ID="c77c4620-fbbb-4f03-9e32-ab48d25bb0cf";
 const MALVES_CNPJ="44454631000156";
-const MALVES_PROFILE={legal_name:"M ALVES SILVA",trade_name:"MSILVA TRANSPORTES",tax_id:MALVES_CNPJ,business_mode:"transport",tax_regime:"simples",crt:"1",fiscal_environment:"homologation",city:"Cacimbinhas",city_ibge_code:"2701209",state:"AL",postal_code:"57570000",street:"Avenida Nossa Senhora da Penha",street_number:"245",district:"Centro",phone:"82999161679"};
+const TEST_REMETENTE_CNPJ="12345678000195";
+const TEST_DESTINATARIO_CNPJ="98765432000198";
+const PLACEHOLDER_NFE_KEY="27260912345678000195550010000000011123456780";
+const PLACEHOLDER_RNTRC="12345678";
 const TEST_VEHICLE={plate:"MUI7179",driverName:"FABIO MARCOS MARTINS CAVALCANTE",driverCpf:"07359216443",tara:"6000",capacity:"12000"};
 function digits(v:any){return String(v??"").replace(/\D/g,"")}
 function Field({label,value,onChange,type="text",placeholder}:{label:string;value:any;onChange:(v:string)=>void;type?:string;placeholder?:string}){return <label className="text-sm font-medium text-[#263652]">{label}<Input type={type} value={value??""} onChange={e=>onChange(e.target.value)} placeholder={placeholder} className={inputClass}/></label>}
