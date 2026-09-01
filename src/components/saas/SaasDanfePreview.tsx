@@ -11,15 +11,16 @@ export function printDanfe(elementId:string,title="DANFE"){
  const node=document.getElementById(elementId); if(!node)return;
  const w=window.open("","_blank","width=1000,height=850"); if(!w)return;
  const inheritedStyles=[...document.head.querySelectorAll('link[rel="stylesheet"],style')].map(el=>el.outerHTML).join("\n");
+ const isReceipt=node.classList.contains("receipt-sheet");
  const printCss=`<style>
  *{box-sizing:border-box}
  html,body{background:#fff!important;color:#000!important}
- body{margin:0;padding:10mm}
+ body{margin:0;padding:${isReceipt?"4mm":"8mm"};font-family:Arial,sans-serif}
  .danfe-actions{display:none!important}
  .danfe-sheet{width:100%!important;max-width:190mm!important;margin:0 auto!important;box-shadow:none!important;background:#fff!important}
- .receipt-sheet{width:80mm!important;max-width:80mm!important;margin:0 auto!important;box-shadow:none!important;background:#fff!important}
+ .receipt-sheet{width:80mm!important;max-width:80mm!important;margin:0 auto!important;box-shadow:none!important;background:#fff!important;border:0!important;padding:4mm!important;font-family:Arial,sans-serif!important;font-size:10px!important;line-height:1.35!important}
  .danfe-sheet *,.receipt-sheet *{color:#000!important}
- @page{size:auto;margin:8mm}
+ @page{size:${isReceipt?"80mm auto":"A4 portrait"};margin:${isReceipt?"3mm":"7mm"}}
  @media print{body{padding:0!important}.danfe-sheet,.receipt-sheet{break-inside:avoid;print-color-adjust:exact;-webkit-print-color-adjust:exact}}
  </style>`;
  w.document.open();
@@ -33,6 +34,9 @@ export function printDanfe(elementId:string,title="DANFE"){
 
 export default function SaasDanfePreview({id="danfe-preview",documentType="NF-e",environment="homologation",profile,data={},result=null,emission=null,showActions=false,mode="danfe"}:{id?:string;documentType?:string;environment?:string;profile?:any;data?:any;result?:any;emission?:any;showActions?:boolean;mode?:"danfe"|"receipt"}){
  const p=emission?.payload||data||{};
+ const emit=p.emit||{};
+ const dest=p.dest||{};
+ const carga=p.carga||{};
  const number=emission?.number||p.numeroNota||p.numero||p.nDPS||"—";
  const series=emission?.series||p.serie||"—";
  const access=emission?.access_key||result?.chaveAcesso||result?.chave||result?.response?.chMDFe||"";
@@ -40,47 +44,56 @@ export default function SaasDanfePreview({id="danfe-preview",documentType="NF-e"
  const status=emission?.status||(result?.authorized===true?"authorized":result?.authorized===false?"rejected":result?.error?"error":"preview");
  const rejection=emission?.response?.protocol?.xMotivo||emission?.response?.xMotivo||result?.response?.protocol?.xMotivo||result?.response?.xMotivo||result?.error||"";
  const total=Number(emission?.total??(p.quantidade&&p.valorUnitario?Number(p.quantidade)*Number(p.valorUnitario):p.valor??p.vTPrest??p.valorCarga??0));
- const emitName=p.nomeFantasia||p.razaoSocial||profile?.trade_name||profile?.legal_name||"Emitente";
- const emitLegal=p.razaoSocial||profile?.legal_name||emitName;
- const emitDoc=p.cnpjEmitente||profile?.tax_id||"";
- const recipient=emission?.recipient_name||p.destNome||p.tomadorNome||p.dest?.xNome||p.munDescargaNome||"Não informado";
- const recipientDoc=emission?.recipient_tax_id||p.destDocumento||p.tomadorDocumento||p.dest?.CNPJ||p.dest?.CPF||"";
- const item=p.produto||p.descricao||p.proPred||p.natOp||"Documento fiscal";
+ const emitName=p.nomeFantasia||p.razaoSocial||emit.xNome||profile?.trade_name||profile?.legal_name||"Emitente";
+ const emitLegal=p.razaoSocial||emit.xNome||profile?.legal_name||emitName;
+ const emitDoc=p.cnpjEmitente||emit.CNPJ||profile?.tax_id||"";
+ const emitIE=p.ie||emit.IE||profile?.state_registration||"";
+ const emitStreet=p.logradouro||emit.xLgr||profile?.street||"";
+ const emitNumber=p.numeroEndereco||emit.nro||profile?.street_number||"";
+ const emitDistrict=p.bairro||emit.xBairro||profile?.district||"";
+ const emitCity=p.nomeMunicipio||emit.xMun||profile?.city||"";
+ const emitUF=emit.UF||profile?.state||"";
+ const recipient=emission?.recipient_name||p.destNome||p.tomadorNome||dest.xNome||p.munDescargaNome||"Não informado";
+ const recipientDoc=emission?.recipient_tax_id||p.destDocumento||p.tomadorDocumento||dest.CNPJ||dest.CPF||"";
+ const item=p.produto||p.descricao||carga.proPred||p.proPred||p.natOp||(documentType==="CT-e"?"Prestação de serviço de transporte":"Documento fiscal");
  const model=documentType==="NF-e"?"55":documentType==="NFC-e"?"65":documentType==="CT-e"?"57":documentType==="MDF-e"?"58":"NFS-e";
  const auxiliary=auxTitle(documentType);
- const date=useMemo(()=>new Date(emission?.external_issue_date||emission?.authorized_at||emission?.created_at||Date.now()).toLocaleString("pt-BR"),[emission]);
+ const date=useMemo(()=>new Date(emission?.external_issue_date||emission?.authorized_at||emission?.created_at||Date.now()).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}),[emission]);
  const imported=emission?.source==="imported";
- if(mode==="receipt")return <div className="space-y-3">{showActions&&<div className="danfe-actions flex flex-wrap gap-2"><button onClick={()=>printDanfe(id,`Notinha-${number}`)} className="rounded-md border border-[#202833] bg-[#202833] px-4 py-2 text-xs font-semibold text-white">Imprimir / salvar PDF</button></div>}<div id={id} className="receipt-sheet mx-auto w-full max-w-[380px] border border-[#aeb7c2] bg-white px-5 py-6 font-mono text-[11px] leading-[1.45] text-black shadow-sm">
-  <div className="text-center"><div className="text-[15px] font-bold">{emitName}</div><div>{emitLegal}</div><div>CNPJ {doc(emitDoc)}</div><div>IE {p.ie||profile?.state_registration||"—"}</div></div>
-  <div className="my-4 border-t border-dashed border-black"/>
-  <div className="text-center font-bold">{documentType} · Nº {number} · SÉRIE {series}</div><div className="mt-1 text-center">{date}</div>
-  {environment!=="production"&&<div className="mt-3 border border-black px-2 py-2 text-center font-bold">SEM VALOR FISCAL · HOMOLOGAÇÃO</div>}
-  {status==="rejected"&&<div className="mt-3 border border-black bg-[#fff1f1] px-2 py-2"><b>REJEITADA</b>{rejection?` · ${rejection}`:""}</div>}
-  {imported&&<div className="mt-3 border border-black px-2 py-2"><b>DOCUMENTO EXTRAÍDO</b></div>}
-  <div className="my-4 border-t border-dashed border-black"/>
-  <div><b>DESTINATÁRIO</b></div><div>{recipient}</div><div>{recipientDoc?doc(recipientDoc):"Consumidor não identificado"}</div>
-  <div className="my-4 border-t border-dashed border-black"/>
-  <div className="grid grid-cols-[1fr_52px_74px] gap-2 border-b border-black pb-1 font-bold"><span>ITEM</span><span className="text-right">QTD</span><span className="text-right">TOTAL</span></div>
-  <div className="grid grid-cols-[1fr_52px_74px] gap-2 py-2"><span>{item}</span><span className="text-right">{p.quantidade||p.qCarga||"1"}</span><span className="text-right">{money(total)}</span></div>
-  <div className="border-t border-black pt-2"><div className="flex justify-between text-[14px] font-bold"><span>TOTAL</span><span>{money(total)}</span></div></div>
-  <div className="my-4 border-t border-dashed border-black"/>
-  <div className="text-center text-[9px]">Status: {statusLabel(status)}</div>{access&&<><div className="mt-2 text-center text-[8px] font-bold">CHAVE DE ACESSO</div><div className="mt-1 break-all text-center text-[8px]">{key(access)}</div></>}{protocol&&<div className="mt-2 text-center text-[8px]">Protocolo: {protocol}</div>}
-  <div className="mt-5 text-center text-[9px]">Documento auxiliar para conferência e impressão.</div>
+ const quantity=p.quantidade||carga.qCarga||p.qCarga||"1";
+
+ if(mode==="receipt")return <div className="space-y-3">{showActions&&<div className="danfe-actions flex flex-wrap gap-2"><button onClick={()=>printDanfe(id,`Notinha-${number}`)} className="rounded-md border border-[#202833] bg-[#202833] px-4 py-2 text-xs font-semibold text-white">Imprimir / salvar PDF</button></div>}<div id={id} className="receipt-sheet mx-auto w-full max-w-[460px] border border-[#aeb7c2] bg-white px-7 py-7 font-mono text-[12px] leading-[1.5] text-black shadow-sm md:px-8 md:py-8">
+  <div className="text-center"><div className="text-[17px] font-black leading-tight">{emitName}</div>{emitLegal&&emitLegal!==emitName&&<div className="mt-1 text-[11px]">{emitLegal}</div>}<div className="mt-2 text-[11px]">CNPJ {doc(emitDoc)}</div><div className="text-[11px]">IE {emitIE||"—"}</div>{(emitStreet||emitCity)&&<div className="mt-2 text-[10px] leading-4">{[emitStreet,emitNumber,emitDistrict].filter(Boolean).join(", ")}<br/>{[emitCity,emitUF].filter(Boolean).join(" / ")}</div>}</div>
+  <div className="my-5 border-t border-dashed border-black"/>
+  <div className="text-center text-[13px] font-black">{documentType} · Nº {number} · SÉRIE {series}</div><div className="mt-1 text-center text-[11px]">{date}</div>
+  {environment!=="production"&&<div className="mt-4 border-2 border-black px-3 py-2.5 text-center text-[11px] font-black">SEM VALOR FISCAL · HOMOLOGAÇÃO</div>}
+  {status==="rejected"&&<div className="mt-4 border border-black bg-[#fff1f1] px-3 py-2"><b>REJEITADA</b>{rejection?` · ${rejection}`:""}</div>}
+  {imported&&<div className="mt-4 border border-black px-3 py-2"><b>DOCUMENTO EXTRAÍDO</b></div>}
+  <div className="my-5 border-t border-dashed border-black"/>
+  <div className="text-[10px] font-black tracking-wide">DESTINATÁRIO</div><div className="mt-1 font-semibold">{recipient}</div><div className="mt-0.5 text-[11px]">{recipientDoc?doc(recipientDoc):"Consumidor não identificado"}</div>
+  <div className="my-5 border-t border-dashed border-black"/>
+  <div className="grid grid-cols-[1fr_58px_90px] gap-2 border-b border-black pb-2 text-[10px] font-black"><span>ITEM / OPERAÇÃO</span><span className="text-right">QTD</span><span className="text-right">TOTAL</span></div>
+  <div className="grid grid-cols-[1fr_58px_90px] gap-2 py-3"><span className="pr-2 font-semibold leading-4">{item}</span><span className="text-right">{quantity}</span><span className="whitespace-nowrap text-right">{money(total)}</span></div>
+  <div className="border-t-2 border-black pt-3"><div className="flex justify-between text-[16px] font-black"><span>TOTAL</span><span>{money(total)}</span></div></div>
+  <div className="my-5 border-t border-dashed border-black"/>
+  <div className="text-center text-[10px]">Status: <b>{statusLabel(status)}</b></div>{access&&<><div className="mt-3 text-center text-[9px] font-black">CHAVE DE ACESSO</div><div className="mt-1 break-all text-center text-[9px] leading-4">{key(access)}</div></>}{protocol&&<div className="mt-3 text-center text-[9px]">Protocolo: <b>{protocol}</b></div>}
+  <div className="mt-6 text-center text-[9px] text-slate-600">Documento auxiliar para conferência e impressão.</div>
  </div></div>;
+
  return <div className="space-y-3">
   {showActions&&<div className="danfe-actions flex flex-wrap gap-2"><button onClick={()=>printDanfe(id,`${auxiliary}-${number}`)} className="rounded-md border border-[#202833] bg-[#202833] px-4 py-2 text-xs font-semibold text-white">Imprimir / salvar PDF</button></div>}
-  <div id={id} className="danfe-sheet mx-auto w-full max-w-[760px] border-2 border-black bg-white p-2 text-[10px] leading-tight text-black shadow-sm">
+  <div id={id} className="danfe-sheet mx-auto w-full max-w-[820px] border-2 border-black bg-white p-2 text-[10px] leading-tight text-black shadow-sm">
    {environment!=="production"&&<div className="mb-2 border-2 border-black bg-[#f1f1f1] px-2 py-1.5 text-center text-[11px] font-bold">SEM VALOR FISCAL — DOCUMENTO EMITIDO EM AMBIENTE DE HOMOLOGAÇÃO</div>}
    {status==="rejected"&&<div className="mb-2 border-2 border-black bg-[#ffe8e8] px-2 py-1.5"><b>DOCUMENTO REJEITADO</b>{rejection&&<span> — {rejection}</span>}</div>}
    {imported&&<div className="mb-2 border border-black bg-[#eaf2ff] px-2 py-1"><b>DOCUMENTO EXTRAÍDO</b> — importado da fonte fiscal da empresa.</div>}
    <div className="grid grid-cols-[1.45fr_.7fr_1.25fr] border-2 border-black">
-    <div className="border-r-2 border-black p-2"><div className="text-[15px] font-bold">{emitName}</div><div className="mt-1">{emitLegal}</div><div className="mt-1">{[p.logradouro||profile?.street,p.numeroEndereco||profile?.street_number,p.bairro||profile?.district].filter(Boolean).join(", ")}</div><div>{[p.nomeMunicipio||profile?.city,profile?.state].filter(Boolean).join(" / ")}</div><div className="mt-1"><b>CNPJ:</b> {doc(emitDoc)} &nbsp; <b>IE:</b> {p.ie||profile?.state_registration||"—"}</div></div>
+    <div className="border-r-2 border-black p-2"><div className="text-[15px] font-bold">{emitName}</div>{emitLegal!==emitName&&<div className="mt-1">{emitLegal}</div>}<div className="mt-1">{[emitStreet,emitNumber,emitDistrict].filter(Boolean).join(", ")||"—"}</div><div>{[emitCity,emitUF].filter(Boolean).join(" / ")||"—"}</div><div className="mt-1"><b>CNPJ:</b> {doc(emitDoc)} &nbsp; <b>IE:</b> {emitIE||"—"}</div></div>
     <div className="flex flex-col items-center justify-center border-r-2 border-black p-2 text-center"><div className="text-[20px] font-black">{auxiliary}</div><div className="mt-1 font-bold">Documento Auxiliar</div><div>{documentType}</div><div className="mt-2 border border-black px-2 py-1 text-[13px] font-bold">{model}</div></div>
     <div className="p-2"><div className="grid grid-cols-2 gap-2"><Box label="NÚMERO" value={number}/><Box label="SÉRIE" value={series}/></div><div className="mt-2"><Box label="DATA / HORA" value={date}/></div><div className="mt-2"><Box label="STATUS" value={statusLabel(status)}/></div></div>
    </div>
    <div className="mt-1 border-2 border-black p-2"><div className="text-[8px] font-bold">CHAVE DE ACESSO</div><div className="mt-1 break-all text-center text-[12px] font-bold tracking-[.12em]">{access?key(access):"CHAVE DISPONÍVEL APÓS GERAÇÃO / AUTORIZAÇÃO"}</div>{protocol&&<div className="mt-1 text-center"><b>Protocolo de autorização:</b> {protocol}</div>}</div>
-   <div className="mt-1 border-2 border-black"><SectionTitle>DESTINATÁRIO / REMETENTE / TOMADOR</SectionTitle><div className="grid grid-cols-[1.6fr_.8fr_.8fr] divide-x divide-black"><Cell label="NOME / RAZÃO SOCIAL" value={recipient}/><Cell label="CNPJ / CPF" value={doc(recipientDoc)}/><Cell label="UF" value={p.destUF||p.dest?.UF||"—"}/></div><div className="grid grid-cols-[1.4fr_.35fr_.65fr_.8fr] border-t border-black divide-x divide-black"><Cell label="ENDEREÇO" value={p.destLogradouro||p.dest?.xLgr||"—"}/><Cell label="Nº" value={p.destNumero||p.dest?.nro||"—"}/><Cell label="BAIRRO" value={p.destBairro||p.dest?.xBairro||"—"}/><Cell label="MUNICÍPIO" value={p.destMunicipio||p.dest?.xMun||"—"}/></div></div>
-   <div className="mt-1 border-2 border-black"><SectionTitle>DADOS DOS PRODUTOS / SERVIÇOS</SectionTitle><div className="grid grid-cols-[.48fr_1.7fr_.6fr_.55fr_.42fr_.42fr_.62fr] border-t border-black bg-[#f1f1f1] text-[7px] font-bold"><Head>CÓDIGO</Head><Head>DESCRIÇÃO</Head><Head>NCM / SERV.</Head><Head>CFOP</Head><Head>UN.</Head><Head>QTD.</Head><Head>VALOR TOTAL</Head></div><div className="grid min-h-[64px] grid-cols-[.48fr_1.7fr_.6fr_.55fr_.42fr_.42fr_.62fr] divide-x divide-black border-t border-black"><Data>{p.codigoProduto||"—"}</Data><Data>{item}</Data><Data>{p.ncm||p.codigoTributacao||"—"}</Data><Data>{p.cfop||p.cfopCte||"—"}</Data><Data>{p.unidade||"UN"}</Data><Data>{p.quantidade||p.qCarga||"1"}</Data><Data>{money(total)}</Data></div></div>
+   <div className="mt-1 border-2 border-black"><SectionTitle>DESTINATÁRIO / REMETENTE / TOMADOR</SectionTitle><div className="grid grid-cols-[1.6fr_.8fr_.8fr] divide-x divide-black"><Cell label="NOME / RAZÃO SOCIAL" value={recipient}/><Cell label="CNPJ / CPF" value={doc(recipientDoc)}/><Cell label="UF" value={p.destUF||dest.UF||"—"}/></div><div className="grid grid-cols-[1.4fr_.35fr_.65fr_.8fr] border-t border-black divide-x divide-black"><Cell label="ENDEREÇO" value={p.destLogradouro||dest.xLgr||"—"}/><Cell label="Nº" value={p.destNumero||dest.nro||"—"}/><Cell label="BAIRRO" value={p.destBairro||dest.xBairro||"—"}/><Cell label="MUNICÍPIO" value={p.destMunicipio||dest.xMun||"—"}/></div></div>
+   <div className="mt-1 border-2 border-black"><SectionTitle>DADOS DOS PRODUTOS / SERVIÇOS</SectionTitle><div className="grid grid-cols-[.48fr_1.7fr_.6fr_.55fr_.42fr_.42fr_.62fr] border-t border-black bg-[#f1f1f1] text-[7px] font-bold"><Head>CÓDIGO</Head><Head>DESCRIÇÃO</Head><Head>NCM / SERV.</Head><Head>CFOP</Head><Head>UN.</Head><Head>QTD.</Head><Head>VALOR TOTAL</Head></div><div className="grid min-h-[64px] grid-cols-[.48fr_1.7fr_.6fr_.55fr_.42fr_.42fr_.62fr] divide-x divide-black border-t border-black"><Data>{p.codigoProduto||"—"}</Data><Data>{item}</Data><Data>{p.ncm||p.codigoTributacao||"—"}</Data><Data>{p.cfop||p.cfopCte||"—"}</Data><Data>{p.unidade||"UN"}</Data><Data>{quantity}</Data><Data>{money(total)}</Data></div></div>
    <div className="mt-1 grid grid-cols-[1.7fr_.7fr] border-2 border-black"><div className="border-r-2 border-black"><SectionTitle>CÁLCULO DO IMPOSTO / INFORMAÇÕES FISCAIS</SectionTitle><div className="grid grid-cols-3 divide-x divide-black border-t border-black"><Cell label="BASE ICMS" value="R$ 0,00"/><Cell label="VALOR ICMS" value="R$ 0,00"/><Cell label="VALOR PRODUTOS / SERVIÇOS" value={money(total)}/></div></div><div><SectionTitle>TOTAL DA NOTA</SectionTitle><div className="flex h-[48px] items-center justify-center border-t border-black text-[18px] font-bold">{money(total)}</div></div></div>
    <div className="mt-1 border-2 border-black"><SectionTitle>DADOS ADICIONAIS</SectionTitle><div className="min-h-[54px] p-2 text-[9px]">{environment!=="production"?"DOCUMENTO EMITIDO EM AMBIENTE DE HOMOLOGAÇÃO - SEM VALOR FISCAL. ":""}{rejection?`Retorno fiscal: ${rejection}`:""}{imported?" Documento importado/extraído; não emitido originalmente por este sistema.":""}</div></div>
   </div>
