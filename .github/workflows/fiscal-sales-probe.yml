@@ -27,10 +27,15 @@ jobs:
           rr=requests.get(oidc_url+sep+'audience=ws-fiscal-runner',headers={'Authorization':'Bearer '+os.environ['ACTIONS_ID_TOKEN_REQUEST_TOKEN']},timeout=20); rr.raise_for_status()
           oidc=rr.json()['value']; h={'Authorization':'Bearer '+oidc,'content-type':'application/json'}
           lease=requests.post(SUPABASE,headers=h,json={'mode':'lease'},timeout=30); lease.raise_for_status(); sec=lease.json()
-          r=requests.post(DOWNLOAD,json={'certificate_base64':sec['pfx_base64'],'certificate_password':sec['password'],'access_key':KEY},timeout=30); o=r.json(); html=str(o.get('body_text') or o.get('body') or '')
+          r=requests.post(DOWNLOAD,json={'certificate_base64':sec['pfx_base64'],'certificate_password':sec['password'],'access_key':KEY},timeout=30)
+          try:o=r.json()
+          except Exception:o={}
+          html=str(o.get('body_text') or o.get('body') or '')
           jm=re.search(r'var\s+stringJson\s*=\s*(\{[\s\S]*?\})\s*;',html)
-          err=' | '.join(' '.join(re.sub(r'<[^>]+>',' ',x).split()) for x in re.findall(r'<h4[^>]*textoErro[^>]*>([\s\S]*?)</h4>',html,re.I))
-          raw=json.dumps({'http':r.status_code,'len':len(html),'has_stringJson':bool(jm),'has_nfe':bool(re.search(r'<(?:nfeProc|procNFe|NFe)\b',html,re.I)),'error':err[:1500],'prefix':html[:3000]},ensure_ascii=False)
-          payload={'mode':'result','results':[{'note_number':2977,'synthetic_key':KEY,'cstat':'DIAG','xmotivo':err[:1000] or 'no_visible_error','real_key':KEY,'raw_response':raw}]}
+          visible=' | '.join(' '.join(re.sub(r'<[^>]+>',' ',x).split()) for x in re.findall(r'<h4[^>]*textoErro[^>]*>([\s\S]*?)</h4>',html,re.I))
+          bridge_error=str(o.get('error') or o.get('message') or '')[:1200]
+          motivo=(bridge_error or visible or 'no_visible_error')[:1000]
+          raw=json.dumps({'http':r.status_code,'json_keys':list(o.keys())[:20],'bridge_error':bridge_error,'len':len(html),'has_stringJson':bool(jm),'has_nfe':bool(re.search(r'<(?:nfeProc|procNFe|NFe)\b',html,re.I))},ensure_ascii=False)
+          payload={'mode':'result','results':[{'note_number':2977,'synthetic_key':KEY,'cstat':'DIAG2','xmotivo':motivo,'real_key':KEY,'raw_response':raw}]}
           z=requests.post(SUPABASE,headers=h,json=payload,timeout=30); z.raise_for_status(); print(z.text)
           PY
