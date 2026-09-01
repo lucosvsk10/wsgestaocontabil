@@ -182,7 +182,7 @@ export const useDashboardData = () => {
           companyId: company.id,
           companyName: company.trade_name || company.company_name,
           lastSearchAt,
-          status: (hasFailure ? 'attention' : running ? 'running' : lastSearchAt ? 'ok' : 'idle') as FiscalSearchRow['status'],
+          status: hasFailure ? 'attention' : running ? 'running' : lastSearchAt ? 'ok' : 'idle',
           direction,
         };
       }).filter(item => item.lastSearchAt || item.direction !== 'Sem buscas').sort((a, b) => new Date(b.lastSearchAt || 0).getTime() - new Date(a.lastSearchAt || 0).getTime());
