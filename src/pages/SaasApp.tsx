@@ -14,6 +14,8 @@ import AccountDrawer from "@/components/account/AccountDrawer";
 import "@/styles/saas-admin-light.css";
 
 const WS_LOGO = "/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png";
+const TEST_TRANSPORT_ORG_ID = "c77c4620-fbbb-4f03-9e32-ab48d25bb0cf";
+const TEST_TRANSPORT_ORG_NAME = "MSILVA TRANSPORTES";
 const cadastroSections = new Set(["Clientes", "Fornecedores", "Produtos", "Serviços", "Transportadoras"]);
 const groups = [
   { title: "Notas de produtos", display: "Emitir produtos", icon: ReceiptText, items: [{label:"Emitir NF-e",icon:FileText},{label:"Emitir NFC-e",icon:FileInput},{label:"Gerenciar DF-e",icon:FileText}] },
@@ -40,7 +42,8 @@ export default function SaasApp() {
     if (!user) return;
     const { data } = await (supabase as any).from("organization_members").select("organization_id, organizations(id,name,slug)").eq("user_id", user.id).eq("status", "active").limit(1).maybeSingle();
     const org = data?.organizations || (data?.organization_id ? { id: data.organization_id, name: "Empresa Teste" } : null);
-    setOrganization(org || { name: "Empresa Teste" });
+    const testTransport = org?.id === TEST_TRANSPORT_ORG_ID;
+    setOrganization(org ? { ...org, name: testTransport ? TEST_TRANSPORT_ORG_NAME : org.name } : { name: "Empresa Teste" });
     if (!org?.id) return;
     setSetupDismissed(localStorage.getItem(`ws_fiscal_setup_dismissed_${org.id}`) === "1");
 
@@ -55,7 +58,8 @@ export default function SaasApp() {
     const p = config?.profile || null;
     setProfile(p);
     setCertificateConfigured(Boolean(config?.certificate_configured));
-    if (p?.trade_name || p?.legal_name) setOrganization((x: any) => ({ ...x, name: p.trade_name || p.legal_name }));
+    if (testTransport) setOrganization((x: any) => ({ ...x, name: TEST_TRANSPORT_ORG_NAME }));
+    else if (p?.trade_name || p?.legal_name) setOrganization((x: any) => ({ ...x, name: p.trade_name || p.legal_name }));
     if (p?.logo_path) {
       const { data: signed } = await supabase.storage.from("saas-private").createSignedUrl(p.logo_path, 3600);
       setLogoUrl(signed?.signedUrl || null);
