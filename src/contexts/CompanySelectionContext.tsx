@@ -22,8 +22,40 @@ type CompanySelectionContextValue = {
   refreshCompanies: () => Promise<void>;
 };
 
+type FiscalIdentityRow = {
+  id: string;
+  company_id: string | null;
+  cnpj: string | null;
+  razao_social: string | null;
+  nome_fantasia: string | null;
+};
+
 const STORAGE_KEY = 'ws_selected_company_id';
 const CompanySelectionContext = createContext<CompanySelectionContextValue | undefined>(undefined);
+
+const digits = (value?: string | null) => String(value || '').replace(/\D/g, '');
+const normalizeName = (value?: string | null) => String(value || '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/[^a-zA-Z0-9]+/g, ' ')
+  .trim()
+  .toLowerCase();
+
+function resolveFiscalCompanyId(company: OfficeCompanySelection, fiscalRows: FiscalIdentityRow[]) {
+  const byCompanyId = fiscalRows.find(row => row.company_id === company.id);
+  if (byCompanyId) return byCompanyId.id;
+
+  const companyCnpj = digits(company.cnpj);
+  if (companyCnpj) {
+    const byCnpj = fiscalRows.find(row => digits(row.cnpj) === companyCnpj);
+    if (byCnpj) return byCnpj.id;
+  }
+
+  const aliases = new Set([normalizeName(company.company_name), normalizeName(company.trade_name)].filter(Boolean));
+  if (!aliases.size) return null;
+  const byAlias = fiscalRows.filter(row => aliases.has(normalizeName(row.razao_social)) || aliases.has(normalizeName(row.nome_fantasia)));
+  return byAlias.length === 1 ? byAlias[0].id : null;
+}
 
 function persistCompatibility(company: OfficeCompanySelection | null) {
   if (!company) return;
@@ -37,12 +69,18 @@ function persistCompatibility(company: OfficeCompanySelection | null) {
     cnpj: company.cnpj || '',
     chartModel: 'Plano próprio da empresa',
   }));
+  localStorage.setItem('ws_company_legal_name', company.company_name);
+  if (company.trade_name) localStorage.setItem('ws_company_trade_name', company.trade_name);
+  else localStorage.removeItem('ws_company_trade_name');
   if (company.fiscal_company_id) {
     localStorage.setItem('ws_fiscal_company_id', company.fiscal_company_id);
-    localStorage.setItem('ws_fiscal_company_name', company.trade_name || company.company_name);
+    localStorage.setItem('ws_fiscal_company_name', company.company_name);
+    if (company.trade_name) localStorage.setItem('ws_fiscal_company_trade_name', company.trade_name);
+    else localStorage.removeItem('ws_fiscal_company_trade_name');
   } else {
     localStorage.removeItem('ws_fiscal_company_id');
     localStorage.removeItem('ws_fiscal_company_name');
+    localStorage.removeItem('ws_fiscal_company_trade_name');
   }
   if (company.portal_user_id) localStorage.setItem('ws_portal_user_id', company.portal_user_id);
   else localStorage.removeItem('ws_portal_user_id');
@@ -57,8 +95,6 @@ export function CompanySelectionProvider({ children }: { children: React.ReactNo
   const refreshCompanies = useCallback(async () => {
     setLoading(true);
     try {
-      // A lista principal do seletor depende SOMENTE de companies.
-      // Dados fiscais, portal e certificado são enriquecimentos opcionais e nunca podem zerar o seletor.
       const companiesResult = await supabase
         .from('companies')
         .select('id,company_name,trade_name,cnpj,logo_url')
@@ -74,7 +110,6 @@ export function CompanySelectionProvider({ children }: { children: React.ReactNo
         id: string; company_name: string; trade_name: string | null; cnpj: string | null; logo_url?: string | null;
       }>);
 
-      // Exibe imediatamente, antes das consultas auxiliares.
       let next: OfficeCompanySelection[] = baseCompanies.map(company => ({
         ...company,
         fiscal_company_id: null,
@@ -85,23 +120,21 @@ export function CompanySelectionProvider({ children }: { children: React.ReactNo
       setCompanies(next);
 
       const [fiscalResult, portalResult, certificateResult] = await Promise.all([
-        supabase.from('fiscal_companies').select('id,company_id'),
+        supabase.from('fiscal_companies').select('id,company_id,cnpj,razao_social,nome_fantasia'),
         supabase.from('company_user_links' as never).select('company_id,user_id'),
         supabase.from('fiscal_certificates').select('company_id,valid_until,is_active').eq('is_active', true),
       ]);
 
-      const fiscalRows = fiscalResult.error ? [] : ((fiscalResult.data || []) as Array<{ id: string; company_id: string | null }>);
+      const fiscalRows = fiscalResult.error ? [] : ((fiscalResult.data || []) as FiscalIdentityRow[]);
       const portalRows = portalResult.error ? [] : ((portalResult.data || []) as unknown as Array<{ company_id: string; user_id: string }>);
       const certificateRows = certificateResult.error ? [] : ((certificateResult.data || []) as unknown as Array<{ company_id: string; valid_until: string | null; is_active: boolean }>);
-
-      const fiscalByCompany = new Map(fiscalRows.filter(item => item.company_id).map(item => [item.company_id as string, item.id]));
       const portalByCompany = new Map(portalRows.map(item => [item.company_id, item.user_id]));
       const certificateByFiscalCompany = new Map(certificateRows.map(item => [item.company_id, item]));
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
       next = baseCompanies.map(company => {
-        const fiscalCompanyId = fiscalByCompany.get(company.id) || null;
+        const fiscalCompanyId = resolveFiscalCompanyId(company, fiscalRows);
         const certificate = fiscalCompanyId ? certificateByFiscalCompany.get(fiscalCompanyId) : undefined;
         const validUntil = certificate?.valid_until || null;
         const expiry = validUntil ? new Date(`${validUntil}T23:59:59`) : null;
