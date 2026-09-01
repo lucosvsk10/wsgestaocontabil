@@ -1,0 +1,31 @@
+name: Diagnose NFe download
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/diag-nfe-download.yml'
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe one NFe safely
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os,re,json,requests
+          SUPABASE='https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/github-fiscal-runner'
+          DOWNLOAD='https://ws-svrs-consit.vercel.app/api/download'
+          KEY='27260829880800000126550020000029771000079319'
+          oidc_url=os.environ['ACTIONS_ID_TOKEN_REQUEST_URL']; sep='&' if '?' in oidc_url else '?'
+          rr=requests.get(oidc_url+sep+'audience=ws-fiscal-runner',headers={'Authorization':'Bearer '+os.environ['ACTIONS_ID_TOKEN_REQUEST_TOKEN']},timeout=20); rr.raise_for_status()
+          oidc=rr.json()['value']; h={'Authorization':'Bearer '+oidc,'content-type':'application/json'}
+          lease=requests.post(SUPABASE,headers=h,json={'mode':'lease'},timeout=30); lease.raise_for_status(); sec=lease.json()
+          r=requests.post(DOWNLOAD,json={'certificate_base64':sec['pfx_base64'],'certificate_password':sec['password'],'access_key':KEY},timeout=30)
+          o=r.json(); html=str(o.get('body_text') or o.get('body') or '')
+          errs=[re.sub(r'<[^>]+>',' ',x) for x in re.findall(r'<h4[^>]*textoErro[^>]*>([\s\S]*?)</h4>',html,re.I)]
+          errs=[' '.join(x.split()) for x in errs]
+          print(json.dumps({'http':r.status_code,'body_len':len(html),'has_stringJson':bool(re.search(r'var\s+stringJson\s*=',html)),'has_xml':bool(re.search(r'<(?:nfeProc|procNFe|NFe)\b',html,re.I)),'errors':errs[:3],'mentions_download':'Download do XML' in html,'prefix':html[:800]},ensure_ascii=False))
+          PY
