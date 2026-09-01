@@ -1,0 +1,48 @@
+name: Fix admin fiscal company context
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-admin-fiscal-company-context.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Patch AdminFiscalNotes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/pages/AdminFiscalNotes.tsx')
+          s=p.read_text()
+          s=s.replace('import { useEffect, useMemo, useState } from "react";', 'import { useEffect, useMemo, useRef, useState } from "react";')
+          s=s.replace('import { supabase } from "@/integrations/supabase/client";', 'import { supabase } from "@/integrations/supabase/client";\nimport { useCompanySelection } from "@/contexts/CompanySelectionContext";')
+          s=s.replace(' const navigate=useNavigate(),now=new Date(),currentYear=now.getFullYear(),currentMonth=now.getMonth(),today=isoDate(now);', ' const navigate=useNavigate(),{selectedCompany}=useCompanySelection(),now=new Date(),currentYear=now.getFullYear(),currentMonth=now.getMonth(),today=isoDate(now);\n const docsRequestRef=useRef(0),recoveryAttemptsRef=useRef<Record<string,number>>({});')
+          old=''' const loadCompanies=async()=>{const list=await vaultList();setCompanies(list);const saved=localStorage.getItem("ws_fiscal_company_id"),chosen=list.find(x=>x.id===saved)||list[0]||null;setCompany(chosen);if(chosen)localStorage.setItem("ws_fiscal_company_id",chosen.id)};\n const loadDocs=async(c:Company|null)=>{if(!c){setDocs([]);return}const db=supabase as any;const{data,error}=await db.from("fiscal_dfe_documents").select("*").eq("cnpj",String(c.cnpj).replace(/\\D/g,"")).eq("environment",c.ambiente_padrao||"producao").order("issue_date",{ascending:false}).limit(5000);if(error)throw error;setDocs((data||[]).map(rowToDoc))};\n useEffect(()=>{void(async()=>{try{await loadCompanies()}catch(e){setError(e instanceof Error?e.message:String(e))}finally{setLoading(false)}})();const sync=()=>{const id=localStorage.getItem("ws_fiscal_company_id");if(!id)return;setCompanies(current=>{const next=current.find(x=>x.id===id);if(next)setCompany(next);return current})};window.addEventListener("ws:company-changed",sync as EventListener);window.addEventListener("storage",sync);return()=>{window.removeEventListener("ws:company-changed",sync as EventListener);window.removeEventListener("storage",sync)}} ,[]);\n useEffect(()=>{if(company)void loadDocs(company).catch(e=>setError(e instanceof Error?e.message:String(e)));setPage(1);setQuery("");setFilter("todos");setTypeFilter("todos")},[company?.id]);\n useEffect(()=>{if(!company)return;const refresh=()=>void loadDocs(company).catch(()=>{});const timer=window.setInterval(refresh,15000),onFocus=()=>refresh();window.addEventListener("focus",onFocus);return()=>{window.clearInterval(timer);window.removeEventListener("focus",onFocus)}},[company?.id]);'''
+          new=''' const loadCompanies=async()=>{const list=await vaultList();setCompanies(list)};\n const loadDocs=async(c:Company|null,clear=false)=>{const request=++docsRequestRef.current;if(clear)setDocs([]);if(!c){setDocs([]);return}const db=supabase as any;const{data,error}=await db.from("fiscal_dfe_documents").select("*").eq("company_id",c.id).eq("cnpj",String(c.cnpj).replace(/\\D/g,"")).eq("environment",c.ambiente_padrao||"producao").order("issue_date",{ascending:false}).limit(5000);if(error)throw error;if(request!==docsRequestRef.current)return;setDocs((data||[]).map(rowToDoc))};\n useEffect(()=>{void(async()=>{try{await loadCompanies()}catch(e){setError(e instanceof Error?e.message:String(e))}finally{setLoading(false)}})()},[]);\n useEffect(()=>{docsRequestRef.current++;recoveryAttemptsRef.current={};setDocs([]);setSelected(null);setError("");setDownloadInfo(null);setPage(1);setQuery("");setFilter("todos");setTypeFilter("todos");const fiscalId=selectedCompany?.fiscal_company_id||"";if(!fiscalId){setCompany(null);return}const next=companies.find(x=>x.id===fiscalId)||null;setCompany(next)},[selectedCompany?.id,selectedCompany?.fiscal_company_id,companies]);\n useEffect(()=>{if(company)void loadDocs(company,true).catch(e=>setError(e instanceof Error?e.message:String(e)))},[company?.id]);\n useEffect(()=>{if(!company)return;const refresh=()=>void loadDocs(company,false).catch(()=>{});const timer=window.setInterval(refresh,15000),onFocus=()=>refresh();window.addEventListener("focus",onFocus);return()=>{window.clearInterval(timer);window.removeEventListener("focus",onFocus)}},[company?.id]);\n useEffect(()=>{if(!company)return;const pending=docs.filter(d=>d.documentKind!=="evento"&&!d.fullXml&&/^\\d{44}$/.test(String(d.accessKey||""))&&["55","65"].includes(docModel(d))).filter(d=>(recoveryAttemptsRef.current[String(d.accessKey)]||0)<2).slice(0,2);if(!pending.length)return;let cancelled=false;const timer=window.setTimeout(async()=>{for(const d of pending){if(cancelled)break;const k=String(d.accessKey);recoveryAttemptsRef.current[k]=(recoveryAttemptsRef.current[k]||0)+1;try{await supabase.functions.invoke("fiscal-document-recover",{body:{company_id:company.id,access_key:d.accessKey,nsu:d.nsu}})}catch{}await new Promise(r=>window.setTimeout(r,1200))}if(!cancelled)void loadDocs(company,false).catch(()=>{})},2500);return()=>{cancelled=true;window.clearTimeout(timer)}},[company?.id,docs]);'''
+          if old not in s:
+              raise SystemExit('expected AdminFiscalNotes block not found')
+          s=s.replace(old,new)
+          old_empty='''{!loading&&!company?<section className="mx-auto mt-20 max-w-xl rounded-2xl bg-muted/15 p-10 text-center"><Building2 className="mx-auto h-8 w-8"/><h1 className="mt-4 text-xl font-semibold">Cadastre uma empresa fiscal</h1><Button className="mt-6" onClick={()=>navigate("/admin/fiscal/empresas")}>Ir para Empresas</Button></section>:<>'''
+          new_empty='''{!loading&&!company?<section className="mx-auto mt-20 max-w-xl rounded-2xl bg-muted/15 p-10 text-center"><Building2 className="mx-auto h-8 w-8"/><h1 className="mt-4 text-xl font-semibold">Configuração fiscal pendente</h1><p className="mt-2 text-sm text-muted-foreground">{selectedCompany?`${selectedCompany.trade_name||selectedCompany.company_name} ainda não possui um perfil fiscal vinculado. Nenhuma nota de outra empresa será exibida.`:"Selecione uma empresa no topo para consultar as notas fiscais."}</p>{selectedCompany&&<Button className="mt-6" onClick={()=>navigate(`/admin/clientes/${selectedCompany.id}/fiscal`)}>Configurar empresa</Button>}</section>:<>'''
+          if old_empty not in s:
+              raise SystemExit('expected empty-state block not found')
+          s=s.replace(old_empty,new_empty)
+          p.write_text(s)
+          PY
+      - name: Commit fix
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/pages/AdminFiscalNotes.tsx
+          git diff --cached --quiet && exit 0
+          git commit -m 'fix: bind fiscal notes strictly to selected company'
+          git push origin main
