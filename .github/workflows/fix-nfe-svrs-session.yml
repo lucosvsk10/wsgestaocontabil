@@ -1,0 +1,40 @@
+name: Fix NFe SVRS session
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-nfe-svrs-session.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch NFe download session
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('supabase/functions/fiscal-purchases-xml-backfill/index.ts')
+          s=p.read_text()
+          a=s.index('function parseDownloadHtml')
+          b=s.index('async function downloadBridge',a)
+          middle=r'''function parseDownloadHtml(all:string){const m=all.match(/var\s+stringJson\s*=\s*(\{[\s\S]*?\})\s*;/);if(!m){if(/CNPJ base do certificado digital[^<]*difere/i.test(all))throw Error("certificate_not_involved");const validation=all.match(/data-valmsg-for=["']ErroConsulta["'][^>]*>([^<]+)/i)?.[1]?.trim();throw Error(validation?`xml_payload_not_found:${validation.slice(0,120)}`:"xml_payload_not_found")}let data:any;try{data=JSON.parse(m[1])}catch{throw Error("xml_payload_invalid_json")}const xml=String(data?.xml||"");if(!/<(?:nfeProc|procNFe|NFe)\b/i.test(xml)||xml.length<1000)throw Error("xml_not_returned");return xml}
+function cookiesFrom(h:Headers){const arr=(h as any).getSetCookie?.() as string[]|undefined;const values=arr?.length?arr:[h.get("set-cookie")||""];return values.filter(Boolean).map(v=>v.split(";",1)[0]).filter(Boolean).join("; ")}
+async function downloadDirect(pfx:string,pass:string,key:string){const p=pfxPem(pfx,pass),client=Deno.createHttpClient({cert:p.cert,key:p.key,http1:true,http2:false} as any);const landing=`https://dfe-portal.svrs.rs.gov.br/NFESSL/DownloadXMLDFe?OrigemSite=2&Ambiente=1&ChaveAcessoDfe=${key}`;try{const pre=await fetch(landing,{method:"GET",headers:{"accept":"text/html,*/*","user-agent":"Mozilla/5.0"},redirect:"manual",client,signal:AbortSignal.timeout(40000)} as any);const preBody=await pre.text();if(!pre.ok)throw Error(`direct_landing_http_${pre.status}`);const cookie=cookiesFrom(pre.headers);const form=new URLSearchParams({sistema:"Nfe",OrigemSite:"SiteSefaz",Ambiente:"1",ChaveAcessoDfe:key});const r=await fetch("https://dfe-portal.svrs.rs.gov.br/BpeSSL/DownloadXmlDfe",{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded","accept":"text/html,application/xml,text/xml,*/*","user-agent":"Mozilla/5.0","referer":landing,...(cookie?{"cookie":cookie}:{})},body:form.toString(),redirect:"manual",client,signal:AbortSignal.timeout(40000)} as any);const all=await r.text();if(!r.ok)throw Error(`direct_http_${r.status}`);if(/captcha/i.test(preBody)&&/captcha/i.test(all)&&!/var\s+stringJson\s*=/.test(all))throw Error("direct_captcha_required");return parseDownloadHtml(all)}finally{client.close()}}
+'''
+          s=s[:a]+middle+s[b:]
+          a=s.index('async function download(pfx:string')
+          b=s.index('Deno.serve',a)
+          new=r'''async function download(pfx:string,pass:string,key:string){let direct="",bridge="";try{return await downloadDirect(pfx,pass,key)}catch(e){direct=e instanceof Error?e.message:String(e);if(direct==="certificate_not_involved")throw Error(direct)}try{return await downloadBridge(pfx,pass,key)}catch(e){bridge=e instanceof Error?e.message:String(e);if(bridge==="certificate_not_involved")throw Error(bridge)}throw Error(`direct:${direct.slice(0,100)}|bridge:${bridge.slice(0,100)}`)}
+'''
+          s=s[:a]+new+s[b:]
+          s=s.replace('parse_error:`xml_retry:${e instanceof Error?e.message:String(e)}`,updated_at:now','parse_error:`xml_retry:${e instanceof Error?e.message:String(e)}`.slice(0,500),updated_at:now')
+          p.write_text(s)
+          PY
+      - name: Commit
+        run: |
+          git config user.name ws-fiscal-bot
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add supabase/functions/fiscal-purchases-xml-backfill/index.ts
+          git diff --cached --quiet || (git commit -m 'fix: keep SVRS NFe download session' && git push)
