@@ -1,0 +1,41 @@
+name: Fix MDFe payment cStat302
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-mdfe-payment-cstat302.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Patch only MDF-e payment group required by cStat 302
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('supabase/functions/saas-mdfe-issue/index.ts')
+          s=p.read_text()
+          marker='contratanteXml=(tpEmit==="1"||tpEmit==="3")&&contratanteDoc?`<infContratante>${contratanteDoc.length===14?`<CNPJ>${contratanteDoc}</CNPJ>`:`<CPF>${contratanteDoc}</CPF>`}</infContratante>`:"";const needsProd='
+          if marker not in s:
+              raise SystemExit('payment insertion marker not found')
+          replacement='contratanteXml=(tpEmit==="1"||tpEmit==="3")&&contratanteDoc?`<infContratante>${contratanteDoc.length===14?`<CNPJ>${contratanteDoc}</CNPJ>`:`<CPF>${contratanteDoc}</CPF>`}</infContratante>`:"",pagDoc=digits(raw.pagadorCnpj||raw.pagadorCpf||(tpAmb==="2"?cnpj:"")),vContrato=Math.max(0,Number(raw.vContrato??raw.valorCarga??0)),indPag=String(raw.indPag??"0"),pixPag=String(raw.pixPagamento||(tpAmb==="2"?cnpj:"")),pagXml=(tpEmit==="1"||tpEmit==="3")&&pagDoc?`<infPag>${pagDoc.length===14?`<CNPJ>${pagDoc}</CNPJ>`:`<CPF>${pagDoc}</CPF>`}<Comp><tpComp>99</tpComp><vComp>${vContrato.toFixed(2)}</vComp><xComp>FRETE</xComp></Comp><vContrato>${vContrato.toFixed(2)}</vContrato><indPag>${indPag}</indPag>${pixPag?`<infBanc><PIX>${esc(pixPag)}</PIX></infBanc>`:""}</infPag>`:"";const needsProd='
+          s=s.replace(marker,replacement,1)
+          old='<infANTT>${rntrcXml}${contratanteXml}</infANTT>'
+          new='<infANTT>${rntrcXml}${contratanteXml}${pagXml}</infANTT>'
+          if old not in s:
+              raise SystemExit('infANTT target not found')
+          s=s.replace(old,new,1)
+          p.write_text(s)
+      - name: Commit patch
+        run: |
+          git config user.name ws-fiscal-bot
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add supabase/functions/saas-mdfe-issue/index.ts
+          git commit -m 'fix: include MDF-e payment group for lotation cStat 302'
+          git push
