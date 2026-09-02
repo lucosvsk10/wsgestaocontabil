@@ -11,57 +11,40 @@ permissions:
   id-token: write
 
 jobs:
-  backfill-sales:
+  probe-purchases:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Probe older NFC-e range and send results
+      - name: Install PKCS12 transport
+        run: python3 -m pip install --quiet requests-pkcs12
+      - name: Probe pending NF-e by key
         shell: bash
         run: |
           python3 - <<'PY'
-          import os, json, requests, time
+          import os, re, json, gzip, base64, requests
+          from requests_pkcs12 import post
           SUPABASE='https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/github-fiscal-runner'
-          BRIDGE='https://ws-svrs-consit.vercel.app/api/consit'
-          DOWNLOAD='https://ws-svrs-consit.vercel.app/api/download'
-          oidc_url=os.environ['ACTIONS_ID_TOKEN_REQUEST_URL']
-          sep='&' if '?' in oidc_url else '?'
-          rr=requests.get(oidc_url+sep+'audience=ws-fiscal-runner',headers={'Authorization':'Bearer '+os.environ['ACTIONS_ID_TOKEN_REQUEST_TOKEN']},timeout=20)
-          rr.raise_for_status()
-          oidc=rr.json()['value']
-          h={'Authorization':'Bearer '+oidc,'content-type':'application/json'}
-          lease=requests.post(SUPABASE,headers=h,json={'mode':'lease'},timeout=30)
-          lease.raise_for_status()
-          sec=lease.json()
-          pfx=sec['pfx_base64']; password=sec['password']
-          cnpj=sec['cnpj']
-          months=['2607','2606']
-          results=[]
-          for m in months:
-              for n in range(999,899,-1):
-                  payload={'certificate_base64':pfx,'certificate_password':password,'cnpj':cnpj,'month':m,'series':'001','note_number':n}
-                  try:
-                      r=requests.post(BRIDGE,json=payload,timeout=20)
-                      o=r.json()
-                  except Exception:
-                      continue
-                  cstat=str(o.get('cstat') or '')
-                  xmotivo=str(o.get('xmotivo') or '')
-                  real_key=str(o.get('real_key') or '')
-                  synt=str(o.get('synthetic_key') or '')
-                  raw=str(o.get('body_text') or '')[:8000]
-                  if cstat in ('100','101','110','150') or (real_key and len(real_key)==44):
-                      if real_key and len(real_key)==44:
-                          try:
-                              dr=requests.post(DOWNLOAD,json={'certificate_base64':pfx,'certificate_password':password,'access_key':real_key},timeout=20)
-                              dj=dr.json()
-                              raw=json.dumps(dj,ensure_ascii=False)[:30000]
-                          except Exception:
-                              pass
-                      results.append({'note_number':n,'synthetic_key':synt,'cstat':cstat,'xmotivo':xmotivo,'real_key':real_key,'raw_response':raw})
-                  time.sleep(.12)
-          if results:
-              z=requests.post(SUPABASE,headers=h,json={'mode':'sales_result','results':results},timeout=60)
-              z.raise_for_status()
-              requests.post(SUPABASE,headers=h,json={'mode':'result','results':results},timeout=60).raise_for_status()
-          print(json.dumps({'found':len(results),'notes':[x['note_number'] for x in results[:15]]}))
+          KEYS=['26260851629276000174550010000030931000034960','26260851629276000174550010000030971000035000','31260803692395000129550010002247741082643543','35260815806937000126550000000314461869724694','35260815806937000126550000000315411825450652','35260815806937000126550000000315551451435418','35260832302352000198550010000216471616332794']
+          oidc_url=os.environ['ACTIONS_ID_TOKEN_REQUEST_URL']; sep='&' if '?' in oidc_url else '?'
+          rr=requests.get(oidc_url+sep+'audience=ws-fiscal-runner',headers={'Authorization':'Bearer '+os.environ['ACTIONS_ID_TOKEN_REQUEST_TOKEN']},timeout=20); rr.raise_for_status()
+          h={'Authorization':'Bearer '+rr.json()['value'],'content-type':'application/json'}
+          lease=requests.post(SUPABASE,headers=h,json={'mode':'lease'},timeout=30); lease.raise_for_status(); sec=lease.json()
+          pfx=base64.b64decode(sec['pfx_base64']); pwd=sec['password']; cnpj=sec['cnpj']
+          out=[]
+          for ch in KEYS:
+              soap=f'''<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDistDFeInteresse xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe"><nfeDadosMsg><distDFeInt xmlns="http://www.portalfiscal.inf.br/nfe" versao="1.01"><tpAmb>1</tpAmb><cUFAutor>27</cUFAutor><CNPJ>{cnpj}</CNPJ><consChNFe><chNFe>{ch}</chNFe></consChNFe></distDFeInt></nfeDadosMsg></nfeDistDFeInteresse></soap12:Body></soap12:Envelope>'''
+              try:
+                  r=post('https://www1.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx',data=soap.encode(),headers={'Content-Type':'application/soap+xml; charset=utf-8','Accept':'application/soap+xml,text/xml,*/*'},pkcs12_data=pfx,pkcs12_password=pwd,timeout=35)
+                  text=r.text
+                  cstat=(re.search(r'<cStat>([^<]+)</cStat>',text) or [None,''])[1]
+                  mot=(re.search(r'<xMotivo>([^<]+)</xMotivo>',text) or [None,''])[1]
+                  schemas=[]; full=False
+                  for schema,b64 in re.findall(r'<docZip[^>]*schema=["\']([^"\']+)["\'][^>]*>([\s\S]*?)</docZip>',text,re.I):
+                      try: x=gzip.decompress(base64.b64decode(''.join(b64.split()))).decode('utf-8','replace')
+                      except Exception: continue
+                      schemas.append(schema); full=full or bool(re.search(r'<(?:nfeProc|procNFe|NFe)\b',x,re.I))
+                  out.append({'key':ch,'http':r.status_code,'cStat':cstat,'xMotivo':mot,'schemas':schemas,'full':full})
+              except Exception as e:
+                  out.append({'key':ch,'error':str(e)[:180]})
+          print(json.dumps(out,ensure_ascii=False))
           PY
