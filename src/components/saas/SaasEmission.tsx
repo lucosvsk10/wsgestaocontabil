@@ -12,6 +12,7 @@ const MALVES_CNPJ="44454631000156";
 const TEST_REMETENTE_CNPJ="12345678000195";
 const TEST_DESTINATARIO_CNPJ="98765432000198";
 const PLACEHOLDER_NFE_KEY="27260912345678000195550010000000011123456780";
+const PLACEHOLDER_CTE_KEY="27260944454631000156570010000000021673862974";
 const PLACEHOLDER_RNTRC="12345678";
 const TEST_VEHICLE={plate:"MUI7179",driverName:"FABIO MARCOS MARTINS CAVALCANTE",driverCpf:"07359216443",tara:"6000",capacity:"12000"};
 function digits(v:any){return String(v??"").replace(/\D/g,"")}
@@ -22,7 +23,9 @@ function scenarioPatch(f:any,parties:any[],hist:any[],force=false){
  const fill=(cur:any,val:any,dflt?:any)=>force?(val??cur):(cur===""||cur==null||(dflt!==undefined&&cur===dflt)?val:cur);
  const rem=pickParty(parties,TEST_REMETENTE_CNPJ,0),dest=pickParty(parties,TEST_DESTINATARIO_CNPJ,1)||parties.find((x:any)=>x.id!==rem?.id);
  const nfe=hist.find(x=>x.document_type==="nfe"&&x.status==="authorized"&&digits(x.access_key).length===44);
+ const cte=hist.find(x=>x.document_type==="cte"&&x.status==="authorized"&&digits(x.access_key).length===44);
  const key=nfe?.access_key||PLACEHOLDER_NFE_KEY;
+ const mdfeKey=cte?.access_key||PLACEHOLDER_CTE_KEY;
  return {...f,
   remetenteId:fill(f.remetenteId,rem?.id||f.remetenteId),
   destinatarioId:fill(f.destinatarioId,dest?.id||f.destinatarioId),
@@ -37,7 +40,7 @@ function scenarioPatch(f:any,parties:any[],hist:any[],force=false){
   munFimNome:fill(f.munFimNome,dest?.city||"Major Isidoro"),
   ufFim:fill(f.ufFim,dest?.state||"AL","AL"),
   chNFe:fill(f.chNFe,key),
-  keys:fill(f.keys,key),
+  keys:fill(f.keys,mdfeKey),
   rntrc:fill(f.rntrc,PLACEHOLDER_RNTRC),
   plate:fill(f.plate,TEST_VEHICLE.plate),
   driverName:fill(f.driverName,TEST_VEHICLE.driverName),
@@ -65,9 +68,10 @@ export default function SaasEmission({organizationId,documentType,onChoose}:{org
  const environment=displayProfile?.fiscal_environment==="production"?"production":"homologation";
  const backendMatchesTransport=!isTransportTest||digits(profile?.tax_id)===MALVES_CNPJ;
  const latestAuthorizedNfe=history.find(x=>x.document_type==="nfe"&&x.status==="authorized"&&digits(x.access_key).length===44);
+ const latestAuthorizedCte=history.find(x=>x.document_type==="cte"&&x.status==="authorized"&&digits(x.access_key).length===44);
  const applyTransportScenario=()=>{
    setForm((f:any)=>scenarioPatch(f,customers,history,true));
-   setMsg(latestAuthorizedNfe?"Cenário de transporte carregado com uma NF-e autorizada do histórico. Confira o RNTRC real antes de transmitir.":"Cenário de transporte carregado com dados fictícios de homologação. Confira chave fiscal e RNTRC reais antes de transmitir.");
+   setMsg(documentType==="MDF-e"?(latestAuthorizedCte?"Cenário de MDF-e carregado com CT-e autorizado do histórico.":"Cenário de MDF-e carregado. Em homologação, use CT-e autorizado para prestador de serviço."):(latestAuthorizedNfe?"Cenário de transporte carregado com uma NF-e autorizada do histórico. Confira o RNTRC real antes de transmitir.":"Cenário de transporte carregado com dados fictícios de homologação. Confira chave fiscal e RNTRC reais antes de transmitir."));
  };
  const usingPlaceholders=environment!=="production"&&(digits(form.chNFe)===PLACEHOLDER_NFE_KEY||String(form.keys||"").includes(PLACEHOLDER_NFE_KEY)||digits(form.rntrc)===PLACEHOLDER_RNTRC);
  const transportMissing=[!form.remetenteId&&"remetente",!form.destinatarioId&&"destinatário",!digits(form.rntrc)&&"RNTRC",documentType==="CT-e"&&digits(form.chNFe).length!==44&&"NF-e vinculada",documentType==="MDF-e"&&digits(form.keys).length<44&&"chave fiscal",documentType==="MDF-e"&&!form.plate&&"placa",documentType==="MDF-e"&&digits(form.driverCpf).length!==11&&"CPF do condutor"].filter(Boolean) as string[];
