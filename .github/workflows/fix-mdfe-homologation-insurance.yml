@@ -1,0 +1,41 @@
+name: Fix MDFe homologation insurance
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-mdfe-homologation-insurance.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch MDF-e insurance group
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('supabase/functions/saas-mdfe-issue/index.ts')
+          s=p.read_text()
+          old='tpAmb=raw.environment==="production"?"1":"2";const xml=`'
+          new='''tpAmb=raw.environment==="production"?"1":"2",tpEmit=String(raw.tpEmit||"1"),needsSeg=tpEmit==="1"||tpEmit==="3",segNome=String(raw.seguradoraNome|| (tpAmb==="2"?"SEGURADORA HOMOLOGACAO":"")),segCnpj=digits(raw.seguradoraCnpj|| (tpAmb==="2"?cnpj:"")),segApol=String(raw.apolice|| (tpAmb==="2"?"HOMOLOGACAO1":"")),segAver=String(raw.averbacao|| (tpAmb==="2"?"HOMOLOGACAO1":"")),segXml=needsSeg?`<seg><infResp><respSeg>1</respSeg></infResp><infSeg><xSeg>${esc(segNome)}</xSeg><CNPJ>${segCnpj}</CNPJ></infSeg><nApol>${esc(segApol)}</nApol><nAver>${esc(segAver)}</nAver></seg>`:"";const xml=`'''
+          if old not in s:
+              raise SystemExit('build anchor not found')
+          s=s.replace(old,new,1)
+          old2='</infMunDescarga></infDoc><tot>'
+          new2='</infMunDescarga></infDoc>${segXml}<tot>'
+          if old2 not in s:
+              raise SystemExit('seg insertion anchor not found')
+          s=s.replace(old2,new2,1)
+          old3='if(!(Number(raw.pesoCarga)>0))errors.push("Peso da carga obrigatório");if(errors.length)'
+          new3='''if(!(Number(raw.pesoCarga)>0))errors.push("Peso da carga obrigatório");const tpEmitCheck=String(raw.tpEmit||"1");if(production&&(tpEmitCheck==="1"||tpEmitCheck==="3")){if(!String(raw.seguradoraNome||"").trim())errors.push("Nome da seguradora obrigatório");if(digits(raw.seguradoraCnpj).length!==14)errors.push("CNPJ da seguradora obrigatório");if(!String(raw.apolice||"").trim())errors.push("Apólice do seguro obrigatória");if(!String(raw.averbacao||"").trim())errors.push("Averbação do seguro obrigatória");}if(errors.length)'''
+          if old3 not in s:
+              raise SystemExit('validation anchor not found')
+          s=s.replace(old3,new3,1)
+          p.write_text(s)
+      - name: Commit patch
+        run: |
+          git config user.name ws-fiscal-bot
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add supabase/functions/saas-mdfe-issue/index.ts
+          git diff --cached --quiet || (git commit -m 'fix: include MDF-e cargo insurance in homologation' && git push)
