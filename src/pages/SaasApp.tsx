@@ -7,11 +7,13 @@ import SaasEmission from "@/components/saas/SaasEmission";
 import SaasCompanyProfile from "@/components/saas/SaasCompanyProfile";
 import SaasReports from "@/components/saas/SaasReports";
 import SaasDashboard from "@/components/saas/SaasDashboard";
+import SaasProductsPremium from "@/components/saas/SaasProductsPremium";
 import SaasDfeManager from "@/components/saas/SaasDfeManager";
 import SaasIssuedNotes from "@/components/saas/SaasIssuedNotes";
 import SaasSetupGuide from "@/components/saas/SaasSetupGuide";
 import AccountDrawer from "@/components/account/AccountDrawer";
 import "@/styles/saas-admin-light.css";
+import "@/styles/saas-premium-v3.css";
 
 const WS_LOGO = "/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png";
 const TEST_TRANSPORT_ORG_ID = "c77c4620-fbbb-4f03-9e32-ab48d25bb0cf";
@@ -84,6 +86,7 @@ export default function SaasApp() {
 
   let content: any;
   if (active === "Início") content = <SaasDashboard organizationName={organization?.name} emissions={emissions} onNew={() => { setSelectedDocument(null); setActive("Emissão"); }} onReports={() => setActive("Relatórios")} />;
+  else if (active === "Produtos") content = <SaasProductsPremium organizationId={organization?.id || null} />;
   else if (cadastroSections.has(active)) content = <SaasCadastros organizationId={organization?.id || null} section={active as CadastroSection} />;
   else if (active === "Emissão") content = <SaasEmission organizationId={organization?.id || null} documentType={selectedDocument} onChoose={setSelectedDocument} />;
   else if (active === "Gerenciar DF-e") content = <SaasDfeManager />;
