@@ -1,0 +1,41 @@
+name: Fix MDFe tomador
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-mdfe-tomador.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch MDF-e infContratante
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('supabase/functions/saas-mdfe-issue/index.ts')
+          s=p.read_text()
+          old='segXml=needsSeg?`<seg><infResp><respSeg>1</respSeg></infResp><infSeg><xSeg>${esc(segNome)}</xSeg><CNPJ>${segCnpj}</CNPJ></infSeg><nApol>${esc(segApol)}</nApol><nAver>${esc(segAver)}</nAver></seg>`:"";const xml=`'
+          new='''segXml=needsSeg?`<seg><infResp><respSeg>1</respSeg></infResp><infSeg><xSeg>${esc(segNome)}</xSeg><CNPJ>${segCnpj}</CNPJ></infSeg><nApol>${esc(segApol)}</nApol><nAver>${esc(segAver)}</nAver></seg>`:"",contratanteDoc=digits(raw.contratanteCnpj||raw.contratanteCpf||(tpAmb==="2"?cnpj:"")),contratanteXml=(tpEmit==="1"||tpEmit==="3")&&contratanteDoc?`<infContratante>${contratanteDoc.length===14?`<CNPJ>${contratanteDoc}</CNPJ>`:`<CPF>${contratanteDoc}</CPF>`}</infContratante>`:"";const xml=`'''
+          if old not in s:
+              raise SystemExit('contractor build anchor not found')
+          s=s.replace(old,new,1)
+          old2='<infANTT><RNTRC>${digits(raw.rntrc)}</RNTRC></infANTT>'
+          new2='<infANTT><RNTRC>${digits(raw.rntrc)}</RNTRC>${contratanteXml}</infANTT>'
+          if old2 not in s:
+              raise SystemExit('infANTT anchor not found')
+          s=s.replace(old2,new2,1)
+          old3='if(!String(raw.averbacao||"").trim())errors.push("Averbação do seguro obrigatória");}if(errors.length)'
+          new3='''if(!String(raw.averbacao||"").trim())errors.push("Averbação do seguro obrigatória");const contratante=digits(raw.contratanteCnpj||raw.contratanteCpf);if(contratante.length!==11&&contratante.length!==14)errors.push("CPF/CNPJ do contratante obrigatório");}if(errors.length)'''
+          if old3 not in s:
+              raise SystemExit('contractor validation anchor not found')
+          s=s.replace(old3,new3,1)
+          p.write_text(s)
+      - name: Commit patch
+        run: |
+          git config user.name ws-fiscal-bot
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add supabase/functions/saas-mdfe-issue/index.ts
+          git diff --cached --quiet || (git commit -m 'fix: include MDF-e service contractor' && git push)
