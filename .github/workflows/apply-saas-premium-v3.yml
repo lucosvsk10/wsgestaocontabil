@@ -48,10 +48,8 @@ jobs:
           if old in s:s=s.replace(old,new,1)
           emission.write_text(s)
           PY
-      - name: Install printable fiscal barcode and QR dependencies
-        run: |
-          npm install jsbarcode@^3.12.1 qrcode@^1.5.4
-          npm install -D @types/jsbarcode@^3.11.4 @types/qrcode@^1.5.5
+      - name: Install dependencies and refresh lockfile
+        run: npm install --legacy-peer-deps
       - name: Validate production build
         run: npm run build
       - name: Commit redesign
@@ -60,4 +58,3 @@ jobs:
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add src/pages/SaasApp.tsx src/components/saas/SaasDashboard.tsx src/components/saas/SaasEmission.tsx package.json package-lock.json
           git diff --cached --quiet || (git commit -m 'feat: apply premium SaaS fiscal redesign' && git push)
-# rerun: 2026-09-02T04:52Z
