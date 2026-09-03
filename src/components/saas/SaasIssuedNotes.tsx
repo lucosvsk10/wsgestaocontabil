@@ -63,7 +63,7 @@ export default function SaasIssuedNotes({emissions,onNew}:Props){
     <span className="min-w-16 text-lg font-semibold">{year}</span>
     <button disabled={year>=currentYear} onClick={()=>changeYear(1)} className="rounded border px-2 py-1.5 text-[#667085] disabled:opacity-25">›</button>
     <div className="ml-2 flex flex-1 flex-wrap gap-1">
-     {MONTHS.map(m=>{const future=m!=="Ano"&&year===currentYear&&MONTH_INDEX[m]>currentMonth,active=month===m;return <button key={m} disabled={future} onClick={()=>chooseMonth(m)} className={`min-w-11 rounded-[4px] border px-3 py-2 text-sm font-medium ${active?"text-[#0f172a]":future?"text-[#b8bec7]":"text-[#344054]"}`}>{m}</button>})}
+     {MONTHS.map(m=>{const future=m!=="Ano"&&year===currentYear&&MONTH_INDEX[m]>currentMonth,active=month===m;return <button key={m} disabled={future} onClick={()=>chooseMonth(m)} className={`min-w-11 rounded-[4px] border px-3 py-2 text-sm transition ${active?"bg-white font-semibold text-[#0f172a] shadow-[0_1px_2px_rgba(15,23,42,.08)]":"font-medium"} ${future?"text-[#b8bec7]":"text-[#344054]"}`}>{m}</button>})}
     </div>
     <button className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium"><CalendarDays className="h-4 w-4"/>Personalizado</button>
    </div>
