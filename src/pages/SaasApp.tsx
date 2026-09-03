@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BarChart3, Boxes, Building2, FileInput, FileText, FolderSearch2, Home, Menu, Package2, ReceiptText, Settings2, ShoppingBag, Truck, UsersRound, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -41,14 +41,24 @@ export default function SaasApp() {
   const [emissions, setEmissions] = useState<any[]>([]);
   const [planLabel, setPlanLabel] = useState("Plano fiscal");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [organizationChoices, setOrganizationChoices] = useState<any[]>([]);
+  const organizationRequest = useRef(0);
 
-  const loadOrg = async () => {
+  const loadOrg = async (preferredOrganizationId?: string) => {
     if (!user) return;
-    const { data } = await (supabase as any).from("organization_members").select("organization_id, organizations(id,name,slug)").eq("user_id", user.id).eq("status", "active").limit(1).maybeSingle();
-    const org = data?.organizations || (data?.organization_id ? { id: data.organization_id, name: "Empresa Teste" } : null);
+    const requestId = ++organizationRequest.current;
+    setEmissions([]); setProfile(null); setCertificateConfigured(false); setLogoUrl(null);
+    const { data } = await (supabase as any).from("organization_members").select("organization_id, organizations(id,name,slug)").eq("user_id", user.id).eq("status", "active");
+    if (requestId !== organizationRequest.current) return;
+    const choices = (data || []).map((row: any) => row.organizations || null).filter((value: any) => Boolean(value?.id));
+    setOrganizationChoices(choices);
+    const storedId = preferredOrganizationId || localStorage.getItem("ws_saas_selected_organization");
+    const org = choices.find((value: any) => value.id === storedId) || (choices.length === 1 ? choices[0] : null);
+    setOrganization(org);
+    if (!org?.id) { setPlanLabel("Plano fiscal"); return; }
+    localStorage.setItem("ws_saas_selected_organization", org.id);
     const testTransport = org?.id === TEST_TRANSPORT_ORG_ID;
-    setOrganization(org ? { ...org, name: testTransport ? TEST_TRANSPORT_ORG_NAME : org.name } : { name: "Empresa Teste" });
-    if (!org?.id) return;
+    setOrganization({ ...org, name: testTransport ? TEST_TRANSPORT_ORG_NAME : org.name });
     setSetupDismissed(localStorage.getItem(`ws_fiscal_setup_dismissed_${org.id}`) === "1");
     await supabase.functions.invoke("saas-sales-history-sync", { body: { organization_id: org.id, mode: "auto" } }).catch(() => null);
     const [{ data: config }, { data: e }, { data: s }] = await Promise.all([
@@ -56,6 +66,7 @@ export default function SaasApp() {
       (supabase as any).from("saas_fiscal_emissions").select("*").eq("organization_id", org.id).order("created_at", { ascending: false }).limit(800),
       (supabase as any).from("saas_subscriptions").select("status,saas_plans(name)").eq("organization_id", org.id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
     ]);
+    if (requestId !== organizationRequest.current) return;
     setEmissions(e || []);
     const p = config?.profile || null;
     setProfile(p);
@@ -104,7 +115,7 @@ export default function SaasApp() {
   return <div className="saas-admin-light min-h-screen bg-background text-foreground" style={lightVars}>
     <header className="saas-topbar fixed inset-x-0 top-0 z-[90] flex h-[72px] items-center border-b">
       <div className="saas-brand flex h-full w-72 shrink-0 items-center justify-center border-r px-5"><button type="button" className="saas-mobile-menu" aria-label="Abrir menu" aria-expanded={mobileMenuOpen} onClick={() => setMobileMenuOpen(true)}><Menu className="h-5 w-5" /></button><img src={WS_LOGO} alt="WS Gestão Contábil" className="h-7 object-contain" /></div>
-      <div className="saas-topbar-content flex min-w-0 flex-1 items-center px-6"><div className="saas-page-context flex-1"><p className="text-[10px] font-semibold uppercase tracking-[.12em]">WS Gestão Contábil</p><span>{active === "Emissão" && selectedDocument ? `Emissão de ${selectedDocument}` : active}</span></div><div className="saas-company-context min-w-0 flex-1 text-center"><p className="truncate text-sm font-medium">{organization?.name || "Sua empresa"}</p><p className="mt-0.5 text-[10px] uppercase tracking-[.12em]">Painel fiscal</p></div><div className="flex flex-1 justify-end"><AccountDrawer darkTrigger avatarUrl={logoUrl} accessLabel="Assinante do emissor fiscal" planLabel={planLabel} notifications={accountNotifications} usageRows={[{ label: "Notas emitidas", value: String(emissions.length) }, { label: "Organização", value: organization?.name || "Sua empresa" }]} /></div></div>
+      <div className="saas-topbar-content flex min-w-0 flex-1 items-center px-6"><div className="saas-page-context flex-1"><p className="text-[10px] font-semibold uppercase tracking-[.12em]">WS Gestão Contábil</p><span>{active === "Emissão" && selectedDocument ? `Emissão de ${selectedDocument}` : active}</span></div><div className="saas-company-context min-w-0 flex-1 text-center">{organizationChoices.length > 1 ? <select aria-label="Empresa selecionada" value={organization?.id || ""} onChange={(event) => void loadOrg(event.target.value)}><option value="" disabled>Selecione a empresa</option>{organizationChoices.map((choice: any) => <option key={choice.id} value={choice.id}>{choice.name}</option>)}</select> : <p className="truncate text-sm font-medium">{organization?.name || "Nenhuma empresa selecionada"}</p>}<p className="mt-0.5 text-[10px] uppercase tracking-[.12em]">Painel fiscal</p></div><div className="flex flex-1 justify-end"><AccountDrawer darkTrigger avatarUrl={logoUrl} accessLabel="Assinante do emissor fiscal" planLabel={planLabel} notifications={accountNotifications} usageRows={[{ label: "Notas emitidas", value: String(emissions.length) }, { label: "Organização", value: organization?.name || "Nenhuma empresa" }]} /></div></div>
     </header>
 
     {mobileMenuOpen && <button type="button" aria-label="Fechar menu" className="saas-sidebar-scrim" onClick={() => setMobileMenuOpen(false)} />}
