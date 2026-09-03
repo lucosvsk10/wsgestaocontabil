@@ -86,6 +86,7 @@ export default function SaasApp() {
   let content: any;
   if (active === "Início") content = <SaasDashboard organizationId={organization?.id || null} organizationName={organization?.name} emissions={emissions} onNew={() => { setSelectedDocument(null); setActive("Emissão"); }} onReports={() => setActive("Relatórios")} />;
   else if (active === "Produtos") content = <SaasProductsPremium organizationId={organization?.id || null} />;
+  else if (active === "Produtos") content = <SaasProductsPremium organizationId={organization?.id || null} />;
   else if (cadastroSections.has(active)) content = <SaasCadastros organizationId={organization?.id || null} section={active as CadastroSection} />;
   else if (active === "Emissão") content = <SaasEmission organizationId={organization?.id || null} documentType={selectedDocument} onChoose={setSelectedDocument} />;
   else if (active === "Gerenciar DF-e") content = <SaasDfeManager />;
