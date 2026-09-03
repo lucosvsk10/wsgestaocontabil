@@ -21,7 +21,13 @@ jobs:
         env:
           OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
         run: |
-          code=$(curl -sS -o /tmp/preview.json -w "%{http_code}" -H "Authorization: Bearer $OIDC_TOKEN" "https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/saas-nfse-raizemtec-preview-prepare-once")
+          code=$(curl -sS -o preview.json -w "%{http_code}" -H "Authorization: Bearer $OIDC_TOKEN" "https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/saas-nfse-raizemtec-preview-prepare-once")
           echo "Supabase preview HTTP $code"
           test "$code" = "200"
-# one-time trigger
+      - name: Upload private preview artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: raizemtec-nfse-preview
+          path: preview.json
+          retention-days: 1
+# one-time artifact trigger
