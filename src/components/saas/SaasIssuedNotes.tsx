@@ -39,8 +39,10 @@ export default function SaasIssuedNotes({emissions,onNew}:Props){
 
  return <div className="saas-issued-admin-clone w-full text-[#0f172a]">
   <style>{`
-   .saas-issued-admin-clone.saas-issued-admin-clone.saas-issued-admin-clone button{background-color:transparent!important;background-image:none!important;color:inherit!important;box-shadow:none!important}
-   .saas-issued-admin-clone.saas-issued-admin-clone.saas-issued-admin-clone button:hover:not(:disabled){background-color:rgba(255,255,255,.35)!important;background-image:none!important}
+   .saas-issued-admin-clone.saas-issued-admin-clone.saas-issued-admin-clone button{background-color:transparent!important;background-image:none!important;color:inherit!important;box-shadow:none!important;border-color:#d8dde3!important}
+   .saas-issued-admin-clone.saas-issued-admin-clone.saas-issued-admin-clone button:hover:not(:disabled){background-color:rgba(255,255,255,.35)!important;background-image:none!important;border-color:#c7ced6!important}
+   .saas-issued-admin-clone .filter-count{display:inline-flex;min-width:20px;height:20px;align-items:center;justify-content:center;border-radius:999px;background:#e7eaee;color:#667085;font-size:10px;font-weight:700;line-height:1;padding:0 6px}
+   .saas-issued-admin-clone .filter-active .filter-count{background:#dfe4e9;color:#344054}
    .saas-issued-admin-clone .row-a{background:#ffffff!important}
    .saas-issued-admin-clone .row-b{background:#ececeb!important}
    .saas-issued-admin-clone .note-row:hover{background:#e3e3e1!important}
@@ -52,18 +54,18 @@ export default function SaasIssuedNotes({emissions,onNew}:Props){
     <h1 className="mt-1 text-[24px] font-semibold leading-none tracking-tight">Notas Emitidas</h1>
     <p className="mt-2 text-sm text-[#657185]">Consulte documentos, arquivos fiscais e valores emitidos.</p>
    </div>
-   <button onClick={onNew} className="h-10 rounded-[4px] border border-[#bcc5cf] px-4 text-sm font-semibold text-[#172033]">Emitir nova nota</button>
+   <button onClick={onNew} className="h-10 rounded-[4px] border px-4 text-sm font-semibold text-[#172033]">Emitir nova nota</button>
   </section>
 
   <section className="relative mt-4 rounded-[4px] bg-[#ececea] px-4 py-3">
    <div className="flex flex-wrap items-center gap-2">
-    <button onClick={()=>changeYear(-1)} className="rounded px-2 py-1.5 text-[#667085]">‹</button>
+    <button onClick={()=>changeYear(-1)} className="rounded border px-2 py-1.5 text-[#667085]">‹</button>
     <span className="min-w-16 text-lg font-semibold">{year}</span>
-    <button disabled={year>=currentYear} onClick={()=>changeYear(1)} className="rounded px-2 py-1.5 text-[#667085] disabled:opacity-25">›</button>
+    <button disabled={year>=currentYear} onClick={()=>changeYear(1)} className="rounded border px-2 py-1.5 text-[#667085] disabled:opacity-25">›</button>
     <div className="ml-2 flex flex-1 flex-wrap gap-1">
-     {MONTHS.map(m=>{const future=m!=="Ano"&&year===currentYear&&MONTH_INDEX[m]>currentMonth,active=month===m;return <button key={m} disabled={future} onClick={()=>chooseMonth(m)} className={`min-w-11 rounded-[4px] border px-3 py-2 text-sm font-medium ${active?"border-[#aeb7c2] text-[#0f172a]":future?"border-transparent text-[#b8bec7]":"border-transparent text-[#344054]"}`}>{m}</button>})}
+     {MONTHS.map(m=>{const future=m!=="Ano"&&year===currentYear&&MONTH_INDEX[m]>currentMonth,active=month===m;return <button key={m} disabled={future} onClick={()=>chooseMonth(m)} className={`min-w-11 rounded-[4px] border px-3 py-2 text-sm font-medium ${active?"text-[#0f172a]":future?"text-[#b8bec7]":"text-[#344054]"}`}>{m}</button>})}
     </div>
-    <button className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium"><CalendarDays className="h-4 w-4"/>Personalizado</button>
+    <button className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium"><CalendarDays className="h-4 w-4"/>Personalizado</button>
    </div>
   </section>
 
@@ -76,8 +78,8 @@ export default function SaasIssuedNotes({emissions,onNew}:Props){
 
   <section className="mt-4 overflow-hidden rounded-[4px] bg-[#ececea]">
    <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-    <div className="flex flex-wrap items-center gap-1">
-     {TYPES.map(t=><button key={t} onClick={()=>toggleType(t)} className={`rounded-[4px] border px-3 py-1.5 text-xs font-medium ${typeFilter===t?"border-[#7e8997] text-[#0f172a]":"border-transparent text-[#475467]"}`}>{t} <b>{typeCounts[t]||0}</b></button>)}
+    <div className="flex flex-wrap items-center gap-2">
+     {TYPES.map(t=><button key={t} onClick={()=>toggleType(t)} className={`inline-flex items-center gap-2 rounded-[4px] border px-3 py-1.5 text-xs font-medium text-[#475467] ${typeFilter===t?"filter-active text-[#0f172a]":""}`}><span>{t}</span><span className="filter-count">{typeCounts[t]||0}</span></button>)}
     </div>
     <span className="text-xs text-[#667085]">{periodDocs.length} nota{periodDocs.length===1?"":"s"} no período</span>
    </div>
@@ -87,7 +89,7 @@ export default function SaasIssuedNotes({emissions,onNew}:Props){
      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#98a2b3]"/>
      <input value={query} onChange={e=>{setQuery(e.target.value);setPage(1)}} placeholder="Buscar por número, chave, razão social, CNPJ, tipo ou situação..." className="h-10 w-full rounded-[4px] border border-[#d5d8dc] bg-transparent pl-10 pr-3 text-sm outline-none placeholder:text-[#98a2b3]"/>
     </div>
-    <button className="inline-flex h-10 items-center justify-center gap-2 rounded-[4px] border border-[#bcc5cf] px-4 text-xs font-semibold"><Download className="h-4 w-4"/>Download</button>
+    <button className="inline-flex h-10 items-center justify-center gap-2 rounded-[4px] border px-4 text-xs font-semibold"><Download className="h-4 w-4"/>Download</button>
    </div>
 
    <div className="overflow-x-auto">
@@ -102,18 +104,18 @@ export default function SaasIssuedNotes({emissions,onNew}:Props){
       <td className="px-4 py-3.5 align-middle"><div className="truncate font-medium">{item.recipient_name||"Sem destinatário"}</div><div className="mt-0.5 truncate text-[10px] text-[#667085]">{item.recipient_tax_id||"Documento não informado"}</div></td>
       <td className="px-4 py-3.5 align-middle"><div className="truncate">{itemName(item)}</div><div className="mt-0.5 text-[10px] text-[#667085]">{typeLabel(item)} · {statusLabel(item.status)}</div></td>
       <td className="px-4 py-3.5 text-right align-middle font-semibold">{money(Number(item.total||0))}</td>
-      <td className="px-4 py-3.5 align-middle" onClick={e=>e.stopPropagation()}><div className="flex justify-end whitespace-nowrap"><button onClick={()=>openPreview(item)} className="inline-flex h-8 items-center gap-2 rounded-[4px] border border-transparent px-2 text-xs font-semibold text-[#172033]"><FileText className="h-3.5 w-3.5"/>Visualizar</button></div></td>
+      <td className="px-4 py-3.5 align-middle" onClick={e=>e.stopPropagation()}><div className="flex justify-end whitespace-nowrap"><button onClick={()=>openPreview(item)} className="inline-flex h-8 items-center gap-2 rounded-[4px] border px-2 text-xs font-semibold text-[#172033]"><FileText className="h-3.5 w-3.5"/>Visualizar</button></div></td>
      </tr>})}{!pageDocs.length&&<tr className="row-a"><td colSpan={6} className="h-44 text-center text-sm text-[#667085]">Nenhuma nota encontrada neste período.</td></tr>}</tbody>
     </table>
    </div>
 
    <div className="flex items-center justify-between border-t border-[#d7d9dc] px-4 py-3 text-xs text-[#667085]">
     <span>{filtered.length?`${(safePage-1)*PAGE_SIZE+1}–${Math.min(safePage*PAGE_SIZE,filtered.length)} de ${filtered.length}`:"0 documento(s)"}</span>
-    <div className="flex items-center"><button disabled={safePage<=1} onClick={()=>setPage(p=>Math.max(1,p-1))} className="rounded px-3 py-2 disabled:opacity-25">‹</button><span className="px-2">{safePage} / {totalPages}</span><button disabled={safePage>=totalPages} onClick={()=>setPage(p=>Math.min(totalPages,p+1))} className="rounded px-3 py-2 disabled:opacity-25">›</button></div>
+    <div className="flex items-center gap-1"><button disabled={safePage<=1} onClick={()=>setPage(p=>Math.max(1,p-1))} className="rounded border px-3 py-2 disabled:opacity-25">‹</button><span className="px-2">{safePage} / {totalPages}</span><button disabled={safePage>=totalPages} onClick={()=>setPage(p=>Math.min(totalPages,p+1))} className="rounded border px-3 py-2 disabled:opacity-25">›</button></div>
    </div>
   </section>
 
-  {selected&&<div className="fixed inset-0 z-[200] flex items-center justify-center bg-[#d9e0e8]/55 p-6 backdrop-blur-[20px]" onMouseDown={e=>{if(e.target===e.currentTarget)setSelected(null)}}><div className="flex h-[min(900px,calc(100vh-48px))] w-[min(1160px,calc(100vw-48px))] flex-col overflow-hidden rounded-lg border border-white bg-white shadow-[0_26px_80px_rgba(28,42,58,.20)]"><div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-[#d5dce4] bg-white px-5 py-3"><div><p className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#7b8492]">{typeLabel(selected)} · Nº {selected.number||"—"} · Série {selected.series||"—"}</p><h3 className="mt-1 text-lg font-semibold">{previewMode==="receipt"?"Visualização em notinha":"Visualização do DANFE"}</h3></div><div className="flex flex-wrap gap-2"><button onClick={()=>setPreviewMode(previewMode==="danfe"?"receipt":"danfe")} className="rounded border border-[#cbd3dc] px-3 py-2 text-xs font-semibold">{previewMode==="danfe"?"Ver notinha":"Ver DANFE"}</button><button onClick={()=>printDanfe(`issued-doc-${selected.id}`,`${typeLabel(selected)}-${selected.number}`)} className="rounded border border-[#cbd3dc] px-3 py-2 text-xs font-semibold">Imprimir / salvar PDF</button>{selected.xml&&<button onClick={()=>downloadXml(selected)} className="rounded border border-[#cbd3dc] px-3 py-2 text-xs font-semibold">Baixar XML</button>}<button onClick={()=>setSelected(null)} className="rounded border border-[#cbd3dc] px-3 py-2 text-xs font-semibold">Fechar</button></div></div><div className="min-h-0 flex-1 overflow-auto bg-[#f6f8fa] p-6"><div className="mx-auto flex min-h-full w-full items-start justify-center"><SaasDanfePreview id={`issued-doc-${selected.id}`} documentType={typeLabel(selected)} environment={selected.environment||"homologation"} emission={selected} mode={previewMode}/></div></div></div></div>}
+  {selected&&<div className="fixed inset-0 z-[200] flex items-center justify-center bg-[#d9e0e8]/55 p-6 backdrop-blur-[20px]" onMouseDown={e=>{if(e.target===e.currentTarget)setSelected(null)}}><div className="flex h-[min(900px,calc(100vh-48px))] w-[min(1160px,calc(100vw-48px))] flex-col overflow-hidden rounded-lg border border-white bg-white shadow-[0_26px_80px_rgba(28,42,58,.20)]"><div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-[#d5dce4] bg-white px-5 py-3"><div><p className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#7b8492]">{typeLabel(selected)} · Nº {selected.number||"—"} · Série {selected.series||"—"}</p><h3 className="mt-1 text-lg font-semibold">{previewMode==="receipt"?"Visualização em notinha":"Visualização do DANFE"}</h3></div><div className="flex flex-wrap gap-2"><button onClick={()=>setPreviewMode(previewMode==="danfe"?"receipt":"danfe")} className="rounded border px-3 py-2 text-xs font-semibold">{previewMode==="danfe"?"Ver notinha":"Ver DANFE"}</button><button onClick={()=>printDanfe(`issued-doc-${selected.id}`,`${typeLabel(selected)}-${selected.number}`)} className="rounded border px-3 py-2 text-xs font-semibold">Imprimir / salvar PDF</button>{selected.xml&&<button onClick={()=>downloadXml(selected)} className="rounded border px-3 py-2 text-xs font-semibold">Baixar XML</button>}<button onClick={()=>setSelected(null)} className="rounded border px-3 py-2 text-xs font-semibold">Fechar</button></div></div><div className="min-h-0 flex-1 overflow-auto bg-[#f6f8fa] p-6"><div className="mx-auto flex min-h-full w-full items-start justify-center"><SaasDanfePreview id={`issued-doc-${selected.id}`} documentType={typeLabel(selected)} environment={selected.environment||"homologation"} emission={selected} mode={previewMode}/></div></div></div></div>}
  </div>;
 }
 
