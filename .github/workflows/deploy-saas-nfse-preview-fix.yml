@@ -20,3 +20,4 @@ jobs:
           test -n "$SUPABASE_PROJECT_REF" || (echo "Missing SUPABASE_PROJECT_REF" && exit 1)
       - name: Deploy SaaS NFS-e function
         run: npx --yes supabase@latest functions deploy saas-nfse-issue --project-ref "$SUPABASE_PROJECT_REF"
+# SaaS-only deployment trigger
