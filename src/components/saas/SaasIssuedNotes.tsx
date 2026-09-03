@@ -18,7 +18,7 @@ export default function SaasIssuedNotes({emissions,onNew}:Props){
  const [year,setYear]=useState(now.getFullYear());
  const [month,setMonth]=useState<number|null>(now.getMonth());
  const [query,setQuery]=useState("");
- const [tab,setTab]=useState("Todas");
+ const [tab,setTab]=useState("");
  const [selected,setSelected]=useState<any>(null);
  const [previewMode,setPreviewMode]=useState<PreviewMode>("danfe");
  const [page,setPage]=useState(1);
@@ -29,27 +29,20 @@ export default function SaasIssuedNotes({emissions,onNew}:Props){
  const pending=scoped.filter(x=>x.status==="draft"||x.status==="validated");
  const revenue=authorized.reduce((sum:number,x:any)=>sum+Number(x.total||0),0);
  const typeCounts=useMemo(()=>["NF-e","NFC-e","NFS-e","CT-e","MDF-e"].map(name=>({name,count:scoped.filter(x=>typeLabel(x)===name).length})),[scoped]);
- const tabs=[
-  {label:"Todas",count:scoped.length},
-  {label:"Autorizadas",count:authorized.length},
-  {label:"Rascunhos",count:scoped.filter(x=>x.status==="draft").length},
-  {label:"Em andamento",count:scoped.filter(x=>x.status==="validated").length},
-  {label:"Canceladas",count:cancelled.length},
-  ...typeCounts,
- ];
+ const tabs=typeCounts;
  const rows=useMemo(()=>scoped.filter((item:any)=>{
   const q=query.trim().toLowerCase();
   const text=[item.number,item.series,item.recipient_name,item.recipient_tax_id,item.access_key,itemName(item),typeLabel(item),statusLabel(item.status)].map(v=>String(v||"").toLowerCase()).join(" ");
   const matchesQuery=!q||text.includes(q);
-  const matchesTab=tab==="Todas"||(tab==="Autorizadas"&&item.status==="authorized")||(tab==="Rascunhos"&&item.status==="draft")||(tab==="Em andamento"&&item.status==="validated")||(tab==="Canceladas"&&(item.status==="cancelled"||Boolean(item.cancelled_at)))||typeLabel(item)===tab;
+  const matchesTab=!tab||typeLabel(item)===tab;
   return matchesQuery&&matchesTab;
  }),[scoped,query,tab]);
  const pages=Math.max(1,Math.ceil(rows.length/PAGE_SIZE));
  const safePage=Math.min(page,pages);
  const visibleRows=rows.slice((safePage-1)*PAGE_SIZE,safePage*PAGE_SIZE);
- const chooseTab=(v:string)=>{setTab(v);setPage(1)};
- const moveYear=(delta:number)=>{setYear(y=>y+delta);setPage(1)};
- const chooseMonth=(value:number|null)=>{setMonth(value);setPage(1)};
+ const chooseTab=(v:string)=>{setTab(current=>current===v?"":v);setPage(1)};
+ const moveYear=(delta:number)=>{setYear(y=>Math.min(now.getFullYear(),y+delta));setPage(1)};
+ const chooseMonth=(value:number|null)=>{if(value!==null&&year===now.getFullYear()&&value>now.getMonth())return;setMonth(value);setPage(1)};
  const openPreview=(item:any)=>{setSelected(item);setPreviewMode("danfe")};
 
  return <div className="w-full space-y-3 text-[#0f172a]">
@@ -62,10 +55,10 @@ export default function SaasIssuedNotes({emissions,onNew}:Props){
    <div className="flex flex-wrap items-center gap-1.5">
     <button onClick={()=>moveYear(-1)} className="grid h-9 w-9 place-items-center rounded-lg text-[#64748b] hover:bg-[#f3f6f9]">‹</button>
     <span className="min-w-[64px] px-1 text-lg font-semibold text-[#0f172a]">{year}</span>
-    <button onClick={()=>moveYear(1)} className="mr-3 grid h-9 w-9 place-items-center rounded-lg text-[#64748b] hover:bg-[#f3f6f9]">›</button>
-    <button onClick={()=>chooseMonth(null)} className={`min-w-11 rounded-lg px-3 py-2 text-sm font-medium transition ${month===null?"bg-[#eef3f8] text-[#0f172a] shadow-sm":"text-[#475569] hover:bg-[#f5f7fa]"}`}>Ano</button>
-    {MONTHS.map((m,i)=><button key={m} onClick={()=>chooseMonth(i)} className={`min-w-11 rounded-lg px-3 py-2 text-sm font-medium transition ${month===i?"bg-[#eef3f8] text-[#0f172a] shadow-sm":"text-[#475569] hover:bg-[#f5f7fa]"}`}>{m}</button>)}
-    <button className="ml-auto inline-flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-medium text-[#475569] hover:bg-[#f5f7fa]"><CalendarDays className="h-4 w-4"/>Personalizado</button>
+    <button disabled={year>=now.getFullYear()} onClick={()=>moveYear(1)} className="mr-3 grid h-9 w-9 place-items-center rounded-lg text-[#64748b] hover:bg-[#f3f6f9] disabled:cursor-default disabled:opacity-25">›</button>
+    <button onClick={()=>chooseMonth(null)} className={`px-3 py-2 text-sm font-medium transition ${month===null?"text-[#0f172a] underline decoration-[#1597c8] decoration-2 underline-offset-[10px]":"text-[#475569] hover:text-[#0f172a]"}`}>Ano</button>
+    {MONTHS.map((m,i)=>{const future=year===now.getFullYear()&&i>now.getMonth();return <button key={m} disabled={future} onClick={()=>chooseMonth(i)} className={`px-3 py-2 text-sm font-medium transition ${future?"cursor-default text-[#c5ccd5]":month===i?"text-[#0f172a] underline decoration-[#1597c8] decoration-2 underline-offset-[10px]":"text-[#475569] hover:text-[#0f172a]"}`}>{m}</button>})}
+    <button className="ml-auto inline-flex h-9 items-center gap-2 rounded-lg border border-[#d9e0e8] bg-transparent px-3 text-sm font-semibold text-[#475569] transition hover:bg-[#f8fafc]"><CalendarDays className="h-4 w-4"/>Personalizado</button>
    </div>
   </section>
 
@@ -78,19 +71,19 @@ export default function SaasIssuedNotes({emissions,onNew}:Props){
 
   <section className="overflow-hidden rounded-2xl bg-white shadow-[0_1px_2px_rgba(15,23,42,.04)] ring-1 ring-[#e7ebf0]">
    <div className="flex flex-wrap items-center gap-2 px-4 py-3">
-    {tabs.map(t=><button key={t.label} onClick={()=>chooseTab(t.label)} className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${tab===t.label?"bg-[#e7f4fb] text-[#0877a8]":"bg-[#f4f6f8] text-[#526173] hover:bg-[#edf1f5]"}`}>{t.label} <b>{t.count}</b></button>)}
+    {tabs.map(t=><button key={t.name} onClick={()=>chooseTab(t.name)} className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${tab===t.name?"border-[#8fc7df] bg-transparent text-[#0877a8]":"border-[#d9e0e8] bg-transparent text-[#526173] hover:border-[#b8c5d1] hover:text-[#0f172a]"}`}>{t.name} <b>{t.count}</b></button>)}
    </div>
 
    <div className="flex items-center gap-2 px-4 pb-3">
     <div className="relative flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94a3b8]"/><input value={query} onChange={e=>{setQuery(e.target.value);setPage(1)}} placeholder="Buscar por número, chave, razão social, CNPJ, produto ou situação..." className="h-10 w-full rounded-lg border border-[#e1e7ee] bg-[#f8fafc] pl-10 pr-3 text-sm text-[#0f172a] outline-none placeholder:text-[#94a3b8] focus:border-[#8fc7df] focus:bg-white"/></div>
-    <button className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-[#d9e0e8] bg-white px-4 text-xs font-semibold text-[#0f172a] shadow-sm hover:bg-[#f8fafc]"><Download className="h-4 w-4"/>Download</button>
+    <button className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-[#d9e0e8] bg-transparent px-4 text-xs font-semibold text-[#0f172a] shadow-sm transition hover:bg-[#f8fafc]"><Download className="h-4 w-4"/>Download</button>
    </div>
 
    <div className="overflow-x-auto">
     <table className="w-full min-w-[1050px] table-fixed text-left text-sm">
      <colgroup><col className="w-[13%]"/><col className="w-[23%]"/><col className="w-[24%]"/><col className="w-[22%]"/><col className="w-[10%]"/><col className="w-[8%]"/></colgroup>
      <thead className="border-y border-[#e7ebf0] bg-[#f8fafc] text-[10px] uppercase tracking-[.06em] text-[#64748b]"><tr><th className="px-4 py-3">Emissão</th><th className="px-4 py-3">Nota / Chave</th><th className="px-4 py-3">Destinatário / Emitente</th><th className="px-4 py-3">Operação</th><th className="px-4 py-3 text-right">Valor</th><th className="px-4 py-3 text-right">Ações</th></tr></thead>
-     <tbody>{visibleRows.map((item:any,index:number)=>{const d=new Date(item.external_issue_date||item.created_at||0);return <tr key={item.id||index} onClick={()=>openPreview(item)} className={`cursor-pointer border-b border-[#edf0f3] transition-colors ${index%2===0?"bg-white":"bg-[#fbfcfd]"} hover:bg-[#f1f6fa]`}>
+     <tbody>{visibleRows.map((item:any,index:number)=>{const d=new Date(item.external_issue_date||item.created_at||0);return <tr key={item.id||index} onClick={()=>openPreview(item)} className={`cursor-pointer border-b border-[#edf0f3] transition-colors ${index%2===0?"bg-white":"bg-[#f2f5f8]"} hover:bg-[#eaf1f6]`}>
       <td className="px-4 py-3.5 align-middle"><div className="font-semibold text-[#0f172a]">{d.toLocaleDateString("pt-BR")}</div><div className="mt-0.5 text-[10px] text-[#64748b]">{d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</div></td>
       <td className="px-4 py-3.5 align-middle"><div className="flex flex-wrap items-center gap-2"><span className="font-semibold text-[#0f172a]">{item.number||"—"}</span><span className="text-[10px] text-[#64748b]">/ {item.series||"—"}</span><TypeBadge value={typeLabel(item)}/><Status value={String(item.status||"draft")}/></div><div className="mt-1 max-w-full truncate text-[9px] text-[#94a3b8]">{item.access_key||"Chave não informada"}</div></td>
       <td className="px-4 py-3.5 align-middle"><div className="truncate font-medium text-[#253349]">{item.recipient_name||"Sem destinatário"}</div><div className="mt-0.5 truncate text-[10px] text-[#64748b]">{item.recipient_tax_id||"Documento não informado"}</div></td>
