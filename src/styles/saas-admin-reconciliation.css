@@ -187,3 +187,34 @@
  .saas-admin-light>aside>div:first-of-type{padding-top:56px!important}
  .saas-main-content{padding-left:0!important;padding-top:60px!important}.saas-main-content>div{padding:18px 12px 40px!important}
 }
+
+/* Final contrast and density pass, verified against the live light interface. */
+.saas-admin-light{--ca-bg:#f1f3f5!important;--ca-card:#fff!important;background:#f1f3f5!important}
+.saas-main-content{background:#f1f3f5!important}
+.saas-main-content section[class*="border"],
+.saas-main-content div[class*="border"][class*="bg-white"],
+.saas-main-content .bg-card,
+.saas-main-content .ca-form-section,
+.saas-main-content .ca-actions,
+.saas-main-content .ca-preview,
+.saas-main-content .ca-tabs,
+.saas-main-content .ca-doc-choice,
+.saas-main-content .saas-emission-history,
+.saas-main-content .saas-issued-notes{background:#fff!important;border-color:#d8dde3!important}
+.saas-dashboard .bg-card,.saas-dashboard [class*="!bg-white"]{background:#fff!important}
+.saas-dashboard .bg-card p,.saas-dashboard [class*="!bg-white"] p{color:#344054!important}
+.saas-dashboard .bg-card p[class*="text-muted"],.saas-dashboard [class*="!bg-white"] p[class*="text-muted"]{color:#667085!important}
+.saas-dashboard .bg-card p[class*="text-2xl"],.saas-dashboard .bg-card p[class*="text-[21px]"]{color:#172033!important}
+.saas-main-content .ca-section-head,.saas-main-content .ca-preview-head,.saas-main-content table thead{background:#f7f8fa!important}
+.saas-main-content table{background:#fff!important}.saas-main-content table tbody tr:nth-child(odd){background:#fff!important}.saas-main-content table tbody tr:nth-child(even){background:#f7f8fa!important}.saas-main-content table tbody tr:hover{background:#eef2f5!important}
+.saas-admin-light button:focus-visible,.saas-admin-light a:focus-visible,.saas-admin-light input:focus-visible,.saas-admin-light select:focus-visible,.saas-admin-light textarea:focus-visible{outline:2px solid #667085!important;outline-offset:2px!important}
+
+@media(max-width:640px){
+ .saas-main-content h1{font-size:22px!important}.saas-main-content h1+p{font-size:12px!important;line-height:1.55!important}
+ .saas-main-content [class*="grid-cols-[minmax"]{grid-template-columns:1fr!important}
+ .saas-register-layout{grid-template-columns:1fr!important}.saas-register-list,.saas-register-drawer{min-width:0!important}
+ .saas-register-list>div:first-child{align-items:stretch!important}.saas-register-list>div:first-child>div:last-child{max-width:none!important}
+ .saas-issued-notes table,.saas-emission-history table{min-width:920px!important}
+ .saas-main-content .ca-section-body{padding:14px!important}.saas-main-content .ca-actions{position:sticky!important;bottom:0!important;z-index:10!important;flex-wrap:wrap!important;padding:10px!important}
+ .saas-main-content .ca-actions button{flex:1 1 120px!important}
+}
