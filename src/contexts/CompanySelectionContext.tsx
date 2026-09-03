@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 export type OfficeCompanySelection = {
   id: string;
@@ -57,6 +58,19 @@ function resolveFiscalCompanyId(company: OfficeCompanySelection, fiscalRows: Fis
   return byAlias.length === 1 ? byAlias[0].id : null;
 }
 
+function clearCompatibility() {
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem('ws_office_client_company_id');
+  localStorage.removeItem('ws-accounting-company-id');
+  localStorage.removeItem('ws-accounting-company');
+  localStorage.removeItem('ws_company_legal_name');
+  localStorage.removeItem('ws_company_trade_name');
+  localStorage.removeItem('ws_fiscal_company_id');
+  localStorage.removeItem('ws_fiscal_company_name');
+  localStorage.removeItem('ws_fiscal_company_trade_name');
+  localStorage.removeItem('ws_portal_user_id');
+}
+
 function persistCompatibility(company: OfficeCompanySelection | null) {
   if (!company) return;
   localStorage.setItem(STORAGE_KEY, company.id);
@@ -88,11 +102,23 @@ function persistCompatibility(company: OfficeCompanySelection | null) {
 }
 
 export function CompanySelectionProvider({ children }: { children: React.ReactNode }) {
+  const { session, isLoading: authLoading } = useAuth();
   const [companies, setCompanies] = useState<OfficeCompanySelection[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState(() => localStorage.getItem(STORAGE_KEY) || localStorage.getItem('ws_office_client_company_id') || '');
   const [loading, setLoading] = useState(true);
 
   const refreshCompanies = useCallback(async () => {
+    if (authLoading) {
+      setLoading(true);
+      return;
+    }
+    if (!session?.user) {
+      setCompanies([]);
+      setSelectedCompanyId('');
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       const companiesResult = await supabase
@@ -102,7 +128,6 @@ export function CompanySelectionProvider({ children }: { children: React.ReactNo
 
       if (companiesResult.error) {
         console.error('[CompanySelection] Falha ao carregar empresas:', companiesResult.error);
-        setCompanies([]);
         return;
       }
 
@@ -152,26 +177,33 @@ export function CompanySelectionProvider({ children }: { children: React.ReactNo
       setCompanies(next);
 
       const savedId = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('ws_office_client_company_id') || '';
-      const selected = next.find(company => company.id === savedId) || next[0] || null;
+      const selected = next.find(company => company.id === savedId) || null;
       if (selected) {
         setSelectedCompanyId(selected.id);
         persistCompatibility(selected);
       } else {
         setSelectedCompanyId('');
+        clearCompatibility();
       }
     } catch (error) {
       console.error('[CompanySelection] Erro inesperado:', error);
     } finally {
       setLoading(false);
     }
-  }, []);
-
-  useEffect(() => { void refreshCompanies(); }, [refreshCompanies]);
+  }, [authLoading, session?.user?.id]);
 
   useEffect(() => {
-    const refresh = () => { void refreshCompanies(); };
+    if (!authLoading) void refreshCompanies();
+  }, [authLoading, session?.user?.id, refreshCompanies]);
+
+  useEffect(() => {
+    if (authLoading || !session?.user) return;
+    const refresh = () => {
+      if (document.visibilityState === 'hidden') return;
+      void refreshCompanies();
+    };
     const channel = supabase
-      .channel('ws-admin-company-selection-live')
+      .channel(`ws-admin-company-selection-live-${session.user.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'companies' }, refresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'fiscal_companies' }, refresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'fiscal_certificates' }, refresh)
@@ -184,10 +216,10 @@ export function CompanySelectionProvider({ children }: { children: React.ReactNo
       document.removeEventListener('visibilitychange', refresh);
       void supabase.removeChannel(channel);
     };
-  }, [refreshCompanies]);
+  }, [authLoading, session?.user?.id, refreshCompanies]);
 
   const selectedCompany = useMemo(
-    () => companies.find(company => company.id === selectedCompanyId) || companies[0] || null,
+    () => companies.find(company => company.id === selectedCompanyId) || null,
     [companies, selectedCompanyId],
   );
 
