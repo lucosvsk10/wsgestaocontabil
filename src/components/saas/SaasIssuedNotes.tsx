@@ -45,10 +45,17 @@ export default function SaasIssuedNotes({emissions,onNew}:Props){
  const chooseMonth=(value:number|null)=>{if(value!==null&&year===now.getFullYear()&&value>now.getMonth())return;setMonth(value);setPage(1)};
  const openPreview=(item:any)=>{setSelected(item);setPreviewMode("danfe")};
 
- return <div className="w-full space-y-3 text-[#0f172a]">
+ return <div className="saas-issued-notes w-full space-y-3 text-[#0f172a]">
+  <style>{`
+   .saas-issued-notes button { background-color: transparent !important; color: #334155 !important; }
+   .saas-issued-notes button:hover:not(:disabled) { background-color: #f8fafc !important; }
+   .saas-issued-notes tbody tr:nth-child(odd) { background-color: #ffffff !important; }
+   .saas-issued-notes tbody tr:nth-child(even) { background-color: #eef2f6 !important; }
+   .saas-issued-notes tbody tr:hover { background-color: #e6eef5 !important; }
+  `}</style>
   <header className="flex flex-col gap-4 rounded-2xl bg-white px-5 py-4 shadow-[0_1px_2px_rgba(15,23,42,.05)] ring-1 ring-[#e7ebf0] lg:flex-row lg:items-center lg:justify-between">
    <div><p className="text-[10px] font-semibold uppercase tracking-[.14em] text-[#64748b]">Emissão fiscal</p><h1 className="mt-1 text-2xl font-semibold tracking-tight text-[#0f172a]">Notas Emitidas</h1><p className="mt-1 text-sm text-[#64748b]">Consulte documentos, arquivos fiscais e valores emitidos.</p></div>
-   <button onClick={onNew} className="h-10 rounded-lg border border-[#d9e0e8] bg-white px-4 text-sm font-semibold text-[#0f172a] shadow-sm transition hover:bg-[#f8fafc]">Emitir nova nota</button>
+   <button onClick={onNew} className="h-10 rounded-lg border border-[#d9e0e8] !bg-transparent px-4 text-sm font-semibold !text-[#334155] shadow-sm transition hover:!bg-[#f8fafc]">Emitir nova nota</button>
   </header>
 
   <section className="rounded-2xl bg-white px-4 py-3 shadow-[0_1px_2px_rgba(15,23,42,.04)] ring-1 ring-[#e7ebf0]">
@@ -58,7 +65,7 @@ export default function SaasIssuedNotes({emissions,onNew}:Props){
     <button disabled={year>=now.getFullYear()} onClick={()=>moveYear(1)} className="mr-3 grid h-9 w-9 place-items-center rounded-lg text-[#64748b] hover:bg-[#f3f6f9] disabled:cursor-default disabled:opacity-25">›</button>
     <button onClick={()=>chooseMonth(null)} className={`px-3 py-2 text-sm font-medium transition ${month===null?"text-[#0f172a] underline decoration-[#1597c8] decoration-2 underline-offset-[10px]":"text-[#475569] hover:text-[#0f172a]"}`}>Ano</button>
     {MONTHS.map((m,i)=>{const future=year===now.getFullYear()&&i>now.getMonth();return <button key={m} disabled={future} onClick={()=>chooseMonth(i)} className={`px-3 py-2 text-sm font-medium transition ${future?"cursor-default text-[#c5ccd5]":month===i?"text-[#0f172a] underline decoration-[#1597c8] decoration-2 underline-offset-[10px]":"text-[#475569] hover:text-[#0f172a]"}`}>{m}</button>})}
-    <button className="ml-auto inline-flex h-9 items-center gap-2 rounded-lg border border-[#d9e0e8] bg-transparent px-3 text-sm font-semibold text-[#475569] transition hover:bg-[#f8fafc]"><CalendarDays className="h-4 w-4"/>Personalizado</button>
+    <button className="ml-auto inline-flex h-9 items-center gap-2 rounded-lg border border-[#d9e0e8] !bg-transparent px-3 text-sm font-semibold text-[#475569] transition hover:bg-[#f8fafc]"><CalendarDays className="h-4 w-4"/>Personalizado</button>
    </div>
   </section>
 
@@ -71,25 +78,25 @@ export default function SaasIssuedNotes({emissions,onNew}:Props){
 
   <section className="overflow-hidden rounded-2xl bg-white shadow-[0_1px_2px_rgba(15,23,42,.04)] ring-1 ring-[#e7ebf0]">
    <div className="flex flex-wrap items-center gap-2 px-4 py-3">
-    {tabs.map(t=><button key={t.name} onClick={()=>chooseTab(t.name)} className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${tab===t.name?"border-[#8fc7df] bg-transparent text-[#0877a8]":"border-[#d9e0e8] bg-transparent text-[#526173] hover:border-[#b8c5d1] hover:text-[#0f172a]"}`}>{t.name} <b>{t.count}</b></button>)}
+    {tabs.map(t=><button key={t.name} onClick={()=>chooseTab(t.name)} className={`rounded-lg border !bg-transparent px-3 py-1.5 text-xs font-semibold transition ${tab===t.name?"border-[#8fc7df] bg-transparent text-[#0877a8]":"border-[#d9e0e8] bg-transparent text-[#526173] hover:border-[#b8c5d1] hover:text-[#0f172a]"}`}>{t.name} <b>{t.count}</b></button>)}
    </div>
 
    <div className="flex items-center gap-2 px-4 pb-3">
     <div className="relative flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94a3b8]"/><input value={query} onChange={e=>{setQuery(e.target.value);setPage(1)}} placeholder="Buscar por número, chave, razão social, CNPJ, produto ou situação..." className="h-10 w-full rounded-lg border border-[#e1e7ee] bg-[#f8fafc] pl-10 pr-3 text-sm text-[#0f172a] outline-none placeholder:text-[#94a3b8] focus:border-[#8fc7df] focus:bg-white"/></div>
-    <button className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-[#d9e0e8] bg-transparent px-4 text-xs font-semibold text-[#0f172a] shadow-sm transition hover:bg-[#f8fafc]"><Download className="h-4 w-4"/>Download</button>
+    <button className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-[#d9e0e8] !bg-transparent px-4 text-xs font-semibold text-[#0f172a] shadow-sm transition hover:bg-[#f8fafc]"><Download className="h-4 w-4"/>Download</button>
    </div>
 
    <div className="overflow-x-auto">
     <table className="w-full min-w-[1050px] table-fixed text-left text-sm">
-     <colgroup><col className="w-[13%]"/><col className="w-[23%]"/><col className="w-[24%]"/><col className="w-[22%]"/><col className="w-[10%]"/><col className="w-[8%]"/></colgroup>
+     <colgroup><col className="w-[12%]"/><col className="w-[22%]"/><col className="w-[22%]"/><col className="w-[18%]"/><col className="w-[12%]"/><col className="w-[14%]"/></colgroup>
      <thead className="border-y border-[#e7ebf0] bg-[#f8fafc] text-[10px] uppercase tracking-[.06em] text-[#64748b]"><tr><th className="px-4 py-3">Emissão</th><th className="px-4 py-3">Nota / Chave</th><th className="px-4 py-3">Destinatário / Emitente</th><th className="px-4 py-3">Operação</th><th className="px-4 py-3 text-right">Valor</th><th className="px-4 py-3 text-right">Ações</th></tr></thead>
-     <tbody>{visibleRows.map((item:any,index:number)=>{const d=new Date(item.external_issue_date||item.created_at||0);return <tr key={item.id||index} onClick={()=>openPreview(item)} className={`cursor-pointer border-b border-[#edf0f3] transition-colors ${index%2===0?"bg-white":"bg-[#f2f5f8]"} hover:bg-[#eaf1f6]`}>
+     <tbody>{visibleRows.map((item:any,index:number)=>{const d=new Date(item.external_issue_date||item.created_at||0);return <tr key={item.id||index} onClick={()=>openPreview(item)} style={{backgroundColor:index%2===0?"#ffffff":"#eef2f6"}} className="cursor-pointer border-b border-[#dfe5eb] transition-colors">
       <td className="px-4 py-3.5 align-middle"><div className="font-semibold text-[#0f172a]">{d.toLocaleDateString("pt-BR")}</div><div className="mt-0.5 text-[10px] text-[#64748b]">{d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</div></td>
       <td className="px-4 py-3.5 align-middle"><div className="flex flex-wrap items-center gap-2"><span className="font-semibold text-[#0f172a]">{item.number||"—"}</span><span className="text-[10px] text-[#64748b]">/ {item.series||"—"}</span><TypeBadge value={typeLabel(item)}/><Status value={String(item.status||"draft")}/></div><div className="mt-1 max-w-full truncate text-[9px] text-[#94a3b8]">{item.access_key||"Chave não informada"}</div></td>
       <td className="px-4 py-3.5 align-middle"><div className="truncate font-medium text-[#253349]">{item.recipient_name||"Sem destinatário"}</div><div className="mt-0.5 truncate text-[10px] text-[#64748b]">{item.recipient_tax_id||"Documento não informado"}</div></td>
       <td className="px-4 py-3.5 align-middle"><div className="truncate text-[#253349]">{itemName(item)}</div><div className="mt-0.5 text-[10px] text-[#64748b]">{item.source==="imported"?"Documento extraído":"Emitida pelo SaaS"}</div></td>
       <td className="px-4 py-3.5 text-right align-middle font-semibold text-[#0f172a]">{money(Number(item.total||0))}</td>
-      <td className="px-4 py-3.5 align-middle" onClick={e=>e.stopPropagation()}><div className="flex justify-end gap-1"><button onClick={()=>openPreview(item)} className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-[#334155] hover:bg-[#eef3f8]"><FileText className="h-3.5 w-3.5"/>Visualizar</button>{item.xml&&<button onClick={()=>downloadXml(item)} className="rounded-lg px-2 py-1.5 text-[10px] font-semibold text-[#334155] hover:bg-[#eef3f8]">XML</button>}</div></td>
+      <td className="px-3 py-3.5 align-middle" onClick={e=>e.stopPropagation()}><div className="flex items-center justify-end gap-2 whitespace-nowrap"><button onClick={()=>openPreview(item)} className="inline-flex h-8 items-center gap-1 rounded-lg border border-[#d9e0e8] !bg-transparent px-2.5 text-[11px] font-semibold !text-[#334155] hover:!bg-[#f8fafc]"><FileText className="h-3.5 w-3.5"/>Visualizar</button>{item.xml&&<button onClick={()=>downloadXml(item)} className="h-8 rounded-lg border border-[#d9e0e8] !bg-transparent px-2.5 text-[10px] font-semibold !text-[#334155] hover:!bg-[#f8fafc]">XML</button>}</div></td>
      </tr>})}{!visibleRows.length&&<tr><td colSpan={6} className="h-48 text-center text-sm text-[#94a3b8]">Nenhuma nota encontrada neste período.</td></tr>}</tbody>
     </table>
    </div>
