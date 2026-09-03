@@ -146,6 +146,28 @@
 .saas-dashboard [class*="bg-[#f8fafb]"][class*="p-1"]>button{background:transparent!important;color:#667085!important;border-color:transparent!important}
 .saas-dashboard [class*="bg-[#f8fafb]"][class*="p-1"]>button[class*="bg-white"]{background:#d4d9de!important;color:#111827!important;border-color:#c4cad0!important;box-shadow:none!important}
 
+/* Products and stock workspace */
+.product-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.product-summary-card{min-width:0;border:1px solid #d8dde3;border-radius:5px;background:#fff;padding:16px 18px}
+.product-summary-label{color:#667085;font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.product-summary-value{margin-top:8px;color:#172033;font-size:22px;font-weight:650;line-height:1.15}
+.product-summary-hint{margin-top:5px;color:#667085;font-size:11px;line-height:1.45}
+.product-workspace{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(320px,.75fr);overflow:hidden;border:1px solid #d8dde3;border-radius:5px;background:#fff}
+.product-table{min-width:0;border-right:1px solid #d8dde3;background:#fff}
+.product-table-head,.product-row{display:grid;grid-template-columns:minmax(190px,1.5fr) minmax(110px,.8fr) minmax(82px,.6fr) minmax(82px,.6fr) minmax(120px,.85fr) minmax(72px,.5fr);align-items:center;column-gap:18px}
+.product-table-head{min-width:760px;border-bottom:1px solid #d8dde3;background:#f7f8fa;padding:11px 16px;color:#667085;font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.product-table>div:last-child{overflow-x:auto}
+.product-row{min-width:760px;cursor:pointer;border-bottom:1px solid #e4e7eb;padding:14px 16px;transition:background .15s ease}
+.product-row:hover,.product-row.is-active{background:#eef2f5}
+.product-side{min-width:0;background:#fff}
+.product-side-head{border-bottom:1px solid #d8dde3;background:#f7f8fa;padding:15px 18px}
+.product-side-body{max-height:calc(100vh - 250px);overflow:auto;padding:18px}
+.product-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.product-form-grid .span-2{grid-column:span 2}
+.product-section-title{margin:22px 0 12px;border-top:1px solid #e4e7eb;padding-top:18px;color:#172033;font-size:11px;font-weight:650;letter-spacing:.08em;text-transform:uppercase}
+.stock-pill{display:inline-flex;width:max-content;align-items:center;gap:5px;border-radius:999px;padding:5px 8px;font-size:10px;font-weight:600}
+.stock-pill.stock-ok{background:#d9eee7;color:#137456}.stock-pill.stock-low{background:#f6eacb;color:#94620d}.stock-pill.stock-off{background:#e9ecef;color:#667085}
+
 /* Issued notes */
 .saas-issued-notes>section:first-of-type,.saas-admin-light .saas-issued-notes>section:first-of-type{background:#e9ecef!important;border-color:#d2d7dc!important;box-shadow:none!important}
 .saas-issued-notes>section:first-of-type button,
@@ -186,6 +208,7 @@
  .saas-sidebar-scrim{display:block!important;position:fixed!important;inset:0!important;z-index:110!important;width:100%!important;height:100%!important;border:0!important;background:rgba(15,23,42,.26)!important;backdrop-filter:blur(3px)!important}
  .saas-admin-light>aside>div:first-of-type{padding-top:56px!important}
  .saas-main-content{padding-left:0!important;padding-top:60px!important}.saas-main-content>div{padding:18px 12px 40px!important}
+ .product-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.product-workspace{grid-template-columns:1fr}.product-table{border-right:0;border-bottom:1px solid #d8dde3}.product-side-body{max-height:none}
 }
 
 /* Final contrast and density pass, verified against the live light interface. */
@@ -217,4 +240,5 @@
  .saas-issued-notes table,.saas-emission-history table{min-width:920px!important}
  .saas-main-content .ca-section-body{padding:14px!important}.saas-main-content .ca-actions{position:sticky!important;bottom:0!important;z-index:10!important;flex-wrap:wrap!important;padding:10px!important}
  .saas-main-content .ca-actions button{flex:1 1 120px!important}
+ .product-summary{grid-template-columns:1fr 1fr;gap:8px}.product-summary-card{padding:13px}.product-summary-value{font-size:18px}.product-workspace{overflow:visible}.product-form-grid{grid-template-columns:1fr}.product-form-grid .span-2{grid-column:auto}.product-side-body{padding:14px}
 }
