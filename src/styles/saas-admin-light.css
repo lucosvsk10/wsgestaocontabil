@@ -93,6 +93,15 @@
 .saas-dashboard [class*="bg-[#f8fafb]"][class*="p-1"]>button:hover{background:#fff!important;color:#344054!important;border-color:#d9e0e7!important}
 .saas-dashboard [class*="bg-[#f8fafb]"][class*="p-1"]>button[class*="bg-white"]{background:#fff!important;color:#17233b!important;border-color:#cfd8e2!important;box-shadow:0 1px 3px rgba(23,35,59,.08)!important}
 
+/* issued notes preview */
+.saas-issued-notes>div[class*="fixed"][class*="inset-0"]{background:rgba(237,242,246,.24)!important;backdrop-filter:blur(22px) saturate(125%)!important;-webkit-backdrop-filter:blur(22px) saturate(125%)!important;padding:28px!important}
+.saas-issued-notes>div[class*="fixed"][class*="inset-0"]>div{width:min(1120px,calc(100vw - 56px))!important;max-width:1120px!important;max-height:calc(100vh - 56px)!important;overflow:hidden!important;border-radius:10px!important;border:1px solid rgba(196,205,215,.95)!important;background:rgba(248,250,252,.96)!important;box-shadow:0 24px 70px rgba(23,41,58,.22),0 3px 10px rgba(23,41,58,.10)!important}
+.saas-issued-notes>div[class*="fixed"][class*="inset-0"]>div>div:first-child{background:rgba(255,255,255,.96)!important;backdrop-filter:blur(8px)!important;padding:14px 18px!important;box-shadow:0 1px 0 rgba(196,205,215,.8)!important}
+.saas-issued-notes>div[class*="fixed"][class*="inset-0"]>div>div:last-child{max-height:calc(100vh - 132px)!important;overflow:auto!important;padding:24px!important;background:#f2f5f7!important}
+.saas-issued-notes .saas-preview-shell{display:flex!important;justify-content:center!important;align-items:flex-start!important;width:100%!important;overflow:visible!important;background:transparent!important;padding:0!important}
+.saas-issued-notes .danfe-sheet{width:min(100%,860px)!important;max-width:860px!important;margin:0 auto!important;box-shadow:0 10px 28px rgba(23,41,58,.12)!important}
+.saas-issued-notes .receipt-sheet{margin:0 auto!important;box-shadow:0 10px 28px rgba(23,41,58,.12)!important}
+
 /* tables */
 .saas-main-content table{width:100%;background:#fff!important;border-collapse:collapse!important;border-radius:0!important}
 .saas-main-content table thead{background:#f7f8fa!important}
@@ -111,4 +120,4 @@
 .saas-status-authorized{background:#eaf8ef;color:#27894b;border-color:#cdebd8}.saas-status-rejected{background:#fff0f0;color:#bd4242;border-color:#f3d2d2}.saas-status-cancelled{background:#f1f3f5;color:#6f7a85;border-color:#dfe4e8}.saas-status-draft{background:#fff7e8;color:#a96d13;border-color:#f3dfb6}
 
 @media(max-width:1180px){.saas-main-content>div{padding-inline:22px!important}.saas-admin-light>aside{width:220px!important}.saas-main-content{padding-left:220px!important}.saas-topbar>div:first-child{width:220px!important}}
-@media(max-width:840px){.saas-admin-light>aside{display:none!important}.saas-main-content{padding-left:0!important}.saas-topbar>div:first-child{width:auto!important;border-right:0!important;padding-left:18px!important}.saas-main-content>div{padding:20px 14px 44px!important}.saas-topbar{height:58px!important}.saas-main-content{padding-top:58px!important}}
+@media(max-width:840px){.saas-admin-light>aside{display:none!important}.saas-main-content{padding-left:0!important}.saas-topbar>div:first-child{width:auto!important;border-right:0!important;padding-left:18px!important}.saas-main-content>div{padding:20px 14px 44px!important}.saas-topbar{height:58px!important}.saas-main-content{padding-top:58px!important}.saas-issued-notes>div[class*="fixed"][class*="inset-0"]{padding:10px!important}.saas-issued-notes>div[class*="fixed"][class*="inset-0"]>div{width:calc(100vw - 20px)!important;max-height:calc(100vh - 20px)!important}.saas-issued-notes>div[class*="fixed"][class*="inset-0"]>div>div:last-child{max-height:calc(100vh - 96px)!important;padding:12px!important}}
