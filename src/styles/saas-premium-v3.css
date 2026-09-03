@@ -1,94 +1,84 @@
-/* WS Fiscal — light workspace system */
-.saas-admin-light{
-  --saas-navy:#071225;--saas-navy-2:#0d1b32;--saas-ink:#101828;--saas-muted:#667085;
-  --saas-line:#dce2e9;--saas-bg:#f4f6f8;--saas-bg-2:#eef2f5;--saas-card:#fff;
-  --saas-green:#0b8f68;--saas-amber:#a76500;--saas-red:#b42318;
-  font-family:"Prompt",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--saas-bg)
-}
-.saas-admin-light .saas-topbar{background:var(--saas-navy)!important;border-color:#17253d!important;box-shadow:0 1px 0 rgba(255,255,255,.03)}
-.saas-admin-light .saas-main-content{background:linear-gradient(180deg,#f4f6f8 0,#f7f8fa 100%)!important;min-height:calc(100vh - 72px)}
-.saas-admin-light aside{background:#f8f9fb!important;border-color:#dce2e9!important}
-.saas-admin-light aside nav{scrollbar-width:thin}.saas-admin-light aside button{border-radius:8px}.saas-admin-light aside button:hover{transform:none}
-.saas-admin-light aside .saas-emission-group{background:#eef1f4!important;border-color:#9aa5b4!important;color:#15243f!important}
-.saas-admin-light h1,.saas-admin-light h2,.saas-admin-light h3{color:#0b172d;letter-spacing:-.03em}.saas-admin-light p{letter-spacing:-.005em}
-.saas-main-content .rounded-2xl,.saas-main-content .rounded-xl,.saas-main-content .rounded-lg{box-shadow:none}
-.saas-main-content section,.saas-main-content [class*="border"][class*="bg-white"]{border-color:var(--saas-line)}
-.saas-main-content input,.saas-main-content select,.saas-main-content textarea{border-color:#d7dde5!important;border-radius:8px!important;background:#fbfcfd!important;box-shadow:none!important;transition:border-color .16s ease,box-shadow .16s ease,background .16s ease}
-.saas-main-content input:hover,.saas-main-content select:hover,.saas-main-content textarea:hover{background:#fff!important;border-color:#bdc7d4!important}
-.saas-main-content input:focus,.saas-main-content select:focus,.saas-main-content textarea:focus{background:#fff!important;border-color:#74839a!important;box-shadow:0 0 0 3px rgba(13,27,50,.055)!important;outline:none!important}
-.saas-main-content button{border-radius:8px;transition:background-color .16s ease,border-color .16s ease,color .16s ease,transform .16s ease,box-shadow .16s ease}
-.saas-main-content button:not(:disabled):active{transform:translateY(1px)}
-.saas-main-content button[class*="bg-primary"],.saas-main-content button:not([class*="border"]):not([class*="bg-transparent"]){box-shadow:none}
+/* WS Fiscal — Conta Azul-inspired component system */
+.saas-emission-page{max-width:1320px;margin:0 auto;padding-bottom:34px}
+.saas-emission-header{display:grid;grid-template-columns:1fr auto;align-items:end;gap:16px;padding:0 0 18px;border-bottom:1px solid var(--ca-line);margin-bottom:20px}
+.saas-emission-header .saas-back-link,.saas-emission-header>button:first-child{grid-column:1/-1;width:max-content;margin:0 0 4px!important;min-height:34px!important;background:#fff!important;color:#526170!important;border:1px solid var(--ca-line-strong)!important;padding:0 13px!important}
+.saas-emission-header h1{grid-column:1;font-size:25px!important}.saas-emission-header h1+p{grid-column:1}.saas-emission-header>div:last-child{grid-column:2;grid-row:2/4;align-self:center;margin:0!important}
+.saas-emission-header [class*="border-red"]{background:#fff5f5!important;border-color:#efc3c3!important;color:#b24444!important;border-radius:12px!important;font-size:10px!important;padding:5px 9px!important}
+.saas-fiscal-card{background:#fff!important;border:1px solid var(--ca-line)!important;border-radius:5px!important;padding:0!important;overflow:visible;box-shadow:none!important}
+.saas-fiscal-card>h2:first-child{margin:0;padding:15px 18px;border-bottom:1px solid var(--ca-line);background:#fbfcfd;color:#2d3b49!important;font-size:14px!important;font-weight:600!important}
+.saas-fiscal-card>div{padding:18px!important}
+.saas-emission-page label{font-size:12px!important;font-weight:500!important;color:#4a5867!important}
+.saas-emission-page input,.saas-emission-page select{min-height:40px!important;height:40px!important;font-size:13px!important}
+.saas-emission-page textarea{font-size:13px!important}
+.saas-emission-page>.grid{grid-template-columns:minmax(0,1.12fr) minmax(390px,.88fr)!important;gap:24px!important;align-items:start!important}
+.saas-emission-page>.grid>div:first-child{display:flex;flex-direction:column;gap:14px}
+.saas-emission-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:15px 18px;margin:-14px 0 0;border:1px solid var(--ca-line);border-top:0;background:#fff;border-radius:0 0 5px 5px}
+.saas-emission-actions button{min-height:40px!important}
 
-/* Emission workspace */
-.saas-emission-page{max-width:1680px;margin:0 auto}
-.saas-emission-header{padding:4px 2px 2px}
-.saas-emission-header>button:first-child,.saas-back-link{display:inline-flex!important;align-items:center;gap:6px;min-height:36px;padding:0 12px!important;border:1px solid #d8dfe7!important;background:#fff!important;color:#43516a!important;font-size:12px!important;font-weight:600!important}
-.saas-emission-header>button:first-child:hover,.saas-back-link:hover{background:#f7f8fa!important;border-color:#bac4d0!important}
-.saas-fiscal-card{border:1px solid #dce2e9!important;background:#fff!important;border-radius:12px!important;box-shadow:0 1px 2px rgba(15,23,42,.025)!important}
-.saas-fiscal-card>p:first-child,.saas-fiscal-card>h2:first-child,.saas-fiscal-card>h3:first-child{font-weight:650;color:#15233c}
-.saas-emission-page label{font-size:12px!important;font-weight:600!important;color:#2b3951!important}
-.saas-emission-page input,.saas-emission-page select{min-height:46px!important}
-.saas-action-primary{min-height:44px!important;background:#071225!important;border:1px solid #071225!important;color:#fff!important;padding-inline:22px!important;font-weight:600!important}
-.saas-action-primary:hover{background:#10203b!important;border-color:#10203b!important}
-.saas-action-secondary{min-height:44px!important;background:#fff!important;border:1px solid #cfd7e1!important;color:#23314b!important;padding-inline:18px!important;font-weight:600!important}
-.saas-action-secondary:hover{background:#f6f8fa!important;border-color:#aeb9c7!important}
-.saas-action-danger{min-height:44px!important;background:#071225!important;border-color:#071225!important;color:#fff!important}
-.saas-emission-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding-top:18px;margin-top:20px;border-top:1px solid #e5e9ee}
-.saas-document-preview{border:1px solid #d9e0e8;border-radius:12px;background:#e9edf1;padding:12px;box-shadow:0 1px 2px rgba(15,23,42,.035)}
-.saas-document-preview>div:first-child{margin-bottom:8px}
+/* preview aligned to the same visual grid */
+.saas-document-preview{position:sticky!important;top:84px!important;align-self:start!important;margin:0!important;padding:0!important;background:#fff!important;border:1px solid var(--ca-line)!important;border-radius:5px!important;box-shadow:none!important;overflow:hidden}
+.saas-document-preview>div:first-child{min-height:52px;margin:0!important;padding:10px 12px!important;display:flex!important;align-items:center!important;justify-content:flex-end!important;background:#fbfcfd!important;border-bottom:1px solid var(--ca-line)!important}
+.saas-document-preview>div:first-child button{min-height:32px!important;height:32px!important;font-size:11px!important;padding:0 10px!important}
+.saas-document-preview>div:last-child,.saas-document-preview>.fiscal-paper{margin:14px!important}
+.saas-preview-shell{background:#f2f4f6!important;border:0!important;border-radius:0!important;padding:14px!important}
 
-/* Guided issuance */
-.saas-issuance-shell{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(360px,.62fr);gap:18px;align-items:start}
-.saas-issuance-main{min-width:0}
-.saas-issuance-side{position:sticky;top:88px;display:flex;flex-direction:column;gap:12px}
-.saas-stepper{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:14px 0 18px}
-.saas-step{display:flex;align-items:center;gap:9px;min-width:0;border:1px solid #dce2e9;background:#fff;padding:10px 12px;color:#7b8799}
-.saas-step.is-active{border-color:#8795a8;background:#f8fafb;color:#0d1b32}.saas-step.is-done{color:#36506d}
-.saas-step-index{display:grid;place-items:center;width:24px;height:24px;border-radius:999px;background:#eef2f5;font-size:10px;font-weight:700;flex:none}.saas-step.is-active .saas-step-index{background:#071225;color:#fff}
-.saas-step-copy{min-width:0}.saas-step-title{display:block;font-size:11px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.saas-step-sub{display:block;margin-top:2px;font-size:9px;color:#98a2b3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.saas-task-card{border:1px solid #dce2e9;background:#fff;border-radius:12px;overflow:hidden}
-.saas-task-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:16px 18px;border-bottom:1px solid #e8ecf0;background:#fbfcfd}
-.saas-task-eyebrow{font-size:9px;text-transform:uppercase;letter-spacing:.14em;font-weight:700;color:#8290a3}.saas-task-title{margin-top:3px;font-size:15px;font-weight:650;color:#13213a}.saas-task-sub{margin-top:3px;font-size:11px;line-height:1.5;color:#7a8698}
-.saas-task-body{padding:18px}.saas-task-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.saas-task-grid .span-2{grid-column:1/-1}
-.saas-advanced{margin-top:14px;border-top:1px solid #e9edf1;padding-top:14px}.saas-advanced summary{cursor:pointer;list-style:none;font-size:11px;font-weight:650;color:#56657c}.saas-advanced summary::-webkit-details-marker{display:none}.saas-advanced summary:after{content:'Mostrar';float:right;color:#8b96a6;font-weight:500}.saas-advanced[open] summary:after{content:'Ocultar'}
-.saas-summary-card{border:1px solid #dce2e9;background:#fff;border-radius:12px;overflow:hidden}.saas-summary-head{padding:15px 16px;border-bottom:1px solid #e7ebef}.saas-summary-body{padding:4px 16px 12px}.saas-summary-row{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:10px 0;border-bottom:1px solid #eff2f5}.saas-summary-row:last-child{border-bottom:0}.saas-summary-label{font-size:10px;color:#7a8698}.saas-summary-value{max-width:65%;font-size:11px;font-weight:650;color:#17243d;text-align:right;word-break:break-word}.saas-summary-total{font-size:18px;letter-spacing:-.03em}
-.saas-env-pill{display:inline-flex;align-items:center;gap:6px;border:1px solid #d4dae2;background:#fff;padding:5px 8px;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#657186}.saas-env-pill.production{border-color:#f0c7c4;background:#fff7f6;color:#a6312a}
-.saas-preview-toggle{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;border:1px solid #dce2e9;background:#fff}.saas-preview-toggle span{font-size:11px;font-weight:650;color:#263650}.saas-preview-collapsed{max-height:360px;overflow:hidden;position:relative}.saas-preview-collapsed:after{content:'';position:absolute;left:0;right:0;bottom:0;height:80px;background:linear-gradient(transparent,#e9edf1)}
-.saas-line-item{display:grid;grid-template-columns:minmax(0,1fr) 84px 110px 110px;gap:10px;align-items:end;border:1px solid #dde3e9;background:#fbfcfd;border-radius:9px;padding:12px}.saas-line-item-total{height:46px;display:flex;align-items:center;justify-content:flex-end;font-size:13px;font-weight:700;color:#17243d}
-.saas-route-grid{display:grid;grid-template-columns:1fr 44px 1fr;gap:10px;align-items:center}.saas-route-node{border:1px solid #dce2e9;background:#fbfcfd;border-radius:9px;padding:13px}.saas-route-arrow{text-align:center;color:#8390a2;font-size:18px}
-.saas-key-list{display:flex;flex-direction:column;gap:7px;margin-top:10px}.saas-key-chip{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid #dce2e9;background:#f8fafb;padding:8px 10px;border-radius:7px;font-size:10px;color:#42516a}.saas-key-chip code{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.saas-review-backdrop{position:fixed;z-index:150;inset:0;background:rgba(7,18,37,.52);display:grid;place-items:center;padding:18px}.saas-review-modal{width:min(720px,100%);max-height:90vh;overflow:auto;background:#fff;border:1px solid #d6dde6;border-radius:14px;box-shadow:0 30px 90px rgba(7,18,37,.28)}.saas-review-head{padding:20px 22px;border-bottom:1px solid #e7ebef}.saas-review-body{padding:20px 22px}.saas-review-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.saas-review-cell{border:1px solid #e0e5eb;background:#f9fafb;border-radius:9px;padding:12px}.saas-review-cell span{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:#8a95a5}.saas-review-cell strong{display:block;margin-top:5px;font-size:12px;color:#17243d}.saas-review-actions{display:flex;justify-content:flex-end;gap:10px;padding:16px 22px;border-top:1px solid #e7ebef;background:#fbfcfd}
-.saas-process-overlay{position:fixed;z-index:170;right:22px;bottom:22px;width:min(390px,calc(100vw - 44px));border:1px solid #cfd7e1;background:#071225;color:#fff;border-radius:12px;box-shadow:0 18px 54px rgba(7,18,37,.3);padding:16px 17px}.saas-process-title{font-size:12px;font-weight:650}.saas-process-sub{margin-top:4px;font-size:10px;color:#aab5c6}.saas-process-track{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:13px}.saas-process-track i{height:3px;border-radius:999px;background:#263750}.saas-process-track i.on{background:#fff}
-.saas-autosave{font-size:9px;color:#8a95a5}.saas-shortcuts{display:flex;gap:8px;flex-wrap:wrap}.saas-shortcut{font-size:9px;color:#758195}.saas-shortcut kbd{border:1px solid #dce2e9;background:#fff;border-radius:5px;padding:2px 5px;font:inherit;color:#43516a}
-
-/* Rich product/service chooser */
+/* chooser inspired by Conta Azul searchable selectors */
 .catalog-picker{position:relative;min-width:0}
-.catalog-picker-trigger{margin-top:8px;width:100%;min-height:68px;display:flex;align-items:center;justify-content:space-between;gap:14px;text-align:left;padding:11px 13px!important;border:1px solid #d7dde5!important;background:#fbfcfd!important;color:#14213a!important}
-.catalog-picker-trigger:hover{background:#fff!important;border-color:#aeb9c7!important}
-.catalog-picker-trigger>span:first-child{display:flex;min-width:0;flex-direction:column;gap:3px}.catalog-picker-trigger strong{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.catalog-picker-trigger small{font-size:10px;line-height:1.4;color:#7b8799;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.catalog-picker-price{flex:none;font-size:12px;font-weight:650;color:#15233c}
-.catalog-picker-popover{position:absolute;z-index:80;left:0;right:0;top:calc(100% + 7px);overflow:hidden;border:1px solid #cad3de;border-radius:10px;background:#fff;box-shadow:0 18px 48px rgba(7,18,37,.16)}
-.catalog-picker-search{margin:10px!important;width:calc(100% - 20px)!important;background:#f7f9fb!important}
-.catalog-picker-list{max-height:340px;overflow:auto;padding:0 6px 7px}
-.catalog-picker-option{width:100%;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:11px 10px!important;border:0!important;border-radius:7px!important;background:#fff!important;text-align:left}
-.catalog-picker-option:hover{background:#f2f5f8!important}.catalog-picker-option>span{display:flex;min-width:0;flex-direction:column;gap:2px}.catalog-picker-option strong{font-size:12px;color:#18263f}.catalog-picker-option small{font-size:10px;color:#7d8899}.catalog-picker-option b{font-size:11px;color:#24344f;white-space:nowrap}.catalog-picker-empty{padding:24px 14px;text-align:center;font-size:12px;color:#7c8797}
-.catalog-picker-recents{display:flex;gap:6px;padding:0 10px 8px;overflow:auto}.catalog-picker-recents button{white-space:nowrap;border:1px solid #e0e5eb!important;background:#f8fafb!important;padding:5px 8px!important;font-size:9px!important;color:#5f6e84!important}
+.catalog-picker-trigger{margin-top:6px!important;width:100%;min-height:40px!important;height:40px!important;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;padding:0 11px!important;border:1px solid var(--ca-line-strong)!important;border-radius:4px!important;background:#fff!important;color:#344351!important}
+.catalog-picker-trigger:hover{border-color:#aebac5!important;background:#fff!important}
+.catalog-picker-trigger>span:first-child{display:flex;min-width:0;flex-direction:column;gap:0}.catalog-picker-trigger strong{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.catalog-picker-trigger small{display:none}
+.catalog-picker-price{font-size:11px;font-weight:600;color:#526170;white-space:nowrap}
+.catalog-picker-popover{position:absolute;z-index:90;left:0;right:0;top:calc(100% + 5px);overflow:hidden;border:1px solid var(--ca-line-strong);border-radius:4px;background:#fff;box-shadow:0 8px 24px rgba(34,55,73,.14)}
+.catalog-picker-search{margin:10px!important;width:calc(100% - 20px)!important;height:38px!important;background:#fff!important}
+.catalog-picker-list{max-height:300px;overflow:auto;padding:0 5px 6px}
+.catalog-picker-option{width:100%;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 9px!important;border:0!important;border-radius:3px!important;background:#fff!important;color:#344351!important;text-align:left}
+.catalog-picker-option:hover{background:#eef8fc!important;color:#236482!important}.catalog-picker-option>span{display:flex;min-width:0;flex-direction:column;gap:2px}.catalog-picker-option strong{font-size:12px}.catalog-picker-option small{font-size:10px;color:#81909e}.catalog-picker-option b{font-size:11px;color:#445362;white-space:nowrap}.catalog-picker-empty{padding:22px 12px;text-align:center;font-size:12px;color:#82909d}
 
-/* History */
-.saas-history-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.saas-history-filter{height:34px!important;min-height:34px!important;border:1px solid #dce2e9!important;background:#fff!important;padding:0 9px;font-size:10px;color:#42516a}.saas-status-pill{display:inline-flex;align-items:center;border-radius:999px;padding:5px 8px;font-size:9px;font-weight:700}.saas-status-authorized{background:#e4f3ee;color:#087456}.saas-status-rejected{background:#fbe9e7;color:#b42318}.saas-status-cancelled{background:#eef1f4;color:#667085}.saas-status-draft{background:#fff1db;color:#9a5b00}
+/* registration list becomes full-width; editor becomes a clean full-page form like Conta Azul */
+.saas-register-layout{display:grid!important;grid-template-columns:1fr!important;gap:18px!important;align-items:start!important}
+.saas-register-list{background:#fff;border:1px solid var(--ca-line);border-radius:5px;overflow:hidden}
+.saas-register-list>div:first-child{padding:14px 16px!important;background:#fff!important}
+.saas-register-list>div[class*="grid-cols"]{background:#f7f8fa!important;border-color:var(--ca-line)!important}
+.saas-register-list>div[class*="cursor-pointer"]{background:#fff!important;border-color:#edf0f2!important}.saas-register-list>div[class*="cursor-pointer"]:hover{background:#f7fbfd!important}
+.saas-register-drawer{display:none!important;background:#fff;border:1px solid var(--ca-line);border-radius:5px;overflow:hidden;position:static!important;max-height:none!important}
+.saas-register-drawer:has(.saas-register-drawer-head){display:block!important}
+.saas-register-layout:has(.saas-register-drawer-head) .saas-register-list{display:none!important}
+.saas-register-drawer-head{padding:16px 18px!important;background:#fbfcfd!important;border-bottom:1px solid var(--ca-line)!important}
+.saas-register-drawer-head h3{font-size:20px!important}
+.saas-register-drawer-body{padding:0!important;overflow:visible!important}
+.saas-register-section{padding:22px 22px!important;border-bottom:1px solid var(--ca-line)!important;background:#fff!important}
+.saas-register-section:last-of-type{border-bottom:0!important}
+.saas-register-section-title{margin:0 0 16px!important;color:#2d3b49!important;font-size:15px!important;font-weight:600!important;text-transform:none!important;letter-spacing:0!important}
+.saas-register-section>div{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:14px 16px!important}
+.saas-register-drawer-body>.saas-emission-actions{margin:0!important;border:0!important;border-top:1px solid var(--ca-line)!important;border-radius:0!important;padding:14px 20px!important;background:#fbfcfd!important}
+.saas-register-drawer-body>.saas-emission-actions .saas-action-primary{background:var(--ca-green)!important;border-color:var(--ca-green)!important}
 
-/* Generic list + drawer pattern */
-.saas-register-layout{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:16px;align-items:start}.saas-register-list{border:1px solid #dce2e9;background:#fff;border-radius:12px;overflow:hidden}.saas-register-drawer{position:sticky;top:88px;max-height:calc(100vh - 108px);overflow:auto;border:1px solid #dce2e9;background:#fff;border-radius:12px}.saas-register-drawer-head{position:sticky;top:0;z-index:2;background:#fbfcfd;border-bottom:1px solid #e6eaee;padding:16px 18px}.saas-register-drawer-body{padding:18px}.saas-register-section{padding-top:16px;margin-top:16px;border-top:1px solid #edf0f3}.saas-register-section:first-child{padding-top:0;margin-top:0;border-top:0}.saas-register-section-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.13em;color:#758195;margin-bottom:10px}
+/* products */
+.saas-products-premium{max-width:1320px!important;margin:0 auto;color:var(--ca-text)}
+.saas-products-premium>header{padding-bottom:18px!important;border-color:var(--ca-line)!important}
+.saas-products-premium .product-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.saas-products-premium .product-summary-card{background:#fff;border:1px solid var(--ca-line);border-radius:5px;padding:16px;min-height:96px}
+.saas-products-premium .product-summary-label{font-size:10px;text-transform:none;letter-spacing:0;color:#788592;font-weight:500}.saas-products-premium .product-summary-value{font-size:22px;line-height:1.1;margin-top:8px;font-weight:600;color:#2c3b49}.saas-products-premium .product-summary-hint{font-size:10px;color:#8a96a1;margin-top:7px}
+.saas-products-premium .product-workspace{display:grid;grid-template-columns:1fr;gap:16px;align-items:start}
+.saas-products-premium .product-table{background:#fff;border:1px solid var(--ca-line);border-radius:5px;overflow:hidden}.saas-products-premium .product-table-head{display:grid;grid-template-columns:1.7fr .7fr .65fr .7fr .7fr 88px;gap:12px;padding:11px 16px;background:#f7f8fa;border-bottom:1px solid var(--ca-line);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#71808f}.saas-products-premium .product-row{display:grid;grid-template-columns:1.7fr .7fr .65fr .7fr .7fr 88px;gap:12px;align-items:center;padding:14px 16px;border-bottom:1px solid #edf0f2;cursor:pointer;background:#fff}.saas-products-premium .product-row:hover{background:#f7fbfd}.saas-products-premium .stock-pill{display:inline-flex;align-items:center;gap:5px;width:max-content;border-radius:10px;padding:4px 7px;font-size:10px;font-weight:600}.saas-products-premium .stock-ok{background:#eaf8ef;color:#27894b}.saas-products-premium .stock-low{background:#fff7e8;color:#a96d13}.saas-products-premium .stock-off{background:#f1f3f5;color:#6f7a85}
+.saas-products-premium .product-side{display:none!important;background:#fff;border:1px solid var(--ca-line);border-radius:5px;overflow:hidden;position:static!important;max-height:none!important}
+.saas-products-premium .product-side:has(.product-side-head){display:block!important}
+.saas-products-premium .product-workspace:has(.product-side-head) .product-table{display:none!important}
+.saas-products-premium .product-side-head{padding:16px 18px;border-bottom:1px solid var(--ca-line);background:#fbfcfd}.saas-products-premium .product-side-body{padding:20px;overflow:visible}.saas-products-premium .product-form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 16px}.saas-products-premium .product-form-grid .span-2{grid-column:span 2}.saas-products-premium .product-section-title{font-size:14px;font-weight:600;letter-spacing:0;text-transform:none;color:#2d3b49;margin:24px -20px 14px;padding:18px 20px 0;border-top:1px solid var(--ca-line)}
+.saas-products-premium .product-side-body>.saas-emission-actions{margin:22px -20px -20px!important;border-left:0!important;border-right:0!important;border-bottom:0!important;border-radius:0!important}
 
-/* Product catalog */
-.saas-products-premium{color:#101828;max-width:1680px;margin:auto}
-.saas-products-premium .product-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.saas-products-premium .product-summary-card{background:#fff;border:1px solid #dfe4ea;border-radius:11px;padding:18px 19px;min-height:112px}.saas-products-premium .product-summary-label{font-size:9px;text-transform:uppercase;letter-spacing:.14em;color:#778397;font-weight:600}.saas-products-premium .product-summary-value{font-size:25px;line-height:1;margin-top:12px;font-weight:600;letter-spacing:-.04em;color:#0d1b32}.saas-products-premium .product-summary-hint{font-size:11px;color:#7a8697;margin-top:9px}.saas-products-premium .product-workspace{display:grid;grid-template-columns:minmax(0,1fr) minmax(400px,460px);gap:18px;align-items:start}.saas-products-premium .product-table{background:#fff;border:1px solid #dce2e9;border-radius:11px;overflow:hidden;min-height:300px}.saas-products-premium .product-table-head{display:grid;grid-template-columns:1.7fr .7fr .65fr .7fr .7fr 88px;gap:12px;padding:11px 16px;background:#eef2f5;border-bottom:1px solid #d9e0e8;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#657186}.saas-products-premium .product-row{display:grid;grid-template-columns:1.7fr .7fr .65fr .7fr .7fr 88px;gap:12px;align-items:center;padding:15px 16px;border-bottom:1px solid #eef1f4;cursor:pointer;transition:background .14s ease}.saas-products-premium .product-row:last-child{border-bottom:0}.saas-products-premium .product-row:hover,.saas-products-premium .product-row.is-active{background:#f5f7f9}.saas-products-premium .stock-pill{display:inline-flex;align-items:center;gap:6px;width:max-content;border-radius:999px;padding:5px 8px;font-size:10px;font-weight:600}.saas-products-premium .stock-ok{background:#e5f4ef;color:#087456}.saas-products-premium .stock-low{background:#fff0d9;color:#9a5b00}.saas-products-premium .stock-off{background:#eef1f4;color:#667085}.saas-products-premium .product-side{position:sticky;top:92px;background:#fff;border:1px solid #dce2e9;border-radius:11px;overflow:hidden;max-height:calc(100vh - 116px);display:flex;flex-direction:column}.saas-products-premium .product-side-head{padding:16px 18px;border-bottom:1px solid #e3e8ee;background:#f8fafb}.saas-products-premium .product-side-body{padding:18px;overflow-y:auto}.saas-products-premium .product-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.saas-products-premium .product-form-grid .span-2{grid-column:1/-1}.saas-products-premium .product-section-title{font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#697589;margin:20px -18px 12px;padding:15px 18px 0;border-top:1px solid #edf0f3}
+/* history and emitted notes */
+.saas-emission-history,.saas-issued-notes{border:1px solid var(--ca-line)!important;border-radius:5px!important;background:#fff!important;box-shadow:none!important}
+.saas-emission-history>div:first-child{padding-bottom:13px;border-bottom:1px solid var(--ca-line)}
+.saas-emission-history>div[class*="overflow-x-auto"]{border:0!important;border-radius:0!important;margin-left:-1px;margin-right:-1px}
+.saas-emission-history button[class*="bg-white"],.saas-issued-notes button[class*="bg-white"]{background:#fff!important;color:#526170!important;border:1px solid var(--ca-line-strong)!important}
 
-/* Receipt */
-.fiscal-paper{background:#fff;color:#000;font-family:Arial,Helvetica,sans-serif}.fiscal-paper .fiscal-label{font-size:7px;font-weight:700;text-transform:uppercase;line-height:1.15}.fiscal-paper .fiscal-value{font-size:9px;font-weight:600;line-height:1.25}.fiscal-paper .fiscal-box{border:1px solid #000;padding:4px}.fiscal-paper .fiscal-section{border:1px solid #000;margin-top:2px}.fiscal-paper .fiscal-section-title{background:#efefef;border-bottom:1px solid #000;padding:2px 4px;font-size:8px;font-weight:800;text-transform:uppercase}.fiscal-barcode{height:54px;display:flex;align-items:stretch;justify-content:center;gap:1px;overflow:hidden;padding:3px 5px;background:#fff}.fiscal-barcode span{display:block;background:#000;height:100%}.fiscal-qr{display:grid;grid-template-columns:repeat(21,1fr);width:132px;height:132px;background:#fff;border:6px solid #fff;box-shadow:0 0 0 1px #000}.fiscal-qr i{display:block;background:transparent}.fiscal-qr i.on{background:#000}
+/* dialogs */
+.saas-admin-light [role="dialog"]{border:1px solid var(--ca-line)!important;border-radius:5px!important;box-shadow:0 20px 60px rgba(31,54,72,.2)!important;overflow:hidden}
 
-@media(max-width:1280px){.saas-products-premium .product-workspace,.saas-register-layout,.saas-issuance-shell{grid-template-columns:1fr}.saas-products-premium .product-side,.saas-register-drawer,.saas-issuance-side{position:static;max-height:none}.saas-products-premium .product-summary{grid-template-columns:repeat(2,1fr)}.saas-document-preview{position:static!important}.saas-issuance-side{display:grid;grid-template-columns:320px minmax(0,1fr)}}
-@media(max-width:900px){.saas-products-premium .product-summary{grid-template-columns:1fr}.saas-products-premium .product-table-head{display:none}.saas-products-premium .product-row{grid-template-columns:1fr 1fr}.saas-products-premium .product-row>*:nth-child(n+3){font-size:11px}.catalog-picker-popover{position:fixed;left:16px;right:16px;top:18vh}.saas-stepper{grid-template-columns:repeat(2,1fr)}.saas-task-grid,.saas-review-grid,.saas-issuance-side{grid-template-columns:1fr}.saas-line-item{grid-template-columns:1fr 80px 1fr}.saas-line-item-total{grid-column:1/-1}.saas-route-grid{grid-template-columns:1fr}.saas-route-arrow{transform:rotate(90deg)}}
-@media(max-width:620px){.saas-stepper{grid-template-columns:1fr}.saas-emission-actions{position:sticky;bottom:0;z-index:30;margin-inline:-18px;padding:12px 18px;background:rgba(255,255,255,.95);backdrop-filter:blur(12px)}.saas-emission-actions>*{flex:1}.saas-review-actions{flex-direction:column-reverse}.saas-review-actions button{width:100%}}
-@media print{.saas-preview-toolbar,.danfe-actions{display:none!important}.saas-preview-shell,.saas-document-preview{padding:0!important;border:0!important;background:#fff!important}}
+/* official-document preview keeps print look, app chrome follows system */
+.fiscal-paper{background:#fff;color:#000;font-family:Arial,Helvetica,sans-serif}.fiscal-paper .fiscal-label{font-size:7px;font-weight:700;text-transform:uppercase;line-height:1.15}.fiscal-paper .fiscal-value{font-size:9px;font-weight:600;line-height:1.25}.fiscal-paper .fiscal-box{border:1px solid #000;padding:4px}.fiscal-paper .fiscal-section{border:1px solid #000;margin-top:2px}.fiscal-paper .fiscal-section-title{background:#efefef;border-bottom:1px solid #000;padding:2px 4px;font-size:8px;font-weight:800;text-transform:uppercase}
+
+@media(max-width:1180px){.saas-emission-page>.grid{grid-template-columns:1fr!important}.saas-document-preview{position:static!important}.saas-register-section>div,.saas-products-premium .product-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.saas-products-premium .product-summary{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:760px){.saas-emission-header{grid-template-columns:1fr}.saas-emission-header>div:last-child{grid-column:1;grid-row:auto;justify-self:start}.saas-emission-page>.grid{gap:14px!important}.saas-register-section>div,.saas-products-premium .product-form-grid{grid-template-columns:1fr!important}.saas-products-premium .product-form-grid .span-2{grid-column:1}.saas-products-premium .product-summary{grid-template-columns:1fr}.saas-products-premium .product-table-head{display:none}.saas-products-premium .product-row{grid-template-columns:1fr 1fr}.catalog-picker-popover{position:fixed;left:14px;right:14px;top:20vh}}
+@media print{.saas-document-preview>div:first-child,.danfe-actions{display:none!important}.saas-document-preview,.saas-preview-shell{padding:0!important;border:0!important;background:#fff!important}}
