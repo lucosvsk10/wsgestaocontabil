@@ -1,0 +1,41 @@
+name: Hotfix fiscal row click
+
+on:
+  push:
+    paths:
+      - '.github/workflows/hotfix-admin-fiscal-row-click.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Make fiscal note rows clickable
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/pages/AdminFiscalNotes.tsx')
+          s = p.read_text()
+          old = '''return <tr key={`${d.accessKey||d.nsu}-${i}`} className={`ws-zebra-row ${cancelledDoc?"ws-zebra-cancelled":""} transition-colors`}>'''
+          new = '''return <tr key={`${d.accessKey||d.nsu}-${i}`} role="button" tabIndex={0} onClick={()=>void openPreview(d)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();void openPreview(d)}}} className={`ws-zebra-row ${cancelledDoc?"ws-zebra-cancelled":""} cursor-pointer transition-colors`}>'''
+          if old not in s:
+              raise SystemExit('row pattern not found')
+          s = s.replace(old, new, 1)
+          old_button = '''<Button size="sm" variant="ghost" onClick={()=>void openPreview(d)}>'''
+          new_button = '''<Button size="sm" variant="ghost" onClick={e=>{e.stopPropagation();void openPreview(d)}}>'''
+          if old_button not in s:
+              raise SystemExit('button pattern not found')
+          s = s.replace(old_button, new_button, 1)
+          p.write_text(s)
+          PY
+      - name: Commit hotfix and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm .github/workflows/hotfix-admin-fiscal-row-click.yml
+          git add src/pages/AdminFiscalNotes.tsx .github/workflows/hotfix-admin-fiscal-row-click.yml
+          git commit -m "feat(admin): open fiscal preview from table row"
+          git push
