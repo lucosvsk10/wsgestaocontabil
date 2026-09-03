@@ -27,6 +27,8 @@ const docType=(d:Doc)=>{if(d.documentKind==="evento")return"Evento";const h=`${d
 const isCancelledDoc=(d:Doc)=>["101","151","155"].includes(String(d.statusCode||""))||/cancel/i.test(String(d.statusText||""));
 const statusLabel=(d:Doc)=>{if(d.documentKind==="evento")return"Evento";if(isCancelledDoc(d))return"Cancelada";if(/deneg/i.test(String(d.statusText||""))||["110","301","302"].includes(String(d.statusCode||"")))return"Denegada";if(["1","100","150"].includes(String(d.statusCode||""))||/autoriz|ativa/i.test(String(d.statusText||"")))return"Autorizada";return d.statusText||"Fiscal"};
 function rowToDoc(r:any):Doc{return{nsu:r.nsu,schema:r.schema_name,source:r.source,documentKind:r.document_kind,fullXml:r.full_xml,direction:r.direction,accessKey:r.access_key,model:r.model,issueDate:r.issue_date,value:Number(r.value||0),issuerCnpj:r.issuer_cnpj,issuerName:r.issuer_name,recipientCnpj:r.recipient_cnpj,number:r.note_number,series:r.series,statusCode:r.status_code,statusText:r.status_text,xml:r.xml,parseError:r.parse_error}}
+const keyMonthKey=(key?:string)=>/^\d{44}$/.test(String(key||""))?String(key).slice(2,6):"";
+function reconciliationToDoc(r:any):Doc{const key=String(r.access_key||"");const cancelled=String(r.status||"")==="cancelled";return{documentKind:"nfe",fullXml:false,direction:"saida",accessKey:key,model:String(r.model||key.slice(20,22)||"65"),issueDate:r.issue_date||undefined,monthKey:keyMonthKey(key),value:0,number:r.note_number!=null?String(r.note_number):"",series:r.series!=null?String(r.series):"",statusCode:cancelled?"101":String(r.cstat||"100"),statusText:cancelled?"Cancelada":"Autorizada"}}
 
 async function resolveFiscalCompany(selectedCompany:any):Promise<Company|null>{
  if(!selectedCompany)return null;
