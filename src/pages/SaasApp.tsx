@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BarChart3, Boxes, Building2, FileInput, FileText, Home, Package2, ReceiptText, Settings2, ShoppingBag, Truck, UsersRound } from "lucide-react";
+import { BarChart3, Boxes, Building2, FileInput, FileText, FolderSearch2, Home, Package2, ReceiptText, Settings2, ShoppingBag, Truck, UsersRound } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import SaasCadastros, { CadastroSection } from "@/components/saas/SaasCadastros";
@@ -20,12 +20,12 @@ const TEST_TRANSPORT_ORG_ID = "c77c4620-fbbb-4f03-9e32-ab48d25bb0cf";
 const TEST_TRANSPORT_ORG_NAME = "MSILVA TRANSPORTES";
 const cadastroSections = new Set(["Clientes", "Fornecedores", "Produtos", "Serviços", "Transportadoras"]);
 const groups = [
-  { title: "Notas de produtos", display: "Emitir produtos", icon: ReceiptText, items: [{label:"Emitir NF-e",icon:FileText},{label:"Emitir NFC-e",icon:FileInput},{label:"Gerenciar DF-e",icon:FileText}] },
+  { title: "Notas de produtos", display: "Emitir produtos", icon: ReceiptText, items: [{label:"Emitir NF-e",icon:FileText},{label:"Emitir NFC-e",icon:FileInput}] },
   { title: "Notas de serviços", display: "Emitir serviços", icon: ShoppingBag, items: [{label:"Emitir NFS-e",icon:ReceiptText}] },
   { title: "Notas de transportes", display: "Emitir transportes", icon: Truck, items: [{label:"Emitir CT-e",icon:FileText},{label:"Emitir MDF-e",icon:FileText}] },
   { title: "Cadastros", display: "Cadastros", icon: Boxes, items: [{label:"Clientes",icon:UsersRound},{label:"Fornecedores",icon:Building2},{label:"Produtos",icon:Package2},{label:"Serviços",icon:ShoppingBag},{label:"Transportadoras",icon:Truck}] },
 ];
-const lightVars: any = { "--background": "210 20% 98%", "--foreground": "222.2 84% 4.9%", "--card": "0 0% 100%", "--card-foreground": "222.2 84% 4.9%", "--popover": "0 0% 100%", "--popover-foreground": "222.2 84% 4.9%", "--primary": "222.2 47.4% 11.2%", "--primary-foreground": "210 40% 98%", "--secondary": "210 40% 96.1%", "--secondary-foreground": "222.2 47.4% 11.2%", "--muted": "210 28% 94%", "--muted-foreground": "215.4 16.3% 42%", "--accent": "210 40% 96.1%", "--accent-foreground": "222.2 47.4% 11.2%", "--border": "214 24% 84%", "--input": "214 24% 82%", "--ring": "222.2 84% 4.9%" };
+const lightVars: any = { "--background": "216 20% 97%", "--foreground": "222.2 84% 4.9%", "--card": "0 0% 100%", "--card-foreground": "222.2 84% 4.9%", "--popover": "0 0% 100%", "--popover-foreground": "222.2 84% 4.9%", "--primary": "222.2 47.4% 11.2%", "--primary-foreground": "210 40% 98%", "--secondary": "216 24% 95%", "--secondary-foreground": "222.2 47.4% 11.2%", "--muted": "216 22% 94%", "--muted-foreground": "215.4 16.3% 42%", "--accent": "216 24% 95%", "--accent-foreground": "222.2 47.4% 11.2%", "--border": "214 22% 87%", "--input": "214 22% 84%", "--ring": "222.2 84% 4.9%" };
 
 export default function SaasApp() {
   const { user } = useAuth();
@@ -48,9 +48,7 @@ export default function SaasApp() {
     setOrganization(org ? { ...org, name: testTransport ? TEST_TRANSPORT_ORG_NAME : org.name } : { name: "Empresa Teste" });
     if (!org?.id) return;
     setSetupDismissed(localStorage.getItem(`ws_fiscal_setup_dismissed_${org.id}`) === "1");
-
     await supabase.functions.invoke("saas-sales-history-sync", { body: { organization_id: org.id, mode: "auto" } }).catch(() => null);
-
     const [{ data: config }, { data: e }, { data: s }] = await Promise.all([
       supabase.functions.invoke("saas-fiscal-config", { body: { action: "get", organization_id: org.id } }),
       (supabase as any).from("saas_fiscal_emissions").select("*").eq("organization_id", org.id).order("created_at", { ascending: false }).limit(800),
@@ -78,7 +76,7 @@ export default function SaasApp() {
     setActive(item);
   };
 
-  const isItemActive = (label: string) => label === "Gerenciar DF-e" ? active === "Gerenciar DF-e" : label.startsWith("Emitir ") ? active === "Emissão" && selectedDocument === label.replace("Emitir ", "") : active === label;
+  const isItemActive = (label: string) => label.startsWith("Emitir ") ? active === "Emissão" && selectedDocument === label.replace("Emitir ", "") : active === label;
   const isGroupActive = (title: string) => groups.find((x) => x.title === title)?.items.some((x) => isItemActive(x.label)) || false;
   const setupComplete = Boolean(profile?.tax_id && profile?.legal_name && profile?.state_registration && profile?.city_ibge_code && profile?.tax_regime && profile?.crt && certificateConfigured);
   const showSetup = active === "Início" && Boolean(organization?.id) && !setupComplete && !setupDismissed;
@@ -111,11 +109,12 @@ export default function SaasApp() {
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <section><p className="mb-2 px-4 text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/90">Visão geral</p><NavButton icon={Home} active={active === "Início"} onClick={() => chooseNav("Início")}>Início</NavButton><NavButton icon={FileText} active={active === "Notas Emitidas"} onClick={() => chooseNav("Notas Emitidas")}>Notas Emitidas</NavButton></section>
         <div className="mt-5 space-y-5">{groups.map((group) => {const expanded=Boolean(openGroups[group.title]),groupActive=isGroupActive(group.title),emission=group.title.startsWith("Notas de "),GroupIcon=group.icon;return <section key={group.title}><p className="mb-2 px-4 text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/90">{group.title}</p><button onClick={() => setOpenGroups((p) => ({ ...p, [group.title]: !p[group.title] }))} className={`flex w-full items-center gap-3 rounded-md border-l-2 px-4 py-3 text-left transition-colors ${groupActive ? "border-[#202833] bg-[#e8edf3] text-[#111827]" : emission ? "saas-emission-group border-[#8794a5] bg-[#e9edf2] text-[#172033] hover:bg-[#e1e6ec]" : "border-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground"}`}><GroupIcon className="h-4 w-4 shrink-0" strokeWidth={1.8}/><span className={`flex-1 text-sm tracking-tight ${emission ? "font-semibold" : "font-medium"}`}>{group.display}</span><span className="text-xs text-muted-foreground">{expanded ? "−" : "+"}</span></button><div className={`ml-7 overflow-hidden border-l border-border pl-3 transition-all duration-200 ${expanded ? "mt-1 max-h-80 opacity-100" : "max-h-0 opacity-0"}`}>{group.items.map((item) => {const ItemIcon=item.icon;return <button key={item.label} onClick={() => chooseNav(item.label)} className={`flex w-full items-center gap-2.5 rounded-sm px-3 py-2 text-left text-xs transition-colors ${isItemActive(item.label) ? "bg-muted font-semibold text-foreground" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"}`}><ItemIcon className="h-3.5 w-3.5" strokeWidth={1.8}/><span>{item.label}</span></button>})}</div></section>})}</div>
+        <section className="mt-5 border-t border-border pt-4"><p className="mb-2 px-4 text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/90">Documentos</p><NavButton icon={FolderSearch2} active={active === "Gerenciar DF-e"} onClick={() => chooseNav("Gerenciar DF-e")}>Gerenciar DF-e</NavButton></section>
         <section className="mt-5 border-t border-border pt-4"><p className="mb-2 px-4 text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/90">Gestão</p><NavButton icon={BarChart3} active={active === "Relatórios"} onClick={() => chooseNav("Relatórios")}>Relatórios</NavButton><NavButton icon={Settings2} active={active === "Minha Empresa"} onClick={() => chooseNav("Minha Empresa")}>Minha Empresa</NavButton></section>
       </nav>
     </aside>
 
-    <main className="saas-main-content min-h-screen bg-[#f3f5f7] pl-72 pt-[72px]"><div className="mx-auto w-full max-w-[1540px] px-4 py-5 sm:px-5 sm:py-6 lg:px-8">{content}</div></main>
+    <main className="saas-main-content min-h-screen pl-72 pt-[72px]"><div className="mx-auto w-full max-w-[1680px] px-5 py-6 lg:px-8 xl:px-10">{content}</div></main>
     {showSetup && <SaasSetupGuide organizationId={organization.id} organizationName={organization?.name} profile={profile} certificateConfigured={certificateConfigured} emissionsCount={emissions.length} onOpenCompany={() => setActive("Minha Empresa")} onStartEmission={() => {setSelectedDocument(null);setActive("Emissão")}} onDismiss={dismissSetup}/>}
   </div>;
 }
