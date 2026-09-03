@@ -59,7 +59,10 @@
 .saas-admin-light>aside nav button[class*="bg-muted"]{background:#e8f6fc!important;color:#117cae!important;font-weight:600!important}
 .saas-main-content{min-height:100vh!important;padding-left:248px!important;padding-top:64px!important;background:var(--ca-bg)!important}
 .saas-main-content>div{width:min(100%,1320px)!important;max-width:1320px!important;margin:0 auto!important;padding:28px 30px 56px!important}
-.saas-main-content>div:has(.saas-dashboard),.saas-main-content>div:has(.saas-issued-notes),.saas-main-content>div:has(.saas-emission-history){max-width:1480px!important}
+.saas-main-content>div:has(.saas-dashboard),.saas-main-content>div:has(.saas-emission-history){max-width:1480px!important}
+.saas-main-content>div:has(.saas-issued-notes){width:100%!important;max-width:none!important;margin:0!important;padding:24px 22px 52px!important;background:transparent!important}
+.saas-main-content:has(.saas-issued-notes){background:var(--ca-bg)!important}
+.saas-issued-notes{width:100%!important;max-width:none!important;background:transparent!important}
 
 /* page headers */
 .saas-main-content h1{text-align:left!important;font-size:25px!important;line-height:1.2!important;margin:0!important}
@@ -93,10 +96,35 @@
 .saas-dashboard [class*="bg-[#f8fafb]"][class*="p-1"]>button:hover{background:#fff!important;color:#344054!important;border-color:#d9e0e7!important}
 .saas-dashboard [class*="bg-[#f8fafb]"][class*="p-1"]>button[class*="bg-white"]{background:#fff!important;color:#17233b!important;border-color:#cfd8e2!important;box-shadow:0 1px 3px rgba(23,35,59,.08)!important}
 
+/* issued notes */
+.saas-issued-notes>section:first-of-type{background:#f4f6f8!important;box-shadow:none!important}
+.saas-issued-notes>section:first-of-type button{background:transparent!important;color:#59697a!important;border:1px solid transparent!important;box-shadow:none!important}
+.saas-issued-notes>section:first-of-type button:hover{background:#e9eef2!important;color:#25364a!important;border-color:#d5dde5!important}
+.saas-issued-notes>section:first-of-type button[class*="bg-white"]{background:#fff!important;color:#152238!important;border-color:#cbd5df!important;box-shadow:0 1px 3px rgba(23,35,59,.08)!important}
+.saas-issued-notes>section:nth-of-type(2)>div:first-child button{background:transparent!important;color:#59697a!important;border:1px solid transparent!important;box-shadow:none!important;border-radius:5px 5px 0 0!important}
+.saas-issued-notes>section:nth-of-type(2)>div:first-child button:hover{background:#e9eef2!important;color:#25364a!important;border-color:transparent!important}
+.saas-issued-notes>section:nth-of-type(2)>div:first-child button[class*="bg-[#152238]"]{background:#152238!important;color:#fff!important;border-color:#152238!important}
+.saas-issued-notes>section:nth-of-type(2)>div:nth-child(2)>button{background:#152238!important;color:#fff!important;border-color:#152238!important}
+.saas-issued-notes table{min-width:1240px!important;table-layout:auto!important}
+.saas-issued-notes table th,.saas-issued-notes table td{white-space:normal!important}
+.saas-issued-notes table td:nth-child(3){min-width:230px!important}
+.saas-issued-notes table td:nth-child(4){min-width:240px!important}
+.saas-issued-notes table td:nth-child(5){min-width:210px!important}
+.saas-issued-notes table td:nth-child(3)>div:last-child{max-width:340px!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere!important}
+.saas-issued-notes table td:nth-child(4)>div:first-child,.saas-issued-notes table td:nth-child(5)>div:first-child{max-width:none!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important}
+.saas-issued-notes table tbody tr{cursor:pointer!important;transition:background .14s ease!important}
+.saas-issued-notes table tbody tr:nth-child(odd){background:#fff!important}
+.saas-issued-notes table tbody tr:nth-child(even){background:#f1f4f6!important}
+.saas-issued-notes table tbody tr:hover{background:#e4eaf0!important}
+.saas-issued-notes table tbody tr td:last-child button:first-child{background:#152238!important;color:#fff!important;border-color:#152238!important}
+.saas-issued-notes table tbody tr td:last-child button:last-child:not(:first-child){background:#fff!important;color:#425466!important;border-color:#cbd5df!important}
+
 /* issued notes preview */
-.saas-issued-notes>div[class*="fixed"][class*="inset-0"]{background:rgba(237,242,246,.24)!important;backdrop-filter:blur(22px) saturate(125%)!important;-webkit-backdrop-filter:blur(22px) saturate(125%)!important;padding:28px!important}
-.saas-issued-notes>div[class*="fixed"][class*="inset-0"]>div{width:min(1120px,calc(100vw - 56px))!important;max-width:1120px!important;max-height:calc(100vh - 56px)!important;overflow:hidden!important;border-radius:10px!important;border:1px solid rgba(196,205,215,.95)!important;background:rgba(248,250,252,.96)!important;box-shadow:0 24px 70px rgba(23,41,58,.22),0 3px 10px rgba(23,41,58,.10)!important}
-.saas-issued-notes>div[class*="fixed"][class*="inset-0"]>div>div:first-child{background:rgba(255,255,255,.96)!important;backdrop-filter:blur(8px)!important;padding:14px 18px!important;box-shadow:0 1px 0 rgba(196,205,215,.8)!important}
+.saas-issued-notes>div[class*="fixed"][class*="inset-0"]{z-index:200!important;background:rgba(237,242,246,.14)!important;backdrop-filter:blur(24px) saturate(105%)!important;-webkit-backdrop-filter:blur(24px) saturate(105%)!important;padding:28px!important}
+.saas-issued-notes>div[class*="fixed"][class*="inset-0"]>div{width:min(1180px,calc(100vw - 56px))!important;max-width:1180px!important;max-height:calc(100vh - 56px)!important;overflow:hidden!important;border-radius:10px!important;border:1px solid rgba(196,205,215,.95)!important;background:rgba(248,250,252,.97)!important;box-shadow:0 24px 70px rgba(23,41,58,.22),0 3px 10px rgba(23,41,58,.10)!important}
+.saas-issued-notes>div[class*="fixed"][class*="inset-0"]>div>div:first-child{background:rgba(255,255,255,.97)!important;backdrop-filter:blur(8px)!important;padding:14px 18px!important;box-shadow:0 1px 0 rgba(196,205,215,.8)!important}
+.saas-issued-notes>div[class*="fixed"][class*="inset-0"]>div>div:first-child button{background:#fff!important;color:#344054!important;border:1px solid #cbd3dc!important}
+.saas-issued-notes>div[class*="fixed"][class*="inset-0"]>div>div:first-child button[class*="bg-[#0099d8]"]{background:#0099d8!important;color:#fff!important;border-color:#0099d8!important}
 .saas-issued-notes>div[class*="fixed"][class*="inset-0"]>div>div:last-child{max-height:calc(100vh - 132px)!important;overflow:auto!important;padding:24px!important;background:#f2f5f7!important}
 .saas-issued-notes .saas-preview-shell{display:flex!important;justify-content:center!important;align-items:flex-start!important;width:100%!important;overflow:visible!important;background:transparent!important;padding:0!important}
 .saas-issued-notes .danfe-sheet{width:min(100%,860px)!important;max-width:860px!important;margin:0 auto!important;box-shadow:0 10px 28px rgba(23,41,58,.12)!important}
@@ -108,6 +136,7 @@
 .saas-main-content table th{height:42px;padding:0 14px!important;border-bottom:1px solid var(--ca-line)!important;color:#71808f!important;font-size:10px!important;font-weight:700!important;text-transform:uppercase!important;letter-spacing:.045em!important}
 .saas-main-content table td{padding:13px 14px!important;border-bottom:1px solid #edf0f2!important;color:#3f4e5d!important}
 .saas-main-content table tbody tr:nth-child(even){background:#fff!important}.saas-main-content table tbody tr:hover{background:#f7fbfd!important}
+.saas-issued-notes table tbody tr:nth-child(odd){background:#fff!important}.saas-issued-notes table tbody tr:nth-child(even){background:#f1f4f6!important}.saas-issued-notes table tbody tr:hover{background:#e4eaf0!important}
 
 /* dashboard */
 .saas-dashboard{max-width:100%!important;color:var(--ca-text)!important}
@@ -120,4 +149,4 @@
 .saas-status-authorized{background:#eaf8ef;color:#27894b;border-color:#cdebd8}.saas-status-rejected{background:#fff0f0;color:#bd4242;border-color:#f3d2d2}.saas-status-cancelled{background:#f1f3f5;color:#6f7a85;border-color:#dfe4e8}.saas-status-draft{background:#fff7e8;color:#a96d13;border-color:#f3dfb6}
 
 @media(max-width:1180px){.saas-main-content>div{padding-inline:22px!important}.saas-admin-light>aside{width:220px!important}.saas-main-content{padding-left:220px!important}.saas-topbar>div:first-child{width:220px!important}}
-@media(max-width:840px){.saas-admin-light>aside{display:none!important}.saas-main-content{padding-left:0!important}.saas-topbar>div:first-child{width:auto!important;border-right:0!important;padding-left:18px!important}.saas-main-content>div{padding:20px 14px 44px!important}.saas-topbar{height:58px!important}.saas-main-content{padding-top:58px!important}.saas-issued-notes>div[class*="fixed"][class*="inset-0"]{padding:10px!important}.saas-issued-notes>div[class*="fixed"][class*="inset-0"]>div{width:calc(100vw - 20px)!important;max-height:calc(100vh - 20px)!important}.saas-issued-notes>div[class*="fixed"][class*="inset-0"]>div>div:last-child{max-height:calc(100vh - 96px)!important;padding:12px!important}}
+@media(max-width:840px){.saas-admin-light>aside{display:none!important}.saas-main-content{padding-left:0!important}.saas-topbar>div:first-child{width:auto!important;border-right:0!important;padding-left:18px!important}.saas-main-content>div{padding:20px 14px 44px!important}.saas-topbar{height:58px!important}.saas-main-content{padding-top:58px!important}.saas-main-content>div:has(.saas-issued-notes){padding:16px 10px 42px!important}.saas-issued-notes>div[class*="fixed"][class*="inset-0"]{padding:10px!important}.saas-issued-notes>div[class*="fixed"][class*="inset-0"]>div{width:calc(100vw - 20px)!important;max-height:calc(100vh - 20px)!important}.saas-issued-notes>div[class*="fixed"][class*="inset-0"]>div>div:last-child{max-height:calc(100vh - 96px)!important;padding:12px!important}}
