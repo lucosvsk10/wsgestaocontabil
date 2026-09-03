@@ -168,6 +168,24 @@ export function CompanySelectionProvider({ children }: { children: React.ReactNo
 
   useEffect(() => { void refreshCompanies(); }, [refreshCompanies]);
 
+  useEffect(() => {
+    const refresh = () => { void refreshCompanies(); };
+    const channel = supabase
+      .channel('ws-admin-company-selection-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'companies' }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'fiscal_companies' }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'fiscal_certificates' }, refresh)
+      .subscribe();
+
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+      void supabase.removeChannel(channel);
+    };
+  }, [refreshCompanies]);
+
   const selectedCompany = useMemo(
     () => companies.find(company => company.id === selectedCompanyId) || companies[0] || null,
     [companies, selectedCompanyId],
