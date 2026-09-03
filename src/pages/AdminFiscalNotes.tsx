@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCompanySelection } from "@/contexts/CompanySelectionContext";
 
 type Company={id:string;company_id?:string|null;cnpj:string;razao_social:string;nome_fantasia?:string|null;uf?:string;ambiente_padrao?:"producao"|"homologacao";last_sync_at?:string};
-type Doc={nsu?:string;schema?:string;source?:string;documentKind?:"nfe"|"nfse"|"resumo"|"evento"|"documento";fullXml?:boolean;direction?:"entrada"|"saida"|"relacionada";accessKey?:string;model?:string;issueDate?:string;value?:number;issuerCnpj?:string;issuerName?:string;recipientCnpj?:string;number?:string;series?:string;statusCode?:string;statusText?:string;xml?:string;parseError?:string};
+type Doc={nsu?:string;schema?:string;source?:string;documentKind?:"nfe"|"nfse"|"resumo"|"evento"|"documento";fullXml?:boolean;direction?:"entrada"|"saida"|"relacionada";accessKey?:string;model?:string;issueDate?:string;monthKey?:string;value?:number;issuerCnpj?:string;issuerName?:string;recipientCnpj?:string;number?:string;series?:string;statusCode?:string;statusText?:string;xml?:string;parseError?:string};
 type Filter="saida"|"entrada"|"todos"|"cancelada"|"evento";type TypeFilter="todos"|"nfe"|"nfce"|"nfse";type PeriodMode="month"|"custom";type DownloadScope="todos"|"entrada"|"saida";
 const MONTHS=["Ano","Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"] as const;
 const MONTH_INDEX:Record<string,number>={Jan:0,Fev:1,Mar:2,Abr:3,Mai:4,Jun:5,Jul:6,Ago:7,Set:8,Out:9,Nov:10,Dez:11};const PAGE_SIZE=50;
