@@ -28,7 +28,7 @@ export default function SaasIssuedNotes({emissions,onNew}:Props){
  const pending=scoped.filter(x=>x.status==="draft"||x.status==="validated");
  const missingXml=authorized.filter(x=>!x.xml);
  const revenue=authorized.reduce((a:number,x:any)=>a+Number(x.total||0),0);
- const typeCounts=useMemo(()=>["NF-e","NFC-e","NFS-e","CT-e","MDF-e"].map(name=>({name,count:scoped.filter(x=>typeLabel(x)===name).length})),[scoped]);
+ const typeCounts=useMemo(()=>["NF-e","NFC-e","NFS-e","CT-e","MDF-e"].map(name=>({label:name,count:scoped.filter(x=>typeLabel(x)===name).length})),[scoped]);
  const tabs=[
   {label:"Todas",count:scoped.length},
   {label:"Autorizadas",count:authorized.length},

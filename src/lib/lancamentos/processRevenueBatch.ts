@@ -44,7 +44,7 @@ async function detectRevenueCompetencesFromDocuments(documents: EncodedDocument[
     body: { module: "faturamento", documents },
   });
   if (error) throw await functionError(error, "Não foi possível identificar a competência do faturamento antes do processamento.");
-  const competences = [...new Set((data?.competences ?? []).map(String).filter((value: string) => /^(0[1-9]|1[0-2])\/(20\d{2})$/.test(value)))];
+  const competences: string[] = [...new Set(((data?.competences ?? []) as unknown[]).map(String).filter((value: string) => /^(0[1-9]|1[0-2])\/(20\d{2})$/.test(value)))];
   return {
     competences,
     hasUndatedPeriodicBlocks: Boolean(data?.hasUndatedPeriodicBlocks),
