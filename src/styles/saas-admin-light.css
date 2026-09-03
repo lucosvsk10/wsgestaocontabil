@@ -68,7 +68,7 @@
 .saas-main-content [class*="md:flex-row"][class*="md:justify-between"]{text-align:left!important}
 
 /* common surfaces */
-.saas-main-content section[class*="border"],.saas-main-content div[class*="border"][class*="bg-white"],.saas-main-content .bg-card{background:#fff!important;border-color:var(--ca-line)!important;box-shadow:0 4px 14px rgba(23,41,58,.065)!important}
+.saas-main-content section[class*="border"],.saas-main-content div[class*="border"][class*="bg-white"],.saas-main-content .bg-card{background:#fff!important;border-color:var(--ca-line)!important;box-shadow:0 1px 3px rgba(23,41,58,.10),0 7px 20px rgba(23,41,58,.11)!important}
 .saas-main-content .rounded-2xl,.saas-main-content .rounded-xl,.saas-main-content .rounded-lg{border-radius:5px!important}
 .saas-main-content input,.saas-main-content select,.saas-main-content textarea{background:#fff!important;color:var(--ca-text)!important;border:1px solid var(--ca-line-strong)!important;border-radius:4px!important;box-shadow:none!important;outline:none!important;transition:border-color .14s ease,box-shadow .14s ease}
 .saas-main-content input:hover,.saas-main-content select:hover,.saas-main-content textarea:hover{border-color:#aebac5!important}
