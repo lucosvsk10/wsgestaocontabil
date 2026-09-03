@@ -14,6 +14,7 @@ import SaasSetupGuide from "@/components/saas/SaasSetupGuide";
 import AccountDrawer from "@/components/account/AccountDrawer";
 import "@/styles/saas-admin-light.css";
 import "@/styles/saas-premium-v3.css";
+import "@/styles/saas-admin-reconciliation.css";
 
 const WS_LOGO = "/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png";
 const TEST_TRANSPORT_ORG_ID = "c77c4620-fbbb-4f03-9e32-ab48d25bb0cf";
@@ -25,7 +26,7 @@ const groups = [
   { title: "Notas de transportes", display: "Emitir transportes", icon: Truck, items: [{label:"Emitir CT-e",icon:FileText},{label:"Emitir MDF-e",icon:FileText}] },
   { title: "Cadastros", display: "Cadastros", icon: Boxes, items: [{label:"Clientes",icon:UsersRound},{label:"Fornecedores",icon:Building2},{label:"Produtos",icon:Package2},{label:"Serviços",icon:ShoppingBag},{label:"Transportadoras",icon:Truck}] },
 ];
-const lightVars: any = { "--background": "216 22% 94.5%", "--foreground": "222.2 84% 4.9%", "--card": "0 0% 100%", "--card-foreground": "222.2 84% 4.9%", "--popover": "0 0% 100%", "--popover-foreground": "222.2 84% 4.9%", "--primary": "222.2 47.4% 11.2%", "--primary-foreground": "210 40% 98%", "--secondary": "216 24% 95%", "--secondary-foreground": "222.2 47.4% 11.2%", "--muted": "216 22% 94%", "--muted-foreground": "215.4 16.3% 42%", "--accent": "216 24% 95%", "--accent-foreground": "222.2 47.4% 11.2%", "--border": "214 22% 87%", "--input": "214 22% 84%", "--ring": "222.2 84% 4.9%" };
+const lightVars: any = { "--background": "220 14% 96%", "--foreground": "222 47% 11%", "--card": "220 13% 92%", "--card-foreground": "222 47% 11%", "--popover": "220 13% 94%", "--popover-foreground": "222 47% 11%", "--primary": "220 12% 87%", "--primary-foreground": "222 47% 11%", "--secondary": "220 12% 89%", "--secondary-foreground": "222 47% 11%", "--muted": "220 12% 90%", "--muted-foreground": "215 16% 40%", "--accent": "220 12% 87%", "--accent-foreground": "222 47% 11%", "--border": "220 12% 82%", "--input": "220 12% 84%", "--ring": "215 16% 40%" };
 
 export default function SaasApp() {
   const { user } = useAuth();
