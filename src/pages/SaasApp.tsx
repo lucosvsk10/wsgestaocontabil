@@ -25,7 +25,7 @@ const groups = [
   { title: "Notas de transportes", display: "Emitir transportes", icon: Truck, items: [{label:"Emitir CT-e",icon:FileText},{label:"Emitir MDF-e",icon:FileText}] },
   { title: "Cadastros", display: "Cadastros", icon: Boxes, items: [{label:"Clientes",icon:UsersRound},{label:"Fornecedores",icon:Building2},{label:"Produtos",icon:Package2},{label:"Serviços",icon:ShoppingBag},{label:"Transportadoras",icon:Truck}] },
 ];
-const lightVars: any = { "--background": "216 20% 97%", "--foreground": "222.2 84% 4.9%", "--card": "0 0% 100%", "--card-foreground": "222.2 84% 4.9%", "--popover": "0 0% 100%", "--popover-foreground": "222.2 84% 4.9%", "--primary": "222.2 47.4% 11.2%", "--primary-foreground": "210 40% 98%", "--secondary": "216 24% 95%", "--secondary-foreground": "222.2 47.4% 11.2%", "--muted": "216 22% 94%", "--muted-foreground": "215.4 16.3% 42%", "--accent": "216 24% 95%", "--accent-foreground": "222.2 47.4% 11.2%", "--border": "214 22% 87%", "--input": "214 22% 84%", "--ring": "222.2 84% 4.9%" };
+const lightVars: any = { "--background": "216 22% 94.5%", "--foreground": "222.2 84% 4.9%", "--card": "0 0% 100%", "--card-foreground": "222.2 84% 4.9%", "--popover": "0 0% 100%", "--popover-foreground": "222.2 84% 4.9%", "--primary": "222.2 47.4% 11.2%", "--primary-foreground": "210 40% 98%", "--secondary": "216 24% 95%", "--secondary-foreground": "222.2 47.4% 11.2%", "--muted": "216 22% 94%", "--muted-foreground": "215.4 16.3% 42%", "--accent": "216 24% 95%", "--accent-foreground": "222.2 47.4% 11.2%", "--border": "214 22% 87%", "--input": "214 22% 84%", "--ring": "222.2 84% 4.9%" };
 
 export default function SaasApp() {
   const { user } = useAuth();
@@ -83,7 +83,7 @@ export default function SaasApp() {
   const dismissSetup = () => { if (organization?.id) localStorage.setItem(`ws_fiscal_setup_dismissed_${organization.id}`, "1"); setSetupDismissed(true); };
 
   let content: any;
-  if (active === "Início") content = <SaasDashboard organizationName={organization?.name} emissions={emissions} onNew={() => { setSelectedDocument(null); setActive("Emissão"); }} onReports={() => setActive("Relatórios")} />;
+  if (active === "Início") content = <SaasDashboard organizationId={organization?.id || null} organizationName={organization?.name} emissions={emissions} onNew={() => { setSelectedDocument(null); setActive("Emissão"); }} onReports={() => setActive("Relatórios")} />;
   else if (active === "Produtos") content = <SaasProductsPremium organizationId={organization?.id || null} />;
   else if (cadastroSections.has(active)) content = <SaasCadastros organizationId={organization?.id || null} section={active as CadastroSection} />;
   else if (active === "Emissão") content = <SaasEmission organizationId={organization?.id || null} documentType={selectedDocument} onChoose={setSelectedDocument} />;
@@ -115,7 +115,7 @@ export default function SaasApp() {
     </aside>
 
     <main className="saas-main-content min-h-screen pl-72 pt-[72px]"><div className="mx-auto w-full max-w-[1680px] px-5 py-6 lg:px-8 xl:px-10">{content}</div></main>
-    {showSetup && <SaasSetupGuide organizationId={organization.id} organizationName={organization?.name} profile={profile} certificateConfigured={certificateConfigured} emissionsCount={emissions.length} onOpenCompany={() => setActive("Minha Empresa")} onStartEmission={() => {setSelectedDocument(null);setActive("Emissão")}} onDismiss={dismissSetup}/>}
+    {showSetup && <SaasSetupGuide organizationId={organization.id} organizationName={organization?.name} profile={profile} certificateConfigured={certificateConfigured} emissionsCount={emissions.length} onOpenCompany={() => setActive("Minha Empresa")} onStartEmission={() => {setSelectedDocument(null);setActive("Emissão")}} onDismiss={dismissSetup}/>} 
   </div>;
 }
 
