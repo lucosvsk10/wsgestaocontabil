@@ -1,0 +1,36 @@
+name: SaaS issued notes UI hotfix
+on:
+  push:
+    paths:
+      - '.github/workflows/saas-issued-notes-ui-hotfix.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch SaaS issued notes UI
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/components/saas/SaasIssuedNotes.tsx')
+          s=p.read_text()
+          s=s.replace('.saas-issued-admin-clone button{background:transparent!important;color:inherit!important;box-shadow:none!important}', '.saas-issued-admin-clone.saas-issued-admin-clone.saas-issued-admin-clone button{background-color:transparent!important;background-image:none!important;color:inherit!important;box-shadow:none!important}')
+          s=s.replace('.saas-issued-admin-clone button:hover:not(:disabled){background:rgba(255,255,255,.6)!important}', '.saas-issued-admin-clone.saas-issued-admin-clone.saas-issued-admin-clone button:hover:not(:disabled){background-color:rgba(255,255,255,.35)!important;background-image:none!important}')
+          s=s.replace('className={`min-w-11 rounded-[4px] px-3 py-2 text-sm font-medium ${active?"bg-white shadow-sm":future?"text-[#b8bec7]":"text-[#344054]"}`}', 'className={`min-w-11 rounded-[4px] border px-3 py-2 text-sm font-medium ${active?"border-[#aeb7c2] text-[#0f172a]":future?"border-transparent text-[#b8bec7]":"border-transparent text-[#344054]"}`}')
+          s=s.replace('className={`rounded-[4px] border px-3 py-1.5 text-xs font-medium ${typeFilter===t?"border-[#0f172a] bg-[#0f172a]! text-[#0f172a]":"border-transparent text-[#475467]"}`}', 'className={`rounded-[4px] border px-3 py-1.5 text-xs font-medium ${typeFilter===t?"border-[#7e8997] text-[#0f172a]":"border-transparent text-[#475467]"}`}')
+          s=s.replace('<colgroup><col className="w-[12%]"/><col className="w-[22%]"/><col className="w-[26%]"/><col className="w-[20%]"/><col className="w-[10%]"/><col className="w-[10%]"/></colgroup>', '<colgroup><col className="w-[12%]"/><col className="w-[22%]"/><col className="w-[25%]"/><col className="w-[19%]"/><col className="w-[10%]"/><col className="w-[12%]"/></colgroup>')
+          old='<td className="px-4 py-3.5 align-middle" onClick={e=>e.stopPropagation()}><div className="flex justify-end gap-2 whitespace-nowrap"><button onClick={()=>openPreview(item)} className="inline-flex h-8 items-center gap-1 rounded-[4px] border border-transparent px-2 text-xs font-semibold"><FileText className="h-3.5 w-3.5"/>Visualizar</button>{item.xml&&<button onClick={()=>downloadXml(item)} className="h-8 rounded-[4px] border border-transparent px-2 text-[10px] font-semibold">XML</button>}</div></td>'
+          new='<td className="px-4 py-3.5 align-middle" onClick={e=>e.stopPropagation()}><div className="flex justify-end whitespace-nowrap"><button onClick={()=>openPreview(item)} className="inline-flex h-8 items-center gap-2 rounded-[4px] border border-transparent px-2 text-xs font-semibold text-[#172033]"><FileText className="h-3.5 w-3.5"/>Visualizar</button></div></td>'
+          if old not in s:
+              raise SystemExit('action cell pattern not found')
+          s=s.replace(old,new)
+          p.write_text(s)
+          PY
+          rm .github/workflows/saas-issued-notes-ui-hotfix.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/saas/SaasIssuedNotes.tsx .github/workflows/saas-issued-notes-ui-hotfix.yml
+          git commit -m "fix(saas): clean issued notes controls and actions"
+          git push
