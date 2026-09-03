@@ -97,7 +97,8 @@
 .saas-dashboard [class*="bg-[#f8fafb]"][class*="p-1"]>button[class*="bg-white"]{background:#fff!important;color:#17233b!important;border-color:#cfd8e2!important;box-shadow:0 1px 3px rgba(23,35,59,.08)!important}
 
 /* issued notes */
-.saas-issued-notes>section:first-of-type{background:#f4f6f8!important;box-shadow:none!important}
+.saas-admin-light .saas-issued-notes>div:first-of-type{background:transparent!important;border:0!important;box-shadow:none!important}
+.saas-admin-light .saas-issued-notes>section:first-of-type{background:#fff!important;border-color:#d7dde5!important;box-shadow:0 1px 3px rgba(23,41,58,.10),0 7px 20px rgba(23,41,58,.11)!important}
 .saas-issued-notes>section:first-of-type button{background:transparent!important;color:#59697a!important;border:1px solid transparent!important;box-shadow:none!important}
 .saas-issued-notes>section:first-of-type button:hover{background:#e9eef2!important;color:#25364a!important;border-color:#d5dde5!important}
 .saas-issued-notes>section:first-of-type button[class*="bg-white"]{background:#fff!important;color:#152238!important;border-color:#cbd5df!important;box-shadow:0 1px 3px rgba(23,35,59,.08)!important}
