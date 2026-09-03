@@ -1,199 +1,108 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-.saas-admin-light { min-height: 100vh; color-scheme: light; font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif !important; font-size: 15px; letter-spacing: -0.005em; }
-.saas-admin-light,
-.saas-admin-light *,
-.saas-admin-light input,
-.saas-admin-light select,
-.saas-admin-light textarea,
-.saas-admin-light button,
-.saas-admin-light table,
-.saas-admin-light th,
-.saas-admin-light td,
-.saas-admin-light svg text { font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif !important; letter-spacing: -0.005em; }
-.saas-admin-light h1,
-.saas-admin-light h2,
-.saas-admin-light h3 { font-weight: 600; letter-spacing: -0.02em; }
-.saas-topbar { background: #202833 !important; border-color: #303946 !important; }
-.saas-emission-group { box-shadow: inset 0 0 0 1px rgba(100,116,139,.10); }
-.saas-emission-group:hover { box-shadow: inset 0 0 0 1px rgba(100,116,139,.16); }
-
-.saas-main-content { background: #f2f4f7 !important; }
-.saas-main-content > div { width: min(100%, 1180px) !important; max-width: 1180px !important; margin-inline: auto !important; padding-inline: 28px !important; }
-
-/* As telas de histórico usam praticamente toda a largura disponível do painel. */
-.saas-main-content > div:has(> .saas-issued-notes),
-.saas-main-content > div:has(.saas-emission-history) {
-  width: calc(100% - 12px) !important;
-  max-width: 1640px !important;
-  padding-inline: 6px !important;
+.saas-admin-light{
+  --ca-blue:#0099d8;
+  --ca-blue-dark:#0077b6;
+  --ca-blue-soft:#eaf7fd;
+  --ca-green:#35bb66;
+  --ca-green-dark:#249b51;
+  --ca-red:#d84d4d;
+  --ca-amber:#d58a1f;
+  --ca-text:#273444;
+  --ca-title:#1f2d3d;
+  --ca-muted:#6f7d8c;
+  --ca-line:#dfe5eb;
+  --ca-line-strong:#cbd4dd;
+  --ca-bg:#f4f5f7;
+  --ca-card:#fff;
+  --background:220 14% 96% !important;
+  --foreground:213 32% 20% !important;
+  --card:0 0% 100% !important;
+  --card-foreground:213 32% 20% !important;
+  --popover:0 0% 100% !important;
+  --popover-foreground:213 32% 20% !important;
+  --primary:198 100% 42% !important;
+  --primary-foreground:0 0% 100% !important;
+  --secondary:210 20% 96% !important;
+  --secondary-foreground:213 32% 20% !important;
+  --muted:210 18% 95% !important;
+  --muted-foreground:211 14% 47% !important;
+  --accent:198 78% 95% !important;
+  --accent-foreground:198 100% 35% !important;
+  --border:211 22% 88% !important;
+  --input:211 22% 82% !important;
+  --ring:198 100% 42% !important;
+  min-height:100vh;
+  color-scheme:light;
+  font-family:'Inter',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif!important;
+  color:var(--ca-text);
+  background:var(--ca-bg)!important;
+  font-size:14px;
 }
+.saas-admin-light,.saas-admin-light *,.saas-admin-light input,.saas-admin-light select,.saas-admin-light textarea,.saas-admin-light button,.saas-admin-light table,.saas-admin-light th,.saas-admin-light td{font-family:'Inter',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif!important;letter-spacing:0}
+.saas-admin-light h1,.saas-admin-light h2,.saas-admin-light h3{color:var(--ca-title)!important;font-weight:600!important;letter-spacing:-.018em!important}
+.saas-admin-light p{letter-spacing:0}
 
-.saas-main-content h1 { text-align: center; color: #111827 !important; }
-.saas-main-content h1 + p { margin-left: auto; margin-right: auto; max-width: 760px; text-align: center; }
+/* shell */
+.saas-topbar{height:64px!important;background:var(--ca-blue)!important;border-color:rgba(255,255,255,.2)!important;box-shadow:0 1px 4px rgba(32,58,76,.12)!important}
+.saas-topbar>div:first-child{width:248px!important;border-color:rgba(255,255,255,.18)!important}
+.saas-topbar img{filter:brightness(0) invert(1);opacity:.98}
+.saas-topbar p{color:#fff!important}
+.saas-admin-light>aside{top:64px!important;width:248px!important;background:#fff!important;border-color:var(--ca-line)!important;box-shadow:1px 0 3px rgba(23,41,58,.035)}
+.saas-admin-light>aside>div:first-child{background:#fff!important;border-color:var(--ca-line)!important}
+.saas-admin-light>aside nav{padding:14px 10px 22px!important;scrollbar-width:thin}
+.saas-admin-light>aside nav section>p{margin:14px 10px 7px!important;color:#93a0ad!important;font-size:9px!important;font-weight:700!important;letter-spacing:.09em!important}
+.saas-admin-light>aside nav button{border-radius:4px!important;border:0!important;box-shadow:none!important;transform:none!important}
+.saas-admin-light>aside nav button:hover{background:#f2f8fb!important;color:var(--ca-blue-dark)!important}
+.saas-admin-light>aside nav button[class*="bg-[#e8edf3]"],
+.saas-admin-light>aside nav button[class*="saas-emission-group"]{background:#eef8fc!important;color:#127cab!important;border-left:3px solid var(--ca-blue)!important}
+.saas-admin-light>aside nav button[class*="bg-muted"]{background:#e8f6fc!important;color:#117cae!important;font-weight:600!important}
+.saas-main-content{min-height:100vh!important;padding-left:248px!important;padding-top:64px!important;background:var(--ca-bg)!important}
+.saas-main-content>div{width:min(100%,1320px)!important;max-width:1320px!important;margin:0 auto!important;padding:28px 30px 56px!important}
+.saas-main-content>div:has(.saas-dashboard),.saas-main-content>div:has(.saas-issued-notes),.saas-main-content>div:has(.saas-emission-history){max-width:1480px!important}
+
+/* page headers */
+.saas-main-content h1{text-align:left!important;font-size:25px!important;line-height:1.2!important;margin:0!important}
+.saas-main-content h1+p{margin:7px 0 0!important;max-width:760px!important;text-align:left!important;color:var(--ca-muted)!important;font-size:13px!important}
 .saas-main-content [class*="sm:flex-row"][class*="sm:justify-between"],
-.saas-main-content [class*="md:flex-row"][class*="md:justify-between"] { flex-direction: column !important; align-items: center !important; justify-content: center !important; text-align: center; }
-.saas-main-content [class*="sm:flex-row"][class*="sm:justify-between"] > div,
-.saas-main-content [class*="md:flex-row"][class*="md:justify-between"] > div { margin-left: auto; margin-right: auto; }
-.saas-main-content [class*="sm:flex-row"][class*="sm:justify-between"] [class*="flex"],
-.saas-main-content [class*="md:flex-row"][class*="md:justify-between"] [class*="flex"] { justify-content: center; }
+.saas-main-content [class*="md:flex-row"][class*="md:justify-between"]{text-align:left!important}
 
-.saas-main-content > div:has(.saas-dashboard) { width: 100% !important; max-width: 1540px !important; padding-inline: 32px !important; }
-.saas-dashboard h1 { text-align: left !important; }
-.saas-dashboard h1 + p { margin-left: 0 !important; margin-right: 0 !important; max-width: 760px; text-align: left !important; }
-.saas-dashboard > div[class*="sm:flex-row"][class*="sm:justify-between"] { flex-direction: row !important; align-items: flex-start !important; justify-content: space-between !important; text-align: left !important; }
-.saas-dashboard > div[class*="sm:flex-row"][class*="sm:justify-between"] > div { margin-left: 0 !important; margin-right: 0 !important; }
-.saas-dashboard > div[class*="sm:flex-row"][class*="sm:justify-between"] [class*="flex"] { justify-content: flex-start; }
+/* common surfaces */
+.saas-main-content section[class*="border"],.saas-main-content div[class*="border"][class*="bg-white"],.saas-main-content .bg-card{background:#fff!important;border-color:var(--ca-line)!important;box-shadow:none!important}
+.saas-main-content .rounded-2xl,.saas-main-content .rounded-xl,.saas-main-content .rounded-lg{border-radius:5px!important}
+.saas-main-content input,.saas-main-content select,.saas-main-content textarea{background:#fff!important;color:var(--ca-text)!important;border:1px solid var(--ca-line-strong)!important;border-radius:4px!important;box-shadow:none!important;outline:none!important;transition:border-color .14s ease,box-shadow .14s ease}
+.saas-main-content input:hover,.saas-main-content select:hover,.saas-main-content textarea:hover{border-color:#aebac5!important}
+.saas-main-content input:focus,.saas-main-content select:focus,.saas-main-content textarea:focus{border-color:var(--ca-blue)!important;box-shadow:0 0 0 2px rgba(0,153,216,.12)!important}
+.saas-main-content label{color:#445261!important;font-weight:500!important}
 
-.saas-main-content [class*="rounded-2xl"] { border-radius: 8px !important; }
-.saas-main-content [class*="rounded-xl"] { border-radius: 6px !important; }
-.saas-main-content [class*="rounded-lg"] { border-radius: 5px !important; }
-.saas-main-content section[class*="border"],
-.saas-main-content div[class*="border"][class*="bg-white"] { border-color: #cfd6df !important; box-shadow: 0 1px 2px rgba(15,23,42,.03), 0 10px 26px -24px rgba(15,23,42,.28); }
-.saas-main-content section[class*="p-6"],
-.saas-main-content section[class*="p-7"] { padding-top: 26px !important; padding-bottom: 26px !important; }
-.saas-main-content table,
-.saas-main-content [class*="overflow-hidden"][class*="border"][class*="bg-white"] { border-radius: 8px !important; }
-.saas-main-content [class*="grid"] { align-items: stretch; }
+/* buttons: Conta Azul-like hierarchy */
+.saas-main-content button{border-radius:4px!important;box-shadow:none!important;transform:none!important;font-weight:600!important;transition:background .14s ease,border-color .14s ease,color .14s ease!important}
+.saas-main-content button:not(:disabled){background:var(--ca-blue)!important;color:#fff!important;border:1px solid var(--ca-blue)!important}
+.saas-main-content button:not(:disabled):hover{background:var(--ca-blue-dark)!important;border-color:var(--ca-blue-dark)!important;transform:none!important}
+.saas-main-content button[class*="bg-white"],.saas-main-content button[class*="variant-outline"],.saas-main-content .saas-action-secondary{background:#fff!important;color:#526170!important;border:1px solid var(--ca-line-strong)!important}
+.saas-main-content button[class*="bg-white"]:hover,.saas-main-content .saas-action-secondary:hover{background:#f7f9fa!important;color:#314252!important;border-color:#aebac5!important}
+.saas-main-content button:disabled{opacity:.48!important;cursor:not-allowed!important}
+.saas-main-content .saas-action-primary{min-height:40px!important;background:var(--ca-blue)!important;border-color:var(--ca-blue)!important;color:#fff!important;padding:0 18px!important}
+.saas-main-content .saas-emission-actions .saas-action-primary{background:var(--ca-green)!important;border-color:var(--ca-green)!important}
+.saas-main-content .saas-emission-actions .saas-action-primary:hover{background:var(--ca-green-dark)!important;border-color:var(--ca-green-dark)!important}
+.saas-main-content .saas-action-secondary{min-height:40px!important;padding:0 16px!important}
 
-.saas-dashboard { color: hsl(var(--foreground)); }
-.saas-dashboard h1,
-.saas-dashboard h2,
-.saas-dashboard h3,
-.saas-dashboard h4 { color: hsl(var(--foreground)) !important; }
-.saas-dashboard p[class*="text-white"],
-.saas-dashboard span[class*="text-white"] { color: hsl(var(--foreground)) !important; }
-.saas-kpi-card { position: relative; overflow: hidden; background: #fff !important; border-radius: 8px !important; }
-.saas-kpi-card::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--kpi-color); }
-.saas-kpi-ring { position: absolute; top: 50%; right: -82px; width: 138px; height: 138px; transform: translateY(-50%); border: 10px solid var(--kpi-ring); border-radius: 9999px; pointer-events: none; }
-.saas-kpi-green { --kpi-color: #22a45a; --kpi-ring: rgba(34,164,90,.25); border-color: rgba(34,164,90,.27) !important; }
-.saas-kpi-orange { --kpi-color: #f59e0b; --kpi-ring: rgba(245,158,11,.26); border-color: rgba(245,158,11,.29) !important; }
-.saas-kpi-red { --kpi-color: #e34f4f; --kpi-ring: rgba(227,79,79,.24); border-color: rgba(227,79,79,.27) !important; }
-.saas-kpi-blue { --kpi-color: #3b82c4; --kpi-ring: rgba(59,130,196,.24); border-color: rgba(59,130,196,.27) !important; }
+/* tables */
+.saas-main-content table{width:100%;background:#fff!important;border-collapse:collapse!important;border-radius:0!important}
+.saas-main-content table thead{background:#f7f8fa!important}
+.saas-main-content table th{height:42px;padding:0 14px!important;border-bottom:1px solid var(--ca-line)!important;color:#71808f!important;font-size:10px!important;font-weight:700!important;text-transform:uppercase!important;letter-spacing:.045em!important}
+.saas-main-content table td{padding:13px 14px!important;border-bottom:1px solid #edf0f2!important;color:#3f4e5d!important}
+.saas-main-content table tbody tr:nth-child(even){background:#fff!important}.saas-main-content table tbody tr:hover{background:#f7fbfd!important}
 
-.saas-admin-light [class*="text-[#10203e]"],
-.saas-admin-light [class*="text-[#12213f]"],
-.saas-admin-light [class*="text-[#263652]"],
-.saas-admin-light [class*="text-[#273953]"],
-.saas-admin-light [class*="text-[#43526b]"] { color: hsl(var(--foreground)) !important; }
-.saas-admin-light [class*="text-[#6d7a90]"],
-.saas-admin-light [class*="text-[#68758c]"],
-.saas-admin-light [class*="text-[#657289]"],
-.saas-admin-light [class*="text-[#7c8799]"],
-.saas-admin-light [class*="text-[#8a96a8]"],
-.saas-admin-light [class*="text-[#9aa6b5]"] { color: hsl(var(--muted-foreground)) !important; }
-.saas-admin-light [class*="border-[#e0e5ec]"],
-.saas-admin-light [class*="border-[#e1e6ec]"],
-.saas-admin-light [class*="border-[#d9e0e8]"],
-.saas-admin-light [class*="border-[#dfe5ec]"],
-.saas-admin-light [class*="border-[#e3e7ed]"],
-.saas-admin-light [class*="border-[#edf0f4]"] { border-color: #cfd6df !important; }
-.saas-admin-light [class*="bg-[#fbfcfe]"],
-.saas-admin-light [class*="bg-[#f6f8fb]"] { background: #f4f6f8 !important; }
-.saas-admin-light [class*="bg-[#eaf2ff]"],
-.saas-admin-light [class*="bg-[#eef4fd]"] { background: #eef1f4 !important; color: hsl(var(--foreground)) !important; }
-.saas-admin-light [class*="bg-[#0b5bd7]"] { background: hsl(var(--primary)) !important; color: hsl(var(--primary-foreground)) !important; }
+/* dashboard */
+.saas-dashboard{max-width:100%!important;color:var(--ca-text)!important}
+.saas-dashboard .saas-kpi-card{border:1px solid var(--ca-line)!important;border-radius:5px!important;min-height:128px!important;background:#fff!important}
+.saas-dashboard .saas-kpi-card::before{display:none!important}.saas-dashboard .saas-kpi-ring{display:none!important}
+.saas-dashboard .saas-kpi-card p:first-child{color:#7a8793!important}.saas-dashboard .saas-kpi-card p[class*="text-2xl"]{color:#263747!important;font-size:24px!important}
 
-.saas-admin-light input,
-.saas-admin-light select,
-.saas-admin-light textarea { background: #ffffff !important; color: hsl(var(--foreground)) !important; border-color: #bfc8d4 !important; border-radius: 6px !important; box-shadow: inset 0 0 0 1px rgba(15,23,42,.015) !important; }
-.saas-admin-light input:focus,
-.saas-admin-light select:focus,
-.saas-admin-light textarea:focus { border-color: #7f8da0 !important; box-shadow: 0 0 0 3px rgba(71,85,105,.09) !important; }
-.saas-admin-light .bg-card { background-color: #ffffff !important; }
-.saas-admin-light table { background: #ffffff; }
-.saas-admin-light table thead { background: #e9edf2; }
-.saas-admin-light table tbody tr:nth-child(even) { background: #fafbfc; }
-.saas-admin-light table tbody tr:hover { background: #f0f3f6; }
-.saas-admin-light .ws-storage-style { color: #111827 !important; }
-.saas-admin-light .ws-storage-style h1,
-.saas-admin-light .ws-storage-style h2,
-.saas-admin-light .ws-storage-style h3,
-.saas-admin-light .ws-storage-style p[class*="text-2xl"],
-.saas-admin-light .ws-storage-style p[class*="text-3xl"],
-.saas-admin-light .ws-storage-style p[class*="text-4xl"],
-.saas-admin-light .ws-storage-style [class*="font-light"] { color: #111827 !important; }
+/* status */
+.saas-status-pill{display:inline-flex;align-items:center;min-height:22px;border-radius:10px;padding:2px 8px;font-size:10px;font-weight:600;border:1px solid transparent}
+.saas-status-authorized{background:#eaf8ef;color:#27894b;border-color:#cdebd8}.saas-status-rejected{background:#fff0f0;color:#bd4242;border-color:#f3d2d2}.saas-status-cancelled{background:#f1f3f5;color:#6f7a85;border-color:#dfe4e8}.saas-status-draft{background:#fff7e8;color:#a96d13;border-color:#f3dfb6}
 
-.saas-main-content button:not(:disabled) {
-  background: #202833 !important;
-  color: #ffffff !important;
-  border: 1px solid #202833 !important;
-  border-radius: 6px !important;
-  box-shadow: 0 1px 2px rgba(15,23,42,.08);
-}
-.saas-main-content button:not(:disabled):hover { background: #151c26 !important; border-color: #151c26 !important; transform: translateY(-1px); }
-.saas-main-content button:disabled { opacity: .48; }
-.saas-main-content button svg { color: currentColor !important; }
-.saas-main-content button[class*="text-xs"] { min-height: 32px; padding: 0 12px !important; }
-.saas-main-content button[class*="text-sm"] { min-height: 36px; padding: 0 14px !important; }
-
-/* Botões secundários e de documento não podem herdar o fundo escuro global. */
-.saas-issued-notes button[class*="bg-white"],
-.saas-emission-history button[class*="bg-white"] {
-  background:#fff !important;
-  color:#263652 !important;
-  border-color:#cbd3dc !important;
-  box-shadow:0 1px 2px rgba(15,23,42,.04) !important;
-}
-.saas-issued-notes button[class*="bg-white"]:hover,
-.saas-emission-history button[class*="bg-white"]:hover {
-  background:#eef2f5 !important;
-  color:#111827 !important;
-  border-color:#9eabb9 !important;
-}
-.saas-issued-notes button[class*="underline"] { background:transparent !important; color:#455468 !important; border:0 !important; box-shadow:none !important; padding:0 !important; min-height:auto !important; transform:none !important; }
-.saas-issued-notes button:disabled { background:#fff !important; color:#7d8997 !important; border-color:#cbd3dc !important; }
-
-/* Alternância DANFE / Notinha: apenas a opção ativa fica escura. */
-.saas-issued-notes button[class*="min-h-[48px]"][class*="bg-white"] { background:#fff !important; color:#263652 !important; border-color:#cbd3dc !important; }
-.saas-issued-notes button[class*="min-h-[48px]"]:not([class*="bg-white"]) { background:#202833 !important; color:#fff !important; border-color:#202833 !important; }
-
-/* As tabelas fiscais devem caber no desktop sem barra horizontal. */
-.saas-issued-notes table,
-.saas-emission-history table {
-  width:100% !important;
-  min-width:0 !important;
-  table-layout:fixed !important;
-}
-.saas-emission-history > div[class*="overflow-x-auto"] { overflow-x:hidden !important; }
-.saas-emission-history th,
-.saas-emission-history td { padding-left:10px !important; padding-right:10px !important; }
-.saas-emission-history th:nth-child(1), .saas-emission-history td:nth-child(1) { width:6%; }
-.saas-emission-history th:nth-child(2), .saas-emission-history td:nth-child(2) { width:7%; }
-.saas-emission-history th:nth-child(3), .saas-emission-history td:nth-child(3) { width:18%; }
-.saas-emission-history th:nth-child(4), .saas-emission-history td:nth-child(4) { width:20%; }
-.saas-emission-history th:nth-child(5), .saas-emission-history td:nth-child(5) { width:10%; }
-.saas-emission-history th:nth-child(6), .saas-emission-history td:nth-child(6) { width:10%; }
-.saas-emission-history th:nth-child(7), .saas-emission-history td:nth-child(7) { width:12%; }
-.saas-emission-history th:nth-child(8), .saas-emission-history td:nth-child(8) { width:8%; }
-.saas-emission-history th:nth-child(9), .saas-emission-history td:nth-child(9) { width:9%; }
-.saas-emission-history td { overflow:hidden; text-overflow:ellipsis; }
-
-.saas-main-content button[class*="mb-3"][class*="text-sm"][class*="font-semibold"],
-.saas-main-content button[class*="mb-4"][class*="text-sm"][class*="font-semibold"] {
-  display: inline-flex !important;
-  align-items: center;
-  justify-content: center;
-  min-width: 86px;
-  min-height: 36px;
-  margin-left: 0;
-  padding: 0 14px !important;
-  background: #ffffff !important;
-  color: #202833 !important;
-  border: 1px solid #bfc8d4 !important;
-  box-shadow: 0 1px 2px rgba(15,23,42,.05);
-}
-.saas-main-content button[class*="mb-3"][class*="text-sm"][class*="font-semibold"]:hover,
-.saas-main-content button[class*="mb-4"][class*="text-sm"][class*="font-semibold"]:hover {
-  background: #eef1f4 !important;
-  color: #111827 !important;
-  border-color: #98a5b5 !important;
-}
-
-@media (max-width: 900px) {
-  .saas-main-content > div { padding-inline: 18px !important; }
-  .saas-main-content > div:has(> .saas-issued-notes),
-  .saas-main-content > div:has(.saas-emission-history) { width:100% !important; padding-inline: 12px !important; }
-  .saas-emission-history > div[class*="overflow-x-auto"] { overflow-x:auto !important; }
-  .saas-emission-history table { min-width:980px !important; }
-}
+@media(max-width:1180px){.saas-main-content>div{padding-inline:22px!important}.saas-admin-light>aside{width:220px!important}.saas-main-content{padding-left:220px!important}.saas-topbar>div:first-child{width:220px!important}}
+@media(max-width:840px){.saas-admin-light>aside{display:none!important}.saas-main-content{padding-left:0!important}.saas-topbar>div:first-child{width:auto!important;border-right:0!important;padding-left:18px!important}.saas-main-content>div{padding:20px 14px 44px!important}.saas-topbar{height:58px!important}.saas-main-content{padding-top:58px!important}}
