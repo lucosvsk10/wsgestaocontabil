@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BarChart3, Boxes, Building2, FileInput, FileText, FolderSearch2, Home, Package2, ReceiptText, Settings2, ShoppingBag, Truck, UsersRound } from "lucide-react";
+import { BarChart3, Boxes, Building2, FileInput, FileText, FolderSearch2, Home, Menu, Package2, ReceiptText, Settings2, ShoppingBag, Truck, UsersRound, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import SaasCadastros, { CadastroSection } from "@/components/saas/SaasCadastros";
@@ -40,6 +40,7 @@ export default function SaasApp() {
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const [emissions, setEmissions] = useState<any[]>([]);
   const [planLabel, setPlanLabel] = useState("Plano fiscal");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const loadOrg = async () => {
     if (!user) return;
@@ -71,6 +72,7 @@ export default function SaasApp() {
   useEffect(() => { void loadOrg(); }, [user?.id]);
 
   const chooseNav = (item: string) => {
+    setMobileMenuOpen(false);
     if (item === "Gerenciar DF-e") { setSelectedDocument(null); setActive("Gerenciar DF-e"); return; }
     if (item.startsWith("Emitir ")) { setSelectedDocument(item.replace("Emitir ", "")); setActive("Emissão"); return; }
     setSelectedDocument(null);
@@ -85,8 +87,6 @@ export default function SaasApp() {
 
   let content: any;
   if (active === "Início") content = <SaasDashboard organizationId={organization?.id || null} organizationName={organization?.name} emissions={emissions} onNew={() => { setSelectedDocument(null); setActive("Emissão"); }} onReports={() => setActive("Relatórios")} />;
-  else if (active === "Produtos") content = <SaasProductsPremium organizationId={organization?.id || null} />;
-  else if (active === "Produtos") content = <SaasProductsPremium organizationId={organization?.id || null} />;
   else if (active === "Produtos") content = <SaasProductsPremium organizationId={organization?.id || null} />;
   else if (cadastroSections.has(active)) content = <SaasCadastros organizationId={organization?.id || null} section={active as CadastroSection} />;
   else if (active === "Emissão") content = <SaasEmission organizationId={organization?.id || null} documentType={selectedDocument} onChoose={setSelectedDocument} />;
@@ -103,11 +103,13 @@ export default function SaasApp() {
 
   return <div className="saas-admin-light min-h-screen bg-background text-foreground" style={lightVars}>
     <header className="saas-topbar fixed inset-x-0 top-0 z-[90] flex h-[72px] items-center border-b">
-      <div className="flex h-full w-72 shrink-0 items-center justify-center border-r border-white/10 px-5"><img src={WS_LOGO} alt="WS Gestão Contábil" className="h-7 object-contain" /></div>
-      <div className="flex min-w-0 flex-1 items-center px-6"><div className="flex-1"/><div className="min-w-0 flex-1 text-center"><p className="truncate text-sm font-medium text-white">{organization?.name || "Sua empresa"}</p><p className="mt-0.5 text-[10px] uppercase tracking-[.12em] text-white/55">Painel fiscal</p></div><div className="flex flex-1 justify-end"><AccountDrawer darkTrigger avatarUrl={logoUrl} accessLabel="Assinante do emissor fiscal" planLabel={planLabel} notifications={accountNotifications} usageRows={[{ label: "Notas emitidas", value: String(emissions.length) }, { label: "Organização", value: organization?.name || "Sua empresa" }]} /></div></div>
+      <div className="saas-brand flex h-full w-72 shrink-0 items-center justify-center border-r px-5"><button type="button" className="saas-mobile-menu" aria-label="Abrir menu" aria-expanded={mobileMenuOpen} onClick={() => setMobileMenuOpen(true)}><Menu className="h-5 w-5" /></button><img src={WS_LOGO} alt="WS Gestão Contábil" className="h-7 object-contain" /></div>
+      <div className="saas-topbar-content flex min-w-0 flex-1 items-center px-6"><div className="saas-page-context flex-1"><p className="text-[10px] font-semibold uppercase tracking-[.12em]">WS Gestão Contábil</p><span>{active === "Emissão" && selectedDocument ? `Emissão de ${selectedDocument}` : active}</span></div><div className="saas-company-context min-w-0 flex-1 text-center"><p className="truncate text-sm font-medium">{organization?.name || "Sua empresa"}</p><p className="mt-0.5 text-[10px] uppercase tracking-[.12em]">Painel fiscal</p></div><div className="flex flex-1 justify-end"><AccountDrawer darkTrigger avatarUrl={logoUrl} accessLabel="Assinante do emissor fiscal" planLabel={planLabel} notifications={accountNotifications} usageRows={[{ label: "Notas emitidas", value: String(emissions.length) }, { label: "Organização", value: organization?.name || "Sua empresa" }]} /></div></div>
     </header>
 
-    <aside className="fixed bottom-0 left-0 top-[72px] z-50 flex w-72 flex-col border-r border-border bg-white">
+    {mobileMenuOpen && <button type="button" aria-label="Fechar menu" className="saas-sidebar-scrim" onClick={() => setMobileMenuOpen(false)} />}
+    <aside className={`saas-sidebar fixed bottom-0 left-0 top-[72px] z-50 flex w-72 flex-col border-r border-border bg-white ${mobileMenuOpen ? "is-open" : ""}`}>
+      <button type="button" className="saas-mobile-close" aria-label="Fechar menu" onClick={() => setMobileMenuOpen(false)}><X className="h-5 w-5" /></button>
       <div className="border-b border-border px-5 py-4"><button onClick={() => setActive("Minha Empresa")} className="mx-auto flex h-[104px] w-full items-center justify-center bg-transparent px-4 transition-opacity hover:opacity-80">{logoUrl ? <img src={logoUrl} alt="Logo da empresa" className="max-h-[76px] max-w-[190px] object-contain" /> : <span className="text-center text-xs font-medium text-muted-foreground">Adicionar logomarca</span>}</button></div>
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <section><p className="mb-2 px-4 text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/90">Visão geral</p><NavButton icon={Home} active={active === "Início"} onClick={() => chooseNav("Início")}>Início</NavButton><NavButton icon={FileText} active={active === "Notas Emitidas"} onClick={() => chooseNav("Notas Emitidas")}>Notas Emitidas</NavButton></section>

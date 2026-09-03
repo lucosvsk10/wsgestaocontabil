@@ -40,6 +40,8 @@
 .saas-admin-light .saas-topbar img{filter:none!important;opacity:1!important;mix-blend-mode:normal!important}
 .saas-admin-light .saas-topbar p{color:#0f172a!important}
 .saas-admin-light .saas-topbar p+p{color:#667085!important}
+.saas-page-context{display:flex;min-width:0;flex-direction:column;gap:2px}.saas-page-context p{color:#667085!important}.saas-page-context span{overflow:hidden;color:#344054;font-size:12px;font-weight:600;text-overflow:ellipsis;white-space:nowrap}
+.saas-mobile-menu,.saas-mobile-close,.saas-sidebar-scrim{display:none}
 .saas-admin-light>aside{top:64px!important;width:248px!important;background:#eaedf0!important;border-color:#d2d7dc!important;box-shadow:none!important}
 .saas-admin-light>aside>div:first-child{background:#eaedf0!important;border-color:#d2d7dc!important}
 .saas-main-content{padding-left:248px!important;padding-top:64px!important;background:#f3f4f6!important}
@@ -169,3 +171,18 @@
 .saas-admin-light [class*="bg-amber"],.saas-admin-light [class*="bg-yellow"]{background-color:#f6eacb!important;color:#94620d!important}
 
 @media(max-width:900px){.saas-admin-light>aside{width:220px!important}.saas-topbar>div:first-child{width:220px!important}.saas-main-content{padding-left:220px!important}}
+
+/* Responsive application shell */
+@media(max-width:840px){
+ .saas-admin-light .saas-topbar{height:60px!important;padding:0 12px!important}
+ .saas-admin-light .saas-topbar .saas-brand{width:auto!important;min-width:0!important;padding:0!important;border:0!important;gap:10px!important}
+ .saas-admin-light .saas-topbar .saas-brand img{height:23px!important;max-width:118px!important}
+ .saas-mobile-menu{display:grid!important;width:38px!important;height:38px!important;place-items:center!important;padding:0!important;border:1px solid #cbd1d7!important;border-radius:6px!important;background:#f5f6f7!important;color:#344054!important}
+ .saas-topbar-content{padding:0 0 0 14px!important}.saas-page-context{display:none!important}.saas-company-context{text-align:left!important}.saas-company-context p:first-child{max-width:52vw!important;font-size:12px!important}.saas-company-context p:last-child{font-size:8px!important}
+ .saas-admin-light>aside.saas-sidebar{display:flex!important;top:0!important;z-index:120!important;width:min(86vw,300px)!important;transform:translateX(-102%);transition:transform .22s ease!important;box-shadow:12px 0 42px rgba(15,23,42,.18)!important}
+ .saas-admin-light>aside.saas-sidebar.is-open{transform:translateX(0)}
+ .saas-mobile-close{display:grid!important;position:absolute!important;z-index:2!important;right:12px!important;top:12px!important;width:36px!important;height:36px!important;place-items:center!important;padding:0!important;border:1px solid #cbd1d7!important;border-radius:6px!important;background:#f5f6f7!important;color:#344054!important}
+ .saas-sidebar-scrim{display:block!important;position:fixed!important;inset:0!important;z-index:110!important;width:100%!important;height:100%!important;border:0!important;background:rgba(15,23,42,.26)!important;backdrop-filter:blur(3px)!important}
+ .saas-admin-light>aside>div:first-of-type{padding-top:56px!important}
+ .saas-main-content{padding-left:0!important;padding-top:60px!important}.saas-main-content>div{padding:18px 12px 40px!important}
+}
