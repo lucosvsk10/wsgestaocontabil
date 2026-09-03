@@ -27,11 +27,6 @@ jobs:
               s=s.replace('import SaasDashboard from "@/components/saas/SaasDashboard";','import SaasDashboard from "@/components/saas/SaasDashboard";\nimport SaasProductsPremium from "@/components/saas/SaasProductsPremium";')
           if 'saas-premium-v3.css' not in s:
               s=s.replace('import "@/styles/saas-admin-light.css";','import "@/styles/saas-admin-light.css";\nimport "@/styles/saas-premium-v3.css";')
-          if 'saas-admin-reconciliation.css' not in s:
-              s=s.replace('import "@/styles/saas-premium-v3.css";','import "@/styles/saas-premium-v3.css";\nimport "@/styles/saas-admin-reconciliation.css";')
-          old_vars='const lightVars: any = { "--background": "216 22% 94.5%", "--foreground": "222.2 84% 4.9%", "--card": "0 0% 100%", "--card-foreground": "222.2 84% 4.9%", "--popover": "0 0% 100%", "--popover-foreground": "222.2 84% 4.9%", "--primary": "222.2 47.4% 11.2%", "--primary-foreground": "210 40% 98%", "--secondary": "216 24% 95%", "--secondary-foreground": "222.2 47.4% 11.2%", "--muted": "216 22% 94%", "--muted-foreground": "215.4 16.3% 42%", "--accent": "216 24% 95%", "--accent-foreground": "222.2 47.4% 11.2%", "--border": "214 22% 87%", "--input": "214 22% 84%", "--ring": "222.2 84% 4.9%" };'
-          new_vars='const lightVars: any = { "--background": "220 14% 96%", "--foreground": "222 47% 11%", "--card": "220 13% 92%", "--card-foreground": "222 47% 11%", "--popover": "220 13% 94%", "--popover-foreground": "222 47% 11%", "--primary": "220 12% 87%", "--primary-foreground": "222 47% 11%", "--secondary": "220 12% 89%", "--secondary-foreground": "222 47% 11%", "--muted": "220 12% 90%", "--muted-foreground": "215 16% 40%", "--accent": "220 12% 87%", "--accent-foreground": "222 47% 11%", "--border": "220 12% 82%", "--input": "220 12% 84%", "--ring": "215 16% 40%" };'
-          if old_vars in s:s=s.replace(old_vars,new_vars,1)
           old='else if (cadastroSections.has(active)) content = <SaasCadastros organizationId={organization?.id || null} section={active as CadastroSection} />;'
           new='else if (active === "Produtos") content = <SaasProductsPremium organizationId={organization?.id || null} />;\n  else if (cadastroSections.has(active)) content = <SaasCadastros organizationId={organization?.id || null} section={active as CadastroSection} />;'
           if old in s:s=s.replace(old,new,1)
@@ -62,4 +57,4 @@ jobs:
           git config user.name ws-ui-bot
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add src/pages/SaasApp.tsx src/components/saas/SaasDashboard.tsx src/components/saas/SaasEmission.tsx package.json package-lock.json
-          git diff --cached --quiet || (git commit -m 'feat(saas): activate ADM-aligned light theme' && git push)
+          git diff --cached --quiet || (git commit -m 'feat(saas): premium total visual + produtos' && git push)
