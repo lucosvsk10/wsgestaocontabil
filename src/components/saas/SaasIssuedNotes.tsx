@@ -52,6 +52,7 @@ export default function SaasIssuedNotes({emissions,onNew}:Props){
  const openPreview=(item:any)=>{setSelected(item);setPreviewMode("danfe")};
 
  return <div className="saas-issued-notes w-full space-y-4 text-[#111827]">
+  <style>{`.saas-issued-notes>section:first-of-type{background:var(--ca-bg)!important;border-color:transparent!important;box-shadow:none!important}`}</style>
   <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between" style={{background:"transparent",boxShadow:"none",border:"none"}}>
    <div><p className="text-[9px] font-semibold uppercase tracking-[.16em] text-[#7b8492]">Emissão fiscal</p><h1 className="mt-1 text-[26px] font-semibold tracking-tight">Notas Emitidas</h1><p className="mt-1 text-sm text-[#667085]">Consulte documentos, arquivos fiscais e valores emitidos.</p></div>
    <Button onClick={onNew}>Emitir nova nota</Button>
