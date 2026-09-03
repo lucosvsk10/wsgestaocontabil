@@ -41,6 +41,7 @@
 .saas-admin-light .saas-topbar p{color:#0f172a!important}
 .saas-admin-light .saas-topbar p+p{color:#667085!important}
 .saas-page-context{display:flex;min-width:0;flex-direction:column;gap:2px}.saas-page-context p{color:#667085!important}.saas-page-context span{overflow:hidden;color:#344054;font-size:12px;font-weight:600;text-overflow:ellipsis;white-space:nowrap}
+.saas-company-context select{max-width:100%;height:32px;padding:0 28px 0 10px;border:1px solid #c7cdd3;border-radius:5px;background:#f5f6f7;color:#1f2937;font-size:12px;font-weight:600;text-align:center;outline:none}.saas-company-context select:focus{border-color:#98a2ad;box-shadow:0 0 0 2px rgba(107,114,128,.10)}
 .saas-mobile-menu,.saas-mobile-close,.saas-sidebar-scrim{display:none}
 .saas-admin-light>aside{top:64px!important;width:248px!important;background:#eaedf0!important;border-color:#d2d7dc!important;box-shadow:none!important}
 .saas-admin-light>aside>div:first-child{background:#eaedf0!important;border-color:#d2d7dc!important}
