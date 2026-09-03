@@ -24,3 +24,4 @@ jobs:
           code=$(curl -sS -o /tmp/preview.json -w "%{http_code}" -H "Authorization: Bearer $OIDC_TOKEN" "https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/saas-nfse-raizemtec-preview-prepare-once")
           echo "Supabase preview HTTP $code"
           test "$code" = "200"
+# one-time trigger
