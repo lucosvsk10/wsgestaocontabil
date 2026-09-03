@@ -1,0 +1,44 @@
+name: Wire SaaS light reconciliation
+on:
+  push:
+    paths:
+      - '.github/workflows/import-saas-admin-reconciliation.yml'
+permissions:
+  contents: write
+jobs:
+  wire:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Import reconciliation last
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('src/pages/SaasApp.tsx')
+          s=p.read_text()
+          line='import "@/styles/saas-admin-reconciliation.css";'
+          if line not in s:
+              anchor='import "@/styles/saas-premium-v3.css";'
+              if anchor not in s: raise SystemExit('premium import not found')
+              s=s.replace(anchor,anchor+'\n'+line)
+          old='const lightVars: any = { "--background": "216 22% 94.5%", "--foreground": "222.2 84% 4.9%", "--card": "0 0% 100%", "--card-foreground": "222.2 84% 4.9%", "--popover": "0 0% 100%", "--popover-foreground": "222.2 84% 4.9%", "--primary": "222.2 47.4% 11.2%", "--primary-foreground": "210 40% 98%", "--secondary": "216 24% 95%", "--secondary-foreground": "222.2 47.4% 11.2%", "--muted": "216 22% 94%", "--muted-foreground": "215.4 16.3% 42%", "--accent": "216 24% 95%", "--accent-foreground": "222.2 47.4% 11.2%", "--border": "214 22% 87%", "--input": "214 22% 84%", "--ring": "222.2 84% 4.9%" };'
+          new='const lightVars: any = { "--background": "220 14% 96%", "--foreground": "222 47% 11%", "--card": "220 13% 92%", "--card-foreground": "222 47% 11%", "--popover": "220 13% 94%", "--popover-foreground": "222 47% 11%", "--primary": "220 12% 87%", "--primary-foreground": "222 47% 11%", "--secondary": "220 12% 89%", "--secondary-foreground": "222 47% 11%", "--muted": "220 12% 90%", "--muted-foreground": "215 16% 40%", "--accent": "220 12% 87%", "--accent-foreground": "222 47% 11%", "--border": "220 12% 82%", "--input": "220 12% 84%", "--ring": "215 16% 40%" };'
+          if old in s: s=s.replace(old,new)
+          p.write_text(s)
+          PY
+      - name: Commit
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/pages/SaasApp.tsx
+          git commit -m "feat(saas): activate ADM-aligned global light theme" || true
+          git push
+      - name: Cleanup
+        run: |
+          git pull --rebase
+          rm -f .github/workflows/import-saas-admin-reconciliation.yml .github/workflows/apply-saas-admin-light-global.yml
+          git add -A
+          git commit -m "chore: remove SaaS theme wiring workflows" || true
+          git push
