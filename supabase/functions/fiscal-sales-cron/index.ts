@@ -1,7 +1,21 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
 const json=(b:unknown,s=200)=>new Response(JSON.stringify(b),{status:s,headers:{"content-type":"application/json"}});
-function extractLatest(text:string){const compact=String(text||"").replace(/\r/g," ");const vals:number[]=[];for(const m of compact.matchAll(/(?:s[eé]rie\s*)?1\D{0,30}([0-9]{1,9})/gi)){const n=Number(m[1]);if(n>0&&n<1e9)vals.push(n)}return vals.length?Math.max(...vals):0}
+function extractLatest(text:string){
+ const normalized=String(text||"").replace(/\r/g,"");
+ const vals:number[]=[];
+ for(const raw of normalized.split("\n")){
+   const line=raw.replace(/\s+/g,"").trim();
+   // O PDF da SEFAZ concatena Série + Último Número + demais colunas.
+   // Ex.: "11,2501,221281" = série 1, último número 1.250.
+   const formatted=line.match(/^1([0-9]{1,3}(?:[.,][0-9]{3})+)(?=\d|$)/);
+   if(formatted){const n=Number(formatted[1].replace(/[.,]/g,""));if(n>0&&n<1e9)vals.push(n)}
+ }
+ if(vals.length)return Math.max(...vals);
+ const compact=normalized.replace(/\n/g," ");
+ for(const m of compact.matchAll(/(?:s[eé]rie\s*)?1\D{0,30}([0-9]{1,9})/gi)){const n=Number(m[1]);if(n>0&&n<1e9)vals.push(n)}
+ return vals.length?Math.max(...vals):0
+}
 Deno.serve(async req=>{try{
  const admin=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
  const tok=req.headers.get("x-debug-token")||"";const {data:t}=await admin.from("_fiscal_sales_debug_token").select("token").eq("id",true).maybeSingle();if(!tok||tok!==String(t?.token||""))return json({error:"unauthorized"},403);
