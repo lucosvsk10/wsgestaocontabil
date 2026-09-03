@@ -1,0 +1,256 @@
+name: Apply SaaS admin light global theme
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-saas-admin-light-global.yml'
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Apply SaaS light reconciliation
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          app = Path('src/pages/SaasApp.tsx')
+          s = app.read_text()
+          old = 'const lightVars: any = { "--background": "216 22% 94.5%", "--foreground": "222.2 84% 4.9%", "--card": "0 0% 100%", "--card-foreground": "222.2 84% 4.9%", "--popover": "0 0% 100%", "--popover-foreground": "222.2 84% 4.9%", "--primary": "222.2 47.4% 11.2%", "--primary-foreground": "210 40% 98%", "--secondary": "216 24% 95%", "--secondary-foreground": "222.2 47.4% 11.2%", "--muted": "216 22% 94%", "--muted-foreground": "215.4 16.3% 42%", "--accent": "216 24% 95%", "--accent-foreground": "222.2 47.4% 11.2%", "--border": "214 22% 87%", "--input": "214 22% 84%", "--ring": "222.2 84% 4.9%" };'
+          new = 'const lightVars: any = { "--background": "220 14% 96%", "--foreground": "222 47% 11%", "--card": "220 13% 92%", "--card-foreground": "222 47% 11%", "--popover": "220 13% 94%", "--popover-foreground": "222 47% 11%", "--primary": "220 12% 87%", "--primary-foreground": "222 47% 11%", "--secondary": "220 12% 89%", "--secondary-foreground": "222 47% 11%", "--muted": "220 12% 90%", "--muted-foreground": "215 16% 40%", "--accent": "220 12% 87%", "--accent-foreground": "222 47% 11%", "--border": "220 12% 82%", "--input": "220 12% 84%", "--ring": "215 16% 40%" };'
+          if old not in s:
+              raise SystemExit('lightVars block not found')
+          app.write_text(s.replace(old,new))
+
+          css = Path('src/styles/saas-premium-v3.css')
+          c = css.read_text()
+          marker = '/* === WS ADMIN LIGHT GLOBAL RECONCILIATION === */'
+          if marker in c:
+              c = c.split(marker)[0].rstrip() + '\n\n'
+          block = r'''/* === WS ADMIN LIGHT GLOBAL RECONCILIATION === */
+/* SaaS uses the same visual grammar as the light ADM: off-white canvas, cool-gray surfaces,
+   neutral controls, restrained shadows, and color reserved for semantic state only. */
+.saas-admin-light{
+  --ca-blue:#6b7280!important;
+  --ca-blue-dark:#4b5563!important;
+  --ca-blue-soft:#e5e7eb!important;
+  --ca-bg:#f3f4f6!important;
+  --ca-card:#e9ecef!important;
+  --ca-text:#111827!important;
+  --ca-title:#0f172a!important;
+  --ca-muted:#667085!important;
+  --ca-line:#d2d7dc!important;
+  --ca-line-strong:#c7cdd3!important;
+  --background:220 14% 96%!important;
+  --foreground:222 47% 11%!important;
+  --card:220 13% 92%!important;
+  --card-foreground:222 47% 11%!important;
+  --popover:220 13% 94%!important;
+  --popover-foreground:222 47% 11%!important;
+  --primary:220 12% 87%!important;
+  --primary-foreground:222 47% 11%!important;
+  --secondary:220 12% 89%!important;
+  --secondary-foreground:222 47% 11%!important;
+  --muted:220 12% 90%!important;
+  --muted-foreground:215 16% 40%!important;
+  --accent:220 12% 87%!important;
+  --accent-foreground:222 47% 11%!important;
+  --border:220 12% 82%!important;
+  --input:220 12% 84%!important;
+  --ring:215 16% 40%!important;
+  font-family:'Prompt',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif!important;
+  background:#f3f4f6!important;
+  color:#111827!important;
+}
+.saas-admin-light,.saas-admin-light *,.saas-admin-light input,.saas-admin-light select,.saas-admin-light textarea,.saas-admin-light button,.saas-admin-light table,.saas-admin-light th,.saas-admin-light td{font-family:'Prompt',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif!important}
+
+/* Shell */
+.saas-admin-light .saas-topbar{height:64px!important;background:#eaedf0!important;border-color:#d2d7dc!important;box-shadow:none!important}
+.saas-admin-light .saas-topbar>div:first-child{width:248px!important;border-color:#d2d7dc!important}
+.saas-admin-light .saas-topbar img{filter:none!important;opacity:1!important;mix-blend-mode:normal!important}
+.saas-admin-light .saas-topbar p{color:#0f172a!important}
+.saas-admin-light .saas-topbar p+ p{color:#667085!important}
+.saas-admin-light>aside{top:64px!important;width:248px!important;background:#eaedf0!important;border-color:#d2d7dc!important;box-shadow:none!important}
+.saas-admin-light>aside>div:first-child{background:#eaedf0!important;border-color:#d2d7dc!important}
+.saas-main-content{padding-left:248px!important;padding-top:64px!important;background:#f3f4f6!important}
+.saas-main-content:has(.saas-issued-notes){background:#f3f4f6!important}
+
+/* Sidebar: one neutral system, no category rainbow */
+.saas-admin-light aside nav section>p{color:#7b8492!important}
+.saas-admin-light aside nav button,
+.saas-admin-light aside nav>.mt-5>section>button,
+.saas-admin-light aside nav>.mt-5>section>div button{
+  background:transparent!important;
+  color:#475467!important;
+  border-color:transparent!important;
+  box-shadow:none!important;
+}
+.saas-admin-light aside nav>.mt-5>section>button{border-left:2px solid transparent!important}
+.saas-admin-light aside nav>.mt-5>section>div button{border-left:1px solid #cfd4da!important;border-radius:0 4px 4px 0!important}
+.saas-admin-light aside nav button:hover,
+.saas-admin-light aside nav>.mt-5>section>button:hover,
+.saas-admin-light aside nav>.mt-5>section>div button:hover{background:#e1e5e9!important;color:#111827!important}
+.saas-admin-light aside nav button[class*="bg-muted"],
+.saas-admin-light aside nav button[class*="font-semibold"],
+.saas-admin-light aside nav button[class*="bg-[#e8edf3]"]{
+  background:#d4d9de!important;
+  color:#111827!important;
+  border-color:#c5cbd1!important;
+}
+.saas-admin-light aside nav button.saas-emission-group{background:transparent!important;color:#344054!important;border-left-color:#9ca3af!important}
+
+/* Surfaces */
+.saas-main-content section[class*="border"],
+.saas-main-content div[class*="border"][class*="bg-white"],
+.saas-main-content .bg-card,
+.saas-main-content .ca-form-section,
+.saas-main-content .ca-actions,
+.saas-main-content .ca-preview,
+.saas-main-content .ca-tabs,
+.saas-main-content .ca-doc-choice,
+.saas-main-content .saas-emission-history,
+.saas-main-content .saas-issued-notes{
+  background:#e9ecef!important;
+  border-color:#d2d7dc!important;
+  box-shadow:none!important;
+}
+.saas-main-content .ca-section-head,
+.saas-main-content .ca-preview-head,
+.saas-main-content table thead{background:#e4e7ea!important;border-color:#d2d7dc!important}
+.saas-main-content .rounded-2xl,.saas-main-content .rounded-xl,.saas-main-content .rounded-lg{border-radius:5px!important}
+
+/* Inputs */
+.saas-main-content input,.saas-main-content select,.saas-main-content textarea,
+.saas-main-content .ca-select,.saas-main-content .ca-textarea,.saas-main-content .ca-picker{
+  background:#f3f4f6!important;
+  color:#111827!important;
+  border:1px solid #c7cdd3!important;
+  box-shadow:none!important;
+}
+.saas-main-content input:hover,.saas-main-content select:hover,.saas-main-content textarea:hover,
+.saas-main-content .ca-select:hover,.saas-main-content .ca-textarea:hover,.saas-main-content .ca-picker:hover{border-color:#aeb5bd!important}
+.saas-main-content input:focus,.saas-main-content select:focus,.saas-main-content textarea:focus,
+.saas-main-content .ca-select:focus,.saas-main-content .ca-textarea:focus{border-color:#8c959f!important;box-shadow:0 0 0 2px rgba(107,114,128,.10)!important}
+
+/* Buttons: neutral by default. Semantic submit/destructive colors remain explicit below. */
+.saas-main-content button:not(:disabled),
+.saas-main-content .ca-btn-secondary,
+.saas-main-content .ca-picker-row,
+.saas-main-content .ca-preview-head button{
+  background:transparent!important;
+  color:#344054!important;
+  border-color:#d2d7dc!important;
+  box-shadow:none!important;
+}
+.saas-main-content button:not(:disabled):hover,
+.saas-main-content .ca-btn-secondary:hover,
+.saas-main-content .ca-picker-row:hover,
+.saas-main-content .ca-preview-head button:hover{background:#dfe3e7!important;color:#111827!important;border-color:#c2c8ce!important}
+.saas-main-content button[aria-selected="true"],
+.saas-main-content button[aria-pressed="true"],
+.saas-main-content button.is-active,
+.saas-main-content button[class*="font-semibold"][class*="bg-muted"]{background:#d4d9de!important;color:#111827!important;border-color:#c4cad0!important}
+.saas-main-content .saas-action-primary,
+.saas-main-content .ca-btn-primary{background:#2f7d57!important;color:#fff!important;border-color:#2f7d57!important}
+.saas-main-content .saas-action-primary:hover,
+.saas-main-content .ca-btn-primary:hover{background:#276b4b!important;border-color:#276b4b!important}
+.saas-main-content button[class*="bg-red"],.saas-main-content button[class*="bg-destructive"]{background:#b42318!important;color:#fff!important;border-color:#b42318!important}
+
+/* Document-choice cards lose decorative category colors, but keep icons identifiable. */
+.saas-main-content .ca-doc-icon,
+.saas-main-content .ca-doc-choice.tone-2 .ca-doc-icon,
+.saas-main-content .ca-doc-choice.tone-3 .ca-doc-icon,
+.saas-main-content .ca-doc-choice.tone-4 .ca-doc-icon,
+.saas-main-content .ca-doc-choice.tone-5 .ca-doc-icon{background:#dde2e6!important;color:#475467!important}
+
+/* Process tabs use the same selected gray as ADM. */
+.saas-main-content .ca-tabs button{background:transparent!important;color:#667085!important;border-color:#d2d7dc!important}
+.saas-main-content .ca-tabs button span{background:#dde2e6!important;color:#667085!important}
+.saas-main-content .ca-tabs button.is-active,
+.saas-main-content .ca-tabs button:nth-child(1).is-active,
+.saas-main-content .ca-tabs button:nth-child(2).is-active,
+.saas-main-content .ca-tabs button:nth-child(3).is-active,
+.saas-main-content .ca-tabs button:nth-child(4).is-active,
+.saas-main-content .ca-tabs button:nth-child(5).is-active{background:#d4d9de!important;color:#111827!important;box-shadow:inset 0 -2px 0 #8b949e!important}
+.saas-main-content .ca-tabs button.is-active span,
+.saas-main-content .ca-tabs button:nth-child(1).is-active span,
+.saas-main-content .ca-tabs button:nth-child(2).is-active span,
+.saas-main-content .ca-tabs button:nth-child(3).is-active span,
+.saas-main-content .ca-tabs button:nth-child(4).is-active span,
+.saas-main-content .ca-tabs button:nth-child(5).is-active span{background:#8b949e!important;color:#fff!important}
+.saas-main-content .ca-section-head:before,
+.saas-main-content .ca-tone-green .ca-section-head:before,
+.saas-main-content .ca-tone-purple .ca-section-head:before,
+.saas-main-content .ca-tone-orange .ca-section-head:before{background:#9aa2ab!important}
+
+/* Tables: exact light-ADM zebra discipline. */
+.saas-main-content table{background:#f3f4f6!important}
+.saas-main-content table tbody tr:nth-child(odd),
+.saas-issued-notes table tbody tr:nth-child(odd),
+.saas-emission-history tbody tr:nth-child(odd){background:#f3f4f6!important}
+.saas-main-content table tbody tr:nth-child(even),
+.saas-issued-notes table tbody tr:nth-child(even),
+.saas-emission-history tbody tr:nth-child(even){background:#e9ecef!important}
+.saas-main-content table tbody tr:hover,
+.saas-issued-notes table tbody tr:hover,
+.saas-emission-history tbody tr:hover{background:#dde2e6!important}
+.saas-main-content table th{color:#667085!important;border-color:#d2d7dc!important}
+.saas-main-content table td{color:#344054!important;border-color:#d8dde2!important}
+
+/* Dashboard selectors/cards */
+.saas-dashboard [class*="bg-[#f8fafb]"][class*="p-1"]{background:#e9ecef!important;border-color:#d2d7dc!important}
+.saas-dashboard [class*="bg-[#f8fafb]"][class*="p-1"]>button{background:transparent!important;color:#667085!important;border-color:transparent!important}
+.saas-dashboard [class*="bg-[#f8fafb]"][class*="p-1"]>button[class*="bg-white"]{background:#d4d9de!important;color:#111827!important;border-color:#c4cad0!important;box-shadow:none!important}
+
+/* Issued notes: ensure local component and global theme agree. */
+.saas-issued-notes>section:first-of-type,
+.saas-admin-light .saas-issued-notes>section:first-of-type{background:#e9ecef!important;border-color:#d2d7dc!important;box-shadow:none!important}
+.saas-issued-notes>section:first-of-type button,
+.saas-issued-notes>section:nth-of-type(2)>div:first-child button,
+.saas-issued-notes>section:nth-of-type(2)>div:nth-child(2)>button,
+.saas-issued-notes table tbody tr td:last-child button:first-child,
+.saas-issued-notes table tbody tr td:last-child button:last-child:not(:first-child){background:transparent!important;color:#344054!important;border-color:#d2d7dc!important;box-shadow:none!important}
+.saas-issued-notes>section:first-of-type button:hover,
+.saas-issued-notes>section:nth-of-type(2)>div:first-child button:hover,
+.saas-issued-notes table tbody tr td:last-child button:hover{background:#dfe3e7!important;color:#111827!important;border-color:#c2c8ce!important}
+
+/* Popovers, picker menus, previews */
+.saas-main-content .ca-picker-pop{background:#f3f4f6!important;border-color:#c7cdd3!important;box-shadow:0 10px 28px rgba(15,23,42,.10)!important}
+.saas-issued-notes>div[class*="fixed"][class*="inset-0"]>div{background:rgba(243,244,246,.98)!important;border-color:#cfd4da!important}
+.saas-issued-notes>div[class*="fixed"][class*="inset-0"]>div>div:first-child{background:#e9ecef!important}
+.saas-issued-notes>div[class*="fixed"][class*="inset-0"]>div>div:last-child{background:#f3f4f6!important}
+
+/* Semantic state colors only. */
+.saas-admin-light [class*="text-emerald"],.saas-admin-light [class*="text-green"]{color:#137456!important}
+.saas-admin-light [class*="bg-emerald"],.saas-admin-light [class*="bg-green"]{background-color:#d9eee7!important;color:#137456!important}
+.saas-admin-light [class*="text-red"],.saas-admin-light [class*="text-destructive"]{color:#b42318!important}
+.saas-admin-light [class*="bg-red"],.saas-admin-light [class*="bg-destructive"]{background-color:#f3dddd!important;color:#b42318!important}
+.saas-admin-light [class*="text-amber"],.saas-admin-light [class*="text-yellow"]{color:#94620d!important}
+.saas-admin-light [class*="bg-amber"],.saas-admin-light [class*="bg-yellow"]{background-color:#f6eacb!important;color:#94620d!important}
+
+/* Responsive shell keeps the visual system intact. */
+@media(max-width:900px){
+  .saas-admin-light>aside{width:220px!important}
+  .saas-topbar>div:first-child{width:220px!important}
+  .saas-main-content{padding-left:220px!important}
+}
+'''
+          css.write_text(c.rstrip() + '\n\n' + block + '\n')
+          PY
+      - name: Commit theme
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/pages/SaasApp.tsx src/styles/saas-premium-v3.css
+          git commit -m "feat(saas): align full light theme with ADM" || true
+          git push
+      - name: Remove temporary workflow
+        run: |
+          git pull --rebase
+          rm -f .github/workflows/apply-saas-admin-light-global.yml
+          git add -A
+          git commit -m "chore: remove SaaS theme workflow" || true
+          git push
