@@ -1,0 +1,46 @@
+name: Urgent admin fiscal hotfix
+
+on:
+  push:
+    paths:
+      - '.github/workflows/hotfix-admin-fiscal-urgent.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch AdminFiscalNotes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/pages/AdminFiscalNotes.tsx')
+          s = p.read_text()
+          old1 = 'function rowToDoc(r:any):Doc{return{nsu:r.nsu,schema:r.schema_name,source:r.source,documentKind:r.document_kind,fullXml:r.full_xml,direction:r.direction,accessKey:r.access_key,model:r.model,issueDate:r.issue_date,value:r.value==null?undefined:Number(r.value),issuerCnpj:r.issuer_cnpj,issuerName:r.issuer_name,recipientCnpj:r.recipient_cnpj,number:r.note_number,series:r.series,statusCode:r.status_code,statusText:r.status_text,xml:r.xml,parseError:r.parse_error}}'
+          new1 = 'function rowToDoc(r:any):Doc{return{nsu:r.nsu,schema:r.schema_name,source:r.source,documentKind:r.document_kind,fullXml:r.full_xml,direction:r.direction,accessKey:r.access_key,model:r.model,issueDate:r.issue_date,monthKey:keyMonthKey(r.access_key),value:r.value==null?undefined:Number(r.value),issuerCnpj:r.issuer_cnpj,issuerName:r.issuer_name,recipientCnpj:r.recipient_cnpj,number:r.note_number,series:r.series,statusCode:r.status_code,statusText:r.status_text,xml:r.xml,parseError:r.parse_error}}'
+          old2 = 'const key=String(selectedCompany?.fiscal_company_id||selectedCompany?.id||selectedCompany?.cnpj||"");'
+          new2 = 'const key=String(selectedCompany?.id||selectedCompany?.cnpj||"");'
+          if old1 not in s:
+              raise SystemExit('rowToDoc target not found')
+          if old2 not in s:
+              raise SystemExit('selected company key target not found')
+          s = s.replace(old1, new1, 1).replace(old2, new2, 1)
+          p.write_text(s)
+          PY
+      - name: Verify patch
+        run: |
+          grep -F 'monthKey:keyMonthKey(r.access_key)' src/pages/AdminFiscalNotes.tsx
+          grep -F 'const key=String(selectedCompany?.id||selectedCompany?.cnpj||"");' src/pages/AdminFiscalNotes.tsx
+      - name: Commit hotfix and remove workflow
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/pages/AdminFiscalNotes.tsx
+          git rm .github/workflows/hotfix-admin-fiscal-urgent.yml
+          git commit -m 'fix(admin): keep fiscal notes stable and show key-month sales'
+          git push
