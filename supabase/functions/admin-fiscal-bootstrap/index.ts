@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
           ? admin.from("fiscal_sales_sync_state").select("company_id,status,last_completed_at,last_error,initial_backfill_done,backfill_days").in("company_id", fiscalIds)
           : Promise.resolve({ data: [], error: null } as any),
         fiscalIds.length
-          ? admin.from("fiscal_dfe_documents").select("company_id").in("company_id", fiscalIds).limit(10000)
+          ? admin.from("fiscal_dfe_documents").select("company_id").in("company_id", fiscalIds).eq("direction", "entrada").limit(10000)
           : Promise.resolve({ data: [], error: null } as any),
         fiscalIds.length
           ? admin.from("fiscal_sales_documents").select("company_id").in("company_id", fiscalIds).limit(10000)
@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
         const hasStateCredentials = Boolean(credential);
         const purchaseState = fiscal ? purchaseByFiscal.get(fiscal.id) as any : null;
         const salesState = fiscal ? salesByFiscal.get(fiscal.id) as any : null;
-        const started = Boolean(purchaseState || salesState);
+        const fullyStarted = Boolean(purchaseState && salesState);
 
         let readiness = "not_configured";
         let label = "Fiscal não configurado";
@@ -111,10 +111,12 @@ Deno.serve(async (req) => {
           readiness = "missing_state_credentials";
           label = "Falta acesso SEFAZ/AL";
           detail = "Compras podem usar o A1, mas a extração completa de vendas exige o acesso estadual configurado.";
-        } else if (!started) {
+        } else if (!fullyStarted) {
           readiness = "ready";
-          label = "Pronta para iniciar";
-          detail = "A empresa está apta para a primeira extração fiscal.";
+          label = purchaseState || salesState ? "Completar inicialização" : "Pronta para iniciar";
+          detail = purchaseState || salesState
+            ? "Uma das rotinas fiscais ainda não foi inicializada para esta empresa."
+            : "A empresa está apta para a primeira extração fiscal.";
           canStart = true;
         } else {
           const statuses = [purchaseState?.status, salesState?.status].filter(Boolean).map(String);
@@ -172,37 +174,41 @@ Deno.serve(async (req) => {
       if (!cert) return json({ error: "Certificado A1 ativo não encontrado" }, 409);
       if (cert.valid_until && new Date(`${cert.valid_until}T23:59:59Z`).getTime() < Date.now()) return json({ error: "O certificado A1 está vencido" }, 409);
       if (String(fiscal.uf || "").toUpperCase() === "AL" && !credential) return json({ error: "Acesso da SEFAZ/AL ainda não está configurado para esta empresa" }, 409);
-      if (purchaseState || salesState) return json({ ok: true, already_started: true, fiscal_company_id: fiscal.id });
+      if (purchaseState && salesState) return json({ ok: true, already_started: true, fiscal_company_id: fiscal.id });
 
       const now = new Date();
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
       const nowIso = now.toISOString();
       const historyStartMonth = monthCode(thirtyDaysAgo);
 
-      const purchaseUpsert = await admin.from("fiscal_purchase_sync_state").upsert({
-        company_id: fiscal.id,
-        paused: false,
-        status: "queued",
-        consecutive_failures: 0,
-        last_error: null,
-        next_scheduled_at: nowIso,
-        updated_at: nowIso,
-      });
-      if (purchaseUpsert.error) throw purchaseUpsert.error;
+      if (!purchaseState) {
+        const purchaseUpsert = await admin.from("fiscal_purchase_sync_state").upsert({
+          company_id: fiscal.id,
+          paused: false,
+          status: "queued",
+          consecutive_failures: 0,
+          last_error: null,
+          next_scheduled_at: nowIso,
+          updated_at: nowIso,
+        });
+        if (purchaseUpsert.error) throw purchaseUpsert.error;
+      }
 
-      const salesUpsert = await admin.from("fiscal_sales_sync_state").upsert({
-        company_id: fiscal.id,
-        paused: false,
-        status: "queued",
-        backfill_days: 30,
-        initial_backfill_done: false,
-        reconciliation_complete: false,
-        history_start_month: historyStartMonth,
-        last_error: null,
-        next_scheduled_at: nowIso,
-        updated_at: nowIso,
-      });
-      if (salesUpsert.error) throw salesUpsert.error;
+      if (!salesState) {
+        const salesUpsert = await admin.from("fiscal_sales_sync_state").upsert({
+          company_id: fiscal.id,
+          paused: false,
+          status: "queued",
+          backfill_days: 30,
+          initial_backfill_done: false,
+          reconciliation_complete: false,
+          history_start_month: historyStartMonth,
+          last_error: null,
+          next_scheduled_at: nowIso,
+          updated_at: nowIso,
+        });
+        if (salesUpsert.error) throw salesUpsert.error;
+      }
 
       const [purchaseTrigger, salesTrigger] = await Promise.all([
         admin.rpc("trigger_fiscal_purchases_cron"),
