@@ -39,8 +39,8 @@ export default function SaasIssuedNotes({emissions,onNew}:Props){
 
  return <div className="saas-issued-admin-clone w-full text-[#0f172a]">
   <style>{`
-   .saas-issued-admin-clone button{background:transparent!important;color:inherit!important;box-shadow:none!important}
-   .saas-issued-admin-clone button:hover:not(:disabled){background:rgba(255,255,255,.6)!important}
+   .saas-issued-admin-clone.saas-issued-admin-clone.saas-issued-admin-clone button{background-color:transparent!important;background-image:none!important;color:inherit!important;box-shadow:none!important}
+   .saas-issued-admin-clone.saas-issued-admin-clone.saas-issued-admin-clone button:hover:not(:disabled){background-color:rgba(255,255,255,.35)!important;background-image:none!important}
    .saas-issued-admin-clone .row-a{background:#ffffff!important}
    .saas-issued-admin-clone .row-b{background:#ececeb!important}
    .saas-issued-admin-clone .note-row:hover{background:#e3e3e1!important}
@@ -61,7 +61,7 @@ export default function SaasIssuedNotes({emissions,onNew}:Props){
     <span className="min-w-16 text-lg font-semibold">{year}</span>
     <button disabled={year>=currentYear} onClick={()=>changeYear(1)} className="rounded px-2 py-1.5 text-[#667085] disabled:opacity-25">›</button>
     <div className="ml-2 flex flex-1 flex-wrap gap-1">
-     {MONTHS.map(m=>{const future=m!=="Ano"&&year===currentYear&&MONTH_INDEX[m]>currentMonth,active=month===m;return <button key={m} disabled={future} onClick={()=>chooseMonth(m)} className={`min-w-11 rounded-[4px] px-3 py-2 text-sm font-medium ${active?"bg-white shadow-sm":future?"text-[#b8bec7]":"text-[#344054]"}`}>{m}</button>})}
+     {MONTHS.map(m=>{const future=m!=="Ano"&&year===currentYear&&MONTH_INDEX[m]>currentMonth,active=month===m;return <button key={m} disabled={future} onClick={()=>chooseMonth(m)} className={`min-w-11 rounded-[4px] border px-3 py-2 text-sm font-medium ${active?"border-[#aeb7c2] text-[#0f172a]":future?"border-transparent text-[#b8bec7]":"border-transparent text-[#344054]"}`}>{m}</button>})}
     </div>
     <button className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium"><CalendarDays className="h-4 w-4"/>Personalizado</button>
    </div>
@@ -77,7 +77,7 @@ export default function SaasIssuedNotes({emissions,onNew}:Props){
   <section className="mt-4 overflow-hidden rounded-[4px] bg-[#ececea]">
    <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
     <div className="flex flex-wrap items-center gap-1">
-     {TYPES.map(t=><button key={t} onClick={()=>toggleType(t)} className={`rounded-[4px] border px-3 py-1.5 text-xs font-medium ${typeFilter===t?"border-[#0f172a] bg-[#0f172a]! text-[#0f172a]":"border-transparent text-[#475467]"}`}>{t} <b>{typeCounts[t]||0}</b></button>)}
+     {TYPES.map(t=><button key={t} onClick={()=>toggleType(t)} className={`rounded-[4px] border px-3 py-1.5 text-xs font-medium ${typeFilter===t?"border-[#7e8997] text-[#0f172a]":"border-transparent text-[#475467]"}`}>{t} <b>{typeCounts[t]||0}</b></button>)}
     </div>
     <span className="text-xs text-[#667085]">{periodDocs.length} nota{periodDocs.length===1?"":"s"} no período</span>
    </div>
@@ -92,7 +92,7 @@ export default function SaasIssuedNotes({emissions,onNew}:Props){
 
    <div className="overflow-x-auto">
     <table className="w-full min-w-[1080px] table-fixed text-left text-sm">
-     <colgroup><col className="w-[12%]"/><col className="w-[22%]"/><col className="w-[26%]"/><col className="w-[20%]"/><col className="w-[10%]"/><col className="w-[10%]"/></colgroup>
+     <colgroup><col className="w-[12%]"/><col className="w-[22%]"/><col className="w-[25%]"/><col className="w-[19%]"/><col className="w-[10%]"/><col className="w-[12%]"/></colgroup>
      <thead className="border-y border-[#d7d9dc] bg-[#f4f4f3] text-[10px] uppercase tracking-[.06em] text-[#475467]">
       <tr><th className="px-4 py-3">Emissão</th><th className="px-4 py-3">Nota / Chave</th><th className="px-4 py-3">Destinatário / Emitente</th><th className="px-4 py-3">Operação</th><th className="px-4 py-3 text-right">Valor</th><th className="px-4 py-3 text-right">Ações</th></tr>
      </thead>
@@ -102,7 +102,7 @@ export default function SaasIssuedNotes({emissions,onNew}:Props){
       <td className="px-4 py-3.5 align-middle"><div className="truncate font-medium">{item.recipient_name||"Sem destinatário"}</div><div className="mt-0.5 truncate text-[10px] text-[#667085]">{item.recipient_tax_id||"Documento não informado"}</div></td>
       <td className="px-4 py-3.5 align-middle"><div className="truncate">{itemName(item)}</div><div className="mt-0.5 text-[10px] text-[#667085]">{typeLabel(item)} · {statusLabel(item.status)}</div></td>
       <td className="px-4 py-3.5 text-right align-middle font-semibold">{money(Number(item.total||0))}</td>
-      <td className="px-4 py-3.5 align-middle" onClick={e=>e.stopPropagation()}><div className="flex justify-end gap-2 whitespace-nowrap"><button onClick={()=>openPreview(item)} className="inline-flex h-8 items-center gap-1 rounded-[4px] border border-transparent px-2 text-xs font-semibold"><FileText className="h-3.5 w-3.5"/>Visualizar</button>{item.xml&&<button onClick={()=>downloadXml(item)} className="h-8 rounded-[4px] border border-transparent px-2 text-[10px] font-semibold">XML</button>}</div></td>
+      <td className="px-4 py-3.5 align-middle" onClick={e=>e.stopPropagation()}><div className="flex justify-end whitespace-nowrap"><button onClick={()=>openPreview(item)} className="inline-flex h-8 items-center gap-2 rounded-[4px] border border-transparent px-2 text-xs font-semibold text-[#172033]"><FileText className="h-3.5 w-3.5"/>Visualizar</button></div></td>
      </tr>})}{!pageDocs.length&&<tr className="row-a"><td colSpan={6} className="h-44 text-center text-sm text-[#667085]">Nenhuma nota encontrada neste período.</td></tr>}</tbody>
     </table>
    </div>
