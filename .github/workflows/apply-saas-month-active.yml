@@ -1,0 +1,42 @@
+name: Apply SaaS active month styling
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/apply-saas-month-active.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Patch active month visual
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/components/saas/SaasIssuedNotes.tsx')
+          s=p.read_text()
+          old='className={`min-w-11 rounded-[4px] border px-3 py-2 text-sm font-medium ${active?"text-[#0f172a]":future?"text-[#b8bec7]":"text-[#344054]"}`}'
+          new='className={`min-w-11 rounded-[4px] border px-3 py-2 text-sm transition ${active?"bg-white font-semibold text-[#0f172a] shadow-[0_1px_2px_rgba(15,23,42,.08)]":"font-medium"} ${future?"text-[#b8bec7]":"text-[#344054]"}`}'
+          if old not in s:
+              raise SystemExit('target not found')
+          s=s.replace(old,new,1)
+          p.write_text(s)
+          PY
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/saas/SaasIssuedNotes.tsx
+          git commit -m "fix(saas): emphasize selected month" || exit 0
+          git push
+      - name: Remove workflow
+        run: |
+          git pull --rebase
+          rm -f .github/workflows/apply-saas-month-active.yml
+          git add -A
+          git commit -m "chore: remove SaaS month styling workflow" || exit 0
+          git push
