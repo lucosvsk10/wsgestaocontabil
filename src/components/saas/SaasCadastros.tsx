@@ -362,7 +362,7 @@ export default function SaasCadastros({ organizationId, section }: Props) {
     }));
   };
 
-  const applyCnpjLookup = (lookup: any) => {
+  const applyCnpjLookup = (lookup: any, meta: any = {}) => {
     const keys = [
       'legal_name',
       'trade_name',
@@ -373,6 +373,7 @@ export default function SaasCadastros({ organizationId, section }: Props) {
       'tax_regime',
       'email',
       'phone',
+      'mobile',
       'postal_code',
       'street',
       'street_number',
@@ -392,11 +393,21 @@ export default function SaasCadastros({ organizationId, section }: Props) {
         next.ie_indicator = lookup.ie_indicator || '1';
         next.icms_taxpayer = lookup.icms_taxpayer !== false;
       }
+      const registry = meta?.registry || lookup?.registry || {};
+      next.metadata = {
+        ...(previous?.metadata || {}),
+        registry_lookup: registry,
+        registry_sources: meta?.sources || {},
+        registry_cnae_primary: lookup?.cnae_primary || registry?.primary_cnae_code || '',
+        registry_updated_at: new Date().toISOString(),
+      };
       return next;
     });
+    const sourceCount = Array.isArray(meta?.sources?.federal) ? meta.sources.federal.length : 0;
+    const filledCount = Array.isArray(meta?.filled_fields) ? meta.filled_fields.length : 0;
     setMessage(lookup?.state_registration
-      ? `CNPJ consultado e IE ${lookup.state_registration} preenchida automaticamente.`
-      : 'CNPJ consultado. Os dados disponíveis foram preenchidos automaticamente.');
+      ? `Consulta concluída: ${filledCount || 'vários'} campos preenchidos por ${sourceCount || 1} fonte(s), incluindo IE ${lookup.state_registration}.`
+      : `Consulta concluída: ${filledCount || 'vários'} campos preenchidos. A IE não foi localizada nas fontes disponíveis.`);
   };
 
   const resetImageState = () => {
@@ -611,10 +622,12 @@ export default function SaasCadastros({ organizationId, section }: Props) {
             organizationId={organizationId}
             value={form.tax_id || ''}
             onChange={value => set('tax_id', value)}
-            onResolved={data => applyCnpjLookup(data)}
+            onResolved={(data, meta) => applyCnpjLookup(data, meta)}
             mode="party"
           />
         )}
+
+        {!isCatalog && form.person_type === 'legal' && <OfficialRegistrySummary form={form} />}
 
         {section === 'Clientes' ? (
           <div className="rounded-xl border border-[#dce2e9] bg-white px-4 sm:px-6">
@@ -814,6 +827,87 @@ function cardDetails(section: CadastroSection, row: any) {
   ];
 }
 
+function OfficialRegistrySummary({ form }: { form: any }) {
+  const registry = form?.metadata?.registry_lookup;
+  if (!registry || typeof registry !== 'object' || !Object.keys(registry).length) return null;
+  const sources = form?.metadata?.registry_sources || {};
+  const federalSources = Array.isArray(sources?.federal) ? sources.federal : [];
+  const regimeNames: Record<string, string> = { simples: 'Simples Nacional', mei: 'MEI', presumido: 'Lucro Presumido', real: 'Lucro Real' };
+  const formatDate = (value: any) => {
+    if (!value) return '';
+    const raw = String(value).slice(0, 10);
+    const parts = raw.split('-');
+    return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : String(value);
+  };
+  const facts = [
+    { label: 'Situação na Receita', value: registry.registration_status },
+    { label: 'Início da atividade', value: formatDate(registry.opening_date) },
+    { label: 'Estabelecimento', value: registry.establishment_type },
+    { label: 'Natureza jurídica', value: [registry.legal_nature_code, registry.legal_nature].filter(Boolean).join(' · ') },
+    { label: 'Porte', value: registry.company_size },
+    { label: 'Capital social', value: registry.share_capital ? money(registry.share_capital) : '' },
+    { label: 'CNAE principal', value: [registry.primary_cnae_code, registry.primary_cnae_description].filter(Boolean).join(' · ') },
+    { label: 'Regime tributário', value: form.tax_regime ? `${regimeNames[form.tax_regime] || form.tax_regime}${registry.tax_regime_year ? ` · ${registry.tax_regime_year}` : ''}` : registry.tax_regime_label },
+    { label: 'Simples / MEI', value: registry.mei ? 'MEI' : registry.simples ? 'Optante pelo Simples' : registry.simples === false ? 'Não optante' : '' },
+    { label: 'Situação da IE', value: registry.state_registry_status },
+  ].filter(item => item.value !== undefined && item.value !== null && String(item.value).trim() !== '');
+  const qsa = Array.isArray(registry.qsa) ? registry.qsa.slice(0, 6) : [];
+  const secondaryCnaes = Array.isArray(registry.secondary_cnaes) ? registry.secondary_cnaes : [];
+
+  return (
+    <section className="overflow-hidden rounded-xl border border-[#c8d0d8] bg-[#e9edf0]">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#cbd3da] bg-[#dce2e7] px-4 py-3.5 sm:px-5">
+        <div>
+          <p className="text-[9px] font-semibold uppercase tracking-[.12em] text-[#667085]">Consulta cadastral</p>
+          <h3 className="mt-1 text-sm font-semibold text-[#17233b]">Dados oficiais encontrados</h3>
+          <p className="mt-1 text-[11px] text-[#667085]">Informações complementares preservadas junto ao cadastro para conferência.</p>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {federalSources.map((source: string) => <span key={source} className="rounded-full border border-[#b9c3cc] bg-[#f0f2f4] px-2 py-1 text-[9px] font-semibold text-[#536077]">{source}</span>)}
+          {sources?.state && <span className="rounded-full border border-[#b9c3cc] bg-[#f0f2f4] px-2 py-1 text-[9px] font-semibold text-[#536077]">{sources.state}</span>}
+        </div>
+      </div>
+      <div className="p-4 sm:p-5">
+        {facts.length > 0 && (
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+            {facts.map(item => (
+              <div key={item.label} className="min-w-0 rounded-lg border border-[#ccd4db] bg-[#f3f5f6] px-3 py-2.5">
+                <span className="block text-[8px] font-semibold uppercase tracking-[.08em] text-[#7a8698]">{item.label}</span>
+                <b className="mt-1 block break-words text-[11px] font-semibold leading-4 text-[#344054]">{item.value}</b>
+              </div>
+            ))}
+          </div>
+        )}
+        {(qsa.length > 0 || secondaryCnaes.length > 0) && (
+          <div className="mt-3 grid gap-3 lg:grid-cols-2">
+            {qsa.length > 0 && (
+              <div className="rounded-lg border border-[#ccd4db] bg-[#eef1f3] p-3">
+                <p className="text-[9px] font-semibold uppercase tracking-[.08em] text-[#667085]">Quadro societário</p>
+                <div className="mt-2 space-y-1.5">
+                  {qsa.map((item: any, index: number) => (
+                    <div key={`${item.name}-${index}`} className="flex items-start justify-between gap-3 text-[10px]">
+                      <span className="font-medium text-[#344054]">{item.name}</span>
+                      <span className="text-right text-[#7a8698]">{item.qualification || 'Sócio / administrador'}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {secondaryCnaes.length > 0 && (
+              <div className="rounded-lg border border-[#ccd4db] bg-[#eef1f3] p-3">
+                <p className="text-[9px] font-semibold uppercase tracking-[.08em] text-[#667085]">Atividades secundárias</p>
+                <p className="mt-2 text-[11px] font-semibold text-[#344054]">{secondaryCnaes.length} CNAE(s) encontrado(s)</p>
+                <p className="mt-1 line-clamp-2 text-[10px] leading-4 text-[#7a8698]">{secondaryCnaes.slice(0, 3).map((item: any) => [item.code, item.description].filter(Boolean).join(' · ')).join('  •  ')}</p>
+              </div>
+            )}
+          </div>
+        )}
+        <p className="mt-3 text-[10px] leading-4 text-[#7a8698]">Dados internos como contato responsável, WhatsApp, banco, PIX, limite de crédito e condição de pagamento continuam manuais quando não existe fonte pública confiável.</p>
+      </div>
+    </section>
+  );
+}
+
 function PartyEditor({ section, form, set, hideTaxIdForLegal = false }: { section: CadastroSection; form: any; set: (key: string, value: any) => void; hideTaxIdForLegal?: boolean }) {
   return (
     <div className="grid gap-4 lg:grid-cols-2">
@@ -833,7 +927,7 @@ function PartyEditor({ section, form, set, hideTaxIdForLegal = false }: { sectio
         {(!hideTaxIdForLegal || form.person_type !== 'legal') && (
           <Field label={form.person_type === 'individual' ? 'CPF' : 'CNPJ / CPF'} value={form.tax_id} onChange={value => set('tax_id', value)} required hint="Digite somente números." />
         )}
-        <Field label="Contato" value={form.contact_name} onChange={value => set('contact_name', value)} />
+        <Field label="Contato" value={form.contact_name} onChange={value => set('contact_name', value)} hint="Contato interno/comercial; não é inferido automaticamente pelo quadro societário." />
         <SelectField
           label="Situação"
           value={form.status}
@@ -847,7 +941,7 @@ function PartyEditor({ section, form, set, hideTaxIdForLegal = false }: { sectio
 
       <Section title="Fiscal" description="Tributação reaproveitada automaticamente nas emissões.">
         <Field label="Inscrição estadual" value={form.state_registration} onChange={value => set('state_registration', value)} />
-        <Field label="Inscrição municipal" value={form.municipal_registration} onChange={value => set('municipal_registration', value)} />
+        <Field label="Inscrição municipal" value={form.municipal_registration} onChange={value => set('municipal_registration', value)} hint="Não existe uma consulta nacional única; informe quando necessário." />
         <SelectField
           label="Regime tributário"
           value={form.tax_regime}

@@ -47,17 +47,19 @@ export default function SaasCnpjLookup({
     if (!organizationId || cnpj.length !== 14 || busy || disabled) return;
     if (!force && lastLooked.current === cnpj) return;
     setBusy(true);
-    setMessage('Consultando Receita e dados estaduais...');
+    setMessage('Consultando CNPJ.ws, BrasilAPI e dados estaduais...');
     setSuccess(false);
     try {
       const result = await lookupCnpjData(organizationId, cnpj);
       lastLooked.current = cnpj;
       onResolved(result.data || {}, result);
       setSuccess(true);
+      const sources = Array.isArray(result?.sources?.federal) ? result.sources.federal.join(' + ') : '';
+      const count = Array.isArray(result?.filled_fields) ? result.filled_fields.length : 0;
       setMessage(
         result.state_registry_found
-          ? `Dados preenchidos automaticamente · IE ${result.data?.state_registration || ''}`
-          : 'Dados cadastrais preenchidos. A IE não foi localizada automaticamente nesta consulta.'
+          ? `${count || 'Vários'} campos encontrados · ${sources || 'fontes cadastrais'} · IE ${result.data?.state_registration || ''}`
+          : `${count || 'Vários'} campos encontrados · ${sources || 'fontes cadastrais'} · IE não localizada`
       );
     } catch (error: any) {
       setMessage(error?.message || 'Não foi possível consultar o CNPJ.');
