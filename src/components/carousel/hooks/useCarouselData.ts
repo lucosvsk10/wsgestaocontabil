@@ -1,6 +1,5 @@
-
-import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface ClientItem {
   id: string;
@@ -19,7 +18,6 @@ export const useCarouselData = () => {
   // Memoizar a função de carregamento
   const loadClients = useCallback(async () => {
     try {
-      console.log('Carregando dados do carrossel público...');
       const { data, error } = await supabase
         .from('carousel_items')
         .select('*')
@@ -27,12 +25,10 @@ export const useCarouselData = () => {
         .order('created_at', { ascending: true });
 
       if (error) {
-        console.error('Erro ao carregar dados do carrossel:', error);
+        if (import.meta.env.DEV) console.warn('Carrossel público indisponível:', error.message);
         setClients([]);
         return;
       }
-
-      console.log('Dados do carrossel carregados:', data);
 
       // Converter para o formato esperado pelo carrossel
       const formattedClients = ((data || []) as any[]).map((item: any, index: number) => ({
@@ -42,13 +38,12 @@ export const useCarouselData = () => {
         instagram_url: item.instagram,
         whatsapp_url: item.whatsapp,
         order_index: index,
-        active: true
+        active: true,
       }));
 
-      console.log('Clientes formatados:', formattedClients);
       setClients(formattedClients);
     } catch (error) {
-      console.error('Erro ao carregar dados do carrossel:', error);
+      if (import.meta.env.DEV) console.warn('Carrossel público indisponível:', error);
       setClients([]);
     } finally {
       setLoading(false);
@@ -61,16 +56,14 @@ export const useCarouselData = () => {
     // Listener para mudanças em tempo real
     const channel = supabase
       .channel('carousel_changes')
-      .on('postgres_changes', 
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'carousel_items' 
-        }, 
-        (payload) => {
-          console.log('Mudança detectada no carrossel:', payload);
-          loadClients();
-        }
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'carousel_items',
+        },
+        () => loadClients()
       )
       .subscribe();
 
