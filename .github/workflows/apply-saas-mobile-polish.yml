@@ -35,3 +35,4 @@ jobs:
           git add src/pages/SaasApp.tsx
           git diff --cached --quiet || git commit -m "style(saas): load final mobile polish"
           git push
+# trigger: compact-mobile-v2
