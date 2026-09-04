@@ -1,0 +1,128 @@
+name: Apply SaaS CNPJ autofill
+
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-saas-cnpj-autofill.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Wire CNPJ autofill into SaaS registries
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          # --- SaasCadastros ---
+          p = Path('src/components/saas/SaasCadastros.tsx')
+          s = p.read_text()
+          if "SaasCnpjLookup" not in s:
+              needle = "import SaasRegisterAppearance, { readableText } from '@/components/saas/SaasRegisterAppearance';"
+              repl = needle + "\nimport SaasCnpjLookup from '@/components/saas/SaasCnpjLookup';"
+              assert needle in s
+              s = s.replace(needle, repl, 1)
+
+          marker = "  const resetImageState = () => {"
+          if "const applyCnpjLookup" not in s:
+              block = '''  const applyCnpjLookup = (lookup: any) => {\n    const keys = [\n      'legal_name',\n      'trade_name',\n      'tax_id',\n      'state_registration',\n      'ie_indicator',\n      'icms_taxpayer',\n      'tax_regime',\n      'email',\n      'phone',\n      'postal_code',\n      'street',\n      'street_number',\n      'complement',\n      'district',\n      'city',\n      'state',\n      'city_ibge_code',\n    ];\n    setForm((previous: any) => {\n      const next = { ...previous, person_type: 'legal' };\n      for (const key of keys) {\n        const value = lookup?.[key];\n        if (value !== undefined && value !== null && String(value).trim() !== '') next[key] = value;\n      }\n      if (lookup?.state_registration) {\n        next.ie_indicator = lookup.ie_indicator || '1';\n        next.icms_taxpayer = lookup.icms_taxpayer !== false;\n      }\n      return next;\n    });\n    setMessage(lookup?.state_registration\n      ? `CNPJ consultado e IE ${lookup.state_registration} preenchida automaticamente.`\n      : 'CNPJ consultado. Os dados disponíveis foram preenchidos automaticamente.');\n  };\n\n'''
+              assert marker in s
+              s = s.replace(marker, block + marker, 1)
+
+          editor_anchor = "        {section === 'Clientes' ? ("
+          if "mode=\"party\"" not in s:
+              hero = '''        {!isCatalog && form.person_type === 'legal' && (\n          <SaasCnpjLookup\n            organizationId={organizationId}\n            value={form.tax_id || ''}\n            onChange={value => set('tax_id', value)}\n            onResolved={data => applyCnpjLookup(data)}\n            mode="party"\n          />\n        )}\n\n'''
+              assert editor_anchor in s
+              s = s.replace(editor_anchor, hero + editor_anchor, 1)
+
+          s = s.replace(
+              '<SaasCustomerEditor form={form} set={set} />',
+              '<SaasCustomerEditor form={form} set={set} hideTaxIdForLegal />',
+              1,
+          )
+          s = s.replace(
+              '<PartyEditor section={section} form={form} set={set} />',
+              '<PartyEditor section={section} form={form} set={set} hideTaxIdForLegal />',
+              1,
+          )
+
+          old_sig = "function PartyEditor({ section, form, set }: { section: CadastroSection; form: any; set: (key: string, value: any) => void }) {"
+          new_sig = "function PartyEditor({ section, form, set, hideTaxIdForLegal = false }: { section: CadastroSection; form: any; set: (key: string, value: any) => void; hideTaxIdForLegal?: boolean }) {"
+          if old_sig in s:
+              s = s.replace(old_sig, new_sig, 1)
+
+          tax_field = '''        <Field label="CNPJ / CPF" value={form.tax_id} onChange={value => set('tax_id', value)} required hint="Digite somente números." />'''
+          if tax_field in s:
+              s = s.replace(tax_field, '''        {(!hideTaxIdForLegal || form.person_type !== 'legal') && (\n          <Field label={form.person_type === 'individual' ? 'CPF' : 'CNPJ / CPF'} value={form.tax_id} onChange={value => set('tax_id', value)} required hint="Digite somente números." />\n        )}''', 1)
+          p.write_text(s)
+
+          # --- SaasCustomerEditor ---
+          p = Path('src/components/saas/SaasCustomerEditor.tsx')
+          s = p.read_text()
+          s = s.replace(
+              "type Props = {\n  form: any;\n  set: (key: string, value: any) => void;\n};",
+              "type Props = {\n  form: any;\n  set: (key: string, value: any) => void;\n  hideTaxIdForLegal?: boolean;\n};",
+              1,
+          )
+          s = s.replace(
+              "export default function SaasCustomerEditor({ form, set }: Props) {",
+              "export default function SaasCustomerEditor({ form, set, hideTaxIdForLegal = false }: Props) {",
+              1,
+          )
+          old = '''                <Field\n                  label={form.person_type === 'individual' ? 'CPF' : form.person_type === 'foreign' ? 'Documento' : 'CNPJ'}\n                  value={form.person_type === 'foreign' ? form.tax_id : formatTaxId(form.tax_id, form.person_type)}\n                  onChange={value => set('tax_id', onlyDigits(value))}\n                  required\n                  placeholder={form.person_type === 'individual' ? '000.000.000-00' : '00.000.000/0000-00'}\n                  hint={form.person_type === 'foreign' ? 'Documento de identificação do exterior.' : undefined}\n                />'''
+          new = '''                {(!hideTaxIdForLegal || form.person_type !== 'legal') && (\n                  <Field\n                    label={form.person_type === 'individual' ? 'CPF' : form.person_type === 'foreign' ? 'Documento' : 'CNPJ'}\n                    value={form.person_type === 'foreign' ? form.tax_id : formatTaxId(form.tax_id, form.person_type)}\n                    onChange={value => set('tax_id', onlyDigits(value))}\n                    required\n                    placeholder={form.person_type === 'individual' ? '000.000.000-00' : '00.000.000/0000-00'}\n                    hint={form.person_type === 'foreign' ? 'Documento de identificação do exterior.' : undefined}\n                  />\n                )}'''
+          assert old in s, 'customer tax id field not found'
+          s = s.replace(old, new, 1)
+          p.write_text(s)
+
+          # --- SaasCompanyProfile ---
+          p = Path('src/components/saas/SaasCompanyProfile.tsx')
+          s = p.read_text()
+          import_line = 'import { supabase } from "@/integrations/supabase/client";'
+          if 'SaasCnpjLookup' not in s:
+              assert import_line in s
+              s = s.replace(import_line, import_line + '\nimport SaasCnpjLookup, { lookupCnpjData } from "@/components/saas/SaasCnpjLookup";', 1)
+
+          use_effect = ' useEffect(()=>{void load()},[organizationId]);'
+          if 'mergeCompanyLookup' not in s:
+              helper = '''\n const mergeCompanyLookup=(base:any,lookup:any)=>{const next={...base};for(const k of ["legal_name","trade_name","tax_id","state_registration","tax_regime","phone","email","postal_code","street","street_number","complement","district","city","state","city_ibge_code","cnae_primary"]){const v=lookup?.[k];if(v!==undefined&&v!==null&&String(v).trim()!=="")next[k]=v}return next};\n const applyCompanyLookup=(lookup:any)=>setForm((p:any)=>mergeCompanyLookup(p,lookup));'''
+              assert use_effect in s
+              s = s.replace(use_effect, use_effect + helper, 1)
+
+          pattern = re.compile(r' const uploadCertificate=async\(e:ChangeEvent<HTMLInputElement>\)=>\{.*?\};\n const status=', re.S)
+          match = pattern.search(s)
+          assert match, 'uploadCertificate block not found'
+          new_upload = ''' const uploadCertificate=async(e:ChangeEvent<HTMLInputElement>)=>{\n  const file=e.target.files?.[0];if(!file||!organizationId)return;if(!password){setMsg("Informe a senha do certificado antes de selecionar o arquivo.");return}\n  const bytes=new Uint8Array(await file.arrayBuffer());let binary="";for(const b of bytes)binary+=String.fromCharCode(b);\n  setSaving(true);setMsg("Lendo certificado A1 e identificando o CNPJ...");\n  const {data,error}=await supabase.functions.invoke("saas-fiscal-config",{body:{action:"save_certificate",organization_id:organizationId,certificate_base64:btoa(binary),certificate_password:password}});\n  if(error||data?.error){setSaving(false);setMsg(data?.error||error?.message||"Erro ao salvar certificado");return}\n  setCertificate(true);setPassword("");\n  const certCnpj=String(data?.certificate?.cnpj||"").replace(/\\D/g,"");\n  let nextForm={...form,...(certCnpj?{tax_id:certCnpj}:{})};\n  if(certCnpj){\n    try{\n      setMsg("A1 validado. Buscando dados do CNPJ e inscrição estadual...");\n      const lookup=await lookupCnpjData(organizationId,certCnpj);\n      nextForm=mergeCompanyLookup(nextForm,lookup?.data||{});\n      setForm(nextForm);\n      const saved=await supabase.functions.invoke("saas-fiscal-config",{body:{action:"save_profile",organization_id:organizationId,profile:nextForm}});\n      if(saved.error||saved.data?.error)throw new Error(saved.data?.error||saved.error?.message||"Não foi possível salvar os dados encontrados.");\n      setForm((p:any)=>({...p,...saved.data.profile,fiscal_environment:p.fiscal_environment}));\n      setMsg(lookup?.state_registry_found\n        ? `A1 configurado. CNPJ identificado e IE ${lookup.data?.state_registration||""} preenchida automaticamente.`\n        : "A1 configurado e CNPJ identificado. Os dados cadastrais foram preenchidos; revise a IE se ela não estiver disponível na fonte estadual.");\n    }catch(lookupError:any){\n      setForm(nextForm);\n      setMsg(`A1 configurado e CNPJ ${certCnpj} identificado. ${lookupError?.message||"Não foi possível completar os dados automaticamente."}`);\n    }\n  }else setMsg(`Certificado configurado até ${new Date(data.certificate.expires_at).toLocaleDateString("pt-BR")}.`);\n  setSaving(false);e.target.value="";\n };\n const status='''
+          s = s[:match.start()] + new_upload + s[match.end():]
+
+          # Make A1 explicitly step 1.
+          s = s.replace('eyebrow="Prioridade de emissão" title="Certificado digital A1"', 'eyebrow="Etapa 1 · identificação fiscal" title="Certificado digital A1"', 1)
+
+          # Insert CNPJ lookup immediately after A1 section and before company data grid.
+          grid_anchor = '<div className="grid gap-5 xl:grid-cols-2"><AdminSection><SectionHead eyebrow="Identificação" title="Dados da empresa"'
+          if 'mode="company"' not in s:
+              lookup_block = '''<SaasCnpjLookup organizationId={organizationId} value={form.tax_id||""} onChange={value=>setForm((p:any)=>({...p,tax_id:value}))} onResolved={(data)=>applyCompanyLookup(data)} mode="company" disabled={!certificate}/>\n '''
+              assert grid_anchor in s
+              s = s.replace(grid_anchor, lookup_block + grid_anchor, 1)
+
+          s = s.replace('<Field label="CNPJ" k="tax_id" form={form} setForm={setForm}/>', '', 1)
+          p.write_text(s)
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/saas/SaasCadastros.tsx src/components/saas/SaasCustomerEditor.tsx src/components/saas/SaasCompanyProfile.tsx
+          if git diff --cached --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git commit -m "feat(saas): autofill registries from CNPJ and A1"
+          git push
