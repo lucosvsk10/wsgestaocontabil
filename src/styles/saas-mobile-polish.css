@@ -26,6 +26,11 @@
 
   .saas-admin-light .saas-mobile-menu {
     display: grid !important;
+    position: static !important;
+    inset: auto !important;
+    transform: none !important;
+    margin: 0 !important;
+    z-index: auto !important;
     place-items: center !important;
     width: 36px !important;
     height: 36px !important;
