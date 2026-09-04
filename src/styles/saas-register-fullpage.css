@@ -39,6 +39,24 @@
   --reg-input: #f5f6f7;
   --reg-border: #cdd4db;
   --reg-border-strong: #bcc6cf;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 20px !important;
+}
+
+/* Tailwind space-y is DOM-based; flex order is visual. Reset it so reordered blocks keep even spacing. */
+.saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance) > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 0 !important;
+}
+
+/* Visual customization is deliberately the last, optional step of every full-page registry form. */
+.saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance) > .saas-register-appearance {
+  order: 90 !important;
+  margin-top: 4px !important;
+}
+
+.saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance) > .fixed.bottom-0 {
+  order: 100 !important;
 }
 
 .saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance) > header {
@@ -232,6 +250,10 @@
     position: static !important;
     margin: 0 !important;
     padding-inline: 0 !important;
+  }
+
+  .saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance) {
+    gap: 14px !important;
   }
 
   .saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance) > header {
