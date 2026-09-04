@@ -106,6 +106,12 @@ const lightVars: any = {
   '--input': '220 12% 84%',
   '--ring': '215 16% 40%',
 };
+const formatCnpj = (value: any) => {
+  const digits = String(value || '').replace(/\D/g, '').slice(0, 14);
+  if (digits.length !== 14) return String(value || '');
+  return digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+};
+
 const emissionTypeLabel = (emission: any) =>
   (
     ({ nfe: 'NF-e', nfce: 'NFC-e', nfse: 'NFS-e', cte: 'CT-e', mdfe: 'MDF-e' }) as Record<
@@ -389,7 +395,7 @@ export default function SaasApp() {
                 {organization?.name || 'Nenhuma empresa selecionada'}
               </p>
             )}
-            <p className="mt-0.5 text-[10px] uppercase tracking-[.12em]">Painel fiscal</p>
+            <p className="saas-company-tax-id mt-0.5 text-[10px] tracking-[.06em]">{profile?.tax_id ? formatCnpj(profile.tax_id) : 'CNPJ não informado'}</p>
           </div>
           <div className="flex flex-1 justify-end">
             <AccountDrawer

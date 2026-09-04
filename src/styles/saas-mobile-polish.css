@@ -102,7 +102,16 @@
   }
 
   .saas-admin-light .saas-company-context > p:last-child {
-    display: none !important;
+    display: block !important;
+    margin-top: 2px !important;
+    color: #94a3b8 !important;
+    font-size: 8px !important;
+    line-height: 1 !important;
+    font-weight: 400 !important;
+    letter-spacing: .04em !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
 
   .saas-admin-light .saas-company-context select {
