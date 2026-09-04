@@ -2283,6 +2283,83 @@ export type Database = {
           },
         ]
       }
+      fiscal_sync_health: {
+        Row: {
+          company_id: string
+          last_checked_at: string
+          last_recovery_reason: string | null
+          purchases_failure_count: number
+          purchases_last_checked_at: string | null
+          purchases_last_progress_at: string | null
+          purchases_last_recovery_at: string | null
+          purchases_snapshot: Json
+          purchases_status: string
+          recovery_count: number
+          sales_detail_stall_since: string | null
+          sales_failure_count: number
+          sales_last_checked_at: string | null
+          sales_last_progress_at: string | null
+          sales_last_recovery_at: string | null
+          sales_reconciliation_stall_since: string | null
+          sales_snapshot: Json
+          sales_status: string
+          sales_xml_stall_since: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          last_checked_at?: string
+          last_recovery_reason?: string | null
+          purchases_failure_count?: number
+          purchases_last_checked_at?: string | null
+          purchases_last_progress_at?: string | null
+          purchases_last_recovery_at?: string | null
+          purchases_snapshot?: Json
+          purchases_status?: string
+          recovery_count?: number
+          sales_detail_stall_since?: string | null
+          sales_failure_count?: number
+          sales_last_checked_at?: string | null
+          sales_last_progress_at?: string | null
+          sales_last_recovery_at?: string | null
+          sales_reconciliation_stall_since?: string | null
+          sales_snapshot?: Json
+          sales_status?: string
+          sales_xml_stall_since?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          last_checked_at?: string
+          last_recovery_reason?: string | null
+          purchases_failure_count?: number
+          purchases_last_checked_at?: string | null
+          purchases_last_progress_at?: string | null
+          purchases_last_recovery_at?: string | null
+          purchases_snapshot?: Json
+          purchases_status?: string
+          recovery_count?: number
+          sales_detail_stall_since?: string | null
+          sales_failure_count?: number
+          sales_last_checked_at?: string | null
+          sales_last_progress_at?: string | null
+          sales_last_recovery_at?: string | null
+          sales_reconciliation_stall_since?: string | null
+          sales_snapshot?: Json
+          sales_status?: string
+          sales_xml_stall_since?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fiscal_sync_health_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "fiscal_companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fiscal_sync_logs: {
         Row: {
           company_id: string
@@ -4159,10 +4236,18 @@ export type Database = {
         Args: { p_company_id: string; p_worker: string }
         Returns: undefined
       }
+      run_fiscal_sync_watchdog: {
+        Args: { p_company_id?: string; p_dry_run?: boolean }
+        Returns: Json
+      }
       set_document_expiration: { Args: never; Returns: undefined }
       set_saas_certificate_password: {
         Args: { _org_id: string; _password: string }
         Returns: string
+      }
+      sync_sales_details_into_dfe: {
+        Args: { p_company_id?: string }
+        Returns: number
       }
       trigger_fiscal_purchase_report_backfill: {
         Args: { p_end: string; p_start: string }
@@ -4175,6 +4260,7 @@ export type Database = {
       trigger_fiscal_sales_detail_backfill: { Args: never; Returns: number }
       trigger_fiscal_sales_event_backfill: { Args: never; Returns: number }
       trigger_fiscal_sales_xml_backfill: { Args: never; Returns: number }
+      trigger_fiscal_sync_watchdog: { Args: never; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "client" | "fiscal" | "contabil" | "geral"
