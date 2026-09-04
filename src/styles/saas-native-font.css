@@ -1,4 +1,4 @@
-/* SaaS typography: Space Grotesk everywhere, with a lighter weight hierarchy. Loaded last on purpose. */
+/* SaaS typography — Mercado Pago inspired hierarchy. Loaded last on purpose. */
 .saas-admin-light,
 .saas-admin-light *,
 .saas-admin-light input,
@@ -8,32 +8,18 @@
 .saas-admin-light table,
 .saas-admin-light th,
 .saas-admin-light td {
-  font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif !important;
+  font-family: 'Proxima Nova', 'Inter', 'Helvetica Neue', Arial, sans-serif !important;
   font-synthesis: none;
+  letter-spacing: 0 !important;
 }
 
 .saas-admin-light {
+  font-size: 14px;
   font-weight: 400;
-  letter-spacing: -0.006em;
+  line-height: 1.35;
 }
 
-.saas-admin-light .font-medium,
-.saas-admin-light .font-semibold {
-  font-weight: 500 !important;
-}
-
-.saas-admin-light .font-bold {
-  font-weight: 600 !important;
-}
-
-.saas-admin-light h1,
-.saas-admin-light h2,
-.saas-admin-light h3,
-.saas-admin-light h4 {
-  font-weight: 500 !important;
-  letter-spacing: -0.018em !important;
-}
-
+/* Body copy */
 .saas-admin-light p,
 .saas-admin-light span,
 .saas-admin-light label,
@@ -44,8 +30,88 @@
   font-weight: 400;
 }
 
-.saas-admin-light button,
+/* Navigation: same lighter, compact rhythm as the reference */
+.saas-admin-light nav,
+.saas-admin-light nav button,
+.saas-admin-light .saas-nav-item,
+.saas-admin-light .saas-nav-subitem,
+.saas-admin-light .saas-emission-group,
+.saas-admin-light .saas-neutral-group {
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  line-height: 1.35 !important;
+}
+
+.saas-admin-light aside nav section > p,
 .saas-admin-light th,
-.saas-admin-light nav {
-  font-weight: 500;
+.saas-admin-light .product-summary-label,
+.saas-admin-light .saas-register-section-title {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  line-height: 1.35 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Buttons: compact semibold, never heavy */
+.saas-admin-light button {
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+/* Heading scale closely follows the reference screenshot */
+.saas-admin-light h1 {
+  font-size: 24px !important;
+  font-weight: 600 !important;
+  line-height: 1.2 !important;
+  letter-spacing: 0 !important;
+}
+
+.saas-admin-light h2 {
+  font-size: 20px !important;
+  font-weight: 600 !important;
+  line-height: 1.25 !important;
+  letter-spacing: 0 !important;
+}
+
+.saas-admin-light h3 {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  line-height: 1.3 !important;
+  letter-spacing: 0 !important;
+}
+
+.saas-admin-light h4 {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  line-height: 1.3 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Tailwind weight utilities reconciled to the lighter visual system */
+.saas-admin-light .font-medium {
+  font-weight: 400 !important;
+}
+
+.saas-admin-light .font-semibold {
+  font-weight: 600 !important;
+}
+
+.saas-admin-light .font-bold {
+  font-weight: 600 !important;
+}
+
+/* Dashboard KPI values: large but visually light, like Mercado Pago balance cards */
+.saas-admin-light .saas-dashboard .text-2xl,
+.saas-admin-light .saas-dashboard [class*='text-[21px]'],
+.saas-admin-light .product-summary-value {
+  font-size: 28px !important;
+  font-weight: 400 !important;
+  line-height: 1.15 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Secondary copy */
+.saas-admin-light .text-muted-foreground,
+.saas-admin-light [class*='text-[#667085]'] {
+  font-weight: 400 !important;
 }
