@@ -257,8 +257,7 @@ export default function SaasApp() {
       profile?.crt &&
       certificateConfigured
   );
-  const showSetup =
-    active === 'Início' && Boolean(organization?.id) && !setupComplete && !setupDismissed;
+  const showSetup = false;
   const dismissSetup = () => {
     if (organization?.id) localStorage.setItem(`ws_fiscal_setup_dismissed_${organization.id}`, '1');
     setSetupDismissed(true);
