@@ -20,34 +20,28 @@ jobs:
           anchor = "import { supabase } from '@/integrations/supabase/client';\n"
           imp = "import SaasCustomerEditor from '@/components/saas/SaasCustomerEditor';\n"
           if imp not in s:
-              if anchor not in s:
-                  raise SystemExit('import anchor not found')
+              assert anchor in s, 'import anchor not found'
               s = s.replace(anchor, anchor + imp, 1)
 
-          old_layout = '      <div className="saas-register-layout">'
-          new_layout = "      <div className={`saas-register-layout ${section === 'Clientes' && form ? 'is-customer-editing' : ''}`}>"
+          old_layout = '<div className="saas-register-layout">'
+          new_layout = "<div className={`saas-register-layout ${section === 'Clientes' && form ? 'is-customer-editing' : ''}`}>"
           if old_layout in s:
               s = s.replace(old_layout, new_layout, 1)
-          elif 'is-customer-editing' not in s:
-              raise SystemExit('layout anchor not found')
 
-          old_editor = """                {isCatalog ? (
-                  <CatalogEditor section={section} form={form} set={set} />
-                ) : (
+          old_party = """                ) : (
                   <PartyEditor section={section} form={form} set={set} />
                 )}"""
-          new_editor = """                {isCatalog ? (
-                  <CatalogEditor section={section} form={form} set={set} />
-                ) : section === 'Clientes' ? (
+          new_party = """                ) : section === 'Clientes' ? (
                   <SaasCustomerEditor form={form} set={set} />
                 ) : (
                   <PartyEditor section={section} form={form} set={set} />
                 )}"""
-          if old_editor in s:
-              s = s.replace(old_editor, new_editor, 1)
-          elif '<SaasCustomerEditor form={form} set={set} />' not in s:
-              raise SystemExit('editor anchor not found')
+          if '<SaasCustomerEditor form={form} set={set} />' not in s:
+              assert old_party in s, 'party editor anchor not found'
+              s = s.replace(old_party, new_party, 1)
 
+          assert 'is-customer-editing' in s
+          assert '<SaasCustomerEditor form={form} set={set} />' in s
           p.write_text(s)
           PY
       - name: Build
