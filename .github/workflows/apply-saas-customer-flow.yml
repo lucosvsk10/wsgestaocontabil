@@ -14,32 +14,40 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          p=Path('src/components/saas/SaasCadastros.tsx')
-          s=p.read_text()
-          imp="import SaasCustomerEditor from '@/components/saas/SaasCustomerEditor';\n"
-          anchor="import { supabase } from '@/integrations/supabase/client';\n"
+          p = Path('src/components/saas/SaasCadastros.tsx')
+          s = p.read_text()
+
+          anchor = "import { supabase } from '@/integrations/supabase/client';\n"
+          imp = "import SaasCustomerEditor from '@/components/saas/SaasCustomerEditor';\n"
           if imp not in s:
-              s=s.replace(anchor, anchor+imp)
-          old='      <div className="saas-register-layout">'
-          new='      <div className={`saas-register-layout ${section === \'Clientes\' && form ? \'is-customer-editing\' : \'\'}` }>'
-          if old not in s:
+              if anchor not in s:
+                  raise SystemExit('import anchor not found')
+              s = s.replace(anchor, anchor + imp, 1)
+
+          old_layout = '      <div className="saas-register-layout">'
+          new_layout = "      <div className={`saas-register-layout ${section === 'Clientes' && form ? 'is-customer-editing' : ''}`}>"
+          if old_layout in s:
+              s = s.replace(old_layout, new_layout, 1)
+          elif 'is-customer-editing' not in s:
               raise SystemExit('layout anchor not found')
-          s=s.replace(old,new,1)
-          old2="""                {isCatalog ? (
+
+          old_editor = """                {isCatalog ? (
                   <CatalogEditor section={section} form={form} set={set} />
                 ) : (
                   <PartyEditor section={section} form={form} set={set} />
                 )}"""
-          new2="""                {isCatalog ? (
+          new_editor = """                {isCatalog ? (
                   <CatalogEditor section={section} form={form} set={set} />
                 ) : section === 'Clientes' ? (
                   <SaasCustomerEditor form={form} set={set} />
                 ) : (
                   <PartyEditor section={section} form={form} set={set} />
                 )}"""
-          if old2 not in s:
+          if old_editor in s:
+              s = s.replace(old_editor, new_editor, 1)
+          elif '<SaasCustomerEditor form={form} set={set} />' not in s:
               raise SystemExit('editor anchor not found')
-          s=s.replace(old2,new2,1)
+
           p.write_text(s)
           PY
       - name: Build
