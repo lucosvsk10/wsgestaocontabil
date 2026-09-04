@@ -1,0 +1,55 @@
+name: Apply SaaS customer flow
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/apply-saas-customer-flow.yml']
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Wire customer editor
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/components/saas/SaasCadastros.tsx')
+          s=p.read_text()
+          imp="import SaasCustomerEditor from '@/components/saas/SaasCustomerEditor';\n"
+          anchor="import { supabase } from '@/integrations/supabase/client';\n"
+          if imp not in s:
+              s=s.replace(anchor, anchor+imp)
+          old='      <div className="saas-register-layout">'
+          new='      <div className={`saas-register-layout ${section === \'Clientes\' && form ? \'is-customer-editing\' : \'\'}` }>'
+          if old not in s:
+              raise SystemExit('layout anchor not found')
+          s=s.replace(old,new,1)
+          old2="""                {isCatalog ? (
+                  <CatalogEditor section={section} form={form} set={set} />
+                ) : (
+                  <PartyEditor section={section} form={form} set={set} />
+                )}"""
+          new2="""                {isCatalog ? (
+                  <CatalogEditor section={section} form={form} set={set} />
+                ) : section === 'Clientes' ? (
+                  <SaasCustomerEditor form={form} set={set} />
+                ) : (
+                  <PartyEditor section={section} form={form} set={set} />
+                )}"""
+          if old2 not in s:
+              raise SystemExit('editor anchor not found')
+          s=s.replace(old2,new2,1)
+          p.write_text(s)
+          PY
+      - name: Build
+        run: |
+          npm install --legacy-peer-deps --no-audit --no-fund
+          npm run build
+      - name: Commit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/components/saas/SaasCadastros.tsx
+          git commit -m 'feat(saas): activate visual customer creation flow'
+          git push
