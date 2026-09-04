@@ -3,20 +3,6 @@
 .saas-topbar img{filter:none!important;opacity:1!important;mix-blend-mode:normal!important}
 .saas-main-content{background:var(--ca-bg)!important}
 
-/* Sidebar hierarchy: categories and sub-tabs have different visual weights/colors */
-.saas-admin-light aside nav>.mt-5>section:nth-child(1)>button{background:#eef7fb!important;border-color:#83c9e8!important;color:#185e7e!important}
-.saas-admin-light aside nav>.mt-5>section:nth-child(1)>div button{background:#f7fcfe!important;color:#347b9b!important;border-left:3px solid #9ed9ef!important;border-radius:0 5px 5px 0!important}
-.saas-admin-light aside nav>.mt-5>section:nth-child(1)>div button:hover,.saas-admin-light aside nav>.mt-5>section:nth-child(1)>div button[class*="font-semibold"]{background:#dff3fb!important;color:#0f6f99!important}
-.saas-admin-light aside nav>.mt-5>section:nth-child(2)>button{background:#eef8f3!important;border-color:#8bd6ac!important;color:#26744c!important}
-.saas-admin-light aside nav>.mt-5>section:nth-child(2)>div button{background:#f8fdf9!important;color:#3a8057!important;border-left:3px solid #a8dfbe!important;border-radius:0 5px 5px 0!important}
-.saas-admin-light aside nav>.mt-5>section:nth-child(2)>div button:hover,.saas-admin-light aside nav>.mt-5>section:nth-child(2)>div button[class*="font-semibold"]{background:#e2f6e9!important;color:#187340!important}
-.saas-admin-light aside nav>.mt-5>section:nth-child(3)>button{background:#f4f0fb!important;border-color:#c8b9eb!important;color:#67519f!important}
-.saas-admin-light aside nav>.mt-5>section:nth-child(3)>div button{background:#fbf9fe!important;color:#7862a7!important;border-left:3px solid #d8cdf1!important;border-radius:0 5px 5px 0!important}
-.saas-admin-light aside nav>.mt-5>section:nth-child(3)>div button:hover,.saas-admin-light aside nav>.mt-5>section:nth-child(3)>div button[class*="font-semibold"]{background:#eee8fb!important;color:#60449d!important}
-.saas-admin-light aside nav>.mt-5>section:nth-child(4)>button{background:#fff6ec!important;border-color:#f2c48f!important;color:#9a641e!important}
-.saas-admin-light aside nav>.mt-5>section:nth-child(4)>div button{background:#fffaf4!important;color:#9b6f3b!important;border-left:3px solid #f6d5ae!important;border-radius:0 5px 5px 0!important}
-.saas-admin-light aside nav>.mt-5>section:nth-child(4)>div button:hover,.saas-admin-light aside nav>.mt-5>section:nth-child(4)>div button[class*="font-semibold"]{background:#fff0dd!important;color:#915816!important}
-
 /* document home */
 .ca-doc-home{max-width:1220px;margin:auto}.ca-page-title{padding:5px 0 24px}.ca-page-title>p,.ca-emission-title>div>p{font-size:10px;text-transform:uppercase;letter-spacing:.12em;font-weight:700;color:#7b8794}.ca-page-title h1,.ca-emission-title h1{margin-top:5px;font-size:28px!important;color:#263746!important;text-align:left!important}.ca-page-title span,.ca-emission-title>div>span{display:block;margin-top:5px;font-size:13px;color:#73808d}.ca-doc-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.ca-doc-choice{position:relative;min-height:150px!important;padding:22px!important;text-align:left!important;background:#fff!important;color:#354554!important;border:1px solid var(--ca-line)!important;border-radius:6px!important;box-shadow:0 2px 5px rgba(31,54,72,.05)!important}.ca-doc-choice:hover{transform:translateY(-2px)!important;box-shadow:0 8px 22px rgba(31,54,72,.09)!important}.ca-doc-choice strong{display:block;margin-top:16px;font-size:18px}.ca-doc-choice small{display:block;margin-top:4px;font-size:11px;color:#7b8793}.ca-doc-choice>svg{position:absolute;right:18px;bottom:18px;width:17px}.ca-doc-icon{display:grid;width:38px;height:38px;place-items:center;border-radius:50%;background:var(--ca-cyan-soft);color:var(--ca-blue-dark)}.ca-doc-icon svg{width:18px}.ca-doc-choice.tone-2 .ca-doc-icon{background:#ecf8f0;color:#23824e}.ca-doc-choice.tone-3 .ca-doc-icon{background:#f2eefb;color:#6d52b5}.ca-doc-choice.tone-4 .ca-doc-icon,.ca-doc-choice.tone-5 .ca-doc-icon{background:#fff2e5;color:#b36a22}
 
