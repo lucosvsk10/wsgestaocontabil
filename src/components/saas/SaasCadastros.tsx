@@ -3,6 +3,7 @@ import { Plus, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
+import SaasCustomerEditor from '@/components/saas/SaasCustomerEditor';
 
 export type CadastroSection =
   | 'Clientes'
@@ -439,7 +440,7 @@ export default function SaasCadastros({ organizationId, section }: Props) {
           {message}
         </div>
       )}
-      <div className="saas-register-layout">
+      <div className={`saas-register-layout ${section === 'Clientes' && form ? 'is-customer-editing' : ''}`}>
         <section className="saas-register-list">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e4e8ed] px-4 py-3">
             <div>
@@ -566,9 +567,11 @@ export default function SaasCadastros({ organizationId, section }: Props) {
               <div className="saas-register-drawer-body">
                 {isCatalog ? (
                   <CatalogEditor section={section} form={form} set={set} />
-                ) : (
-                  <PartyEditor section={section} form={form} set={set} />
-                )}
+                ) : section === 'Clientes' ? (
+                <SaasCustomerEditor form={form} set={set} />
+              ) : (
+                <PartyEditor section={section} form={form} set={set} />
+              )}
                 <div className="saas-emission-actions">
                   <Button
                     variant="outline"
