@@ -27,7 +27,7 @@ jobs:
               p.write_text(s)
           PY
       - name: Validate
-        run: npm ci && npm run build
+        run: npm install --legacy-peer-deps && npm run build
       - name: Commit
         run: |
           git config user.name github-actions[bot]
@@ -35,4 +35,4 @@ jobs:
           git add src/pages/SaasApp.tsx
           git diff --cached --quiet || git commit -m "style(saas): load final mobile polish"
           git push
-# trigger: compact-mobile-v2
+# trigger: compact-mobile-v3
