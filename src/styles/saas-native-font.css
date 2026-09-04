@@ -93,7 +93,7 @@
 .saas-admin-light .saas-topbar .saas-page-context p,
 .saas-admin-light .saas-topbar .saas-company-context p:last-child { color:#94a3b8 !important; }
 .saas-admin-light .saas-topbar select { background:rgba(255,255,255,.07) !important; border-color:rgba(148,163,184,.2) !important; color:#f8fafc !important; }
-.saas-admin-light .saas-topbar img { filter:brightness(0) invert(1) opacity(.96) !important; }
+.saas-admin-light .saas-topbar img { filter:none !important; opacity:1 !important; }
 @keyframes saasTopbarLightSweep { 0%{left:-38%;opacity:0} 8%{opacity:1} 86%{opacity:1} 100%{left:112%;opacity:0} }
 
 /* =========================================================
