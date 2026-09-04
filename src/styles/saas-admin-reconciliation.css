@@ -33,6 +33,8 @@
 }
 .saas-admin-light,.saas-admin-light *,.saas-admin-light input,.saas-admin-light select,.saas-admin-light textarea,.saas-admin-light button,.saas-admin-light table,.saas-admin-light th,.saas-admin-light td{font-family:'Prompt',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif!important}
 .saas-admin-light h1,.saas-admin-light h2,.saas-admin-light h3{color:#0f172a!important}
+.saas-admin-light .font-semibold{font-weight:500!important}.saas-admin-light .font-bold{font-weight:600!important}
+.saas-admin-light h1,.saas-admin-light h2,.saas-admin-light h3{font-weight:500!important;letter-spacing:-.012em!important}
 
 /* Shell */
 .saas-admin-light .saas-topbar{height:64px!important;background:#eaedf0!important;border-color:#d2d7dc!important;box-shadow:none!important}
@@ -62,6 +64,11 @@
 .saas-admin-light aside nav button[class*="font-semibold"],
 .saas-admin-light aside nav button[class*="bg-[#e8edf3]"]{background:#d4d9de!important;color:#111827!important;border-color:#c5cbd1!important}
 .saas-admin-light aside nav button.saas-emission-group{background:transparent!important;color:#344054!important;border-left-color:#9ca3af!important}
+.saas-admin-light aside nav button.saas-neutral-group,.saas-admin-light aside nav button.saas-neutral-group.is-active{background:transparent!important;color:#475467!important;border-left-color:transparent!important}
+.saas-admin-light aside nav button.saas-neutral-group.is-active{background:#dfe3e7!important;color:#111827!important;border-left-color:#98a2ad!important}
+.saas-admin-light aside nav section:nth-of-type(1)>button.saas-emission-group{background:#eef7fa!important;border-left-color:#67a7b8!important;color:#315d69!important}
+.saas-admin-light aside nav section:nth-of-type(2)>button.saas-emission-group{background:#eef7f1!important;border-left-color:#6ba984!important;color:#35644a!important}
+.saas-admin-light aside nav section:nth-of-type(3)>button.saas-emission-group{background:#f3f1f8!important;border-left-color:#8d82aa!important;color:#554d69!important}
 
 /* Main surfaces */
 .saas-main-content section[class*="border"],
@@ -100,6 +107,23 @@
 .saas-main-content button[aria-pressed="true"],
 .saas-main-content button.is-active,
 .saas-main-content button[class*="font-semibold"][class*="bg-muted"]{background:#d4d9de!important;color:#111827!important;border-color:#c4cad0!important}
+
+/* Real step-by-step emission flow */
+.ca-step-page{max-width:980px;margin:0 auto}.ca-step-page>.ca-form-section{min-height:310px}.ca-step-page .ca-section-body{padding:28px}
+.ca-step-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:14px;padding:14px 0}.ca-step-actions button{min-width:118px}
+.ca-review-layout{display:grid;grid-template-columns:minmax(280px,.58fr) minmax(520px,1.15fr);gap:22px;align-items:start}
+.ca-review-summary{border:1px solid #d8dde3;border-radius:5px;background:#fff;padding:22px}.ca-review-summary>p{color:#667085;font-size:10px;font-weight:500;letter-spacing:.1em;text-transform:uppercase}.ca-review-summary h2{margin-top:7px;font-size:20px!important}.ca-review-summary span{display:block;margin-top:8px;color:#667085;font-size:12px;line-height:1.6}
+.ca-final-actions{display:grid;gap:9px;margin-top:12px}.ca-final-actions button{width:100%;min-height:42px}
+.ca-tabs button:disabled{cursor:not-allowed!important;opacity:.55}.ca-tabs button.is-complete{color:#344054!important}.ca-tabs button.is-complete span{background:#667085!important;color:#fff!important}
+
+/* Professional register workspace */
+.saas-register-layout{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(390px,.75fr);overflow:hidden;border:1px solid #d8dde3;border-radius:5px;background:#fff}
+.saas-register-list{min-width:0;border-right:1px solid #d8dde3;background:#fff}.saas-register-drawer{min-width:0;background:#fff}
+.saas-register-drawer-head{position:sticky;top:0;z-index:2;border-bottom:1px solid #d8dde3;background:#f7f8fa;padding:17px 20px}
+.saas-register-drawer-body{max-height:calc(100vh - 235px);overflow:auto;padding:0 20px 20px}
+.saas-register-section{margin:0!important;border:0!important;border-bottom:1px solid #e4e7eb!important;background:#fff!important;padding:20px 0!important}
+.saas-register-section-title{margin-bottom:13px;color:#172033!important;font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase}
+.saas-register-drawer-body>.saas-emission-actions{position:sticky;bottom:0;margin:0 -20px -20px;padding:14px 20px;border-top:1px solid #d8dde3;background:rgba(255,255,255,.96);backdrop-filter:blur(8px)}
 
 /* Semantic action colors only */
 .saas-main-content .saas-action-primary,.saas-main-content .ca-btn-primary{background:#2f7d57!important;color:#fff!important;border-color:#2f7d57!important}
@@ -167,6 +191,7 @@
 .product-section-title{margin:22px 0 12px;border-top:1px solid #e4e7eb;padding-top:18px;color:#172033;font-size:11px;font-weight:650;letter-spacing:.08em;text-transform:uppercase}
 .stock-pill{display:inline-flex;width:max-content;align-items:center;gap:5px;border-radius:999px;padding:5px 8px;font-size:10px;font-weight:600}
 .stock-pill.stock-ok{background:#d9eee7;color:#137456}.stock-pill.stock-low{background:#f6eacb;color:#94620d}.stock-pill.stock-off{background:#e9ecef;color:#667085}
+.fiscal-logo-box{display:grid;width:100%;height:100%;min-height:84px;place-items:center;overflow:hidden;color:#555;text-align:center;font-family:Arial,sans-serif;font-size:7px;line-height:1.35}.fiscal-logo-box img{display:block;max-width:100%;max-height:78px;object-fit:contain}
 
 /* Issued notes */
 .saas-issued-notes>section:first-of-type,.saas-admin-light .saas-issued-notes>section:first-of-type{background:#e9ecef!important;border-color:#d2d7dc!important;box-shadow:none!important}
@@ -209,6 +234,7 @@
  .saas-admin-light>aside>div:first-of-type{padding-top:56px!important}
  .saas-main-content{padding-left:0!important;padding-top:60px!important}.saas-main-content>div{padding:18px 12px 40px!important}
  .product-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.product-workspace{grid-template-columns:1fr}.product-table{border-right:0;border-bottom:1px solid #d8dde3}.product-side-body{max-height:none}
+ .saas-register-layout,.ca-review-layout{grid-template-columns:1fr}.saas-register-list{border-right:0;border-bottom:1px solid #d8dde3}.saas-register-drawer-body{max-height:none}
 }
 
 /* Final contrast and density pass, verified against the live light interface. */
