@@ -1,0 +1,51 @@
+/* SaaS typography: native, immediate and lighter. Loaded last on purpose. */
+.saas-admin-light,
+.saas-admin-light *,
+.saas-admin-light input,
+.saas-admin-light select,
+.saas-admin-light textarea,
+.saas-admin-light button,
+.saas-admin-light table,
+.saas-admin-light th,
+.saas-admin-light td {
+  font-family: "Segoe UI Variable Text", "Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
+  font-synthesis: none;
+}
+
+.saas-admin-light {
+  font-weight: 400;
+  letter-spacing: -0.004em;
+}
+
+.saas-admin-light .font-medium,
+.saas-admin-light .font-semibold {
+  font-weight: 500 !important;
+}
+
+.saas-admin-light .font-bold {
+  font-weight: 600 !important;
+}
+
+.saas-admin-light h1,
+.saas-admin-light h2,
+.saas-admin-light h3,
+.saas-admin-light h4 {
+  font-weight: 500 !important;
+  letter-spacing: -0.018em !important;
+}
+
+.saas-admin-light p,
+.saas-admin-light span,
+.saas-admin-light label,
+.saas-admin-light td,
+.saas-admin-light input,
+.saas-admin-light select,
+.saas-admin-light textarea {
+  font-weight: 400;
+}
+
+.saas-admin-light button,
+.saas-admin-light th,
+.saas-admin-light nav {
+  font-weight: 500;
+}
