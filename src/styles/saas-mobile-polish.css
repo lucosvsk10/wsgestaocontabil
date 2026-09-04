@@ -1,4 +1,4 @@
-/* Final mobile polish layer for the SaaS. Desktop intentionally untouched. */
+/* Final mobile polish layer for the SaaS. */
 @media (max-width: 720px) {
   /* Navbar: true 3-column mobile layout — menu | company | profile */
   .saas-admin-light .saas-topbar {
@@ -10,14 +10,22 @@
     align-items: center !important;
   }
 
-  .saas-admin-light .saas-brand {
+  /* Override the older desktop rule: .saas-topbar > div:first-child { width:248px } */
+  .saas-admin-light .saas-topbar > .saas-brand {
     grid-column: 1 !important;
+    position: static !important;
     width: 52px !important;
     min-width: 52px !important;
+    max-width: 52px !important;
     height: 52px !important;
     padding: 0 !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
     justify-content: center !important;
     border-right: 0 !important;
+    transform: none !important;
+    inset: auto !important;
   }
 
   .saas-admin-light .saas-brand > img {
@@ -30,10 +38,11 @@
     inset: auto !important;
     transform: none !important;
     margin: 0 !important;
-    z-index: auto !important;
+    z-index: 2 !important;
     place-items: center !important;
     width: 36px !important;
     height: 36px !important;
+    min-width: 36px !important;
     min-height: 36px !important;
     padding: 0 !important;
     border: 0 !important;
@@ -41,6 +50,8 @@
     background: transparent !important;
     color: #f8fafc !important;
     box-shadow: none !important;
+    opacity: 1 !important;
+    visibility: visible !important;
   }
 
   .saas-admin-light .saas-mobile-menu:hover {
@@ -48,8 +59,11 @@
   }
 
   .saas-admin-light .saas-mobile-menu svg {
+    display: block !important;
     width: 19px !important;
     height: 19px !important;
+    color: #f8fafc !important;
+    stroke: currentColor !important;
   }
 
   /* Let company/profile become direct grid items of the topbar. */
@@ -114,6 +128,7 @@
     grid-column: 3 !important;
     width: 52px !important;
     min-width: 52px !important;
+    max-width: 52px !important;
     height: 52px !important;
     margin: 0 !important;
     display: flex !important;
@@ -143,7 +158,6 @@
     row-gap: 12px !important;
   }
 
-  /* Hero/header: keep typography, improve whitespace */
   .saas-dashboard > header,
   .saas-dashboard [data-admin-page-header] {
     padding-bottom: 4px !important;
@@ -176,7 +190,6 @@
     font-size: 13px !important;
   }
 
-  /* KPI cards: 2 columns, compact and proportional */
   .saas-dashboard > .grid.gap-3 {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     gap: 10px !important;
@@ -216,7 +229,6 @@
     margin-top: 3px !important;
   }
 
-  /* Analytical cards: less empty vertical space */
   .saas-dashboard > .grid.gap-5 {
     gap: 12px !important;
   }
@@ -255,7 +267,6 @@
     border-radius: 8px !important;
   }
 
-  /* Issued notes keep the same cleaner mobile gutter */
   .saas-issued-admin-clone > section:first-of-type {
     padding: 12px !important;
   }
@@ -296,5 +307,32 @@
 
   .saas-dashboard > .grid.gap-3 [class*='h-[48px]'] {
     height: 23px !important;
+  }
+}
+
+/* Desktop home: give the dashboard more air without changing its density. */
+@media (min-width: 1025px) {
+  .saas-admin-light .saas-main-content > div:has(.saas-dashboard) {
+    padding-top: 38px !important;
+    padding-left: 38px !important;
+    padding-right: 38px !important;
+    padding-bottom: 64px !important;
+  }
+
+  .saas-admin-light .saas-dashboard {
+    max-width: 1480px !important;
+  }
+
+  .saas-admin-light .saas-dashboard > header,
+  .saas-admin-light .saas-dashboard [data-admin-page-header] {
+    margin-bottom: 26px !important;
+  }
+
+  .saas-admin-light .saas-dashboard > .grid.gap-3 {
+    margin-bottom: 28px !important;
+  }
+
+  .saas-admin-light .saas-dashboard > .grid.gap-5 {
+    margin-bottom: 28px !important;
   }
 }
