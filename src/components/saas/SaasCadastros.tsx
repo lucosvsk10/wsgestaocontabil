@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import SaasCustomerEditor from '@/components/saas/SaasCustomerEditor';
 import SaasRegisterAppearance, { readableText } from '@/components/saas/SaasRegisterAppearance';
+import SaasCnpjLookup from '@/components/saas/SaasCnpjLookup';
 
 export type CadastroSection =
   | 'Clientes'
@@ -361,6 +362,43 @@ export default function SaasCadastros({ organizationId, section }: Props) {
     }));
   };
 
+  const applyCnpjLookup = (lookup: any) => {
+    const keys = [
+      'legal_name',
+      'trade_name',
+      'tax_id',
+      'state_registration',
+      'ie_indicator',
+      'icms_taxpayer',
+      'tax_regime',
+      'email',
+      'phone',
+      'postal_code',
+      'street',
+      'street_number',
+      'complement',
+      'district',
+      'city',
+      'state',
+      'city_ibge_code',
+    ];
+    setForm((previous: any) => {
+      const next = { ...previous, person_type: 'legal' };
+      for (const key of keys) {
+        const value = lookup?.[key];
+        if (value !== undefined && value !== null && String(value).trim() !== '') next[key] = value;
+      }
+      if (lookup?.state_registration) {
+        next.ie_indicator = lookup.ie_indicator || '1';
+        next.icms_taxpayer = lookup.icms_taxpayer !== false;
+      }
+      return next;
+    });
+    setMessage(lookup?.state_registration
+      ? `CNPJ consultado e IE ${lookup.state_registration} preenchida automaticamente.`
+      : 'CNPJ consultado. Os dados disponíveis foram preenchidos automaticamente.');
+  };
+
   const resetImageState = () => {
     if (imagePreview?.startsWith('blob:')) URL.revokeObjectURL(imagePreview);
     setPendingImage(null);
@@ -568,14 +606,24 @@ export default function SaasCadastros({ organizationId, section }: Props) {
           imageLabel={imageLabel(section)}
         />
 
+        {!isCatalog && form.person_type === 'legal' && (
+          <SaasCnpjLookup
+            organizationId={organizationId}
+            value={form.tax_id || ''}
+            onChange={value => set('tax_id', value)}
+            onResolved={data => applyCnpjLookup(data)}
+            mode="party"
+          />
+        )}
+
         {section === 'Clientes' ? (
           <div className="rounded-xl border border-[#dce2e9] bg-white px-4 sm:px-6">
-            <SaasCustomerEditor form={form} set={set} />
+            <SaasCustomerEditor form={form} set={set} hideTaxIdForLegal />
           </div>
         ) : isCatalog ? (
           <CatalogEditor section={section} form={form} set={set} />
         ) : (
-          <PartyEditor section={section} form={form} set={set} />
+          <PartyEditor section={section} form={form} set={set} hideTaxIdForLegal />
         )}
 
         <div className="fixed bottom-0 right-0 z-30 border-t border-[#d9e0e7] bg-white/95 p-3 shadow-[0_-8px_30px_rgba(15,23,42,.06)] backdrop-blur md:left-72">
@@ -766,7 +814,7 @@ function cardDetails(section: CadastroSection, row: any) {
   ];
 }
 
-function PartyEditor({ section, form, set }: { section: CadastroSection; form: any; set: (key: string, value: any) => void }) {
+function PartyEditor({ section, form, set, hideTaxIdForLegal = false }: { section: CadastroSection; form: any; set: (key: string, value: any) => void; hideTaxIdForLegal?: boolean }) {
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <Section title="Identificação" description="Dados usados para localizar e identificar o cadastro.">
@@ -782,7 +830,9 @@ function PartyEditor({ section, form, set }: { section: CadastroSection; form: a
         />
         <Field label="Razão social / nome" value={form.legal_name} onChange={value => set('legal_name', value)} required />
         <Field label="Nome fantasia" value={form.trade_name} onChange={value => set('trade_name', value)} />
-        <Field label="CNPJ / CPF" value={form.tax_id} onChange={value => set('tax_id', value)} required hint="Digite somente números." />
+        {(!hideTaxIdForLegal || form.person_type !== 'legal') && (
+          <Field label={form.person_type === 'individual' ? 'CPF' : 'CNPJ / CPF'} value={form.tax_id} onChange={value => set('tax_id', value)} required hint="Digite somente números." />
+        )}
         <Field label="Contato" value={form.contact_name} onChange={value => set('contact_name', value)} />
         <SelectField
           label="Situação"

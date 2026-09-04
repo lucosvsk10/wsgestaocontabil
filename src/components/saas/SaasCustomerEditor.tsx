@@ -5,6 +5,7 @@ import '@/styles/saas-customer-flow.css';
 type Props = {
   form: any;
   set: (key: string, value: any) => void;
+  hideTaxIdForLegal?: boolean;
 };
 
 type Step = 'identity' | 'address' | 'contact';
@@ -109,7 +110,7 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
   );
 }
 
-export default function SaasCustomerEditor({ form, set }: Props) {
+export default function SaasCustomerEditor({ form, set, hideTaxIdForLegal = false }: Props) {
   const [step, setStep] = useState<Step>('identity');
   const personLabel = form.person_type === 'individual' ? 'Pessoa física' : form.person_type === 'foreign' ? 'Exterior' : 'Pessoa jurídica';
   const displayName = form.legal_name || form.trade_name || 'Novo cliente';
@@ -211,14 +212,16 @@ export default function SaasCustomerEditor({ form, set }: Props) {
                 {form.person_type !== 'individual' && (
                   <Field label="Nome fantasia" value={form.trade_name} onChange={value => set('trade_name', value)} placeholder="Como é conhecido comercialmente" />
                 )}
-                <Field
-                  label={form.person_type === 'individual' ? 'CPF' : form.person_type === 'foreign' ? 'Documento' : 'CNPJ'}
-                  value={form.person_type === 'foreign' ? form.tax_id : formatTaxId(form.tax_id, form.person_type)}
-                  onChange={value => set('tax_id', onlyDigits(value))}
-                  required
-                  placeholder={form.person_type === 'individual' ? '000.000.000-00' : '00.000.000/0000-00'}
-                  hint={form.person_type === 'foreign' ? 'Documento de identificação do exterior.' : undefined}
-                />
+                {(!hideTaxIdForLegal || form.person_type !== 'legal') && (
+                  <Field
+                    label={form.person_type === 'individual' ? 'CPF' : form.person_type === 'foreign' ? 'Documento' : 'CNPJ'}
+                    value={form.person_type === 'foreign' ? form.tax_id : formatTaxId(form.tax_id, form.person_type)}
+                    onChange={value => set('tax_id', onlyDigits(value))}
+                    required
+                    placeholder={form.person_type === 'individual' ? '000.000.000-00' : '00.000.000/0000-00'}
+                    hint={form.person_type === 'foreign' ? 'Documento de identificação do exterior.' : undefined}
+                  />
+                )}
                 <Field label="Nome do contato" value={form.contact_name} onChange={value => set('contact_name', value)} placeholder="Pessoa de referência" />
                 <SelectField
                   label="Situação"
