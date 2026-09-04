@@ -1,3 +1,5 @@
+/* Full-page register flow + neutral surface hierarchy */
+
 .customer-flow-workspace {
   grid-template-columns: minmax(0, 1fr) !important;
   gap: 0 !important;
@@ -23,6 +25,197 @@
   margin-bottom: 8px;
 }
 
+/*
+ * Register pages use the same neutral ladder as the SaaS shell:
+ * canvas #f3f4f6 -> surface #eaedf0 -> hover/depth #dde2e6 -> active #d4d9de.
+ * This keeps the interface monochrome without making every layer pure white.
+ */
+.saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance) {
+  --reg-canvas: #f3f4f6;
+  --reg-surface: #eaedf0;
+  --reg-surface-soft: #e9ecef;
+  --reg-depth: #dde2e6;
+  --reg-depth-strong: #d4d9de;
+  --reg-input: #f5f6f7;
+  --reg-border: #cdd4db;
+  --reg-border-strong: #bcc6cf;
+}
+
+.saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance) > header {
+  padding: 16px 18px !important;
+  border: 1px solid var(--reg-border) !important;
+  border-radius: 12px !important;
+  background: var(--reg-surface) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.55) !important;
+}
+
+.saas-admin-light .saas-register-appearance {
+  border-color: var(--reg-border) !important;
+  background: var(--reg-surface-soft) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.42) !important;
+}
+
+.saas-admin-light .saas-register-appearance > div:first-child > div:first-child {
+  border-color: var(--reg-border) !important;
+  background: var(--reg-depth) !important;
+}
+
+.saas-admin-light .saas-register-appearance [class*="bg-white"] {
+  background-color: var(--reg-input) !important;
+}
+
+.saas-admin-light .saas-register-appearance [class*="bg-[#f5f7f9]"],
+.saas-admin-light .saas-register-appearance [class*="bg-[#f7f9fb]"] {
+  background-color: var(--reg-depth) !important;
+}
+
+.saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance) section.rounded-xl:not(.saas-register-appearance),
+.saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance) > div.rounded-xl:has(.customer-flow) {
+  border-color: var(--reg-border) !important;
+  background: var(--reg-surface-soft) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.36) !important;
+}
+
+/* Section headers become their own shallow layer instead of floating on white. */
+.saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance)
+  section.rounded-xl:not(.saas-register-appearance) > div:first-child.mb-4 {
+  margin: -16px -16px 16px !important;
+  padding: 13px 16px 12px !important;
+  border-bottom-color: var(--reg-border) !important;
+  border-radius: 11px 11px 0 0 !important;
+  background: var(--reg-depth) !important;
+}
+
+@media (min-width: 640px) {
+  .saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance)
+    section.rounded-xl:not(.saas-register-appearance) > div:first-child.mb-4 {
+    margin: -20px -20px 16px !important;
+    padding: 14px 20px 13px !important;
+  }
+}
+
+/* Form controls sit one level above the card, but stay neutral. */
+.saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance)
+  input:not([type="file"]):not([type="color"]):not([type="checkbox"]),
+.saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance) select,
+.saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance) textarea {
+  border-color: var(--reg-border-strong) !important;
+  background: var(--reg-input) !important;
+  box-shadow: inset 0 1px 1px rgba(15,23,42,.025) !important;
+}
+
+.saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance)
+  input:not([type="file"]):not([type="color"]):not([type="checkbox"]):focus,
+.saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance) select:focus,
+.saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance) textarea:focus {
+  border-color: #8794a3 !important;
+  background: #fbfcfd !important;
+  box-shadow: 0 0 0 3px rgba(71,85,105,.08) !important;
+}
+
+.saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance)
+  label:has(> input[type="checkbox"]) {
+  border-color: var(--reg-border) !important;
+  background: var(--reg-depth) !important;
+}
+
+/* Customer wizard gets its own subtle rail and neutral controls. */
+.saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance) .customer-flow-progress {
+  margin-top: 14px !important;
+  padding: 14px !important;
+  border: 1px solid var(--reg-border) !important;
+  border-radius: 10px !important;
+  background: var(--reg-depth) !important;
+}
+
+.saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance) .customer-flow-progress-track {
+  background: #c9d1d8 !important;
+}
+
+.saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance) .customer-flow-steps button,
+.saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance) .customer-flow-person-type button {
+  border-color: #c8d0d7 !important;
+  background: #eef1f3 !important;
+}
+
+.saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance) .customer-flow-steps button.is-active,
+.saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance) .customer-flow-person-type button.is-active {
+  border-color: #9da9b5 !important;
+  background: var(--reg-depth-strong) !important;
+}
+
+.saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance) .customer-flow-section-head > div,
+.saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance) .customer-flow-toggle {
+  border-color: var(--reg-border) !important;
+  background: var(--reg-depth) !important;
+}
+
+.saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance) .customer-flow-subsection {
+  border-top-color: var(--reg-border) !important;
+}
+
+/* Product editor uses the same monochrome step rail. */
+.saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance) .product-editor-steps {
+  padding: 6px !important;
+  border: 1px solid var(--reg-border) !important;
+  border-radius: 10px !important;
+  background: var(--reg-depth) !important;
+}
+
+.saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance) .product-editor-steps button {
+  border-color: transparent !important;
+  background: transparent !important;
+}
+
+.saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance) .product-editor-steps button.is-active {
+  border-color: var(--reg-border-strong) !important;
+  background: var(--reg-input) !important;
+  box-shadow: 0 1px 2px rgba(15,23,42,.05) !important;
+}
+
+.saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance) .product-stock-preview {
+  border-color: var(--reg-border) !important;
+  background: var(--reg-depth) !important;
+}
+
+/* Bottom actions should close the composition instead of adding another white stripe. */
+.saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance) > .fixed.bottom-0 {
+  border-top-color: #c5cdd5 !important;
+  background: rgba(226,230,234,.96) !important;
+  box-shadow: 0 -10px 28px rgba(15,23,42,.07) !important;
+}
+
+.saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance) .saas-action-secondary {
+  border-color: #c2cbd3 !important;
+  background: #f0f2f4 !important;
+  color: #344054 !important;
+}
+
+.saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance) .saas-action-primary {
+  border-color: #263241 !important;
+  background: #263241 !important;
+  color: #fff !important;
+}
+
+/* Rich registry lists: keep the cards identifiable, but stop wrapping them in a white box. */
+.saas-admin-light .saas-main-content > div > div:has(> div[class*="sm:grid-cols-3"]) > div[class*="sm:grid-cols-3"] > div,
+.saas-admin-light .saas-products-premium .product-summary-card {
+  border-color: #d0d7de !important;
+  background: #e9ecef !important;
+}
+
+.saas-admin-light .saas-main-content > div > div:has(> div[class*="sm:grid-cols-3"]) > section.rounded-xl,
+.saas-admin-light .saas-products-premium > section.rounded-xl {
+  border-color: #cfd6dd !important;
+  background: #eaedf0 !important;
+}
+
+.saas-admin-light .saas-main-content > div > div:has(> div[class*="sm:grid-cols-3"]) > section.rounded-xl input,
+.saas-admin-light .saas-products-premium > section.rounded-xl input {
+  background: #f4f5f6 !important;
+  border-color: #c9d1d8 !important;
+}
+
 @media (min-width: 900px) {
   .customer-flow-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -39,5 +232,17 @@
     position: static !important;
     margin: 0 !important;
     padding-inline: 0 !important;
+  }
+
+  .saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance) > header {
+    padding: 13px 14px !important;
+  }
+
+  .saas-admin-light .saas-register-appearance {
+    padding: 13px !important;
+  }
+
+  .saas-admin-light .saas-main-content > div > div:has(> .saas-register-appearance) > .fixed.bottom-0 {
+    padding-bottom: max(10px, env(safe-area-inset-bottom)) !important;
   }
 }
