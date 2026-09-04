@@ -1,0 +1,26 @@
+/* Final SaaS sidebar subitem reconciliation */
+.saas-admin-light .saas-nav-children {
+  border-left: 1px solid #c7cdd3 !important;
+  background: transparent !important;
+}
+
+.saas-admin-light .saas-nav-children .saas-nav-subitem,
+.saas-admin-light .saas-nav-children .saas-nav-subitem.is-active {
+  background: transparent !important;
+  border-left: 0 !important;
+  border-right: 0 !important;
+  border-top: 0 !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+.saas-admin-light .saas-nav-children .saas-nav-subitem:hover,
+.saas-admin-light .saas-nav-children .saas-nav-subitem.is-active:hover {
+  background: #e1e5e9 !important;
+}
+
+.saas-admin-light .saas-nav-children .saas-nav-subitem.is-active {
+  color: #111827 !important;
+  font-weight: 500 !important;
+}
