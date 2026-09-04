@@ -46,6 +46,7 @@ const cadastroSections = new Set([
 const groups = [
   {
     title: 'Notas de produtos',
+    tone: 'product',
     display: 'Emitir produtos',
     icon: ReceiptText,
     items: [
@@ -55,12 +56,14 @@ const groups = [
   },
   {
     title: 'Notas de serviços',
+    tone: 'service',
     display: 'Emitir serviços',
     icon: ShoppingBag,
     items: [{ label: 'Emitir NFS-e', icon: ReceiptText }],
   },
   {
     title: 'Notas de transportes',
+    tone: 'transport',
     display: 'Emitir transportes',
     icon: Truck,
     items: [
@@ -70,6 +73,7 @@ const groups = [
   },
   {
     title: 'Cadastros',
+    tone: 'registry',
     display: 'Cadastros',
     icon: Boxes,
     items: [
@@ -463,11 +467,12 @@ export default function SaasApp() {
                 emission = group.title.startsWith('Notas de '),
                 GroupIcon = group.icon;
               return (
-                <section key={group.title}>
+                <section key={group.title} className="saas-nav-group" data-tone={group.tone}>
                   <p className="mb-2 px-4 text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/90">
                     {group.title}
                   </p>
                   <button
+                    type="button"
                     onClick={() => setOpenGroups(p => ({ ...p, [group.title]: !p[group.title] }))}
                     className={`flex w-full items-center gap-3 rounded-md border-l-2 px-4 py-3 text-left transition-colors ${
                       emission ? 'saas-emission-group' : 'saas-neutral-group'
@@ -498,12 +503,11 @@ export default function SaasApp() {
                       const ItemIcon = item.icon;
                       return (
                         <button
+                          type="button"
                           key={item.label}
                           onClick={() => chooseNav(item.label)}
-                          className={`flex w-full items-center gap-2.5 rounded-sm px-3 py-2 text-left text-xs transition-colors ${
-                            isItemActive(item.label)
-                              ? 'bg-muted font-semibold text-foreground'
-                              : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                          className={`saas-nav-subitem flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs transition-colors ${
+                            isItemActive(item.label) ? 'is-active' : ''
                           }`}
                         >
                           <ItemIcon className="h-3.5 w-3.5" strokeWidth={1.8} />
@@ -585,8 +589,9 @@ function NavButton({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
-      className={`mb-1 flex w-full items-center gap-3 rounded-md border-l-2 px-4 py-2.5 text-left transition-colors ${
+      className={`saas-nav-item mb-1 flex w-full items-center gap-3 border-l-2 px-4 py-2.5 text-left transition-colors ${
         active
           ? 'border-[#202833] bg-muted text-foreground'
           : 'border-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground'

@@ -157,38 +157,30 @@
 .saas-admin-light aside nav section > p {
   color: #7b8492 !important;
 }
-.saas-admin-light aside nav button,
-.saas-admin-light aside nav > .mt-5 > section > button,
-.saas-admin-light aside nav > .mt-5 > section > div button {
+.saas-admin-light aside nav button {
   background: transparent !important;
   color: #475467 !important;
   border-color: transparent !important;
+  border-radius: 4px !important;
   box-shadow: none !important;
 }
-.saas-admin-light aside nav > .mt-5 > section > button {
-  border-left: 2px solid transparent !important;
-}
-.saas-admin-light aside nav > .mt-5 > section > div button {
-  border-left: 1px solid #cfd4da !important;
-  border-radius: 0 4px 4px 0 !important;
-}
-.saas-admin-light aside nav button:hover,
-.saas-admin-light aside nav > .mt-5 > section > button:hover,
-.saas-admin-light aside nav > .mt-5 > section > div button:hover {
+.saas-admin-light aside nav button:hover {
   background: #e1e5e9 !important;
   color: #111827 !important;
 }
-.saas-admin-light aside nav button[class*='bg-muted'],
-.saas-admin-light aside nav button[class*='font-semibold'],
-.saas-admin-light aside nav button[class*='bg-[#e8edf3]'] {
-  background: #d4d9de !important;
+.saas-admin-light aside nav .saas-nav-item {
+  border-left-color: transparent !important;
+}
+.saas-admin-light aside nav .saas-nav-item[class*='bg-muted'] {
+  background: #d9dee4 !important;
   color: #111827 !important;
-  border-color: #c5cbd1 !important;
+  border-left-color: #67717f !important;
 }
 .saas-admin-light aside nav button.saas-emission-group {
   background: transparent !important;
   color: #344054 !important;
-  border-left-color: #9ca3af !important;
+  border-left-color: var(--saas-nav-accent, #9ca3af) !important;
+  border-radius: 0 4px 4px 0 !important;
 }
 .saas-admin-light aside nav button.saas-neutral-group,
 .saas-admin-light aside nav button.saas-neutral-group.is-active {
@@ -201,20 +193,68 @@
   color: #111827 !important;
   border-left-color: #98a2ad !important;
 }
-.saas-admin-light aside nav section:nth-of-type(1) > button.saas-emission-group {
-  background: #eef7fa !important;
-  border-left-color: #67a7b8 !important;
-  color: #315d69 !important;
+.saas-admin-light aside nav .saas-nav-group[data-tone='product'] {
+  --saas-nav-accent: #4c9bb0;
+  --saas-nav-text: #315d69;
+  --saas-nav-soft: rgba(76, 155, 176, 0.1);
 }
-.saas-admin-light aside nav section:nth-of-type(2) > button.saas-emission-group {
-  background: #eef7f1 !important;
-  border-left-color: #6ba984 !important;
-  color: #35644a !important;
+.saas-admin-light aside nav .saas-nav-group[data-tone='service'] {
+  --saas-nav-accent: #55966f;
+  --saas-nav-text: #35644a;
+  --saas-nav-soft: rgba(85, 150, 111, 0.1);
 }
-.saas-admin-light aside nav section:nth-of-type(3) > button.saas-emission-group {
-  background: #f3f1f8 !important;
-  border-left-color: #8d82aa !important;
-  color: #554d69 !important;
+.saas-admin-light aside nav .saas-nav-group[data-tone='transport'] {
+  --saas-nav-accent: #81759f;
+  --saas-nav-text: #554d69;
+  --saas-nav-soft: rgba(129, 117, 159, 0.1);
+}
+.saas-admin-light aside nav .saas-nav-group[data-tone='registry'] {
+  --saas-nav-accent: #a77936;
+  --saas-nav-text: #76521e;
+  --saas-nav-soft: rgba(167, 121, 54, 0.09);
+}
+.saas-admin-light aside nav .saas-nav-group > button.saas-emission-group,
+.saas-admin-light aside nav .saas-nav-group > button.saas-neutral-group {
+  color: var(--saas-nav-text, #344054) !important;
+}
+.saas-admin-light aside nav .saas-nav-group > button:hover,
+.saas-admin-light aside nav .saas-nav-group > button.is-active {
+  background: var(--saas-nav-soft, #e1e5e9) !important;
+  border-left-color: var(--saas-nav-accent, #98a2ad) !important;
+}
+.saas-admin-light aside nav .saas-nav-group > div {
+  border-left-color: color-mix(
+    in srgb,
+    var(--saas-nav-accent, #98a2ad) 45%,
+    transparent
+  ) !important;
+}
+.saas-admin-light aside nav button.saas-nav-subitem {
+  position: relative;
+  margin-left: 0 !important;
+  background: transparent !important;
+  color: #667085 !important;
+  border: 0 !important;
+  border-radius: 3px !important;
+}
+.saas-admin-light aside nav button.saas-nav-subitem:hover {
+  background: rgba(255, 255, 255, 0.32) !important;
+  color: var(--saas-nav-text, #344054) !important;
+}
+.saas-admin-light aside nav button.saas-nav-subitem.is-active {
+  background: var(--saas-nav-soft, rgba(103, 113, 127, 0.1)) !important;
+  color: var(--saas-nav-text, #111827) !important;
+  font-weight: 500 !important;
+}
+.saas-admin-light aside nav button.saas-nav-subitem.is-active::before {
+  position: absolute;
+  top: 7px;
+  bottom: 7px;
+  left: -13px;
+  width: 2px;
+  border-radius: 999px;
+  background: var(--saas-nav-accent, #67717f);
+  content: '';
 }
 
 /* Main surfaces */
