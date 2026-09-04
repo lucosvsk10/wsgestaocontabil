@@ -115,3 +115,103 @@
 .saas-admin-light [class*='text-[#667085]'] {
   font-weight: 400 !important;
 }
+
+/* Premium SaaS topbar — deep navy with a subtle moving light beam */
+.saas-admin-light .saas-topbar {
+  position: fixed;
+  overflow: hidden;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 50% -120%, rgba(62, 104, 154, 0.24), transparent 58%),
+    linear-gradient(180deg, #0a1422 0%, #07111d 100%) !important;
+  border-color: rgba(148, 163, 184, 0.14) !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.025), 0 8px 24px rgba(2, 8, 23, 0.08) !important;
+}
+
+.saas-admin-light .saas-topbar::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  top: -90%;
+  bottom: -90%;
+  left: -38%;
+  width: 28%;
+  pointer-events: none;
+  transform: skewX(-18deg);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(125, 181, 235, 0.025) 20%,
+    rgba(191, 222, 255, 0.12) 48%,
+    rgba(255, 255, 255, 0.16) 52%,
+    rgba(135, 192, 245, 0.07) 68%,
+    transparent 100%
+  );
+  filter: blur(8px);
+  animation: saasTopbarLightSweep 7.2s linear infinite;
+}
+
+.saas-admin-light .saas-topbar::after {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(255,255,255,0.018), transparent 18%, transparent 82%, rgba(255,255,255,0.012));
+}
+
+.saas-admin-light .saas-topbar > * {
+  position: relative;
+  z-index: 1;
+}
+
+.saas-admin-light .saas-topbar > div:first-child {
+  border-color: rgba(148, 163, 184, 0.14) !important;
+}
+
+.saas-admin-light .saas-topbar p,
+.saas-admin-light .saas-topbar span,
+.saas-admin-light .saas-page-context p,
+.saas-admin-light .saas-page-context span,
+.saas-admin-light .saas-company-context p {
+  color: #f8fafc !important;
+}
+
+.saas-admin-light .saas-topbar .saas-page-context p,
+.saas-admin-light .saas-topbar .saas-company-context p:last-child {
+  color: #94a3b8 !important;
+}
+
+.saas-admin-light .saas-topbar select {
+  background: rgba(255, 255, 255, 0.07) !important;
+  border-color: rgba(148, 163, 184, 0.2) !important;
+  color: #f8fafc !important;
+}
+
+.saas-admin-light .saas-topbar img {
+  filter: brightness(0) invert(1) opacity(0.96) !important;
+}
+
+@keyframes saasTopbarLightSweep {
+  0% {
+    left: -38%;
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  86% {
+    opacity: 1;
+  }
+  100% {
+    left: 112%;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .saas-admin-light .saas-topbar::before {
+    animation: none;
+    display: none;
+  }
+}
