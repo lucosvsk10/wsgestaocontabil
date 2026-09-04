@@ -495,7 +495,7 @@ export default function SaasApp() {
                     <span className="text-xs text-muted-foreground">{expanded ? '−' : '+'}</span>
                   </button>
                   <div
-                    className={`ml-7 overflow-hidden border-l border-border pl-3 transition-all duration-200 ${
+                    className={`saas-nav-children ml-7 overflow-hidden border-l border-border pl-3 transition-all duration-200 ${
                       expanded ? 'mt-1 max-h-80 opacity-100' : 'max-h-0 opacity-0'
                     }`}
                   >

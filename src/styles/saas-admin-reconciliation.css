@@ -222,7 +222,7 @@
   background: var(--saas-nav-soft, #e1e5e9) !important;
   border-left-color: var(--saas-nav-accent, #98a2ad) !important;
 }
-.saas-admin-light aside nav .saas-nav-group > div {
+.saas-admin-light aside nav .saas-nav-group > .saas-nav-children {
   border-left-color: color-mix(
     in srgb,
     var(--saas-nav-accent, #98a2ad) 45%,
@@ -235,26 +235,16 @@
   background: transparent !important;
   color: #667085 !important;
   border: 0 !important;
-  border-radius: 3px !important;
+  border-radius: 0 !important;
 }
 .saas-admin-light aside nav button.saas-nav-subitem:hover {
-  background: rgba(255, 255, 255, 0.32) !important;
+  background: color-mix(in srgb, var(--saas-nav-accent, #98a2ad) 8%, transparent) !important;
   color: var(--saas-nav-text, #344054) !important;
 }
 .saas-admin-light aside nav button.saas-nav-subitem.is-active {
-  background: var(--saas-nav-soft, rgba(103, 113, 127, 0.1)) !important;
+  background: color-mix(in srgb, var(--saas-nav-accent, #67717f) 12%, transparent) !important;
   color: var(--saas-nav-text, #111827) !important;
   font-weight: 500 !important;
-}
-.saas-admin-light aside nav button.saas-nav-subitem.is-active::before {
-  position: absolute;
-  top: 7px;
-  bottom: 7px;
-  left: -13px;
-  width: 2px;
-  border-radius: 999px;
-  background: var(--saas-nav-accent, #67717f);
-  content: '';
 }
 
 /* Main surfaces */
