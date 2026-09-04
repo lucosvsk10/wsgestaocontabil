@@ -1,0 +1,52 @@
+name: Remove SaaS setup screen
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/remove-saas-setup-screen.yml']
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove setup gate from SaaS
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/pages/SaasApp.tsx')
+          s=p.read_text()
+          s=s.replace("import SaasSetupGuide from '@/components/saas/SaasSetupGuide';\n","")
+          s=s.replace("  const [setupDismissed, setSetupDismissed] = useState(false);\n","")
+          s=s.replace("      setSetupDismissed(localStorage.getItem(`ws_fiscal_setup_dismissed_${org.id}`) === '1');\n","")
+          old="""  const showSetup =
+    active === 'Início' && Boolean(organization?.id) && !setupComplete && !setupDismissed;
+  const dismissSetup = () => {
+    if (organization?.id) localStorage.setItem(`ws_fiscal_setup_dismissed_${organization.id}`, '1');
+    setSetupDismissed(true);
+  };
+
+"""
+          s=s.replace(old,"")
+          start=s.find("      {showSetup && (\n        <SaasSetupGuide")
+          if start!=-1:
+            end=s.find("      )}\n    </div>", start)
+            if end==-1:
+              raise SystemExit('setup render end not found')
+            s=s[:start]+s[end+9:]
+          if 'SaasSetupGuide' in s or 'showSetup' in s or 'setupDismissed' in s or 'dismissSetup' in s:
+            raise SystemExit('setup references remain')
+          p.write_text(s)
+          PY
+      - name: Build
+        run: |
+          npm install --legacy-peer-deps --no-audit --no-fund
+          npm run build
+      - name: Commit and remove workflow
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/pages/SaasApp.tsx
+          git rm .github/workflows/remove-saas-setup-screen.yml
+          git commit -m 'fix(saas): remove mandatory setup screen'
+          git push
