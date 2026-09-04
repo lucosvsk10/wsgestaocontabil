@@ -1,9 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, Search, X } from 'lucide-react';
+import {
+  ArrowLeft,
+  Building2,
+  Mail,
+  MapPin,
+  Package2,
+  Phone,
+  Plus,
+  Search,
+  Truck,
+  UsersRound,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import SaasCustomerEditor from '@/components/saas/SaasCustomerEditor';
+import SaasRegisterAppearance, { readableText } from '@/components/saas/SaasRegisterAppearance';
 
 export type CadastroSection =
   | 'Clientes'
@@ -11,8 +23,10 @@ export type CadastroSection =
   | 'Produtos'
   | 'Serviços'
   | 'Transportadoras';
+
 type Props = { organizationId: string | null; section: CadastroSection };
-const partyTypeBySection: any = {
+
+const partyTypeBySection: Record<string, string> = {
   Clientes: 'customer',
   Fornecedores: 'supplier',
   Transportadoras: 'carrier',
@@ -33,6 +47,7 @@ const numeric = [
   'weight_gross',
 ];
 const inputClass = 'mt-1.5 h-10 border-[#d7dde5] bg-white text-sm text-[#10203e]';
+
 const blankParty = (section: CadastroSection) => ({
   status: 'active',
   person_type: 'legal',
@@ -47,6 +62,7 @@ const blankParty = (section: CadastroSection) => ({
   phone: '',
   mobile: '',
   contact_name: '',
+  website: '',
   postal_code: '',
   street: '',
   street_number: '',
@@ -62,13 +78,19 @@ const blankParty = (section: CadastroSection) => ({
   billing_email: '',
   payment_terms: '',
   credit_limit: '',
+  bank_name: '',
+  bank_branch: '',
+  bank_account: '',
+  pix_key: '',
   rntrc: '',
   antt_category: '',
   vehicle_plate: '',
   vehicle_state: '',
   freight_default_mode: '',
   notes: '',
+  metadata: { card_color: '#ffffff' },
 });
+
 const blankCatalog = (section: CadastroSection) => ({
   status: 'active',
   code: '',
@@ -110,9 +132,32 @@ const blankCatalog = (section: CadastroSection) => ({
   weight_net: '',
   weight_gross: '',
   fiscal_notes: '',
+  metadata: { card_color: '#ffffff' },
 });
-const money = (v: any) =>
-  Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+const money = (value: any) =>
+  Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const onlyDigits = (value: any) => String(value || '').replace(/\D/g, '');
+const formatTaxId = (value: any) => {
+  const d = onlyDigits(value);
+  if (d.length === 11) return d.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
+  if (d.length === 14)
+    return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+  return value || '—';
+};
+const singular = (section: CadastroSection) =>
+  ({
+    Clientes: 'cliente',
+    Fornecedores: 'fornecedor',
+    Produtos: 'produto',
+    Serviços: 'serviço',
+    Transportadoras: 'transportadora',
+  } as Record<CadastroSection, string>)[section];
+const supportsImage = (section: CadastroSection) =>
+  section === 'Clientes' || section === 'Fornecedores' || section === 'Produtos';
+const imageLabel = (section: CadastroSection) =>
+  section === 'Produtos' ? 'Foto do produto' : section === 'Clientes' ? 'Foto ou logomarca do cliente' : 'Foto ou logomarca do fornecedor';
+
 function Field({
   label,
   value,
@@ -139,7 +184,7 @@ function Field({
       <Input
         type={type}
         value={value ?? ''}
-        onChange={e => onChange(e.target.value)}
+        onChange={event => onChange(event.target.value)}
         placeholder={placeholder}
         className={inputClass}
       />
@@ -147,6 +192,7 @@ function Field({
     </label>
   );
 }
+
 function SelectField({
   label,
   value,
@@ -168,53 +214,34 @@ function SelectField({
       </span>
       <select
         value={value ?? ''}
-        onChange={e => onChange(e.target.value)}
+        onChange={event => onChange(event.target.value)}
         className="mt-1.5 h-10 w-full rounded-[8px] border border-[#d7dde5] bg-white px-3 text-sm text-[#10203e]"
       >
-        {options.map(([v, l]) => (
-          <option key={v} value={v}>
-            {l}
+        {options.map(([key, text]) => (
+          <option key={key} value={key}>
+            {text}
           </option>
         ))}
       </select>
     </label>
   );
 }
-function Toggle({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) {
+
+function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <label className="flex items-center justify-between rounded-[8px] border border-[#dce2e9] bg-[#f8fafb] px-3 py-2.5 text-xs font-medium text-[#344054]">
       <span>{label}</span>
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={e => onChange(e.target.checked)}
-        className="h-4 w-4"
-      />
+      <input type="checkbox" checked={checked} onChange={event => onChange(event.target.checked)} className="h-4 w-4" />
     </label>
   );
 }
-function Section({
-  title,
-  children,
-  description,
-}: {
-  title: string;
-  children: any;
-  description?: string;
-}) {
+
+function Section({ title, children, description }: { title: string; children: any; description?: string }) {
   return (
-    <section className="saas-register-section">
-      <div className="saas-register-section-heading">
-        <p className="saas-register-section-title">{title}</p>
-        {description && <span>{description}</span>}
+    <section className="rounded-xl border border-[#dce2e9] bg-white p-4 sm:p-5">
+      <div className="mb-4 border-b border-[#edf0f3] pb-3">
+        <p className="text-sm font-semibold text-[#17233b]">{title}</p>
+        {description && <span className="mt-1 block text-[11px] leading-5 text-[#7a8698]">{description}</span>}
       </div>
       <div className="grid gap-3 md:grid-cols-2">{children}</div>
     </section>
@@ -223,51 +250,84 @@ function Section({
 
 export default function SaasCadastros({ organizationId, section }: Props) {
   const isCatalog = section === 'Produtos' || section === 'Serviços';
-  const [rows, setRows] = useState<any[]>([]),
-    [form, setForm] = useState<any>(null),
-    [search, setSearch] = useState(''),
-    [loading, setLoading] = useState(false),
-    [saving, setSaving] = useState(false),
-    [message, setMessage] = useState('');
+  const [rows, setRows] = useState<any[]>([]);
+  const [form, setForm] = useState<any>(null);
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
+  const [pendingImage, setPendingImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageRemoved, setImageRemoved] = useState(false);
+
+  const hydrateImages = async (data: any[]) => {
+    const paths = Array.from(
+      new Set(data.map(row => row?.metadata?.image_path).filter((value: any) => Boolean(value)))
+    ) as string[];
+    if (!paths.length) return data;
+    const { data: signed } = await supabase.storage.from('saas-private').createSignedUrls(paths, 3600);
+    const urls = new Map<string, string>();
+    (signed || []).forEach((item: any) => {
+      if (item?.path && item?.signedUrl) urls.set(item.path, item.signedUrl);
+    });
+    return data.map(row => ({ ...row, __imageUrl: urls.get(row?.metadata?.image_path) || null }));
+  };
+
   const load = async () => {
     if (!organizationId) return;
     setLoading(true);
     try {
       const table = isCatalog ? 'saas_fiscal_catalog_items' : 'saas_fiscal_parties';
-      let q = (supabase as any).from(table).select('*').eq('organization_id', organizationId);
-      q = isCatalog
-        ? q.eq('item_type', section === 'Produtos' ? 'product' : 'service')
-        : q.eq('party_type', partyTypeBySection[section]);
-      const { data, error } = await q.order(isCatalog ? 'name' : 'legal_name');
+      let query = (supabase as any).from(table).select('*').eq('organization_id', organizationId);
+      query = isCatalog
+        ? query.eq('item_type', section === 'Produtos' ? 'product' : 'service')
+        : query.eq('party_type', partyTypeBySection[section]);
+      const { data, error } = await query.order(isCatalog ? 'name' : 'legal_name');
       if (error) throw error;
-      setRows(data || []);
-    } catch (e: any) {
-      setMessage(e.message || 'Não foi possível carregar os cadastros.');
+      setRows(await hydrateImages(data || []));
+    } catch (error: any) {
+      setMessage(error.message || 'Não foi possível carregar os cadastros.');
     } finally {
       setLoading(false);
     }
   };
+
   useEffect(() => {
     setForm(null);
     setSearch('');
     setMessage('');
+    setPendingImage(null);
+    setImagePreview(null);
+    setImageRemoved(false);
     void load();
   }, [organizationId, section]);
+
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return rows.filter(
-      r =>
-        !q ||
-        String(
-          isCatalog
-            ? `${r.name} ${r.code} ${r.ncm} ${r.service_code_national}`
-            : `${r.legal_name} ${r.trade_name} ${r.tax_id} ${r.email}`
-        )
-          .toLowerCase()
-          .includes(q)
-    );
+    const query = search.trim().toLowerCase();
+    if (!query) return rows;
+    return rows.filter(row => {
+      const text = isCatalog
+        ? [row.name, row.code, row.description, row.ncm, row.cnae, row.service_code_national]
+        : [
+            row.legal_name,
+            row.trade_name,
+            row.tax_id,
+            row.email,
+            row.phone,
+            row.city,
+            row.state,
+            row.state_registration,
+            row.rntrc,
+            row.vehicle_plate,
+          ];
+      return text.some(value => String(value || '').toLowerCase().includes(query));
+    });
   }, [rows, search, isCatalog]);
-  const set = (k: string, v: any) => {
+
+  const activeCount = rows.filter(row => row.status !== 'inactive').length;
+  const inactiveCount = rows.length - activeCount;
+
+  const set = (key: string, value: any) => {
     if (
       [
         'tax_id',
@@ -279,26 +339,73 @@ export default function SaasCadastros({ organizationId, section }: Props) {
         'cnae',
         'ncm',
         'cest',
-      ].includes(k)
+      ].includes(key)
     )
-      v = String(v).replace(/\D/g, '');
-    if (k === 'tax_id') v = v.slice(0, 14);
-    if (k === 'postal_code') v = v.slice(0, 8);
-    if (k === 'city_ibge_code') v = v.slice(0, 7);
-    if (['state', 'vehicle_state'].includes(k))
-      v = String(v)
-        .toUpperCase()
-        .replace(/[^A-Z]/g, '')
-        .slice(0, 2);
-    if (k === 'vehicle_plate')
-      v = String(v)
-        .toUpperCase()
-        .replace(/[^A-Z0-9]/g, '')
-        .slice(0, 7);
+      value = String(value).replace(/\D/g, '');
+    if (key === 'tax_id') value = value.slice(0, 14);
+    if (key === 'postal_code') value = value.slice(0, 8);
+    if (key === 'city_ibge_code') value = value.slice(0, 7);
+    if (['state', 'vehicle_state'].includes(key))
+      value = String(value).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2);
+    if (key === 'vehicle_plate')
+      value = String(value).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 7);
     setMessage('');
-    setForm((p: any) => ({ ...p, [k]: v }));
+    setForm((previous: any) => ({ ...previous, [key]: value }));
   };
-  const create = () => setForm(isCatalog ? blankCatalog(section) : blankParty(section));
+
+  const setMeta = (key: string, value: any) => {
+    setMessage('');
+    setForm((previous: any) => ({
+      ...previous,
+      metadata: { ...(previous?.metadata || {}), [key]: value },
+    }));
+  };
+
+  const resetImageState = () => {
+    if (imagePreview?.startsWith('blob:')) URL.revokeObjectURL(imagePreview);
+    setPendingImage(null);
+    setImagePreview(null);
+    setImageRemoved(false);
+  };
+
+  const open = (row: any) => {
+    resetImageState();
+    setForm({ ...row, metadata: { ...(row.metadata || {}), card_color: row?.metadata?.card_color || '#ffffff' } });
+    setImagePreview(row.__imageUrl || null);
+    setMessage('');
+  };
+
+  const create = () => {
+    resetImageState();
+    setForm(isCatalog ? blankCatalog(section) : blankParty(section));
+    setMessage('');
+  };
+
+  const close = () => {
+    resetImageState();
+    setForm(null);
+    setMessage('');
+  };
+
+  const chooseImage = (file: File) => {
+    if (file.size > 5 * 1024 * 1024) {
+      setMessage('A imagem deve ter no máximo 5 MB.');
+      return;
+    }
+    if (imagePreview?.startsWith('blob:')) URL.revokeObjectURL(imagePreview);
+    setPendingImage(file);
+    setImagePreview(URL.createObjectURL(file));
+    setImageRemoved(false);
+    setMessage('');
+  };
+
+  const removeImage = () => {
+    if (imagePreview?.startsWith('blob:')) URL.revokeObjectURL(imagePreview);
+    setPendingImage(null);
+    setImagePreview(null);
+    setImageRemoved(true);
+  };
+
   const save = async () => {
     if (!organizationId || !form) return;
     const required: Array<[any, string]> = isCatalog
@@ -328,26 +435,45 @@ export default function SaasCadastros({ organizationId, section }: Props) {
         ];
     const missing = required.filter(([value]) => !value).map(([, label]) => label);
     if (missing.length) return setMessage(`Complete ${missing.join(', ')} antes de salvar.`);
+
     setSaving(true);
     setMessage('');
+    let uploadedPath: string | null = null;
+    const previousPath = form?.metadata?.image_path || null;
     try {
+      let nextImagePath = imageRemoved ? null : previousPath;
+      if (pendingImage && supportsImage(section)) {
+        const extension = (pendingImage.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+        const folder = isCatalog ? 'products' : partyTypeBySection[section] || 'parties';
+        uploadedPath = `${organizationId}/cadastros/${folder}/${crypto.randomUUID()}.${extension}`;
+        const { error: uploadError } = await supabase.storage
+          .from('saas-private')
+          .upload(uploadedPath, pendingImage, { contentType: pendingImage.type || undefined, upsert: false });
+        if (uploadError) throw uploadError;
+        nextImagePath = uploadedPath;
+      }
+
       const table = isCatalog ? 'saas_fiscal_catalog_items' : 'saas_fiscal_parties';
       const payload: any = {
         ...form,
+        metadata: {
+          ...(form.metadata || {}),
+          card_color: form?.metadata?.card_color || '#ffffff',
+          image_path: nextImagePath,
+        },
         organization_id: organizationId,
         updated_at: new Date().toISOString(),
       };
+      delete payload.__imageUrl;
       if (isCatalog) {
         payload.item_type = section === 'Produtos' ? 'product' : 'service';
         numeric.forEach(
-          k => (payload[k] = payload[k] === '' || payload[k] == null ? null : Number(payload[k]))
+          key => (payload[key] = payload[key] === '' || payload[key] == null ? null : Number(payload[key]))
         );
       } else {
         payload.party_type = partyTypeBySection[section];
         payload.credit_limit =
-          payload.credit_limit === '' || payload.credit_limit == null
-            ? null
-            : Number(payload.credit_limit);
+          payload.credit_limit === '' || payload.credit_limit == null ? null : Number(payload.credit_limit);
       }
       delete payload.created_at;
       const id = payload.id;
@@ -356,317 +482,326 @@ export default function SaasCadastros({ organizationId, section }: Props) {
         ? await (supabase as any).from(table).update(payload).eq('id', id)
         : await (supabase as any).from(table).insert(payload);
       if (error) throw error;
+
+      if (previousPath && previousPath !== nextImagePath) {
+        await supabase.storage.from('saas-private').remove([previousPath]).catch(() => null);
+      }
       await load();
-      setForm(null);
+      close();
       setMessage('Cadastro salvo.');
-    } catch (e: any) {
-      setMessage(e.message || 'Não foi possível salvar.');
+    } catch (error: any) {
+      if (uploadedPath) await supabase.storage.from('saas-private').remove([uploadedPath]).catch(() => null);
+      setMessage(error.message || 'Não foi possível salvar.');
     } finally {
       setSaving(false);
     }
   };
-  const remove = async (row: any) => {
-    if (!window.confirm(`Excluir ${isCatalog ? row.name : row.legal_name}?`)) return;
+
+  const remove = async () => {
+    if (!form?.id) return;
+    const name = isCatalog ? form.name : form.legal_name;
+    if (!window.confirm(`Excluir ${name}?`)) return;
     const { error } = await (supabase as any)
       .from(isCatalog ? 'saas_fiscal_catalog_items' : 'saas_fiscal_parties')
       .delete()
-      .eq('id', row.id);
+      .eq('id', form.id);
     if (error) return setMessage(error.message);
-    if (form?.id === row.id) setForm(null);
+    if (form?.metadata?.image_path)
+      await supabase.storage.from('saas-private').remove([form.metadata.image_path]).catch(() => null);
     await load();
+    close();
+    setMessage('Cadastro excluído.');
   };
+
   const subtitle =
     section === 'Serviços'
       ? 'Serviços com preço, classificação, ISS e retenções prontos para reutilizar na NFS-e.'
       : section === 'Produtos'
       ? 'Catálogo fiscal com preços, classificação e estoque.'
-      : `Dados cadastrais e fiscais de ${section.toLowerCase()} disponíveis em todas as emissões.`;
-  const completionFields = form
-    ? isCatalog
-      ? [
-          form.name,
-          form.code,
-          form.sale_price,
-          form.description,
-          form.service_code_national,
-          form.service_code_municipal,
-          form.cnae,
-          form.iss_rate,
-        ]
-      : [
-          form.legal_name,
-          form.tax_id,
-          form.email || form.phone,
-          form.postal_code,
-          form.street,
-          form.city,
-          form.state,
-          form.city_ibge_code,
-          ...(section === 'Transportadoras' ? [form.rntrc, form.vehicle_plate] : []),
-        ]
-    : [];
-  const completion = completionFields.length
-    ? Math.round((completionFields.filter(Boolean).length / completionFields.length) * 100)
-    : 0;
+      : `Dados cadastrais, fiscais e comerciais de ${section.toLowerCase()} disponíveis em todas as emissões.`;
+
+  if (!organizationId)
+    return <div className="py-20 text-center text-sm text-muted-foreground">Nenhuma organização fiscal disponível.</div>;
+
+  if (form) {
+    const title = (isCatalog ? form.name : form.legal_name) || `Novo ${singular(section)}`;
+    return (
+      <div className="mx-auto w-full max-w-[1280px] space-y-5 pb-28">
+        <header className="flex flex-wrap items-start justify-between gap-4 border-b border-[#dbe1e8] pb-5">
+          <div className="flex min-w-0 items-start gap-3">
+            <button
+              type="button"
+              onClick={close}
+              className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-[#d7dde5] bg-white text-[#536077] transition hover:bg-[#f7f9fb]"
+              aria-label={`Voltar para ${section}`}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[.14em] text-[#718096]">
+                Cadastros / {section}
+              </p>
+              <h1 className="mt-1 truncate text-[27px] font-semibold text-[#17233b]">{title}</h1>
+              <p className="mt-1 text-sm text-[#667085]">
+                {form.id ? `Edite todos os dados deste ${singular(section)} em uma página dedicada.` : `Cadastre um novo ${singular(section)} sem dividir a tela com a listagem.`}
+              </p>
+            </div>
+          </div>
+          <span className={`rounded-full px-3 py-1.5 text-[10px] font-semibold ${form.status === 'inactive' ? 'bg-[#eef0f3] text-[#667085]' : 'bg-[#e7f6ef] text-[#167a5b]'}`}>
+            {form.status === 'inactive' ? 'Inativo' : 'Ativo'}
+          </span>
+        </header>
+
+        {message && (
+          <div role="status" className="rounded-[9px] border border-[#dce2e9] bg-white px-4 py-3 text-xs text-[#536077]">
+            {message}
+          </div>
+        )}
+
+        <SaasRegisterAppearance
+          allowImage={supportsImage(section)}
+          imageUrl={imagePreview || form.__imageUrl || null}
+          cardColor={form?.metadata?.card_color || '#ffffff'}
+          onImageChange={chooseImage}
+          onRemoveImage={removeImage}
+          onColorChange={color => setMeta('card_color', color)}
+          imageLabel={imageLabel(section)}
+        />
+
+        {section === 'Clientes' ? (
+          <div className="rounded-xl border border-[#dce2e9] bg-white px-4 sm:px-6">
+            <SaasCustomerEditor form={form} set={set} />
+          </div>
+        ) : isCatalog ? (
+          <CatalogEditor section={section} form={form} set={set} />
+        ) : (
+          <PartyEditor section={section} form={form} set={set} />
+        )}
+
+        <div className="fixed bottom-0 right-0 z-30 border-t border-[#d9e0e7] bg-white/95 p-3 shadow-[0_-8px_30px_rgba(15,23,42,.06)] backdrop-blur md:left-72">
+          <div className="mx-auto flex w-full max-w-[1280px] flex-wrap justify-end gap-2">
+            <Button variant="outline" onClick={close} className="saas-action-secondary">Cancelar</Button>
+            {form.id && (
+              <Button variant="outline" onClick={() => void remove()} className="saas-action-secondary">Excluir</Button>
+            )}
+            <Button onClick={() => void save()} disabled={saving} className="saas-action-primary">
+              {saving ? 'Salvando...' : `Salvar ${singular(section)}`}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto w-full max-w-[1540px] space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-4 border-b border-[#dbe1e8] pb-5">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[.14em] text-[#718096]">
-            Cadastros
-          </p>
-          <h1 className="mt-1 text-[28px] font-semibold">{section}</h1>
+          <p className="text-[10px] font-semibold uppercase tracking-[.14em] text-[#718096]">Cadastros</p>
+          <h1 className="mt-1 text-[28px] font-semibold text-[#17233b]">{section}</h1>
           <p className="mt-1 max-w-3xl text-sm text-[#667085]">{subtitle}</p>
         </div>
         <Button onClick={create} className="saas-action-primary">
           <Plus className="mr-2 h-4 w-4" />
-          Novo{' '}
-          {section === 'Clientes'
-            ? 'cliente'
-            : section === 'Fornecedores'
-            ? 'fornecedor'
-            : section === 'Transportadoras'
-            ? 'transportadora'
-            : section === 'Serviços'
-            ? 'serviço'
-            : 'produto'}
+          Novo {singular(section)}
         </Button>
       </header>
+
       {message && (
-        <div
-          role="status"
-          className="rounded-[9px] border border-[#dce2e9] bg-white px-4 py-3 text-xs text-[#536077]"
-        >
-          {message}
-        </div>
+        <div role="status" className="rounded-[9px] border border-[#dce2e9] bg-white px-4 py-3 text-xs text-[#536077]">{message}</div>
       )}
-      <div className={`saas-register-layout ${section === 'Clientes' && form ? 'is-customer-editing' : ''}`}>
-        <section className="saas-register-list">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e4e8ed] px-4 py-3">
-            <div>
-              <h2 className="text-sm font-semibold text-[#17233b]">{section}</h2>
-              <p className="mt-0.5 text-[11px] text-[#7a8698]">
-                {filtered.length} registro{filtered.length === 1 ? '' : 's'}
-              </p>
-            </div>
-            <div className="relative w-full max-w-[360px]">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#98a2b3]" />
-              <Input
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder={`Buscar ${section.toLowerCase()}...`}
-                className="h-10 bg-[#fbfcfd] pl-9 text-sm"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-[minmax(0,1fr)_190px_110px] gap-4 border-b border-[#dce2e9] bg-[#eef2f5] px-4 py-2.5 text-[9px] font-bold uppercase tracking-[.11em] text-[#657186]">
-            <span>Cadastro</span>
-            <span>Informação principal</span>
-            <span className="text-right">Situação</span>
-          </div>
-          {loading ? (
-            <div className="px-5 py-16 text-center text-sm text-[#7a8698]">Carregando...</div>
-          ) : !filtered.length ? (
-            <div className="px-6 py-16 text-center">
-              <p className="text-sm font-semibold text-[#344054]">Nenhum cadastro encontrado.</p>
-              <p className="mt-1 text-xs text-[#8a95a5]">
-                Crie o primeiro registro para reaproveitar os dados na emissão.
-              </p>
-              <Button onClick={create} variant="outline" className="mt-5 saas-action-secondary">
-                Criar cadastro
-              </Button>
-            </div>
-          ) : (
-            filtered.map(row => (
-              <button
-                type="button"
-                key={row.id}
-                onClick={() => setForm({ ...row })}
-                className={`grid w-full cursor-pointer grid-cols-[minmax(0,1fr)_190px_110px] items-center gap-4 rounded-none border-0 border-b border-[#edf0f3] px-4 py-4 text-left transition hover:bg-[#f6f8fa] ${
-                  form?.id === row.id ? 'bg-[#f2f5f8]' : ''
-                }`}
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-[#15213a]">
-                    {isCatalog ? row.name : row.legal_name}
-                  </p>
-                  <p className="mt-1 truncate text-[11px] text-[#7a8698]">
-                    {isCatalog
-                      ? [row.code, row.description].filter(Boolean).join(' · ') || 'Sem código'
-                      : [row.trade_name, row.tax_id].filter(Boolean).join(' · ') || 'Sem documento'}
-                  </p>
-                </div>
-                <div className="text-xs text-[#536077]">
-                  {section === 'Serviços'
-                    ? [
-                        row.service_code_national,
-                        row.iss_rate != null ? `ISS ${row.iss_rate}%` : null,
-                      ]
-                        .filter(Boolean)
-                        .join(' · ') || '—'
-                    : section === 'Produtos'
-                    ? [row.ncm, money(row.sale_price)].filter(Boolean).join(' · ')
-                    : row.email || row.phone || row.city || '—'}
-                </div>
-                <div className="text-right">
-                  <span
-                    className={`saas-status-pill ${
-                      row.status === 'inactive' ? 'saas-status-cancelled' : 'saas-status-authorized'
-                    }`}
-                  >
-                    {row.status === 'inactive' ? 'Inativo' : 'Ativo'}
-                  </span>
-                </div>
-              </button>
-            ))
-          )}
-        </section>
-        <aside className="saas-register-drawer">
-          {!form ? (
-            <div className="grid min-h-[460px] place-items-center px-8 text-center">
-              <div>
-                <p className="text-base font-semibold text-[#17233b]">Selecione um cadastro</p>
-                <p className="mt-2 text-xs leading-5 text-[#7a8698]">
-                  Os detalhes aparecem aqui sem tirar você da lista. Você também pode criar um novo
-                  registro.
-                </p>
-                <Button onClick={create} className="mt-5 saas-action-primary">
-                  Novo cadastro
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="saas-register-drawer-head">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-[9px] font-semibold uppercase tracking-[.14em] text-[#7a8698]">
-                      {form.id ? 'Editar cadastro' : 'Novo cadastro'}
-                    </p>
-                    <h3 className="mt-1 text-base font-semibold text-[#17233b]">
-                      {(isCatalog ? form.name : form.legal_name) || 'Sem nome'}
-                    </h3>
-                  </div>
-                  <button
-                    type="button"
-                    aria-label="Fechar cadastro"
-                    onClick={() => setForm(null)}
-                    className="grid h-8 w-8 place-items-center border border-[#dce2e9] bg-white text-[#667085]"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-                <div className="saas-register-completion">
-                  <span>Cadastro preenchido</span>
-                  <b>{completion}%</b>
-                  <i>
-                    <em style={{ width: `${completion}%` }} />
-                  </i>
-                </div>
-              </div>
-              <div className="saas-register-drawer-body">
-                {isCatalog ? (
-                  <CatalogEditor section={section} form={form} set={set} />
-                ) : section === 'Clientes' ? (
-                <SaasCustomerEditor form={form} set={set} />
-              ) : (
-                <PartyEditor section={section} form={form} set={set} />
-              )}
-                <div className="saas-emission-actions">
-                  <Button
-                    variant="outline"
-                    onClick={() => setForm(null)}
-                    className="saas-action-secondary"
-                  >
-                    Cancelar
-                  </Button>
-                  {form.id && (
-                    <Button
-                      variant="outline"
-                      onClick={() => void remove(form)}
-                      className="saas-action-secondary"
-                    >
-                      Excluir
-                    </Button>
-                  )}
-                  <Button onClick={save} disabled={saving} className="saas-action-primary">
-                    {saving ? 'Salvando...' : 'Salvar'}
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
-        </aside>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Metric label="Total cadastrados" value={String(rows.length)} />
+        <Metric label="Ativos" value={String(activeCount)} />
+        <Metric label="Inativos" value={String(inactiveCount)} />
       </div>
+
+      <section className="rounded-xl border border-[#dce2e9] bg-white p-4 sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-[#17233b]">Todos os {section.toLowerCase()}</h2>
+            <p className="mt-1 text-[11px] text-[#7a8698]">Clique em qualquer card para abrir a página completa de edição.</p>
+          </div>
+          <div className="relative w-full max-w-[420px]">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#98a2b3]" />
+            <Input
+              value={search}
+              onChange={event => setSearch(event.target.value)}
+              placeholder={`Buscar ${section.toLowerCase()} por nome, documento ou informação fiscal...`}
+              className="h-10 border-[#d8dfe7] bg-[#fbfcfd] pl-9 text-sm"
+            />
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="py-16 text-center text-sm text-[#7a8698]">Carregando...</div>
+        ) : !filtered.length ? (
+          <div className="py-16 text-center">
+            <p className="text-sm font-semibold text-[#344054]">Nenhum cadastro encontrado.</p>
+            <p className="mt-1 text-xs text-[#8a95a5]">Crie o primeiro registro para reaproveitar os dados nas emissões.</p>
+            <Button onClick={create} variant="outline" className="mt-5 saas-action-secondary">Criar cadastro</Button>
+          </div>
+        ) : (
+          <div className="mt-5 grid gap-3 xl:grid-cols-2 2xl:grid-cols-3">
+            {filtered.map(row => (
+              <RegisterCard key={row.id} section={section} row={row} onClick={() => open(row)} />
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
 
-function PartyEditor({
-  section,
-  form,
-  set,
-}: {
-  section: CadastroSection;
-  form: any;
-  set: (k: string, v: any) => void;
-}) {
+function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <>
-      <Section
-        title="Identificação"
-        description="Dados usados para localizar e identificar o cadastro."
-      >
+    <div className="rounded-xl border border-[#dce2e9] bg-white px-4 py-3">
+      <p className="text-[9px] font-semibold uppercase tracking-[.11em] text-[#7a8698]">{label}</p>
+      <p className="mt-1.5 text-xl font-semibold text-[#17233b]">{value}</p>
+    </div>
+  );
+}
+
+function RegisterCard({ section, row, onClick }: { section: CadastroSection; row: any; onClick: () => void }) {
+  const background = row?.metadata?.card_color || '#ffffff';
+  const foreground = readableText(background);
+  const dark = foreground === '#ffffff';
+  const title = section === 'Serviços' || section === 'Produtos' ? row.name : row.legal_name;
+  const subtitle = section === 'Serviços' || section === 'Produtos' ? row.description : row.trade_name;
+  const initials = String(title || singular(section))
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0])
+    .join('')
+    .toUpperCase();
+  const Icon = section === 'Clientes' ? UsersRound : section === 'Fornecedores' ? Building2 : section === 'Transportadoras' ? Truck : Package2;
+  const lines = cardDetails(section, row);
+  const subtle = dark ? 'rgba(255,255,255,.76)' : 'rgba(23,35,59,.67)';
+  const border = dark ? 'rgba(255,255,255,.24)' : 'rgba(15,23,42,.12)';
+  const panel = dark ? 'rgba(255,255,255,.11)' : 'rgba(255,255,255,.52)';
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group min-h-[224px] overflow-hidden rounded-xl border p-4 text-left shadow-[0_1px_2px_rgba(15,23,42,.04)] transition duration-150 hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgba(15,23,42,.09)]"
+      style={{ backgroundColor: background, color: foreground, borderColor: border }}
+    >
+      <div className="flex items-start gap-3">
+        <div className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-xl border text-sm font-semibold" style={{ borderColor: border, backgroundColor: panel }}>
+          {row.__imageUrl ? <img src={row.__imageUrl} alt="" className="h-full w-full object-cover" /> : initials ? initials : <Icon className="h-5 w-5" />}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h3 className="truncate text-sm font-semibold">{title || 'Sem nome'}</h3>
+              <p className="mt-1 truncate text-[11px]" style={{ color: subtle }}>{subtitle || primaryLine(section, row)}</p>
+            </div>
+            <span className="shrink-0 rounded-full px-2 py-1 text-[9px] font-semibold" style={{ backgroundColor: panel }}>
+              {row.status === 'inactive' ? 'Inativo' : 'Ativo'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        {lines.map((item, index) => (
+          <div key={`${item.label}-${index}`} className="min-w-0 rounded-lg border px-3 py-2.5" style={{ borderColor: border, backgroundColor: panel }}>
+            <span className="block text-[8px] font-semibold uppercase tracking-[.08em]" style={{ color: subtle }}>{item.label}</span>
+            <b className="mt-1 block truncate text-[11px] font-semibold">{item.value || '—'}</b>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-3 flex items-center justify-between text-[10px]" style={{ color: subtle }}>
+        <span>{row.updated_at ? `Atualizado em ${new Date(row.updated_at).toLocaleDateString('pt-BR')}` : 'Cadastro fiscal'}</span>
+        <span className="font-semibold transition group-hover:translate-x-0.5">Abrir cadastro →</span>
+      </div>
+    </button>
+  );
+}
+
+function primaryLine(section: CadastroSection, row: any) {
+  if (section === 'Serviços') return [row.code, row.service_code_national].filter(Boolean).join(' · ') || 'Serviço fiscal';
+  if (section === 'Produtos') return [row.code, row.ncm].filter(Boolean).join(' · ') || 'Produto fiscal';
+  return [formatTaxId(row.tax_id), row.city, row.state].filter(Boolean).join(' · ');
+}
+
+function cardDetails(section: CadastroSection, row: any) {
+  if (section === 'Clientes')
+    return [
+      { label: 'Documento', value: formatTaxId(row.tax_id) },
+      { label: 'Localização', value: [row.city, row.state].filter(Boolean).join(' / ') },
+      { label: 'Contato', value: row.email || row.phone || row.mobile },
+      { label: 'Inscrição estadual', value: row.state_registration || ({ '1': 'Contribuinte', '2': 'Isento', '9': 'Não contribuinte' } as any)[row.ie_indicator] },
+    ];
+  if (section === 'Fornecedores')
+    return [
+      { label: 'Documento', value: formatTaxId(row.tax_id) },
+      { label: 'Localização', value: [row.city, row.state].filter(Boolean).join(' / ') },
+      { label: 'Contato', value: row.email || row.phone || row.mobile },
+      { label: 'Condição', value: row.payment_terms || row.pix_key || '—' },
+    ];
+  if (section === 'Transportadoras')
+    return [
+      { label: 'Documento', value: formatTaxId(row.tax_id) },
+      { label: 'RNTRC', value: row.rntrc },
+      { label: 'Veículo padrão', value: [row.vehicle_plate, row.vehicle_state].filter(Boolean).join(' / ') },
+      { label: 'Contato', value: row.email || row.phone || row.city },
+    ];
+  if (section === 'Serviços')
+    return [
+      { label: 'Código', value: row.code },
+      { label: 'Valor padrão', value: money(row.sale_price) },
+      { label: 'Código nacional', value: row.service_code_national },
+      { label: 'Tributação', value: row.iss_rate != null ? `ISS ${row.iss_rate}%` : row.cnae || '—' },
+    ];
+  return [
+    { label: 'SKU', value: row.code },
+    { label: 'Venda', value: money(row.sale_price) },
+    { label: 'NCM', value: row.ncm },
+    { label: 'Estoque', value: row.stock_managed ? `${row.stock_quantity || 0} ${row.unit || 'UN'}` : 'Sem controle' },
+  ];
+}
+
+function PartyEditor({ section, form, set }: { section: CadastroSection; form: any; set: (key: string, value: any) => void }) {
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      <Section title="Identificação" description="Dados usados para localizar e identificar o cadastro.">
         <SelectField
           label="Tipo"
           value={form.person_type}
-          onChange={v => set('person_type', v)}
+          onChange={value => set('person_type', value)}
           options={[
             ['legal', 'Pessoa jurídica'],
             ['individual', 'Pessoa física'],
             ['foreign', 'Exterior'],
           ]}
         />
-        <Field
-          label="Razão social / nome"
-          value={form.legal_name}
-          onChange={v => set('legal_name', v)}
-          required
-        />
-        <Field label="Nome fantasia" value={form.trade_name} onChange={v => set('trade_name', v)} />
-        <Field
-          label="CNPJ / CPF"
-          value={form.tax_id}
-          onChange={v => set('tax_id', v)}
-          required
-          hint="Digite somente números."
-        />
-        <Field label="Contato" value={form.contact_name} onChange={v => set('contact_name', v)} />
+        <Field label="Razão social / nome" value={form.legal_name} onChange={value => set('legal_name', value)} required />
+        <Field label="Nome fantasia" value={form.trade_name} onChange={value => set('trade_name', value)} />
+        <Field label="CNPJ / CPF" value={form.tax_id} onChange={value => set('tax_id', value)} required hint="Digite somente números." />
+        <Field label="Contato" value={form.contact_name} onChange={value => set('contact_name', value)} />
         <SelectField
           label="Situação"
           value={form.status}
-          onChange={v => set('status', v)}
+          onChange={value => set('status', value)}
           options={[
             ['active', 'Ativo'],
             ['inactive', 'Inativo'],
           ]}
         />
       </Section>
+
       <Section title="Fiscal" description="Tributação reaproveitada automaticamente nas emissões.">
-        <Field
-          label="Inscrição estadual"
-          value={form.state_registration}
-          onChange={v => set('state_registration', v)}
-        />
-        <Field
-          label="Inscrição municipal"
-          value={form.municipal_registration}
-          onChange={v => set('municipal_registration', v)}
-        />
+        <Field label="Inscrição estadual" value={form.state_registration} onChange={value => set('state_registration', value)} />
+        <Field label="Inscrição municipal" value={form.municipal_registration} onChange={value => set('municipal_registration', value)} />
         <SelectField
           label="Regime tributário"
           value={form.tax_regime}
-          onChange={v => set('tax_regime', v)}
+          onChange={value => set('tax_regime', value)}
           options={[
             ['', 'Não informado'],
             ['simples', 'Simples Nacional'],
@@ -678,7 +813,7 @@ function PartyEditor({
         <SelectField
           label="Indicador IE"
           value={form.ie_indicator}
-          onChange={v => set('ie_indicator', v)}
+          onChange={value => set('ie_indicator', value)}
           options={[
             ['', 'Não informado'],
             ['1', 'Contribuinte'],
@@ -686,61 +821,49 @@ function PartyEditor({
             ['9', 'Não contribuinte'],
           ]}
         />
-        <Toggle
-          label="Consumidor final"
-          checked={!!form.final_consumer}
-          onChange={v => set('final_consumer', v)}
-        />
-        <Toggle
-          label="Contribuinte ICMS"
-          checked={!!form.icms_taxpayer}
-          onChange={v => set('icms_taxpayer', v)}
-        />
+        <Toggle label="Consumidor final" checked={!!form.final_consumer} onChange={value => set('final_consumer', value)} />
+        <Toggle label="Contribuinte ICMS" checked={!!form.icms_taxpayer} onChange={value => set('icms_taxpayer', value)} />
       </Section>
-      <Section title="Contato" description="Informe pelo menos um canal de contato.">
-        <Field label="E-mail" value={form.email} onChange={v => set('email', v)} />
-        <Field
-          label="E-mail fiscal"
-          value={form.billing_email}
-          onChange={v => set('billing_email', v)}
-        />
-        <Field label="Telefone" value={form.phone} onChange={v => set('phone', v)} />
-        <Field label="WhatsApp" value={form.mobile} onChange={v => set('mobile', v)} />
+
+      <Section title="Contato" description="Canais usados pela equipe e no faturamento.">
+        <Field label="E-mail" value={form.email} onChange={value => set('email', value)} />
+        <Field label="E-mail fiscal" value={form.billing_email} onChange={value => set('billing_email', value)} />
+        <Field label="Telefone" value={form.phone} onChange={value => set('phone', value)} />
+        <Field label="WhatsApp" value={form.mobile} onChange={value => set('mobile', value)} />
+        <div className="md:col-span-2">
+          <Field label="Site" value={form.website} onChange={value => set('website', value)} />
+        </div>
       </Section>
-      <Section
-        title="Endereço"
-        description="Necessário para documentos fiscais com destinatário identificado."
-      >
-        <Field
-          label="CEP"
-          value={form.postal_code}
-          onChange={v => set('postal_code', v)}
-          hint="Somente números."
-        />
-        <Field label="Logradouro" value={form.street} onChange={v => set('street', v)} />
-        <Field label="Número" value={form.street_number} onChange={v => set('street_number', v)} />
-        <Field label="Bairro" value={form.district} onChange={v => set('district', v)} />
-        <Field label="Cidade" value={form.city} onChange={v => set('city', v)} required />
-        <Field label="UF" value={form.state} onChange={v => set('state', v)} required />
-        <Field
-          label="Código IBGE"
-          value={form.city_ibge_code}
-          onChange={v => set('city_ibge_code', v)}
-          required
-          hint="Código IBGE de 7 dígitos."
-        />
-        <Field label="Complemento" value={form.complement} onChange={v => set('complement', v)} />
+
+      <Section title="Endereço" description="Endereço fiscal do cadastro.">
+        <Field label="CEP" value={form.postal_code} onChange={value => set('postal_code', value)} hint="Somente números." />
+        <Field label="Logradouro" value={form.street} onChange={value => set('street', value)} />
+        <Field label="Número" value={form.street_number} onChange={value => set('street_number', value)} />
+        <Field label="Bairro" value={form.district} onChange={value => set('district', value)} />
+        <Field label="Cidade" value={form.city} onChange={value => set('city', value)} required />
+        <Field label="UF" value={form.state} onChange={value => set('state', value)} required />
+        <Field label="Código IBGE" value={form.city_ibge_code} onChange={value => set('city_ibge_code', value)} required hint="Código IBGE de 7 dígitos." />
+        <Field label="Complemento" value={form.complement} onChange={value => set('complement', value)} />
       </Section>
+
+      {section === 'Fornecedores' && (
+        <Section title="Comercial e pagamento" description="Informações úteis para compras e relacionamento com o fornecedor.">
+          <Field label="Condição de pagamento" value={form.payment_terms} onChange={value => set('payment_terms', value)} />
+          <Field label="Limite de crédito" value={form.credit_limit} onChange={value => set('credit_limit', value)} type="number" />
+          <Field label="Banco" value={form.bank_name} onChange={value => set('bank_name', value)} />
+          <Field label="Agência" value={form.bank_branch} onChange={value => set('bank_branch', value)} />
+          <Field label="Conta" value={form.bank_account} onChange={value => set('bank_account', value)} />
+          <Field label="Chave PIX" value={form.pix_key} onChange={value => set('pix_key', value)} />
+        </Section>
+      )}
+
       {section === 'Transportadoras' && (
-        <Section
-          title="Transporte"
-          description="Dados preenchidos automaticamente no CT-e e MDF-e."
-        >
-          <Field label="RNTRC" value={form.rntrc} onChange={v => set('rntrc', v)} required />
+        <Section title="Transporte" description="Dados preenchidos automaticamente no CT-e e MDF-e.">
+          <Field label="RNTRC" value={form.rntrc} onChange={value => set('rntrc', value)} required />
           <SelectField
             label="Categoria ANTT"
             value={form.antt_category}
-            onChange={v => set('antt_category', v)}
+            onChange={value => set('antt_category', value)}
             options={[
               ['', 'Selecione'],
               ['TAC', 'Transportador autônomo'],
@@ -748,21 +871,12 @@ function PartyEditor({
               ['CTC', 'Cooperativa de transporte'],
             ]}
           />
-          <Field
-            label="Placa padrão"
-            value={form.vehicle_plate}
-            onChange={v => set('vehicle_plate', v)}
-            required
-          />
-          <Field
-            label="UF veículo"
-            value={form.vehicle_state}
-            onChange={v => set('vehicle_state', v)}
-          />
+          <Field label="Placa padrão" value={form.vehicle_plate} onChange={value => set('vehicle_plate', value)} required />
+          <Field label="UF veículo" value={form.vehicle_state} onChange={value => set('vehicle_state', value)} />
           <SelectField
             label="Modal padrão"
             value={form.freight_default_mode}
-            onChange={v => set('freight_default_mode', v)}
+            onChange={value => set('freight_default_mode', value)}
             options={[
               ['', 'Selecione'],
               ['01', 'Rodoviário'],
@@ -773,169 +887,78 @@ function PartyEditor({
           />
         </Section>
       )}
-      <Section
-        title="Observações"
-        description="Informações internas; não serão transmitidas no documento fiscal."
-      >
+
+      <Section title="Observações" description="Informações internas; não serão transmitidas no documento fiscal.">
         <div className="md:col-span-2">
           <textarea
-            rows={4}
+            rows={5}
             value={form.notes || ''}
-            onChange={e => set('notes', e.target.value)}
+            onChange={event => set('notes', event.target.value)}
             className="w-full rounded-[8px] border border-[#d7dde5] bg-white p-3 text-sm"
           />
         </div>
       </Section>
-    </>
+    </div>
   );
 }
-function CatalogEditor({
-  section,
-  form,
-  set,
-}: {
-  section: CadastroSection;
-  form: any;
-  set: (k: string, v: any) => void;
-}) {
+
+function CatalogEditor({ section, form, set }: { section: CadastroSection; form: any; set: (key: string, value: any) => void }) {
   const service = section === 'Serviços';
   return (
-    <>
-      <Section
-        title="Identificação"
-        description="Nome, código e valor que aparecerão durante a emissão."
-      >
-        <Field
-          label={service ? 'Nome do serviço' : 'Nome do produto'}
-          value={form.name}
-          onChange={v => set('name', v)}
-          required
-        />
-        <Field label="Código interno" value={form.code} onChange={v => set('code', v)} required />
-        <Field
-          label="Valor padrão"
-          value={form.sale_price}
-          onChange={v => set('sale_price', v)}
-          type="number"
-          required
-        />
+    <div className="grid gap-4 lg:grid-cols-2">
+      <Section title="Identificação" description="Nome, código e valor que aparecerão durante a emissão.">
+        <Field label={service ? 'Nome do serviço' : 'Nome do produto'} value={form.name} onChange={value => set('name', value)} required />
+        <Field label="Código interno" value={form.code} onChange={value => set('code', value)} required />
+        <Field label="Valor padrão" value={form.sale_price} onChange={value => set('sale_price', value)} type="number" required />
         <SelectField
           label="Situação"
           value={form.status}
-          onChange={v => set('status', v)}
+          onChange={value => set('status', value)}
           options={[
             ['active', 'Ativo'],
             ['inactive', 'Inativo'],
           ]}
         />
         <div className="md:col-span-2">
-          <Field
-            label={service ? 'Descrição padrão para NFS-e' : 'Descrição'}
-            value={form.description}
-            onChange={v => set('description', v)}
-            required={service}
-          />
+          <Field label={service ? 'Descrição padrão para NFS-e' : 'Descrição'} value={form.description} onChange={value => set('description', value)} required={service} />
         </div>
       </Section>
+
       {service ? (
         <>
-          <Section
-            title="Classificação fiscal"
-            description="Dados aplicados automaticamente na DPS e na NFS-e."
-          >
-            <Field
-              label="Código nacional"
-              value={form.service_code_national}
-              onChange={v => set('service_code_national', v)}
-              required
-              hint="Código de tributação nacional do serviço."
-            />
-            <Field
-              label="Código municipal"
-              value={form.service_code_municipal}
-              onChange={v => set('service_code_municipal', v)}
-            />
-            <Field label="CNAE" value={form.cnae} onChange={v => set('cnae', v)} />
-            <Field
-              label="ISS (%)"
-              value={form.iss_rate}
-              onChange={v => set('iss_rate', v)}
-              type="number"
-            />
+          <Section title="Classificação fiscal" description="Dados aplicados automaticamente na DPS e na NFS-e.">
+            <Field label="Código nacional" value={form.service_code_national} onChange={value => set('service_code_national', value)} required hint="Código de tributação nacional do serviço." />
+            <Field label="Código municipal" value={form.service_code_municipal} onChange={value => set('service_code_municipal', value)} />
+            <Field label="CNAE" value={form.cnae} onChange={value => set('cnae', value)} />
+            <Field label="ISS (%)" value={form.iss_rate} onChange={value => set('iss_rate', value)} type="number" />
           </Section>
           <Section title="Retenções" description="Ative apenas os tributos retidos pelo tomador.">
-            <Toggle
-              label="Reter ISS"
-              checked={!!form.iss_withheld}
-              onChange={v => set('iss_withheld', v)}
-            />
-            <Toggle
-              label="Reter INSS"
-              checked={!!form.inss_withheld}
-              onChange={v => set('inss_withheld', v)}
-            />
-            <Toggle
-              label="Reter IR"
-              checked={!!form.ir_withheld}
-              onChange={v => set('ir_withheld', v)}
-            />
-            <Toggle
-              label="Reter CSLL"
-              checked={!!form.csll_withheld}
-              onChange={v => set('csll_withheld', v)}
-            />
-            <Toggle
-              label="Reter PIS"
-              checked={!!form.pis_withheld}
-              onChange={v => set('pis_withheld', v)}
-            />
-            <Toggle
-              label="Reter COFINS"
-              checked={!!form.cofins_withheld}
-              onChange={v => set('cofins_withheld', v)}
-            />
+            <Toggle label="Reter ISS" checked={!!form.iss_withheld} onChange={value => set('iss_withheld', value)} />
+            <Toggle label="Reter INSS" checked={!!form.inss_withheld} onChange={value => set('inss_withheld', value)} />
+            <Toggle label="Reter IR" checked={!!form.ir_withheld} onChange={value => set('ir_withheld', value)} />
+            <Toggle label="Reter CSLL" checked={!!form.csll_withheld} onChange={value => set('csll_withheld', value)} />
+            <Toggle label="Reter PIS" checked={!!form.pis_withheld} onChange={value => set('pis_withheld', value)} />
+            <Toggle label="Reter COFINS" checked={!!form.cofins_withheld} onChange={value => set('cofins_withheld', value)} />
           </Section>
         </>
       ) : (
         <>
           <Section title="Classificação">
-            <Field label="NCM" value={form.ncm} onChange={v => set('ncm', v)} />
-            <Field label="CEST" value={form.cest} onChange={v => set('cest', v)} />
-            <Field
-              label="CFOP interno"
-              value={form.cfop_in_state}
-              onChange={v => set('cfop_in_state', v)}
-            />
-            <Field
-              label="CFOP interestadual"
-              value={form.cfop_out_state}
-              onChange={v => set('cfop_out_state', v)}
-            />
-            <Field label="CSOSN" value={form.csosn} onChange={v => set('csosn', v)} />
-            <Field label="CST ICMS" value={form.icms_cst} onChange={v => set('icms_cst', v)} />
+            <Field label="NCM" value={form.ncm} onChange={value => set('ncm', value)} />
+            <Field label="CEST" value={form.cest} onChange={value => set('cest', value)} />
+            <Field label="CFOP interno" value={form.cfop_in_state} onChange={value => set('cfop_in_state', value)} />
+            <Field label="CFOP interestadual" value={form.cfop_out_state} onChange={value => set('cfop_out_state', value)} />
+            <Field label="CSOSN" value={form.csosn} onChange={value => set('csosn', value)} />
+            <Field label="CST ICMS" value={form.icms_cst} onChange={value => set('icms_cst', value)} />
           </Section>
           <Section title="Estoque">
-            <Toggle
-              label="Controlar estoque"
-              checked={!!form.stock_managed}
-              onChange={v => set('stock_managed', v)}
-            />
-            <Field
-              label="Quantidade atual"
-              value={form.stock_quantity}
-              onChange={v => set('stock_quantity', v)}
-              type="number"
-            />
-            <Field
-              label="Estoque mínimo"
-              value={form.stock_minimum}
-              onChange={v => set('stock_minimum', v)}
-              type="number"
-            />
-            <Field label="Unidade" value={form.unit} onChange={v => set('unit', v)} />
+            <Toggle label="Controlar estoque" checked={!!form.stock_managed} onChange={value => set('stock_managed', value)} />
+            <Field label="Quantidade atual" value={form.stock_quantity} onChange={value => set('stock_quantity', value)} type="number" />
+            <Field label="Estoque mínimo" value={form.stock_minimum} onChange={value => set('stock_minimum', value)} type="number" />
+            <Field label="Unidade" value={form.unit} onChange={value => set('unit', value)} />
           </Section>
         </>
       )}
-    </>
+    </div>
   );
 }
