@@ -27,7 +27,7 @@ export default function SaasRegisterAppearance({
   const color = /^#[0-9a-f]{6}$/i.test(cardColor || '') ? cardColor : '#ffffff';
 
   return (
-    <section className="rounded-xl border border-[#dce2e9] bg-white p-4 sm:p-5">
+    <section className="saas-register-appearance rounded-xl border border-[#dce2e9] bg-white p-4 sm:p-5">
       <div className="mb-4 flex items-start gap-3">
         <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-[#dce2e9] bg-[#f7f9fb] text-[#536077]">
           <Palette className="h-4 w-4" />
