@@ -14,6 +14,7 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
           p = Path('src/components/saas/SaasCadastros.tsx')
           s = p.read_text()
 
@@ -28,17 +29,11 @@ jobs:
           if old_layout in s:
               s = s.replace(old_layout, new_layout, 1)
 
-          old_party = """                ) : (
-                  <PartyEditor section={section} form={form} set={set} />
-                )}"""
-          new_party = """                ) : section === 'Clientes' ? (
-                  <SaasCustomerEditor form={form} set={set} />
-                ) : (
-                  <PartyEditor section={section} form={form} set={set} />
-                )}"""
           if '<SaasCustomerEditor form={form} set={set} />' not in s:
-              assert old_party in s, 'party editor anchor not found'
-              s = s.replace(old_party, new_party, 1)
+              pattern = r"\) : \(\s*<PartyEditor section=\{section\} form=\{form\} set=\{set\} />\s*\)\}"
+              replacement = ") : section === 'Clientes' ? (\n                <SaasCustomerEditor form={form} set={set} />\n              ) : (\n                <PartyEditor section={section} form={form} set={set} />\n              )}"
+              s, count = re.subn(pattern, replacement, s, count=1)
+              assert count == 1, 'party editor regex did not match'
 
           assert 'is-customer-editing' in s
           assert '<SaasCustomerEditor form={form} set={set} />' in s
