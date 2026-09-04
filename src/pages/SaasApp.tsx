@@ -32,6 +32,7 @@ import AppLoadingScreen from '@/components/AppLoadingScreen';
 import '@/styles/saas-admin-light.css';
 import '@/styles/saas-premium-v3.css';
 import '@/styles/saas-admin-reconciliation.css';
+import '@/styles/saas-native-font.css';
 
 const WS_LOGO = '/lovable-uploads/f7fdf0cf-f16c-4df7-a92c-964aadea9539.png';
 const TEST_TRANSPORT_ORG_ID = 'c77c4620-fbbb-4f03-9e32-ab48d25bb0cf';
