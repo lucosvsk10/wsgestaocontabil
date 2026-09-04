@@ -1,0 +1,338 @@
+name: Apply SaaS issued notes mobile polish
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/saas-issued-mobile-cards.yml']
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Append mobile issued notes overrides
+        run: |
+          cat >> src/styles/saas-mobile-polish.css <<'EOF'
+
+/* Issued notes: compact native mobile document cards */
+@media (max-width: 720px) {
+  .saas-issued-admin-clone {
+    font-size: 12px !important;
+  }
+
+  .saas-issued-admin-clone > section:first-of-type {
+    padding: 12px 12px 11px !important;
+    gap: 8px !important;
+  }
+  .saas-issued-admin-clone > section:first-of-type p:first-child {
+    font-size: 8px !important;
+    letter-spacing: .12em !important;
+  }
+  .saas-issued-admin-clone > section:first-of-type h1 {
+    margin-top: 3px !important;
+    font-size: 18px !important;
+    line-height: 1.05 !important;
+    font-weight: 600 !important;
+  }
+  .saas-issued-admin-clone > section:first-of-type h1 + p {
+    margin-top: 5px !important;
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+  }
+  .saas-issued-admin-clone > section:first-of-type > button {
+    width: auto !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    padding: 0 12px !important;
+    font-size: 11px !important;
+  }
+
+  .saas-issued-admin-clone > section:nth-of-type(2) {
+    margin-top: 10px !important;
+    padding: 8px !important;
+    background: transparent !important;
+  }
+  .saas-issued-admin-clone > section:nth-of-type(2) > div {
+    gap: 5px !important;
+  }
+  .saas-issued-admin-clone > section:nth-of-type(2) > div > button,
+  .saas-issued-admin-clone > section:nth-of-type(2) .ml-2 button {
+    min-height: 32px !important;
+    height: 32px !important;
+    min-width: 38px !important;
+    padding: 0 9px !important;
+    border-radius: 6px !important;
+    font-size: 11px !important;
+  }
+  .saas-issued-admin-clone > section:nth-of-type(2) > div > span {
+    min-width: 48px !important;
+    font-size: 14px !important;
+  }
+  .saas-issued-admin-clone > section:nth-of-type(2) > div > button:last-child {
+    min-width: max-content !important;
+    padding: 0 10px !important;
+  }
+  .saas-issued-admin-clone > section:nth-of-type(2) > div > button:last-child svg {
+    width: 13px !important;
+    height: 13px !important;
+  }
+
+  .saas-issued-admin-clone > section:nth-of-type(3) {
+    margin-top: 8px !important;
+    gap: 8px !important;
+  }
+  .saas-issued-admin-clone > section:nth-of-type(3) > div {
+    min-height: 64px !important;
+    height: 64px !important;
+    padding: 9px 10px !important;
+    border-radius: 7px !important;
+  }
+  .saas-issued-admin-clone > section:nth-of-type(3) > div p:first-child {
+    font-size: 8px !important;
+    line-height: 1.1 !important;
+  }
+  .saas-issued-admin-clone > section:nth-of-type(3) > div p:last-child {
+    margin-top: 6px !important;
+    font-size: 16px !important;
+    line-height: 1 !important;
+    font-weight: 500 !important;
+  }
+
+  .saas-issued-admin-clone > section:nth-of-type(4) {
+    margin-top: 10px !important;
+    background: transparent !important;
+    overflow: visible !important;
+  }
+  .saas-issued-admin-clone > section:nth-of-type(4) > div:first-child {
+    padding: 0 0 8px !important;
+    gap: 6px !important;
+  }
+  .saas-issued-admin-clone > section:nth-of-type(4) > div:first-child > div {
+    gap: 6px !important;
+  }
+  .saas-issued-admin-clone > section:nth-of-type(4) > div:first-child button {
+    min-height: 30px !important;
+    height: 30px !important;
+    padding: 0 9px !important;
+    border-radius: 6px !important;
+    font-size: 10px !important;
+    gap: 6px !important;
+    background: transparent !important;
+  }
+  .saas-issued-admin-clone .filter-count {
+    min-width: 18px !important;
+    height: 18px !important;
+    padding: 0 5px !important;
+    font-size: 9px !important;
+    font-weight: 600 !important;
+  }
+  .saas-issued-admin-clone > section:nth-of-type(4) > div:first-child > span {
+    display: none !important;
+  }
+
+  .saas-issued-admin-clone > section:nth-of-type(4) > div:nth-child(2) {
+    grid-template-columns: 1fr 38px !important;
+    gap: 7px !important;
+    padding: 0 0 9px !important;
+  }
+  .saas-issued-admin-clone > section:nth-of-type(4) > div:nth-child(2) input {
+    height: 38px !important;
+    min-height: 38px !important;
+    padding-left: 34px !important;
+    font-size: 16px !important;
+    border-radius: 7px !important;
+    background: #fff !important;
+  }
+  .saas-issued-admin-clone > section:nth-of-type(4) > div:nth-child(2) svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+  .saas-issued-admin-clone > section:nth-of-type(4) > div:nth-child(2) button {
+    width: 38px !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    border-radius: 7px !important;
+  }
+
+  .saas-issued-admin-clone > section:nth-of-type(4) > div.overflow-x-auto {
+    overflow: visible !important;
+  }
+  .saas-issued-admin-clone table tbody {
+    gap: 8px !important;
+    padding: 0 !important;
+  }
+  .saas-issued-admin-clone table tbody tr.note-row {
+    position: relative !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    grid-template-areas:
+      'note value'
+      'party party'
+      'operation operation'
+      'date date' !important;
+    gap: 0 !important;
+    border: 1px solid #d5dbe2 !important;
+    border-radius: 8px !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    overflow: hidden !important;
+  }
+  .saas-issued-admin-clone table tbody tr.note-row:active {
+    background: #f6f7f8 !important;
+  }
+  .saas-issued-admin-clone table tbody tr.note-row > td {
+    min-width: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+  .saas-issued-admin-clone table tbody tr.note-row > td:nth-child(2) {
+    grid-area: note !important;
+    padding: 10px 8px 7px 11px !important;
+    border-bottom: 1px solid #edf0f3 !important;
+  }
+  .saas-issued-admin-clone table tbody tr.note-row > td:nth-child(5) {
+    grid-area: value !important;
+    align-self: stretch !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    padding: 9px 11px 7px 6px !important;
+    border-bottom: 1px solid #edf0f3 !important;
+    font-size: 14px !important;
+    line-height: 1 !important;
+    font-weight: 600 !important;
+    white-space: nowrap !important;
+  }
+  .saas-issued-admin-clone table tbody tr.note-row > td:nth-child(3) {
+    grid-area: party !important;
+    padding: 8px 11px 6px !important;
+  }
+  .saas-issued-admin-clone table tbody tr.note-row > td:nth-child(3) > div:first-child {
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+    font-weight: 600 !important;
+  }
+  .saas-issued-admin-clone table tbody tr.note-row > td:nth-child(3) > div:last-child {
+    margin-top: 2px !important;
+    font-size: 9px !important;
+  }
+  .saas-issued-admin-clone table tbody tr.note-row > td:nth-child(4) {
+    grid-area: operation !important;
+    padding: 0 11px 6px !important;
+  }
+  .saas-issued-admin-clone table tbody tr.note-row > td:nth-child(4) > div:first-child {
+    font-size: 10px !important;
+    line-height: 1.2 !important;
+    color: #475467 !important;
+  }
+  .saas-issued-admin-clone table tbody tr.note-row > td:nth-child(4) > div:last-child {
+    display: none !important;
+  }
+  .saas-issued-admin-clone table tbody tr.note-row > td:nth-child(1) {
+    grid-area: date !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    padding: 0 11px 9px !important;
+    border: 0 !important;
+  }
+  .saas-issued-admin-clone table tbody tr.note-row > td:nth-child(1) > div:first-child {
+    font-size: 9px !important;
+    line-height: 1 !important;
+    font-weight: 500 !important;
+    color: #667085 !important;
+  }
+  .saas-issued-admin-clone table tbody tr.note-row > td:nth-child(1) > div:last-child {
+    margin: 0 !important;
+    font-size: 9px !important;
+    line-height: 1 !important;
+  }
+  .saas-issued-admin-clone table tbody tr.note-row > td:nth-child(1) > div:last-child::before {
+    content: '· ';
+  }
+  .saas-issued-admin-clone table tbody tr.note-row > td:nth-child(6) {
+    display: none !important;
+  }
+  .saas-issued-admin-clone table tbody tr.note-row > td:nth-child(2) > div:first-child {
+    gap: 5px !important;
+  }
+  .saas-issued-admin-clone table tbody tr.note-row > td:nth-child(2) > div:first-child > span:first-child {
+    font-size: 12px !important;
+    font-weight: 600 !important;
+  }
+  .saas-issued-admin-clone table tbody tr.note-row > td:nth-child(2) > div:first-child > span:nth-child(2) {
+    font-size: 9px !important;
+  }
+  .saas-issued-admin-clone table tbody tr.note-row > td:nth-child(2) > div:last-child {
+    margin-top: 4px !important;
+    max-width: 210px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    font-size: 8px !important;
+  }
+  .saas-issued-admin-clone table tbody tr.note-row [class*='bg-[#d7edf5]'],
+  .saas-issued-admin-clone table tbody tr.note-row [class*='bg-[#d9eee7]'],
+  .saas-issued-admin-clone table tbody tr.note-row [class*='bg-[#e8eaed]'],
+  .saas-issued-admin-clone table tbody tr.note-row [class*='bg-[#f6eacb]'],
+  .saas-issued-admin-clone table tbody tr.note-row [class*='bg-[#f3dddd]'],
+  .saas-issued-admin-clone table tbody tr.note-row [class*='bg-[#e5e5e5]'] {
+    padding: 3px 6px !important;
+    font-size: 8px !important;
+    line-height: 1 !important;
+    border-radius: 4px !important;
+  }
+
+  .saas-issued-admin-clone > section:nth-of-type(4) > div:last-child {
+    margin-top: 8px !important;
+    padding: 8px 2px 0 !important;
+    font-size: 9px !important;
+  }
+  .saas-issued-admin-clone > section:nth-of-type(4) > div:last-child button {
+    min-height: 30px !important;
+    height: 30px !important;
+    padding: 0 9px !important;
+    font-size: 10px !important;
+  }
+
+  .saas-issued-admin-clone .fixed.inset-0 {
+    padding: 8px !important;
+  }
+  .saas-issued-admin-clone .fixed.inset-0 > div {
+    width: calc(100vw - 16px) !important;
+    height: calc(100dvh - 16px) !important;
+    max-height: none !important;
+    border-radius: 10px !important;
+  }
+  .saas-issued-admin-clone .fixed.inset-0 > div > div:first-child {
+    padding: 10px 11px !important;
+    gap: 8px !important;
+  }
+  .saas-issued-admin-clone .fixed.inset-0 > div > div:first-child h3 {
+    font-size: 14px !important;
+  }
+  .saas-issued-admin-clone .fixed.inset-0 > div > div:first-child > div:last-child {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+  .saas-issued-admin-clone .fixed.inset-0 > div > div:first-child button {
+    min-height: 34px !important;
+    height: 34px !important;
+    padding: 0 8px !important;
+    font-size: 9px !important;
+  }
+  .saas-issued-admin-clone .fixed.inset-0 > div > div:last-child {
+    padding: 10px !important;
+  }
+}
+EOF
+      - name: Commit changes
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/styles/saas-mobile-polish.css
+          git commit -m 'style(saas): refine issued notes mobile cards'
+          git push
