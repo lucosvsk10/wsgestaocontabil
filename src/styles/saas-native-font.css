@@ -1,4 +1,4 @@
-/* SaaS typography: native, immediate and lighter. Loaded last on purpose. */
+/* SaaS typography: Space Grotesk everywhere, with a lighter weight hierarchy. Loaded last on purpose. */
 .saas-admin-light,
 .saas-admin-light *,
 .saas-admin-light input,
@@ -8,13 +8,13 @@
 .saas-admin-light table,
 .saas-admin-light th,
 .saas-admin-light td {
-  font-family: "Segoe UI Variable Text", "Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
+  font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif !important;
   font-synthesis: none;
 }
 
 .saas-admin-light {
   font-weight: 400;
-  letter-spacing: -0.004em;
+  letter-spacing: -0.006em;
 }
 
 .saas-admin-light .font-medium,
