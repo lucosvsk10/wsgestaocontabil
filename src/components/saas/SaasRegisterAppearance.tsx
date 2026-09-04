@@ -1,5 +1,6 @@
 import { useId } from 'react';
 import { ImageIcon, Palette, Upload, X } from 'lucide-react';
+import '@/styles/saas-register-fullpage.css';
 
 const PRESETS = ['#ffffff', '#edf4ff', '#edf9f1', '#fff5e8', '#f6efff', '#fff0f0', '#edf8fa', '#f1f3f5'];
 
