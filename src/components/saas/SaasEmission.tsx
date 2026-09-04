@@ -1,6 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { ChevronRight, FileText, Package2, ReceiptText, Truck, UsersRound } from 'lucide-react';
+import {
+  ChevronRight,
+  FileText,
+  Package2,
+  ReceiptText,
+  Repeat2,
+  Search,
+  Truck,
+  UsersRound,
+  X,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,6 +20,29 @@ const docs = ['NF-e', 'NFC-e', 'NFS-e', 'CT-e', 'MDF-e'];
 const money = (v: any) =>
   Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const digits = (v: any) => String(v ?? '').replace(/\D/g, '');
+const reusablePartsDefault = {
+  people: true,
+  items: true,
+  payment: true,
+  fiscal: true,
+  transport: true,
+};
+type ReusableParts = typeof reusablePartsDefault;
+const emissionType = (emission: any) =>
+  (
+    ({ nfe: 'NF-e', nfce: 'NFC-e', nfse: 'NFS-e', cte: 'CT-e', mdfe: 'MDF-e' }) as Record<
+      string,
+      string
+    >
+  )[String(emission?.document_type || '').toLowerCase()] || '';
+const emissionDate = (emission: any) =>
+  new Date(emission?.authorized_at || emission?.created_at || 0).toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 const fieldClass =
   'h-10 !rounded-[4px] !border-[#b9c2ce] !bg-white !px-3 !text-[13px] !text-[#344054] focus:!border-[#1496d4] focus:!ring-2 focus:!ring-[#1496d4]/10';
 function Field({
@@ -245,10 +278,16 @@ export default function SaasEmission({
   organizationId,
   documentType,
   onChoose,
+  emissions = [],
+  reusableEmission,
+  onReuseConsumed,
 }: {
   organizationId: string | null;
   documentType: string | null;
   onChoose: (d: string | null) => void;
+  emissions?: any[];
+  reusableEmission?: any | null;
+  onReuseConsumed?: () => void;
 }) {
   const [profile, setProfile] = useState<any>(null),
     [customers, setCustomers] = useState<any[]>([]),
@@ -259,7 +298,36 @@ export default function SaasEmission({
     [msg, setMsg] = useState(''),
     [stepAlert, setStepAlert] = useState(''),
     [result, setResult] = useState<any>(null),
-    [tab, setTab] = useState('');
+    [tab, setTab] = useState(''),
+    [dataReady, setDataReady] = useState(false),
+    [reuseOpen, setReuseOpen] = useState(false),
+    [reuseSearch, setReuseSearch] = useState(''),
+    [reuseParts, setReuseParts] = useState<ReusableParts>(reusablePartsDefault);
+  const reusedEmissionRef = useRef('');
+  const deferredReuseSearch = useDeferredValue(reuseSearch);
+  const reusableRows = useMemo(() => {
+    const query = deferredReuseSearch.trim().toLowerCase();
+    return emissions
+      .filter(
+        emission =>
+          emissionType(emission) === documentType &&
+          !emission?.payload?.imported &&
+          emission?.payload &&
+          Object.keys(emission.payload).length > 0
+      )
+      .filter(emission => {
+        if (!query) return true;
+        const payload = emission.payload || {};
+        return String(
+          `${emission.number || ''} ${emission.recipient_name || ''} ${
+            emission.recipient_tax_id || ''
+          } ${payload.produto || ''} ${payload.descricao || ''} ${payload.natOp || ''}`
+        )
+          .toLowerCase()
+          .includes(query);
+      })
+      .slice(0, 24);
+  }, [deferredReuseSearch, documentType, emissions]);
   const [form, setForm] = useState<any>({
     customerId: '',
     productId: '',
@@ -407,8 +475,11 @@ export default function SaasEmission({
         munIniNome: f.munIniNome || pp.city || '',
         ufIni: f.ufIni || pp.state || 'AL',
       }));
+    setDataReady(true);
   };
   useEffect(() => {
+    setDataReady(false);
+    reusedEmissionRef.current = '';
     void load();
     setResult(null);
     setMsg('');
@@ -455,6 +526,136 @@ export default function SaasEmission({
         plate: carrier.vehicle_plate || current.plate,
       }));
   }, [form.carrierId]);
+
+  const applyReusableEmission = useCallback(
+    (emission: any, parts: ReusableParts = reusablePartsDefault) => {
+      const payload = emission?.payload || {};
+      const byTaxId = (value: any) =>
+        customers.find(item => digits(item.tax_id) === digits(value))?.id || '';
+      const byCarrier = (rntrc: any) =>
+        carriers.find(item => digits(item.rntrc) === digits(rntrc))?.id || '';
+      const productId =
+        products.find(
+          item =>
+            String(item.code || '') === String(payload.codigoProduto || '') ||
+            String(item.name || '').toLowerCase() === String(payload.produto || '').toLowerCase() ||
+            (digits(item.ncm) && digits(item.ncm) === digits(payload.ncm))
+        )?.id || '';
+      const serviceId =
+        services.find(
+          item =>
+            String(item.service_code_national || '') === String(payload.codigoTributacao || '') ||
+            String(item.name || '').toLowerCase() === String(payload.descricao || '').toLowerCase()
+        )?.id || '';
+      const values: Record<string, any> = {};
+
+      if (documentType === 'NF-e' || documentType === 'NFC-e') {
+        if (parts.people) values.customerId = byTaxId(payload.destDocumento);
+        if (parts.items) {
+          values.productId = productId;
+          values.quantity = String(payload.quantidade || 1);
+          values.unitPrice = String(payload.valorUnitario || '');
+        }
+        if (parts.payment) values.payment = String(payload.formaPagamento || '01');
+        if (parts.fiscal) values.cfop = String(payload.cfop || '');
+      } else if (documentType === 'NFS-e') {
+        if (parts.people) {
+          values.customerId = byTaxId(payload.tomadorDocumento);
+          values.municipioPrestacao = String(payload.municipioPrestacao || '');
+        }
+        if (parts.items) {
+          values.serviceId = serviceId;
+          values.description = String(payload.descricao || '');
+          values.value = String(payload.valor || '');
+        }
+        if (parts.fiscal) values.serviceCode = String(payload.codigoTributacao || '');
+      } else if (documentType === 'CT-e') {
+        if (parts.people) {
+          values.remetenteId = byTaxId(payload.rem?.CNPJ || payload.rem?.CPF);
+          values.destinatarioId = byTaxId(payload.dest?.CNPJ || payload.dest?.CPF);
+          values.carrierId = byCarrier(payload.rodo?.RNTRC);
+        }
+        if (parts.items) {
+          values.vCarga = String(payload.carga?.vCarga || '');
+          values.qCarga = String(payload.carga?.qCarga || 1);
+          values.chNFe = String(payload.chNFe || '');
+        }
+        if (parts.payment) values.vTPrest = String(payload.vTPrest || '');
+        if (parts.fiscal) values.cfopCte = String(payload.cfop || '5353');
+        if (parts.transport) {
+          values.rntrc = String(payload.rodo?.RNTRC || '');
+          values.munIniCodigo = String(payload.cMunIni || '');
+          values.munIniNome = String(payload.xMunIni || '');
+          values.ufIni = String(payload.UFIni || 'AL');
+          values.munFimCodigo = String(payload.cMunFim || '');
+          values.munFimNome = String(payload.xMunFim || '');
+          values.ufFim = String(payload.UFFim || 'AL');
+        }
+      } else if (documentType === 'MDF-e') {
+        if (parts.people) {
+          values.driverName = String(payload.condutorNome || '');
+          values.driverCpf = String(payload.condutorCpf || '');
+        }
+        if (parts.items) {
+          values.cargoValue = String(payload.valorCarga || '');
+          values.cargoWeight = String(payload.pesoCarga || '');
+          values.keys = Array.isArray(payload.chaves)
+            ? payload.chaves.join('\n')
+            : String(payload.chaves || '');
+        }
+        if (parts.transport) {
+          values.carrierId = byCarrier(payload.rntrc);
+          values.rntrc = String(payload.rntrc || '');
+          values.plate = String(payload.placa || '');
+          values.tara = String(payload.tara || '');
+          values.capacity = String(payload.capacidadeKg || '');
+          values.munIniCodigo = String(payload.munCarregaCodigo || '');
+          values.munIniNome = String(payload.munCarregaNome || '');
+          values.unloadCode = String(payload.munDescargaCodigo || '');
+          values.unloadName = String(payload.munDescargaNome || '');
+          values.ufIni = String(payload.ufIni || 'AL');
+          values.ufFim = String(payload.ufFim || 'AL');
+        }
+      }
+
+      setForm((current: any) => ({
+        ...current,
+        ...values,
+        series: current.series,
+        number: current.number,
+      }));
+      setResult(null);
+      setStepAlert('');
+      setMsg(
+        `Dados reaproveitados da ${documentType} nº ${
+          emission?.number || 'sem número'
+        }. Numeração e tributos serão validados novamente.`
+      );
+      setTab(
+        documentType === 'NFS-e'
+          ? 'Pessoas'
+          : documentType === 'CT-e'
+          ? 'Participantes'
+          : documentType === 'MDF-e'
+          ? 'Veículo'
+          : 'Cliente'
+      );
+      setReuseOpen(false);
+      setReuseSearch('');
+    },
+    [carriers, customers, documentType, products, services]
+  );
+
+  useEffect(() => {
+    if (!dataReady || !reusableEmission || !documentType) return;
+    const reuseKey = String(
+      reusableEmission.id || reusableEmission.access_key || reusableEmission.number
+    );
+    if (reusedEmissionRef.current === reuseKey) return;
+    reusedEmissionRef.current = reuseKey;
+    applyReusableEmission(reusableEmission);
+    onReuseConsumed?.();
+  }, [applyReusableEmission, dataReady, reusableEmission, documentType, onReuseConsumed]);
   const environment = profile?.fiscal_environment === 'production' ? 'production' : 'homologation';
   const readEdgeError = async (e: any) => {
     try {
@@ -1363,83 +1564,215 @@ export default function SaasEmission({
           ],
         ];
   return (
-    <div className="ca-emission-page">
-      <header className="ca-emission-title">
-        <button onClick={() => onChoose(null)}>← Voltar</button>
-        <div>
-          <p>Emissão fiscal</p>
-          <h1>Emitir {documentType}</h1>
-          <span>Uma etapa por vez. Os dados ficam preservados até a revisão.</span>
-        </div>
-        <div className={`ca-environment ${environment}`}>
-          {environment === 'production' ? 'Produção' : 'Homologação'}
-        </div>
-      </header>
-      <TabBar
-        tabs={tabs}
-        active={tab}
-        onChange={value => {
-          setStepAlert('');
-          setTab(value);
-        }}
-      />
-      {msg && <div className="ca-message">{msg}</div>}
-      {stepAlert && (
-        <div className="ca-step-alert" role="alert">
-          <b>Antes de continuar</b>
-          <span>{stepAlert}</span>
-        </div>
-      )}
-      {last ? (
-        <div className="ca-review-layout">
+    <>
+      <div className="ca-emission-page">
+        <header className="ca-emission-title">
+          <button onClick={() => onChoose(null)}>← Voltar</button>
           <div>
-            <div className="ca-review-summary">
-              <p>Revisão final</p>
-              <h2>Confira o documento antes de transmitir</h2>
-              <span>Nenhuma informação será enviada até você usar o botão de transmissão.</span>
+            <p>Emissão fiscal</p>
+            <h1>Emitir {documentType}</h1>
+            <span>Uma etapa por vez. Os dados ficam preservados até a revisão.</span>
+          </div>
+          <div className="ca-emission-title-tools">
+            <button
+              type="button"
+              className="ca-reuse-trigger"
+              onClick={() => {
+                setReuseParts(reusablePartsDefault);
+                setReuseOpen(true);
+              }}
+            >
+              <Repeat2 />
+              Reutilizar emissão anterior
+            </button>
+            <div className={`ca-environment ${environment}`}>
+              {environment === 'production' ? 'Produção' : 'Homologação'}
             </div>
-            <div className="ca-review-facts">
-              {reviewFacts.map(([label, value]) => (
-                <div key={label}>
-                  <span>{label}</span>
-                  <b>{value}</b>
+          </div>
+        </header>
+        <TabBar
+          tabs={tabs}
+          active={tab}
+          onChange={value => {
+            setStepAlert('');
+            setTab(value);
+          }}
+        />
+        {msg && <div className="ca-message">{msg}</div>}
+        {stepAlert && (
+          <div className="ca-step-alert" role="alert">
+            <b>Antes de continuar</b>
+            <span>{stepAlert}</span>
+          </div>
+        )}
+        {last ? (
+          <div className="ca-review-layout">
+            <div>
+              <div className="ca-review-summary">
+                <p>Revisão final</p>
+                <h2>Confira o documento antes de transmitir</h2>
+                <span>Nenhuma informação será enviada até você usar o botão de transmissão.</span>
+              </div>
+              <div className="ca-review-facts">
+                {reviewFacts.map(([label, value]) => (
+                  <div key={label}>
+                    <span>{label}</span>
+                    <b>{value}</b>
+                  </div>
+                ))}
+              </div>
+              {allIssues.length > 0 && (
+                <div className="ca-step-alert" role="alert">
+                  <b>Dados pendentes</b>
+                  <span>{allIssues.join(', ')}.</span>
                 </div>
+              )}
+              {finalActions}
+            </div>
+            <FiscalPreview
+              documentType={documentType}
+              environment={environment}
+              profile={profile}
+              form={form}
+              customer={customer}
+              product={product}
+              service={service}
+              dest={dest}
+              result={result}
+            />
+          </div>
+        ) : (
+          <main className="ca-step-page">
+            {content}
+            <div className="ca-step-actions">
+              <Button variant="outline" disabled={step === 0} onClick={() => go(-1)}>
+                Voltar
+              </Button>
+              <Button className="ca-btn-primary" onClick={advance}>
+                Continuar para {tabs[step + 1]}
+              </Button>
+            </div>
+          </main>
+        )}
+      </div>
+      {reuseOpen && (
+        <div
+          className="ca-reuse-backdrop"
+          onMouseDown={event => {
+            if (event.target === event.currentTarget) setReuseOpen(false);
+          }}
+        >
+          <section
+            className="ca-reuse-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="reuse-emission-title"
+          >
+            <header>
+              <div>
+                <p>Atalho de emissão</p>
+                <h2 id="reuse-emission-title">Reutilizar uma {documentType} anterior</h2>
+                <span>
+                  Escolha o documento e quais informações deseja trazer para o novo rascunho.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReuseOpen(false)}
+                aria-label="Fechar seleção de emissão"
+              >
+                <X />
+              </button>
+            </header>
+            <div className="ca-reuse-options">
+              {(
+                [
+                  ['people', 'Clientes e participantes'],
+                  ['items', 'Itens, serviços ou carga'],
+                  ['payment', 'Pagamento e valores'],
+                  ['fiscal', 'Dados fiscais'],
+                  ['transport', 'Transporte e rota'],
+                ] as Array<[keyof ReusableParts, string]>
+              ).map(([key, label]) => (
+                <label key={key}>
+                  <input
+                    type="checkbox"
+                    checked={reuseParts[key]}
+                    onChange={event =>
+                      setReuseParts(current => ({ ...current, [key]: event.target.checked }))
+                    }
+                  />
+                  <span>{label}</span>
+                </label>
               ))}
             </div>
-            {allIssues.length > 0 && (
-              <div className="ca-step-alert" role="alert">
-                <b>Dados pendentes</b>
-                <span>{allIssues.join(', ')}.</span>
-              </div>
-            )}
-            {finalActions}
-          </div>
-          <FiscalPreview
-            documentType={documentType}
-            environment={environment}
-            profile={profile}
-            form={form}
-            customer={customer}
-            product={product}
-            service={service}
-            dest={dest}
-            result={result}
-          />
+            <div className="ca-reuse-search">
+              <Search />
+              <input
+                autoFocus
+                value={reuseSearch}
+                onChange={event => setReuseSearch(event.target.value)}
+                placeholder="Buscar por cliente, produto, serviço ou número..."
+              />
+            </div>
+            <div className="ca-reuse-list">
+              {reusableRows.length ? (
+                reusableRows.map(emission => {
+                  const payload = emission.payload || {};
+                  const operation =
+                    payload.produto ||
+                    payload.descricao ||
+                    payload.carga?.proPred ||
+                    payload.proPred ||
+                    payload.natOp ||
+                    payload.munDescargaNome ||
+                    'Documento fiscal';
+                  return (
+                    <article key={emission.id || emission.access_key}>
+                      <div>
+                        <p>
+                          {documentType} nº {emission.number || '—'}
+                          <span>{emissionDate(emission)}</span>
+                        </p>
+                        <h3>{emission.recipient_name || 'Sem destinatário informado'}</h3>
+                        <small>{operation}</small>
+                      </div>
+                      <div>
+                        <b>{money(emission.total)}</b>
+                        <button
+                          type="button"
+                          onClick={() => applyReusableEmission(emission, reuseParts)}
+                          disabled={!Object.values(reuseParts).some(Boolean)}
+                        >
+                          Usar como base
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })
+              ) : (
+                <div className="ca-reuse-empty">
+                  <Repeat2 />
+                  <b>Nenhuma emissão reutilizável encontrada</b>
+                  <span>
+                    Somente documentos emitidos neste sistema, com os dados originais disponíveis,
+                    podem ser usados como base.
+                  </span>
+                </div>
+              )}
+            </div>
+            <footer>
+              <span>
+                Série, número, data, chave, protocolo e XML nunca são copiados para a nova emissão.
+              </span>
+              <Button variant="outline" onClick={() => setReuseOpen(false)}>
+                Cancelar
+              </Button>
+            </footer>
+          </section>
         </div>
-      ) : (
-        <main className="ca-step-page">
-          {content}
-          <div className="ca-step-actions">
-            <Button variant="outline" disabled={step === 0} onClick={() => go(-1)}>
-              Voltar
-            </Button>
-            <Button className="ca-btn-primary" onClick={advance}>
-              Continuar para {tabs[step + 1]}
-            </Button>
-          </div>
-        </main>
       )}
-    </div>
+    </>
   );
 }
 

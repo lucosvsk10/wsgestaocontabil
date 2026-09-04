@@ -1186,6 +1186,263 @@
   outline-offset: 2px !important;
 }
 
+/* Reutilização segura de emissões */
+.ca-emission-title-tools {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.saas-main-content .ca-reuse-trigger {
+  display: inline-flex !important;
+  min-height: 36px !important;
+  align-items: center !important;
+  gap: 8px !important;
+  border: 1px solid #bcc5cf !important;
+  border-radius: 4px !important;
+  background: #fff !important;
+  padding: 0 13px !important;
+  color: #273548 !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+}
+.saas-main-content .ca-reuse-trigger:hover {
+  background: #eef1f4 !important;
+}
+.ca-reuse-trigger svg {
+  width: 15px;
+  height: 15px;
+}
+.ca-reuse-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(27, 36, 47, 0.48);
+  backdrop-filter: blur(12px);
+}
+.ca-reuse-dialog {
+  display: flex;
+  width: min(820px, calc(100vw - 32px));
+  max-height: min(820px, calc(100vh - 48px));
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #cbd2da;
+  border-radius: 8px;
+  background: #f7f8f9 !important;
+  box-shadow: 0 28px 90px rgba(22, 32, 44, 0.24);
+}
+.ca-reuse-dialog > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid #d7dce2;
+}
+.ca-reuse-dialog > header p {
+  color: #778294;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.ca-reuse-dialog > header h2 {
+  margin-top: 5px;
+  color: #172033;
+  font-size: 20px;
+  font-weight: 500;
+}
+.ca-reuse-dialog > header span {
+  display: block;
+  margin-top: 6px;
+  color: #667085;
+  font-size: 12px;
+}
+.ca-reuse-dialog > header > button {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid #d2d8df;
+  border-radius: 4px;
+  background: #fff;
+  color: #596579;
+}
+.ca-reuse-dialog > header > button svg {
+  width: 16px;
+}
+.ca-reuse-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 14px 24px;
+  border-bottom: 1px solid #dde1e6;
+  background: #eef1f3;
+}
+.ca-reuse-options label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  border: 1px solid #cbd2da;
+  border-radius: 4px;
+  background: #fff;
+  padding: 0 10px;
+  color: #3f4c5f;
+  font-size: 10px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.ca-reuse-options input {
+  width: 14px;
+  height: 14px;
+  accent-color: #495666;
+}
+.ca-reuse-search {
+  position: relative;
+  margin: 18px 24px 10px;
+}
+.ca-reuse-search svg {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  width: 16px;
+  transform: translateY(-50%);
+  color: #8a94a3;
+}
+.ca-reuse-search input {
+  width: 100%;
+  height: 42px;
+  border: 1px solid #cbd2da;
+  border-radius: 4px;
+  background: #fff;
+  padding: 0 14px 0 38px;
+  color: #172033;
+  font-size: 12px;
+  outline: none;
+}
+.ca-reuse-search input:focus {
+  border-color: #7d8997;
+  box-shadow: 0 0 0 3px rgba(88, 102, 119, 0.1);
+}
+.ca-reuse-list {
+  min-height: 220px;
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 24px 18px;
+}
+.ca-reuse-list article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 8px;
+  border: 1px solid #d6dce3;
+  border-radius: 5px;
+  background: #fff;
+  padding: 14px 16px;
+}
+.ca-reuse-list article > div:first-child {
+  min-width: 0;
+}
+.ca-reuse-list article p {
+  color: #344054;
+  font-size: 11px;
+  font-weight: 600;
+}
+.ca-reuse-list article p span {
+  margin-left: 9px;
+  color: #8a94a3;
+  font-size: 9px;
+  font-weight: 400;
+}
+.ca-reuse-list article h3 {
+  margin-top: 5px;
+  overflow: hidden;
+  color: #172033;
+  font-size: 13px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ca-reuse-list article small {
+  display: block;
+  margin-top: 3px;
+  overflow: hidden;
+  color: #6f7a8b;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ca-reuse-list article > div:last-child {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 8px;
+}
+.ca-reuse-list article > div:last-child b {
+  color: #172033;
+  font-size: 12px;
+  font-weight: 500;
+}
+.ca-reuse-list article button {
+  min-height: 34px;
+  border: 1px solid #aeb8c4;
+  border-radius: 4px;
+  background: #253142 !important;
+  padding: 0 13px;
+  color: #fff !important;
+  font-size: 10px;
+  font-weight: 500;
+}
+.ca-reuse-list article button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+.ca-reuse-empty {
+  display: grid;
+  min-height: 230px;
+  place-items: center;
+  align-content: center;
+  gap: 7px;
+  color: #6d7889;
+  text-align: center;
+}
+.ca-reuse-empty svg {
+  width: 24px;
+  height: 24px;
+}
+.ca-reuse-empty b {
+  color: #344054;
+  font-size: 13px;
+  font-weight: 500;
+}
+.ca-reuse-empty span {
+  max-width: 440px;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.ca-reuse-dialog > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 24px;
+  border-top: 1px solid #d7dce2;
+  background: #fff;
+}
+.ca-reuse-dialog > footer span {
+  max-width: 580px;
+  color: #737f90;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
 @media (max-width: 640px) {
   .saas-main-content h1 {
     font-size: 22px !important;
@@ -1248,5 +1505,53 @@
   }
   .product-side-body {
     padding: 14px;
+  }
+  .ca-emission-title-tools {
+    align-items: flex-start;
+    flex-direction: column-reverse;
+    justify-content: flex-start;
+  }
+  .saas-main-content .ca-reuse-trigger {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+  .ca-reuse-backdrop {
+    align-items: end;
+    padding: 0;
+  }
+  .ca-reuse-dialog {
+    width: 100%;
+    max-height: 92vh;
+    border-radius: 10px 10px 0 0;
+  }
+  .ca-reuse-dialog > header,
+  .ca-reuse-dialog > footer {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+  .ca-reuse-options {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+  .ca-reuse-search {
+    margin-right: 16px;
+    margin-left: 16px;
+  }
+  .ca-reuse-list {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+  .ca-reuse-list article {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .ca-reuse-list article > div:last-child {
+    align-items: center;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+  .ca-reuse-dialog > footer {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
