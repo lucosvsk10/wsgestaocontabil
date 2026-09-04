@@ -373,7 +373,6 @@ export default function SaasCadastros({ organizationId, section }: Props) {
       'tax_regime',
       'email',
       'phone',
-      'mobile',
       'postal_code',
       'street',
       'street_number',
