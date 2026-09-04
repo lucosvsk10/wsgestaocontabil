@@ -32,10 +32,15 @@ export default function SaasRegisterAppearance({
         <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-[#dce2e9] bg-[#f7f9fb] text-[#536077]">
           <Palette className="h-4 w-4" />
         </div>
-        <div>
-          <h3 className="text-sm font-semibold text-[#17233b]">Identificação visual</h3>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-sm font-semibold text-[#17233b]">Identificação visual</h3>
+            <span className="rounded-full border border-[#cbd3db] bg-[#e1e5e9] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[.08em] text-[#667085]">
+              Opcional
+            </span>
+          </div>
           <p className="mt-1 text-[11px] leading-5 text-[#7a8698]">
-            A cor ocupa o card inteiro na listagem para localizar este cadastro mais rápido.
+            Se quiser, adicione uma imagem e uma cor para reconhecer este cadastro mais rápido na listagem. Você pode salvar sem preencher esta etapa.
           </p>
         </div>
       </div>
