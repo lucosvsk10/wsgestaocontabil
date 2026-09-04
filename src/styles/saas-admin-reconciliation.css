@@ -27,11 +27,11 @@
   --border:220 12% 82%!important;
   --input:220 12% 84%!important;
   --ring:215 16% 40%!important;
-  font-family:'Prompt',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif!important;
+  font-family:'Space Grotesk','Inter',system-ui,sans-serif!important;
   background:#f3f4f6!important;
   color:#111827!important;
 }
-.saas-admin-light,.saas-admin-light *,.saas-admin-light input,.saas-admin-light select,.saas-admin-light textarea,.saas-admin-light button,.saas-admin-light table,.saas-admin-light th,.saas-admin-light td{font-family:'Prompt',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif!important}
+.saas-admin-light,.saas-admin-light *,.saas-admin-light input,.saas-admin-light select,.saas-admin-light textarea,.saas-admin-light button,.saas-admin-light table,.saas-admin-light th,.saas-admin-light td{font-family:'Space Grotesk','Inter',system-ui,sans-serif!important}
 .saas-admin-light h1,.saas-admin-light h2,.saas-admin-light h3{color:#0f172a!important}
 .saas-admin-light .font-semibold{font-weight:500!important}.saas-admin-light .font-bold{font-weight:600!important}
 .saas-admin-light h1,.saas-admin-light h2,.saas-admin-light h3{font-weight:500!important;letter-spacing:-.012em!important}

@@ -34,12 +34,12 @@
   --ring:198 100% 42% !important;
   min-height:100vh;
   color-scheme:light;
-  font-family:'Inter',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif!important;
+  font-family:'Space Grotesk','Inter',system-ui,sans-serif!important;
   color:var(--ca-text);
   background:var(--ca-bg)!important;
   font-size:14px;
 }
-.saas-admin-light,.saas-admin-light *,.saas-admin-light input,.saas-admin-light select,.saas-admin-light textarea,.saas-admin-light button,.saas-admin-light table,.saas-admin-light th,.saas-admin-light td{font-family:'Inter',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif!important;letter-spacing:0}
+.saas-admin-light,.saas-admin-light *,.saas-admin-light input,.saas-admin-light select,.saas-admin-light textarea,.saas-admin-light button,.saas-admin-light table,.saas-admin-light th,.saas-admin-light td{font-family:'Space Grotesk','Inter',system-ui,sans-serif!important;letter-spacing:0}
 .saas-admin-light h1,.saas-admin-light h2,.saas-admin-light h3{color:var(--ca-title)!important;font-weight:600!important;letter-spacing:-.018em!important}
 .saas-admin-light p{letter-spacing:0}
 
