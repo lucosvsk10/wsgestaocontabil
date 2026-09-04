@@ -1,78 +1,225 @@
 /* SaaS global light-theme reconciliation — mirrors the visual grammar of the ADM light mode. */
-.saas-admin-light{
-  --ca-blue:#6b7280!important;
-  --ca-blue-dark:#4b5563!important;
-  --ca-blue-soft:#e5e7eb!important;
-  --ca-bg:#f3f4f6!important;
-  --ca-card:#e9ecef!important;
-  --ca-text:#111827!important;
-  --ca-title:#0f172a!important;
-  --ca-muted:#667085!important;
-  --ca-line:#d2d7dc!important;
-  --ca-line-strong:#c7cdd3!important;
-  --background:220 14% 96%!important;
-  --foreground:222 47% 11%!important;
-  --card:220 13% 92%!important;
-  --card-foreground:222 47% 11%!important;
-  --popover:220 13% 94%!important;
-  --popover-foreground:222 47% 11%!important;
-  --primary:220 12% 87%!important;
-  --primary-foreground:222 47% 11%!important;
-  --secondary:220 12% 89%!important;
-  --secondary-foreground:222 47% 11%!important;
-  --muted:220 12% 90%!important;
-  --muted-foreground:215 16% 40%!important;
-  --accent:220 12% 87%!important;
-  --accent-foreground:222 47% 11%!important;
-  --border:220 12% 82%!important;
-  --input:220 12% 84%!important;
-  --ring:215 16% 40%!important;
-  font-family:'Space Grotesk','Inter',system-ui,sans-serif!important;
-  background:#f3f4f6!important;
-  color:#111827!important;
+.saas-admin-light {
+  --ca-blue: #6b7280 !important;
+  --ca-blue-dark: #4b5563 !important;
+  --ca-blue-soft: #e5e7eb !important;
+  --ca-bg: #f3f4f6 !important;
+  --ca-card: #e9ecef !important;
+  --ca-text: #111827 !important;
+  --ca-title: #0f172a !important;
+  --ca-muted: #667085 !important;
+  --ca-line: #d2d7dc !important;
+  --ca-line-strong: #c7cdd3 !important;
+  --background: 220 14% 96% !important;
+  --foreground: 222 47% 11% !important;
+  --card: 220 13% 92% !important;
+  --card-foreground: 222 47% 11% !important;
+  --popover: 220 13% 94% !important;
+  --popover-foreground: 222 47% 11% !important;
+  --primary: 220 12% 87% !important;
+  --primary-foreground: 222 47% 11% !important;
+  --secondary: 220 12% 89% !important;
+  --secondary-foreground: 222 47% 11% !important;
+  --muted: 220 12% 90% !important;
+  --muted-foreground: 215 16% 40% !important;
+  --accent: 220 12% 87% !important;
+  --accent-foreground: 222 47% 11% !important;
+  --border: 220 12% 82% !important;
+  --input: 220 12% 84% !important;
+  --ring: 215 16% 40% !important;
+  font-family:
+    'Prompt',
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif !important;
+  background: #f3f4f6 !important;
+  color: #111827 !important;
 }
-.saas-admin-light,.saas-admin-light *,.saas-admin-light input,.saas-admin-light select,.saas-admin-light textarea,.saas-admin-light button,.saas-admin-light table,.saas-admin-light th,.saas-admin-light td{font-family:'Space Grotesk','Inter',system-ui,sans-serif!important}
-.saas-admin-light h1,.saas-admin-light h2,.saas-admin-light h3{color:#0f172a!important}
-.saas-admin-light .font-semibold{font-weight:500!important}.saas-admin-light .font-bold{font-weight:600!important}
-.saas-admin-light h1,.saas-admin-light h2,.saas-admin-light h3{font-weight:500!important;letter-spacing:-.012em!important}
+.saas-admin-light,
+.saas-admin-light *,
+.saas-admin-light input,
+.saas-admin-light select,
+.saas-admin-light textarea,
+.saas-admin-light button,
+.saas-admin-light table,
+.saas-admin-light th,
+.saas-admin-light td {
+  font-family:
+    'Prompt',
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif !important;
+}
+.saas-admin-light h1,
+.saas-admin-light h2,
+.saas-admin-light h3 {
+  color: #0f172a !important;
+}
+.saas-admin-light .font-semibold {
+  font-weight: 500 !important;
+}
+.saas-admin-light .font-bold {
+  font-weight: 600 !important;
+}
+.saas-admin-light h1,
+.saas-admin-light h2,
+.saas-admin-light h3 {
+  font-weight: 500 !important;
+  letter-spacing: -0.012em !important;
+}
 
 /* Shell */
-.saas-admin-light .saas-topbar{height:64px!important;background:#eaedf0!important;border-color:#d2d7dc!important;box-shadow:none!important}
-.saas-admin-light .saas-topbar>div:first-child{width:248px!important;border-color:#d2d7dc!important}
-.saas-admin-light .saas-topbar img{filter:none!important;opacity:1!important;mix-blend-mode:normal!important}
-.saas-admin-light .saas-topbar p{color:#0f172a!important}
-.saas-admin-light .saas-topbar p+p{color:#667085!important}
-.saas-page-context{display:flex;min-width:0;flex-direction:column;gap:2px}.saas-page-context p{color:#667085!important}.saas-page-context span{overflow:hidden;color:#344054;font-size:12px;font-weight:600;text-overflow:ellipsis;white-space:nowrap}
-.saas-company-context select{max-width:100%;height:32px;padding:0 28px 0 10px;border:1px solid #c7cdd3;border-radius:5px;background:#f5f6f7;color:#1f2937;font-size:12px;font-weight:600;text-align:center;outline:none}.saas-company-context select:focus{border-color:#98a2ad;box-shadow:0 0 0 2px rgba(107,114,128,.10)}
-.saas-mobile-menu,.saas-mobile-close,.saas-sidebar-scrim{display:none}
-.saas-admin-light>aside{top:64px!important;width:248px!important;background:#eaedf0!important;border-color:#d2d7dc!important;box-shadow:none!important}
-.saas-admin-light>aside>div:first-child{background:#eaedf0!important;border-color:#d2d7dc!important}
-.saas-main-content{padding-left:248px!important;padding-top:64px!important;background:#f3f4f6!important}
-.saas-main-content:has(.saas-issued-notes){background:#f3f4f6!important}
+.saas-admin-light .saas-topbar {
+  height: 64px !important;
+  background: #eaedf0 !important;
+  border-color: #d2d7dc !important;
+  box-shadow: none !important;
+}
+.saas-admin-light .saas-topbar > div:first-child {
+  width: 248px !important;
+  border-color: #d2d7dc !important;
+}
+.saas-admin-light .saas-topbar img {
+  filter: none !important;
+  opacity: 1 !important;
+  mix-blend-mode: normal !important;
+}
+.saas-admin-light .saas-topbar p {
+  color: #0f172a !important;
+}
+.saas-admin-light .saas-topbar p + p {
+  color: #667085 !important;
+}
+.saas-page-context {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+.saas-page-context p {
+  color: #667085 !important;
+}
+.saas-page-context span {
+  overflow: hidden;
+  color: #344054;
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.saas-company-context select {
+  max-width: 100%;
+  height: 32px;
+  padding: 0 28px 0 10px;
+  border: 1px solid #c7cdd3;
+  border-radius: 5px;
+  background: #f5f6f7;
+  color: #1f2937;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  outline: none;
+}
+.saas-company-context select:focus {
+  border-color: #98a2ad;
+  box-shadow: 0 0 0 2px rgba(107, 114, 128, 0.1);
+}
+.saas-mobile-menu,
+.saas-mobile-close,
+.saas-sidebar-scrim {
+  display: none;
+}
+.saas-admin-light > aside {
+  top: 64px !important;
+  width: 248px !important;
+  background: #eaedf0 !important;
+  border-color: #d2d7dc !important;
+  box-shadow: none !important;
+}
+.saas-admin-light > aside > div:first-child {
+  background: #eaedf0 !important;
+  border-color: #d2d7dc !important;
+}
+.saas-main-content {
+  padding-left: 248px !important;
+  padding-top: 64px !important;
+  background: #f3f4f6 !important;
+}
+.saas-main-content:has(.saas-issued-notes) {
+  background: #f3f4f6 !important;
+}
 
 /* Sidebar */
-.saas-admin-light aside nav section>p{color:#7b8492!important}
+.saas-admin-light aside nav section > p {
+  color: #7b8492 !important;
+}
 .saas-admin-light aside nav button,
-.saas-admin-light aside nav>.mt-5>section>button,
-.saas-admin-light aside nav>.mt-5>section>div button{background:transparent!important;color:#475467!important;border-color:transparent!important;box-shadow:none!important}
-.saas-admin-light aside nav>.mt-5>section>button{border-left:2px solid transparent!important}
-.saas-admin-light aside nav>.mt-5>section>div button{border-left:1px solid #cfd4da!important;border-radius:0 4px 4px 0!important}
+.saas-admin-light aside nav > .mt-5 > section > button,
+.saas-admin-light aside nav > .mt-5 > section > div button {
+  background: transparent !important;
+  color: #475467 !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+.saas-admin-light aside nav > .mt-5 > section > button {
+  border-left: 2px solid transparent !important;
+}
+.saas-admin-light aside nav > .mt-5 > section > div button {
+  border-left: 1px solid #cfd4da !important;
+  border-radius: 0 4px 4px 0 !important;
+}
 .saas-admin-light aside nav button:hover,
-.saas-admin-light aside nav>.mt-5>section>button:hover,
-.saas-admin-light aside nav>.mt-5>section>div button:hover{background:#e1e5e9!important;color:#111827!important}
-.saas-admin-light aside nav button[class*="bg-muted"],
-.saas-admin-light aside nav button[class*="font-semibold"],
-.saas-admin-light aside nav button[class*="bg-[#e8edf3]"]{background:#d4d9de!important;color:#111827!important;border-color:#c5cbd1!important}
-.saas-admin-light aside nav button.saas-emission-group{background:transparent!important;color:#344054!important;border-left-color:#9ca3af!important}
-.saas-admin-light aside nav button.saas-neutral-group,.saas-admin-light aside nav button.saas-neutral-group.is-active{background:transparent!important;color:#475467!important;border-left-color:transparent!important}
-.saas-admin-light aside nav button.saas-neutral-group.is-active{background:#dfe3e7!important;color:#111827!important;border-left-color:#98a2ad!important}
-.saas-admin-light aside nav section:nth-of-type(1)>button.saas-emission-group{background:#eef7fa!important;border-left-color:#67a7b8!important;color:#315d69!important}
-.saas-admin-light aside nav section:nth-of-type(2)>button.saas-emission-group{background:#eef7f1!important;border-left-color:#6ba984!important;color:#35644a!important}
-.saas-admin-light aside nav section:nth-of-type(3)>button.saas-emission-group{background:#f3f1f8!important;border-left-color:#8d82aa!important;color:#554d69!important}
+.saas-admin-light aside nav > .mt-5 > section > button:hover,
+.saas-admin-light aside nav > .mt-5 > section > div button:hover {
+  background: #e1e5e9 !important;
+  color: #111827 !important;
+}
+.saas-admin-light aside nav button[class*='bg-muted'],
+.saas-admin-light aside nav button[class*='font-semibold'],
+.saas-admin-light aside nav button[class*='bg-[#e8edf3]'] {
+  background: #d4d9de !important;
+  color: #111827 !important;
+  border-color: #c5cbd1 !important;
+}
+.saas-admin-light aside nav button.saas-emission-group {
+  background: transparent !important;
+  color: #344054 !important;
+  border-left-color: #9ca3af !important;
+}
+.saas-admin-light aside nav button.saas-neutral-group,
+.saas-admin-light aside nav button.saas-neutral-group.is-active {
+  background: transparent !important;
+  color: #475467 !important;
+  border-left-color: transparent !important;
+}
+.saas-admin-light aside nav button.saas-neutral-group.is-active {
+  background: #dfe3e7 !important;
+  color: #111827 !important;
+  border-left-color: #98a2ad !important;
+}
+.saas-admin-light aside nav section:nth-of-type(1) > button.saas-emission-group {
+  background: #eef7fa !important;
+  border-left-color: #67a7b8 !important;
+  color: #315d69 !important;
+}
+.saas-admin-light aside nav section:nth-of-type(2) > button.saas-emission-group {
+  background: #eef7f1 !important;
+  border-left-color: #6ba984 !important;
+  color: #35644a !important;
+}
+.saas-admin-light aside nav section:nth-of-type(3) > button.saas-emission-group {
+  background: #f3f1f8 !important;
+  border-left-color: #8d82aa !important;
+  color: #554d69 !important;
+}
 
 /* Main surfaces */
-.saas-main-content section[class*="border"],
-.saas-main-content div[class*="border"][class*="bg-white"],
+.saas-main-content section[class*='border'],
+.saas-main-content div[class*='border'][class*='bg-white'],
 .saas-main-content .bg-card,
 .saas-main-content .ca-form-section,
 .saas-main-content .ca-actions,
@@ -80,168 +227,912 @@
 .saas-main-content .ca-tabs,
 .saas-main-content .ca-doc-choice,
 .saas-main-content .saas-emission-history,
-.saas-main-content .saas-issued-notes{background:#e9ecef!important;border-color:#d2d7dc!important;box-shadow:none!important}
+.saas-main-content .saas-issued-notes {
+  background: #e9ecef !important;
+  border-color: #d2d7dc !important;
+  box-shadow: none !important;
+}
 .saas-main-content .ca-section-head,
 .saas-main-content .ca-preview-head,
-.saas-main-content table thead{background:#e4e7ea!important;border-color:#d2d7dc!important}
-.saas-main-content .rounded-2xl,.saas-main-content .rounded-xl,.saas-main-content .rounded-lg{border-radius:5px!important}
+.saas-main-content table thead {
+  background: #e4e7ea !important;
+  border-color: #d2d7dc !important;
+}
+.saas-main-content .rounded-2xl,
+.saas-main-content .rounded-xl,
+.saas-main-content .rounded-lg {
+  border-radius: 5px !important;
+}
 
 /* Inputs */
-.saas-main-content input,.saas-main-content select,.saas-main-content textarea,
-.saas-main-content .ca-select,.saas-main-content .ca-textarea,.saas-main-content .ca-picker{background:#f3f4f6!important;color:#111827!important;border:1px solid #c7cdd3!important;box-shadow:none!important}
-.saas-main-content input:hover,.saas-main-content select:hover,.saas-main-content textarea:hover,
-.saas-main-content .ca-select:hover,.saas-main-content .ca-textarea:hover,.saas-main-content .ca-picker:hover{border-color:#aeb5bd!important}
-.saas-main-content input:focus,.saas-main-content select:focus,.saas-main-content textarea:focus,
-.saas-main-content .ca-select:focus,.saas-main-content .ca-textarea:focus{border-color:#8c959f!important;box-shadow:0 0 0 2px rgba(107,114,128,.10)!important}
+.saas-main-content input,
+.saas-main-content select,
+.saas-main-content textarea,
+.saas-main-content .ca-select,
+.saas-main-content .ca-textarea,
+.saas-main-content .ca-picker {
+  background: #f3f4f6 !important;
+  color: #111827 !important;
+  border: 1px solid #c7cdd3 !important;
+  box-shadow: none !important;
+}
+.saas-main-content input:hover,
+.saas-main-content select:hover,
+.saas-main-content textarea:hover,
+.saas-main-content .ca-select:hover,
+.saas-main-content .ca-textarea:hover,
+.saas-main-content .ca-picker:hover {
+  border-color: #aeb5bd !important;
+}
+.saas-main-content input:focus,
+.saas-main-content select:focus,
+.saas-main-content textarea:focus,
+.saas-main-content .ca-select:focus,
+.saas-main-content .ca-textarea:focus {
+  border-color: #8c959f !important;
+  box-shadow: 0 0 0 2px rgba(107, 114, 128, 0.1) !important;
+}
 
 /* Neutral controls by default */
 .saas-main-content button:not(:disabled),
 .saas-main-content .ca-btn-secondary,
 .saas-main-content .ca-picker-row,
-.saas-main-content .ca-preview-head button{background:transparent!important;color:#344054!important;border-color:#d2d7dc!important;box-shadow:none!important}
+.saas-main-content .ca-preview-head button {
+  background: transparent !important;
+  color: #344054 !important;
+  border-color: #d2d7dc !important;
+  box-shadow: none !important;
+}
 .saas-main-content button:not(:disabled):hover,
 .saas-main-content .ca-btn-secondary:hover,
 .saas-main-content .ca-picker-row:hover,
-.saas-main-content .ca-preview-head button:hover{background:#dfe3e7!important;color:#111827!important;border-color:#c2c8ce!important}
-.saas-main-content button[aria-selected="true"],
-.saas-main-content button[aria-pressed="true"],
+.saas-main-content .ca-preview-head button:hover {
+  background: #dfe3e7 !important;
+  color: #111827 !important;
+  border-color: #c2c8ce !important;
+}
+.saas-main-content button[aria-selected='true'],
+.saas-main-content button[aria-pressed='true'],
 .saas-main-content button.is-active,
-.saas-main-content button[class*="font-semibold"][class*="bg-muted"]{background:#d4d9de!important;color:#111827!important;border-color:#c4cad0!important}
+.saas-main-content button[class*='font-semibold'][class*='bg-muted'] {
+  background: #d4d9de !important;
+  color: #111827 !important;
+  border-color: #c4cad0 !important;
+}
 
 /* Real step-by-step emission flow */
-.ca-step-page{max-width:980px;margin:0 auto}.ca-step-page>.ca-form-section{min-height:310px}.ca-step-page .ca-section-body{padding:28px}
-.ca-step-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:14px;padding:14px 0}.ca-step-actions button{min-width:118px}
-.ca-review-layout{display:grid;grid-template-columns:minmax(280px,.58fr) minmax(520px,1.15fr);gap:22px;align-items:start}
-.ca-review-summary{border:1px solid #d8dde3;border-radius:5px;background:#fff;padding:22px}.ca-review-summary>p{color:#667085;font-size:10px;font-weight:500;letter-spacing:.1em;text-transform:uppercase}.ca-review-summary h2{margin-top:7px;font-size:20px!important}.ca-review-summary span{display:block;margin-top:8px;color:#667085;font-size:12px;line-height:1.6}
-.ca-final-actions{display:grid;gap:9px;margin-top:12px}.ca-final-actions button{width:100%;min-height:42px}
-.ca-tabs button:disabled{cursor:not-allowed!important;opacity:.55}.ca-tabs button.is-complete{color:#344054!important}.ca-tabs button.is-complete span{background:#667085!important;color:#fff!important}
+.ca-tabs-wrap {
+  margin-bottom: 18px;
+}
+.ca-progress-copy {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 7px;
+  color: #667085;
+  font-size: 10px;
+}
+.ca-progress-copy b {
+  font-weight: 500;
+  color: #344054;
+}
+.ca-progress-track {
+  height: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #dfe3e7;
+}
+.ca-progress-track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #2f7d57;
+  transition: width 0.22s ease;
+}
+.ca-step-page {
+  max-width: 980px;
+  margin: 0 auto;
+}
+.ca-step-page > .ca-form-section {
+  min-height: 310px;
+}
+.ca-step-page .ca-section-body {
+  padding: 28px;
+}
+.ca-step-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 14px 0;
+  background: linear-gradient(180deg, rgba(241, 243, 245, 0), #f1f3f5 28%);
+}
+.ca-step-actions button {
+  min-width: 118px;
+}
+.ca-field-hint {
+  display: block;
+  margin-top: 6px;
+  color: #7a8698;
+  font-size: 10px;
+  line-height: 1.4;
+}
+.ca-label b {
+  color: #b42318;
+  font-weight: 600;
+}
+.ca-step-alert {
+  display: flex;
+  max-width: 980px;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0 auto 14px;
+  border: 1px solid #e6c78d;
+  border-radius: 5px;
+  background: #fffaf0;
+  padding: 11px 14px;
+  color: #6f4d0f;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.ca-step-alert b {
+  flex: 0 0 auto;
+  font-weight: 600;
+}
+.ca-step-alert span {
+  color: #745d35;
+}
+.ca-review-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.58fr) minmax(520px, 1.15fr);
+  gap: 22px;
+  align-items: start;
+}
+.ca-review-summary {
+  border: 1px solid #d8dde3;
+  border-radius: 5px;
+  background: #fff;
+  padding: 22px;
+}
+.ca-review-summary > p {
+  color: #667085;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.ca-review-summary h2 {
+  margin-top: 7px;
+  font-size: 20px !important;
+}
+.ca-review-summary span {
+  display: block;
+  margin-top: 8px;
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.ca-review-facts {
+  margin-top: 10px;
+  border: 1px solid #d8dde3;
+  border-radius: 5px;
+  background: #fff;
+}
+.ca-review-facts > div {
+  display: grid;
+  grid-template-columns: 105px minmax(0, 1fr);
+  gap: 12px;
+  padding: 11px 13px;
+  border-bottom: 1px solid #edf0f3;
+}
+.ca-review-facts > div:last-child {
+  border-bottom: 0;
+}
+.ca-review-facts span {
+  color: #7a8698;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.ca-review-facts b {
+  overflow: hidden;
+  color: #27364f;
+  font-size: 11px;
+  font-weight: 500;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ca-final-actions {
+  display: grid;
+  gap: 9px;
+  margin-top: 12px;
+}
+.ca-final-actions button {
+  width: 100%;
+  min-height: 42px;
+}
+.ca-tabs button:disabled {
+  cursor: not-allowed !important;
+  opacity: 0.55;
+}
+.ca-tabs button.is-complete {
+  color: #344054 !important;
+}
+.ca-tabs button.is-complete span {
+  background: #667085 !important;
+  color: #fff !important;
+}
 
 /* Professional register workspace */
-.saas-register-layout{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(390px,.75fr);overflow:hidden;border:1px solid #d8dde3;border-radius:5px;background:#fff}
-.saas-register-list{min-width:0;border-right:1px solid #d8dde3;background:#fff}.saas-register-drawer{min-width:0;background:#fff}
-.saas-register-drawer-head{position:sticky;top:0;z-index:2;border-bottom:1px solid #d8dde3;background:#f7f8fa;padding:17px 20px}
-.saas-register-drawer-body{max-height:calc(100vh - 235px);overflow:auto;padding:0 20px 20px}
-.saas-register-section{margin:0!important;border:0!important;border-bottom:1px solid #e4e7eb!important;background:#fff!important;padding:20px 0!important}
-.saas-register-section-title{margin-bottom:13px;color:#172033!important;font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase}
-.saas-register-drawer-body>.saas-emission-actions{position:sticky;bottom:0;margin:0 -20px -20px;padding:14px 20px;border-top:1px solid #d8dde3;background:rgba(255,255,255,.96);backdrop-filter:blur(8px)}
+.saas-register-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(390px, 0.75fr);
+  overflow: hidden;
+  border: 1px solid #d8dde3;
+  border-radius: 5px;
+  background: #fff;
+}
+.saas-register-list {
+  min-width: 0;
+  border-right: 1px solid #d8dde3;
+  background: #fff;
+}
+.saas-register-drawer {
+  min-width: 0;
+  background: #fff;
+}
+.saas-register-drawer-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  border-bottom: 1px solid #d8dde3;
+  background: #f7f8fa;
+  padding: 17px 20px;
+}
+.saas-register-drawer-body {
+  max-height: calc(100vh - 235px);
+  overflow: auto;
+  padding: 0 20px 20px;
+}
+.saas-register-section {
+  margin: 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid #e4e7eb !important;
+  background: #fff !important;
+  padding: 20px 0 !important;
+}
+.saas-register-section-heading {
+  margin-bottom: 13px;
+}
+.saas-register-section-title {
+  color: #172033 !important;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.saas-register-section-heading > span {
+  display: block;
+  margin-top: 4px;
+  color: #7a8698;
+  font-size: 10px;
+  line-height: 1.45;
+}
+.saas-register-completion {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  margin-top: 13px;
+  color: #667085;
+  font-size: 9px;
+}
+.saas-register-completion b {
+  font-weight: 500;
+  color: #344054;
+}
+.saas-register-completion i {
+  grid-column: 1/-1;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #dfe3e7;
+}
+.saas-register-completion em {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #2f7d57;
+  transition: width 0.2s ease;
+}
+.saas-register-drawer-body > .saas-emission-actions {
+  position: sticky;
+  bottom: 0;
+  margin: 0 -20px -20px;
+  padding: 14px 20px;
+  border-top: 1px solid #d8dde3;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(8px);
+}
+.saas-emission-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.product-side-body > .saas-emission-actions {
+  position: sticky;
+  bottom: -18px;
+  z-index: 2;
+  margin: 20px -18px -18px;
+  padding: 13px 18px;
+  border-top: 1px solid #d8dde3;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(8px);
+}
 
 /* Semantic action colors only */
-.saas-main-content .saas-action-primary,.saas-main-content .ca-btn-primary{background:#2f7d57!important;color:#fff!important;border-color:#2f7d57!important}
-.saas-main-content .saas-action-primary:hover,.saas-main-content .ca-btn-primary:hover{background:#276b4b!important;border-color:#276b4b!important}
-.saas-main-content button[class*="bg-red"],.saas-main-content button[class*="bg-destructive"]{background:#b42318!important;color:#fff!important;border-color:#b42318!important}
+.saas-main-content .saas-action-primary,
+.saas-main-content .ca-btn-primary {
+  background: #2f7d57 !important;
+  color: #fff !important;
+  border-color: #2f7d57 !important;
+}
+.saas-main-content .saas-action-primary:hover,
+.saas-main-content .ca-btn-primary:hover {
+  background: #276b4b !important;
+  border-color: #276b4b !important;
+}
+.saas-main-content button[class*='bg-red'],
+.saas-main-content button[class*='bg-destructive'] {
+  background: #b42318 !important;
+  color: #fff !important;
+  border-color: #b42318 !important;
+}
 
 /* Document-choice cards */
 .saas-main-content .ca-doc-icon,
 .saas-main-content .ca-doc-choice.tone-2 .ca-doc-icon,
 .saas-main-content .ca-doc-choice.tone-3 .ca-doc-icon,
 .saas-main-content .ca-doc-choice.tone-4 .ca-doc-icon,
-.saas-main-content .ca-doc-choice.tone-5 .ca-doc-icon{background:#dde2e6!important;color:#475467!important}
+.saas-main-content .ca-doc-choice.tone-5 .ca-doc-icon {
+  background: #dde2e6 !important;
+  color: #475467 !important;
+}
 
 /* Process tabs */
-.saas-main-content .ca-tabs button{background:transparent!important;color:#667085!important;border-color:#d2d7dc!important}
-.saas-main-content .ca-tabs button span{background:#dde2e6!important;color:#667085!important}
+.saas-main-content .ca-tabs button {
+  background: transparent !important;
+  color: #667085 !important;
+  border-color: #d2d7dc !important;
+}
+.saas-main-content .ca-tabs button span {
+  background: #dde2e6 !important;
+  color: #667085 !important;
+}
 .saas-main-content .ca-tabs button.is-active,
 .saas-main-content .ca-tabs button:nth-child(1).is-active,
 .saas-main-content .ca-tabs button:nth-child(2).is-active,
 .saas-main-content .ca-tabs button:nth-child(3).is-active,
 .saas-main-content .ca-tabs button:nth-child(4).is-active,
-.saas-main-content .ca-tabs button:nth-child(5).is-active{background:#d4d9de!important;color:#111827!important;box-shadow:inset 0 -2px 0 #8b949e!important}
+.saas-main-content .ca-tabs button:nth-child(5).is-active {
+  background: #d4d9de !important;
+  color: #111827 !important;
+  box-shadow: inset 0 -2px 0 #8b949e !important;
+}
 .saas-main-content .ca-tabs button.is-active span,
 .saas-main-content .ca-tabs button:nth-child(1).is-active span,
 .saas-main-content .ca-tabs button:nth-child(2).is-active span,
 .saas-main-content .ca-tabs button:nth-child(3).is-active span,
 .saas-main-content .ca-tabs button:nth-child(4).is-active span,
-.saas-main-content .ca-tabs button:nth-child(5).is-active span{background:#8b949e!important;color:#fff!important}
+.saas-main-content .ca-tabs button:nth-child(5).is-active span {
+  background: #8b949e !important;
+  color: #fff !important;
+}
 .saas-main-content .ca-section-head:before,
 .saas-main-content .ca-tone-green .ca-section-head:before,
 .saas-main-content .ca-tone-purple .ca-section-head:before,
-.saas-main-content .ca-tone-orange .ca-section-head:before{background:#9aa2ab!important}
+.saas-main-content .ca-tone-orange .ca-section-head:before {
+  background: #9aa2ab !important;
+}
 
 /* Tables: exact ADM-light zebra */
-.saas-main-content table{background:#f3f4f6!important}
-.saas-main-content table tbody tr:nth-child(odd),.saas-issued-notes table tbody tr:nth-child(odd),.saas-emission-history tbody tr:nth-child(odd){background:#f3f4f6!important}
-.saas-main-content table tbody tr:nth-child(even),.saas-issued-notes table tbody tr:nth-child(even),.saas-emission-history tbody tr:nth-child(even){background:#e9ecef!important}
-.saas-main-content table tbody tr:hover,.saas-issued-notes table tbody tr:hover,.saas-emission-history tbody tr:hover{background:#dde2e6!important}
-.saas-main-content table th{color:#667085!important;border-color:#d2d7dc!important}
-.saas-main-content table td{color:#344054!important;border-color:#d8dde2!important}
+.saas-main-content table {
+  background: #f3f4f6 !important;
+}
+.saas-main-content table tbody tr:nth-child(odd),
+.saas-issued-notes table tbody tr:nth-child(odd),
+.saas-emission-history tbody tr:nth-child(odd) {
+  background: #f3f4f6 !important;
+}
+.saas-main-content table tbody tr:nth-child(even),
+.saas-issued-notes table tbody tr:nth-child(even),
+.saas-emission-history tbody tr:nth-child(even) {
+  background: #e9ecef !important;
+}
+.saas-main-content table tbody tr:hover,
+.saas-issued-notes table tbody tr:hover,
+.saas-emission-history tbody tr:hover {
+  background: #dde2e6 !important;
+}
+.saas-main-content table th {
+  color: #667085 !important;
+  border-color: #d2d7dc !important;
+}
+.saas-main-content table td {
+  color: #344054 !important;
+  border-color: #d8dde2 !important;
+}
 
 /* Dashboard selectors */
-.saas-dashboard [class*="bg-[#f8fafb]"][class*="p-1"]{background:#e9ecef!important;border-color:#d2d7dc!important}
-.saas-dashboard [class*="bg-[#f8fafb]"][class*="p-1"]>button{background:transparent!important;color:#667085!important;border-color:transparent!important}
-.saas-dashboard [class*="bg-[#f8fafb]"][class*="p-1"]>button[class*="bg-white"]{background:#d4d9de!important;color:#111827!important;border-color:#c4cad0!important;box-shadow:none!important}
+.saas-dashboard [class*='bg-[#f8fafb]'][class*='p-1'] {
+  background: #e9ecef !important;
+  border-color: #d2d7dc !important;
+}
+.saas-dashboard [class*='bg-[#f8fafb]'][class*='p-1'] > button {
+  background: transparent !important;
+  color: #667085 !important;
+  border-color: transparent !important;
+}
+.saas-dashboard [class*='bg-[#f8fafb]'][class*='p-1'] > button[class*='bg-white'] {
+  background: #d4d9de !important;
+  color: #111827 !important;
+  border-color: #c4cad0 !important;
+  box-shadow: none !important;
+}
 
 /* Products and stock workspace */
-.product-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
-.product-summary-card{min-width:0;border:1px solid #d8dde3;border-radius:5px;background:#fff;padding:16px 18px}
-.product-summary-label{color:#667085;font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
-.product-summary-value{margin-top:8px;color:#172033;font-size:22px;font-weight:650;line-height:1.15}
-.product-summary-hint{margin-top:5px;color:#667085;font-size:11px;line-height:1.45}
-.product-workspace{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(320px,.75fr);overflow:hidden;border:1px solid #d8dde3;border-radius:5px;background:#fff}
-.product-table{min-width:0;border-right:1px solid #d8dde3;background:#fff}
-.product-table-head,.product-row{display:grid;grid-template-columns:minmax(190px,1.5fr) minmax(110px,.8fr) minmax(82px,.6fr) minmax(82px,.6fr) minmax(120px,.85fr) minmax(72px,.5fr);align-items:center;column-gap:18px}
-.product-table-head{min-width:760px;border-bottom:1px solid #d8dde3;background:#f7f8fa;padding:11px 16px;color:#667085;font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
-.product-table>div:last-child{overflow-x:auto}
-.product-row{min-width:760px;cursor:pointer;border-bottom:1px solid #e4e7eb;padding:14px 16px;transition:background .15s ease}
-.product-row:hover,.product-row.is-active{background:#eef2f5}
-.product-side{min-width:0;background:#fff}
-.product-side-head{border-bottom:1px solid #d8dde3;background:#f7f8fa;padding:15px 18px}
-.product-side-body{max-height:calc(100vh - 250px);overflow:auto;padding:18px}
-.product-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
-.product-form-grid .span-2{grid-column:span 2}
-.product-section-title{margin:22px 0 12px;border-top:1px solid #e4e7eb;padding-top:18px;color:#172033;font-size:11px;font-weight:650;letter-spacing:.08em;text-transform:uppercase}
-.stock-pill{display:inline-flex;width:max-content;align-items:center;gap:5px;border-radius:999px;padding:5px 8px;font-size:10px;font-weight:600}
-.stock-pill.stock-ok{background:#d9eee7;color:#137456}.stock-pill.stock-low{background:#f6eacb;color:#94620d}.stock-pill.stock-off{background:#e9ecef;color:#667085}
-.fiscal-logo-box{display:grid;width:100%;height:100%;min-height:84px;place-items:center;overflow:hidden;color:#555;text-align:center;font-family:Arial,sans-serif;font-size:7px;line-height:1.35}.fiscal-logo-box img{display:block;max-width:100%;max-height:78px;object-fit:contain}
+.product-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.product-summary-card {
+  min-width: 0;
+  border: 1px solid #d8dde3;
+  border-radius: 5px;
+  background: #fff;
+  padding: 16px 18px;
+}
+.product-summary-label {
+  color: #667085;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.product-summary-value {
+  margin-top: 8px;
+  color: #172033;
+  font-size: 22px;
+  font-weight: 650;
+  line-height: 1.15;
+}
+.product-summary-hint {
+  margin-top: 5px;
+  color: #667085;
+  font-size: 11px;
+  line-height: 1.45;
+}
+.product-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.75fr);
+  overflow: hidden;
+  border: 1px solid #d8dde3;
+  border-radius: 5px;
+  background: #fff;
+}
+.product-table {
+  min-width: 0;
+  border-right: 1px solid #d8dde3;
+  background: #fff;
+}
+.product-table-head,
+.product-row {
+  display: grid;
+  grid-template-columns:
+    minmax(190px, 1.5fr) minmax(110px, 0.8fr) minmax(82px, 0.6fr) minmax(82px, 0.6fr)
+    minmax(120px, 0.85fr) minmax(72px, 0.5fr);
+  align-items: center;
+  column-gap: 18px;
+}
+.product-table-head {
+  min-width: 760px;
+  border-bottom: 1px solid #d8dde3;
+  background: #f7f8fa;
+  padding: 11px 16px;
+  color: #667085;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.product-table > div:last-child {
+  overflow-x: auto;
+}
+.product-row {
+  width: 100%;
+  min-width: 760px;
+  cursor: pointer;
+  border: 0;
+  border-bottom: 1px solid #e4e7eb;
+  border-radius: 0;
+  padding: 14px 16px;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+.product-row:hover,
+.product-row.is-active {
+  background: #eef2f5;
+}
+.product-side {
+  min-width: 0;
+  background: #fff;
+}
+.product-side-head {
+  border-bottom: 1px solid #d8dde3;
+  background: #f7f8fa;
+  padding: 15px 18px;
+}
+.product-side-body {
+  max-height: calc(100vh - 250px);
+  overflow: auto;
+  padding: 18px;
+}
+.product-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.product-form-grid .span-2 {
+  grid-column: span 2;
+}
+.product-editor-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: -18px -18px 18px;
+  border-bottom: 1px solid #d8dde3;
+  background: #f7f8fa;
+}
+.product-editor-steps button {
+  display: flex !important;
+  min-width: 0 !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  border: 0 !important;
+  border-right: 1px solid #e4e7eb !important;
+  border-bottom: 2px solid transparent !important;
+  border-radius: 0 !important;
+  padding: 12px 7px !important;
+  color: #667085 !important;
+  font-size: 10px !important;
+}
+.product-editor-steps button:last-child {
+  border-right: 0 !important;
+}
+.product-editor-steps button span {
+  display: grid;
+  width: 19px;
+  height: 19px;
+  place-items: center;
+  border: 1px solid #cbd2da;
+  border-radius: 50%;
+  font-size: 9px;
+}
+.product-editor-steps button.is-active {
+  border-bottom-color: #2f7d57 !important;
+  background: #fff !important;
+  color: #172033 !important;
+}
+.product-editor-steps button.is-active span {
+  border-color: #2f7d57;
+  background: #2f7d57;
+  color: #fff;
+}
+.product-editor-intro {
+  margin-bottom: 16px;
+}
+.product-editor-intro b {
+  display: block;
+  color: #172033;
+  font-size: 13px;
+  font-weight: 500;
+}
+.product-editor-intro span {
+  display: block;
+  margin-top: 4px;
+  color: #7a8698;
+  font-size: 10px;
+  line-height: 1.45;
+}
+.product-stock-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 18px;
+  border: 1px solid #d8dde3;
+  border-radius: 5px;
+  background: #f7f8fa;
+  padding: 13px;
+}
+.product-stock-preview span {
+  color: #667085;
+  font-size: 10px;
+}
+.product-stock-preview b {
+  color: #172033;
+  font-size: 14px;
+  font-weight: 500;
+}
+.product-section-title {
+  margin: 22px 0 12px;
+  border-top: 1px solid #e4e7eb;
+  padding-top: 18px;
+  color: #172033;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.stock-pill {
+  display: inline-flex;
+  width: max-content;
+  align-items: center;
+  gap: 5px;
+  border-radius: 999px;
+  padding: 5px 8px;
+  font-size: 10px;
+  font-weight: 600;
+}
+.stock-pill.stock-ok {
+  background: #d9eee7;
+  color: #137456;
+}
+.stock-pill.stock-low {
+  background: #f6eacb;
+  color: #94620d;
+}
+.stock-pill.stock-off {
+  background: #e9ecef;
+  color: #667085;
+}
+.fiscal-logo-box {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  min-height: 84px;
+  place-items: center;
+  overflow: hidden;
+  color: #555;
+  text-align: center;
+  font-family: Arial, sans-serif;
+  font-size: 7px;
+  line-height: 1.35;
+}
+.fiscal-logo-box img {
+  display: block;
+  max-width: 100%;
+  max-height: 78px;
+  object-fit: contain;
+}
 
 /* Issued notes */
-.saas-issued-notes>section:first-of-type,.saas-admin-light .saas-issued-notes>section:first-of-type{background:#e9ecef!important;border-color:#d2d7dc!important;box-shadow:none!important}
-.saas-issued-notes>section:first-of-type button,
-.saas-issued-notes>section:nth-of-type(2)>div:first-child button,
-.saas-issued-notes>section:nth-of-type(2)>div:nth-child(2)>button,
+.saas-issued-notes > section:first-of-type,
+.saas-admin-light .saas-issued-notes > section:first-of-type {
+  background: #e9ecef !important;
+  border-color: #d2d7dc !important;
+  box-shadow: none !important;
+}
+.saas-issued-notes > section:first-of-type button,
+.saas-issued-notes > section:nth-of-type(2) > div:first-child button,
+.saas-issued-notes > section:nth-of-type(2) > div:nth-child(2) > button,
 .saas-issued-notes table tbody tr td:last-child button:first-child,
-.saas-issued-notes table tbody tr td:last-child button:last-child:not(:first-child){background:transparent!important;color:#344054!important;border-color:#d2d7dc!important;box-shadow:none!important}
-.saas-issued-notes>section:first-of-type button:hover,
-.saas-issued-notes>section:nth-of-type(2)>div:first-child button:hover,
-.saas-issued-notes table tbody tr td:last-child button:hover{background:#dfe3e7!important;color:#111827!important;border-color:#c2c8ce!important}
+.saas-issued-notes table tbody tr td:last-child button:last-child:not(:first-child) {
+  background: transparent !important;
+  color: #344054 !important;
+  border-color: #d2d7dc !important;
+  box-shadow: none !important;
+}
+.saas-issued-notes > section:first-of-type button:hover,
+.saas-issued-notes > section:nth-of-type(2) > div:first-child button:hover,
+.saas-issued-notes table tbody tr td:last-child button:hover {
+  background: #dfe3e7 !important;
+  color: #111827 !important;
+  border-color: #c2c8ce !important;
+}
 
 /* Popovers / previews */
-.saas-main-content .ca-picker-pop{background:#f3f4f6!important;border-color:#c7cdd3!important;box-shadow:0 10px 28px rgba(15,23,42,.10)!important}
-.saas-issued-notes>div[class*="fixed"][class*="inset-0"]>div{background:rgba(243,244,246,.98)!important;border-color:#cfd4da!important}
-.saas-issued-notes>div[class*="fixed"][class*="inset-0"]>div>div:first-child{background:#e9ecef!important}
-.saas-issued-notes>div[class*="fixed"][class*="inset-0"]>div>div:last-child{background:#f3f4f6!important}
+.saas-main-content .ca-picker-pop {
+  background: #f3f4f6 !important;
+  border-color: #c7cdd3 !important;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.1) !important;
+}
+.saas-issued-notes > div[class*='fixed'][class*='inset-0'] > div {
+  background: rgba(243, 244, 246, 0.98) !important;
+  border-color: #cfd4da !important;
+}
+.saas-issued-notes > div[class*='fixed'][class*='inset-0'] > div > div:first-child {
+  background: #e9ecef !important;
+}
+.saas-issued-notes > div[class*='fixed'][class*='inset-0'] > div > div:last-child {
+  background: #f3f4f6 !important;
+}
 
 /* Semantic state colors only */
-.saas-admin-light [class*="text-emerald"],.saas-admin-light [class*="text-green"]{color:#137456!important}
-.saas-admin-light [class*="bg-emerald"],.saas-admin-light [class*="bg-green"]{background-color:#d9eee7!important;color:#137456!important}
-.saas-admin-light [class*="text-red"],.saas-admin-light [class*="text-destructive"]{color:#b42318!important}
-.saas-admin-light [class*="bg-red"],.saas-admin-light [class*="bg-destructive"]{background-color:#f3dddd!important;color:#b42318!important}
-.saas-admin-light [class*="text-amber"],.saas-admin-light [class*="text-yellow"]{color:#94620d!important}
-.saas-admin-light [class*="bg-amber"],.saas-admin-light [class*="bg-yellow"]{background-color:#f6eacb!important;color:#94620d!important}
+.saas-admin-light [class*='text-emerald'],
+.saas-admin-light [class*='text-green'] {
+  color: #137456 !important;
+}
+.saas-admin-light [class*='bg-emerald'],
+.saas-admin-light [class*='bg-green'] {
+  background-color: #d9eee7 !important;
+  color: #137456 !important;
+}
+.saas-admin-light [class*='text-red'],
+.saas-admin-light [class*='text-destructive'] {
+  color: #b42318 !important;
+}
+.saas-admin-light [class*='bg-red'],
+.saas-admin-light [class*='bg-destructive'] {
+  background-color: #f3dddd !important;
+  color: #b42318 !important;
+}
+.saas-admin-light [class*='text-amber'],
+.saas-admin-light [class*='text-yellow'] {
+  color: #94620d !important;
+}
+.saas-admin-light [class*='bg-amber'],
+.saas-admin-light [class*='bg-yellow'] {
+  background-color: #f6eacb !important;
+  color: #94620d !important;
+}
 
-@media(max-width:900px){.saas-admin-light>aside{width:220px!important}.saas-topbar>div:first-child{width:220px!important}.saas-main-content{padding-left:220px!important}}
+@media (max-width: 900px) {
+  .saas-admin-light > aside {
+    width: 220px !important;
+  }
+  .saas-topbar > div:first-child {
+    width: 220px !important;
+  }
+  .saas-main-content {
+    padding-left: 220px !important;
+  }
+}
 
 /* Responsive application shell */
-@media(max-width:840px){
- .saas-admin-light .saas-topbar{height:60px!important;padding:0 12px!important}
- .saas-admin-light .saas-topbar .saas-brand{width:auto!important;min-width:0!important;padding:0!important;border:0!important;gap:10px!important}
- .saas-admin-light .saas-topbar .saas-brand img{height:23px!important;max-width:118px!important}
- .saas-mobile-menu{display:grid!important;width:38px!important;height:38px!important;place-items:center!important;padding:0!important;border:1px solid #cbd1d7!important;border-radius:6px!important;background:#f5f6f7!important;color:#344054!important}
- .saas-topbar-content{padding:0 0 0 14px!important}.saas-page-context{display:none!important}.saas-company-context{text-align:left!important}.saas-company-context p:first-child{max-width:52vw!important;font-size:12px!important}.saas-company-context p:last-child{font-size:8px!important}
- .saas-admin-light>aside.saas-sidebar{display:flex!important;top:0!important;z-index:120!important;width:min(86vw,300px)!important;transform:translateX(-102%);transition:transform .22s ease!important;box-shadow:12px 0 42px rgba(15,23,42,.18)!important}
- .saas-admin-light>aside.saas-sidebar.is-open{transform:translateX(0)}
- .saas-mobile-close{display:grid!important;position:absolute!important;z-index:2!important;right:12px!important;top:12px!important;width:36px!important;height:36px!important;place-items:center!important;padding:0!important;border:1px solid #cbd1d7!important;border-radius:6px!important;background:#f5f6f7!important;color:#344054!important}
- .saas-sidebar-scrim{display:block!important;position:fixed!important;inset:0!important;z-index:110!important;width:100%!important;height:100%!important;border:0!important;background:rgba(15,23,42,.26)!important;backdrop-filter:blur(3px)!important}
- .saas-admin-light>aside>div:first-of-type{padding-top:56px!important}
- .saas-main-content{padding-left:0!important;padding-top:60px!important}.saas-main-content>div{padding:18px 12px 40px!important}
- .product-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.product-workspace{grid-template-columns:1fr}.product-table{border-right:0;border-bottom:1px solid #d8dde3}.product-side-body{max-height:none}
- .saas-register-layout,.ca-review-layout{grid-template-columns:1fr}.saas-register-list{border-right:0;border-bottom:1px solid #d8dde3}.saas-register-drawer-body{max-height:none}
+@media (max-width: 840px) {
+  .saas-admin-light .saas-topbar {
+    height: 60px !important;
+    padding: 0 12px !important;
+  }
+  .saas-admin-light .saas-topbar .saas-brand {
+    width: auto !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    gap: 10px !important;
+  }
+  .saas-admin-light .saas-topbar .saas-brand img {
+    height: 23px !important;
+    max-width: 118px !important;
+  }
+  .saas-mobile-menu {
+    display: grid !important;
+    width: 38px !important;
+    height: 38px !important;
+    place-items: center !important;
+    padding: 0 !important;
+    border: 1px solid #cbd1d7 !important;
+    border-radius: 6px !important;
+    background: #f5f6f7 !important;
+    color: #344054 !important;
+  }
+  .saas-topbar-content {
+    padding: 0 0 0 14px !important;
+  }
+  .saas-page-context {
+    display: none !important;
+  }
+  .saas-company-context {
+    text-align: left !important;
+  }
+  .saas-company-context p:first-child {
+    max-width: 52vw !important;
+    font-size: 12px !important;
+  }
+  .saas-company-context p:last-child {
+    font-size: 8px !important;
+  }
+  .saas-admin-light > aside.saas-sidebar {
+    display: flex !important;
+    top: 0 !important;
+    z-index: 120 !important;
+    width: min(86vw, 300px) !important;
+    transform: translateX(-102%);
+    transition: transform 0.22s ease !important;
+    box-shadow: 12px 0 42px rgba(15, 23, 42, 0.18) !important;
+  }
+  .saas-admin-light > aside.saas-sidebar.is-open {
+    transform: translateX(0);
+  }
+  .saas-mobile-close {
+    display: grid !important;
+    position: absolute !important;
+    z-index: 2 !important;
+    right: 12px !important;
+    top: 12px !important;
+    width: 36px !important;
+    height: 36px !important;
+    place-items: center !important;
+    padding: 0 !important;
+    border: 1px solid #cbd1d7 !important;
+    border-radius: 6px !important;
+    background: #f5f6f7 !important;
+    color: #344054 !important;
+  }
+  .saas-sidebar-scrim {
+    display: block !important;
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 110 !important;
+    width: 100% !important;
+    height: 100% !important;
+    border: 0 !important;
+    background: rgba(15, 23, 42, 0.26) !important;
+    backdrop-filter: blur(3px) !important;
+  }
+  .saas-admin-light > aside > div:first-of-type {
+    padding-top: 56px !important;
+  }
+  .saas-main-content {
+    padding-left: 0 !important;
+    padding-top: 60px !important;
+  }
+  .saas-main-content > div {
+    padding: 18px 12px 40px !important;
+  }
+  .product-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .product-workspace {
+    grid-template-columns: 1fr;
+  }
+  .product-table {
+    border-right: 0;
+    border-bottom: 1px solid #d8dde3;
+  }
+  .product-side-body {
+    max-height: none;
+  }
+  .saas-register-layout,
+  .ca-review-layout {
+    grid-template-columns: 1fr;
+  }
+  .saas-register-list {
+    border-right: 0;
+    border-bottom: 1px solid #d8dde3;
+  }
+  .saas-register-drawer-body {
+    max-height: none;
+  }
 }
 
 /* Final contrast and density pass, verified against the live light interface. */
-.saas-admin-light{--ca-bg:#f1f3f5!important;--ca-card:#fff!important;background:#f1f3f5!important}
-.saas-main-content{background:#f1f3f5!important}
-.saas-main-content section[class*="border"],
-.saas-main-content div[class*="border"][class*="bg-white"],
+.saas-admin-light {
+  --ca-bg: #f1f3f5 !important;
+  --ca-card: #fff !important;
+  background: #f1f3f5 !important;
+}
+.saas-main-content {
+  background: #f1f3f5 !important;
+}
+.saas-main-content section[class*='border'],
+.saas-main-content div[class*='border'][class*='bg-white'],
 .saas-main-content .bg-card,
 .saas-main-content .ca-form-section,
 .saas-main-content .ca-actions,
@@ -249,22 +1140,113 @@
 .saas-main-content .ca-tabs,
 .saas-main-content .ca-doc-choice,
 .saas-main-content .saas-emission-history,
-.saas-main-content .saas-issued-notes{background:#fff!important;border-color:#d8dde3!important}
-.saas-dashboard .bg-card,.saas-dashboard [class*="!bg-white"]{background:#fff!important}
-.saas-dashboard .bg-card p,.saas-dashboard [class*="!bg-white"] p{color:#344054!important}
-.saas-dashboard .bg-card p[class*="text-muted"],.saas-dashboard [class*="!bg-white"] p[class*="text-muted"]{color:#667085!important}
-.saas-dashboard .bg-card p[class*="text-2xl"],.saas-dashboard .bg-card p[class*="text-[21px]"]{color:#172033!important}
-.saas-main-content .ca-section-head,.saas-main-content .ca-preview-head,.saas-main-content table thead{background:#f7f8fa!important}
-.saas-main-content table{background:#fff!important}.saas-main-content table tbody tr:nth-child(odd){background:#fff!important}.saas-main-content table tbody tr:nth-child(even){background:#f7f8fa!important}.saas-main-content table tbody tr:hover{background:#eef2f5!important}
-.saas-admin-light button:focus-visible,.saas-admin-light a:focus-visible,.saas-admin-light input:focus-visible,.saas-admin-light select:focus-visible,.saas-admin-light textarea:focus-visible{outline:2px solid #667085!important;outline-offset:2px!important}
+.saas-main-content .saas-issued-notes {
+  background: #fff !important;
+  border-color: #d8dde3 !important;
+}
+.saas-dashboard .bg-card,
+.saas-dashboard [class*='!bg-white'] {
+  background: #fff !important;
+}
+.saas-dashboard .bg-card p,
+.saas-dashboard [class*='!bg-white'] p {
+  color: #344054 !important;
+}
+.saas-dashboard .bg-card p[class*='text-muted'],
+.saas-dashboard [class*='!bg-white'] p[class*='text-muted'] {
+  color: #667085 !important;
+}
+.saas-dashboard .bg-card p[class*='text-2xl'],
+.saas-dashboard .bg-card p[class*='text-[21px]'] {
+  color: #172033 !important;
+}
+.saas-main-content .ca-section-head,
+.saas-main-content .ca-preview-head,
+.saas-main-content table thead {
+  background: #f7f8fa !important;
+}
+.saas-main-content table {
+  background: #fff !important;
+}
+.saas-main-content table tbody tr:nth-child(odd) {
+  background: #fff !important;
+}
+.saas-main-content table tbody tr:nth-child(even) {
+  background: #f7f8fa !important;
+}
+.saas-main-content table tbody tr:hover {
+  background: #eef2f5 !important;
+}
+.saas-admin-light button:focus-visible,
+.saas-admin-light a:focus-visible,
+.saas-admin-light input:focus-visible,
+.saas-admin-light select:focus-visible,
+.saas-admin-light textarea:focus-visible {
+  outline: 2px solid #667085 !important;
+  outline-offset: 2px !important;
+}
 
-@media(max-width:640px){
- .saas-main-content h1{font-size:22px!important}.saas-main-content h1+p{font-size:12px!important;line-height:1.55!important}
- .saas-main-content [class*="grid-cols-[minmax"]{grid-template-columns:1fr!important}
- .saas-register-layout{grid-template-columns:1fr!important}.saas-register-list,.saas-register-drawer{min-width:0!important}
- .saas-register-list>div:first-child{align-items:stretch!important}.saas-register-list>div:first-child>div:last-child{max-width:none!important}
- .saas-issued-notes table,.saas-emission-history table{min-width:920px!important}
- .saas-main-content .ca-section-body{padding:14px!important}.saas-main-content .ca-actions{position:sticky!important;bottom:0!important;z-index:10!important;flex-wrap:wrap!important;padding:10px!important}
- .saas-main-content .ca-actions button{flex:1 1 120px!important}
- .product-summary{grid-template-columns:1fr 1fr;gap:8px}.product-summary-card{padding:13px}.product-summary-value{font-size:18px}.product-workspace{overflow:visible}.product-form-grid{grid-template-columns:1fr}.product-form-grid .span-2{grid-column:auto}.product-side-body{padding:14px}
+@media (max-width: 640px) {
+  .saas-main-content h1 {
+    font-size: 22px !important;
+  }
+  .saas-main-content h1 + p {
+    font-size: 12px !important;
+    line-height: 1.55 !important;
+  }
+  .saas-main-content [class*='grid-cols-[minmax'] {
+    grid-template-columns: 1fr !important;
+  }
+  .saas-register-layout {
+    grid-template-columns: 1fr !important;
+  }
+  .saas-register-list,
+  .saas-register-drawer {
+    min-width: 0 !important;
+  }
+  .saas-register-list > div:first-child {
+    align-items: stretch !important;
+  }
+  .saas-register-list > div:first-child > div:last-child {
+    max-width: none !important;
+  }
+  .saas-issued-notes table,
+  .saas-emission-history table {
+    min-width: 920px !important;
+  }
+  .saas-main-content .ca-section-body {
+    padding: 14px !important;
+  }
+  .saas-main-content .ca-actions {
+    position: sticky !important;
+    bottom: 0 !important;
+    z-index: 10 !important;
+    flex-wrap: wrap !important;
+    padding: 10px !important;
+  }
+  .saas-main-content .ca-actions button {
+    flex: 1 1 120px !important;
+  }
+  .product-summary {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .product-summary-card {
+    padding: 13px;
+  }
+  .product-summary-value {
+    font-size: 18px;
+  }
+  .product-workspace {
+    overflow: visible;
+  }
+  .product-form-grid {
+    grid-template-columns: 1fr;
+  }
+  .product-form-grid .span-2 {
+    grid-column: auto;
+  }
+  .product-side-body {
+    padding: 14px;
+  }
 }
