@@ -1,0 +1,43 @@
+.customer-flow-workspace {
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 0 !important;
+}
+
+.customer-flow-summary {
+  display: none !important;
+}
+
+.customer-flow-form {
+  width: 100%;
+}
+
+.customer-flow-section {
+  max-width: none;
+}
+
+.customer-flow-progress {
+  padding-top: 18px;
+}
+
+.customer-flow-next {
+  margin-bottom: 8px;
+}
+
+@media (min-width: 900px) {
+  .customer-flow-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .customer-flow-section {
+    padding: 2px 2px 6px;
+  }
+}
+
+@media (max-width: 720px) {
+  .customer-flow-next {
+    position: static !important;
+    margin: 0 !important;
+    padding-inline: 0 !important;
+  }
+}
