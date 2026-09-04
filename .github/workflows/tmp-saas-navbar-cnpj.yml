@@ -1,0 +1,54 @@
+name: Temporary SaaS navbar CNPJ patch
+
+on:
+  push:
+    paths:
+      - '.github/workflows/tmp-saas-navbar-cnpj.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch SaaS navbar CNPJ
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          app = Path('src/pages/SaasApp.tsx')
+          text = app.read_text()
+
+          marker = "const emissionTypeLabel = (emission: any) =>\n"
+          helper = "const formatCnpj = (value: any) => {\n  const digits = String(value || '').replace(/\\D/g, '').slice(0, 14);\n  if (digits.length !== 14) return String(value || '');\n  return digits.replace(/^(\\d{2})(\\d{3})(\\d{3})(\\d{4})(\\d{2})$/, '$1.$2.$3/$4-$5');\n};\n\n"
+          if helper not in text:
+              text = text.replace(marker, helper + marker, 1)
+
+          old = '<p className="mt-0.5 text-[10px] uppercase tracking-[.12em]">Painel fiscal</p>'
+          new = '<p className="saas-company-tax-id mt-0.5 text-[10px] tracking-[.06em]">{profile?.tax_id ? formatCnpj(profile.tax_id) : \'CNPJ não informado\'}</p>'
+          if old not in text:
+              raise SystemExit('Navbar subtitle marker not found')
+          text = text.replace(old, new, 1)
+          app.write_text(text)
+
+          css = Path('src/styles/saas-mobile-polish.css')
+          c = css.read_text()
+          old_css = "  .saas-admin-light .saas-company-context > p:last-child {\n    display: none !important;\n  }"
+          new_css = "  .saas-admin-light .saas-company-context > p:last-child {\n    display: block !important;\n    margin-top: 2px !important;\n    color: #94a3b8 !important;\n    font-size: 8px !important;\n    line-height: 1 !important;\n    font-weight: 400 !important;\n    letter-spacing: .04em !important;\n    white-space: nowrap !important;\n    overflow: hidden !important;\n    text-overflow: ellipsis !important;\n  }"
+          if old_css not in c:
+              raise SystemExit('Mobile company subtitle CSS marker not found')
+          c = c.replace(old_css, new_css, 1)
+          css.write_text(c)
+          PY
+      - name: Commit patch and remove temporary workflow
+        run: |
+          rm -f .github/workflows/tmp-saas-navbar-cnpj.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/SaasApp.tsx src/styles/saas-mobile-polish.css .github/workflows/tmp-saas-navbar-cnpj.yml
+          git commit -m "feat(saas): show company CNPJ in navbar"
+          git push
