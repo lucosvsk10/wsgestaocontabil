@@ -1,17 +1,27 @@
 /* Final mobile polish layer for the SaaS. Desktop intentionally untouched. */
 @media (max-width: 720px) {
-  /* Topbar: compact app-like composition */
+  /* Navbar: menu | company centered in viewport | profile */
   .saas-admin-light .saas-topbar {
     height: 52px !important;
     min-height: 52px !important;
+    position: fixed !important;
   }
+
   .saas-admin-light .saas-brand {
-    width: 50px !important;
-    min-width: 50px !important;
-    padding: 0 5px !important;
+    width: 52px !important;
+    min-width: 52px !important;
+    padding: 0 !important;
     justify-content: center !important;
+    border-right: 0 !important;
   }
+
+  .saas-admin-light .saas-brand > img {
+    display: none !important;
+  }
+
   .saas-admin-light .saas-mobile-menu {
+    display: grid !important;
+    place-items: center !important;
     width: 36px !important;
     height: 36px !important;
     min-height: 36px !important;
@@ -22,28 +32,43 @@
     color: #f8fafc !important;
     box-shadow: none !important;
   }
+
   .saas-admin-light .saas-mobile-menu:hover {
     background: rgba(255,255,255,.07) !important;
   }
+
   .saas-admin-light .saas-mobile-menu svg {
     width: 19px !important;
     height: 19px !important;
   }
+
   .saas-admin-light .saas-topbar-content {
-    display: grid !important;
-    grid-template-columns: minmax(0,1fr) auto !important;
+    display: flex !important;
     align-items: center !important;
-    gap: 8px !important;
-    padding: 0 9px 0 10px !important;
-  }
-  .saas-admin-light .saas-page-context { display: none !important; }
-  .saas-admin-light .saas-company-context {
-    width: auto !important;
+    justify-content: flex-end !important;
     min-width: 0 !important;
-    text-align: left !important;
+    padding: 0 12px 0 0 !important;
   }
+
+  .saas-admin-light .saas-page-context {
+    display: none !important;
+  }
+
+  .saas-admin-light .saas-company-context {
+    position: absolute !important;
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    width: calc(100vw - 126px) !important;
+    max-width: 230px !important;
+    min-width: 0 !important;
+    text-align: center !important;
+    pointer-events: auto !important;
+  }
+
   .saas-admin-light .saas-company-context > p:first-child {
     max-width: 100% !important;
+    margin: 0 !important;
     font-size: 12px !important;
     line-height: 1.15 !important;
     font-weight: 600 !important;
@@ -51,64 +76,80 @@
     overflow: hidden !important;
     text-overflow: ellipsis !important;
   }
+
   .saas-admin-light .saas-company-context > p:last-child {
-    margin-top: 2px !important;
-    font-size: 8px !important;
-    line-height: 1 !important;
-    letter-spacing: .06em !important;
+    display: none !important;
   }
+
   .saas-admin-light .saas-company-context select {
-    height: 32px !important;
-    min-height: 32px !important;
-    padding: 0 26px 0 8px !important;
+    width: 100% !important;
+    height: 30px !important;
+    min-height: 30px !important;
+    padding: 0 24px 0 8px !important;
+    border: 0 !important;
+    background: transparent !important;
+    color: inherit !important;
     font-size: 12px !important;
+    font-weight: 600 !important;
+    text-align: center !important;
+    box-shadow: none !important;
   }
+
   .saas-admin-light .saas-topbar-content > div:last-child {
-    width: 34px !important;
-    min-width: 34px !important;
-    flex: 0 0 34px !important;
+    width: 36px !important;
+    min-width: 36px !important;
+    flex: 0 0 36px !important;
+    margin-left: auto !important;
   }
+
   .saas-admin-light .saas-topbar-content > div:last-child button {
-    width: 34px !important;
-    height: 34px !important;
-    min-height: 34px !important;
+    width: 36px !important;
+    height: 36px !important;
+    min-height: 36px !important;
     padding: 0 !important;
   }
+
   .saas-admin-light .saas-sidebar { top: 52px !important; }
   .saas-admin-light .saas-sidebar-scrim { inset: 52px 0 0 !important; }
   .saas-admin-light .saas-main-content { padding-top: 52px !important; }
 
-  /* Overall density */
+  /* More breathing room from phone edges */
   .saas-admin-light .saas-main-content > div {
-    padding: 10px 8px 24px !important;
-  }
-  .saas-dashboard {
-    gap: 10px !important;
-    row-gap: 10px !important;
+    width: 100% !important;
+    padding: 14px 16px 28px !important;
   }
 
-  /* Hero/header */
+  .saas-dashboard {
+    gap: 12px !important;
+    row-gap: 12px !important;
+  }
+
+  /* Hero/header: keep typography, improve whitespace */
   .saas-dashboard > header,
   .saas-dashboard [data-admin-page-header] {
     padding-bottom: 2px !important;
   }
+
   .saas-dashboard h1 {
     font-size: 20px !important;
     line-height: 1.08 !important;
   }
+
   .saas-dashboard h1 + p,
   .saas-dashboard header p {
     margin-top: 5px !important;
     font-size: 12px !important;
-    line-height: 1.35 !important;
+    line-height: 1.4 !important;
   }
+
   .saas-dashboard header > div:last-child {
     display: grid !important;
     grid-template-columns: 1fr 1fr !important;
-    gap: 7px !important;
+    gap: 8px !important;
     width: 100% !important;
-    margin-top: 2px !important;
+    margin-top: 4px !important;
   }
+
   .saas-dashboard header > div:last-child button {
     min-height: 38px !important;
     height: 38px !important;
@@ -116,96 +157,126 @@
     font-size: 13px !important;
   }
 
-  /* KPI cards: compact 2-column grid */
-  .saas-dashboard > .grid:first-of-type {
-    grid-template-columns: repeat(2,minmax(0,1fr)) !important;
-    gap: 7px !important;
+  /* KPI cards: 2 columns, much shorter and proportional to their content */
+  .saas-dashboard > .grid.gap-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
   }
-  .saas-dashboard > .grid:first-of-type > * {
-    min-height: 132px !important;
+
+  .saas-dashboard > .grid.gap-3 > * {
+    min-height: 0 !important;
+    height: 122px !important;
   }
-  .saas-dashboard > .grid:first-of-type [class*='p-4'] {
-    padding: 11px !important;
+
+  .saas-dashboard > .grid.gap-3 [class*='p-4'] {
+    height: 100% !important;
+    padding: 10px 11px !important;
   }
-  .saas-dashboard > .grid:first-of-type p:first-child {
+
+  .saas-dashboard > .grid.gap-3 p:first-child {
     font-size: 9px !important;
     line-height: 1.2 !important;
   }
-  .saas-dashboard > .grid:first-of-type [class*='text-[21px]'],
+
+  .saas-dashboard > .grid.gap-3 [class*='text-[21px]'],
   .saas-admin-light .saas-dashboard .text-2xl {
     margin-top: 6px !important;
     font-size: 20px !important;
     line-height: 1.05 !important;
   }
-  .saas-dashboard > .grid:first-of-type p[class*='min-h'] {
-    min-height: 22px !important;
+
+  .saas-dashboard > .grid.gap-3 p[class*='min-h'] {
+    min-height: 18px !important;
     margin-top: 4px !important;
     font-size: 9px !important;
-    line-height: 1.3 !important;
-  }
-  .saas-dashboard > .grid:first-of-type [class*='h-[48px]'] {
-    height: 34px !important;
-    margin-top: 4px !important;
+    line-height: 1.25 !important;
   }
 
-  /* Main analytical cards */
-  .saas-dashboard > .grid:not(:first-of-type) {
-    gap: 9px !important;
+  .saas-dashboard > .grid.gap-3 [class*='h-[48px]'] {
+    height: 25px !important;
+    margin-top: 3px !important;
   }
+
+  /* Analytical cards: less empty vertical space */
+  .saas-dashboard > .grid.gap-5 {
+    gap: 12px !important;
+  }
+
   .saas-dashboard [class*='h-[330px]'] {
-    height: 205px !important;
-    padding: 8px 4px !important;
+    height: 168px !important;
+    padding: 8px 6px !important;
   }
+
   .saas-dashboard [class*='h-[300px]'] {
-    height: 205px !important;
+    height: 165px !important;
     padding: 8px !important;
   }
+
   .saas-dashboard [class*='px-5'][class*='py-4'] {
     padding: 11px 12px !important;
   }
+
   .saas-dashboard [class*='p-5'] {
     padding: 12px !important;
   }
+
   .saas-dashboard h3 { font-size: 15px !important; }
   .saas-dashboard h4 { font-size: 13px !important; }
   .saas-dashboard .recharts-wrapper text { font-size: 9px !important; }
   .saas-dashboard .recharts-legend-wrapper { font-size: 9px !important; }
+
   .saas-dashboard [class*='divide-y'] > div {
     min-height: 0 !important;
     padding: 9px 11px !important;
   }
 
-  /* Generic cards/surfaces a touch tighter on mobile */
   .saas-main-content .rounded-xl,
   .saas-main-content .rounded-2xl,
   .saas-main-content .rounded-lg {
-    border-radius: 7px !important;
+    border-radius: 8px !important;
   }
 
-  /* Keep issued-note mobile cards compact as well */
+  /* Issued notes keep the same cleaner mobile gutter */
   .saas-issued-admin-clone > section:first-of-type {
     padding: 12px !important;
   }
+
   .saas-issued-admin-clone > section:nth-of-type(3) > div {
     min-height: 68px !important;
     padding: 10px !important;
   }
+
   .saas-issued-admin-clone table tbody {
     gap: 7px !important;
     padding: 0 7px 9px !important;
   }
+
   .saas-issued-admin-clone table tbody tr.note-row > td {
     padding: 9px 10px !important;
   }
 }
 
 @media (max-width: 390px) {
-  .saas-dashboard > .grid:first-of-type {
-    grid-template-columns: repeat(2,minmax(0,1fr)) !important;
+  .saas-admin-light .saas-main-content > div {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
   }
-  .saas-dashboard > .grid:first-of-type [class*='text-[21px]'],
+
+  .saas-dashboard > .grid.gap-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .saas-dashboard > .grid.gap-3 > * {
+    height: 118px !important;
+  }
+
+  .saas-dashboard > .grid.gap-3 [class*='text-[21px]'],
   .saas-admin-light .saas-dashboard .text-2xl {
     font-size: 18px !important;
   }
-  .saas-dashboard > .grid:first-of-type > * { min-height: 126px !important; }
+
+  .saas-dashboard > .grid.gap-3 [class*='h-[48px]'] {
+    height: 23px !important;
+  }
 }
