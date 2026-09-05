@@ -2,55 +2,19 @@ type LoadingMode = 'light' | 'standard';
 
 const LIGHT_LOGO = '/lovable-uploads/f7fdf0cf-f16c-4df7-a92c-964aadea9539.png';
 const STANDARD_LOGO = '/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png';
+const LIGHT_LOADER = '/loading/ws-loading-light.gif';
+const STANDARD_LOADER = '/loading/ws-loading-standard.gif';
 
-const loaderPaths = [
-  'M17 35 C28 22 47 18 70 24 C82 27 89 35 91 44',
-  'M16 42 C30 29 50 27 72 32 C83 35 90 42 91 50',
-  'M19 49 C35 38 54 36 74 40 C84 42 90 49 90 56',
-  'M24 56 C41 47 59 45 76 48 C84 50 89 56 88 62',
-  'M31 63 C47 57 63 55 77 57 C84 58 87 62 85 67',
-  'M40 69 C54 65 67 64 77 65 C82 66 84 69 81 73',
-];
-
-function WsLoaderMark() {
+function OriginalLoaderAnimation({ light }: { light: boolean }) {
   return (
-    <span className="ws-app-loader-shell">
-      <svg
-        viewBox="0 0 108 92"
-        className="ws-app-loader-mark"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <defs>
-          <linearGradient
-            id="ws-loader-gradient"
-            gradientUnits="userSpaceOnUse"
-            x1="15"
-            y1="20"
-            x2="92"
-            y2="74"
-          >
-            <stop offset="0%" stopColor="#7047ff" />
-            <stop offset="36%" stopColor="#a84cf1" />
-            <stop offset="68%" stopColor="#e25a9d" />
-            <stop offset="100%" stopColor="#ef9a38" />
-          </linearGradient>
-        </defs>
-
-        <g className="ws-app-loader-mark-inner">
-          {loaderPaths.map((d, index) => (
-            <path
-              key={d}
-              d={d}
-              fill="none"
-              stroke="url(#ws-loader-gradient)"
-              strokeWidth={4.35 - index * 0.1}
-              strokeLinecap="round"
-              opacity={0.98 - index * 0.035}
-            />
-          ))}
-        </g>
-      </svg>
+    <span className="ws-app-loader-crop" aria-hidden="true">
+      <img
+        src={light ? LIGHT_LOADER : STANDARD_LOADER}
+        alt=""
+        className="ws-app-loader-source"
+        draggable={false}
+        decoding="async"
+      />
     </span>
   );
 }
@@ -133,32 +97,31 @@ export default function AppLoadingScreen({ mode = 'standard' }: { mode?: Loading
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 8px;
+          gap: 5px;
           min-width: 120px;
         }
 
-        .ws-app-loader-shell {
-          display: grid;
-          place-items: center;
-          width: clamp(54px, 4.9vw, 68px);
-          aspect-ratio: 1;
-          transform: translateZ(0);
-        }
-
-        .ws-app-loader-mark {
+        .ws-app-loader-crop {
+          position: relative;
           display: block;
-          width: 100%;
-          height: auto;
-          overflow: visible;
-          transform-box: fill-box;
-          transform-origin: center;
-          backface-visibility: hidden;
-          will-change: transform;
-          animation: ws-app-loader-spin 1.55s linear infinite;
+          width: 108px;
+          height: 62px;
+          overflow: hidden;
+          isolation: isolate;
+          -webkit-mask-image: radial-gradient(ellipse at center, #000 58%, rgba(0,0,0,.96) 67%, transparent 98%);
+          mask-image: radial-gradient(ellipse at center, #000 58%, rgba(0,0,0,.96) 67%, transparent 98%);
         }
 
-        .ws-app-loader-mark-inner {
-          transform-origin: 54px 46px;
+        .ws-app-loader-source {
+          position: absolute;
+          display: block;
+          width: 960px;
+          height: 540px;
+          max-width: none;
+          left: -430px;
+          top: -251px;
+          pointer-events: none;
+          user-select: none;
         }
 
         .ws-app-loading-label {
@@ -173,28 +136,9 @@ export default function AppLoadingScreen({ mode = 'standard' }: { mode?: Loading
           opacity: .9;
         }
 
-        .ws-app-loading-dots::after {
-          content: '...';
-          display: inline-block;
-          width: 1.2em;
-          overflow: hidden;
-          vertical-align: bottom;
-          animation: ws-app-loading-dots 1.2s steps(4, end) infinite;
-        }
-
         @keyframes ws-app-loading-fade-in {
           from { opacity: 0; }
           to { opacity: 1; }
-        }
-
-        @keyframes ws-app-loader-spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-
-        @keyframes ws-app-loading-dots {
-          0% { width: 0; }
-          100% { width: 1.2em; }
         }
 
         @media (max-width: 720px) {
@@ -213,11 +157,19 @@ export default function AppLoadingScreen({ mode = 'standard' }: { mode?: Loading
 
           .ws-app-loading-indicator {
             top: 53.5%;
-            gap: 7px;
+            gap: 4px;
           }
 
-          .ws-app-loader-shell {
-            width: 50px;
+          .ws-app-loader-crop {
+            width: 94px;
+            height: 56px;
+          }
+
+          .ws-app-loader-source {
+            width: 864px;
+            height: 486px;
+            left: -385px;
+            top: -226px;
           }
 
           .ws-app-loading-label {
@@ -231,9 +183,7 @@ export default function AppLoadingScreen({ mode = 'standard' }: { mode?: Loading
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .ws-app-loading-screen,
-          .ws-app-loader-mark,
-          .ws-app-loading-dots::after {
+          .ws-app-loading-screen {
             animation-duration: .001ms !important;
             animation-iteration-count: 1 !important;
           }
@@ -251,11 +201,9 @@ export default function AppLoadingScreen({ mode = 'standard' }: { mode?: Loading
         />
       </div>
 
-      <div className="ws-app-loading-indicator" aria-hidden="true">
-        <WsLoaderMark />
-        <p className="ws-app-loading-label">
-          Carregando<span className="ws-app-loading-dots" />
-        </p>
+      <div className="ws-app-loading-indicator">
+        <OriginalLoaderAnimation light={light} />
+        <p className="ws-app-loading-label">Carregando...</p>
       </div>
 
       <span className="sr-only">Carregando o sistema...</span>
