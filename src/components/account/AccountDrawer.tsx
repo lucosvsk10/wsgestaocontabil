@@ -380,31 +380,126 @@ const drawerCss = `
   .ws-account-logout:hover { background:#171e27; }
 
   @media (max-width:720px) {
-    .ws-account-drawer { width:100vw; }
-    .ws-account-header { min-height:96px; padding:14px; }
+    .ws-account-overlay { background:#f3f4f6; backdrop-filter:none; -webkit-backdrop-filter:none; }
+    .ws-account-drawer { position:fixed; inset:0; width:100vw; height:100dvh; max-width:none; box-shadow:none; }
+
+    .ws-account-header {
+      min-height:auto;
+      align-items:flex-start;
+      padding:18px 16px 17px;
+      gap:12px;
+    }
+
+    .ws-account-profile { align-items:center; gap:12px; }
     .ws-account-avatar.is-large { width:48px; height:48px; }
-    .ws-account-profile-copy h2 { max-width:calc(100vw - 126px); font-size:18px !important; }
-    .ws-account-profile-copy p { max-width:calc(100vw - 126px); font-size:13px !important; }
-    .ws-account-profile-copy small,
-    .ws-account-kicker { font-size:11px !important; }
-    .ws-account-body { display:flex; flex-direction:column; }
-    .ws-account-nav { flex:0 0 auto; overflow:hidden; border-right:0; border-bottom:1px solid #d2d7dc; padding:8px 10px; }
+    .ws-account-kicker { margin-bottom:4px; font-size:11px !important; }
+    .ws-account-profile-copy h2 { max-width:calc(100vw - 126px); font-size:18px !important; line-height:1.2 !important; }
+    .ws-account-profile-copy p { max-width:calc(100vw - 126px); margin-top:3px; font-size:13px !important; line-height:1.4 !important; }
+    .ws-account-profile-copy small { margin-top:4px; font-size:11px !important; line-height:1.4 !important; }
+    .ws-account-close { width:38px; height:38px; border-radius:8px; font-size:22px !important; }
+
+    .ws-account-body { display:flex; min-height:0; flex:1; flex-direction:column; }
+
+    .ws-account-nav {
+      flex:0 0 auto;
+      overflow:hidden;
+      border-right:0;
+      border-bottom:1px solid #d2d7dc;
+      background:#eaedf0;
+      padding:11px 12px 10px;
+    }
     .ws-account-nav-label,
     .ws-account-nav-full { display:none; }
-    .ws-account-nav-list { flex-direction:row; overflow-x:auto; gap:5px; scrollbar-width:none; }
+    .ws-account-nav-list {
+      flex-direction:row;
+      overflow-x:auto;
+      gap:7px;
+      padding:1px 0 2px;
+      scrollbar-width:none;
+      overscroll-behavior-x:contain;
+      scroll-padding-inline:12px;
+    }
     .ws-account-nav-list::-webkit-scrollbar { display:none; }
-    .ws-account-nav-item { width:auto; min-width:max-content; min-height:36px; flex:0 0 auto; border:1px solid transparent; border-radius:5px; padding:8px 11px; font-size:13px !important; }
-    .ws-account-nav-item.is-active { border-color:#c7cdd3; background:#d9dee4; }
+    .ws-account-nav-item {
+      width:auto;
+      min-width:max-content;
+      min-height:38px;
+      flex:0 0 auto;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      border:1px solid transparent;
+      border-radius:8px;
+      padding:0 14px;
+      color:#536077 !important;
+      font-size:13px !important;
+      font-weight:400 !important;
+      text-align:center;
+    }
+    .ws-account-nav-item.is-active {
+      border-color:#c7cdd3;
+      background:#d9dee4;
+      color:#111827 !important;
+      font-weight:600 !important;
+    }
     .ws-account-nav-short { display:inline; color:inherit !important; font-size:inherit !important; font-weight:inherit !important; }
-    .ws-account-content { flex:1; padding:16px 12px 22px; }
-    .ws-account-section-head { margin-bottom:14px; }
-    .ws-account-section-head h3 { font-size:18px !important; }
-    .ws-account-section-head p { font-size:13px !important; }
-    .ws-account-grid { grid-template-columns:1fr; gap:8px; }
+
+    .ws-account-content {
+      flex:1;
+      min-height:0;
+      overflow-y:auto;
+      overscroll-behavior:contain;
+      -webkit-overflow-scrolling:touch;
+      background:#f3f4f6;
+      padding:22px 16px 32px;
+    }
+
+    .ws-account-section-head { margin-bottom:18px; }
+    .ws-account-section-head > span { margin-bottom:6px; font-size:11px !important; }
+    .ws-account-section-head h3 { font-size:18px !important; line-height:1.25 !important; }
+    .ws-account-section-head p { margin-top:7px; max-width:none; font-size:13px !important; line-height:1.55 !important; }
+
+    .ws-account-content-stack { gap:14px; }
+    .ws-account-grid { grid-template-columns:1fr; gap:10px; }
+
     .ws-account-summary,
-    .ws-account-plan { padding:14px; }
-    .ws-account-info { min-height:72px; padding:12px; }
-    .ws-account-footer { padding:9px 10px max(9px,env(safe-area-inset-bottom)); }
-    .ws-account-logout { min-height:44px; }
+    .ws-account-plan,
+    .ws-account-info,
+    .ws-account-text-card,
+    .ws-account-danger,
+    .ws-account-danger-button { border-radius:10px; }
+
+    .ws-account-summary,
+    .ws-account-plan { padding:16px; gap:12px; }
+    .ws-account-summary > div > strong { font-size:17px !important; }
+    .ws-account-summary > div > p { margin-top:6px; line-height:1.5 !important; }
+    .ws-account-plan > div > strong { font-size:18px !important; }
+    .ws-account-status { min-height:28px; padding:0 10px; border-radius:7px; }
+
+    .ws-account-info { min-height:78px; padding:14px; }
+    .ws-account-info > strong { margin-top:8px; font-size:14px !important; }
+    .ws-account-text-card,
+    .ws-account-danger { padding:15px; }
+    .ws-account-text-card > p,
+    .ws-account-danger > p { margin-top:7px; line-height:1.55 !important; }
+
+    .ws-account-danger-button { min-height:46px; margin-top:1px; }
+
+    .ws-account-footer {
+      flex:0 0 auto;
+      border-top:1px solid #d2d7dc;
+      background:#eaedf0;
+      padding:11px 12px max(11px,env(safe-area-inset-bottom));
+    }
+    .ws-account-logout { min-height:46px; border-radius:9px; }
+  }
+
+  @media (max-width:360px) {
+    .ws-account-header { padding-inline:12px; }
+    .ws-account-avatar.is-large { width:44px; height:44px; }
+    .ws-account-profile-copy h2,
+    .ws-account-profile-copy p { max-width:calc(100vw - 116px); }
+    .ws-account-nav { padding-inline:10px; }
+    .ws-account-content { padding:20px 12px 28px; }
   }
 `;
