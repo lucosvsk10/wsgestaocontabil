@@ -3,32 +3,32 @@ type LoadingMode = 'light' | 'standard';
 const LIGHT_LOGO = '/lovable-uploads/f7fdf0cf-f16c-4df7-a92c-964aadea9539.png';
 const STANDARD_LOGO = '/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png';
 
-function WsLoaderMark() {
-  const paths = [
-    'M20 43 C35 28, 54 21, 79 24',
-    'M19 49 C38 35, 59 30, 84 33',
-    'M22 55 C43 43, 64 40, 88 42',
-    'M28 61 C50 52, 70 50, 91 50',
-    'M36 67 C56 61, 75 59, 92 58',
-    'M46 72 C63 69, 79 66, 92 65',
-  ];
+const loaderPaths = [
+  'M17 35 C28 22 47 18 70 24 C82 27 89 35 91 44',
+  'M16 42 C30 29 50 27 72 32 C83 35 90 42 91 50',
+  'M19 49 C35 38 54 36 74 40 C84 42 90 49 90 56',
+  'M24 56 C41 47 59 45 76 48 C84 50 89 56 88 62',
+  'M31 63 C47 57 63 55 77 57 C84 58 87 62 85 67',
+  'M40 69 C54 65 67 64 77 65 C82 66 84 69 81 73',
+];
 
+function WsLoaderMark() {
   return (
     <svg
-      viewBox="0 0 112 94"
+      viewBox="0 0 108 92"
       className="ws-app-loader-mark"
       aria-hidden="true"
       focusable="false"
     >
       <defs>
         <linearGradient id="ws-loader-gradient" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#7b3ff2" />
-          <stop offset="44%" stopColor="#b14ff1" />
-          <stop offset="72%" stopColor="#ef5f8f" />
-          <stop offset="100%" stopColor="#f39a38" />
+          <stop offset="0%" stopColor="#7047ff" />
+          <stop offset="38%" stopColor="#a84cf1" />
+          <stop offset="68%" stopColor="#e25a9d" />
+          <stop offset="100%" stopColor="#ef9a38" />
         </linearGradient>
-        <filter id="ws-loader-soft-glow" x="-40%" y="-40%" width="180%" height="180%">
-          <feGaussianBlur stdDeviation="1.4" result="blur" />
+        <filter id="ws-loader-glow" x="-35%" y="-35%" width="170%" height="170%">
+          <feGaussianBlur stdDeviation="0.9" result="blur" />
           <feMerge>
             <feMergeNode in="blur" />
             <feMergeNode in="SourceGraphic" />
@@ -36,17 +36,17 @@ function WsLoaderMark() {
         </filter>
       </defs>
 
-      <g className="ws-app-loader-mark-inner" filter="url(#ws-loader-soft-glow)">
-        {paths.map((d, index) => (
+      <g className="ws-app-loader-mark-inner" filter="url(#ws-loader-glow)">
+        {loaderPaths.map((d, index) => (
           <path
             key={d}
             d={d}
             fill="none"
             stroke="url(#ws-loader-gradient)"
-            strokeWidth={index < 2 ? 4.4 : 4}
+            strokeWidth={4.4 - index * 0.12}
             strokeLinecap="round"
             className="ws-app-loader-stroke"
-            style={{ animationDelay: `${index * 90}ms` }}
+            style={{ animationDelay: `${index * 75}ms` }}
           />
         ))}
       </g>
@@ -63,7 +63,7 @@ export default function AppLoadingScreen({ mode = 'standard' }: { mode?: Loading
       className={`ws-app-loading-screen ${light ? 'is-light' : 'is-standard'}`}
       role="status"
       aria-live="polite"
-      aria-label="Carregando o sistema"
+      aria-label="Carregando WS Gestão Contábil"
     >
       <style>{`
         .ws-app-loading-screen {
@@ -71,25 +71,22 @@ export default function AppLoadingScreen({ mode = 'standard' }: { mode?: Loading
           inset: 0;
           z-index: 9999;
           overflow: hidden;
-          display: flex;
-          align-items: center;
-          justify-content: center;
           isolation: isolate;
-          color: #f6f7f9;
+          color: #f7f8fa;
           background-color: #020918;
           background-image:
-            linear-gradient(rgba(18, 31, 52, .76) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(18, 31, 52, .76) 1px, transparent 1px);
+            linear-gradient(rgba(17, 30, 51, .78) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(17, 30, 51, .78) 1px, transparent 1px);
           background-size: 82px 82px;
-          animation: ws-app-loading-fade-in .18s ease-out both;
+          animation: ws-app-loading-fade-in .16s ease-out both;
         }
 
         .ws-app-loading-screen.is-light {
-          color: #161a22;
+          color: #15191f;
           background-color: #f3ecd9;
           background-image:
-            linear-gradient(rgba(184, 189, 190, .50) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(184, 189, 190, .50) 1px, transparent 1px);
+            linear-gradient(rgba(190, 194, 192, .53) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(190, 194, 192, .53) 1px, transparent 1px);
         }
 
         .ws-app-loading-screen::before {
@@ -98,26 +95,29 @@ export default function AppLoadingScreen({ mode = 'standard' }: { mode?: Loading
           inset: 0;
           z-index: -1;
           pointer-events: none;
-          background: radial-gradient(circle at 50% 45%, rgba(39, 57, 88, .10), transparent 42%);
+          background: radial-gradient(circle at 50% 42%, rgba(55, 76, 112, .07), transparent 38%);
         }
 
         .ws-app-loading-screen.is-light::before {
-          background: radial-gradient(circle at 50% 44%, rgba(255,255,255,.32), transparent 42%);
+          background: radial-gradient(circle at 50% 40%, rgba(255, 255, 255, .26), transparent 38%);
         }
 
-        .ws-app-loading-composition {
-          width: min(92vw, 520px);
+        .ws-app-loading-logo-wrap {
+          position: absolute;
+          top: 29.5%;
+          left: 50%;
+          width: min(86vw, 280px);
+          transform: translate(-50%, -50%);
           display: flex;
-          flex-direction: column;
+          justify-content: center;
           align-items: center;
-          transform: translateY(-2vh);
         }
 
         .ws-app-loading-logo {
           display: block;
-          width: clamp(150px, 14vw, 205px);
+          width: clamp(154px, 13vw, 205px);
           height: auto;
-          max-height: 72px;
+          max-height: 68px;
           object-fit: contain;
           object-position: center;
           user-select: none;
@@ -125,31 +125,35 @@ export default function AppLoadingScreen({ mode = 'standard' }: { mode?: Loading
         }
 
         .ws-app-loading-indicator {
-          margin-top: clamp(78px, 11vh, 122px);
+          position: absolute;
+          top: 52.5%;
+          left: 50%;
+          transform: translate(-50%, -50%);
           display: flex;
           flex-direction: column;
           align-items: center;
           gap: 7px;
+          min-width: 120px;
         }
 
         .ws-app-loader-mark {
           display: block;
-          width: clamp(48px, 4.8vw, 62px);
+          width: clamp(52px, 4.7vw, 68px);
           height: auto;
           overflow: visible;
           transform-origin: 50% 55%;
-          animation: ws-app-loader-drift 1.95s cubic-bezier(.4,0,.2,1) infinite;
+          animation: ws-app-loader-float 1.85s cubic-bezier(.4,0,.2,1) infinite;
         }
 
         .ws-app-loader-mark-inner {
-          transform-origin: 56px 49px;
-          animation: ws-app-loader-turn 1.35s cubic-bezier(.55,.08,.35,.95) infinite;
+          transform-origin: 54px 48px;
+          animation: ws-app-loader-sway 1.32s cubic-bezier(.55,.08,.35,.95) infinite;
         }
 
         .ws-app-loader-stroke {
-          stroke-dasharray: 82 26;
-          stroke-dashoffset: 0;
-          animation: ws-app-loader-flow 1.35s ease-in-out infinite;
+          stroke-dasharray: 78 24;
+          stroke-dashoffset: 30;
+          animation: ws-app-loader-flow 1.32s ease-in-out infinite;
         }
 
         .ws-app-loading-label {
@@ -158,18 +162,19 @@ export default function AppLoadingScreen({ mode = 'standard' }: { mode?: Loading
           font-size: 10px;
           font-weight: 500;
           line-height: 1;
-          letter-spacing: .055em;
+          letter-spacing: .045em;
           text-transform: uppercase;
-          opacity: .88;
+          white-space: nowrap;
+          opacity: .9;
         }
 
         .ws-app-loading-dots::after {
           content: '...';
           display: inline-block;
-          width: 1.25em;
+          width: 1.2em;
           overflow: hidden;
           vertical-align: bottom;
-          animation: ws-app-loading-dots 1.25s steps(4, end) infinite;
+          animation: ws-app-loading-dots 1.2s steps(4, end) infinite;
         }
 
         @keyframes ws-app-loading-fade-in {
@@ -177,26 +182,26 @@ export default function AppLoadingScreen({ mode = 'standard' }: { mode?: Loading
           to { opacity: 1; }
         }
 
-        @keyframes ws-app-loader-turn {
-          0% { transform: rotate(-10deg) scale(.98); }
-          50% { transform: rotate(16deg) scale(1.03); }
-          100% { transform: rotate(-10deg) scale(.98); }
+        @keyframes ws-app-loader-sway {
+          0% { transform: rotate(-7deg) scale(.98); }
+          50% { transform: rotate(13deg) scale(1.025); }
+          100% { transform: rotate(-7deg) scale(.98); }
         }
 
-        @keyframes ws-app-loader-drift {
+        @keyframes ws-app-loader-float {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-2px); }
         }
 
         @keyframes ws-app-loader-flow {
-          0% { stroke-dashoffset: 38; opacity: .42; }
-          48% { opacity: 1; }
-          100% { stroke-dashoffset: -70; opacity: .52; }
+          0% { stroke-dashoffset: 34; opacity: .42; }
+          45% { opacity: 1; }
+          100% { stroke-dashoffset: -66; opacity: .56; }
         }
 
         @keyframes ws-app-loading-dots {
           0% { width: 0; }
-          100% { width: 1.25em; }
+          100% { width: 1.2em; }
         }
 
         @media (max-width: 720px) {
@@ -204,26 +209,32 @@ export default function AppLoadingScreen({ mode = 'standard' }: { mode?: Loading
             background-size: 52px 52px;
           }
 
-          .ws-app-loading-composition {
-            transform: translateY(-4vh);
+          .ws-app-loading-logo-wrap {
+            top: 31%;
           }
 
           .ws-app-loading-logo {
             width: 148px;
-            max-height: 58px;
+            max-height: 56px;
           }
 
           .ws-app-loading-indicator {
-            margin-top: 72px;
+            top: 53.5%;
+            gap: 6px;
           }
 
           .ws-app-loader-mark {
-            width: 48px;
+            width: 50px;
           }
 
           .ws-app-loading-label {
             font-size: 9px;
           }
+        }
+
+        @media (max-height: 620px) {
+          .ws-app-loading-logo-wrap { top: 27%; }
+          .ws-app-loading-indicator { top: 55%; }
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -238,7 +249,7 @@ export default function AppLoadingScreen({ mode = 'standard' }: { mode?: Loading
         }
       `}</style>
 
-      <div className="ws-app-loading-composition">
+      <div className="ws-app-loading-logo-wrap">
         <img
           src={logo}
           alt="WS Gestão Contábil"
@@ -247,13 +258,13 @@ export default function AppLoadingScreen({ mode = 'standard' }: { mode?: Loading
           decoding="async"
           fetchPriority="high"
         />
+      </div>
 
-        <div className="ws-app-loading-indicator" aria-hidden="true">
-          <WsLoaderMark />
-          <p className="ws-app-loading-label">
-            Carregando<span className="ws-app-loading-dots" />
-          </p>
-        </div>
+      <div className="ws-app-loading-indicator" aria-hidden="true">
+        <WsLoaderMark />
+        <p className="ws-app-loading-label">
+          Carregando<span className="ws-app-loading-dots" />
+        </p>
       </div>
 
       <span className="sr-only">Carregando o sistema...</span>
