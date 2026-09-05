@@ -537,7 +537,7 @@ const drawerCss = `
 
   .ws-account-drawer.is-saas,
   .ws-account-drawer.is-saas * {
-    font-family: 'Prompt', 'Inter', system-ui, sans-serif !important;
+    font-family: 'Proxima Nova', 'Inter', 'Helvetica Neue', Arial, sans-serif !important;
     letter-spacing: 0 !important;
   }
 
