@@ -76,24 +76,9 @@
   padding: 56px 0 68px;
 }
 
-.ws-login-kicker {
-  display: inline-flex;
-  min-height: 29px;
-  align-items: center;
-  border: 1px solid rgba(184, 150, 62, .25);
-  border-radius: 999px;
-  background: rgba(184, 150, 62, .07);
-  padding: 0 12px;
-  color: #c6a754;
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-}
-
 .ws-login-presentation h1 {
   max-width: 670px;
-  margin: 21px 0 0;
+  margin: 0;
   color: #f8fafc;
   font-size: clamp(46px, 5vw, 72px);
   font-weight: 400;
@@ -114,20 +99,13 @@
   display: grid;
   max-width: 610px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0;
+  gap: 48px;
   margin-top: 42px;
-  border-top: 1px solid rgba(148, 163, 184, .14);
 }
 
 .ws-login-points > div {
   display: grid;
   gap: 7px;
-  padding: 20px 24px 0 0;
-}
-
-.ws-login-points > div + div {
-  border-left: 1px solid rgba(148, 163, 184, .14);
-  padding-left: 24px;
 }
 
 .ws-login-points strong { color: #e5eaf1; font-size: 13px; font-weight: 500; }
