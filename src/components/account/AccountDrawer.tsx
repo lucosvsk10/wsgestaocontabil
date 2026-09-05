@@ -304,7 +304,7 @@ const drawerCss = `
     border-bottom: 1px solid rgba(148,163,184,.14);
   }
 
-  .ws-account-profile { display:flex; min-width:0; align-items:center; gap:14px; }
+  .ws-account-profile { display:flex; min-width:0; align-items:center; gap:8px; }
   .ws-account-profile-copy { min-width:0; }
   .ws-account-kicker { display:block; margin-bottom:5px; color:#94a3b8 !important; font-size:12px !important; font-weight:600 !important; }
   .ws-account-profile-copy h2 { margin:0; max-width:390px; overflow:hidden; color:#f8fafc !important; font-size:20px !important; font-weight:600 !important; line-height:1.25 !important; text-overflow:ellipsis; white-space:nowrap; }
@@ -331,13 +331,13 @@ const drawerCss = `
   .ws-account-nav-short { display:none; }
 
   .ws-account-content { min-width:0; overflow-y:auto; background:#f3f4f6; padding:24px; }
-  .ws-account-section-head { margin-bottom:18px; }
+  .ws-account-section-head { margin-bottom:14px; }
   .ws-account-section-head > span { display:block; margin-bottom:4px; color:#667085 !important; font-size:12px !important; font-weight:600 !important; }
-  .ws-account-section-head h3 { margin:0; color:#0f172a !important; font-size:18px !important; font-weight:600 !important; line-height:1.3 !important; }
+  .ws-account-section-head h3 { margin:0; color:#0f172a !important; font-size:16px !important; font-weight:600 !important; line-height:1.3 !important; }
   .ws-account-section-head p { margin:5px 0 0; color:#667085 !important; font-size:14px !important; font-weight:400 !important; line-height:1.5 !important; }
 
   .ws-account-content-stack { display:grid; gap:12px; }
-  .ws-account-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+  .ws-account-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
 
   .ws-account-summary,
   .ws-account-plan,
@@ -351,12 +351,12 @@ const drawerCss = `
   }
 
   .ws-account-summary,
-  .ws-account-plan { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; padding:16px; }
+  .ws-account-plan { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; padding:16px; }
   .ws-account-summary > div > span,
   .ws-account-plan > div > span,
   .ws-account-info > span,
   .ws-account-danger > span { display:block; color:#667085 !important; font-size:12px !important; font-weight:600 !important; }
-  .ws-account-summary > div > strong { display:block; margin-top:5px; color:#0f172a !important; font-size:18px !important; font-weight:600 !important; line-height:1.3 !important; }
+  .ws-account-summary > div > strong { display:block; margin-top:5px; color:#0f172a !important; font-size:16px !important; font-weight:600 !important; line-height:1.3 !important; }
   .ws-account-summary > div > p { margin:4px 0 0; color:#667085 !important; font-size:13px !important; font-weight:400 !important; line-height:1.45 !important; }
   .ws-account-plan > div > strong { display:block; margin-top:5px; color:#0f172a !important; font-size:20px !important; font-weight:600 !important; }
 
@@ -386,17 +386,17 @@ const drawerCss = `
     .ws-account-header {
       min-height:auto;
       align-items:flex-start;
-      padding:18px 16px 17px;
+      padding:15px 14px 14px;
       gap:12px;
     }
 
     .ws-account-profile { align-items:center; gap:12px; }
-    .ws-account-avatar.is-large { width:48px; height:48px; }
-    .ws-account-kicker { margin-bottom:4px; font-size:11px !important; }
-    .ws-account-profile-copy h2 { max-width:calc(100vw - 126px); font-size:18px !important; line-height:1.2 !important; }
-    .ws-account-profile-copy p { max-width:calc(100vw - 126px); margin-top:3px; font-size:13px !important; line-height:1.4 !important; }
-    .ws-account-profile-copy small { margin-top:4px; font-size:11px !important; line-height:1.4 !important; }
-    .ws-account-close { width:38px; height:38px; border-radius:8px; font-size:22px !important; }
+    .ws-account-avatar.is-large { width:44px; height:44px; }
+    .ws-account-kicker { margin-bottom:4px; font-size:10px !important; }
+    .ws-account-profile-copy h2 { max-width:calc(100vw - 126px); font-size:16px !important; line-height:1.2 !important; }
+    .ws-account-profile-copy p { max-width:calc(100vw - 126px); margin-top:3px; font-size:12px !important; line-height:1.4 !important; }
+    .ws-account-profile-copy small { margin-top:3px; font-size:10px !important; line-height:1.35 !important; }
+    .ws-account-close { width:38px; height:38px; border-radius:6px; font-size:22px !important; }
 
     .ws-account-body { display:flex; min-height:0; flex:1; flex-direction:column; }
 
@@ -406,14 +406,14 @@ const drawerCss = `
       border-right:0;
       border-bottom:1px solid #d2d7dc;
       background:#eaedf0;
-      padding:11px 12px 10px;
+      padding:8px 10px 8px;
     }
     .ws-account-nav-label,
     .ws-account-nav-full { display:none; }
     .ws-account-nav-list {
       flex-direction:row;
       overflow-x:auto;
-      gap:7px;
+      gap:5px;
       padding:1px 0 2px;
       scrollbar-width:none;
       overscroll-behavior-x:contain;
@@ -423,16 +423,16 @@ const drawerCss = `
     .ws-account-nav-item {
       width:auto;
       min-width:max-content;
-      min-height:38px;
+      min-height:34px;
       flex:0 0 auto;
       display:inline-flex;
       align-items:center;
       justify-content:center;
       border:1px solid transparent;
-      border-radius:8px;
-      padding:0 14px;
+      border-radius:6px;
+      padding:0 11px;
       color:#536077 !important;
-      font-size:13px !important;
+      font-size:12px !important;
       font-weight:400 !important;
       text-align:center;
     }
@@ -451,47 +451,47 @@ const drawerCss = `
       overscroll-behavior:contain;
       -webkit-overflow-scrolling:touch;
       background:#f3f4f6;
-      padding:22px 16px 32px;
+      padding:18px 14px 26px;
     }
 
-    .ws-account-section-head { margin-bottom:18px; }
-    .ws-account-section-head > span { margin-bottom:6px; font-size:11px !important; }
-    .ws-account-section-head h3 { font-size:18px !important; line-height:1.25 !important; }
-    .ws-account-section-head p { margin-top:7px; max-width:none; font-size:13px !important; line-height:1.55 !important; }
+    .ws-account-section-head { margin-bottom:14px; }
+    .ws-account-section-head > span { margin-bottom:6px; font-size:10px !important; }
+    .ws-account-section-head h3 { font-size:16px !important; line-height:1.25 !important; }
+    .ws-account-section-head p { margin-top:7px; max-width:none; font-size:12px !important; line-height:1.5 !important; }
 
-    .ws-account-content-stack { gap:14px; }
-    .ws-account-grid { grid-template-columns:1fr; gap:10px; }
+    .ws-account-content-stack { gap:8px; }
+    .ws-account-grid { grid-template-columns:1fr; gap:8px; }
 
     .ws-account-summary,
     .ws-account-plan,
     .ws-account-info,
     .ws-account-text-card,
     .ws-account-danger,
-    .ws-account-danger-button { border-radius:10px; }
+    .ws-account-danger-button { border-radius:8px; }
 
     .ws-account-summary,
-    .ws-account-plan { padding:16px; gap:12px; }
-    .ws-account-summary > div > strong { font-size:17px !important; }
+    .ws-account-plan { padding:13px; gap:10px; }
+    .ws-account-summary > div > strong { font-size:15px !important; }
     .ws-account-summary > div > p { margin-top:6px; line-height:1.5 !important; }
-    .ws-account-plan > div > strong { font-size:18px !important; }
-    .ws-account-status { min-height:28px; padding:0 10px; border-radius:7px; }
+    .ws-account-plan > div > strong { font-size:16px !important; }
+    .ws-account-status { min-height:24px; padding:0 8px; border-radius:5px; }
 
-    .ws-account-info { min-height:78px; padding:14px; }
-    .ws-account-info > strong { margin-top:8px; font-size:14px !important; }
+    .ws-account-info { min-height:64px; padding:12px; }
+    .ws-account-info > strong { margin-top:6px; font-size:13px !important; }
     .ws-account-text-card,
-    .ws-account-danger { padding:15px; }
+    .ws-account-danger { padding:12px; }
     .ws-account-text-card > p,
     .ws-account-danger > p { margin-top:7px; line-height:1.55 !important; }
 
-    .ws-account-danger-button { min-height:46px; margin-top:1px; }
+    .ws-account-danger-button { min-height:40px; margin-top:0; }
 
     .ws-account-footer {
       flex:0 0 auto;
       border-top:1px solid #d2d7dc;
       background:#eaedf0;
-      padding:11px 12px max(11px,env(safe-area-inset-bottom));
+      padding:8px 10px max(8px,env(safe-area-inset-bottom));
     }
-    .ws-account-logout { min-height:46px; border-radius:9px; }
+    .ws-account-logout { min-height:40px; border-radius:7px; }
   }
 
   @media (max-width:360px) {
