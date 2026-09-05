@@ -813,4 +813,29 @@ const drawerCss = `
     .ws-plan-invoice-primary,
     .ws-plan-invoice-actions { grid-column:auto; }
   }
+
+  /* SaaS account typography: lighter optical weight, isolated from ADM. */
+  .ws-account-drawer.is-saas,
+  .ws-account-drawer.is-saas * {
+    font-weight: 400 !important;
+  }
+
+  .ws-account-drawer.is-saas h2,
+  .ws-account-drawer.is-saas h3,
+  .ws-account-drawer.is-saas h4,
+  .ws-account-drawer.is-saas strong,
+  .ws-account-drawer.is-saas .ws-account-kicker,
+  .ws-account-drawer.is-saas .ws-account-nav-label,
+  .ws-account-drawer.is-saas .ws-account-section-head > span,
+  .ws-account-drawer.is-saas .ws-account-nav-item.is-active,
+  .ws-account-drawer.is-saas .ws-account-status,
+  .ws-account-drawer.is-saas .ws-plan-badge,
+  .ws-account-drawer.is-saas .ws-plan-invoice-status,
+  .ws-account-drawer.is-saas .ws-account-logout,
+  .ws-account-drawer.is-saas .ws-account-danger-button,
+  .ws-account-drawer.is-saas .ws-plan-invoice-actions a,
+  .ws-account-drawer.is-saas .ws-plan-invoice-actions button {
+    font-weight: 500 !important;
+  }
+
 `;
