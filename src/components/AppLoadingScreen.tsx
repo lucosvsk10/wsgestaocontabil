@@ -135,7 +135,7 @@ export default function AppLoadingScreen({ mode = 'standard' }: { mode?: Loading
           text-transform: uppercase;
           white-space: nowrap;
           opacity: .9;
-          margin-top: 18px;
+          margin-top: 36px;
         }
 
         @keyframes ws-app-loading-fade-in {
@@ -173,7 +173,7 @@ export default function AppLoadingScreen({ mode = 'standard' }: { mode?: Loading
 
           .ws-app-loading-label {
             font-size: 9px;
-            margin-top: 15px;
+            margin-top: 32px;
           }
         }
 
