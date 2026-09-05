@@ -34,6 +34,7 @@ import AdminFiscalNotes from './pages/AdminFiscalNotes';
 import AdminSubscribers from './pages/AdminSubscribers';
 import SaasApp from './pages/SaasApp';
 import SaasCheckout from './pages/SaasCheckout';
+import LegalPage from './pages/LegalPage';
 import AppLoadingScreen from './components/AppLoadingScreen';
 
 const DashboardRouter = () => {
@@ -81,6 +82,8 @@ const AppRoutes = () => {
       <Route path="/calculadora-inss" element={<INSSCalculator />} />
       <Route path="/simulador-prolabore" element={<ProLaboreCalculator />} />
       <Route path="/changelog" element={<ChangeLog />} />
+      <Route path="/termos-de-servico" element={<LegalPage />} />
+      <Route path="/politica-de-privacidade" element={<LegalPage />} />
       <Route
         path="/admin"
         element={
