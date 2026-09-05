@@ -33,6 +33,7 @@ import AdminFiscalCompanies from './pages/AdminFiscalCompanies';
 import AdminFiscalNotes from './pages/AdminFiscalNotes';
 import AdminSubscribers from './pages/AdminSubscribers';
 import SaasApp from './pages/SaasApp';
+import SaasCheckout from './pages/SaasCheckout';
 import AppLoadingScreen from './components/AppLoadingScreen';
 
 const DashboardRouter = () => {
@@ -280,6 +281,14 @@ const AppRoutes = () => {
       <Route
         path="/admin/lancamentos/feature"
         element={<Navigate to="/admin/fiscal/emissao" replace />}
+      />
+      <Route
+        path="/app/checkout/:invoiceId"
+        element={
+          <PrivateRoute>
+            <SaasCheckout />
+          </PrivateRoute>
+        }
       />
       <Route
         path="/app/*"
