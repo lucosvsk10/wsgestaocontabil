@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
+import { consume, limited, requestKey } from "../_shared/rate-limit.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -82,6 +83,8 @@ serve(async req => {
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const { data: { user } } = await admin.auth.getUser(auth.replace("Bearer ", ""));
     if (!user) return json({ error: "Não autenticado" }, 401);
+    const rate = await consume(admin, "accounting_ai", requestKey(req, user.id), 20, 600);
+    if (limited(rate)) return limited(rate)!;
     const { data: roles } = await admin.from("user_roles").select("role").eq("user_id", user.id);
     if (!roles?.some((row: { role: string }) => ["admin", "fiscal", "contabil", "geral"].includes(row.role))) return json({ error: "Acesso negado" }, 403);
 
