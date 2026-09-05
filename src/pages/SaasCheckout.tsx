@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useState, type ReactNode } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
 import '@/styles/saas-checkout.css';
@@ -19,7 +19,7 @@ type CheckoutInvoice = {
   status: string;
 };
 
-type PaymentMethod = 'pix' | 'card';
+type PaymentMethod = 'pix' | 'card' | 'boleto';
 type QueryError = { message: string } | null;
 type InvoiceQueryResult = PromiseLike<{ data: CheckoutInvoice | null; error: QueryError }>;
 type OrganizationQueryResult = PromiseLike<{ data: { name: string } | null; error: QueryError }>;
@@ -46,6 +46,7 @@ export default function SaasCheckout() {
   const [invoice, setInvoice] = useState<CheckoutInvoice | null>(null);
   const [organizationName, setOrganizationName] = useState('Sua empresa');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pix');
+  const [legalAccepted, setLegalAccepted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -91,10 +92,7 @@ export default function SaasCheckout() {
     };
   }, [invoiceId]);
 
-  const invoiceCode = useMemo(
-    () => String(invoice?.invoice_number ?? '').padStart(6, '0') || '—',
-    [invoice?.invoice_number],
-  );
+  const invoiceCode = String(invoice?.invoice_number ?? '').padStart(6, '0') || '—';
 
   if (loading) return <AppLoadingScreen mode="light" />;
 
@@ -120,12 +118,18 @@ export default function SaasCheckout() {
   return (
     <div className="saas-checkout-page">
       <header className="saas-checkout-topbar">
-        <button type="button" className="saas-checkout-brand" onClick={() => navigate('/app')}>
-          <img src={WS_LOGO} alt="WS Gestão Contábil" />
-        </button>
-        <div>
-          <strong>Checkout seguro</strong>
-          <span>Ambiente protegido da WS Gestão Contábil</span>
+        <div className="saas-checkout-owner">
+          <button type="button" className="saas-checkout-brand" onClick={() => navigate('/app')}>
+            <img src={WS_LOGO} alt="WS Gestão Contábil" />
+          </button>
+          <div>
+            <strong>Checkout seguro</strong>
+            <span>Ambiente protegido da WS Gestão Contábil</span>
+          </div>
+        </div>
+        <div className="saas-checkout-mercado-pago">
+          <span>O pagamento será processado por</span>
+          <MercadoPagoLogo />
         </div>
       </header>
 
@@ -150,43 +154,55 @@ export default function SaasCheckout() {
             {payable ? (
               <>
                 <div className="saas-checkout-methods" role="radiogroup" aria-label="Forma de pagamento">
-                  <button
-                    type="button"
-                    role="radio"
-                    aria-checked={paymentMethod === 'pix'}
-                    className={paymentMethod === 'pix' ? 'is-active' : ''}
-                    onClick={() => setPaymentMethod('pix')}
-                  >
-                    <strong>PIX</strong>
-                    <span>Aprovação rápida</span>
-                  </button>
-                  <button
-                    type="button"
-                    role="radio"
-                    aria-checked={paymentMethod === 'card'}
-                    className={paymentMethod === 'card' ? 'is-active' : ''}
-                    onClick={() => setPaymentMethod('card')}
-                  >
-                    <strong>Cartão de crédito</strong>
-                    <span>Pagamento online</span>
-                  </button>
+                  <PaymentMethodOption
+                    method="pix"
+                    current={paymentMethod}
+                    title="PIX"
+                    subtitle="Aprovação rápida"
+                    icon={<PixIcon />}
+                    onSelect={setPaymentMethod}
+                  />
+                  <PaymentMethodOption
+                    method="card"
+                    current={paymentMethod}
+                    title="Cartão de crédito"
+                    subtitle="Pagamento online"
+                    icon={<CardBrands />}
+                    onSelect={setPaymentMethod}
+                  />
+                  <PaymentMethodOption
+                    method="boleto"
+                    current={paymentMethod}
+                    title="Boleto"
+                    subtitle="Pagamento após compensação"
+                    icon={<BoletoIcon />}
+                    onSelect={setPaymentMethod}
+                  />
                 </div>
 
                 <div className="saas-checkout-method-detail">
-                  <span>{paymentMethod === 'pix' ? 'Pagamento por PIX' : 'Pagamento por cartão'}</span>
-                  <h3>{paymentMethod === 'pix' ? 'Pague pelo aplicativo do seu banco' : 'Use seu cartão de crédito'}</h3>
-                  <p>
-                    {paymentMethod === 'pix'
-                      ? 'O código e o QR Code serão gerados pela plataforma de pagamento na próxima etapa.'
-                      : 'Os dados do cartão serão processados com segurança pela plataforma de pagamento.'}
-                  </p>
+                  <span>{paymentDetails[paymentMethod].eyebrow}</span>
+                  <h3>{paymentDetails[paymentMethod].title}</h3>
+                  <p>{paymentDetails[paymentMethod].description}</p>
                 </div>
 
+                <label className="saas-checkout-legal-acceptance">
+                  <input
+                    type="checkbox"
+                    checked={legalAccepted}
+                    onChange={(event) => setLegalAccepted(event.target.checked)}
+                  />
+                  <span>
+                    Li e concordo com os <Link to="/termos-de-servico" target="_blank" rel="noopener noreferrer">Termos de Serviço</Link> e declaro ciência da{' '}
+                    <Link to="/politica-de-privacidade" target="_blank" rel="noopener noreferrer">Política de Privacidade</Link>.
+                  </span>
+                </label>
+
                 <button type="button" className="saas-checkout-submit" disabled>
-                  Conectar plataforma de pagamento para continuar
+                  {paymentDetails[paymentMethod].buttonLabel}
                 </button>
                 <p className="saas-checkout-provider-note">
-                  Esta tela já está preparada para receber a integração do provedor. Nenhuma cobrança será feita nesta demonstração.
+                  Integração com o Mercado Pago em preparação. Nenhuma cobrança será feita nesta demonstração.
                 </p>
               </>
             ) : (
@@ -228,7 +244,118 @@ export default function SaasCheckout() {
           </aside>
         </div>
       </main>
+
+      <footer className="saas-checkout-footer">
+        <span>© 2026 WS Gestão Contábil</span>
+        <nav aria-label="Documentos legais">
+          <Link to="/termos-de-servico">Termos de Serviço</Link>
+          <Link to="/politica-de-privacidade">Política de Privacidade</Link>
+        </nav>
+      </footer>
     </div>
+  );
+}
+
+const paymentDetails: Record<PaymentMethod, { eyebrow: string; title: string; description: string; buttonLabel: string }> = {
+  pix: {
+    eyebrow: 'Pagamento por PIX',
+    title: 'Pague pelo aplicativo do seu banco',
+    description: 'Na próxima etapa, o Mercado Pago exibirá o QR Code e o código copia e cola. A confirmação costuma acontecer em poucos instantes.',
+    buttonLabel: 'Continuar com PIX',
+  },
+  card: {
+    eyebrow: 'Pagamento por cartão',
+    title: 'Use seu cartão de crédito',
+    description: 'Os dados do cartão serão informados e processados com segurança no ambiente do Mercado Pago.',
+    buttonLabel: 'Continuar com cartão',
+  },
+  boleto: {
+    eyebrow: 'Pagamento por boleto',
+    title: 'Gere o boleto para pagamento',
+    description: 'O Mercado Pago emitirá o boleto na próxima etapa. A fatura será confirmada somente após a compensação bancária.',
+    buttonLabel: 'Gerar boleto',
+  },
+};
+
+function PaymentMethodOption({
+  method,
+  current,
+  title,
+  subtitle,
+  icon,
+  onSelect,
+}: {
+  method: PaymentMethod;
+  current: PaymentMethod;
+  title: string;
+  subtitle: string;
+  icon: ReactNode;
+  onSelect: (method: PaymentMethod) => void;
+}) {
+  const active = current === method;
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={active}
+      className={active ? 'is-active' : ''}
+      onClick={() => onSelect(method)}
+    >
+      <span className="saas-checkout-method-copy">
+        <strong>{title}</strong>
+        <small>{subtitle}</small>
+      </span>
+      <span className="saas-checkout-method-icon" aria-hidden="true">{icon}</span>
+      <span className="saas-checkout-method-chevron" aria-hidden="true">⌄</span>
+    </button>
+  );
+}
+
+function MercadoPagoLogo() {
+  return (
+    <span className="saas-checkout-mp-logo" aria-label="Mercado Pago">
+      <span className="saas-checkout-mp-mark" aria-hidden="true">
+        <svg viewBox="0 0 44 28" role="img">
+          <path d="M13.1 8.4c2.6-2.6 5.4-2.3 8.3.5l1.4 1.3 1.7-1.6c2.5-2.3 5-2.5 7.3-.4 1.7 1.5 2 3.7.9 5.8l-1 1.7-6.5 5.7c-1.5 1.3-3.7 1.4-5.2.1l-2-1.7-1.2.9c-1.4 1.1-3.4.9-4.6-.4-1-1.1-1.2-2.7-.5-4l-1.2-1.1c-1.9-1.8-2-4.7-.2-6.6.8-.9 1.8-1.4 2.8-1.6Z" />
+          <path d="M4.2 6.5c4.9-4.9 12.8-5 17.8-.2 5-4.8 12.9-4.7 17.8.2 5 5 5 13.1 0 18.1-1.8 1.8-4 2.9-6.4 3.4l-2.1-3.2c2-.3 3.9-1.2 5.4-2.7 3.6-3.6 3.6-9.5 0-13.1-3.6-3.6-9.5-3.6-13.1 0l-1.5 1.5L20.5 9c-3.6-3.6-9.5-3.6-13.1 0-3.6 3.6-3.6 9.5 0 13.1 1.6 1.6 3.6 2.5 5.6 2.7L10.9 28c-2.5-.5-4.8-1.6-6.7-3.4-5-5-5-13.1 0-18.1Z" />
+        </svg>
+      </span>
+      <strong>mercado pago</strong>
+    </span>
+  );
+}
+
+function PixIcon() {
+  return (
+    <span className="saas-checkout-pix-icon">
+      <svg viewBox="0 0 24 24" role="img">
+        <path d="m12 2.7 4.1 4.1a2.8 2.8 0 0 0 2 .8h1.1l2.1 2.1a3.2 3.2 0 0 1 0 4.6l-2.1 2.1h-1.1a2.8 2.8 0 0 0-2 .8L12 21.3l-4.1-4.1a2.8 2.8 0 0 0-2-.8H4.8l-2.1-2.1a3.2 3.2 0 0 1 0-4.6l2.1-2.1h1.1a2.8 2.8 0 0 0 2-.8L12 2.7Zm0 4.1L8.7 10a4.6 4.6 0 0 1-2.9 1.3H5l-.7.7.7.7h.8c1.2 0 2.2.5 3 1.3l3.2 3.2 3.3-3.2a4.6 4.6 0 0 1 2.9-1.3h.8l.7-.7-.7-.7h-.8c-1.2 0-2.2-.5-3-1.3L12 6.8Z" />
+      </svg>
+      <strong>pix</strong>
+    </span>
+  );
+}
+
+function CardBrands() {
+  return (
+    <span className="saas-checkout-card-brands" aria-label="Visa, Mastercard, American Express, Elo e Hipercard">
+      <span className="brand-visa">VISA</span>
+      <span className="brand-master"><i /><i /></span>
+      <span className="brand-amex">AMEX</span>
+      <span className="brand-elo">elo</span>
+      <span className="brand-hiper">hiper</span>
+    </span>
+  );
+}
+
+function BoletoIcon() {
+  return (
+    <span className="saas-checkout-boleto-icon">
+      <svg viewBox="0 0 42 24" role="img">
+        <path d="M2 3h2v18H2V3Zm4 0h1v18H6V3Zm3 0h3v18H9V3Zm5 0h1v18h-1V3Zm3 0h2v18h-2V3Zm4 0h1v18h-1V3Zm3 0h3v18h-3V3Zm5 0h1v18h-1V3Zm3 0h2v18h-2V3Zm4 0h1v18h-1V3Zm3 0h2v18h-2V3Z" />
+      </svg>
+      <strong>Boleto</strong>
+    </span>
   );
 }
 
