@@ -1,15 +1,34 @@
-import { FormEvent, useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { useLocation, useNavigate } from "react-router-dom";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { useNotifications } from "@/hooks/useNotifications";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, type FormEvent } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { useNotifications } from '@/hooks/useNotifications';
+import { supabase } from '@/integrations/supabase/client';
+import '@/styles/client-login.css';
+
+type MembershipQuery = PromiseLike<{
+  data: Array<{ id: string }> | null;
+  error: { message: string } | null;
+}>;
+
+type MembershipDatabase = {
+  from(table: 'organization_members'): {
+    select(columns: string): {
+      eq(column: string, value: string): {
+        eq(column: string, value: string): {
+          limit(count: number): MembershipQuery;
+        };
+      };
+    };
+  };
+};
+
+const membershipDb = supabase as unknown as MembershipDatabase;
+const STANDARD_LOGO = '/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png';
 
 const ClientLogin = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -20,50 +39,142 @@ const ClientLogin = () => {
   const { notifyLogin } = useNotifications();
 
   const resolveDestination = async (userId: string) => {
-    const redirectPath = new URLSearchParams(location.search).get("redirect");
+    const redirectPath = new URLSearchParams(location.search).get('redirect');
     if (redirectPath) return redirectPath;
 
-    const { data: profile } = await supabase.from("users").select("role").eq("id", userId).maybeSingle();
-    if (profile?.role === "admin") return "/admin";
+    const { data: profile } = await supabase.from('users').select('role').eq('id', userId).maybeSingle();
+    if (profile?.role === 'admin') return '/admin';
 
-    const { data: membership } = await (supabase as any)
-      .from("organization_members")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("status", "active")
+    const { data: membership } = await membershipDb
+      .from('organization_members')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('status', 'active')
       .limit(1);
 
-    if (membership?.length) return "/app";
-    return "/client";
+    if (membership?.length) return '/app';
+    return '/client';
   };
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
     setError(null);
     setIsLoading(true);
 
     try {
       const { error: signInError, data } = await signIn(email, password);
       if (signInError || !data?.user) {
-        setError("Não foi possível entrar. Confira seu e-mail e sua senha.");
-        toast({ title: "Não foi possível entrar", description: signInError?.message || "Credenciais inválidas", variant: "destructive" });
+        setError('Não foi possível entrar. Confira seu e-mail e sua senha.');
+        toast({
+          title: 'Não foi possível entrar',
+          description: signInError?.message || 'Credenciais inválidas',
+          variant: 'destructive',
+        });
         return;
       }
 
       notifyLogin().catch(() => undefined);
       const destination = await resolveDestination(data.user.id);
       navigate(destination, { replace: true });
-    } catch (err: any) {
-      setError("Ocorreu um erro inesperado. Tente novamente.");
-      console.error(err?.message || err);
+    } catch (caughtError: unknown) {
+      setError('Ocorreu um erro inesperado. Tente novamente.');
+      console.error(caughtError instanceof Error ? caughtError.message : caughtError);
     } finally {
       setIsLoading(false);
     }
   };
 
-  return <main className="min-h-screen bg-[#f3f4f6] text-[#111827]"><div className="grid min-h-screen lg:grid-cols-[1.08fr_0.92fr]">
-    <section className="relative hidden overflow-hidden border-r border-[#dde2e7] bg-[#eaedf0] lg:flex lg:flex-col lg:justify-between lg:p-10 xl:p-14"><div className="absolute -left-44 top-[27%] h-[520px] w-[520px] rounded-full border border-[#d3d8de]"/><div className="absolute -left-20 top-[35%] h-[380px] w-[380px] rounded-full border border-[#d6dbe0]"/><div className="absolute bottom-[-150px] right-[-100px] h-[460px] w-[460px] rounded-full bg-[#e2e6ea]"/><div className="relative z-10"><img src="/lovable-uploads/f7fdf0cf-f16c-4df7-a92c-964aadea9539.png" alt="WS Gestão Contábil" className="h-8 object-contain"/></div><div className="relative z-10 max-w-2xl pb-10"><div className="mb-6 inline-flex rounded-full border border-[#d2d7dd] bg-[#f3f4f6] px-3.5 py-1.5 text-xs font-medium text-[#5f6875]">Ambiente seguro e organizado</div><h1 className="max-w-2xl text-5xl font-semibold leading-[1.03] tracking-[-0.055em] xl:text-6xl 2xl:text-7xl">Sua operação fiscal em um lugar só.</h1><p className="mt-6 max-w-xl text-[15px] leading-7 text-[#66707d]">Acesse documentos, empresas e ferramentas da WS com uma experiência simples, clara e feita para o trabalho do dia a dia.</p><div className="mt-10 grid max-w-xl grid-cols-2 gap-3"><div className="rounded-xl border border-[#d7dce2] bg-[#f0f2f4]/90 p-5"><p className="text-sm font-semibold">Documentos fiscais</p><p className="mt-2 text-xs leading-5 text-[#727b87]">Emissão e acompanhamento em um fluxo único.</p></div><div className="rounded-xl border border-[#d7dce2] bg-[#f0f2f4]/90 p-5"><p className="text-sm font-semibold">Acesso protegido</p><p className="mt-2 text-xs leading-5 text-[#727b87]">Cada ambiente permanece separado e controlado.</p></div></div></div><p className="relative z-10 text-xs text-[#8a929d]">WS Gestão Contábil</p></section>
-    <section className="flex min-h-screen items-center justify-center px-5 py-10 sm:px-8 lg:px-12"><div className="w-full max-w-[430px]"><div className="mb-10 flex items-center justify-center lg:hidden"><img src="/lovable-uploads/f7fdf0cf-f16c-4df7-a92c-964aadea9539.png" alt="WS Gestão Contábil" className="h-8 object-contain"/></div><div className="mb-8"><p className="text-sm font-medium text-[#6b7280]">Acesso à plataforma</p><h2 className="mt-2 text-3xl font-semibold tracking-[-0.035em]">Bem-vindo de volta</h2><p className="mt-2 text-sm leading-6 text-[#727b87]">Entre com seus dados para continuar.</p></div><form onSubmit={handleSubmit} className="space-y-5"><div className="space-y-2"><label htmlFor="email" className="text-sm font-medium">E-mail</label><Input id="email" type="email" autoComplete="email" placeholder="seu@email.com" value={email} onChange={e=>setEmail(e.target.value)} required style={{backgroundColor:'#ffffff',color:'#111827',WebkitTextFillColor:'#111827'}} className="h-12 !border-[#cfd5dc] !bg-white !text-[#111827] dark:!bg-white dark:!text-[#111827] caret-[#111827] placeholder:!text-[#9aa1aa]"/></div><div className="space-y-2"><div className="flex items-center justify-between"><label htmlFor="password" className="text-sm font-medium">Senha</label><button type="button" className="text-xs font-medium text-[#6b7280]">Esqueci minha senha</button></div><div className="relative"><Input id="password" type={showPassword?"text":"password"} autoComplete="current-password" placeholder="Sua senha" value={password} onChange={e=>setPassword(e.target.value)} required style={{backgroundColor:'#ffffff',color:'#111827',WebkitTextFillColor:'#111827'}} className="h-12 !border-[#cfd5dc] !bg-white !text-[#111827] dark:!bg-white dark:!text-[#111827] caret-[#111827] pr-20 placeholder:!text-[#9aa1aa]"/><button type="button" onClick={()=>setShowPassword(v=>!v)} className="absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-1 text-xs font-medium text-[#6b7280]">{showPassword?"Ocultar":"Mostrar"}</button></div></div>{error&&<div role="alert" className="rounded-lg border border-[#e4b8b8] bg-[#f8eaea] px-3.5 py-3 text-sm text-[#9f3030]">{error}</div>}<Button type="submit" disabled={isLoading} className="h-12 w-full rounded-lg bg-[#111827] text-sm font-semibold text-white hover:bg-[#202938]">{isLoading?"Entrando...":"Entrar"}</Button></form><div className="mt-8 border-t border-[#dde2e7] pt-6 text-center"><p className="text-sm text-[#727b87]">Acesso exclusivo para usuários autorizados.</p></div></div></section>
-  </div></main>;
+  return (
+    <main className="ws-login-page">
+      <div className="ws-login-shell">
+        <section className="ws-login-presentation">
+          <div className="ws-login-grid" aria-hidden="true" />
+          <Link to="/" className="ws-login-brand" aria-label="Ir para o site da WS Gestão Contábil">
+            <img src={STANDARD_LOGO} alt="WS Gestão Contábil" />
+          </Link>
+
+          <div className="ws-login-presentation-copy">
+            <span className="ws-login-kicker">Emissor Fiscal WS</span>
+            <h1>Sua operação fiscal em um lugar só.</h1>
+            <p>Emita documentos, organize empresas e acompanhe sua rotina fiscal com segurança e clareza.</p>
+
+            <div className="ws-login-points">
+              <div>
+                <strong>Operação centralizada</strong>
+                <span>Cadastros e emissões reunidos no mesmo ambiente.</span>
+              </div>
+              <div>
+                <strong>Acesso controlado</strong>
+                <span>Cada empresa permanece separada e protegida.</span>
+              </div>
+            </div>
+          </div>
+
+          <span className="ws-login-signature">WS Gestão Contábil · Major Isidoro, AL</span>
+        </section>
+
+        <section className="ws-login-access">
+          <div className="ws-login-form-wrap">
+            <Link to="/" className="ws-login-mobile-brand" aria-label="Ir para o site da WS Gestão Contábil">
+              <img src={STANDARD_LOGO} alt="WS Gestão Contábil" />
+            </Link>
+
+            <header className="ws-login-heading">
+              <span>Acesso à plataforma</span>
+              <h2>Bem-vindo de volta</h2>
+              <p>Entre com seus dados para continuar.</p>
+            </header>
+
+            <form onSubmit={handleSubmit} className="ws-login-form">
+              <label htmlFor="email">E-mail</label>
+              <input
+                id="email"
+                type="email"
+                autoComplete="email"
+                placeholder="seu@email.com"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
+              />
+
+              <div className="ws-login-password-head">
+                <label htmlFor="password">Senha</label>
+                <button type="button">Esqueci minha senha</button>
+              </div>
+              <div className="ws-login-password-field">
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  placeholder="Sua senha"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                />
+                <button type="button" onClick={() => setShowPassword((visible) => !visible)}>
+                  {showPassword ? 'Ocultar' : 'Mostrar'}
+                </button>
+              </div>
+
+              {error && <div role="alert" className="ws-login-error">{error}</div>}
+
+              <button type="submit" className="ws-login-submit" disabled={isLoading}>
+                {isLoading ? 'Entrando...' : 'Entrar'}
+              </button>
+            </form>
+
+            <footer className="ws-login-footer">
+              <p>Acesso exclusivo para usuários autorizados.</p>
+              <nav aria-label="Documentos legais">
+                <Link to="/termos-de-servico">Termos de Serviço</Link>
+                <Link to="/politica-de-privacidade">Política de Privacidade</Link>
+              </nav>
+            </footer>
+          </div>
+        </section>
+      </div>
+    </main>
+  );
 };
+
 export default ClientLogin;

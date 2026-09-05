@@ -1,0 +1,213 @@
+.ws-login-page,
+.ws-login-page * {
+  box-sizing: border-box;
+  font-family: 'Proxima Nova', 'Inter', 'Helvetica Neue', Arial, sans-serif;
+}
+
+.ws-login-page {
+  min-height: 100vh;
+  background: #020918;
+  color: #f7f8fa;
+}
+
+.ws-login-shell {
+  display: grid;
+  min-height: 100vh;
+  grid-template-columns: minmax(0, 1.08fr) minmax(440px, .92fr);
+}
+
+.ws-login-presentation {
+  position: relative;
+  display: flex;
+  min-height: 100vh;
+  overflow: hidden;
+  flex-direction: column;
+  justify-content: space-between;
+  border-right: 1px solid rgba(148, 163, 184, .12);
+  background:
+    radial-gradient(circle at 14% 76%, rgba(129, 93, 238, .13), transparent 28%),
+    radial-gradient(circle at 82% 14%, rgba(184, 150, 62, .08), transparent 27%),
+    #020918;
+  padding: clamp(36px, 5vw, 64px);
+}
+
+.ws-login-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(17, 30, 51, .68) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(17, 30, 51, .68) 1px, transparent 1px);
+  background-size: 82px 82px;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, .72), transparent 94%);
+}
+
+.ws-login-grid::before,
+.ws-login-grid::after {
+  content: '';
+  position: absolute;
+  border: 1px solid rgba(149, 162, 184, .11);
+  border-radius: 50%;
+}
+
+.ws-login-grid::before { width: 530px; height: 530px; right: -290px; top: 18%; }
+.ws-login-grid::after { width: 390px; height: 390px; right: -220px; top: 27%; }
+
+.ws-login-brand,
+.ws-login-mobile-brand {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  width: 154px;
+}
+
+.ws-login-brand img,
+.ws-login-mobile-brand img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.ws-login-presentation-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 690px;
+  padding: 56px 0 68px;
+}
+
+.ws-login-kicker {
+  display: inline-flex;
+  min-height: 29px;
+  align-items: center;
+  border: 1px solid rgba(184, 150, 62, .25);
+  border-radius: 999px;
+  background: rgba(184, 150, 62, .07);
+  padding: 0 12px;
+  color: #c6a754;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.ws-login-presentation h1 {
+  max-width: 670px;
+  margin: 21px 0 0;
+  color: #f8fafc;
+  font-size: clamp(46px, 5vw, 72px);
+  font-weight: 400;
+  letter-spacing: -.05em;
+  line-height: .98;
+}
+
+.ws-login-presentation-copy > p {
+  max-width: 550px;
+  margin: 24px 0 0;
+  color: #9ba8b9;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.75;
+}
+
+.ws-login-points {
+  display: grid;
+  max-width: 610px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  margin-top: 42px;
+  border-top: 1px solid rgba(148, 163, 184, .14);
+}
+
+.ws-login-points > div {
+  display: grid;
+  gap: 7px;
+  padding: 20px 24px 0 0;
+}
+
+.ws-login-points > div + div {
+  border-left: 1px solid rgba(148, 163, 184, .14);
+  padding-left: 24px;
+}
+
+.ws-login-points strong { color: #e5eaf1; font-size: 13px; font-weight: 500; }
+.ws-login-points span { max-width: 235px; color: #7f8c9f; font-size: 12px; font-weight: 400; line-height: 1.55; }
+.ws-login-signature { position: relative; z-index: 1; color: #647184; font-size: 11px; font-weight: 400; }
+
+.ws-login-access {
+  display: flex;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, #07111d 0%, #081421 100%);
+  padding: 48px clamp(28px, 5vw, 76px);
+}
+
+.ws-login-form-wrap { width: 100%; max-width: 420px; }
+.ws-login-mobile-brand { display: none; }
+.ws-login-heading > span { color: #8c99a9; font-size: 12px; font-weight: 500; }
+.ws-login-heading h2 { margin: 8px 0 0; color: #f8fafc; font-size: 31px; font-weight: 400; letter-spacing: -.035em; line-height: 1.15; }
+.ws-login-heading p { margin: 9px 0 0; color: #788699; font-size: 13px; font-weight: 400; line-height: 1.5; }
+
+.ws-login-form { display: grid; margin-top: 35px; }
+.ws-login-form > label,
+.ws-login-password-head label { color: #d8dee7; font-size: 12px; font-weight: 500; }
+.ws-login-form > input { margin-top: 8px; }
+.ws-login-form input {
+  width: 100%;
+  height: 48px;
+  border: 1px solid #243247;
+  border-radius: 8px;
+  outline: none;
+  background: #0b1726;
+  padding: 0 14px;
+  color: #f8fafc;
+  font-size: 13px;
+  font-weight: 400;
+  transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+}
+
+.ws-login-form input::placeholder { color: #647184; opacity: 1; }
+.ws-login-form input:hover { border-color: #34445a; }
+.ws-login-form input:focus { border-color: #8f7a3a; background: #0d1a2b; box-shadow: 0 0 0 3px rgba(184, 150, 62, .09); }
+.ws-login-password-head { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-top: 21px; }
+.ws-login-password-head button,
+.ws-login-password-field button {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: #8f9cad;
+  font-size: 11px;
+  font-weight: 400;
+  cursor: pointer;
+}
+.ws-login-password-head button:hover,
+.ws-login-password-field button:hover { color: #c6a754; }
+.ws-login-password-field { position: relative; margin-top: 8px; }
+.ws-login-password-field input { padding-right: 72px; }
+.ws-login-password-field button { position: absolute; top: 50%; right: 13px; transform: translateY(-50%); }
+
+.ws-login-error { margin-top: 16px; border: 1px solid rgba(248, 113, 113, .25); border-radius: 8px; background: rgba(127, 29, 29, .16); padding: 11px 13px; color: #fca5a5; font-size: 12px; line-height: 1.5; }
+.ws-login-submit { width: 100%; height: 48px; margin-top: 22px; border: 1px solid #b8963e; border-radius: 8px; background: #b8963e; color: #08111d; font-size: 13px; font-weight: 500; cursor: pointer; transition: background .16s ease, border-color .16s ease, transform .16s ease; }
+.ws-login-submit:hover:not(:disabled) { border-color: #c6a754; background: #c6a754; transform: translateY(-1px); }
+.ws-login-submit:disabled { cursor: wait; opacity: .68; }
+
+.ws-login-footer { margin-top: 34px; border-top: 1px solid rgba(148, 163, 184, .13); padding-top: 22px; text-align: center; }
+.ws-login-footer p { margin: 0; color: #667487; font-size: 11px; line-height: 1.45; }
+.ws-login-footer nav { display: flex; justify-content: center; gap: 18px; margin-top: 13px; }
+.ws-login-footer a { color: #8491a3; font-size: 11px; text-decoration: none; }
+.ws-login-footer a:hover { color: #c6a754; }
+
+@media (max-width: 920px) {
+  .ws-login-shell { grid-template-columns: 1fr; }
+  .ws-login-presentation { display: none; }
+  .ws-login-access { padding: 38px 22px; }
+  .ws-login-mobile-brand { display: inline-flex; width: 132px; margin-bottom: 54px; }
+}
+
+@media (max-width: 520px) {
+  .ws-login-access { align-items: flex-start; padding: 30px 18px; }
+  .ws-login-mobile-brand { width: 116px; margin-bottom: 48px; }
+  .ws-login-heading h2 { font-size: 27px; }
+  .ws-login-form { margin-top: 30px; }
+}
