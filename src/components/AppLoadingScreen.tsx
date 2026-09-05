@@ -13,7 +13,9 @@ function OriginalLoaderAnimation({ light }: { light: boolean }) {
         alt=""
         className="ws-app-loader-source"
         draggable={false}
-        decoding="async"
+        loading="eager"
+        fetchPriority="high"
+        decoding="sync"
       />
     </span>
   );
@@ -97,29 +99,28 @@ export default function AppLoadingScreen({ mode = 'standard' }: { mode?: Loading
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 5px;
+          gap: 0;
           min-width: 120px;
         }
 
         .ws-app-loader-crop {
           position: relative;
-          display: block;
-          width: 108px;
-          height: 62px;
+          display: grid;
+          place-items: center;
+          width: 112px;
+          height: 77px;
           overflow: hidden;
           isolation: isolate;
-          -webkit-mask-image: radial-gradient(ellipse at center, #000 58%, rgba(0,0,0,.96) 67%, transparent 98%);
-          mask-image: radial-gradient(ellipse at center, #000 58%, rgba(0,0,0,.96) 67%, transparent 98%);
+          -webkit-mask-image: radial-gradient(ellipse at center, #000 64%, rgba(0,0,0,.97) 76%, transparent 100%);
+          mask-image: radial-gradient(ellipse at center, #000 64%, rgba(0,0,0,.97) 76%, transparent 100%);
         }
 
         .ws-app-loader-source {
-          position: absolute;
+          position: static;
           display: block;
-          width: 960px;
-          height: 540px;
+          width: 112px;
+          height: auto;
           max-width: none;
-          left: -430px;
-          top: -251px;
           pointer-events: none;
           user-select: none;
         }
@@ -134,6 +135,7 @@ export default function AppLoadingScreen({ mode = 'standard' }: { mode?: Loading
           text-transform: uppercase;
           white-space: nowrap;
           opacity: .9;
+          margin-top: 18px;
         }
 
         @keyframes ws-app-loading-fade-in {
@@ -157,23 +159,21 @@ export default function AppLoadingScreen({ mode = 'standard' }: { mode?: Loading
 
           .ws-app-loading-indicator {
             top: 53.5%;
-            gap: 4px;
+            gap: 0;
           }
 
           .ws-app-loader-crop {
-            width: 94px;
-            height: 56px;
+            width: 96px;
+            height: 66px;
           }
 
           .ws-app-loader-source {
-            width: 864px;
-            height: 486px;
-            left: -385px;
-            top: -226px;
+            width: 96px;
           }
 
           .ws-app-loading-label {
             font-size: 9px;
+            margin-top: 15px;
           }
         }
 
