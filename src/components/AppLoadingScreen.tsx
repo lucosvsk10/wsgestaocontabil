@@ -106,14 +106,14 @@ export default function AppLoadingScreen({ mode = 'standard' }: { mode?: Loading
           position: relative;
           display: grid;
           place-items: center;
-          width: 112px;
-          height: 90px;
+          width: 76px;
+          height: 61px;
         }
 
         .ws-app-loader-source {
           position: static;
           display: block;
-          width: 112px;
+          width: 76px;
           height: auto;
           max-width: none;
           pointer-events: none;
@@ -130,7 +130,7 @@ export default function AppLoadingScreen({ mode = 'standard' }: { mode?: Loading
           text-transform: uppercase;
           white-space: nowrap;
           opacity: .9;
-          margin-top: 22px;
+          margin-top: 16px;
         }
 
         @keyframes ws-app-loading-fade-in {
@@ -158,17 +158,17 @@ export default function AppLoadingScreen({ mode = 'standard' }: { mode?: Loading
           }
 
           .ws-app-loader-crop {
-            width: 96px;
-            height: 77px;
+            width: 68px;
+            height: 55px;
           }
 
           .ws-app-loader-source {
-            width: 96px;
+            width: 68px;
           }
 
           .ws-app-loading-label {
             font-size: 9px;
-            margin-top: 20px;
+            margin-top: 14px;
           }
         }
 
