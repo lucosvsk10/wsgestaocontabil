@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { X, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Announcement } from '@/types/announcements';
+import { openExternalUrl } from '@/utils/security/url';
 
 interface AnnouncementPopupProps {
   announcement: Announcement;
@@ -18,9 +19,7 @@ export const AnnouncementPopup = ({ announcement, onClose }: AnnouncementPopupPr
   };
 
   const handleActionClick = () => {
-    if (announcement.action_button_url) {
-      window.open(announcement.action_button_url, '_blank');
-    }
+    openExternalUrl(announcement.action_button_url);
   };
 
   const positionClasses = {

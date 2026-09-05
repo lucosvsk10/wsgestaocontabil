@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
+import { openExternalUrl } from "@/utils/security/url";
 
 interface ClientAnnouncement {
   id: string;
@@ -370,7 +371,7 @@ export const ClientAnnouncementsContainer = () => {
                     size="sm"
                     variant="outline"
                     className="w-full border-[#efc349]/30 hover:bg-[#efc349]/10"
-                    onClick={() => window.open(announcement.action_button_url, '_blank')}
+                    onClick={() => openExternalUrl(announcement.action_button_url)}
                   >
                     <ExternalLink className="w-4 h-4 mr-1" />
                     {announcement.action_button_text}

@@ -397,7 +397,7 @@ export default function SaasEmission({
     const [p, c, pr, s, ca] = await Promise.all([
       (supabase as any)
         .from('saas_company_fiscal_profiles')
-        .select('*')
+        .select('id,organization_id,company_id,business_mode,tax_regime,crt,state_registration,municipal_registration,cnae_primary,fiscal_environment,enabled_documents,default_cfop_in_state,default_cfop_out_state,default_nfse_service_code,default_iss_rate,certificate_expires_at,certificate_subject,nfce_csc_id,series_nfe,next_number_nfe,series_nfce,next_number_nfce,series_nfse,next_number_nfse,series_cte,next_number_cte,series_mdfe,next_number_mdfe,notes,logo_path,legal_name,trade_name,tax_id,phone,email,postal_code,street,street_number,complement,district,city,state,city_ibge_code,created_at,updated_at,fiscal_environment_changed_at,fiscal_environment_changed_by')
         .eq('organization_id', organizationId)
         .order('created_at')
         .limit(1)

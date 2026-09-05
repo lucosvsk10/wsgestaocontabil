@@ -471,8 +471,6 @@ export type Database = {
       companies: {
         Row: {
           address: string | null
-          certificate_data: string | null
-          certificate_password: string | null
           cnpj: string | null
           company_name: string
           company_size: string | null
@@ -485,8 +483,6 @@ export type Database = {
         }
         Insert: {
           address?: string | null
-          certificate_data?: string | null
-          certificate_password?: string | null
           cnpj?: string | null
           company_name: string
           company_size?: string | null
@@ -499,8 +495,6 @@ export type Database = {
         }
         Update: {
           address?: string | null
-          certificate_data?: string | null
-          certificate_password?: string | null
           cnpj?: string | null
           company_name?: string
           company_size?: string | null
@@ -1047,7 +1041,6 @@ export type Database = {
       fiscal_certificates: {
         Row: {
           certificate_ciphertext: string | null
-          certificate_data: string | null
           certificate_iv: string | null
           certificate_name: string
           company_id: string
@@ -1060,7 +1053,6 @@ export type Database = {
           inspected_at: string | null
           is_active: boolean
           password_ciphertext: string | null
-          password_hash: string | null
           password_iv: string | null
           serial_number: string | null
           updated_at: string
@@ -1069,7 +1061,6 @@ export type Database = {
         }
         Insert: {
           certificate_ciphertext?: string | null
-          certificate_data?: string | null
           certificate_iv?: string | null
           certificate_name: string
           company_id: string
@@ -1082,7 +1073,6 @@ export type Database = {
           inspected_at?: string | null
           is_active?: boolean
           password_ciphertext?: string | null
-          password_hash?: string | null
           password_iv?: string | null
           serial_number?: string | null
           updated_at?: string
@@ -1091,7 +1081,6 @@ export type Database = {
         }
         Update: {
           certificate_ciphertext?: string | null
-          certificate_data?: string | null
           certificate_iv?: string | null
           certificate_name?: string
           company_id?: string
@@ -1104,7 +1093,6 @@ export type Database = {
           inspected_at?: string | null
           is_active?: boolean
           password_ciphertext?: string | null
-          password_hash?: string | null
           password_iv?: string | null
           serial_number?: string | null
           updated_at?: string
@@ -4241,6 +4229,10 @@ export type Database = {
         Returns: Json
       }
       set_document_expiration: { Args: never; Returns: undefined }
+      set_saas_certificate_bundle: {
+        Args: { _org_id: string; _password: string; _pfx_base64: string }
+        Returns: undefined
+      }
       set_saas_certificate_password: {
         Args: { _org_id: string; _password: string }
         Returns: string

@@ -1,30 +1,17 @@
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; frame-src 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://nadtoitgkukzbghtbohm.supabase.co wss://nadtoitgkukzbghtbohm.supabase.co https://brasilapi.com.br; upgrade-insecure-requests" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
     <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
     <link rel="preload" as="image" href="/loading/ws-loading-light.gif" type="image/gif" fetchpriority="high" />
     <link rel="preload" as="image" href="/loading/ws-loading-standard.gif" type="image/gif" fetchpriority="high" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WS Gestão Contábil | Assessoria & Consultoria</title>
     
-    <!-- Script para evitar flash de modo claro - deve vir antes de qualquer CSS -->
-    <script>
-      (function() {
-        const savedTheme = localStorage.getItem('vite-ui-theme');
-        const theme = savedTheme || 'dark'; // Padrão é modo escuro
-        
-        if (theme === 'dark' || (!savedTheme && theme === 'dark')) {
-          document.documentElement.classList.add('dark');
-        } else if (theme === 'light') {
-          document.documentElement.classList.add('light');
-        } else if (theme === 'system') {
-          const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-          document.documentElement.classList.add(systemTheme);
-        }
-      })();
-    </script>
+    <script src="/theme-init.js"></script>
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -34,7 +21,6 @@
   </head>
   <body>
     <div id="root"></div>
-    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

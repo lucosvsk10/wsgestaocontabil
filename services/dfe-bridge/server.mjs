@@ -1,9 +1,11 @@
 import http from 'node:http';
 import https from 'node:https';
 import { Buffer } from 'node:buffer';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 
 const PORT = Number(process.env.PORT || 8787);
 const BRIDGE_SECRET = process.env.DFE_BRIDGE_SECRET || '';
+const MAX_BODY_BYTES = 8 * 1024 * 1024;
 
 const digits = (v = '') => String(v).replace(/\D/g, '');
 const tag = (xml, name) => xml.match(new RegExp(`<(?:\\w+:)?${name}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/(?:\\w+:)?${name}>`, 'i'))?.[1]?.trim() || '';
@@ -74,103 +76,66 @@ function postToAmbienteNacional({ pfxBase64, password, cnpj, ufCode, ultNSU, env
   });
 }
 
-function probeSvrs({ pfxBase64, password, url }) {
-  const target = new URL(url);
-  if (target.protocol !== 'https:' || !target.hostname.endsWith('.svrs.rs.gov.br')) {
-    throw new Error('Host de probe não permitido');
+async function readBody(req) {
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of req) {
+    size += chunk.length;
+    if (size > MAX_BODY_BYTES) throw new Error('request_too_large');
+    chunks.push(Buffer.from(chunk));
   }
-
-  return new Promise((resolve, reject) => {
-    const req = https.request({
-      hostname: target.hostname,
-      port: 443,
-      path: `${target.pathname}${target.search}`,
-      method: 'GET',
-      pfx: Buffer.from(pfxBase64, 'base64'),
-      passphrase: password,
-      minVersion: 'TLSv1.2',
-      maxVersion: 'TLSv1.2',
-      ALPNProtocols: ['http/1.1'],
-      servername: target.hostname,
-      // Restrito ao endpoint interno de diagnóstico. Alguns hosts legados do SVRS
-      // entregam uma cadeia que a imagem atual do Node não reconhece.
-      rejectUnauthorized: false,
-      agent: false,
-      headers: {
-        Accept: '*/*',
-        Connection: 'close',
-        'User-Agent': 'WS-Gestao-SVRS-Probe/1.0',
-      },
-    }, (res) => {
-      const chunks = [];
-      res.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
-      res.on('end', () => {
-        const text = Buffer.concat(chunks).toString('utf8');
-        resolve({
-          url,
-          status: res.statusCode || 0,
-          contentType: res.headers['content-type'] || null,
-          location: res.headers.location || null,
-          tlsProtocol: typeof res.socket?.getProtocol === 'function' ? res.socket.getProtocol() : null,
-          alpn: res.socket?.alpnProtocol || null,
-          size: text.length,
-          body: text.slice(0, 12000),
-        });
-      });
-    });
-
-    req.setTimeout(15000, () => req.destroy(new Error('Timeout de 15s no SVRS')));
-    req.on('error', reject);
-    req.end();
-  });
+  return Buffer.concat(chunks).toString('utf8');
 }
 
-async function readJson(req) {
-  const chunks = [];
-  for await (const chunk of req) chunks.push(Buffer.from(chunk));
-  return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
+function authorized(req, rawBody) {
+  if (!BRIDGE_SECRET) return false;
+  const timestamp = String(req.headers['x-ws-timestamp'] || '');
+  const signature = String(req.headers['x-ws-signature'] || '');
+  const unixMs = Number(timestamp);
+  if (!Number.isFinite(unixMs) || Math.abs(Date.now() - unixMs) > 5 * 60 * 1000) return false;
+  const expected = createHmac('sha256', BRIDGE_SECRET)
+    .update(`dfe-bridge:${timestamp}:${rawBody}`)
+    .digest('hex');
+  const receivedBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expected);
+  return receivedBuffer.length === expectedBuffer.length && timingSafeEqual(receivedBuffer, expectedBuffer);
 }
 
 const server = http.createServer(async (req, res) => {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
 
   if (req.method === 'GET' && req.url === '/health') {
     res.end(JSON.stringify({ ok: true, service: 'ws-dfe-bridge' }));
     return;
   }
 
-  if (req.method !== 'POST' || !['/distribuicao', '/svrs-probe'].includes(req.url || '')) {
+  if (req.method !== 'POST' || req.url !== '/distribuicao') {
     res.statusCode = 404;
     res.end(JSON.stringify({ error: 'Not found' }));
     return;
   }
 
-  if (BRIDGE_SECRET && req.headers.authorization !== `Bearer ${BRIDGE_SECRET}`) {
-    res.statusCode = 401;
-    res.end(JSON.stringify({ error: 'Unauthorized' }));
-    return;
-  }
-
   try {
-    const body = await readJson(req);
+    if (!String(req.headers['content-type'] || '').toLowerCase().startsWith('application/json')) {
+      res.statusCode = 415;
+      res.end(JSON.stringify({ error: 'Unsupported media type' }));
+      return;
+    }
+    const rawBody = await readBody(req);
+    if (!authorized(req, rawBody)) {
+      res.statusCode = 401;
+      res.end(JSON.stringify({ error: 'Unauthorized' }));
+      return;
+    }
+    const body = JSON.parse(rawBody || '{}');
     const pfxBase64 = String(body.certificate_base64 || '');
     const password = String(body.certificate_password || '');
 
-    if (!pfxBase64 || !password) {
+    if (!pfxBase64 || !password || pfxBase64.length > 7_000_000 || password.length > 256) {
       res.statusCode = 400;
       res.end(JSON.stringify({ error: 'certificate_base64 e certificate_password são obrigatórios' }));
-      return;
-    }
-
-    if (req.url === '/svrs-probe') {
-      const url = String(body.url || '');
-      if (!url) {
-        res.statusCode = 400;
-        res.end(JSON.stringify({ error: 'url é obrigatória' }));
-        return;
-      }
-      const result = await probeSvrs({ pfxBase64, password, url });
-      res.end(JSON.stringify({ ok: true, transport: 'Node/OpenSSL mTLS probe', result }));
       return;
     }
 
@@ -188,7 +153,7 @@ const server = http.createServer(async (req, res) => {
     const result = await postToAmbienteNacional({ pfxBase64, password, cnpj, ufCode, ultNSU, environment });
     if (result.status < 200 || result.status >= 300) {
       res.statusCode = 502;
-      res.end(JSON.stringify({ error: `Ambiente Nacional HTTP ${result.status}`, raw: result.text.slice(0, 1200) }));
+      res.end(JSON.stringify({ error: `Ambiente Nacional HTTP ${result.status}` }));
       return;
     }
 
@@ -206,8 +171,8 @@ const server = http.createServer(async (req, res) => {
       raw_xml: result.text,
     }));
   } catch (error) {
-    res.statusCode = 500;
-    res.end(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }));
+    res.statusCode = error instanceof Error && error.message === 'request_too_large' ? 413 : 500;
+    res.end(JSON.stringify({ error: res.statusCode === 413 ? 'Request too large' : 'Internal server error' }));
   }
 });
 

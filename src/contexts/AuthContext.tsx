@@ -79,14 +79,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const fetchUserData = async (userId: string) => {
     try {
-      const { data, error } = await supabase
-        .from("users")
-        .select("*")
-        .eq("id", userId)
-        .maybeSingle();
+      const [{ data, error }, { data: roles, error: roleError }] = await Promise.all([
+        supabase.from("users").select("*").eq("id", userId).maybeSingle(),
+        supabase.from("user_roles").select("role").eq("user_id", userId),
+      ]);
 
       if (error) throw error;
-      setUserData(data);
+      if (roleError) throw roleError;
+      const isDatabaseAdmin = roles?.some(({ role }) => role === "admin") ?? false;
+      setUserData(data ? { ...data, role: isDatabaseAdmin ? "admin" : "client" } : null);
     } catch (error) {
       console.error("Error fetching user data:", error);
     } finally {

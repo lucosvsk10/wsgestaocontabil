@@ -9,6 +9,7 @@ import { Document } from "@/types/admin";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { openExternalUrl } from "@/utils/security/url";
 
 interface DocumentListProps {
   documents: Document[];
@@ -92,7 +93,7 @@ export const DocumentList = ({
 
       // Fallback para URL pública se não conseguir baixar diretamente
       if (docItem.file_url) {
-        window.open(docItem.file_url, '_blank');
+        if (!openExternalUrl(docItem.file_url)) throw new Error("URL do documento inválida");
       } else {
         throw new Error("URL do documento não encontrada");
       }
