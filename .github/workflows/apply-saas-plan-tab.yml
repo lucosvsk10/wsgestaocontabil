@@ -269,3 +269,5 @@ jobs:
           git add src/components/account/AccountDrawer.tsx src/pages/SaasApp.tsx
           git commit -m "feat(saas): redesign only Meu plano billing tab"
           git push
+
+# trigger
