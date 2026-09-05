@@ -94,7 +94,6 @@ const ClientLogin = () => {
           </Link>
 
           <div className="ws-login-presentation-copy">
-            <span className="ws-login-kicker">Emissor Fiscal WS</span>
             <h1>Sua operação fiscal em um lugar só.</h1>
             <p>Emita documentos, organize empresas e acompanhe sua rotina fiscal com segurança e clareza.</p>
 
