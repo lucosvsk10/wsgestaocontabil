@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
+import { consume, limited, requestKey } from '../_shared/rate-limit.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,6 +21,9 @@ serve(async (req) => {
 
     const { data: roles } = await admin.from('user_roles').select('role').eq('user_id', caller.id)
     if (!roles?.some((r: any) => r.role === 'admin')) return new Response(JSON.stringify({ error: 'Permission denied' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    const limit = await consume(admin, 'admin_change_password', requestKey(req, caller.id), 10, 900)
+    const blocked = limited(limit)
+    if (blocked) return blocked
 
     const { userId, newPassword } = await req.json()
     if (!userId || typeof newPassword !== 'string' || newPassword.length < 8) return new Response(JSON.stringify({ error: 'Invalid data' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })

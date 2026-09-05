@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
 import { Buffer } from "node:buffer";
 import { lerCertificado } from "npm:nfse-node@0.3.2/certificado";
+import { consume, limited, requestKey } from "../_shared/rate-limit.ts";
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type"};
 const out=(b:unknown,s=200)=>new Response(JSON.stringify(b),{status:s,headers:{...cors,"Content-Type":"application/json","Cache-Control":"no-store"}});
 const digits=(v:unknown)=>String(v??"").replace(/\D/g,"");
@@ -9,10 +10,10 @@ Deno.serve(async req=>{if(req.method==="OPTIONS")return new Response(null,{heade
  const auth=req.headers.get("Authorization");if(!auth)return out({error:"Não autenticado"},401);
  const admin=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
  const {data:{user}}=await admin.auth.getUser(auth.replace("Bearer ",""));if(!user)return out({error:"Não autenticado"},401);
- const b=await req.json(),orgId=String(b.organization_id||"");if(!orgId)return out({error:"Organização obrigatória"},422);
+ const b=await req.json(),orgId=String(b.organization_id||"");if(!orgId)return out({error:"Organização obrigatória"},422);const action=String(b.action||"get");const limit=await consume(admin,"saas_fiscal_config",requestKey(req,user.id+"|"+orgId),action==="save_certificate"?6:30,600);const blocked=limited(limit);if(blocked)return blocked;
  const {data:m}=await admin.from("organization_members").select("role,status").eq("organization_id",orgId).eq("user_id",user.id).eq("status","active").maybeSingle();
  const {data:roles}=await admin.from("user_roles").select("role").eq("user_id",user.id);const platformAdmin=roles?.some((r:any)=>["admin","fiscal","contabil","geral"].includes(r.role));if(!m&&!platformAdmin)return out({error:"Sem acesso à organização"},403);
- const canManage=platformAdmin||["owner","admin"].includes(m?.role||"");const action=String(b.action||"get");
+ const canManage=platformAdmin||["owner","admin"].includes(m?.role||"");
  const {data:existing}=await admin.from("saas_company_fiscal_profiles").select("*").eq("organization_id",orgId).order("created_at").limit(1).maybeSingle();
  if(action==="get"){if(!existing)return out({profile:null,certificate_configured:false});const safe={...existing};delete safe.certificate_secret_id;delete safe.certificate_pfx_secret_id;delete safe.certificate_storage_path;delete safe.nfce_csc_token_encrypted;return out({profile:safe,certificate_configured:Boolean(existing.certificate_secret_id&&existing.certificate_pfx_secret_id)})}
  if(!canManage)return out({error:"Apenas proprietário ou administrador pode alterar a configuração fiscal"},403);

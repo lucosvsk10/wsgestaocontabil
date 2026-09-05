@@ -103,16 +103,22 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const { data, error } = await supabase.functions.invoke("auth-login", {
+        body: { email, password },
       });
-      
-      if (error) {
-        return { error, data: null };
+      if (error || data?.error) {
+        return { error: new Error(data?.error || error?.message || "Não foi possível fazer login."), data: null };
       }
-      
-      return { error: null, data };
+      const tokens = data?.session;
+      if (!tokens?.access_token || !tokens?.refresh_token) {
+        return { error: new Error("Resposta de autenticação inválida."), data: null };
+      }
+      const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
+      });
+      if (sessionError) return { error: sessionError, data: null };
+      return { error: null, data: sessionData };
     } catch (error: any) {
       return { error, data: null };
     }

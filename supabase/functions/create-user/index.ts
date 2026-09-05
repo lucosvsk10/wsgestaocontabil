@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
+import { consume, limited, requestKey } from '../_shared/rate-limit.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -24,6 +25,9 @@ Deno.serve(async (req) => {
     const { data: roles } = await admin.from('user_roles').select('role').eq('user_id', caller.id)
     const isFullAdmin = roles?.some((r: any) => r.role === 'admin') || false
     if (!isFullAdmin) return new Response(JSON.stringify({ error: 'Admin privileges required' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    const limit = await consume(admin, 'admin_create_user', requestKey(req, caller.id), 20, 600)
+    const blocked = limited(limit)
+    if (blocked) return blocked
 
     const body = await req.json()
     const email = String(body.email || '').trim().toLowerCase()
