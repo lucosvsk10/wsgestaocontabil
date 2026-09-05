@@ -23,9 +23,6 @@ export const useAuthState = () => {
       } else {
         setUserData(data);
         
-        // Store user data in localStorage
-        localStorage.setItem('user', JSON.stringify(data));
-        
         setIsLoading(false);
       }
     } catch (error) {
@@ -52,10 +49,7 @@ export const useAuthState = () => {
           setUserData(null);
           setIsLoading(false);
           
-          // Remove user data from localStorage on signOut
-          if (event === 'SIGNED_OUT') {
-            localStorage.removeItem('user');
-          }
+          localStorage.removeItem('user');
         }
       }
     );
@@ -69,19 +63,9 @@ export const useAuthState = () => {
       if (currentSession?.user) {
         fetchUserData(currentSession.user.id);
       } else {
-        // Check if we have stored user data in localStorage
-        const storedUser = localStorage.getItem('user');
-        
-        if (storedUser) {
-          try {
-            const parsedUser = JSON.parse(storedUser);
-            setUserData(parsedUser);
-          } catch (error) {
-            console.error('Error parsing stored user data:', error);
-            localStorage.removeItem('user');
-          }
-        }
-        
+        // Authorization data must never be restored from attacker-controlled
+        // browser storage. It is always reloaded through RLS after auth.
+        localStorage.removeItem('user');
         setIsLoading(false);
       }
     });

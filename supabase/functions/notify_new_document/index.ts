@@ -1,98 +1,58 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
 
-// Update the notify_new_document edge function
-
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-// Set up Supabase client with service role key
-const supabaseUrl = 'https://nadtoitgkukzbghtbohm.supabase.co'
-const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
-const supabase = createClient(supabaseUrl, supabaseKey)
-
-// Define CORS headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
+};
+const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
+  status,
+  headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+});
 
-// Handle requests
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
-  
-  // Only allow POST requests
-  if (req.method !== 'POST') {
-    return new Response(
-      JSON.stringify({ error: 'Method not allowed' }),
-      { 
-        status: 405,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      }
-    )
-  }
-  
-  // Parse request body
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
+
   try {
-    const { user_id, document_name } = await req.json()
-    
-    // Validate required fields
-    if (!user_id || !document_name) {
-      return new Response(
-        JSON.stringify({ error: 'user_id and document_name are required' }),
-        { 
-          status: 400,
-          headers: { 'Content-Type': 'application/json', ...corsHeaders }
-        }
-      )
-    }
-    
-    console.log(`Creating notification for user ${user_id} about document: ${document_name}`)
-    
-    // Insert notification into the database using service role (bypasses RLS)
-    const { data, error } = await supabase
-      .from('notifications')
-      .insert({
-        user_id,
-        message: `Novo documento enviado: ${document_name}`,
-        type: 'Novo Documento'
+    const token = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
+    if (!token) return json({ error: 'Não autenticado' }, 401);
+
+    const admin = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      { auth: { persistSession: false, autoRefreshToken: false } },
+    );
+    const { data: { user }, error: authError } = await admin.auth.getUser(token);
+    if (authError || !user) return json({ error: 'Não autenticado' }, 401);
+
+    const body = await req.json().catch(() => ({})) as Record<string, unknown>;
+    const userId = String(body.user_id || '');
+    const documentName = [...String(body.document_name || '')]
+      .filter((character) => {
+        const code = character.charCodeAt(0);
+        return code > 31 && code !== 127;
       })
-      .select()
-      .single()
-    
-    if (error) {
-      console.error('Error creating notification:', error)
-      return new Response(
-        JSON.stringify({ error: error.message }),
-        { 
-          status: 500,
-          headers: { 'Content-Type': 'application/json', ...corsHeaders }
-        }
-      )
+      .join('')
+      .trim()
+      .slice(0, 180);
+    if (!userId || !documentName) return json({ error: 'Dados inválidos' }, 400);
+
+    if (userId !== user.id) {
+      const { data: roles } = await admin.from('user_roles').select('role').eq('user_id', user.id);
+      if (!roles?.some((row: { role: string }) => row.role === 'admin')) return json({ error: 'Sem permissão' }, 403);
     }
-    
-    console.log('Notification created successfully:', data)
-    
-    // Return success response
-    return new Response(
-      JSON.stringify({ 
-        success: true,
-        notification: data
-      }),
-      { 
-        status: 200,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      }
-    )
+
+    const { error } = await admin.from('notifications').insert({
+      user_id: userId,
+      message: `Novo documento enviado: ${documentName}`,
+      type: 'Novo Documento',
+    });
+    if (error) throw error;
+
+    return json({ success: true }, 201);
   } catch (error) {
-    console.error('Unexpected error:', error)
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { 
-        status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      }
-    )
+    console.error('notify_new_document failed', error instanceof Error ? error.message : 'unknown');
+    return json({ error: 'Internal server error' }, 500);
   }
-})
+});

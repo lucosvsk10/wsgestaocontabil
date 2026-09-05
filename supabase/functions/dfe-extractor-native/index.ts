@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
 
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type"};
-const json=(b:unknown,s=200)=>new Response(JSON.stringify(b),{status:s,headers:{...cors,"content-type":"application/json"}});
+const json=(b:unknown,s=200)=>new Response(JSON.stringify(b),{status:s,headers:{...cors,"content-type":"application/json","cache-control":"no-store","x-content-type-options":"nosniff"}});
 const E=new TextEncoder(),D=new TextDecoder(),B=(v:string)=>Uint8Array.from(atob(v),c=>c.charCodeAt(0));
 const digits=(v:unknown)=>String(v??"").replace(/\D/g,"");
 const sleep=(ms:number)=>new Promise(r=>setTimeout(r,ms));
@@ -41,7 +41,8 @@ Deno.serve(async req=>{
     let current=digits(state?.ult_nsu||"0").padStart(15,"0").slice(-15),last:any={cStat:"137",xMotivo:"Nenhum documento localizado",ultNSU:current,maxNSU:state?.max_nsu||current},newDocuments=0,newEvents=0,batches=0;
     for(let i=0;i<5;i++){
       if(i)await sleep(1300);
-      const br=await fetch("https://ws-dfe-bridge.vercel.app/api/distribuicao",{method:"POST",headers:{authorization:`Bearer ${service}`,"content-type":"application/json"},body:JSON.stringify({certificate_base64:pfx,certificate_password:pass,cnpj,ufCode,uf_code:ufCode,ultNSU:current,ult_nsu:current,environment}),signal:AbortSignal.timeout(45000)});
+      const timestamp=String(Date.now()),bodyJson=JSON.stringify({certificate_base64:pfx,certificate_password:pass,cnpj,ufCode,uf_code:ufCode,ultNSU:current,ult_nsu:current,environment}),key=await crypto.subtle.importKey("raw",E.encode(service),{name:"HMAC",hash:"SHA-256"},false,["sign"]),signed=new Uint8Array(await crypto.subtle.sign("HMAC",key,E.encode(`dfe-bridge:${timestamp}:${bodyJson}`))),signature=[...signed].map(v=>v.toString(16).padStart(2,"0")).join("");
+      const br=await fetch("https://ws-dfe-bridge.vercel.app/api/distribuicao",{method:"POST",headers:{"x-ws-timestamp":timestamp,"x-ws-signature":signature,"content-type":"application/json"},body:bodyJson,signal:AbortSignal.timeout(45000)});
       const payload=await br.json().catch(()=>({})) as any;if(!br.ok)throw new Error(`Bridge fiscal HTTP ${br.status}: ${payload?.error||"erro desconhecido"}`);const text=String(payload.raw_xml||"");if(!text)throw new Error("Bridge fiscal respondeu sem XML bruto");
       last=payload.response||{cStat:tag(text,"cStat"),xMotivo:tag(text,"xMotivo"),ultNSU:tag(text,"ultNSU"),maxNSU:tag(text,"maxNSU")};batches++;
       if(String(last.cStat)==="656"){await admin.from("fiscal_dfe_sync_state").upsert({user_id:user.id,cnpj,environment,uf_code:ufCode,ult_nsu:current,max_nsu:state?.max_nsu||current,last_status_code:"656",last_status_message:last.xMotivo||"Consumo indevido",last_synced_at:new Date().toISOString(),updated_at:new Date().toISOString()},{onConflict:"user_id,cnpj,environment,uf_code"});return json({ok:false,cooldown:true,response:last},429)}
@@ -56,5 +57,5 @@ Deno.serve(async req=>{
     await admin.from("fiscal_companies").update({last_sync_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq("id",companyId);
     const {data:stored}=await admin.from("fiscal_dfe_documents").select("*").eq("company_id",companyId).eq("environment",environment).order("issue_date",{ascending:false}).limit(5000);
     return json({ok:["137","138"].includes(String(last.cStat)),provider:"Ambiente Nacional NF-e",source:"national_dfe",environment,response:last,newDocuments,newEvents,batchCount:batches,documents:stored||[],scope:{received:true,emittedByCompany:false,note:"Compras/entradas vêm do Ambiente Nacional; vendas usam o conector estadual."}});
-  }catch(e){console.error("dfe-extractor-native",e);return json({error:e instanceof Error?e.message:String(e)},500)}
+  }catch(e){console.error("dfe-extractor-native",e);return json({error:"Não foi possível concluir a sincronização fiscal"},500)}
 });

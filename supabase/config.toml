@@ -60,7 +60,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.storage-stats]
-verify_jwt = false
+verify_jwt = true
 
 [functions.delete-expired-documents]
 verify_jwt = false
@@ -79,3 +79,114 @@ verify_jwt = true
 
 [functions.cte-issue-native]
 verify_jwt = true
+
+[functions.notify_new_document]
+verify_jwt = true
+
+[functions.delete_daily_log_notifications]
+verify_jwt = true
+
+[functions.delete_old_document_notifications]
+verify_jwt = true
+
+[functions.notify_expiring_documents]
+verify_jwt = true
+
+[functions.setup_notification_cron_jobs]
+verify_jwt = true
+
+[functions.setup-document-cleanup-cron]
+verify_jwt = true
+
+[functions.process-purchases-document]
+verify_jwt = true
+
+[functions.process-revenue-document]
+verify_jwt = true
+
+[functions.process-revenue-undated-document]
+verify_jwt = true
+
+[functions.process-trial-balance-document]
+verify_jwt = true
+
+[functions.detect-accounting-competence]
+verify_jwt = true
+
+[functions.align-expense-entries]
+verify_jwt = true
+
+[functions.resolve-accounting-mappings]
+verify_jwt = true
+
+[functions.learn-accounting-mappings]
+verify_jwt = true
+
+[functions.dfe-feature]
+verify_jwt = true
+
+[functions.dfe-preview-native]
+verify_jwt = true
+
+[functions.dfe-issue-native]
+verify_jwt = true
+
+[functions.dfe-danfe-native]
+verify_jwt = true
+
+[functions.dfe-danfe-pdf]
+verify_jwt = true
+
+[functions.dfe-extractor-native]
+verify_jwt = true
+
+[functions.fiscal-bulk-download]
+verify_jwt = true
+
+[functions.fiscal-document-recover]
+verify_jwt = true
+
+[functions.admin-fiscal-bootstrap]
+verify_jwt = true
+
+[functions.saas-fiscal-config]
+verify_jwt = true
+
+[functions.saas-dfe-issue]
+verify_jwt = true
+
+[functions.saas-nfse-issue]
+verify_jwt = true
+
+[functions.saas-cte-issue]
+verify_jwt = true
+
+[functions.saas-mdfe-issue]
+verify_jwt = true
+
+[functions.saas-registry-lookup]
+verify_jwt = true
+
+[functions.saas-sales-history-sync]
+verify_jwt = true
+
+[functions.fiscal-sales-connector]
+verify_jwt = false
+
+[functions.fiscal-sales-cron]
+verify_jwt = false
+
+[functions.fiscal-sales-reconcile]
+verify_jwt = false
+
+[functions.fiscal-sales-classify-gaps]
+verify_jwt = false
+
+[functions.fiscal-sales-xml-backfill]
+verify_jwt = false
+
+[functions.fiscal-sales-event-backfill]
+verify_jwt = false
+
+[functions.fiscal-purchases-xml-backfill]
+verify_jwt = false

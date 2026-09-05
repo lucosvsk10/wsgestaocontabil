@@ -45,10 +45,14 @@ const ClientLogin = () => {
 
   const resolveDestination = async (userId: string) => {
     const redirectPath = new URLSearchParams(location.search).get('redirect');
-    if (redirectPath) return redirectPath;
+    // Never allow the login page to act as an open redirect. Only local,
+    // absolute application paths are accepted.
+    if (redirectPath?.startsWith('/') && !redirectPath.startsWith('//') && !redirectPath.includes('\\')) {
+      return redirectPath;
+    }
 
-    const { data: profile } = await supabase.from('users').select('role').eq('id', userId).maybeSingle();
-    if (profile?.role === 'admin') return '/admin';
+    const { data: roles } = await supabase.from('user_roles').select('role').eq('user_id', userId);
+    if (roles?.some(({ role }) => role === 'admin')) return '/admin';
 
     const { data: membership } = await membershipDb
       .from('organization_members')
@@ -72,7 +76,7 @@ const ClientLogin = () => {
         setError('Não foi possível entrar. Confira seu e-mail e sua senha.');
         toast({
           title: 'Não foi possível entrar',
-          description: signInError?.message || 'Credenciais inválidas',
+          description: 'Confira seu e-mail e sua senha.',
           variant: 'destructive',
         });
         return;

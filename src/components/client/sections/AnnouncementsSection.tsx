@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Bell, ExternalLink } from "lucide-react";
 import { ClientAnnouncement } from "@/types/client";
 import { supabase } from "@/integrations/supabase/client";
+import { openExternalUrl } from "@/utils/security/url";
 
 export const AnnouncementsSection = () => {
   const [announcements, setAnnouncements] = useState<ClientAnnouncement[]>([]);
@@ -117,7 +118,7 @@ export const AnnouncementsSection = () => {
 
                   {announcement.action_button_text && announcement.action_button_url && (
                     <button 
-                      onClick={() => window.open(announcement.action_button_url, '_blank')}
+                      onClick={() => openExternalUrl(announcement.action_button_url)}
                       className="flex-shrink-0 p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-primary/10 transition-all duration-200 opacity-0 group-hover:opacity-100"
                     >
                       <ExternalLink className="w-4 h-4" />

@@ -75,11 +75,11 @@ const Hero = () => {
               
               {/* CTA Buttons */}
               <div className="flex flex-wrap gap-3 mt-7">
-                <Button className="bg-primary text-white px-4 py-1.5 text-sm rounded-xl font-semibold hover:opacity-90" onClick={() => window.open('https://g.co/kgs/d2UwXh3', '_blank')}>
+                <Button className="bg-primary text-white px-4 py-1.5 text-sm rounded-xl font-semibold hover:opacity-90" onClick={() => window.open('https://g.co/kgs/d2UwXh3', '_blank', 'noopener,noreferrer')}>
                   Saiba Mais
                 </Button>
                 
-                <Button variant="outline" className="border border-primary text-primary px-4 py-1.5 text-sm rounded-xl hover:bg-primary/10" onClick={() => window.open('https://wa.me/5582999324884', '_blank')}>
+                <Button variant="outline" className="border border-primary text-primary px-4 py-1.5 text-sm rounded-xl hover:bg-primary/10" onClick={() => window.open('https://wa.me/5582999324884', '_blank', 'noopener,noreferrer')}>
                   Fale com um especialista
                 </Button>
               </div>

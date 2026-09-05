@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import JsBarcode from "jsbarcode";
 import QRCode from "qrcode";
+import { openPrintWindow, renderPrintableDocument } from "@/utils/security/print";
 
 const money=(v:any)=>Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
 const digits=(v:any)=>String(v??"").replace(/\D/g,"");
@@ -11,10 +12,11 @@ const auxTitle=(t:string)=>t==="CT-e"?"DACTE":t==="MDF-e"?"DAMDFE":t==="NFS-e"?"
 
 export function printDanfe(elementId:string,title="Documento fiscal"){
  const node=document.getElementById(elementId);if(!node)return;
- const w=window.open("","_blank","width=1080,height=900");if(!w)return;
+ const w=openPrintWindow("width=1080,height=900");if(!w)return;
  const styles=[...document.head.querySelectorAll('link[rel="stylesheet"],style')].map(el=>el.outerHTML).join("\n");
  const receipt=node.classList.contains("receipt-sheet");
- w.document.open();w.document.write(`<!doctype html><html><head><meta charset="utf-8"/><title>${title}</title>${styles}<style>*{box-sizing:border-box}html,body{background:#fff!important;color:#000!important}body{margin:0;padding:${receipt?"3mm":"6mm"};font-family:Arial,sans-serif}.danfe-actions,.saas-preview-toolbar{display:none!important}.danfe-sheet{width:100%!important;max-width:198mm!important;margin:0 auto!important;box-shadow:none!important}.receipt-sheet{width:80mm!important;max-width:80mm!important;margin:0 auto!important;box-shadow:none!important;border:0!important;padding:3mm!important}@page{size:${receipt?"80mm auto":"A4 portrait"};margin:${receipt?"2mm":"5mm"}}@media print{body{padding:0!important}.saas-preview-shell{background:#fff!important;border:0!important;padding:0!important}}</style></head><body>${node.outerHTML}</body></html>`);w.document.close();setTimeout(()=>{w.focus();w.print()},650);
+ const escapedTitle=title.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+ renderPrintableDocument(w,`<!doctype html><html><head><meta charset="utf-8"/><title>${escapedTitle}</title>${styles}<style>*{box-sizing:border-box}html,body{background:#fff!important;color:#000!important}body{margin:0;padding:${receipt?"3mm":"6mm"};font-family:Arial,sans-serif}.danfe-actions,.saas-preview-toolbar{display:none!important}.danfe-sheet{width:100%!important;max-width:198mm!important;margin:0 auto!important;box-shadow:none!important}.receipt-sheet{width:80mm!important;max-width:80mm!important;margin:0 auto!important;box-shadow:none!important;border:0!important;padding:3mm!important}@page{size:${receipt?"80mm auto":"A4 portrait"};margin:${receipt?"2mm":"5mm"}}@media print{body{padding:0!important}.saas-preview-shell{background:#fff!important;border:0!important;padding:0!important}}</style></head><body>${node.outerHTML}</body></html>`);
 }
 
 function Barcode({value}:{value:string}){const ref=useRef<SVGSVGElement|null>(null);useEffect(()=>{if(!ref.current||digits(value).length<8)return;try{JsBarcode(ref.current,digits(value),{format:"CODE128",displayValue:false,height:44,width:1.15,margin:0})}catch{}},[value]);return digits(value).length>=8?<svg ref={ref} className="h-[48px] w-full" aria-label="Código de barras"/>:<div className="grid h-[48px] place-items-center border border-dashed border-black/30 text-[8px]">Código de barras disponível após autorização</div>}

@@ -122,14 +122,14 @@ const AccountingSection = () => {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
                 className="bg-[#020817] text-white hover:bg-[#0f172a] dark:bg-gold dark:text-deepNavy dark:hover:bg-gold/90"
-                onClick={() => window.open('https://wa.me/5582999324884', '_blank')}
+                onClick={() => window.open('https://wa.me/5582999324884', '_blank', 'noopener,noreferrer')}
               >
                 Fale Conosco
               </Button>
               <Button 
                 variant="outline"
                 className="border-[#e6e6e6] text-[#020817] hover:bg-gray-50 dark:border-gold/30 dark:text-gold dark:hover:bg-gold/10"
-                onClick={() => window.open('https://g.co/kgs/d2UwXh3', '_blank')}
+                onClick={() => window.open('https://g.co/kgs/d2UwXh3', '_blank', 'noopener,noreferrer')}
               >
                 Saiba Mais
               </Button>

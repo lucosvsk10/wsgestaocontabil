@@ -2,6 +2,7 @@ import { CheckCircle2, Copy, Printer, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { openPrintWindow, renderPrintableDocument, showPrintPlaceholder } from "@/utils/security/print";
 
 type Props = {
   token: string;
@@ -33,9 +34,9 @@ export function AuthorizedNfceCard({ token, sale, result }: Props) {
 
   const printDanfe = async () => {
     setPrinting(true); setMessage("");
-    const printWindow = window.open("", "_blank", "width=460,height=760");
+    const printWindow = openPrintWindow("width=460,height=760");
     if (!printWindow) { setMessage("O navegador bloqueou a janela de impressão. Libere pop-ups para este site."); setPrinting(false); return; }
-    printWindow.document.write("<html><body style='font-family:Arial;padding:24px'>Gerando DANFE...</body></html>");
+    showPrintPlaceholder(printWindow, "Gerando DANFE...");
     try {
       const data = await invoke<{ html: string }>("dfe-danfe-native", {
         engine_token: token,
@@ -44,9 +45,7 @@ export function AuthorizedNfceCard({ token, sale, result }: Props) {
         chaveAcesso: chave,
         protocol,
       });
-      printWindow.document.open();
-      printWindow.document.write(data.html);
-      printWindow.document.close();
+      renderPrintableDocument(printWindow, data.html);
     } catch (error) {
       printWindow.close();
       setMessage(error instanceof Error ? error.message : "Falha ao gerar DANFE.");
