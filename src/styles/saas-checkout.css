@@ -1,0 +1,239 @@
+.saas-checkout-page,
+.saas-checkout-page * {
+  box-sizing: border-box;
+  font-family: 'Proxima Nova', 'Inter', 'Helvetica Neue', Arial, sans-serif;
+}
+
+.saas-checkout-page {
+  min-height: 100vh;
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.saas-checkout-topbar {
+  display: flex;
+  min-height: 68px;
+  align-items: center;
+  gap: 18px;
+  padding: 0 max(24px, calc((100vw - 1160px) / 2));
+  border-bottom: 1px solid rgba(148, 163, 184, .14);
+  background: radial-gradient(circle at 50% -120%, rgba(62, 104, 154, .24), transparent 58%), linear-gradient(180deg, #0a1422 0%, #07111d 100%);
+  color: #f8fafc;
+}
+
+.saas-checkout-brand {
+  display: flex;
+  width: 104px;
+  height: 44px;
+  align-items: center;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+.saas-checkout-brand img {
+  display: block;
+  max-width: 100%;
+  max-height: 31px;
+  object-fit: contain;
+}
+
+.saas-checkout-topbar > div {
+  display: grid;
+  gap: 2px;
+  padding-left: 18px;
+  border-left: 1px solid rgba(255, 255, 255, .14);
+}
+
+.saas-checkout-topbar strong { font-size: 13px; font-weight: 500; }
+.saas-checkout-topbar span { color: #94a3b8; font-size: 11px; font-weight: 400; }
+
+.saas-checkout-main {
+  width: min(1160px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 34px 0 64px;
+}
+
+.saas-checkout-back {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: #667085;
+  font-size: 12px;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.saas-checkout-back:hover { color: #111827; }
+
+.saas-checkout-heading { margin: 28px 0 24px; }
+.saas-checkout-heading > span,
+.saas-checkout-section-head > span {
+  display: block;
+  color: #667085;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .02em;
+}
+
+.saas-checkout-heading h1 {
+  margin: 6px 0 0;
+  color: #0f172a;
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1.18;
+}
+
+.saas-checkout-heading p {
+  margin: 7px 0 0;
+  color: #667085;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.saas-checkout-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 370px;
+  gap: 18px;
+  align-items: start;
+}
+
+.saas-checkout-card {
+  border: 1px solid #d2d7dc;
+  border-radius: 8px;
+  background: #e9ecef;
+}
+
+.saas-checkout-payment { padding: 24px; }
+.saas-checkout-summary { overflow: hidden; }
+
+.saas-checkout-section-head h2 {
+  margin: 5px 0 0;
+  color: #0f172a;
+  font-size: 19px;
+  font-weight: 500;
+}
+
+.saas-checkout-methods {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.saas-checkout-methods button {
+  display: grid;
+  min-height: 82px;
+  gap: 5px;
+  align-content: center;
+  border: 1px solid #c7cdd3;
+  border-radius: 7px;
+  background: #f3f4f6;
+  padding: 15px;
+  color: #344054;
+  text-align: left;
+  cursor: pointer;
+}
+
+.saas-checkout-methods button:hover { border-color: #98a2ad; }
+.saas-checkout-methods button.is-active {
+  border-color: #536077;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px #536077;
+}
+
+.saas-checkout-methods strong { font-size: 14px; font-weight: 500; }
+.saas-checkout-methods span { color: #667085; font-size: 12px; font-weight: 400; }
+
+.saas-checkout-method-detail {
+  min-height: 156px;
+  margin-top: 12px;
+  border: 1px solid #d2d7dc;
+  border-radius: 7px;
+  background: #f3f4f6;
+  padding: 22px;
+}
+
+.saas-checkout-method-detail > span { color: #667085; font-size: 11px; font-weight: 500; }
+.saas-checkout-method-detail h3 { margin: 8px 0 0; color: #111827; font-size: 17px; font-weight: 500; }
+.saas-checkout-method-detail p { max-width: 500px; margin: 8px 0 0; color: #667085; font-size: 13px; line-height: 1.55; }
+
+.saas-checkout-submit {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 14px;
+  border: 1px solid #202833;
+  border-radius: 7px;
+  background: #202833;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.saas-checkout-submit:disabled { cursor: not-allowed; opacity: .58; }
+.saas-checkout-provider-note { margin: 10px 0 0; color: #7a8492; font-size: 11px; line-height: 1.45; text-align: center; }
+
+.saas-checkout-summary .saas-checkout-section-head { padding: 22px; border-bottom: 1px solid #d2d7dc; }
+.saas-checkout-company,
+.saas-checkout-description { display: grid; gap: 5px; padding: 17px 22px; border-bottom: 1px solid #d2d7dc; }
+.saas-checkout-company span,
+.saas-checkout-description span { color: #667085; font-size: 11px; line-height: 1.45; }
+.saas-checkout-company strong,
+.saas-checkout-description strong { color: #344054; font-size: 13px; font-weight: 500; line-height: 1.45; }
+
+.saas-checkout-totals { display: grid; gap: 12px; margin: 0; padding: 20px 22px; }
+.saas-checkout-totals > div { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.saas-checkout-totals dt { color: #667085; font-size: 12px; }
+.saas-checkout-totals dd { margin: 0; color: #344054; font-size: 13px; font-weight: 500; }
+.saas-checkout-totals .is-total { margin-top: 3px; padding-top: 16px; border-top: 1px solid #d2d7dc; }
+.saas-checkout-totals .is-total dt { color: #111827; font-size: 14px; font-weight: 500; }
+.saas-checkout-totals .is-total dd { color: #0f172a; font-size: 23px; font-weight: 500; }
+
+.saas-checkout-security { display: grid; gap: 5px; border-top: 1px solid #d2d7dc; background: #e4e7ea; padding: 16px 22px; }
+.saas-checkout-security strong { color: #344054; font-size: 12px; font-weight: 500; }
+.saas-checkout-security span { color: #667085; font-size: 11px; line-height: 1.45; }
+
+.saas-checkout-state { display: grid; gap: 8px; margin-top: 22px; border: 1px solid #d2d7dc; border-radius: 7px; background: #f3f4f6; padding: 24px; }
+.saas-checkout-state span { color: #667085; font-size: 11px; }
+.saas-checkout-state h3 { margin: 0; color: #111827; font-size: 17px; font-weight: 500; }
+.saas-checkout-state button,
+.saas-checkout-error button { width: max-content; min-height: 40px; margin-top: 8px; border: 0; border-radius: 6px; background: #202833; padding: 0 16px; color: #fff; font-size: 13px; font-weight: 500; cursor: pointer; }
+
+.saas-checkout-error {
+  display: grid;
+  min-height: 100vh;
+  place-content: center;
+  gap: 24px;
+  background: #f3f4f6;
+  padding: 24px;
+  color: #111827;
+  text-align: center;
+}
+.saas-checkout-error img { width: 116px; margin: 0 auto; }
+.saas-checkout-error section { max-width: 440px; border: 1px solid #d2d7dc; border-radius: 8px; background: #e9ecef; padding: 28px; }
+.saas-checkout-error span { color: #667085; font-size: 11px; }
+.saas-checkout-error h1 { margin: 6px 0 0; color: #0f172a; font-size: 24px; font-weight: 500; }
+.saas-checkout-error p { margin: 9px 0 0; color: #667085; font-size: 13px; line-height: 1.5; }
+.saas-checkout-error button { margin-inline: auto; }
+
+@media (max-width: 820px) {
+  .saas-checkout-main { width: min(100% - 24px, 680px); padding-top: 24px; }
+  .saas-checkout-layout { grid-template-columns: 1fr; }
+  .saas-checkout-summary { order: -1; }
+}
+
+@media (max-width: 520px) {
+  .saas-checkout-topbar { min-height: 60px; gap: 12px; padding: 0 14px; }
+  .saas-checkout-brand { width: 84px; }
+  .saas-checkout-brand img { max-height: 26px; }
+  .saas-checkout-topbar > div { padding-left: 12px; }
+  .saas-checkout-topbar > div span { display: none; }
+  .saas-checkout-main { width: calc(100% - 20px); padding-bottom: 32px; }
+  .saas-checkout-heading { margin: 22px 2px 18px; }
+  .saas-checkout-heading h1 { font-size: 25px; }
+  .saas-checkout-payment { padding: 18px 14px; }
+  .saas-checkout-methods { grid-template-columns: 1fr; }
+  .saas-checkout-methods button { min-height: 70px; }
+  .saas-checkout-method-detail { min-height: 0; padding: 18px; }
+}
