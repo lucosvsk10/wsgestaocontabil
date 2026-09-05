@@ -2,14 +2,13 @@ type LoadingMode = 'light' | 'standard';
 
 const LIGHT_LOGO = '/lovable-uploads/f7fdf0cf-f16c-4df7-a92c-964aadea9539.png';
 const STANDARD_LOGO = '/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png';
-const LIGHT_LOADER = '/loading/ws-loading-light.gif';
-const STANDARD_LOADER = '/loading/ws-loading-standard.gif';
+const TRANSPARENT_LOADER = '/loading/ws-loading-transparent.gif';
 
-function OriginalLoaderAnimation({ light }: { light: boolean }) {
+function OriginalLoaderAnimation() {
   return (
     <span className="ws-app-loader-crop" aria-hidden="true">
       <img
-        src={light ? LIGHT_LOADER : STANDARD_LOADER}
+        src={TRANSPARENT_LOADER}
         alt=""
         className="ws-app-loader-source"
         draggable={false}
@@ -108,11 +107,7 @@ export default function AppLoadingScreen({ mode = 'standard' }: { mode?: Loading
           display: grid;
           place-items: center;
           width: 112px;
-          height: 77px;
-          overflow: hidden;
-          isolation: isolate;
-          -webkit-mask-image: radial-gradient(ellipse at center, #000 64%, rgba(0,0,0,.97) 76%, transparent 100%);
-          mask-image: radial-gradient(ellipse at center, #000 64%, rgba(0,0,0,.97) 76%, transparent 100%);
+          height: 90px;
         }
 
         .ws-app-loader-source {
@@ -135,7 +130,7 @@ export default function AppLoadingScreen({ mode = 'standard' }: { mode?: Loading
           text-transform: uppercase;
           white-space: nowrap;
           opacity: .9;
-          margin-top: 36px;
+          margin-top: 22px;
         }
 
         @keyframes ws-app-loading-fade-in {
@@ -164,7 +159,7 @@ export default function AppLoadingScreen({ mode = 'standard' }: { mode?: Loading
 
           .ws-app-loader-crop {
             width: 96px;
-            height: 66px;
+            height: 77px;
           }
 
           .ws-app-loader-source {
@@ -173,7 +168,7 @@ export default function AppLoadingScreen({ mode = 'standard' }: { mode?: Loading
 
           .ws-app-loading-label {
             font-size: 9px;
-            margin-top: 32px;
+            margin-top: 20px;
           }
         }
 
@@ -202,7 +197,7 @@ export default function AppLoadingScreen({ mode = 'standard' }: { mode?: Loading
       </div>
 
       <div className="ws-app-loading-indicator">
-        <OriginalLoaderAnimation light={light} />
+        <OriginalLoaderAnimation />
         <p className="ws-app-loading-label">Carregando...</p>
       </div>
 
