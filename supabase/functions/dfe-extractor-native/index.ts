@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
+import { consume, limited, requestKey } from "../_shared/rate-limit.ts";
 
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type"};
 const json=(b:unknown,s=200)=>new Response(JSON.stringify(b),{status:s,headers:{...cors,"content-type":"application/json","cache-control":"no-store","x-content-type-options":"nosniff"}});
@@ -31,6 +32,7 @@ Deno.serve(async req=>{
     const url=Deno.env.get("SUPABASE_URL")!,service=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;const admin=createClient(url,service);
     const {data:{user}}=await admin.auth.getUser(auth.replace(/^Bearer\s+/i,""));if(!user)return json({error:"Não autenticado"},401);
     const {data:roles}=await admin.from("user_roles").select("role").eq("user_id",user.id);if(!roles?.some((r:any)=>r.role==="admin"))return json({error:"Acesso exclusivo para administradores"},403);
+    const limit=await consume(admin,"dfe_extractor",requestKey(req,user.id),6,600);const blocked=limited(limit);if(blocked)return blocked;
     const body=await req.json().catch(()=>({})) as any;const companyId=String(body.company_id||"");if(!companyId)return json({error:"company_id obrigatório"},422);
     const {data:company,error:ce}=await admin.from("fiscal_companies").select("id,cnpj,razao_social,uf,ambiente_padrao,status").eq("id",companyId).single();if(ce||!company)return json({error:"Empresa fiscal não encontrada"},404);if(company.status==="inativa")return json({error:"Empresa fiscal inativa"},422);
     const {data:cert,error:cerror}=await admin.from("fiscal_certificates").select("certificate_ciphertext,certificate_iv,password_ciphertext,password_iv,valid_until").eq("company_id",companyId).eq("is_active",true).order("created_at",{ascending:false}).limit(1).single();if(cerror||!cert)return json({error:"Empresa sem certificado A1 ativo"},422);

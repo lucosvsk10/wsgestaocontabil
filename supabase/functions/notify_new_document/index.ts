@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
+import { consume, limited, requestKey } from '../_shared/rate-limit.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,6 +26,9 @@ Deno.serve(async (req) => {
     );
     const { data: { user }, error: authError } = await admin.auth.getUser(token);
     if (authError || !user) return json({ error: 'Não autenticado' }, 401);
+    const limit = await consume(admin, 'notify_document', requestKey(req, user.id), 120, 600);
+    const blocked = limited(limit);
+    if (blocked) return blocked;
 
     const body = await req.json().catch(() => ({})) as Record<string, unknown>;
     const userId = String(body.user_id || '');
