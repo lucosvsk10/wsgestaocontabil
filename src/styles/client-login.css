@@ -113,6 +113,7 @@
 .ws-login-signature { position: relative; z-index: 1; color: #647184; font-size: 11px; font-weight: 400; }
 
 .ws-login-access {
+  position: relative;
   display: flex;
   min-height: 100vh;
   align-items: center;
@@ -120,6 +121,35 @@
   background: linear-gradient(145deg, #07111d 0%, #081421 100%);
   padding: 48px clamp(28px, 5vw, 76px);
 }
+
+.ws-login-theme-switch {
+  position: absolute;
+  top: 24px;
+  right: 26px;
+  z-index: 2;
+  display: inline-flex;
+  gap: 3px;
+  border: 1px solid rgba(148, 163, 184, .16);
+  border-radius: 999px;
+  background: rgba(2, 9, 24, .38);
+  padding: 3px;
+}
+
+.ws-login-theme-switch button {
+  min-height: 29px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  padding: 0 11px;
+  color: #7f8c9f;
+  font-size: 10px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .16s ease, color .16s ease;
+}
+
+.ws-login-theme-switch button:hover { color: #d8dee7; }
+.ws-login-theme-switch button[aria-pressed='true'] { background: #e8edf3; color: #101827; }
 
 .ws-login-form-wrap { width: 100%; max-width: 420px; }
 .ws-login-mobile-brand { display: none; }
@@ -176,16 +206,79 @@
 .ws-login-footer a { color: #8491a3; font-size: 11px; text-decoration: none; }
 .ws-login-footer a:hover { color: #c6a754; }
 
+.ws-login-page.is-light { background: #f3ecd9; color: #15191f; }
+
+.ws-login-page.is-light .ws-login-presentation {
+  border-right-color: rgba(137, 144, 150, .22);
+  background:
+    radial-gradient(circle at 14% 76%, rgba(129, 93, 238, .08), transparent 28%),
+    radial-gradient(circle at 82% 14%, rgba(184, 150, 62, .1), transparent 27%),
+    #f3ecd9;
+}
+
+.ws-login-page.is-light .ws-login-grid {
+  background-image:
+    linear-gradient(rgba(190, 194, 192, .48) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(190, 194, 192, .48) 1px, transparent 1px);
+}
+
+.ws-login-page.is-light .ws-login-grid::before,
+.ws-login-page.is-light .ws-login-grid::after { border-color: rgba(107, 114, 128, .13); }
+.ws-login-page.is-light .ws-login-presentation h1 { color: #15191f; }
+.ws-login-page.is-light .ws-login-presentation-copy > p { color: #5f6875; }
+.ws-login-page.is-light .ws-login-points strong { color: #303846; }
+.ws-login-page.is-light .ws-login-points span { color: #69727e; }
+.ws-login-page.is-light .ws-login-signature { color: #747d88; }
+
+.ws-login-page.is-light .ws-login-access {
+  background: linear-gradient(145deg, #f8f9fa 0%, #f1f3f5 100%);
+}
+
+.ws-login-page.is-light .ws-login-theme-switch {
+  border-color: #d7dce2;
+  background: rgba(255, 255, 255, .7);
+}
+
+.ws-login-page.is-light .ws-login-theme-switch button { color: #737c88; }
+.ws-login-page.is-light .ws-login-theme-switch button:hover { color: #202938; }
+.ws-login-page.is-light .ws-login-theme-switch button[aria-pressed='true'] { background: #111b2a; color: #fff; }
+.ws-login-page.is-light .ws-login-heading > span { color: #6b7280; }
+.ws-login-page.is-light .ws-login-heading h2 { color: #15191f; }
+.ws-login-page.is-light .ws-login-heading p { color: #727b87; }
+.ws-login-page.is-light .ws-login-form > label,
+.ws-login-page.is-light .ws-login-password-head label { color: #303846; }
+
+.ws-login-page.is-light .ws-login-form input {
+  border-color: #cfd5dc;
+  background: #fff;
+  color: #15191f;
+}
+
+.ws-login-page.is-light .ws-login-form input::placeholder { color: #939ba5; }
+.ws-login-page.is-light .ws-login-form input:hover { border-color: #aab2bc; }
+.ws-login-page.is-light .ws-login-form input:focus { border-color: #9c812f; background: #fff; box-shadow: 0 0 0 3px rgba(184, 150, 62, .12); }
+.ws-login-page.is-light .ws-login-password-head button,
+.ws-login-page.is-light .ws-login-password-field button { color: #6f7884; }
+.ws-login-page.is-light .ws-login-password-head button:hover,
+.ws-login-page.is-light .ws-login-password-field button:hover { color: #8a6d1d; }
+.ws-login-page.is-light .ws-login-error { border-color: #e5b8b8; background: #faeeee; color: #9f3030; }
+.ws-login-page.is-light .ws-login-footer { border-top-color: #dce1e6; }
+.ws-login-page.is-light .ws-login-footer p { color: #727b87; }
+.ws-login-page.is-light .ws-login-footer a { color: #626c78; }
+.ws-login-page.is-light .ws-login-footer a:hover { color: #8a6d1d; }
+
 @media (max-width: 920px) {
   .ws-login-shell { grid-template-columns: 1fr; }
   .ws-login-presentation { display: none; }
   .ws-login-access { padding: 38px 22px; }
   .ws-login-mobile-brand { display: inline-flex; width: 132px; margin-bottom: 54px; }
+  .ws-login-theme-switch { top: 22px; right: 20px; }
 }
 
 @media (max-width: 520px) {
   .ws-login-access { align-items: flex-start; padding: 30px 18px; }
   .ws-login-mobile-brand { width: 116px; margin-bottom: 48px; }
+  .ws-login-theme-switch { top: 20px; right: 16px; }
   .ws-login-heading h2 { font-size: 27px; }
   .ws-login-form { margin-top: 30px; }
 }
