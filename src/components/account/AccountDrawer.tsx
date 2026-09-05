@@ -461,7 +461,7 @@ function InvoiceItem({ invoice, onOpenStoredFile }: { invoice: InvoiceRow; onOpe
 
       <div className="ws-plan-invoice-actions">
         {invoice.checkout_url && ["open", "overdue"].includes(invoice.status) && (
-          <a href={invoice.checkout_url} target="_blank" rel="noreferrer">Pagar fatura</a>
+          <a href={invoice.checkout_url}>Pagar fatura</a>
         )}
         {invoice.receipt_path && (
           <button type="button" onClick={() => void onOpenStoredFile(invoice.receipt_path!)}>Baixar comprovante</button>
