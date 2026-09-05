@@ -14,43 +14,44 @@ const loaderPaths = [
 
 function WsLoaderMark() {
   return (
-    <svg
-      viewBox="0 0 108 92"
-      className="ws-app-loader-mark"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <defs>
-        <linearGradient id="ws-loader-gradient" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#7047ff" />
-          <stop offset="38%" stopColor="#a84cf1" />
-          <stop offset="68%" stopColor="#e25a9d" />
-          <stop offset="100%" stopColor="#ef9a38" />
-        </linearGradient>
-        <filter id="ws-loader-glow" x="-35%" y="-35%" width="170%" height="170%">
-          <feGaussianBlur stdDeviation="0.9" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-      </defs>
+    <span className="ws-app-loader-shell">
+      <svg
+        viewBox="0 0 108 92"
+        className="ws-app-loader-mark"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <defs>
+          <linearGradient
+            id="ws-loader-gradient"
+            gradientUnits="userSpaceOnUse"
+            x1="15"
+            y1="20"
+            x2="92"
+            y2="74"
+          >
+            <stop offset="0%" stopColor="#7047ff" />
+            <stop offset="36%" stopColor="#a84cf1" />
+            <stop offset="68%" stopColor="#e25a9d" />
+            <stop offset="100%" stopColor="#ef9a38" />
+          </linearGradient>
+        </defs>
 
-      <g className="ws-app-loader-mark-inner" filter="url(#ws-loader-glow)">
-        {loaderPaths.map((d, index) => (
-          <path
-            key={d}
-            d={d}
-            fill="none"
-            stroke="url(#ws-loader-gradient)"
-            strokeWidth={4.4 - index * 0.12}
-            strokeLinecap="round"
-            className="ws-app-loader-stroke"
-            style={{ animationDelay: `${index * 75}ms` }}
-          />
-        ))}
-      </g>
-    </svg>
+        <g className="ws-app-loader-mark-inner">
+          {loaderPaths.map((d, index) => (
+            <path
+              key={d}
+              d={d}
+              fill="none"
+              stroke="url(#ws-loader-gradient)"
+              strokeWidth={4.35 - index * 0.1}
+              strokeLinecap="round"
+              opacity={0.98 - index * 0.035}
+            />
+          ))}
+        </g>
+      </svg>
+    </span>
   );
 }
 
@@ -132,28 +133,32 @@ export default function AppLoadingScreen({ mode = 'standard' }: { mode?: Loading
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 7px;
+          gap: 8px;
           min-width: 120px;
+        }
+
+        .ws-app-loader-shell {
+          display: grid;
+          place-items: center;
+          width: clamp(54px, 4.9vw, 68px);
+          aspect-ratio: 1;
+          transform: translateZ(0);
         }
 
         .ws-app-loader-mark {
           display: block;
-          width: clamp(52px, 4.7vw, 68px);
+          width: 100%;
           height: auto;
           overflow: visible;
-          transform-origin: 50% 55%;
-          animation: ws-app-loader-float 1.85s cubic-bezier(.4,0,.2,1) infinite;
+          transform-box: fill-box;
+          transform-origin: center;
+          backface-visibility: hidden;
+          will-change: transform;
+          animation: ws-app-loader-spin 1.55s linear infinite;
         }
 
         .ws-app-loader-mark-inner {
-          transform-origin: 54px 48px;
-          animation: ws-app-loader-sway 1.32s cubic-bezier(.55,.08,.35,.95) infinite;
-        }
-
-        .ws-app-loader-stroke {
-          stroke-dasharray: 78 24;
-          stroke-dashoffset: 30;
-          animation: ws-app-loader-flow 1.32s ease-in-out infinite;
+          transform-origin: 54px 46px;
         }
 
         .ws-app-loading-label {
@@ -182,21 +187,9 @@ export default function AppLoadingScreen({ mode = 'standard' }: { mode?: Loading
           to { opacity: 1; }
         }
 
-        @keyframes ws-app-loader-sway {
-          0% { transform: rotate(-7deg) scale(.98); }
-          50% { transform: rotate(13deg) scale(1.025); }
-          100% { transform: rotate(-7deg) scale(.98); }
-        }
-
-        @keyframes ws-app-loader-float {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-2px); }
-        }
-
-        @keyframes ws-app-loader-flow {
-          0% { stroke-dashoffset: 34; opacity: .42; }
-          45% { opacity: 1; }
-          100% { stroke-dashoffset: -66; opacity: .56; }
+        @keyframes ws-app-loader-spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
 
         @keyframes ws-app-loading-dots {
@@ -220,10 +213,10 @@ export default function AppLoadingScreen({ mode = 'standard' }: { mode?: Loading
 
           .ws-app-loading-indicator {
             top: 53.5%;
-            gap: 6px;
+            gap: 7px;
           }
 
-          .ws-app-loader-mark {
+          .ws-app-loader-shell {
             width: 50px;
           }
 
@@ -240,8 +233,6 @@ export default function AppLoadingScreen({ mode = 'standard' }: { mode?: Loading
         @media (prefers-reduced-motion: reduce) {
           .ws-app-loading-screen,
           .ws-app-loader-mark,
-          .ws-app-loader-mark-inner,
-          .ws-app-loader-stroke,
           .ws-app-loading-dots::after {
             animation-duration: .001ms !important;
             animation-iteration-count: 1 !important;
