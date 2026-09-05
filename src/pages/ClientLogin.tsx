@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useNotifications } from '@/hooks/useNotifications';
 import { supabase } from '@/integrations/supabase/client';
+import { useTheme } from '@/contexts/ThemeContext';
 import '@/styles/client-login.css';
 
 type MembershipQuery = PromiseLike<{
@@ -25,6 +26,7 @@ type MembershipDatabase = {
 
 const membershipDb = supabase as unknown as MembershipDatabase;
 const STANDARD_LOGO = '/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png';
+const LIGHT_LOGO = '/lovable-uploads/f7fdf0cf-f16c-4df7-a92c-964aadea9539.png';
 
 const ClientLogin = () => {
   const [email, setEmail] = useState('');
@@ -37,6 +39,9 @@ const ClientLogin = () => {
   const location = useLocation();
   const { toast } = useToast();
   const { notifyLogin } = useNotifications();
+  const { theme, setTheme } = useTheme();
+  const light = theme === 'light';
+  const logo = light ? LIGHT_LOGO : STANDARD_LOGO;
 
   const resolveDestination = async (userId: string) => {
     const redirectPath = new URLSearchParams(location.search).get('redirect');
@@ -85,16 +90,15 @@ const ClientLogin = () => {
   };
 
   return (
-    <main className="ws-login-page">
+    <main className={`ws-login-page ${light ? 'is-light' : 'is-standard'}`}>
       <div className="ws-login-shell">
         <section className="ws-login-presentation">
           <div className="ws-login-grid" aria-hidden="true" />
           <Link to="/" className="ws-login-brand" aria-label="Ir para o site da WS Gestão Contábil">
-            <img src={STANDARD_LOGO} alt="WS Gestão Contábil" />
+            <img src={logo} alt="WS Gestão Contábil" />
           </Link>
 
           <div className="ws-login-presentation-copy">
-            <span className="ws-login-kicker">Emissor Fiscal WS</span>
             <h1>Sua operação fiscal em um lugar só.</h1>
             <p>Emita documentos, organize empresas e acompanhe sua rotina fiscal com segurança e clareza.</p>
 
@@ -114,9 +118,14 @@ const ClientLogin = () => {
         </section>
 
         <section className="ws-login-access">
+          <div className="ws-login-theme-switch" role="group" aria-label="Aparência da tela">
+            <button type="button" aria-pressed={!light} onClick={() => setTheme('default')}>Padrão</button>
+            <button type="button" aria-pressed={light} onClick={() => setTheme('light')}>Claro</button>
+          </div>
+
           <div className="ws-login-form-wrap">
             <Link to="/" className="ws-login-mobile-brand" aria-label="Ir para o site da WS Gestão Contábil">
-              <img src={STANDARD_LOGO} alt="WS Gestão Contábil" />
+              <img src={logo} alt="WS Gestão Contábil" />
             </Link>
 
             <header className="ws-login-heading">
