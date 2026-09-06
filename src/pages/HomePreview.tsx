@@ -48,7 +48,7 @@ const HomePreview = () => {
 
       <main>
         <section id="inicio" className="preview-hero preview-section">
-          <div className="preview-hero-mark" aria-hidden="true"><span className="preview-hero-mark-orbit" /><span className="preview-hero-mark-stem" /><span className="preview-hero-mark-ring" /></div>
+          <img className="preview-hero-mark" src="/assets/ws-emblem.png" alt="" aria-hidden="true" />
           <div className="preview-hero-copy">
             <h1 className="preview-hero-title"><span>Contabilidade</span><strong>Aliada ao seu</strong><strong>empreendimento</strong></h1>
             <p className="preview-hero-subtitle">O que sua empresa precisar, em um só lugar.</p>

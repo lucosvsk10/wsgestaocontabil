@@ -156,3 +156,19 @@
   .preview-hero-copy { position:relative; z-index:2; }
   .preview-founder-image { right:-44%; width:180%; }
 }
+
+/* Asset and contrast corrections from the supplied preview. */
+.preview-hero-mark { object-fit:contain; object-position:center; opacity:.12; filter:saturate(.65); }
+.preview-hero-mark-stem,.preview-hero-mark-orbit,.preview-hero-mark-ring { display:none; }
+.preview-start-button { color:#020b1b !important; background:#f2c744 !important; }
+.preview-nav-links > a { color:#f5f0e3; }
+.preview-brand { align-items:center; }
+.preview-brand img { width:100%; object-position:left center; }
+@media (min-width:761px) {
+  .preview-brand { width:clamp(150px,14vw,300px); }
+  .preview-brand img { max-height:clamp(36px,3.3vw,66px); }
+  .preview-hero-mark { left:-5%; top:18%; width:clamp(100px,14vw,280px); height:auto; }
+}
+@media (max-width:760px) {
+  .preview-hero-mark { left:-30px; top:22%; width:105px; height:auto; }
+}
