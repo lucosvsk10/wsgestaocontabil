@@ -197,3 +197,49 @@
   .preview-founder-image { right:2%; bottom:-5%; width:auto; height:clamp(360px,100vw,520px); max-width:none; }
   .preview-hero-mark { left:-35px; top:16%; width:auto; height:420px; opacity:.065; }
 }
+
+/* Sections 2 and 3: compact SaaS-scale typography and balanced card rhythm. */
+@media (min-width:761px) {
+  .preview-services,
+  .preview-software { width:100%; padding-inline:6vw; }
+  .preview-services { padding-top:clamp(76px,8vw,150px); padding-bottom:clamp(90px,9vw,170px); }
+  .preview-services-heading { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:32px; margin-bottom:clamp(42px,4vw,78px); }
+  .preview-services-heading h2,
+  .preview-software > h2 { font-family:'Proxima Nova','Inter','Helvetica Neue',Arial,sans-serif; font-size:clamp(50px,5.4vw,116px); line-height:.9; letter-spacing:-.055em; }
+  .preview-services-heading h2::after { content:''; display:block; width:clamp(42px,3.5vw,78px); height:4px; margin-top:22px; border-radius:999px; background:var(--preview-gold); opacity:.8; }
+  .preview-other-service { margin:0 0 4px; }
+  .preview-other-service p { margin:0 0 14px; font-size:clamp(18px,1.35vw,30px); line-height:1.1; }
+  .preview-other-service a { min-height:clamp(44px,3vw,62px); padding:10px clamp(18px,1.35vw,28px); border-radius:14px; font-size:clamp(16px,1.1vw,24px); }
+  .preview-service-grid { grid-template-columns:repeat(5,minmax(0,1fr)); gap:clamp(12px,1.15vw,24px); }
+  .preview-service-card { min-height:clamp(270px,20vw,390px); padding:clamp(22px,1.7vw,36px) clamp(18px,1.45vw,30px) clamp(24px,1.9vw,40px); border-radius:clamp(16px,1.25vw,24px); background:rgba(36,51,75,.78); }
+  .preview-service-card h3 { min-height:clamp(112px,8.2vw,160px); font-family:'Proxima Nova','Inter','Helvetica Neue',Arial,sans-serif; font-size:clamp(19px,1.32vw,30px); line-height:1.01; letter-spacing:-.025em; }
+  .preview-service-card h3 strong { font-weight:750; }
+  .preview-service-card p { max-width:none; margin-top:20px; font-family:'Proxima Nova','Inter','Helvetica Neue',Arial,sans-serif; font-size:clamp(14px,.98vw,21px); line-height:1.12; }
+  .preview-software { padding-top:clamp(78px,8vw,150px); padding-bottom:clamp(100px,10vw,180px); }
+  .preview-software > h2 { margin-bottom:clamp(38px,4vw,72px); color:var(--preview-cream); }
+  .preview-software > h2::after { content:''; display:block; width:clamp(44px,3.6vw,80px); height:4px; margin-top:22px; border-radius:999px; background:var(--preview-gold); opacity:.8; }
+  .preview-software-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:clamp(16px,1.7vw,34px); }
+  .preview-software-card { min-height:clamp(480px,38vw,680px); padding:clamp(26px,2.2vw,46px); border-radius:clamp(22px,2vw,34px); background:#363636; }
+  .preview-software-meta { min-height:clamp(44px,4vw,70px); font-family:'Proxima Nova','Inter','Helvetica Neue',Arial,sans-serif; font-size:clamp(13px,1.05vw,23px); }
+  .preview-software-badge { padding:9px 13px; border-radius:15px; font-size:clamp(10px,.72vw,16px); }
+  .preview-software-card h3 { margin:clamp(30px,3vw,56px) 0 clamp(28px,3.2vw,62px); font-family:'Proxima Nova','Inter','Helvetica Neue',Arial,sans-serif; font-size:clamp(34px,3vw,70px); line-height:.94; }
+  .preview-software-card p { max-width:17ch; font-family:'Proxima Nova','Inter','Helvetica Neue',Arial,sans-serif; font-size:clamp(17px,1.35vw,29px); line-height:1.08; }
+  .preview-software-cta { padding:13px clamp(16px,1.25vw,26px); font-family:'Proxima Nova','Inter','Helvetica Neue',Arial,sans-serif; font-size:clamp(14px,1vw,22px); }
+}
+
+@media (max-width:760px) {
+  .preview-services-heading h2,
+  .preview-software > h2 { font-family:'Proxima Nova','Inter','Helvetica Neue',Arial,sans-serif; letter-spacing:-.045em; }
+  .preview-services-heading h2::after,
+  .preview-software > h2::after { content:''; display:block; width:42px; height:3px; margin-top:14px; border-radius:999px; background:var(--preview-gold); }
+  .preview-service-card h3,
+  .preview-service-card p,
+  .preview-software-card h3,
+  .preview-software-card p,
+  .preview-software-cta { font-family:'Proxima Nova','Inter','Helvetica Neue',Arial,sans-serif; }
+}
+
+@media (min-width:761px) and (max-width:1100px) {
+  .preview-service-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .preview-software-grid { grid-template-columns:1fr; max-width:720px; margin-inline:auto; }
+}
