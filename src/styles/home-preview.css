@@ -65,49 +65,49 @@
 
 /* Desktop preview scale: keep the reference composition, but fit a normal site viewport. */
 @media (min-width:761px) {
-  .preview-section { width:min(100%,1440px); }
-  .preview-navbar-wrap { top:22px; width:min(calc(100% - 72px),1280px); }
-  .preview-navbar { min-height:72px; gap:28px; padding:10px 28px; }
-  .preview-brand { width:190px; }
-  .preview-brand img { max-height:48px; }
-  .preview-nav-links { gap:24px; font-size:15px; }
-  .preview-login,.preview-register { min-height:42px; gap:8px; padding:8px 16px; border-radius:12px; }
+  .preview-section { width:100%; }
+  .preview-navbar-wrap { top:5vh; width:calc(100% - 10vw); }
+  .preview-navbar { min-height:86px; gap:34px; padding:13px 38px; }
+  .preview-brand { width:245px; }
+  .preview-brand img { max-height:56px; }
+  .preview-nav-links { gap:34px; font-size:clamp(17px,1.1vw,24px); }
+  .preview-login,.preview-register { min-height:52px; gap:10px; padding:9px 21px; border-radius:14px; }
   .preview-register { min-width:0; }
-  .preview-theme { width:42px; height:42px; }
-  .preview-theme svg { width:24px; height:24px; }
-  .preview-hero { min-height:760px; grid-template-columns:minmax(0,1.04fr) minmax(430px,.96fr); gap:22px; padding:126px 42px 64px; }
+  .preview-theme { width:54px; height:54px; }
+  .preview-theme svg { width:31px; height:31px; }
+  .preview-hero { min-height:100vh; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:3vw; padding:15vh 5vw 6vh; }
   .preview-hero-copy { padding-left:0; }
-  .preview-hero-logo { width:min(100%,560px); margin-bottom:30px; }
-  .preview-start-button { min-height:50px; padding:10px 24px; border-radius:12px; font-size:18px; }
-  .preview-scroll-cue { margin:14px 0 0 105px; }
+  .preview-hero-logo { width:min(42vw,900px); margin-bottom:42px; }
+  .preview-start-button { min-height:68px; padding:12px 30px; border-radius:15px; font-size:clamp(20px,1.35vw,32px); }
+  .preview-scroll-cue { margin:16px 0 0 140px; }
   .preview-scroll-cue svg { width:24px; height:24px; }
-  .preview-founder { min-height:520px; }
-  .preview-founder-panel { width:86%; height:84%; border-radius:24px; }
-  .preview-founder-panel::before { border-width:16px; }
-  .preview-founder-copy { top:9%; right:7%; font-size:17px; }
-  .preview-founder-copy h2 { margin-bottom:12px; }
-  .preview-founder-highlight { margin-top:26px!important; }
-  .preview-founder-image { width:76%; }
-  .preview-socials { gap:12px; }
-  .preview-socials svg { width:22px; height:22px; }
-  .preview-services { padding:72px 42px 88px; }
-  .preview-services-heading { margin-bottom:42px; }
-  .preview-services-heading h2,.preview-software > h2 { font-size:clamp(48px,5vw,76px); }
+  .preview-founder { min-height:700px; }
+  .preview-founder-panel { width:88%; height:92%; border-radius:30px; }
+  .preview-founder-panel::before { border-width:23px; }
+  .preview-founder-copy { top:8%; right:7%; font-size:clamp(18px,1.35vw,30px); }
+  .preview-founder-copy h2 { margin-bottom:17px; }
+  .preview-founder-highlight { margin-top:42px!important; }
+  .preview-founder-image { right:-22%; bottom:-7%; width:148%; max-height:none; }
+  .preview-socials { right:7%; bottom:-2%; gap:16px; }
+  .preview-socials svg { width:28px; height:28px; }
+  .preview-services { padding:7vh 5vw 9vh; }
+  .preview-services-heading { margin-bottom:5vh; }
+  .preview-services-heading h2,.preview-software > h2 { font-size:clamp(54px,5.5vw,145px); }
   .preview-other-service { margin-top:8px; }
-  .preview-other-service p { margin-bottom:12px; font-size:20px; }
-  .preview-other-service a { min-height:46px; padding:9px 20px; border-radius:12px; font-size:16px; }
-  .preview-service-grid { gap:14px; }
-  .preview-service-card { min-height:250px; padding:24px 20px 25px; border-radius:18px; }
-  .preview-service-card h3 { min-height:106px; font-size:22px; }
-  .preview-service-card p { margin-top:18px; font-size:15px; line-height:1.15; }
-  .preview-software { padding:68px 42px 96px; }
-  .preview-software > h2 { margin-bottom:40px; }
-  .preview-software-grid { gap:18px; }
-  .preview-software-card { min-height:450px; padding:28px; border-radius:24px; }
-  .preview-software-meta { min-height:48px; font-size:14px; }
-  .preview-software-badge { padding:8px 12px; border-radius:15px; font-size:10px; }
-  .preview-software-card h3 { margin:34px 0 34px; font-size:46px; }
-  .preview-software-card p { font-size:18px; }
-  .preview-software-cta { padding:12px 18px; font-size:14px; }
-  .preview-software-icon svg { width:88px; height:88px; }
+  .preview-other-service p { margin-bottom:16px; font-size:clamp(20px,1.7vw,38px); }
+  .preview-other-service a { min-height:58px; padding:10px 25px; border-radius:14px; font-size:clamp(18px,1.25vw,28px); }
+  .preview-service-grid { gap:1.2vw; }
+  .preview-service-card { min-height:360px; padding:30px 26px 32px; border-radius:22px; }
+  .preview-service-card h3 { min-height:145px; font-size:clamp(22px,1.55vw,38px); }
+  .preview-service-card p { margin-top:22px; font-size:clamp(16px,1.1vw,26px); line-height:1.08; }
+  .preview-software { padding:7vh 5vw 10vh; }
+  .preview-software > h2 { margin-bottom:5vh; }
+  .preview-software-grid { gap:1.8vw; }
+  .preview-software-card { min-height:620px; padding:38px; border-radius:30px; }
+  .preview-software-meta { min-height:60px; font-size:clamp(15px,1.15vw,27px); }
+  .preview-software-badge { padding:10px 15px; border-radius:18px; font-size:clamp(11px,.85vw,20px); }
+  .preview-software-card h3 { margin:42px 0 48px; font-size:clamp(38px,3.1vw,80px); }
+  .preview-software-card p { font-size:clamp(20px,1.55vw,38px); }
+  .preview-software-cta { padding:15px 22px; font-size:clamp(16px,1.15vw,28px); }
+  .preview-software-icon svg { width:clamp(90px,7vw,180px); height:clamp(90px,7vw,180px); }
 }
