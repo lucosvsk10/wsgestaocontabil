@@ -257,3 +257,17 @@
   .preview-service-card h3 { font-size:26px; line-height:1; }
   .preview-service-card p { margin-top:auto; padding-top:18px; }
 }
+
+
+/* Use a restrained open-source line-icon language instead of decorative illustrations. */
+.preview-service-art { display:flex; align-items:center; justify-content:flex-start; width:100%; height:clamp(54px,5vw,84px); margin:0 0 clamp(14px,1.2vw,22px); opacity:.9; }
+.preview-service-art svg { width:clamp(42px,3.8vw,70px); height:clamp(42px,3.8vw,70px); color:var(--preview-gold); stroke:currentColor; }
+.preview-service-card:hover .preview-service-art { transform:none; }
+.preview-service-card h3 { font-size:clamp(22px,1.45vw,32px); line-height:1; }
+.preview-service-card p { width:100%; max-width:none; margin-top:auto; padding-top:22px; text-align:center; font-size:clamp(16px,1.15vw,24px); line-height:1.15; }
+@media (max-width:760px) {
+  .preview-service-art { height:62px; margin-bottom:14px; }
+  .preview-service-art svg { width:48px; height:48px; }
+  .preview-service-card h3 { font-size:26px; }
+  .preview-service-card p { font-size:17px; line-height:1.18; }
+}

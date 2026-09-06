@@ -1,19 +1,19 @@
 import { useEffect, useState } from 'react';
-import { ArrowUpRight, Calculator, FileCheck2, FileSearch2, Instagram, Lightbulb, MessageCircle, UserRound } from 'lucide-react';
+import { ArrowUpRight, Building2, Briefcase, Calculator, FileCheck2, FileSearch2, FileText, FolderX, Instagram, Lightbulb, MessageCircle, Receipt, ShieldCheck, Target, UserRound, Users, Wallet } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import '../styles/home-preview.css';
 
 const services = [
-  { image: '/assets/services/abertura.svg' , title: <>Abertura <strong>de<br />empresa</strong></>, description: 'CNPJ, definição de CNAE, regime tributário, inscrições e regularização inicial.' },
-  { image: '/assets/services/contabilidade.svg' , title: <><strong>Contabilidade</strong><br />mensal</>, description: 'Escrituração, balancetes, DRE, obrigações acessórias e acompanhamento contábil.' },
-  { image: '/assets/services/pessoal.svg' , title: <><strong>Departamento</strong><br />pessoal e folha<br />de pagamento</>, description: 'Admissão, demissão, férias, 13º, folha, encargos, eSocial e FGTS.' },
-  { image: '/assets/services/tributario.svg' , title: <><strong>Planejamento</strong><br />tributário</>, description: 'Análise de Simples Nacional, Lucro Presumido e Lucro Real para reduzir carga tributária de forma legal.' },
-  { image: '/assets/services/irpf.svg' , title: <>Imposto de<br />Renda <strong>Pessoa<br />Física</strong></>, description: 'Declaração anual, ganho de capital, investimentos, imóveis e regularização de pendências.' },
-  { image: '/assets/services/regularizacao.svg' , title: <>Regularização<br /><strong>de empresa e<br />débitos</strong></>, description: 'CNPJ inapto, pendências na Receita, certidões negativas e regularização fiscal.' },
-  { image: '/assets/services/notas.svg' , title: <>Emissão <strong>e<br />orientação</strong><br />sobre notas<br />fiscais</>, description: 'NF-e, NFS-e, NFC-e, configuração fiscal e orientação sobre operações.' },
-  { image: '/assets/services/bpo.svg' , title: <>BPO<br /><strong>financeiro</strong></>, description: 'Contas a pagar e receber, conciliação de caixa, organização financeira e relatórios.' },
-  { image: '/assets/services/societario.svg' , title: <>Alteração<br /><strong>contratual e<br />serviços</strong><br />societários</>, description: 'Mudança de endereço, atividade, transformação e organização empresarial.' },
-  { image: '/assets/services/encerramento.svg' , title: <>Encerramento<br /><strong>de empresa</strong></>, description: 'Baixa de CNPJ, inscrições, regularização e encerramento nos órgãos competentes.' },
+  { icon: Building2, title: <>Abertura <strong>de<br />empresa</strong></>, description: 'CNPJ, definição de CNAE, regime tributário, inscrições e regularização inicial.' },
+  { icon: Calculator, title: <><strong>Contabilidade</strong><br />mensal</>, description: 'Escrituração, balancetes, DRE, obrigações acessórias e acompanhamento contábil.' },
+  { icon: Users, title: <><strong>Departamento</strong><br />pessoal e folha<br />de pagamento</>, description: 'Admissão, demissão, férias, 13º, folha, encargos, eSocial e FGTS.' },
+  { icon: Target, title: <><strong>Planejamento</strong><br />tributário</>, description: 'Análise de Simples Nacional, Lucro Presumido e Lucro Real para reduzir carga tributária de forma legal.' },
+  { icon: FileText, title: <>Imposto de<br />Renda <strong>Pessoa<br />Física</strong></>, description: 'Declaração anual, ganho de capital, investimentos, imóveis e regularização de pendências.' },
+  { icon: ShieldCheck, title: <>Regularização<br /><strong>de empresa e<br />débitos</strong></>, description: 'CNPJ inapto, pendências na Receita, certidões negativas e regularização fiscal.' },
+  { icon: Receipt, title: <>Emissão <strong>e<br />orientação</strong><br />sobre notas<br />fiscais</>, description: 'NF-e, NFS-e, NFC-e, configuração fiscal e orientação sobre operações.' },
+  { icon: Wallet, title: <>BPO<br /><strong>financeiro</strong></>, description: 'Contas a pagar e receber, conciliação de caixa, organização financeira e relatórios.' },
+  { icon: Briefcase, title: <>Alteração<br /><strong>contratual e<br />serviços</strong><br />societários</>, description: 'Mudança de endereço, atividade, transformação e organização empresarial.' },
+  { icon: FolderX, title: <>Encerramento<br /><strong>de empresa</strong></>, description: 'Baixa de CNPJ, inscrições, regularização e encerramento nos órgãos competentes.' },
 ];
 
 const software = [
@@ -86,7 +86,7 @@ const HomePreview = () => {
 
         <section id="servicos" className="preview-services preview-section">
           <div className="preview-services-heading"><h2>O QUE VOCÊ<br />PRECISA?</h2><div className="preview-other-service"><p>Precisa de outra coisa?</p><a href="https://wa.me/5582999324884" target="_blank" rel="noreferrer">CLIQUE AQUI</a></div></div>
-          <div className="preview-service-grid">{services.map((service, index) => <a className="preview-service-card" href="https://wa.me/5582999324884" target="_blank" rel="noreferrer" key={`${index}-${service.description}`}><img className="preview-service-art" src={service.image} alt="" aria-hidden="true" /><h3>{service.title}</h3><p>{service.description}</p></a>)}</div>
+          <div className="preview-service-grid">{services.map((service, index) => { const ServiceIcon = service.icon; return <a className="preview-service-card" href="https://wa.me/5582999324884" target="_blank" rel="noreferrer" key={`${index}-${service.description}`}><span className="preview-service-art" aria-hidden="true"><ServiceIcon strokeWidth={1.8} /></span><h3>{service.title}</h3><p>{service.description}</p></a>)}</div>
         </section>
 
         <section id="softwares" className="preview-software preview-section">
