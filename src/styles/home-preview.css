@@ -243,3 +243,17 @@
   .preview-service-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .preview-software-grid { grid-template-columns:1fr; max-width:720px; margin-inline:auto; }
 }
+
+
+/* Individual service artwork and stronger card titles. */
+.preview-service-card { justify-content:flex-start; }
+.preview-service-art { display:block; flex:0 0 auto; width:100%; height:clamp(58px,5.2vw,92px); margin:0 0 clamp(14px,1.25vw,24px); object-fit:contain; object-position:left center; opacity:.9; transition:transform .24s ease,opacity .24s ease; }
+.preview-service-card:hover .preview-service-art { transform:translateX(4px); opacity:1; }
+.preview-service-card h3 { flex:0 0 auto; color:var(--preview-gold); font-weight:550; text-wrap:balance; }
+.preview-service-card h3 strong { color:var(--preview-cream); font-weight:800; }
+.preview-service-card p { margin-top:auto; padding-top:18px; }
+@media (max-width:760px) {
+  .preview-service-art { height:64px; margin-bottom:16px; object-position:left center; }
+  .preview-service-card h3 { font-size:26px; line-height:1; }
+  .preview-service-card p { margin-top:auto; padding-top:18px; }
+}
