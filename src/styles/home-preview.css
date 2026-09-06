@@ -161,6 +161,8 @@
 .preview-hero-mark { object-fit:contain; object-position:center; opacity:.12; filter:saturate(.65); }
 .preview-hero-mark-stem,.preview-hero-mark-orbit,.preview-hero-mark-ring { display:none; }
 .preview-start-button { color:#020b1b !important; background:#f2c744 !important; }
+.preview-founder-panel::before { display:none !important; }
+.preview-scroll-cue { display:none !important; }
 .preview-nav-links > a { color:#f5f0e3; }
 .preview-brand { align-items:center; }
 .preview-brand img { width:100%; object-position:left center; }
@@ -184,7 +186,7 @@
   .preview-theme { width:clamp(25px,2vw,38px); height:clamp(25px,2vw,38px); }
   .preview-theme svg { width:clamp(15px,1.15vw,22px); height:clamp(15px,1.15vw,22px); }
   .preview-hero-mark { left:-14%; top:14%; width:auto; height:clamp(420px,52vw,800px); opacity:.065; }
-  .preview-founder-image { right:24%; bottom:-5%; width:auto; height:clamp(410px,42vw,720px); max-height:none; object-fit:contain; }
+  .preview-founder-image { right:28%; bottom:-5%; width:auto; height:clamp(410px,42vw,720px); max-height:none; object-fit:contain; }
 }
 @media (max-width:760px) {
   .preview-founder-image { right:2%; bottom:-5%; width:auto; height:clamp(360px,100vw,520px); max-width:none; }
