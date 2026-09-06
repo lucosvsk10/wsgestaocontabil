@@ -176,17 +176,17 @@
 /* Final image placement: the supplied cutout is sized by height, not its original canvas. */
 @media (min-width:761px) {
   .preview-navbar-wrap { width:min(66vw,1320px); }
-  .preview-navbar { min-height:clamp(42px,3.8vw,72px); padding:clamp(6px,.8vw,11px) clamp(14px,1.7vw,32px); }
-  .preview-brand { width:clamp(135px,11.5vw,220px); }
-  .preview-brand img { max-height:clamp(32px,2.8vw,52px); }
+  .preview-navbar { min-height:clamp(36px,3vw,58px); padding:clamp(5px,.55vw,9px) clamp(12px,1.3vw,25px); }
+  .preview-brand { width:clamp(125px,10vw,192px); }
+  .preview-brand img { max-height:clamp(28px,2.25vw,43px); }
   .preview-nav-links { gap:clamp(10px,1.45vw,28px); font-size:clamp(10px,.78vw,16px); }
-  .preview-login,.preview-register { min-height:clamp(26px,2.4vw,46px); padding:clamp(4px,.45vw,8px) clamp(8px,.9vw,16px); }
-  .preview-theme { width:clamp(28px,2.35vw,45px); height:clamp(28px,2.35vw,45px); }
-  .preview-theme svg { width:clamp(17px,1.35vw,26px); height:clamp(17px,1.35vw,26px); }
-  .preview-hero-mark { left:-8%; top:16%; width:clamp(170px,21vw,480px); height:auto; opacity:.14; }
-  .preview-founder-image { right:-20%; bottom:-12%; width:auto; height:clamp(420px,49vw,820px); max-height:none; object-fit:contain; }
+  .preview-login,.preview-register { min-height:clamp(24px,2vw,39px); padding:clamp(3px,.35vw,6px) clamp(7px,.75vw,14px); }
+  .preview-theme { width:clamp(25px,2vw,38px); height:clamp(25px,2vw,38px); }
+  .preview-theme svg { width:clamp(15px,1.15vw,22px); height:clamp(15px,1.15vw,22px); }
+  .preview-hero-mark { left:-14%; top:14%; width:auto; height:clamp(420px,52vw,800px); opacity:.15; }
+  .preview-founder-image { right:10%; bottom:-5%; width:auto; height:clamp(410px,42vw,720px); max-height:none; object-fit:contain; }
 }
 @media (max-width:760px) {
-  .preview-founder-image { right:-22%; bottom:-8%; width:auto; height:clamp(390px,108vw,590px); max-width:none; }
-  .preview-hero-mark { left:-45px; top:16%; width:180px; height:auto; opacity:.13; }
+  .preview-founder-image { right:2%; bottom:-5%; width:auto; height:clamp(360px,100vw,520px); max-width:none; }
+  .preview-hero-mark { left:-35px; top:16%; width:auto; height:420px; opacity:.14; }
 }
