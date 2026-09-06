@@ -301,3 +301,18 @@
   .preview-service-card h3 { min-height:78px; }
   .preview-service-card p { max-width:280px; margin-top:12px; font-size:16px; }
 }
+
+
+/* Keep service titles as normal text so inline emphasis never creates flex fragments. */
+.preview-service-card h3 {
+  display:block;
+  min-height:104px;
+  margin:0;
+  white-space:normal;
+  word-break:normal;
+  overflow-wrap:normal;
+  text-wrap:wrap;
+}
+@media (max-width:760px) {
+  .preview-service-card h3 { display:block; min-height:78px; }
+}
