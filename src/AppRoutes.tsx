@@ -36,6 +36,7 @@ import SaasApp from './pages/SaasApp';
 import SaasCheckout from './pages/SaasCheckout';
 import LegalPage from './pages/LegalPage';
 import AppLoadingScreen from './components/AppLoadingScreen';
+import HomePreview from './pages/HomePreview';
 
 const DashboardRouter = () => {
   const { userData, user } = useAuth();
@@ -74,6 +75,9 @@ const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/" element={<Index />} />
+      <Route path="/home-preview" element={<HomePreview />} />
+      <Route path="/home-preview/*" element={<HomePreview />} />
+      <Route path="/nova-home" element={<HomePreview />} />
       <Route path="/login" element={<ClientLogin />} />
       <Route path="/enquete/:id" element={<PollPage />} />
       <Route path="/enquete-numerica/:id" element={<NumericalPollPage />} />
