@@ -30,7 +30,7 @@ const HomePreview = () => {
       <header className="preview-navbar-wrap">
         <nav className="preview-navbar" aria-label="Navegação principal">
           <a className="preview-brand" href="#inicio" aria-label="WS Gestão Contábil — início">
-            <img src="/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png" alt="WS Gestão Contábil" />
+            <img src="/assets/ws-logo.png" alt="WS Gestão Contábil" />
           </a>
           <button className="preview-mobile-toggle" type="button" aria-label="Abrir menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>
             <span /><span /><span />
@@ -49,13 +49,13 @@ const HomePreview = () => {
       <main>
         <section id="inicio" className="preview-hero preview-section">
           <div className="preview-hero-copy">
-            <img className="preview-hero-logo" src="/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png" alt="WS Gestão Contábil" />
+            <img className="preview-hero-logo" src="/assets/ws-logo.png" alt="WS Gestão Contábil" />
             <a className="preview-start-button" href="#servicos">COMECE AQUI</a>
             <a className="preview-scroll-cue" href="#servicos" aria-label="Ir para serviços"><ChevronDown size={31} /><ChevronDown size={31} /></a>
           </div>
           <div id="sobre" className="preview-founder">
             <div className="preview-founder-panel"><div className="preview-founder-copy"><h2>WILSON SOUZA</h2><p>CONTADOR E CEO DA<br />WS GESTÃO A MAIS DE 16<br />ANOS</p><p className="preview-founder-highlight">REFERÊNCIA <strong>#1</strong> EM<br />CONTABILIDADE EM<br />TODO O NORDESTE</p></div></div>
-            <img className="preview-founder-image" src="/lovable-uploads/ws-contador-preview.webp" alt="Wilson Souza, contador e CEO da WS Gestão Contábil" />
+            <img className="preview-founder-image" src="/assets/ws-contador.webp" alt="Wilson Souza, contador e CEO da WS Gestão Contábil" />
             <div className="preview-socials"><a href="https://www.instagram.com/wscontabil.co/" target="_blank" rel="noreferrer" aria-label="Instagram"><Instagram size={27} /></a><a href="https://wa.me/5582999324884" target="_blank" rel="noreferrer" aria-label="WhatsApp"><MessageCircle size={27} /></a></div>
           </div>
         </section>
