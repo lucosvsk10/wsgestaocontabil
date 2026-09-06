@@ -286,3 +286,18 @@
   .preview-service-card h3 { font-size:22px; }
   .preview-service-card p { margin-top:16px; font-size:16px; line-height:1.16; }
 }
+
+
+/* Fixed card zones keep all titles and descriptions on the same rhythm. */
+.preview-service-card { display:grid; grid-template-rows:64px 104px 1fr; align-content:start; }
+.preview-service-art { height:64px; margin:0 0 12px; }
+.preview-service-art svg { width:48px; height:48px; }
+.preview-service-card h3 { display:flex; min-height:104px; align-items:flex-start; margin:0; }
+.preview-service-card p { align-self:start; width:100%; max-width:260px; margin:14px auto 0; padding:0; font-size:clamp(14px,.86vw,18px); line-height:1.15; text-align:center; }
+@media (max-width:760px) {
+  .preview-service-card { grid-template-rows:56px 78px 1fr; }
+  .preview-service-art { height:56px; margin-bottom:10px; }
+  .preview-service-art svg { width:44px; height:44px; }
+  .preview-service-card h3 { min-height:78px; }
+  .preview-service-card p { max-width:280px; margin-top:12px; font-size:16px; }
+}
