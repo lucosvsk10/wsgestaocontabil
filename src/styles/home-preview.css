@@ -62,3 +62,52 @@
 @media (max-width:1100px) { .preview-navbar { min-height:86px; padding:13px 22px; } .preview-brand { width:215px; } .preview-nav-links { gap:18px; font-size:14px; } .preview-login,.preview-register { min-height:48px; padding:8px 15px; border-radius:13px; } .preview-register { min-width:0; } .preview-theme { width:40px; height:40px; } .preview-founder { min-height:620px; } .preview-service-card { min-height:350px; } }
 @media (max-width:760px) { .preview-navbar-wrap { top:14px; width:calc(100% - 24px); } .preview-navbar { min-height:64px; gap:12px; padding:8px 13px; } .preview-brand { width:170px; } .preview-brand img { max-height:45px; } .preview-mobile-toggle { display:flex; width:34px; height:34px; flex-direction:column; justify-content:center; gap:4px; margin-left:auto; border:0; color:#fff; background:transparent; cursor:pointer; } .preview-mobile-toggle span { display:block; width:22px; height:2px; background:currentColor; } .preview-nav-links { position:absolute; top:calc(100% + 9px); left:0; right:0; display:none; flex-direction:column; align-items:stretch; gap:6px; padding:14px; border-radius:22px; background:rgba(55,64,80,.98); } .preview-nav-links.is-open { display:flex; } .preview-nav-links > a { padding:12px 13px; font-size:15px; } .preview-login,.preview-register { justify-content:flex-start; } .preview-theme { width:32px; height:32px; } .preview-theme svg { width:23px; } .preview-hero { display:flex; min-height:auto; flex-direction:column; align-items:stretch; padding:135px 20px 44px; } .preview-hero-copy { padding:30px 0; } .preview-hero-logo { width:min(90vw,500px); margin-bottom:32px; } .preview-start-button { min-height:54px; padding-inline:21px; font-size:19px; } .preview-scroll-cue { margin-left:95px; } .preview-founder { min-height:510px; margin-top:12px; } .preview-founder-panel { right:0; width:88%; height:87%; border-radius:20px; } .preview-founder-panel::before { border-width:14px; } .preview-founder-copy { top:7%; right:5%; font-size:12px; } .preview-founder-highlight { margin-top:25px!important; } .preview-founder-image { right:5%; bottom:-3%; width:85%; } .preview-socials { right:3%; bottom:0; gap:9px; } .preview-socials svg { width:21px; } .preview-services,.preview-software { padding:64px 20px; } .preview-services-heading { display:block; margin-bottom:30px; } .preview-services-heading h2,.preview-software > h2 { font-size:clamp(50px,15vw,84px); } .preview-other-service { margin-top:35px; } .preview-other-service p { font-size:24px; } .preview-other-service a { min-height:52px; font-size:17px; } .preview-service-grid { grid-template-columns:1fr; gap:14px; } .preview-service-card { min-height:245px; padding:24px; border-radius:18px; } .preview-service-card h3 { min-height:0; font-size:27px; } .preview-service-card p { max-width:none; margin-top:26px; font-size:18px; } .preview-software > h2 { margin-bottom:30px; } .preview-software-grid { grid-template-columns:1fr; gap:18px; } .preview-software-card { min-height:465px; padding:26px; border-radius:26px; } .preview-software-meta { min-height:46px; font-size:15px; } .preview-software-badge { font-size:11px; } .preview-software-card h3 { margin:38px 0 34px; font-size:42px; } .preview-software-card p { font-size:24px; } .preview-software-cta { font-size:16px; } .preview-software-icon svg { width:85px; height:85px; } }
 @media (prefers-reduced-motion:reduce) { .preview-navbar::after { animation:none; display:none; } .preview-start-button,.preview-service-card { transition:none; } }
+
+/* Desktop preview scale: keep the reference composition, but fit a normal site viewport. */
+@media (min-width:761px) {
+  .preview-section { width:min(100%,1440px); }
+  .preview-navbar-wrap { top:22px; width:min(calc(100% - 72px),1280px); }
+  .preview-navbar { min-height:72px; gap:28px; padding:10px 28px; }
+  .preview-brand { width:190px; }
+  .preview-brand img { max-height:48px; }
+  .preview-nav-links { gap:24px; font-size:15px; }
+  .preview-login,.preview-register { min-height:42px; gap:8px; padding:8px 16px; border-radius:12px; }
+  .preview-register { min-width:0; }
+  .preview-theme { width:42px; height:42px; }
+  .preview-theme svg { width:24px; height:24px; }
+  .preview-hero { min-height:760px; grid-template-columns:minmax(0,1.04fr) minmax(430px,.96fr); gap:22px; padding:126px 42px 64px; }
+  .preview-hero-copy { padding-left:0; }
+  .preview-hero-logo { width:min(100%,560px); margin-bottom:30px; }
+  .preview-start-button { min-height:50px; padding:10px 24px; border-radius:12px; font-size:18px; }
+  .preview-scroll-cue { margin:14px 0 0 105px; }
+  .preview-scroll-cue svg { width:24px; height:24px; }
+  .preview-founder { min-height:520px; }
+  .preview-founder-panel { width:86%; height:84%; border-radius:24px; }
+  .preview-founder-panel::before { border-width:16px; }
+  .preview-founder-copy { top:9%; right:7%; font-size:17px; }
+  .preview-founder-copy h2 { margin-bottom:12px; }
+  .preview-founder-highlight { margin-top:26px!important; }
+  .preview-founder-image { width:76%; }
+  .preview-socials { gap:12px; }
+  .preview-socials svg { width:22px; height:22px; }
+  .preview-services { padding:72px 42px 88px; }
+  .preview-services-heading { margin-bottom:42px; }
+  .preview-services-heading h2,.preview-software > h2 { font-size:clamp(48px,5vw,76px); }
+  .preview-other-service { margin-top:8px; }
+  .preview-other-service p { margin-bottom:12px; font-size:20px; }
+  .preview-other-service a { min-height:46px; padding:9px 20px; border-radius:12px; font-size:16px; }
+  .preview-service-grid { gap:14px; }
+  .preview-service-card { min-height:250px; padding:24px 20px 25px; border-radius:18px; }
+  .preview-service-card h3 { min-height:106px; font-size:22px; }
+  .preview-service-card p { margin-top:18px; font-size:15px; line-height:1.15; }
+  .preview-software { padding:68px 42px 96px; }
+  .preview-software > h2 { margin-bottom:40px; }
+  .preview-software-grid { gap:18px; }
+  .preview-software-card { min-height:450px; padding:28px; border-radius:24px; }
+  .preview-software-meta { min-height:48px; font-size:14px; }
+  .preview-software-badge { padding:8px 12px; border-radius:15px; font-size:10px; }
+  .preview-software-card h3 { margin:34px 0 34px; font-size:46px; }
+  .preview-software-card p { font-size:18px; }
+  .preview-software-cta { padding:12px 18px; font-size:14px; }
+  .preview-software-icon svg { width:88px; height:88px; }
+}
