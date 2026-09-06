@@ -3244,6 +3244,30 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limit_buckets: {
+        Row: {
+          hit_count: number
+          key_hash: string
+          last_seen_at: string
+          scope: string
+          window_started_at: string
+        }
+        Insert: {
+          hit_count?: number
+          key_hash: string
+          last_seen_at?: string
+          scope: string
+          window_started_at: string
+        }
+        Update: {
+          hit_count?: number
+          key_hash?: string
+          last_seen_at?: string
+          scope?: string
+          window_started_at?: string
+        }
+        Relationships: []
+      }
       saas_audit_logs: {
         Row: {
           action: string
@@ -3887,6 +3911,99 @@ export type Database = {
           },
         ]
       }
+      saas_invoices: {
+        Row: {
+          checkout_url: string | null
+          created_at: string
+          description: string
+          discount_cents: number
+          due_date: string | null
+          fiscal_note_path: string | null
+          id: string
+          invoice_number: number
+          line_items: Json
+          metadata: Json
+          organization_id: string
+          paid_at: string | null
+          payment_method: string | null
+          period_end: string
+          period_start: string
+          provider: string | null
+          provider_invoice_id: string | null
+          receipt_path: string | null
+          status: string
+          subscription_id: string | null
+          subtotal_cents: number | null
+          total_cents: number | null
+          updated_at: string
+        }
+        Insert: {
+          checkout_url?: string | null
+          created_at?: string
+          description?: string
+          discount_cents?: number
+          due_date?: string | null
+          fiscal_note_path?: string | null
+          id?: string
+          invoice_number?: never
+          line_items?: Json
+          metadata?: Json
+          organization_id: string
+          paid_at?: string | null
+          payment_method?: string | null
+          period_end: string
+          period_start: string
+          provider?: string | null
+          provider_invoice_id?: string | null
+          receipt_path?: string | null
+          status?: string
+          subscription_id?: string | null
+          subtotal_cents?: number | null
+          total_cents?: number | null
+          updated_at?: string
+        }
+        Update: {
+          checkout_url?: string | null
+          created_at?: string
+          description?: string
+          discount_cents?: number
+          due_date?: string | null
+          fiscal_note_path?: string | null
+          id?: string
+          invoice_number?: never
+          line_items?: Json
+          metadata?: Json
+          organization_id?: string
+          paid_at?: string | null
+          payment_method?: string | null
+          period_end?: string
+          period_start?: string
+          provider?: string | null
+          provider_invoice_id?: string | null
+          receipt_path?: string | null
+          status?: string
+          subscription_id?: string | null
+          subtotal_cents?: number | null
+          total_cents?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saas_invoices_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saas_invoices_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "saas_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       saas_plans: {
         Row: {
           code: string
@@ -4203,6 +4320,19 @@ export type Database = {
         Args: { p_company_id: string; p_seconds?: number; p_worker: string }
         Returns: boolean
       }
+      consume_rate_limit: {
+        Args: {
+          p_key: string
+          p_limit: number
+          p_scope: string
+          p_window_seconds: number
+        }
+        Returns: {
+          allowed: boolean
+          remaining: number
+          retry_after_seconds: number
+        }[]
+      }
       delete_expired_documents: { Args: never; Returns: undefined }
       foldername: { Args: never; Returns: string }
       get_saas_certificate_bundle: { Args: { _org_id: string }; Returns: Json }
@@ -4224,6 +4354,7 @@ export type Database = {
         Args: { p_company_id: string; p_worker: string }
         Returns: undefined
       }
+      revoke_user_sessions: { Args: { p_user_id: string }; Returns: number }
       run_fiscal_sync_watchdog: {
         Args: { p_company_id?: string; p_dry_run?: boolean }
         Returns: Json
