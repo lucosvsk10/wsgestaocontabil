@@ -19,6 +19,8 @@ Deno.serve(async (req) => {
   if (!String(req.headers.get("content-type") || "").toLowerCase().startsWith("application/json")) {
     return json({ error: "Unsupported media type" }, 415);
   }
+  const contentLength = Number(req.headers.get("content-length") || "0");
+  if (contentLength > 4096) return json({ error: "Credenciais inválidas." }, 413);
 
   try {
     const body = await req.json().catch(() => ({})) as Record<string, unknown>;
@@ -40,7 +42,15 @@ Deno.serve(async (req) => {
     );
     const { data, error } = await auth.auth.signInWithPassword({ email, password });
     if (error || !data.session || !data.user) return json({ error: "Credenciais inválidas." }, 401);
-    return json({ session: data.session, user: data.user });
+    return json({
+      session: {
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+        expires_at: data.session.expires_at,
+        expires_in: data.session.expires_in,
+        token_type: data.session.token_type,
+      },
+    });
   } catch (error) {
     console.error("auth-login", error instanceof Error ? error.message : "unknown");
     return json({ error: "Não foi possível concluir o login." }, 500);

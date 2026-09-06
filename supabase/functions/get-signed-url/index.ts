@@ -1,105 +1,67 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { consume, limited, requestKey } from "../_shared/rate-limit.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+const cors = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
+  status,
+  headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "no-store" },
+});
+const allowedPath = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/[a-zA-Z0-9_./-]{1,500}$/i;
+const blockedSecret = /\.(p12|pfx|pem|key|crt|cer)$/i;
 
-// Check if user has admin privileges using user_roles table
-const checkIsAdmin = async (supabase: any, userId: string): Promise<boolean> => {
-  const { data: roles, error } = await supabase
-    .from('user_roles')
-    .select('role')
-    .eq('user_id', userId);
-  
-  if (error) {
-    console.error('Error checking admin role:', error);
-    return false;
-  }
-  
-  return roles?.some(r => r.role === 'admin') || false;
-};
-
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  if (!String(req.headers.get("content-type") || "").toLowerCase().startsWith("application/json")) {
+    return json({ error: "Unsupported media type" }, 415);
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) return json({ error: "Não autenticado" }, 401);
 
-    // Get Authorization header to verify admin
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Authorization header required' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+    const admin = createClient(
+      Deno.env.get("SUPABASE_URL") || "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "",
+      { auth: { persistSession: false, autoRefreshToken: false } },
+    );
+    const { data: { user }, error: authError } = await admin.auth.getUser(authHeader.slice(7));
+    if (authError || !user) return json({ error: "Não autenticado" }, 401);
+
+    const rate = await consume(admin, "document_download", requestKey(req, user.id), 60, 600);
+    const blocked = limited(rate);
+    if (blocked) return blocked;
+
+    const body = await req.json().catch(() => ({})) as Record<string, unknown>;
+    const bucket = String(body.bucket || "");
+    const path = String(body.path || "");
+    if (bucket !== "documents" || !allowedPath.test(path) || blockedSecret.test(path) || path.includes("..")) {
+      return json({ error: "Documento inválido" }, 400);
     }
 
-    // Verify the calling user
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user: callingUser }, error: authError } = await supabase.auth.getUser(token);
-    
-    if (authError || !callingUser) {
-      return new Response(JSON.stringify({ error: 'Invalid token' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+    const [{ data: roles }, { data: document, error: documentError }] = await Promise.all([
+      admin.from("user_roles").select("role").eq("user_id", user.id),
+      admin.from("documents").select("id,user_id,status,expires_at").eq("storage_key", path).maybeSingle(),
+    ]);
+    const isAdmin = roles?.some((row: { role: string }) => row.role === "admin") || false;
+    const active = document && (document.status === null || document.status === "active");
+    const unexpired = !document?.expires_at || new Date(document.expires_at).getTime() > Date.now();
+    if (documentError || !document || (!isAdmin && (document.user_id !== user.id || !active || !unexpired))) {
+      return json({ error: "Documento indisponível" }, 404);
     }
 
-    // Check if calling user is admin
-    const isAdmin = await checkIsAdmin(supabase, callingUser.id);
-
-    if (!isAdmin) {
-      console.log(`User ${callingUser.email} attempted to get signed URL but is not admin`);
-      return new Response(JSON.stringify({ error: 'Apenas administradores podem acessar' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    const { bucket, path } = await req.json();
-
-    if (!bucket || !path) {
-      return new Response(JSON.stringify({ error: 'Bucket e path são obrigatórios' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    console.log(`Generating signed URL for bucket: ${bucket}, path: ${path}`);
-
-    // Generate signed URL valid for 1 hour (3600 seconds)
-    const { data, error } = await supabase.storage
-      .from(bucket)
-      .createSignedUrl(path, 3600);
-
-    if (error) {
-      console.error('Error creating signed URL:', error);
-      return new Response(JSON.stringify({ error: 'Erro ao gerar URL de download' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    console.log(`Signed URL generated successfully for ${path}`);
-
-    return new Response(JSON.stringify({ 
-      success: true,
-      signed_url: data.signedUrl
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    const { data, error } = await admin.storage.from("documents").createSignedUrl(path, 300, {
+      download: true,
     });
-
-  } catch (error: any) {
-    console.error('Error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+    if (error || !data?.signedUrl) return json({ error: "Documento indisponível" }, 404);
+    return json({ success: true, signed_url: data.signedUrl });
+  } catch (error) {
+    console.error("get-signed-url", error instanceof Error ? error.message : "unknown");
+    return json({ error: "Não foi possível liberar o documento" }, 500);
   }
 });

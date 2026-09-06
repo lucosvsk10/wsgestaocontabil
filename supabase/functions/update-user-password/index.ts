@@ -7,6 +7,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const strongPassword = (value: string) => value.length >= 12 && value.length <= 128 &&
+  [/[a-z]/, /[A-Z]/, /\d/, /[^A-Za-z0-9]/].filter((rule) => rule.test(value)).length >= 3
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
   try {
@@ -26,10 +29,12 @@ serve(async (req) => {
     if (blocked) return blocked
 
     const { userId, newPassword } = await req.json()
-    if (!userId || typeof newPassword !== 'string' || newPassword.length < 8) return new Response(JSON.stringify({ error: 'Invalid data' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    if (!userId || typeof newPassword !== 'string' || !strongPassword(newPassword)) return new Response(JSON.stringify({ error: 'A senha deve ter entre 12 e 128 caracteres e combinar ao menos três tipos de caracteres' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 
     const { error } = await admin.auth.admin.updateUserById(userId, { password: newPassword })
     if (error) throw error
+    const { error: revokeError } = await admin.rpc('revoke_user_sessions', { p_user_id: userId })
+    if (revokeError) throw revokeError
 
     await admin.from('saas_audit_logs').insert({ actor_user_id: caller.id, action: 'change_user_password', resource_type: 'auth_user', resource_id: userId, is_sensitive: true, metadata: { source: 'edge_function', function: 'update-user-password' } })
     return new Response(JSON.stringify({ success: true }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
