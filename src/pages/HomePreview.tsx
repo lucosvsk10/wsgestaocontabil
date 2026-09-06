@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ArrowUpRight, Calculator, ChevronDown, FileCheck2, FileSearch2, Instagram, Lightbulb, MessageCircle, UserRound } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ArrowUpRight, Calculator, FileCheck2, FileSearch2, Instagram, Lightbulb, MessageCircle, UserRound } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import '../styles/home-preview.css';
 
@@ -22,8 +22,31 @@ const software = [
   { audience: 'PARA EMPRESAS', badge: 'LICENÇA OFICIAL DA SEFAZ', title: <>EXTRATOR DE<br /><span>COMPRAS E<br />VENDAS</span></>, description: 'Busque e organize suas notas fiscais de compras e vendas de forma automática.', cta: <>VER OFERTA <small>POR TEMPO LIMITADO</small><ArrowUpRight size={18} /></>, icon: 'document', urgent: true },
 ];
 
+const heroMessages = [
+  ['Contabilidade', 'Aliada ao seu', 'empreendimento'],
+  ['Mais clareza', 'para o seu', 'negócio'],
+  ['Gestão contábil', 'para sua', 'empresa crescer'],
+  ['Seu negócio', 'no caminho', 'certo'],
+  ['Decisões melhores', 'começam com', 'bons números'],
+  ['Cuidamos dos', 'números do seu', 'negócio'],
+  ['Contabilidade', 'feita para', 'crescer'],
+  ['Seu negócio', 'merece mais', 'tranquilidade'],
+  ['Estratégia e', 'precisão para', 'sua empresa'],
+  ['Tudo em ordem', 'para você', 'avançar'],
+];
+
 const HomePreview = () => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [heroIndex, setHeroIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setHeroIndex((current) => (current + 1) % heroMessages.length);
+    }, 4800);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const heroMessage = heroMessages[heroIndex];
 
   return (
     <div className="home-preview">
@@ -50,10 +73,9 @@ const HomePreview = () => {
         <section id="inicio" className="preview-hero preview-section">
           <img className="preview-hero-mark" src="/assets/ws-emblem.png" alt="" aria-hidden="true" />
           <div className="preview-hero-copy">
-            <h1 className="preview-hero-title"><span>Contabilidade</span><strong>Aliada ao seu</strong><strong>empreendimento</strong></h1>
+            <h1 key={heroIndex} className="preview-hero-title preview-hero-title-switch" aria-live="polite"><span>{heroMessage[0]}</span><strong>{heroMessage[1]}</strong><strong>{heroMessage[2]}</strong></h1>
             <p className="preview-hero-subtitle">O que sua empresa precisar, em um só lugar.</p>
             <a className="preview-start-button" href="#servicos">COMECE AQUI</a>
-            <a className="preview-scroll-cue" href="#servicos" aria-label="Ir para serviços"><ChevronDown size={31} /><ChevronDown size={31} /></a>
           </div>
           <div id="sobre" className="preview-founder">
             <div className="preview-founder-panel"><div className="preview-founder-copy"><h2>WILSON SOUZA</h2><p>CONTADOR E CEO DA<br />WS GESTÃO A MAIS DE 16<br />ANOS</p><p className="preview-founder-highlight">REFERÊNCIA <strong>#1</strong> EM<br />CONTABILIDADE EM<br />TODO O NORDESTE</p></div></div>
