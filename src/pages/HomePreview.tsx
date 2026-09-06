@@ -48,8 +48,10 @@ const HomePreview = () => {
 
       <main>
         <section id="inicio" className="preview-hero preview-section">
+          <div className="preview-hero-mark" aria-hidden="true"><span className="preview-hero-mark-orbit" /><span className="preview-hero-mark-stem" /><span className="preview-hero-mark-ring" /></div>
           <div className="preview-hero-copy">
-            <img className="preview-hero-logo" src="/assets/ws-logo.png" alt="WS Gestão Contábil" />
+            <h1 className="preview-hero-title"><span>Contabilidade</span><strong>Aliada ao seu</strong><strong>empreendimento</strong></h1>
+            <p className="preview-hero-subtitle">O que sua empresa precisar, em um só lugar.</p>
             <a className="preview-start-button" href="#servicos">COMECE AQUI</a>
             <a className="preview-scroll-cue" href="#servicos" aria-label="Ir para serviços"><ChevronDown size={31} /><ChevronDown size={31} /></a>
           </div>
