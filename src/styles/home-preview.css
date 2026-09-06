@@ -368,3 +368,7 @@
 
 @media (min-width:761px){.preview-service-card h3{min-height:76px}.preview-service-card p{margin-top:18px}}
 @media (max-width:760px){.preview-service-card h3{min-height:58px}.preview-service-card p{margin-top:15px}}
+
+
+@media (min-width:761px){.preview-service-card{min-height:215px;padding:16px 14px 18px}.preview-service-card{grid-template-rows:46px auto 1fr}.preview-service-art{height:40px;margin-bottom:6px}.preview-service-art svg{width:34px;height:34px}.preview-service-card h3{font-size:clamp(15px,.86vw,19px);line-height:1.02}.preview-service-card p{margin-top:10px;font-size:clamp(11px,.64vw,14px);line-height:1.1}}
+@media (max-width:760px){.preview-service-card{min-height:185px;padding:14px}.preview-service-card h3{font-size:17px}.preview-service-card p{font-size:13px}}
