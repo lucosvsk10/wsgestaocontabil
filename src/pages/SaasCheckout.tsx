@@ -39,6 +39,7 @@ type CheckoutDatabaseClient = {
 
 const WS_LOGO = '/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png';
 const checkoutDb = supabase as unknown as CheckoutDatabaseClient;
+const invoiceIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export default function SaasCheckout() {
   const { invoiceId } = useParams();
@@ -54,7 +55,7 @@ export default function SaasCheckout() {
     let cancelled = false;
 
     const loadInvoice = async () => {
-      if (!invoiceId) {
+      if (!invoiceId || !invoiceIdPattern.test(invoiceId)) {
         setError('Fatura não informada.');
         setLoading(false);
         return;

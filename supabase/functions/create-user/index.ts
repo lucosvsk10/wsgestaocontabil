@@ -6,6 +6,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const strongPassword = (value: string) => value.length >= 12 && value.length <= 128 &&
+  [/[a-z]/, /[A-Z]/, /\d/, /[^A-Za-z0-9]/].filter((rule) => rule.test(value)).length >= 3
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders, status: 204 })
 
@@ -35,8 +38,8 @@ Deno.serve(async (req) => {
     const password = String(body.password || '')
     const role = ['client','admin','fiscal','contabil','geral'].includes(body.role) ? body.role : 'client'
 
-    if (!email || !name || password.length < 8) {
-      return new Response(JSON.stringify({ error: 'Email, nome e senha de pelo menos 8 caracteres são obrigatórios' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    if (!email || !name || !strongPassword(password)) {
+      return new Response(JSON.stringify({ error: 'Email, nome e senha de 12 a 128 caracteres, combinando ao menos três tipos de caracteres, são obrigatórios' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     const { data: authUser, error: authCreateError } = await admin.auth.admin.createUser({

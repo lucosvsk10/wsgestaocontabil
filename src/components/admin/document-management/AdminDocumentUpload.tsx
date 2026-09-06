@@ -17,6 +17,17 @@ interface AdminDocumentUploadProps {
   onDocumentUploaded?: () => void;
 }
 
+const MAX_DOCUMENT_SIZE = 25 * 1024 * 1024;
+const ALLOWED_DOCUMENT_TYPES = new Set([
+  "application/pdf",
+  "image/png",
+  "image/jpeg",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+]);
+
 export const AdminDocumentUpload: React.FC<AdminDocumentUploadProps> = ({
   userId,
   onDocumentUploaded
@@ -109,19 +120,23 @@ export const AdminDocumentUpload: React.FC<AdminDocumentUploadProps> = ({
       for (let i = 0; i < filesArray.length; i++) {
         const file = filesArray[i];
 
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${userId}/${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
+        if (file.size <= 0 || file.size > MAX_DOCUMENT_SIZE) {
+          throw new Error(`O arquivo ${file.name} deve ter no máximo 25 MB.`);
+        }
+        if (!ALLOWED_DOCUMENT_TYPES.has(file.type)) {
+          throw new Error(`O formato do arquivo ${file.name} não é permitido.`);
+        }
+
+        const fileExt = file.name.split('.').pop()?.toLowerCase() || "bin";
+        const fileName = `${crypto.randomUUID()}.${fileExt}`;
         const storageKey = `${userId}/${fileName}`;
 
-        const { error: uploadError } = await supabase.storage.from('documents').upload(storageKey, file);
+        const { error: uploadError } = await supabase.storage.from('documents').upload(storageKey, file, {
+          contentType: file.type,
+          upsert: false,
+        });
         if (uploadError) throw uploadError;
         setUploadProgress(30 + i / totalFiles * 40);
-
-        const { data: urlData } = await supabase.storage.from('documents').createSignedUrl(storageKey, 31536000);
-
-        if (!urlData?.signedUrl) {
-          throw new Error('Não foi possível obter URL para o arquivo');
-        }
 
         let expiresAt = null;
         if (!noExpiration && expirationDate) {
@@ -132,16 +147,22 @@ export const AdminDocumentUpload: React.FC<AdminDocumentUploadProps> = ({
         const { error: dbError } = await supabase.from('documents').insert({
           user_id: userId,
           name: docName,
-          file_url: urlData.signedUrl,
+          // Downloads are authorized on demand with a short-lived signed URL.
+          file_url: "",
           storage_key: storageKey,
           category: documentCategory,
           subcategory: documentSubcategory || null,
           observations: documentObservations || null,
           expires_at: expiresAt,
           original_filename: file.name,
+          filename: fileName,
+          type: file.type,
           size: file.size
         });
-        if (dbError) throw dbError;
+        if (dbError) {
+          await supabase.storage.from('documents').remove([storageKey]);
+          throw dbError;
+        }
         successCount++;
         setUploadProgress(70 + i / totalFiles * 30);
       }

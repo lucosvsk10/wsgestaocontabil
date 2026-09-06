@@ -18,6 +18,7 @@ Deno.serve(async req=>{if(req.method==="OPTIONS")return new Response(null,{heade
  if(action==="get"){if(!existing)return out({profile:null,certificate_configured:false});const safe={...existing};delete safe.certificate_secret_id;delete safe.certificate_pfx_secret_id;delete safe.certificate_storage_path;delete safe.nfce_csc_token_encrypted;return out({profile:safe,certificate_configured:Boolean(existing.certificate_secret_id&&existing.certificate_pfx_secret_id)})}
  if(!canManage)return out({error:"Apenas proprietário ou administrador pode alterar a configuração fiscal"},403);
  if(action==="set_environment"){
+   const passwordLimit=await consume(admin,"saas_fiscal_environment_password",requestKey(req,user.id),5,900);const passwordBlocked=limited(passwordLimit);if(passwordBlocked)return passwordBlocked;
    if(!existing?.id)return out({error:"Configure os dados fiscais antes de alterar o ambiente"},422);
    const target=String(b.environment||"");if(!["homologation","production"].includes(target))return out({error:"Ambiente inválido"},422);
    if(target===existing.fiscal_environment)return out({ok:true,environment:target,unchanged:true});

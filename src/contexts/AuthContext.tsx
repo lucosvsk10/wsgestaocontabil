@@ -43,8 +43,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const isAdmin = checkIsAdmin(userData, user?.email);
 
   useEffect(() => {
+    let initialVerificationComplete = false;
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        if (event === 'INITIAL_SESSION' && !initialVerificationComplete) return;
         setSession(session);
         setUser(session?.user || null);
         
@@ -60,16 +62,32 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
     );
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user || null);
-      
-      if (session?.user) {
-        fetchUserData(session.user.id);
+    // A cached session alone is not enough to authorize the initial render.
+    // Validate it with Auth before exposing protected application routes.
+    (async () => {
+      const [{ data: sessionData }, { data: userResult, error: userError }] = await Promise.all([
+        supabase.auth.getSession(),
+        supabase.auth.getUser(),
+      ]);
+      const verifiedUser = userError ? null : userResult.user;
+      const verifiedSession = verifiedUser ? sessionData.session : null;
+      initialVerificationComplete = true;
+      setSession(verifiedSession);
+      setUser(verifiedUser);
+
+      if (verifiedUser && verifiedSession) {
+        await fetchUserData(verifiedUser.id);
       } else {
+        if (sessionData.session) await supabase.auth.signOut({ scope: 'local' });
+        setUserData(null);
         setIsLoading(false);
       }
+    })().catch(() => {
+      initialVerificationComplete = true;
+      setSession(null);
+      setUser(null);
+      setUserData(null);
+      setIsLoading(false);
     });
 
     return () => {

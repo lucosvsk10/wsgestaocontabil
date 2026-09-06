@@ -27,10 +27,8 @@ type InvoiceRow = {
   status: "draft" | "open" | "paid" | "overdue" | "canceled" | "void" | string;
   payment_method: string | null;
   paid_at: string | null;
-  checkout_url: string | null;
   receipt_path: string | null;
   fiscal_note_path: string | null;
-  metadata: Record<string, any> | null;
 };
 
 type InvoiceFilter = "all" | "pending" | "paid" | "canceled";
@@ -287,7 +285,7 @@ function SaasPlanPanel({ planLabel }: { planLabel: string }) {
       const [{ data: invoiceData }, { data: subscriptionData }] = await Promise.all([
         (supabase as any)
           .from("saas_invoices")
-          .select("id,invoice_number,description,period_start,period_end,due_date,subtotal_cents,discount_cents,total_cents,status,payment_method,paid_at,checkout_url,receipt_path,fiscal_note_path,metadata")
+          .select("id,invoice_number,description,period_start,period_end,due_date,subtotal_cents,discount_cents,total_cents,status,payment_method,paid_at,receipt_path,fiscal_note_path")
           .eq("organization_id", organizationId)
           .order("period_start", { ascending: false }),
         (supabase as any)
@@ -442,7 +440,8 @@ function FilterButton({ active, onClick, children }: { active: boolean; onClick:
 function InvoiceItem({ invoice, onOpenStoredFile }: { invoice: InvoiceRow; onOpenStoredFile: (path: string) => void }) {
   const status = invoiceStatusLabel(invoice.status);
   const invoiceId = invoice.invoice_number ? String(invoice.invoice_number) : invoice.id.slice(0, 8).toUpperCase();
-  const hasAction = Boolean(invoice.checkout_url || invoice.receipt_path || invoice.fiscal_note_path);
+  const payable = ["open", "overdue"].includes(invoice.status);
+  const hasAction = Boolean(payable || invoice.receipt_path || invoice.fiscal_note_path);
 
   return (
     <article className="ws-plan-invoice-row">
@@ -460,8 +459,8 @@ function InvoiceItem({ invoice, onOpenStoredFile }: { invoice: InvoiceRow; onOpe
       <InvoiceField label="Forma de pagamento" value={invoice.payment_method || "—"} />
 
       <div className="ws-plan-invoice-actions">
-        {invoice.checkout_url && ["open", "overdue"].includes(invoice.status) && (
-          <a href={invoice.checkout_url}>Pagar fatura</a>
+        {payable && (
+          <a href={`/app/checkout/${invoice.id}`}>Pagar fatura</a>
         )}
         {invoice.receipt_path && (
           <button type="button" onClick={() => void onOpenStoredFile(invoice.receipt_path!)}>Baixar comprovante</button>
