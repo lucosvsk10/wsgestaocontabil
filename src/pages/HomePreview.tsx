@@ -93,6 +93,16 @@ const HomePreview = () => {
           <h2>SOFTWARES WS</h2>
           <div className="preview-software-grid">{software.map((item) => <article className="preview-software-card" key={item.audience + item.title.toString()}><div className="preview-software-meta"><span>{item.audience}</span>{item.badge && <span className="preview-software-badge">{item.badge}</span>}</div><h3>{item.title}</h3><p>{item.description}</p><a className={`preview-software-cta ${item.urgent ? 'is-urgent' : ''}`} href="/login">{item.cta}</a><div className={`preview-software-icon ${item.icon}`} aria-hidden="true">{item.icon === 'calculator' ? <Calculator /> : item.badge?.includes('SEFAZ') ? <FileSearch2 /> : <FileCheck2 />}</div></article>)}</div>
         </section>
+
+        <section id="clientes" className="preview-clients preview-section">
+          <div className="preview-clients-heading">
+            <div><p className="preview-clients-eyebrow">PARCERIAS QUE GERAM CONFIANÇA</p><h2>Empresas que<br /><span>confiam na WS</span></h2><p className="preview-clients-lead">Um modelo de apresentação pensado para valorizar cada empresa atendida.</p></div>
+          </div>
+          <div className="preview-client-model" aria-label="Modelo de logo padronizada">
+            <div className="preview-client-logo-frame"><img src="https://nadtoitgkukzbghtbohm.supabase.co/storage/v1/object/public/carousel-logos/logos/1749661878558.png" alt="Logo Rei do Aço" /></div>
+            <div className="preview-client-model-copy"><span>EMPRESA ATENDIDA</span><h3>REI DO AÇO</h3><p>Identidade preservada em uma apresentação limpa, proporcional e consistente com a WS.</p></div>
+          </div>
+        </section>
       </main>
     </div>
   );
