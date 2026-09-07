@@ -461,3 +461,9 @@
 /* Keep offer CTAs inside every fixed-height card, including long-copy offers. */
 @media (min-width:761px){.preview-software-card{padding-bottom:76px}.preview-software-cta{position:absolute;left:22px;bottom:22px;margin:0;white-space:nowrap}}
 @media (max-width:760px){.preview-software-card{padding-bottom:66px}.preview-software-cta{position:absolute;left:18px;bottom:18px;margin:0;white-space:nowrap}}
+
+
+/* Keep the longer final-offer CTA on one stable line. */
+.preview-software-card:last-child .preview-software-cta { display:inline-flex; align-items:center; flex-wrap:nowrap; gap:7px; white-space:nowrap; }
+.preview-software-card:last-child .preview-software-cta small { display:inline; white-space:nowrap; }
+@media (max-width:760px){.preview-software-card:last-child .preview-software-cta{font-size:13px;gap:5px}.preview-software-card:last-child .preview-software-cta small{font-size:.52em}}
