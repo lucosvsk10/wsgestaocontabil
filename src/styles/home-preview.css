@@ -400,3 +400,30 @@
   .preview-software-card h3 { margin:22px 0 20px; font-size:30px; }
   .preview-software-card p { font-size:17px; }
 }
+
+
+/* Section 3 visual refresh: compact offer cards with a clear product visual. */
+@media (min-width:761px) {
+  .preview-software > h2 { font-size:clamp(36px,3.8vw,78px); }
+  .preview-software-grid { gap:clamp(14px,1.35vw,26px); }
+  .preview-software-card { min-height:clamp(300px,26vw,430px); padding:20px; border-radius:20px; }
+  .preview-software-card::before { top:auto; left:0; right:auto; bottom:0; width:100%; height:3px; background:linear-gradient(90deg,transparent,rgba(239,196,73,.75),transparent); }
+  .preview-software-card::after { content:''; position:absolute; top:-42px; right:-24px; width:170px; height:150px; border-radius:42px; background:radial-gradient(circle at 40% 45%,rgba(239,196,73,.28),rgba(239,196,73,.04) 58%,transparent 72%); pointer-events:none; }
+  .preview-software-meta { position:relative; z-index:2; min-height:34px; padding-right:70px; font-size:clamp(11px,.72vw,16px); }
+  .preview-software-badge { padding:6px 9px; border-radius:11px; font-size:clamp(8px,.56vw,12px); }
+  .preview-software-card h3 { position:relative; z-index:2; margin:20px 0 16px; font-size:clamp(24px,1.85vw,42px); line-height:.96; }
+  .preview-software-card p { position:relative; z-index:2; max-width:20ch; font-size:clamp(13px,.82vw,18px); line-height:1.08; }
+  .preview-software-cta { position:relative; z-index:2; margin-top:auto; padding:10px 14px; font-size:clamp(12px,.72vw,16px); }
+  .preview-software-icon { top:18px; right:18px; bottom:auto; z-index:1; opacity:.85; }
+  .preview-software-icon svg { width:58px; height:58px; stroke-width:1.15; }
+}
+@media (max-width:760px) {
+  .preview-software > h2 { font-size:clamp(38px,11vw,60px); }
+  .preview-software-card { min-height:320px; padding:18px; border-radius:18px; }
+  .preview-software-card::after { content:''; position:absolute; top:-34px; right:-22px; width:130px; height:120px; border-radius:34px; background:radial-gradient(circle at 40% 45%,rgba(239,196,73,.25),transparent 70%); pointer-events:none; }
+  .preview-software-meta { min-height:32px; padding-right:55px; font-size:11px; }
+  .preview-software-card h3 { margin:18px 0 16px; font-size:28px; }
+  .preview-software-card p { font-size:16px; }
+  .preview-software-icon { top:16px; right:16px; bottom:auto; }
+  .preview-software-icon svg { width:46px; height:46px; }
+}
