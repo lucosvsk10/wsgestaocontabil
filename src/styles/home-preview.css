@@ -427,3 +427,28 @@
   .preview-software-icon { top:16px; right:16px; bottom:auto; }
   .preview-software-icon svg { width:46px; height:46px; }
 }
+
+
+/* Section 3 commercial emphasis: readable copy and stronger click cues. */
+@media (min-width:761px) {
+  .preview-software-card { min-height:clamp(380px,32vw,520px); padding:26px; border:1px solid rgba(239,196,73,.18); background:linear-gradient(145deg,#3b3b3b 0%,#303030 100%); box-shadow:0 16px 36px rgba(0,0,0,.18); cursor:pointer; transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease; }
+  .preview-software-card:hover { transform:translateY(-6px); border-color:rgba(239,196,73,.7); box-shadow:0 22px 46px rgba(0,0,0,.3); }
+  .preview-software-meta { min-height:38px; font-size:clamp(13px,.86vw,19px); letter-spacing:.02em; }
+  .preview-software-badge { padding:7px 11px; border-radius:12px; font-size:clamp(9px,.62vw,14px); background:rgba(239,196,73,.18); color:#f5f0e3; }
+  .preview-software-card h3 { margin:26px 0 22px; font-size:clamp(29px,2.25vw,52px); line-height:.97; letter-spacing:-.035em; }
+  .preview-software-card p { max-width:19ch; font-size:clamp(16px,1.08vw,23px); line-height:1.12; }
+  .preview-software-cta { padding:12px 17px; border:1px solid rgba(255,255,255,.12); border-radius:12px; color:#171b25; background:#f2c744; font-size:clamp(13px,.84vw,19px); transition:filter .2s ease,transform .2s ease; }
+  .preview-software-cta:hover { filter:brightness(1.08); transform:translateY(-2px); }
+  .preview-software-cta.is-urgent { color:#fff; background:#e23b35; }
+  .preview-software-icon { top:20px; right:22px; opacity:.95; }
+  .preview-software-icon svg { width:70px; height:70px; stroke-width:1.1; }
+}
+@media (max-width:760px) {
+  .preview-software-card { min-height:350px; padding:22px; border:1px solid rgba(239,196,73,.18); background:linear-gradient(145deg,#3b3b3b,#303030); }
+  .preview-software-meta { font-size:12px; }
+  .preview-software-card h3 { margin:22px 0 18px; font-size:32px; }
+  .preview-software-card p { font-size:18px; line-height:1.1; }
+  .preview-software-cta { padding:11px 15px; font-size:14px; }
+  .preview-software-icon { top:17px; right:18px; }
+  .preview-software-icon svg { width:52px; height:52px; }
+}
