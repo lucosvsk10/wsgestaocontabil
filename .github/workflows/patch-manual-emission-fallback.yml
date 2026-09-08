@@ -1,0 +1,196 @@
+name: Patch manual emission fallback
+
+on:
+  push:
+    branches:
+      - fix/manual-emission-fallback
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/manual-emission-fallback
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Apply targeted patch
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('src/components/saas/SaasEmission.tsx')
+          s = path.read_text()
+
+          def replace_once(old, new, label):
+              global s
+              count = s.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected 1 occurrence, found {count}')
+              s = s.replace(old, new, 1)
+
+          # Reusable helper shown only when a registry is empty.
+          marker = '''function Section({\n  title,'''
+          helper = '''function RegistryGap({\n  section,\n  label,\n  onOpen,\n}: {\n  section: string;\n  label: string;\n  onOpen: (section: string) => void;\n}) {\n  return (\n    <div className="md:col-span-2 rounded-[6px] border border-[#c8d0da] bg-[#f6f7f9] px-4 py-3 text-[#475467]">\n      <div className="flex flex-wrap items-center justify-between gap-3">\n        <div>\n          <b className="block text-[12px] font-semibold text-[#344054]">Nenhum {label} cadastrado</b>\n          <span className="mt-0.5 block text-[11px] leading-5">\n            Para reutilizar estes dados nas próximas emissões, cadastre em Cadastros → {section}.\n            Se for apenas esta emissão, preencha manualmente abaixo.\n          </span>\n        </div>\n        <button\n          type="button"\n          className="rounded-[5px] border border-[#aeb8c4] bg-white px-3 py-2 text-[11px] font-semibold text-[#344054] hover:bg-[#eef1f4]"\n          onClick={() => onOpen(section)}\n        >\n          Abrir {section}\n        </button>\n      </div>\n    </div>\n  );\n}\n\nfunction ManualPartyFields({\n  title,\n  prefix,\n  form,\n  onSet,\n}: {\n  title: string;\n  prefix: 'manualRem' | 'manualDest';\n  form: any;\n  onSet: (key: string, value: any) => void;\n}) {\n  const key = (suffix: string) => `${prefix}${suffix}`;\n  return (\n    <div className="md:col-span-2 rounded-[6px] border border-[#c8d0da] bg-[#f7f8fa] p-4">\n      <div className="mb-3">\n        <b className="text-[12px] font-semibold text-[#344054]">{title} manual</b>\n        <p className="mt-1 text-[11px] text-[#667085]">Estes dados valem somente para esta emissão e não criam um cadastro.</p>\n      </div>\n      <div className="ca-form-grid">\n        <Field label="Razão social" value={form[key('Name')]} onChange={v => onSet(key('Name'), v)} required />\n        <Field label="CNPJ" value={form[key('TaxId')]} onChange={v => onSet(key('TaxId'), v)} required />\n        <Field label="Inscrição estadual" value={form[key('Ie')]} onChange={v => onSet(key('Ie'), v)} />\n        <Field label="CEP" value={form[key('Cep')]} onChange={v => onSet(key('Cep'), v)} required />\n        <Field label="Logradouro" value={form[key('Street')]} onChange={v => onSet(key('Street'), v)} required />\n        <Field label="Número" value={form[key('Number')]} onChange={v => onSet(key('Number'), v)} required />\n        <Field label="Bairro" value={form[key('District')]} onChange={v => onSet(key('District'), v)} required />\n        <Field label="Município (IBGE)" value={form[key('CityIbge')]} onChange={v => onSet(key('CityIbge'), v)} required />\n        <Field label="Município" value={form[key('City')]} onChange={v => onSet(key('City'), v)} required />\n        <Field label="UF" value={form[key('Uf')]} onChange={v => onSet(key('Uf'), v)} required />\n      </div>\n    </div>\n  );\n}\n\nfunction Section({\n  title,'''
+          replace_once(marker, helper, 'insert helper components')
+
+          # Add manual form state.
+          replace_once(
+              "    customerId: '',\n    productId: '',\n    serviceId: '',",
+              "    customerId: '',\n    manualCustomerName: '',\n    manualCustomerTaxId: '',\n    manualCustomerIe: '',\n    manualCustomerStreet: '',\n    manualCustomerNumber: '',\n    manualCustomerDistrict: '',\n    manualCustomerCityIbge: '',\n    manualCustomerCity: '',\n    manualCustomerUf: 'AL',\n    manualCustomerCep: '',\n    productId: '',\n    manualProductName: '',\n    manualProductCode: '1',\n    manualProductNcm: '',\n    manualProductUnit: 'UN',\n    serviceId: '',",
+              'manual customer and product state',
+          )
+          replace_once(
+              "    remetenteId: '',\n    destinatarioId: '',\n    carrierId: '',",
+              "    remetenteId: '',\n    destinatarioId: '',\n    manualRemName: '',\n    manualRemTaxId: '',\n    manualRemIe: '',\n    manualRemStreet: '',\n    manualRemNumber: '',\n    manualRemDistrict: '',\n    manualRemCityIbge: '',\n    manualRemCity: '',\n    manualRemUf: 'AL',\n    manualRemCep: '',\n    manualDestName: '',\n    manualDestTaxId: '',\n    manualDestIe: '',\n    manualDestStreet: '',\n    manualDestNumber: '',\n    manualDestDistrict: '',\n    manualDestCityIbge: '',\n    manualDestCity: '',\n    manualDestUf: 'AL',\n    manualDestCep: '',\n    carrierId: '',",
+              'manual CT-e parties state',
+          )
+
+          # Harden digit/UF normalization for manual fiscal fields.
+          replace_once(
+              "      unloadCode: 7,\n    };",
+              "      unloadCode: 7,\n      manualCustomerTaxId: 14,\n      manualCustomerCityIbge: 7,\n      manualCustomerCep: 8,\n      manualProductNcm: 8,\n      manualRemTaxId: 14,\n      manualRemCityIbge: 7,\n      manualRemCep: 8,\n      manualDestTaxId: 14,\n      manualDestCityIbge: 7,\n      manualDestCep: 8,\n    };",
+              'manual digit limits',
+          )
+          replace_once(
+              "    if (['ufIni', 'ufFim'].includes(k))",
+              "    if (['ufIni', 'ufFim', 'manualCustomerUf', 'manualRemUf', 'manualDestUf'].includes(k))",
+              'manual UF normalization',
+          )
+
+          # Add navigation helper and effective in-memory records after selected records are derived.
+          selected_marker = '''  const customer = customers.find(x => x.id === form.customerId),\n    product = products.find(x => x.id === form.productId),\n    service = services.find(x => x.id === form.serviceId),\n    rem = customers.find(x => x.id === form.remetenteId),\n    dest = customers.find(x => x.id === form.destinatarioId),\n    carrier = carriers.find(x => x.id === form.carrierId);'''
+          selected_new = selected_marker + '''\n  const openRegistry = (section: string) => {\n    const clickSection = () => {\n      const target = Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(\n        button => String(button.textContent || '').trim() === section\n      );\n      if (!target) return false;\n      target.click();\n      return true;\n    };\n    if (clickSection()) return;\n    const cadastros = Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(\n      button => String(button.textContent || '').trim() === 'Cadastros'\n    );\n    if (cadastros) {\n      cadastros.click();\n      window.setTimeout(() => {\n        if (!clickSection()) setMsg(`Abra Cadastros → ${section} pelo menu lateral.`);\n      }, 0);\n      return;\n    }\n    setMsg(`Abra Cadastros → ${section} pelo menu lateral.`);\n  };\n  const manualCustomer = String(form.manualCustomerName || form.manualCustomerTaxId).trim()\n    ? {\n        legal_name: String(form.manualCustomerName || '').trim(),\n        tax_id: digits(form.manualCustomerTaxId),\n        state_registration: digits(form.manualCustomerIe),\n        street: String(form.manualCustomerStreet || '').trim(),\n        street_number: String(form.manualCustomerNumber || '').trim(),\n        district: String(form.manualCustomerDistrict || '').trim(),\n        city_ibge_code: digits(form.manualCustomerCityIbge),\n        city: String(form.manualCustomerCity || '').trim(),\n        state: String(form.manualCustomerUf || 'AL').toUpperCase(),\n        postal_code: digits(form.manualCustomerCep),\n      }\n    : null;\n  const effectiveCustomer = customer || manualCustomer;\n  const manualProduct = String(form.manualProductName || '').trim()\n    ? {\n        name: String(form.manualProductName || '').trim(),\n        code: String(form.manualProductCode || '1').trim() || '1',\n        ncm: digits(form.manualProductNcm),\n        unit: String(form.manualProductUnit || 'UN').trim().toUpperCase() || 'UN',\n        product_origin: '0',\n        csosn: '400',\n        icms_cst: '00',\n      }\n    : null;\n  const effectiveProduct = product || manualProduct;\n  const manualParty = (prefix: 'manualRem' | 'manualDest') => {\n    const get = (suffix: string) => form[`${prefix}${suffix}`];\n    if (!String(get('Name') || get('TaxId') || '').trim()) return null;\n    return {\n      legal_name: String(get('Name') || '').trim(),\n      tax_id: digits(get('TaxId')),\n      state_registration: digits(get('Ie')),\n      street: String(get('Street') || '').trim(),\n      street_number: String(get('Number') || '').trim(),\n      district: String(get('District') || '').trim(),\n      city_ibge_code: digits(get('CityIbge')),\n      city: String(get('City') || '').trim(),\n      state: String(get('Uf') || 'AL').toUpperCase(),\n      postal_code: digits(get('Cep')),\n    };\n  };\n  const effectiveRem = rem || manualParty('manualRem');\n  const effectiveDest = dest || manualParty('manualDest');'''
+          replace_once(selected_marker, selected_new, 'effective manual records')
+
+          # Payloads must use selected registry record OR the manual in-memory record.
+          for old, new, label in [
+              ("    destDocumento: customer?.tax_id || '',", "    destDocumento: effectiveCustomer?.tax_id || '',", 'product customer tax id'),
+              ("    destNome: customer?.legal_name || 'CONSUMIDOR',", "    destNome: effectiveCustomer?.legal_name || 'CONSUMIDOR',", 'product customer name'),
+              ("    destLogradouro: customer?.street,", "    destLogradouro: effectiveCustomer?.street,", 'product customer street'),
+              ("    destNumero: customer?.street_number,", "    destNumero: effectiveCustomer?.street_number,", 'product customer number'),
+              ("    destBairro: customer?.district,", "    destBairro: effectiveCustomer?.district,", 'product customer district'),
+              ("    destCodigoMunicipio: customer?.city_ibge_code,", "    destCodigoMunicipio: effectiveCustomer?.city_ibge_code,", 'product customer city ibge'),
+              ("    destMunicipio: customer?.city,", "    destMunicipio: effectiveCustomer?.city,", 'product customer city'),
+              ("    destUF: customer?.state,", "    destUF: effectiveCustomer?.state,", 'product customer state'),
+              ("    destCep: customer?.postal_code,", "    destCep: effectiveCustomer?.postal_code,", 'product customer cep'),
+              ("    codigoProduto: product?.code || '1',", "    codigoProduto: effectiveProduct?.code || '1',", 'manual product code'),
+              ("    produto: product?.name || 'PRODUTO',", "    produto: effectiveProduct?.name || 'PRODUTO',", 'manual product name'),
+              ("    ncm: product?.ncm,", "    ncm: effectiveProduct?.ncm,", 'manual product ncm'),
+              ("    cfop: form.cfop || product?.cfop_in_state,", "    cfop: form.cfop || effectiveProduct?.cfop_in_state,", 'manual product cfop'),
+              ("    unidade: product?.unit || 'UN',", "    unidade: effectiveProduct?.unit || 'UN',", 'manual product unit'),
+              ("    origem: product?.product_origin || '0',", "    origem: effectiveProduct?.product_origin || '0',", 'manual product origin'),
+              ("    csosn: product?.csosn || '400',", "    csosn: effectiveProduct?.csosn || '400',", 'manual product csosn'),
+              ("    cst: product?.icms_cst || '00',", "    cst: effectiveProduct?.icms_cst || '00',", 'manual product cst'),
+              ("    tomadorDocumento: customer?.tax_id,", "    tomadorDocumento: effectiveCustomer?.tax_id,", 'manual nfse customer tax id'),
+              ("    tomadorNome: customer?.legal_name,", "    tomadorNome: effectiveCustomer?.legal_name,", 'manual nfse customer name'),
+              ("    rem: partyCte(rem),", "    rem: partyCte(effectiveRem),", 'manual cte rem'),
+              ("    dest: partyCte(dest),", "    dest: partyCte(effectiveDest),", 'manual cte dest'),
+          ]:
+              replace_once(old, new, label)
+
+          # Validation: selected registry is no longer mandatory when complete manual data exists.
+          replace_once(
+              "      if (index === 0 && documentType === 'NF-e') need(customer, 'cliente');",
+              "      if (index === 0 && documentType === 'NF-e') {\n        need(effectiveCustomer, 'cliente / destinatário');\n        need([11, 14].includes(digits(effectiveCustomer?.tax_id).length), 'CPF/CNPJ do destinatário');\n        need(digits(effectiveCustomer?.city_ibge_code).length === 7, 'município do destinatário (IBGE)');\n        need(String(effectiveCustomer?.state || '').length === 2, 'UF do destinatário');\n      }",
+              'manual NF-e customer validation',
+          )
+          replace_once(
+              "        need(product, 'produto');\n        need(Number(form.quantity) > 0, 'quantidade');\n        need(Number(form.unitPrice) > 0, 'valor unitário');\n        need(digits(product?.ncm).length === 8, 'NCM do produto');",
+              "        need(effectiveProduct, 'produto / descrição manual');\n        need(String(effectiveProduct?.name || '').trim(), 'descrição do produto');\n        need(Number(form.quantity) > 0, 'quantidade');\n        need(Number(form.unitPrice) > 0, 'valor unitário');\n        need(digits(effectiveProduct?.ncm).length === 8, 'NCM do produto');",
+              'manual product validation',
+          )
+          replace_once(
+              "        need(customer, 'cliente / tomador');\n        need(digits(form.municipioPrestacao).length === 7, 'município da prestação (IBGE)');",
+              "        need(effectiveCustomer, 'cliente / tomador');\n        need(String(effectiveCustomer?.legal_name || '').trim(), 'nome do tomador');\n        if (digits(effectiveCustomer?.tax_id).length)\n          need([11, 14].includes(digits(effectiveCustomer?.tax_id).length), 'CPF/CNPJ do tomador');\n        need(digits(form.municipioPrestacao).length === 7, 'município da prestação (IBGE)');",
+              'manual NFS-e customer validation',
+          )
+          replace_once(
+              "        need(service, 'serviço');\n        need(String(form.serviceCode).trim(), 'código de tributação');",
+              "        need(service || String(form.description || '').trim(), 'serviço / descrição manual');\n        need(String(form.serviceCode).trim(), 'código de tributação');",
+              'manual service validation',
+          )
+          replace_once(
+              "        need(rem, 'remetente');\n        need(dest, 'destinatário');\n        need(String(form.rntrc || carrier?.rntrc).trim(), 'RNTRC');",
+              "        need(effectiveRem, 'remetente');\n        need(effectiveDest, 'destinatário');\n        for (const [party, label] of [[effectiveRem, 'remetente'], [effectiveDest, 'destinatário']] as const) {\n          need(digits(party?.tax_id).length === 14, `CNPJ do ${label}`);\n          need(String(party?.legal_name || '').trim(), `razão social do ${label}`);\n          need(digits(party?.city_ibge_code).length === 7, `município do ${label} (IBGE)`);\n          need(String(party?.state || '').length === 2, `UF do ${label}`);\n          need(String(party?.street || '').trim(), `logradouro do ${label}`);\n          need(String(party?.street_number || '').trim(), `número do endereço do ${label}`);\n          need(String(party?.district || '').trim(), `bairro do ${label}`);\n          need(digits(party?.postal_code).length === 8, `CEP do ${label}`);\n        }\n        need(String(form.rntrc || carrier?.rntrc).trim(), 'RNTRC');",
+              'manual CT-e parties validation',
+          )
+
+          # NF-e/NFC-e customer screen: suggestion + manual fields when no selected registry record.
+          customer_info = '''            <div className="ca-info-box">\n              <UsersRound />\n              <span>\n                <b>{customer?.legal_name || 'Nenhum cliente selecionado'}</b>\n                <small>{customer?.tax_id || 'CPF/CNPJ será preenchido pelo cadastro'}</small>\n              </span>\n            </div>'''
+          customer_info_new = customer_info + '''\n            {customers.length === 0 && (\n              <RegistryGap section="Clientes" label="cliente" onOpen={openRegistry} />\n            )}\n            {!customer && documentType === 'NF-e' && (\n              <>\n                <Field label="Nome / razão social" value={form.manualCustomerName} onChange={v => set('manualCustomerName', v)} required />\n                <Field label="CPF/CNPJ" value={form.manualCustomerTaxId} onChange={v => set('manualCustomerTaxId', v)} required />\n                <Field label="Inscrição estadual" value={form.manualCustomerIe} onChange={v => set('manualCustomerIe', v)} />\n                <Field label="CEP" value={form.manualCustomerCep} onChange={v => set('manualCustomerCep', v)} />\n                <Field label="Logradouro" value={form.manualCustomerStreet} onChange={v => set('manualCustomerStreet', v)} />\n                <Field label="Número" value={form.manualCustomerNumber} onChange={v => set('manualCustomerNumber', v)} />\n                <Field label="Bairro" value={form.manualCustomerDistrict} onChange={v => set('manualCustomerDistrict', v)} />\n                <Field label="Município (IBGE)" value={form.manualCustomerCityIbge} onChange={v => set('manualCustomerCityIbge', v)} required />\n                <Field label="Município" value={form.manualCustomerCity} onChange={v => set('manualCustomerCity', v)} />\n                <Field label="UF" value={form.manualCustomerUf} onChange={v => set('manualCustomerUf', v)} required />\n              </>\n            )}'''
+          replace_once(customer_info, customer_info_new, 'manual NF-e customer UI')
+
+          # Product screen: optional picker + manual product fields.
+          replace_once(
+              '''              kind="product"\n              required\n            />''',
+              '''              kind="product"\n            />\n            {products.length === 0 && (\n              <RegistryGap section="Produtos" label="produto" onOpen={openRegistry} />\n            )}\n            {!product && (\n              <>\n                <Field label="Descrição do produto" value={form.manualProductName} onChange={v => set('manualProductName', v)} required />\n                <Field label="Código interno" value={form.manualProductCode} onChange={v => set('manualProductCode', v)} />\n                <Field label="NCM" value={form.manualProductNcm} onChange={v => set('manualProductNcm', v)} required hint="Informe os 8 dígitos do NCM." />\n                <Field label="Unidade" value={form.manualProductUnit} onChange={v => set('manualProductUnit', v)} required />\n              </>\n            )}''',
+              'manual product UI',
+          )
+
+          # NFS-e customer block: use effective info and manual fields.
+          nfse_info = '''            <div className="ca-info-box">\n              <UsersRound />\n              <span>\n                <b>{customer?.legal_name || 'Tomador não selecionado'}</b>\n                <small>{customer?.tax_id || 'Os dados virão do cadastro'}</small>\n              </span>\n            </div>'''
+          nfse_info_new = '''            <div className="ca-info-box">\n              <UsersRound />\n              <span>\n                <b>{effectiveCustomer?.legal_name || 'Tomador não selecionado'}</b>\n                <small>{effectiveCustomer?.tax_id || 'Selecione um cadastro ou informe manualmente'}</small>\n              </span>\n            </div>\n            {customers.length === 0 && (\n              <RegistryGap section="Clientes" label="cliente / tomador" onOpen={openRegistry} />\n            )}\n            {!customer && (\n              <>\n                <Field label="Nome / razão social do tomador" value={form.manualCustomerName} onChange={v => set('manualCustomerName', v)} required />\n                <Field label="CPF/CNPJ do tomador" value={form.manualCustomerTaxId} onChange={v => set('manualCustomerTaxId', v)} hint="Opcional quando a operação permitir tomador sem documento." />\n              </>\n            )}'''
+          replace_once(nfse_info, nfse_info_new, 'manual NFS-e customer UI')
+
+          # Service picker can be skipped; the existing service code/description fields are the manual path.
+          replace_once(
+              '''              kind="service"\n              required\n            />''',
+              '''              kind="service"\n            />\n            {services.length === 0 && (\n              <RegistryGap section="Serviços" label="serviço" onOpen={openRegistry} />\n            )}''',
+              'manual service UI',
+          )
+
+          # CT-e participants: suggestions and full manual participant forms.
+          cte_rntrc = '''            <Field\n              label="RNTRC"\n              value={form.rntrc}\n              onChange={v => set('rntrc', v)}\n              required\n              hint="Preenchido automaticamente ao selecionar uma transportadora cadastrada."\n            />'''
+          cte_rntrc_new = cte_rntrc + '''\n            {customers.length === 0 && (\n              <RegistryGap section="Clientes" label="cliente para remetente/destinatário" onOpen={openRegistry} />\n            )}\n            {!rem && (\n              <ManualPartyFields title="Remetente" prefix="manualRem" form={form} onSet={set} />\n            )}\n            {!dest && (\n              <ManualPartyFields title="Destinatário" prefix="manualDest" form={form} onSet={set} />\n            )}\n            {carriers.length === 0 && (\n              <RegistryGap section="Transportadoras" label="transportadora" onOpen={openRegistry} />\n            )}'''
+          replace_once(cte_rntrc, cte_rntrc_new, 'manual CT-e participants UI')
+
+          # MDF-e carrier suggestion. Existing RNTRC + plate fields already form a complete manual path.
+          mdfe_select = '''            <Select\n              label="Transportadora"\n              value={form.carrierId}\n              onChange={v => set('carrierId', v)}\n            >\n              <option value="">Própria / manual</option>\n              {carriers.map(x => (\n                <option key={x.id} value={x.id}>\n                  {x.legal_name}\n                </option>\n              ))}\n            </Select>'''
+          mdfe_select_new = mdfe_select + '''\n            {carriers.length === 0 && (\n              <RegistryGap section="Transportadoras" label="transportadora" onOpen={openRegistry} />\n            )}'''
+          # Two identical selects exist (CT-e and MDF-e); only replace the last remaining exact block after CT-e block has been changed structurally.
+          count = s.count(mdfe_select)
+          if count != 2:
+              raise SystemExit(f'MDF-e carrier select: expected 2 occurrences before targeted replacement, found {count}')
+          first = s.find(mdfe_select)
+          second = s.find(mdfe_select, first + len(mdfe_select))
+          s = s[:second] + mdfe_select_new + s[second + len(mdfe_select):]
+
+          # Review and preview should show the effective manual records.
+          replacements = [
+              ("            customer?.legal_name ||", "            effectiveCustomer?.legal_name ||", 'review product customer'),
+              ("          ['Produto', product?.name || '—'],", "          ['Produto', effectiveProduct?.name || '—'],", 'review product'),
+              ("          ['Quantidade', `${form.quantity || 0} ${product?.unit || 'UN'}`],", "          ['Quantidade', `${form.quantity || 0} ${effectiveProduct?.unit || 'UN'}`],", 'review product unit'),
+              ("          ['Tomador', customer?.legal_name || '—'],", "          ['Tomador', effectiveCustomer?.legal_name || '—'],", 'review nfse customer'),
+              ("          ['Serviço', service?.name || '—'],", "          ['Serviço', service?.name || form.description || '—'],", 'review manual service'),
+              ("          ['Remetente', rem?.legal_name || '—'],", "          ['Remetente', effectiveRem?.legal_name || '—'],", 'review cte rem'),
+              ("          ['Destinatário', dest?.legal_name || '—'],", "          ['Destinatário', effectiveDest?.legal_name || '—'],", 'review cte dest'),
+              ("              customer={customer}", "              customer={effectiveCustomer}", 'preview effective customer'),
+              ("              product={product}", "              product={effectiveProduct}", 'preview effective product'),
+              ("              dest={dest}", "              dest={effectiveDest}", 'preview effective dest'),
+          ]
+          for old, new, label in replacements:
+              replace_once(old, new, label)
+
+          path.write_text(s)
+          PY
+      - name: Build
+        run: npm ci && npm run build
+      - name: Commit verified patch
+        shell: bash
+        run: |
+          rm .github/workflows/patch-manual-emission-fallback.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/saas/SaasEmission.tsx .github/workflows/patch-manual-emission-fallback.yml
+          git commit -m "feat(saas): allow manual emission data without registry records"
+          git push origin HEAD:fix/manual-emission-fallback
