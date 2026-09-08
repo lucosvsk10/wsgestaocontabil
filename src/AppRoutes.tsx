@@ -38,6 +38,7 @@ import LegalPage from './pages/LegalPage';
 import AppLoadingScreen from './components/AppLoadingScreen';
 import HomePreview from './pages/HomePreview';
 import BusinessGuidePage from './pages/BusinessGuidePage';
+import BusinessGuidesIndexPage from './pages/BusinessGuidesIndexPage';
 
 const DashboardRouter = () => {
   const { userData, user } = useAuth();
@@ -78,6 +79,7 @@ const AppRoutes = () => {
       <Route path="/home-preview" element={<HomePreview />} />
       <Route path="/home-preview/*" element={<HomePreview />} />
       <Route path="/nova-home" element={<HomePreview />} />
+      <Route path="/guias" element={<BusinessGuidesIndexPage />} />
       <Route path="/guias/:slug" element={<BusinessGuidePage />} />
       <Route path="/" element={<Index />} />
       <Route path="/login" element={<ClientLogin />} />

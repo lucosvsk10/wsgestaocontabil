@@ -15,10 +15,10 @@ const PublicSiteFooter = () => (
       <div>
         <h2>Explore</h2>
         <nav aria-label="Links do rodapé">
-          <a href="/home-preview#servicos">Serviços</a>
-          <a href="/home-preview#softwares">Softwares WS</a>
-          <a href="/home-preview#conteudos">Guias para empresas</a>
-          <a href="/home-preview#duvidas">Perguntas frequentes</a>
+          <Link to="/">Página inicial</Link>
+          <Link to="/guias">Guias para empresas</Link>
+          <Link to="/termos-de-servico">Termos de serviço</Link>
+          <Link to="/politica-de-privacidade">Política de privacidade</Link>
         </nav>
       </div>
       <div>

@@ -42,23 +42,23 @@ const BusinessGuidePage = () => {
     window.scrollTo(0, 0);
   }, [guide]);
 
-  if (!guide) return <Navigate to="/home-preview" replace />;
+  if (!guide) return <Navigate to="/guias" replace />;
   const related = guides.filter((item) => item.slug !== guide.slug);
 
   return (
     <div className="public-page">
       <header className="guide-header">
-        <Link to="/home-preview" className="guide-brand"><img src="/assets/ws-logo.png" alt="WS Gestão Contábil" /></Link>
-        <nav><Link to="/home-preview#servicos">Serviços</Link><Link to="/home-preview#conteudos">Guias</Link><Link to="/login">Login</Link></nav>
+        <Link to="/" className="guide-brand"><img src="/assets/ws-logo.png" alt="WS Gestão Contábil" /></Link>
+        <nav><Link to="/">Início</Link><Link to="/guias">Guias</Link><Link to="/login">Login</Link></nav>
       </header>
       <main>
         <article className="guide-article">
-          <Link className="guide-back" to="/home-preview#conteudos"><ArrowLeft /> Voltar para a página inicial</Link>
+          <Link className="guide-back" to="/guias"><ArrowLeft /> Ver todos os guias</Link>
           <header className="guide-hero">
             <span>{guide.eyebrow}</span>
             <h1>{guide.title}</h1>
             <p>{guide.description}</p>
-            <small><Clock3 /> {guide.readingTime}</small>
+            <small><Clock3 /> Publicado em 8 de setembro de 2026 · {guide.readingTime}</small>
           </header>
           <figure className="guide-cover">
             <img src={guide.heroImage} alt={guide.heroImageAlt} width="1600" height="900" fetchPriority="high" />

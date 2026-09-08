@@ -10,6 +10,7 @@ import { AnnouncementsContainer } from './components/announcements/Announcements
 import { WrongCompetenceImportGuard } from './components/admin/lancamentos/WrongCompetenceImportGuard';
 import AppLoadingScreen from './components/AppLoadingScreen';
 import React from 'react';
+import RouteSeoPolicy from './components/RouteSeoPolicy';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -30,6 +31,7 @@ function RoutedApplication() {
 
   return (
     <>
+      <RouteSeoPolicy />
       <AppRoutes />
       <AnnouncementsContainer />
       <WrongCompetenceImportGuard />
