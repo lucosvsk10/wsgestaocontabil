@@ -1,0 +1,31 @@
+name: Patch extractor icon language
+
+on:
+  push:
+    branches:
+      - fix/extractor-icon-language
+    paths:
+      - scripts/patch-extractor-icon-language.mjs
+      - .github/workflows/patch-extractor-icon-language.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/extractor-icon-language
+          fetch-depth: 0
+      - name: Apply icon language patch
+        run: node scripts/patch-extractor-icon-language.mjs
+      - name: Commit patched extractor and remove temporary patch files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm scripts/patch-extractor-icon-language.mjs .github/workflows/patch-extractor-icon-language.yml
+          git add src/pages/FiscalExtractorApp.tsx src/styles/fiscal-extractor.css
+          git commit -m "style(extractor): refine icons from 21st references"
+          git push origin HEAD:fix/extractor-icon-language
