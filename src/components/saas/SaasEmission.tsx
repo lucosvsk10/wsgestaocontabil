@@ -20,6 +20,12 @@ const docs = ['NF-e', 'NFC-e', 'NFS-e', 'CT-e', 'MDF-e'];
 const money = (v: any) =>
   Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const digits = (v: any) => String(v ?? '').replace(/\D/g, '');
+const formatTaxId = (value: any) => {
+  const raw = digits(value);
+  if (raw.length === 14) return raw.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+  if (raw.length === 11) return raw.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
+  return value || '—';
+};
 const reusablePartsDefault = {
   people: true,
   items: true,
@@ -255,6 +261,46 @@ function Section({
         </div>
       </div>
       <div className="ca-section-body">{children}</div>
+    </section>
+  );
+}
+function IssuerSummary({ profile, documentType }: { profile: any; documentType: string }) {
+  const service = documentType === 'NFS-e';
+  const registration = service
+    ? profile?.municipal_registration
+      ? `IM ${profile.municipal_registration}`
+      : 'IM não informada'
+    : profile?.state_registration
+      ? `IE ${profile.state_registration}`
+      : 'IE não informada';
+  const address = [profile?.street, profile?.street_number, profile?.district].filter(Boolean).join(', ');
+  const city = [profile?.city, profile?.state].filter(Boolean).join('/');
+  return (
+    <section className="mb-4 rounded-[6px] border border-[#cbd3dc] bg-[#edf1f4] px-4 py-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="text-[10px] font-semibold uppercase tracking-[.08em] text-[#667382]">
+              {service ? 'Prestador' : 'Emitente'}
+            </span>
+            <span className="rounded-full border border-[#c5cdd6] bg-white px-2 py-0.5 text-[9px] font-medium text-[#65717d]">
+              Dados da Minha Empresa · somente leitura
+            </span>
+          </div>
+          <strong className="mt-1 block truncate text-[13px] font-semibold text-[#263442]">
+            {profile?.legal_name || profile?.trade_name || 'Empresa fiscal não configurada'}
+          </strong>
+          {profile?.trade_name && profile?.trade_name !== profile?.legal_name && (
+            <span className="mt-0.5 block text-[10px] text-[#697785]">{profile.trade_name}</span>
+          )}
+        </div>
+        <div className="grid min-w-[280px] flex-1 grid-cols-2 gap-x-5 gap-y-2 md:max-w-[640px] md:grid-cols-4">
+          <div><span className="block text-[9px] text-[#7a8793]">CNPJ/CPF</span><b className="text-[10px] font-medium text-[#354350]">{formatTaxId(profile?.tax_id)}</b></div>
+          <div><span className="block text-[9px] text-[#7a8793]">Inscrição</span><b className="text-[10px] font-medium text-[#354350]">{registration}</b></div>
+          <div><span className="block text-[9px] text-[#7a8793]">Município</span><b className="text-[10px] font-medium text-[#354350]">{city || '—'}</b></div>
+          <div><span className="block text-[9px] text-[#7a8793]">Endereço</span><b className="line-clamp-2 text-[10px] font-medium text-[#354350]">{address || '—'}</b></div>
+        </div>
+      </div>
     </section>
   );
 }
@@ -525,7 +571,7 @@ export default function SaasEmission({
     service = services.find(x => x.id === form.serviceId),
     rem = customers.find(x => x.id === form.remetenteId),
     dest = customers.find(x => x.id === form.destinatarioId),
-    carrier = carriers.find(x => x.id === form.carrierId);
+    issuerCarrier = carriers.find(x => digits(x.tax_id) === digits(profile?.tax_id));
   const chooseOrCreate = (
     key: string,
     value: string,
@@ -556,21 +602,19 @@ export default function SaasEmission({
       }));
   }, [form.serviceId]);
   useEffect(() => {
-    if (carrier)
-      setForm((current: any) => ({
-        ...current,
-        rntrc: carrier.rntrc || current.rntrc,
-        plate: carrier.vehicle_plate || current.plate,
-      }));
-  }, [form.carrierId]);
+    if (!issuerCarrier) return;
+    setForm((current: any) => ({
+      ...current,
+      rntrc: current.rntrc || issuerCarrier.rntrc || '',
+      plate: current.plate || issuerCarrier.vehicle_plate || '',
+    }));
+  }, [issuerCarrier?.id, documentType]);
 
   const applyReusableEmission = useCallback(
     (emission: any, parts: ReusableParts = reusablePartsDefault) => {
       const payload = emission?.payload || {};
       const byTaxId = (value: any) =>
         customers.find(item => digits(item.tax_id) === digits(value))?.id || '';
-      const byCarrier = (rntrc: any) =>
-        carriers.find(item => digits(item.rntrc) === digits(rntrc))?.id || '';
       const productId =
         products.find(
           item =>
@@ -610,7 +654,6 @@ export default function SaasEmission({
         if (parts.people) {
           values.remetenteId = byTaxId(payload.rem?.CNPJ || payload.rem?.CPF);
           values.destinatarioId = byTaxId(payload.dest?.CNPJ || payload.dest?.CPF);
-          values.carrierId = byCarrier(payload.rodo?.RNTRC);
         }
         if (parts.items) {
           values.vCarga = String(payload.carga?.vCarga || '');
@@ -641,7 +684,6 @@ export default function SaasEmission({
             : String(payload.chaves || '');
         }
         if (parts.transport) {
-          values.carrierId = byCarrier(payload.rntrc);
           values.rntrc = String(payload.rntrc || '');
           values.plate = String(payload.placa || '');
           values.tara = String(payload.tara || '');
@@ -680,7 +722,7 @@ export default function SaasEmission({
       setReuseOpen(false);
       setReuseSearch('');
     },
-    [carriers, customers, documentType, products, services]
+    [customers, documentType, products, services]
   );
 
   useEffect(() => {
@@ -828,15 +870,15 @@ export default function SaasEmission({
     dest: partyCte(dest),
     carga: { vCarga: Number(form.vCarga), proPred: 'CARGA GERAL', qCarga: Number(form.qCarga) },
     chNFe: form.chNFe,
-    rodo: { RNTRC: form.rntrc || carrier?.rntrc },
+    rodo: { RNTRC: form.rntrc || issuerCarrier?.rntrc },
   });
   const mdfePayload = () => ({
     environment,
     serie: form.series,
     numero: form.number,
-    rntrc: form.rntrc || carrier?.rntrc,
-    placa: form.plate || carrier?.vehicle_plate,
-    veiculoUf: carrier?.vehicle_state || profile?.state || 'AL',
+    rntrc: form.rntrc || issuerCarrier?.rntrc,
+    placa: form.plate || issuerCarrier?.vehicle_plate,
+    veiculoUf: issuerCarrier?.vehicle_state || profile?.state || 'AL',
     condutorNome: form.driverName,
     condutorCpf: form.driverCpf,
     tara: Number(form.tara),
@@ -942,7 +984,7 @@ export default function SaasEmission({
       if (index === 0) {
         need(rem, 'remetente');
         need(dest, 'destinatário');
-        need(String(form.rntrc || carrier?.rntrc).trim(), 'RNTRC');
+        need(String(form.rntrc || issuerCarrier?.rntrc).trim(), 'RNTRC');
       }
       if (index === 1) {
         need(Number(form.vTPrest) > 0, 'valor da prestação');
@@ -966,9 +1008,9 @@ export default function SaasEmission({
     }
     if (documentType === 'MDF-e') {
       if (index === 0) {
-        need(String(form.rntrc || carrier?.rntrc).trim(), 'RNTRC');
+        need(String(form.rntrc || issuerCarrier?.rntrc).trim(), 'RNTRC');
         need(
-          String(form.plate || carrier?.vehicle_plate || '').replace(/[^A-Z0-9]/gi, '').length ===
+          String(form.plate || issuerCarrier?.vehicle_plate || '').replace(/[^A-Z0-9]/gi, '').length ===
             7,
           'placa do veículo'
         );
@@ -1271,7 +1313,7 @@ export default function SaasEmission({
   if (documentType === 'CT-e')
     content =
       step === 0 ? (
-        <Section title="Participantes" subtitle="Remetente, destinatário e transportadora.">
+        <Section title="Participantes" subtitle="O emitente é a empresa desta conta. Selecione remetente e destinatário.">
           <div className="ca-form-grid">
             <Select
               label="Remetente"
@@ -1301,25 +1343,12 @@ export default function SaasEmission({
                 </option>
               ))}
             </Select>
-            <Select
-              label="Transportadora"
-              value={form.carrierId}
-              onChange={v => chooseOrCreate('carrierId', v, 'Transportadoras')}
-            >
-              <option value="">Própria</option>
-              {carriers.length === 0 && <option value="__new__">Adicionar transportadora</option>}
-              {carriers.map(x => (
-                <option key={x.id} value={x.id}>
-                  {x.legal_name}
-                </option>
-              ))}
-            </Select>
             <Field
               label="RNTRC"
               value={form.rntrc}
               onChange={v => set('rntrc', v)}
               required
-              hint="Preenchido automaticamente ao selecionar uma transportadora cadastrada."
+              hint="RNTRC do emitente. Quando houver cadastro correspondente à própria empresa, ele é preenchido automaticamente."
             />
           </div>
         </Section>
@@ -1416,23 +1445,10 @@ export default function SaasEmission({
     content =
       step === 0 ? (
         <Section
-          title="Veículo e transportadora"
-          subtitle="Identifique o conjunto rodoviário principal."
+          title="Veículo do emitente"
+          subtitle="O emitente é a empresa desta conta. Informe apenas os dados do conjunto rodoviário."
         >
           <div className="ca-form-grid">
-            <Select
-              label="Transportadora"
-              value={form.carrierId}
-              onChange={v => chooseOrCreate('carrierId', v, 'Transportadoras')}
-            >
-              <option value="">Própria</option>
-              {carriers.length === 0 && <option value="__new__">Adicionar transportadora</option>}
-              {carriers.map(x => (
-                <option key={x.id} value={x.id}>
-                  {x.legal_name}
-                </option>
-              ))}
-            </Select>
             <Field label="RNTRC" value={form.rntrc} onChange={v => set('rntrc', v)} required />
             <Field
               label="Placa"
@@ -1589,7 +1605,7 @@ export default function SaasEmission({
       ? [
           ['Remetente', rem?.legal_name || '—'],
           ['Destinatário', dest?.legal_name || '—'],
-          ['Transportadora', carrier?.legal_name || 'Transporte próprio'],
+          ['Emitente', profile?.trade_name || profile?.legal_name || '—'],
           ['Prestação', money(form.vTPrest)],
           ['Carga', `${money(form.vCarga)} · ${form.qCarga || 0} kg`],
           [
@@ -1598,8 +1614,8 @@ export default function SaasEmission({
           ],
         ]
       : [
-          ['Transportadora', carrier?.legal_name || 'Transporte próprio'],
-          ['Veículo', form.plate || carrier?.vehicle_plate || '—'],
+          ['Emitente', profile?.trade_name || profile?.legal_name || '—'],
+          ['Veículo', form.plate || issuerCarrier?.vehicle_plate || '—'],
           ['Condutor', form.driverName || '—'],
           ['Carga', `${money(form.cargoValue)} · ${form.cargoWeight || 0} kg`],
           [
@@ -1642,6 +1658,7 @@ export default function SaasEmission({
             </div>
           </div>
         </header>
+        <IssuerSummary profile={profile} documentType={documentType} />
         <TabBar
           tabs={tabs}
           active={tab}
