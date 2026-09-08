@@ -14,9 +14,16 @@ import {
   YAxis,
 } from 'recharts';
 import {
+  Activity,
+  AlertTriangle,
+  ArrowDownToLine,
+  ArrowLeftRight,
+  ArrowUpFromLine,
   BarChart3,
   Building2,
   Check,
+  CircleDollarSign,
+  FileCheck2,
   Download,
   FileText,
   History,
@@ -125,6 +132,39 @@ const navigation: Array<{ label: ExtractorSection; icon: any; group: string }> =
   { label: 'Histórico', icon: History, group: 'Gestão' },
   { label: 'Configurações', icon: Settings, group: 'Gestão' },
 ];
+
+const pageHeadingIconByTitle: Record<string, any> = {
+  'Visão geral': LayoutDashboard,
+  Empresas: Building2,
+  Documentos: FileText,
+  Relatórios: BarChart3,
+  'Certificados digitais': ShieldCheck,
+  'Histórico retroativo': History,
+  Configurações: Settings,
+};
+
+const metricIconByLabel: Record<string, any> = {
+  Documentos: FileText,
+  Entradas: ArrowDownToLine,
+  Saídas: ArrowUpFromLine,
+  Movimentação: CircleDollarSign,
+  'Cobertura XML': FileCheck2,
+  'XML integral': FileCheck2,
+  'Valor médio': Activity,
+  Empresas: Building2,
+};
+
+const panelIconForTitle = (title: string) => {
+  if (/atenção/i.test(title)) return AlertTriangle;
+  if (/xml/i.test(title)) return FileCheck2;
+  if (/entrada|saída/i.test(title)) return ArrowLeftRight;
+  if (/modelo/i.test(title)) return BarChart3;
+  if (/empresa/i.test(title)) return Building2;
+  if (/documento/i.test(title)) return FileText;
+  if (/plano|configuração/i.test(title)) return Settings;
+  if (/rotina|movimento|ritmo/i.test(title)) return Activity;
+  return BarChart3;
+};
 
 const currency = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 const integer = new Intl.NumberFormat('pt-BR');
@@ -484,7 +524,8 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
 }
 
 function PageHeading({ title, description, actions }: { title: string; description: string; actions?: React.ReactNode }) {
-  return <div className="extractor-page-heading"><div><span className="extractor-eyebrow">WS Extrator Fiscal</span><h1>{title}</h1><p>{description}</p></div>{actions && <div className="extractor-heading-actions">{actions}</div>}</div>;
+  const Icon = pageHeadingIconByTitle[title] || Activity;
+  return <div className="extractor-page-heading"><div><span className="extractor-eyebrow"><Icon className="extractor-page-icon" />WS Extrator Fiscal</span><h1>{title}</h1><p>{description}</p></div>{actions && <div className="extractor-heading-actions">{actions}</div>}</div>;
 }
 
 function Overview({ companies, documents, totals, models, daily, busy, onSync, onNavigate }: { companies: Company[]; documents: FiscalDocument[]; totals: Totals; models: Record<string, number>; daily: Array<{ day: string; documents: number }>; busy: boolean; onSync: () => void; onNavigate: (s: ExtractorSection) => void }) {
@@ -529,8 +570,14 @@ function Overview({ companies, documents, totals, models, daily, busy, onSync, o
   </div>;
 }
 
-function Metric({ label, value, detail }: { label: string; value: string; detail: string }) { return <article className="extractor-metric"><p>{label}</p><strong>{value}</strong><span>{detail}</span></article>; }
-function PanelHeader({ title, subtitle, action }: { title: string; subtitle: string; action?: React.ReactNode }) { return <header className="extractor-panel-head"><div><h2>{title}</h2><p>{subtitle}</p></div>{action}</header>; }
+function Metric({ label, value, detail }: { label: string; value: string; detail: string }) {
+  const Icon = metricIconByLabel[label] || Activity;
+  return <article className="extractor-metric"><div className="extractor-metric-head"><p>{label}</p><Icon className="extractor-metric-icon" /></div><strong>{value}</strong><span>{detail}</span></article>;
+}
+function PanelHeader({ title, subtitle, action }: { title: string; subtitle: string; action?: React.ReactNode }) {
+  const Icon = panelIconForTitle(title);
+  return <header className="extractor-panel-head"><div className="extractor-panel-title"><Icon className="extractor-panel-icon" /><div><h2>{title}</h2><p>{subtitle}</p></div></div>{action}</header>;
+}
 function EmptyInline({ text }: { text: string }) { return <div className="extractor-empty-inline">{text}</div>; }
 
 function ExtractorTooltip({ active, payload, label, labelFormatter }: any) {
