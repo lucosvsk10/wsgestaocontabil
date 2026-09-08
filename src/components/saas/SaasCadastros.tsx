@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
+import SaasRegistryImport from '@/components/saas/SaasRegistryImport';
 import SaasCustomerEditor from '@/components/saas/SaasCustomerEditor';
 import SaasRegisterAppearance, { readableText } from '@/components/saas/SaasRegisterAppearance';
 import SaasCnpjLookup from '@/components/saas/SaasCnpjLookup';
@@ -677,10 +678,17 @@ export default function SaasCadastros({
           <h1 className="mt-1 text-[28px] font-semibold text-[#17233b]">{section}</h1>
           <p className="mt-1 max-w-3xl text-sm text-[#667085]">{subtitle}</p>
         </div>
-        <Button onClick={create} className="saas-action-primary">
-          <Plus className="mr-2 h-4 w-4" />
-          Novo {singular(section)}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <SaasRegistryImport
+            organizationId={organizationId}
+            defaultDestination={section}
+            onImported={() => void load()}
+          />
+          <Button onClick={create} className="saas-action-primary">
+            <Plus className="mr-2 h-4 w-4" />
+            Novo {singular(section)}
+          </Button>
+        </div>
       </header>
 
       {message && (
