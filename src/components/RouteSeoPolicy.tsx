@@ -30,6 +30,7 @@ const isPrivateOrUtilityRoute = (pathname: string) => (
   || pathname.startsWith('/admin')
   || pathname.startsWith('/app')
   || pathname.startsWith('/client')
+  || pathname.startsWith('/extrator')
   || pathname.startsWith('/checkout')
   || pathname.startsWith('/enquete/')
   || pathname.startsWith('/enquete-numerica/')

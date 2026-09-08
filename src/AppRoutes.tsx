@@ -40,6 +40,7 @@ import HomePreview from './pages/HomePreview';
 import BusinessGuidePage from './pages/BusinessGuidePage';
 import BusinessGuidesIndexPage from './pages/BusinessGuidesIndexPage';
 import FiscalIssuerLandingPage from './pages/FiscalIssuerLandingPage';
+import FiscalExtractorApp from './pages/FiscalExtractorApp';
 
 const DashboardRouter = () => {
   const { userData, user } = useAuth();
@@ -83,6 +84,7 @@ const AppRoutes = () => {
       <Route path="/guias" element={<BusinessGuidesIndexPage />} />
       <Route path="/guias/:slug" element={<BusinessGuidePage />} />
       <Route path="/emissor-fiscal" element={<FiscalIssuerLandingPage />} />
+      <Route path="/extrator-preview" element={<FiscalExtractorApp preview />} />
       <Route path="/" element={<Index />} />
       <Route path="/login" element={<ClientLogin />} />
       <Route path="/enquete/:id" element={<PollPage />} />
@@ -294,6 +296,14 @@ const AppRoutes = () => {
       <Route
         path="/admin/lancamentos/feature"
         element={<Navigate to="/admin/fiscal/emissao" replace />}
+      />
+      <Route
+        path="/extrator/*"
+        element={
+          <PrivateRoute>
+            <FiscalExtractorApp />
+          </PrivateRoute>
+        }
       />
       <Route
         path="/app/checkout/:invoiceId"
