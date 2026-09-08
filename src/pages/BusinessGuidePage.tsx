@@ -20,7 +20,7 @@ const BusinessGuidePage = () => {
     let canonical = document.querySelector('link[rel="canonical"]');
     if (!canonical) canonical = document.head.appendChild(document.createElement('link'));
     canonical.setAttribute('rel', 'canonical');
-    canonical.setAttribute('href', `https://wsgestaocontabil.com/guias/${guide.slug}`);
+    canonical.setAttribute('href', `https://www.wsgestaocontabil.com/guias/${guide.slug}`);
     const upsertMeta = (key: string, value: string, property = false) => {
       const attribute = property ? 'property' : 'name';
       let meta = document.querySelector(`meta[${attribute}="${key}"]`);
@@ -28,7 +28,7 @@ const BusinessGuidePage = () => {
       meta.setAttribute(attribute, key);
       meta.setAttribute('content', value);
     };
-    const pageUrl = `https://wsgestaocontabil.com/guias/${guide.slug}`;
+    const pageUrl = `https://www.wsgestaocontabil.com/guias/${guide.slug}`;
     upsertMeta('og:type', 'article', true);
     upsertMeta('og:title', guide.title, true);
     upsertMeta('og:description', guide.description, true);

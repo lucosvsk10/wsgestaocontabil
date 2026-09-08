@@ -8,13 +8,13 @@ O site já gera automaticamente `sitemap.xml`, `robots.txt`, URLs canônicas, me
 2. Adicione uma propriedade do tipo **Domínio**: `wsgestaocontabil.com`.
 3. Copie o registro TXT informado pelo Google.
 4. No painel DNS do domínio, crie o registro TXT exatamente como informado e aguarde a validação.
-5. Em **Sitemaps**, envie: `https://wsgestaocontabil.com/sitemap.xml`.
+5. Em **Sitemaps**, envie: `https://www.wsgestaocontabil.com/sitemap.xml`.
 6. Em **Inspeção de URL**, solicite a indexação destas páginas:
-   - `https://wsgestaocontabil.com/`
-   - `https://wsgestaocontabil.com/guias`
-   - `https://wsgestaocontabil.com/guias/como-comecar-um-negocio`
-   - `https://wsgestaocontabil.com/guias/quanto-custa-abrir-empresa`
-   - `https://wsgestaocontabil.com/guias/organizar-financas-da-empresa`
+   - `https://www.wsgestaocontabil.com/`
+   - `https://www.wsgestaocontabil.com/guias`
+   - `https://www.wsgestaocontabil.com/guias/como-comecar-um-negocio`
+   - `https://www.wsgestaocontabil.com/guias/quanto-custa-abrir-empresa`
+   - `https://www.wsgestaocontabil.com/guias/organizar-financas-da-empresa`
 
 ## Acompanhamento
 

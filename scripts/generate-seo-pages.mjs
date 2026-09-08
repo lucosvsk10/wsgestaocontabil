@@ -9,7 +9,7 @@ const template = builtTemplate
   .replace(/\s*<script type="application\/ld\+json">[\s\S]*?<\/script>/g, '')
   .replace(/ 'sha256-[^']+'/g, '');
 const guides = JSON.parse(await readFile(path.join(root, 'src', 'content', 'business-guides.json'), 'utf8'));
-const site = 'https://wsgestaocontabil.com';
+const site = 'https://www.wsgestaocontabil.com';
 const buildDate = '2026-09-08';
 const defaultRobots = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
 const escapeHtml = (value = '') => String(value).replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character]);

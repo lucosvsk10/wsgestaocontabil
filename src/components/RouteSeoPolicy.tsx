@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
-const SITE_URL = 'https://wsgestaocontabil.com';
+const SITE_URL = 'https://www.wsgestaocontabil.com';
 const publicMetadata: Record<string, { title: string; description: string }> = {
   '/': {
     title: 'Contabilidade em Major Isidoro e Palmeira dos Índios | WS',
