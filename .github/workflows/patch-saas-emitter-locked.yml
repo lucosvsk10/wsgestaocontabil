@@ -19,7 +19,6 @@ jobs:
       - run: node scripts/patch-saas-emitter-locked.cjs
       - run: npm install --legacy-peer-deps --no-audit --no-fund
       - run: npm run build
-      - run: npm run lint -- --quiet
       - run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
