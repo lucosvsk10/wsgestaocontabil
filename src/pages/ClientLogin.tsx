@@ -5,26 +5,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useNotifications } from '@/hooks/useNotifications';
 import { supabase } from '@/integrations/supabase/client';
 import { useTheme } from '@/contexts/ThemeContext';
+import { getCurrentProductAccess } from '@/utils/auth/productAccess';
 import '@/styles/client-login.css';
 
-type MembershipQuery = PromiseLike<{
-  data: Array<{ id: string }> | null;
-  error: { message: string } | null;
-}>;
-
-type MembershipDatabase = {
-  from(table: 'organization_members'): {
-    select(columns: string): {
-      eq(column: string, value: string): {
-        eq(column: string, value: string): {
-          limit(count: number): MembershipQuery;
-        };
-      };
-    };
-  };
-};
-
-const membershipDb = supabase as unknown as MembershipDatabase;
 const STANDARD_LOGO = '/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png';
 const LIGHT_LOGO = '/lovable-uploads/f7fdf0cf-f16c-4df7-a92c-964aadea9539.png';
 const WS_TEST_EMAIL = 'wsteste@gmail.com';
@@ -55,14 +38,9 @@ const ClientLogin = () => {
     const { data: roles } = await supabase.from('user_roles').select('role').eq('user_id', userId);
     if (roles?.some(({ role }) => role === 'admin')) return '/admin';
 
-    const { data: membership } = await membershipDb
-      .from('organization_members')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('status', 'active')
-      .limit(1);
-
-    if (membership?.length) return '/app';
+    const access = await getCurrentProductAccess();
+    if (access.saas) return '/app';
+    if (access.extractor) return '/extrator';
     return '/client';
   };
 
