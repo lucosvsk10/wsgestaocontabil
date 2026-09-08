@@ -95,9 +95,10 @@
 .saas-admin-light .saas-topbar select { background:rgba(255,255,255,.07) !important; border-color:rgba(148,163,184,.2) !important; color:#f8fafc !important; }
 .saas-admin-light .saas-topbar img { filter:none !important; opacity:1 !important; }
 .saas-admin-light .saas-topbar .saas-product-logo {
-  width: 188px !important;
-  height: auto !important;
-  max-height: 52px !important;
+  width: auto !important;
+  height: 28px !important;
+  max-width: 118px !important;
+  max-height: 28px !important;
 }
 @keyframes saasTopbarLightSweep { 0%{left:-38%;opacity:0} 8%{opacity:1} 86%{opacity:1} 100%{left:112%;opacity:0} }
 
