@@ -27,6 +27,7 @@ type MembershipDatabase = {
 const membershipDb = supabase as unknown as MembershipDatabase;
 const STANDARD_LOGO = '/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png';
 const LIGHT_LOGO = '/lovable-uploads/f7fdf0cf-f16c-4df7-a92c-964aadea9539.png';
+const WS_TEST_EMAIL = 'wsteste@gmail.com';
 
 const ClientLogin = () => {
   const [email, setEmail] = useState('');
@@ -83,6 +84,12 @@ const ClientLogin = () => {
       }
 
       notifyLogin().catch(() => undefined);
+
+      if (data.user.email?.trim().toLowerCase() === WS_TEST_EMAIL) {
+        navigate('/escolher-produto', { replace: true });
+        return;
+      }
+
       const destination = await resolveDestination(data.user.id);
       navigate(destination, { replace: true });
     } catch (caughtError: unknown) {
