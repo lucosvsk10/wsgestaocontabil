@@ -301,6 +301,11 @@ export default function SaasApp() {
         emissions={emissions}
         reusableEmission={reusableEmission}
         onReuseConsumed={() => setReusableEmission(null)}
+        onOpenRegistry={section => {
+          setSelectedDocument(null);
+          setReusableEmission(null);
+          setActive(section);
+        }}
       />
     );
   else if (active === 'Gerenciar DF-e') content = <SaasDfeManager />;
