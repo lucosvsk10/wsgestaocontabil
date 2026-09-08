@@ -2,15 +2,13 @@ import { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { checkIsAdmin } from '@/utils/auth/userChecks';
-import { supabase } from '@/integrations/supabase/client';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
+import { getCurrentProductAccess, type ProductAccess } from '@/utils/auth/productAccess';
 
 interface PrivateRouteProps {
   children: JSX.Element;
   requiredRole?: string;
 }
-
-type ProductAccess = { saas: boolean; extractor: boolean };
 
 const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
   const { user, userData, isLoading } = useAuth();
@@ -29,24 +27,13 @@ const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
     }
 
     setAccess(null);
-    Promise.all([
-      (supabase as any)
-        .from('organization_members')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .limit(1),
-      (supabase as any)
-        .from('extractor_accounts')
-        .select('id')
-        .limit(1),
-    ]).then(([saasResult, extractorResult]) => {
-      if (cancelled) return;
-      setAccess({
-        saas: !saasResult.error && Boolean(saasResult.data?.length),
-        extractor: !extractorResult.error && Boolean(extractorResult.data?.length),
+    getCurrentProductAccess()
+      .then((nextAccess) => {
+        if (!cancelled) setAccess(nextAccess);
+      })
+      .catch(() => {
+        if (!cancelled) setAccess({ saas: false, extractor: false });
       });
-    });
 
     return () => {
       cancelled = true;
@@ -76,7 +63,7 @@ const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
   }
 
   if (pathname.startsWith('/app') && !access.saas) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={access.extractor ? '/extrator' : '/dashboard'} replace />;
   }
 
   if (pathname.startsWith('/client') && (access.saas || access.extractor)) {
