@@ -1,96 +1,87 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  AlertTriangle,
-  ArrowDownToLine,
   BarChart3,
-  Bell,
   Building2,
   CalendarDays,
   Check,
   ChevronDown,
-  CircleDollarSign,
-  Clock3,
   Download,
-  FileArchive,
-  FileCheck2,
   FileText,
   History,
   LayoutDashboard,
-  LockKeyhole,
   Menu,
-  MoreHorizontal,
-  Plus,
   RefreshCw,
   Search,
   Settings,
   ShieldCheck,
-  SlidersHorizontal,
-  Sparkles,
-  TrendingUp,
-  Upload,
-  UsersRound,
   X,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { FiscalDocumentPreview, type PreviewDocument } from '@/components/admin/fiscal/FiscalDocumentPreview';
 import '@/styles/fiscal-extractor.css';
 
-type ExtractorSection =
-  | 'Visão geral'
-  | 'Empresas'
-  | 'Documentos'
-  | 'Relatórios'
-  | 'Certificados'
-  | 'Histórico'
-  | 'Configurações';
+type ExtractorSection = 'Visão geral' | 'Empresas' | 'Documentos' | 'Relatórios' | 'Certificados' | 'Histórico' | 'Configurações';
+type ModelFilter = 'Todos' | 'NF-e' | 'NFC-e' | 'NFS-e';
 
 type Company = {
   id: string;
+  extractorCompanyId: string;
   name: string;
   tradeName: string;
   cnpj: string;
   uf: string;
-  status: 'active' | 'attention';
   documents: number;
-  lastSync: string;
-  certificateUntil: string;
-  certificateDays: number;
+  entries: number;
+  exits: number;
+  fullXml: number;
+  pendingXml: number;
+  lastSync: string | null;
+  automaticSync: boolean;
+  certificateUntil: string | null;
+  certificateDays: number | null;
+  purchaseStatus: string | null;
+  salesStatus: string | null;
+  purchaseLastCompleted: string | null;
+  salesLastCompleted: string | null;
+  salesXmlPending: number;
+  salesXmlFailed: number;
 };
 
 type FiscalDocument = {
   id: string;
+  companyId: string;
   company: string;
+  legalName: string;
+  nsu?: string;
+  schema?: string;
+  documentKind?: string;
+  fullXml: boolean;
+  accessKey?: string;
   number: string;
-  model: 'NF-e' | 'NFC-e' | 'NFS-e';
-  direction: 'Entrada' | 'Saída';
+  series?: string;
+  model: 'NF-e' | 'NFC-e' | 'NFS-e' | 'Documento';
+  direction: 'Entrada' | 'Saída' | 'Relacionada';
   party: string;
-  issueDate: string;
+  issueDate: string | null;
   value: number;
-  status: 'Autorizada' | 'Cancelada';
+  statusCode?: string;
+  statusText: string;
+  parseError?: string;
 };
 
 type Snapshot = {
-  account?: { name?: string; plan_code?: string; monthly_xml_limit?: number };
+  account?: { id?: string; name?: string; plan_code?: string; monthly_xml_limit?: number; base_lookback_days?: number; allowed_from?: string };
   companies?: Array<Record<string, any>>;
   documents?: Array<Record<string, any>>;
-  totals?: { documents?: number; entries?: number; exits?: number; value?: number };
+  totals?: { documents?: number; entries?: number; exits?: number; value?: number; full_xml?: number; pending_xml?: number };
+  models?: { nfe?: number; nfce?: number; nfse?: number; other?: number };
+  daily?: Array<{ day?: string; documents?: number }>;
 };
 
-const demoCompanies: Company[] = [
-  { id: '1', name: 'Sertão Verde Agrícola Ltda', tradeName: 'Sertão Verde', cnpj: '••.•••.•••/••••-••', uf: 'AL', status: 'active', documents: 486, lastSync: 'Hoje, 08:42', certificateUntil: '18 nov. 2026', certificateDays: 71 },
-  { id: '2', name: 'Rota Norte Transportes Ltda', tradeName: 'Rota Norte', cnpj: '••.•••.•••/••••-••', uf: 'AL', status: 'active', documents: 352, lastSync: 'Hoje, 08:36', certificateUntil: '09 jan. 2027', certificateDays: 123 },
-  { id: '3', name: 'Horizonte Serviços de Redes Ltda', tradeName: 'Horizonte Redes', cnpj: '••.•••.•••/••••-••', uf: 'AL', status: 'attention', documents: 218, lastSync: 'Hoje, 07:58', certificateUntil: '22 set. 2026', certificateDays: 14 },
-  { id: '4', name: 'Vila Comércio de Alimentos Ltda', tradeName: 'Vila Alimentos', cnpj: '••.•••.•••/••••-••', uf: 'PE', status: 'active', documents: 604, lastSync: 'Ontem, 23:17', certificateUntil: '11 mar. 2027', certificateDays: 184 },
-];
+type Totals = { documents: number; entries: number; exits: number; value: number; fullXml: number; pendingXml: number };
 
-const demoDocuments: FiscalDocument[] = [
-  { id: '1', company: 'Sertão Verde', number: '000.013.842', model: 'NF-e', direction: 'Entrada', party: 'Agro Nordeste Insumos', issueDate: '08 set. 2026, 08:31', value: 12840.5, status: 'Autorizada' },
-  { id: '2', company: 'Rota Norte', number: '000.004.291', model: 'NFS-e', direction: 'Saída', party: 'Cooperativa Vale Verde', issueDate: '08 set. 2026, 08:12', value: 4780, status: 'Autorizada' },
-  { id: '3', company: 'Vila Alimentos', number: '000.087.614', model: 'NFC-e', direction: 'Saída', party: 'Consumidor final', issueDate: '08 set. 2026, 07:49', value: 184.9, status: 'Autorizada' },
-  { id: '4', company: 'Horizonte Redes', number: '000.001.937', model: 'NF-e', direction: 'Entrada', party: 'Conecta Distribuidora', issueDate: '07 set. 2026, 17:26', value: 3250, status: 'Autorizada' },
-  { id: '5', company: 'Sertão Verde', number: '000.013.790', model: 'NF-e', direction: 'Entrada', party: 'Máquinas do Sertão', issueDate: '07 set. 2026, 14:08', value: 22900, status: 'Cancelada' },
-  { id: '6', company: 'Vila Alimentos', number: '000.087.553', model: 'NFC-e', direction: 'Saída', party: 'Consumidor final', issueDate: '07 set. 2026, 12:44', value: 96.7, status: 'Autorizada' },
-];
+type Notice = { tone: 'success' | 'warning' | 'error'; text: string } | null;
 
 const navigation: Array<{ label: ExtractorSection; icon: any; group: string }> = [
   { label: 'Visão geral', icon: LayoutDashboard, group: 'Operação' },
@@ -103,286 +94,397 @@ const navigation: Array<{ label: ExtractorSection; icon: any; group: string }> =
 ];
 
 const currency = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
-const number = new Intl.NumberFormat('pt-BR');
-const shortCurrency = (value: number) => {
-  if (value >= 1_000_000) return `R$ ${(value / 1_000_000).toFixed(1).replace('.', ',')} mi`;
-  if (value >= 1_000) return `R$ ${(value / 1_000).toFixed(1).replace('.', ',')} mil`;
-  return currency.format(value);
+const integer = new Intl.NumberFormat('pt-BR');
+const onlyDigits = (value: unknown) => String(value || '').replace(/\D/g, '');
+const formatCnpj = (value: unknown) => {
+  const digits = onlyDigits(value);
+  return digits.length === 14 ? digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : String(value || '—');
+};
+const formatDate = (value?: string | null, withTime = false) => {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return withTime
+    ? date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+    : date.toLocaleDateString('pt-BR');
+};
+const modelFromRow = (row: Record<string, any>): FiscalDocument['model'] => {
+  const kind = String(row.document_kind || '').toLowerCase();
+  const model = String(row.model || '');
+  if (kind === 'nfse' || /nfse|nfs-e/i.test(model)) return 'NFS-e';
+  if (model === '65') return 'NFC-e';
+  if (model === '55') return 'NF-e';
+  return 'Documento';
+};
+const statusLabel = (row: Record<string, any>) => {
+  const raw = String(row.status_text || row.status_code || '').trim();
+  if (/cancel/i.test(raw) || ['101', '151', '155'].includes(String(row.status_code || ''))) return 'Cancelada';
+  if (/deneg/i.test(raw) || ['110', '301', '302'].includes(String(row.status_code || ''))) return 'Denegada';
+  if (/autoriz|ativa/i.test(raw) || ['1', '100', '150'].includes(String(row.status_code || ''))) return 'Autorizada';
+  return raw || 'Fiscal';
+};
+const statusTone = (status: string) => /cancel|deneg/i.test(status) ? 'danger' : /autoriz|ativa|válid/i.test(status) ? 'success' : 'neutral';
+const syncLabel = (value?: string | null) => {
+  const raw = String(value || '').toLowerCase();
+  if (['running', 'queued', 'reconciling', 'bootstrap_window', 'retrying'].includes(raw)) return 'Sincronizando';
+  if (['idle', 'completed', 'success'].includes(raw)) return 'Ativa';
+  if (!raw) return 'Não iniciada';
+  return raw.replaceAll('_', ' ');
 };
 
 const normalizeCompany = (row: Record<string, any>, index: number): Company => ({
   id: String(row.id || index),
-  name: row.razao_social || row.name || 'Empresa sem nome',
-  tradeName: row.nome_fantasia || row.trade_name || row.razao_social || 'Empresa',
-  cnpj: row.cnpj || 'CNPJ não informado',
+  extractorCompanyId: String(row.extractor_company_id || ''),
+  name: row.razao_social || 'Empresa sem razão social',
+  tradeName: row.nome_fantasia || row.razao_social || 'Empresa',
+  cnpj: row.cnpj || '',
   uf: row.uf || '—',
-  status: Number(row.certificate_days ?? 999) <= 30 ? 'attention' : 'active',
-  documents: Number(row.documents || row.document_count || 0),
-  lastSync: row.last_sync_at ? new Date(row.last_sync_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'Aguardando sincronização',
-  certificateUntil: row.certificate_until ? new Date(`${row.certificate_until}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Não configurado',
-  certificateDays: Number(row.certificate_days ?? 999),
+  documents: Number(row.documents || 0),
+  entries: Number(row.entries || 0),
+  exits: Number(row.exits || 0),
+  fullXml: Number(row.full_xml || 0),
+  pendingXml: Number(row.pending_xml || 0),
+  lastSync: row.last_sync_at || null,
+  automaticSync: row.automatic_sync !== false,
+  certificateUntil: row.certificate_until || null,
+  certificateDays: row.certificate_days == null ? null : Number(row.certificate_days),
+  purchaseStatus: row.purchase_status || null,
+  salesStatus: row.sales_status || null,
+  purchaseLastCompleted: row.purchase_last_completed_at || null,
+  salesLastCompleted: row.sales_last_completed_at || null,
+  salesXmlPending: Number(row.sales_xml_pending || 0),
+  salesXmlFailed: Number(row.sales_xml_failed || 0),
 });
 
 const normalizeDocument = (row: Record<string, any>, index: number): FiscalDocument => ({
   id: String(row.id || index),
-  company: row.company_name || row.nome_fantasia || 'Empresa',
-  number: row.note_number || row.document_number || '—',
-  model: row.model === '65' ? 'NFC-e' : row.model === 'NFSE' || row.model === 'NFS-e' ? 'NFS-e' : 'NF-e',
-  direction: row.direction === 'saida' || row.direction === 'outbound' ? 'Saída' : 'Entrada',
-  party: row.counterparty_name || row.issuer_name || row.recipient_name || 'Não identificado',
-  issueDate: row.issue_date ? new Date(row.issue_date).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—',
-  value: Number(row.value || row.total_value || 0),
-  status: /cancel/i.test(row.status_text || row.status || '') ? 'Cancelada' : 'Autorizada',
+  companyId: String(row.company_id || ''),
+  company: row.company_name || row.company_legal_name || 'Empresa',
+  legalName: row.company_legal_name || row.company_name || 'Empresa',
+  nsu: row.nsu || undefined,
+  schema: row.schema_name || undefined,
+  documentKind: row.document_kind || undefined,
+  fullXml: Boolean(row.full_xml),
+  accessKey: row.access_key || undefined,
+  number: row.note_number || '—',
+  series: row.series || undefined,
+  model: modelFromRow(row),
+  direction: row.direction === 'saida' || row.direction === 'outbound' ? 'Saída' : row.direction === 'entrada' || row.direction === 'inbound' ? 'Entrada' : 'Relacionada',
+  party: row.counterparty_name || row.issuer_name || row.recipient_cnpj || 'Não identificado',
+  issueDate: row.issue_date || null,
+  value: Number(row.value || 0),
+  statusCode: row.status_code || undefined,
+  statusText: statusLabel(row),
+  parseError: row.parse_error || undefined,
 });
+
+const previewCompanies: Company[] = [
+  { id: 'preview-1', extractorCompanyId: '', name: 'Empresa de demonstração', tradeName: 'Empresa demonstração', cnpj: '00000000000000', uf: 'AL', documents: 326, entries: 55, exits: 271, fullXml: 266, pendingXml: 60, lastSync: new Date().toISOString(), automaticSync: true, certificateUntil: '2027-08-25', certificateDays: 351, purchaseStatus: 'idle', salesStatus: 'idle', purchaseLastCompleted: new Date().toISOString(), salesLastCompleted: new Date().toISOString(), salesXmlPending: 60, salesXmlFailed: 0 },
+];
+const previewDocuments: FiscalDocument[] = [
+  { id: 'preview-doc-1', companyId: 'preview-1', company: 'Empresa demonstração', legalName: 'Empresa de demonstração', number: '001234', model: 'NF-e', direction: 'Entrada', party: 'Fornecedor exemplo', issueDate: new Date().toISOString(), value: 1840.5, statusText: 'Autorizada', fullXml: true },
+  { id: 'preview-doc-2', companyId: 'preview-1', company: 'Empresa demonstração', legalName: 'Empresa de demonstração', number: '004521', model: 'NFC-e', direction: 'Saída', party: 'Consumidor final', issueDate: new Date(Date.now() - 3600000).toISOString(), value: 96.7, statusText: 'Autorizada', fullXml: false },
+];
 
 export default function FiscalExtractorApp({ preview = false }: { preview?: boolean }) {
   const { user } = useAuth();
   const [active, setActive] = useState<ExtractorSection>('Visão geral');
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const [companyFilter, setCompanyFilter] = useState('Todas as empresas');
-  const [directionFilter, setDirectionFilter] = useState('Todos');
-  const [modal, setModal] = useState<'company' | 'history' | null>(null);
-  const [loading, setLoading] = useState(!preview);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
+  const [loading, setLoading] = useState(!preview);
   const [accessDenied, setAccessDenied] = useState(false);
+  const [busy, setBusy] = useState('');
+  const [notice, setNotice] = useState<Notice>(null);
+  const [modal, setModal] = useState<'company' | 'history' | null>(null);
+  const [selectedPreview, setSelectedPreview] = useState<PreviewDocument | null>(null);
 
-  useEffect(() => {
-    if (preview || !user) {
-      setLoading(false);
-      return;
+  const loadSnapshot = useCallback(async (quiet = false) => {
+    if (preview || !user) return;
+    if (!quiet) setLoading(true);
+    const { data, error } = await (supabase as any).rpc('extractor_workspace_snapshot');
+    if (error || !data) {
+      setAccessDenied(true);
+    } else {
+      setSnapshot(data as Snapshot);
+      setAccessDenied(false);
     }
-    let cancelled = false;
-    (async () => {
-      const { data, error } = await (supabase as any).rpc('extractor_workspace_snapshot');
-      if (!cancelled) {
-        if (!error && data) setSnapshot(data as Snapshot);
-        else setAccessDenied(true);
-        setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
+    if (!quiet) setLoading(false);
   }, [preview, user?.id]);
 
-  const companies = useMemo(
-    () => snapshot?.companies?.length ? snapshot.companies.map(normalizeCompany) : demoCompanies,
-    [snapshot],
-  );
-  const documents = useMemo(
-    () => snapshot?.documents?.length ? snapshot.documents.map(normalizeDocument) : demoDocuments,
-    [snapshot],
-  );
-  const filteredDocuments = useMemo(() => documents.filter(doc => {
-    const term = search.trim().toLowerCase();
-    const matchesSearch = !term || `${doc.company} ${doc.number} ${doc.party} ${doc.model}`.toLowerCase().includes(term);
-    const matchesCompany = companyFilter === 'Todas as empresas' || doc.company === companyFilter;
-    const matchesDirection = directionFilter === 'Todos' || doc.direction === directionFilter;
-    return matchesSearch && matchesCompany && matchesDirection;
-  }), [documents, search, companyFilter, directionFilter]);
+  useEffect(() => { void loadSnapshot(); }, [loadSnapshot]);
+  useEffect(() => {
+    if (preview || accessDenied) return;
+    const timer = window.setInterval(() => void loadSnapshot(true), 30000);
+    const onFocus = () => void loadSnapshot(true);
+    window.addEventListener('focus', onFocus);
+    return () => { window.clearInterval(timer); window.removeEventListener('focus', onFocus); };
+  }, [preview, accessDenied, loadSnapshot]);
 
-  const totals = useMemo(() => ({
-    documents: snapshot?.totals?.documents ?? companies.reduce((sum, item) => sum + item.documents, 0),
-    entries: snapshot?.totals?.entries ?? 978,
-    exits: snapshot?.totals?.exits ?? 682,
-    value: snapshot?.totals?.value ?? 1_284_760.9,
-  }), [snapshot, companies]);
+  const companies = useMemo(() => preview ? previewCompanies : (snapshot?.companies || []).map(normalizeCompany), [preview, snapshot]);
+  const documents = useMemo(() => preview ? previewDocuments : (snapshot?.documents || []).map(normalizeDocument), [preview, snapshot]);
+  const totals: Totals = useMemo(() => preview ? {
+    documents: 326, entries: 55, exits: 271, value: 675295.32, fullXml: 266, pendingXml: 60,
+  } : {
+    documents: Number(snapshot?.totals?.documents || 0),
+    entries: Number(snapshot?.totals?.entries || 0),
+    exits: Number(snapshot?.totals?.exits || 0),
+    value: Number(snapshot?.totals?.value || 0),
+    fullXml: Number(snapshot?.totals?.full_xml || 0),
+    pendingXml: Number(snapshot?.totals?.pending_xml || 0),
+  }, [preview, snapshot]);
+  const models = preview ? { nfe: 149, nfce: 169, nfse: 8, other: 0 } : {
+    nfe: Number(snapshot?.models?.nfe || 0), nfce: Number(snapshot?.models?.nfce || 0), nfse: Number(snapshot?.models?.nfse || 0), other: Number(snapshot?.models?.other || 0),
+  };
+  const daily = preview
+    ? Array.from({ length: 30 }, (_, index) => ({ day: new Date(Date.now() - (29 - index) * 86400000).toISOString().slice(0, 10), documents: [7, 9, 6, 12, 8, 4, 11, 13, 8, 10][index % 10] }))
+    : (snapshot?.daily || []).map(item => ({ day: String(item.day || ''), documents: Number(item.documents || 0) }));
 
-  const navigate = (section: ExtractorSection) => {
-    setActive(section);
-    setMobileOpen(false);
+  const navigate = (section: ExtractorSection) => { setActive(section); setMobileOpen(false); setNotice(null); };
+  const syncNow = async (companyId?: string) => {
+    if (preview) return setNotice({ tone: 'warning', text: 'A sincronização fica disponível no ambiente autenticado.' });
+    setBusy('sync'); setNotice(null);
+    const { data, error } = await (supabase as any).rpc('extractor_queue_sync', { _company_id: companyId || null });
+    if (error || !data?.ok) setNotice({ tone: 'error', text: error?.message || 'Não foi possível colocar a sincronização na fila.' });
+    else {
+      setNotice({ tone: 'success', text: `${data.queued} empresa(s) enviada(s) para sincronização.` });
+      await loadSnapshot(true);
+    }
+    setBusy('');
   };
 
   if (loading) return <ExtractorLoading />;
   if (!preview && accessDenied) return <ExtractorAccessPending />;
 
-  return (
-    <div className="extractor-app">
-      <header className="extractor-topbar">
-        <div className="extractor-topbar-brand">
-          <button className="extractor-mobile-trigger" aria-label="Abrir menu" onClick={() => setMobileOpen(true)}><Menu /></button>
-          <img src="/assets/ws-logo.png" alt="WS Gestão Contábil" />
-          <span className="extractor-product-name">Extrator Fiscal</span>
-        </div>
-        <div className="extractor-topbar-center">
-          <button className="extractor-company-picker">
-            <span className="extractor-company-mark">WS</span>
-            <span><small>Escritório</small><strong>{snapshot?.account?.name || 'Escritório demonstração'}</strong></span>
-            <ChevronDown />
-          </button>
-        </div>
-        <div className="extractor-topbar-actions">
-          {preview && <span className="extractor-preview-badge">Prévia</span>}
-          <button className="extractor-icon-button" aria-label="Notificações"><Bell /><i /></button>
-          <button className="extractor-avatar" aria-label="Abrir conta">WS</button>
-        </div>
-      </header>
+  return <div className="extractor-app">
+    <header className="extractor-topbar">
+      <div className="extractor-brand">
+        <button className="extractor-mobile-trigger" aria-label="Abrir menu" onClick={() => setMobileOpen(true)}><Menu /></button>
+        <img src="/assets/ws-logo.png" alt="WS Gestão Contábil" />
+        <span>Extrato Fiscal</span>
+      </div>
+      <div className="extractor-workspace"><small>Carteira fiscal</small><strong>{preview ? 'Demonstração' : snapshot?.account?.name || 'WS Gestão Contábil'}</strong></div>
+      <div className="extractor-account"><span>{preview ? 'PR' : (user?.email || 'WS').slice(0, 2).toUpperCase()}</span></div>
+    </header>
 
-      {mobileOpen && <button className="extractor-scrim" aria-label="Fechar menu" onClick={() => setMobileOpen(false)} />}
-      <aside className={`extractor-sidebar ${mobileOpen ? 'is-open' : ''}`}>
-        <button className="extractor-sidebar-close" aria-label="Fechar menu" onClick={() => setMobileOpen(false)}><X /></button>
-        <div className="extractor-sidebar-intro">
-          <span>EF</span>
-          <div><strong>Extrator Fiscal</strong><small>Gestão de documentos</small></div>
-        </div>
-        <nav>
-          {['Operação', 'Fiscal', 'Gestão'].map(group => (
-            <section key={group}>
-              <p>{group}</p>
-              {navigation.filter(item => item.group === group).map(item => {
-                const Icon = item.icon;
-                return (
-                  <button key={item.label} className={active === item.label ? 'is-active' : ''} onClick={() => navigate(item.label)}>
-                    <Icon /><span>{item.label}</span>{item.label === 'Histórico' && <em>PRO</em>}
-                  </button>
-                );
-              })}
-            </section>
-          ))}
-        </nav>
-        <div className="extractor-plan-card">
-          <div><Sparkles /><span>Plano Escritório</span></div>
-          <strong>{number.format(totals.documents)} <small>/ {number.format(snapshot?.account?.monthly_xml_limit || 20000)} XML</small></strong>
-          <div className="extractor-usage-bar"><i /></div>
-          <button onClick={() => setModal('history')}>Ver recursos do plano</button>
-        </div>
-        <div className="extractor-sidebar-user"><span>WS</span><div><strong>Equipe fiscal</strong><small>Administrador</small></div><MoreHorizontal /></div>
-      </aside>
+    {mobileOpen && <button className="extractor-scrim" aria-label="Fechar menu" onClick={() => setMobileOpen(false)} />}
+    <aside className={`extractor-sidebar ${mobileOpen ? 'is-open' : ''}`}>
+      <button className="extractor-sidebar-close" aria-label="Fechar menu" onClick={() => setMobileOpen(false)}><X /></button>
+      <div className="extractor-sidebar-title"><strong>Extrato Fiscal</strong><small>Compras e vendas</small></div>
+      <nav>{['Operação', 'Fiscal', 'Gestão'].map(group => <section key={group}><p>{group}</p>{navigation.filter(item => item.group === group).map(item => {
+        const Icon = item.icon;
+        return <button key={item.label} className={active === item.label ? 'is-active' : ''} onClick={() => navigate(item.label)}><span className="extractor-nav-icon"><Icon /></span><span>{item.label}</span></button>;
+      })}</section>)}</nav>
+      <div className="extractor-usage">
+        <small>Documentos no período</small>
+        <strong>{integer.format(totals.documents)}</strong>
+        {!preview && snapshot?.account?.monthly_xml_limit ? <span>Limite do plano: {integer.format(snapshot.account.monthly_xml_limit)} XML</span> : <span>{preview ? 'Dados demonstrativos' : 'Janela fiscal ativa'}</span>}
+      </div>
+    </aside>
 
-      <main className="extractor-main">
-        {active === 'Visão geral' && <Overview companies={companies} documents={documents} totals={totals} onNavigate={navigate} />}
-        {active === 'Empresas' && <Companies companies={companies} onAdd={() => setModal('company')} />}
-        {active === 'Documentos' && <Documents documents={filteredDocuments} companies={companies} search={search} onSearch={setSearch} companyFilter={companyFilter} onCompanyFilter={setCompanyFilter} directionFilter={directionFilter} onDirectionFilter={setDirectionFilter} onHistory={() => setModal('history')} />}
-        {active === 'Relatórios' && <Reports companies={companies} totals={totals} />}
-        {active === 'Certificados' && <Certificates companies={companies} />}
-        {active === 'Histórico' && <HistorySection onOpen={() => setModal('history')} />}
-        {active === 'Configurações' && <SettingsSection />}
-      </main>
+    <main className="extractor-main">
+      {notice && <div className={`extractor-notice ${notice.tone}`}><span>{notice.text}</span><button onClick={() => setNotice(null)}><X /></button></div>}
+      {active === 'Visão geral' && <Overview companies={companies} documents={documents} totals={totals} models={models} daily={daily} busy={busy === 'sync'} onSync={() => void syncNow()} onNavigate={navigate} />}
+      {active === 'Empresas' && <Companies companies={companies} onAdd={() => setModal('company')} busy={busy === 'sync'} onSync={id => void syncNow(id)} />}
+      {active === 'Documentos' && <Documents documents={documents} companies={companies} preview={preview} setBusy={setBusy} busy={busy} setNotice={setNotice} onPreview={setSelectedPreview} />}
+      {active === 'Relatórios' && <Reports companies={companies} documents={documents} totals={totals} models={models} />}
+      {active === 'Certificados' && <Certificates companies={companies} onCompanies={() => navigate('Empresas')} />}
+      {active === 'Histórico' && <HistorySection onOpen={() => setModal('history')} />}
+      {active === 'Configurações' && <SettingsSection companies={companies} account={snapshot?.account} preview={preview} />}
+    </main>
 
-      {modal === 'company' && <AddCompanyModal onClose={() => setModal(null)} />}
-      {modal === 'history' && <HistoryModal preview={preview} onClose={() => setModal(null)} />}
-    </div>
-  );
+    {modal === 'company' && <AddCompanyModal preview={preview} onClose={() => setModal(null)} onLinked={async message => { setModal(null); setNotice({ tone: 'success', text: message }); await loadSnapshot(true); }} />}
+    {modal === 'history' && <HistoryModal preview={preview} companies={companies} onClose={() => setModal(null)} onSaved={message => { setModal(null); setNotice({ tone: 'success', text: message }); }} />}
+    {selectedPreview && <FiscalDocumentPreview doc={selectedPreview} onClose={() => setSelectedPreview(null)} />}
+  </div>;
 }
 
-function PageHeading({ eyebrow, title, description, actions }: { eyebrow: string; title: string; description: string; actions?: React.ReactNode }) {
-  return <div className="extractor-page-heading"><div><span>{eyebrow}</span><h1>{title}</h1><p>{description}</p></div>{actions && <div className="extractor-heading-actions">{actions}</div>}</div>;
+function PageHeading({ title, description, actions }: { title: string; description: string; actions?: React.ReactNode }) {
+  return <div className="extractor-page-heading"><div><h1>{title}</h1><p>{description}</p></div>{actions && <div className="extractor-heading-actions">{actions}</div>}</div>;
 }
 
-function Overview({ companies, documents, totals, onNavigate }: { companies: Company[]; documents: FiscalDocument[]; totals: { documents: number; entries: number; exits: number; value: number }; onNavigate: (section: ExtractorSection) => void }) {
+function Overview({ companies, documents, totals, models, daily, busy, onSync, onNavigate }: { companies: Company[]; documents: FiscalDocument[]; totals: Totals; models: Record<string, number>; daily: Array<{ day: string; documents: number }>; busy: boolean; onSync: () => void; onNavigate: (s: ExtractorSection) => void }) {
+  const attention = companies.filter(c => (c.certificateDays != null && c.certificateDays <= 30) || c.pendingXml > 0 || /retry|error|failed/i.test(`${c.purchaseStatus} ${c.salesStatus}`));
   return <div className="extractor-page">
-    <PageHeading eyebrow="Visão geral" title="Sua operação fiscal, em ordem." description="A carteira está atualizada. Veja o que exige atenção hoje." actions={<><button className="extractor-period"><CalendarDays />Últimos 30 dias<ChevronDown /></button><button className="extractor-primary"><RefreshCw />Sincronizar agora</button></>} />
+    <PageHeading title="Visão geral" description="Resumo real da carteira no período disponível." actions={<button className="extractor-primary" disabled={busy} onClick={onSync}><RefreshCw className={busy ? 'is-spinning' : ''} />{busy ? 'Sincronizando' : 'Sincronizar agora'}</button>} />
     <section className="extractor-kpis">
-      <Kpi icon={FileCheck2} label="Documentos capturados" value={number.format(totals.documents)} detail="+12,4% no período" tone="blue" />
-      <Kpi icon={ArrowDownToLine} label="Notas de entrada" value={number.format(totals.entries)} detail="59% dos documentos" tone="violet" />
-      <Kpi icon={TrendingUp} label="Notas de saída" value={number.format(totals.exits)} detail="41% dos documentos" tone="green" />
-      <Kpi icon={CircleDollarSign} label="Movimentação total" value={shortCurrency(totals.value)} detail="Entradas e saídas" tone="gold" />
+      <Metric label="Documentos" value={integer.format(totals.documents)} detail={`${integer.format(totals.fullXml)} com XML integral`} />
+      <Metric label="Entradas" value={integer.format(totals.entries)} detail={totals.documents ? `${Math.round(totals.entries / totals.documents * 100)}% do período` : 'Sem documentos'} />
+      <Metric label="Saídas" value={integer.format(totals.exits)} detail={totals.documents ? `${Math.round(totals.exits / totals.documents * 100)}% do período` : 'Sem documentos'} />
+      <Metric label="Movimentação" value={currency.format(totals.value)} detail={`${integer.format(totals.pendingXml)} XML pendente(s)`} />
     </section>
-    <section className="extractor-dashboard-grid">
-      <div className="extractor-panel extractor-chart-panel">
-        <PanelHeader title="Capturas por dia" subtitle="Documentos processados automaticamente" action={<button>30 dias<ChevronDown /></button>} />
-        <div className="extractor-chart-summary"><strong>1.660</strong><span><TrendingUp />12,4% comparado ao período anterior</span></div>
-        <SimpleChart />
-      </div>
-      <div className="extractor-panel extractor-composition">
-        <PanelHeader title="Composição fiscal" subtitle="Distribuição por modelo" />
-        <div className="extractor-donut"><div><strong>1.660</strong><span>documentos</span></div></div>
-        <ul><li><i className="nfe" /><span>NF-e</span><strong>854</strong><small>51%</small></li><li><i className="nfce" /><span>NFC-e</span><strong>621</strong><small>37%</small></li><li><i className="nfse" /><span>NFS-e</span><strong>185</strong><small>12%</small></li></ul>
-      </div>
-      <div className="extractor-panel extractor-attention">
-        <PanelHeader title="Precisa de atenção" subtitle="Pendências da carteira" action={<button onClick={() => onNavigate('Certificados')}>Ver todas</button>} />
-        <div className="extractor-alert-row"><span className="warning"><AlertTriangle /></span><div><strong>Certificado próximo do vencimento</strong><p>EL Redes vence em 14 dias.</p></div><button onClick={() => onNavigate('Certificados')}>Resolver</button></div>
-        <div className="extractor-alert-row"><span className="neutral"><Clock3 /></span><div><strong>1 empresa com captura atrasada</strong><p>Última consulta há mais de 12 horas.</p></div><button onClick={() => onNavigate('Empresas')}>Revisar</button></div>
-      </div>
-      <div className="extractor-panel extractor-recent">
-        <PanelHeader title="Documentos recentes" subtitle="Últimas notas encontradas" action={<button onClick={() => onNavigate('Documentos')}>Ver documentos</button>} />
-        <DocumentTable documents={documents.slice(0, 4)} compact />
-      </div>
+
+    <section className="extractor-overview-grid">
+      <article className="extractor-panel extractor-chart-panel"><PanelHeader title="Capturas nos últimos 30 dias" subtitle="Quantidade de documentos por dia" /><DailyBars data={daily} /></article>
+      <article className="extractor-panel"><PanelHeader title="Documentos por modelo" subtitle="Composição do período" /><ModelComposition models={models} total={totals.documents} /></article>
+      <article className="extractor-panel extractor-attention"><PanelHeader title="Pontos de atenção" subtitle="Somente ocorrências encontradas na carteira" />{attention.length ? attention.slice(0, 4).map(company => <button key={company.id} onClick={() => onNavigate(company.certificateDays != null && company.certificateDays <= 30 ? 'Certificados' : 'Empresas')}><div><strong>{company.tradeName}</strong><span>{company.certificateDays != null && company.certificateDays <= 30 ? `Certificado vence em ${company.certificateDays} dia(s)` : company.pendingXml > 0 ? `${company.pendingXml} XML aguardando recuperação` : `Compras: ${syncLabel(company.purchaseStatus)} · Vendas: ${syncLabel(company.salesStatus)}`}</span></div><span>Ver</span></button>) : <EmptyInline text="Nenhuma pendência relevante no período." />}</article>
+      <article className="extractor-panel extractor-recent"><PanelHeader title="Documentos recentes" subtitle="Últimos registros encontrados" action={<button onClick={() => onNavigate('Documentos')}>Ver todos</button>} /><DocumentTable documents={documents.slice(0, 6)} compact /></article>
     </section>
   </div>;
 }
 
-function Kpi({ icon: Icon, label, value, detail, tone }: { icon: any; label: string; value: string; detail: string; tone: string }) {
-  return <article className={`extractor-kpi ${tone}`}><div className="extractor-kpi-top"><span><Icon /></span><small>30 dias</small></div><p>{label}</p><strong>{value}</strong><small>{detail}</small></article>;
+function Metric({ label, value, detail }: { label: string; value: string; detail: string }) { return <article className="extractor-metric"><p>{label}</p><strong>{value}</strong><span>{detail}</span></article>; }
+function PanelHeader({ title, subtitle, action }: { title: string; subtitle: string; action?: React.ReactNode }) { return <header className="extractor-panel-head"><div><h2>{title}</h2><p>{subtitle}</p></div>{action}</header>; }
+function EmptyInline({ text }: { text: string }) { return <div className="extractor-empty-inline">{text}</div>; }
+
+function DailyBars({ data }: { data: Array<{ day: string; documents: number }> }) {
+  const max = Math.max(1, ...data.map(item => item.documents));
+  const total = data.reduce((sum, item) => sum + item.documents, 0);
+  return <div className="extractor-daily"><div className="extractor-daily-total"><strong>{integer.format(total)}</strong><span>documentos</span></div><div className="extractor-bars">{data.map((item, index) => <span key={`${item.day}-${index}`} title={`${formatDate(item.day)} · ${item.documents}`}><i style={{ height: `${Math.max(item.documents ? 8 : 2, item.documents / max * 100)}%` }} /></span>)}</div><div className="extractor-axis"><span>{data[0]?.day ? formatDate(data[0].day) : '—'}</span><span>{data.at(-1)?.day ? formatDate(data.at(-1)?.day) : '—'}</span></div></div>;
 }
 
-function PanelHeader({ title, subtitle, action }: { title: string; subtitle: string; action?: React.ReactNode }) {
-  return <header className="extractor-panel-head"><div><h2>{title}</h2><p>{subtitle}</p></div>{action}</header>;
+function ModelComposition({ models, total }: { models: Record<string, number>; total: number }) {
+  const rows = [['NF-e', models.nfe || 0], ['NFC-e', models.nfce || 0], ['NFS-e', models.nfse || 0], ['Outros', models.other || 0]] as const;
+  return <div className="extractor-model-list">{rows.filter(([, value]) => value > 0 || total === 0).map(([label, value]) => <div key={label}><div><span>{label}</span><strong>{integer.format(value)}</strong></div><div className="extractor-progress"><i style={{ width: total ? `${value / total * 100}%` : '0%' }} /></div><small>{total ? `${Math.round(value / total * 100)}%` : '0%'}</small></div>)}</div>;
 }
 
-function SimpleChart() {
-  return <div className="extractor-chart"><div className="extractor-chart-grid"><i /><i /><i /><i /></div><svg viewBox="0 0 720 190" preserveAspectRatio="none" role="img" aria-label="Documentos capturados nos últimos 30 dias"><defs><linearGradient id="extractorArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#4d8fff" stopOpacity=".34"/><stop offset="1" stopColor="#4d8fff" stopOpacity="0"/></linearGradient></defs><path d="M0 157 C42 145 61 150 92 128 S146 112 177 123 S233 92 270 103 S324 76 358 85 S417 64 450 80 S509 52 545 58 S600 24 634 39 S687 19 720 25 L720 190 L0 190 Z" fill="url(#extractorArea)"/><path d="M0 157 C42 145 61 150 92 128 S146 112 177 123 S233 92 270 103 S324 76 358 85 S417 64 450 80 S509 52 545 58 S600 24 634 39 S687 19 720 25" fill="none" stroke="#5a95ff" strokeWidth="3" vectorEffect="non-scaling-stroke"/><circle cx="634" cy="39" r="5" fill="#071525" stroke="#82adff" strokeWidth="3" vectorEffect="non-scaling-stroke"/></svg><div className="extractor-chart-labels"><span>10 ago.</span><span>17 ago.</span><span>24 ago.</span><span>31 ago.</span><span>8 set.</span></div></div>;
-}
-
-function Companies({ companies, onAdd }: { companies: Company[]; onAdd: () => void }) {
+function Companies({ companies, onAdd, busy, onSync }: { companies: Company[]; onAdd: () => void; busy: boolean; onSync: (id: string) => void }) {
   const [term, setTerm] = useState('');
-  const visible = companies.filter(item => `${item.name} ${item.cnpj}`.toLowerCase().includes(term.toLowerCase()));
-  return <div className="extractor-page">
-    <PageHeading eyebrow="Carteira" title="Empresas" description="Acompanhe a captura, os certificados e a situação de cada CNPJ." actions={<button className="extractor-primary" onClick={onAdd}><Plus />Adicionar empresa</button>} />
-    <div className="extractor-toolbar"><label><Search /><input value={term} onChange={event => setTerm(event.target.value)} placeholder="Buscar por nome ou CNPJ" /></label><button><SlidersHorizontal />Filtros</button></div>
-    <div className="extractor-company-list">
-      <div className="extractor-list-head"><span>Empresa</span><span>Documentos — 30 dias</span><span>Certificado A1</span><span>Última captura</span><span>Situação</span><span /></div>
-      {visible.map(company => <div className="extractor-company-row" key={company.id}><div className="extractor-company-cell"><span>{company.tradeName.slice(0, 2).toUpperCase()}</span><div><strong>{company.tradeName}</strong><small>{company.cnpj} · {company.uf}</small></div></div><div data-label="Documentos"><strong>{number.format(company.documents)}</strong><small>XML capturados</small></div><div data-label="Certificado"><strong className={company.status === 'attention' ? 'is-warning' : ''}>{company.certificateUntil}</strong><small>{company.certificateDays === 999 ? 'Sem certificado' : `${company.certificateDays} dias restantes`}</small></div><div data-label="Última captura"><strong>{company.lastSync}</strong><small>Consulta automática</small></div><div data-label="Situação"><span className={`extractor-status ${company.status}`}>{company.status === 'active' ? 'Ativa' : 'Atenção'}</span></div><button className="extractor-row-menu"><MoreHorizontal /></button></div>)}
-    </div>
+  const visible = companies.filter(item => `${item.name} ${item.tradeName} ${item.cnpj}`.toLowerCase().includes(term.toLowerCase()));
+  return <div className="extractor-page"><PageHeading title="Empresas" description="CNPJs vinculados ao Extrato e o estado real das rotinas fiscais." actions={<button className="extractor-primary" onClick={onAdd}>Adicionar empresa</button>} />
+    <div className="extractor-toolbar"><label><Search /><input value={term} onChange={e => setTerm(e.target.value)} placeholder="Buscar por empresa ou CNPJ" /></label></div>
+    <div className="extractor-company-list"><div className="extractor-company-head"><span>Empresa</span><span>Documentos</span><span>XML integral</span><span>Sincronização</span><span>Certificado</span><span /></div>{visible.map(company => <div className="extractor-company-row" key={company.id}>
+      <div className="extractor-company-name"><strong>{company.tradeName}</strong><span>{formatCnpj(company.cnpj)} · {company.uf}</span></div>
+      <div data-label="Documentos"><strong>{integer.format(company.documents)}</strong><span>{company.entries} entrada(s) · {company.exits} saída(s)</span></div>
+      <div data-label="XML integral"><strong>{integer.format(company.fullXml)}</strong><span>{company.pendingXml ? `${company.pendingXml} pendente(s)` : 'Completo no período'}</span></div>
+      <div data-label="Sincronização"><strong>{syncLabel(company.purchaseStatus)} / {syncLabel(company.salesStatus)}</strong><span>{company.lastSync ? `Última: ${formatDate(company.lastSync, true)}` : 'Sem sincronização registrada'}</span></div>
+      <div data-label="Certificado"><strong>{company.certificateUntil ? formatDate(company.certificateUntil) : 'Não configurado'}</strong><span>{company.certificateDays == null ? '—' : `${company.certificateDays} dia(s)`}</span></div>
+      <button className="extractor-text-action" disabled={busy} onClick={() => onSync(company.id)}>Sincronizar</button>
+    </div>)}{!visible.length && <EmptyInline text="Nenhuma empresa encontrada." />}</div>
   </div>;
 }
 
-function Documents({ documents, companies, search, onSearch, companyFilter, onCompanyFilter, directionFilter, onDirectionFilter, onHistory }: { documents: FiscalDocument[]; companies: Company[]; search: string; onSearch: (value: string) => void; companyFilter: string; onCompanyFilter: (value: string) => void; directionFilter: string; onDirectionFilter: (value: string) => void; onHistory: () => void }) {
-  return <div className="extractor-page">
-    <PageHeading eyebrow="Fiscal" title="Documentos" description="Notas de entrada e saída encontradas nos últimos 30 dias." actions={<><button className="extractor-secondary" onClick={onHistory}><History />Consultar período anterior</button><button className="extractor-primary"><FileArchive />Baixar XML</button></>} />
-    <div className="extractor-filter-strip"><label className="extractor-search"><Search /><input value={search} onChange={event => onSearch(event.target.value)} placeholder="Número, empresa ou participante" /></label><select value={companyFilter} onChange={event => onCompanyFilter(event.target.value)}><option>Todas as empresas</option>{companies.map(item => <option key={item.id}>{item.tradeName}</option>)}</select><select value={directionFilter} onChange={event => onDirectionFilter(event.target.value)}><option>Todos</option><option>Entrada</option><option>Saída</option></select><button><CalendarDays />10 ago. — 8 set.</button></div>
-    <div className="extractor-panel extractor-documents-panel"><div className="extractor-document-tabs"><button className="is-active">Todos <span>{documents.length}</span></button><button>NF-e</button><button>NFC-e</button><button>NFS-e</button><div /><button><Download />Exportar</button></div><DocumentTable documents={documents} /></div>
+function Documents({ documents, companies, preview, setBusy, busy, setNotice, onPreview }: { documents: FiscalDocument[]; companies: Company[]; preview: boolean; setBusy: (v: string) => void; busy: string; setNotice: (n: Notice) => void; onPreview: (d: PreviewDocument) => void }) {
+  const [search, setSearch] = useState('');
+  const [company, setCompany] = useState('Todas');
+  const [direction, setDirection] = useState('Todos');
+  const [model, setModel] = useState<ModelFilter>('Todos');
+  const [page, setPage] = useState(1);
+  const pageSize = 50;
+  const filtered = useMemo(() => documents.filter(doc => {
+    const q = search.trim().toLowerCase();
+    return (!q || `${doc.company} ${doc.legalName} ${doc.number} ${doc.party} ${doc.accessKey || ''}`.toLowerCase().includes(q))
+      && (company === 'Todas' || doc.companyId === company)
+      && (direction === 'Todos' || doc.direction === direction)
+      && (model === 'Todos' || doc.model === model);
+  }), [documents, search, company, direction, model]);
+  const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const rows = filtered.slice((Math.min(page, pages) - 1) * pageSize, Math.min(page, pages) * pageSize);
+
+  useEffect(() => setPage(1), [search, company, direction, model]);
+
+  const openDocument = async (doc: FiscalDocument) => {
+    if (preview) return setNotice({ tone: 'warning', text: 'A visualização fiscal usa XML real e fica disponível no ambiente autenticado.' });
+    setBusy(`doc:${doc.id}`); setNotice(null);
+    const { data, error } = await supabase.functions.invoke('fiscal-document-recover', { body: { company_id: doc.companyId, access_key: doc.accessKey, nsu: doc.nsu } });
+    if (error) setNotice({ tone: 'error', text: error.message || 'Não foi possível abrir o documento.' });
+    else if (!data?.ready || !data?.document) setNotice({ tone: 'warning', text: data?.reason || 'O XML integral deste documento ainda não está disponível.' });
+    else {
+      const row = data.document;
+      onPreview({ nsu: row.nsu, schema: row.schema_name, documentKind: row.document_kind, fullXml: row.full_xml, direction: row.direction, accessKey: row.access_key, issueDate: row.issue_date, value: Number(row.value || 0), issuerCnpj: row.issuer_cnpj, issuerName: row.issuer_name, recipientCnpj: row.recipient_cnpj, number: row.note_number, series: row.series, statusCode: row.status_code, statusText: row.status_text, model: row.model, xml: row.xml, parseError: row.parse_error });
+    }
+    setBusy('');
+  };
+
+  const downloadPackage = async () => {
+    if (preview) return setNotice({ tone: 'warning', text: 'O download fiscal fica disponível no ambiente autenticado.' });
+    const target = company !== 'Todas' ? companies.find(c => c.id === company) : companies.length === 1 ? companies[0] : null;
+    if (!target) return setNotice({ tone: 'warning', text: 'Selecione uma empresa para gerar o pacote fiscal.' });
+    setBusy('download'); setNotice(null);
+    const end = new Date();
+    const start = new Date(Date.now() - 29 * 86400000);
+    const date = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const payload = { company_id: target.id, start: date(start), end: date(end), direction: direction === 'Entrada' ? 'entrada' : direction === 'Saída' ? 'saida' : 'todos' };
+    const pre = await supabase.functions.invoke('fiscal-bulk-download', { body: { ...payload, action: 'preflight' } });
+    if (pre.error) { setNotice({ tone: 'error', text: pre.error.message || 'Falha ao conferir os arquivos.' }); setBusy(''); return; }
+    if (!pre.data?.ready) { setNotice({ tone: 'warning', text: `${pre.data?.pending || 0} documento(s) ainda aguardam XML integral. O pacote só é gerado quando estiver completo.` }); setBusy(''); return; }
+    const result = await supabase.functions.invoke('fiscal-bulk-download', { body: payload });
+    if (result.error) setNotice({ tone: 'error', text: result.error.message || 'Falha ao gerar o pacote fiscal.' });
+    else {
+      const blob = result.data instanceof Blob ? result.data : new Blob([result.data], { type: 'application/zip' });
+      const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `extrato-fiscal-${target.tradeName.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.zip`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setNotice({ tone: 'success', text: 'Pacote fiscal completo gerado.' });
+    }
+    setBusy('');
+  };
+
+  return <div className="extractor-page"><PageHeading title="Documentos" description="Notas reais encontradas na janela disponível. Clique em uma linha para abrir o documento fiscal." actions={<button className="extractor-primary" disabled={busy === 'download'} onClick={() => void downloadPackage()}><Download />{busy === 'download' ? 'Preparando' : 'Baixar pacote'}</button>} />
+    <div className="extractor-filter-strip"><label className="extractor-search"><Search /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Número, chave, empresa ou participante" /></label><select value={company} onChange={e => setCompany(e.target.value)}><option value="Todas">Todas as empresas</option>{companies.map(c => <option value={c.id} key={c.id}>{c.tradeName}</option>)}</select><select value={direction} onChange={e => setDirection(e.target.value)}><option>Todos</option><option>Entrada</option><option>Saída</option></select></div>
+    <div className="extractor-doc-tabs">{(['Todos', 'NF-e', 'NFC-e', 'NFS-e'] as ModelFilter[]).map(item => <button key={item} className={model === item ? 'is-active' : ''} onClick={() => setModel(item)}>{item}{item === 'Todos' && <span>{filtered.length}</span>}</button>)}</div>
+    <div className="extractor-panel extractor-document-panel"><DocumentTable documents={rows} onOpen={doc => void openDocument(doc)} busy={busy} />{filtered.length > pageSize && <div className="extractor-pagination"><button disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Anterior</button><span>Página {Math.min(page, pages)} de {pages}</span><button disabled={page >= pages} onClick={() => setPage(p => p + 1)}>Próxima</button></div>}</div>
   </div>;
 }
 
-function DocumentTable({ documents, compact = false }: { documents: FiscalDocument[]; compact?: boolean }) {
-  return <div className={`extractor-table-wrap ${compact ? 'is-compact' : ''}`}><table className="extractor-doc-table"><thead><tr><th>Documento</th><th>Empresa</th><th>Participante</th><th>Emissão</th><th>Valor</th><th>Status</th><th /></tr></thead><tbody>{documents.map(doc => <tr key={doc.id}><td><div className="extractor-document-id"><span className={doc.direction === 'Entrada' ? 'in' : 'out'}>{doc.direction === 'Entrada' ? 'E' : 'S'}</span><div><strong>{doc.model} · {doc.number}</strong><small>{doc.direction}</small></div></div></td><td><strong>{doc.company}</strong></td><td><span>{doc.party}</span></td><td><span>{doc.issueDate}</span></td><td><strong>{currency.format(doc.value)}</strong></td><td><span className={`extractor-status ${doc.status === 'Autorizada' ? 'active' : 'cancelled'}`}>{doc.status}</span></td><td><button className="extractor-row-menu"><MoreHorizontal /></button></td></tr>)}</tbody></table>{documents.length === 0 && <div className="extractor-empty"><Search /><strong>Nenhum documento encontrado</strong><span>Tente alterar os filtros da consulta.</span></div>}</div>;
+function DocumentTable({ documents, compact = false, onOpen, busy = '' }: { documents: FiscalDocument[]; compact?: boolean; onOpen?: (doc: FiscalDocument) => void; busy?: string }) {
+  return <div className={`extractor-table-wrap ${compact ? 'is-compact' : ''}`}><table className="extractor-doc-table"><thead><tr><th>Documento</th><th>Empresa</th><th>Participante</th><th>Emissão</th><th>Valor</th><th>Arquivo</th><th>Status</th></tr></thead><tbody>{documents.map(doc => <tr key={doc.id} className={onOpen ? 'is-clickable' : ''} onClick={() => onOpen?.(doc)}><td><strong>{doc.model} · {doc.number}</strong><small>{doc.direction}</small></td><td>{doc.company}</td><td>{doc.party}</td><td>{formatDate(doc.issueDate, true)}</td><td><strong>{currency.format(doc.value)}</strong></td><td><span className={`extractor-file-status ${doc.fullXml ? 'ready' : 'pending'}`}>{busy === `doc:${doc.id}` ? 'Carregando' : doc.fullXml ? 'XML integral' : 'Em recuperação'}</span></td><td><span className={`extractor-status ${statusTone(doc.statusText)}`}>{doc.statusText}</span></td></tr>)}</tbody></table>{!documents.length && <div className="extractor-empty"><strong>Nenhum documento encontrado</strong><span>A consulta não retornou registros para os filtros selecionados.</span></div>}</div>;
 }
 
-function Reports({ companies, totals }: { companies: Company[]; totals: { documents: number; entries: number; exits: number; value: number } }) {
-  return <div className="extractor-page"><PageHeading eyebrow="Análises" title="Relatórios" description="Transforme a movimentação fiscal da carteira em informações prontas para conferência." actions={<button className="extractor-primary"><Download />Exportar relatório</button>} />
-    <div className="extractor-report-grid"><article className="extractor-report-feature"><div><span>Resumo da carteira</span><h2>Movimentação fiscal consolidada</h2><p>Entradas, saídas e documentos por empresa nos últimos 30 dias.</p><button>Gerar relatório <Download /></button></div><ReportBars /></article><article className="extractor-report-card"><span><Building2 /></span><div><small>Empresas monitoradas</small><strong>{companies.length}</strong><p>100% com captura ativa</p></div></article><article className="extractor-report-card"><span><FileCheck2 /></span><div><small>XML disponíveis</small><strong>{number.format(totals.documents)}</strong><p>Prontos para exportação</p></div></article></div>
-    <div className="extractor-panel extractor-company-performance"><PanelHeader title="Movimentação por empresa" subtitle="Consolidado do período atual" /><div className="extractor-performance-head"><span>Empresa</span><span>Documentos</span><span>Participação</span><span>Última captura</span></div>{companies.map((company, index) => <div className="extractor-performance-row" key={company.id}><div><span>{company.tradeName.slice(0, 2).toUpperCase()}</span><strong>{company.tradeName}</strong></div><strong>{number.format(company.documents)}</strong><div><i style={{ width: `${[79, 63, 46, 88][index % 4]}%` }} /><small>{[29, 21, 15, 35][index % 4]}%</small></div><span>{company.lastSync}</span></div>)}</div>
+function Reports({ companies, documents, totals, models }: { companies: Company[]; documents: FiscalDocument[]; totals: Totals; models: Record<string, number> }) {
+  const exportCsv = () => {
+    const header = ['Empresa', 'CNPJ', 'Documentos', 'Entradas', 'Saídas', 'XML integral', 'XML pendente'];
+    const rows = companies.map(c => [c.tradeName, formatCnpj(c.cnpj), c.documents, c.entries, c.exits, c.fullXml, c.pendingXml]);
+    const csv = [header, ...rows].map(row => row.map(v => `"${String(v).replaceAll('"', '""')}"`).join(';')).join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'relatorio-extrato-fiscal.csv'; a.click(); URL.revokeObjectURL(url);
+  };
+  return <div className="extractor-page"><PageHeading title="Relatórios" description="Consolidado gerado somente a partir dos documentos disponíveis no Extrato." actions={<button className="extractor-primary" onClick={exportCsv}><Download />Exportar CSV</button>} />
+    <section className="extractor-kpis"><Metric label="Empresas" value={integer.format(companies.length)} detail="CNPJs vinculados" /><Metric label="Documentos" value={integer.format(totals.documents)} detail={`${totals.entries} entradas · ${totals.exits} saídas`} /><Metric label="XML integral" value={integer.format(totals.fullXml)} detail={`${totals.pendingXml} pendente(s)`} /><Metric label="Movimentação" value={currency.format(totals.value)} detail="Soma dos valores disponíveis" /></section>
+    <div className="extractor-report-layout"><article className="extractor-panel"><PanelHeader title="Por modelo" subtitle="Quantidade de documentos" /><ModelComposition models={models} total={totals.documents} /></article><article className="extractor-panel"><PanelHeader title="Por empresa" subtitle="Movimentação documental" /><div className="extractor-company-performance">{companies.map(c => <div key={c.id}><span><strong>{c.tradeName}</strong><small>{formatCnpj(c.cnpj)}</small></span><span>{integer.format(c.documents)} documentos</span><span>{c.pendingXml ? `${c.pendingXml} XML pendente(s)` : 'XML do período completo'}</span></div>)}{!companies.length && <EmptyInline text="Nenhuma empresa vinculada." />}</div></article></div>
+    {documents.length === 200 && <p className="extractor-footnote">A lista detalhada exibe os 200 documentos mais recentes; os totais consolidados usam toda a janela disponível.</p>}
   </div>;
 }
 
-function ReportBars() { return <div className="extractor-report-bars">{[48, 65, 43, 76, 59, 88, 72, 94, 68, 84].map((height, index) => <i key={index} style={{ height: `${height}%` }} />)}</div>; }
-
-function Certificates({ companies }: { companies: Company[] }) {
-  return <div className="extractor-page"><PageHeading eyebrow="Segurança fiscal" title="Certificados digitais" description="Controle validade e vínculo dos certificados A1 sem expor arquivos ou senhas." actions={<button className="extractor-primary"><Upload />Enviar certificado</button>} />
-    <div className="extractor-certificate-summary"><article><span className="ok"><Check /></span><div><strong>{companies.filter(item => item.status === 'active').length} certificados válidos</strong><p>Captura funcionando normalmente.</p></div></article><article><span className="warn"><AlertTriangle /></span><div><strong>{companies.filter(item => item.status === 'attention').length} exige atenção</strong><p>Vencimento dentro de 30 dias.</p></div></article><article><span className="secure"><LockKeyhole /></span><div><strong>Arquivos protegidos</strong><p>Dados criptografados e acesso restrito.</p></div></article></div>
-    <div className="extractor-company-list extractor-certificate-list"><div className="extractor-list-head"><span>Empresa</span><span>Titular</span><span>Validade</span><span>Captura</span><span>Situação</span><span /></div>{companies.map(company => <div className="extractor-company-row" key={company.id}><div className="extractor-company-cell"><span><ShieldCheck /></span><div><strong>{company.tradeName}</strong><small>{company.cnpj}</small></div></div><div data-label="Titular"><strong>{company.name}</strong><small>Certificado A1</small></div><div data-label="Validade"><strong className={company.status === 'attention' ? 'is-warning' : ''}>{company.certificateUntil}</strong><small>{company.certificateDays === 999 ? 'Não configurado' : `${company.certificateDays} dias restantes`}</small></div><div data-label="Captura"><strong>Automática</strong><small>{company.lastSync}</small></div><div data-label="Situação"><span className={`extractor-status ${company.status}`}>{company.status === 'active' ? 'Válido' : 'Renovar'}</span></div><button className="extractor-row-menu"><MoreHorizontal /></button></div>)}</div>
+function Certificates({ companies, onCompanies }: { companies: Company[]; onCompanies: () => void }) {
+  return <div className="extractor-page"><PageHeading title="Certificados digitais" description="Situação do A1 usado pelas rotinas fiscais. Arquivos e senhas permanecem protegidos e não são expostos no Extrato." actions={<button className="extractor-secondary" onClick={onCompanies}>Ver empresas</button>} />
+    <div className="extractor-company-list"><div className="extractor-company-head certificate"><span>Empresa</span><span>Validade</span><span>Dias restantes</span><span>Situação</span></div>{companies.map(c => {
+      const state = c.certificateDays == null ? 'Não configurado' : c.certificateDays < 0 ? 'Vencido' : c.certificateDays <= 30 ? 'Atenção' : 'Válido';
+      return <div className="extractor-certificate-row" key={c.id}><div><strong>{c.tradeName}</strong><span>{formatCnpj(c.cnpj)}</span></div><span>{c.certificateUntil ? formatDate(c.certificateUntil) : '—'}</span><span>{c.certificateDays == null ? '—' : `${c.certificateDays} dia(s)`}</span><span className={`extractor-status ${state === 'Válido' ? 'success' : state === 'Atenção' ? 'warning' : 'danger'}`}>{state}</span></div>;
+    })}{!companies.length && <EmptyInline text="Nenhuma empresa vinculada." />}</div>
   </div>;
 }
 
 function HistorySection({ onOpen }: { onOpen: () => void }) {
-  return <div className="extractor-page"><PageHeading eyebrow="Recurso adicional" title="Histórico retroativo" description="Encontre documentos anteriores à janela padrão de 30 dias quando precisar." />
-    <section className="extractor-history-hero"><div className="extractor-history-copy"><span><History /></span><small>Consulta sob demanda</small><h2>Busque meses anteriores sem alterar sua rotina mensal.</h2><p>Escolha as empresas e o período. Antes de iniciar, você vê a estimativa de volume e o valor da consulta.</p><ul><li><Check />Consulta por CNPJ e competência</li><li><Check />XML organizados por empresa e período</li><li><Check />Processamento acompanhado pelo painel</li></ul><button className="extractor-primary" onClick={onOpen}>Simular consulta histórica</button></div><div className="extractor-history-visual"><div className="extractor-history-months"><span>MAR</span><span>ABR</span><span>MAI</span><span>JUN</span><span>JUL</span><span>AGO</span></div><div className="extractor-history-window"><LockKeyhole /><strong>30 dias incluídos</strong><small>Períodos anteriores disponíveis sob demanda</small></div></div></section>
+  return <div className="extractor-page"><PageHeading title="Histórico retroativo" description="Solicite a análise de um período anterior à janela liberada no seu plano." />
+    <article className="extractor-history"><div><h2>Consulta de período anterior</h2><p>Informe as competências desejadas. A solicitação é registrada para análise sem iniciar automaticamente uma busca fiscal e sem gerar cobrança automática.</p><ul><li><Check />Período definido por você</li><li><Check />Sem estimativa fictícia de volume</li><li><Check />Busca só começa após o fluxo comercial correspondente</li></ul><button className="extractor-primary" onClick={onOpen}>Solicitar análise</button></div><div className="extractor-history-note"><strong>Janela padrão</strong><span>Os documentos liberados no plano continuam disponíveis normalmente no restante do painel.</span></div></article>
   </div>;
 }
 
-function SettingsSection() {
-  return <div className="extractor-page"><PageHeading eyebrow="Conta" title="Configurações" description="Preferências da carteira, equipe e automações de captura." />
-    <div className="extractor-settings-grid"><section className="extractor-panel"><PanelHeader title="Captura automática" subtitle="Rotina padrão das empresas" /><SettingRow title="Sincronização automática" description="Consultar novas notas de todas as empresas." enabled /><SettingRow title="Aviso de certificado" description="Notificar quando faltarem 30 dias para vencer." enabled /><SettingRow title="Resumo semanal" description="Enviar o relatório consolidado por e-mail." /></section><section className="extractor-panel"><PanelHeader title="Equipe" subtitle="Pessoas com acesso ao extrator" /><div className="extractor-team-row"><span>WS</span><div><strong>Wilson Souza</strong><small>Administrador · acesso completo</small></div><span className="extractor-status active">Ativo</span></div><button className="extractor-add-member"><UsersRound />Convidar integrante</button></section></div>
+function SettingsSection({ companies, account, preview }: { companies: Company[]; account?: Snapshot['account']; preview: boolean }) {
+  return <div className="extractor-page"><PageHeading title="Configurações" description="Parâmetros efetivamente aplicados à carteira." />
+    <div className="extractor-settings-grid"><article className="extractor-panel"><PanelHeader title="Plano e janela fiscal" subtitle="Configuração atual" /><dl><div><dt>Plano</dt><dd>{preview ? 'Demonstração' : account?.plan_code || '—'}</dd></div><div><dt>Janela padrão</dt><dd>{preview ? '30 dias' : `${account?.base_lookback_days || 0} dias`}</dd></div><div><dt>Início liberado</dt><dd>{preview ? 'Demonstração' : account?.allowed_from ? formatDate(account.allowed_from) : '—'}</dd></div><div><dt>Limite mensal</dt><dd>{preview ? '—' : account?.monthly_xml_limit ? `${integer.format(account.monthly_xml_limit)} XML` : '—'}</dd></div></dl></article>
+      <article className="extractor-panel"><PanelHeader title="Rotinas por empresa" subtitle="Leitura do estado fiscal existente" /><div className="extractor-settings-companies">{companies.map(c => <div key={c.id}><span><strong>{c.tradeName}</strong><small>{c.automaticSync ? 'Sincronização automática habilitada' : 'Sincronização automática desabilitada'}</small></span><span>Compras: {syncLabel(c.purchaseStatus)}<br />Vendas: {syncLabel(c.salesStatus)}</span></div>)}</div></article></div>
   </div>;
 }
 
-function SettingRow({ title, description, enabled = false }: { title: string; description: string; enabled?: boolean }) { const [on, setOn] = useState(enabled); return <div className="extractor-setting-row"><div><strong>{title}</strong><small>{description}</small></div><button className={on ? 'is-on' : ''} onClick={() => setOn(value => !value)} aria-label={`${on ? 'Desativar' : 'Ativar'} ${title}`}><i /></button></div>; }
-
-function AddCompanyModal({ onClose }: { onClose: () => void }) {
-  return <div className="extractor-modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}><div className="extractor-modal" role="dialog" aria-modal="true" aria-label="Adicionar empresa"><header><div><span><Building2 /></span><div><h2>Adicionar empresa</h2><p>Inclua um CNPJ na carteira de captura.</p></div></div><button onClick={onClose}><X /></button></header><div className="extractor-modal-body"><label>CNPJ<input placeholder="00.000.000/0000-00" /></label><label>Razão social<input placeholder="Nome empresarial" /></label><div className="extractor-form-row"><label>UF<select><option>AL</option><option>PE</option><option>SE</option><option>BA</option></select></label><label>Ambiente<select><option>Produção</option><option>Homologação</option></select></label></div><div className="extractor-info-note"><ShieldCheck /><p><strong>Próximo passo</strong><span>Depois do cadastro, você poderá vincular o certificado A1 e iniciar a captura.</span></p></div></div><footer><button className="extractor-secondary" onClick={onClose}>Cancelar</button><button className="extractor-primary" onClick={onClose}>Adicionar empresa</button></footer></div></div>;
-}
-
-function HistoryModal({ preview, onClose }: { preview: boolean; onClose: () => void }) {
-  const [sent, setSent] = useState(false);
-  const request = async () => {
-    if (!preview) await (supabase as any).from('extractor_history_requests').insert({ requested_from: '2026-01-01', requested_to: '2026-07-31', estimated_xml: 4800 });
-    setSent(true);
+function AddCompanyModal({ preview, onClose, onLinked }: { preview: boolean; onClose: () => void; onLinked: (message: string) => void }) {
+  const [cnpj, setCnpj] = useState(''); const [busy, setBusy] = useState(false); const [error, setError] = useState('');
+  const submit = async () => {
+    if (preview) return setError('O vínculo de empresa fica disponível no ambiente autenticado.');
+    setBusy(true); setError('');
+    const { data, error: rpcError } = await (supabase as any).rpc('extractor_link_company_by_cnpj', { _cnpj: cnpj });
+    if (rpcError || !data?.ok) setError(rpcError?.message || data?.message || 'Não foi possível vincular esta empresa.');
+    else onLinked(`${data.name || 'Empresa'} vinculada ao Extrato.`);
+    setBusy(false);
   };
-  return <div className="extractor-modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}><div className="extractor-modal extractor-history-modal" role="dialog" aria-modal="true" aria-label="Consulta histórica"><header><div><span><History /></span><div><h2>Consulta histórica</h2><p>Documentos anteriores aos últimos 30 dias.</p></div></div><button onClick={onClose}><X /></button></header>{sent ? <div className="extractor-success-state"><span><Check /></span><h3>Solicitação registrada</h3><p>Vamos analisar o volume do período e apresentar o valor antes de iniciar a consulta.</p><button className="extractor-primary" onClick={onClose}>Concluir</button></div> : <><div className="extractor-modal-body"><label>Empresas<select><option>Toda a carteira — 4 empresas</option><option>Selecionar empresas</option></select></label><div className="extractor-form-row"><label>De<input type="month" defaultValue="2026-01" /></label><label>Até<input type="month" defaultValue="2026-07" /></label></div><div className="extractor-history-estimate"><div><small>Estimativa de volume</small><strong>≈ 4.800 XML</strong></div><span>Valor calculado após análise</span></div><p className="extractor-modal-disclaimer">Nenhuma busca será iniciada sem sua confirmação do valor.</p></div><footer><button className="extractor-secondary" onClick={onClose}>Cancelar</button><button className="extractor-primary" onClick={request}>Solicitar estimativa</button></footer></>}</div></div>;
+  return <Modal title="Adicionar empresa" description="Vincule um CNPJ que já possua configuração fiscal válida na WS." onClose={onClose}><div className="extractor-modal-body"><label>CNPJ<input value={cnpj} onChange={e => setCnpj(e.target.value)} placeholder="00.000.000/0000-00" autoFocus /></label><p className="extractor-helper">O Extrato não cria configuração fiscal fictícia. Se o CNPJ ainda não estiver preparado, o sistema informa isso antes de qualquer vínculo.</p>{error && <p className="extractor-form-error">{error}</p>}</div><footer><button className="extractor-secondary" onClick={onClose}>Cancelar</button><button className="extractor-primary" disabled={busy} onClick={() => void submit()}>{busy ? 'Vinculando' : 'Vincular empresa'}</button></footer></Modal>;
 }
 
-function ExtractorLoading() { return <div className="extractor-loading"><img src="/assets/ws-logo.png" alt="WS Gestão Contábil" /><span><i /></span><p>Preparando sua carteira fiscal...</p></div>; }
-
-function ExtractorAccessPending() {
-  return <div className="extractor-access-pending"><img src="/assets/ws-logo.png" alt="WS Gestão Contábil" /><div><span><LockKeyhole /></span><h1>Extrator ainda não habilitado</h1><p>Seu acesso existe, mas nenhuma carteira do Extrator Fiscal foi vinculada a esta conta.</p><a href="/extrator-preview">Abrir demonstração</a></div></div>;
+function HistoryModal({ preview, companies, onClose, onSaved }: { preview: boolean; companies: Company[]; onClose: () => void; onSaved: (message: string) => void }) {
+  const now = new Date(); const defaultEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`; const six = new Date(now.getFullYear(), now.getMonth() - 6, 1); const defaultStart = `${six.getFullYear()}-${String(six.getMonth() + 1).padStart(2, '0')}`;
+  const [from, setFrom] = useState(defaultStart); const [to, setTo] = useState(defaultEnd); const [busy, setBusy] = useState(false); const [error, setError] = useState('');
+  const submit = async () => {
+    if (preview) return setError('A solicitação fica disponível no ambiente autenticado.');
+    if (!from || !to || from > to) return setError('Informe um período válido.');
+    setBusy(true); setError('');
+    const start = `${from}-01`; const endDate = new Date(Number(to.slice(0, 4)), Number(to.slice(5, 7)), 0); const end = `${to}-${String(endDate.getDate()).padStart(2, '0')}`;
+    const { error: insertError } = await (supabase as any).from('extractor_history_requests').insert({ requested_from: start, requested_to: end, metadata: { companies: companies.map(c => c.id), source: 'extractor_ui' } });
+    if (insertError) setError(insertError.message); else onSaved('Solicitação de histórico registrada para análise.');
+    setBusy(false);
+  };
+  return <Modal title="Histórico retroativo" description="Registre o período que precisa consultar." onClose={onClose}><div className="extractor-modal-body"><div className="extractor-form-row"><label>De<input type="month" value={from} onChange={e => setFrom(e.target.value)} /></label><label>Até<input type="month" value={to} onChange={e => setTo(e.target.value)} /></label></div><p className="extractor-helper">Carteira atual: {companies.length} empresa(s). Nenhuma busca ou cobrança é iniciada por este formulário.</p>{error && <p className="extractor-form-error">{error}</p>}</div><footer><button className="extractor-secondary" onClick={onClose}>Cancelar</button><button className="extractor-primary" disabled={busy} onClick={() => void submit()}>{busy ? 'Registrando' : 'Solicitar análise'}</button></footer></Modal>;
 }
+
+function Modal({ title, description, onClose, children }: { title: string; description: string; onClose: () => void; children: React.ReactNode }) {
+  return <div className="extractor-modal-backdrop" onMouseDown={e => { if (e.currentTarget === e.target) onClose(); }}><div className="extractor-modal" role="dialog" aria-modal="true"><header><div><h2>{title}</h2><p>{description}</p></div><button onClick={onClose}><X /></button></header>{children}</div></div>;
+}
+
+function ExtractorLoading() { return <div className="extractor-loading"><img src="/assets/ws-logo.png" alt="WS Gestão Contábil" /><span /><p>Carregando dados fiscais...</p></div>; }
+function ExtractorAccessPending() { return <div className="extractor-access-pending"><img src="/assets/ws-logo.png" alt="WS Gestão Contábil" /><div><h1>Extrato Fiscal não habilitado</h1><p>Esta conta ainda não possui uma carteira do Extrato vinculada.</p><a href="/extrator-preview">Abrir demonstração</a></div></div>; }
