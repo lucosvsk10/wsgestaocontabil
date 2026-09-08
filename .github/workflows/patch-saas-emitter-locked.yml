@@ -1,0 +1,28 @@
+name: Patch SaaS emitter lock
+on:
+  push:
+    branches:
+      - fix/saas-emitter-locked
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/saas-emitter-locked
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: node scripts/patch-saas-emitter-locked.cjs
+      - run: npm install --legacy-peer-deps --no-audit --no-fund
+      - run: npm run build
+      - run: npm run lint -- --quiet
+      - run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/components/saas/SaasEmission.tsx
+          git diff --cached --quiet || git commit -m "fix(saas): lock issuer to active fiscal company"
+          git push origin HEAD:fix/saas-emitter-locked
