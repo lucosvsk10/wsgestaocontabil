@@ -11,6 +11,10 @@ const publicMetadata: Record<string, { title: string; description: string }> = {
     title: 'Guias para abrir e administrar uma empresa | WS Gestão Contábil',
     description: 'Guias práticos sobre abertura de empresa, custos, fluxo de caixa e organização financeira para empreendedores e gestores.',
   },
+  '/emissor-fiscal': {
+    title: 'Emissor Fiscal WS: NF-e, NFC-e, NFS-e, CT-e e MDF-e',
+    description: 'Emita e gerencie documentos fiscais em um só lugar. Conheça o Emissor Fiscal WS, seus recursos e planos mensal e anual.',
+  },
 };
 
 const isPrivateOrUtilityRoute = (pathname: string) => (

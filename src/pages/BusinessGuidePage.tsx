@@ -43,7 +43,7 @@ const BusinessGuidePage = () => {
   }, [guide]);
 
   if (!guide) return <Navigate to="/guias" replace />;
-  const related = guides.filter((item) => item.slug !== guide.slug);
+  const related = guides.filter((item) => item.slug !== guide.slug).slice(0, 3);
 
   return (
     <div className="public-page">
@@ -59,6 +59,7 @@ const BusinessGuidePage = () => {
             <h1>{guide.title}</h1>
             <p>{guide.description}</p>
             <small><Clock3 /> Publicado em 8 de setembro de 2026 · {guide.readingTime}</small>
+            <a className="guide-hero-cta" href="https://wa.me/5582999324884?text=Ol%C3%A1%2C%20li%20um%20guia%20da%20WS%20e%20quero%20orienta%C3%A7%C3%A3o." target="_blank" rel="noreferrer">Conversar sobre meu caso <ArrowRight /></a>
           </header>
           <figure className="guide-cover">
             <img src={guide.heroImage} alt={guide.heroImageAlt} width="1600" height="900" fetchPriority="high" />
@@ -73,6 +74,7 @@ const BusinessGuidePage = () => {
               </section>)}
               <section className="guide-checklist"><h2>Checklist para colocar em prática</h2>{guide.checklist.map((item) => <p key={item}><Check /> {item}</p>)}</section>
               <p className="guide-source">Fonte de referência: <a href={guide.sourceUrl} target="_blank" rel="noreferrer">{guide.sourceLabel} <ExternalLink /></a></p>
+              <aside className="guide-final-cta"><span>PRÓXIMO PASSO</span><h2>Transforme informação em uma decisão segura.</h2><p>Conte à WS o momento da sua empresa e receba uma orientação inicial para organizar o caminho.</p><a href="https://wa.me/5582999324884?text=Ol%C3%A1%2C%20quero%20organizar%20o%20pr%C3%B3ximo%20passo%20da%20minha%20empresa." target="_blank" rel="noreferrer">Solicitar orientação <ArrowRight /></a></aside>
             </div>
             <aside className="guide-cta"><span>PRECISA ORGANIZAR O PRÓXIMO PASSO?</span><h2>Converse com a equipe da WS.</h2><p>Avaliamos o contexto do seu negócio antes de indicar o caminho.</p><a href="https://wa.me/5582999324884" target="_blank" rel="noreferrer">Falar no WhatsApp <ArrowRight /></a></aside>
           </div>

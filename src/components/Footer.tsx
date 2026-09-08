@@ -40,7 +40,7 @@ const Footer = () => {
           </div>
         </div>
         <div className="border-t border-gold/10 mt-12 pt-6 flex justify-between items-center text-white/60 dark:text-white/70 text-sm">
-          <p>© 2026 WS Gestão Contábil. Todos os direitos reservados.<br /><a href="/guias" className="text-gold hover:text-gold-light transition-colors duration-300">Guias para empresas</a></p>
+          <p>© 2026 WS Gestão Contábil. Todos os direitos reservados.<br /><a href="/guias" className="text-gold hover:text-gold-light transition-colors duration-300">Guias para empresas</a> · <a href="/emissor-fiscal" className="text-gold hover:text-gold-light transition-colors duration-300">Emissor Fiscal WS</a></p>
         </div>
       </div>
     </footer>

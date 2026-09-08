@@ -17,6 +17,7 @@ const PublicSiteFooter = () => (
         <nav aria-label="Links do rodapé">
           <Link to="/">Página inicial</Link>
           <Link to="/guias">Guias para empresas</Link>
+          <Link to="/emissor-fiscal">Emissor Fiscal WS</Link>
           <Link to="/termos-de-servico">Termos de serviço</Link>
           <Link to="/politica-de-privacidade">Política de privacidade</Link>
         </nav>

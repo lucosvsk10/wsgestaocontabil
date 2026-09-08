@@ -204,6 +204,42 @@ for (const guide of guides) {
   await writeRoute(`/guias/${guide.slug}`, html);
 }
 
+const issuerCanonical = `${site}/emissor-fiscal`;
+const issuerTitle = 'Emissor Fiscal WS: NF-e, NFC-e, NFS-e, CT-e e MDF-e';
+const issuerDescription = 'Emita e gerencie documentos fiscais em um só lugar. Conheça o Emissor Fiscal WS, seus recursos e planos mensal e anual.';
+const issuerStaticContent = `<main style="max-width:1050px;margin:70px auto;padding:24px;color:#f5f0e3;font-family:Arial,sans-serif"><nav><a href="/">Início</a> · <a href="/guias">Guias</a></nav><header><p>Emissor Fiscal WS</p><h1>Emita documentos fiscais com menos etapas</h1><p>${escapeHtml(issuerDescription)}</p><p><a href="#planos">Conheça os planos</a> · <a href="https://wa.me/5582999324884">Fale com a WS</a></p></header><section><h2>Documentos e recursos</h2><p>Emissão de NF-e, NFC-e, NFS-e, CT-e e MDF-e, cadastro de clientes, produtos e serviços, histórico de emissões, configuração fiscal, certificado A1 e relatórios operacionais.</p></section><section id="planos"><h2>Planos</h2><article><h3>Mensal</h3><p>R$ 39,90 por mês.</p></article><article><h3>Anual</h3><p>R$ 399,00 por ano, equivalente a R$ 33,25 por mês.</p></article><p><a href="/login">Começar agora</a></p></section></main>`;
+let issuerHtml = applyMetadata(template, { title: issuerTitle, description: issuerDescription, canonical: issuerCanonical });
+issuerHtml = addStructuredData(issuerHtml, {
+  '@context': 'https://schema.org',
+  '@graph': [
+    organization,
+    {
+      '@type': 'SoftwareApplication',
+      '@id': `${issuerCanonical}/#software`,
+      name: 'Emissor Fiscal WS',
+      url: issuerCanonical,
+      description: issuerDescription,
+      applicationCategory: 'BusinessApplication',
+      operatingSystem: 'Web',
+      inLanguage: 'pt-BR',
+      publisher: { '@id': organizationId },
+      offers: [
+        { '@type': 'Offer', name: 'Plano mensal', price: '39.90', priceCurrency: 'BRL', url: `${issuerCanonical}#precos`, availability: 'https://schema.org/InStock' },
+        { '@type': 'Offer', name: 'Plano anual', price: '399.00', priceCurrency: 'BRL', url: `${issuerCanonical}#precos`, availability: 'https://schema.org/InStock' },
+      ],
+    },
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Início', item: `${site}/` },
+        { '@type': 'ListItem', position: 2, name: 'Emissor Fiscal WS', item: issuerCanonical },
+      ],
+    },
+  ],
+});
+issuerHtml = issuerHtml.replace('<div id="root"></div>', () => `<div id="root">${issuerStaticContent}</div>`);
+await writeRoute('/emissor-fiscal', issuerHtml);
+
 for (const route of ['/home-preview', '/nova-home']) {
   const previewHtml = applyMetadata(template, {
     title: 'Prévia da nova página | WS Gestão Contábil',
@@ -215,5 +251,5 @@ for (const route of ['/home-preview', '/nova-home']) {
 }
 
 await writeFile(path.join(dist, 'robots.txt'), `User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /app/\nDisallow: /client/\nDisallow: /dashboard\nDisallow: /checkout/\n\nSitemap: ${site}/sitemap.xml\n`);
-const sitemapUrls = ['/', '/guias', ...guides.map((guide) => `/guias/${guide.slug}`)];
+const sitemapUrls = ['/', '/emissor-fiscal', '/guias', ...guides.map((guide) => `/guias/${guide.slug}`)];
 await writeFile(path.join(dist, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${sitemapUrls.map((route) => `  <url>\n    <loc>${site}${route}</loc>\n    <lastmod>${buildDate}</lastmod>\n  </url>`).join('\n')}\n</urlset>\n`);

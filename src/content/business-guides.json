@@ -67,5 +67,143 @@
     "checklist": ["Contas pessoais e empresariais separadas", "Entradas e saídas registradas diariamente", "Conciliação bancária em dia", "Próximos vencimentos projetados", "Revisão mensal dos números agendada"],
     "sourceLabel": "Banco Central — Caderno de Educação Financeira",
     "sourceUrl": "https://www.bcb.gov.br/content/cidadaniafinanceira/documentos_cidadania/Cuidando_do_seu_dinheiro_Gestao_de_Financas_Pessoais/caderno_cidadania_financeira.pdf"
+  },
+  {
+    "slug": "mei-ou-microempresa",
+    "eyebrow": "Formalização",
+    "title": "MEI ou Microempresa: qual formato combina com o seu negócio?",
+    "description": "Compare limites, atividades, contratação e perspectivas de crescimento antes de escolher como formalizar sua empresa.",
+    "readingTime": "7 min de leitura",
+    "heroImage": "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1600&q=82",
+    "heroImageAlt": "Profissionais analisando documentos e planejando a formalização de uma empresa",
+    "contentImage": "https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=1260&q=82",
+    "contentImageAlt": "Equipe reunida para decidir a estrutura de um novo negócio",
+    "ctaTitle": "Quer escolher sem limitar o crescimento da empresa?",
+    "ctaText": "A WS compara atividade, faturamento esperado e operação antes de indicar a estrutura mais coerente para o seu momento.",
+    "intro": "MEI e Microempresa não são apenas nomes diferentes. Cada formato atende a um perfil de operação, e a melhor escolha depende de atividade, faturamento, equipe e de como o negócio pretende crescer.",
+    "sections": [
+      { "title": "1. Comece pela atividade", "paragraphs": ["Nem toda ocupação pode ser registrada como MEI. Confira se a atividade exercida aparece na lista permitida e se ela representa de verdade o que será vendido ou prestado.", "Quando a atividade não se enquadra ou a empresa terá operações mais complexas, a Microempresa pode oferecer uma estrutura mais adequada desde o início."] },
+      { "title": "2. Projete faturamento e equipe", "paragraphs": ["Olhe para os próximos doze meses, não apenas para o primeiro mês. Considere contratos em negociação, sazonalidade e a possibilidade de contratar pessoas.", "Uma escolha feita somente para pagar menos agora pode gerar uma mudança apressada quando o negócio ultrapassar limites ou precisar ampliar a equipe."] },
+      { "title": "3. Entenda obrigações e custos", "paragraphs": ["O MEI possui recolhimento simplificado, enquanto uma Microempresa pode ter cálculo tributário e obrigações que variam conforme atividade e regime.", "Compare o custo total da operação, incluindo contabilidade, emissão de documentos, licenças e organização administrativa."] },
+      { "title": "4. Planeje a transição", "paragraphs": ["Se o negócio começou como MEI, acompanhe faturamento e atividades ao longo do ano. A transição planejada evita decisões de última hora e mantém a empresa regular.", "Guarde documentos e mantenha o movimento financeiro organizado para que a mudança de enquadramento seja baseada em dados confiáveis."] }
+    ],
+    "checklist": ["Atividade conferida na lista permitida", "Faturamento de doze meses projetado", "Necessidade de contratação avaliada", "Custos e obrigações comparados", "Cenário de crescimento discutido com um contador"],
+    "sourceLabel": "Portal do Empreendedor — Quero ser MEI",
+    "sourceUrl": "https://www.gov.br/empresas-e-negocios/pt-br/empreendedor/quero-ser-mei"
+  },
+  {
+    "slug": "como-trocar-de-contador",
+    "eyebrow": "Transição contábil",
+    "title": "Como trocar de contador com segurança e sem perder prazos",
+    "description": "Veja como organizar documentos, responsabilidades e comunicação para manter a continuidade fiscal e contábil da empresa.",
+    "readingTime": "6 min de leitura",
+    "heroImage": "https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1600&q=82",
+    "heroImageAlt": "Profissionais conversando durante uma transição de responsabilidade contábil",
+    "contentImage": "https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1260&q=82",
+    "contentImageAlt": "Equipe alinhando responsabilidades e documentos de uma empresa",
+    "ctaTitle": "Pensando em mudar de contabilidade?",
+    "ctaText": "A WS faz uma avaliação inicial da empresa e orienta a transição para reduzir lacunas de documentos, acessos e obrigações.",
+    "intro": "Trocar de contador é uma decisão de gestão. Quando a transição tem datas, documentos e responsáveis definidos, a empresa preserva a continuidade das rotinas e começa a nova relação com mais clareza.",
+    "sections": [
+      { "title": "1. Entenda o motivo da mudança", "paragraphs": ["Liste o que precisa melhorar: prazo de resposta, relatórios, orientação, tecnologia ou atendimento. Isso ajuda a escolher um novo parceiro com critérios objetivos.", "Antes de decidir, revise o contrato atual e as condições de encerramento para respeitar os compromissos já assumidos."] },
+      { "title": "2. Defina uma data de corte", "paragraphs": ["Escolha a competência em que a nova contabilidade assumirá e registre quem entregará cada obrigação durante a transição.", "Evite uma troca sem data clara, especialmente perto de vencimentos relevantes, fechamento de folha ou entrega de declarações."] },
+      { "title": "3. Organize documentos e acessos", "paragraphs": ["Reúna livros, relatórios, folhas, guias, certificados, procurações, contratos e comprovantes. Os acessos devem ser transferidos por canais seguros.", "Peça uma relação formal do material entregue e confira se existem pendências ou parcelamentos que precisam de acompanhamento."] },
+      { "title": "4. Faça uma conferência inicial", "paragraphs": ["A nova contabilidade deve validar cadastros, regime tributário, situação fiscal, saldos e obrigações em andamento.", "Essa conferência cria um ponto de partida confiável e permite priorizar correções sem interromper a operação."] }
+    ],
+    "checklist": ["Contrato atual revisado", "Data de corte definida", "Responsáveis por cada obrigação registrados", "Documentos e acessos conferidos", "Diagnóstico inicial agendado"],
+    "sourceLabel": "Conselho Federal de Contabilidade",
+    "sourceUrl": "https://cfc.org.br/"
+  },
+  {
+    "slug": "fluxo-de-caixa-empresarial",
+    "eyebrow": "Controle financeiro",
+    "title": "Fluxo de caixa: como saber se a empresa realmente tem dinheiro",
+    "description": "Aprenda a visualizar entradas, saídas e compromissos futuros para antecipar apertos e decidir com mais segurança.",
+    "readingTime": "7 min de leitura",
+    "heroImage": "https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=1600&q=82",
+    "heroImageAlt": "Pessoa analisando o fluxo de caixa e registros financeiros de uma empresa",
+    "contentImage": "https://images.unsplash.com/photo-1554224154-26032ffc0d07?auto=format&fit=crop&w=1260&q=82",
+    "contentImageAlt": "Relatórios financeiros, calculadora e anotações sobre uma mesa",
+    "ctaTitle": "Quer enxergar o caixa antes de ele apertar?",
+    "ctaText": "A WS ajuda a organizar uma rotina de acompanhamento compatível com o tamanho e a operação da sua empresa.",
+    "intro": "Saldo bancário e lucro não são a mesma coisa. O fluxo de caixa conecta o dinheiro disponível aos recebimentos e pagamentos que ainda acontecerão, revelando se a operação consegue cumprir os próximos compromissos.",
+    "sections": [
+      { "title": "1. Registre o que entrou e saiu", "paragraphs": ["Classifique cada movimentação com data, valor, origem e categoria. Registros genéricos dificultam descobrir onde o dinheiro foi usado.", "Faça a conciliação com banco, cartões e caixa físico para confirmar que o controle representa a realidade."] },
+      { "title": "2. Inclua o que ainda vai vencer", "paragraphs": ["Adicione impostos, folha, fornecedores, parcelas e recebimentos previstos. Assim, a visão deixa de ser apenas histórica e passa a apoiar decisões.", "Use uma estimativa prudente para recebimentos incertos e destaque valores em atraso."] },
+      { "title": "3. Analise por períodos", "paragraphs": ["Acompanhe a semana para gerir pagamentos e o mês para avaliar tendência. Negócios sazonais também devem comparar períodos equivalentes.", "Quando houver saldo negativo projetado, aja antes: revise compras, cobre clientes e renegocie prazos."] },
+      { "title": "4. Transforme números em decisões", "paragraphs": ["Observe quais produtos, clientes ou despesas mais afetam o caixa. A análise deve levar a ações com prazo e responsável.", "Atualização frequente vale mais do que um modelo complexo abandonado depois de poucas semanas."] }
+    ],
+    "checklist": ["Movimentações classificadas", "Banco e controle conciliados", "Contas futuras lançadas", "Inadimplência destacada", "Projeção revisada toda semana"],
+    "sourceLabel": "Sebrae — Fluxo de caixa",
+    "sourceUrl": "https://sebrae.com.br/sites/PortalSebrae/artigos/fluxo-de-caixa-o-que-e-e-como-implantar"
+  },
+  {
+    "slug": "pro-labore-e-distribuicao-de-lucros",
+    "eyebrow": "Remuneração dos sócios",
+    "title": "Pró-labore e distribuição de lucros: entenda a diferença",
+    "description": "Organize a retirada dos sócios, preserve o caixa e mantenha registros coerentes com a realidade da empresa.",
+    "readingTime": "6 min de leitura",
+    "heroImage": "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1600&q=82",
+    "heroImageAlt": "Sócios reunidos para organizar remuneração e resultados da empresa",
+    "contentImage": "https://images.unsplash.com/photo-1556761175-4b46a572b786?auto=format&fit=crop&w=1260&q=82",
+    "contentImageAlt": "Equipe analisando resultados antes de definir retiradas dos sócios",
+    "ctaTitle": "As retiradas dos sócios estão organizadas?",
+    "ctaText": "A WS ajuda a estruturar registros, periodicidade e documentação conforme a realidade financeira e societária da empresa.",
+    "intro": "Misturar retirada, salário e lucro deixa o caixa confuso e dificulta avaliar o resultado real. Separar cada conceito ajuda a empresa a remunerar os sócios sem perder previsibilidade.",
+    "sections": [
+      { "title": "1. O que é pró-labore", "paragraphs": ["Pró-labore é a remuneração do sócio pelo trabalho que exerce na empresa. Ele deve ser definido de forma compatível com as funções e registrado corretamente.", "O valor e os recolhimentos precisam ser avaliados conforme o contexto da empresa e a legislação aplicável."] },
+      { "title": "2. O que é distribuição de lucros", "paragraphs": ["A distribuição depende de resultado apurado e de registros contábeis que sustentem a decisão. Não é simplesmente retirar o dinheiro disponível na conta.", "Antes de distribuir, preserve recursos para impostos, folha, fornecedores, investimentos e capital de giro."] },
+      { "title": "3. Crie uma política de retirada", "paragraphs": ["Defina datas, valores e critérios, evitando transferências aleatórias para despesas pessoais. Isso melhora a disciplina dos sócios e a leitura do caixa.", "Registre decisões societárias quando necessário e mantenha comprovantes vinculados à finalidade correta."] },
+      { "title": "4. Revise ao longo do ano", "paragraphs": ["Mudanças em faturamento, funções ou necessidades de caixa podem exigir ajustes. Faça revisões periódicas com apoio contábil.", "O objetivo é equilibrar remuneração dos sócios, capacidade financeira e documentação consistente."] }
+    ],
+    "checklist": ["Funções dos sócios definidas", "Pró-labore registrado", "Resultado contábil acompanhado", "Capital de giro preservado", "Retiradas pessoais separadas da empresa"],
+    "sourceLabel": "Receita Federal — Contribuições previdenciárias",
+    "sourceUrl": "https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/declaracoes-e-demonstrativos/dctfweb"
+  },
+  {
+    "slug": "regime-tributario-simples-presumido-real",
+    "eyebrow": "Planejamento tributário",
+    "title": "Simples Nacional, Lucro Presumido ou Lucro Real?",
+    "description": "Entenda quais informações devem ser comparadas para escolher um regime coerente com a atividade e os números da empresa.",
+    "readingTime": "8 min de leitura",
+    "heroImage": "https://images.unsplash.com/photo-1554224154-22dec7ec8818?auto=format&fit=crop&w=1600&q=82",
+    "heroImageAlt": "Gestor comparando cenários tributários e indicadores financeiros",
+    "contentImage": "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&w=1260&q=82",
+    "contentImageAlt": "Documentos empresariais usados em uma análise tributária",
+    "ctaTitle": "Quer comparar cenários com os números da sua empresa?",
+    "ctaText": "A WS avalia faturamento, margem, folha, atividade e operação para simular caminhos antes da escolha do regime.",
+    "intro": "Não existe um regime tributário melhor para todas as empresas. A escolha depende da atividade, faturamento, margem, folha, créditos e forma de operação — e precisa ser refeita quando o negócio muda.",
+    "sections": [
+      { "title": "1. Reúna os dados certos", "paragraphs": ["Comece com faturamento por atividade, despesas, margem, folha, compras e operações entre estados ou municípios. Sem esses dados, a comparação vira apenas uma estimativa.", "Use números recentes e considere mudanças previstas para o próximo ano."] },
+      { "title": "2. Entenda o Simples Nacional", "paragraphs": ["O Simples reúne tributos em uma guia, mas alíquotas, anexos e permissões variam. Folha e tipo de serviço podem alterar significativamente o resultado.", "A simplicidade operacional é uma vantagem, porém deve ser comparada ao custo efetivo."] },
+      { "title": "3. Compare Presumido e Real", "paragraphs": ["No Lucro Presumido, a base segue percentuais definidos para cada atividade. No Lucro Real, o resultado contábil e os ajustes fiscais ganham papel central.", "Margem, créditos e estrutura de custos podem mudar qual cenário é mais adequado."] },
+      { "title": "4. Decida com simulação", "paragraphs": ["Compare carga tributária, obrigações e impacto no caixa em mais de um cenário. Registre as premissas usadas.", "Revise a escolha sempre que houver crescimento relevante, nova atividade ou mudança na operação."] }
+    ],
+    "checklist": ["Faturamento por atividade levantado", "Margem e folha conferidas", "Operações especiais identificadas", "Três regimes simulados quando aplicáveis", "Premissas documentadas"],
+    "sourceLabel": "Receita Federal — Simples Nacional",
+    "sourceUrl": "https://www8.receita.fazenda.gov.br/SimplesNacional/"
+  },
+  {
+    "slug": "quando-emitir-nota-fiscal",
+    "eyebrow": "Rotina fiscal",
+    "title": "Quando e como emitir nota fiscal sem transformar isso em um problema",
+    "description": "Organize cadastro, certificado, tipo de documento e conferência para emitir com menos retrabalho no dia a dia.",
+    "readingTime": "7 min de leitura",
+    "heroImage": "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=1600&q=82",
+    "heroImageAlt": "Empresária conferindo uma nota fiscal no computador",
+    "contentImage": "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?auto=format&fit=crop&w=1260&q=82",
+    "contentImageAlt": "Computador e documentos usados na rotina de emissão fiscal",
+    "ctaTitle": "Quer simplificar a emissão de documentos fiscais?",
+    "ctaText": "Conheça o Emissor WS e centralize cadastros, emissão e acompanhamento em um ambiente pensado para a rotina da empresa.",
+    "intro": "Emitir corretamente começa antes de clicar em enviar. A empresa precisa saber qual documento usar, manter cadastros consistentes e conferir os dados da operação para evitar cancelamentos e correções.",
+    "sections": [
+      { "title": "1. Identifique a operação", "paragraphs": ["Venda de mercadoria, prestação de serviço e transporte podem exigir documentos diferentes. Município, estado e tipo de cliente também influenciam o preenchimento.", "Valide a operação com orientação fiscal antes de transformar um preenchimento incorreto em rotina."] },
+      { "title": "2. Prepare cadastros e certificado", "paragraphs": ["Mantenha dados da empresa, clientes, produtos, serviços e tributos atualizados. Quando aplicável, proteja o certificado digital e controle quem pode utilizá-lo.", "Cadastros padronizados reduzem digitação repetida e erros em operações recorrentes."] },
+      { "title": "3. Confira antes de transmitir", "paragraphs": ["Revise destinatário, valores, itens, impostos, datas e natureza da operação. Uma conferência curta costuma custar menos do que corrigir um documento autorizado.", "Depois do envio, acompanhe o retorno do órgão autorizador e guarde XML e representação do documento."] },
+      { "title": "4. Crie uma rotina de acompanhamento", "paragraphs": ["Defina responsáveis por emissão, cancelamento, inutilização e envio ao cliente. Centralize o histórico para facilitar consultas.", "Relacione documentos emitidos ao movimento financeiro e compartilhe as informações necessárias com a contabilidade."] }
+    ],
+    "checklist": ["Tipo de documento confirmado", "Cadastros revisados", "Certificado protegido", "Dados conferidos antes do envio", "XML e histórico organizados"],
+    "sourceLabel": "Portal Nacional da Nota Fiscal Eletrônica",
+    "sourceUrl": "https://www.nfe.fazenda.gov.br/portal/principal.aspx"
   }
 ]
