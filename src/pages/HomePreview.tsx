@@ -115,6 +115,7 @@ const HomePreview = () => {
           <div className="public-guide-grid">
             {guides.map((guide, index) => (
               <Link className="public-guide-card" to={`/guias/${guide.slug}`} key={guide.slug}>
+                <img className="public-guide-thumb" src={guide.heroImage} alt="" loading="lazy" />
                 <span className="public-guide-number">0{index + 1}</span>
                 <small>{guide.eyebrow} · {guide.readingTime}</small>
                 <h3>{guide.title}</h3>

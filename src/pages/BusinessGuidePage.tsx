@@ -21,6 +21,24 @@ const BusinessGuidePage = () => {
     if (!canonical) canonical = document.head.appendChild(document.createElement('link'));
     canonical.setAttribute('rel', 'canonical');
     canonical.setAttribute('href', `https://wsgestaocontabil.com/guias/${guide.slug}`);
+    const upsertMeta = (key: string, value: string, property = false) => {
+      const attribute = property ? 'property' : 'name';
+      let meta = document.querySelector(`meta[${attribute}="${key}"]`);
+      if (!meta) meta = document.head.appendChild(document.createElement('meta'));
+      meta.setAttribute(attribute, key);
+      meta.setAttribute('content', value);
+    };
+    const pageUrl = `https://wsgestaocontabil.com/guias/${guide.slug}`;
+    upsertMeta('og:type', 'article', true);
+    upsertMeta('og:title', guide.title, true);
+    upsertMeta('og:description', guide.description, true);
+    upsertMeta('og:url', pageUrl, true);
+    upsertMeta('og:image', guide.heroImage, true);
+    upsertMeta('og:image:alt', guide.heroImageAlt, true);
+    upsertMeta('twitter:card', 'summary_large_image');
+    upsertMeta('twitter:title', guide.title);
+    upsertMeta('twitter:description', guide.description);
+    upsertMeta('twitter:image', guide.heroImage);
     window.scrollTo(0, 0);
   }, [guide]);
 
@@ -42,10 +60,17 @@ const BusinessGuidePage = () => {
             <p>{guide.description}</p>
             <small><Clock3 /> {guide.readingTime}</small>
           </header>
+          <figure className="guide-cover">
+            <img src={guide.heroImage} alt={guide.heroImageAlt} width="1600" height="900" fetchPriority="high" />
+          </figure>
           <div className="guide-layout">
             <div className="guide-body">
               <p className="guide-lead">{guide.intro}</p>
-              {guide.sections.map((section) => <section key={section.title}><h2>{section.title}</h2>{section.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}</section>)}
+              {guide.sections.map((section, index) => <section key={section.title}>
+                <h2>{section.title}</h2>{section.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+                {index === 0 && <figure className="guide-content-image"><img src={guide.contentImage} alt={guide.contentImageAlt} width="1260" height="750" loading="lazy" /></figure>}
+                {index === 1 && <aside className="guide-inline-cta"><span>ORIENTAÇÃO WS</span><h3>{guide.ctaTitle}</h3><p>{guide.ctaText}</p><a href="https://wa.me/5582999324884" target="_blank" rel="noreferrer">Conversar com um especialista <ArrowRight /></a></aside>}
+              </section>)}
               <section className="guide-checklist"><h2>Checklist para colocar em prática</h2>{guide.checklist.map((item) => <p key={item}><Check /> {item}</p>)}</section>
               <p className="guide-source">Fonte de referência: <a href={guide.sourceUrl} target="_blank" rel="noreferrer">{guide.sourceLabel} <ExternalLink /></a></p>
             </div>
