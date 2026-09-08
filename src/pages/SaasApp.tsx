@@ -136,6 +136,7 @@ export default function SaasApp() {
   const [organizationChoices, setOrganizationChoices] = useState<any[]>([]);
   const [organizationLoading, setOrganizationLoading] = useState(true);
   const [reusableEmission, setReusableEmission] = useState<any>(null);
+  const [pendingCadastroCreate, setPendingCadastroCreate] = useState<CadastroSection | null>(null);
   const organizationRequest = useRef(0);
 
   const loadOrg = async (preferredOrganizationId?: string) => {
@@ -218,6 +219,7 @@ export default function SaasApp() {
 
   const chooseNav = (item: string) => {
     setMobileMenuOpen(false);
+    setPendingCadastroCreate(null);
     if (item === 'Gerenciar DF-e') {
       setSelectedDocument(null);
       setActive('Gerenciar DF-e');
@@ -232,6 +234,13 @@ export default function SaasApp() {
     setSelectedDocument(null);
     setReusableEmission(null);
     setActive(item);
+  };
+
+  const openCadastroCreate = (section: CadastroSection) => {
+    setSelectedDocument(null);
+    setReusableEmission(null);
+    setPendingCadastroCreate(section);
+    setActive(section);
   };
 
   const reuseEmission = (emission: any) => {
@@ -287,6 +296,8 @@ export default function SaasApp() {
       <SaasCadastros
         organizationId={organization?.id || null}
         section={active as CadastroSection}
+        autoCreate={pendingCadastroCreate === active}
+        onAutoCreateConsumed={() => setPendingCadastroCreate(null)}
       />
     );
   else if (active === 'Emissão')
@@ -301,11 +312,7 @@ export default function SaasApp() {
         emissions={emissions}
         reusableEmission={reusableEmission}
         onReuseConsumed={() => setReusableEmission(null)}
-        onOpenRegistry={section => {
-          setSelectedDocument(null);
-          setReusableEmission(null);
-          setActive(section);
-        }}
+        onOpenCadastro={openCadastroCreate}
       />
     );
   else if (active === 'Gerenciar DF-e') content = <SaasDfeManager />;

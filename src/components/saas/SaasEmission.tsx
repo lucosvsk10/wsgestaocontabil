@@ -116,6 +116,8 @@ function CatalogPicker({
   items,
   kind,
   required = false,
+  emptyActionLabel,
+  onEmptyAction,
 }: {
   label: string;
   value: string;
@@ -123,6 +125,8 @@ function CatalogPicker({
   items: any[];
   kind: 'product' | 'service';
   required?: boolean;
+  emptyActionLabel?: string;
+  onEmptyAction?: () => void;
 }) {
   const [open, setOpen] = useState(false),
     [q, setQ] = useState('');
@@ -143,7 +147,9 @@ function CatalogPicker({
       <button type="button" className="ca-picker" onClick={() => setOpen(v => !v)}>
         <span>
           <strong>
-            {chosen?.name || `Selecionar ${kind === 'product' ? 'produto' : 'serviço'}`}
+            {chosen?.name || (items.length === 0
+              ? `Nenhum ${kind === 'product' ? 'produto' : 'serviço'} cadastrado`
+              : `Selecionar ${kind === 'product' ? 'produto' : 'serviço'}`)}
           </strong>
           <small>
             {chosen
@@ -156,7 +162,9 @@ function CatalogPicker({
                 ]
                   .filter(Boolean)
                   .join(' · ')
-              : 'Pesquise no seu cadastro'}
+              : items.length === 0 && onEmptyAction
+                ? 'Abra para adicionar ao cadastro'
+                : 'Pesquise no seu cadastro'}
           </small>
         </span>
         <b>{chosen?.sale_price != null ? money(chosen.sale_price) : ''}</b>
@@ -202,6 +210,22 @@ function CatalogPicker({
                   <b>{x.sale_price != null ? money(x.sale_price) : '—'}</b>
                 </button>
               ))
+            ) : items.length === 0 && onEmptyAction ? (
+              <button
+                type="button"
+                className="ca-picker-row w-full text-left"
+                onClick={() => {
+                  setOpen(false);
+                  setQ('');
+                  onEmptyAction();
+                }}
+              >
+                <span>
+                  <strong>Nenhum {kind === 'product' ? 'produto' : 'serviço'} cadastrado</strong>
+                  <small>{emptyActionLabel || 'Adicionar ao cadastro'}</small>
+                </span>
+                <b>Adicionar</b>
+              </button>
             ) : (
               <p className="p-5 text-center text-xs text-slate-500">Nenhum cadastro encontrado.</p>
             )}
@@ -211,71 +235,6 @@ function CatalogPicker({
     </div>
   );
 }
-function RegistryGap({
-  section,
-  label,
-  onOpen,
-}: {
-  section: string;
-  label: string;
-  onOpen: (section: string) => void;
-}) {
-  return (
-    <div className="md:col-span-2 rounded-[6px] border border-[#c8d0da] bg-[#f6f7f9] px-4 py-3 text-[#475467]">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <b className="block text-[12px] font-semibold text-[#344054]">Nenhum {label} cadastrado</b>
-          <span className="mt-0.5 block text-[11px] leading-5">
-            Para reutilizar estes dados nas próximas emissões, cadastre em Cadastros → {section}.
-            Se for apenas esta emissão, preencha manualmente abaixo.
-          </span>
-        </div>
-        <button
-          type="button"
-          className="rounded-[5px] border border-[#aeb8c4] bg-white px-3 py-2 text-[11px] font-semibold text-[#344054] hover:bg-[#eef1f4]"
-          onClick={() => onOpen(section)}
-        >
-          Abrir {section}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function ManualPartyFields({
-  title,
-  prefix,
-  form,
-  onSet,
-}: {
-  title: string;
-  prefix: 'manualRem' | 'manualDest';
-  form: any;
-  onSet: (key: string, value: any) => void;
-}) {
-  const key = (suffix: string) => `${prefix}${suffix}`;
-  return (
-    <div className="md:col-span-2 rounded-[6px] border border-[#c8d0da] bg-[#f7f8fa] p-4">
-      <div className="mb-3">
-        <b className="text-[12px] font-semibold text-[#344054]">{title} manual</b>
-        <p className="mt-1 text-[11px] text-[#667085]">Estes dados valem somente para esta emissão e não criam um cadastro.</p>
-      </div>
-      <div className="ca-form-grid">
-        <Field label="Razão social" value={form[key('Name')]} onChange={v => onSet(key('Name'), v)} required />
-        <Field label="CNPJ" value={form[key('TaxId')]} onChange={v => onSet(key('TaxId'), v)} required />
-        <Field label="Inscrição estadual" value={form[key('Ie')]} onChange={v => onSet(key('Ie'), v)} />
-        <Field label="CEP" value={form[key('Cep')]} onChange={v => onSet(key('Cep'), v)} required />
-        <Field label="Logradouro" value={form[key('Street')]} onChange={v => onSet(key('Street'), v)} required />
-        <Field label="Número" value={form[key('Number')]} onChange={v => onSet(key('Number'), v)} required />
-        <Field label="Bairro" value={form[key('District')]} onChange={v => onSet(key('District'), v)} required />
-        <Field label="Município (IBGE)" value={form[key('CityIbge')]} onChange={v => onSet(key('CityIbge'), v)} required />
-        <Field label="Município" value={form[key('City')]} onChange={v => onSet(key('City'), v)} required />
-        <Field label="UF" value={form[key('Uf')]} onChange={v => onSet(key('Uf'), v)} required />
-      </div>
-    </div>
-  );
-}
-
 function Section({
   title,
   subtitle,
@@ -346,7 +305,7 @@ export default function SaasEmission({
   emissions = [],
   reusableEmission,
   onReuseConsumed,
-  onOpenRegistry,
+  onOpenCadastro,
 }: {
   organizationId: string | null;
   documentType: string | null;
@@ -354,7 +313,7 @@ export default function SaasEmission({
   emissions?: any[];
   reusableEmission?: any | null;
   onReuseConsumed?: () => void;
-  onOpenRegistry?: (section: string) => void;
+  onOpenCadastro?: (section: 'Clientes' | 'Produtos' | 'Serviços' | 'Transportadoras') => void;
 }) {
   const [profile, setProfile] = useState<any>(null),
     [customers, setCustomers] = useState<any[]>([]),
@@ -397,21 +356,7 @@ export default function SaasEmission({
   }, [deferredReuseSearch, documentType, emissions]);
   const [form, setForm] = useState<any>({
     customerId: '',
-    manualCustomerName: '',
-    manualCustomerTaxId: '',
-    manualCustomerIe: '',
-    manualCustomerStreet: '',
-    manualCustomerNumber: '',
-    manualCustomerDistrict: '',
-    manualCustomerCityIbge: '',
-    manualCustomerCity: '',
-    manualCustomerUf: 'AL',
-    manualCustomerCep: '',
     productId: '',
-    manualProductName: '',
-    manualProductCode: '1',
-    manualProductNcm: '',
-    manualProductUnit: 'UN',
     serviceId: '',
     quantity: '1',
     unitPrice: '',
@@ -425,26 +370,6 @@ export default function SaasEmission({
     municipioPrestacao: '',
     remetenteId: '',
     destinatarioId: '',
-    manualRemName: '',
-    manualRemTaxId: '',
-    manualRemIe: '',
-    manualRemStreet: '',
-    manualRemNumber: '',
-    manualRemDistrict: '',
-    manualRemCityIbge: '',
-    manualRemCity: '',
-    manualRemUf: 'AL',
-    manualRemCep: '',
-    manualDestName: '',
-    manualDestTaxId: '',
-    manualDestIe: '',
-    manualDestStreet: '',
-    manualDestNumber: '',
-    manualDestDistrict: '',
-    manualDestCityIbge: '',
-    manualDestCity: '',
-    manualDestUf: 'AL',
-    manualDestCep: '',
     carrierId: '',
     rntrc: '',
     chNFe: '',
@@ -477,19 +402,9 @@ export default function SaasEmission({
       munIniCodigo: 7,
       munFimCodigo: 7,
       unloadCode: 7,
-      manualCustomerTaxId: 14,
-      manualCustomerCityIbge: 7,
-      manualCustomerCep: 8,
-      manualProductNcm: 8,
-      manualRemTaxId: 14,
-      manualRemCityIbge: 7,
-      manualRemCep: 8,
-      manualDestTaxId: 14,
-      manualDestCityIbge: 7,
-      manualDestCep: 8,
     };
     if (digitLimits[k]) v = digits(v).slice(0, digitLimits[k]);
-    if (['ufIni', 'ufFim', 'manualCustomerUf', 'manualRemUf', 'manualDestUf'].includes(k))
+    if (['ufIni', 'ufFim'].includes(k))
       v = String(v)
         .toUpperCase()
         .replace(/[^A-Z]/g, '')
@@ -611,58 +526,17 @@ export default function SaasEmission({
     rem = customers.find(x => x.id === form.remetenteId),
     dest = customers.find(x => x.id === form.destinatarioId),
     carrier = carriers.find(x => x.id === form.carrierId);
-  const openRegistry = (section: string) => {
-    if (onOpenRegistry) {
-      onOpenRegistry(section);
+  const chooseOrCreate = (
+    key: string,
+    value: string,
+    section: 'Clientes' | 'Produtos' | 'Serviços' | 'Transportadoras'
+  ) => {
+    if (value === '__new__') {
+      onOpenCadastro?.(section);
       return;
     }
-    setMsg(`Abra Cadastros → ${section} pelo menu lateral.`);
+    set(key, value);
   };
-  const manualCustomer = String(form.manualCustomerName || form.manualCustomerTaxId).trim()
-    ? {
-        legal_name: String(form.manualCustomerName || '').trim(),
-        tax_id: digits(form.manualCustomerTaxId),
-        state_registration: digits(form.manualCustomerIe),
-        street: String(form.manualCustomerStreet || '').trim(),
-        street_number: String(form.manualCustomerNumber || '').trim(),
-        district: String(form.manualCustomerDistrict || '').trim(),
-        city_ibge_code: digits(form.manualCustomerCityIbge),
-        city: String(form.manualCustomerCity || '').trim(),
-        state: String(form.manualCustomerUf || 'AL').toUpperCase(),
-        postal_code: digits(form.manualCustomerCep),
-      }
-    : null;
-  const effectiveCustomer = customer || manualCustomer;
-  const manualProduct = String(form.manualProductName || '').trim()
-    ? {
-        name: String(form.manualProductName || '').trim(),
-        code: String(form.manualProductCode || '1').trim() || '1',
-        ncm: digits(form.manualProductNcm),
-        unit: String(form.manualProductUnit || 'UN').trim().toUpperCase() || 'UN',
-        product_origin: '0',
-        csosn: '400',
-        icms_cst: '00',
-      }
-    : null;
-  const effectiveProduct = product || manualProduct;
-  const manualParty = (prefix: 'manualRem' | 'manualDest') => {
-    const get = (suffix: string) => form[`${prefix}${suffix}`];
-    if (!String(get('Name') || get('TaxId') || '').trim()) return null;
-    return {
-      legal_name: String(get('Name') || '').trim(),
-      tax_id: digits(get('TaxId')),
-      state_registration: digits(get('Ie')),
-      street: String(get('Street') || '').trim(),
-      street_number: String(get('Number') || '').trim(),
-      district: String(get('District') || '').trim(),
-      city_ibge_code: digits(get('CityIbge')),
-      city: String(get('City') || '').trim(),
-      state: String(get('Uf') || 'AL').toUpperCase(),
-      postal_code: digits(get('Cep')),
-    };
-  };
-  const effectiveRem = rem || manualParty('manualRem');
-  const effectiveDest = dest || manualParty('manualDest');
   useEffect(() => {
     if (product)
       setForm((f: any) => ({
@@ -876,25 +750,25 @@ export default function SaasEmission({
     telefone: profile?.phone,
     serie: form.series,
     numeroNota: form.number,
-    destDocumento: effectiveCustomer?.tax_id || '',
-    destNome: effectiveCustomer?.legal_name || 'CONSUMIDOR',
-    destLogradouro: effectiveCustomer?.street,
-    destNumero: effectiveCustomer?.street_number,
-    destBairro: effectiveCustomer?.district,
-    destCodigoMunicipio: effectiveCustomer?.city_ibge_code,
-    destMunicipio: effectiveCustomer?.city,
-    destUF: effectiveCustomer?.state,
-    destCep: effectiveCustomer?.postal_code,
-    codigoProduto: effectiveProduct?.code || '1',
-    produto: effectiveProduct?.name || 'PRODUTO',
-    ncm: effectiveProduct?.ncm,
-    cfop: form.cfop || effectiveProduct?.cfop_in_state,
-    unidade: effectiveProduct?.unit || 'UN',
+    destDocumento: customer?.tax_id || '',
+    destNome: customer?.legal_name || 'CONSUMIDOR',
+    destLogradouro: customer?.street,
+    destNumero: customer?.street_number,
+    destBairro: customer?.district,
+    destCodigoMunicipio: customer?.city_ibge_code,
+    destMunicipio: customer?.city,
+    destUF: customer?.state,
+    destCep: customer?.postal_code,
+    codigoProduto: product?.code || '1',
+    produto: product?.name || 'PRODUTO',
+    ncm: product?.ncm,
+    cfop: form.cfop || product?.cfop_in_state,
+    unidade: product?.unit || 'UN',
     quantidade: Number(form.quantity),
     valorUnitario: Number(form.unitPrice),
-    origem: effectiveProduct?.product_origin || '0',
-    csosn: effectiveProduct?.csosn || '400',
-    cst: effectiveProduct?.icms_cst || '00',
+    origem: product?.product_origin || '0',
+    csosn: product?.csosn || '400',
+    cst: product?.icms_cst || '00',
     formaPagamento: form.payment,
   });
   const nfsePayload = () => ({
@@ -906,8 +780,8 @@ export default function SaasEmission({
     codigoTributacao: form.serviceCode,
     descricao: form.description,
     valor: Number(form.value),
-    tomadorDocumento: effectiveCustomer?.tax_id,
-    tomadorNome: effectiveCustomer?.legal_name,
+    tomadorDocumento: customer?.tax_id,
+    tomadorNome: customer?.legal_name,
     simples: profile?.tax_regime === 'simples' ? '1' : '2',
     issRetido: Boolean(service?.iss_withheld),
   });
@@ -950,8 +824,8 @@ export default function SaasEmission({
       UF: profile?.state || 'AL',
       CRT: profile?.crt || '1',
     },
-    rem: partyCte(effectiveRem),
-    dest: partyCte(effectiveDest),
+    rem: partyCte(rem),
+    dest: partyCte(dest),
     carga: { vCarga: Number(form.vCarga), proPred: 'CARGA GERAL', qCarga: Number(form.qCarga) },
     chNFe: form.chNFe,
     rodo: { RNTRC: form.rntrc || carrier?.rntrc },
@@ -1034,18 +908,12 @@ export default function SaasEmission({
       if (!ok) issues.push(label);
     };
     if (documentType === 'NF-e' || documentType === 'NFC-e') {
-      if (index === 0 && documentType === 'NF-e') {
-        need(effectiveCustomer, 'cliente / destinatário');
-        need([11, 14].includes(digits(effectiveCustomer?.tax_id).length), 'CPF/CNPJ do destinatário');
-        need(digits(effectiveCustomer?.city_ibge_code).length === 7, 'município do destinatário (IBGE)');
-        need(String(effectiveCustomer?.state || '').length === 2, 'UF do destinatário');
-      }
+      if (index === 0 && documentType === 'NF-e') need(customer, 'cliente');
       if (index === 1) {
-        need(effectiveProduct, 'produto / descrição manual');
-        need(String(effectiveProduct?.name || '').trim(), 'descrição do produto');
+        need(product, 'produto');
         need(Number(form.quantity) > 0, 'quantidade');
         need(Number(form.unitPrice) > 0, 'valor unitário');
-        need(digits(effectiveProduct?.ncm).length === 8, 'NCM do produto');
+        need(digits(product?.ncm).length === 8, 'NCM do produto');
       }
       if (index === 2) need(form.payment, 'forma de pagamento');
       if (index === 3) {
@@ -1056,14 +924,11 @@ export default function SaasEmission({
     }
     if (documentType === 'NFS-e') {
       if (index === 0) {
-        need(effectiveCustomer, 'cliente / tomador');
-        need(String(effectiveCustomer?.legal_name || '').trim(), 'nome do tomador');
-        if (digits(effectiveCustomer?.tax_id).length)
-          need([11, 14].includes(digits(effectiveCustomer?.tax_id).length), 'CPF/CNPJ do tomador');
+        need(customer, 'cliente / tomador');
         need(digits(form.municipioPrestacao).length === 7, 'município da prestação (IBGE)');
       }
       if (index === 1) {
-        need(service || String(form.description || '').trim(), 'serviço / descrição manual');
+        need(service, 'serviço');
         need(String(form.serviceCode).trim(), 'código de tributação');
         need(String(form.description).trim(), 'descrição do serviço');
       }
@@ -1075,18 +940,8 @@ export default function SaasEmission({
     }
     if (documentType === 'CT-e') {
       if (index === 0) {
-        need(effectiveRem, 'remetente');
-        need(effectiveDest, 'destinatário');
-        for (const [party, label] of [[effectiveRem, 'remetente'], [effectiveDest, 'destinatário']] as const) {
-          need(digits(party?.tax_id).length === 14, `CNPJ do ${label}`);
-          need(String(party?.legal_name || '').trim(), `razão social do ${label}`);
-          need(digits(party?.city_ibge_code).length === 7, `município do ${label} (IBGE)`);
-          need(String(party?.state || '').length === 2, `UF do ${label}`);
-          need(String(party?.street || '').trim(), `logradouro do ${label}`);
-          need(String(party?.street_number || '').trim(), `número do endereço do ${label}`);
-          need(String(party?.district || '').trim(), `bairro do ${label}`);
-          need(digits(party?.postal_code).length === 8, `CEP do ${label}`);
-        }
+        need(rem, 'remetente');
+        need(dest, 'destinatário');
         need(String(form.rntrc || carrier?.rntrc).trim(), 'RNTRC');
       }
       if (index === 1) {
@@ -1190,7 +1045,7 @@ export default function SaasEmission({
             <Select
               label="Cliente"
               value={form.customerId}
-              onChange={v => set('customerId', v)}
+              onChange={v => chooseOrCreate('customerId', v, 'Clientes')}
               required={documentType === 'NF-e'}
               hint={
                 documentType === 'NFC-e'
@@ -1201,6 +1056,12 @@ export default function SaasEmission({
               <option value="">
                 {documentType === 'NFC-e' ? 'Consumidor não identificado' : 'Selecione um cliente'}
               </option>
+              {customers.length === 0 && documentType === 'NF-e' && (
+                <option value="__new__">Adicionar cliente</option>
+              )}
+              {customers.length === 0 && documentType === 'NFC-e' && (
+                <option value="__new__">Adicionar cliente identificado</option>
+              )}
               {customers.map(x => (
                 <option key={x.id} value={x.id}>
                   {x.legal_name}
@@ -1214,23 +1075,6 @@ export default function SaasEmission({
                 <small>{customer?.tax_id || 'CPF/CNPJ será preenchido pelo cadastro'}</small>
               </span>
             </div>
-            {customers.length === 0 && (
-              <RegistryGap section="Clientes" label="cliente" onOpen={openRegistry} />
-            )}
-            {!customer && documentType === 'NF-e' && (
-              <>
-                <Field label="Nome / razão social" value={form.manualCustomerName} onChange={v => set('manualCustomerName', v)} required />
-                <Field label="CPF/CNPJ" value={form.manualCustomerTaxId} onChange={v => set('manualCustomerTaxId', v)} required />
-                <Field label="Inscrição estadual" value={form.manualCustomerIe} onChange={v => set('manualCustomerIe', v)} />
-                <Field label="CEP" value={form.manualCustomerCep} onChange={v => set('manualCustomerCep', v)} />
-                <Field label="Logradouro" value={form.manualCustomerStreet} onChange={v => set('manualCustomerStreet', v)} />
-                <Field label="Número" value={form.manualCustomerNumber} onChange={v => set('manualCustomerNumber', v)} />
-                <Field label="Bairro" value={form.manualCustomerDistrict} onChange={v => set('manualCustomerDistrict', v)} />
-                <Field label="Município (IBGE)" value={form.manualCustomerCityIbge} onChange={v => set('manualCustomerCityIbge', v)} required />
-                <Field label="Município" value={form.manualCustomerCity} onChange={v => set('manualCustomerCity', v)} />
-                <Field label="UF" value={form.manualCustomerUf} onChange={v => set('manualCustomerUf', v)} required />
-              </>
-            )}
           </div>
         </Section>
       ) : step === 1 ? (
@@ -1242,18 +1086,10 @@ export default function SaasEmission({
               onChange={v => set('productId', v)}
               items={products}
               kind="product"
+              required
+              emptyActionLabel="Adicionar produto"
+              onEmptyAction={() => onOpenCadastro?.('Produtos')}
             />
-            {products.length === 0 && (
-              <RegistryGap section="Produtos" label="produto" onOpen={openRegistry} />
-            )}
-            {!product && (
-              <>
-                <Field label="Descrição do produto" value={form.manualProductName} onChange={v => set('manualProductName', v)} required />
-                <Field label="Código interno" value={form.manualProductCode} onChange={v => set('manualProductCode', v)} />
-                <Field label="NCM" value={form.manualProductNcm} onChange={v => set('manualProductNcm', v)} required hint="Informe os 8 dígitos do NCM." />
-                <Field label="Unidade" value={form.manualProductUnit} onChange={v => set('manualProductUnit', v)} required />
-              </>
-            )}
             <div className="ca-item-row">
               <Field
                 label="Quantidade"
@@ -1332,10 +1168,11 @@ export default function SaasEmission({
             <Select
               label="Cliente / tomador"
               value={form.customerId}
-              onChange={v => set('customerId', v)}
+              onChange={v => chooseOrCreate('customerId', v, 'Clientes')}
               required
             >
-              <option value="">Selecione um cliente</option>
+              <option value="">{customers.length ? 'Selecione um cliente' : 'Nenhum cliente cadastrado'}</option>
+              {customers.length === 0 && <option value="__new__">Adicionar cliente</option>}
               {customers.map(x => (
                 <option key={x.id} value={x.id}>
                   {x.legal_name}
@@ -1345,19 +1182,10 @@ export default function SaasEmission({
             <div className="ca-info-box">
               <UsersRound />
               <span>
-                <b>{effectiveCustomer?.legal_name || 'Tomador não selecionado'}</b>
-                <small>{effectiveCustomer?.tax_id || 'Selecione um cadastro ou informe manualmente'}</small>
+                <b>{customer?.legal_name || 'Tomador não selecionado'}</b>
+                <small>{customer?.tax_id || 'Os dados virão do cadastro'}</small>
               </span>
             </div>
-            {customers.length === 0 && (
-              <RegistryGap section="Clientes" label="cliente / tomador" onOpen={openRegistry} />
-            )}
-            {!customer && (
-              <>
-                <Field label="Nome / razão social do tomador" value={form.manualCustomerName} onChange={v => set('manualCustomerName', v)} required />
-                <Field label="CPF/CNPJ do tomador" value={form.manualCustomerTaxId} onChange={v => set('manualCustomerTaxId', v)} hint="Opcional quando a operação permitir tomador sem documento." />
-              </>
-            )}
             <Field
               label="Município da prestação (IBGE)"
               value={form.municipioPrestacao}
@@ -1376,10 +1204,10 @@ export default function SaasEmission({
               onChange={v => set('serviceId', v)}
               items={services}
               kind="service"
+              required
+              emptyActionLabel="Adicionar serviço"
+              onEmptyAction={() => onOpenCadastro?.('Serviços')}
             />
-            {services.length === 0 && (
-              <RegistryGap section="Serviços" label="serviço" onOpen={openRegistry} />
-            )}
             <Field
               label="Código de Tributação Nacional"
               value={form.serviceCode}
@@ -1448,10 +1276,11 @@ export default function SaasEmission({
             <Select
               label="Remetente"
               value={form.remetenteId}
-              onChange={v => set('remetenteId', v)}
+              onChange={v => chooseOrCreate('remetenteId', v, 'Clientes')}
               required
             >
-              <option value="">Selecione</option>
+              <option value="">{customers.length ? 'Selecione' : 'Nenhum cliente cadastrado'}</option>
+              {customers.length === 0 && <option value="__new__">Adicionar cliente</option>}
               {customers.map(x => (
                 <option key={x.id} value={x.id}>
                   {x.legal_name}
@@ -1461,10 +1290,11 @@ export default function SaasEmission({
             <Select
               label="Destinatário"
               value={form.destinatarioId}
-              onChange={v => set('destinatarioId', v)}
+              onChange={v => chooseOrCreate('destinatarioId', v, 'Clientes')}
               required
             >
-              <option value="">Selecione</option>
+              <option value="">{customers.length ? 'Selecione' : 'Nenhum cliente cadastrado'}</option>
+              {customers.length === 0 && <option value="__new__">Adicionar cliente</option>}
               {customers.map(x => (
                 <option key={x.id} value={x.id}>
                   {x.legal_name}
@@ -1474,9 +1304,10 @@ export default function SaasEmission({
             <Select
               label="Transportadora"
               value={form.carrierId}
-              onChange={v => set('carrierId', v)}
+              onChange={v => chooseOrCreate('carrierId', v, 'Transportadoras')}
             >
-              <option value="">Própria / manual</option>
+              <option value="">Própria</option>
+              {carriers.length === 0 && <option value="__new__">Adicionar transportadora</option>}
               {carriers.map(x => (
                 <option key={x.id} value={x.id}>
                   {x.legal_name}
@@ -1490,14 +1321,6 @@ export default function SaasEmission({
               required
               hint="Preenchido automaticamente ao selecionar uma transportadora cadastrada."
             />
-            {customers.length === 0 && (
-              <RegistryGap section="Clientes" label="cliente para remetente/destinatário" onOpen={openRegistry} />
-            )}
-            {!rem && <ManualPartyFields title="Remetente" prefix="manualRem" form={form} onSet={set} />}
-            {!dest && <ManualPartyFields title="Destinatário" prefix="manualDest" form={form} onSet={set} />}
-            {carriers.length === 0 && (
-              <RegistryGap section="Transportadoras" label="transportadora" onOpen={openRegistry} />
-            )}
           </div>
         </Section>
       ) : step === 1 ? (
@@ -1600,18 +1423,16 @@ export default function SaasEmission({
             <Select
               label="Transportadora"
               value={form.carrierId}
-              onChange={v => set('carrierId', v)}
+              onChange={v => chooseOrCreate('carrierId', v, 'Transportadoras')}
             >
-              <option value="">Própria / manual</option>
+              <option value="">Própria</option>
+              {carriers.length === 0 && <option value="__new__">Adicionar transportadora</option>}
               {carriers.map(x => (
                 <option key={x.id} value={x.id}>
                   {x.legal_name}
                 </option>
               ))}
             </Select>
-            {carriers.length === 0 && (
-              <RegistryGap section="Transportadoras" label="transportadora" onOpen={openRegistry} />
-            )}
             <Field label="RNTRC" value={form.rntrc} onChange={v => set('rntrc', v)} required />
             <Field
               label="Placa"
@@ -1737,11 +1558,11 @@ export default function SaasEmission({
       ? [
           [
             'Destinatário',
-            effectiveCustomer?.legal_name ||
+            customer?.legal_name ||
               (documentType === 'NFC-e' ? 'Consumidor não identificado' : '—'),
           ],
-          ['Produto', effectiveProduct?.name || '—'],
-          ['Quantidade', `${form.quantity || 0} ${effectiveProduct?.unit || 'UN'}`],
+          ['Produto', product?.name || '—'],
+          ['Quantidade', `${form.quantity || 0} ${product?.unit || 'UN'}`],
           ['Total', money(productTotal)],
           [
             'Pagamento',
@@ -1757,8 +1578,8 @@ export default function SaasEmission({
         ]
       : documentType === 'NFS-e'
       ? [
-          ['Tomador', effectiveCustomer?.legal_name || '—'],
-          ['Serviço', service?.name || form.description || '—'],
+          ['Tomador', customer?.legal_name || '—'],
+          ['Serviço', service?.name || '—'],
           ['Valor', money(form.value)],
           ['ISSQN', service?.iss_withheld ? 'Retido pelo tomador' : 'Não retido'],
           ['Município', form.municipioPrestacao || '—'],
@@ -1766,8 +1587,8 @@ export default function SaasEmission({
         ]
       : documentType === 'CT-e'
       ? [
-          ['Remetente', effectiveRem?.legal_name || '—'],
-          ['Destinatário', effectiveDest?.legal_name || '—'],
+          ['Remetente', rem?.legal_name || '—'],
+          ['Destinatário', dest?.legal_name || '—'],
           ['Transportadora', carrier?.legal_name || 'Transporte próprio'],
           ['Prestação', money(form.vTPrest)],
           ['Carga', `${money(form.vCarga)} · ${form.qCarga || 0} kg`],
@@ -1865,10 +1686,10 @@ export default function SaasEmission({
               environment={environment}
               profile={profile}
               form={form}
-              customer={effectiveCustomer}
-              product={effectiveProduct}
+              customer={customer}
+              product={product}
               service={service}
-              dest={effectiveDest}
+              dest={dest}
               result={result}
             />
           </div>

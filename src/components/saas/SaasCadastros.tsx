@@ -25,7 +25,12 @@ export type CadastroSection =
   | 'Serviços'
   | 'Transportadoras';
 
-type Props = { organizationId: string | null; section: CadastroSection };
+type Props = {
+  organizationId: string | null;
+  section: CadastroSection;
+  autoCreate?: boolean;
+  onAutoCreateConsumed?: () => void;
+};
 
 const partyTypeBySection: Record<string, string> = {
   Clientes: 'customer',
@@ -249,7 +254,12 @@ function Section({ title, children, description }: { title: string; children: an
   );
 }
 
-export default function SaasCadastros({ organizationId, section }: Props) {
+export default function SaasCadastros({
+  organizationId,
+  section,
+  autoCreate = false,
+  onAutoCreateConsumed,
+}: Props) {
   const isCatalog = section === 'Produtos' || section === 'Serviços';
   const [rows, setRows] = useState<any[]>([]);
   const [form, setForm] = useState<any>(null);
@@ -428,6 +438,12 @@ export default function SaasCadastros({ organizationId, section }: Props) {
     setForm(isCatalog ? blankCatalog(section) : blankParty(section));
     setMessage('');
   };
+
+  useEffect(() => {
+    if (!autoCreate || !organizationId) return;
+    create();
+    onAutoCreateConsumed?.();
+  }, [autoCreate, organizationId, section]);
 
   const close = () => {
     resetImageState();
