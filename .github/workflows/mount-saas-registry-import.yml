@@ -1,8 +1,59 @@
 name: Mount registry importer
 on: push
+permissions:
+  contents: write
 jobs:
   patch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: echo registry-import-workflow-ok
+        with:
+          ref: feat/saas-registry-import
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Wire importer
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const path = 'src/components/saas/SaasCadastros.tsx';
+          let text = fs.readFileSync(path, 'utf8');
+          const anchor = "import { supabase } from '@/integrations/supabase/client';\n";
+          const importer = "import SaasRegistryImport from '@/components/saas/SaasRegistryImport';\n";
+          if (!text.includes(importer)) {
+            if (!text.includes(anchor)) throw new Error('import anchor not found');
+            text = text.replace(anchor, anchor + importer);
+          }
+          const oldBlock = `        <Button onClick={create} className="saas-action-primary">
+          <Plus className="mr-2 h-4 w-4" />
+          Novo {singular(section)}
+        </Button>`;
+          const newBlock = `        <div className="flex flex-wrap items-center gap-2">
+          <SaasRegistryImport
+            organizationId={organizationId}
+            defaultDestination={section}
+            onImported={() => void load()}
+          />
+          <Button onClick={create} className="saas-action-primary">
+            <Plus className="mr-2 h-4 w-4" />
+            Novo {singular(section)}
+          </Button>
+        </div>`;
+          if (!text.includes(newBlock)) {
+            if (!text.includes(oldBlock)) throw new Error('header action anchor not found');
+            text = text.replace(oldBlock, newBlock);
+          }
+          fs.writeFileSync(path, text);
+          NODE
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps --no-audit --no-fund
+      - name: Build
+        run: npm run build
+      - name: Commit integration
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/components/saas/SaasCadastros.tsx
+          git diff --cached --quiet || git commit -m "feat(saas): expose destination-aware registry import"
+          git push origin HEAD:feat/saas-registry-import
