@@ -10,52 +10,54 @@ interface PrivateRouteProps {
   requiredRole?: string;
 }
 
+type ProductAccess = { saas: boolean; extractor: boolean };
+
 const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
   const { user, userData, isLoading } = useAuth();
   const location = useLocation();
   const admin = checkIsAdmin(userData, user?.email);
-  const [isSaasMember, setIsSaasMember] = useState<boolean | null>(null);
+  const [access, setAccess] = useState<ProductAccess | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    if (!user) {
-      setIsSaasMember(false);
+    if (!user || admin) {
+      setAccess({ saas: false, extractor: false });
       return () => {
         cancelled = true;
       };
     }
 
-    if (admin) {
-      setIsSaasMember(false);
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    setIsSaasMember(null);
-    (async () => {
-      const { data, error } = await (supabase as any)
+    setAccess(null);
+    Promise.all([
+      (supabase as any)
         .from('organization_members')
         .select('id')
         .eq('user_id', user.id)
         .eq('status', 'active')
-        .limit(1);
-
-      if (!cancelled) {
-        setIsSaasMember(!error && Boolean(data?.length));
-      }
-    })();
+        .limit(1),
+      (supabase as any)
+        .from('extractor_accounts')
+        .select('id')
+        .limit(1),
+    ]).then(([saasResult, extractorResult]) => {
+      if (cancelled) return;
+      setAccess({
+        saas: !saasResult.error && Boolean(saasResult.data?.length),
+        extractor: !extractorResult.error && Boolean(extractorResult.data?.length),
+      });
+    });
 
     return () => {
       cancelled = true;
     };
   }, [user?.id, admin]);
 
-  const loadingMode = location.pathname.startsWith('/app') ? 'light' : 'standard';
+  const pathname = location.pathname;
+  const loadingMode = pathname.startsWith('/app') || pathname.startsWith('/escolher-produto') ? 'light' : 'standard';
 
   if (isLoading) return <AppLoadingScreen mode={loadingMode} />;
-  if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  if (!user) return <Navigate to="/login" replace state={{ from: pathname }} />;
 
   if (requiredRole === 'admin') {
     if (!admin) return <Navigate to="/dashboard" replace />;
@@ -63,14 +65,22 @@ const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
   }
 
   if (admin) return <Navigate to="/admin" replace />;
-  if (isSaasMember === null) return <AppLoadingScreen mode={loadingMode} />;
+  if (access === null) return <AppLoadingScreen mode={loadingMode} />;
 
-  if (location.pathname.startsWith('/client') && isSaasMember) {
-    return <Navigate to="/app" replace />;
+  if (pathname.startsWith('/escolher-produto') && user.email?.trim().toLowerCase() !== 'wsteste@gmail.com') {
+    return <Navigate to="/dashboard" replace />;
   }
 
-  if (location.pathname.startsWith('/app') && !isSaasMember) {
-    return <Navigate to="/client" replace />;
+  if (pathname.startsWith('/extrator') && !access.extractor) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (pathname.startsWith('/app') && !access.saas) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (pathname.startsWith('/client') && (access.saas || access.extractor)) {
+    return <Navigate to={access.saas ? '/app' : '/extrator'} replace />;
   }
 
   return children;

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
 export type PreviewDocument = {
-  nsu?: string; schema?: string; documentKind?: "nfe"|"nfse"|"resumo"|"evento"|"documento"; fullXml?: boolean;
+  companyId?: string; nsu?: string; schema?: string; documentKind?: "nfe"|"nfse"|"resumo"|"evento"|"documento"; fullXml?: boolean;
   direction?: "entrada"|"saida"|"relacionada"; accessKey?: string; issueDate?: string; value?: number;
   issuerCnpj?: string; issuerName?: string; recipientCnpj?: string; number?: string; series?: string;
   statusCode?: string; statusText?: string; model?: string; xml?: string; parseError?: string;
@@ -17,7 +17,7 @@ function downloadXml(doc:PreviewDocument){
   a.href=url;a.download=`${doc.accessKey||doc.nsu||"documento-fiscal"}.xml`;a.click();URL.revokeObjectURL(url);
 }
 async function renderPdf(doc:PreviewDocument){
-  const{data,error}=await supabase.functions.invoke("dfe-danfe-pdf",{body:{document:doc}});
+  const{data,error}=await supabase.functions.invoke("dfe-danfe-pdf",{body:{company_id:doc.companyId,document:doc}});
   if(error)throw error;
   const base64=String(data?.pdf_base64||"");
   if(!base64)throw new Error("PDF não foi gerado.");

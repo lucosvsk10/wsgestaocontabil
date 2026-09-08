@@ -292,7 +292,7 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
     </main>
 
     {modal === 'company' && <AddCompanyModal preview={preview} onClose={() => setModal(null)} onLinked={async message => { setModal(null); setNotice({ tone: 'success', text: message }); await loadSnapshot(true); }} />}
-    {modal === 'history' && <HistoryModal preview={preview} companies={companies} onClose={() => setModal(null)} onSaved={message => { setModal(null); setNotice({ tone: 'success', text: message }); }} />}
+    {modal === 'history' && <HistoryModal preview={preview} companies={companies} accountId={snapshot?.account?.id} userId={user?.id} onClose={() => setModal(null)} onSaved={message => { setModal(null); setNotice({ tone: 'success', text: message }); }} />}
     {selectedPreview && <FiscalDocumentPreview doc={selectedPreview} onClose={() => setSelectedPreview(null)} />}
   </div>;
 }
@@ -379,7 +379,7 @@ function Documents({ documents, companies, preview, setBusy, busy, setNotice, on
     else if (!data?.ready || !data?.document) setNotice({ tone: 'warning', text: data?.reason || 'O XML integral deste documento ainda não está disponível.' });
     else {
       const row = data.document;
-      onPreview({ nsu: row.nsu, schema: row.schema_name, documentKind: row.document_kind, fullXml: row.full_xml, direction: row.direction, accessKey: row.access_key, issueDate: row.issue_date, value: Number(row.value || 0), issuerCnpj: row.issuer_cnpj, issuerName: row.issuer_name, recipientCnpj: row.recipient_cnpj, number: row.note_number, series: row.series, statusCode: row.status_code, statusText: row.status_text, model: row.model, xml: row.xml, parseError: row.parse_error });
+      onPreview({ companyId: row.company_id || doc.companyId, nsu: row.nsu, schema: row.schema_name, documentKind: row.document_kind, fullXml: row.full_xml, direction: row.direction, accessKey: row.access_key, issueDate: row.issue_date, value: Number(row.value || 0), issuerCnpj: row.issuer_cnpj, issuerName: row.issuer_name, recipientCnpj: row.recipient_cnpj, number: row.note_number, series: row.series, statusCode: row.status_code, statusText: row.status_text, model: row.model, xml: row.xml, parseError: row.parse_error });
     }
     setBusy('');
   };
@@ -466,15 +466,16 @@ function AddCompanyModal({ preview, onClose, onLinked }: { preview: boolean; onC
   return <Modal title="Adicionar empresa" description="Vincule um CNPJ que já possua configuração fiscal válida na WS." onClose={onClose}><div className="extractor-modal-body"><label>CNPJ<input value={cnpj} onChange={e => setCnpj(e.target.value)} placeholder="00.000.000/0000-00" autoFocus /></label><p className="extractor-helper">O Extrato não cria configuração fiscal fictícia. Se o CNPJ ainda não estiver preparado, o sistema informa isso antes de qualquer vínculo.</p>{error && <p className="extractor-form-error">{error}</p>}</div><footer><button className="extractor-secondary" onClick={onClose}>Cancelar</button><button className="extractor-primary" disabled={busy} onClick={() => void submit()}>{busy ? 'Vinculando' : 'Vincular empresa'}</button></footer></Modal>;
 }
 
-function HistoryModal({ preview, companies, onClose, onSaved }: { preview: boolean; companies: Company[]; onClose: () => void; onSaved: (message: string) => void }) {
+function HistoryModal({ preview, companies, accountId, userId, onClose, onSaved }: { preview: boolean; companies: Company[]; accountId?: string; userId?: string; onClose: () => void; onSaved: (message: string) => void }) {
   const now = new Date(); const defaultEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`; const six = new Date(now.getFullYear(), now.getMonth() - 6, 1); const defaultStart = `${six.getFullYear()}-${String(six.getMonth() + 1).padStart(2, '0')}`;
   const [from, setFrom] = useState(defaultStart); const [to, setTo] = useState(defaultEnd); const [busy, setBusy] = useState(false); const [error, setError] = useState('');
   const submit = async () => {
     if (preview) return setError('A solicitação fica disponível no ambiente autenticado.');
     if (!from || !to || from > to) return setError('Informe um período válido.');
+    if (!accountId || !userId) return setError('Não foi possível identificar a sua carteira fiscal.');
     setBusy(true); setError('');
     const start = `${from}-01`; const endDate = new Date(Number(to.slice(0, 4)), Number(to.slice(5, 7)), 0); const end = `${to}-${String(endDate.getDate()).padStart(2, '0')}`;
-    const { error: insertError } = await (supabase as any).from('extractor_history_requests').insert({ requested_from: start, requested_to: end, metadata: { companies: companies.map(c => c.id), source: 'extractor_ui' } });
+    const { error: insertError } = await (supabase as any).from('extractor_history_requests').insert({ account_id: accountId, requested_by: userId, requested_from: start, requested_to: end, metadata: { companies: companies.map(c => c.id), source: 'extractor_ui' } });
     if (insertError) setError(insertError.message); else onSaved('Solicitação de histórico registrada para análise.');
     setBusy(false);
   };

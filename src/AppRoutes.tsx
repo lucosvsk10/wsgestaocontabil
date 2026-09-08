@@ -41,29 +41,39 @@ import BusinessGuidePage from './pages/BusinessGuidePage';
 import BusinessGuidesIndexPage from './pages/BusinessGuidesIndexPage';
 import FiscalIssuerLandingPage from './pages/FiscalIssuerLandingPage';
 import FiscalExtractorApp from './pages/FiscalExtractorApp';
+import ProductChooser from './pages/ProductChooser';
 
 const DashboardRouter = () => {
   const { userData, user } = useAuth();
-  const [isSaasMember, setIsSaasMember] = useState<boolean | null>(null);
+  const [access, setAccess] = useState<{ saas: boolean; extractor: boolean } | null>(null);
   const admin = checkIsAdmin(userData, user?.email);
 
   useEffect(() => {
     if (!user || admin) {
-      setIsSaasMember(false);
+      setAccess({ saas: false, extractor: false });
       return;
     }
 
     let active = true;
-    (supabase as any)
-      .from('organization_members')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('status', 'active')
-      .limit(1)
-      .then(({ data, error }: { data: Array<{ id: string }> | null; error: any }) => {
-        if (!active) return;
-        setIsSaasMember(!error && Boolean(data?.length));
+    setAccess(null);
+    Promise.all([
+      (supabase as any)
+        .from('organization_members')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .limit(1),
+      (supabase as any)
+        .from('extractor_accounts')
+        .select('id')
+        .limit(1),
+    ]).then(([saasResult, extractorResult]) => {
+      if (!active) return;
+      setAccess({
+        saas: !saasResult.error && Boolean(saasResult.data?.length),
+        extractor: !extractorResult.error && Boolean(extractorResult.data?.length),
       });
+    });
 
     return () => {
       active = false;
@@ -71,8 +81,12 @@ const DashboardRouter = () => {
   }, [user?.id, admin]);
 
   if (admin) return <Navigate to="/admin" replace />;
-  if (isSaasMember === null) return <AppLoadingScreen mode="light" />;
-  return <Navigate to={isSaasMember ? '/app' : '/client'} replace />;
+  if (access === null) return <AppLoadingScreen mode="light" />;
+  if (user?.email?.trim().toLowerCase() === 'wsteste@gmail.com') {
+    return <Navigate to="/escolher-produto" replace />;
+  }
+  if (access.extractor && !access.saas) return <Navigate to="/extrator" replace />;
+  return <Navigate to={access.saas ? '/app' : '/client'} replace />;
 };
 
 const AppRoutes = () => {
@@ -87,6 +101,7 @@ const AppRoutes = () => {
       <Route path="/extrator-preview" element={<FiscalExtractorApp preview />} />
       <Route path="/" element={<Index />} />
       <Route path="/login" element={<ClientLogin />} />
+      <Route path="/escolher-produto" element={<PrivateRoute><ProductChooser /></PrivateRoute>} />
       <Route path="/enquete/:id" element={<PollPage />} />
       <Route path="/enquete-numerica/:id" element={<NumericalPollPage />} />
       <Route path="/formulario/:id" element={<FormPollPage />} />
