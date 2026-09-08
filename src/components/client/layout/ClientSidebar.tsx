@@ -23,21 +23,18 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
 }) => {
   return (
     <button 
-      className={`flex items-center space-x-4 px-6 py-4 rounded-lg transition-all duration-300 ease-in-out group w-full ${
+      className={`client-portal-nav-item group ${
         active 
-          ? "bg-[#efc349]/10 text-[#efc349] border-l-4 border-[#efc349]" 
-          : "text-gray-700 dark:text-white/80 hover:bg-gray-100 dark:hover:bg-[#efc349]/5 hover:text-[#020817] dark:hover:text-[#efc349]"
+          ? "is-active"
+          : ""
       }`} 
       onClick={onClick}
+      aria-current={active ? "page" : undefined}
     >
-      <div className={`transition-all duration-300 ${
-        active 
-          ? "text-[#efc349] scale-110" 
-          : "text-gray-500 dark:text-white/70 group-hover:text-[#efc349] group-hover:scale-105"
-      }`}>
+      <div className="client-portal-nav-icon">
         <Icon size={20} />
       </div>
-      <span className="tracking-wide text-sm font-extralight">{label}</span>
+      <span>{label}</span>
     </button>
   );
 };
@@ -83,7 +80,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({ activeTab, setActiveTab, 
           inset-y-0 left-0 z-50 
           w-72 flex flex-col 
           transition-transform duration-300 ease-in-out 
-          bg-white dark:bg-[#020817] 
+          client-portal-sidebar ${!open && !isMobile ? 'is-collapsed' : ''}
           ${isMobile 
             ? open 
               ? 'translate-x-0 shadow-2xl' 
@@ -96,18 +93,18 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({ activeTab, setActiveTab, 
       >
         {/* Mobile close button */}
         {isMobile && open && (
-          <Button
+            <Button
             variant="ghost"
             size="icon"
             onClick={() => onOpenChange(false)}
-            className="absolute top-4 right-4 z-10 text-gray-500 dark:text-white/70 hover:text-[#efc349]"
+            className="client-portal-sidebar-close"
           >
             <X size={20} />
           </Button>
         )}
 
         {/* Logo area */}
-        <div className="h-20 flex items-center justify-center px-6 border-b border-gray-100 dark:border-[#020817]">
+        <div className="client-portal-brand">
           <Link to="/" className="flex items-center justify-center transition-all duration-300 hover:scale-105">
             {(open || isMobile) ? (
               <img 
@@ -132,7 +129,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({ activeTab, setActiveTab, 
         </div>
         
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-8 px-3 space-y-2">
+        <nav className="client-portal-nav" aria-label="Navegação do portal">
           {sidebarItems.map(item => (
             <div key={item.label}>
               {(open || isMobile) ? (
@@ -144,19 +141,19 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({ activeTab, setActiveTab, 
                 />
               ) : (
                 <div 
-                  className={`flex justify-center p-4 rounded-lg transition-all duration-300 hover:scale-110 ${
+                  className={`client-portal-nav-collapsed ${
                     item.active 
-                      ? "bg-[#efc349]/10 border-l-4 border-[#efc349]" 
-                      : "hover:bg-gray-100 dark:hover:bg-[#efc349]/10"
+                      ? "is-active"
+                      : ""
                   }`} 
                   title={item.label}
                 >
                   <button 
                     onClick={() => setActiveTab(item.id)}
-                    className={`transition-colors duration-300 ${
+                    className={`client-portal-nav-collapsed-button ${
                       item.active 
-                        ? "text-[#efc349]" 
-                        : "text-gray-500 dark:text-white/70 hover:text-[#efc349]"
+                        ? "is-active"
+                        : ""
                     }`}
                   >
                     <item.icon size={20} />

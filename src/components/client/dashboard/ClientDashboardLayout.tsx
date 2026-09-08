@@ -16,7 +16,7 @@ export const ClientDashboardLayout = ({ children, activeTab, setActiveTab }: Cli
   const { toggleSidebar, getToggleButtonProps } = useSidebarToggle({ isMobile, sidebarOpen, setSidebarOpen });
   const toggleButtonProps = getToggleButtonProps();
 
-  return <div className="pro-ui flex min-h-screen overflow-hidden bg-transparent">
+  return <div className="pro-ui client-portal flex min-h-screen overflow-hidden bg-transparent">
     <ClientSidebar activeTab={activeTab} setActiveTab={setActiveTab} open={sidebarOpen} onOpenChange={setSidebarOpen} />
     <div className="flex h-screen min-w-0 flex-1 flex-col overflow-hidden">
       <ClientHeader />

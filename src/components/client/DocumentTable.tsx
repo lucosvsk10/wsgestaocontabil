@@ -43,6 +43,21 @@ export const DocumentTable = ({ documents, formatDate, isDocumentExpired, daysUn
     return new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime();
   }), [activeDocuments, searchQuery, statusFilter, sortBy, isDocumentExpired]);
 
+  const documentsByMonth = useMemo(() => {
+    const groups = new Map<string, Document[]>();
+    sortedDocuments.forEach((doc) => {
+      const date = new Date(doc.uploaded_at);
+      const key = `${date.getFullYear()}-${date.getMonth()}`;
+      const current = groups.get(key) || [];
+      current.push(doc);
+      groups.set(key, current);
+    });
+    return Array.from(groups.entries()).map(([key, docs]) => {
+      const date = new Date(docs[0].uploaded_at);
+      return { key, label: new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(date), documents: docs };
+    });
+  }, [sortedDocuments]);
+
   const stats = [
     { label: "Disponíveis", value: activeDocuments.length, icon: Files },
     { label: "Novos para você", value: newCount, icon: Sparkles },
@@ -53,9 +68,9 @@ export const DocumentTable = ({ documents, formatDate, isDocumentExpired, daysUn
   return <div className="client-documents space-y-5">
     <section className="client-documents-hero">
       <div className="client-documents-hero-copy">
-        <p className="client-eyebrow">Central de documentos</p>
-        <h2>Seus documentos, organizados e fáceis de encontrar.</h2>
-        <p>Consulte os arquivos enviados pelo escritório, acompanhe novidades e baixe o que precisar.</p>
+        <p className="client-eyebrow">Visão geral</p>
+        <h2>O que precisa da sua atenção.</h2>
+        <p>Veja os documentos mais recentes, identifique novidades e acesse seus arquivos quando precisar.</p>
       </div>
       <div className="client-document-stats">
         {stats.map(({ label, value, icon: Icon }) => <div key={label} className="client-document-stat"><span className="client-document-stat-icon"><Icon className="h-4 w-4" /></span><div><strong>{value}</strong><span>{label}</span></div></div>)}
@@ -65,7 +80,10 @@ export const DocumentTable = ({ documents, formatDate, isDocumentExpired, daysUn
     <section className="client-documents-panel">
       <DocumentSearchAndFilter searchQuery={searchQuery} setSearchQuery={setSearchQuery} statusFilter={statusFilter} setStatusFilter={setStatusFilter} sortBy={sortBy} setSortBy={setSortBy} />
       <DocumentResultsSummary count={sortedDocuments.length} searchQuery={searchQuery} statusFilter={statusFilter} />
-      {sortedDocuments.length > 0 ? <DocumentGrid documents={sortedDocuments} formatDate={formatDate} isDocumentExpired={isDocumentExpired} daysUntilExpiration={daysUntilExpiration} refreshDocuments={refreshDocuments} loadingDocumentIds={loadingDocumentIds} handleDownload={handleDownload} categories={categories} /> : <DocumentEmptyState searchQuery={searchQuery} />}
+      {documentsByMonth.length > 0 ? documentsByMonth.map((group) => <section key={group.key} className="client-document-month" aria-labelledby={`month-${group.key}`}>
+        <div className="client-document-month-heading"><div><p className="client-eyebrow">Competência</p><h3 id={`month-${group.key}`}>{group.label}</h3></div><span>{group.documents.length} {group.documents.length === 1 ? "documento" : "documentos"}</span></div>
+        <DocumentGrid documents={group.documents} formatDate={formatDate} isDocumentExpired={isDocumentExpired} daysUntilExpiration={daysUntilExpiration} refreshDocuments={refreshDocuments} loadingDocumentIds={loadingDocumentIds} handleDownload={handleDownload} categories={categories} />
+      </section>) : <DocumentEmptyState searchQuery={searchQuery} />}
     </section>
   </div>;
 };

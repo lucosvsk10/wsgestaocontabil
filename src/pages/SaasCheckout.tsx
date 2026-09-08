@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
 import '@/styles/saas-checkout.css';
@@ -44,12 +44,17 @@ const invoiceIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-
 export default function SaasCheckout() {
   const { invoiceId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [invoice, setInvoice] = useState<CheckoutInvoice | null>(null);
   const [organizationName, setOrganizationName] = useState('Sua empresa');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pix');
   const [legalAccepted, setLegalAccepted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [checkoutError, setCheckoutError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const mercadoPagoReturn = searchParams.get('mp');
 
   useEffect(() => {
     let cancelled = false;
@@ -93,6 +98,33 @@ export default function SaasCheckout() {
     };
   }, [invoiceId]);
 
+  useEffect(() => {
+    if (!invoiceId || !invoiceIdPattern.test(invoiceId) || !['success', 'pending'].includes(mercadoPagoReturn || '')) return;
+
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let attempt = 0;
+
+    const refreshPaymentStatus = async () => {
+      const { data } = await checkoutDb
+        .from('saas_invoices')
+        .select('id,invoice_number,organization_id,description,line_items,period_start,period_end,due_date,subtotal_cents,discount_cents,total_cents,status')
+        .eq('id', invoiceId)
+        .maybeSingle();
+
+      if (cancelled || !data) return;
+      setInvoice(data as CheckoutInvoice);
+      attempt += 1;
+      if (data.status !== 'paid' && attempt < 6) timer = setTimeout(refreshPaymentStatus, 2000);
+    };
+
+    void refreshPaymentStatus();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [invoiceId, mercadoPagoReturn]);
+
   const invoiceCode = String(invoice?.invoice_number ?? '').padStart(6, '0') || '—';
 
   if (loading) return <AppLoadingScreen mode="light" />;
@@ -115,6 +147,25 @@ export default function SaasCheckout() {
   const subtotal = invoice.subtotal_cents ?? invoice.total_cents ?? 0;
   const discount = invoice.discount_cents ?? 0;
   const total = invoice.total_cents ?? Math.max(0, subtotal - discount);
+
+  const startCheckout = async () => {
+    if (!invoiceId || !payable || !legalAccepted || submitting) return;
+    setCheckoutError('');
+    setSubmitting(true);
+
+    try {
+      const { data, error: invokeError } = await supabase.functions.invoke('mp-create-checkout', {
+        body: { invoiceId, paymentMethod, termsAccepted: true },
+      });
+      if (invokeError) throw invokeError;
+      const checkoutUrl = typeof data?.checkoutUrl === 'string' ? data.checkoutUrl : '';
+      if (!checkoutUrl) throw new Error('missing_checkout_url');
+      window.location.assign(checkoutUrl);
+    } catch {
+      setSubmitting(false);
+      setCheckoutError('Não foi possível abrir o Mercado Pago agora. Tente novamente em instantes.');
+    }
+  };
 
   return (
     <div className="saas-checkout-page">
@@ -151,6 +202,13 @@ export default function SaasCheckout() {
               <span>Forma de pagamento</span>
               <h2>Como você prefere pagar?</h2>
             </div>
+
+            {mercadoPagoReturn && (
+              <div className={`saas-checkout-return is-${mercadoPagoReturn}`} role="status">
+                <strong>{returnMessage(mercadoPagoReturn, invoice.status).title}</strong>
+                <span>{returnMessage(mercadoPagoReturn, invoice.status).description}</span>
+              </div>
+            )}
 
             {payable ? (
               <>
@@ -199,11 +257,18 @@ export default function SaasCheckout() {
                   </span>
                 </label>
 
-                <button type="button" className="saas-checkout-submit" disabled>
-                  {paymentDetails[paymentMethod].buttonLabel}
+                {checkoutError && <p className="saas-checkout-feedback is-error" role="alert">{checkoutError}</p>}
+
+                <button
+                  type="button"
+                  className="saas-checkout-submit"
+                  disabled={!legalAccepted || submitting}
+                  onClick={() => void startCheckout()}
+                >
+                  {submitting ? 'Abrindo o Mercado Pago...' : paymentDetails[paymentMethod].buttonLabel}
                 </button>
                 <p className="saas-checkout-provider-note">
-                  Integração com o Mercado Pago em preparação. Nenhuma cobrança será feita nesta demonstração.
+                  Você será direcionado ao ambiente seguro do Mercado Pago para concluir o pagamento.
                 </p>
               </>
             ) : (
@@ -367,4 +432,17 @@ function formatDate(value: string) {
 
 function formatMoney(cents: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100);
+}
+
+function returnMessage(result: string, invoiceStatus: string) {
+  if (invoiceStatus === 'paid') {
+    return { title: 'Pagamento confirmado', description: 'A fatura já foi atualizada no seu painel.' };
+  }
+  if (result === 'success') {
+    return { title: 'Pagamento recebido pelo Mercado Pago', description: 'Estamos aguardando a confirmação segura para atualizar a fatura.' };
+  }
+  if (result === 'pending') {
+    return { title: 'Pagamento pendente', description: 'A fatura será atualizada automaticamente após a compensação.' };
+  }
+  return { title: 'Pagamento não concluído', description: 'Você pode revisar a forma de pagamento e tentar novamente.' };
 }

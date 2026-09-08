@@ -1,0 +1,53 @@
+[
+  {
+    "slug": "como-comecar-um-negocio",
+    "eyebrow": "Primeiros passos",
+    "title": "Como começar um negócio do zero: um guia prático",
+    "description": "Um roteiro direto para validar a ideia, organizar os números e transformar um projeto em uma empresa preparada para operar.",
+    "readingTime": "7 min de leitura",
+    "intro": "Começar bem não significa prever tudo. Significa testar a ideia, entender de onde virá a receita e tomar as primeiras decisões sem criar uma estrutura maior do que o negócio precisa.",
+    "sections": [
+      { "title": "1. Defina o problema antes da empresa", "paragraphs": ["Explique em uma frase qual problema você resolve, para quem e por que sua solução merece ser escolhida. Se essa frase ainda estiver confusa, converse com possíveis clientes antes de investir em marca, estoque ou ponto comercial.", "Registre as respostas mais frequentes. Elas ajudam a ajustar a oferta, o preço e o canal de venda com base em sinais reais, não apenas em expectativa."] },
+      { "title": "2. Faça uma conta simples de viabilidade", "paragraphs": ["Liste o investimento inicial, os custos mensais e quanto sobra de cada venda depois dos custos diretamente ligados a ela. A partir disso, estime quantas vendas são necessárias para o negócio pagar a própria operação.", "Trabalhe com três cenários: conservador, provável e otimista. O cenário conservador mostra quanto fôlego financeiro será necessário até a receita ganhar consistência."] },
+      { "title": "3. Escolha a estrutura certa", "paragraphs": ["Atividade, endereço, participação de sócios e projeção de faturamento influenciam o formato da empresa e suas obrigações. Antes do registro, valide a viabilidade do endereço e as licenças exigidas para a atividade.", "A Redesim organiza a abertura em etapas de viabilidade, inscrição e licenciamento. As exigências podem mudar conforme o município e o tipo de atividade."] },
+      { "title": "4. Prepare os primeiros 30 dias", "paragraphs": ["Separe uma conta para o negócio, defina como vendas e despesas serão registradas e crie uma rotina semanal de conferência. Também deixe claro quem aprova pagamentos, emite documentos e acompanha vencimentos.", "Uma operação pequena com processos simples e consistentes costuma ser mais segura do que uma estrutura sofisticada que ninguém atualiza."] }
+    ],
+    "checklist": ["Problema e público definidos", "Oferta testada com possíveis clientes", "Custos e meta mínima de vendas calculados", "Atividade, endereço e licenças verificados", "Rotina financeira dos primeiros 30 dias preparada"],
+    "sourceLabel": "Redesim — Abrir CNPJ",
+    "sourceUrl": "https://www.gov.br/empresas-e-negocios/pt-br/redesim/abrir-cnpj"
+  },
+  {
+    "slug": "quanto-custa-abrir-empresa",
+    "eyebrow": "Planejamento",
+    "title": "Quanto custa abrir e manter uma empresa?",
+    "description": "Entenda as categorias de custo que precisam entrar no planejamento antes do CNPJ — sem promessas de um valor único que não serve para todos.",
+    "readingTime": "6 min de leitura",
+    "intro": "O custo de uma empresa não termina no registro. Endereço, licenças, operação, impostos e capital de giro mudam conforme atividade, cidade e porte. Por isso, a pergunta mais útil é: quais custos existirão no meu caso?",
+    "sections": [
+      { "title": "1. Custos de abertura", "paragraphs": ["Considere taxas de registro, eventuais licenças, certificado digital quando aplicável e apoio profissional. Alguns processos podem ser gratuitos, mas isso não elimina custos específicos da atividade ou do município.", "O endereço também pode exigir adequações ou autorizações. Confirme a viabilidade antes de assumir aluguel ou comprar equipamentos."] },
+      { "title": "2. Custos mensais fixos", "paragraphs": ["Aluguel, internet, sistemas, contabilidade, salários e contratos recorrentes existem mesmo em meses de venda menor. Liste cada item e sua data de vencimento para visualizar o compromisso mensal mínimo.", "Inclua uma reserva para manutenção, reposições e despesas sazonais. O orçamento fica mais realista quando considera o que não acontece todo mês, mas inevitavelmente acontece."] },
+      { "title": "3. Custos variáveis e tributos", "paragraphs": ["Taxas de venda, frete, matéria-prima, comissões e impostos variam com a operação. Eles precisam ser incorporados ao preço, porque faturamento alto não garante margem saudável.", "A forma de tributação depende da atividade, do faturamento e de outros fatores. Uma simulação antes da abertura reduz o risco de escolher uma estrutura inadequada."] },
+      { "title": "4. Capital de giro", "paragraphs": ["O caixa precisa sustentar o intervalo entre pagar fornecedores e receber clientes. Calcule por quanto tempo a empresa consegue operar se as vendas demorarem mais do que o esperado.", "Evite usar todo o investimento em reforma, estoque ou equipamentos. Sem caixa para o começo da operação, um negócio promissor pode ficar sem margem de decisão."] }
+    ],
+    "checklist": ["Taxas e licenças locais verificadas", "Custos fixos mensais listados", "Custos variáveis incorporados ao preço", "Tributação simulada para a atividade", "Capital de giro reservado"],
+    "sourceLabel": "Portal Gov.br — Consulta de viabilidade",
+    "sourceUrl": "https://www.gov.br/empresas-e-negocios/pt-br/redesim/abrir-cnpj/viabilidade"
+  },
+  {
+    "slug": "organizar-financas-da-empresa",
+    "eyebrow": "Gestão financeira",
+    "title": "Como organizar as finanças da empresa desde o início",
+    "description": "Uma rotina enxuta para separar as contas, acompanhar o caixa e tomar decisões com números confiáveis.",
+    "readingTime": "7 min de leitura",
+    "intro": "Organização financeira não começa com uma planilha perfeita. Começa quando cada movimentação tem origem, destino e responsável claros — e quando o dono consegue responder quanto entrou, quanto saiu e o que vence em seguida.",
+    "sections": [
+      { "title": "1. Separe empresa e pessoa física", "paragraphs": ["Use contas e cartões diferentes para impedir que despesas pessoais distorçam o resultado do negócio. Defina uma retirada planejada para os sócios e evite transferências sem identificação.", "Essa separação melhora a leitura do caixa e facilita a conferência de documentos, pagamentos e resultados."] },
+      { "title": "2. Registre o caixa todos os dias", "paragraphs": ["Anote entradas e saídas por categoria, forma de pagamento, data e competência. O registro diário reduz esquecimentos e permite enxergar despesas que parecem pequenas isoladamente.", "Concilie os registros com banco, cartões e dinheiro em espécie. O saldo do sistema deve explicar o saldo real."] },
+      { "title": "3. Olhe para frente", "paragraphs": ["Além do que já aconteceu, mantenha uma projeção das próximas semanas. Inclua recebimentos prováveis, impostos, folha, fornecedores e demais compromissos.", "A projeção mostra antecipadamente quando o caixa pode apertar e dá tempo para renegociar prazos, ajustar compras ou acelerar cobranças."] },
+      { "title": "4. Crie uma reunião mensal com os números", "paragraphs": ["Reserve um horário para comparar vendas, margem, despesas, inadimplência e caixa. Registre decisões e responsáveis, para que a análise produza mudança na operação.", "Poucos indicadores acompanhados todos os meses são mais úteis do que muitos relatórios sem continuidade."] }
+    ],
+    "checklist": ["Contas pessoais e empresariais separadas", "Entradas e saídas registradas diariamente", "Conciliação bancária em dia", "Próximos vencimentos projetados", "Revisão mensal dos números agendada"],
+    "sourceLabel": "Banco Central — Caderno de Educação Financeira",
+    "sourceUrl": "https://www.bcb.gov.br/content/cidadaniafinanceira/documentos_cidadania/Cuidando_do_seu_dinheiro_Gestao_de_Financas_Pessoais/caderno_cidadania_financeira.pdf"
+  }
+]

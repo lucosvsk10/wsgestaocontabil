@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
-import { ArrowUpRight, Building2, Briefcase, Calculator, FileCheck2, FileSearch2, FileText, FolderX, Instagram, Lightbulb, MessageCircle, Receipt, ShieldCheck, Target, UserRound, Users, Wallet } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Building2, Briefcase, Calculator, FileCheck2, FileSearch2, FileText, FolderX, Instagram, MessageCircle, Receipt, ShieldCheck, Target, UserRound, Users, Wallet } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import guides from '@/content/business-guides.json';
+import TrustedCompaniesSection from '@/components/public/TrustedCompaniesSection';
+import PublicSiteFooter from '@/components/public/PublicSiteFooter';
 import '../styles/home-preview.css';
+import '../styles/public-content.css';
 
 const services = [
   { icon: Building2, title: <>Abertura <strong>de<br />empresa</strong></>, description: 'CNPJ, definição de CNAE, regime tributário, inscrições e regularização inicial.' },
@@ -46,6 +50,12 @@ const HomePreview = () => {
     return () => window.clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    document.title = 'WS Gestão Contábil | Contabilidade e tecnologia para empresas';
+    const hash = window.location.hash;
+    if (hash) window.requestAnimationFrame(() => document.querySelector(hash)?.scrollIntoView());
+  }, []);
+
   const heroMessage = heroMessages[heroIndex];
 
   return (
@@ -60,12 +70,12 @@ const HomePreview = () => {
           </button>
           <div className={`preview-nav-links ${menuOpen ? 'is-open' : ''}`}>
             <a href="#servicos" onClick={() => setMenuOpen(false)}>SERVIÇOS</a>
-            <a href="#sobre" onClick={() => setMenuOpen(false)}>QUEM SOMOS</a>
-            <a href="#softwares" onClick={() => setMenuOpen(false)}>SOBRE</a>
+            <a href="#softwares" onClick={() => setMenuOpen(false)}>SOFTWARES</a>
+            <a href="#conteudos" onClick={() => setMenuOpen(false)}>CONTEÚDOS</a>
+            <a href="#duvidas" onClick={() => setMenuOpen(false)}>DÚVIDAS</a>
             <Link className="preview-login" to="/login"><UserRound size={19} /> LOGIN</Link>
             <Link className="preview-register" to="/login">CADASTRE-SE</Link>
           </div>
-          <button className="preview-theme" type="button" aria-label="Alternar tema"><Lightbulb size={30} strokeWidth={1.8} /></button>
         </nav>
       </header>
 
@@ -94,16 +104,40 @@ const HomePreview = () => {
           <div className="preview-software-grid">{software.map((item) => <article className="preview-software-card" key={item.audience + item.title.toString()}><div className="preview-software-meta"><span>{item.audience}</span>{item.badge && <span className="preview-software-badge">{item.badge}</span>}</div><h3>{item.title}</h3><p>{item.description}</p><a className={`preview-software-cta ${item.urgent ? 'is-urgent' : ''}`} href="/login">{item.cta}</a><div className={`preview-software-icon ${item.icon}`} aria-hidden="true">{item.icon === 'calculator' ? <Calculator /> : item.badge?.includes('SEFAZ') ? <FileSearch2 /> : <FileCheck2 />}</div></article>)}</div>
         </section>
 
-        <section id="clientes" className="preview-clients preview-section">
-          <div className="preview-clients-heading">
-            <div><p className="preview-clients-eyebrow">PARCERIAS QUE GERAM CONFIANÇA</p><h2>Empresas que<br /><span>confiam na WS</span></h2><p className="preview-clients-lead">Um modelo de apresentação pensado para valorizar cada empresa atendida.</p></div>
+        <TrustedCompaniesSection />
+
+        <section id="conteudos" className="public-guides preview-section" aria-labelledby="guides-title">
+          <div className="public-section-heading">
+            <span>DECISÕES MAIS SEGURAS</span>
+            <h2 id="guides-title">GUIAS PARA QUEM<br />ESTÁ CONSTRUINDO</h2>
+            <p>Informação prática para transformar uma ideia em um negócio mais organizado.</p>
           </div>
-          <div className="preview-client-model" aria-label="Modelo de logo padronizada">
-            <div className="preview-client-logo-frame"><img src="https://nadtoitgkukzbghtbohm.supabase.co/storage/v1/object/public/carousel-logos/logos/1749661878558.png" alt="Logo Rei do Aço" /></div>
-            <div className="preview-client-model-copy"><span>EMPRESA ATENDIDA</span><h3>REI DO AÇO</h3><p>Identidade preservada em uma apresentação limpa, proporcional e consistente com a WS.</p></div>
+          <div className="public-guide-grid">
+            {guides.map((guide, index) => (
+              <Link className="public-guide-card" to={`/guias/${guide.slug}`} key={guide.slug}>
+                <span className="public-guide-number">0{index + 1}</span>
+                <small>{guide.eyebrow} · {guide.readingTime}</small>
+                <h3>{guide.title}</h3>
+                <p>{guide.description}</p>
+                <strong>Ler guia <ArrowRight /></strong>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section id="duvidas" className="public-faq preview-section" aria-labelledby="faq-title">
+          <div className="public-section-heading"><span>ANTES DE COMEÇAR</span><h2 id="faq-title">DÚVIDAS<br />FREQUENTES</h2><p>Respostas diretas para facilitar sua decisão.</p></div>
+          <div className="public-faq-list">
+            <details><summary>A WS atende empresas fora de Major Isidoro?</summary><p>Sim. A equipe atende presencialmente em Major Isidoro e Palmeira dos Índios e também acompanha empresas de outras cidades com processos digitais.</p></details>
+            <details><summary>Como funciona a troca de contador?</summary><p>Primeiro analisamos a situação da empresa e os documentos disponíveis. Depois, orientamos a transição e o contato com a contabilidade anterior para preservar a continuidade das obrigações.</p></details>
+            <details><summary>Posso conversar com a WS antes de abrir o CNPJ?</summary><p>Sim. Essa conversa ajuda a avaliar atividade, endereço, participação de sócios e a estrutura mais adequada antes do registro.</p></details>
+            <details><summary>A WS oferece sistema para emissão de notas fiscais?</summary><p>Sim. O Emissor WS reúne emissão e gerenciamento de notas em um ambiente próprio para empresas.</p></details>
+            <details><summary>Quanto tempo leva para abrir uma empresa?</summary><p>O prazo varia conforme atividade, município, análise de viabilidade e licenças necessárias. A equipe informa uma estimativa após conhecer o caso.</p></details>
+            <details><summary>Como falar com a equipe?</summary><p>Você pode chamar diretamente pelo WhatsApp no número (82) 99932-4884.</p></details>
           </div>
         </section>
       </main>
+      <PublicSiteFooter />
     </div>
   );
 };

@@ -190,3 +190,9 @@ verify_jwt = false
 
 [functions.fiscal-purchases-xml-backfill]
 verify_jwt = false
+
+[functions.mp-create-checkout]
+verify_jwt = true
+
+[functions.mp-webhook]
+verify_jwt = false

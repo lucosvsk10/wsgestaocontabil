@@ -11,7 +11,10 @@ import ToolsSection from '@/components/tools/ToolsSection';
 import HomeCarousel from '@/components/carousel/HomeCarousel';
 import UsefulLinksSection from '@/components/useful-links/UsefulLinksSection';
 import ZoomControl from '@/components/zoom/ZoomControl';
+import { useLocation } from 'react-router-dom';
+import HomePreview from './HomePreview';
 const Index = () => {
+  const location = useLocation();
   useEffect(() => {
     const handleIntersection = (entries: IntersectionObserverEntry[]) => {
       entries.forEach(entry => {
@@ -35,6 +38,9 @@ const Index = () => {
       });
     };
   }, []);
+  if (new URLSearchParams(location.search).get('preview') === 'home') {
+    return <HomePreview />;
+  }
   return <div className="ws-page-surface relative min-h-screen">
       <Navbar />
       <div id="main-content">
