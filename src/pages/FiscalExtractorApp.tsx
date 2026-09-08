@@ -259,8 +259,7 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
     <header className="extractor-topbar">
       <div className="extractor-brand">
         <button className="extractor-mobile-trigger" aria-label="Abrir menu" onClick={() => setMobileOpen(true)}><Menu /></button>
-        <img src="/assets/ws-logo.png" alt="WS Gestão Contábil" />
-        <span>Extrato Fiscal</span>
+        <img src="/assets/ws-extrator-fiscal.png" alt="WS Extrator Fiscal" />
       </div>
       <div className="extractor-workspace"><small>Carteira fiscal</small><strong>{preview ? 'Demonstração' : snapshot?.account?.name || 'WS Gestão Contábil'}</strong></div>
       <div className="extractor-account"><span>{preview ? 'PR' : (user?.email || 'WS').slice(0, 2).toUpperCase()}</span></div>
@@ -486,5 +485,5 @@ function Modal({ title, description, onClose, children }: { title: string; descr
   return <div className="extractor-modal-backdrop" onMouseDown={e => { if (e.currentTarget === e.target) onClose(); }}><div className="extractor-modal" role="dialog" aria-modal="true"><header><div><h2>{title}</h2><p>{description}</p></div><button onClick={onClose}><X /></button></header>{children}</div></div>;
 }
 
-function ExtractorLoading() { return <div className="extractor-loading"><img src="/assets/ws-logo.png" alt="WS Gestão Contábil" /><span /><p>Carregando dados fiscais...</p></div>; }
-function ExtractorAccessPending() { return <div className="extractor-access-pending"><img src="/assets/ws-logo.png" alt="WS Gestão Contábil" /><div><h1>Extrato Fiscal não habilitado</h1><p>Esta conta ainda não possui uma carteira do Extrato vinculada.</p><a href="/extrator-preview">Abrir demonstração</a></div></div>; }
+function ExtractorLoading() { return <div className="extractor-loading"><img src="/assets/ws-extrator-fiscal.png" alt="WS Extrator Fiscal" /><span /><p>Carregando dados fiscais...</p></div>; }
+function ExtractorAccessPending() { return <div className="extractor-access-pending"><img src="/assets/ws-extrator-fiscal.png" alt="WS Extrator Fiscal" /><div><h1>Extrato Fiscal não habilitado</h1><p>Esta conta ainda não possui uma carteira do Extrato vinculada.</p><a href="/extrator-preview">Abrir demonstração</a></div></div>; }

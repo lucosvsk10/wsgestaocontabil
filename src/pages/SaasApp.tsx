@@ -35,7 +35,7 @@ import '@/styles/saas-admin-reconciliation.css';
 import '@/styles/saas-native-font.css';
 import '@/styles/saas-mobile-polish.css';
 
-const WS_LOGO = '/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png';
+const WS_LOGO = '/assets/ws-emissor-fiscal.png';
 const TEST_TRANSPORT_ORG_ID = 'c77c4620-fbbb-4f03-9e32-ab48d25bb0cf';
 const TEST_TRANSPORT_ORG_NAME = 'MSILVA TRANSPORTES';
 const cadastroSections = new Set([
@@ -374,7 +374,7 @@ export default function SaasApp() {
           >
             <Menu className="h-5 w-5" />
           </button>
-          <img src={WS_LOGO} alt="WS Gestão Contábil" className="h-7 object-contain" />
+          <img src={WS_LOGO} alt="WS Emissor Fiscal" className="saas-product-logo object-contain" />
         </div>
         <div className="saas-topbar-content flex min-w-0 flex-1 items-center px-6">
           <div className="saas-page-context flex-1">
