@@ -1,0 +1,41 @@
+name: Verify extractor production preview
+on:
+  push:
+    branches: [verify/extractor-preview]
+permissions:
+  contents: read
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Setup Playwright
+        run: |
+          mkdir -p /tmp/pw
+          cd /tmp/pw
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null 2>&1
+      - name: Capture preview
+        run: |
+          cat > /tmp/pw/capture.cjs <<'NODE'
+          const { chromium } = require('/tmp/pw/node_modules/playwright');
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage({viewport:{width:1600,height:1100},deviceScaleFactor:1});
+            const response=await page.goto('https://wsgestaocontabil.lovable.app/extrator-preview',{waitUntil:'networkidle',timeout:90000});
+            console.log('HTTP',response?.status());
+            await page.waitForTimeout(5000);
+            console.log('URL',page.url());
+            console.log('TITLE',await page.title());
+            console.log('BODY', (await page.locator('body').innerText()).slice(0,1800));
+            await page.screenshot({path:'/tmp/extractor-preview.png',fullPage:true});
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+          node /tmp/pw/capture.cjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: extractor-production-preview
+          path: /tmp/extractor-preview.png
+          retention-days: 1
