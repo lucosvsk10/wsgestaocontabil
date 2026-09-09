@@ -4,15 +4,15 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigation } from '@/components/navbar/hooks/useNavigation';
 
 type Usage={used:number;limit:number;remaining:number;percent:number;period_start?:string|null;period_end?:string|null};
-type Props={planLabel:string;usage:Usage;companies:number;onOpenSettings:()=>void};
+type Props={accountName?:string;planLabel:string;usage:Usage;companies:number;onOpenSettings:()=>void};
 type Section='Configurações gerais'|'Meu plano'|'Relatório da conta'|'Notificações'|'Exclusão de dados';
 const sections:Section[]=['Configurações gerais','Meu plano','Relatório da conta','Notificações','Exclusão de dados'];
 const fmt=new Intl.NumberFormat('pt-BR');
 const date=(v?:string|null)=>v?new Date(`${v}T12:00:00`).toLocaleDateString('pt-BR'):'—';
 
-export default function ExtractorAccountDrawer({planLabel,usage,companies,onOpenSettings}:Props){
+export default function ExtractorAccountDrawer({accountName,planLabel,usage,companies,onOpenSettings}:Props){
  const {user,userData}=useAuth();const{handleLogout}=useNavigation();const[open,setOpen]=useState(false),[section,setSection]=useState<Section>('Configurações gerais');
- const email=user?.email||'usuario@email.com',name=(userData as any)?.name||(userData as any)?.full_name||email.split('@')[0]||'Usuário',initials=useMemo(()=>String(name).split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]?.toUpperCase()).join('')||'U',[name]);
+ const email=user?.email||'usuario@email.com',name=accountName||(userData as any)?.name||(userData as any)?.full_name||email.split('@')[0]||'Usuário',initials=useMemo(()=>String(name).split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]?.toUpperCase()).join('')||'U',[name]);
  useEffect(()=>{if(!open)return;const key=(e:KeyboardEvent)=>e.key==='Escape'&&setOpen(false),before=document.body.style.overflow;document.addEventListener('keydown',key);document.body.style.overflow='hidden';return()=>{document.removeEventListener('keydown',key);document.body.style.overflow=before}},[open]);
  const upgrade=()=>window.open('https://wa.me/5582999324884?text=Ol%C3%A1%2C%20quero%20fazer%20upgrade%20do%20plano%20do%20Extrator%20Fiscal%20WS.','_blank','noopener,noreferrer');
  const openSettings=()=>{setOpen(false);onOpenSettings()};

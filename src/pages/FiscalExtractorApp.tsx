@@ -6,8 +6,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { FiscalDocumentPreview, type PreviewDocument } from '@/components/admin/fiscal/FiscalDocumentPreview';
 import AnimatedExtractorIcon, { type ExtractorIconName } from '@/components/extractor/AnimatedExtractorIcon';
 import ExtractorAccountDrawer from '@/components/extractor/ExtractorAccountDrawer';
+import ExtractorCompanySelector from '@/components/extractor/ExtractorCompanySelector';
+import ExtractorReports from '@/components/extractor/ExtractorReports';
 import '@/styles/fiscal-extractor.css';
 import '@/styles/fiscal-extractor-polish.css';
+import '@/styles/fiscal-extractor-final.css';
 
 type Section='Visão geral'|'Empresas'|'Documentos'|'Relatórios'|'Certificados'|'Histórico'|'Configurações';
 type Filter='saida'|'entrada'|'todos'|'cancelada'|'evento';
@@ -49,7 +52,7 @@ export default function FiscalExtractorApp({preview=false}:{preview?:boolean}){
  const load=useCallback(async(quiet=false)=>{if(preview||!user)return;if(!quiet)setLoading(true);const[snapshotResult,usageResult]=await Promise.all([(supabase as any).rpc('extractor_workspace_snapshot'),(supabase as any).rpc('extractor_account_usage')]);if(snapshotResult.error||!snapshotResult.data){setDenied(true)}else{setSnapshot(snapshotResult.data as Snapshot);setDenied(false);if(usageResult.data)setUsage(usageResult.data as Usage)}if(!quiet)setLoading(false)},[preview,user?.id]);
  useEffect(()=>{void load()},[load]);
  useEffect(()=>{if(preview||denied)return;const t=window.setInterval(()=>void load(true),30000),f=()=>void load(true);window.addEventListener('focus',f);return()=>{window.clearInterval(t);window.removeEventListener('focus',f)}},[preview,denied,load]);
- const companies=useMemo(()=>preview?[{id:'demo',extractorCompanyId:'demo',name:'Empresa demonstração',tradeName:'Empresa demonstração',cnpj:'00000000000000',uf:'AL',documents:326,entries:55,exits:271,fullXml:266,pendingXml:60,lastSync:new Date().toISOString(),automaticSync:true,certificateUntil:'2027-08-25',certificateDays:351,purchaseStatus:'idle',salesStatus:'idle',salesXmlPending:60,salesXmlFailed:0}]:((snapshot?.companies||[]).map(normalizeCompany)),[preview,snapshot]);
+ const companies=useMemo(()=>preview?[{id:'demo',extractorCompanyId:'demo',name:'EMPRESA DEMONSTRAÇÃO LTDA',tradeName:'Empresa demonstração',cnpj:'00000000000000',uf:'AL',documents:326,entries:55,exits:271,fullXml:266,pendingXml:60,lastSync:new Date().toISOString(),automaticSync:true,certificateUntil:'2027-08-25',certificateDays:351,purchaseStatus:'idle',salesStatus:'idle',salesXmlPending:60,salesXmlFailed:0}]:((snapshot?.companies||[]).map(normalizeCompany)),[preview,snapshot]);
  useEffect(()=>{if(!selectedCompanyId&&companies.length)setSelectedCompanyId(companies[0].id)},[companies,selectedCompanyId]);
  const totals=preview?{documents:326,entries:55,exits:271,value:675295.32,fullXml:266,pendingXml:60}:{documents:Number(snapshot?.totals?.documents||0),entries:Number(snapshot?.totals?.entries||0),exits:Number(snapshot?.totals?.exits||0),value:Number(snapshot?.totals?.value||0),fullXml:Number(snapshot?.totals?.full_xml||0),pendingXml:Number(snapshot?.totals?.pending_xml||0)};
  const models=preview?{nfe:149,nfce:169,nfse:8,other:0}:{nfe:Number(snapshot?.models?.nfe||0),nfce:Number(snapshot?.models?.nfce||0),nfse:Number(snapshot?.models?.nfse||0),other:Number(snapshot?.models?.other||0)};
@@ -60,14 +63,14 @@ export default function FiscalExtractorApp({preview=false}:{preview?:boolean}){
  if(loading)return <Loading/>;
  if(!preview&&denied)return <AccessPending/>;
  return <div className="extractor-app">
-  <header className="extractor-topbar"><div className="extractor-brand"><button className="extractor-mobile-trigger" onClick={()=>setMobile(true)} aria-label="Abrir menu"><Menu/></button><img src="/assets/ws-logo.png" alt="WS Gestão Contábil"/></div><div className="extractor-workspace"><small>Carteira fiscal</small><strong>{preview?'Demonstração':snapshot?.account?.name||'WS teste'}</strong></div><div className="extractor-account">{preview?<span className="extractor-account-avatar">PR</span>:<ExtractorAccountDrawer planLabel={planLabel} usage={planUsage} companies={companies.length} onOpenSettings={()=>go('Configurações')}/>}</div></header>
+  <header className="extractor-topbar"><div className="extractor-brand"><button className="extractor-mobile-trigger" onClick={()=>setMobile(true)} aria-label="Abrir menu"><Menu/></button><img src="/assets/ws-logo.png" alt="WS Gestão Contábil"/></div><ExtractorCompanySelector companies={companies} selectedCompanyId={selectedCompanyId} onSelect={setSelectedCompanyId} preview={preview}/><div className="extractor-account">{preview?<span className="extractor-account-avatar">PR</span>:<ExtractorAccountDrawer accountName={snapshot?.account?.name||'Conta Extrator'} planLabel={planLabel} usage={planUsage} companies={companies.length} onOpenSettings={()=>go('Configurações')}/>}</div></header>
   {mobile&&<button className="extractor-scrim" onClick={()=>setMobile(false)} aria-label="Fechar menu"/>}
   <aside className={`extractor-sidebar ${mobile?'is-open':''}`}><button className="extractor-sidebar-close" onClick={()=>setMobile(false)}><X/></button><div className="extractor-sidebar-title"><strong>Extrato Fiscal</strong><small>Compras e vendas</small></div><nav>{['Operação','Fiscal','Gestão'].map(group=><section key={group}><p>{group}</p>{nav.filter(n=>n.group===group).map(n=><button key={n.label} data-icon-hover className={active===n.label?'is-active':''} onClick={()=>go(n.label)}><AnimatedExtractorIcon name={n.icon} className="extractor-nav-icon"/><span>{n.label}</span></button>)}</section>)}</nav><button className="extractor-usage" onClick={()=>go('Configurações')} data-icon-hover><small>Uso do plano</small><strong>{integer.format(planUsage.used)} <span>/ {integer.format(planUsage.limit)} XML</span></strong><div className="usage-track"><i style={{width:`${Math.min(100,Math.max(0,planUsage.percent))}%`}}/></div><span>{integer.format(planUsage.remaining)} restantes · ver detalhes</span></button></aside>
   <main className="extractor-main">{notice&&<NoticeBar notice={notice} close={()=>setNotice(null)}/>} 
    {active==='Visão geral'&&<Overview companies={companies} totals={totals} models={models} daily={daily} onGo={go}/>} 
    {active==='Empresas'&&<Companies companies={companies} onAdd={()=>setCompanyModal(true)} onOpen={id=>go('Documentos',id)} onReload={()=>load(true)} setNotice={setNotice} preview={preview}/>} 
    {active==='Documentos'&&<Documents companies={companies} selectedCompanyId={selectedCompanyId} setSelectedCompanyId={setSelectedCompanyId} preview={preview} setNotice={setNotice} onPreview={setPreviewDoc}/>} 
-   {active==='Relatórios'&&<Reports companies={companies} totals={totals} models={models} daily={daily}/>} 
+   {active==='Relatórios'&&<ExtractorReports companies={companies} selectedCompanyId={selectedCompanyId} onSelectCompany={setSelectedCompanyId} allowedFrom={snapshot?.account?.allowed_from} preview={preview}/>} 
    {active==='Certificados'&&<Certificates companies={companies} onGo={go}/>} 
    {active==='Histórico'&&<HistorySection companies={companies} accountId={snapshot?.account?.id} userId={user?.id} preview={preview} setNotice={setNotice}/>} 
    {active==='Configurações'&&<SettingsSection companies={companies} account={snapshot?.account} usage={planUsage} planLabel={planLabel}/>} 
