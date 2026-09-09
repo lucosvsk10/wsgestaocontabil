@@ -1,6 +1,7 @@
 import { ArrowUpRight, Instagram, Mail, MapPin, MessageCircle, Route, ShieldCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import PublicCookieConsent from './PublicCookieConsent';
+import '@/styles/public-visual-round.css';
 
 const PublicSiteFooter = () => (
   <>
