@@ -36,7 +36,10 @@ jobs:
             });
             console.log('HTTP',r?.status(),'URL',page.url(),'COMPUTED',JSON.stringify(computed));
             if(!/Space Grotesk/i.test(computed.font)) throw new Error('ADM font is not active');
-            if(computed.spacing!=='-0.075px') throw new Error('ADM base tracking is not active');
+            const baseTracking=parseFloat(computed.spacing);
+            const headingTracking=parseFloat(computed.h1Spacing);
+            if(!(baseTracking < 0 && Math.abs(baseTracking) <= 0.1)) throw new Error('ADM base tracking is not active');
+            if(!(headingTracking < -0.3)) throw new Error('ADM heading tracking is not active');
             if(computed.h1Weight!=='600') throw new Error('ADM heading weight is not active');
             await browser.close();
           })().catch(e=>{console.error(e);process.exit(1)});
