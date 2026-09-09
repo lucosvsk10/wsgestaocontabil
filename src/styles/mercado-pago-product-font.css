@@ -1,0 +1,22 @@
+/* Fiscal products typography — same Mercado Pago-inspired stack used by the issuer/admin language. */
+html body .extractor-app,
+html body .extractor-app *,
+html body .extractor-app input,
+html body .extractor-app select,
+html body .extractor-app textarea,
+html body .extractor-app button,
+html body .extractor-app table,
+html body .extractor-app th,
+html body .extractor-app td,
+html body .extractor-account-overlay,
+html body .extractor-account-overlay *,
+html body .ws-account-overlay,
+html body .ws-account-overlay * {
+  font-family: 'Proxima Nova', 'Inter', 'Helvetica Neue', Arial, sans-serif !important;
+  font-synthesis: none;
+}
+
+/* Keep long fiscal keys readable as code. */
+html body .extractor-admin-table td .key {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace !important;
+}
