@@ -32,7 +32,7 @@ const OfficeExperienceSection = () => (
     </div>
 
     <div className="public-office-video-wrap">
-      <video className="public-office-video" src="/assets/ws-escritorio-tour.mp4" poster="/assets/ws-escritorio-poster.jpg" controls playsInline preload="metadata" aria-label="Vídeo do escritório da WS Gestão Contábil" />
+      <video className="public-office-video" src="/assets/ws-escritorio-tour.mp4" controls playsInline preload="auto" aria-label="Vídeo do escritório da WS Gestão Contábil" />
       <div className="public-office-video-caption"><span><Play /> VISITA RÁPIDA</span><strong>Um pouco do nosso escritório.</strong></div>
     </div>
 
