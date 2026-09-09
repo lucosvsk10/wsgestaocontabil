@@ -34,6 +34,7 @@ import '@/styles/saas-premium-v3.css';
 import '@/styles/saas-admin-reconciliation.css';
 import '@/styles/saas-native-font.css';
 import '@/styles/saas-mobile-polish.css';
+import '@/styles/saas-user-polish.css';
 
 const WS_LOGO = '/assets/ws-emissor-fiscal.png';
 const TEST_TRANSPORT_ORG_ID = 'c77c4620-fbbb-4f03-9e32-ab48d25bb0cf';
