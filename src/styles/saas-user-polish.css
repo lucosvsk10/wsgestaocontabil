@@ -1,0 +1,5 @@
+.saas-admin-light,.saas-admin-light *,.saas-admin-light input,.saas-admin-light select,.saas-admin-light textarea,.saas-admin-light button,.saas-admin-light table,.saas-admin-light th,.saas-admin-light td{font-family:'Prompt',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif!important}
+.saas-admin-light .saas-topbar{background:radial-gradient(circle at 50% -120%,rgba(48,78,112,.16),transparent 56%),linear-gradient(180deg,#030912 0%,#020817 100%)!important}
+.saas-admin-light .saas-brand{position:relative}.saas-admin-light .saas-brand .saas-product-logo{display:none!important}.saas-admin-light .saas-brand::after{content:'';display:block;width:124px;height:34px;background:url('/assets/ws-logo.png') center/contain no-repeat}
+.saas-admin-light .saas-topbar .saas-page-context p,.saas-admin-light .saas-topbar .saas-company-context p:last-child{color:#8d9aab!important}.saas-admin-light .saas-topbar select{background:#08111d!important;border-color:rgba(148,163,184,.18)!important}
+@media(max-width:720px){.saas-admin-light .saas-brand::after{display:none}}
