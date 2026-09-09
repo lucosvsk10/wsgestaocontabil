@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -12,17 +11,11 @@ export const useUserCreation = (onUserCreated: () => void) => {
     try {
       const session = await supabase.auth.getSession();
       const accessToken = session.data.session?.access_token;
-      
-      if (!accessToken) {
-        throw new Error("Você precisa estar logado para criar usuários");
-      }
-      
-      // Ensure role is one of the valid options
+      if (!accessToken) throw new Error("Você precisa estar logado para criar usuários");
+
       let userRole = data.role || 'client';
-      if (!['fiscal', 'contabil', 'geral', 'client'].includes(userRole)) {
-        userRole = 'client'; // Default to client if invalid role
-      }
-      
+      if (!['admin', 'fiscal', 'contabil', 'geral', 'client'].includes(userRole)) userRole = 'client';
+
       const response = await fetch(`https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/create-user`, {
         method: 'POST',
         headers: {
@@ -31,54 +24,33 @@ export const useUserCreation = (onUserCreated: () => void) => {
         },
         body: JSON.stringify({
           email: data.email,
+          username: data.username,
           password: data.password,
-          name: data.name,  // Sending the name field
+          name: data.name,
           isAdmin: data.isAdmin,
           role: userRole,
-          user_metadata: {
-            name: data.name  // Include name in user_metadata
-          }
+          user_metadata: { name: data.name }
         })
       });
 
       const responseData = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(responseData.error || "Erro ao criar usuário");
-      }
+      if (!response.ok) throw new Error(responseData.error || "Erro ao criar usuário");
 
-      // Get role display text
-      const getRoleDisplayText = (role: string) => {
-        switch (role) {
-          case 'fiscal': return 'fiscal';
-          case 'contabil': return 'contábil';
-          case 'geral': return 'geral';
-          default: return 'cliente';
-        }
-      };
-
-      // Notify successful creation
+      const credential = userRole === 'client' ? responseData?.user?.username : responseData?.user?.email;
       toast({
         title: "Usuário criado com sucesso",
-        description: `${data.name} (${data.email}) foi cadastrado no sistema como ${getRoleDisplayText(userRole)}.`
+        description: `${data.name}${credential ? ` (${credential})` : ''} foi cadastrado no sistema.`
       });
-
-      // Call callback to refresh users
       onUserCreated();
+      return responseData;
     } catch (error: any) {
       console.error('Erro ao criar usuário:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao criar usuário",
-        description: error.message
-      });
+      toast({ variant: "destructive", title: "Erro ao criar usuário", description: error.message });
+      throw error;
     } finally {
       setIsCreatingUser(false);
     }
   };
 
-  return {
-    isCreatingUser,
-    createUser
-  };
+  return { isCreatingUser, createUser };
 };
