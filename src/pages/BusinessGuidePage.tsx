@@ -4,6 +4,7 @@ import { Link, Navigate, useParams } from 'react-router-dom';
 import guides from '@/content/business-guides.json';
 import PublicSiteFooter from '@/components/public/PublicSiteFooter';
 import '../styles/public-content.css';
+import '../styles/public-layout-fixes.css';
 
 type Guide = (typeof guides)[number];
 
@@ -48,8 +49,8 @@ const BusinessGuidePage = () => {
   return (
     <div className="public-page">
       <header className="guide-header">
-        <Link to="/" className="guide-brand"><img src="/assets/ws-logo.png" alt="WS Gestão Contábil" /></Link>
-        <nav><Link to="/">Início</Link><Link to="/guias">Guias</Link><Link to="/login">Login</Link></nav>
+        <Link to="/home-preview" className="guide-brand"><img src="/assets/ws-logo.png" alt="WS Gestão Contábil" /></Link>
+        <nav><Link to="/home-preview">Início</Link><Link to="/guias">Guias</Link><Link to="/login">Login</Link></nav>
       </header>
       <main>
         <article className="guide-article">
@@ -61,17 +62,11 @@ const BusinessGuidePage = () => {
             <small><Clock3 /> Publicado em 8 de setembro de 2026 · {guide.readingTime}</small>
             <a className="guide-hero-cta" href="https://wa.me/5582999324884?text=Ol%C3%A1%2C%20li%20um%20guia%20da%20WS%20e%20quero%20orienta%C3%A7%C3%A3o." target="_blank" rel="noreferrer">Conversar sobre meu caso <ArrowRight /></a>
           </header>
-          <figure className="guide-cover">
-            <img src={guide.heroImage} alt={guide.heroImageAlt} width="1600" height="900" fetchPriority="high" />
-          </figure>
+          <figure className="guide-cover"><img src={guide.heroImage} alt={guide.heroImageAlt} width="1600" height="900" fetchPriority="high" /></figure>
           <div className="guide-layout">
             <div className="guide-body">
               <p className="guide-lead">{guide.intro}</p>
-              {guide.sections.map((section, index) => <section key={section.title}>
-                <h2>{section.title}</h2>{section.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
-                {index === 0 && <figure className="guide-content-image"><img src={guide.contentImage} alt={guide.contentImageAlt} width="1260" height="750" loading="lazy" /></figure>}
-                {index === 1 && <aside className="guide-inline-cta"><span>ORIENTAÇÃO WS</span><h3>{guide.ctaTitle}</h3><p>{guide.ctaText}</p><a href="https://wa.me/5582999324884" target="_blank" rel="noreferrer">Conversar com um especialista <ArrowRight /></a></aside>}
-              </section>)}
+              {guide.sections.map((section, index) => <section key={section.title}><h2>{section.title}</h2>{section.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}{index === 0 && <figure className="guide-content-image"><img src={guide.contentImage} alt={guide.contentImageAlt} width="1260" height="750" loading="lazy" /></figure>}{index === 1 && <aside className="guide-inline-cta"><span>ORIENTAÇÃO WS</span><h3>{guide.ctaTitle}</h3><p>{guide.ctaText}</p><a href="https://wa.me/5582999324884" target="_blank" rel="noreferrer">Conversar com um especialista <ArrowRight /></a></aside>}</section>)}
               <section className="guide-checklist"><h2>Checklist para colocar em prática</h2>{guide.checklist.map((item) => <p key={item}><Check /> {item}</p>)}</section>
               <p className="guide-source">Fonte de referência: <a href={guide.sourceUrl} target="_blank" rel="noreferrer">{guide.sourceLabel} <ExternalLink /></a></p>
               <aside className="guide-final-cta"><span>PRÓXIMO PASSO</span><h2>Transforme informação em uma decisão segura.</h2><p>Conte à WS o momento da sua empresa e receba uma orientação inicial para organizar o caminho.</p><a href="https://wa.me/5582999324884?text=Ol%C3%A1%2C%20quero%20organizar%20o%20pr%C3%B3ximo%20passo%20da%20minha%20empresa." target="_blank" rel="noreferrer">Solicitar orientação <ArrowRight /></a></aside>
