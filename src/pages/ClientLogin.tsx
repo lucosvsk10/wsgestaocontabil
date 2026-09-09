@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useTheme } from '@/contexts/ThemeContext';
 import { getCurrentProductAccess } from '@/utils/auth/productAccess';
 import '@/styles/client-login.css';
+import '@/styles/shared-entry-visual.css';
 
 const STANDARD_LOGO = '/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png';
 const LIGHT_LOGO = '/lovable-uploads/f7fdf0cf-f16c-4df7-a92c-964aadea9539.png';

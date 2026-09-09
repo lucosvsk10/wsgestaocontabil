@@ -3,6 +3,7 @@ import { ArrowRight, ArrowUpRight, Building2, Briefcase, Calculator, FileCheck2,
 import { Link } from 'react-router-dom';
 import guides from '@/content/business-guides.json';
 import TrustedCompaniesSection from '@/components/public/TrustedCompaniesSection';
+import OfficeExperienceSection from '@/components/public/OfficeExperienceSection';
 import PublicSiteFooter from '@/components/public/PublicSiteFooter';
 import '../styles/home-preview.css';
 import '../styles/public-content.css';
@@ -44,9 +45,7 @@ const HomePreview = () => {
   const [heroIndex, setHeroIndex] = useState(0);
 
   useEffect(() => {
-    const timer = window.setInterval(() => {
-      setHeroIndex((current) => (current + 1) % heroMessages.length);
-    }, 4800);
+    const timer = window.setInterval(() => setHeroIndex((current) => (current + 1) % heroMessages.length), 4800);
     return () => window.clearInterval(timer);
   }, []);
 
@@ -57,21 +56,20 @@ const HomePreview = () => {
   }, []);
 
   const heroMessage = heroMessages[heroIndex];
+  const featuredGuide = guides[0];
+  const guideRail = guides.slice(1, 5);
 
   return (
     <div className="home-preview">
       <header className="preview-navbar-wrap">
         <nav className="preview-navbar" aria-label="Navegação principal">
-          <a className="preview-brand" href="#inicio" aria-label="WS Gestão Contábil — início">
-            <img src="/assets/ws-logo.png" alt="WS Gestão Contábil" />
-          </a>
-          <button className="preview-mobile-toggle" type="button" aria-label="Abrir menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>
-            <span /><span /><span />
-          </button>
+          <a className="preview-brand" href="#inicio" aria-label="WS Gestão Contábil — início"><img src="/assets/ws-logo.png" alt="WS Gestão Contábil" /></a>
+          <button className="preview-mobile-toggle" type="button" aria-label="Abrir menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}><span /><span /><span /></button>
           <div className={`preview-nav-links ${menuOpen ? 'is-open' : ''}`}>
             <a href="#servicos" onClick={() => setMenuOpen(false)}>SERVIÇOS</a>
             <a href="#softwares" onClick={() => setMenuOpen(false)}>SOFTWARES</a>
             <a href="#conteudos" onClick={() => setMenuOpen(false)}>CONTEÚDOS</a>
+            <a href="#escritorio" onClick={() => setMenuOpen(false)}>ESCRITÓRIO</a>
             <a href="#duvidas" onClick={() => setMenuOpen(false)}>DÚVIDAS</a>
             <Link className="preview-login" to="/login"><UserRound size={19} /> LOGIN</Link>
             <Link className="preview-register" to="/login">CADASTRE-SE</Link>
@@ -106,25 +104,27 @@ const HomePreview = () => {
 
         <TrustedCompaniesSection />
 
-        <section id="conteudos" className="public-guides preview-section" aria-labelledby="guides-title">
-          <div className="public-section-heading">
-            <span>DECISÕES MAIS SEGURAS</span>
-            <h2 id="guides-title">GUIAS PARA QUEM<br />ESTÁ CONSTRUINDO</h2>
-            <p>Informação prática para transformar uma ideia em um negócio mais organizado.</p>
+        <section id="conteudos" className="public-guides preview-section public-guides-editorial" aria-labelledby="guides-title">
+          <div className="public-guides-head-row">
+            <div className="public-section-heading">
+              <span>CONTEÚDO PARA DECIDIR MELHOR</span>
+              <h2 id="guides-title">GUIAS PARA QUEM<br />ESTÁ CONSTRUINDO</h2>
+              <p>Sem conteúdo genérico: cada guia organiza uma decisão real de quem está abrindo, administrando ou reorganizando uma empresa.</p>
+            </div>
+            <Link className="public-guides-all" to="/guias">Ver todos os guias <ArrowUpRight /></Link>
           </div>
-          <div className="public-guide-grid">
-            {guides.map((guide, index) => (
-              <Link className="public-guide-card" to={`/guias/${guide.slug}`} key={guide.slug}>
-                <img className="public-guide-thumb" src={guide.heroImage} alt="" loading="lazy" />
-                <span className="public-guide-number">0{index + 1}</span>
-                <small>{guide.eyebrow} · {guide.readingTime}</small>
-                <h3>{guide.title}</h3>
-                <p>{guide.description}</p>
-                <strong>Ler guia <ArrowRight /></strong>
-              </Link>
-            ))}
+          <div className="public-guides-featured">
+            <Link className="public-guide-feature" to={`/guias/${featuredGuide.slug}`}>
+              <img src={featuredGuide.heroImage} alt={featuredGuide.heroImageAlt} loading="lazy" />
+              <div><small>{featuredGuide.eyebrow} · {featuredGuide.readingTime}</small><h3>{featuredGuide.title}</h3><p>{featuredGuide.description}</p><strong>Começar por este guia <ArrowRight /></strong></div>
+            </Link>
+            <div className="public-guide-rail">
+              {guideRail.map((guide, index) => <Link to={`/guias/${guide.slug}`} key={guide.slug}><span>0{index + 2}</span><div><small>{guide.eyebrow}</small><h3>{guide.title}</h3><p>{guide.readingTime}</p></div><ArrowUpRight /></Link>)}
+            </div>
           </div>
         </section>
+
+        <OfficeExperienceSection />
 
         <section id="duvidas" className="public-faq preview-section" aria-labelledby="faq-title">
           <div className="public-section-heading"><span>ANTES DE COMEÇAR</span><h2 id="faq-title">DÚVIDAS<br />FREQUENTES</h2><p>Respostas diretas para facilitar sua decisão.</p></div>

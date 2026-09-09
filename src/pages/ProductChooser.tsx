@@ -1,6 +1,7 @@
 import { FileCheck2, Files } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import '@/styles/product-chooser.css';
+import '@/styles/shared-entry-visual.css';
 
 export default function ProductChooser() {
   const navigate = useNavigate();

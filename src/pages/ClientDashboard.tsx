@@ -7,6 +7,7 @@ import { AnnouncementsSection } from "@/components/client/sections/Announcements
 import { FiscalCalendarSection } from "@/components/client/sections/FiscalCalendarSection";
 import { CompanyDataSection } from "@/components/client/sections/CompanyDataSection";
 import { DocumentTable } from "@/components/client/DocumentTable";
+import "@/styles/client-visual-round.css";
 
 const ClientDashboard = () => {
   const { user, documents, commonCategories, fetchUserDocuments } = useClientDashboardLogic();
