@@ -1,4 +1,4 @@
-name: Verify Mercado Pago font
+name: Verify exact ADM font
 on:
   push:
     branches: [verify/extractor-ux-round2]
@@ -24,10 +24,20 @@ jobs:
             const page=await browser.newPage({viewport:{width:1500,height:900}});
             const r=await page.goto('https://wsgestaocontabil.lovable.app/extrator-preview',{waitUntil:'networkidle',timeout:90000});
             await page.waitForTimeout(5000);
-            const font=await page.evaluate(()=>getComputedStyle(document.querySelector('.extractor-app')).fontFamily);
-            console.log('HTTP',r?.status(),'URL',page.url(),'FONT',font);
-            if(/Prompt/i.test(font)) throw new Error('Prompt is still active');
-            if(!/Proxima Nova/i.test(font)) throw new Error('Mercado Pago font stack is not active');
+            const computed=await page.evaluate(()=>{
+              const app=document.querySelector('.extractor-app');
+              const h1=document.querySelector('.extractor-app h1');
+              return {
+                font:getComputedStyle(app).fontFamily,
+                spacing:getComputedStyle(app).letterSpacing,
+                h1Spacing:h1?getComputedStyle(h1).letterSpacing:null,
+                h1Weight:h1?getComputedStyle(h1).fontWeight:null
+              };
+            });
+            console.log('HTTP',r?.status(),'URL',page.url(),'COMPUTED',JSON.stringify(computed));
+            if(!/Space Grotesk/i.test(computed.font)) throw new Error('ADM font is not active');
+            if(computed.spacing!=='-0.075px') throw new Error('ADM base tracking is not active');
+            if(computed.h1Weight!=='600') throw new Error('ADM heading weight is not active');
             await browser.close();
           })().catch(e=>{console.error(e);process.exit(1)});
           NODE
