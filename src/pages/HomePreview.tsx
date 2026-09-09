@@ -5,6 +5,7 @@ import guides from '@/content/business-guides.json';
 import TrustedCompaniesSection from '@/components/public/TrustedCompaniesSection';
 import OfficeExperienceSection from '@/components/public/OfficeExperienceSection';
 import PublicSiteFooter from '@/components/public/PublicSiteFooter';
+import { WS_COUNTER_IMAGE_DATA } from '@/generated/wsCounterImageData';
 import '../styles/home-preview.css';
 import '../styles/public-content.css';
 import '../styles/home-clients.css';
@@ -88,7 +89,7 @@ const HomePreview = () => {
           </div>
           <div id="sobre" className="preview-founder">
             <div className="preview-founder-panel"><div className="preview-founder-copy"><h2>WILSON SOUZA</h2><p>CONTADOR E CEO DA<br />WS GESTÃO A MAIS DE 16<br />ANOS</p><p className="preview-founder-highlight">REFERÊNCIA <strong>#1</strong> EM<br />CONTABILIDADE EM<br />TODO O NORDESTE</p></div></div>
-            <img className="preview-founder-image" src="/assets/ws-contador-cutout-new.webp" alt="Wilson Souza, contador e CEO da WS Gestão Contábil" />
+            <img className="preview-founder-image" src={WS_COUNTER_IMAGE_DATA} alt="Wilson Souza, contador e CEO da WS Gestão Contábil" />
             <div className="preview-socials"><a href="https://www.instagram.com/wscontabil.co/" target="_blank" rel="noreferrer" aria-label="Instagram"><Instagram size={27} /></a><a href="https://wa.me/5582999324884" target="_blank" rel="noreferrer" aria-label="WhatsApp"><MessageCircle size={27} /></a></div>
           </div>
         </section>
