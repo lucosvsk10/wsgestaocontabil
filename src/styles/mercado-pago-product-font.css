@@ -1,4 +1,13 @@
-/* Fiscal products typography — same Mercado Pago-inspired stack used by the issuer/admin language. */
+/* Fiscal products typography — exact stack used by the current ADM (.pro-ui). */
+html body .saas-admin-light,
+html body .saas-admin-light *,
+html body .saas-admin-light input,
+html body .saas-admin-light select,
+html body .saas-admin-light textarea,
+html body .saas-admin-light button,
+html body .saas-admin-light table,
+html body .saas-admin-light th,
+html body .saas-admin-light td,
 html body .extractor-app,
 html body .extractor-app *,
 html body .extractor-app input,
@@ -12,11 +21,29 @@ html body .extractor-account-overlay,
 html body .extractor-account-overlay *,
 html body .ws-account-overlay,
 html body .ws-account-overlay * {
-  font-family: 'Proxima Nova', 'Inter', 'Helvetica Neue', Arial, sans-serif !important;
+  font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif !important;
   font-synthesis: none;
+  letter-spacing: -0.005em;
+}
+
+html body .saas-admin-light h1,
+html body .saas-admin-light h2,
+html body .saas-admin-light h3,
+html body .extractor-app h1,
+html body .extractor-app h2,
+html body .extractor-app h3,
+html body .extractor-account-overlay h1,
+html body .extractor-account-overlay h2,
+html body .extractor-account-overlay h3,
+html body .ws-account-overlay h1,
+html body .ws-account-overlay h2,
+html body .ws-account-overlay h3 {
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 /* Keep long fiscal keys readable as code. */
 html body .extractor-admin-table td .key {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace !important;
+  letter-spacing: 0;
 }
