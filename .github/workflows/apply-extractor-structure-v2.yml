@@ -28,6 +28,16 @@ jobs:
       - name: Apply scoped refinements
         run: |
           python .github/scripts/patch_extractor_structure_v2.py
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/pages/FiscalExtractorApp.tsx')
+          s=p.read_text()
+          bad="onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();onGo('Empresas',c.id)}}><div>"
+          good="onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();onGo('Empresas',c.id)}}}><div>"
+          if bad not in s:
+              raise SystemExit('certificate key handler pattern not found')
+          p.write_text(s.replace(bad,good,1))
+          PY
           sed -i 's/[[:space:]]\+$//' src/pages/FiscalExtractorApp.tsx
 
       - name: Validate diff
