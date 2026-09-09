@@ -34,14 +34,19 @@ const OfficeExperienceSection = () => {
     };
 
     startPlayback();
-    video.addEventListener('loadedmetadata', startPlayback);
+    video.addEventListener('loadeddata', startPlayback);
     video.addEventListener('canplay', startPlayback);
     const retry = window.setTimeout(startPlayback, 350);
+    const retryAgain = window.setTimeout(startPlayback, 1200);
+    const handleVisibility = () => { if (document.visibilityState === 'visible') startPlayback(); };
+    document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       window.clearTimeout(retry);
-      video.removeEventListener('loadedmetadata', startPlayback);
+      window.clearTimeout(retryAgain);
+      video.removeEventListener('loadeddata', startPlayback);
       video.removeEventListener('canplay', startPlayback);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, []);
 
@@ -63,13 +68,12 @@ const OfficeExperienceSection = () => {
         <video
           ref={videoRef}
           className="public-office-video"
-          src="/assets/ws-escritorio-tour.mp4"
+          src="/assets/ws-escritorio-tour-hq-web.mp4"
           autoPlay
           muted
           loop
           playsInline
           preload="auto"
-          poster="/assets/ws-escritorio-poster.jpg"
           aria-label="Vídeo do escritório da WS Gestão Contábil"
           onCanPlay={(event) => void event.currentTarget.play().catch(() => undefined)}
         />
