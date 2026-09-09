@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export type ExtractorIconName = 'dashboard'|'company'|'document'|'report'|'certificate'|'history'|'settings'|'search'|'refresh'|'download'|'upload'|'eye'|'warning'|'check';
 
@@ -7,10 +7,19 @@ type Props={name:ExtractorIconName;className?:string;title?:string};
 
 export default function AnimatedExtractorIcon({name,className='',title}:Props){
   const [hot,setHot]=useState(false);
+  const ref=useRef<SVGSVGElement|null>(null);
   const common={fill:'none',stroke:'currentColor',strokeWidth:1.8,strokeLinecap:'round' as const,strokeLinejoin:'round' as const};
   const enter=()=>setHot(true),leave=()=>setHot(false);
   const transition={duration:.42,ease:[.22,1,.36,1] as [number,number,number,number]};
-  return <motion.svg viewBox="0 0 24 24" aria-hidden={title?undefined:true} role={title?'img':undefined} className={className} onMouseEnter={enter} onMouseLeave={leave} initial={false}>
+  useEffect(()=>{
+    const parent=ref.current?.closest('[data-icon-hover]');
+    if(!parent)return;
+    const onEnter=()=>setHot(true),onLeave=()=>setHot(false);
+    parent.addEventListener('mouseenter',onEnter);
+    parent.addEventListener('mouseleave',onLeave);
+    return()=>{parent.removeEventListener('mouseenter',onEnter);parent.removeEventListener('mouseleave',onLeave)};
+  },[]);
+  return <motion.svg ref={ref} viewBox="0 0 24 24" aria-hidden={title?undefined:true} role={title?'img':undefined} className={`extractor-animated-icon icon-${name} ${className}`.trim()} onMouseEnter={enter} onMouseLeave={leave} initial={false}>
     {title&&<title>{title}</title>}
     {name==='search'&&<><motion.circle cx="11" cy="11" r="6.6" {...common} animate={{rotate:hot?22:0,scale:hot?1.04:1}} style={{transformOrigin:'11px 11px'}} transition={transition}/><motion.path d="m16 16 4.1 4.1" {...common} animate={{x:hot?1:0,y:hot?1:0}} transition={transition}/></>}
     {name==='document'&&<><path d="M7 3.5h7l4 4V20H7z" {...common}/><path d="M14 3.5V8h4" {...common}/><motion.path d="M10 11h5.5" {...common} initial={{pathLength:1}} animate={{pathLength:hot?[0,1]:1}} transition={{duration:.55}}/><motion.path d="M10 14.5h5.5" {...common} initial={{pathLength:1}} animate={{pathLength:hot?[0,1]:1}} transition={{duration:.55,delay:hot ? .12 : 0}}/><motion.path d="M10 18h3.8" {...common} initial={{pathLength:1}} animate={{pathLength:hot?[0,1]:1}} transition={{duration:.5,delay:hot ? .22 : 0}}/></>}
