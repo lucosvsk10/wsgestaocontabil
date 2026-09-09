@@ -7,6 +7,7 @@ import OfficeExperienceSection from '@/components/public/OfficeExperienceSection
 import PublicSiteFooter from '@/components/public/PublicSiteFooter';
 import '../styles/home-preview.css';
 import '../styles/public-content.css';
+import '../styles/home-clients.css';
 
 const services = [
   { icon: Building2, title: <>Abertura <strong>de<br />empresa</strong></>, description: 'CNPJ, definição de CNAE, regime tributário, inscrições e regularização inicial.' },
@@ -24,7 +25,7 @@ const services = [
 const software = [
   { audience: 'PARA EMPRESAS', badge: 'MELHOR APP DE EMISSÃO NACIONAL', title: <>EMISSOR DE<br /><span>NOTAS FISCAIS</span></>, description: 'Emita e gerencie suas notas fiscais em um só lugar.', cta: <>VER OFERTA <small>POR TEMPO LIMITADO</small><ArrowUpRight size={18} /></>, icon: 'document', urgent: true, href: '/emissor-fiscal' },
   { audience: 'PESSOAL / EMPRESARIAL', title: <>SIMULADORES<br />DE <span>IMPOSTOS</span></>, description: 'Calcule impostos, contribuições e encargos em poucos segundos.', cta: <>VER SIMULADOR <ArrowUpRight size={18} /></>, icon: 'calculator', urgent: false, href: '/simulador-irpf' },
-  { audience: 'PARA EMPRESAS', badge: 'LICENÇA OFICIAL DA SEFAZ', title: <>EXTRATOR DE<br /><span>COMPRAS E<br />VENDAS</span></>, description: 'Busque e organize suas notas fiscais de compras e vendas de forma automática.', cta: <>VER OFERTA <small>POR TEMPO LIMITADO</small><ArrowUpRight size={18} /></>, icon: 'document', urgent: true, href: '/login' },
+  { audience: 'PARA EMPRESAS', badge: 'LICENÇA OFICIAL DA SEFAZ', title: <>EXTRATOR DE<br /><span>COMPRAS E<br />VENDAS</span></>, description: 'Busque e organize suas notas fiscais de compras e vendas de forma automática.', cta: <>VER OFERTA <small>POR TEMPO LIMITADO</small><ArrowUpRight size={18} /></>, icon: 'document', urgent: true, href: '/extrator-fiscal' },
 ];
 
 const heroMessages = [
@@ -72,7 +73,7 @@ const HomePreview = () => {
             <a href="#escritorio" onClick={() => setMenuOpen(false)}>ESCRITÓRIO</a>
             <a href="#duvidas" onClick={() => setMenuOpen(false)}>DÚVIDAS</a>
             <Link className="preview-login" to="/login"><UserRound size={19} /> LOGIN</Link>
-            <Link className="preview-register" to="/login">CADASTRE-SE</Link>
+            <Link className="preview-register" to="/cadastro">CADASTRE-SE</Link>
           </div>
         </nav>
       </header>
@@ -87,7 +88,7 @@ const HomePreview = () => {
           </div>
           <div id="sobre" className="preview-founder">
             <div className="preview-founder-panel"><div className="preview-founder-copy"><h2>WILSON SOUZA</h2><p>CONTADOR E CEO DA<br />WS GESTÃO A MAIS DE 16<br />ANOS</p><p className="preview-founder-highlight">REFERÊNCIA <strong>#1</strong> EM<br />CONTABILIDADE EM<br />TODO O NORDESTE</p></div></div>
-            <img className="preview-founder-image" src="/assets/ws-contador-cutout-hq.webp" alt="Wilson Souza, contador e CEO da WS Gestão Contábil" />
+            <img className="preview-founder-image" src="/assets/ws-contador-cutout-new.webp" alt="Wilson Souza, contador e CEO da WS Gestão Contábil" />
             <div className="preview-socials"><a href="https://www.instagram.com/wscontabil.co/" target="_blank" rel="noreferrer" aria-label="Instagram"><Instagram size={27} /></a><a href="https://wa.me/5582999324884" target="_blank" rel="noreferrer" aria-label="WhatsApp"><MessageCircle size={27} /></a></div>
           </div>
         </section>
