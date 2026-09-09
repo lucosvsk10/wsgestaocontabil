@@ -10,7 +10,7 @@ import { Loader2 } from "lucide-react";
 interface UserCreationDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: { name: string; username: string; password: string; isAdmin: false; role: 'client' }) => void;
+  onSubmit: (data: any) => void;
   isCreating: boolean;
 }
 
