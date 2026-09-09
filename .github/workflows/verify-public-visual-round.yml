@@ -1,0 +1,101 @@
+name: Verify public visual round
+on:
+  push:
+    branches: [verify/public-visual-round]
+    paths: [.github/workflows/verify-public-visual-round.yml]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Playwright
+        run: |
+          mkdir -p /tmp/pw && cd /tmp/pw
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null 2>&1
+      - name: Verify production visuals
+        run: |
+          cat > /tmp/pw/verify.cjs <<'NODE'
+          const { chromium } = require('/tmp/pw/node_modules/playwright');
+          const base='https://wsgestaocontabil.lovable.app';
+          const wait=ms=>new Promise(r=>setTimeout(r,ms));
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage({viewport:{width:1600,height:1000},deviceScaleFactor:1});
+            let ok=false;
+            for(let attempt=1;attempt<=8;attempt++){
+              const res=await page.goto(base+'/home-preview',{waitUntil:'networkidle',timeout:90000});
+              await page.waitForTimeout(3500);
+              const hasOffice=await page.locator('#escritorio').count();
+              console.log('HOME ATTEMPT',attempt,'HTTP',res?.status(),'OFFICE',hasOffice,'URL',page.url());
+              if(res?.status()===200&&hasOffice){ok=true;break}
+              await wait(12000);
+            }
+            if(!ok) throw new Error('New Home deployment did not become available');
+            const home=await page.evaluate(()=>({
+              trust:Boolean(document.querySelector('.public-logo-stage')),
+              marquees:document.querySelectorAll('.public-logo-marquee').length,
+              clients:document.querySelectorAll('.public-client-logo').length,
+              featured:Boolean(document.querySelector('.public-guide-feature')),
+              guideRail:document.querySelectorAll('.public-guide-rail>a').length,
+              office:Boolean(document.querySelector('#escritorio')),
+              video:document.querySelector('.public-office-video')?.getAttribute('src')||'',
+              maps:document.querySelectorAll('.public-location-map iframe').length,
+              routes:[...document.querySelectorAll('.public-location-copy a')].map(a=>a.getAttribute('href')),
+              faq:document.querySelectorAll('#duvidas details').length,
+              footer:Boolean(document.querySelector('.public-footer-cta')),
+              cookie:Boolean(document.querySelector('.public-cookie')),
+              font:getComputedStyle(document.querySelector('.home-preview')).fontFamily
+            }));
+            console.log('HOME',JSON.stringify(home));
+            if(!home.trust||home.marquees!==2||home.clients<2) throw new Error('Client trust showcase missing');
+            if(!home.featured||home.guideRail<4) throw new Error('Editorial guides block missing');
+            if(!home.office||home.maps!==2) throw new Error('Office/location section incomplete');
+            if(home.video!=='/assets/ws-escritorio-tour.mp4') throw new Error('Office video source missing');
+            if(!home.routes.includes('https://maps.app.goo.gl/cthtEGbJGqGBTVVo9')||!home.routes.includes('https://maps.app.goo.gl/nCabkeuY39TkrYv59')) throw new Error('Provided route links missing');
+            if(home.faq<6||!home.footer||!home.cookie) throw new Error('FAQ/footer/cookie incomplete');
+            const videoRes=await page.request.get(base+'/assets/ws-escritorio-tour.mp4');
+            console.log('VIDEO HTTP',videoRes.status(),'BYTES',(await videoRes.body()).length);
+            if(videoRes.status()!==200||(await videoRes.body()).length<10000) throw new Error('Office video asset unavailable');
+            await page.screenshot({path:'/tmp/home-desktop.png',fullPage:true});
+
+            await page.goto(base+'/guias',{waitUntil:'networkidle',timeout:90000});
+            await page.waitForTimeout(1000);
+            const guides=await page.evaluate(()=>({cards:document.querySelectorAll('.guides-index-main .public-guide-card').length,main:Boolean(document.querySelector('.guides-index-main')),radius:getComputedStyle(document.querySelector('.guides-index-main .public-guide-card')).borderRadius}));
+            console.log('GUIDES',JSON.stringify(guides));
+            if(!guides.main||guides.cards<4) throw new Error('Guides index missing');
+            await page.screenshot({path:'/tmp/guides-desktop.png',fullPage:true});
+
+            await page.goto(base+'/login',{waitUntil:'networkidle',timeout:90000});
+            const login=await page.evaluate(()=>({font:getComputedStyle(document.querySelector('.ws-login-page')).fontFamily,bg:getComputedStyle(document.querySelector('.ws-login-page')).backgroundColor,grid:getComputedStyle(document.querySelector('.ws-login-grid')).display}));
+            console.log('LOGIN',JSON.stringify(login));
+            if(!/Space Grotesk/i.test(login.font)||login.grid!=='none') throw new Error('Shared login polish missing');
+
+            const mobile=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:1});
+            await mobile.goto(base+'/home-preview',{waitUntil:'networkidle',timeout:90000});
+            await mobile.waitForTimeout(1800);
+            const mobileHome=await mobile.evaluate(()=>({width:document.documentElement.scrollWidth,viewport:window.innerWidth,video:getComputedStyle(document.querySelector('.public-office-video')).aspectRatio,locations:document.querySelectorAll('.public-location-card').length,cookie:Boolean(document.querySelector('.public-cookie'))}));
+            console.log('MOBILE HOME',JSON.stringify(mobileHome));
+            if(mobileHome.width>mobileHome.viewport+2||mobileHome.locations!==2) throw new Error('Home mobile overflow/location issue');
+            await mobile.screenshot({path:'/tmp/home-mobile.png',fullPage:true});
+            await mobile.goto(base+'/login',{waitUntil:'networkidle',timeout:90000});
+            const mobileLogin=await mobile.evaluate(()=>({width:document.documentElement.scrollWidth,viewport:window.innerWidth,presentation:getComputedStyle(document.querySelector('.ws-login-presentation')).display}));
+            console.log('MOBILE LOGIN',JSON.stringify(mobileLogin));
+            if(mobileLogin.width>mobileLogin.viewport+2||mobileLogin.presentation!=='none') throw new Error('Login mobile layout issue');
+            await mobile.screenshot({path:'/tmp/login-mobile.png',fullPage:true});
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+          node /tmp/pw/verify.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: public-visual-round-screenshots
+          path: |
+            /tmp/home-desktop.png
+            /tmp/home-mobile.png
+            /tmp/guides-desktop.png
+            /tmp/login-mobile.png
+          retention-days: 1
