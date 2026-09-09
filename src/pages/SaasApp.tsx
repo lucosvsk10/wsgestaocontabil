@@ -35,7 +35,7 @@ import '@/styles/saas-admin-reconciliation.css';
 import '@/styles/saas-native-font.css';
 import '@/styles/saas-mobile-polish.css';
 
-const WS_LOGO = '/assets/ws-emissor-fiscal.png';
+const WS_LOGO = '/assets/ws-logo.png';
 const TEST_TRANSPORT_ORG_ID = 'c77c4620-fbbb-4f03-9e32-ab48d25bb0cf';
 const TEST_TRANSPORT_ORG_NAME = 'MSILVA TRANSPORTES';
 const cadastroSections = new Set([
@@ -150,13 +150,13 @@ export default function SaasApp() {
       setLogoUrl(null);
       const { data } = await (supabase as any)
         .from('organization_members')
-        .select('organization_id, organizations(id,name,slug)')
+        .select('organization_id, organizations(id,name,slug,product_scope)')
         .eq('user_id', user.id)
         .eq('status', 'active');
       if (requestId !== organizationRequest.current) return;
       const choices = (data || [])
         .map((row: any) => row.organizations || null)
-        .filter((value: any) => Boolean(value?.id));
+        .filter((value: any) => Boolean(value?.id) && value?.product_scope !== 'extractor');
       setOrganizationChoices(choices);
       const storedId =
         preferredOrganizationId || localStorage.getItem('ws_saas_selected_organization');

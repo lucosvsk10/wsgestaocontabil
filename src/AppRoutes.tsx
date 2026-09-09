@@ -59,10 +59,9 @@ const DashboardRouter = () => {
     Promise.all([
       (supabase as any)
         .from('organization_members')
-        .select('id')
+        .select('id, organizations(product_scope)')
         .eq('user_id', user.id)
-        .eq('status', 'active')
-        .limit(1),
+        .eq('status', 'active'),
       (supabase as any)
         .from('extractor_accounts')
         .select('id')
@@ -70,7 +69,10 @@ const DashboardRouter = () => {
     ]).then(([saasResult, extractorResult]) => {
       if (!active) return;
       setAccess({
-        saas: !saasResult.error && Boolean(saasResult.data?.length),
+        saas: !saasResult.error && Boolean((saasResult.data || []).some((row: any) => {
+          const org = Array.isArray(row.organizations) ? row.organizations[0] : row.organizations;
+          return org?.product_scope !== 'extractor';
+        })),
         extractor: !extractorResult.error && Boolean(extractorResult.data?.length),
       });
     });

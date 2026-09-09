@@ -1,4 +1,4 @@
-/* SaaS typography — Mercado Pago inspired hierarchy. Loaded last on purpose. */
+/* SaaS typography — same family used by the administrator panel. Loaded last on purpose. */
 .saas-admin-light,
 .saas-admin-light *,
 .saas-admin-light input,
@@ -8,9 +8,9 @@
 .saas-admin-light table,
 .saas-admin-light th,
 .saas-admin-light td {
-  font-family: 'Proxima Nova', 'Inter', 'Helvetica Neue', Arial, sans-serif !important;
+  font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif !important;
   font-synthesis: none;
-  letter-spacing: 0 !important;
+  letter-spacing: -0.005em !important;
 }
 
 .saas-admin-light {
@@ -45,14 +45,14 @@
   font-size: 12px !important;
   font-weight: 600 !important;
   line-height: 1.35 !important;
-  letter-spacing: 0 !important;
+  letter-spacing: -0.005em !important;
 }
 
 .saas-admin-light button { font-weight: 600; line-height: 1.25; }
-.saas-admin-light h1 { font-size: 24px !important; font-weight: 600 !important; line-height: 1.2 !important; letter-spacing: 0 !important; }
-.saas-admin-light h2 { font-size: 20px !important; font-weight: 600 !important; line-height: 1.25 !important; letter-spacing: 0 !important; }
-.saas-admin-light h3 { font-size: 18px !important; font-weight: 600 !important; line-height: 1.3 !important; letter-spacing: 0 !important; }
-.saas-admin-light h4 { font-size: 16px !important; font-weight: 600 !important; line-height: 1.3 !important; letter-spacing: 0 !important; }
+.saas-admin-light h1 { font-size: 24px !important; font-weight: 600 !important; line-height: 1.2 !important; letter-spacing: -0.005em !important; }
+.saas-admin-light h2 { font-size: 20px !important; font-weight: 600 !important; line-height: 1.25 !important; letter-spacing: -0.005em !important; }
+.saas-admin-light h3 { font-size: 18px !important; font-weight: 600 !important; line-height: 1.3 !important; letter-spacing: -0.005em !important; }
+.saas-admin-light h4 { font-size: 16px !important; font-weight: 600 !important; line-height: 1.3 !important; letter-spacing: -0.005em !important; }
 .saas-admin-light .font-medium { font-weight: 400 !important; }
 .saas-admin-light .font-semibold,
 .saas-admin-light .font-bold { font-weight: 600 !important; }
@@ -62,7 +62,7 @@
   font-size: 28px !important;
   font-weight: 400 !important;
   line-height: 1.15 !important;
-  letter-spacing: 0 !important;
+  letter-spacing: -0.005em !important;
 }
 .saas-admin-light .text-muted-foreground,
 .saas-admin-light [class*='text-[#667085]'] { font-weight: 400 !important; }
@@ -72,7 +72,7 @@
   position: fixed;
   overflow: hidden;
   isolation: isolate;
-  background: radial-gradient(circle at 50% -120%, rgba(62,104,154,.24), transparent 58%), linear-gradient(180deg,#0a1422 0%,#07111d 100%) !important;
+  background: radial-gradient(circle at 50% -150%, rgba(46,80,112,.18), transparent 56%), linear-gradient(180deg,#040b14 0%,#020817 100%) !important;
   border-color: rgba(148,163,184,.14) !important;
   box-shadow: 0 1px 0 rgba(255,255,255,.025), 0 8px 24px rgba(2,8,23,.08) !important;
 }

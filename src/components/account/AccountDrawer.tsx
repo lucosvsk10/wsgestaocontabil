@@ -12,6 +12,7 @@ type AccountDrawerProps = {
   darkTrigger?: boolean;
   avatarUrl?: string | null;
   notifications?: Array<{ title: string; text: string }>;
+  productName?: string;
 };
 
 type InvoiceRow = {
@@ -84,12 +85,14 @@ export default function AccountDrawer({
   darkTrigger = false,
   avatarUrl = null,
   notifications = [],
+  productName = "Sistema WS",
 }: AccountDrawerProps) {
   const { user, userData } = useAuth();
   const { handleLogout } = useNavigation();
   const [open, setOpen] = useState(false);
   const [section, setSection] = useState<Section>("Configurações gerais");
   const isSaasAccount = accessLabel === "Assinante do emissor fiscal";
+  const resolvedProductName = isSaasAccount ? "Emissor fiscal" : productName;
 
   const email = user?.email || "usuario@email.com";
   const name = (userData as any)?.name || (userData as any)?.full_name || email.split("@")[0] || "Usuário";
@@ -174,7 +177,7 @@ export default function AccountDrawer({
                 <SectionHeader
                   eyebrow={sectionMeta[section].eyebrow}
                   title={sectionMeta[section].title}
-                  subtitle={sectionMeta[section].subtitle}
+                  subtitle={section === "Configurações gerais" ? `Informações vinculadas ao seu acesso no ${resolvedProductName}.` : sectionMeta[section].subtitle}
                 />
 
                 {section === "Configurações gerais" && (
@@ -183,7 +186,7 @@ export default function AccountDrawer({
                       <div>
                         <span>Perfil principal</span>
                         <strong>{name}</strong>
-                        <p>Dados básicos associados ao seu login e ao emissor fiscal.</p>
+                        <p>Dados básicos associados ao seu login e ao {resolvedProductName}.</p>
                       </div>
                       <span className="ws-account-status">Ativo</span>
                     </div>
@@ -206,7 +209,7 @@ export default function AccountDrawer({
                         <span className="ws-account-status">Ativo</span>
                       </div>
                       <div className="ws-account-grid">
-                        <TextCard title="Emissor fiscal">Acesso aos recursos de emissão e gestão fiscal da organização.</TextCard>
+                        <TextCard title={resolvedProductName}>Acesso aos recursos contratados para esta conta.</TextCard>
                         <TextCard title="Documentos">Centralização dos documentos e informações vinculadas à conta.</TextCard>
                       </div>
                     </div>
@@ -529,15 +532,15 @@ const drawerCss = `
   .ws-account-overlay,
   .ws-account-overlay * {
     box-sizing: border-box;
-    font-family: 'Proxima Nova', 'Inter', 'Helvetica Neue', Arial, sans-serif !important;
-    letter-spacing: 0 !important;
+    font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif !important;
+    letter-spacing: -0.005em !important;
     font-synthesis: none;
   }
 
   .ws-account-drawer.is-saas,
   .ws-account-drawer.is-saas * {
-    font-family: 'Proxima Nova', 'Inter', 'Helvetica Neue', Arial, sans-serif !important;
-    letter-spacing: 0 !important;
+    font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif !important;
+    letter-spacing: -0.005em !important;
   }
 
   .ws-account-overlay {
@@ -576,7 +579,7 @@ const drawerCss = `
     justify-content: space-between;
     gap: 18px;
     padding: 20px 22px;
-    background: linear-gradient(180deg, #0a1422 0%, #07111d 100%);
+    background: linear-gradient(180deg, #040b14 0%, #020817 100%);
     border-bottom: 1px solid rgba(148,163,184,.14);
   }
 
