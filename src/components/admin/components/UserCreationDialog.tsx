@@ -1,29 +1,29 @@
-
-import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { UserFormData } from "../CreateUser";
 import { Loader2 } from "lucide-react";
 
 interface UserCreationDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: UserFormData) => void;
+  onSubmit: (data: any) => void;
   isCreating: boolean;
 }
 
-// Schema to validate user creation form
 const userSchema = z.object({
   name: z.string().min(3, { message: "Nome deve ter pelo menos 3 caracteres" }),
-  email: z.string().email({ message: "Email inválido" }),
-  password: z.string().min(6, { message: "Senha deve ter pelo menos 6 caracteres" }),
-  confirmPassword: z.string().min(6, { message: "Confirme sua senha" }),
+  username: z.string()
+    .trim()
+    .toLowerCase()
+    .min(3, { message: "Usuário deve ter pelo menos 3 caracteres" })
+    .max(32, { message: "Usuário deve ter no máximo 32 caracteres" })
+    .regex(/^[a-z0-9][a-z0-9._-]*$/, { message: "Use apenas letras minúsculas, números, ponto, hífen ou sublinhado" }),
+  password: z.string().min(12, { message: "Senha deve ter pelo menos 12 caracteres" }),
+  confirmPassword: z.string().min(12, { message: "Confirme sua senha" }),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "As senhas não coincidem",
   path: ["confirmPassword"],
@@ -31,29 +31,19 @@ const userSchema = z.object({
 
 export type UserCreationFormData = z.infer<typeof userSchema>;
 
-export const UserCreationDialog = ({ 
-  isOpen, 
-  onClose, 
-  onSubmit,
-  isCreating
-}: UserCreationDialogProps) => {
+export const UserCreationDialog = ({ isOpen, onClose, onSubmit, isCreating }: UserCreationDialogProps) => {
   const form = useForm<UserCreationFormData>({
     resolver: zodResolver(userSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-    }
+    defaultValues: { name: "", username: "", password: "", confirmPassword: "" }
   });
 
   const handleSubmit = (data: UserCreationFormData) => {
-    // Convert to UserFormData format (without confirmPassword)
     onSubmit({
-      name: data.name,
-      email: data.email,
+      name: data.name.trim(),
+      username: data.username.trim().toLowerCase(),
       password: data.password,
-      isAdmin: false
+      isAdmin: false,
+      role: 'client'
     });
   };
 
@@ -61,111 +51,28 @@ export const UserCreationDialog = ({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="bg-white dark:bg-navy-dark border border-gold/20 sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-navy dark:text-gold">Criar Novo Usuário</DialogTitle>
+          <DialogTitle className="text-navy dark:text-gold">Criar acesso de cliente</DialogTitle>
           <DialogDescription className="text-navy/70 dark:text-gold/70">
-            Preencha os campos abaixo para criar um novo usuário.
+            O cliente entrará com nome de usuário. O e-mail técnico de autenticação fica interno e não é exibido.
           </DialogDescription>
         </DialogHeader>
-        
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-navy dark:text-gold">Nome Completo</FormLabel>
-                  <FormControl>
-                    <Input 
-                      {...field} 
-                      placeholder="João da Silva"
-                      className="bg-white dark:bg-navy-light/50 border-gray-300 dark:border-gold/20 text-navy dark:text-white"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-navy dark:text-gold">Email</FormLabel>
-                  <FormControl>
-                    <Input 
-                      {...field} 
-                      type="email"
-                      placeholder="joao@exemplo.com"
-                      className="bg-white dark:bg-navy-light/50 border-gray-300 dark:border-gold/20 text-navy dark:text-white"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-navy dark:text-gold">Senha</FormLabel>
-                  <FormControl>
-                    <Input 
-                      {...field} 
-                      type="password"
-                      placeholder="******"
-                      className="bg-white dark:bg-navy-light/50 border-gray-300 dark:border-gold/20 text-navy dark:text-white"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="confirmPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-navy dark:text-gold">Confirme a Senha</FormLabel>
-                  <FormControl>
-                    <Input 
-                      {...field} 
-                      type="password"
-                      placeholder="******"
-                      className="bg-white dark:bg-navy-light/50 border-gray-300 dark:border-gold/20 text-navy dark:text-white"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
+            <FormField control={form.control} name="name" render={({ field }) => (
+              <FormItem><FormLabel className="text-navy dark:text-gold">Nome do cliente</FormLabel><FormControl><Input {...field} placeholder="Casa do Ordenhador" autoComplete="off" className="bg-white dark:bg-navy-light/50 border-gray-300 dark:border-gold/20 text-navy dark:text-white" /></FormControl><FormMessage /></FormItem>
+            )} />
+            <FormField control={form.control} name="username" render={({ field }) => (
+              <FormItem><FormLabel className="text-navy dark:text-gold">Nome de usuário</FormLabel><FormControl><Input {...field} autoCapitalize="none" spellCheck={false} placeholder="casadoordenhador" className="bg-white dark:bg-navy-light/50 border-gray-300 dark:border-gold/20 text-navy dark:text-white" /></FormControl><FormMessage /></FormItem>
+            )} />
+            <FormField control={form.control} name="password" render={({ field }) => (
+              <FormItem><FormLabel className="text-navy dark:text-gold">Senha inicial</FormLabel><FormControl><Input {...field} type="password" autoComplete="new-password" placeholder="Senha inicial" className="bg-white dark:bg-navy-light/50 border-gray-300 dark:border-gold/20 text-navy dark:text-white" /></FormControl><FormMessage /></FormItem>
+            )} />
+            <FormField control={form.control} name="confirmPassword" render={({ field }) => (
+              <FormItem><FormLabel className="text-navy dark:text-gold">Confirmar senha</FormLabel><FormControl><Input {...field} type="password" autoComplete="new-password" placeholder="Repita a senha" className="bg-white dark:bg-navy-light/50 border-gray-300 dark:border-gold/20 text-navy dark:text-white" /></FormControl><FormMessage /></FormItem>
+            )} />
             <DialogFooter>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={onClose}
-                className="border-gold/20 text-navy dark:text-gold"
-                disabled={isCreating}
-              >
-                Cancelar
-              </Button>
-              <Button 
-                type="submit" 
-                className="bg-navy hover:bg-navy-light text-white dark:bg-gold dark:hover:bg-gold-light dark:text-navy"
-                disabled={isCreating}
-              >
-                {isCreating ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" /> 
-                    Criando...
-                  </span>
-                ) : "Criar Usuário"}
-              </Button>
+              <Button type="button" variant="outline" onClick={onClose} disabled={isCreating}>Cancelar</Button>
+              <Button type="submit" disabled={isCreating}>{isCreating ? <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" />Criando...</span> : "Criar acesso"}</Button>
             </DialogFooter>
           </form>
         </Form>

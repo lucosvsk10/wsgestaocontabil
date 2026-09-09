@@ -14,7 +14,7 @@ const LIGHT_LOGO = '/lovable-uploads/f7fdf0cf-f16c-4df7-a92c-964aadea9539.png';
 const WS_TEST_EMAIL = 'wsteste@gmail.com';
 
 const ClientLogin = () => {
-  const [email, setEmail] = useState('');
+  const [credential, setCredential] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,8 +30,6 @@ const ClientLogin = () => {
 
   const resolveDestination = async (userId: string) => {
     const redirectPath = new URLSearchParams(location.search).get('redirect');
-    // Never allow the login page to act as an open redirect. Only local,
-    // absolute application paths are accepted.
     if (redirectPath?.startsWith('/') && !redirectPath.startsWith('//') && !redirectPath.includes('\\')) {
       return redirectPath;
     }
@@ -45,35 +43,66 @@ const ClientLogin = () => {
     return '/client';
   };
 
+  const signInWithUsername = async (username: string, currentPassword: string) => {
+    const response = await fetch('https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/client-username-login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      },
+      body: JSON.stringify({ username: username.trim().toLowerCase(), password: currentPassword }),
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.access_token || !payload?.refresh_token) {
+      throw new Error(payload?.error || 'Usuário ou senha inválidos.');
+    }
+
+    const { data, error: sessionError } = await supabase.auth.setSession({
+      access_token: payload.access_token,
+      refresh_token: payload.refresh_token,
+    });
+
+    if (sessionError || !data.user) throw sessionError || new Error('Não foi possível iniciar a sessão.');
+    return data.user;
+  };
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
     setIsLoading(true);
 
     try {
-      const { error: signInError, data } = await signIn(email, password);
-      if (signInError || !data?.user) {
-        setError('Não foi possível entrar. Confira seu e-mail e sua senha.');
-        toast({
-          title: 'Não foi possível entrar',
-          description: 'Confira seu e-mail e sua senha.',
-          variant: 'destructive',
-        });
-        return;
+      const normalizedCredential = credential.trim();
+      let user;
+
+      if (normalizedCredential.includes('@')) {
+        const { error: signInError, data } = await signIn(normalizedCredential, password);
+        if (signInError || !data?.user) throw new Error('Usuário ou senha inválidos.');
+        user = data.user;
+      } else {
+        user = await signInWithUsername(normalizedCredential, password);
       }
 
       notifyLogin().catch(() => undefined);
 
-      if (data.user.email?.trim().toLowerCase() === WS_TEST_EMAIL) {
+      if (user.email?.trim().toLowerCase() === WS_TEST_EMAIL) {
         navigate('/escolher-produto', { replace: true });
         return;
       }
 
-      const destination = await resolveDestination(data.user.id);
+      const destination = await resolveDestination(user.id);
       navigate(destination, { replace: true });
     } catch (caughtError: unknown) {
-      setError('Ocorreu um erro inesperado. Tente novamente.');
-      console.error(caughtError instanceof Error ? caughtError.message : caughtError);
+      const message = caughtError instanceof Error && caughtError.message.includes('Muitas tentativas')
+        ? caughtError.message
+        : 'Não foi possível entrar. Confira seu usuário e sua senha.';
+      setError(message);
+      toast({
+        title: 'Não foi possível entrar',
+        description: message,
+        variant: 'destructive',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -121,24 +150,25 @@ const ClientLogin = () => {
             <header className="ws-login-heading">
               <span>Acesso à plataforma</span>
               <h2>Bem-vindo de volta</h2>
-              <p>Entre com seus dados para continuar.</p>
+              <p>Clientes do escritório entram com nome de usuário. Administradores e produtos fiscais continuam podendo usar e-mail.</p>
             </header>
 
             <form onSubmit={handleSubmit} className="ws-login-form">
-              <label htmlFor="email">E-mail</label>
+              <label htmlFor="credential">Usuário</label>
               <input
-                id="email"
-                type="email"
-                autoComplete="email"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                id="credential"
+                type="text"
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
+                placeholder="seu.usuario"
+                value={credential}
+                onChange={(event) => setCredential(event.target.value)}
                 required
               />
 
               <div className="ws-login-password-head">
                 <label htmlFor="password">Senha</label>
-                <button type="button">Esqueci minha senha</button>
               </div>
               <div className="ws-login-password-field">
                 <input
