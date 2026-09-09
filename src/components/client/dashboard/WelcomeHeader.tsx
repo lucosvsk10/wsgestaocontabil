@@ -1,13 +1,12 @@
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { ArrowUpRight, FileText } from "lucide-react";
+
 export const WelcomeHeader = () => {
-  const {
-    user,
-    userData
-  } = useAuth();
-  const displayName = userData?.name || userData?.fullname || user?.email?.split("@")[0] || "cliente";
-  const firstName = displayName.trim().split(/\s+/)[0];
+  const { user, userData } = useAuth();
+  const displayName = String(
+    userData?.name || userData?.fullname || user?.email?.split("@")[0] || "cliente"
+  ).trim();
 
   return <motion.section
     initial={{ opacity: 0, y: -10 }}
@@ -17,7 +16,7 @@ export const WelcomeHeader = () => {
   >
     <div className="client-portal-welcome-copy">
       <span className="client-portal-overline"><FileText aria-hidden="true" className="h-3.5 w-3.5" />Área do cliente</span>
-      <h1>Olá, {firstName}.</h1>
+      <h1>Olá, {displayName}.</h1>
       <p>Os documentos enviados pelo escritório ficam reunidos aqui, organizados por período.</p>
     </div>
     <div className="client-portal-welcome-note">
