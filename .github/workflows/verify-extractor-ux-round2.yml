@@ -1,0 +1,75 @@
+name: Verify extractor UX round 2
+on:
+  push:
+    branches: [verify/extractor-ux-round2]
+    paths: [.github/workflows/verify-extractor-ux-round2.yml]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Playwright
+        run: |
+          mkdir -p /tmp/pw && cd /tmp/pw
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null 2>&1
+      - name: Verify production
+        run: |
+          cat > /tmp/pw/verify.cjs <<'NODE'
+          const { chromium } = require('/tmp/pw/node_modules/playwright');
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage({viewport:{width:1600,height:1050},deviceScaleFactor:1});
+            const r=await page.goto('https://wsgestaocontabil.lovable.app/extrator-preview',{waitUntil:'networkidle',timeout:90000});
+            await page.waitForTimeout(5000);
+            console.log('HTTP',r?.status(),'URL',page.url());
+            const base=await page.evaluate(()=>({
+              font:getComputedStyle(document.querySelector('.extractor-app')).fontFamily,
+              topbar:getComputedStyle(document.querySelector('.extractor-topbar')).backgroundImage,
+              logoAfter:getComputedStyle(document.querySelector('.extractor-brand'),'::after').backgroundImage,
+              metricIcon:getComputedStyle(document.querySelector('.extractor-metric svg')).width,
+              sidebarIcon:getComputedStyle(document.querySelector('.extractor-nav-icon')).width
+            }));
+            console.log('BASE',JSON.stringify(base));
+            if(!/Prompt/i.test(base.font)) throw new Error('Extractor font is not Prompt');
+            if(!/ws-logo\.png/i.test(base.logoAfter)) throw new Error('Primary logo not applied');
+            await page.getByRole('button',{name:'Documentos',exact:true}).click();
+            await page.waitForTimeout(800);
+            const table=await page.evaluate(()=>{
+              const row=document.querySelector('.extractor-admin-table tbody tr.ws-zebra-row');
+              const cell=row?.querySelector('td');
+              return {row:row?getComputedStyle(row).backgroundColor:null,cell:cell?getComputedStyle(cell).backgroundColor:null,cursor:row?getComputedStyle(row).cursor:null};
+            });
+            console.log('TABLE',JSON.stringify(table));
+            if(table.cell==='rgb(255, 255, 255)'||table.cell==='white') throw new Error('Fiscal table cell is white');
+            if(table.cursor!=='pointer') throw new Error('Document row not clickable');
+            await page.getByRole('button',{name:'Empresas',exact:true}).click();
+            await page.waitForTimeout(500);
+            const companyRow=page.locator('.extractor-company-row').first();
+            console.log('COMPANY_ROWS',await page.locator('.extractor-company-row').count());
+            if(await companyRow.count()){
+              console.log('COMPANY_CURSOR',await companyRow.evaluate(el=>getComputedStyle(el).cursor));
+              await companyRow.click();
+              await page.waitForTimeout(500);
+              console.log('AFTER_COMPANY_CLICK',await page.locator('h1').first().innerText());
+            }
+            await page.getByRole('button',{name:'Configurações',exact:true}).click();
+            await page.waitForTimeout(400);
+            const settings=await page.evaluate(()=>({
+              dt:getComputedStyle(document.querySelector('.extractor-settings-grid dt')).fontSize,
+              dd:getComputedStyle(document.querySelector('.extractor-settings-grid dd')).fontSize,
+              panel:getComputedStyle(document.querySelector('.extractor-settings-grid .extractor-panel')).borderRadius
+            }));
+            console.log('SETTINGS',JSON.stringify(settings));
+            await page.screenshot({path:'/tmp/extractor-round2.png',fullPage:true});
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+          node /tmp/pw/verify.cjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: extractor-round2-preview
+          path: /tmp/extractor-round2.png
+          retention-days: 1
