@@ -1,47 +1,75 @@
-name: Patch extractor company context
+name: Verify extractor company context
 on:
   push:
     branches: [verify/extractor-ux-round2]
     paths: [.github/workflows/verify-mercado-font.yml]
 permissions:
-  contents: write
+  contents: read
 jobs:
-  patch:
+  verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: feat/extractor-company-context-reports
-          fetch-depth: 0
-      - name: Patch feature branch
+      - name: Setup Playwright
         run: |
-          python3 <<'PY'
-          from pathlib import Path
-          p=Path('src/pages/FiscalExtractorApp.tsx')
-          s=p.read_text()
-          s=s.replace("import ExtractorAccountDrawer from '@/components/extractor/ExtractorAccountDrawer';", "import ExtractorAccountDrawer from '@/components/extractor/ExtractorAccountDrawer';\nimport ExtractorCompanySelector from '@/components/extractor/ExtractorCompanySelector';\nimport ExtractorReports from '@/components/extractor/ExtractorReports';")
-          s=s.replace("import '@/styles/fiscal-extractor-polish.css';", "import '@/styles/fiscal-extractor-polish.css';\nimport '@/styles/fiscal-extractor-final.css';")
-          s=s.replace("name:'Empresa demonstração',tradeName:'Empresa demonstração'", "name:'EMPRESA DEMONSTRAÇÃO LTDA',tradeName:'Empresa demonstração'")
-          old="<header className=\"extractor-topbar\"><div className=\"extractor-brand\"><button className=\"extractor-mobile-trigger\" onClick={()=>setMobile(true)} aria-label=\"Abrir menu\"><Menu/></button><img src=\"/assets/ws-logo.png\" alt=\"WS Gestão Contábil\"/></div><div className=\"extractor-workspace\"><small>Carteira fiscal</small><strong>{preview?'Demonstração':snapshot?.account?.name||'WS teste'}</strong></div><div className=\"extractor-account\">{preview?<span className=\"extractor-account-avatar\">PR</span>:<ExtractorAccountDrawer planLabel={planLabel} usage={planUsage} companies={companies.length} onOpenSettings={()=>go('Configurações')}/>}</div></header>"
-          new="<header className=\"extractor-topbar\"><div className=\"extractor-brand\"><button className=\"extractor-mobile-trigger\" onClick={()=>setMobile(true)} aria-label=\"Abrir menu\"><Menu/></button><img src=\"/assets/ws-logo.png\" alt=\"WS Gestão Contábil\"/></div><ExtractorCompanySelector companies={companies} selectedCompanyId={selectedCompanyId} onSelect={setSelectedCompanyId} preview={preview}/><div className=\"extractor-account\">{preview?<span className=\"extractor-account-avatar\">PR</span>:<ExtractorAccountDrawer accountName={snapshot?.account?.name||'Conta Extrator'} planLabel={planLabel} usage={planUsage} companies={companies.length} onOpenSettings={()=>go('Configurações')}/>}</div></header>"
-          if old in s: s=s.replace(old,new,1)
-          s=s.replace("{active==='Relatórios'&&<Reports companies={companies} totals={totals} models={models} daily={daily}/>}", "{active==='Relatórios'&&<ExtractorReports companies={companies} selectedCompanyId={selectedCompanyId} onSelectCompany={setSelectedCompanyId} allowedFrom={snapshot?.account?.allowed_from} preview={preview}/>}" )
-          assert 'ExtractorCompanySelector companies={companies}' in s
-          assert '<ExtractorReports companies={companies}' in s
-          p.write_text(s)
-
-          p=Path('src/components/extractor/ExtractorAccountDrawer.tsx')
-          s=p.read_text()
-          s=s.replace('type Props={planLabel:string;usage:Usage;companies:number;onOpenSettings:()=>void};','type Props={accountName?:string;planLabel:string;usage:Usage;companies:number;onOpenSettings:()=>void};')
-          s=s.replace('export default function ExtractorAccountDrawer({planLabel,usage,companies,onOpenSettings}:Props){','export default function ExtractorAccountDrawer({accountName,planLabel,usage,companies,onOpenSettings}:Props){')
-          s=s.replace("name=(userData as any)?.name||(userData as any)?.full_name||email.split('@')[0]||'Usuário'", "name=accountName||(userData as any)?.name||(userData as any)?.full_name||email.split('@')[0]||'Usuário'")
-          assert 'accountName||(userData as any)?.name' in s
-          p.write_text(s)
-          PY
-          npm install --legacy-peer-deps --ignore-scripts
-          npm run build
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add src/pages/FiscalExtractorApp.tsx src/components/extractor/ExtractorAccountDrawer.tsx
-          git commit -m "feat(extractor): bind navbar and reports to active company"
-          git push origin HEAD:feat/extractor-company-context-reports
+          mkdir -p /tmp/pw && cd /tmp/pw
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null 2>&1
+      - name: Verify production company context and reports
+        run: |
+          cat > /tmp/pw/verify.cjs <<'NODE'
+          const { chromium } = require('/tmp/pw/node_modules/playwright');
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage({viewport:{width:1600,height:1100},deviceScaleFactor:1});
+            let response;
+            for(let attempt=1;attempt<=6;attempt++){
+              response=await page.goto('https://wsgestaocontabil.lovable.app/extrator-preview',{waitUntil:'networkidle',timeout:90000});
+              await page.waitForTimeout(5000);
+              const ready=await page.locator('.extractor-company-picker-trigger').count();
+              console.log('ATTEMPT',attempt,'HTTP',response?.status(),'URL',page.url(),'PICKER',ready);
+              if(ready) break;
+              await page.waitForTimeout(10000);
+            }
+            if(response?.status()!==200) throw new Error(`Unexpected HTTP ${response?.status()}`);
+            const base=await page.evaluate(()=>({
+              font:getComputedStyle(document.querySelector('.extractor-app')).fontFamily,
+              picker:document.querySelector('.extractor-company-picker-trigger')?.innerText||'',
+              profile:Boolean(document.querySelector('.extractor-account'))
+            }));
+            console.log('BASE',JSON.stringify(base));
+            if(!/Space Grotesk/i.test(base.font)) throw new Error('Exact ADM font not active');
+            if(!/EMPRESA DEMONSTRAÇÃO LTDA/.test(base.picker)) throw new Error('Legal name missing from navbar selector');
+            if(!/Empresa demonstração/.test(base.picker)) throw new Error('Trade name missing from navbar selector');
+            if(!/00\.000\.000\/0000-00/.test(base.picker)) throw new Error('CNPJ missing from navbar selector');
+            await page.locator('.extractor-company-picker-trigger').click();
+            if(!(await page.locator('.extractor-company-picker-menu').isVisible())) throw new Error('Company selector menu did not open');
+            await page.keyboard.press('Escape');
+            await page.getByRole('button',{name:'Relatórios',exact:true}).click();
+            await page.waitForTimeout(1200);
+            const report=await page.evaluate(()=>({
+              rich:Boolean(document.querySelector('.extractor-report-rich')),
+              company:(document.querySelector('.extractor-report-company')?.textContent||'').replace(/\s+/g,' ').trim(),
+              metrics:document.querySelectorAll('.extractor-report-kpis .extractor-metric').length,
+              panels:[...document.querySelectorAll('.extractor-report-rich .extractor-panel-head h2')].map(x=>x.textContent?.trim()).filter(Boolean),
+              font:getComputedStyle(document.querySelector('.extractor-report-rich')).fontFamily
+            }));
+            console.log('REPORT',JSON.stringify(report));
+            if(!report.rich) throw new Error('Rich reports page missing');
+            if(report.metrics<6) throw new Error(`Expected 6 report metrics, got ${report.metrics}`);
+            for(const title of ['Movimento no período','Documentos por modelo','Situação fiscal','Principais fornecedores','Cobertura XML']){
+              if(!report.panels.includes(title)) throw new Error(`Missing report panel: ${title}`);
+            }
+            if(!/EMPRESA DEMONSTRAÇÃO LTDA/.test(report.company)||!/00\.000\.000\/0000-00/.test(report.company)) throw new Error('Active company context missing in reports');
+            if(!/Space Grotesk/i.test(report.font)) throw new Error('Report typography diverged from ADM');
+            await page.screenshot({path:'/tmp/extractor-final-company-reports.png',fullPage:true});
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+          node /tmp/pw/verify.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: extractor-final-company-reports
+          path: /tmp/extractor-final-company-reports.png
+          retention-days: 1
