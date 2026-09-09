@@ -1,0 +1,35 @@
+name: Publish accountant image asset
+
+on:
+  push:
+    paths:
+      - '.media-upload/accountant-READY'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Rebuild accountant image
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p public/assets
+          cat .media-upload/accountant-*.txt | base64 --decode > public/assets/ws-contador-cutout-new.webp
+          test -s public/assets/ws-contador-cutout-new.webp
+          bytes=$(wc -c < public/assets/ws-contador-cutout-new.webp)
+          test "$bytes" -gt 50000
+          rm -f .media-upload/accountant-*.txt .media-upload/accountant-READY
+      - name: Commit binary asset
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/assets/ws-contador-cutout-new.webp .media-upload
+          git commit -m "fix: publish accountant portrait"
+          git push
