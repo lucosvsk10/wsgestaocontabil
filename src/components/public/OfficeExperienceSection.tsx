@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Building2, MapPin, Play, Route } from 'lucide-react';
 
 const locations = [
@@ -17,41 +18,81 @@ const locations = [
   },
 ];
 
-const OfficeExperienceSection = () => (
-  <section id="escritorio" className="public-office preview-section" aria-labelledby="office-title">
-    <div className="public-office-intro">
-      <div className="public-section-heading">
-        <span>ESTRUTURA REAL, ATENDIMENTO PRÓXIMO</span>
-        <h2 id="office-title">CONHEÇA A WS<br />POR DENTRO</h2>
-        <p>Equipe, rotina e estrutura física para atender empresas de forma presencial e digital — com sede em Palmeira dos Índios e unidade em Major Isidoro.</p>
-      </div>
-      <div className="public-office-facts" aria-label="Sobre a estrutura da WS">
-        <div><Building2 /><strong>2 unidades</strong><span>Palmeira dos Índios e Major Isidoro</span></div>
-        <div><MapPin /><strong>Atendimento híbrido</strong><span>Presencial e digital</span></div>
-      </div>
-    </div>
+const OfficeExperienceSection = () => {
+  const videoRef = useRef<HTMLVideoElement>(null);
 
-    <div className="public-office-video-wrap">
-      <video className="public-office-video" src="/assets/ws-escritorio-tour.mp4" autoPlay muted loop controls playsInline preload="auto" poster="/assets/ws-escritorio-poster.jpg" aria-label="Vídeo do escritório da WS Gestão Contábil" />
-      <div className="public-office-video-caption"><span><Play /> VISITA RÁPIDA</span><strong>Veja de perto a estrutura da WS.</strong></div>
-    </div>
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
 
-    <div className="public-location-grid">
-      {locations.map((location) => (
-        <article className="public-location-card" key={location.label}>
-          <div className="public-location-copy">
-            <span>{location.label}</span>
-            <h3>{location.city}</h3>
-            <p>{location.description}</p>
-            <a href={location.mapHref} target="_blank" rel="noreferrer">Traçar rota <Route /></a>
-          </div>
-          <div className="public-location-map">
-            <iframe title={`Mapa da ${location.label} da WS em ${location.city}`} src={location.embed} loading="lazy" referrerPolicy="no-referrer-when-downgrade" allowFullScreen />
-          </div>
-        </article>
-      ))}
-    </div>
-  </section>
-);
+    video.muted = true;
+    video.defaultMuted = true;
+    video.playsInline = true;
+
+    const startPlayback = () => {
+      if (video.paused) void video.play().catch(() => undefined);
+    };
+
+    startPlayback();
+    video.addEventListener('loadedmetadata', startPlayback);
+    video.addEventListener('canplay', startPlayback);
+    const retry = window.setTimeout(startPlayback, 350);
+
+    return () => {
+      window.clearTimeout(retry);
+      video.removeEventListener('loadedmetadata', startPlayback);
+      video.removeEventListener('canplay', startPlayback);
+    };
+  }, []);
+
+  return (
+    <section id="escritorio" className="public-office preview-section" aria-labelledby="office-title">
+      <div className="public-office-intro">
+        <div className="public-section-heading">
+          <span>ESTRUTURA REAL, ATENDIMENTO PRÓXIMO</span>
+          <h2 id="office-title">CONHEÇA A WS<br />POR DENTRO</h2>
+          <p>Equipe, rotina e estrutura física para atender empresas de forma presencial e digital — com sede em Palmeira dos Índios e unidade em Major Isidoro.</p>
+        </div>
+        <div className="public-office-facts" aria-label="Sobre a estrutura da WS">
+          <div><Building2 /><strong>2 unidades</strong><span>Palmeira dos Índios e Major Isidoro</span></div>
+          <div><MapPin /><strong>Atendimento híbrido</strong><span>Presencial e digital</span></div>
+        </div>
+      </div>
+
+      <div className="public-office-video-wrap">
+        <video
+          ref={videoRef}
+          className="public-office-video"
+          src="/assets/ws-escritorio-tour.mp4"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          poster="/assets/ws-escritorio-poster.jpg"
+          aria-label="Vídeo do escritório da WS Gestão Contábil"
+          onCanPlay={(event) => void event.currentTarget.play().catch(() => undefined)}
+        />
+        <div className="public-office-video-caption"><span><Play /> VISITA RÁPIDA</span><strong>Veja de perto a estrutura da WS.</strong></div>
+      </div>
+
+      <div className="public-location-grid">
+        {locations.map((location) => (
+          <article className="public-location-card" key={location.label}>
+            <div className="public-location-copy">
+              <span>{location.label}</span>
+              <h3>{location.city}</h3>
+              <p>{location.description}</p>
+              <a href={location.mapHref} target="_blank" rel="noreferrer">Traçar rota <Route /></a>
+            </div>
+            <div className="public-location-map">
+              <iframe title={`Mapa da ${location.label} da WS em ${location.city}`} src={location.embed} loading="lazy" referrerPolicy="no-referrer-when-downgrade" allowFullScreen />
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+};
 
 export default OfficeExperienceSection;
