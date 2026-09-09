@@ -35,34 +35,39 @@ jobs:
             console.log('BASE',JSON.stringify(base));
             if(!/Prompt/i.test(base.font)) throw new Error('Extractor font is not Prompt');
             if(!/ws-logo\.png/i.test(base.logoAfter)) throw new Error('Primary logo not applied');
+            if(base.metricIcon!=='24px'||base.sidebarIcon!=='21px') throw new Error('Icon scale not applied');
             await page.getByRole('button',{name:'Documentos',exact:true}).click();
-            await page.waitForTimeout(800);
+            await page.waitForTimeout(500);
             const table=await page.evaluate(()=>{
-              const row=document.querySelector('.extractor-admin-table tbody tr.ws-zebra-row');
-              const cell=row?.querySelector('td');
-              return {row:row?getComputedStyle(row).backgroundColor:null,cell:cell?getComputedStyle(cell).backgroundColor:null,cursor:row?getComputedStyle(row).cursor:null};
+              const tbody=document.querySelector('.extractor-admin-table tbody');
+              if(!tbody) throw new Error('Table not rendered');
+              const row=document.createElement('tr');row.className='ws-zebra-row';row.innerHTML='<td>Teste visual</td>';tbody.appendChild(row);
+              const cell=row.querySelector('td');
+              const out={row:getComputedStyle(row).backgroundColor,cell:getComputedStyle(cell).backgroundColor,cursor:getComputedStyle(row).cursor};
+              row.remove();return out;
             });
             console.log('TABLE',JSON.stringify(table));
             if(table.cell==='rgb(255, 255, 255)'||table.cell==='white') throw new Error('Fiscal table cell is white');
             if(table.cursor!=='pointer') throw new Error('Document row not clickable');
             await page.getByRole('button',{name:'Empresas',exact:true}).click();
-            await page.waitForTimeout(500);
+            await page.waitForTimeout(400);
             const companyRow=page.locator('.extractor-company-row').first();
             console.log('COMPANY_ROWS',await page.locator('.extractor-company-row').count());
-            if(await companyRow.count()){
-              console.log('COMPANY_CURSOR',await companyRow.evaluate(el=>getComputedStyle(el).cursor));
-              await companyRow.click();
-              await page.waitForTimeout(500);
-              console.log('AFTER_COMPANY_CLICK',await page.locator('h1').first().innerText());
-            }
-            await page.getByRole('button',{name:'Configurações',exact:true}).click();
-            await page.waitForTimeout(400);
+            if(!(await companyRow.count())) throw new Error('Preview company row missing');
+            const companyCursor=await companyRow.evaluate(el=>getComputedStyle(el).cursor);console.log('COMPANY_CURSOR',companyCursor);
+            if(companyCursor!=='pointer') throw new Error('Company row not clickable');
+            await companyRow.click();await page.waitForTimeout(400);
+            console.log('AFTER_COMPANY_CLICK',await page.locator('h1').first().innerText());
+            if((await page.locator('h1').first().innerText())!=='Documentos') throw new Error('Company row did not open documents');
+            await page.getByRole('button',{name:'Configurações',exact:true}).click();await page.waitForTimeout(400);
             const settings=await page.evaluate(()=>({
               dt:getComputedStyle(document.querySelector('.extractor-settings-grid dt')).fontSize,
               dd:getComputedStyle(document.querySelector('.extractor-settings-grid dd')).fontSize,
-              panel:getComputedStyle(document.querySelector('.extractor-settings-grid .extractor-panel')).borderRadius
+              panel:getComputedStyle(document.querySelector('.extractor-settings-grid .extractor-panel')).borderRadius,
+              hasPlan:Boolean(document.querySelector('.extractor-plan-card'))
             }));
             console.log('SETTINGS',JSON.stringify(settings));
+            if(settings.dt!=='12px'||settings.dd!=='13px'||!settings.hasPlan) throw new Error('Settings sizing/plan panel missing');
             await page.screenshot({path:'/tmp/extractor-round2.png',fullPage:true});
             await browser.close();
           })().catch(e=>{console.error(e);process.exit(1)});
