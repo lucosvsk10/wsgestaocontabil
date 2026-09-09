@@ -2,12 +2,13 @@ import { ArrowUpRight, Instagram, Mail, MapPin, MessageCircle, Route, ShieldChec
 import { Link } from 'react-router-dom';
 import PublicCookieConsent from './PublicCookieConsent';
 import '@/styles/public-visual-round.css';
+import '@/styles/public-layout-fixes.css';
 
 const PublicSiteFooter = () => (
   <>
     <footer className="public-footer">
       <div className="public-footer-cta">
-        <div><span>NÃO DEIXE A CONTABILIDADE VIRAR UM PROBLEMA.</span><h2 style={{fontFamily:"'Space Grotesk', Inter, system-ui, sans-serif",fontStyle:'normal'}}>Coloque sua empresa nas mãos de quem acompanha os números e resolve o que precisa ser resolvido.</h2></div>
+        <div><span>NÃO DEIXE A CONTABILIDADE VIRAR UM PROBLEMA.</span><h2 style={{fontFamily:"'Space Grotesk', Inter, system-ui, sans-serif",fontStyle:'normal',fontWeight:500,letterSpacing:'-.048em',lineHeight:.98,wordSpacing:'-.02em',textTransform:'none'}}>Coloque sua empresa nas mãos de quem acompanha os números e resolve o que precisa ser resolvido.</h2></div>
         <a href="https://wa.me/5582999324884" target="_blank" rel="noreferrer">Quero falar com a WS <ArrowUpRight /></a>
       </div>
 
