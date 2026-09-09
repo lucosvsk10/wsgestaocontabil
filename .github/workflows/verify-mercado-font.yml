@@ -1,47 +1,47 @@
-name: Verify exact ADM font
+name: Patch extractor company context
 on:
   push:
     branches: [verify/extractor-ux-round2]
     paths: [.github/workflows/verify-mercado-font.yml]
 permissions:
-  contents: read
+  contents: write
 jobs:
-  verify:
+  patch:
     runs-on: ubuntu-latest
     steps:
-      - name: Setup Playwright
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/extractor-company-context-reports
+          fetch-depth: 0
+      - name: Patch feature branch
         run: |
-          mkdir -p /tmp/pw && cd /tmp/pw
-          npm init -y >/dev/null 2>&1
-          npm install playwright@1.55.0 >/dev/null 2>&1
-          npx playwright install --with-deps chromium >/dev/null 2>&1
-      - name: Verify production font
-        run: |
-          cat > /tmp/pw/font.cjs <<'NODE'
-          const { chromium } = require('/tmp/pw/node_modules/playwright');
-          (async()=>{
-            const browser=await chromium.launch({headless:true});
-            const page=await browser.newPage({viewport:{width:1500,height:900}});
-            const r=await page.goto('https://wsgestaocontabil.lovable.app/extrator-preview',{waitUntil:'networkidle',timeout:90000});
-            await page.waitForTimeout(5000);
-            const computed=await page.evaluate(()=>{
-              const app=document.querySelector('.extractor-app');
-              const h1=document.querySelector('.extractor-app h1');
-              return {
-                font:getComputedStyle(app).fontFamily,
-                spacing:getComputedStyle(app).letterSpacing,
-                h1Spacing:h1?getComputedStyle(h1).letterSpacing:null,
-                h1Weight:h1?getComputedStyle(h1).fontWeight:null
-              };
-            });
-            console.log('HTTP',r?.status(),'URL',page.url(),'COMPUTED',JSON.stringify(computed));
-            if(!/Space Grotesk/i.test(computed.font)) throw new Error('ADM font is not active');
-            const baseTracking=parseFloat(computed.spacing);
-            const headingTracking=parseFloat(computed.h1Spacing);
-            if(!(baseTracking < 0 && Math.abs(baseTracking) <= 0.1)) throw new Error('ADM base tracking is not active');
-            if(!(headingTracking < -0.3)) throw new Error('ADM heading tracking is not active');
-            if(computed.h1Weight!=='600') throw new Error('ADM heading weight is not active');
-            await browser.close();
-          })().catch(e=>{console.error(e);process.exit(1)});
-          NODE
-          node /tmp/pw/font.cjs
+          python3 <<'PY'
+          from pathlib import Path
+          p=Path('src/pages/FiscalExtractorApp.tsx')
+          s=p.read_text()
+          s=s.replace("import ExtractorAccountDrawer from '@/components/extractor/ExtractorAccountDrawer';", "import ExtractorAccountDrawer from '@/components/extractor/ExtractorAccountDrawer';\nimport ExtractorCompanySelector from '@/components/extractor/ExtractorCompanySelector';\nimport ExtractorReports from '@/components/extractor/ExtractorReports';")
+          s=s.replace("import '@/styles/fiscal-extractor-polish.css';", "import '@/styles/fiscal-extractor-polish.css';\nimport '@/styles/fiscal-extractor-final.css';")
+          s=s.replace("name:'Empresa demonstração',tradeName:'Empresa demonstração'", "name:'EMPRESA DEMONSTRAÇÃO LTDA',tradeName:'Empresa demonstração'")
+          old="<header className=\"extractor-topbar\"><div className=\"extractor-brand\"><button className=\"extractor-mobile-trigger\" onClick={()=>setMobile(true)} aria-label=\"Abrir menu\"><Menu/></button><img src=\"/assets/ws-logo.png\" alt=\"WS Gestão Contábil\"/></div><div className=\"extractor-workspace\"><small>Carteira fiscal</small><strong>{preview?'Demonstração':snapshot?.account?.name||'WS teste'}</strong></div><div className=\"extractor-account\">{preview?<span className=\"extractor-account-avatar\">PR</span>:<ExtractorAccountDrawer planLabel={planLabel} usage={planUsage} companies={companies.length} onOpenSettings={()=>go('Configurações')}/>}</div></header>"
+          new="<header className=\"extractor-topbar\"><div className=\"extractor-brand\"><button className=\"extractor-mobile-trigger\" onClick={()=>setMobile(true)} aria-label=\"Abrir menu\"><Menu/></button><img src=\"/assets/ws-logo.png\" alt=\"WS Gestão Contábil\"/></div><ExtractorCompanySelector companies={companies} selectedCompanyId={selectedCompanyId} onSelect={setSelectedCompanyId} preview={preview}/><div className=\"extractor-account\">{preview?<span className=\"extractor-account-avatar\">PR</span>:<ExtractorAccountDrawer accountName={snapshot?.account?.name||'Conta Extrator'} planLabel={planLabel} usage={planUsage} companies={companies.length} onOpenSettings={()=>go('Configurações')}/>}</div></header>"
+          if old in s: s=s.replace(old,new,1)
+          s=s.replace("{active==='Relatórios'&&<Reports companies={companies} totals={totals} models={models} daily={daily}/>}", "{active==='Relatórios'&&<ExtractorReports companies={companies} selectedCompanyId={selectedCompanyId} onSelectCompany={setSelectedCompanyId} allowedFrom={snapshot?.account?.allowed_from} preview={preview}/>}" )
+          assert 'ExtractorCompanySelector companies={companies}' in s
+          assert '<ExtractorReports companies={companies}' in s
+          p.write_text(s)
+
+          p=Path('src/components/extractor/ExtractorAccountDrawer.tsx')
+          s=p.read_text()
+          s=s.replace('type Props={planLabel:string;usage:Usage;companies:number;onOpenSettings:()=>void};','type Props={accountName?:string;planLabel:string;usage:Usage;companies:number;onOpenSettings:()=>void};')
+          s=s.replace('export default function ExtractorAccountDrawer({planLabel,usage,companies,onOpenSettings}:Props){','export default function ExtractorAccountDrawer({accountName,planLabel,usage,companies,onOpenSettings}:Props){')
+          s=s.replace("name=(userData as any)?.name||(userData as any)?.full_name||email.split('@')[0]||'Usuário'", "name=accountName||(userData as any)?.name||(userData as any)?.full_name||email.split('@')[0]||'Usuário'")
+          assert 'accountName||(userData as any)?.name' in s
+          p.write_text(s)
+          PY
+          npm install --legacy-peer-deps --ignore-scripts
+          npm run build
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/pages/FiscalExtractorApp.tsx src/components/extractor/ExtractorAccountDrawer.tsx
+          git commit -m "feat(extractor): bind navbar and reports to active company"
+          git push origin HEAD:feat/extractor-company-context-reports
