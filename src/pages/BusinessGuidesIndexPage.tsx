@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import guides from '@/content/business-guides.json';
 import PublicSiteFooter from '@/components/public/PublicSiteFooter';
 import '../styles/public-content.css';
+import '../styles/public-layout-fixes.css';
 
 const BusinessGuidesIndexPage = () => {
   useEffect(() => { window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); }, []);
