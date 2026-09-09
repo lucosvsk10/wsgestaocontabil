@@ -1,0 +1,68 @@
+name: Patch extractor final from verify
+on:
+  push:
+    branches: [verify/extractor-ux-round2]
+    paths: [.github/workflows/patch-extractor-final-from-verify.yml]
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/extractor-company-context-reports
+          fetch-depth: 0
+      - name: Patch feature branch
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          p=Path('src/pages/FiscalExtractorApp.tsx'); s=p.read_text()
+          old="import ExtractorAccountDrawer from '@/components/extractor/ExtractorAccountDrawer';"
+          new="import ExtractorAccountDrawer from '@/components/extractor/ExtractorAccountDrawer';\nimport ExtractorCompanySelector from '@/components/extractor/ExtractorCompanySelector';\nimport ExtractorReports from '@/components/extractor/ExtractorReports';"
+          if new not in s:
+            assert old in s; s=s.replace(old,new,1)
+          old="const companies=useMemo(()=>preview?[{id:'demo',extractorCompanyId:'demo',name:'Empresa demonstração',tradeName:'Empresa demonstração',cnpj:'00000000000000'"
+          new="const companies=useMemo(()=>preview?[{id:'demo',extractorCompanyId:'demo',name:'EMPRESA DEMONSTRAÇÃO LTDA',tradeName:'Empresa demonstração',cnpj:'00000000000000'"
+          if old in s: s=s.replace(old,new,1)
+          old="<header className=\"extractor-topbar\"><div className=\"extractor-brand\"><button className=\"extractor-mobile-trigger\" onClick={()=>setMobile(true)} aria-label=\"Abrir menu\"><Menu/></button><img src=\"/assets/ws-logo.png\" alt=\"WS Gestão Contábil\"/></div><div className=\"extractor-workspace\"><small>Carteira fiscal</small><strong>{preview?'Demonstração':snapshot?.account?.name||'WS teste'}</strong></div><div className=\"extractor-account\">{preview?<span className=\"extractor-account-avatar\">PR</span>:<ExtractorAccountDrawer planLabel={planLabel} usage={planUsage} companies={companies.length} onOpenSettings={()=>go('Configurações')}/>}</div></header>"
+          new="<header className=\"extractor-topbar\"><div className=\"extractor-brand\"><button className=\"extractor-mobile-trigger\" onClick={()=>setMobile(true)} aria-label=\"Abrir menu\"><Menu/></button><img src=\"/assets/ws-logo.png\" alt=\"WS Gestão Contábil\"/></div><ExtractorCompanySelector companies={companies} selectedCompanyId={selectedCompanyId} onSelect={setSelectedCompanyId} preview={preview}/><div className=\"extractor-account\">{preview?<span className=\"extractor-account-avatar\">PR</span>:<ExtractorAccountDrawer accountName={snapshot?.account?.name||'Conta Extrator'} planLabel={planLabel} usage={planUsage} companies={companies.length} onOpenSettings={()=>go('Configurações')}/>}</div></header>"
+          if old in s: s=s.replace(old,new,1)
+          old="{active==='Relatórios'&&<Reports companies={companies} totals={totals} models={models} daily={daily}/>}"
+          new="{active==='Relatórios'&&<ExtractorReports companies={companies} selectedCompanyId={selectedCompanyId} onSelectCompany={setSelectedCompanyId} allowedFrom={snapshot?.account?.allowed_from} preview={preview}/>}"
+          if old in s: s=s.replace(old,new,1)
+          assert 'ExtractorCompanySelector companies={companies}' in s
+          assert "<ExtractorReports companies={companies}" in s
+          p.write_text(s)
+
+          p=Path('src/components/extractor/ExtractorAccountDrawer.tsx'); s=p.read_text()
+          s=s.replace("type Props={planLabel:string;usage:Usage;companies:number;onOpenSettings:()=>void};","type Props={accountName?:string;planLabel:string;usage:Usage;companies:number;onOpenSettings:()=>void};")
+          s=s.replace("export default function ExtractorAccountDrawer({planLabel,usage,companies,onOpenSettings}:Props){","export default function ExtractorAccountDrawer({accountName,planLabel,usage,companies,onOpenSettings}:Props){")
+          old="const email=user?.email||'usuario@email.com',name=(userData as any)?.name||(userData as any)?.full_name||email.split('@')[0]||'Usuário',initials=useMemo(()=>String(name).split(/\\s+/).filter(Boolean).slice(0,2).map(x=>x[0]?.toUpperCase()).join('')||'U',[name]);"
+          new="const email=user?.email||'usuario@email.com',name=accountName||(userData as any)?.name||(userData as any)?.full_name||email.split('@')[0]||'Usuário',initials=useMemo(()=>String(name).split(/\\s+/).filter(Boolean).slice(0,2).map(x=>x[0]?.toUpperCase()).join('')||'U',[name]);"
+          if old in s: s=s.replace(old,new,1)
+          assert 'accountName||(userData as any)?.name' in s
+          p.write_text(s)
+          PY
+          cat >> src/styles/fiscal-extractor-polish.css <<'CSS'
+
+/* Global company context — mirrors the ADM selector while preserving the Extrator shell. */
+.extractor-company-picker{position:relative;justify-self:center;width:min(520px,calc(100vw - 650px));min-width:340px}
+.extractor-company-picker-trigger{width:100%;min-height:58px;display:flex;align-items:center;gap:11px;padding:7px 13px;border:1px solid rgba(148,163,184,.16);border-radius:6px;background:#08111d;color:#e8eef5;text-align:left;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+.extractor-company-picker-trigger:hover,.extractor-company-picker-trigger[aria-expanded="true"]{background:#0b1624;border-color:rgba(148,163,184,.28)}
+.extractor-company-picker-avatar{display:grid;place-items:center;width:38px;height:38px;flex:0 0 38px;border:1px solid #26364a;border-radius:6px;background:#101b29;color:#dce5ed;font-size:12px;font-weight:600}.extractor-company-picker-avatar.small{width:32px;height:32px;flex-basis:32px;font-size:10px}
+.extractor-company-picker-copy{min-width:0;flex:1}.extractor-company-picker-copy strong,.extractor-company-picker-copy span,.extractor-company-picker-copy small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.extractor-company-picker-copy strong{font-size:12px;font-weight:600;color:#eef3f8}.extractor-company-picker-copy span{margin-top:1px;font-size:10px;color:#a8b5c3}.extractor-company-picker-copy small{margin-top:1px;font-size:9px;color:#6f8195}
+.extractor-company-picker-trigger>svg{width:17px;height:17px;flex:0 0 17px;color:#7f91a5;transition:transform .18s ease}.extractor-company-picker-trigger>svg.is-open{transform:rotate(180deg)}
+.extractor-company-picker-status{width:8px;height:8px;flex:0 0 8px;border-radius:50%;background:#66778a}.extractor-company-picker-status.valid{background:#5f987d;box-shadow:0 0 0 3px rgba(95,152,125,.12)}.extractor-company-picker-status.warning{background:#d7b65a;box-shadow:0 0 0 3px rgba(215,182,90,.12)}.extractor-company-picker-status.expired{background:#a86167;box-shadow:0 0 0 3px rgba(168,97,103,.12)}
+.extractor-company-picker-menu{position:absolute;z-index:180;top:calc(100% + 8px);left:0;right:0;overflow:hidden;border:1px solid #25364a;border-radius:6px;background:#080f19;box-shadow:0 20px 54px rgba(0,0,0,.42)}.extractor-company-picker-menu>p{margin:0;padding:10px 13px;border-bottom:1px solid #172438;color:#708195;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.08em}.extractor-company-picker-menu>div{max-height:390px;overflow:auto;padding:5px}.extractor-company-picker-menu button{width:100%;display:flex;align-items:center;gap:10px;padding:9px 9px;border:0;border-radius:5px;background:transparent;color:inherit;text-align:left}.extractor-company-picker-menu button:hover,.extractor-company-picker-menu button.is-active{background:#111b29}.extractor-company-picker-menu button>b{color:#d7b65a;font-size:9px;font-weight:600}.extractor-company-picker-empty{display:block;padding:22px;color:#718397;font-size:10px;text-align:center}
+.extractor-report-company{display:grid;grid-template-columns:1.4fr .8fr;gap:1px;margin-bottom:10px;overflow:hidden;border:1px solid #1b2838;border-radius:4px;background:#1b2838}.extractor-report-company>div{padding:15px 17px;background:#0b0f1c}.extractor-report-company small,.extractor-report-company strong,.extractor-report-company span,.extractor-report-company em{display:block}.extractor-report-company small{color:#718397;font-size:9px;text-transform:uppercase;letter-spacing:.08em}.extractor-report-company strong{margin-top:5px;font-size:14px;font-weight:600;color:#eef3f8}.extractor-report-company span{margin-top:2px;color:#9caaba;font-size:11px}.extractor-report-company em{margin-top:3px;color:#68798c;font-size:10px;font-style:normal}.extractor-report-kpis{grid-template-columns:repeat(3,minmax(0,1fr))!important}.extractor-report-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:9px}.extractor-report-span-2{grid-column:span 2}.extractor-report-chart{height:300px;padding:16px 12px 12px}.extractor-report-donut{position:relative;height:190px;margin:8px 12px 0}.extractor-report-donut>div:last-child{pointer-events:none;position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}.extractor-report-donut>div:last-child strong{font-size:23px;font-weight:500}.extractor-report-donut>div:last-child span{color:#68798c;font-size:9px}.extractor-report-status{display:grid;gap:12px;padding:16px}.extractor-report-status>div>span{display:flex;align-items:center;justify-content:space-between;gap:12px}.extractor-report-status strong{font-size:10px;font-weight:550;color:#cbd5df}.extractor-report-status b{font-size:10px;color:#e5ebf0}.extractor-report-status>div>div{height:5px;margin-top:6px;overflow:hidden;border-radius:999px;background:#172438}.extractor-report-status i{display:block;height:100%}.extractor-report-status small{display:block;margin-top:4px;color:#647487;font-size:8px}.extractor-report-status .tone-green i{background:#5f987d}.extractor-report-status .tone-red i{background:#a86167}.extractor-report-status .tone-gold i{background:#d7b65a}.extractor-report-status .tone-blue i{background:#5b83ad}.extractor-report-suppliers{padding:5px 16px 14px}.extractor-report-suppliers>div{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:11px 0;border-bottom:1px solid #172438}.extractor-report-suppliers>div:last-child{border-bottom:0}.extractor-report-suppliers>div>span{display:flex;align-items:center;gap:10px;min-width:0}.extractor-report-suppliers>div>span>b{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#121c2b;color:#7f91a5;font-size:8px}.extractor-report-suppliers strong{display:block;font-size:10px;font-weight:550}.extractor-report-suppliers small{display:block;margin-top:2px;color:#65778b;font-size:8px}.extractor-report-suppliers>div>strong{white-space:nowrap;color:#d8e0e8;font-size:11px}.extractor-report-suppliers>p{margin:20px 0;color:#65778b;font-size:10px}.extractor-report-coverage{padding:24px}.extractor-report-coverage>strong{display:block;font-size:34px;font-weight:450}.extractor-report-coverage>div{height:7px;margin:12px 0;overflow:hidden;border-radius:999px;background:#172438}.extractor-report-coverage i{display:block;height:100%;background:#5f987d}.extractor-report-coverage span{display:block;margin-top:4px;color:#718397;font-size:9px}.extractor-report-loading{display:grid;place-items:center;min-height:320px;margin-top:9px;border:1px solid #1b2838;border-radius:4px;background:#0b0f1c;color:#718397;font-size:11px}
+@media(max-width:1180px){.extractor-company-picker{width:min(440px,calc(100vw - 590px));min-width:290px}.extractor-report-grid{grid-template-columns:1fr 1fr}.extractor-report-span-2{grid-column:span 2}.extractor-report-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:760px){.extractor-company-picker{justify-self:stretch;width:auto;min-width:0;margin:0 56px 0 8px}.extractor-company-picker-trigger{min-height:50px;padding:6px 9px}.extractor-company-picker-avatar{display:none}.extractor-company-picker-copy strong{font-size:10px}.extractor-company-picker-copy span,.extractor-company-picker-copy small{font-size:8px}.extractor-report-company,.extractor-report-grid{grid-template-columns:1fr}.extractor-report-span-2{grid-column:auto}.extractor-report-kpis{grid-template-columns:1fr!important}}
+CSS
+          npm install --legacy-peer-deps --ignore-scripts
+          npm run build
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/pages/FiscalExtractorApp.tsx src/components/extractor/ExtractorAccountDrawer.tsx src/styles/fiscal-extractor-polish.css
+          git commit -m "feat(extractor): bind navbar and reports to active company"
+          git push origin HEAD:feat/extractor-company-context-reports
