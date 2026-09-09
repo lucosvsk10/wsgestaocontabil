@@ -39,8 +39,8 @@ export const UserListDarkMode = ({
   const { isCreatingUser, createUser } = useUserCreation(refreshUsers);
 
   const getUserInfo = (authUser: any) => users.find(u => u.id === authUser.id);
-  const getUserName = (authUser: any) => getUserInfo(authUser)?.name || authUser.user_metadata?.name || "Sem nome";
-  const getUsername = (authUser: any) => getUserInfo(authUser)?.username || "Usuário não definido";
+  const getUserName = (authUser: any) => String(getUserInfo(authUser)?.name || authUser.user_metadata?.name || "SEM NOME").toUpperCase();
+  const getUsername = (authUser: any) => String(getUserInfo(authUser)?.username || "USUÁRIO NÃO DEFINIDO").toUpperCase();
 
   const isAdminUser = (authUserId: string, email: string | null) => {
     if (email === "wsgestao@gmail.com" || email === "l09022007@gmail.com") return true;
@@ -63,9 +63,7 @@ export const UserListDarkMode = ({
     return usersList
       .filter(user => {
         const name = getUserName(user).toLowerCase();
-        const credential = isAdmin
-          ? (user.email?.toLowerCase() || "")
-          : getUsername(user).toLowerCase();
+        const credential = isAdmin ? (user.email?.toLowerCase() || "") : getUsername(user).toLowerCase();
         return name.includes(search) || credential.includes(search);
       })
       .sort((a, b) => {
@@ -93,9 +91,7 @@ export const UserListDarkMode = ({
     }
   };
 
-  if (isLoading) {
-    return <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>;
-  }
+  if (isLoading) return <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>;
 
   const UserTable = ({ usersList, title, isAdmin = false }: { usersList: any[]; title: string; isAdmin?: boolean }) => {
     const visibleUsers = filterAndSortUsers(usersList, isAdmin);
@@ -111,37 +107,31 @@ export const UserListDarkMode = ({
           <TableHeader>
             <TableRow className="border-b border-[#efc349]/30 hover:bg-transparent">
               {!isAdmin && <TableHead className="text-[#efc349] font-semibold uppercase tracking-wider">Nome</TableHead>}
-              <TableHead className="text-[#efc349] font-semibold uppercase tracking-wider">
-                <div className="flex items-center gap-2"><AtSign className="h-4 w-4" />{isAdmin ? 'E-mail' : 'Usuário'}</div>
-              </TableHead>
-              <TableHead className="text-[#efc349] font-semibold uppercase tracking-wider">
-                <div className="flex items-center gap-2"><Calendar className="h-4 w-4" />Data de Cadastro</div>
-              </TableHead>
-              {!isAdmin && <TableHead className="text-[#efc349] font-semibold uppercase tracking-wider">
-                <div className="flex items-center gap-2"><Settings className="h-4 w-4" />Ações</div>
-              </TableHead>}
+              <TableHead className="text-[#efc349] font-semibold uppercase tracking-wider"><div className="flex items-center gap-2"><AtSign className="h-4 w-4" />{isAdmin ? 'E-mail' : 'Usuário'}</div></TableHead>
+              {!isAdmin && <TableHead className="text-[#efc349] font-semibold uppercase tracking-wider">Status da senha</TableHead>}
+              <TableHead className="text-[#efc349] font-semibold uppercase tracking-wider"><div className="flex items-center gap-2"><Calendar className="h-4 w-4" />Data de Cadastro</div></TableHead>
+              {!isAdmin && <TableHead className="text-[#efc349] font-semibold uppercase tracking-wider"><div className="flex items-center gap-2"><Settings className="h-4 w-4" />Ações</div></TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {visibleUsers.map((user, index) => <TableRow key={user.id} className={`border-b border-[#efc349]/10 hover:bg-[#efc349]/5 transition-colors ${index % 2 === 1 ? 'bg-white/[0.015]' : ''}`}>
-              {!isAdmin && <TableCell className="text-[#f4f4f4] font-extralight">{getUserName(user)}</TableCell>}
-              <TableCell className="text-[#b3b3b3]">{isAdmin ? (user.email || "Sem e-mail") : getUsername(user)}</TableCell>
-              <TableCell className="text-[#b3b3b3]">{formatDate(user.created_at)}</TableCell>
-              {!isAdmin && <TableCell>
-                <div className="flex gap-2">
-                  <Button size="sm" className="bg-[#1e293b] hover:bg-[#efc349] hover:text-[#020817] text-white border-none transition-all" onClick={() => navigate(`/admin/user-documents/${user.id}`)}><FileText className="h-4 w-4 mr-1" />Documentos</Button>
-                  <Button size="sm" variant="outline" className="bg-[#374151] hover:bg-[#4b5563] text-white border-[#374151]" onClick={() => {
-                    const userInfo = users.find(u => u.id === user.id);
-                    if (userInfo) {
-                      setSelectedUserForPasswordChange(userInfo);
-                      passwordForm.reset();
-                    }
-                  }}><Lock className="h-4 w-4 mr-1" />Senha</Button>
-                  <Button size="sm" className="bg-[#7f1d1d] hover:bg-[#dc2626] text-white border-none transition-all" onClick={() => handleDeleteUser(user.id)}><Trash2 className="h-4 w-4 mr-1" />Excluir</Button>
-                </div>
-              </TableCell>}
-            </TableRow>)}
-            {visibleUsers.length === 0 && <TableRow><TableCell colSpan={isAdmin ? 2 : 4} className="text-center py-8 text-[#b3b3b3]">Nenhum usuário encontrado</TableCell></TableRow>}
+            {visibleUsers.map((user, index) => {
+              const info = getUserInfo(user);
+              const standardPassword = Boolean(info?.must_change_password);
+              return <TableRow key={user.id} className={`border-b border-[#efc349]/10 hover:bg-[#efc349]/5 transition-colors ${index % 2 === 1 ? 'bg-white/[0.015]' : ''}`}>
+                {!isAdmin && <TableCell className="text-[#f4f4f4] font-extralight">{getUserName(user)}</TableCell>}
+                <TableCell className="text-[#b3b3b3]">{isAdmin ? (user.email || "Sem e-mail") : getUsername(user)}</TableCell>
+                {!isAdmin && <TableCell><Badge variant="outline" className={standardPassword ? "border-amber-400/30 bg-amber-500/10 text-amber-400" : "border-emerald-400/30 bg-emerald-500/10 text-emerald-400"}>{standardPassword ? 'Senha padrão' : 'Senha alterada'}</Badge></TableCell>}
+                <TableCell className="text-[#b3b3b3]">{formatDate(user.created_at)}</TableCell>
+                {!isAdmin && <TableCell>
+                  <div className="flex gap-2">
+                    <Button size="sm" className="bg-[#1e293b] hover:bg-[#efc349] hover:text-[#020817] text-white border-none transition-all" onClick={() => navigate(`/admin/user-documents/${user.id}`)}><FileText className="h-4 w-4 mr-1" />Documentos</Button>
+                    <Button size="sm" variant="outline" className="bg-[#374151] hover:bg-[#4b5563] text-white border-[#374151]" onClick={() => { if (info) { setSelectedUserForPasswordChange(info); passwordForm.reset(); } }}><Lock className="h-4 w-4 mr-1" />Senha</Button>
+                    <Button size="sm" className="bg-[#7f1d1d] hover:bg-[#dc2626] text-white border-none transition-all" onClick={() => handleDeleteUser(user.id)}><Trash2 className="h-4 w-4 mr-1" />Excluir</Button>
+                  </div>
+                </TableCell>}
+              </TableRow>;
+            })}
+            {visibleUsers.length === 0 && <TableRow><TableCell colSpan={isAdmin ? 2 : 5} className="text-center py-8 text-[#b3b3b3]">Nenhum usuário encontrado</TableCell></TableRow>}
           </TableBody>
         </Table>
       </div>
@@ -152,28 +142,18 @@ export const UserListDarkMode = ({
     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
       <div>
         <h1 className="text-3xl text-[#efc349] mb-2 font-extralight">Gerenciamento de Usuários</h1>
-        <p className="text-[#b3b3b3]">Clientes são identificados pelo nome de usuário. E-mails de autenticação permanecem internos.</p>
+        <p className="text-[#b3b3b3]">Clientes são identificados pelo nome de usuário. O status mostra se a senha inicial já foi substituída.</p>
       </div>
       <Button onClick={() => setIsUserCreationDialogOpen(true)} className="bg-[#efc349] hover:bg-[#d4a73a] text-[#020817] font-semibold transition-all"><Plus className="h-4 w-4 mr-2" />Novo Usuário</Button>
     </div>
 
     <div className="flex flex-col md:flex-row gap-4 mb-8">
-      <div className="relative flex-1">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#b3b3b3]" />
-        <Input placeholder="Buscar por nome ou usuário..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 bg-[#0b0f1c] border-[#efc349]/30 text-[#f4f4f4] placeholder-[#b3b3b3] focus:border-[#efc349]" />
-      </div>
-      <Select value={sortOrder} onValueChange={setSortOrder}>
-        <SelectTrigger className="w-full md:w-48 bg-[#0b0f1c] border-[#efc349]/30 text-[#f4f4f4]"><SelectValue placeholder="Ordenar por" /></SelectTrigger>
-        <SelectContent className="bg-[#0b0f1c] border-[#efc349]/30">
-          <SelectItem value="newest" className="text-[#f4f4f4] hover:bg-[#efc349]/10">Mais recente</SelectItem>
-          <SelectItem value="oldest" className="text-[#f4f4f4] hover:bg-[#efc349]/10">Mais antigo</SelectItem>
-        </SelectContent>
-      </Select>
+      <div className="relative flex-1"><Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#b3b3b3]" /><Input placeholder="Buscar por nome ou usuário..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 bg-[#0b0f1c] border-[#efc349]/30 text-[#f4f4f4] placeholder-[#b3b3b3] focus:border-[#efc349]" /></div>
+      <Select value={sortOrder} onValueChange={setSortOrder}><SelectTrigger className="w-full md:w-48 bg-[#0b0f1c] border-[#efc349]/30 text-[#f4f4f4]"><SelectValue placeholder="Ordenar por" /></SelectTrigger><SelectContent className="bg-[#0b0f1c] border-[#efc349]/30"><SelectItem value="newest" className="text-[#f4f4f4] hover:bg-[#efc349]/10">Mais recente</SelectItem><SelectItem value="oldest" className="text-[#f4f4f4] hover:bg-[#efc349]/10">Mais antigo</SelectItem></SelectContent></Select>
     </div>
 
     <UserTable usersList={clientUsers} title="Clientes" />
     <UserTable usersList={adminUsers} title="Administradores" isAdmin={true} />
-
     <Button onClick={() => setIsUserCreationDialogOpen(true)} className="fixed bottom-8 right-8 h-14 w-14 rounded-full bg-[#efc349] hover:bg-[#d4a73a] text-[#020817] shadow-lg z-50" size="icon"><Plus className="h-6 w-6" /></Button>
     <UserCreationDialog isOpen={isUserCreationDialogOpen} onClose={() => setIsUserCreationDialogOpen(false)} onSubmit={handleUserCreation} isCreating={isCreatingUser} />
   </div>;
