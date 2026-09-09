@@ -1,6 +1,19 @@
 /* Shared entry surfaces: login and product selection. */
 .ws-login-page,.product-chooser{font-family:'Space Grotesk','Inter',system-ui,sans-serif!important;letter-spacing:-.005em}
-.ws-login-page.is-standard{background:#020817}.ws-login-page.is-standard .ws-login-presentation{background:#020817!important}.ws-login-page.is-standard .ws-login-access{background:#07111d!important}.ws-login-page .ws-login-grid{display:none}.ws-login-page .ws-login-presentation h1,.ws-login-page .ws-login-heading h2{font-weight:500}.ws-login-page .ws-login-presentation h1{letter-spacing:-.055em}.ws-login-page .ws-login-form input,.ws-login-page .ws-login-submit,.ws-login-page .ws-login-error{border-radius:6px}.ws-login-page .ws-login-theme-switch,.ws-login-page .ws-login-theme-switch button{border-radius:6px}.ws-login-page .ws-login-brand{width:150px}.ws-login-page .ws-login-points{gap:28px}.ws-login-page .ws-login-points>div{padding-top:13px;border-top:1px solid rgba(148,163,184,.14)}
+.ws-login-page.is-standard{background:#020817}
+.ws-login-page.is-standard .ws-login-presentation{
+  background:
+    radial-gradient(circle at 14% 76%,rgba(129,93,238,.12),transparent 28%),
+    radial-gradient(circle at 82% 14%,rgba(184,150,62,.09),transparent 27%),
+    #020817!important
+}
+.ws-login-page.is-standard .ws-login-access{background:#07111d!important}
+.ws-login-page .ws-login-grid{display:block!important;background-image:none!important}
+.ws-login-page .ws-login-grid::before{border-color:rgba(184,150,62,.16)!important}
+.ws-login-page .ws-login-grid::after{border-color:rgba(149,162,184,.13)!important}
+.ws-login-page.is-light .ws-login-grid::before{border-color:rgba(156,129,47,.18)!important}
+.ws-login-page.is-light .ws-login-grid::after{border-color:rgba(107,114,128,.15)!important}
+.ws-login-page .ws-login-presentation h1,.ws-login-page .ws-login-heading h2{font-weight:500}.ws-login-page .ws-login-presentation h1{letter-spacing:-.055em}.ws-login-page .ws-login-form input,.ws-login-page .ws-login-submit,.ws-login-page .ws-login-error{border-radius:6px}.ws-login-page .ws-login-theme-switch,.ws-login-page .ws-login-theme-switch button{border-radius:6px}.ws-login-page .ws-login-brand{width:150px}.ws-login-page .ws-login-points{gap:28px}.ws-login-page .ws-login-points>div{padding-top:13px;border-top:1px solid rgba(148,163,184,.14)}
 
 .product-chooser{background:#020817!important;color:#edf2f7!important}.product-chooser>section{width:min(860px,100%)!important}.product-chooser header p{color:#d5b45a!important}.product-chooser h1{font-size:31px!important;font-weight:550!important;letter-spacing:-.04em!important}.product-chooser header>span{color:#8290a1!important}.product-choice-grid{gap:10px!important}.product-choice-grid button{min-height:230px!important;border-color:#1b2a3c!important;border-radius:7px!important;background:#0b0f1c!important;color:#edf2f7!important}.product-choice-grid button:hover,.product-choice-grid button:focus-visible{border-color:#43546a!important;background:#101827!important}.product-choice-grid svg{width:31px!important;height:31px!important;color:#d5b45a!important}.product-choice-grid strong{font-size:20px!important}.product-choice-grid span{color:#8492a3!important}.product-choice-grid b{color:#d5b45a!important}
 
