@@ -117,17 +117,17 @@ const HomePreview = () => {
           <div className="preview-pricing-table" role="table" aria-label="Comparação dos planos do Emissor Fiscal WS">
             <div className="preview-pricing-labels" role="rowheader">
               <div><span>Compare os planos</span><strong>Escolha pelo seu volume</strong></div>
-              <span>Empresas adicionadas</span><span>Notas emitidas</span><span>Atendimento</span><span>Emissor Fiscal</span><span>Calculadoras</span><span>Extrator Fiscal</span>
+              <span>Emissor Fiscal</span><span>Calculadoras</span><span>Extrator Fiscal</span><span>Empresas adicionadas</span><span>Notas emitidas</span><span>Atendimento</span>
             </div>
             {pricingPlans.map((plan) => <article className={`preview-pricing-plan ${plan.featured ? 'is-featured' : ''}`} key={plan.name} role="columnheader">
               {plan.featured && <span className="preview-pricing-popular">MAIS ESCOLHIDO</span>}
               <header><small>{plan.eyebrow}</small><h3>{plan.name}</h3>{plan.previousPrice && <del>{plan.previousPrice}</del>}<div className="preview-software-price"><strong>{plan.price}</strong><span>{plan.period}</span></div></header>
-              <div><span>Empresas adicionadas</span><strong>{plan.companies}</strong></div>
-              <div><span>Notas emitidas</span><strong>{plan.invoices}</strong></div>
-              <div><span>Atendimento</span><strong>{plan.support}</strong></div>
               <div><span>Emissor Fiscal</span><strong><Check size={17} /> Incluído</strong></div>
               <div><span>Calculadoras</span><strong><Check size={17} /> Incluídas</strong></div>
               <div><span>Extrator Fiscal</span><strong><Check size={17} /> Incluído</strong></div>
+              <div><span>Empresas adicionadas</span><strong>{plan.companies}</strong></div>
+              <div><span>Notas emitidas</span><strong>{plan.invoices}</strong></div>
+              <div><span>Atendimento</span><strong>{plan.support}</strong></div>
               <Link className="preview-software-cta" to="/cadastro">{plan.cta}<ArrowUpRight size={18} /></Link>
             </article>)}
           </div>
