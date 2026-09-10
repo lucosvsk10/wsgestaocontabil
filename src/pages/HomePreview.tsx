@@ -90,7 +90,7 @@ const HomePreview = () => {
           <div id="sobre" className={`preview-founder ${founderOpen ? 'is-open' : ''}`}>
             <img className="preview-founder-emblem" src="/assets/ws-founder-emblem.webp" alt="" aria-hidden="true" />
             <div className="preview-founder-portrait">
-              <img className="preview-founder-image" src="/assets/ws-contador-home.svg" alt="Wilson Souza, contador e CEO da WS Gestão Contábil" />
+              <img className="preview-founder-image" src="/assets/ws-contador-home-clean.svg" alt="Wilson Souza, contador e CEO da WS Gestão Contábil" />
               <button className="preview-founder-info" type="button" aria-expanded={founderOpen} onClick={() => setFounderOpen((open) => !open)}>
                 <span className="preview-founder-name">WILSON SOUZA</span>
                 <span className="preview-founder-details">
