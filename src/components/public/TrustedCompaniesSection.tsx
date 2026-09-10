@@ -45,7 +45,6 @@ const TrustedCompaniesSection = () => {
           <div className="public-logo-marquee public-logo-marquee-b"><div className="public-logo-track">{rowB.map((client) => renderClient(client))}{rowB.map((client) => renderClient(client, true))}</div></div>
         </>}
       </div>
-      <p className="public-trust-note">17 marcas reais em destaque · passe o mouse para pausar</p>
     </section>
   );
 };
