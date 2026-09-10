@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, ArrowUpRight, Building2, Briefcase, Calculator, Check, FileCheck2, FileSearch2, FileText, FolderX, Instagram, MessageCircle, Receipt, ShieldCheck, Sparkles, Target, UserRound, Users, Wallet } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { ArrowRight, ArrowUpRight, Building2, Briefcase, Calculator, Check, FileText, FolderX, Instagram, MessageCircle, Receipt, ShieldCheck, Target, UserRound, Users, Wallet } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import guides from '@/content/business-guides.json';
 import TrustedCompaniesSection from '@/components/public/TrustedCompaniesSection';
@@ -23,10 +22,10 @@ const services = [
   { icon: FolderX, title: <>Encerramento<br /><strong>de empresa</strong></>, description: 'Baixa de CNPJ, inscrições, regularização e encerramento nos órgãos competentes.' },
 ];
 
-const software = [
-  { audience: 'PARA EMPRESAS', badge: 'MAIS ESCOLHIDO', name: 'Emissor Fiscal', price: '39,90', currency: 'R$', period: '/mês', description: 'Emita e gerencie suas notas fiscais em um só lugar.', features: ['NF-e, NFC-e, NFS-e, CT-e e MDF-e', 'Cadastros e histórico organizados', 'Suporte para começar'], cta: 'Começar agora', icon: 'document', featured: true, href: '/emissor-fiscal' },
-  { audience: 'PESSOAL E EMPRESARIAL', name: 'Simuladores', price: 'Grátis', description: 'Calcule impostos, contribuições e encargos em poucos segundos.', features: ['Cálculos rápidos e objetivos', 'Resultados explicados', 'Acesso imediato, sem custo'], cta: 'Usar simuladores', icon: 'calculator', featured: false, href: '/simulador-irpf' },
-  { audience: 'PARA EMPRESAS', badge: 'INTEGRAÇÃO SEFAZ', name: 'Extrator Fiscal', price: 'Sob consulta', description: 'Centralize notas de compras e vendas e reduza o trabalho manual.', features: ['Compras e vendas em um só painel', 'Organização por empresa', 'Consulta fiscal automatizada'], cta: 'Conhecer o Extrator', icon: 'search', featured: false, href: '/extrator-fiscal' },
+const pricingPlans = [
+  { name: 'Teste grátis', eyebrow: 'PARA CONHECER', price: 'R$ 0', period: 'por 7 dias', companies: '1 empresa', invoices: '30 notas', support: 'Suporte inicial', cta: 'Testar por 7 dias', featured: false },
+  { name: 'Comercial', eyebrow: 'PARA QUEM ESTÁ CRESCENDO', price: 'R$ 99', period: '/mês', companies: 'Até 5 empresas', invoices: 'Até 500 notas/mês', support: 'Suporte prioritário', cta: 'Escolher Comercial', featured: true },
+  { name: 'Empresarial', eyebrow: 'OPERAÇÃO SEM LIMITES', price: 'R$ 250', period: '/mês', companies: 'Empresas ilimitadas', invoices: 'Notas ilimitadas', support: 'Suporte prioritário', cta: 'Escolher Empresarial', featured: false },
 ];
 
 const heroMessages = [
@@ -110,22 +109,27 @@ const HomePreview = () => {
         </section>
 
         <section id="softwares" className="preview-software preview-section">
-          <motion.div className="preview-pricing-heading" initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: .55 }} transition={{ duration: .55 }}>
-            <span>SOLUÇÕES PARA CADA MOMENTO</span>
-            <h2>PLANOS E<br />SOFTWARES WS</h2>
-            <p>Escolha a solução que simplifica sua rotina agora. Preços claros, acesso direto e suporte da WS.</p>
-          </motion.div>
-          <div className="preview-software-grid">{software.map((item, index) => <motion.article className={`preview-software-card ${item.featured ? 'is-featured' : ''}`} key={item.name} initial={{ opacity: 0, y: 34 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: .25 }} transition={{ duration: .5, delay: index * .1 }} whileHover={{ y: -8 }}>
-            {item.featured && <span className="preview-pricing-popular"><Sparkles size={14} /> RECOMENDADO</span>}
-            <div className="preview-software-meta"><span>{item.audience}</span>{item.badge && <span className="preview-software-badge">{item.badge}</span>}</div>
-            <div className={`preview-software-icon ${item.icon}`} aria-hidden="true">{item.icon === 'calculator' ? <Calculator /> : item.icon === 'search' ? <FileSearch2 /> : <FileCheck2 />}</div>
-            <h3>{item.name}</h3>
-            <p className="preview-software-description">{item.description}</p>
-            <div className="preview-software-price">{item.currency && <small>{item.currency}</small>}<strong>{item.price}</strong>{item.period && <span>{item.period}</span>}</div>
-            <ul>{item.features.map((feature) => <li key={feature}><Check size={16} />{feature}</li>)}</ul>
-            <Link className="preview-software-cta" to={item.href}>{item.cta}<ArrowUpRight size={18} /></Link>
-          </motion.article>)}</div>
-          <p className="preview-pricing-note">O plano anual do Emissor também está disponível por R$ 399/ano. Condições e limites completos aparecem antes da contratação.</p>
+          <div className="preview-pricing-heading">
+            <span>PLANOS DO EMISSOR FISCAL WS</span>
+            <h2>UM PLANO PARA<br />CADA VOLUME</h2>
+            <p>Compare pela quantidade de empresas cadastradas e notas emitidas. Sem recursos escondidos.</p>
+          </div>
+          <div className="preview-pricing-table" role="table" aria-label="Comparação dos planos do Emissor Fiscal WS">
+            <div className="preview-pricing-labels" role="rowheader">
+              <div><span>Compare os planos</span><strong>Escolha pelo seu volume</strong></div>
+              <span>Empresas adicionadas</span><span>Notas emitidas</span><span>Atendimento</span><span>Acesso ao emissor</span>
+            </div>
+            {pricingPlans.map((plan) => <article className={`preview-pricing-plan ${plan.featured ? 'is-featured' : ''}`} key={plan.name} role="columnheader">
+              {plan.featured && <span className="preview-pricing-popular">MAIS ESCOLHIDO</span>}
+              <header><small>{plan.eyebrow}</small><h3>{plan.name}</h3><div className="preview-software-price"><strong>{plan.price}</strong><span>{plan.period}</span></div></header>
+              <div><span>Empresas adicionadas</span><strong>{plan.companies}</strong></div>
+              <div><span>Notas emitidas</span><strong>{plan.invoices}</strong></div>
+              <div><span>Atendimento</span><strong>{plan.support}</strong></div>
+              <div><span>Acesso ao emissor</span><strong><Check size={17} /> Completo</strong></div>
+              <Link className="preview-software-cta" to="/cadastro">{plan.cta}<ArrowUpRight size={18} /></Link>
+            </article>)}
+          </div>
+          <p className="preview-pricing-note">Os limites são renovados a cada ciclo mensal. Consulte as condições completas antes da contratação.</p>
         </section>
 
         <TrustedCompaniesSection />
