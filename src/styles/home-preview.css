@@ -544,3 +544,14 @@
 .preview-client-model-copy h3 { margin:10px 0 8px; color:var(--preview-cream); font-family:'Proxima Nova','Inter','Helvetica Neue',Arial,sans-serif; font-size:clamp(25px,2vw,42px); line-height:1; }
 .preview-client-model-copy p { max-width:31ch; margin:0; color:rgba(245,240,227,.72); font-family:'Proxima Nova','Inter','Helvetica Neue',Arial,sans-serif; font-size:clamp(14px,.9vw,19px); line-height:1.18; }
 @media (max-width:760px) { .preview-clients { padding:64px 20px 90px; } .preview-clients h2 { font-size:clamp(38px,11vw,60px); } .preview-client-model { min-height:0; flex-direction:column; align-items:stretch; gap:20px; padding:18px; border-radius:18px; } .preview-client-logo-frame { flex-basis:auto; width:100%; height:150px; } .preview-client-model-copy h3 { font-size:28px; } .preview-client-model-copy p { font-size:15px; } }
+
+/* ===== Poppins section-H2 font test — scoped to the public Home only ===== */
+/* Applies Poppins only to the six main section H2 titles. All sizes, colors,
+   line-heights, letter-spacing and spacing are preserved unchanged. Scoping
+   under .home-preview ensures Poppins never leaks to guide pages or other views. */
+.home-preview .preview-services-heading h2,
+.home-preview .preview-software > h2,
+.home-preview .public-trust-head h2,
+.home-preview .public-section-heading h2 {
+  font-family: 'Poppins', 'Inter', 'Helvetica Neue', Arial, sans-serif !important;
+}
