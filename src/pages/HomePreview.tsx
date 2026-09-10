@@ -45,7 +45,7 @@ const HomePreview = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [heroIndex, setHeroIndex] = useState(0);
   const [founderOpen, setFounderOpen] = useState(false);
-  const [founderSvg, setFounderSvg] = useState('');
+  const [founderSrc, setFounderSrc] = useState('');
 
   useEffect(() => {
     const timer = window.setInterval(() => setHeroIndex((current) => (current + 1) % heroMessages.length), 4800);
@@ -60,14 +60,16 @@ const HomePreview = () => {
 
   useEffect(() => {
     let active = true;
-    fetch('/assets/ws-contador-home-clean.svg')
+    fetch('/assets/ws-contador-home-real.png', { cache: 'force-cache' })
       .then((response) => {
         if (!response.ok) throw new Error(`Falha ao carregar retrato: HTTP ${response.status}`);
         return response.text();
       })
-      .then((svg) => {
+      .then((base64) => {
         if (!active) return;
-        setFounderSvg(svg.replace('<svg ', '<svg style="display:block;width:100%;height:100%" '));
+        const cleanBase64 = base64.trim();
+        if (!cleanBase64.startsWith('iVBOR')) throw new Error('PNG do contador inválido');
+        setFounderSrc(`data:image/png;base64,${cleanBase64}`);
       })
       .catch((error) => console.error(error));
     return () => { active = false; };
@@ -106,7 +108,7 @@ const HomePreview = () => {
           <div id="sobre" className={`preview-founder ${founderOpen ? 'is-open' : ''}`}>
             <img className="preview-founder-emblem" src="/assets/ws-founder-emblem.webp" alt="" aria-hidden="true" />
             <div className="preview-founder-portrait">
-              {founderSvg && <div className="preview-founder-image" style={{ aspectRatio: '731 / 810' }} role="img" aria-label="Wilson Souza, contador e CEO da WS Gestão Contábil" dangerouslySetInnerHTML={{ __html: founderSvg }} />}
+              {founderSrc && <img className="preview-founder-image" src={founderSrc} alt="Wilson Souza, contador e CEO da WS Gestão Contábil" />}
               <button className="preview-founder-info" type="button" aria-expanded={founderOpen} onClick={() => setFounderOpen((open) => !open)}>
                 <span className="preview-founder-name">WILSON SOUZA</span>
                 <span className="preview-founder-details">
