@@ -1,5 +1,29 @@
-import type { CSSProperties } from 'react';
 import { useCarouselData, type ClientItem } from '@/components/carousel/hooks/useCarouselData';
+
+const applyDominantLogoColor = (image: HTMLImageElement) => {
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 48;
+    canvas.height = 28;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    if (!context) return;
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    const colors = new Map<string, number>();
+    for (let index = 0; index < pixels.length; index += 4) {
+      if (pixels[index + 3] < 180) continue;
+      const red = Math.round(pixels[index] / 24) * 24;
+      const green = Math.round(pixels[index + 1] / 24) * 24;
+      const blue = Math.round(pixels[index + 2] / 24) * 24;
+      const key = `${Math.min(red, 255)},${Math.min(green, 255)},${Math.min(blue, 255)}`;
+      colors.set(key, (colors.get(key) || 0) + 1);
+    }
+    const dominant = [...colors.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+    if (dominant) image.parentElement?.style.setProperty('--client-logo-color', `rgb(${dominant})`);
+  } catch {
+    // Keep the neutral fallback when a remote image does not allow canvas sampling.
+  }
+};
 
 const fallbackClients: ClientItem[] = [
   { id:'85c0571f-d193-4c09-a145-0c2ecb0790b3', name:'REI DO AÇO', logo_url:'https://nadtoitgkukzbghtbohm.supabase.co/storage/v1/object/public/carousel-logos/logos/1749661878558.png', order_index:0, active:true },
@@ -28,8 +52,8 @@ const TrustedCompaniesSection = () => {
   const rowB = visibleClients.filter((_, index) => index % 2 !== 0);
 
   const renderClient = (client: ClientItem, clone = false) => (
-    <div key={`${clone ? 'clone-' : ''}${client.id}`} className="public-client-logo" aria-hidden={clone || undefined} title={clone ? undefined : client.name} style={{ '--client-logo-image': `url("${client.logo_url}")` } as CSSProperties}>
-      <img src={client.logo_url} alt={clone ? '' : client.name} loading="eager" decoding="async" draggable={false} />
+    <div key={`${clone ? 'clone-' : ''}${client.id}`} className="public-client-logo" aria-hidden={clone || undefined} title={clone ? undefined : client.name}>
+      <img src={client.logo_url} alt={clone ? '' : client.name} loading="eager" decoding="async" draggable={false} crossOrigin="anonymous" onLoad={(event) => applyDominantLogoColor(event.currentTarget)} />
     </div>
   );
 
