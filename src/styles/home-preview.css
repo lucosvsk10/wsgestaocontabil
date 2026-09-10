@@ -247,13 +247,13 @@
 .preview-founder-emblem { right:-8%; height:150%; opacity:.34; }
 
 @media (min-width:761px) {
-  .preview-hero-title { font-size:clamp(40px,4.5vw,88px); }
+  .preview-hero-title { font-size:clamp(46px,5.2vw,102px); }
   .preview-founder-emblem { right:-8%; height:150%; opacity:.34; }
   .preview-hero-mark { left:-18%; }
 }
 
 @media (max-width:760px) {
-  .preview-hero-title { font-size:clamp(38px,12.3vw,65px); }
+  .preview-hero-title { font-size:clamp(42px,13vw,70px); }
   .preview-founder-emblem { right:-32px; height:88%; opacity:.15; }
   .preview-hero-mark { left:-47px; opacity:.02; }
 }
@@ -549,6 +549,7 @@
 /* Applies Poppins only to the six main section H2 titles. All sizes, colors,
    line-heights, letter-spacing and spacing are preserved unchanged. Scoping
    under .home-preview ensures Poppins never leaks to guide pages or other views. */
+.home-preview .preview-hero-title,
 .home-preview .preview-services-heading h2,
 .home-preview .preview-software > h2,
 .home-preview .public-trust-head h2,
