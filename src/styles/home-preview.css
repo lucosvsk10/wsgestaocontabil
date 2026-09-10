@@ -219,7 +219,7 @@
 @media (min-width:761px) {
   .preview-founder { margin-right:-5vw; }
   .preview-founder-emblem { height:89%; }
-  .preview-founder-image { right:-35%; bottom:4%; width:auto; height:clamp(390px,35vw,620px); max-width:none; max-height:none; object-fit:contain; object-position:bottom right; }
+  .preview-founder-image { right:-35%; bottom:14%; width:auto; height:clamp(390px,35vw,620px); max-width:none; max-height:none; object-fit:contain; object-position:bottom right; }
   .preview-socials { right:5%; bottom:1%; }
 }
 
