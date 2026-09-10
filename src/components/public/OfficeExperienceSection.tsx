@@ -1,20 +1,26 @@
 import { useEffect, useRef } from 'react';
-import { Building2, MapPin, Play, Route } from 'lucide-react';
+import { Building2, Clock3, MapPin, Phone, Play, Route } from 'lucide-react';
 
 const locations = [
   {
     label: 'Sede',
     city: 'Palmeira dos Índios — AL',
     description: 'Sede da WS Gestão Contábil e uma das bases de atendimento presencial às empresas da região.',
+    address: 'Av. Muniz Falcão, 391, Sala 12 — São Cristóvão',
+    hours: 'Segunda a sexta, das 8h às 17h',
+    phone: '(82) 99932-4884',
     mapHref: 'https://maps.app.goo.gl/nCabkeuY39TkrYv59',
-    embed: 'https://www.google.com/maps?q=Av.%20Muniz%20Falc%C3%A3o%2C%20391%2C%20Sala%2012%2C%20S%C3%A3o%20Crist%C3%B3v%C3%A3o%2C%20Palmeira%20dos%20%C3%8Dndios%2C%20AL&output=embed',
+    embed: 'https://www.google.com/maps?q=WS%20Gest%C3%A3o%20Cont%C3%A1bil%2C%20Av.%20Muniz%20Falc%C3%A3o%2C%20391%2C%20Palmeira%20dos%20%C3%8Dndios%2C%20AL&z=16&output=embed',
   },
   {
     label: 'Filial',
     city: 'Major Isidoro — AL',
     description: 'Unidade de atendimento da WS para acompanhar de perto empresas de Major Isidoro e região.',
+    address: 'Loteamento Terra do Leite, 29, Quadra 1 — Centro',
+    hours: 'Segunda a sexta, das 8h às 17h',
+    phone: '(82) 99932-4884',
     mapHref: 'https://maps.app.goo.gl/cthtEGbJGqGBTVVo9',
-    embed: 'https://www.google.com/maps?q=Loteamento%20Terra%20do%20Leite%2C%2029%2C%20Centro%2C%20Major%20Isidoro%2C%20AL&output=embed',
+    embed: 'https://www.google.com/maps?q=WS%20Gest%C3%A3o%20Cont%C3%A1bil%2C%20Loteamento%20Terra%20do%20Leite%2C%2029%2C%20Major%20Isidoro%2C%20AL&z=16&output=embed',
   },
 ];
 
@@ -89,7 +95,12 @@ const OfficeExperienceSection = () => {
               <span>{location.label}</span>
               <h3>{location.city}</h3>
               <p>{location.description}</p>
-              <a href={location.mapHref} target="_blank" rel="noreferrer">Traçar rota <Route /></a>
+              <div className="public-location-details">
+                <div><MapPin /><span>{location.address}</span></div>
+                <div><Clock3 /><span>{location.hours}</span></div>
+                <div><Phone /><span>{location.phone}</span></div>
+              </div>
+              <a href={location.mapHref} target="_blank" rel="noreferrer">Ver local e traçar rota <Route /></a>
             </div>
             <div className="public-location-map">
               <iframe title={`Mapa da ${location.label} da WS em ${location.city}`} src={location.embed} loading="lazy" referrerPolicy="no-referrer-when-downgrade" allowFullScreen />
