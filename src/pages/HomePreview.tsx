@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, ArrowUpRight, Building2, Briefcase, Calculator, FileCheck2, FileSearch2, FileText, FolderX, Instagram, MessageCircle, Receipt, ShieldCheck, Target, UserRound, Users, Wallet } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Building2, Briefcase, Calculator, Check, FileCheck2, FileSearch2, FileText, FolderX, Instagram, MessageCircle, Receipt, ShieldCheck, Sparkles, Target, UserRound, Users, Wallet } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import guides from '@/content/business-guides.json';
 import TrustedCompaniesSection from '@/components/public/TrustedCompaniesSection';
@@ -23,9 +24,9 @@ const services = [
 ];
 
 const software = [
-  { audience: 'PARA EMPRESAS', badge: 'MELHOR APP DE EMISSÃO NACIONAL', title: <>EMISSOR DE<br /><span>NOTAS FISCAIS</span></>, description: 'Emita e gerencie suas notas fiscais em um só lugar.', cta: <>VER OFERTA <small>POR TEMPO LIMITADO</small><ArrowUpRight size={18} /></>, icon: 'document', urgent: true, href: '/emissor-fiscal' },
-  { audience: 'PESSOAL / EMPRESARIAL', title: <>SIMULADORES<br />DE <span>IMPOSTOS</span></>, description: 'Calcule impostos, contribuições e encargos em poucos segundos.', cta: <>VER SIMULADOR <ArrowUpRight size={18} /></>, icon: 'calculator', urgent: false, href: '/simulador-irpf' },
-  { audience: 'PARA EMPRESAS', badge: 'LICENÇA OFICIAL DA SEFAZ', title: <>EXTRATOR DE<br /><span>COMPRAS E<br />VENDAS</span></>, description: 'Busque e organize suas notas fiscais de compras e vendas de forma automática.', cta: <>VER OFERTA <small>POR TEMPO LIMITADO</small><ArrowUpRight size={18} /></>, icon: 'document', urgent: true, href: '/extrator-fiscal' },
+  { audience: 'PARA EMPRESAS', badge: 'MAIS ESCOLHIDO', name: 'Emissor Fiscal', price: '39,90', currency: 'R$', period: '/mês', description: 'Emita e gerencie suas notas fiscais em um só lugar.', features: ['NF-e, NFC-e, NFS-e, CT-e e MDF-e', 'Cadastros e histórico organizados', 'Suporte para começar'], cta: 'Começar agora', icon: 'document', featured: true, href: '/emissor-fiscal' },
+  { audience: 'PESSOAL E EMPRESARIAL', name: 'Simuladores', price: 'Grátis', description: 'Calcule impostos, contribuições e encargos em poucos segundos.', features: ['Cálculos rápidos e objetivos', 'Resultados explicados', 'Acesso imediato, sem custo'], cta: 'Usar simuladores', icon: 'calculator', featured: false, href: '/simulador-irpf' },
+  { audience: 'PARA EMPRESAS', badge: 'INTEGRAÇÃO SEFAZ', name: 'Extrator Fiscal', price: 'Sob consulta', description: 'Centralize notas de compras e vendas e reduza o trabalho manual.', features: ['Compras e vendas em um só painel', 'Organização por empresa', 'Consulta fiscal automatizada'], cta: 'Conhecer o Extrator', icon: 'search', featured: false, href: '/extrator-fiscal' },
 ];
 
 const heroMessages = [
@@ -109,8 +110,22 @@ const HomePreview = () => {
         </section>
 
         <section id="softwares" className="preview-software preview-section">
-          <h2>SOFTWARES WS</h2>
-          <div className="preview-software-grid">{software.map((item) => <article className="preview-software-card" key={item.audience + item.title.toString()}><div className="preview-software-meta"><span>{item.audience}</span>{item.badge && <span className="preview-software-badge">{item.badge}</span>}</div><h3>{item.title}</h3><p>{item.description}</p><Link className={`preview-software-cta ${item.urgent ? 'is-urgent' : ''}`} to={item.href}>{item.cta}</Link><div className={`preview-software-icon ${item.icon}`} aria-hidden="true">{item.icon === 'calculator' ? <Calculator /> : item.badge?.includes('SEFAZ') ? <FileSearch2 /> : <FileCheck2 />}</div></article>)}</div>
+          <motion.div className="preview-pricing-heading" initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: .55 }} transition={{ duration: .55 }}>
+            <span>SOLUÇÕES PARA CADA MOMENTO</span>
+            <h2>PLANOS E<br />SOFTWARES WS</h2>
+            <p>Escolha a solução que simplifica sua rotina agora. Preços claros, acesso direto e suporte da WS.</p>
+          </motion.div>
+          <div className="preview-software-grid">{software.map((item, index) => <motion.article className={`preview-software-card ${item.featured ? 'is-featured' : ''}`} key={item.name} initial={{ opacity: 0, y: 34 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: .25 }} transition={{ duration: .5, delay: index * .1 }} whileHover={{ y: -8 }}>
+            {item.featured && <span className="preview-pricing-popular"><Sparkles size={14} /> RECOMENDADO</span>}
+            <div className="preview-software-meta"><span>{item.audience}</span>{item.badge && <span className="preview-software-badge">{item.badge}</span>}</div>
+            <div className={`preview-software-icon ${item.icon}`} aria-hidden="true">{item.icon === 'calculator' ? <Calculator /> : item.icon === 'search' ? <FileSearch2 /> : <FileCheck2 />}</div>
+            <h3>{item.name}</h3>
+            <p className="preview-software-description">{item.description}</p>
+            <div className="preview-software-price">{item.currency && <small>{item.currency}</small>}<strong>{item.price}</strong>{item.period && <span>{item.period}</span>}</div>
+            <ul>{item.features.map((feature) => <li key={feature}><Check size={16} />{feature}</li>)}</ul>
+            <Link className="preview-software-cta" to={item.href}>{item.cta}<ArrowUpRight size={18} /></Link>
+          </motion.article>)}</div>
+          <p className="preview-pricing-note">O plano anual do Emissor também está disponível por R$ 399/ano. Condições e limites completos aparecem antes da contratação.</p>
         </section>
 
         <TrustedCompaniesSection />

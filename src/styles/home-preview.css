@@ -568,3 +568,82 @@
 .home-preview .public-section-heading h2 {
   font-family: 'Poppins', 'Inter', 'Helvetica Neue', Arial, sans-serif !important;
 }
+
+/* Pricing-inspired software section, informed by 21st.dev interaction patterns. */
+.preview-software {
+  position:relative;
+  min-height:auto;
+  overflow:hidden;
+  padding:clamp(105px,9vw,170px) 6vw clamp(110px,9vw,175px);
+  background:
+    radial-gradient(circle at 50% 44%,rgba(239,196,73,.09),transparent 34%),
+    linear-gradient(180deg,#020b1b 0%,#061126 100%);
+}
+.preview-software::before {
+  content:'';
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
+  background-size:72px 72px;
+  mask-image:linear-gradient(to bottom,transparent,black 22%,black 78%,transparent);
+}
+.preview-pricing-heading { position:relative; z-index:1; max-width:780px; margin:0 auto clamp(52px,5vw,86px); text-align:center; }
+.preview-pricing-heading > span { display:inline-flex; align-items:center; min-height:30px; padding:6px 12px; border:1px solid rgba(239,196,73,.28); border-radius:999px; color:var(--preview-gold); background:rgba(239,196,73,.07); font-size:clamp(11px,.72vw,14px); font-weight:700; letter-spacing:.12em; }
+.preview-software .preview-pricing-heading h2 { margin:20px 0 0; color:var(--preview-cream); font-family:'Poppins','Inter','Helvetica Neue',Arial,sans-serif!important; font-size:clamp(44px,4.4vw,88px); font-weight:700; line-height:.91; letter-spacing:-.055em; }
+.preview-software .preview-pricing-heading h2::after { display:none; }
+.preview-pricing-heading p { max-width:58ch; margin:22px auto 0; color:rgba(245,240,227,.7); font-size:clamp(16px,1.05vw,21px); line-height:1.45; }
+.preview-software-grid { position:relative; z-index:1; display:grid; width:min(1320px,100%); margin:0 auto; grid-template-columns:repeat(3,minmax(0,1fr)); gap:clamp(18px,1.7vw,28px); align-items:stretch; }
+.preview-software-card {
+  position:relative;
+  display:flex;
+  min-height:590px;
+  flex-direction:column;
+  padding:clamp(27px,2vw,36px);
+  overflow:visible;
+  border:1px solid rgba(173,192,222,.16);
+  border-radius:26px;
+  background:linear-gradient(145deg,rgba(42,56,79,.92),rgba(24,35,54,.96));
+  box-shadow:0 22px 65px rgba(0,0,0,.2);
+  transition:border-color .25s ease,box-shadow .25s ease,background .25s ease;
+}
+.preview-software-card::after { content:''; position:absolute; inset:0; z-index:-1; border-radius:inherit; opacity:0; background:radial-gradient(circle at 75% 12%,rgba(239,196,73,.2),transparent 37%); transition:opacity .25s ease; }
+.preview-software-card:hover { border-color:rgba(239,196,73,.45); box-shadow:0 30px 80px rgba(0,0,0,.3); }
+.preview-software-card:hover::after { opacity:1; }
+.preview-software-card.is-featured { border-color:rgba(239,196,73,.72); background:linear-gradient(155deg,rgba(69,65,47,.96),rgba(31,39,55,.98) 58%); box-shadow:0 24px 80px rgba(239,196,73,.12); }
+.preview-pricing-popular { position:absolute; top:-16px; left:50%; display:flex; min-height:32px; align-items:center; gap:6px; padding:6px 15px; transform:translateX(-50%); border-radius:999px; color:#07101f; background:var(--preview-gold); font-size:11px; font-weight:800; letter-spacing:.08em; box-shadow:0 10px 30px rgba(239,196,73,.22); }
+.preview-software-meta { display:flex; min-height:31px; align-items:center; justify-content:space-between; gap:10px; color:rgba(245,240,227,.7); font-size:11px; font-weight:700; letter-spacing:.08em; }
+.preview-software-badge { padding:7px 10px; border:1px solid rgba(239,196,73,.22); border-radius:999px; color:var(--preview-gold); background:rgba(239,196,73,.08); font-size:9px; white-space:nowrap; }
+.preview-software-icon { position:static; display:grid; width:54px; height:54px; margin:28px 0 24px; place-items:center; border:1px solid rgba(239,196,73,.25); border-radius:16px; color:var(--preview-gold); background:rgba(239,196,73,.08); }
+.preview-software-icon svg { width:27px; height:27px; stroke-width:1.7; }
+.preview-software-card h3 { margin:0; color:var(--preview-cream); font-family:'Poppins','Inter','Helvetica Neue',Arial,sans-serif; font-size:clamp(27px,1.9vw,38px); font-weight:650; line-height:1; letter-spacing:-.04em; }
+.preview-software-card .preview-software-description { max-width:34ch; margin:13px 0 0; color:rgba(245,240,227,.66); font-size:clamp(14px,.88vw,17px); line-height:1.35; }
+.preview-software-price { display:flex; min-height:72px; align-items:baseline; gap:5px; margin:26px 0 22px; color:var(--preview-cream); }
+.preview-software-price small { color:var(--preview-gold); font-size:18px; font-weight:700; }
+.preview-software-price strong { font-family:'Poppins','Inter',sans-serif; font-size:clamp(38px,3vw,56px); font-weight:700; line-height:1; letter-spacing:-.055em; }
+.preview-software-price span { color:rgba(245,240,227,.54); font-size:15px; }
+.preview-software-card ul { display:grid; gap:12px; margin:0 0 28px; padding:22px 0 0; border-top:1px solid rgba(173,192,222,.12); list-style:none; }
+.preview-software-card li { display:flex; align-items:flex-start; gap:10px; color:rgba(245,240,227,.82); font-size:14px; line-height:1.25; }
+.preview-software-card li svg { flex:0 0 auto; margin-top:1px; color:var(--preview-gold); stroke-width:2.3; }
+.preview-software-cta { display:flex; width:100%; min-height:52px; align-items:center; justify-content:center; gap:10px; margin-top:auto; padding:12px 18px; border:1px solid rgba(239,196,73,.28); border-radius:14px; color:var(--preview-cream); background:rgba(239,196,73,.08); font-size:14px; font-weight:750; transition:color .2s ease,background .2s ease,transform .2s ease; }
+.preview-software-card.is-featured .preview-software-cta,.preview-software-cta:hover { color:#07101f; background:var(--preview-gold); transform:translateY(-2px); }
+.preview-software-cta small { display:none; }
+.preview-pricing-note { position:relative; z-index:1; max-width:760px; margin:28px auto 0; color:rgba(245,240,227,.48); font-size:12px; line-height:1.45; text-align:center; }
+
+@media (max-width:900px) {
+  .preview-software-grid { grid-template-columns:1fr; max-width:600px; gap:24px; }
+  .preview-software-card { min-height:0; }
+  .preview-software-card.is-featured { order:-1; }
+}
+@media (max-width:760px) {
+  .preview-software { padding:82px 20px 92px; }
+  .preview-pricing-heading { margin-bottom:42px; text-align:left; }
+  .preview-pricing-heading p { margin-inline:0; }
+  .preview-software .preview-pricing-heading h2 { font-size:clamp(38px,12vw,58px); }
+  .preview-software-card { padding:24px 20px; border-radius:22px; }
+  .preview-software-meta { font-size:10px; }
+  .preview-software-icon { margin:24px 0 20px; }
+  .preview-software-card h3 { font-size:30px; }
+  .preview-software-card .preview-software-description { font-size:15px; }
+  .preview-software-price strong { font-size:44px; }
+}
