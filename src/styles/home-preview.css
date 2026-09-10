@@ -437,6 +437,18 @@
 @media (min-width:761px){.preview-service-card{min-height:195px;padding:14px 12px 16px}.preview-service-card{grid-template-rows:40px auto 1fr}.preview-service-art{height:34px;margin-bottom:5px}.preview-service-art svg{width:30px;height:30px}.preview-service-card h3{font-size:clamp(14px,.78vw,17px)}.preview-service-card p{margin-top:8px;font-size:clamp(10px,.57vw,12px)}}
 @media (max-width:760px){.preview-service-card{min-height:175px;padding:13px}.preview-service-card h3{font-size:16px}.preview-service-card p{font-size:12px}}
 
+/* Service copy: keep descriptions close to their titles and comfortably readable. */
+@media (min-width:761px) {
+  .preview-service-card { min-height:220px; padding:16px 16px 20px; grid-template-rows:42px auto auto; align-content:start; }
+  .preview-service-card h3 { min-height:68px; font-size:clamp(16px,.9vw,20px); line-height:1.04; }
+  .preview-service-card p { align-self:start; max-width:none; margin:12px 0 0; padding:0; text-align:left; font-size:clamp(13px,.76vw,16px); line-height:1.22; }
+}
+@media (max-width:760px) {
+  .preview-service-card { min-height:195px; padding:16px; grid-template-rows:44px auto auto; }
+  .preview-service-card h3 { min-height:54px; font-size:18px; }
+  .preview-service-card p { margin:12px 0 0; text-align:left; font-size:15px; line-height:1.22; }
+}
+
 
 /* Section 2 heading scale only. */
 @media (min-width:761px){.preview-services-heading h2{font-size:clamp(36px,3.8vw,78px)}}
