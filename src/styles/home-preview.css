@@ -239,6 +239,22 @@
   .preview-socials { right:3%; bottom:0; }
 }
 
+/* Hero symbol hierarchy: atmospheric caduceus, institutional founder mark. */
+.preview-hero-mark { opacity:.045; filter:grayscale(1) saturate(.45) brightness(.86) blur(.35px); }
+.preview-founder::after { content:''; position:absolute; z-index:-1; inset:4% -5vw 3% 16%; background:linear-gradient(90deg,transparent 0%,rgba(239,196,73,.015) 52%,rgba(239,196,73,.052) 100%); pointer-events:none; }
+.preview-founder-emblem { right:-2.5%; height:96%; opacity:.175; }
+
+@media (min-width:761px) {
+  .preview-hero-title { font-size:clamp(36.72px,4.104vw,79.92px); }
+  .preview-founder-emblem { right:-3%; height:98%; }
+}
+
+@media (max-width:760px) {
+  .preview-hero-title { font-size:clamp(36.72px,11.88vw,62.64px); }
+  .preview-founder::after { inset:6% -20px 4% 22%; }
+  .preview-founder-emblem { right:-32px; height:88%; opacity:.15; }
+}
+
 /* Sections 2 and 3: compact SaaS-scale typography and balanced card rhythm. */
 @media (min-width:761px) {
   .preview-services,
