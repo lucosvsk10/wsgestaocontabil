@@ -19,8 +19,8 @@ const locations = [
     address: 'Loteamento Terra do Leite, 29, Quadra 1 — Centro',
     hours: 'Segunda a sexta, das 8h às 17h',
     phone: '(82) 99932-4884',
-    mapHref: 'https://maps.app.goo.gl/cthtEGbJGqGBTVVo9',
-    embed: 'https://www.google.com/maps?q=WS%20Gest%C3%A3o%20Cont%C3%A1bil%2C%20Loteamento%20Terra%20do%20Leite%2C%2029%2C%20Major%20Isidoro%2C%20AL&z=16&output=embed',
+    mapHref: 'https://www.google.com/maps/place/WS+Gest%C3%A3o+Cont%C3%A1bil+-+Major+Izidoro/@-9.5364584,-36.9895467,17z/data=!4m5!3m4!1s0x70613612234834b:0xa437e6b9cead07b5!8m2!3d-9.5366347!4d-36.9929417',
+    embed: 'https://www.google.com/maps?q=WS%20Gest%C3%A3o%20Cont%C3%A1bil%20-%20Major%20Izidoro&ll=-9.5366347,-36.9929417&z=17&output=embed',
   },
 ];
 
