@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { useCarouselData, type ClientItem } from '@/components/carousel/hooks/useCarouselData';
 
 const fallbackClients: ClientItem[] = [
@@ -27,7 +28,7 @@ const TrustedCompaniesSection = () => {
   const rowB = visibleClients.filter((_, index) => index % 2 !== 0);
 
   const renderClient = (client: ClientItem, clone = false) => (
-    <div key={`${clone ? 'clone-' : ''}${client.id}`} className="public-client-logo" aria-hidden={clone || undefined} title={clone ? undefined : client.name}>
+    <div key={`${clone ? 'clone-' : ''}${client.id}`} className="public-client-logo" aria-hidden={clone || undefined} title={clone ? undefined : client.name} style={{ '--client-logo-image': `url("${client.logo_url}")` } as CSSProperties}>
       <img src={client.logo_url} alt={clone ? '' : client.name} loading="eager" decoding="async" draggable={false} />
     </div>
   );
