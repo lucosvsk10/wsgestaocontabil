@@ -698,3 +698,45 @@
   .preview-pricing-plan > header { min-height:170px; padding:22px 20px; }
   .preview-pricing-plan > div { padding:0 20px; }
 }
+
+/* Product presentation on the home page. Pricing belongs to each product page. */
+.preview-software { padding:clamp(100px,8vw,150px) 6vw clamp(115px,9vw,175px); background:#020b1b; }
+.preview-products-heading { position:relative; z-index:1; max-width:880px; margin-bottom:clamp(50px,5vw,82px); }
+.preview-products-heading > span { color:var(--preview-gold); font-size:clamp(11px,.75vw,14px); font-weight:700; letter-spacing:.13em; }
+.preview-products-heading h2 { margin:18px 0 0; color:var(--preview-cream); font-family:'Poppins','Inter','Helvetica Neue',Arial,sans-serif; font-size:clamp(42px,4.2vw,82px); font-weight:650; line-height:.94; letter-spacing:-.055em; }
+.preview-products-heading p { max-width:57ch; margin:20px 0 0; color:rgba(245,240,227,.68); font-size:clamp(16px,1vw,20px); line-height:1.42; }
+.preview-product-showcase { position:relative; z-index:1; display:grid; width:min(1380px,100%); gap:clamp(30px,4vw,62px); }
+.preview-product-card { display:grid; min-height:430px; overflow:hidden; grid-template-columns:minmax(0,1.12fr) minmax(330px,.88fr); border:1px solid rgba(173,192,222,.16); border-radius:22px; background:#0a1527; }
+.preview-product-card:nth-child(even) { grid-template-columns:minmax(330px,.88fr) minmax(0,1.12fr); }
+.preview-product-card:nth-child(even) .preview-product-visual { order:2; }
+.preview-product-visual { position:relative; display:grid; min-height:430px; overflow:hidden; place-items:center; padding:clamp(48px,6vw,100px); background:#111e32; }
+.preview-product-visual::after { content:''; position:absolute; inset:0; pointer-events:none; box-shadow:inset 0 0 0 1px rgba(255,255,255,.08); }
+.preview-product-visual img { display:block; width:min(82%,560px); height:auto; max-height:230px; object-fit:contain; transition:transform .45s ease; }
+.preview-product-card:hover .preview-product-visual img { transform:scale(1.018); }
+.preview-product-copy { position:relative; display:flex; align-items:flex-start; justify-content:center; flex-direction:column; padding:clamp(30px,3.4vw,58px); }
+.preview-product-copy > span { color:var(--preview-gold); font-size:11px; font-weight:700; letter-spacing:.12em; }
+.preview-product-copy > small { position:absolute; top:30px; right:34px; color:rgba(245,240,227,.18); font-family:'Poppins','Inter',sans-serif; font-size:30px; font-weight:650; }
+.preview-product-copy h3 { margin:15px 0 0; color:var(--preview-cream); font-family:'Poppins','Inter',sans-serif; font-size:clamp(29px,2.3vw,46px); font-weight:650; line-height:1; letter-spacing:-.045em; }
+.preview-product-copy p { max-width:39ch; margin:18px 0 0; color:rgba(245,240,227,.68); font-size:clamp(15px,.95vw,18px); line-height:1.42; }
+.preview-product-copy ul { display:flex; flex-wrap:wrap; gap:9px 18px; margin:26px 0 0; padding:0; list-style:none; }
+.preview-product-copy li { display:flex; align-items:center; gap:7px; color:rgba(245,240,227,.82); font-size:13px; }
+.preview-product-copy li svg { color:var(--preview-gold); stroke-width:2.2; }
+.preview-product-copy > a { display:inline-flex; min-height:48px; align-items:center; justify-content:center; gap:9px; margin-top:32px; padding:11px 18px; border:1px solid rgba(239,196,73,.45); border-radius:10px; color:#07101f; background:var(--preview-gold); font-size:14px; font-weight:750; transition:transform .2s ease,background .2s ease; }
+.preview-product-copy > a:hover { transform:translateY(-2px); background:#f5cf5d; }
+
+@media (max-width:900px) {
+  .preview-product-card,.preview-product-card:nth-child(even) { grid-template-columns:1fr; }
+  .preview-product-card:nth-child(even) .preview-product-visual { order:0; }
+  .preview-product-visual { min-height:clamp(250px,58vw,420px); }
+}
+@media (max-width:760px) {
+  .preview-software { padding:82px 20px 92px; }
+  .preview-products-heading h2 { font-size:clamp(38px,11.5vw,56px); }
+  .preview-product-showcase { gap:22px; }
+  .preview-product-card { border-radius:17px; }
+  .preview-product-copy { padding:28px 22px 30px; }
+  .preview-product-copy > small { top:23px; right:22px; font-size:24px; }
+  .preview-product-copy h3 { font-size:30px; }
+  .preview-product-copy p { font-size:15px; }
+  .preview-product-copy ul { display:grid; gap:10px; }
+}

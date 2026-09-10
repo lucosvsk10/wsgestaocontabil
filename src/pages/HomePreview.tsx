@@ -22,10 +22,9 @@ const services = [
   { icon: FolderX, title: <>Encerramento<br /><strong>de empresa</strong></>, description: 'Baixa de CNPJ, inscrições, regularização e encerramento nos órgãos competentes.' },
 ];
 
-const pricingPlans = [
-  { name: 'Teste grátis', eyebrow: 'PARA CONHECER', price: 'R$ 0', period: 'por 7 dias', companies: '1 empresa', invoices: '30 notas', support: 'Suporte inicial', cta: 'Testar por 7 dias', featured: false },
-  { name: 'Comercial', eyebrow: 'PARA QUEM ESTÁ CRESCENDO', previousPrice: 'R$ 149/mês', price: 'R$ 99', period: '/mês', companies: 'Até 5 empresas', invoices: 'Até 500 notas/mês', support: 'Suporte prioritário', cta: 'Escolher Comercial', featured: true },
-  { name: 'Empresarial', eyebrow: 'OPERAÇÃO SEM LIMITES', previousPrice: 'R$ 349/mês', price: 'R$ 250', period: '/mês', companies: 'Empresas ilimitadas', invoices: 'Notas ilimitadas', support: 'Suporte prioritário', cta: 'Escolher Empresarial', featured: false },
+const products = [
+  { eyebrow: 'EMISSÃO FISCAL', name: 'Emissor Fiscal WS', description: 'Emita e acompanhe seus documentos fiscais em uma rotina organizada, sem redigitar os mesmos dados a cada operação.', image: '/assets/ws-emissor-fiscal.png', imageAlt: 'Tela do Emissor Fiscal WS', features: ['NF-e, NFC-e, NFS-e, CT-e e MDF-e', 'Cadastros reaproveitados', 'Histórico de emissões'], cta: 'Conhecer o Emissor', href: '/emissor-fiscal' },
+  { eyebrow: 'GESTÃO DE DOCUMENTOS', name: 'Extrator Fiscal WS', description: 'Centralize documentos de compras e vendas das empresas e reduza o tempo gasto procurando notas em diferentes fontes.', image: '/assets/ws-extrator-fiscal.png', imageAlt: 'Tela do Extrator Fiscal WS', features: ['Organização por empresa', 'Compras e vendas centralizadas', 'Acompanhamento do volume fiscal'], cta: 'Conhecer o Extrator', href: '/extrator-fiscal' },
 ];
 
 const heroMessages = [
@@ -109,29 +108,17 @@ const HomePreview = () => {
         </section>
 
         <section id="softwares" className="preview-software preview-section">
-          <div className="preview-pricing-heading">
-            <span>PLANOS DO EMISSOR FISCAL WS</span>
-            <h2>PLANOS E<br />SOLUÇÕES WS</h2>
-            <p>Emissor, calculadoras e extração fiscal no mesmo ecossistema. Compare pela quantidade de empresas e notas.</p>
+          <div className="preview-products-heading">
+            <span>TECNOLOGIA DESENVOLVIDA PELA WS</span>
+            <h2>SISTEMAS PARA<br />A ROTINA FISCAL</h2>
+            <p>Dois produtos, duas necessidades diferentes. Conheça cada sistema e veja qual faz sentido para sua operação.</p>
           </div>
-          <div className="preview-pricing-table" role="table" aria-label="Comparação dos planos do Emissor Fiscal WS">
-            <div className="preview-pricing-labels" role="rowheader">
-              <div><span>Compare os planos</span><strong>Escolha pelo seu volume</strong></div>
-              <span>Emissor Fiscal</span><span>Calculadoras</span><span>Extrator Fiscal</span><span>Empresas adicionadas</span><span>Notas emitidas</span><span>Atendimento</span>
-            </div>
-            {pricingPlans.map((plan) => <article className={`preview-pricing-plan ${plan.featured ? 'is-featured' : ''}`} key={plan.name} role="columnheader">
-              {plan.featured && <span className="preview-pricing-popular">MAIS ESCOLHIDO</span>}
-              <header><small>{plan.eyebrow}</small><h3>{plan.name}</h3>{plan.previousPrice && <del>{plan.previousPrice}</del>}<div className="preview-software-price"><strong>{plan.price}</strong><span>{plan.period}</span></div></header>
-              <div><span>Emissor Fiscal</span><strong><Check size={17} /> Incluído</strong></div>
-              <div><span>Calculadoras</span><strong><Check size={17} /> Incluídas</strong></div>
-              <div><span>Extrator Fiscal</span><strong><Check size={17} /> Incluído</strong></div>
-              <div><span>Empresas adicionadas</span><strong>{plan.companies}</strong></div>
-              <div><span>Notas emitidas</span><strong>{plan.invoices}</strong></div>
-              <div><span>Atendimento</span><strong>{plan.support}</strong></div>
-              <Link className="preview-software-cta" to="/cadastro">{plan.cta}<ArrowUpRight size={18} /></Link>
+          <div className="preview-product-showcase">
+            {products.map((product, index) => <article className="preview-product-card" key={product.name}>
+              <div className="preview-product-visual"><img src={product.image} alt={product.imageAlt} loading="lazy" /></div>
+              <div className="preview-product-copy"><span>{product.eyebrow}</span><small>0{index + 1}</small><h3>{product.name}</h3><p>{product.description}</p><ul>{product.features.map((feature) => <li key={feature}><Check size={16} />{feature}</li>)}</ul><Link to={product.href}>{product.cta}<ArrowUpRight size={18} /></Link></div>
             </article>)}
           </div>
-          <p className="preview-pricing-note">Os limites são renovados a cada ciclo mensal. Consulte as condições completas antes da contratação.</p>
         </section>
 
         <TrustedCompaniesSection />
