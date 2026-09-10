@@ -23,8 +23,8 @@ const services = [
 ];
 
 const products = [
-  { eyebrow: 'EMISSÃO FISCAL', name: 'Emissor Fiscal WS', description: 'Emita e acompanhe seus documentos fiscais em uma rotina organizada, sem redigitar os mesmos dados a cada operação.', image: '/assets/ws-emissor-dashboard-transparent-v2.png', imageAlt: 'Painel interno do Emissor Fiscal WS', features: ['NF-e, NFC-e, NFS-e, CT-e e MDF-e', 'Cadastros reaproveitados', 'Histórico de emissões'], cta: 'Conhecer o Emissor', href: '/emissor-fiscal' },
-  { eyebrow: 'GESTÃO DE DOCUMENTOS', name: 'Extrator Fiscal WS', description: 'Centralize documentos de compras e vendas das empresas e reduza o tempo gasto procurando notas em diferentes fontes.', image: '/assets/ws-extrator-dashboard-transparent-v2.png', imageAlt: 'Painel interno do Extrator Fiscal WS', features: ['Organização por empresa', 'Compras e vendas centralizadas', 'Acompanhamento do volume fiscal'], cta: 'Conhecer o Extrator', href: '/extrator-fiscal' },
+  { eyebrow: 'EMISSÃO SEM REDIGITAÇÃO', name: 'Emissor Fiscal WS', description: 'Emita NF-e, NFC-e, NFS-e, CT-e e MDF-e em um só sistema. Reaproveite clientes, produtos e dados fiscais para reduzir erros e concluir cada emissão com muito mais agilidade.', image: '/assets/ws-emissor-dashboard-transparent-v2.png', imageAlt: 'Painel interno do Emissor Fiscal WS', features: ['Cinco tipos de documento fiscal no mesmo painel', 'Cadastros prontos para reutilizar em novas emissões', 'Histórico completo para localizar e acompanhar cada nota'], cta: 'Conhecer o Emissor', href: '/emissor-fiscal' },
+  { eyebrow: '7 DIAS GRÁTIS • SEM PEDIR NOTA AO CLIENTE', name: 'Extrator Fiscal WS', description: 'Pare de cobrar notas por WhatsApp e esperar o cliente enviar arquivos. O Extrator reúne os documentos fiscais de compras e vendas, separa tudo por empresa e deixa o escritório pronto para trabalhar sem atrasos no fechamento.', image: '/assets/ws-extrator-dashboard-transparent-v2.png', imageAlt: 'Painel interno do Extrator Fiscal WS', features: ['Notas disponíveis sem depender do envio manual do cliente', 'Documentos de compras e vendas organizados por empresa', 'Menos cobranças, retrabalho e fechamento fiscal atrasado'], cta: 'Testar grátis por 7 dias', href: '/extrator-fiscal' },
 ];
 
 const heroMessages = [
@@ -111,7 +111,7 @@ const HomePreview = () => {
           <div className="preview-products-heading">
             <span>TECNOLOGIA DESENVOLVIDA PELA WS</span>
             <h2>SISTEMAS PARA<br />A ROTINA FISCAL</h2>
-            <p>Dois produtos, duas necessidades diferentes. Conheça cada sistema e veja qual faz sentido para sua operação.</p>
+            <p>Menos tarefas repetitivas, menos documentos perdidos e mais tempo para cuidar do que realmente exige análise do seu escritório.</p>
           </div>
           <div className="preview-product-showcase">
             {products.map((product, index) => <article className="preview-product-card" key={product.name}>
