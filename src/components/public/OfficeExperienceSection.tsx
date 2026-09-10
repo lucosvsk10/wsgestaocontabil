@@ -68,15 +68,17 @@ const OfficeExperienceSection = () => {
         <video
           ref={videoRef}
           className="public-office-video"
-          src="/assets/ws-escritorio-tour-hq-web.mp4"
           autoPlay
           muted
           loop
           playsInline
           preload="auto"
+          poster="/assets/ws-escritorio-poster.webp"
           aria-label="Vídeo do escritório da WS Gestão Contábil"
           onCanPlay={(event) => void event.currentTarget.play().catch(() => undefined)}
-        />
+        >
+          <source src="/assets/ws-escritorio-tour-hq-web.mp4?v=2" type="video/mp4" />
+        </video>
         <div className="public-office-video-caption"><span><Play /> VISITA RÁPIDA</span><strong>Veja de perto a estrutura da WS.</strong></div>
       </div>
 
