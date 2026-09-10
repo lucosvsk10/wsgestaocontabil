@@ -28,7 +28,7 @@ const TrustedCompaniesSection = () => {
 
   const renderClient = (client: ClientItem, clone = false) => (
     <div key={`${clone ? 'clone-' : ''}${client.id}`} className="public-client-logo" aria-hidden={clone || undefined} title={clone ? undefined : client.name}>
-      <img src={client.logo_url} alt={clone ? '' : client.name} loading="lazy" decoding="async" />
+      <img src={client.logo_url} alt={clone ? '' : client.name} loading="eager" decoding="async" draggable={false} />
     </div>
   );
 
