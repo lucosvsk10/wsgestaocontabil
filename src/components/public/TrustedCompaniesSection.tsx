@@ -1,5 +1,42 @@
 import { useCarouselData, type ClientItem } from '@/components/carousel/hooks/useCarouselData';
 
+const extendLogoBackground = (image: HTMLImageElement) => {
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = image.naturalWidth;
+    canvas.height = image.naturalHeight;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    if (!context) return;
+    context.drawImage(image, 0, 0);
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    const clusters = new Map<string, { count: number; red: number; green: number; blue: number }>();
+    const edge = Math.max(2, Math.round(Math.min(canvas.width, canvas.height) * .08));
+    for (let y = 0; y < canvas.height; y += 2) {
+      for (let x = 0; x < canvas.width; x += 2) {
+        if (x >= edge && x < canvas.width - edge && y >= edge && y < canvas.height - edge) continue;
+        const index = (y * canvas.width + x) * 4;
+        if (pixels[index + 3] < 180) continue;
+        const red = pixels[index];
+        const green = pixels[index + 1];
+        const blue = pixels[index + 2];
+        const key = `${Math.round(red / 8)},${Math.round(green / 8)},${Math.round(blue / 8)}`;
+        const cluster = clusters.get(key) || { count: 0, red: 0, green: 0, blue: 0 };
+        cluster.count += 1;
+        cluster.red += red;
+        cluster.green += green;
+        cluster.blue += blue;
+        clusters.set(key, cluster);
+      }
+    }
+    const dominant = [...clusters.values()].sort((a, b) => b.count - a.count)[0];
+    if (!dominant) return;
+    const color = `rgb(${Math.round(dominant.red / dominant.count)},${Math.round(dominant.green / dominant.count)},${Math.round(dominant.blue / dominant.count)})`;
+    image.parentElement?.style.setProperty('--client-logo-color', color);
+  } catch {
+    // Preserve the neutral fallback if a remote host blocks pixel sampling.
+  }
+};
+
 const fallbackClients: ClientItem[] = [
   { id:'85c0571f-d193-4c09-a145-0c2ecb0790b3', name:'REI DO AÇO', logo_url:'https://nadtoitgkukzbghtbohm.supabase.co/storage/v1/object/public/carousel-logos/logos/1749661878558.png', order_index:0, active:true },
   { id:'7d62e047-ecde-4ff1-8eb8-64c457da92d4', name:'ATELIÊ JULIANA FELIX', logo_url:'https://nadtoitgkukzbghtbohm.supabase.co/storage/v1/object/public/carousel-logos/logos/1749662075919.png', order_index:1, active:true },
@@ -28,7 +65,7 @@ const TrustedCompaniesSection = () => {
 
   const renderClient = (client: ClientItem, clone = false) => (
     <div key={`${clone ? 'clone-' : ''}${client.id}`} className="public-client-logo" aria-hidden={clone || undefined} title={clone ? undefined : client.name}>
-      <img src={client.logo_url} alt={clone ? '' : client.name} loading="eager" decoding="async" draggable={false} />
+      <img src={client.logo_url} alt={clone ? '' : client.name} loading="eager" decoding="async" draggable={false} crossOrigin="anonymous" onLoad={(event) => extendLogoBackground(event.currentTarget)} />
     </div>
   );
 
