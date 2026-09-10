@@ -709,10 +709,10 @@
 .preview-product-card { display:grid; min-height:430px; overflow:hidden; grid-template-columns:minmax(0,1.12fr) minmax(330px,.88fr); border:1px solid rgba(173,192,222,.16); border-radius:22px; background:#0a1527; }
 .preview-product-card:nth-child(even) { grid-template-columns:minmax(330px,.88fr) minmax(0,1.12fr); }
 .preview-product-card:nth-child(even) .preview-product-visual { order:2; }
-.preview-product-visual { position:relative; display:grid; min-height:430px; overflow:hidden; place-items:center; padding:clamp(48px,6vw,100px); background:#111e32; }
+.preview-product-visual { position:relative; display:grid; min-height:430px; overflow:hidden; place-items:center; padding:clamp(24px,3vw,48px); background:#111e32; }
 .preview-product-visual::after { content:''; position:absolute; inset:0; pointer-events:none; box-shadow:inset 0 0 0 1px rgba(255,255,255,.08); }
-.preview-product-visual img { display:block; width:min(82%,560px); height:auto; max-height:230px; object-fit:contain; transition:transform .45s ease; }
-.preview-product-card:hover .preview-product-visual img { transform:scale(1.018); }
+.preview-product-visual img { display:block; width:min(100%,760px); height:auto; max-height:390px; object-fit:contain; transition:transform .45s ease; }
+.preview-product-card:hover .preview-product-visual img { transform:none; }
 .preview-product-copy { position:relative; display:flex; align-items:flex-start; justify-content:center; flex-direction:column; padding:clamp(30px,3.4vw,58px); }
 .preview-product-copy > span { color:var(--preview-gold); font-size:11px; font-weight:700; letter-spacing:.12em; }
 .preview-product-copy > small { position:absolute; top:30px; right:34px; color:rgba(245,240,227,.18); font-family:'Poppins','Inter',sans-serif; font-size:30px; font-weight:650; }
@@ -743,27 +743,20 @@
 
 /* Stronger visual identity for the product showcase. */
 .preview-software {
-  border-top:1px solid rgba(239,196,73,.28);
-  border-bottom:1px solid rgba(239,196,73,.18);
-  background:
-    linear-gradient(135deg,rgba(239,196,73,.045),transparent 30%),
-    #111c2f;
+  border:0;
+  background:#111c2f;
 }
 .preview-software::before {
-  display:block;
-  background-image:linear-gradient(rgba(245,240,227,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(245,240,227,.025) 1px,transparent 1px);
-  background-size:80px 80px;
-  mask-image:linear-gradient(to bottom,transparent 2%,black 18%,black 82%,transparent 98%);
+  display:none;
 }
-.preview-products-heading::after { content:''; display:block; width:72px; height:3px; margin-top:28px; border-radius:99px; background:var(--preview-gold); }
-.preview-product-showcase::before { content:'PRODUTOS WS'; position:absolute; z-index:-1; top:-52px; right:0; color:rgba(245,240,227,.05); font-family:'Poppins','Inter',sans-serif; font-size:clamp(50px,7vw,120px); font-weight:700; letter-spacing:-.06em; white-space:nowrap; }
+.preview-products-heading::after,.preview-product-showcase::before { display:none; }
 .preview-product-card {
   border-color:rgba(196,209,231,.22);
   background:rgba(8,19,36,.9);
   box-shadow:0 28px 70px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.035);
 }
 .preview-product-card:nth-child(even) { background:rgba(14,26,46,.94); }
-.preview-product-card::before { content:''; position:absolute; z-index:3; top:0; left:0; width:100%; height:3px; background:linear-gradient(90deg,var(--preview-gold),rgba(239,196,73,.12) 58%,transparent); }
+.preview-product-card::before { display:none; }
 .preview-product-visual {
   margin:18px;
   min-height:394px;

@@ -44,6 +44,7 @@ import FiscalIssuerLandingPage from './pages/FiscalIssuerLandingPage';
 import ExtractorFiscalLandingPage from './pages/ExtractorFiscalLandingPage';
 import SimulationsHubPage from './pages/SimulationsHubPage';
 import FiscalExtractorApp from './pages/FiscalExtractorApp';
+import EmissorPreview from './pages/EmissorPreview';
 import ProductChooser from './pages/ProductChooser';
 
 const DashboardRouter = () => {
@@ -68,6 +69,7 @@ const AppRoutes = () => <Routes>
   <Route path="/guias" element={<BusinessGuidesIndexPage />} /><Route path="/guias/:slug" element={<BusinessGuidePage />} />
   <Route path="/emissor-fiscal" element={<FiscalIssuerLandingPage />} /><Route path="/extrator-fiscal" element={<ExtractorFiscalLandingPage />} /><Route path="/simulacoes" element={<SimulationsHubPage />} />
   <Route path="/extrator-preview" element={<FiscalExtractorApp preview />} />
+  <Route path="/emissor-preview" element={<EmissorPreview />} />
   <Route path="/" element={<Index />} /><Route path="/login" element={<ClientLogin />} /><Route path="/cadastro" element={<PublicSignupPage />} />
   <Route path="/escolher-produto" element={<PrivateRoute><ProductChooser /></PrivateRoute>} />
   <Route path="/enquete/:id" element={<PollPage />} /><Route path="/enquete-numerica/:id" element={<NumericalPollPage />} /><Route path="/formulario/:id" element={<FormPollPage />} />

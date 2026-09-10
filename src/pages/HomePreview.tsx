@@ -23,8 +23,8 @@ const services = [
 ];
 
 const products = [
-  { eyebrow: 'EMISSÃO FISCAL', name: 'Emissor Fiscal WS', description: 'Emita e acompanhe seus documentos fiscais em uma rotina organizada, sem redigitar os mesmos dados a cada operação.', image: '/assets/ws-emissor-fiscal.png', imageAlt: 'Tela do Emissor Fiscal WS', features: ['NF-e, NFC-e, NFS-e, CT-e e MDF-e', 'Cadastros reaproveitados', 'Histórico de emissões'], cta: 'Conhecer o Emissor', href: '/emissor-fiscal' },
-  { eyebrow: 'GESTÃO DE DOCUMENTOS', name: 'Extrator Fiscal WS', description: 'Centralize documentos de compras e vendas das empresas e reduza o tempo gasto procurando notas em diferentes fontes.', image: '/assets/ws-extrator-fiscal.png', imageAlt: 'Tela do Extrator Fiscal WS', features: ['Organização por empresa', 'Compras e vendas centralizadas', 'Acompanhamento do volume fiscal'], cta: 'Conhecer o Extrator', href: '/extrator-fiscal' },
+  { eyebrow: 'EMISSÃO FISCAL', name: 'Emissor Fiscal WS', description: 'Emita e acompanhe seus documentos fiscais em uma rotina organizada, sem redigitar os mesmos dados a cada operação.', image: '/assets/ws-emissor-promo.png', imageAlt: 'Painel interno do Emissor Fiscal WS', features: ['NF-e, NFC-e, NFS-e, CT-e e MDF-e', 'Cadastros reaproveitados', 'Histórico de emissões'], cta: 'Conhecer o Emissor', href: '/emissor-fiscal' },
+  { eyebrow: 'GESTÃO DE DOCUMENTOS', name: 'Extrator Fiscal WS', description: 'Centralize documentos de compras e vendas das empresas e reduza o tempo gasto procurando notas em diferentes fontes.', image: '/assets/ws-extrator-promo.png', imageAlt: 'Painel interno do Extrator Fiscal WS', features: ['Organização por empresa', 'Compras e vendas centralizadas', 'Acompanhamento do volume fiscal'], cta: 'Conhecer o Extrator', href: '/extrator-fiscal' },
 ];
 
 const heroMessages = [
