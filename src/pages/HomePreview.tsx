@@ -44,6 +44,7 @@ const heroMessages = [
 const HomePreview = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [heroIndex, setHeroIndex] = useState(0);
+  const [founderOpen, setFounderOpen] = useState(false);
 
   useEffect(() => {
     const timer = window.setInterval(() => setHeroIndex((current) => (current + 1) % heroMessages.length), 4800);
@@ -86,9 +87,18 @@ const HomePreview = () => {
             <p className="preview-hero-subtitle">O que sua empresa precisar, em um só lugar.</p>
             <a className="preview-start-button" href="#servicos">COMECE AQUI</a>
           </div>
-          <div id="sobre" className="preview-founder">
-            <div className="preview-founder-panel"><div className="preview-founder-copy"><h2>WILSON SOUZA</h2><p>CONTADOR E CEO DA<br />WS GESTÃO A MAIS DE 16<br />ANOS</p><p className="preview-founder-highlight">REFERÊNCIA <strong>#1</strong> EM<br />CONTABILIDADE EM<br />TODO O NORDESTE</p></div></div>
-            <img className="preview-founder-image" src="/assets/ws-contador-home-v3.webp" alt="Wilson Souza, contador e CEO da WS Gestão Contábil" />
+          <div id="sobre" className={`preview-founder ${founderOpen ? 'is-open' : ''}`}>
+            <img className="preview-founder-emblem" src="/assets/ws-founder-emblem.webp" alt="" aria-hidden="true" />
+            <div className="preview-founder-portrait">
+              <img className="preview-founder-image" src="/assets/ws-contador-home-v3.webp" alt="Wilson Souza, contador e CEO da WS Gestão Contábil" />
+              <button className="preview-founder-info" type="button" aria-expanded={founderOpen} onClick={() => setFounderOpen((open) => !open)}>
+                <span className="preview-founder-name">WILSON SOUZA</span>
+                <span className="preview-founder-details">
+                  <span>CONTADOR E CEO DA<br />WS GESTÃO HÁ MAIS DE 16 ANOS</span>
+                  <span>REFERÊNCIA <strong>#1</strong> EM<br />CONTABILIDADE EM TODO O NORDESTE</span>
+                </span>
+              </button>
+            </div>
             <div className="preview-socials"><a href="https://www.instagram.com/wscontabil.co/" target="_blank" rel="noreferrer" aria-label="Instagram"><Instagram size={27} /></a><a href="https://wa.me/5582999324884" target="_blank" rel="noreferrer" aria-label="WhatsApp"><MessageCircle size={27} /></a></div>
           </div>
         </section>

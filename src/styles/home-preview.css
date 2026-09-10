@@ -198,6 +198,47 @@
   .preview-hero-mark { left:-35px; top:16%; width:auto; height:420px; opacity:.065; }
 }
 
+/* Founder portrait: brand framing with progressive profile details. */
+.preview-founder-panel,
+.preview-founder-copy { display:none; }
+.preview-founder { overflow:visible; }
+.preview-founder-emblem { position:absolute; z-index:0; top:50%; right:0; width:auto; height:88%; transform:translateY(-50%); object-fit:contain; object-position:right center; opacity:.14; pointer-events:none; }
+.preview-founder-portrait { position:absolute; z-index:2; inset:0; }
+.preview-founder-info { position:absolute; z-index:4; right:1.5%; bottom:21%; display:flex; width:clamp(205px,15vw,290px); min-height:54px; flex-direction:column; align-items:flex-start; justify-content:center; padding:12px 22px; overflow:hidden; border:0; border-radius:2px 0 0 2px; color:#020b1b; background:#efc449; font:inherit; text-align:left; cursor:pointer; box-shadow:0 14px 34px rgba(0,0,0,.18); transition:width .32s ease, padding .32s ease, background-color .2s ease; }
+.preview-founder-name { display:block; white-space:nowrap; font-size:clamp(16px,1.25vw,24px); font-weight:700; line-height:1; letter-spacing:-.02em; }
+.preview-founder-details { display:grid; max-height:0; gap:14px; opacity:0; transform:translateY(8px); font-size:clamp(12px,.76vw,15px); font-weight:500; line-height:1.12; transition:max-height .32s ease, margin-top .32s ease, opacity .2s ease, transform .32s ease; }
+.preview-founder-details > span { display:block; }
+.preview-founder-portrait:hover .preview-founder-info,
+.preview-founder-info:focus-visible,
+.preview-founder.is-open .preview-founder-info { width:clamp(300px,21vw,410px); padding:18px 24px 20px; }
+.preview-founder-portrait:hover .preview-founder-details,
+.preview-founder-info:focus-visible .preview-founder-details,
+.preview-founder.is-open .preview-founder-details { max-height:150px; margin-top:16px; opacity:1; transform:translateY(0); }
+.preview-founder-info:focus-visible { outline:2px solid #f5f0e3; outline-offset:4px; }
+
+@media (min-width:761px) {
+  .preview-founder { margin-right:-5vw; }
+  .preview-founder-emblem { height:89%; }
+  .preview-founder-image { right:7%; bottom:-1%; width:auto; height:clamp(420px,39vw,680px); max-height:none; object-fit:contain; object-position:bottom right; }
+  .preview-socials { right:5%; bottom:1%; }
+}
+
+@media (max-width:760px) {
+  .preview-founder { min-height:500px; }
+  .preview-founder-emblem { top:48%; right:-20px; height:82%; opacity:.12; }
+  .preview-founder-image { right:-2%; bottom:-2%; width:auto; height:clamp(350px,102vw,490px); max-width:none; }
+  .preview-founder-info { right:-20px; bottom:17%; width:205px; min-height:48px; padding:11px 18px; }
+  .preview-founder-name { font-size:16px; }
+  .preview-founder-details { font-size:12px; }
+  .preview-founder-portrait:hover .preview-founder-info { width:205px; padding:11px 18px; }
+  .preview-founder-portrait:hover .preview-founder-details { max-height:0; margin-top:0; opacity:0; transform:translateY(8px); }
+  .preview-founder-info:focus-visible,
+  .preview-founder.is-open .preview-founder-info { width:min(300px,calc(100vw - 34px)); padding:15px 19px 17px; }
+  .preview-founder-info:focus-visible .preview-founder-details,
+  .preview-founder.is-open .preview-founder-details { max-height:150px; margin-top:13px; opacity:1; transform:translateY(0); }
+  .preview-socials { right:3%; bottom:0; }
+}
+
 /* Sections 2 and 3: compact SaaS-scale typography and balanced card rhythm. */
 @media (min-width:761px) {
   .preview-services,
