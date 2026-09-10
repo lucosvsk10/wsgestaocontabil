@@ -24,8 +24,8 @@ const services = [
 
 const pricingPlans = [
   { name: 'Teste grátis', eyebrow: 'PARA CONHECER', price: 'R$ 0', period: 'por 7 dias', companies: '1 empresa', invoices: '30 notas', support: 'Suporte inicial', cta: 'Testar por 7 dias', featured: false },
-  { name: 'Comercial', eyebrow: 'PARA QUEM ESTÁ CRESCENDO', price: 'R$ 99', period: '/mês', companies: 'Até 5 empresas', invoices: 'Até 500 notas/mês', support: 'Suporte prioritário', cta: 'Escolher Comercial', featured: true },
-  { name: 'Empresarial', eyebrow: 'OPERAÇÃO SEM LIMITES', price: 'R$ 250', period: '/mês', companies: 'Empresas ilimitadas', invoices: 'Notas ilimitadas', support: 'Suporte prioritário', cta: 'Escolher Empresarial', featured: false },
+  { name: 'Comercial', eyebrow: 'PARA QUEM ESTÁ CRESCENDO', previousPrice: 'R$ 149/mês', price: 'R$ 99', period: '/mês', companies: 'Até 5 empresas', invoices: 'Até 500 notas/mês', support: 'Suporte prioritário', cta: 'Escolher Comercial', featured: true },
+  { name: 'Empresarial', eyebrow: 'OPERAÇÃO SEM LIMITES', previousPrice: 'R$ 349/mês', price: 'R$ 250', period: '/mês', companies: 'Empresas ilimitadas', invoices: 'Notas ilimitadas', support: 'Suporte prioritário', cta: 'Escolher Empresarial', featured: false },
 ];
 
 const heroMessages = [
@@ -111,21 +111,23 @@ const HomePreview = () => {
         <section id="softwares" className="preview-software preview-section">
           <div className="preview-pricing-heading">
             <span>PLANOS DO EMISSOR FISCAL WS</span>
-            <h2>UM PLANO PARA<br />CADA VOLUME</h2>
-            <p>Compare pela quantidade de empresas cadastradas e notas emitidas. Sem recursos escondidos.</p>
+            <h2>PLANOS E<br />SOLUÇÕES WS</h2>
+            <p>Emissor, calculadoras e extração fiscal no mesmo ecossistema. Compare pela quantidade de empresas e notas.</p>
           </div>
           <div className="preview-pricing-table" role="table" aria-label="Comparação dos planos do Emissor Fiscal WS">
             <div className="preview-pricing-labels" role="rowheader">
               <div><span>Compare os planos</span><strong>Escolha pelo seu volume</strong></div>
-              <span>Empresas adicionadas</span><span>Notas emitidas</span><span>Atendimento</span><span>Acesso ao emissor</span>
+              <span>Empresas adicionadas</span><span>Notas emitidas</span><span>Atendimento</span><span>Emissor Fiscal</span><span>Calculadoras</span><span>Extrator Fiscal</span>
             </div>
             {pricingPlans.map((plan) => <article className={`preview-pricing-plan ${plan.featured ? 'is-featured' : ''}`} key={plan.name} role="columnheader">
               {plan.featured && <span className="preview-pricing-popular">MAIS ESCOLHIDO</span>}
-              <header><small>{plan.eyebrow}</small><h3>{plan.name}</h3><div className="preview-software-price"><strong>{plan.price}</strong><span>{plan.period}</span></div></header>
+              <header><small>{plan.eyebrow}</small><h3>{plan.name}</h3>{plan.previousPrice && <del>{plan.previousPrice}</del>}<div className="preview-software-price"><strong>{plan.price}</strong><span>{plan.period}</span></div></header>
               <div><span>Empresas adicionadas</span><strong>{plan.companies}</strong></div>
               <div><span>Notas emitidas</span><strong>{plan.invoices}</strong></div>
               <div><span>Atendimento</span><strong>{plan.support}</strong></div>
-              <div><span>Acesso ao emissor</span><strong><Check size={17} /> Completo</strong></div>
+              <div><span>Emissor Fiscal</span><strong><Check size={17} /> Incluído</strong></div>
+              <div><span>Calculadoras</span><strong><Check size={17} /> Incluídas</strong></div>
+              <div><span>Extrator Fiscal</span><strong><Check size={17} /> Incluído</strong></div>
               <Link className="preview-software-cta" to="/cadastro">{plan.cta}<ArrowUpRight size={18} /></Link>
             </article>)}
           </div>
