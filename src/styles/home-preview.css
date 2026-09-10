@@ -219,7 +219,7 @@
 @media (min-width:761px) {
   .preview-founder { margin-right:-5vw; }
   .preview-founder-emblem { height:89%; }
-  .preview-founder-image { right:-35%; bottom:14%; width:auto; height:clamp(390px,35vw,620px); max-width:none; max-height:none; object-fit:contain; object-position:bottom right; }
+  .preview-founder-image { right:-35%; bottom:9%; width:auto; height:clamp(390px,35vw,620px); max-width:none; max-height:none; object-fit:contain; object-position:bottom right; }
   .preview-socials { right:5%; bottom:1%; }
 }
 
@@ -244,11 +244,11 @@
 .preview-hero::before { z-index:1; }
 .preview-hero-mark { z-index:0; opacity:.024; filter:grayscale(1) saturate(.3) brightness(.72) blur(.4px); }
 .preview-founder::after { display:none; }
-.preview-founder-emblem { right:-8%; height:130%; opacity:.34; }
+.preview-founder-emblem { right:-8%; height:150%; opacity:.34; }
 
 @media (min-width:761px) {
   .preview-hero-title { font-size:clamp(40px,4.5vw,88px); }
-  .preview-founder-emblem { right:-8%; height:130%; opacity:.34; }
+  .preview-founder-emblem { right:-8%; height:150%; opacity:.34; }
   .preview-hero-mark { left:-18%; }
 }
 
