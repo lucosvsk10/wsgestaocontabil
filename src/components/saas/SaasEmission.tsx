@@ -990,7 +990,7 @@ export default function SaasEmission({
         need(Number(form.vTPrest) > 0, 'valor da prestação');
         need(Number(form.vCarga) > 0, 'valor da carga');
         need(Number(form.qCarga) > 0, 'peso / quantidade');
-        need(digits(form.chNFe).length === 44, 'chave NF-e com 44 dígitos');
+        if (String(form.chNFe || '').trim()) need(digits(form.chNFe).length === 44, 'chave NF-e com 44 dígitos');
       }
       if (index === 2) {
         need(digits(form.munIniCodigo).length === 7, 'código IBGE da origem');
@@ -1380,8 +1380,7 @@ export default function SaasEmission({
               label="Chave NF-e vinculada"
               value={form.chNFe}
               onChange={v => set('chNFe', v)}
-              required
-              hint="Informe os 44 dígitos da chave, sem espaços."
+              hint="Opcional nesta etapa. Se informar, use os 44 dígitos da chave, sem espaços."
             />
           </div>
         </Section>
