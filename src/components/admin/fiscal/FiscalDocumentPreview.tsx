@@ -57,10 +57,16 @@ export function FiscalDocumentPreview({doc,onClose}:{doc:PreviewDocument;onClose
           <Button variant="ghost" size="icon" onClick={onClose}><X className="h-4 w-4"/></Button>
         </div>
       </div>
-      {!event&&!complete&&<div className="border-b bg-amber-500/10 px-5 py-3 text-sm text-amber-700 dark:text-amber-200">Arquivo integral em recuperação. Assim que o XML oficial chegar, o próprio {pdfLabel} aparecerá aqui automaticamente.</div>}
+      {!event&&!complete&&<div className="border-b bg-amber-500/10 px-5 py-3 text-sm text-amber-700 dark:text-amber-200">Estamos buscando o arquivo integral desta nota. Enquanto isso, as informações registradas aparecem abaixo.</div>}
       {error&&<div className="border-b bg-destructive/10 px-5 py-3 text-sm text-destructive">Não foi possível renderizar o documento: {error}</div>}
-      <div className="min-h-0 flex-1 bg-muted/20 p-3">
-        {loading?<div className="flex h-full items-center justify-center gap-3 text-sm text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin"/>Gerando {pdfLabel} para visualização...</div>:pdfUrl?<iframe title={title} src={`${pdfUrl}#toolbar=1&navpanes=0&view=FitH`} className="h-full w-full rounded-xl bg-white shadow-xl"/>:<div className="flex h-full items-center justify-center"><div className="max-w-md rounded-2xl border bg-background p-8 text-center"><FileText className="mx-auto h-9 w-9 text-muted-foreground"/><h3 className="mt-4 font-semibold">{event?"Evento fiscal":"Documento completo ainda indisponível"}</h3><p className="mt-2 text-sm text-muted-foreground">{event?"Eventos continuam disponíveis como XML e registro fiscal.":"O preview não usa mais resumo. Ele exibe somente o DANFE, a notinha NFC-e ou o DANFSe gerado a partir do XML integral."}</p></div></div>}
+      <div className="min-h-0 flex-1 overflow-auto bg-muted/20 p-3">
+        {loading?<div className="flex h-full items-center justify-center gap-3 text-sm text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin"/>Gerando {pdfLabel} para visualização...</div>:pdfUrl?<iframe title={title} src={`${pdfUrl}#toolbar=1&navpanes=0&view=FitH`} className="h-full w-full rounded-xl bg-white shadow-xl"/>:<div className="mx-auto max-w-3xl rounded-2xl border bg-background p-6">
+          <div className="flex items-start gap-3"><FileText className="h-8 w-8 text-muted-foreground"/><div><h3 className="font-semibold">{event?"Evento fiscal":"Informações da nota"}</h3><p className="mt-1 text-sm text-muted-foreground">{event?"Eventos ficam disponíveis como registro fiscal e XML.":"O arquivo integral ainda não chegou. Você pode baixar as informações registradas agora."}</p></div></div>
+          <dl className="mt-5 grid gap-3 sm:grid-cols-2">
+            {infoRows(doc).map(([k,v])=><div key={k} className="rounded-xl bg-muted/30 px-4 py-3"><dt className="text-[10px] font-semibold uppercase tracking-[.12em] text-muted-foreground">{k}</dt><dd className="mt-1 break-all text-sm font-medium">{v}</dd></div>)}
+          </dl>
+          <div className="mt-5 flex flex-wrap gap-2"><Button variant="outline" size="sm" onClick={()=>downloadInfo(doc)}><Download className="mr-2 h-4 w-4"/>Baixar informações completas</Button>{doc.xml&&<Button variant="ghost" size="sm" onClick={()=>downloadXml(doc)}><Download className="mr-2 h-4 w-4"/>Baixar XML</Button>}</div>
+        </div>}
       </div>
     </div>
   </div>
