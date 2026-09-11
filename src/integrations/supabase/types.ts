@@ -468,40 +468,112 @@ export type Database = {
         }
         Relationships: []
       }
+      client_login_attempts: {
+        Row: {
+          attempts: number
+          key_hash: string
+          locked_until: string | null
+          updated_at: string
+          window_started_at: string
+        }
+        Insert: {
+          attempts?: number
+          key_hash: string
+          locked_until?: string | null
+          updated_at?: string
+          window_started_at?: string
+        }
+        Update: {
+          attempts?: number
+          key_hash?: string
+          locked_until?: string | null
+          updated_at?: string
+          window_started_at?: string
+        }
+        Relationships: []
+      }
       companies: {
         Row: {
           address: string | null
+          city: string | null
+          city_ibge_code: string | null
+          cnae_primary: string | null
           cnpj: string | null
           company_name: string
           company_size: string | null
+          complement: string | null
           created_at: string
+          district: string | null
+          email: string | null
           id: string
           is_fiscal_automation_client: boolean | null
           logo_url: string | null
+          phone: string | null
+          postal_code: string | null
+          registration_status: string | null
+          registry_payload: Json
+          registry_updated_at: string | null
+          state: string | null
+          state_registration: string | null
+          street: string | null
+          street_number: string | null
+          tax_regime: string | null
           trade_name: string | null
           updated_at: string
         }
         Insert: {
           address?: string | null
+          city?: string | null
+          city_ibge_code?: string | null
+          cnae_primary?: string | null
           cnpj?: string | null
           company_name: string
           company_size?: string | null
+          complement?: string | null
           created_at?: string
+          district?: string | null
+          email?: string | null
           id?: string
           is_fiscal_automation_client?: boolean | null
           logo_url?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          registration_status?: string | null
+          registry_payload?: Json
+          registry_updated_at?: string | null
+          state?: string | null
+          state_registration?: string | null
+          street?: string | null
+          street_number?: string | null
+          tax_regime?: string | null
           trade_name?: string | null
           updated_at?: string
         }
         Update: {
           address?: string | null
+          city?: string | null
+          city_ibge_code?: string | null
+          cnae_primary?: string | null
           cnpj?: string | null
           company_name?: string
           company_size?: string | null
+          complement?: string | null
           created_at?: string
+          district?: string | null
+          email?: string | null
           id?: string
           is_fiscal_automation_client?: boolean | null
           logo_url?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          registration_status?: string | null
+          registry_payload?: Json
+          registry_updated_at?: string | null
+          state?: string | null
+          state_registration?: string | null
+          street?: string | null
+          street_number?: string | null
+          tax_regime?: string | null
           trade_name?: string | null
           updated_at?: string
         }
@@ -942,6 +1014,160 @@ export type Database = {
             columns: ["category"]
             isOneToOne: false
             referencedRelation: "document_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      extractor_accounts: {
+        Row: {
+          access_expires_at: string | null
+          access_source: string
+          base_lookback_days: number
+          created_at: string
+          current_period_start: string
+          history_from: string | null
+          id: string
+          lifetime_access: boolean
+          monthly_xml_limit: number
+          name: string
+          organization_id: string
+          plan_code: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          access_expires_at?: string | null
+          access_source?: string
+          base_lookback_days?: number
+          created_at?: string
+          current_period_start?: string
+          history_from?: string | null
+          id?: string
+          lifetime_access?: boolean
+          monthly_xml_limit?: number
+          name: string
+          organization_id: string
+          plan_code?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          access_expires_at?: string | null
+          access_source?: string
+          base_lookback_days?: number
+          created_at?: string
+          current_period_start?: string
+          history_from?: string | null
+          id?: string
+          lifetime_access?: boolean
+          monthly_xml_limit?: number
+          name?: string
+          organization_id?: string
+          plan_code?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extractor_accounts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      extractor_companies: {
+        Row: {
+          account_id: string
+          automatic_sync: boolean
+          created_at: string
+          fiscal_company_id: string
+          id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          automatic_sync?: boolean
+          created_at?: string
+          fiscal_company_id: string
+          id?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          automatic_sync?: boolean
+          created_at?: string
+          fiscal_company_id?: string
+          id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extractor_companies_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "extractor_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extractor_companies_fiscal_company_id_fkey"
+            columns: ["fiscal_company_id"]
+            isOneToOne: false
+            referencedRelation: "fiscal_companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      extractor_history_requests: {
+        Row: {
+          account_id: string
+          created_at: string
+          estimated_xml: number | null
+          id: string
+          metadata: Json
+          quoted_amount: number | null
+          requested_by: string
+          requested_from: string
+          requested_to: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          estimated_xml?: number | null
+          id?: string
+          metadata?: Json
+          quoted_amount?: number | null
+          requested_by: string
+          requested_from: string
+          requested_to: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          estimated_xml?: number | null
+          id?: string
+          metadata?: Json
+          quoted_amount?: number | null
+          requested_by?: string
+          requested_from?: string
+          requested_to?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extractor_history_requests_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "extractor_accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -3312,6 +3538,75 @@ export type Database = {
           },
         ]
       }
+      saas_billing_checkouts: {
+        Row: {
+          billing_mode: string
+          checkout_url: string | null
+          created_at: string
+          failure_code: string | null
+          id: string
+          idempotency_key: string
+          organization_id: string
+          privacy_version: string
+          provider_reference: string | null
+          requested_by: string
+          status: string
+          subscription_id: string
+          terms_accepted_at: string | null
+          terms_version: string
+          updated_at: string
+        }
+        Insert: {
+          billing_mode: string
+          checkout_url?: string | null
+          created_at?: string
+          failure_code?: string | null
+          id?: string
+          idempotency_key?: string
+          organization_id: string
+          privacy_version?: string
+          provider_reference?: string | null
+          requested_by: string
+          status?: string
+          subscription_id: string
+          terms_accepted_at?: string | null
+          terms_version?: string
+          updated_at?: string
+        }
+        Update: {
+          billing_mode?: string
+          checkout_url?: string | null
+          created_at?: string
+          failure_code?: string | null
+          id?: string
+          idempotency_key?: string
+          organization_id?: string
+          privacy_version?: string
+          provider_reference?: string | null
+          requested_by?: string
+          status?: string
+          subscription_id?: string
+          terms_accepted_at?: string | null
+          terms_version?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saas_billing_checkouts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saas_billing_checkouts_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "saas_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       saas_company_fiscal_profiles: {
         Row: {
           business_mode: string
@@ -3930,6 +4225,10 @@ export type Database = {
           period_start: string
           provider: string | null
           provider_invoice_id: string | null
+          provider_payment_id: string | null
+          provider_status: string | null
+          provider_status_detail: string | null
+          provider_updated_at: string | null
           receipt_path: string | null
           status: string
           subscription_id: string | null
@@ -3955,6 +4254,10 @@ export type Database = {
           period_start: string
           provider?: string | null
           provider_invoice_id?: string | null
+          provider_payment_id?: string | null
+          provider_status?: string | null
+          provider_status_detail?: string | null
+          provider_updated_at?: string | null
           receipt_path?: string | null
           status?: string
           subscription_id?: string | null
@@ -3980,6 +4283,10 @@ export type Database = {
           period_start?: string
           provider?: string | null
           provider_invoice_id?: string | null
+          provider_payment_id?: string | null
+          provider_status?: string | null
+          provider_status_detail?: string | null
+          provider_updated_at?: string | null
           receipt_path?: string | null
           status?: string
           subscription_id?: string | null
@@ -4004,6 +4311,155 @@ export type Database = {
           },
         ]
       }
+      saas_payment_attempts: {
+        Row: {
+          checkout_url: string | null
+          created_at: string
+          failure_code: string | null
+          id: string
+          idempotency_key: string
+          invoice_id: string
+          organization_id: string
+          payment_method: string
+          preference_id: string | null
+          privacy_version: string
+          provider_request_id: string | null
+          requested_by: string
+          sandbox_checkout_url: string | null
+          status: string
+          terms_accepted_at: string
+          terms_version: string
+          updated_at: string
+        }
+        Insert: {
+          checkout_url?: string | null
+          created_at?: string
+          failure_code?: string | null
+          id?: string
+          idempotency_key?: string
+          invoice_id: string
+          organization_id: string
+          payment_method: string
+          preference_id?: string | null
+          privacy_version?: string
+          provider_request_id?: string | null
+          requested_by: string
+          sandbox_checkout_url?: string | null
+          status?: string
+          terms_accepted_at: string
+          terms_version?: string
+          updated_at?: string
+        }
+        Update: {
+          checkout_url?: string | null
+          created_at?: string
+          failure_code?: string | null
+          id?: string
+          idempotency_key?: string
+          invoice_id?: string
+          organization_id?: string
+          payment_method?: string
+          preference_id?: string | null
+          privacy_version?: string
+          provider_request_id?: string | null
+          requested_by?: string
+          sandbox_checkout_url?: string | null
+          status?: string
+          terms_accepted_at?: string
+          terms_version?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saas_payment_attempts_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "saas_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saas_payment_attempts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      saas_payment_events: {
+        Row: {
+          action: string | null
+          amount_cents: number | null
+          created_at: string
+          currency_id: string | null
+          error_code: string | null
+          id: string
+          invoice_id: string | null
+          live_mode: boolean | null
+          payment_method_id: string | null
+          payment_status: string | null
+          payment_type: string | null
+          processed: boolean
+          processed_at: string | null
+          provider: string
+          provider_event_id: string
+          provider_payment_id: string
+          request_id: string | null
+          signature_valid: boolean
+          status_detail: string | null
+        }
+        Insert: {
+          action?: string | null
+          amount_cents?: number | null
+          created_at?: string
+          currency_id?: string | null
+          error_code?: string | null
+          id?: string
+          invoice_id?: string | null
+          live_mode?: boolean | null
+          payment_method_id?: string | null
+          payment_status?: string | null
+          payment_type?: string | null
+          processed?: boolean
+          processed_at?: string | null
+          provider?: string
+          provider_event_id: string
+          provider_payment_id: string
+          request_id?: string | null
+          signature_valid?: boolean
+          status_detail?: string | null
+        }
+        Update: {
+          action?: string | null
+          amount_cents?: number | null
+          created_at?: string
+          currency_id?: string | null
+          error_code?: string | null
+          id?: string
+          invoice_id?: string | null
+          live_mode?: boolean | null
+          payment_method_id?: string | null
+          payment_status?: string | null
+          payment_type?: string | null
+          processed?: boolean
+          processed_at?: string | null
+          provider?: string
+          provider_event_id?: string
+          provider_payment_id?: string
+          request_id?: string | null
+          signature_valid?: boolean
+          status_detail?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saas_payment_events_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "saas_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       saas_plans: {
         Row: {
           code: string
@@ -4012,7 +4468,10 @@ export type Database = {
           id: string
           limits: Json
           name: string
+          price_cents: number | null
+          product_code: string | null
           status: string
+          trial_days: number
           updated_at: string
         }
         Insert: {
@@ -4022,7 +4481,10 @@ export type Database = {
           id?: string
           limits?: Json
           name: string
+          price_cents?: number | null
+          product_code?: string | null
           status?: string
+          trial_days?: number
           updated_at?: string
         }
         Update: {
@@ -4032,13 +4494,18 @@ export type Database = {
           id?: string
           limits?: Json
           name?: string
+          price_cents?: number | null
+          product_code?: string | null
           status?: string
+          trial_days?: number
           updated_at?: string
         }
         Relationships: []
       }
       saas_subscriptions: {
         Row: {
+          access_expires_at: string | null
+          billing_mode: string
           cancel_at_period_end: boolean
           created_at: string
           current_period_end: string | null
@@ -4047,13 +4514,19 @@ export type Database = {
           metadata: Json
           organization_id: string
           plan_id: string
+          product_code: string
           provider: string | null
           provider_customer_id: string | null
+          provider_status: string | null
           provider_subscription_id: string | null
           status: string
+          trial_ends_at: string | null
+          trial_started_at: string | null
           updated_at: string
         }
         Insert: {
+          access_expires_at?: string | null
+          billing_mode?: string
           cancel_at_period_end?: boolean
           created_at?: string
           current_period_end?: string | null
@@ -4062,13 +4535,19 @@ export type Database = {
           metadata?: Json
           organization_id: string
           plan_id: string
+          product_code: string
           provider?: string | null
           provider_customer_id?: string | null
+          provider_status?: string | null
           provider_subscription_id?: string | null
           status?: string
+          trial_ends_at?: string | null
+          trial_started_at?: string | null
           updated_at?: string
         }
         Update: {
+          access_expires_at?: string | null
+          billing_mode?: string
           cancel_at_period_end?: boolean
           created_at?: string
           current_period_end?: string | null
@@ -4077,10 +4556,14 @@ export type Database = {
           metadata?: Json
           organization_id?: string
           plan_id?: string
+          product_code?: string
           provider?: string | null
           provider_customer_id?: string | null
+          provider_status?: string | null
           provider_subscription_id?: string | null
           status?: string
+          trial_ends_at?: string | null
+          trial_started_at?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -4096,6 +4579,48 @@ export type Database = {
             columns: ["plan_id"]
             isOneToOne: false
             referencedRelation: "saas_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      saas_trial_redemptions: {
+        Row: {
+          id: string
+          organization_id: string
+          product_code: string
+          redeemed_at: string
+          subscription_id: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          product_code: string
+          redeemed_at?: string
+          subscription_id?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          product_code?: string
+          redeemed_at?: string
+          subscription_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saas_trial_redemptions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saas_trial_redemptions_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "saas_subscriptions"
             referencedColumns: ["id"]
           },
         ]
@@ -4234,22 +4759,31 @@ export type Database = {
           created_at: string | null
           email: string | null
           id: string
+          must_change_password: boolean
           name: string | null
+          password_changed_at: string | null
           role: string | null
+          username: string | null
         }
         Insert: {
           created_at?: string | null
           email?: string | null
           id: string
+          must_change_password?: boolean
           name?: string | null
+          password_changed_at?: string | null
           role?: string | null
+          username?: string | null
         }
         Update: {
           created_at?: string | null
           email?: string | null
           id?: string
+          must_change_password?: boolean
           name?: string | null
+          password_changed_at?: string | null
           role?: string | null
+          username?: string | null
         }
         Relationships: []
       }
@@ -4278,6 +4812,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      ws_public_media_chunks: {
+        Row: {
+          b64: string
+          media_key: string
+          seq: number
+        }
+        Insert: {
+          b64: string
+          media_key: string
+          seq: number
+        }
+        Update: {
+          b64?: string
+          media_key?: string
+          seq?: number
+        }
+        Relationships: []
       }
     }
     Views: {
@@ -4316,6 +4868,31 @@ export type Database = {
         Args: { p_end?: number; p_month?: string; p_start?: number }
         Returns: number
       }
+      activate_ws_paid_invoice: {
+        Args: { p_invoice_id: string }
+        Returns: undefined
+      }
+      apply_mercado_pago_payment_event: {
+        Args: {
+          p_action: string
+          p_amount_cents: number
+          p_currency_id: string
+          p_invoice_id: string
+          p_live_mode: boolean
+          p_paid_at: string
+          p_payment_method_id: string
+          p_payment_status: string
+          p_payment_type: string
+          p_provider_event_id: string
+          p_provider_payment_id: string
+          p_request_id: string
+          p_status_detail: string
+        }
+        Returns: {
+          applied: boolean
+          reason: string
+        }[]
+      }
       claim_fiscal_sales_worker_lease: {
         Args: { p_company_id: string; p_seconds?: number; p_worker: string }
         Returns: boolean
@@ -4334,6 +4911,18 @@ export type Database = {
         }[]
       }
       delete_expired_documents: { Args: never; Returns: undefined }
+      extractor_account_org_manager: {
+        Args: { _organization_id: string; _user_id: string }
+        Returns: boolean
+      }
+      extractor_account_usage: { Args: never; Returns: Json }
+      extractor_company_documents: {
+        Args: { _company_id: string; _end?: string; _start?: string }
+        Returns: Json
+      }
+      extractor_link_company_by_cnpj: { Args: { _cnpj: string }; Returns: Json }
+      extractor_queue_sync: { Args: { _company_id?: string }; Returns: Json }
+      extractor_workspace_snapshot: { Args: never; Returns: Json }
       foldername: { Args: never; Returns: string }
       get_saas_certificate_bundle: { Args: { _org_id: string }; Returns: Json }
       get_saas_certificate_password: {
@@ -4349,6 +4938,7 @@ export type Database = {
       }
       is_valid_cnpj: { Args: { value: string }; Returns: boolean }
       is_valid_cpf: { Args: { value: string }; Returns: boolean }
+      mark_client_password_changed: { Args: never; Returns: undefined }
       mark_expired_documents: { Args: never; Returns: undefined }
       release_fiscal_sales_worker_lease: {
         Args: { p_company_id: string; p_worker: string }
@@ -4371,6 +4961,16 @@ export type Database = {
       sync_sales_details_into_dfe: {
         Args: { p_company_id?: string }
         Returns: number
+      }
+      sync_ws_subscription_access: {
+        Args: {
+          p_period_end: string
+          p_period_start: string
+          p_provider_status: string
+          p_provider_subscription_id: string
+          p_subscription_id: string
+        }
+        Returns: undefined
       }
       trigger_fiscal_purchase_report_backfill: {
         Args: { p_end: string; p_start: string }
