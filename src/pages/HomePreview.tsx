@@ -162,12 +162,12 @@ const HomePreview = () => {
         <section id="duvidas" className="public-faq preview-section" aria-labelledby="faq-title">
           <div className="public-section-heading"><span>ANTES DE COMEÇAR</span><h2 id="faq-title">DÚVIDAS<br />FREQUENTES</h2><p>Respostas diretas para facilitar sua decisão.</p></div>
           <div className="public-faq-list">
-            <details><summary>A WS atende empresas fora de Major Isidoro?</summary><p>Sim. A equipe atende presencialmente em Major Isidoro e Palmeira dos Índios e também acompanha empresas de outras cidades com processos digitais.</p></details>
+            <details><summary>A WS atende empresas fora de Alagoas?</summary><p>Sim. A WS atende empresas em todo o Brasil por meio de processos digitais, além do atendimento presencial nas unidades de Palmeira dos Índios e Major Isidoro.</p></details>
             <details><summary>Como funciona a troca de contador?</summary><p>Primeiro analisamos a situação da empresa e os documentos disponíveis. Depois, orientamos a transição e o contato com a contabilidade anterior para preservar a continuidade das obrigações.</p></details>
             <details><summary>Posso conversar com a WS antes de abrir o CNPJ?</summary><p>Sim. Essa conversa ajuda a avaliar atividade, endereço, participação de sócios e a estrutura mais adequada antes do registro.</p></details>
             <details><summary>A WS oferece sistema para emissão de notas fiscais?</summary><p>Sim. O Emissor WS reúne emissão e gerenciamento de notas em um ambiente próprio para empresas.</p></details>
             <details><summary>Quanto tempo leva para abrir uma empresa?</summary><p>O prazo varia conforme atividade, município, análise de viabilidade e licenças necessárias. A equipe informa uma estimativa após conhecer o caso.</p></details>
-            <details><summary>Como falar com a equipe?</summary><p>Você pode chamar diretamente pelo WhatsApp no número (82) 99932-4884.</p></details>
+            <details><summary>Como falar com a equipe?</summary><p className="public-faq-contact">Fale com a WS pelo <a href="https://wa.me/5582999324884" target="_blank" rel="noreferrer">WhatsApp (82) 99932-4884</a>, pelo <a href="https://www.instagram.com/wscontabil.co/" target="_blank" rel="noreferrer">Instagram @wscontabil.co</a> ou pelo e-mail <a href="mailto:contato@wsgestaocontabil.com">contato@wsgestaocontabil.com</a>.</p></details>
           </div>
         </section>
       </main>

@@ -1,6 +1,8 @@
 .home-preview { --preview-bg:#020b1b; --preview-gold:#efc449; --preview-cream:#f5f0e3; --preview-card:rgba(37,51,74,.72); min-height:100vh; overflow-x:hidden; color:var(--preview-cream); background:var(--preview-bg); font-family:'Proxima Nova','Inter','Helvetica Neue',Arial,sans-serif; }
 .home-preview * { box-sizing:border-box; }
 .home-preview a { color:inherit; text-decoration:none; }
+.home-preview .public-faq-contact a { color:var(--preview-gold); font-weight:700; text-decoration:underline; text-decoration-color:rgba(239,196,73,.42); text-underline-offset:3px; }
+.home-preview .public-faq-contact a:hover { text-decoration-color:currentColor; }
 .preview-section { position:relative; width:min(100%,2640px); margin:0 auto; }
 .preview-section::before { content:''; position:absolute; inset:0; pointer-events:none; opacity:.35; background-image:linear-gradient(rgba(71,93,123,.22) 1px,transparent 1px),linear-gradient(90deg,rgba(71,93,123,.22) 1px,transparent 1px); background-size:128px 128px; }
 .preview-navbar-wrap { position:fixed; z-index:30; top:4.8%; left:50%; width:min(92vw,2435px); transform:translateX(-50%); }
