@@ -8,6 +8,9 @@ const plans = {
 } as const;
 type PlanCode = keyof typeof plans;
 type BillingMode = "recurring" | "one_time";
+const testBuyerBySellerId: Record<string, string> = {
+  "3683036338": "test_user_4909973592755136737@testuser.com",
+};
 
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "no-store" } });
@@ -42,6 +45,14 @@ Deno.serve(async (req) => {
   if (!(planCode in plans) || !["recurring", "one_time"].includes(billingMode)) return json({ error: "Plano inválido." }, 400);
   if (input.termsAccepted !== true) return json({ error: "Aceite os termos para continuar." }, 400);
   const selected = plans[planCode];
+  let payerEmail = user.email;
+  const sellerResponse = await fetch("https://api.mercadopago.com/users/me", {
+    headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json" },
+  });
+  if (sellerResponse.ok) {
+    const seller = await sellerResponse.json().catch(() => ({})) as Record<string, unknown>;
+    payerEmail = testBuyerBySellerId[String(seller.id || "")] || payerEmail;
+  }
 
   const { data: rateRows, error: rateError } = await admin.rpc("consume_rate_limit", { p_scope: "mp_product_checkout", p_key: user.id, p_limit: 6, p_window_seconds: 600 });
   if (rateError) return json({ error: "Não foi possível validar a tentativa." }, 503);
@@ -85,13 +96,14 @@ Deno.serve(async (req) => {
   if (!checkout) return json({ error: "Não foi possível preparar o pagamento." }, 500);
 
   const origin = siteOrigin();
+  const checkoutPath = selected.product === "issuer" ? "/assinar/emissor" : "/assinar/extrator";
   const webhook = `${supabaseUrl}/functions/v1/mp-webhook?source_news=webhooks`;
   let endpoint = ""; let payload: Record<string, unknown>;
   if (billingMode === "recurring") {
     endpoint = "https://api.mercadopago.com/preapproval";
     payload = {
-      reason: selected.name, external_reference: subscription.id, payer_email: user.email,
-      back_url: `${origin}/assinar?status=return&product=${selected.product}`,
+      reason: selected.name, external_reference: subscription.id, payer_email: payerEmail,
+      back_url: `${origin}${checkoutPath}?status=return`,
       notification_url: webhook, status: "pending",
       auto_recurring: {
         frequency: 1, frequency_type: "months", transaction_amount: selected.cents / 100, currency_id: "BRL",
@@ -106,9 +118,9 @@ Deno.serve(async (req) => {
     endpoint = "https://api.mercadopago.com/checkout/preferences";
     payload = {
       items: [{ id: planCode, title: selected.name, description: "Acesso por 30 dias, sem renovação automática", category_id: "services", quantity: 1, currency_id: "BRL", unit_price: selected.cents / 100 }],
-      payer: { email: user.email }, external_reference: invoice.id,
+      payer: { email: payerEmail }, external_reference: invoice.id,
       metadata: { invoice_id: invoice.id, subscription_id: subscription.id, organization_id: organizationId },
-      back_urls: { success: `${origin}/assinar?status=success&product=${selected.product}`, pending: `${origin}/assinar?status=pending&product=${selected.product}`, failure: `${origin}/assinar?status=failure&product=${selected.product}` },
+      back_urls: { success: `${origin}${checkoutPath}?status=success`, pending: `${origin}${checkoutPath}?status=pending`, failure: `${origin}${checkoutPath}?status=failure` },
       auto_return: "approved", notification_url: webhook, statement_descriptor: "WS GESTAO",
     };
   }

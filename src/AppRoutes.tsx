@@ -46,7 +46,7 @@ import SimulationsHubPage from './pages/SimulationsHubPage';
 import FiscalExtractorApp from './pages/FiscalExtractorApp';
 import EmissorPreview from './pages/EmissorPreview';
 import ProductChooser from './pages/ProductChooser';
-import BillingOnboardingPage from './pages/BillingOnboardingPage';
+import BillingOnboardingPage, { LegacyBillingRedirect } from './pages/BillingOnboardingPage';
 
 const DashboardRouter = () => {
   const { userData, user } = useAuth();
@@ -73,7 +73,9 @@ const AppRoutes = () => <Routes>
   <Route path="/emissor-preview" element={<EmissorPreview />} />
   <Route path="/" element={<Index />} /><Route path="/login" element={<ClientLogin />} /><Route path="/cadastro" element={<PublicSignupPage />} />
   <Route path="/escolher-produto" element={<PrivateRoute><ProductChooser /></PrivateRoute>} />
-  <Route path="/assinar" element={<PrivateRoute><BillingOnboardingPage /></PrivateRoute>} />
+  <Route path="/assinar" element={<PrivateRoute><LegacyBillingRedirect /></PrivateRoute>} />
+  <Route path="/assinar/emissor" element={<PrivateRoute><BillingOnboardingPage product="issuer" /></PrivateRoute>} />
+  <Route path="/assinar/extrator" element={<PrivateRoute><BillingOnboardingPage product="extractor" /></PrivateRoute>} />
   <Route path="/enquete/:id" element={<PollPage />} /><Route path="/enquete-numerica/:id" element={<NumericalPollPage />} /><Route path="/formulario/:id" element={<FormPollPage />} />
   <Route path="/simulador-irpf" element={<TaxCalculator />} /><Route path="/calculadora-inss" element={<INSSCalculator />} /><Route path="/simulador-prolabore" element={<ProLaboreCalculator />} /><Route path="/changelog" element={<ChangeLog />} />
   <Route path="/termos-de-servico" element={<LegalPage />} /><Route path="/politica-de-privacidade" element={<LegalPage />} />
