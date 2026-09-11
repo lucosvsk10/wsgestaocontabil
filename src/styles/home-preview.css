@@ -934,8 +934,8 @@
   .home-preview .preview-hero-subtitle { max-width:290px; margin:12px 0 22px; font-size:14px; line-height:1.35; }
   .home-preview .preview-start-button { min-height:48px; padding:10px 18px; border-radius:9px; font-size:16px; }
   .home-preview .preview-founder { min-height:445px; margin-top:0; }
-  .home-preview .preview-founder-emblem { top:48%; right:-16%; width:132%; height:auto; opacity:.18; }
-  .home-preview .preview-founder-image { right:-48%; bottom:0; width:auto; height:410px; max-width:none; }
+  .home-preview .preview-founder-emblem { top:48%; right:auto; left:50%; width:180%; max-width:none; height:auto; opacity:.2; transform:translate(-50%,-50%); }
+  .home-preview .preview-founder-image { right:auto; left:50%; bottom:0; width:auto; height:410px; max-width:none; transform:translateX(-50%); }
   .home-preview .preview-founder-info { right:0; bottom:13%; width:190px; min-height:46px; padding:10px 15px; }
   .home-preview .preview-founder-name { font-size:14px; }
   .home-preview .preview-socials { right:4px; bottom:2px; gap:12px; }
@@ -979,5 +979,5 @@
 @media (max-width:350px) {
   .home-preview .preview-service-grid { grid-template-columns:1fr; }
   .home-preview .preview-service-card { min-height:210px; }
-  .home-preview .preview-founder-image { right:-55%; }
+  .home-preview .preview-founder-image { right:auto; left:50%; transform:translateX(-50%); }
 }
