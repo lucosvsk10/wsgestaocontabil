@@ -981,3 +981,15 @@
   .home-preview .preview-service-card { min-height:210px; }
   .home-preview .preview-founder-image { right:auto; left:50%; transform:translateX(-50%); }
 }
+
+/* Compact desktop navigation for tablets and reduced-width screens. */
+@media (min-width:761px) and (max-width:1100px) {
+  .home-preview .preview-navbar-wrap { top:18px; width:calc(100% - 32px); }
+  .home-preview .preview-navbar { min-height:54px; gap:12px; padding:7px 14px; }
+  .home-preview .preview-brand { width:clamp(104px,14vw,142px); }
+  .home-preview .preview-brand img { max-height:38px; }
+  .home-preview .preview-nav-links { gap:clamp(9px,1.35vw,15px); font-size:clamp(9px,1.2vw,12px); }
+  .home-preview .preview-login,
+  .home-preview .preview-register { min-height:32px; gap:5px; padding:5px 9px; border-radius:10px; }
+  .home-preview .preview-login svg { width:14px; height:14px; }
+}
