@@ -134,6 +134,13 @@ Deno.serve(async (req) => {
       p_period_end: periodEnd,
     });
     if (error) return json({ error: "database_update_failed" }, 500);
+    if (safeText(preapproval.status, 60).toLowerCase() === "authorized") {
+      const { data: activated } = await admin.from("saas_subscriptions").select("organization_id,product_code,metadata").eq("id", subscriptionId).maybeSingle();
+      const checkoutUserId = safeText((activated?.metadata as Record<string, unknown> | null)?.checkout_created_by, 64);
+      if (activated && uuidPattern.test(checkoutUserId)) {
+        await admin.from("saas_trial_redemptions").upsert({ organization_id: activated.organization_id, product_code: activated.product_code, user_id: checkoutUserId, subscription_id: subscriptionId }, { onConflict: "organization_id,product_code", ignoreDuplicates: true });
+      }
+    }
     return json({ received: true, applied: true });
   }
 

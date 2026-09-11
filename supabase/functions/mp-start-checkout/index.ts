@@ -74,7 +74,12 @@ Deno.serve(async (req) => {
   if (existing?.status && existing.status !== "incomplete") return json({ error: "Sua empresa já possui acesso a este produto.", destination: selected.product === "issuer" ? "/app" : "/extrator" }, 409);
   if (existing?.id) await admin.from("saas_subscriptions").update({ status: "canceled" }).eq("id", existing.id);
 
-  const trialEligible = billingMode === "recurring" && !(await admin.from("saas_trial_redemptions").select("id").or(`organization_id.eq.${organizationId},user_id.eq.${user.id}`).eq("product_code", selected.product).limit(1)).data?.length;
+  const { data: priorTrials } = await admin.from("saas_trial_redemptions").select("id,saas_subscriptions(provider_status,status)").or(`organization_id.eq.${organizationId},user_id.eq.${user.id}`).eq("product_code", selected.product).limit(10);
+  const trialAlreadyUsed = Boolean(priorTrials?.some((row: any) => {
+    const linked = Array.isArray(row.saas_subscriptions) ? row.saas_subscriptions[0] : row.saas_subscriptions;
+    return String(linked?.provider_status || '').toLowerCase() === 'authorized' || ['trialing', 'active', 'past_due'].includes(String(linked?.status || '').toLowerCase());
+  }));
+  const trialEligible = billingMode === "recurring" && !trialAlreadyUsed;
   const now = new Date();
   const trialEnd = trialEligible ? new Date(now.getTime() + selected.trialDays * 86400000) : null;
   const { data: subscription, error: subError } = await admin.from("saas_subscriptions").insert({
@@ -84,14 +89,7 @@ Deno.serve(async (req) => {
     metadata: { plan_code: planCode, checkout_created_by: user.id },
   }).select("id").single();
   if (subError || !subscription) return json({ error: "Não foi possível iniciar a contratação." }, 500);
-  let confirmedTrial = trialEligible;
-  if (trialEligible) {
-    const { error: redemptionError } = await admin.from("saas_trial_redemptions").insert({ organization_id: organizationId, product_code: selected.product, user_id: user.id, subscription_id: subscription.id });
-    if (redemptionError) {
-      confirmedTrial = false;
-      await admin.from("saas_subscriptions").update({ trial_started_at: null, trial_ends_at: null }).eq("id", subscription.id);
-    }
-  }
+  const confirmedTrial = trialEligible;
   const { data: checkout } = await admin.from("saas_billing_checkouts").insert({ organization_id: organizationId, subscription_id: subscription.id, requested_by: user.id, billing_mode: billingMode, terms_accepted_at: new Date().toISOString() }).select("id,idempotency_key").single();
   if (!checkout) return json({ error: "Não foi possível preparar o pagamento." }, 500);
 
@@ -132,7 +130,6 @@ Deno.serve(async (req) => {
   if (!response.ok || !trustedCheckout(checkoutUrl)) {
     await admin.from("saas_billing_checkouts").update({ status: "failed", failure_code: String(provider.message || `http_${response.status}`).slice(0, 120) }).eq("id", checkout.id);
     await admin.from("saas_subscriptions").update({ status: "canceled" }).eq("id", subscription.id);
-    if (confirmedTrial) await admin.from("saas_trial_redemptions").delete().eq("subscription_id", subscription.id);
     return json({ error: "Não foi possível abrir o Mercado Pago. Tente novamente." }, 502);
   }
   await admin.from("saas_billing_checkouts").update({ status: "ready", provider_reference: String(provider.id || ""), checkout_url: checkoutUrl }).eq("id", checkout.id);
