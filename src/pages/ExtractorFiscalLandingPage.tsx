@@ -84,7 +84,7 @@ export default function ExtractorFiscalLandingPage() {
             <h1>Pare de pedir nota. Comece o fechamento com os documentos <em>na mão.</em></h1>
             <p>O Extrator busca e organiza documentos fiscais de compras e vendas por empresa, para sua equipe não depender do cliente enviar XML pelo WhatsApp.</p>
             <div className="product-actions">
-              <Link className="product-primary" to="/cadastro">Testar grátis por 7 dias <ArrowRight /></Link>
+              <Link className="product-primary" to="/cadastro?product=extractor&plan=extractor_commercial">Testar grátis por 7 dias <ArrowRight /></Link>
               <a className="product-secondary" href={whatsapp} target="_blank" rel="noreferrer">Ver uma demonstração</a>
             </div>
             <div className="product-assurances" aria-label="Benefícios do Extrator Fiscal">
@@ -163,7 +163,7 @@ export default function ExtractorFiscalLandingPage() {
               <p>Para escritórios que querem organizar a captura recorrente da carteira.</p>
               <div className="extractor-plan-limit"><strong>20.000 XML</strong><span>processados por mês</span></div>
               <ul>{commonPlanItems.map((item) => <li key={item}><CheckCircle2 /> {item}</li>)}</ul>
-              <Link to="/cadastro">Testar o plano Comercial <ArrowRight /></Link>
+              <Link to="/cadastro?product=extractor&plan=extractor_commercial">Testar o plano Comercial <ArrowRight /></Link>
             </article>
             <article className="product-price-card is-featured">
               <div className="product-price-label"><span>EMPRESARIAL</span><b>SEM LIMITAÇÕES</b></div>
@@ -172,7 +172,7 @@ export default function ExtractorFiscalLandingPage() {
               <p>Para operações maiores que não querem administrar franquia de documentos.</p>
               <div className="extractor-plan-limit"><strong>XML e empresas ilimitados</strong><span>para a rotina do escritório</span></div>
               <ul>{commonPlanItems.map((item) => <li key={item}><CheckCircle2 /> {item}</li>)}</ul>
-              <Link to="/cadastro">Testar o plano Empresarial <ArrowRight /></Link>
+              <Link to="/cadastro?product=extractor&plan=extractor_enterprise">Testar o plano Empresarial <ArrowRight /></Link>
             </article>
           </div>
         </section>
@@ -189,7 +189,7 @@ export default function ExtractorFiscalLandingPage() {
 
         <section className="product-final-cta extractor-final">
           <div><span><Clock3 /> O PRÓXIMO FECHAMENTO NÃO PRECISA COMEÇAR COM COBRANÇAS</span><h2>Teste o Extrator por 7 dias com empresas da sua própria carteira.</h2></div>
-          <Link className="product-primary" to="/cadastro">Começar gratuitamente <ArrowRight /></Link>
+          <Link className="product-primary" to="/cadastro?product=extractor&plan=extractor_commercial">Começar gratuitamente <ArrowRight /></Link>
         </section>
       </main>
       <PublicSiteFooter />

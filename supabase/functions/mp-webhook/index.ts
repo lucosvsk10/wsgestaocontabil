@@ -109,10 +109,45 @@ Deno.serve(async (req) => {
     return json({ error: "invalid_signature" }, 401);
   }
 
-  if (type && type !== "payment") return json({ received: true, ignored: "unsupported_type" });
+  const admin = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+
+  if (["subscription_preapproval", "preapproval"].includes(type)) {
+    const providerResponse = await fetch(`https://api.mercadopago.com/preapproval/${encodeURIComponent(dataId)}`, {
+      headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json" },
+    });
+    const preapproval = await providerResponse.json().catch(() => ({})) as Record<string, unknown>;
+    if (providerResponse.status === 404) return json({ received: true, ignored: "subscription_not_found" });
+    if (!providerResponse.ok) return json({ error: "provider_lookup_failed" }, 502);
+    const subscriptionId = safeText(preapproval.external_reference, 64);
+    if (!uuidPattern.test(subscriptionId)) return json({ received: true, ignored: "unlinked_subscription" });
+    const startText = safeText(preapproval.date_created, 40);
+    const endText = safeText(preapproval.next_payment_date, 40);
+    const periodStart = startText && !Number.isNaN(Date.parse(startText)) ? new Date(startText).toISOString() : null;
+    const periodEnd = endText && !Number.isNaN(Date.parse(endText)) ? new Date(endText).toISOString() : null;
+    const { error } = await admin.rpc("sync_ws_subscription_access", {
+      p_subscription_id: subscriptionId,
+      p_provider_subscription_id: safeText(preapproval.id || dataId, 160),
+      p_provider_status: safeText(preapproval.status, 60).toLowerCase(),
+      p_period_start: periodStart,
+      p_period_end: periodEnd,
+    });
+    if (error) return json({ error: "database_update_failed" }, 500);
+    return json({ received: true, applied: true });
+  }
+
+  if (type && !["payment", "subscription_authorized_payment", "authorized_payment"].includes(type)) {
+    return json({ received: true, ignored: "unsupported_type" });
+  }
   if (!paymentIdPattern.test(dataId)) return json({ received: true, ignored: "invalid_payment_id" });
 
-  const providerResponse = await fetch(`https://api.mercadopago.com/v1/payments/${dataId}`, {
+  let paymentLookupUrl = `https://api.mercadopago.com/v1/payments/${dataId}`;
+  if (["subscription_authorized_payment", "authorized_payment"].includes(type)) {
+    paymentLookupUrl = `https://api.mercadopago.com/authorized_payments/${dataId}`;
+  }
+
+  const providerResponse = await fetch(paymentLookupUrl, {
     headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json" },
   });
   const providerRequestId = providerResponse.headers.get("x-request-id") || xRequestId;
@@ -128,9 +163,13 @@ Deno.serve(async (req) => {
     return json({ error: "provider_lookup_failed" }, 502);
   }
 
-  const invoiceId = safeText(payment.external_reference, 64);
+  let invoiceId = safeText(payment.external_reference, 64);
   const amountCents = cents(payment.transaction_amount);
   const currencyId = safeText(payment.currency_id, 3).toUpperCase();
+  if (!uuidPattern.test(invoiceId) && safeText(payment.preapproval_id, 160)) {
+    const { data: linkedSubscription } = await admin.from("saas_subscriptions").select("id").eq("provider", "mercado_pago").eq("provider_subscription_id", safeText(payment.preapproval_id, 160)).maybeSingle();
+    invoiceId = linkedSubscription?.id || "";
+  }
   if (!uuidPattern.test(invoiceId) || amountCents === null) {
     console.warn("mp-webhook ignored unlinked payment", { paymentId: dataId, requestId: providerRequestId });
     return json({ received: true, ignored: "unlinked_payment" });
@@ -149,9 +188,31 @@ Deno.serve(async (req) => {
   const dateApproved = safeText(payment.date_approved, 40);
   const paidAt = dateApproved && !Number.isNaN(new Date(dateApproved).getTime()) ? new Date(dateApproved).toISOString() : null;
 
-  const admin = createClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-  });
+  const { data: directInvoice } = await admin.from("saas_invoices").select("id").eq("id", invoiceId).maybeSingle();
+  let invoiceResolved = Boolean(directInvoice);
+  if (!directInvoice) {
+    const providerPaymentId = safeText(payment.id || dataId, 32);
+    const { data: existingRenewal } = await admin.from("saas_invoices").select("id").eq("provider", "mercado_pago").eq("provider_payment_id", providerPaymentId).maybeSingle();
+    if (existingRenewal) { invoiceId = existingRenewal.id; invoiceResolved = true; }
+  }
+  if (!invoiceResolved) {
+    const { data: subscription } = await admin.from("saas_subscriptions")
+      .select("id,organization_id,plan_id,saas_plans(name,price_cents)").eq("id", invoiceId).maybeSingle();
+    if (!subscription) return json({ received: true, ignored: "unlinked_payment" });
+    const planData = Array.isArray(subscription.saas_plans) ? subscription.saas_plans[0] : subscription.saas_plans;
+    const start = new Date(); const end = new Date(start); end.setMonth(end.getMonth() + 1);
+    const { data: renewalInvoice, error: renewalError } = await admin.from("saas_invoices").insert({
+      organization_id: subscription.organization_id, subscription_id: subscription.id,
+      description: `${planData?.name || "Plano WS"} — renovação mensal`,
+      period_start: start.toISOString().slice(0, 10), period_end: end.toISOString().slice(0, 10),
+      due_date: start.toISOString().slice(0, 10), subtotal_cents: amountCents, total_cents: amountCents,
+      line_items: [{ plan_id: subscription.plan_id, quantity: 1, unit_price_cents: amountCents }],
+      provider: "mercado_pago", provider_payment_id: safeText(payment.id || dataId, 32),
+      metadata: { recurring: true },
+    }).select("id").single();
+    if (renewalError || !renewalInvoice) return json({ error: "renewal_invoice_failed" }, 500);
+    invoiceId = renewalInvoice.id;
+  }
   const { data: result, error } = await admin.rpc("apply_mercado_pago_payment_event", {
     p_provider_event_id: eventId,
     p_provider_payment_id: paymentId,
@@ -171,6 +232,11 @@ Deno.serve(async (req) => {
   if (error) {
     console.error("mp-webhook database error", { paymentId, requestId: providerRequestId, code: error.code });
     return json({ error: "database_update_failed" }, 500);
+  }
+
+  if (status === "approved") {
+    const { error: accessError } = await admin.rpc("activate_ws_paid_invoice", { p_invoice_id: invoiceId });
+    if (accessError) return json({ error: "access_update_failed" }, 500);
   }
 
   const appliedResult = Array.isArray(result) ? result[0] : result;

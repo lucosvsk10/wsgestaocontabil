@@ -85,7 +85,7 @@ const FiscalIssuerLandingPage = () => {
             <h1>Emitir nota não deveria tomar o tempo de <em>vender.</em></h1>
             <p>Cadastre clientes e produtos uma vez, emita os principais documentos fiscais e acompanhe tudo em um só painel — sem recomeçar cada venda do zero.</p>
             <div className="product-actions">
-              <Link className="product-primary" to="/cadastro">Testar grátis por 7 dias <ArrowRight /></Link>
+              <Link className="product-primary" to="/cadastro?product=issuer&plan=issuer_monthly">Testar grátis por 7 dias <ArrowRight /></Link>
               <a className="product-secondary" href={whatsapp} target="_blank" rel="noreferrer">Pedir uma demonstração</a>
             </div>
             <div className="product-assurances" aria-label="Condições do Emissor Fiscal">
@@ -171,7 +171,7 @@ const FiscalIssuerLandingPage = () => {
             <div className="product-price"><small>R$</small><strong>69</strong><span>/mês</span></div>
             <p>Emissão ilimitada, sem planos por quantidade de notas.</p>
             <ul>{included.map((item) => <li key={item}><CheckCircle2 /> {item}</li>)}</ul>
-            <Link to="/cadastro">Começar meus 7 dias grátis <ArrowRight /></Link>
+            <Link to="/cadastro?product=issuer&plan=issuer_monthly">Começar meus 7 dias grátis <ArrowRight /></Link>
           </article>
         </section>
 
@@ -187,7 +187,7 @@ const FiscalIssuerLandingPage = () => {
 
         <section className="product-final-cta issuer-final">
           <div><span><Clock3 /> SETE DIAS PARA EMITIR DE VERDADE</span><h2>Teste com a rotina da sua empresa, não com uma apresentação genérica.</h2></div>
-          <Link className="product-primary" to="/cadastro">Criar minha conta grátis <ArrowRight /></Link>
+          <Link className="product-primary" to="/cadastro?product=issuer&plan=issuer_monthly">Criar minha conta grátis <ArrowRight /></Link>
         </section>
       </main>
       <PublicSiteFooter />

@@ -31,6 +31,8 @@ const ClientLogin = () => {
   const resolveDestination = async (userId: string) => {
     const redirectPath = new URLSearchParams(location.search).get('redirect');
     if (redirectPath?.startsWith('/') && !redirectPath.startsWith('//') && !redirectPath.includes('\\')) return redirectPath;
+    const statePath = (location.state as { from?: string } | null)?.from;
+    if (statePath?.startsWith('/') && !statePath.startsWith('//') && !statePath.includes('\\')) return statePath;
     const { data: roles } = await supabase.from('user_roles').select('role').eq('user_id', userId);
     if (roles?.some(({ role }) => role === 'admin')) return '/admin';
     const access = await getCurrentProductAccess();

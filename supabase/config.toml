@@ -194,5 +194,8 @@ verify_jwt = false
 [functions.mp-create-checkout]
 verify_jwt = true
 
+[functions.mp-start-checkout]
+verify_jwt = true
+
 [functions.mp-webhook]
 verify_jwt = false
