@@ -96,14 +96,14 @@ Deno.serve(async (req) => {
   if (!checkout) return json({ error: "Não foi possível preparar o pagamento." }, 500);
 
   const origin = siteOrigin();
-  const checkoutPath = selected.product === "issuer" ? "/assinar/emissor" : "/assinar/extrator";
+  const checkoutPath = selected.product === "issuer" ? "/pagamento/retorno?product=issuer" : "/pagamento/retorno?product=extractor";
   const webhook = `${supabaseUrl}/functions/v1/mp-webhook?source_news=webhooks`;
   let endpoint = ""; let payload: Record<string, unknown>;
   if (billingMode === "recurring") {
     endpoint = "https://api.mercadopago.com/preapproval";
     payload = {
       reason: selected.name, external_reference: subscription.id, payer_email: payerEmail,
-      back_url: `${origin}${checkoutPath}?status=return`,
+      back_url: `${origin}${checkoutPath}&status=return`,
       notification_url: webhook, status: "pending",
       auto_recurring: {
         frequency: 1, frequency_type: "months", transaction_amount: selected.cents / 100, currency_id: "BRL",
@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
       items: [{ id: planCode, title: selected.name, description: "Acesso por 30 dias, sem renovação automática", category_id: "services", quantity: 1, currency_id: "BRL", unit_price: selected.cents / 100 }],
       payer: { email: payerEmail }, external_reference: invoice.id,
       metadata: { invoice_id: invoice.id, subscription_id: subscription.id, organization_id: organizationId },
-      back_urls: { success: `${origin}${checkoutPath}?status=success`, pending: `${origin}${checkoutPath}?status=pending`, failure: `${origin}${checkoutPath}?status=failure` },
+      back_urls: { success: `${origin}${checkoutPath}&status=success`, pending: `${origin}${checkoutPath}&status=pending`, failure: `${origin}${checkoutPath}&status=failure` },
       auto_return: "approved", notification_url: webhook, statement_descriptor: "WS GESTAO",
     };
   }

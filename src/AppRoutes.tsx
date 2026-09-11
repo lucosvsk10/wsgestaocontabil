@@ -47,6 +47,7 @@ import FiscalExtractorApp from './pages/FiscalExtractorApp';
 import EmissorPreview from './pages/EmissorPreview';
 import ProductChooser from './pages/ProductChooser';
 import BillingOnboardingPage, { LegacyBillingRedirect } from './pages/BillingOnboardingPage';
+import PaymentReturnPage from './pages/PaymentReturnPage';
 
 const DashboardRouter = () => {
   const { userData, user } = useAuth();
@@ -61,6 +62,7 @@ const DashboardRouter = () => {
   if (admin) return <Navigate to="/admin" replace />;
   if (access === null) return <AppLoadingScreen mode="light" />;
   if (user?.email?.trim().toLowerCase() === 'wsteste@gmail.com') return <Navigate to="/escolher-produto" replace />;
+  if (access.extractor && access.saas) return <Navigate to="/escolher-produto" replace />;
   if (access.extractor && !access.saas) return <Navigate to="/extrator" replace />;
   return <Navigate to={access.saas ? '/app' : '/client'} replace />;
 };
@@ -76,6 +78,7 @@ const AppRoutes = () => <Routes>
   <Route path="/assinar" element={<PrivateRoute><LegacyBillingRedirect /></PrivateRoute>} />
   <Route path="/assinar/emissor" element={<PrivateRoute><BillingOnboardingPage product="issuer" /></PrivateRoute>} />
   <Route path="/assinar/extrator" element={<PrivateRoute><BillingOnboardingPage product="extractor" /></PrivateRoute>} />
+  <Route path="/pagamento/retorno" element={<PaymentReturnPage />} />
   <Route path="/enquete/:id" element={<PollPage />} /><Route path="/enquete-numerica/:id" element={<NumericalPollPage />} /><Route path="/formulario/:id" element={<FormPollPage />} />
   <Route path="/simulador-irpf" element={<TaxCalculator />} /><Route path="/calculadora-inss" element={<INSSCalculator />} /><Route path="/simulador-prolabore" element={<ProLaboreCalculator />} /><Route path="/changelog" element={<ChangeLog />} />
   <Route path="/termos-de-servico" element={<LegalPage />} /><Route path="/politica-de-privacidade" element={<LegalPage />} />

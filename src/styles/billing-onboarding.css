@@ -30,9 +30,10 @@
   width: 122px;
   height: 42px;
   object-fit: contain;
-  border-radius: 4px;
-  background: #0b1729;
-  padding: 8px 10px;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  filter: drop-shadow(0 1px 0 rgba(11, 23, 41, 0.18));
 }
 .billing-header > a,
 .billing-header > span {
@@ -241,12 +242,12 @@
 }
 .billing-choice-icon {
   display: grid !important;
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
   place-items: center;
-  border: 1px solid #d6dce3;
-  border-radius: 7px;
-  background: #fff;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--billing-accent);
 }
 .billing-choice-icon svg {

@@ -12,7 +12,7 @@ export default function ProductChooser() {
         <header>
           <p>WS Gestão Contábil</p>
           <h1 id="product-chooser-title">Qual produto você deseja acessar?</h1>
-          <span>Escolha um ambiente para continuar.</span>
+          <span>Você tem acesso a mais de um produto. Escolha o ambiente para continuar.</span>
         </header>
         <div className="product-choice-grid">
           <button type="button" onClick={() => navigate('/app')}>
