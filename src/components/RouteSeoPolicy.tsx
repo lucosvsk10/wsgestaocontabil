@@ -12,8 +12,12 @@ const publicMetadata: Record<string, { title: string; description: string }> = {
     description: 'Guias práticos sobre abertura de empresa, custos, fluxo de caixa e organização financeira para empreendedores e gestores.',
   },
   '/emissor-fiscal': {
-    title: 'Emissor Fiscal WS: NF-e, NFC-e, NFS-e, CT-e e MDF-e',
-    description: 'Emita e gerencie documentos fiscais em um só lugar. Conheça o Emissor Fiscal WS, seus recursos e planos mensal e anual.',
+    title: 'Emissor Fiscal WS: emissão ilimitada por R$ 69/mês',
+    description: 'Emita NF-e, NFC-e, NFS-e, CT-e e MDF-e sem limite em uma rotina simples e organizada. Teste grátis por 7 dias.',
+  },
+  '/extrator-fiscal': {
+    title: 'Extrator Fiscal WS: notas dos clientes sem cobranças',
+    description: 'Capture e organize os XML de compras e vendas dos seus clientes sem depender de envios pelo WhatsApp. Teste grátis por 7 dias.',
   },
 };
 
@@ -30,7 +34,7 @@ const isPrivateOrUtilityRoute = (pathname: string) => (
   || pathname.startsWith('/admin')
   || pathname.startsWith('/app')
   || pathname.startsWith('/client')
-  || pathname.startsWith('/extrator')
+  || (pathname.startsWith('/extrator') && pathname !== '/extrator-fiscal')
   || pathname.startsWith('/checkout')
   || pathname.startsWith('/enquete/')
   || pathname.startsWith('/enquete-numerica/')

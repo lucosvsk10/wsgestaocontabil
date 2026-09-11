@@ -1,5 +1,17 @@
 import { useEffect } from 'react';
-import { ArrowRight, BarChart3, Check, History, LockKeyhole, PackageCheck, ReceiptText, ShieldCheck, UsersRound } from 'lucide-react';
+import {
+  ArrowRight,
+  Check,
+  CheckCircle2,
+  Clock3,
+  FileCheck2,
+  Files,
+  History,
+  PackageCheck,
+  ReceiptText,
+  ShieldCheck,
+  UsersRound,
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 import PublicSiteFooter from '@/components/public/PublicSiteFooter';
 import '../styles/public-content.css';
@@ -7,38 +19,180 @@ import '../styles/fiscal-issuer-landing.css';
 
 const whatsapp = 'https://wa.me/5582999324884?text=Ol%C3%A1%2C%20quero%20conhecer%20o%20Emissor%20Fiscal%20WS.';
 
-const capabilities = [
-  { icon: ReceiptText, title: 'Um emissor, vários documentos', text: 'NF-e, NFC-e, NFS-e, CT-e e MDF-e no mesmo ambiente, sem espalhar a operação entre sistemas diferentes.' },
-  { icon: UsersRound, title: 'Cadastre uma vez e reutilize', text: 'Clientes, produtos e serviços ficam disponíveis para as próximas emissões e reduzem redigitação.' },
-  { icon: History, title: 'Histórico no lugar certo', text: 'Encontre emissões anteriores, acompanhe status e volte ao documento sem procurar em pastas e portais.' },
-  { icon: BarChart3, title: 'A operação aparece no painel', text: 'Tenha uma leitura rápida do que foi emitido e do que ainda precisa de atenção dentro do próprio produto.' },
-  { icon: LockKeyhole, title: 'A1 separado e protegido', text: 'O certificado fica ligado à empresa e à configuração fiscal, sem virar um arquivo perdido na máquina.' },
-  { icon: PackageCheck, title: 'Repita o que faz sentido', text: 'Reaproveite dados de emissões anteriores quando a operação se repete e revise antes de transmitir.' },
+const issuerBenefits = [
+  {
+    icon: UsersRound,
+    title: 'Cliente já cadastrado não precisa ser digitado de novo',
+    text: 'Salve clientes, transportadoras e dados de cobrança para reutilizar nas próximas emissões.',
+  },
+  {
+    icon: PackageCheck,
+    title: 'Produtos e serviços ficam prontos para a próxima venda',
+    text: 'Descrição, unidade e informações fiscais permanecem organizadas para você montar a nota mais rápido.',
+  },
+  {
+    icon: Files,
+    title: 'Cinco documentos fiscais em uma única rotina',
+    text: 'Emita NF-e, NFC-e, NFS-e, CT-e e MDF-e sem espalhar a operação entre portais diferentes.',
+  },
+  {
+    icon: History,
+    title: 'A nota não desaparece depois da transmissão',
+    text: 'Consulte histórico, situação, valores e documentos emitidos sem procurar XML em pastas soltas.',
+  },
+  {
+    icon: FileCheck2,
+    title: 'Revisão antes de transmitir',
+    text: 'Confira destinatário, itens, totais e dados fiscais antes de enviar o documento para autorização.',
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Cada empresa com sua própria configuração',
+    text: 'Série, numeração, ambiente e certificado A1 ficam associados ao CNPJ correto.',
+  },
 ];
 
-const included = ['NF-e, NFC-e, NFS-e, CT-e e MDF-e', 'Cadastro de clientes, produtos e serviços', 'Histórico e consulta de emissões', 'Configuração fiscal e certificado A1', 'Relatórios operacionais', 'Acesso ao suporte WS'];
+const included = [
+  'Emissões sem limite de quantidade',
+  'NF-e, NFC-e, NFS-e, CT-e e MDF-e',
+  'Cadastros reutilizáveis de clientes e itens',
+  'Histórico e consulta de documentos',
+  'Configuração fiscal por empresa',
+  'Suporte da equipe WS',
+];
 
 const FiscalIssuerLandingPage = () => {
   useEffect(() => { window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); }, []);
-  return <div className="public-page issuer-page">
-    <header className="guide-header issuer-header"><Link to="/home-preview" className="guide-brand"><img src="/assets/ws-logo.png" alt="WS Gestão Contábil" /></Link><nav><Link to="/home-preview">Início</Link><a href="#recursos">Recursos</a><a href="#precos">Planos</a><Link to="/extrator-fiscal">Extrator</Link><Link to="/login">Login</Link></nav></header>
-    <main>
-      <section className="issuer-hero">
-        <div className="issuer-hero-copy"><span className="issuer-kicker">EMISSOR FISCAL WS</span><h1>Pare de redigitar a mesma emissão <em>todo dia.</em></h1><p>Emita os principais documentos fiscais, reutilize cadastros e acompanhe o histórico em um fluxo feito para quem precisa faturar e seguir trabalhando.</p><div className="issuer-actions"><a className="issuer-primary" href="#precos">Começar agora <ArrowRight /></a><a className="issuer-secondary" href={whatsapp} target="_blank" rel="noreferrer">Ver uma demonstração</a></div><div className="issuer-proof"><span><Check /> 5 tipos de documento</span><span><Check /> Multiempresa</span><span><Check /> A1 por empresa</span></div></div>
-        <div className="issuer-product-view" style={{padding:0,overflow:'hidden'}}><img src="/assets/ws-emissor-fiscal.png" alt="Tela do Emissor Fiscal WS" style={{display:'block',width:'100%',height:'100%',objectFit:'cover',objectPosition:'top left'}} /></div>
-      </section>
 
-      <section id="recursos" className="issuer-section"><div className="issuer-section-heading"><span>O QUE MUDA NA ROTINA</span><h2>Menos portal, menos redigitação, mais controle.</h2><p>O WS não tenta parecer um ERP gigante. Ele concentra a operação fiscal que você precisa executar e consultar no dia a dia.</p></div><div className="issuer-feature-grid">{capabilities.map(({ icon: Icon, title, text }) => <article key={title}><Icon /><h3>{title}</h3><p>{text}</p></article>)}</div></section>
+  return (
+    <div className="public-page product-landing product-issuer">
+      <header className="guide-header product-header">
+        <Link to="/home-preview" className="guide-brand"><img src="/assets/ws-logo.png" alt="WS Gestão Contábil" /></Link>
+        <nav aria-label="Navegação do Emissor Fiscal">
+          <Link to="/home-preview">Início</Link>
+          <a href="#rotina">Como funciona</a>
+          <a href="#documentos">Documentos</a>
+          <a href="#preco">Preço</a>
+          <Link to="/extrator-fiscal">Extrator</Link>
+          <Link className="product-header-login" to="/login">Entrar</Link>
+        </nav>
+      </header>
 
-      <section className="issuer-flow"><div><span>DO CADASTRO À AUTORIZAÇÃO</span><h2>Você sabe onde está e qual é o próximo passo.</h2><p>Cadastre a empresa, escolha o documento, preencha a operação e revise antes de transmitir. Quando a emissão se repetir, reutilize o que já existe.</p><a href={whatsapp} target="_blank" rel="noreferrer">Quero ver esse fluxo <ArrowRight /></a></div><ol><li><b>01</b><span><strong>Configure a empresa</strong>CNPJ, dados fiscais, séries, numeração e A1 quando aplicável.</span></li><li><b>02</b><span><strong>Monte ou reutilize</strong>Escolha cliente e itens, ou aproveite dados de uma emissão anterior.</span></li><li><b>03</b><span><strong>Revise e transmita</strong>Confira o resumo antes da transmissão e acompanhe o retorno da autorização.</span></li></ol></section>
+      <main>
+        <section className="product-hero">
+          <div className="product-hero-copy">
+            <span className="product-eyebrow"><ReceiptText /> PARA QUEM EMITE NOTA TODOS OS DIAS</span>
+            <h1>Emitir nota não deveria tomar o tempo de <em>vender.</em></h1>
+            <p>Cadastre clientes e produtos uma vez, emita os principais documentos fiscais e acompanhe tudo em um só painel — sem recomeçar cada venda do zero.</p>
+            <div className="product-actions">
+              <Link className="product-primary" to="/cadastro">Testar grátis por 7 dias <ArrowRight /></Link>
+              <a className="product-secondary" href={whatsapp} target="_blank" rel="noreferrer">Pedir uma demonstração</a>
+            </div>
+            <div className="product-assurances" aria-label="Condições do Emissor Fiscal">
+              <span><Check /> Emissões ilimitadas</span>
+              <span><Check /> R$ 69 por mês</span>
+              <span><Check /> Suporte WS</span>
+            </div>
+          </div>
 
-      <section className="issuer-section"><div className="issuer-section-heading"><span>VISUAL DE PRODUTO, NÃO PROMESSA</span><h2>Veja o ambiente que você realmente vai usar.</h2><p>O painel foi desenhado para manter emissão, cadastros, configurações e histórico dentro da mesma navegação.</p></div><div style={{display:'grid',gridTemplateColumns:'1.2fr .8fr',gap:18,alignItems:'stretch'}}><img src="/assets/ws-emissor-fiscal.png" alt="Painel do Emissor Fiscal WS" style={{width:'100%',height:'100%',minHeight:320,objectFit:'cover',objectPosition:'top left',borderRadius:16,border:'1px solid rgba(148,163,184,.2)'}}/><img src="/assets/ws-portal-cliente.png" alt="Ecossistema digital WS" style={{width:'100%',height:'100%',minHeight:320,objectFit:'cover',objectPosition:'top left',borderRadius:16,border:'1px solid rgba(148,163,184,.2)'}}/></div></section>
+          <figure className="product-hero-visual issuer-hero-visual">
+            <div className="product-orbit" aria-hidden="true" />
+            <img src="/assets/ws-emissor-dashboard-transparent-v2.png" alt="Painel do Emissor Fiscal WS com faturamento, vendas, produtos e atalhos de emissão" />
+            <figcaption>
+              <span><CheckCircle2 /> Painel real do produto</span>
+              <strong>Da venda à nota autorizada</strong>
+            </figcaption>
+          </figure>
+        </section>
 
-      <section id="precos" className="issuer-pricing issuer-section"><div className="issuer-section-heading"><span>PREÇO DE LANÇAMENTO</span><h2>Escolha como prefere pagar.</h2><p>Os mesmos recursos nos dois planos. No anual, o custo mensal equivalente é menor.</p></div><div className="issuer-price-grid"><article className="issuer-price-card"><span>MENSAL</span><h3>Flexibilidade para começar</h3><div className="issuer-price"><small>R$</small><strong>39,90</strong><small>/mês</small></div><p>Cobrança mensal e possibilidade de cancelar a renovação para o próximo ciclo.</p><ul>{included.map((item) => <li key={item}><Check /> {item}</li>)}</ul><Link to="/cadastro">Criar minha conta <ArrowRight /></Link></article><article className="issuer-price-card is-featured"><div className="issuer-save">ECONOMIZE R$ 79,80</div><span>ANUAL</span><h3>Mais economia no ano</h3><div className="issuer-price"><small>R$</small><strong>399</strong><small>/ano</small></div><p>Equivale a R$ 33,25 por mês, com pagamento anual e 16,7% de desconto.</p><ul>{included.map((item) => <li key={item}><Check /> {item}</li>)}</ul><Link to="/cadastro">Quero o plano anual <ArrowRight /></Link></article></div><small className="issuer-price-note">Valores de lançamento. A emissão depende da configuração fiscal, do certificado digital quando aplicável e da disponibilidade dos órgãos autorizadores.</small></section>
+        <section className="issuer-friction" aria-label="Problemas eliminados pelo Emissor Fiscal">
+          <div><small>ANTES</small><strong>Digitar o mesmo cliente em cada nota</strong></div>
+          <ArrowRight aria-hidden="true" />
+          <div><small>COM O EMISSOR WS</small><strong>Selecionar o cadastro e seguir com a emissão</strong></div>
+          <div><small>ANTES</small><strong>Procurar notas em pastas e portais</strong></div>
+          <ArrowRight aria-hidden="true" />
+          <div><small>COM O EMISSOR WS</small><strong>Consultar o histórico no mesmo painel</strong></div>
+        </section>
 
-      <section className="issuer-security"><ShieldCheck /><div><span>OPERAÇÃO SEPARADA POR EMPRESA</span><h2>Dados fiscais e acesso organizados por contexto.</h2><p>O Emissor WS usa autenticação e separação por organização para reduzir mistura de dados entre empresas.</p></div><a href={whatsapp} target="_blank" rel="noreferrer">Tirar dúvidas <ArrowRight /></a></section>
-      <section className="issuer-final-cta"><span>SE VOCÊ EMITE TODO DIA, O RETRABALHO TAMBÉM ACONTECE TODO DIA.</span><h2>Troque a repetição por um fluxo que reaproveita o que você já cadastrou.</h2><p>Crie sua conta ou peça uma apresentação rápida do Emissor Fiscal WS.</p><div><Link className="issuer-primary" to="/cadastro">Criar minha conta <ArrowRight /></Link><a className="issuer-secondary" href={whatsapp} target="_blank" rel="noreferrer">Quero uma demonstração</a></div></section>
-    </main><PublicSiteFooter />
-  </div>;
+        <section id="rotina" className="product-section issuer-benefits">
+          <header className="product-section-heading">
+            <span>MENOS REDIGITAÇÃO EM CADA VENDA</span>
+            <h2>O sistema guarda o trabalho que você já fez.</h2>
+            <p>O ganho não está em “ter mais uma tela”. Está em não preencher novamente dados que já existem e em saber onde encontrar cada emissão depois.</p>
+          </header>
+          <div className="product-feature-grid">
+            {issuerBenefits.map(({ icon: Icon, title, text }, index) => (
+              <article key={title}>
+                <div><Icon /><small>0{index + 1}</small></div>
+                <h3>{title}</h3>
+                <p>{text}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section id="documentos" className="issuer-documents">
+          <div className="issuer-documents-copy">
+            <span>UM PAINEL PARA CINCO ROTINAS</span>
+            <h2>Venda, serviço e transporte sem trocar de sistema.</h2>
+            <p>Escolha o documento adequado à operação e mantenha cadastros, configurações e histórico no mesmo ambiente.</p>
+          </div>
+          <div className="issuer-document-list">
+            <article><b>NF-e</b><span>Venda de produtos</span></article>
+            <article><b>NFC-e</b><span>Venda ao consumidor</span></article>
+            <article><b>NFS-e</b><span>Prestação de serviços</span></article>
+            <article><b>CT-e</b><span>Prestação de transporte</span></article>
+            <article><b>MDF-e</b><span>Manifesto de documentos</span></article>
+          </div>
+        </section>
+
+        <section className="product-process">
+          <header className="product-section-heading">
+            <span>DA CONFIGURAÇÃO À AUTORIZAÇÃO</span>
+            <h2>Um caminho claro até a nota pronta.</h2>
+          </header>
+          <ol>
+            <li><b>01</b><div><strong>Configure a empresa</strong><p>Defina CNPJ, séries, numeração, ambiente e certificado quando aplicável.</p></div></li>
+            <li><b>02</b><div><strong>Escolha ou reutilize os cadastros</strong><p>Selecione cliente, produtos ou serviços já salvos e complete apenas o que mudou.</p></div></li>
+            <li><b>03</b><div><strong>Revise antes de enviar</strong><p>Confira a operação e transmita o documento para autorização.</p></div></li>
+            <li><b>04</b><div><strong>Acompanhe pelo histórico</strong><p>Volte à emissão, consulte o status e localize o documento quando precisar.</p></div></li>
+          </ol>
+        </section>
+
+        <section id="preco" className="product-pricing issuer-single-price">
+          <div className="product-price-intro">
+            <span>7 DIAS PARA TESTAR NA SUA ROTINA</span>
+            <h2>Um plano. Todas as emissões.</h2>
+            <p>Use os recursos do Emissor durante o período gratuito. Depois, continue por uma mensalidade única e sem limite de notas.</p>
+          </div>
+          <article className="product-price-card is-issuer">
+            <div className="product-price-label"><span>EMISSOR FISCAL WS</span><b>7 DIAS GRÁTIS</b></div>
+            <p className="product-anchor-price">de <s>R$ 89/mês</s> por</p>
+            <div className="product-price"><small>R$</small><strong>69</strong><span>/mês</span></div>
+            <p>Emissão ilimitada, sem planos por quantidade de notas.</p>
+            <ul>{included.map((item) => <li key={item}><CheckCircle2 /> {item}</li>)}</ul>
+            <Link to="/cadastro">Começar meus 7 dias grátis <ArrowRight /></Link>
+          </article>
+        </section>
+
+        <section className="product-faq" aria-labelledby="issuer-faq-title">
+          <div className="product-section-heading"><span>ANTES DE COMEÇAR</span><h2 id="issuer-faq-title">Dúvidas de quem vai emitir.</h2></div>
+          <div>
+            <details><summary>Existe limite de notas por mês?</summary><p>Não. A assinatura mensal do Emissor Fiscal WS não limita a quantidade de emissões.</p></details>
+            <details><summary>Quais documentos posso emitir?</summary><p>O sistema reúne NF-e, NFC-e, NFS-e, CT-e e MDF-e. A disponibilidade de cada documento depende da configuração fiscal da empresa e dos órgãos autorizadores.</p></details>
+            <details><summary>Preciso de certificado digital?</summary><p>O certificado A1 é necessário nas operações em que a legislação e o órgão autorizador exigem autenticação digital.</p></details>
+            <details><summary>Consigo cadastrar mais de uma empresa?</summary><p>Sim. Cada empresa mantém seus próprios dados fiscais, séries, numeração e certificado.</p></details>
+          </div>
+        </section>
+
+        <section className="product-final-cta issuer-final">
+          <div><span><Clock3 /> SETE DIAS PARA EMITIR DE VERDADE</span><h2>Teste com a rotina da sua empresa, não com uma apresentação genérica.</h2></div>
+          <Link className="product-primary" to="/cadastro">Criar minha conta grátis <ArrowRight /></Link>
+        </section>
+      </main>
+      <PublicSiteFooter />
+    </div>
+  );
 };
+
 export default FiscalIssuerLandingPage;

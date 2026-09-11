@@ -45,6 +45,22 @@
 }
 @media(prefers-reduced-motion:reduce){.public-logo-track{animation:none}.public-client-logo,.public-guide-rail>a>svg{transition:none}}
 
+/* Guides index on phones: compact editorial rows instead of tall desktop cards. */
+@media(max-width:760px){
+ .guides-index-main .public-guide-grid{display:grid!important;grid-template-columns:1fr!important;gap:14px!important}
+ .guides-index-main .public-guide-card,.guides-index-main .public-guide-card:nth-child(1),.guides-index-main .public-guide-card:nth-child(5){position:relative!important;display:grid!important;min-height:218px!important;grid-column:auto!important;grid-template-columns:116px minmax(0,1fr)!important;grid-template-rows:auto auto 1fr auto!important;padding:0!important;overflow:hidden!important;border-radius:8px!important}
+ .guides-index-main .public-guide-card .public-guide-thumb,.guides-index-main .public-guide-card:nth-child(1) .public-guide-thumb,.guides-index-main .public-guide-card:nth-child(5) .public-guide-thumb{grid-column:1!important;grid-row:1/-1!important;width:116px!important;height:100%!important;min-height:218px!important;margin:0!important;object-fit:cover!important;opacity:.78!important}
+ .guides-index-main .public-guide-card .public-guide-number{position:absolute!important;z-index:2!important;top:10px!important;left:10px!important;margin:0!important;padding:6px 8px!important;border-radius:6px!important;background:rgba(2,11,27,.86)!important;color:#efc449!important;font-size:18px!important}
+ .guides-index-main .public-guide-card small{grid-column:2!important;grid-row:1!important;margin:16px 16px 0!important;color:#efc449!important;font-size:9px!important;line-height:1.35!important}
+ .guides-index-main .public-guide-card h2{grid-column:2!important;grid-row:2!important;margin:9px 16px 8px!important;font-size:20px!important;line-height:1.08!important}
+ .guides-index-main .public-guide-card p{display:-webkit-box!important;grid-column:2!important;grid-row:3!important;margin:0 16px!important;overflow:hidden!important;color:rgba(245,240,227,.64)!important;font-size:12px!important;line-height:1.42!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:3!important}
+ .guides-index-main .public-guide-card strong{grid-column:2!important;grid-row:4!important;margin:0 16px 15px!important;padding-top:12px!important;font-size:12px!important}
+}
+@media(max-width:380px){
+ .guides-index-main .public-guide-card,.guides-index-main .public-guide-card:nth-child(1),.guides-index-main .public-guide-card:nth-child(5){grid-template-columns:100px minmax(0,1fr)!important}
+ .guides-index-main .public-guide-card .public-guide-thumb,.guides-index-main .public-guide-card:nth-child(1) .public-guide-thumb,.guides-index-main .public-guide-card:nth-child(5) .public-guide-thumb{width:100px!important}
+}
+
 /* Open location layout: maps are part of the section, not nested cards. */
 .home-preview .public-office .public-section-heading h2,
 .home-preview .public-location-copy h3 {
