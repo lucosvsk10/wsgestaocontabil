@@ -3,10 +3,11 @@ import { supabase } from '@/integrations/supabase/client';
 export type ProductAccess = {
   saas: boolean;
   extractor: boolean;
+  client: boolean;
 };
 
 export async function getCurrentProductAccess(): Promise<ProductAccess> {
-  const [subscriptionResult, fiscalProfileResult, extractorResult] = await Promise.all([
+  const [subscriptionResult, fiscalProfileResult, extractorResult, clientResult] = await Promise.all([
     (supabase as any)
       .from('saas_subscriptions')
       .select('id,status,trial_ends_at,access_expires_at')
@@ -18,6 +19,10 @@ export async function getCurrentProductAccess(): Promise<ProductAccess> {
       .limit(1),
     (supabase as any)
       .from('extractor_accounts')
+      .select('id')
+      .limit(1),
+    (supabase as any)
+      .from('company_user_links')
       .select('id')
       .limit(1),
   ]);
@@ -35,5 +40,6 @@ export async function getCurrentProductAccess(): Promise<ProductAccess> {
   return {
     saas: subscriptionAccess || configuredSaasAccess,
     extractor: extractorAccess,
+    client: !clientResult.error && Boolean(clientResult.data?.length),
   };
 }

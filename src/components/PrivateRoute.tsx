@@ -20,7 +20,7 @@ const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
     let cancelled = false;
 
     if (!user || admin) {
-      setAccess({ saas: false, extractor: false });
+      setAccess({ saas: false, extractor: false, client: false });
       return () => {
         cancelled = true;
       };
@@ -32,7 +32,7 @@ const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
         if (!cancelled) setAccess(nextAccess);
       })
       .catch(() => {
-        if (!cancelled) setAccess({ saas: false, extractor: false });
+        if (!cancelled) setAccess({ saas: false, extractor: false, client: false });
       });
 
     return () => {
@@ -63,8 +63,12 @@ const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
     return <Navigate to="/assinar/emissor?plan=issuer_monthly" replace />;
   }
 
+  if (pathname.startsWith('/client') && !access.client) {
+    return <Navigate to={access.saas ? '/app' : access.extractor ? '/extrator' : '/escolher-produto'} replace />;
+  }
+
   if (pathname.startsWith('/client') && (access.saas || access.extractor)) {
-    return <Navigate to={access.saas ? '/app' : '/extrator'} replace />;
+    return <Navigate to={access.saas && access.extractor ? '/escolher-produto' : access.saas ? '/app' : '/extrator'} replace />;
   }
 
   return children;
