@@ -98,8 +98,8 @@ export default function ExtractorFiscalLandingPage() {
             <div className="extractor-grid-glow" aria-hidden="true" />
             <img src="/assets/ws-extrator-dashboard-transparent-v2.png" alt="Painel do Extrator Fiscal WS com empresas, documentos, movimentação e gráfico dos últimos 30 dias" />
             <figcaption>
-              <span><CheckCircle2 /> Carteira acompanhada</span>
-              <strong>326 documentos organizados</strong>
+              <span><CheckCircle2 /> Sem cobrar o cliente</span>
+              <strong>XML organizado por empresa</strong>
             </figcaption>
           </figure>
         </section>
