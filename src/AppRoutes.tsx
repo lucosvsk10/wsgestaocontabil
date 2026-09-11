@@ -48,6 +48,7 @@ import EmissorPreview from './pages/EmissorPreview';
 import ProductChooser from './pages/ProductChooser';
 import BillingOnboardingPage, { LegacyBillingRedirect } from './pages/BillingOnboardingPage';
 import PaymentReturnPage from './pages/PaymentReturnPage';
+import SignupChooserPage from './pages/SignupChooserPage';
 
 const DashboardRouter = () => {
   const { userData, user } = useAuth();
@@ -75,6 +76,7 @@ const AppRoutes = () => <Routes>
   <Route path="/extrator-preview" element={<FiscalExtractorApp preview />} />
   <Route path="/emissor-preview" element={<EmissorPreview />} />
   <Route path="/" element={<Index />} /><Route path="/login" element={<ClientLogin />} /><Route path="/cadastro" element={<PublicSignupPage />} />
+  <Route path="/cadastro-escolha" element={<SignupChooserPage />} />
   <Route path="/escolher-produto" element={<PrivateRoute><ProductChooser /></PrivateRoute>} />
   <Route path="/assinar" element={<PrivateRoute><LegacyBillingRedirect /></PrivateRoute>} />
   <Route path="/assinar/emissor" element={<PrivateRoute><BillingOnboardingPage product="issuer" /></PrivateRoute>} />

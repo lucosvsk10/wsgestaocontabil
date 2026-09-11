@@ -87,7 +87,7 @@ const HomePreview = () => {
             <a href="#escritorio" onClick={() => setMenuOpen(false)}>ESCRITÓRIO</a>
             <a href="#duvidas" onClick={() => setMenuOpen(false)}>DÚVIDAS</a>
             <Link className="preview-login" to="/login"><UserRound size={19} /> LOGIN</Link>
-            <Link className="preview-register" to="/cadastro">CADASTRE-SE</Link>
+            <Link className="preview-register" to="/cadastro-escolha">CADASTRE-SE</Link>
           </div>
         </nav>
       </header>
