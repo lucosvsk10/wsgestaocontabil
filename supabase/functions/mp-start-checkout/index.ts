@@ -115,7 +115,8 @@ Deno.serve(async (req) => {
 
   const response = await fetch(endpoint, { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", "X-Idempotency-Key": checkout.idempotency_key }, body: JSON.stringify(payload) });
   const provider = await response.json().catch(() => ({})) as Record<string, unknown>;
-  const checkoutUrl = String(accessToken.startsWith("TEST-") ? provider.sandbox_init_point || provider.init_point || "" : provider.init_point || "");
+  const isSandbox = provider.live_mode === false;
+  const checkoutUrl = String(isSandbox ? provider.sandbox_init_point || provider.init_point || "" : provider.init_point || "");
   if (!response.ok || !trustedCheckout(checkoutUrl)) {
     await admin.from("saas_billing_checkouts").update({ status: "failed", failure_code: String(provider.message || `http_${response.status}`).slice(0, 120) }).eq("id", checkout.id);
     await admin.from("saas_subscriptions").update({ status: "canceled" }).eq("id", subscription.id);
