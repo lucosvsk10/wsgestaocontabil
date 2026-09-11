@@ -63,7 +63,7 @@ const HomePreview = () => {
     if (!founder || !mobile.matches) return;
 
     const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) setFounderOpen(true);
+      setFounderOpen(entry.isIntersecting);
     }, { threshold: .42, rootMargin: '0px 0px -12% 0px' });
 
     observer.observe(founder);
