@@ -144,7 +144,7 @@ Deno.serve(async req=>{
     await ctx.admin.from("fiscal_certificates").update({is_active:false,updated_at:now}).eq("company_id",companyId).eq("is_active",true);
     const {error:certError}=await ctx.admin.from("fiscal_certificates").insert({
       company_id:companyId,certificate_name:String(body.certificate_name||"certificado-a1.pfx"),
-      certificate_data:null,password_hash:null,certificate_ciphertext:pfxCrypt.ciphertext,certificate_iv:pfxCrypt.iv,
+      certificate_ciphertext:pfxCrypt.ciphertext,certificate_iv:pfxCrypt.iv,
       password_ciphertext:passCrypt.ciphertext,password_iv:passCrypt.iv,holder_cnpj:cnpj,holder_name:cert.titular.nome||null,
       valid_from:cert.validadeInicio.toISOString().slice(0,10),valid_until:cert.validadeFim.toISOString().slice(0,10),
       serial_number:String(cert.serialNumber||"")||null,fingerprint:null,is_active:true,inspected_at:now,updated_at:now,created_by:ctx.user.id
@@ -161,6 +161,7 @@ Deno.serve(async req=>{
     return J({ok:true,company:{id:companyId,cnpj,legal_name:companyPayload.razao_social,trade_name:companyPayload.nome_fantasia,state_registration:companyPayload.inscricao_estadual,state:companyPayload.uf,city:companyPayload.municipio,city_ibge_code:companyPayload.codigo_municipio,certificate_valid_until:cert.validadeFim.toISOString().slice(0,10)},registry_found:Boolean(registry?.ok),state_registry_found:Boolean(digits(d.state_registration))});
   }catch(error:any){
     console.error("extractor-company-config",error);
-    return J({error:error instanceof Error?error.message:String(error)},Number(error?.status)||500);
+    const detail=error instanceof Error?error.message:(error&&typeof error==='object'?JSON.stringify(error):String(error));
+    return J({error:detail},200);
   }
 });
