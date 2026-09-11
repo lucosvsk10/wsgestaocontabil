@@ -107,7 +107,7 @@ const HomePreview = () => {
               <button className="preview-founder-info" type="button" aria-expanded={founderOpen} onClick={() => setFounderOpen((open) => !open)}>
                 <span className="preview-founder-name">WILSON SOUZA</span>
                 <span className="preview-founder-details">
-                  <span>CONTADOR E CEO DA<br />WS GESTÃO HÁ MAIS DE 16 ANOS</span>
+                  <span>CONTADOR E CEO DA<br />WS GESTÃO HÁ MAIS DE 25 ANOS</span>
                   <span>REFERÊNCIA <strong>#1</strong> EM<br />CONTABILIDADE EM TODO O NORDESTE</span>
                 </span>
               </button>
