@@ -11,7 +11,7 @@ export async function getCurrentProductAccess(): Promise<ProductAccess> {
     await Promise.all([
       (supabase as any)
         .from('saas_subscriptions')
-        .select('id,status,trial_ends_at,access_expires_at')
+        .select('id,product_code,status,trial_ends_at,access_expires_at')
         .in('status', ['trialing', 'active', 'past_due'])
         .limit(1),
       (supabase as any).from('saas_company_fiscal_profiles').select('id').limit(1),
@@ -20,10 +20,11 @@ export async function getCurrentProductAccess(): Promise<ProductAccess> {
     ]);
 
   const now = Date.now();
-  const subscriptionAccess =
+  const hasLiveSubscription = (productCode: 'issuer' | 'extractor') =>
     !subscriptionResult.error &&
     Boolean(
       subscriptionResult.data?.some((subscription: any) => {
+        if (subscription.product_code !== productCode) return false;
         const boundary =
           subscription.status === 'trialing'
             ? subscription.trial_ends_at
@@ -36,8 +37,8 @@ export async function getCurrentProductAccess(): Promise<ProductAccess> {
   const extractorAccess = !extractorResult.error && Boolean(extractorResult.data?.length);
 
   return {
-    saas: subscriptionAccess || configuredSaasAccess,
-    extractor: extractorAccess,
+    saas: hasLiveSubscription('issuer') || configuredSaasAccess,
+    extractor: hasLiveSubscription('extractor') || extractorAccess,
     client: !clientResult.error && Boolean(clientResult.data?.length),
   };
 }

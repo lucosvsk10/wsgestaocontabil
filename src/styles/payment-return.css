@@ -1,0 +1,50 @@
+.payment-return-page {
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  padding: 110px 24px 60px;
+  background: linear-gradient(145deg, #07172a 0%, #0d2440 58%, #091a30 100%);
+  color: #f8f5ec;
+  font-family: Inter, system-ui, sans-serif;
+}
+.payment-return-grid { position: absolute; inset: 0; opacity: .22; background-image: linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px); background-size: 86px 86px; mask-image: linear-gradient(to bottom, black, transparent 85%); }
+.payment-return-header { position: absolute; z-index: 2; top: 0; left: 50%; width: min(1120px, calc(100% - 48px)); height: 84px; transform: translateX(-50%); display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,.12); }
+.payment-return-header img { width: 132px; height: 46px; object-fit: contain; }
+.payment-return-header span { display: flex; align-items: center; gap: 8px; color: #cad5e2; font-size: 12px; font-weight: 700; }
+.payment-return-header svg { width: 16px; }
+.payment-return-card { position: relative; z-index: 2; width: min(620px, 100%); padding: 54px; border: 1px solid rgba(255,255,255,.16); border-top: 3px solid #f2c540; border-radius: 18px; background: rgba(8, 25, 45, .88); box-shadow: 0 30px 90px rgba(0,0,0,.32); backdrop-filter: blur(18px); text-align: center; }
+.payment-return-icon { width: 56px; height: 56px; margin: 0 auto 24px; display: grid; place-items: center; color: #f2c540; }
+.payment-return-icon svg { width: 48px; height: 48px; stroke-width: 1.4; }
+.payment-return-icon.is-failed { color: #e6a733; }
+.payment-return-kicker { color: #f2c540; font-size: 11px; font-weight: 800; letter-spacing: .16em; }
+.payment-return-card h1 { max-width: 500px; margin: 14px auto 16px; font-size: clamp(34px, 5vw, 54px); line-height: 1.02; letter-spacing: -.045em; }
+.payment-return-card > p { max-width: 510px; margin: 0 auto; color: #bac8d8; font-size: 16px; line-height: 1.65; }
+.payment-return-progress { height: 3px; margin: 34px 0 30px; overflow: hidden; border-radius: 99px; background: rgba(255,255,255,.1); }
+.payment-return-progress span { display: block; width: 42%; height: 100%; background: #f2c540; animation: ws-payment-progress 1.5s ease-in-out infinite alternate; }
+.payment-return-actions { margin-top: 30px; }
+.payment-return-actions:empty { display: none; }
+.payment-return-actions button { min-height: 48px; display: inline-flex; align-items: center; justify-content: center; gap: 12px; padding: 0 24px; border: 0; border-radius: 9px; background: #f2c540; color: #0b1729; font-weight: 800; cursor: pointer; }
+.payment-return-actions svg { width: 17px; }
+.payment-return-card > small { margin-top: 28px; display: flex; align-items: center; justify-content: center; gap: 8px; color: #879bb1; font-size: 11px; }
+.payment-return-card > small svg { width: 14px; }
+.payment-return-light,
+.payment-return-ring { position: absolute; border-radius: 50%; pointer-events: none; }
+.payment-return-light { filter: blur(10px); }
+.payment-return-light.light-one { width: 360px; height: 360px; top: -170px; right: -60px; background: radial-gradient(circle, rgba(242,197,64,.21), transparent 67%); }
+.payment-return-light.light-two { width: 440px; height: 440px; bottom: -250px; left: -130px; background: radial-gradient(circle, rgba(42,120,206,.16), transparent 68%); }
+.payment-return-ring { border: 1px solid rgba(242,197,64,.16); }
+.payment-return-ring.ring-one { width: 250px; height: 250px; top: 20%; left: -125px; }
+.payment-return-ring.ring-two { width: 120px; height: 120px; right: 8%; bottom: 10%; }
+.is-spinning { animation: ws-payment-spin 1.2s linear infinite; }
+@keyframes ws-payment-spin { to { transform: rotate(360deg); } }
+@keyframes ws-payment-progress { from { transform: translateX(-20%); } to { transform: translateX(160%); } }
+@media (max-width: 640px) {
+  .payment-return-page { padding: 100px 16px 32px; }
+  .payment-return-header { width: calc(100% - 32px); height: 72px; }
+  .payment-return-header img { width: 108px; }
+  .payment-return-header span { font-size: 0; }
+  .payment-return-card { padding: 38px 24px; border-radius: 14px; }
+  .payment-return-card h1 { font-size: 38px; }
+}

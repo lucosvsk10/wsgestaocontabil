@@ -13,7 +13,6 @@ function OriginalLoaderAnimation() {
         className="ws-app-loader-source"
         draggable={false}
         loading="eager"
-        fetchPriority="high"
         decoding="sync"
       />
     </span>
@@ -192,7 +191,6 @@ export default function AppLoadingScreen({ mode = 'standard' }: { mode?: Loading
           className="ws-app-loading-logo"
           draggable={false}
           decoding="async"
-          fetchPriority="high"
         />
       </div>
 

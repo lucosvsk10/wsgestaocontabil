@@ -26,7 +26,6 @@ export default function SignupChooserPage() {
           <small>Pagamento e dados de cartão processados com segurança pelo Mercado Pago.</small>
         </div>
         <div className="signup-chooser-options">
-          <p>SISTEMAS PARA ESCRITÓRIOS E EMPRESAS</p>
           <Choice
             icon={<ReceiptText />}
             number="01"
@@ -43,7 +42,6 @@ export default function SignupChooserPage() {
             to="/cadastro?product=extractor&plan=extractor_commercial"
             action="Conhecer o Extrator"
           />
-          <p className="signup-chooser-service-label">SERVIÇO CONTÁBIL</p>
           <a
             className="signup-choice is-service"
             href="https://wa.me/5582999324884"
@@ -51,6 +49,7 @@ export default function SignupChooserPage() {
             rel="noreferrer"
           >
             <span className="signup-choice-number">03</span>
+            <span className="signup-choice-kicker">SERVIÇO CONTÁBIL</span>
             <Building2 />
             <span className="signup-choice-copy">
               <b>Contratar gestão contábil</b>
@@ -84,6 +83,7 @@ function Choice({
   return (
     <Link className="signup-choice" to={to}>
       <span className="signup-choice-number">{number}</span>
+      <span className="signup-choice-kicker">SISTEMA PARA ESCRITÓRIOS E EMPRESAS</span>
       {icon}
       <span className="signup-choice-copy">
         <b>{title}</b>

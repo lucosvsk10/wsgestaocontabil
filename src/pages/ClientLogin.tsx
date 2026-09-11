@@ -219,7 +219,7 @@ const ClientLogin = () => {
             >
               <span>Ainda não tem uma conta? </span>
               <Link
-                to="/cadastro"
+                to="/cadastro-escolha"
                 style={{ fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: 4 }}
               >
                 Criar conta
