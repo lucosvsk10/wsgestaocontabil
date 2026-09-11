@@ -64,7 +64,11 @@ const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
   }
 
   if (pathname.startsWith('/client') && !access.client) {
-    return <Navigate to={access.saas ? '/app' : access.extractor ? '/extrator' : '/escolher-produto'} replace />;
+    return <Navigate to={access.saas ? '/app' : access.extractor ? '/extrator' : '/home-preview'} replace />;
+  }
+
+  if (pathname.startsWith('/escolher-produto') && !(access.saas && access.extractor)) {
+    return <Navigate to={access.client ? '/client' : '/home-preview'} replace />;
   }
 
   if (pathname.startsWith('/client') && (access.saas || access.extractor)) {

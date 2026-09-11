@@ -65,7 +65,7 @@ const DashboardRouter = () => {
   if (access.extractor && access.saas) return <Navigate to="/escolher-produto" replace />;
   if (access.extractor && !access.saas) return <Navigate to="/extrator" replace />;
   if (access.saas) return <Navigate to="/app" replace />;
-  return <Navigate to={access.client ? '/client' : '/escolher-produto'} replace />;
+  return <Navigate to={access.client ? '/client' : '/home-preview'} replace />;
 };
 
 const AppRoutes = () => <Routes>

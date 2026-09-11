@@ -38,7 +38,7 @@ const ClientLogin = () => {
     if (access.saas) return '/app';
     if (access.extractor) return '/extrator';
     if (access.client) return '/client';
-    return '/escolher-produto';
+    return '/home-preview';
   };
 
   const signInWithUsername = async (username: string, currentPassword: string) => {
