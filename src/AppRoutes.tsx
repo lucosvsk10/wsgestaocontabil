@@ -51,12 +51,12 @@ import PaymentReturnPage from './pages/PaymentReturnPage';
 
 const DashboardRouter = () => {
   const { userData, user } = useAuth();
-  const [access, setAccess] = useState<{ saas: boolean; extractor: boolean } | null>(null);
+  const [access, setAccess] = useState<{ saas: boolean; extractor: boolean; client: boolean } | null>(null);
   const admin = checkIsAdmin(userData, user?.email);
   useEffect(() => {
-    if (!user || admin) { setAccess({ saas: false, extractor: false }); return; }
+    if (!user || admin) { setAccess({ saas: false, extractor: false, client: false }); return; }
     let active = true; setAccess(null);
-    Promise.all([(supabase as any).from('organization_members').select('id').eq('user_id', user.id).eq('status', 'active').limit(1),(supabase as any).from('extractor_accounts').select('id').limit(1)]).then(([saasResult, extractorResult]) => { if (!active) return; setAccess({ saas: !saasResult.error && Boolean(saasResult.data?.length), extractor: !extractorResult.error && Boolean(extractorResult.data?.length) }); });
+    Promise.all([(supabase as any).from('organization_members').select('id').eq('user_id', user.id).eq('status', 'active').limit(1),(supabase as any).from('extractor_accounts').select('id').limit(1),(supabase as any).from('company_user_links').select('id').eq('user_id', user.id).limit(1)]).then(([saasResult, extractorResult, clientResult]) => { if (!active) return; setAccess({ saas: !saasResult.error && Boolean(saasResult.data?.length), extractor: !extractorResult.error && Boolean(extractorResult.data?.length), client: !clientResult.error && Boolean(clientResult.data?.length) }); });
     return () => { active = false; };
   }, [user?.id, admin]);
   if (admin) return <Navigate to="/admin" replace />;
@@ -64,7 +64,8 @@ const DashboardRouter = () => {
   if (user?.email?.trim().toLowerCase() === 'wsteste@gmail.com') return <Navigate to="/escolher-produto" replace />;
   if (access.extractor && access.saas) return <Navigate to="/escolher-produto" replace />;
   if (access.extractor && !access.saas) return <Navigate to="/extrator" replace />;
-  return <Navigate to={access.saas ? '/app' : '/client'} replace />;
+  if (access.saas) return <Navigate to="/app" replace />;
+  return <Navigate to={access.client ? '/client' : '/escolher-produto'} replace />;
 };
 
 const AppRoutes = () => <Routes>

@@ -54,9 +54,6 @@ const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
   if (admin) return <Navigate to="/admin" replace />;
   if (access === null) return <AppLoadingScreen mode={loadingMode} />;
 
-  if (pathname.startsWith('/escolher-produto') && user.email?.trim().toLowerCase() !== 'wsteste@gmail.com') {
-    return <Navigate to="/dashboard" replace />;
-  }
 
   if (pathname.startsWith('/extrator') && !access.extractor) {
     return <Navigate to="/assinar/extrator?plan=extractor_commercial" replace />;
