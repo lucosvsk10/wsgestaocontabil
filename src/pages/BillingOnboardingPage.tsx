@@ -143,7 +143,7 @@ export default function BillingOnboardingPage({ product }: { product: Product })
       </header>
 
       <div className="billing-product-ribbon">
-        <span>{content.name}</span>
+        <Link to={product === 'issuer' ? '/assinar/extrator?plan=extractor_commercial' : '/assinar/emissor?plan=issuer_monthly'}>{product === 'issuer' ? 'Extrator Fiscal WS' : 'Emissor Fiscal WS'}</Link>
         <small>{content.context}</small>
       </div>
 
