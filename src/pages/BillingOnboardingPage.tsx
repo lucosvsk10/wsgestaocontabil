@@ -138,7 +138,7 @@ export default function BillingOnboardingPage({ product }: { product: Product })
     <main className={`billing-page billing-${product}`}>
       <header className="billing-header">
         <Link to={content.back}><ArrowLeft /> Voltar ao {content.shortName}</Link>
-        <img src="/assets/ws-logo.png" alt="WS Gestão Contábil" />
+        <img src="/lovable-uploads/f7fdf0cf-f16c-4df7-a92c-964aadea9539.png" alt="WS Gestão Contábil" />
         <span><LockKeyhole /> Pagamento seguro</span>
       </header>
 
