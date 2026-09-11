@@ -1,18 +1,34 @@
-# Mercado Pago — ativação do checkout
+# Mercado Pago — ativação de assinaturas e pagamentos avulsos
 
-O checkout usa o Checkout Pro. O navegador nunca recebe o Access Token: uma Edge Function autenticada cria a preferência e o webhook confirma o pagamento consultando a API do Mercado Pago.
+O checkout da WS usa páginas hospedadas pelo Mercado Pago. Dados de cartão não passam pelo frontend nem são armazenados pela WS.
 
-## 1. Criar ou selecionar a aplicação
+## 1. Criar a aplicação
 
-1. Entre em **Mercado Pago Developers > Suas integrações**.
-2. Crie uma aplicação, ou selecione a aplicação da WS Gestão Contábil.
-3. Selecione **Checkout Pro** como produto.
+1. Entre em **Mercado Pago Developers > Suas integrações** com a conta que receberá os pagamentos.
+2. Clique em **Criar aplicação**.
+3. Use um nome como `WS Gestão Contábil — Emissor e Extrator`.
+4. Selecione pagamentos online e habilite **Checkout Pro** e **Assinaturas** quando essas opções forem apresentadas.
+5. Primeiro use credenciais de teste. Só troque para produção depois do teste completo com conta compradora diferente da conta vendedora.
 
-## 2. Configurar primeiro o ambiente de teste
+## 2. Configurar o webhook
 
-Copie o **Access Token de teste**. Ele começa normalmente com `TEST-`.
+Cadastre esta URL nas notificações da aplicação:
 
-Cadastre os seguintes secrets no projeto Supabase `nadtoitgkukzbghtbohm`:
+```text
+https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/mp-webhook?source_news=webhooks
+```
+
+Eventos necessários:
+
+- Pagamentos (`payment`)
+- Assinaturas / preapproval (`subscription_preapproval`)
+- Pagamentos recorrentes autorizados (`subscription_authorized_payment`)
+
+Depois de salvar, copie a **assinatura secreta do webhook**. Ela é diferente do Access Token.
+
+## 3. Cadastrar os secrets no Supabase
+
+Em **Supabase > Project Settings > Edge Functions > Secrets**, cadastre:
 
 ```text
 MERCADO_PAGO_ACCESS_TOKEN=TEST-...
@@ -21,40 +37,33 @@ MERCADO_PAGO_SELLER_EMAIL=email-da-conta-recebedora
 PUBLIC_SITE_URL=https://wsgestaocontabil.com
 ```
 
-`MERCADO_PAGO_SELLER_EMAIL` é uma proteção opcional contra a conta recebedora pagar a própria cobrança. Nenhuma dessas variáveis deve ser adicionada ao frontend ou receber o prefixo `VITE_`.
+Não coloque Access Token ou segredo do webhook em variáveis `VITE_*`, no GitHub ou em mensagens de chat. A Public Key não é necessária no fluxo atual porque o pagamento é aberto no checkout hospedado do Mercado Pago.
 
-## 3. Configurar o webhook
+## 4. Testar antes de produção
 
-No painel da aplicação, abra **Webhooks** e configure separadamente em teste e produção:
+1. Crie comprador e cartão de teste no painel do Mercado Pago.
+2. Cadastre-se no site por um CTA do Emissor ou Extrator.
+3. Teste assinatura mensal: o checkout deve mostrar o teste de 7 dias e autorizar o meio de pagamento.
+4. Confirme que o retorno libera o produto e cria a assinatura no painel administrativo.
+5. Teste a opção de 30 dias: ela deve cobrar imediatamente e não criar renovação automática.
+6. Envie uma notificação de teste pelo painel e confirme resposta HTTP 200.
+7. Faça um pagamento aprovado, um pendente e um recusado.
+8. Só então troque o Access Token pelo de produção e repita uma compra real de baixo risco com outra conta.
 
-```text
-https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/mp-webhook
-```
+## Produtos configurados
 
-Selecione o evento **Pagamentos**, salve e copie a **assinatura secreta** gerada para `MERCADO_PAGO_WEBHOOK_SECRET`.
-
-## 4. Fazer o teste completo
-
-1. Use uma conta compradora de teste diferente da conta vendedora.
-2. Entre no site com um usuário que pertença à empresa da fatura.
-3. Abra uma fatura com status `open` ou `overdue`.
-4. Escolha Pix, cartão ou boleto, aceite os termos e prossiga.
-5. Conclua no Checkout Pro.
-6. Confirme que o retorno abre a mesma fatura e que, em pagamento aprovado, o status muda para `paid` após o webhook.
-7. Repita uma notificação de teste e confirme que não ocorre baixa duplicada.
-
-## 5. Ativar produção
-
-1. Conclua a homologação solicitada pelo Mercado Pago.
-2. Troque o Access Token de teste pelo **Access Token de produção**.
-3. Configure o webhook também no modo produção e substitua o secret se ele for diferente.
-4. Faça uma cobrança real de valor baixo, usando uma conta pagadora diferente da recebedora.
+- Emissor Fiscal: R$ 69/mês, emissões ilimitadas.
+- Extrator Comercial: R$ 99/mês, até 20.000 XML mensais.
+- Extrator Empresarial: R$ 250/mês, XML e empresas ilimitados.
+- Assinaturas recorrentes: 7 dias grátis uma única vez por usuário/empresa e produto.
+- Compra avulsa: 30 dias de acesso, cobrada na hora e sem renovação.
 
 ## Controles implementados
 
-- A fatura e o valor são lidos no servidor, nunca aceitos do navegador.
-- O usuário só cria checkout para fatura acessível pela política RLS da própria organização.
-- O endpoint limita tentativas por usuário e reutiliza preferências para evitar cobranças duplicadas.
-- O webhook valida `x-signature`, consulta o pagamento na API do Mercado Pago e compara fatura, moeda e valor.
-- Eventos são idempotentes; somente o backend pode gravar tentativas, eventos e baixar a fatura.
-- Logs e tabelas internas não armazenam o payload bruto nem dados de cartão.
+- Plano, valor e elegibilidade ao teste são validados no servidor.
+- Um usuário ou empresa só pode resgatar um teste por produto.
+- O webhook valida `x-signature` e consulta o objeto diretamente na API do Mercado Pago.
+- Eventos de pagamento são idempotentes e não liberam acesso com moeda ou valor divergente.
+- O acesso avulso expira em 30 dias; a assinatura é renovada pelos eventos do Mercado Pago.
+- Ao cancelar uma renovação, o período já pago permanece disponível até o vencimento.
+- Tabelas de tentativa, consentimento e eventos são exclusivas do backend e protegidas por RLS.
