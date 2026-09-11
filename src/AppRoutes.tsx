@@ -49,57 +49,377 @@ import ProductChooser from './pages/ProductChooser';
 import BillingOnboardingPage, { LegacyBillingRedirect } from './pages/BillingOnboardingPage';
 import PaymentReturnPage from './pages/PaymentReturnPage';
 import SignupChooserPage from './pages/SignupChooserPage';
+import { getPendingCheckoutDestination } from './utils/auth/productAccess';
 
 const DashboardRouter = () => {
   const { userData, user } = useAuth();
-  const [access, setAccess] = useState<{ saas: boolean; extractor: boolean; client: boolean } | null>(null);
+  const [access, setAccess] = useState<{
+    saas: boolean;
+    extractor: boolean;
+    client: boolean;
+    pending: string | null;
+  } | null>(null);
   const admin = checkIsAdmin(userData, user?.email);
   useEffect(() => {
-    if (!user || admin) { setAccess({ saas: false, extractor: false, client: false }); return; }
-    let active = true; setAccess(null);
-    Promise.all([(supabase as any).from('saas_subscriptions').select('id,status,trial_ends_at,access_expires_at').in('status', ['trialing', 'active', 'past_due']).limit(1),(supabase as any).from('extractor_accounts').select('id,status,access_expires_at').limit(1),(supabase as any).from('company_user_links').select('id').eq('user_id', user.id).limit(1)]).then(([saasResult, extractorResult, clientResult]) => { if (!active) return; const now = Date.now(); const saas = !saasResult.error && Boolean(saasResult.data?.some((row: any) => { const boundary = row.status === 'trialing' ? row.trial_ends_at : row.access_expires_at; return !boundary || new Date(boundary).getTime() > now; })); const extractor = !extractorResult.error && Boolean(extractorResult.data?.some((row: any) => { const boundary = row.access_expires_at; return row.status !== 'suspended' && (!boundary || new Date(boundary).getTime() > now); })); setAccess({ saas, extractor, client: !clientResult.error && Boolean(clientResult.data?.length) }); });
-    return () => { active = false; };
+    if (!user || admin) {
+      setAccess({ saas: false, extractor: false, client: false, pending: null });
+      return;
+    }
+    let active = true;
+    setAccess(null);
+    Promise.all([
+      (supabase as any)
+        .from('saas_subscriptions')
+        .select('id,status,trial_ends_at,access_expires_at')
+        .in('status', ['trialing', 'active', 'past_due'])
+        .limit(1),
+      (supabase as any).from('extractor_accounts').select('id,status,access_expires_at').limit(1),
+      (supabase as any).from('company_user_links').select('id').eq('user_id', user.id).limit(1),
+      getPendingCheckoutDestination(),
+    ]).then(([saasResult, extractorResult, clientResult, pending]) => {
+      if (!active) return;
+      const now = Date.now();
+      const saas =
+        !saasResult.error &&
+        Boolean(
+          saasResult.data?.some((row: any) => {
+            const boundary = row.status === 'trialing' ? row.trial_ends_at : row.access_expires_at;
+            return !boundary || new Date(boundary).getTime() > now;
+          })
+        );
+      const extractor =
+        !extractorResult.error &&
+        Boolean(
+          extractorResult.data?.some((row: any) => {
+            const boundary = row.access_expires_at;
+            return row.status !== 'suspended' && (!boundary || new Date(boundary).getTime() > now);
+          })
+        );
+      setAccess({
+        saas,
+        extractor,
+        client: !clientResult.error && Boolean(clientResult.data?.length),
+        pending,
+      });
+    });
+    return () => {
+      active = false;
+    };
   }, [user?.id, admin]);
   if (admin) return <Navigate to="/admin" replace />;
   if (access === null) return <AppLoadingScreen mode="light" />;
-  if (user?.email?.trim().toLowerCase() === 'wsteste@gmail.com') return <Navigate to="/escolher-produto" replace />;
   if (access.extractor && access.saas) return <Navigate to="/escolher-produto" replace />;
   if (access.extractor && !access.saas) return <Navigate to="/extrator" replace />;
   if (access.saas) return <Navigate to="/app" replace />;
+  if (access.pending) return <Navigate to={access.pending} replace />;
+  if (user?.user_metadata?.signup_product === 'extractor') {
+    const intendedPlan = typeof user.user_metadata.signup_plan === 'string' ? user.user_metadata.signup_plan : 'extractor_commercial';
+    return <Navigate to={`/assinar/extrator?plan=${encodeURIComponent(intendedPlan)}`} replace />;
+  }
+  if (user?.user_metadata?.signup_product === 'issuer') return <Navigate to="/assinar/emissor?plan=issuer_monthly" replace />;
   return <Navigate to={access.client ? '/client' : '/home-preview'} replace />;
 };
 
-const AppRoutes = () => <Routes>
-  <Route path="/home-preview" element={<HomePreview />} /><Route path="/home-preview/*" element={<HomePreview />} /><Route path="/nova-home" element={<HomePreview />} />
-  <Route path="/guias" element={<BusinessGuidesIndexPage />} /><Route path="/guias/:slug" element={<BusinessGuidePage />} />
-  <Route path="/emissor-fiscal" element={<FiscalIssuerLandingPage />} /><Route path="/extrator-fiscal" element={<ExtractorFiscalLandingPage />} /><Route path="/simulacoes" element={<SimulationsHubPage />} />
-  <Route path="/extrator-preview" element={<FiscalExtractorApp preview />} />
-  <Route path="/emissor-preview" element={<EmissorPreview />} />
-  <Route path="/" element={<Index />} /><Route path="/login" element={<ClientLogin />} /><Route path="/cadastro" element={<PublicSignupPage />} />
-  <Route path="/cadastro-escolha" element={<SignupChooserPage />} />
-  <Route path="/escolher-produto" element={<PrivateRoute><ProductChooser /></PrivateRoute>} />
-  <Route path="/assinar" element={<PrivateRoute><LegacyBillingRedirect /></PrivateRoute>} />
-  <Route path="/assinar/emissor" element={<PrivateRoute><BillingOnboardingPage product="issuer" /></PrivateRoute>} />
-  <Route path="/assinar/extrator" element={<PrivateRoute><BillingOnboardingPage product="extractor" /></PrivateRoute>} />
-  <Route path="/pagamento/retorno" element={<PaymentReturnPage />} />
-  <Route path="/enquete/:id" element={<PollPage />} /><Route path="/enquete-numerica/:id" element={<NumericalPollPage />} /><Route path="/formulario/:id" element={<FormPollPage />} />
-  <Route path="/simulador-irpf" element={<TaxCalculator />} /><Route path="/calculadora-inss" element={<INSSCalculator />} /><Route path="/simulador-prolabore" element={<ProLaboreCalculator />} /><Route path="/changelog" element={<ChangeLog />} />
-  <Route path="/termos-de-servico" element={<LegalPage />} /><Route path="/politica-de-privacidade" element={<LegalPage />} />
-  <Route path="/admin" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="dashboard" /></PrivateRoute>} />
-  <Route path="/admin/clientes" element={<PrivateRoute requiredRole="admin"><AdminCompanies /></PrivateRoute>} />
-  <Route path="/admin/clientes/:companyId" element={<PrivateRoute requiredRole="admin"><AdminClientProfile /></PrivateRoute>} />
-  <Route path="/admin/clientes/:companyId/fiscal" element={<PrivateRoute requiredRole="admin"><AdminClientFiscalSetup /></PrivateRoute>} />
-  <Route path="/admin/empresas" element={<Navigate to="/admin/clientes" replace />} />
-  <Route path="/admin/assinantes" element={<PrivateRoute requiredRole="admin"><AdminSubscribers /></PrivateRoute>} />
-  <Route path="/admin/documentos" element={<PrivateRoute requiredRole="admin"><AdminClientDocuments /></PrivateRoute>} /><Route path="/admin/users" element={<Navigate to="/admin/documentos" replace />} />
-  <Route path="/admin/user-documents/:userId" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="user-documents" /></PrivateRoute>} />
-  <Route path="/admin/company-data/:userId" element={<PrivateRoute requiredRole="admin"><CompanyDataView /></PrivateRoute>} />
-  <Route path="/admin/storage" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="storage" /></PrivateRoute>} /><Route path="/admin/polls" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="polls" /></PrivateRoute>} /><Route path="/admin/tools" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="tools" /></PrivateRoute>} /><Route path="/admin/simulations" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="simulations" /></PrivateRoute>} /><Route path="/admin/announcements" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="announcements" /></PrivateRoute>} /><Route path="/admin/agenda" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="agenda" /></PrivateRoute>} /><Route path="/admin/settings" element={<PrivateRoute requiredRole="admin"><AdminDashboard activeTab="settings" /></PrivateRoute>} />
-  <Route path="/admin/fiscal/empresas" element={<PrivateRoute requiredRole="admin"><AdminFiscalCompanies /></PrivateRoute>} /><Route path="/admin/feature" element={<PrivateRoute requiredRole="admin"><AdminFiscalNotes /></PrivateRoute>} /><Route path="/admin/fiscal/emissao" element={<PrivateRoute requiredRole="admin"><AdminFeature /></PrivateRoute>} /><Route path="/admin/fiscal/cte" element={<Navigate to="/admin/fiscal/emissao" replace />} /><Route path="/admin/fiscal/laboratorio" element={<Navigate to="/admin/fiscal/emissao" replace />} />
-  <Route path="/admin-dashboard" element={<Navigate to="/admin" replace />} /><Route path="/admin/tax-simulations" element={<Navigate to="/admin/simulations" replace />} />
-  <Route path="/admin/carousel" element={<PrivateRoute requiredRole="admin"><AdminLayout><AdminPage><SimpleCarouselManager /></AdminPage></AdminLayout></PrivateRoute>} />
-  <Route path="/admin/lancamentos" element={<PrivateRoute requiredRole="admin"><AdminLancamentos /></PrivateRoute>} /><Route path="/admin/lancamentos/balancete" element={<PrivateRoute requiredRole="admin"><AdminBalancete /></PrivateRoute>} /><Route path="/admin/lancamentos/plano-contas" element={<PrivateRoute requiredRole="admin"><AdminPlanoContas /></PrivateRoute>} /><Route path="/admin/lancamentos/engine" element={<PrivateRoute requiredRole="admin"><AdminEngine /></PrivateRoute>} /><Route path="/admin/lancamentos/feature" element={<Navigate to="/admin/fiscal/emissao" replace />} />
-  <Route path="/extrator/*" element={<PrivateRoute><FiscalExtractorApp /></PrivateRoute>} /><Route path="/app/checkout/:invoiceId" element={<PrivateRoute><SaasCheckout /></PrivateRoute>} /><Route path="/app/*" element={<PrivateRoute><SaasApp /></PrivateRoute>} /><Route path="/client/*" element={<PrivateRoute><ClientDashboard /></PrivateRoute>} /><Route path="/dashboard" element={<PrivateRoute><DashboardRouter /></PrivateRoute>} />
-  <Route path="*" element={<NotFound />} />
-</Routes>;
+const AppRoutes = () => (
+  <Routes>
+    <Route path="/home-preview" element={<HomePreview />} />
+    <Route path="/home-preview/*" element={<HomePreview />} />
+    <Route path="/nova-home" element={<HomePreview />} />
+    <Route path="/guias" element={<BusinessGuidesIndexPage />} />
+    <Route path="/guias/:slug" element={<BusinessGuidePage />} />
+    <Route path="/emissor-fiscal" element={<FiscalIssuerLandingPage />} />
+    <Route path="/extrator-fiscal" element={<ExtractorFiscalLandingPage />} />
+    <Route path="/simulacoes" element={<SimulationsHubPage />} />
+    <Route path="/extrator-preview" element={<FiscalExtractorApp preview />} />
+    <Route path="/emissor-preview" element={<EmissorPreview />} />
+    <Route path="/" element={<Index />} />
+    <Route path="/login" element={<ClientLogin />} />
+    <Route path="/cadastro" element={<PublicSignupPage />} />
+    <Route path="/cadastro-escolha" element={<SignupChooserPage />} />
+    <Route
+      path="/escolher-produto"
+      element={
+        <PrivateRoute>
+          <ProductChooser />
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/assinar"
+      element={
+        <PrivateRoute>
+          <LegacyBillingRedirect />
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/assinar/emissor"
+      element={
+        <PrivateRoute>
+          <BillingOnboardingPage product="issuer" />
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/assinar/extrator"
+      element={
+        <PrivateRoute>
+          <BillingOnboardingPage product="extractor" />
+        </PrivateRoute>
+      }
+    />
+    <Route path="/pagamento/retorno" element={<PaymentReturnPage />} />
+    <Route path="/enquete/:id" element={<PollPage />} />
+    <Route path="/enquete-numerica/:id" element={<NumericalPollPage />} />
+    <Route path="/formulario/:id" element={<FormPollPage />} />
+    <Route path="/simulador-irpf" element={<TaxCalculator />} />
+    <Route path="/calculadora-inss" element={<INSSCalculator />} />
+    <Route path="/simulador-prolabore" element={<ProLaboreCalculator />} />
+    <Route path="/changelog" element={<ChangeLog />} />
+    <Route path="/termos-de-servico" element={<LegalPage />} />
+    <Route path="/politica-de-privacidade" element={<LegalPage />} />
+    <Route
+      path="/admin"
+      element={
+        <PrivateRoute requiredRole="admin">
+          <AdminDashboard activeTab="dashboard" />
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/admin/clientes"
+      element={
+        <PrivateRoute requiredRole="admin">
+          <AdminCompanies />
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/admin/clientes/:companyId"
+      element={
+        <PrivateRoute requiredRole="admin">
+          <AdminClientProfile />
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/admin/clientes/:companyId/fiscal"
+      element={
+        <PrivateRoute requiredRole="admin">
+          <AdminClientFiscalSetup />
+        </PrivateRoute>
+      }
+    />
+    <Route path="/admin/empresas" element={<Navigate to="/admin/clientes" replace />} />
+    <Route
+      path="/admin/assinantes"
+      element={
+        <PrivateRoute requiredRole="admin">
+          <AdminSubscribers />
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/admin/documentos"
+      element={
+        <PrivateRoute requiredRole="admin">
+          <AdminClientDocuments />
+        </PrivateRoute>
+      }
+    />
+    <Route path="/admin/users" element={<Navigate to="/admin/documentos" replace />} />
+    <Route
+      path="/admin/user-documents/:userId"
+      element={
+        <PrivateRoute requiredRole="admin">
+          <AdminDashboard activeTab="user-documents" />
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/admin/company-data/:userId"
+      element={
+        <PrivateRoute requiredRole="admin">
+          <CompanyDataView />
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/admin/storage"
+      element={
+        <PrivateRoute requiredRole="admin">
+          <AdminDashboard activeTab="storage" />
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/admin/polls"
+      element={
+        <PrivateRoute requiredRole="admin">
+          <AdminDashboard activeTab="polls" />
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/admin/tools"
+      element={
+        <PrivateRoute requiredRole="admin">
+          <AdminDashboard activeTab="tools" />
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/admin/simulations"
+      element={
+        <PrivateRoute requiredRole="admin">
+          <AdminDashboard activeTab="simulations" />
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/admin/announcements"
+      element={
+        <PrivateRoute requiredRole="admin">
+          <AdminDashboard activeTab="announcements" />
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/admin/agenda"
+      element={
+        <PrivateRoute requiredRole="admin">
+          <AdminDashboard activeTab="agenda" />
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/admin/settings"
+      element={
+        <PrivateRoute requiredRole="admin">
+          <AdminDashboard activeTab="settings" />
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/admin/fiscal/empresas"
+      element={
+        <PrivateRoute requiredRole="admin">
+          <AdminFiscalCompanies />
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/admin/feature"
+      element={
+        <PrivateRoute requiredRole="admin">
+          <AdminFiscalNotes />
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/admin/fiscal/emissao"
+      element={
+        <PrivateRoute requiredRole="admin">
+          <AdminFeature />
+        </PrivateRoute>
+      }
+    />
+    <Route path="/admin/fiscal/cte" element={<Navigate to="/admin/fiscal/emissao" replace />} />
+    <Route
+      path="/admin/fiscal/laboratorio"
+      element={<Navigate to="/admin/fiscal/emissao" replace />}
+    />
+    <Route path="/admin-dashboard" element={<Navigate to="/admin" replace />} />
+    <Route path="/admin/tax-simulations" element={<Navigate to="/admin/simulations" replace />} />
+    <Route
+      path="/admin/carousel"
+      element={
+        <PrivateRoute requiredRole="admin">
+          <AdminLayout>
+            <AdminPage>
+              <SimpleCarouselManager />
+            </AdminPage>
+          </AdminLayout>
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/admin/lancamentos"
+      element={
+        <PrivateRoute requiredRole="admin">
+          <AdminLancamentos />
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/admin/lancamentos/balancete"
+      element={
+        <PrivateRoute requiredRole="admin">
+          <AdminBalancete />
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/admin/lancamentos/plano-contas"
+      element={
+        <PrivateRoute requiredRole="admin">
+          <AdminPlanoContas />
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/admin/lancamentos/engine"
+      element={
+        <PrivateRoute requiredRole="admin">
+          <AdminEngine />
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/admin/lancamentos/feature"
+      element={<Navigate to="/admin/fiscal/emissao" replace />}
+    />
+    <Route
+      path="/extrator/*"
+      element={
+        <PrivateRoute>
+          <FiscalExtractorApp />
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/app/checkout/:invoiceId"
+      element={
+        <PrivateRoute>
+          <SaasCheckout />
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/app/*"
+      element={
+        <PrivateRoute>
+          <SaasApp />
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/client/*"
+      element={
+        <PrivateRoute>
+          <ClientDashboard />
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/dashboard"
+      element={
+        <PrivateRoute>
+          <DashboardRouter />
+        </PrivateRoute>
+      }
+    />
+    <Route path="*" element={<NotFound />} />
+  </Routes>
+);
 export default AppRoutes;

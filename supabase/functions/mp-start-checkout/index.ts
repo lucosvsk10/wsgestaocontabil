@@ -132,6 +132,17 @@ Deno.serve(async (req) => {
     await admin.from("saas_subscriptions").update({ status: "canceled" }).eq("id", subscription.id);
     return json({ error: "Não foi possível abrir o Mercado Pago. Tente novamente." }, 502);
   }
+  if (billingMode === "recurring" && confirmedTrial) {
+    const providerId = String(provider.id || "");
+    const verificationResponse = await fetch(`https://api.mercadopago.com/preapproval/${encodeURIComponent(providerId)}`, { headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json" } });
+    const verified = await verificationResponse.json().catch(() => ({})) as Record<string, any>;
+    const verifiedTrial = verified?.auto_recurring?.free_trial;
+    if (!verificationResponse.ok || Number(verifiedTrial?.frequency) !== selected.trialDays || String(verifiedTrial?.frequency_type || "").toLowerCase() !== "days") {
+      await admin.from("saas_billing_checkouts").update({ status: "failed", failure_code: "free_trial_not_confirmed" }).eq("id", checkout.id);
+      await admin.from("saas_subscriptions").update({ status: "canceled" }).eq("id", subscription.id);
+      return json({ error: "O Mercado Pago não confirmou os 7 dias grátis. Nenhuma contratação foi iniciada." }, 502);
+    }
+  }
   await admin.from("saas_billing_checkouts").update({ status: "ready", provider_reference: String(provider.id || ""), checkout_url: checkoutUrl }).eq("id", checkout.id);
   if (billingMode === "recurring") {
     await admin.from("saas_subscriptions").update({ provider_subscription_id: String(provider.id || ""), provider_status: String(provider.status || "pending") }).eq("id", subscription.id);

@@ -86,7 +86,7 @@
 .billing-product-switch > small {
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: .08em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 .billing-product-ribbon small {
@@ -282,6 +282,38 @@
   color: #687386;
   font-size: 12px;
   line-height: 1.35;
+}
+.billing-promotional-price {
+  display: grid !important;
+  justify-items: end;
+  gap: 1px;
+}
+.billing-promotional-price del {
+  color: #8b96a6;
+  font-size: 12px;
+  font-weight: 600;
+}
+.billing-promotional-price span {
+  color: var(--billing-accent);
+  font-size: 18px;
+}
+.billing-promotional-price small {
+  color: #69778a;
+  font-size: 10px;
+}
+.billing-old-price {
+  text-decoration: line-through;
+  color: #7d8898 !important;
+}
+.billing-discount dt,
+.billing-discount dd {
+  color: #17804d !important;
+  font-weight: 750;
+}
+.billing-trial-note strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #142238;
 }
 .billing-mode button > i {
   width: 16px;
