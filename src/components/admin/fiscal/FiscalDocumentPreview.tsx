@@ -16,6 +16,26 @@ function downloadXml(doc:PreviewDocument){
   const url=URL.createObjectURL(blob),a=document.createElement("a");
   a.href=url;a.download=`${doc.accessKey||doc.nsu||"documento-fiscal"}.xml`;a.click();URL.revokeObjectURL(url);
 }
+const brl=(v?:number)=>v==null?"—":Number(v).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+const dateBr=(v?:string)=>{if(!v)return"—";const d=new Date(v);return Number.isNaN(d.getTime())?v:d.toLocaleString("pt-BR")};
+function infoRows(doc:PreviewDocument):[string,string][]{
+  return [
+    ["Número / Série",`${doc.number||"—"} / ${doc.series||"—"}`],
+    ["Emissão",dateBr(doc.issueDate)],
+    ["Valor",brl(doc.value)],
+    ["Operação",doc.direction==="saida"?"Venda / saída":doc.direction==="entrada"?"Compra / entrada":"Documento relacionado"],
+    ["Emitente",`${doc.issuerName||"—"}${doc.issuerCnpj?` · ${doc.issuerCnpj}`:""}`],
+    ["Destinatário",doc.recipientCnpj||"—"],
+    ["Situação",doc.statusText||doc.statusCode||"—"],
+    ["Chave de acesso",doc.accessKey||"—"],
+  ];
+}
+function downloadInfo(doc:PreviewDocument){
+  const text=infoRows(doc).map(([k,v])=>`${k}: ${v}`).join("\n")+`\n\nModelo: ${doc.model||"—"}\nNSU: ${doc.nsu||"—"}\n`;
+  const blob=new Blob([text],{type:"text/plain;charset=utf-8"});
+  const url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download=`informacoes-${doc.accessKey||doc.nsu||"nota"}.txt`;a.click();URL.revokeObjectURL(url);
+}
 async function renderPdf(doc:PreviewDocument){
   const{data,error}=await supabase.functions.invoke("dfe-danfe-pdf",{body:{company_id:doc.companyId,document:doc}});
   if(error)throw error;
