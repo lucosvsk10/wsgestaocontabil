@@ -11,7 +11,6 @@ import '@/styles/shared-entry-visual.css';
 
 const STANDARD_LOGO = '/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png';
 const LIGHT_LOGO = '/lovable-uploads/f7fdf0cf-f16c-4df7-a92c-964aadea9539.png';
-const WS_TEST_EMAIL = 'wsteste@gmail.com';
 
 const ClientLogin = () => {
   const [credential, setCredential] = useState('');
@@ -30,15 +29,16 @@ const ClientLogin = () => {
 
   const resolveDestination = async (userId: string) => {
     const redirectPath = new URLSearchParams(location.search).get('redirect');
-    if (redirectPath?.startsWith('/') && !redirectPath.startsWith('//') && !redirectPath.includes('\\')) return redirectPath;
+    if (redirectPath?.startsWith('/') && !redirectPath.startsWith('//') && !redirectPath.includes('\\') && !redirectPath.startsWith('/client')) return redirectPath;
     const statePath = (location.state as { from?: string } | null)?.from;
-    if (statePath?.startsWith('/') && !statePath.startsWith('//') && !statePath.includes('\\')) return statePath;
+    if (statePath?.startsWith('/') && !statePath.startsWith('//') && !statePath.includes('\\') && !statePath.startsWith('/client')) return statePath;
     const { data: roles } = await supabase.from('user_roles').select('role').eq('user_id', userId);
     if (roles?.some(({ role }) => role === 'admin')) return '/admin';
     const access = await getCurrentProductAccess();
     if (access.saas) return '/app';
     if (access.extractor) return '/extrator';
-    return '/client';
+    if (access.client) return '/client';
+    return '/escolher-produto';
   };
 
   const signInWithUsername = async (username: string, currentPassword: string) => {
@@ -57,7 +57,6 @@ const ClientLogin = () => {
       if (normalizedCredential.includes('@')) { const { error: signInError, data } = await signIn(normalizedCredential, password); if (signInError || !data?.user) throw new Error('Usuário ou senha inválidos.'); user = data.user; }
       else user = await signInWithUsername(normalizedCredential, password);
       notifyLogin().catch(() => undefined);
-      if (user.email?.trim().toLowerCase() === WS_TEST_EMAIL) { navigate('/escolher-produto', { replace: true }); return; }
       navigate(await resolveDestination(user.id), { replace: true });
     } catch (caughtError: unknown) {
       const message = caughtError instanceof Error && caughtError.message.includes('Muitas tentativas') ? caughtError.message : 'Não foi possível entrar. Confira seu usuário e sua senha.';
