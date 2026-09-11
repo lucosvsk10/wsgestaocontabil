@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, ArrowUpRight, Building2, Briefcase, Calculator, Check, FileText, FolderX, Instagram, MessageCircle, Receipt, ShieldCheck, Target, UserRound, Users, Wallet } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import guides from '@/content/business-guides.json';
@@ -44,6 +44,7 @@ const HomePreview = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [heroIndex, setHeroIndex] = useState(0);
   const [founderOpen, setFounderOpen] = useState(false);
+  const founderRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const timer = window.setInterval(() => setHeroIndex((current) => (current + 1) % heroMessages.length), 4800);
@@ -54,6 +55,19 @@ const HomePreview = () => {
     document.title = 'WS Gestão Contábil | Contabilidade e tecnologia para empresas';
     const hash = window.location.hash;
     if (hash) window.requestAnimationFrame(() => document.querySelector(hash)?.scrollIntoView());
+  }, []);
+
+  useEffect(() => {
+    const founder = founderRef.current;
+    const mobile = window.matchMedia('(max-width: 760px)');
+    if (!founder || !mobile.matches) return;
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) setFounderOpen(true);
+    }, { threshold: .42, rootMargin: '0px 0px -12% 0px' });
+
+    observer.observe(founder);
+    return () => observer.disconnect();
   }, []);
 
   const heroMessage = heroMessages[heroIndex];
@@ -86,7 +100,7 @@ const HomePreview = () => {
             <p className="preview-hero-subtitle">O que sua empresa precisar, em um só lugar.</p>
             <a className="preview-start-button" href="#servicos">COMECE AQUI</a>
           </div>
-          <div id="sobre" className={`preview-founder ${founderOpen ? 'is-open' : ''}`}>
+          <div ref={founderRef} id="sobre" className={`preview-founder ${founderOpen ? 'is-open' : ''}`}>
             <img className="preview-founder-emblem" src="/assets/ws-founder-emblem.webp" alt="" aria-hidden="true" />
             <div className="preview-founder-portrait">
               <img className="preview-founder-image" src="/assets/ws-contador-home.png" alt="Wilson Souza, contador e CEO da WS Gestão Contábil" />
