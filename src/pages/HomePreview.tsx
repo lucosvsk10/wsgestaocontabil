@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { ArrowRight, ArrowUpRight, Building2, Briefcase, Calculator, FileCheck2, FileSearch2, FileText, FolderX, Instagram, MessageCircle, Receipt, ShieldCheck, Target, UserRound, Users, Wallet } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowRight, ArrowUpRight, Building2, Briefcase, Calculator, Check, FileText, FolderX, Instagram, MessageCircle, Receipt, ShieldCheck, Target, UserRound, Users, Wallet } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import guides from '@/content/business-guides.json';
 import TrustedCompaniesSection from '@/components/public/TrustedCompaniesSection';
@@ -22,10 +22,9 @@ const services = [
   { icon: FolderX, title: <>Encerramento<br /><strong>de empresa</strong></>, description: 'Baixa de CNPJ, inscrições, regularização e encerramento nos órgãos competentes.' },
 ];
 
-const software = [
-  { audience: 'PARA EMPRESAS', badge: 'MELHOR APP DE EMISSÃO NACIONAL', title: <>EMISSOR DE<br /><span>NOTAS FISCAIS</span></>, description: 'Emita e gerencie suas notas fiscais em um só lugar.', cta: <>VER OFERTA <small>POR TEMPO LIMITADO</small><ArrowUpRight size={18} /></>, icon: 'document', urgent: true, href: '/emissor-fiscal' },
-  { audience: 'PESSOAL / EMPRESARIAL', title: <>SIMULADORES<br />DE <span>IMPOSTOS</span></>, description: 'Calcule impostos, contribuições e encargos em poucos segundos.', cta: <>VER SIMULADOR <ArrowUpRight size={18} /></>, icon: 'calculator', urgent: false, href: '/simulador-irpf' },
-  { audience: 'PARA EMPRESAS', badge: 'LICENÇA OFICIAL DA SEFAZ', title: <>EXTRATOR DE<br /><span>COMPRAS E<br />VENDAS</span></>, description: 'Busque e organize suas notas fiscais de compras e vendas de forma automática.', cta: <>VER OFERTA <small>POR TEMPO LIMITADO</small><ArrowUpRight size={18} /></>, icon: 'document', urgent: true, href: '/extrator-fiscal' },
+const products = [
+  { eyebrow: 'EMISSÃO SEM REDIGITAÇÃO', name: 'Emissor Fiscal WS', description: 'Emita NF-e, NFC-e, NFS-e, CT-e e MDF-e em um só sistema. Reaproveite clientes, produtos e dados fiscais para reduzir erros e concluir cada emissão com muito mais agilidade.', image: '/assets/ws-emissor-dashboard-transparent-v2.png', imageAlt: 'Painel interno do Emissor Fiscal WS', features: ['Cinco tipos de documento fiscal no mesmo painel', 'Cadastros prontos para reutilizar em novas emissões', 'Histórico completo para localizar e acompanhar cada nota'], cta: 'Conhecer o Emissor', href: '/emissor-fiscal' },
+  { eyebrow: '7 DIAS GRÁTIS • SEM PEDIR NOTA AO CLIENTE', name: 'Extrator Fiscal WS', description: 'Pare de cobrar notas por WhatsApp e esperar o cliente enviar arquivos. O Extrator reúne os documentos fiscais de compras e vendas, separa tudo por empresa e deixa o escritório pronto para trabalhar sem atrasos no fechamento.', image: '/assets/ws-extrator-dashboard-transparent-v2.png', imageAlt: 'Painel interno do Extrator Fiscal WS', features: ['Notas disponíveis sem depender do envio manual do cliente', 'Documentos de compras e vendas organizados por empresa', 'Menos cobranças, retrabalho e fechamento fiscal atrasado'], cta: 'Conhecer o Extrator gratuitamente', href: '/extrator-fiscal' },
 ];
 
 const heroMessages = [
@@ -45,6 +44,7 @@ const HomePreview = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [heroIndex, setHeroIndex] = useState(0);
   const [founderOpen, setFounderOpen] = useState(false);
+  const founderRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const timer = window.setInterval(() => setHeroIndex((current) => (current + 1) % heroMessages.length), 4800);
@@ -55,6 +55,19 @@ const HomePreview = () => {
     document.title = 'WS Gestão Contábil | Contabilidade e tecnologia para empresas';
     const hash = window.location.hash;
     if (hash) window.requestAnimationFrame(() => document.querySelector(hash)?.scrollIntoView());
+  }, []);
+
+  useEffect(() => {
+    const founder = founderRef.current;
+    const mobile = window.matchMedia('(max-width: 760px)');
+    if (!founder || !mobile.matches) return;
+
+    const observer = new IntersectionObserver(([entry]) => {
+      setFounderOpen(entry.isIntersecting);
+    }, { threshold: .42, rootMargin: '0px 0px -12% 0px' });
+
+    observer.observe(founder);
+    return () => observer.disconnect();
   }, []);
 
   const heroMessage = heroMessages[heroIndex];
@@ -87,14 +100,14 @@ const HomePreview = () => {
             <p className="preview-hero-subtitle">O que sua empresa precisar, em um só lugar.</p>
             <a className="preview-start-button" href="#servicos">COMECE AQUI</a>
           </div>
-          <div id="sobre" className={`preview-founder ${founderOpen ? 'is-open' : ''}`}>
+          <div ref={founderRef} id="sobre" className={`preview-founder ${founderOpen ? 'is-open' : ''}`}>
             <img className="preview-founder-emblem" src="/assets/ws-founder-emblem.webp" alt="" aria-hidden="true" />
             <div className="preview-founder-portrait">
-              <img className="preview-founder-image" src="/assets/ws-contador-home-v4.svg" alt="Wilson Souza, contador e CEO da WS Gestão Contábil" />
+              <img className="preview-founder-image" src="/assets/ws-contador-home.png" alt="Wilson Souza, contador e CEO da WS Gestão Contábil" />
               <button className="preview-founder-info" type="button" aria-expanded={founderOpen} onClick={() => setFounderOpen((open) => !open)}>
                 <span className="preview-founder-name">WILSON SOUZA</span>
                 <span className="preview-founder-details">
-                  <span>CONTADOR E CEO DA<br />WS GESTÃO HÁ MAIS DE 16 ANOS</span>
+                  <span>CONTADOR E CEO DA<br />WS GESTÃO HÁ MAIS DE 25 ANOS</span>
                   <span>REFERÊNCIA <strong>#1</strong> EM<br />CONTABILIDADE EM TODO O NORDESTE</span>
                 </span>
               </button>
@@ -109,8 +122,17 @@ const HomePreview = () => {
         </section>
 
         <section id="softwares" className="preview-software preview-section">
-          <h2>SOFTWARES WS</h2>
-          <div className="preview-software-grid">{software.map((item) => <article className="preview-software-card" key={item.audience + item.title.toString()}><div className="preview-software-meta"><span>{item.audience}</span>{item.badge && <span className="preview-software-badge">{item.badge}</span>}</div><h3>{item.title}</h3><p>{item.description}</p><Link className={`preview-software-cta ${item.urgent ? 'is-urgent' : ''}`} to={item.href}>{item.cta}</Link><div className={`preview-software-icon ${item.icon}`} aria-hidden="true">{item.icon === 'calculator' ? <Calculator /> : item.badge?.includes('SEFAZ') ? <FileSearch2 /> : <FileCheck2 />}</div></article>)}</div>
+          <div className="preview-products-heading">
+            <span>TECNOLOGIA DESENVOLVIDA PELA WS</span>
+            <h2>SISTEMAS PARA<br />A ROTINA FISCAL</h2>
+            <p>Menos tarefas repetitivas, menos documentos perdidos e mais tempo para cuidar do que realmente exige análise do seu escritório.</p>
+          </div>
+          <div className="preview-product-showcase">
+            {products.map((product, index) => <article className="preview-product-card" key={product.name}>
+              <div className="preview-product-visual"><img src={product.image} alt={product.imageAlt} loading="lazy" /></div>
+              <div className="preview-product-copy"><span>{product.eyebrow}</span><small>0{index + 1}</small><h3>{product.name}</h3><p>{product.description}</p><ul>{product.features.map((feature) => <li key={feature}><Check size={16} />{feature}</li>)}</ul><Link to={product.href}>{product.cta}<ArrowUpRight size={18} /></Link></div>
+            </article>)}
+          </div>
         </section>
 
         <TrustedCompaniesSection />
@@ -140,12 +162,12 @@ const HomePreview = () => {
         <section id="duvidas" className="public-faq preview-section" aria-labelledby="faq-title">
           <div className="public-section-heading"><span>ANTES DE COMEÇAR</span><h2 id="faq-title">DÚVIDAS<br />FREQUENTES</h2><p>Respostas diretas para facilitar sua decisão.</p></div>
           <div className="public-faq-list">
-            <details><summary>A WS atende empresas fora de Major Isidoro?</summary><p>Sim. A equipe atende presencialmente em Major Isidoro e Palmeira dos Índios e também acompanha empresas de outras cidades com processos digitais.</p></details>
+            <details><summary>A WS atende empresas fora de Alagoas?</summary><p>Sim. A WS atende empresas em todo o Brasil por meio de processos digitais, além do atendimento presencial nas unidades de Palmeira dos Índios e Major Isidoro.</p></details>
             <details><summary>Como funciona a troca de contador?</summary><p>Primeiro analisamos a situação da empresa e os documentos disponíveis. Depois, orientamos a transição e o contato com a contabilidade anterior para preservar a continuidade das obrigações.</p></details>
             <details><summary>Posso conversar com a WS antes de abrir o CNPJ?</summary><p>Sim. Essa conversa ajuda a avaliar atividade, endereço, participação de sócios e a estrutura mais adequada antes do registro.</p></details>
             <details><summary>A WS oferece sistema para emissão de notas fiscais?</summary><p>Sim. O Emissor WS reúne emissão e gerenciamento de notas em um ambiente próprio para empresas.</p></details>
             <details><summary>Quanto tempo leva para abrir uma empresa?</summary><p>O prazo varia conforme atividade, município, análise de viabilidade e licenças necessárias. A equipe informa uma estimativa após conhecer o caso.</p></details>
-            <details><summary>Como falar com a equipe?</summary><p>Você pode chamar diretamente pelo WhatsApp no número (82) 99932-4884.</p></details>
+            <details><summary>Como falar com a equipe?</summary><p className="public-faq-contact">Fale com a WS pelo <a href="https://wa.me/5582999324884" target="_blank" rel="noreferrer">WhatsApp (82) 99932-4884</a>, pelo <a href="https://www.instagram.com/wscontabil.co/" target="_blank" rel="noreferrer">Instagram @wscontabil.co</a> ou pelo e-mail <a href="mailto:contato@wsgestaocontabil.com">contato@wsgestaocontabil.com</a>.</p></details>
           </div>
         </section>
       </main>
