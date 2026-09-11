@@ -80,6 +80,13 @@ export default function BillingOnboardingPage({ product }: { product: Product })
   const productPlans = Object.entries(planCatalog).filter(([, plan]) => plan.product === product) as [PlanCode, Plan][];
 
   useEffect(() => {
+    setPlanCode(initialPlan);
+    setBillingMode('recurring');
+    setAccepted(false);
+    setError('');
+  }, [initialPlan, product]);
+
+  useEffect(() => {
     window.scrollTo(0, 0);
     document.title = `Contratar ${content.name} | WS Gestão Contábil`;
   }, [content.name]);
@@ -143,7 +150,7 @@ export default function BillingOnboardingPage({ product }: { product: Product })
       </header>
 
       <div className="billing-product-ribbon">
-        <Link to={product === 'issuer' ? '/assinar/extrator?plan=extractor_commercial' : '/assinar/emissor?plan=issuer_monthly'}>{product === 'issuer' ? 'Extrator Fiscal WS' : 'Emissor Fiscal WS'}</Link>
+        <div className="billing-product-switch"><small>Alterar para:</small><Link to={product === 'issuer' ? '/assinar/extrator?plan=extractor_commercial' : '/assinar/emissor?plan=issuer_monthly'}>{product === 'issuer' ? 'Extrator Fiscal WS' : 'Emissor Fiscal WS'}</Link></div>
         <small>{content.context}</small>
       </div>
 

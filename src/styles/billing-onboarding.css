@@ -67,9 +67,27 @@
   padding: 12px 16px;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
 }
-.billing-product-ribbon span {
+.billing-product-ribbon span,
+.billing-product-ribbon a {
   font-size: 14px;
   font-weight: 750;
+}
+.billing-product-ribbon a {
+  color: #142238;
+  text-decoration: none;
+}
+.billing-product-ribbon a:hover {
+  color: var(--billing-accent);
+}
+.billing-product-switch {
+  display: grid;
+  gap: 2px;
+}
+.billing-product-switch > small {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
 }
 .billing-product-ribbon small {
   color: #687386;
