@@ -1,5 +1,320 @@
 .ws-emission-workspace {
   width: 100%;
+  color: #233548;
+}
+
+.saas-main-content .ws-emission-workspace {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 8px 0 42px;
+}
+
+.ws-emission-workspace .ca-emission-title {
+  margin-bottom: 18px;
+  border: 1px solid #d7e0e8;
+  border-radius: 18px;
+  background: #fff;
+  padding: 20px 22px;
+  box-shadow: 0 10px 26px rgba(24, 43, 64, .05);
+}
+
+.ws-emission-workspace .ca-emission-title h1 {
+  font-size: clamp(1.45rem, 2.5vw, 2rem) !important;
+  letter-spacing: -.025em;
+}
+
+.ws-emission-workspace .ca-emission-title-tools {
+  align-items: center;
+}
+
+.ws-emission-workspace .ca-emission-title-tools .ca-draft-status {
+  border: 1px solid #d7e2d9;
+  border-radius: 999px;
+  background: #f7fbf7;
+  padding: 7px 10px;
+}
+
+.ws-emission-workspace .ca-step-page,
+.ws-emission-workspace .ca-review-layout {
+  min-height: 520px;
+}
+
+.ws-emission-workspace .ca-step-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 28px;
+  border-top: 1px solid #e3eaf0;
+  padding-top: 20px;
+}
+
+.ws-emission-workspace .ca-btn-primary {
+  border-radius: 10px !important;
+  background: #173b56 !important;
+  box-shadow: 0 5px 12px rgba(23, 59, 86, .14) !important;
+}
+
+.ws-emission-workspace .ca-btn-primary:hover {
+  background: #0f2e45 !important;
+}
+
+.ws-emission-workspace .ca-form-section {
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: none;
+}
+
+.ws-emission-workspace .ca-section-head {
+  border-radius: 14px 14px 0 0;
+  background: #f7f9fb;
+  padding: 17px 20px 15px;
+}
+
+.ws-emission-workspace .ca-section-head:before {
+  width: 3px;
+}
+
+.ws-emission-workspace .ca-section-head h2 {
+  font-size: 1rem !important;
+  color: #173b56 !important;
+}
+
+.ws-emission-workspace .ca-section-body {
+  padding: 20px;
+}
+
+.ws-emission-workspace .ca-label {
+  color: #415466;
+  font-size: .74rem;
+  letter-spacing: .01em;
+}
+
+.ws-emission-workspace .ca-select,
+.ws-emission-workspace input,
+.ws-emission-workspace textarea {
+  min-height: 46px;
+  border-radius: 10px !important;
+  border-color: #cbd7e1;
+  box-shadow: none;
+}
+
+.ws-emission-workspace .ca-select:focus,
+.ws-emission-workspace input:focus,
+.ws-emission-workspace textarea:focus {
+  border-color: #397b9f;
+  box-shadow: 0 0 0 3px rgba(57, 123, 159, .12);
+}
+
+.ws-record-picker {
+  display: grid;
+  gap: 7px;
+}
+
+.ws-record-trigger {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  min-height: 64px;
+  border-radius: 12px !important;
+  padding: 9px 12px;
+}
+
+.ws-record-trigger.has-record {
+  border-color: #9db9c9;
+  background: #f8fbfc;
+}
+
+.ws-record-avatar {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 10px;
+  background: #eaf2f6;
+  color: #24617e;
+  font-size: .75rem;
+  font-weight: 700;
+}
+
+.ws-record-body {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+  text-align: left;
+}
+
+.ws-record-body strong,
+.ws-record-body small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ws-record-body strong {
+  color: #173b56;
+  font-size: .86rem;
+}
+
+.ws-record-body small {
+  color: #6d7d8a;
+  font-size: .72rem;
+}
+
+.ws-record-location {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.ws-record-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #397b9f;
+  font-size: .73rem;
+  font-weight: 700;
+}
+
+.ws-record-dialog {
+  width: min(680px, calc(100vw - 28px));
+  border-radius: 18px !important;
+  padding: 24px !important;
+}
+
+.ws-record-dialog header {
+  display: grid;
+  gap: 5px;
+}
+
+.ws-record-dialog h2 {
+  color: #173b56;
+  font-size: 1.25rem;
+  letter-spacing: -.015em;
+}
+
+.ws-record-search {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 20px;
+  border: 1px solid #cbd7e1;
+  border-radius: 12px;
+  padding: 0 12px;
+  color: #6d7d8a;
+}
+
+.ws-record-search input {
+  min-height: 46px;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.ws-record-result-count {
+  margin: 12px 0 8px;
+  color: #7a8995;
+  font-size: .75rem;
+}
+
+.ws-record-results {
+  display: grid;
+  gap: 8px;
+  max-height: min(430px, 52vh);
+  overflow: auto;
+}
+
+.ws-record-result {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  border: 1px solid #dce5eb;
+  border-radius: 12px;
+  background: #fff;
+  padding: 11px;
+  text-align: left;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+
+.ws-record-result:hover {
+  border-color: #9db9c9;
+  background: #f8fbfc;
+}
+
+.ws-record-price {
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+  color: #397b9f;
+}
+
+.ws-record-price small {
+  color: #81909b;
+  font-size: .67rem;
+}
+
+.ws-record-empty {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  border: 1px dashed #cbd7e1;
+  border-radius: 14px;
+  color: #6d7d8a;
+  padding: 30px 20px;
+  text-align: center;
+}
+
+.ws-record-empty strong {
+  color: #314b5e;
+}
+
+.ws-record-empty p {
+  max-width: 360px;
+  font-size: .8rem;
+}
+
+.ws-record-dialog footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+  color: #7a8995;
+  font-size: .72rem;
+}
+
+.ca-municipality {
+  position: relative;
+}
+
+.ca-municipality-results {
+  z-index: 20;
+  border: 1px solid #cbd7e1;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 15px 30px rgba(24, 43, 64, .14);
+  padding: 6px;
+}
+
+.ca-municipality-results button {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  padding: 10px;
+  text-align: left;
+}
+
+.ca-municipality-results button:hover {
+  background: #f1f7fa;
+}
+
+.ca-municipality-results span {
+  color: #6d7d8a;
+  font-size: .74rem;
 }
 
 .ws-emission-grid {
