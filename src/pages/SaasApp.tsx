@@ -25,7 +25,8 @@ import SaasReports from '@/components/saas/SaasReports';
 import SaasDashboard from '@/components/saas/SaasDashboard';
 import SaasProductsPremium from '@/components/saas/SaasProductsPremium';
 import SaasDfeManager from '@/components/saas/SaasDfeManager';
-import SaasIssuedNotes from '@/components/saas/SaasIssuedNotes';
+import SaasMyNotes, { DraftResumeBanner } from '@/components/saas/SaasDrafts';
+import { useEmissionDrafts } from '@/hooks/useEmissionDrafts';
 import SaasSetupGuide from '@/components/saas/SaasSetupGuide';
 import AccountDrawer from '@/components/account/AccountDrawer';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
@@ -35,6 +36,7 @@ import '@/styles/saas-admin-reconciliation.css';
 import '@/styles/saas-native-font.css';
 import '@/styles/saas-mobile-polish.css';
 import '@/styles/saas-user-polish.css';
+import '@/styles/saas-emission-workspace.css';
 
 const WS_LOGO = '/assets/ws-emissor-fiscal.png';
 const TEST_TRANSPORT_ORG_ID = 'c77c4620-fbbb-4f03-9e32-ab48d25bb0cf';
@@ -139,6 +141,14 @@ export default function SaasApp() {
   const [reusableEmission, setReusableEmission] = useState<any>(null);
   const [pendingCadastroCreate, setPendingCadastroCreate] = useState<CadastroSection | null>(null);
   const organizationRequest = useRef(0);
+  const drafts = useEmissionDrafts(organization?.id || null);
+  const [notesView, setNotesView] = useState<'issued' | 'drafts'>('issued');
+  const resumeDraft = (document: string) => {
+    setReusableEmission(null);
+    setSelectedDocument(document);
+    setActive('Emissão');
+  };
+  const openDrafts = () => { setNotesView('drafts'); setActive('Minhas notas'); setSelectedDocument(null); };
 
   const loadOrg = async (preferredOrganizationId?: string) => {
     if (!user) return;
@@ -317,10 +327,14 @@ export default function SaasApp() {
       />
     );
   else if (active === 'Gerenciar DF-e') content = <SaasDfeManager />;
-  else if (active === 'Notas Emitidas')
+  else if (active === 'Minhas notas')
     content = (
-      <SaasIssuedNotes
+      <SaasMyNotes
+        key={notesView}
         emissions={emissions}
+        drafts={drafts}
+        initialTab={notesView}
+        onResume={resumeDraft}
         onNew={() => {
           setReusableEmission(null);
           setSelectedDocument(null);
@@ -358,7 +372,7 @@ export default function SaasApp() {
     },
     {
       title: 'Documentos emitidos',
-      text: 'A aba Notas Emitidas reúne o histórico de NF-e, NFC-e, NFS-e, CT-e e MDF-e.',
+      text: 'Minhas notas reúne documentos emitidos e rascunhos em andamento.',
     },
   ];
 
@@ -474,10 +488,10 @@ export default function SaasApp() {
             </NavButton>
             <NavButton
               icon={FileText}
-              active={active === 'Notas Emitidas'}
-              onClick={() => chooseNav('Notas Emitidas')}
+              active={active === 'Minhas notas'}
+              onClick={() => { setNotesView('issued'); chooseNav('Minhas notas'); }}
             >
-              Notas Emitidas
+              Minhas notas
             </NavButton>
           </section>
           <div className="mt-5 space-y-5">
@@ -575,7 +589,10 @@ export default function SaasApp() {
       </aside>
 
       <main className="saas-main-content min-h-screen pl-72 pt-[72px]">
-        <div className="mx-auto w-full max-w-[1680px] px-5 py-6 lg:px-8 xl:px-10">{content}</div>
+        <div className="mx-auto w-full max-w-[1680px] px-5 py-6 lg:px-8 xl:px-10">
+          {active !== 'Emissão' && active !== 'Minhas notas' && <DraftResumeBanner drafts={drafts} onResume={resumeDraft} onAll={openDrafts} />}
+          {content}
+        </div>
       </main>
       {showSetup && (
         <SaasSetupGuide
@@ -622,3 +639,4 @@ function NavButton({
     </button>
   );
 }
+
