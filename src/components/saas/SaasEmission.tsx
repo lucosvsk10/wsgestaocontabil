@@ -1,4 +1,4 @@
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   ChevronRight,
@@ -14,7 +14,18 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
+import {
+  clearEmissionDraft,
+  emissionDraftKey,
+  readEmissionDraft,
+  writeEmissionDraft,
+} from '@/lib/saas/emissionDraft';
+import { isValidAccessKey, isValidCpf, isValidCnpj, isValidTaxId, isPositiveAmount, isDocumentNumber, brazilStates, parseAccessKeys, validateMdfeKeys } from '@/lib/saas/emissionValidation';
+import { fiscalErrorMessage, readFiscalError } from '@/lib/saas/emissionErrors';
 import SaasDanfePreview, { printDanfe } from './SaasDanfePreview';
+import MunicipalityField from './MunicipalityField';
+import FiscalRecordPicker from './FiscalRecordPicker';
+import '@/styles/saas-emission-workspace.css';
 
 const docs = ['NF-e', 'NFC-e', 'NFS-e', 'CT-e', 'MDF-e'];
 const money = (v: any) =>
@@ -32,6 +43,60 @@ const reusablePartsDefault = {
   payment: true,
   fiscal: true,
   transport: true,
+};
+const initialEmissionForm = {
+  customerId: '',
+  productId: '',
+  serviceId: '',
+  quantity: '1',
+  unitPrice: '',
+  series: '1',
+  number: '1',
+  payment: '01',
+  cfop: '',
+  description: '',
+  value: '',
+  serviceCode: '',
+  municipioPrestacao: '',
+  municipioPrestacaoNome: '',
+  municipioPrestacaoUf: '',
+  remetenteId: '',
+  destinatarioId: '',
+  toma: '0',
+  carrierId: '',
+  rntrc: '',
+  chNFe: '',
+  cfopCte: '5353',
+  vTPrest: '',
+  vCarga: '',
+  qCarga: '1',
+  munIniCodigo: '',
+  munIniNome: '',
+  ufIni: 'AL',
+  munFimCodigo: '',
+  munFimNome: '',
+  ufFim: 'AL',
+  plate: '',
+  driverName: '',
+  driverCpf: '',
+  tara: '1000',
+  capacity: '5000',
+  unloadCode: '',
+  unloadName: '',
+  cargoValue: '',
+  cargoWeight: '',
+  keys: '',
+  tpEmit: '2',
+  seguradoraNome: '',
+  seguradoraCnpj: '',
+  apolice: '',
+  averbacao: '',
+  contratanteId: '',
+  ncmPredominante: '',
+  xProd: '',
+  cepDescarga: '',
+  vContrato: '',
+  pixPagamento: '',
 };
 type ReusableParts = typeof reusablePartsDefault;
 const emissionType = (emission: any) =>
@@ -60,6 +125,7 @@ function Field({
   wide = false,
   required = false,
   hint,
+  suggestions,
 }: {
   label: string;
   value: any;
@@ -69,7 +135,9 @@ function Field({
   wide?: boolean;
   required?: boolean;
   hint?: string;
+  suggestions?: string[];
 }) {
+  const listId = suggestions?.length ? `field-suggestions-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}` : undefined;
   return (
     <label className={wide ? 'md:col-span-2' : ''}>
       <span className="ca-label">
@@ -81,8 +149,10 @@ function Field({
         value={value ?? ''}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
+        list={listId}
         className={fieldClass}
       />
+      {listId && <datalist id={listId}>{suggestions.map(value => <option key={value} value={value} />)}</datalist>}
       {hint && <small className="ca-field-hint">{hint}</small>}
     </label>
   );
@@ -115,131 +185,16 @@ function Select({
     </label>
   );
 }
-function CatalogPicker({
-  label,
-  value,
-  onChange,
-  items,
-  kind,
-  required = false,
-  emptyActionLabel,
-  onEmptyAction,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  items: any[];
-  kind: 'product' | 'service';
-  required?: boolean;
-  emptyActionLabel?: string;
-  onEmptyAction?: () => void;
+function CatalogPicker({ label, value, onChange, items, kind, required = false, onEmptyAction }: {
+  label: string; value: string; onChange: (value: string) => void; items: any[];
+  kind: 'product' | 'service'; required?: boolean; emptyActionLabel?: string; onEmptyAction?: () => void;
 }) {
-  const [open, setOpen] = useState(false),
-    [q, setQ] = useState('');
-  const chosen = items.find(x => x.id === value);
-  const filtered = items
-    .filter(x =>
-      String(`${x.name || ''} ${x.code || ''} ${x.ncm || ''} ${x.service_code_national || ''}`)
-        .toLowerCase()
-        .includes(q.toLowerCase())
-    )
-    .slice(0, 15);
-  return (
-    <div className="relative">
-      <span className="ca-label">
-        {label}
-        {required && <b aria-hidden="true"> *</b>}
-      </span>
-      <button type="button" className="ca-picker" onClick={() => setOpen(v => !v)}>
-        <span>
-          <strong>
-            {chosen?.name || (items.length === 0
-              ? `Nenhum ${kind === 'product' ? 'produto' : 'serviço'} cadastrado`
-              : `Selecionar ${kind === 'product' ? 'produto' : 'serviço'}`)}
-          </strong>
-          <small>
-            {chosen
-              ? [
-                  chosen.code,
-                  kind === 'product' && chosen.ncm ? `NCM ${chosen.ncm}` : null,
-                  kind === 'service' && chosen.service_code_national
-                    ? `Cód. ${chosen.service_code_national}`
-                    : null,
-                ]
-                  .filter(Boolean)
-                  .join(' · ')
-              : items.length === 0 && onEmptyAction
-                ? 'Abra para adicionar ao cadastro'
-                : 'Pesquise no seu cadastro'}
-          </small>
-        </span>
-        <b>{chosen?.sale_price != null ? money(chosen.sale_price) : ''}</b>
-      </button>
-      {open && (
-        <div className="ca-picker-pop">
-          <div className="p-3">
-            <Input
-              autoFocus
-              value={q}
-              onChange={e => setQ(e.target.value)}
-              placeholder="Buscar..."
-              className={fieldClass}
-            />
-          </div>
-          <div className="max-h-72 overflow-auto">
-            {filtered.length ? (
-              filtered.map(x => (
-                <button
-                  key={x.id}
-                  type="button"
-                  className="ca-picker-row"
-                  onClick={() => {
-                    onChange(x.id);
-                    setOpen(false);
-                    setQ('');
-                  }}
-                >
-                  <span>
-                    <strong>{x.name}</strong>
-                    <small>
-                      {[
-                        x.code,
-                        kind === 'product' && x.ncm ? `NCM ${x.ncm}` : null,
-                        kind === 'service' && x.service_code_national
-                          ? `Cód. ${x.service_code_national}`
-                          : null,
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </small>
-                  </span>
-                  <b>{x.sale_price != null ? money(x.sale_price) : '—'}</b>
-                </button>
-              ))
-            ) : items.length === 0 && onEmptyAction ? (
-              <button
-                type="button"
-                className="ca-picker-row w-full text-left"
-                onClick={() => {
-                  setOpen(false);
-                  setQ('');
-                  onEmptyAction();
-                }}
-              >
-                <span>
-                  <strong>Nenhum {kind === 'product' ? 'produto' : 'serviço'} cadastrado</strong>
-                  <small>{emptyActionLabel || 'Adicionar ao cadastro'}</small>
-                </span>
-                <b>Adicionar</b>
-              </button>
-            ) : (
-              <p className="p-5 text-center text-xs text-slate-500">Nenhum cadastro encontrado.</p>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  return <FiscalRecordPicker label={label} value={value} onChange={onChange} kind={kind} required={required}
+    onCreate={onEmptyAction} items={items.map(item => ({
+      id: item.id, name: item.name, code: item.code,
+      classification: kind === 'product' ? item.ncm && `NCM ${item.ncm}` : item.service_code_national && `Tributação ${item.service_code_national}`,
+      amount: item.sale_price == null ? undefined : Number(item.sale_price), unit: item.unit, detail: item.description,
+    }))} />;
 }
 function Section({
   title,
@@ -256,7 +211,7 @@ function Section({
     <section className={`ca-form-section ca-tone-${tone}`}>
       <div className="ca-section-head">
         <div>
-          <h2>{title}</h2>
+          <h2 tabIndex={-1}>{title}</h2>
           {subtitle && <p>{subtitle}</p>}
         </div>
       </div>
@@ -320,7 +275,7 @@ function TabBar({
         <span>
           Etapa {current + 1} de {tabs.length}
         </span>
-        <b>{Math.round(((current + 1) / tabs.length) * 100)}% concluído</b>
+        <b>Preenchimento</b>
       </div>
       <div className="ca-progress-track" aria-hidden="true">
         <i style={{ width: `${((current + 1) / tabs.length) * 100}%` }} />
@@ -330,8 +285,7 @@ function TabBar({
           <button
             type="button"
             key={t}
-            onClick={() => i <= current && onChange(t)}
-            disabled={i > current}
+            onClick={() => onChange(t)}
             className={`${active === t ? 'is-active' : ''} ${i < current ? 'is-complete' : ''}`}
             aria-current={active === t ? 'step' : undefined}
           >
@@ -344,7 +298,11 @@ function TabBar({
   );
 }
 
-export default function SaasEmission({
+export default function SaasEmission(props: Parameters<typeof EmissionForm>[0]) {
+  return <EmissionForm key={`${props.organizationId}:${props.documentType}`} {...props} />;
+}
+
+function EmissionForm({
   organizationId,
   documentType,
   onChoose,
@@ -374,8 +332,17 @@ export default function SaasEmission({
     [dataReady, setDataReady] = useState(false),
     [reuseOpen, setReuseOpen] = useState(false),
     [reuseSearch, setReuseSearch] = useState(''),
-    [reuseParts, setReuseParts] = useState<ReusableParts>(reusablePartsDefault);
+    [reuseParts, setReuseParts] = useState<ReusableParts>(reusablePartsDefault),
+    [draftStatus, setDraftStatus] = useState<'restored' | 'saving' | 'saved' | 'cleared' | 'error' | null>(null),
+    [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
   const reusedEmissionRef = useRef('');
+  const draftReadyRef = useRef(false);
+  const mountedRef = useRef(true);
+  const invocationRef = useRef(false);
+  const completedRef = useRef(false);
+  const editorRef = useRef<HTMLDivElement>(null);
+  const [emissionAuthorized, setEmissionAuthorized] = useState(false);
+  const draftKey = organizationId && documentType ? emissionDraftKey(organizationId, documentType) : null;
   const deferredReuseSearch = useDeferredValue(reuseSearch);
   const reusableRows = useMemo(() => {
     const query = deferredReuseSearch.trim().toLowerCase();
@@ -400,46 +367,10 @@ export default function SaasEmission({
       })
       .slice(0, 24);
   }, [deferredReuseSearch, documentType, emissions]);
-  const [form, setForm] = useState<any>({
-    customerId: '',
-    productId: '',
-    serviceId: '',
-    quantity: '1',
-    unitPrice: '',
-    series: '1',
-    number: '1',
-    payment: '01',
-    cfop: '',
-    description: '',
-    value: '',
-    serviceCode: '',
-    municipioPrestacao: '',
-    remetenteId: '',
-    destinatarioId: '',
-    carrierId: '',
-    rntrc: '',
-    chNFe: '',
-    cfopCte: '5353',
-    vTPrest: '',
-    vCarga: '',
-    qCarga: '1',
-    munIniCodigo: '',
-    munIniNome: '',
-    ufIni: 'AL',
-    munFimCodigo: '',
-    munFimNome: '',
-    ufFim: 'AL',
-    plate: '',
-    driverName: '',
-    driverCpf: '',
-    tara: '1000',
-    capacity: '5000',
-    unloadCode: '',
-    unloadName: '',
-    cargoValue: '',
-    cargoWeight: '',
-    keys: '',
-  });
+  const [form, setForm] = useState<any>(initialEmissionForm);
+  useEffect(() => {
+    if (editorRef.current) editorRef.current.querySelector<HTMLElement>('h2')?.focus({ preventScroll: true });
+  }, [tab]);
   const set = (k: string, v: any) => {
     const digitLimits: Record<string, number> = {
       driverCpf: 11,
@@ -462,7 +393,25 @@ export default function SaasEmission({
         .slice(0, 7);
     setStepAlert('');
     setResult(null);
-    setForm((p: any) => ({ ...p, [k]: v }));
+    setForm((p: any) => {
+      const next = { ...p, [k]: v };
+      if (k === 'productId') {
+        const selected = products.find(item => item.id === v);
+        if (selected) {
+          next.unitPrice = String(selected.sale_price ?? '');
+          next.cfop = selected.cfop_in_state || profile?.default_cfop_in_state || p.cfop;
+        }
+      }
+      if (k === 'serviceId') {
+        const selected = services.find(item => item.id === v);
+        if (selected) {
+          next.value = String(selected.sale_price ?? '');
+          next.description = selected.description || selected.name;
+          next.serviceCode = selected.service_code_national || profile?.default_nfse_service_code || '';
+        }
+      }
+      return next;
+    });
   };
   const load = async () => {
     if (!organizationId) return;
@@ -503,6 +452,9 @@ export default function SaasEmission({
         .eq('status', 'active')
         .order('legal_name'),
     ]);
+    if (!mountedRef.current) return;
+    const failed = [p, c, pr, s, ca].find(response => response.error);
+    if (failed) throw new Error('Não foi possível carregar os cadastros. Recarregue para tentar novamente; seu rascunho foi mantido.');
     let loadedProfile = p.data;
     if (loadedProfile?.logo_path) {
       const { data: signed } = await supabase.storage
@@ -510,17 +462,21 @@ export default function SaasEmission({
         .createSignedUrl(loadedProfile.logo_path, 3600);
       loadedProfile = { ...loadedProfile, logo_url: signed?.signedUrl || null };
     }
+    if (!mountedRef.current) return;
     setProfile(loadedProfile);
     setCustomers(c.data || []);
     setProducts(pr.data || []);
     setServices(s.data || []);
     setCarriers(ca.data || []);
     const pp = p.data;
+    const savedDraft = draftKey ? readEmissionDraft(draftKey) : null;
     if (pp)
       setForm((f: any) => ({
         ...f,
         series:
-          documentType === 'NF-e'
+          savedDraft
+            ? f.series
+            : documentType === 'NF-e'
             ? pp.series_nfe || '1'
             : documentType === 'NFC-e'
             ? pp.series_nfce || '1'
@@ -530,7 +486,9 @@ export default function SaasEmission({
             ? pp.series_cte || '1'
             : pp.series_mdfe || '1',
         number: String(
-          documentType === 'NF-e'
+          savedDraft
+            ? f.number
+            : documentType === 'NF-e'
             ? pp.next_number_nfe || 1
             : documentType === 'NFC-e'
             ? pp.next_number_nfce || 1
@@ -540,38 +498,74 @@ export default function SaasEmission({
             ? pp.next_number_cte || 1
             : pp.next_number_mdfe || 1
         ),
-        cfop: pp.default_cfop_in_state || '5102',
-        serviceCode: pp.default_nfse_service_code || '',
-        municipioPrestacao: pp.city_ibge_code || '',
-        munIniCodigo: f.munIniCodigo || pp.city_ibge_code || '',
-        munIniNome: f.munIniNome || pp.city || '',
-        ufIni: f.ufIni || pp.state || 'AL',
+        cfop: savedDraft ? f.cfop : pp.default_cfop_in_state || '5102',
+        serviceCode: savedDraft ? f.serviceCode : pp.default_nfse_service_code || '',
+        municipioPrestacao: savedDraft ? f.municipioPrestacao : pp.city_ibge_code || '',
+        municipioPrestacaoNome: savedDraft ? f.municipioPrestacaoNome : pp.city || '',
+        municipioPrestacaoUf: savedDraft ? f.municipioPrestacaoUf : pp.state || '',
+        munIniCodigo: savedDraft ? f.munIniCodigo : f.munIniCodigo || pp.city_ibge_code || '',
+        munIniNome: savedDraft ? f.munIniNome : f.munIniNome || pp.city || '',
+        ufIni: savedDraft ? f.ufIni : f.ufIni || pp.state || 'AL',
+        tpEmit: savedDraft ? f.tpEmit : pp.business_mode === 'transport' ? '1' : '2',
       }));
     setDataReady(true);
   };
   useEffect(() => {
     setDataReady(false);
+    draftReadyRef.current = false;
+    mountedRef.current = true;
     reusedEmissionRef.current = '';
-    void load();
+    const savedDraft = draftKey ? readEmissionDraft(draftKey) : null;
+    setForm({ ...initialEmissionForm, ...(savedDraft?.form || {}) });
+    setDraftSavedAt(savedDraft?.savedAt || null);
+    setDraftStatus(savedDraft ? 'restored' : null);
+    void load().catch(error => {
+      if (mountedRef.current) setMsg(error.message);
+    });
     setResult(null);
     setMsg('');
     setStepAlert('');
     setTab(
-      documentType === 'NFS-e'
-        ? 'Pessoas'
-        : documentType === 'CT-e'
-        ? 'Participantes'
-        : documentType === 'MDF-e'
-        ? 'Veículo'
-        : 'Cliente'
+      (documentType === 'NFS-e' && ['Valores', 'Impostos'].includes(savedDraft?.tab || '') ? 'Serviço' : savedDraft?.tab) ||
+        (documentType === 'NFS-e'
+          ? 'Pessoas'
+          : documentType === 'CT-e'
+          ? 'Participantes'
+          : documentType === 'MDF-e'
+          ? 'Veículo'
+          : 'Cliente')
     );
-  }, [organizationId, documentType]);
+    draftReadyRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, [organizationId, documentType, draftKey]);
+
+  useLayoutEffect(() => {
+    if (!draftKey || !draftReadyRef.current || !dataReady || completedRef.current) return;
+    try {
+      const draft = writeEmissionDraft(draftKey, form, tab, {
+        recipient: customers.find(item => item.id === (form.customerId || form.destinatarioId))?.legal_name || form.driverName || '',
+        subject: products.find(item => item.id === form.productId)?.name || form.description || form.xProd || '',
+        total: documentType === 'NF-e' || documentType === 'NFC-e' ? Number(form.quantity) * Number(form.unitPrice) : Number(form.value || form.vTPrest || form.cargoValue || 0),
+        environment: profile?.fiscal_environment === 'production' ? 'production' : 'homologation',
+      });
+      setDraftSavedAt(draft.savedAt);
+      setDraftStatus('saved');
+    } catch {
+      setDraftStatus('error');
+    }
+  }, [draftKey, form, tab, dataReady, customers, products, profile?.fiscal_environment, documentType]);
   const customer = customers.find(x => x.id === form.customerId),
     product = products.find(x => x.id === form.productId),
     service = services.find(x => x.id === form.serviceId),
     rem = customers.find(x => x.id === form.remetenteId),
     dest = customers.find(x => x.id === form.destinatarioId),
     issuerCarrier = carriers.find(x => digits(x.tax_id) === digits(profile?.tax_id));
+  const transportCarrier = issuerCarrier;
+  const partyRecords = customers.map(item => ({
+    id: item.id, name: item.legal_name || item.trade_name || 'Sem nome', identifier: formatTaxId(item.tax_id),
+    location: [item.street, item.street_number, item.city, item.state].filter(Boolean).join(' · '),
+    contact: [item.email, item.phone].filter(Boolean).join(' · '), detail: item.trade_name,
+  }));
   const chooseOrCreate = (
     key: string,
     value: string,
@@ -584,31 +578,13 @@ export default function SaasEmission({
     set(key, value);
   };
   useEffect(() => {
-    if (product)
-      setForm((f: any) => ({
-        ...f,
-        unitPrice: String(product.sale_price ?? ''),
-        cfop: product.cfop_in_state || profile?.default_cfop_in_state || f.cfop,
-      }));
-  }, [form.productId]);
-  useEffect(() => {
-    if (service)
-      setForm((f: any) => ({
-        ...f,
-        value: String(service.sale_price ?? ''),
-        description: service.description || service.name,
-        serviceCode:
-          service.service_code_national || profile?.default_nfse_service_code || f.serviceCode,
-      }));
-  }, [form.serviceId]);
-  useEffect(() => {
-    if (!issuerCarrier) return;
+    if (!transportCarrier) return;
     setForm((current: any) => ({
       ...current,
-      rntrc: current.rntrc || issuerCarrier.rntrc || '',
-      plate: current.plate || issuerCarrier.vehicle_plate || '',
+      rntrc: current.rntrc || transportCarrier.rntrc || '',
+      plate: current.plate || transportCarrier.vehicle_plate || '',
     }));
-  }, [issuerCarrier?.id, documentType]);
+  }, [transportCarrier?.id, documentType]);
 
   const applyReusableEmission = useCallback(
     (emission: any, parts: ReusableParts = reusablePartsDefault) => {
@@ -736,17 +712,9 @@ export default function SaasEmission({
     onReuseConsumed?.();
   }, [applyReusableEmission, dataReady, reusableEmission, documentType, onReuseConsumed]);
   const environment = profile?.fiscal_environment === 'production' ? 'production' : 'homologation';
-  const readEdgeError = async (e: any) => {
-    try {
-      const r = e?.context;
-      if (r && typeof r.json === 'function') {
-        const b = await r.clone().json();
-        return [b?.error, ...(b?.errors || [])].filter(Boolean).join(' · ') || e?.message;
-      }
-    } catch {}
-    return e?.message || 'Falha no processamento fiscal';
-  };
   const invoke = async (name: string, body: any) => {
+    if (invocationRef.current || completedRef.current || !dataReady) return;
+    invocationRef.current = true;
     setBusy(true);
     setMsg('');
     setResult(null);
@@ -754,9 +722,10 @@ export default function SaasEmission({
       const { data, error } = await supabase.functions.invoke(name, {
         body: { ...body, organization_id: organizationId, expected_environment: environment },
       });
+      if (!mountedRef.current) return;
       if (error) throw error;
       if (data?.error) {
-        setMsg([data.error, ...(data.errors || [])].join(' · '));
+        setMsg(fiscalErrorMessage(data));
         setResult(data);
         return;
       }
@@ -765,14 +734,26 @@ export default function SaasEmission({
         body.action === 'preview'
           ? 'Prévia gerada e assinada para conferência.'
           : data?.authorized === false
-          ? 'Documento rejeitado pelo autorizador.'
-          : 'Processamento concluído.'
+          ? fiscalErrorMessage(data.response, 'Documento rejeitado pelo autorizador.')
+          : data?.authorized === true
+          ? 'Documento autorizado. Você já pode consultar o resultado.'
+          : 'Envio recebido. Confira a situação no histórico antes de transmitir novamente.'
       );
-      if (body.action === 'issue') await load();
+      if (body.action === 'issue') {
+        if (data?.authorized === true && draftKey) {
+          completedRef.current = true;
+          setEmissionAuthorized(true);
+          try { clearEmissionDraft(draftKey); } catch { /* Keep the authorized result visible. */ }
+          setDraftSavedAt(null);
+          setDraftStatus('cleared');
+          await load();
+        }
+      }
     } catch (e: any) {
-      setMsg(await readEdgeError(e));
+      if (mountedRef.current) setMsg(await readFiscalError(e, body.action === 'issue'));
     } finally {
-      setBusy(false);
+      invocationRef.current = false;
+      if (mountedRef.current) setBusy(false);
     }
   };
   const productPayload = () => ({
@@ -828,7 +809,7 @@ export default function SaasEmission({
     issRetido: Boolean(service?.iss_withheld),
   });
   const partyCte = (x: any) => ({
-    CNPJ: digits(x?.tax_id),
+    ...(digits(x?.tax_id).length === 11 ? { CPF: digits(x?.tax_id) } : { CNPJ: digits(x?.tax_id) }),
     IE: x?.state_registration || '',
     xNome: x?.legal_name || '',
     xLgr: x?.street || '',
@@ -845,7 +826,8 @@ export default function SaasEmission({
     numero: form.number,
     cfop: form.cfopCte,
     natOp: 'PRESTACAO DE SERVICO DE TRANSPORTE',
-    cUF: '27',
+    cUF: digits(profile?.city_ibge_code).slice(0, 2),
+    toma: form.toma,
     cMunIni: form.munIniCodigo,
     xMunIni: form.munIniNome,
     UFIni: form.ufIni,
@@ -870,15 +852,15 @@ export default function SaasEmission({
     dest: partyCte(dest),
     carga: { vCarga: Number(form.vCarga), proPred: 'CARGA GERAL', qCarga: Number(form.qCarga) },
     chNFe: form.chNFe,
-    rodo: { RNTRC: form.rntrc || issuerCarrier?.rntrc },
+    rodo: { RNTRC: form.rntrc || transportCarrier?.rntrc },
   });
   const mdfePayload = () => ({
     environment,
     serie: form.series,
     numero: form.number,
-    rntrc: form.rntrc || issuerCarrier?.rntrc,
-    placa: form.plate || issuerCarrier?.vehicle_plate,
-    veiculoUf: issuerCarrier?.vehicle_state || profile?.state || 'AL',
+    rntrc: form.rntrc || transportCarrier?.rntrc,
+    placa: form.plate || transportCarrier?.vehicle_plate,
+    veiculoUf: transportCarrier?.vehicle_state || profile?.state || 'AL',
     condutorNome: form.driverName,
     condutorCpf: form.driverCpf,
     tara: Number(form.tara),
@@ -891,9 +873,22 @@ export default function SaasEmission({
     munDescargaNome: form.unloadName,
     valorCarga: Number(form.cargoValue),
     pesoCarga: Number(form.cargoWeight),
-    chaves: String(form.keys || '')
-      .split(/[\n,; ]+/)
-      .filter(Boolean),
+    chaves: parseAccessKeys(form.keys),
+    tpEmit: form.tpEmit,
+    ...(form.tpEmit === '1' ? {
+      seguradoraNome: form.seguradoraNome,
+      seguradoraCnpj: digits(form.seguradoraCnpj),
+      apolice: form.apolice,
+      averbacao: form.averbacao,
+      contratanteCnpj: customers.find(x => x.id === form.contratanteId)?.tax_id,
+      pagadorCnpj: customers.find(x => x.id === form.contratanteId)?.tax_id,
+      ncmPredominante: digits(form.ncmPredominante),
+      xProd: form.xProd,
+      cepCarrega: profile?.postal_code,
+      cepDescarga: digits(form.cepDescarga),
+      vContrato: Number(form.vContrato),
+      pixPagamento: form.pixPagamento,
+    } : {}),
   });
   if (!documentType)
     return (
@@ -935,7 +930,7 @@ export default function SaasEmission({
     );
   const tabs =
     documentType === 'NFS-e'
-      ? ['Pessoas', 'Serviço', 'Valores', 'Impostos', 'Revisão']
+      ? ['Pessoas', 'Serviço', 'Revisão']
       : documentType === 'CT-e'
       ? ['Participantes', 'Carga', 'Rota', 'Fiscal', 'Revisão']
       : documentType === 'MDF-e'
@@ -950,96 +945,115 @@ export default function SaasEmission({
       if (!ok) issues.push(label);
     };
     if (documentType === 'NF-e' || documentType === 'NFC-e') {
-      if (index === 0 && documentType === 'NF-e') need(customer, 'cliente');
+      if (index === 0) {
+        if (documentType === 'NF-e') need(customer, 'cliente');
+        if (customer) need(isValidTaxId(customer.tax_id), 'CPF/CNPJ válido no cadastro do cliente');
+        if (documentType === 'NF-e' && customer) {
+          need(digits(customer.city_ibge_code).length === 7, 'município IBGE no cadastro do cliente');
+          need(brazilStates.includes(customer.state), 'UF no cadastro do cliente');
+          need(customer.street && customer.street_number && customer.district, 'endereço completo no cadastro do cliente');
+        }
+      }
       if (index === 1) {
         need(product, 'produto');
-        need(Number(form.quantity) > 0, 'quantidade');
-        need(Number(form.unitPrice) > 0, 'valor unitário');
+        need(isPositiveAmount(form.quantity), 'quantidade');
+        need(isPositiveAmount(form.unitPrice), 'valor unitário');
         need(digits(product?.ncm).length === 8, 'NCM do produto');
       }
       if (index === 2) need(form.payment, 'forma de pagamento');
       if (index === 3) {
         need(digits(form.cfop).length === 4, 'CFOP com 4 dígitos');
-        need(String(form.series).trim(), 'série');
-        need(Number(form.number) > 0, 'número da nota');
+        need(isDocumentNumber(form.series, 3, true), 'série numérica de até 3 dígitos');
+        need(isDocumentNumber(form.number, documentType === 'NFS-e' ? 15 : 9), 'número da nota');
       }
     }
     if (documentType === 'NFS-e') {
       if (index === 0) {
         need(customer, 'cliente / tomador');
+        need(isValidTaxId(customer?.tax_id), 'CPF/CNPJ válido no cadastro do tomador');
         need(digits(form.municipioPrestacao).length === 7, 'município da prestação (IBGE)');
       }
       if (index === 1) {
         need(service, 'serviço');
-        need(String(form.serviceCode).trim(), 'código de tributação');
+        need(/^\d{6}$/.test(digits(form.serviceCode)), 'código de tributação nacional com 6 dígitos');
         need(String(form.description).trim(), 'descrição do serviço');
-      }
-      if (index === 2) need(Number(form.value) > 0, 'valor do serviço');
-      if (index === 3) {
-        need(String(form.series).trim(), 'série DPS');
-        need(Number(form.number) > 0, 'número DPS');
+        need(isPositiveAmount(form.value), 'valor do serviço');
+        need(isDocumentNumber(form.series, 5, true), 'série DPS numérica');
+        need(isDocumentNumber(form.number, documentType === 'NFS-e' ? 15 : 9), 'número DPS');
       }
     }
     if (documentType === 'CT-e') {
       if (index === 0) {
         need(rem, 'remetente');
         need(dest, 'destinatário');
-        need(String(form.rntrc || issuerCarrier?.rntrc).trim(), 'RNTRC');
+        need(isValidTaxId(rem?.tax_id), 'CPF/CNPJ do remetente');
+        need(isValidTaxId(dest?.tax_id), 'CPF/CNPJ do destinatário');
+        for (const party of [rem, dest]) {
+          need(party?.street && party?.street_number && party?.district && digits(party?.city_ibge_code).length === 7 && brazilStates.includes(party?.state), 'endereço completo dos participantes no cadastro');
+        }
+        need(digits(form.rntrc || transportCarrier?.rntrc).length === 8, 'RNTRC do emitente com 8 dígitos');
       }
       if (index === 1) {
-        need(Number(form.vTPrest) > 0, 'valor da prestação');
-        need(Number(form.vCarga) > 0, 'valor da carga');
-        need(Number(form.qCarga) > 0, 'peso / quantidade');
-        if (String(form.chNFe || '').trim()) need(digits(form.chNFe).length === 44, 'chave NF-e com 44 dígitos');
+        need(isPositiveAmount(form.vTPrest), 'valor da prestação');
+        need(isPositiveAmount(form.vCarga), 'valor da carga');
+        need(isPositiveAmount(form.qCarga), 'peso / quantidade');
+        if (String(form.chNFe || '').trim()) need(isValidAccessKey(form.chNFe, ['55']), 'chave NF-e válida (modelo 55)');
       }
       if (index === 2) {
         need(digits(form.munIniCodigo).length === 7, 'código IBGE da origem');
         need(String(form.munIniNome).trim(), 'município de origem');
-        need(String(form.ufIni).trim().length === 2, 'UF de origem');
+        need(brazilStates.includes(form.ufIni), 'UF de origem');
         need(digits(form.munFimCodigo).length === 7, 'código IBGE do destino');
         need(String(form.munFimNome).trim(), 'município de destino');
-        need(String(form.ufFim).trim().length === 2, 'UF de destino');
+        need(brazilStates.includes(form.ufFim), 'UF de destino');
       }
       if (index === 3) {
         need(digits(form.cfopCte).length === 4, 'CFOP com 4 dígitos');
-        need(String(form.series).trim(), 'série');
-        need(Number(form.number) > 0, 'número do CT-e');
+        need(isDocumentNumber(form.series, 3, true), 'série numérica de até 3 dígitos');
+        need(isDocumentNumber(form.number, documentType === 'NFS-e' ? 15 : 9), 'número do CT-e');
       }
     }
     if (documentType === 'MDF-e') {
       if (index === 0) {
-        need(String(form.rntrc || issuerCarrier?.rntrc).trim(), 'RNTRC');
+        if (form.tpEmit === '1' || form.ufIni !== form.ufFim) need(digits(form.rntrc || transportCarrier?.rntrc).length === 8, 'RNTRC do emitente com 8 dígitos');
         need(
-          String(form.plate || issuerCarrier?.vehicle_plate || '').replace(/[^A-Z0-9]/gi, '').length ===
+            String(form.plate || transportCarrier?.vehicle_plate || '').replace(/[^A-Z0-9]/gi, '').length ===
             7,
           'placa do veículo'
         );
-        need(Number(form.tara) > 0, 'tara');
-        need(Number(form.capacity) > 0, 'capacidade');
+        need(isPositiveAmount(form.tara), 'tara');
+        need(isPositiveAmount(form.capacity), 'capacidade');
       }
       if (index === 1) {
         need(String(form.driverName).trim(), 'nome do condutor');
-        need(digits(form.driverCpf).length === 11, 'CPF do condutor');
+        need(isValidCpf(form.driverCpf), 'CPF válido do condutor');
       }
       if (index === 2) {
         need(digits(form.munIniCodigo).length === 7, 'código IBGE do carregamento');
         need(String(form.munIniNome).trim(), 'município de carregamento');
         need(digits(form.unloadCode).length === 7, 'código IBGE do descarregamento');
         need(String(form.unloadName).trim(), 'município de descarregamento');
-        need(String(form.ufFim).trim().length === 2, 'UF final');
-        need(Number(form.cargoValue) > 0, 'valor da carga');
-        need(Number(form.cargoWeight) > 0, 'peso da carga');
+        need(brazilStates.includes(form.ufIni), 'UF inicial');
+        need(brazilStates.includes(form.ufFim), 'UF final');
+        need(isPositiveAmount(form.cargoValue), 'valor da carga');
+        need(isPositiveAmount(form.cargoWeight), 'peso da carga');
       }
       if (index === 3) {
-        const keys = String(form.keys || '')
-          .split(/[\n,; ]+/)
-          .filter(Boolean);
-        need(
-          keys.length > 0 && keys.every((key: string) => digits(key).length === 44),
-          'chaves fiscais com 44 dígitos'
-        );
-        need(String(form.series).trim(), 'série');
-        need(Number(form.number) > 0, 'número do MDF-e');
+        const keyError = validateMdfeKeys(form.keys, form.tpEmit);
+        if (keyError) issues.push(keyError);
+        if (form.tpEmit === '1') {
+          need(String(form.seguradoraNome).trim(), 'nome da seguradora');
+          need(isValidCnpj(form.seguradoraCnpj), 'CNPJ válido da seguradora');
+          need(String(form.apolice).trim(), 'apólice do seguro');
+          need(String(form.averbacao).trim(), 'averbação do seguro');
+          need(isValidTaxId(customers.find(x => x.id === form.contratanteId)?.tax_id), 'contratante cadastrado com CPF/CNPJ válido');
+          need(digits(form.ncmPredominante).length === 8, 'NCM do produto predominante');
+          need(String(form.xProd).trim(), 'descrição da carga');
+          need(isPositiveAmount(form.vContrato), 'valor do frete');
+          if (parseAccessKeys(form.keys).length === 1) need(digits(form.cepDescarga).length === 8, 'CEP de descarga');
+        }
+        need(isDocumentNumber(form.series, 3, true), 'série numérica de até 3 dígitos');
+        need(isDocumentNumber(form.number, documentType === 'NFS-e' ? 15 : 9), 'número do MDF-e');
       }
     }
     return issues;
@@ -1054,18 +1068,23 @@ export default function SaasEmission({
     go(1);
   };
   const allIssues = tabs.slice(0, -1).flatMap((_, index) => issuesForStep(index));
-  const actions = (name: string, payload: any, extra: any = {}) => (
+  const nfsePreviewOnly = documentType === 'NFS-e' && environment !== 'production';
+  const actions = (name: string, payload: any, extra: any = {}) => emissionAuthorized ? (
+    <div className="ca-final-actions">
+      <Button className="ca-btn-primary" onClick={() => onChoose(null)}>Nova emissão</Button>
+    </div>
+  ) : (
     <div className="ca-final-actions">
       <Button
         variant="outline"
         className="ca-btn-secondary"
-        disabled={busy || allIssues.length > 0}
+        disabled={busy || !dataReady || allIssues.length > 0}
         onClick={() => invoke(name, { action: 'preview', data: payload, ...extra })}
       >
         Gerar prévia
       </Button>
-      <Button
-        disabled={busy || allIssues.length > 0}
+      {!nfsePreviewOnly && <Button
+        disabled={busy || !dataReady || allIssues.length > 0}
         onClick={() => invoke(name, { action: 'issue', data: payload, ...extra })}
         className="ca-btn-primary"
       >
@@ -1074,42 +1093,31 @@ export default function SaasEmission({
           : environment === 'production'
           ? 'Emitir documento'
           : 'Transmitir para homologação'}
-      </Button>
+      </Button>}
+      {nfsePreviewOnly && <p className="ca-field-hint">Neste ambiente, a NFS-e permite conferir a prévia assinada. A transmissão de teste ainda não está disponível.</p>}
     </div>
   );
   const productTotal = Number(form.quantity || 0) * Number(form.unitPrice || 0);
+  const draftCopy = draftStatus === 'saving'
+    ? 'Salvando rascunho…'
+    : draftStatus === 'saved'
+    ? `Rascunho salvo${draftSavedAt ? ` às ${new Date(draftSavedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''}`
+    : draftStatus === 'restored'
+    ? 'Rascunho recuperado'
+    : draftStatus === 'cleared'
+    ? 'Rascunho concluído'
+    : draftStatus === 'error'
+    ? 'Não foi possível salvar neste navegador'
+    : 'Carregando rascunho…';
   let content: ReactNode = null;
   if (documentType === 'NF-e' || documentType === 'NFC-e')
     content =
       step === 0 ? (
         <Section title="Cliente" subtitle="Selecione o destinatário desta operação.">
           <div className="ca-form-grid">
-            <Select
-              label="Cliente"
-              value={form.customerId}
-              onChange={v => chooseOrCreate('customerId', v, 'Clientes')}
-              required={documentType === 'NF-e'}
-              hint={
-                documentType === 'NFC-e'
-                  ? 'Opcional quando o consumidor não for identificado.'
-                  : 'Os dados fiscais serão carregados do cadastro.'
-              }
-            >
-              <option value="">
-                {documentType === 'NFC-e' ? 'Consumidor não identificado' : 'Selecione um cliente'}
-              </option>
-              {customers.length === 0 && documentType === 'NF-e' && (
-                <option value="__new__">Adicionar cliente</option>
-              )}
-              {customers.length === 0 && documentType === 'NFC-e' && (
-                <option value="__new__">Adicionar cliente identificado</option>
-              )}
-              {customers.map(x => (
-                <option key={x.id} value={x.id}>
-                  {x.legal_name}
-                </option>
-              ))}
-            </Select>
+<FiscalRecordPicker label="Cliente" value={form.customerId} items={partyRecords}
+              onChange={value => set('customerId', value)} onCreate={() => onOpenCadastro?.('Clientes')}
+              required={documentType === 'NF-e'} />
             <div className="ca-info-box">
               <UsersRound />
               <span>
@@ -1189,6 +1197,7 @@ export default function SaasEmission({
               value={form.cfop}
               onChange={v => set('cfop', v)}
               required
+              suggestions={Array.from(new Set([profile?.default_cfop_in_state, profile?.default_cfop_out_state, '5102', '6102'].filter(Boolean).map(String)))}
               hint="Código fiscal da operação com 4 dígitos."
             />
             <Field label="Série" value={form.series} onChange={v => set('series', v)} required />
@@ -1203,146 +1212,60 @@ export default function SaasEmission({
         </Section>
       ) : null;
   if (documentType === 'NFS-e')
-    content =
-      step === 0 ? (
-        <Section title="Pessoas" subtitle="Informe o tomador e o local da prestação.">
+    content = step === 0 ? (
+      <Section title="Cliente e local" subtitle="Selecione o cadastro e confirme onde o serviço foi prestado.">
+        <div className="ca-form-grid">
+<FiscalRecordPicker label="Cliente / tomador" value={form.customerId} items={partyRecords}
+              onChange={value => set('customerId', value)} onCreate={() => onOpenCadastro?.('Clientes')}
+              required={true} />
+          <MunicipalityField label="Local da prestação" value={form.municipioPrestacao}
+            name={form.municipioPrestacaoNome} state={form.municipioPrestacaoUf}
+            onChange={city => setForm((current: any) => ({ ...current, municipioPrestacao: city.code, municipioPrestacaoNome: city.name, municipioPrestacaoUf: city.state }))} />
+        </div>
+      </Section>
+    ) : step === 1 ? (
+      <Section title="Serviço e valor" subtitle="O cadastro preenche a descrição e o código. Ajuste apenas o que mudou.">
+        <div className="ca-form-grid">
+          <CatalogPicker label="Serviço" value={form.serviceId} onChange={v => set('serviceId', v)}
+            items={services} kind="service" required emptyActionLabel="Adicionar serviço" onEmptyAction={() => onOpenCadastro?.('Serviços')} />
+          <Field label="Valor do serviço" value={form.value} onChange={v => set('value', v)} type="number" required />
+          <Field label="Descrição do serviço" value={form.description} onChange={v => set('description', v)} wide required />
+          <Field label="Código de Tributação Nacional" value={form.serviceCode} onChange={v => set('serviceCode', v)} required
+            suggestions={Array.from(new Set(services.map(item => String(item.service_code_national || '')).filter(Boolean)))}
+            hint="Código nacional de 6 dígitos do serviço, diferente do CNAE." />
+          <div className="ca-info-box"><ReceiptText /><span><b>ISSQN</b><small>{service?.iss_withheld ? 'Retido pelo tomador, conforme cadastro' : 'Não retido, conforme cadastro'}</small></span></div>
+        </div>
+        <details className="ca-emission-details">
+          <summary>Numeração da DPS · série {form.series} · nº {form.number}</summary>
           <div className="ca-form-grid">
-            <Select
-              label="Cliente / tomador"
-              value={form.customerId}
-              onChange={v => chooseOrCreate('customerId', v, 'Clientes')}
-              required
-            >
-              <option value="">{customers.length ? 'Selecione um cliente' : 'Nenhum cliente cadastrado'}</option>
-              {customers.length === 0 && <option value="__new__">Adicionar cliente</option>}
-              {customers.map(x => (
-                <option key={x.id} value={x.id}>
-                  {x.legal_name}
-                </option>
-              ))}
-            </Select>
-            <div className="ca-info-box">
-              <UsersRound />
-              <span>
-                <b>{customer?.legal_name || 'Tomador não selecionado'}</b>
-                <small>{customer?.tax_id || 'Os dados virão do cadastro'}</small>
-              </span>
-            </div>
-            <Field
-              label="Município da prestação (IBGE)"
-              value={form.municipioPrestacao}
-              onChange={v => set('municipioPrestacao', v)}
-              required
-              hint="Código IBGE de 7 dígitos."
-            />
+            <Field label="Série DPS" value={form.series} onChange={v => set('series', v)} required />
+            <Field label="Número DPS" value={form.number} onChange={v => set('number', v)} type="number" required />
           </div>
-        </Section>
-      ) : step === 1 ? (
-        <Section title="Serviço" subtitle="Selecione o serviço e confira sua classificação.">
-          <div className="ca-form-grid">
-            <CatalogPicker
-              label="Serviço"
-              value={form.serviceId}
-              onChange={v => set('serviceId', v)}
-              items={services}
-              kind="service"
-              required
-              emptyActionLabel="Adicionar serviço"
-              onEmptyAction={() => onOpenCadastro?.('Serviços')}
-            />
-            <Field
-              label="Código de Tributação Nacional"
-              value={form.serviceCode}
-              onChange={v => set('serviceCode', v)}
-              required
-            />
-            <Field
-              label="Descrição do serviço"
-              value={form.description}
-              onChange={v => set('description', v)}
-              wide
-              required
-            />
-          </div>
-        </Section>
-      ) : step === 2 ? (
-        <Section title="Valores" subtitle="Informe o valor da prestação.">
-          <div className="ca-form-grid">
-            <Field
-              label="Valor do serviço"
-              value={form.value}
-              onChange={v => set('value', v)}
-              type="number"
-              required
-            />
-            <div className="ca-info-box">
-              <ReceiptText />
-              <span>
-                <b>Valor líquido estimado</b>
-                <small>{money(form.value)}</small>
-              </span>
-            </div>
-          </div>
-        </Section>
-      ) : step === 3 ? (
-        <Section title="Impostos e DPS" subtitle="Confira retenções, série e número da declaração.">
-          <div className="ca-form-grid">
-            <div className="ca-info-box">
-              <ReceiptText />
-              <span>
-                <b>ISSQN</b>
-                <small>{service?.iss_withheld ? 'Retido pelo tomador' : 'Não retido'}</small>
-              </span>
-            </div>
-            <Field
-              label="Série DPS"
-              value={form.series}
-              onChange={v => set('series', v)}
-              required
-            />
-            <Field
-              label="Número DPS"
-              value={form.number}
-              onChange={v => set('number', v)}
-              type="number"
-              required
-            />
-          </div>
-        </Section>
-      ) : null;
+        </details>
+      </Section>
+    ) : null;
   if (documentType === 'CT-e')
     content =
       step === 0 ? (
         <Section title="Participantes" subtitle="O emitente é a empresa desta conta. Selecione remetente e destinatário.">
+          <div className="ca-info-box ca-issuer-card mb-4">
+            <FileText />
+            <span>
+              <b>Emitente do CT-e: {profile?.legal_name || 'Empresa da conta'}</b>
+              <small>CNPJ {profile?.tax_id || '—'} · A assinatura e a transmissão usam o certificado A1 desta empresa.</small>
+            </span>
+          </div>
           <div className="ca-form-grid">
-            <Select
-              label="Remetente"
-              value={form.remetenteId}
-              onChange={v => chooseOrCreate('remetenteId', v, 'Clientes')}
-              required
-            >
-              <option value="">{customers.length ? 'Selecione' : 'Nenhum cliente cadastrado'}</option>
-              {customers.length === 0 && <option value="__new__">Adicionar cliente</option>}
-              {customers.map(x => (
-                <option key={x.id} value={x.id}>
-                  {x.legal_name}
-                </option>
-              ))}
+            <Select label="Quem contrata o frete?" value={form.toma} onChange={v => set('toma', v)}>
+              <option value="0">Remetente</option>
+              <option value="3">Destinatário</option>
             </Select>
-            <Select
-              label="Destinatário"
-              value={form.destinatarioId}
-              onChange={v => chooseOrCreate('destinatarioId', v, 'Clientes')}
-              required
-            >
-              <option value="">{customers.length ? 'Selecione' : 'Nenhum cliente cadastrado'}</option>
-              {customers.length === 0 && <option value="__new__">Adicionar cliente</option>}
-              {customers.map(x => (
-                <option key={x.id} value={x.id}>
-                  {x.legal_name}
-                </option>
-              ))}
-            </Select>
+<FiscalRecordPicker label="Remetente" value={form.remetenteId} items={partyRecords}
+              onChange={value => set('remetenteId', value)} onCreate={() => onOpenCadastro?.('Clientes')}
+              required={true} />
+<FiscalRecordPicker label="Destinatário" value={form.destinatarioId} items={partyRecords}
+              onChange={value => set('destinatarioId', value)} onCreate={() => onOpenCadastro?.('Clientes')}
+              required={true} />
             <Field
               label="RNTRC"
               value={form.rntrc}
@@ -1387,48 +1310,24 @@ export default function SaasEmission({
       ) : step === 2 ? (
         <Section title="Rota" subtitle="Origem e destino da prestação.">
           <div className="ca-route">
-            <div>
-              <Field
-                label="Município início (IBGE)"
-                value={form.munIniCodigo}
-                onChange={v => set('munIniCodigo', v)}
-                required
-              />
-              <Field
-                label="Município início"
-                value={form.munIniNome}
-                onChange={v => set('munIniNome', v)}
-                required
-              />
-              <Field
-                label="UF início"
-                value={form.ufIni}
-                onChange={v => set('ufIni', v)}
-                required
-              />
-            </div>
+            <MunicipalityField label="Origem" value={form.munIniCodigo} name={form.munIniNome} state={form.ufIni}
+              onChange={city => setForm((current: any) => ({ ...current, munIniCodigo: city.code, munIniNome: city.name, ufIni: city.state }))} />
             <ChevronRight />
-            <div>
-              <Field
-                label="Município fim (IBGE)"
-                value={form.munFimCodigo}
-                onChange={v => set('munFimCodigo', v)}
-                required
-              />
-              <Field
-                label="Município fim"
-                value={form.munFimNome}
-                onChange={v => set('munFimNome', v)}
-                required
-              />
-              <Field label="UF fim" value={form.ufFim} onChange={v => set('ufFim', v)} required />
-            </div>
+            <MunicipalityField label="Destino" value={form.munFimCodigo} name={form.munFimNome} state={form.ufFim}
+              onChange={city => setForm((current: any) => ({ ...current, munFimCodigo: city.code, munFimNome: city.name, ufFim: city.state }))} />
           </div>
         </Section>
       ) : step === 3 ? (
         <Section title="Fiscal" subtitle="Numeração e CFOP do conhecimento.">
           <div className="ca-form-grid">
-            <Field label="CFOP" value={form.cfopCte} onChange={v => set('cfopCte', v)} required />
+            <Field
+              label="CFOP"
+              value={form.cfopCte}
+              onChange={v => set('cfopCte', v)}
+              required
+              suggestions={['5351', '5352', '5353', '5354', '5355', '6351', '6352', '6353', '6354', '6355']}
+              hint="Use o CFOP correspondente ao tipo e ao percurso da prestação."
+            />
             <Field label="Série" value={form.series} onChange={v => set('series', v)} required />
             <Field
               label="Número"
@@ -1447,8 +1346,22 @@ export default function SaasEmission({
           title="Veículo do emitente"
           subtitle="O emitente é a empresa desta conta. Informe apenas os dados do conjunto rodoviário."
         >
+          <div className="ca-form-grid mb-4">
+            <Select label="O que será transportado?" value={form.tpEmit} onChange={v => set('tpEmit', v)}>
+              <option value="2">Carga própria da empresa</option>
+              <option value="1">Carga de um cliente (prestação de transporte)</option>
+            </Select>
+            <p className="ca-field-hint">{form.tpEmit === '2' ? 'Vincule as NF-e da carga. Dados de seguro e contratação não serão solicitados neste fluxo.' : 'Vincule os CT-e e informe os dados do frete e do seguro na etapa Documentos.'}</p>
+          </div>
+          <div className="ca-info-box ca-issuer-card mb-4">
+            <Truck />
+            <span>
+              <b>Emitente do MDF-e: {profile?.legal_name || 'Empresa da conta'}</b>
+              <small>CNPJ {profile?.tax_id || '—'} · O certificado A1 desta empresa será usado para assinar o manifesto.</small>
+            </span>
+          </div>
           <div className="ca-form-grid">
-            <Field label="RNTRC" value={form.rntrc} onChange={v => set('rntrc', v)} required />
+            {(form.tpEmit === '1' || form.ufIni !== form.ufFim) && <Field label="RNTRC do emitente" value={form.rntrc} onChange={v => set('rntrc', v)} required />}
             <Field
               label="Placa"
               value={form.plate}
@@ -1492,31 +1405,11 @@ export default function SaasEmission({
       ) : step === 2 ? (
         <Section title="Rota e carga" subtitle="Defina carregamento, descarregamento e totais.">
           <div className="ca-form-grid">
-            <Field
-              label="Município carga (IBGE)"
-              value={form.munIniCodigo}
-              onChange={v => set('munIniCodigo', v)}
-              required
-            />
-            <Field
-              label="Município carga"
-              value={form.munIniNome}
-              onChange={v => set('munIniNome', v)}
-              required
-            />
-            <Field
-              label="Município descarga (IBGE)"
-              value={form.unloadCode}
-              onChange={v => set('unloadCode', v)}
-              required
-            />
-            <Field
-              label="Município descarga"
-              value={form.unloadName}
-              onChange={v => set('unloadName', v)}
-              required
-            />
-            <Field label="UF final" value={form.ufFim} onChange={v => set('ufFim', v)} required />
+            <MunicipalityField label="Carregamento" value={form.munIniCodigo} name={form.munIniNome} state={form.ufIni}
+              onChange={city => setForm((current: any) => ({ ...current, munIniCodigo: city.code, munIniNome: city.name, ufIni: city.state }))} />
+            <MunicipalityField label="Descarga" value={form.unloadCode} name={form.unloadName} state={form.ufFim}
+              onChange={city => setForm((current: any) => ({ ...current, unloadCode: city.code, unloadName: city.name, ufFim: city.state }))} />
+            {form.tpEmit === '2' && form.ufIni !== form.ufFim && <Field label="RNTRC do emitente" value={form.rntrc} onChange={v => set('rntrc', v)} required />}
             <Field
               label="Valor da carga"
               value={form.cargoValue}
@@ -1534,7 +1427,7 @@ export default function SaasEmission({
           </div>
         </Section>
       ) : step === 3 ? (
-        <Section title="Documentos fiscais" subtitle="Informe uma chave NF-e ou CT-e por linha.">
+        <Section title="Documentos fiscais" subtitle={form.tpEmit === '2' ? 'Vincule as NF-e da carga própria, uma chave por linha.' : 'Vincule os CT-e desta viagem, uma chave por linha.'}>
           <label className="ca-label" htmlFor="mdfe-keys">
             Chaves de acesso <b aria-hidden="true">*</b>
           </label>
@@ -1546,6 +1439,20 @@ export default function SaasEmission({
             className="ca-textarea"
             placeholder="Uma chave de 44 dígitos por linha"
           />
+          {form.tpEmit === '1' && <div className="ca-form-grid mt-4">
+<FiscalRecordPicker label="Cliente contratante do frete" value={form.contratanteId} items={partyRecords}
+              onChange={value => set('contratanteId', value)} onCreate={() => onOpenCadastro?.('Clientes')}
+              required={true} />
+            <Field label="Valor do frete" value={form.vContrato} onChange={v => set('vContrato', v)} type="number" required />
+            <Field label="Descrição da carga" value={form.xProd} onChange={v => set('xProd', v)} required />
+            <Field label="NCM predominante" value={form.ncmPredominante} onChange={v => set('ncmPredominante', v)} required suggestions={Array.from(new Set(products.map(item => String(item.ncm || '')).filter(Boolean)))} />
+            {parseAccessKeys(form.keys).length === 1 && <Field label="CEP de descarga" value={form.cepDescarga} onChange={v => set('cepDescarga', v)} required />}
+            <Field label="Seguradora" value={form.seguradoraNome} onChange={v => set('seguradoraNome', v)} required />
+            <Field label="CNPJ da seguradora" value={form.seguradoraCnpj} onChange={v => set('seguradoraCnpj', v)} required />
+            <Field label="Apólice" value={form.apolice} onChange={v => set('apolice', v)} required />
+            <Field label="Averbação" value={form.averbacao} onChange={v => set('averbacao', v)} required />
+            <Field label="Chave Pix do frete" value={form.pixPagamento} onChange={v => set('pixPagamento', v)} hint="Opcional neste fluxo; não altera o valor da carga." />
+          </div>}
           <div className="ca-form-grid mt-4">
             <Field label="Série" value={form.series} onChange={v => set('series', v)} required />
             <Field
@@ -1614,7 +1521,7 @@ export default function SaasEmission({
         ]
       : [
           ['Emitente', profile?.trade_name || profile?.legal_name || '—'],
-          ['Veículo', form.plate || issuerCarrier?.vehicle_plate || '—'],
+          ['Veículo', form.plate || transportCarrier?.vehicle_plate || '—'],
           ['Condutor', form.driverName || '—'],
           ['Carga', `${money(form.cargoValue)} · ${form.cargoWeight || 0} kg`],
           [
@@ -1632,13 +1539,13 @@ export default function SaasEmission({
         ];
   return (
     <>
-      <div className="ca-emission-page">
+      <div className="ca-emission-page ws-emission-workspace">
         <header className="ca-emission-title">
           <button onClick={() => onChoose(null)}>← Voltar</button>
           <div>
-            <p>Emissão fiscal</p>
-            <h1>Emitir {documentType}</h1>
-            <span>Uma etapa por vez. Os dados ficam preservados até a revisão.</span>
+            <p>DOCUMENTOS / NOVA EMISSÃO</p>
+            <h1>Sua próxima {documentType}.</h1>
+            <span>Preencha, confira e emita. O trabalho fica salvo enquanto você avança.</span>
           </div>
           <div className="ca-emission-title-tools">
             <button
@@ -1650,23 +1557,45 @@ export default function SaasEmission({
               }}
             >
               <Repeat2 />
-              Reutilizar emissão anterior
+              Usar nota anterior
             </button>
             <div className={`ca-environment ${environment}`}>
               {environment === 'production' ? 'Produção' : 'Homologação'}
             </div>
+            <span className={`ca-draft-status ${draftStatus || ''}`} role="status">
+              <i aria-hidden="true" />
+              {draftCopy}
+            </span>
           </div>
         </header>
         <IssuerSummary profile={profile} documentType={documentType} />
+        <div className="ws-emission-grid">
+        <aside className="ws-workflow-rail" aria-label="Progresso da nota">
+        <p className="ws-rail-eyebrow">PREPARAR DOCUMENTO</p>
         <TabBar
           tabs={tabs}
           active={tab}
           onChange={value => {
+            if (busy || emissionAuthorized) return;
+            const target = tabs.indexOf(value);
+            if (target > step) {
+              const issues = tabs.slice(0, target).flatMap((_, index) => issuesForStep(index));
+              if (issues.length) { setStepAlert(`Confira: ${[...new Set(issues)].join(', ')}.`); return; }
+            }
             setStepAlert('');
             setTab(value);
           }}
         />
-        {msg && <div className="ca-message">{msg}</div>}
+        <div className="ws-rail-summary">
+          <span>{documentType === 'MDF-e' ? 'Valor da carga' : 'Total da nota'}</span>
+          <strong>{money(documentType === 'NF-e' || documentType === 'NFC-e' ? productTotal : documentType === 'NFS-e' ? form.value : documentType === 'CT-e' ? form.vTPrest : form.cargoValue)}</strong>
+          <p>{customer?.legal_name || dest?.legal_name || (documentType === 'MDF-e' ? form.driverName : '') || 'Dados da operação em preenchimento'}</p>
+          <small>Série {form.series} · Nº {form.number}</small>
+        </div>
+        <div className="ws-rail-footnote"><span aria-hidden="true">↳</span><p>Precisa sair? Retome este rascunho em <b>Minhas notas</b>.</p></div>
+        </aside>
+        <div className="ws-emission-editor" ref={editorRef}>
+        {msg && <div className="ca-message" role="status">{msg}</div>}
         {stepAlert && (
           <div className="ca-step-alert" role="alert">
             <b>Antes de continuar</b>
@@ -1716,12 +1645,14 @@ export default function SaasEmission({
               <Button variant="outline" disabled={step === 0} onClick={() => go(-1)}>
                 Voltar
               </Button>
-              <Button className="ca-btn-primary" onClick={advance}>
+              <Button className="ca-btn-primary" disabled={!dataReady || busy} onClick={advance}>
                 Continuar para {tabs[step + 1]}
               </Button>
             </div>
           </main>
         )}
+        </div>
+        </div>
       </div>
       {reuseOpen && (
         <div
@@ -1970,3 +1901,4 @@ function FiscalPreview({
     </aside>
   );
 }
+
