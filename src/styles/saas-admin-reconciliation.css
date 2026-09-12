@@ -1223,6 +1223,49 @@
   justify-content: flex-end;
   gap: 10px;
 }
+
+/* Emission flow: quiet status and hierarchy inspired by 21st dashboard patterns. */
+.ca-emission-title-tools {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.ca-draft-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #71808e;
+  font-size: 10px;
+  white-space: nowrap;
+}
+.ca-draft-status i {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #a8b2bc;
+}
+.ca-draft-status.saved i,
+.ca-draft-status.restored i { background: #2d9b68; }
+.ca-draft-status.saving i { background: #df9b35; animation: ca-draft-pulse 1s ease-in-out infinite; }
+.ca-draft-status.cleared i { background: #2775c5; }
+@keyframes ca-draft-pulse { 50% { opacity: .35; } }
+.ca-issuer-card {
+  border-color: #b7d9e8;
+  background: #f2fbfe;
+}
+.ca-issuer-card > svg { color: #1676a2; }
+.ca-issuer-card b { color: #205d78; }
+
+.ca-step-page,
+.ca-review-layout { animation: ca-step-enter .18s ease-out; }
+@keyframes ca-step-enter { from { opacity: .72; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (max-width: 760px) {
+  .ca-emission-title-tools { justify-content: flex-start; }
+  .ca-draft-status { width: 100%; }
+}
 .saas-main-content .ca-reuse-trigger {
   display: inline-flex !important;
   min-height: 36px !important;
@@ -1585,3 +1628,4 @@
     flex-direction: column;
   }
 }
+
