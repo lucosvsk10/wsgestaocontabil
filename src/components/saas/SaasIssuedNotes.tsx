@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { CalendarDays, Download, FileText, Repeat2, Search } from 'lucide-react';
 import SaasDanfePreview, { printDanfe } from './SaasDanfePreview';
 
-type Props = { emissions: any[]; onNew: () => void; onReuse: (emission: any) => void };
+type Props = { emissions: any[]; onNew: () => void; onReuse: (emission: any) => void; embedded?: boolean };
 type PreviewMode = 'danfe' | 'receipt';
 
 const MONTHS = [
@@ -70,7 +70,7 @@ const downloadXml = (item: any) => {
   URL.revokeObjectURL(a.href);
 };
 
-export default function SaasIssuedNotes({ emissions, onNew, onReuse }: Props) {
+export default function SaasIssuedNotes({ emissions, onNew, onReuse, embedded = false }: Props) {
   const now = new Date(),
     currentYear = now.getFullYear(),
     currentMonth = now.getMonth();
@@ -162,7 +162,7 @@ export default function SaasIssuedNotes({ emissions, onNew, onReuse }: Props) {
    .saas-issued-admin-clone .note-row:hover{background:#e3e3e1!important}
   `}</style>
 
-      <section className="flex flex-wrap items-center justify-between gap-3 rounded-[4px] bg-[#ececea] px-5 py-4">
+      {!embedded && <section className="flex flex-wrap items-center justify-between gap-3 rounded-[4px] bg-[#ececea] px-5 py-4">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[.15em] text-[#657185]">
             Emissão fiscal
@@ -180,7 +180,7 @@ export default function SaasIssuedNotes({ emissions, onNew, onReuse }: Props) {
         >
           Emitir nova nota
         </button>
-      </section>
+      </section>}
 
       <section className="relative mt-4 rounded-[4px] bg-[#ececea] px-4 py-3">
         <div className="flex flex-wrap items-center gap-2">
@@ -528,3 +528,4 @@ function Status({ value }: { value: string }) {
     </span>
   );
 }
+
