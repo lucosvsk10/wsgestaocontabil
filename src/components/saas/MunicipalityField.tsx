@@ -30,11 +30,16 @@ export default function MunicipalityField({ label, value, name = '', state = '',
   const [query, setQuery] = useState(name ? `${name}/${state}` : value);
   const [rows, setRows] = useState(municipalities);
   const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const typing = useRef(false);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
-  useEffect(() => { if (value) setQuery(name ? `${name}/${state}` : value); }, [value, name, state]);
+  useEffect(() => {
+    if (!typing.current || value) setQuery(name ? `${name}/${state}` : value);
+    typing.current = false;
+  }, [value, name, state]);
   const search = async () => {
     setOpen(true);
     setLoading(true);
@@ -45,18 +50,22 @@ export default function MunicipalityField({ label, value, name = '', state = '',
   const filtered = query.trim().length < 2 ? [] : rows.filter(row =>
     normalize(`${row.name}/${row.state}`).includes(normalize(query.trim())) || row.code.startsWith(query.trim())
   ).slice(0, 8);
-  const choose = (row: Municipality) => { onChange(row); setQuery(`${row.name}/${row.state}`); setOpen(false); };
+  const choose = (row: Municipality) => { onChange(row); setQuery(`${row.name}/${row.state}`); setOpen(false); setActiveIndex(-1); };
   return <div ref={root} className="ca-municipality" onBlur={event => {
     if (!event.currentTarget.contains(event.relatedTarget as Node)) setOpen(false);
   }}>
     <label className="ca-label" htmlFor={id}>{label} <b aria-hidden="true">*</b></label>
     <Input id={id} value={query} onFocus={() => void search()} placeholder="Nome da cidade ou código IBGE"
-      autoComplete="off" role="combobox" aria-expanded={open} aria-controls={`${id}-results`} aria-autocomplete="list"
-      onKeyDown={event => { if (event.key === 'Escape') setOpen(false); if (event.key === 'Enter' && filtered.length === 1) { event.preventDefault(); choose(filtered[0]); } }}
-      onChange={event => { setQuery(event.target.value); setOpen(true); onChange({ code: '', name: '', state: '' }); }} />
+      autoComplete="off" role="combobox" aria-expanded={open} aria-controls={`${id}-results`} aria-autocomplete="list" aria-activedescendant={open && activeIndex >= 0 ? `${id}-option-${activeIndex}` : undefined}
+      onKeyDown={event => {
+        if (event.key === 'Escape') { setOpen(false); setActiveIndex(-1); }
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); setOpen(true); setActiveIndex(i => Math.max(0, Math.min(filtered.length - 1, i + (event.key === 'ArrowDown' ? 1 : -1)))); }
+        if (event.key === 'Enter' && open && filtered.length && (activeIndex >= 0 || filtered.length === 1)) { event.preventDefault(); choose(filtered[activeIndex >= 0 ? activeIndex : 0]); }
+      }}
+      onChange={event => { typing.current = true; setActiveIndex(-1); setQuery(event.target.value); setOpen(true); onChange({ code: '', name: '', state: '' }); }} />
     {value && <small className="ca-field-hint">{name ? `${name}/${state} · ` : ''}IBGE {value}</small>}
     {open && <div id={`${id}-results`} className="ca-municipality-results" role="listbox" aria-label={`Resultados: ${label}`}>
-      {loading ? <p role="status">Consultando municípios…</p> : filtered.map(row => <button type="button" role="option" aria-selected={row.code === value} key={row.code}
+      {loading ? <p role="status">Consultando municípios…</p> : filtered.map((row, index) => <button id={`${id}-option-${index}`} type="button" role="option" aria-selected={index === activeIndex || row.code === value} key={row.code}
         onMouseDown={event => event.preventDefault()} onClick={() => choose(row)}><strong>{row.name}/{row.state}</strong><span>{row.code}</span></button>)}
       {!loading && !filtered.length && !failed && <p>{query.length < 2 ? 'Digite ao menos 2 letras ou o código IBGE.' : 'Nenhum município encontrado. Confira o nome ou código.'}</p>}
     </div>}
@@ -68,4 +77,3 @@ export default function MunicipalityField({ label, value, name = '', state = '',
     </div>}
   </div>;
 }
-

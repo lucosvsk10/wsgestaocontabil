@@ -59,8 +59,7 @@ export function listEmissionDrafts(organizationId: string): ListedEmissionDraft[
     const key = emissionDraftKey(organizationId, documentType);
     const draft = readEmissionDraft(key);
     // Merely opening an empty form must not create a visible unfinished note.
-    const meaningful = draft && ['customerId', 'productId', 'serviceId', 'description', 'remetenteId', 'destinatarioId', 'driverName', 'keys', 'vTPrest', 'cargoValue'].some(field => String(draft.form[field] || '').trim());
+    const meaningful = draft && ['customerId', 'productId', 'serviceId', 'description', 'remetenteId', 'destinatarioId', 'driverName', 'driverCpf', 'plate', 'keys', 'chNFe', 'vTPrest', 'vCarga', 'cargoValue', 'cargoWeight', 'value', 'unitPrice', 'contratanteId', 'seguradoraNome', 'apolice', 'averbacao', 'xProd'].some(field => String(draft.form[field] || '').trim());
     return meaningful ? [{ ...draft, key, documentType }] : [];
   }).sort((a, b) => Date.parse(b.savedAt) - Date.parse(a.savedAt));
 }
-

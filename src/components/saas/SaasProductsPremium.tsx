@@ -1,3 +1,4 @@
+import FiscalCodeField from './FiscalCodeField';
 import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, Archive, ArrowLeft, Box, Package2, PackagePlus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -502,7 +503,7 @@ export default function SaasProductsPremium({ organizationId }: { organizationId
                 <span>Dados reutilizados automaticamente na NF-e e NFC-e.</span>
               </div>
               <div className="product-form-grid">
-                <Field label="NCM" value={form.ncm} onChange={value => set('ncm', value)} required hint="Informe os 8 dígitos." />
+                <FiscalCodeField kind="ncm" label="NCM" value={form.ncm} onChange={value => set('ncm', value)} required />
                 <Field label="CEST" value={form.cest} onChange={value => set('cest', value)} />
                 <Field label="CFOP dentro do estado" value={form.cfop_in_state} onChange={value => set('cfop_in_state', value)} required />
                 <Field label="CFOP fora do estado" value={form.cfop_out_state} onChange={value => set('cfop_out_state', value)} />

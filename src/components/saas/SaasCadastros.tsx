@@ -1,3 +1,4 @@
+import FiscalCodeField from './FiscalCodeField';
 import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
@@ -1094,7 +1095,7 @@ function CatalogEditor({ section, form, set }: { section: CadastroSection; form:
       {service ? (
         <>
           <Section title="Classificação fiscal" description="Dados aplicados automaticamente na DPS e na NFS-e.">
-            <Field label="Código nacional" value={form.service_code_national} onChange={value => set('service_code_national', value)} required hint="Código de tributação nacional do serviço." />
+            <FiscalCodeField kind="service" label="Código nacional" value={form.service_code_national} onChange={value => set('service_code_national', value)} required />
             <Field label="Código municipal" value={form.service_code_municipal} onChange={value => set('service_code_municipal', value)} />
             <Field label="CNAE" value={form.cnae} onChange={value => set('cnae', value)} />
             <Field label="ISS (%)" value={form.iss_rate} onChange={value => set('iss_rate', value)} type="number" />
@@ -1111,7 +1112,7 @@ function CatalogEditor({ section, form, set }: { section: CadastroSection; form:
       ) : (
         <>
           <Section title="Classificação">
-            <Field label="NCM" value={form.ncm} onChange={value => set('ncm', value)} />
+            <FiscalCodeField kind="ncm" label="NCM" value={form.ncm} onChange={value => set('ncm', value)} />
             <Field label="CEST" value={form.cest} onChange={value => set('cest', value)} />
             <Field label="CFOP interno" value={form.cfop_in_state} onChange={value => set('cfop_in_state', value)} />
             <Field label="CFOP interestadual" value={form.cfop_out_state} onChange={value => set('cfop_out_state', value)} />

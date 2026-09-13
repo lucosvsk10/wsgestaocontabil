@@ -49,6 +49,19 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('preenchimento e contrato de emissão', () => {
+  it('permite selecionar a própria empresa como participante do CT-e sem substituir o emitente', async () => {
+    writeEmissionDraft(emissionDraftKey('org-test', 'CT-e'), {...completedForm, remetenteId:'__issuer__'}, 'Revisão');
+    mount('CT-e'); await ready();
+    fireEvent.click(screen.getByRole('button',{name:'Gerar prévia'}));
+    await waitFor(()=>expect(fixture.invoke).toHaveBeenCalledTimes(1));
+    expect(fixture.invoke.mock.calls[0][1].body.data.rem.CNPJ).toBe('04252011000110');
+  });
+  it('recupera etapa inválida na primeira etapa sem perder os dados', async () => {
+    writeEmissionDraft(emissionDraftKey('org-test', 'NF-e'), completedForm, 'Etapa antiga');
+    mount('NF-e'); await ready();
+    expect(screen.getByRole('heading',{name:'Cliente'})).toBeInTheDocument();
+    expect(readEmissionDraft(emissionDraftKey('org-test','NF-e'))?.form.unitPrice).toBe('75');
+  });
   it('preserva a última digitação ao sair e restaura o preço editado, sem voltar ao preço do cadastro', async () => {
     writeEmissionDraft(emissionDraftKey('org-test', 'NF-e'), completedForm, 'Produtos');
     const view = mount('NF-e'); await ready();
@@ -124,4 +137,3 @@ describe('preenchimento e contrato de emissão', () => {
     expect(readEmissionDraft(emissionDraftKey('org-test', 'NF-e'))?.form.unitPrice).toBe('75');
   });
 });
-

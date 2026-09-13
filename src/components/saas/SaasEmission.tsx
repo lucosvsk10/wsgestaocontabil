@@ -25,9 +25,17 @@ import { fiscalErrorMessage, readFiscalError } from '@/lib/saas/emissionErrors';
 import SaasDanfePreview, { printDanfe } from './SaasDanfePreview';
 import MunicipalityField from './MunicipalityField';
 import FiscalRecordPicker from './FiscalRecordPicker';
-import '@/styles/saas-emission-workspace.css';
+import FiscalCodeField from './FiscalCodeField';
+import '@/styles/fiscal-studio.css';
 
 const docs = ['NF-e', 'NFC-e', 'NFS-e', 'CT-e', 'MDF-e'];
+const stepsByDocument: Record<string, string[]> = {
+ 'NF-e': ['Cliente', 'Produtos', 'Pagamento', 'Fiscal', 'Revisão'],
+ 'NFC-e': ['Cliente', 'Produtos', 'Pagamento', 'Fiscal', 'Revisão'],
+ 'NFS-e': ['Pessoas', 'Serviço', 'Revisão'],
+ 'CT-e': ['Participantes', 'Carga', 'Rota', 'Fiscal', 'Revisão'],
+ 'MDF-e': ['Veículo', 'Condutor', 'Rota e carga', 'Documentos', 'Revisão'],
+};
 const money = (v: any) =>
   Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const digits = (v: any) => String(v ?? '').replace(/\D/g, '');
@@ -115,7 +123,7 @@ const emissionDate = (emission: any) =>
     minute: '2-digit',
   });
 const fieldClass =
-  'h-10 !rounded-[4px] !border-[#b9c2ce] !bg-white !px-3 !text-[13px] !text-[#344054] focus:!border-[#1496d4] focus:!ring-2 focus:!ring-[#1496d4]/10';
+  'fe-input';
 function Field({
   label,
   value,
@@ -140,7 +148,7 @@ function Field({
   const listId = suggestions?.length ? `field-suggestions-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}` : undefined;
   return (
     <label className={wide ? 'md:col-span-2' : ''}>
-      <span className="ca-label">
+      <span className="fe-label">
         {label}
         {required && <b aria-hidden="true"> *</b>}
       </span>
@@ -153,7 +161,7 @@ function Field({
         className={fieldClass}
       />
       {listId && <datalist id={listId}>{suggestions.map(value => <option key={value} value={value} />)}</datalist>}
-      {hint && <small className="ca-field-hint">{hint}</small>}
+      {hint && <small className="fe-field-hint">{hint}</small>}
     </label>
   );
 }
@@ -174,14 +182,14 @@ function Select({
 }) {
   return (
     <label>
-      <span className="ca-label">
+      <span className="fe-label">
         {label}
         {required && <b aria-hidden="true"> *</b>}
       </span>
-      <select value={value ?? ''} onChange={e => onChange(e.target.value)} className="ca-select">
+      <select value={value ?? ''} onChange={e => onChange(e.target.value)} className="fe-select">
         {children}
       </select>
-      {hint && <small className="ca-field-hint">{hint}</small>}
+      {hint && <small className="fe-field-hint">{hint}</small>}
     </label>
   );
 }
@@ -208,14 +216,14 @@ function Section({
   tone?: 'blue' | 'green' | 'purple' | 'orange';
 }) {
   return (
-    <section className={`ca-form-section ca-tone-${tone}`}>
-      <div className="ca-section-head">
+    <section className={`fe-form-section fe-tone-${tone}`} data-section={title}>
+      <div className="fe-section-head">
         <div>
           <h2 tabIndex={-1}>{title}</h2>
           {subtitle && <p>{subtitle}</p>}
         </div>
       </div>
-      <div className="ca-section-body">{children}</div>
+      <div className="fe-section-body">{children}</div>
     </section>
   );
 }
@@ -231,32 +239,14 @@ function IssuerSummary({ profile, documentType }: { profile: any; documentType: 
   const address = [profile?.street, profile?.street_number, profile?.district].filter(Boolean).join(', ');
   const city = [profile?.city, profile?.state].filter(Boolean).join('/');
   return (
-    <section className="mb-4 rounded-[6px] border border-[#cbd3dc] bg-[#edf1f4] px-4 py-3">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="text-[10px] font-semibold uppercase tracking-[.08em] text-[#667382]">
-              {service ? 'Prestador' : 'Emitente'}
-            </span>
-            <span className="rounded-full border border-[#c5cdd6] bg-white px-2 py-0.5 text-[9px] font-medium text-[#65717d]">
-              Dados da Minha Empresa · somente leitura
-            </span>
-          </div>
-          <strong className="mt-1 block truncate text-[13px] font-semibold text-[#263442]">
-            {profile?.legal_name || profile?.trade_name || 'Empresa fiscal não configurada'}
-          </strong>
-          {profile?.trade_name && profile?.trade_name !== profile?.legal_name && (
-            <span className="mt-0.5 block text-[10px] text-[#697785]">{profile.trade_name}</span>
-          )}
-        </div>
-        <div className="grid min-w-[280px] flex-1 grid-cols-2 gap-x-5 gap-y-2 md:max-w-[640px] md:grid-cols-4">
-          <div><span className="block text-[9px] text-[#7a8793]">CNPJ/CPF</span><b className="text-[10px] font-medium text-[#354350]">{formatTaxId(profile?.tax_id)}</b></div>
-          <div><span className="block text-[9px] text-[#7a8793]">Inscrição</span><b className="text-[10px] font-medium text-[#354350]">{registration}</b></div>
-          <div><span className="block text-[9px] text-[#7a8793]">Município</span><b className="text-[10px] font-medium text-[#354350]">{city || '—'}</b></div>
-          <div><span className="block text-[9px] text-[#7a8793]">Endereço</span><b className="line-clamp-2 text-[10px] font-medium text-[#354350]">{address || '—'}</b></div>
-        </div>
-      </div>
-    </section>
+    <details className="fe-issuer">
+      <summary><span className="fe-issuer-monogram" aria-hidden="true">{(profile?.legal_name || 'WS').slice(0, 2).toUpperCase()}</span>
+        <span><small>{service ? 'Prestador do serviço' : 'Empresa emitente'}</small><strong>{profile?.legal_name || 'Configure sua empresa'}</strong></span>
+        <span className="fe-issuer-tax">{formatTaxId(profile?.tax_id)}<small>{city || 'Município não informado'}</small></span>
+        <span className="fe-issuer-expand">Conferir dados <ChevronRight size={15} /></span>
+      </summary>
+      <div className="fe-issuer-details"><span>{registration}</span><span>{address || 'Endereço não informado'}</span><small>Dados de Minha Empresa. A assinatura utiliza o certificado desta empresa.</small></div>
+    </details>
   );
 }
 function TabBar({
@@ -270,19 +260,19 @@ function TabBar({
 }) {
   const current = tabs.indexOf(active);
   return (
-    <div className="ca-tabs-wrap">
-      <div className="ca-progress-copy">
+    <div className="fe-tabs-wrap">
+      <div className="fe-progress-copy">
         <span>
           Etapa {current + 1} de {tabs.length}
         </span>
         <b>Preenchimento</b>
       </div>
-      <div className="ca-progress-track" aria-hidden="true">
+      <div className="fe-progress-track" aria-hidden="true">
         <i style={{ width: `${((current + 1) / tabs.length) * 100}%` }} />
       </div>
-      <div className="ca-tabs" aria-label="Etapas da emissão">
+      <ol className="fe-tabs" aria-label="Etapas da emissão">
         {tabs.map((t, i) => (
-          <button
+          <li key={t}><button
             type="button"
             key={t}
             onClick={() => onChange(t)}
@@ -291,9 +281,9 @@ function TabBar({
           >
             <span>{i < current ? '✓' : i + 1}</span>
             {t}
-          </button>
+          </button></li>
         ))}
-      </div>
+      </ol>
     </div>
   );
 }
@@ -399,7 +389,9 @@ function EmissionForm({
         const selected = products.find(item => item.id === v);
         if (selected) {
           next.unitPrice = String(selected.sale_price ?? '');
-          next.cfop = selected.cfop_in_state || profile?.default_cfop_in_state || p.cfop;
+          const destination = customers.find(item => item.id === p.customerId);
+          const interstate = destination?.state && profile?.state && destination.state !== profile.state;
+          next.cfop = (interstate ? selected.cfop_out_state || profile?.default_cfop_out_state : selected.cfop_in_state || profile?.default_cfop_in_state) || p.cfop;
         }
       }
       if (k === 'serviceId') {
@@ -505,7 +497,8 @@ function EmissionForm({
         municipioPrestacaoUf: savedDraft ? f.municipioPrestacaoUf : pp.state || '',
         munIniCodigo: savedDraft ? f.munIniCodigo : f.munIniCodigo || pp.city_ibge_code || '',
         munIniNome: savedDraft ? f.munIniNome : f.munIniNome || pp.city || '',
-        ufIni: savedDraft ? f.ufIni : f.ufIni || pp.state || 'AL',
+        ufIni: savedDraft ? f.ufIni : pp.state || 'AL',
+        ufFim: savedDraft ? f.ufFim : pp.state || 'AL',
         tpEmit: savedDraft ? f.tpEmit : pp.business_mode === 'transport' ? '1' : '2',
       }));
     setDataReady(true);
@@ -525,16 +518,9 @@ function EmissionForm({
     setResult(null);
     setMsg('');
     setStepAlert('');
-    setTab(
-      (documentType === 'NFS-e' && ['Valores', 'Impostos'].includes(savedDraft?.tab || '') ? 'Serviço' : savedDraft?.tab) ||
-        (documentType === 'NFS-e'
-          ? 'Pessoas'
-          : documentType === 'CT-e'
-          ? 'Participantes'
-          : documentType === 'MDF-e'
-          ? 'Veículo'
-          : 'Cliente')
-    );
+    const savedStep = documentType === 'NFS-e' && ['Valores', 'Impostos'].includes(savedDraft?.tab || '') ? 'Serviço' : savedDraft?.tab;
+    const availableSteps = stepsByDocument[documentType || ''] || stepsByDocument['NF-e'];
+    setTab(savedStep && availableSteps.includes(savedStep) ? savedStep : availableSteps[0]);
     draftReadyRef.current = true;
     return () => { mountedRef.current = false; };
   }, [organizationId, documentType, draftKey]);
@@ -543,9 +529,9 @@ function EmissionForm({
     if (!draftKey || !draftReadyRef.current || !dataReady || completedRef.current) return;
     try {
       const draft = writeEmissionDraft(draftKey, form, tab, {
-        recipient: customers.find(item => item.id === (form.customerId || form.destinatarioId))?.legal_name || form.driverName || '',
-        subject: products.find(item => item.id === form.productId)?.name || form.description || form.xProd || '',
-        total: documentType === 'NF-e' || documentType === 'NFC-e' ? Number(form.quantity) * Number(form.unitPrice) : Number(form.value || form.vTPrest || form.cargoValue || 0),
+        recipient: documentType === 'MDF-e' ? form.driverName : customers.find(item => item.id === (documentType === 'CT-e' ? form.destinatarioId : form.customerId))?.legal_name || (form.destinatarioId === '__issuer__' ? profile?.legal_name : '') || '',
+        subject: documentType === 'NF-e' || documentType === 'NFC-e' ? products.find(item => item.id === form.productId)?.name || '' : documentType === 'NFS-e' ? form.description : [form.munIniNome, form.munFimNome || form.unloadName].filter(Boolean).join(' → '),
+        total: documentType === 'NF-e' || documentType === 'NFC-e' ? Number(form.quantity) * Number(form.unitPrice) : Number(documentType === 'NFS-e' ? form.value : documentType === 'CT-e' ? form.vTPrest : form.cargoValue),
         environment: profile?.fiscal_environment === 'production' ? 'production' : 'homologation',
       });
       setDraftSavedAt(draft.savedAt);
@@ -554,18 +540,23 @@ function EmissionForm({
       setDraftStatus('error');
     }
   }, [draftKey, form, tab, dataReady, customers, products, profile?.fiscal_environment, documentType]);
+  const transportParties = profile?.tax_id
+    ? [{ ...profile, id: '__issuer__', trade_name: 'Sua empresa · emitente' }, ...customers]
+    : customers;
   const customer = customers.find(x => x.id === form.customerId),
     product = products.find(x => x.id === form.productId),
     service = services.find(x => x.id === form.serviceId),
-    rem = customers.find(x => x.id === form.remetenteId),
-    dest = customers.find(x => x.id === form.destinatarioId),
+    rem = transportParties.find(x => x.id === form.remetenteId),
+    dest = transportParties.find(x => x.id === form.destinatarioId),
     issuerCarrier = carriers.find(x => digits(x.tax_id) === digits(profile?.tax_id));
   const transportCarrier = issuerCarrier;
-  const partyRecords = customers.map(item => ({
+  const mapParty = (item: any) => ({
     id: item.id, name: item.legal_name || item.trade_name || 'Sem nome', identifier: formatTaxId(item.tax_id),
     location: [item.street, item.street_number, item.city, item.state].filter(Boolean).join(' · '),
-    contact: [item.email, item.phone].filter(Boolean).join(' · '), detail: item.trade_name,
-  }));
+    contact: [item.email, item.phone].filter(Boolean).join(' · '), detail: item.trade_name, classification: item.id === '__issuer__' ? 'Sua empresa · emitente' : undefined,
+  });
+  const partyRecords = customers.map(mapParty);
+  const transportRecords = transportParties.map(mapParty);
   const chooseOrCreate = (
     key: string,
     value: string,
@@ -590,7 +581,7 @@ function EmissionForm({
     (emission: any, parts: ReusableParts = reusablePartsDefault) => {
       const payload = emission?.payload || {};
       const byTaxId = (value: any) =>
-        customers.find(item => digits(item.tax_id) === digits(value))?.id || '';
+        transportParties.find(item => digits(item.tax_id) === digits(value))?.id || '';
       const productId =
         products.find(
           item =>
@@ -880,8 +871,8 @@ function EmissionForm({
       seguradoraCnpj: digits(form.seguradoraCnpj),
       apolice: form.apolice,
       averbacao: form.averbacao,
-      contratanteCnpj: customers.find(x => x.id === form.contratanteId)?.tax_id,
-      pagadorCnpj: customers.find(x => x.id === form.contratanteId)?.tax_id,
+      contratanteCnpj: transportParties.find(x => x.id === form.contratanteId)?.tax_id,
+      pagadorCnpj: transportParties.find(x => x.id === form.contratanteId)?.tax_id,
       ncmPredominante: digits(form.ncmPredominante),
       xProd: form.xProd,
       cepCarrega: profile?.postal_code,
@@ -892,16 +883,16 @@ function EmissionForm({
   });
   if (!documentType)
     return (
-      <div className="ca-doc-home">
-        <div className="ca-page-title">
+      <div className="fe-doc-home">
+        <div className="fe-page-title">
           <p>Emissão fiscal</p>
           <h1>Nova nota fiscal</h1>
           <span>Escolha o tipo de documento para iniciar.</span>
         </div>
-        <div className="ca-doc-grid">
+        <div className="fe-doc-grid">
           {docs.map((d, i) => (
-            <button key={d} onClick={() => onChoose(d)} className={`ca-doc-choice tone-${i + 1}`}>
-              <span className="ca-doc-icon">
+            <button key={d} onClick={() => onChoose(d)} className={`fe-doc-choice tone-${i + 1}`}>
+              <span className="fe-doc-icon">
                 {d === 'NFS-e' ? (
                   <ReceiptText />
                 ) : d === 'CT-e' || d === 'MDF-e' ? (
@@ -928,14 +919,7 @@ function EmissionForm({
         </div>
       </div>
     );
-  const tabs =
-    documentType === 'NFS-e'
-      ? ['Pessoas', 'Serviço', 'Revisão']
-      : documentType === 'CT-e'
-      ? ['Participantes', 'Carga', 'Rota', 'Fiscal', 'Revisão']
-      : documentType === 'MDF-e'
-      ? ['Veículo', 'Condutor', 'Rota e carga', 'Documentos', 'Revisão']
-      : ['Cliente', 'Produtos', 'Pagamento', 'Fiscal', 'Revisão'];
+  const tabs = stepsByDocument[documentType] || stepsByDocument['NF-e'];
   const step = tabs.indexOf(tab),
     last = step === tabs.length - 1;
   const go = (delta: number) => setTab(tabs[Math.max(0, Math.min(tabs.length - 1, step + delta))]);
@@ -964,7 +948,7 @@ function EmissionForm({
       if (index === 3) {
         need(digits(form.cfop).length === 4, 'CFOP com 4 dígitos');
         need(isDocumentNumber(form.series, 3, true), 'série numérica de até 3 dígitos');
-        need(isDocumentNumber(form.number, documentType === 'NFS-e' ? 15 : 9), 'número da nota');
+        need(isDocumentNumber(form.number, 9), 'número da nota');
       }
     }
     if (documentType === 'NFS-e') {
@@ -979,7 +963,7 @@ function EmissionForm({
         need(String(form.description).trim(), 'descrição do serviço');
         need(isPositiveAmount(form.value), 'valor do serviço');
         need(isDocumentNumber(form.series, 5, true), 'série DPS numérica');
-        need(isDocumentNumber(form.number, documentType === 'NFS-e' ? 15 : 9), 'número DPS');
+        need(isDocumentNumber(form.number, 15), 'número DPS');
       }
     }
     if (documentType === 'CT-e') {
@@ -1010,7 +994,7 @@ function EmissionForm({
       if (index === 3) {
         need(digits(form.cfopCte).length === 4, 'CFOP com 4 dígitos');
         need(isDocumentNumber(form.series, 3, true), 'série numérica de até 3 dígitos');
-        need(isDocumentNumber(form.number, documentType === 'NFS-e' ? 15 : 9), 'número do CT-e');
+        need(isDocumentNumber(form.number, 9), 'número do CT-e');
       }
     }
     if (documentType === 'MDF-e') {
@@ -1046,14 +1030,14 @@ function EmissionForm({
           need(isValidCnpj(form.seguradoraCnpj), 'CNPJ válido da seguradora');
           need(String(form.apolice).trim(), 'apólice do seguro');
           need(String(form.averbacao).trim(), 'averbação do seguro');
-          need(isValidTaxId(customers.find(x => x.id === form.contratanteId)?.tax_id), 'contratante cadastrado com CPF/CNPJ válido');
+          need(isValidTaxId(transportParties.find(x => x.id === form.contratanteId)?.tax_id), 'contratante cadastrado com CPF/CNPJ válido');
           need(digits(form.ncmPredominante).length === 8, 'NCM do produto predominante');
           need(String(form.xProd).trim(), 'descrição da carga');
           need(isPositiveAmount(form.vContrato), 'valor do frete');
           if (parseAccessKeys(form.keys).length === 1) need(digits(form.cepDescarga).length === 8, 'CEP de descarga');
         }
         need(isDocumentNumber(form.series, 3, true), 'série numérica de até 3 dígitos');
-        need(isDocumentNumber(form.number, documentType === 'NFS-e' ? 15 : 9), 'número do MDF-e');
+        need(isDocumentNumber(form.number, 9), 'número do MDF-e');
       }
     }
     return issues;
@@ -1070,14 +1054,14 @@ function EmissionForm({
   const allIssues = tabs.slice(0, -1).flatMap((_, index) => issuesForStep(index));
   const nfsePreviewOnly = documentType === 'NFS-e' && environment !== 'production';
   const actions = (name: string, payload: any, extra: any = {}) => emissionAuthorized ? (
-    <div className="ca-final-actions">
-      <Button className="ca-btn-primary" onClick={() => onChoose(null)}>Nova emissão</Button>
+    <div className="fe-final-actions">
+      <Button className="fe-btn-primary" onClick={() => onChoose(null)}>Nova emissão</Button>
     </div>
   ) : (
-    <div className="ca-final-actions">
+    <div className="fe-final-actions">
       <Button
         variant="outline"
-        className="ca-btn-secondary"
+        className="fe-btn-secondary"
         disabled={busy || !dataReady || allIssues.length > 0}
         onClick={() => invoke(name, { action: 'preview', data: payload, ...extra })}
       >
@@ -1086,7 +1070,7 @@ function EmissionForm({
       {!nfsePreviewOnly && <Button
         disabled={busy || !dataReady || allIssues.length > 0}
         onClick={() => invoke(name, { action: 'issue', data: payload, ...extra })}
-        className="ca-btn-primary"
+        className="fe-btn-primary"
       >
         {busy
           ? 'Processando...'
@@ -1094,7 +1078,7 @@ function EmissionForm({
           ? 'Emitir documento'
           : 'Transmitir para homologação'}
       </Button>}
-      {nfsePreviewOnly && <p className="ca-field-hint">Neste ambiente, a NFS-e permite conferir a prévia assinada. A transmissão de teste ainda não está disponível.</p>}
+      {nfsePreviewOnly && <p className="fe-field-hint">Neste ambiente, a NFS-e permite conferir a prévia assinada. A transmissão de teste ainda não está disponível.</p>}
     </div>
   );
   const productTotal = Number(form.quantity || 0) * Number(form.unitPrice || 0);
@@ -1113,23 +1097,23 @@ function EmissionForm({
   if (documentType === 'NF-e' || documentType === 'NFC-e')
     content =
       step === 0 ? (
-        <Section title="Cliente" subtitle="Selecione o destinatário desta operação.">
-          <div className="ca-form-grid">
+        <Section title="Cliente" subtitle={documentType === 'NFC-e' ? 'Identifique o consumidor quando necessário. Sem seleção, a nota segue como consumidor não identificado.' : 'Selecione o destinatário desta operação.'}>
+          <div className="fe-form-grid">
 <FiscalRecordPicker label="Cliente" value={form.customerId} items={partyRecords}
               onChange={value => set('customerId', value)} onCreate={() => onOpenCadastro?.('Clientes')}
               required={documentType === 'NF-e'} />
-            <div className="ca-info-box">
+            <div className="fe-info-box">
               <UsersRound />
               <span>
-                <b>{customer?.legal_name || 'Nenhum cliente selecionado'}</b>
-                <small>{customer?.tax_id || 'CPF/CNPJ será preenchido pelo cadastro'}</small>
+                <b>{customer?.legal_name || (documentType === 'NFC-e' ? 'Consumidor não identificado' : 'Dados vindos do seu cadastro')}</b>
+                <small>{customer ? [formatTaxId(customer.tax_id), customer.city, customer.state].filter(Boolean).join(' · ') : documentType === 'NFC-e' ? 'Confira as exigências de identificação aplicáveis à operação antes de transmitir.' : 'Documento, endereço e informações fiscais são preenchidos ao selecionar o cliente.'}</small>
               </span>
             </div>
           </div>
         </Section>
       ) : step === 1 ? (
         <Section title="Produtos" subtitle="Escolha o item e informe a quantidade.">
-          <div className="ca-form-grid">
+          <div className="fe-form-grid">
             <CatalogPicker
               label="Produto"
               value={form.productId}
@@ -1140,7 +1124,7 @@ function EmissionForm({
               emptyActionLabel="Adicionar produto"
               onEmptyAction={() => onOpenCadastro?.('Produtos')}
             />
-            <div className="ca-item-row">
+            <div className="fe-item-row">
               <Field
                 label="Quantidade"
                 value={form.quantity}
@@ -1156,15 +1140,15 @@ function EmissionForm({
                 required
               />
               <div>
-                <span className="ca-label">Total</span>
-                <div className="ca-total-box">{money(productTotal)}</div>
+                <span className="fe-label">Total</span>
+                <div className="fe-total-box">{money(productTotal)}</div>
               </div>
             </div>
           </div>
         </Section>
       ) : step === 2 ? (
         <Section title="Pagamento" subtitle="Defina como a operação será recebida.">
-          <div className="ca-form-grid">
+          <div className="fe-form-grid">
             <Select
               label="Forma de pagamento"
               value={form.payment}
@@ -1177,7 +1161,7 @@ function EmissionForm({
               <option value="17">PIX</option>
               <option value="99">Outros</option>
             </Select>
-            <div className="ca-info-box">
+            <div className="fe-info-box">
               <Package2 />
               <span>
                 <b>Total da nota</b>
@@ -1191,7 +1175,7 @@ function EmissionForm({
           title="Informações fiscais"
           subtitle="Revise a numeração e a natureza fiscal da operação."
         >
-          <div className="ca-form-grid">
+          <div className="fe-form-grid">
             <Field
               label="CFOP"
               value={form.cfop}
@@ -1214,7 +1198,7 @@ function EmissionForm({
   if (documentType === 'NFS-e')
     content = step === 0 ? (
       <Section title="Cliente e local" subtitle="Selecione o cadastro e confirme onde o serviço foi prestado.">
-        <div className="ca-form-grid">
+        <div className="fe-form-grid">
 <FiscalRecordPicker label="Cliente / tomador" value={form.customerId} items={partyRecords}
               onChange={value => set('customerId', value)} onCreate={() => onOpenCadastro?.('Clientes')}
               required={true} />
@@ -1225,19 +1209,17 @@ function EmissionForm({
       </Section>
     ) : step === 1 ? (
       <Section title="Serviço e valor" subtitle="O cadastro preenche a descrição e o código. Ajuste apenas o que mudou.">
-        <div className="ca-form-grid">
+        <div className="fe-form-grid">
           <CatalogPicker label="Serviço" value={form.serviceId} onChange={v => set('serviceId', v)}
             items={services} kind="service" required emptyActionLabel="Adicionar serviço" onEmptyAction={() => onOpenCadastro?.('Serviços')} />
           <Field label="Valor do serviço" value={form.value} onChange={v => set('value', v)} type="number" required />
           <Field label="Descrição do serviço" value={form.description} onChange={v => set('description', v)} wide required />
-          <Field label="Código de Tributação Nacional" value={form.serviceCode} onChange={v => set('serviceCode', v)} required
-            suggestions={Array.from(new Set(services.map(item => String(item.service_code_national || '')).filter(Boolean)))}
-            hint="Código nacional de 6 dígitos do serviço, diferente do CNAE." />
-          <div className="ca-info-box"><ReceiptText /><span><b>ISSQN</b><small>{service?.iss_withheld ? 'Retido pelo tomador, conforme cadastro' : 'Não retido, conforme cadastro'}</small></span></div>
+          <FiscalCodeField kind="service" label="Código de Tributação Nacional" value={form.serviceCode} onChange={v => set('serviceCode', v)} required />
+          <div className="fe-info-box"><ReceiptText /><span><b>ISSQN</b><small>{service?.iss_withheld ? 'Retido pelo tomador, conforme cadastro' : 'Não retido, conforme cadastro'}</small></span></div>
         </div>
-        <details className="ca-emission-details">
+        <details className="fe-emission-details">
           <summary>Numeração da DPS · série {form.series} · nº {form.number}</summary>
-          <div className="ca-form-grid">
+          <div className="fe-form-grid">
             <Field label="Série DPS" value={form.series} onChange={v => set('series', v)} required />
             <Field label="Número DPS" value={form.number} onChange={v => set('number', v)} type="number" required />
           </div>
@@ -1248,22 +1230,22 @@ function EmissionForm({
     content =
       step === 0 ? (
         <Section title="Participantes" subtitle="O emitente é a empresa desta conta. Selecione remetente e destinatário.">
-          <div className="ca-info-box ca-issuer-card mb-4">
+          <div className="fe-info-box fe-issuer-card mb-4">
             <FileText />
             <span>
               <b>Emitente do CT-e: {profile?.legal_name || 'Empresa da conta'}</b>
               <small>CNPJ {profile?.tax_id || '—'} · A assinatura e a transmissão usam o certificado A1 desta empresa.</small>
             </span>
           </div>
-          <div className="ca-form-grid">
+          <div className="fe-form-grid">
             <Select label="Quem contrata o frete?" value={form.toma} onChange={v => set('toma', v)}>
               <option value="0">Remetente</option>
               <option value="3">Destinatário</option>
             </Select>
-<FiscalRecordPicker label="Remetente" value={form.remetenteId} items={partyRecords}
+<FiscalRecordPicker label="Remetente" value={form.remetenteId} items={transportRecords}
               onChange={value => set('remetenteId', value)} onCreate={() => onOpenCadastro?.('Clientes')}
               required={true} />
-<FiscalRecordPicker label="Destinatário" value={form.destinatarioId} items={partyRecords}
+<FiscalRecordPicker label="Destinatário" value={form.destinatarioId} items={transportRecords}
               onChange={value => set('destinatarioId', value)} onCreate={() => onOpenCadastro?.('Clientes')}
               required={true} />
             <Field
@@ -1277,7 +1259,7 @@ function EmissionForm({
         </Section>
       ) : step === 1 ? (
         <Section title="Carga" subtitle="Valores, peso e documento vinculado.">
-          <div className="ca-form-grid">
+          <div className="fe-form-grid">
             <Field
               label="Valor da prestação"
               value={form.vTPrest}
@@ -1309,7 +1291,7 @@ function EmissionForm({
         </Section>
       ) : step === 2 ? (
         <Section title="Rota" subtitle="Origem e destino da prestação.">
-          <div className="ca-route">
+          <div className="fe-route">
             <MunicipalityField label="Origem" value={form.munIniCodigo} name={form.munIniNome} state={form.ufIni}
               onChange={city => setForm((current: any) => ({ ...current, munIniCodigo: city.code, munIniNome: city.name, ufIni: city.state }))} />
             <ChevronRight />
@@ -1319,7 +1301,7 @@ function EmissionForm({
         </Section>
       ) : step === 3 ? (
         <Section title="Fiscal" subtitle="Numeração e CFOP do conhecimento.">
-          <div className="ca-form-grid">
+          <div className="fe-form-grid">
             <Field
               label="CFOP"
               value={form.cfopCte}
@@ -1346,21 +1328,21 @@ function EmissionForm({
           title="Veículo do emitente"
           subtitle="O emitente é a empresa desta conta. Informe apenas os dados do conjunto rodoviário."
         >
-          <div className="ca-form-grid mb-4">
+          <div className="fe-form-grid mb-4">
             <Select label="O que será transportado?" value={form.tpEmit} onChange={v => set('tpEmit', v)}>
               <option value="2">Carga própria da empresa</option>
               <option value="1">Carga de um cliente (prestação de transporte)</option>
             </Select>
-            <p className="ca-field-hint">{form.tpEmit === '2' ? 'Vincule as NF-e da carga. Dados de seguro e contratação não serão solicitados neste fluxo.' : 'Vincule os CT-e e informe os dados do frete e do seguro na etapa Documentos.'}</p>
+            <p className="fe-field-hint">{form.tpEmit === '2' ? 'Vincule as NF-e da carga. Dados de seguro e contratação não serão solicitados neste fluxo.' : 'Vincule os CT-e e informe os dados do frete e do seguro na etapa Documentos.'}</p>
           </div>
-          <div className="ca-info-box ca-issuer-card mb-4">
+          <div className="fe-info-box fe-issuer-card mb-4">
             <Truck />
             <span>
               <b>Emitente do MDF-e: {profile?.legal_name || 'Empresa da conta'}</b>
               <small>CNPJ {profile?.tax_id || '—'} · O certificado A1 desta empresa será usado para assinar o manifesto.</small>
             </span>
           </div>
-          <div className="ca-form-grid">
+          <div className="fe-form-grid">
             {(form.tpEmit === '1' || form.ufIni !== form.ufFim) && <Field label="RNTRC do emitente" value={form.rntrc} onChange={v => set('rntrc', v)} required />}
             <Field
               label="Placa"
@@ -1387,7 +1369,7 @@ function EmissionForm({
         </Section>
       ) : step === 1 ? (
         <Section title="Condutor" subtitle="Informe o responsável pela condução.">
-          <div className="ca-form-grid">
+          <div className="fe-form-grid">
             <Field
               label="Nome do condutor"
               value={form.driverName}
@@ -1404,7 +1386,7 @@ function EmissionForm({
         </Section>
       ) : step === 2 ? (
         <Section title="Rota e carga" subtitle="Defina carregamento, descarregamento e totais.">
-          <div className="ca-form-grid">
+          <div className="fe-form-grid">
             <MunicipalityField label="Carregamento" value={form.munIniCodigo} name={form.munIniNome} state={form.ufIni}
               onChange={city => setForm((current: any) => ({ ...current, munIniCodigo: city.code, munIniNome: city.name, ufIni: city.state }))} />
             <MunicipalityField label="Descarga" value={form.unloadCode} name={form.unloadName} state={form.ufFim}
@@ -1428,7 +1410,7 @@ function EmissionForm({
         </Section>
       ) : step === 3 ? (
         <Section title="Documentos fiscais" subtitle={form.tpEmit === '2' ? 'Vincule as NF-e da carga própria, uma chave por linha.' : 'Vincule os CT-e desta viagem, uma chave por linha.'}>
-          <label className="ca-label" htmlFor="mdfe-keys">
+          <label className="fe-label" htmlFor="mdfe-keys">
             Chaves de acesso <b aria-hidden="true">*</b>
           </label>
           <textarea
@@ -1436,16 +1418,16 @@ function EmissionForm({
             value={form.keys}
             onChange={e => set('keys', e.target.value)}
             rows={7}
-            className="ca-textarea"
+            className="fe-textarea"
             placeholder="Uma chave de 44 dígitos por linha"
           />
-          {form.tpEmit === '1' && <div className="ca-form-grid mt-4">
-<FiscalRecordPicker label="Cliente contratante do frete" value={form.contratanteId} items={partyRecords}
+          {form.tpEmit === '1' && <div className="fe-form-grid mt-4">
+<FiscalRecordPicker label="Cliente contratante do frete" value={form.contratanteId} items={transportRecords}
               onChange={value => set('contratanteId', value)} onCreate={() => onOpenCadastro?.('Clientes')}
               required={true} />
             <Field label="Valor do frete" value={form.vContrato} onChange={v => set('vContrato', v)} type="number" required />
             <Field label="Descrição da carga" value={form.xProd} onChange={v => set('xProd', v)} required />
-            <Field label="NCM predominante" value={form.ncmPredominante} onChange={v => set('ncmPredominante', v)} required suggestions={Array.from(new Set(products.map(item => String(item.ncm || '')).filter(Boolean)))} />
+            <FiscalCodeField kind="ncm" label="NCM predominante" value={form.ncmPredominante} onChange={v => set('ncmPredominante', v)} required />
             {parseAccessKeys(form.keys).length === 1 && <Field label="CEP de descarga" value={form.cepDescarga} onChange={v => set('cepDescarga', v)} required />}
             <Field label="Seguradora" value={form.seguradoraNome} onChange={v => set('seguradoraNome', v)} required />
             <Field label="CNPJ da seguradora" value={form.seguradoraCnpj} onChange={v => set('seguradoraCnpj', v)} required />
@@ -1453,7 +1435,7 @@ function EmissionForm({
             <Field label="Averbação" value={form.averbacao} onChange={v => set('averbacao', v)} required />
             <Field label="Chave Pix do frete" value={form.pixPagamento} onChange={v => set('pixPagamento', v)} hint="Opcional neste fluxo; não altera o valor da carga." />
           </div>}
-          <div className="ca-form-grid mt-4">
+          <div className="fe-form-grid mt-4">
             <Field label="Série" value={form.series} onChange={v => set('series', v)} required />
             <Field
               label="Número"
@@ -1539,18 +1521,18 @@ function EmissionForm({
         ];
   return (
     <>
-      <div className="ca-emission-page ws-emission-workspace">
-        <header className="ca-emission-title">
+      <div className="fe-emission-page ws-emission-workspace" data-release="fiscal-studio-20260912">
+        <header className="fe-emission-title">
           <button onClick={() => onChoose(null)}>← Voltar</button>
           <div>
             <p>DOCUMENTOS / NOVA EMISSÃO</p>
-            <h1>Sua próxima {documentType}.</h1>
-            <span>Preencha, confira e emita. O trabalho fica salvo enquanto você avança.</span>
+            <h1>Nova <em>{documentType}</em></h1>
+            <span>Prepare sua nota. Os dados do cadastro já vêm com você.</span>
           </div>
-          <div className="ca-emission-title-tools">
+          <div className="fe-emission-title-tools">
             <button
               type="button"
-              className="ca-reuse-trigger"
+              className="fe-reuse-trigger"
               onClick={() => {
                 setReuseParts(reusablePartsDefault);
                 setReuseOpen(true);
@@ -1559,19 +1541,17 @@ function EmissionForm({
               <Repeat2 />
               Usar nota anterior
             </button>
-            <div className={`ca-environment ${environment}`}>
+            <div className={`fe-environment ${environment}`}>
               {environment === 'production' ? 'Produção' : 'Homologação'}
             </div>
-            <span className={`ca-draft-status ${draftStatus || ''}`} role="status">
+            <span className={`fe-draft-status ${draftStatus || ''}`} role="status">
               <i aria-hidden="true" />
               {draftCopy}
             </span>
           </div>
         </header>
         <IssuerSummary profile={profile} documentType={documentType} />
-        <div className="ws-emission-grid">
-        <aside className="ws-workflow-rail" aria-label="Progresso da nota">
-        <p className="ws-rail-eyebrow">PREPARAR DOCUMENTO</p>
+        <nav className="fe-workflow" aria-label="Progresso da nota">
         <TabBar
           tabs={tabs}
           active={tab}
@@ -1586,31 +1566,25 @@ function EmissionForm({
             setTab(value);
           }}
         />
-        <div className="ws-rail-summary">
-          <span>{documentType === 'MDF-e' ? 'Valor da carga' : 'Total da nota'}</span>
-          <strong>{money(documentType === 'NF-e' || documentType === 'NFC-e' ? productTotal : documentType === 'NFS-e' ? form.value : documentType === 'CT-e' ? form.vTPrest : form.cargoValue)}</strong>
-          <p>{customer?.legal_name || dest?.legal_name || (documentType === 'MDF-e' ? form.driverName : '') || 'Dados da operação em preenchimento'}</p>
-          <small>Série {form.series} · Nº {form.number}</small>
-        </div>
-        <div className="ws-rail-footnote"><span aria-hidden="true">↳</span><p>Precisa sair? Retome este rascunho em <b>Minhas notas</b>.</p></div>
-        </aside>
+        </nav>
+        <div className={`ws-emission-grid ${last ? 'is-review' : ''}`}>
         <div className="ws-emission-editor" ref={editorRef}>
-        {msg && <div className="ca-message" role="status">{msg}</div>}
+        {msg && <div className="fe-message" role="status">{msg}</div>}
         {stepAlert && (
-          <div className="ca-step-alert" role="alert">
+          <div className="fe-step-alert" role="alert">
             <b>Antes de continuar</b>
             <span>{stepAlert}</span>
           </div>
         )}
         {last ? (
-          <div className="ca-review-layout">
+          <div className="fe-review-layout">
             <div>
-              <div className="ca-review-summary">
+              <div className="fe-review-summary">
                 <p>Revisão final</p>
                 <h2>Confira o documento antes de transmitir</h2>
                 <span>Nenhuma informação será enviada até você usar o botão de transmissão.</span>
               </div>
-              <div className="ca-review-facts">
+              <div className="fe-review-facts">
                 {reviewFacts.map(([label, value]) => (
                   <div key={label}>
                     <span>{label}</span>
@@ -1619,7 +1593,7 @@ function EmissionForm({
                 ))}
               </div>
               {allIssues.length > 0 && (
-                <div className="ca-step-alert" role="alert">
+                <div className="fe-step-alert" role="alert">
                   <b>Dados pendentes</b>
                   <span>{allIssues.join(', ')}.</span>
                 </div>
@@ -1639,30 +1613,38 @@ function EmissionForm({
             />
           </div>
         ) : (
-          <main className="ca-step-page">
+          <main className="fe-step-page">
             {content}
-            <div className="ca-step-actions">
+            <div className="fe-step-actions">
               <Button variant="outline" disabled={step === 0} onClick={() => go(-1)}>
                 Voltar
               </Button>
-              <Button className="ca-btn-primary" disabled={!dataReady || busy} onClick={advance}>
+              <Button className="fe-btn-primary" disabled={!dataReady || busy} onClick={advance}>
                 Continuar para {tabs[step + 1]}
               </Button>
             </div>
           </main>
         )}
         </div>
+        {!last && <aside className="fe-summary-sheet" aria-label="Resumo da nota">
+          <div className="fe-sheet-top"><FileText size={25} strokeWidth={1.3}/><span>{documentType}<small>EM PREPARAÇÃO</small></span></div>
+          <dl><div><dt>Emitente</dt><dd>{profile?.trade_name || profile?.legal_name || 'Sua empresa'}</dd></div>
+          <div><dt>{documentType === 'MDF-e' ? 'Condutor' : 'Destinatário'}</dt><dd>{customer?.legal_name || dest?.legal_name || (documentType === 'MDF-e' ? form.driverName : '') || 'A definir'}</dd></div>
+          <div><dt>{documentType === 'NFS-e' ? 'Serviço' : documentType === 'CT-e' || documentType === 'MDF-e' ? 'Trajeto' : 'Produto'}</dt><dd>{(documentType === 'NFS-e' ? service?.name : documentType === 'CT-e' || documentType === 'MDF-e' ? (form.munFimNome || form.unloadName ? `${form.munIniNome} → ${form.munFimNome || form.unloadName}` : '') : product?.name) || 'A definir'}</dd></div></dl>
+          <div className="fe-sheet-total"><span>{documentType === 'MDF-e' ? 'Valor da carga' : 'Total da nota'}</span><strong>{money(documentType === 'NF-e' || documentType === 'NFC-e' ? productTotal : documentType === 'NFS-e' ? form.value : documentType === 'CT-e' ? form.vTPrest : form.cargoValue)}</strong><small>Série {form.series} / Nº {form.number}</small></div>
+          <p className="fe-sheet-note">Salvamento automático neste navegador. Continue depois em <b>Minhas notas</b>.</p>
+        </aside>}
         </div>
       </div>
       {reuseOpen && (
         <div
-          className="ca-reuse-backdrop"
+          className="fe-reuse-backdrop"
           onMouseDown={event => {
             if (event.target === event.currentTarget) setReuseOpen(false);
           }}
         >
           <section
-            className="ca-reuse-dialog"
+            className="fe-reuse-dialog"
             role="dialog"
             aria-modal="true"
             aria-labelledby="reuse-emission-title"
@@ -1683,7 +1665,7 @@ function EmissionForm({
                 <X />
               </button>
             </header>
-            <div className="ca-reuse-options">
+            <div className="fe-reuse-options">
               {(
                 [
                   ['people', 'Clientes e participantes'],
@@ -1705,7 +1687,7 @@ function EmissionForm({
                 </label>
               ))}
             </div>
-            <div className="ca-reuse-search">
+            <div className="fe-reuse-search">
               <Search />
               <input
                 autoFocus
@@ -1714,7 +1696,7 @@ function EmissionForm({
                 placeholder="Buscar por cliente, produto, serviço ou número..."
               />
             </div>
-            <div className="ca-reuse-list">
+            <div className="fe-reuse-list">
               {reusableRows.length ? (
                 reusableRows.map(emission => {
                   const payload = emission.payload || {};
@@ -1750,7 +1732,7 @@ function EmissionForm({
                   );
                 })
               ) : (
-                <div className="ca-reuse-empty">
+                <div className="fe-reuse-empty">
                   <Repeat2 />
                   <b>Nenhuma emissão reutilizável encontrada</b>
                   <span>
@@ -1802,7 +1784,7 @@ function FiscalPreview({
           ...profile,
           serie: form.series,
           numero: form.number,
-          descricao: service?.name || form.description,
+          descricao: form.description || service?.name,
           valor: Number(form.value || 0),
           tomadorNome: customer?.legal_name,
           tomadorDocumento: customer?.tax_id,
@@ -1863,8 +1845,8 @@ function FiscalPreview({
         };
   const xml = result?.xml || result?.xmlAssinado;
   return (
-    <aside className="ca-preview">
-      <div className="ca-preview-head">
+    <aside className="fe-preview">
+      <div className="fe-preview-head">
         <div>
           <p>Pré-visualização</p>
           <strong>{documentType}</strong>
@@ -1888,7 +1870,7 @@ function FiscalPreview({
           )}
         </div>
       </div>
-      <div className="ca-preview-paper">
+      <div className="fe-preview-paper">
         <SaasDanfePreview
           id="live-danfe"
           documentType={documentType}
@@ -1901,4 +1883,3 @@ function FiscalPreview({
     </aside>
   );
 }
-

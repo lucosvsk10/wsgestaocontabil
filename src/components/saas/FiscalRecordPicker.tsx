@@ -1,4 +1,4 @@
-import { useDeferredValue, useMemo, useState } from 'react';
+import { useDeferredValue, useId, useMemo, useRef, useState } from 'react';
 import { ArrowRight, Check, MapPin, Plus, Search, UserRound, Package2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -14,7 +14,7 @@ export function searchFiscalRecords(items: FiscalRecord[], query: string) {
   return items.filter(item => {
     const search = normalize([item.name, item.code, item.identifier, item.classification, item.location, item.contact, item.detail].filter(Boolean).join(' '));
     const compact = search.replace(/[^a-z0-9]/g, '');
-    return terms.every(term => search.includes(term) || compact.includes(term.replace(/[^a-z0-9]/g, '')));
+    return terms.every(term => search.includes(term) || (term.replace(/[^a-z0-9]/g, '').length > 0 && compact.includes(term.replace(/[^a-z0-9]/g, ''))));
   });
 }
 const currency = (amount: number) => amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -23,6 +23,8 @@ export default function FiscalRecordPicker({ label, value, items, kind = 'person
   label: string; value: string; items: FiscalRecord[]; kind?: 'person' | 'product' | 'service'; required?: boolean;
   onChange: (id: string) => void; onCreate?: () => void;
 }) {
+  const searchId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [limit, setLimit] = useState(8);
@@ -46,11 +48,11 @@ export default function FiscalRecordPicker({ label, value, items, kind = 'person
         </button>
       </DialogTrigger>
       <DialogContent className="ws-record-dialog" onOpenAutoFocus={event => {
-        event.preventDefault(); requestAnimationFrame(() => document.getElementById(`record-search-${kind}`)?.focus());
+        event.preventDefault(); requestAnimationFrame(() => inputRef.current?.focus());
       }}>
         <header><p className="ws-eyebrow">SEU CADASTRO</p><DialogTitle>Escolher {label.toLowerCase()}</DialogTitle>
           <DialogDescription>Encontre o registro e confira os dados antes de selecionar.</DialogDescription></header>
-        <div className="ws-record-search"><Search size={21} /><Input id={`record-search-${kind}`} aria-label={`Buscar ${label.toLowerCase()}`} placeholder={placeholder}
+        <div className="ws-record-search"><Search size={21} /><Input ref={inputRef} id={searchId} aria-label={`Buscar ${label.toLowerCase()}`} placeholder={placeholder}
           value={query} onChange={event => { setQuery(event.target.value); setLimit(8); }} /></div>
         <div className="ws-record-result-count" role="status">{results.length} {results.length === 1 ? 'registro encontrado' : 'registros encontrados'}</div>
         <div className="ws-record-results">
@@ -74,4 +76,3 @@ export default function FiscalRecordPicker({ label, value, items, kind = 'person
     </Dialog>
   </div>;
 }
-
