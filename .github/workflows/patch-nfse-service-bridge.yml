@@ -39,3 +39,4 @@ jobs:
           git add supabase/functions/saas-nfse-issue/index.ts
           git commit -m "fix: accept current NFS-e service codes through legacy bridge"
           git push
+# trigger
