@@ -1,0 +1,33 @@
+name: Patch NFS-e ME EPP total tributos
+
+on:
+  push:
+    paths:
+      - '.github/workflows/patch-nfse-me-epp-totals.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch NFS-e edge source
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path=Path('supabase/functions/saas-nfse-issue/index.ts')
+          text=path.read_text()
+          old='''    const isSimples=String(p.tax_regime||"").toLowerCase().includes("simples");const reg:any={opSimpNac:isSimples?"3":String(raw.simples||"2"),regEspTrib:"0"};if(reg.opSimpNac==="3")reg.regApTribSN="1";\n    const tpAmb=environment==="production"?"1":"2",im=digits(p.municipal_registration),cServ:any={cTribNac:code,...(digits(raw.codigoTributacaoMunicipal)?{cTribMun:digits(raw.codigoTributacaoMunicipal)}:{}),xDescServ:String(raw.descricao).trim(),...(nbs?{cNBS:nbs}:{})};\n    const dados:any={tpAmb,dhEmi:new Date(),verAplic:"WS-SAAS-2.1",serie:String(raw.serie),nDPS:String(raw.numero),dCompet:new Date(),tpEmit:"1",cLocEmi:mun,prest:{CNPJ:cnpj,...(im?{IM:im}:{}),regTrib:reg},serv:{locPrest:{cLocPrestacao:munPrest},cServ},valores:{vServPrest:{vServ:Number(raw.valor)},trib:{tribMun:{tribISSQN:String(raw.tributacaoIss||"1"),tpRetISSQN:raw.issRetido?"2":"1"},totTrib:{pTotTribFed:0,pTotTribEst:0,pTotTribMun:0}}}};\n    if(tomaDoc)dados.toma={...(tomaDoc.length===14?{CNPJ:tomaDoc}:{CPF:tomaDoc}),xNome:String(raw.tomadorNome||"Tomador")};\n    const mounted=montarXmlDps(dados);const oldTotTrib="<pTotTrib><pTotTribFed>0.00</pTotTribFed><pTotTribEst>0.00</pTotTribEst><pTotTribMun>0.00</pTotTribMun></pTotTrib>";const xmlBeforeSign=mounted.xml.replace(oldTotTrib,"<indTotTrib>0</indTotTrib>");if(xmlBeforeSign===mounted.xml)throw new Error("Falha ao normalizar o grupo totTrib antes da assinatura");\n'''
+          new='''    const regime=String(p.tax_regime||"").toLowerCase(),isMei=regime.includes("mei"),isMeEpp=regime.includes("simples")&&!isMei,isSimples=isMei||isMeEpp;\n    const reg:any={opSimpNac:isMei?"2":isMeEpp?"3":"1",regEspTrib:"0"};if(isMeEpp)reg.regApTribSN="1";\n    const simplesTaxRate=Number(raw.simplesTaxRate);\n    if(isMeEpp&&(!(simplesTaxRate>0)||simplesTaxRate>100))return out({error:"Dados incompletos",errors:["Informe a alíquota total do Simples Nacional (%) para gerar pTotTribSN"]},422);\n    const tpAmb=environment==="production"?"1":"2",im=digits(p.municipal_registration),cServ:any={cTribNac:code,...(digits(raw.codigoTributacaoMunicipal)?{cTribMun:digits(raw.codigoTributacaoMunicipal)}:{}),xDescServ:String(raw.descricao).trim(),...(nbs?{cNBS:nbs}:{})};\n    const totTrib:any=isMeEpp?{pTotTribSN:simplesTaxRate}:{pTotTribFed:0,pTotTribEst:0,pTotTribMun:0};\n    const dados:any={tpAmb,dhEmi:new Date(),verAplic:"WS-SAAS-2.2",serie:String(raw.serie),nDPS:String(raw.numero),dCompet:new Date(),tpEmit:"1",cLocEmi:mun,prest:{CNPJ:cnpj,...(im?{IM:im}:{}),regTrib:reg},serv:{locPrest:{cLocPrestacao:munPrest},cServ},valores:{vServPrest:{vServ:Number(raw.valor)},trib:{tribMun:{tribISSQN:String(raw.tributacaoIss||"1"),tpRetISSQN:raw.issRetido?"2":"1"},totTrib}}};\n    if(tomaDoc)dados.toma={...(tomaDoc.length===14?{CNPJ:tomaDoc}:{CPF:tomaDoc}),xNome:String(raw.tomadorNome||"Tomador")};\n    const mounted=montarXmlDps(dados);\n    const oldTotTrib="<pTotTrib><pTotTribFed>0.00</pTotTribFed><pTotTribEst>0.00</pTotTribEst><pTotTribMun>0.00</pTotTribMun></pTotTrib>";\n    const xmlBeforeSign=isMeEpp?mounted.xml:mounted.xml.replace(oldTotTrib,"<indTotTrib>0</indTotTrib>");\n    if(!isMeEpp&&xmlBeforeSign===mounted.xml)throw new Error("Falha ao normalizar o grupo totTrib antes da assinatura");\n    if(isMeEpp&&(!xmlBeforeSign.includes("<pTotTribSN>")||xmlBeforeSign.includes("<indTotTrib>")))throw new Error("Falha ao montar tributação do Simples Nacional (pTotTribSN)");\n'''
+          if old not in text: raise SystemExit('anchor not found')
+          path.write_text(text.replace(old,new,1))
+          PY
+      - name: Commit
+        run: |
+          git config user.name "ws-fiscal-bot"
+          git config user.email "ws-fiscal-bot@users.noreply.github.com"
+          git add supabase/functions/saas-nfse-issue/index.ts
+          git commit -m "fix: use pTotTribSN for ME EPP NFS-e"
+          git push
