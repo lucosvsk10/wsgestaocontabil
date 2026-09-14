@@ -66,7 +66,7 @@ Deno.serve(async req=>{
     if(!/^\d{4}-\d{2}-\d{2}$/.test(competencia)||Number.isNaN(Date.parse(`${competencia}T12:00:00`)))return out({error:"Dados incompletos",errors:["Data de competência inválida"]},422);
     const tpAmb=environment==="production"?"1":"2",im=digits(p.municipal_registration),cServ:any={cTribNac:code,...(digits(raw.codigoTributacaoMunicipal)?{cTribMun:digits(raw.codigoTributacaoMunicipal)}:{}),xDescServ:String(raw.descricao).trim(),...(nbs?{cNBS:nbs}:{})};
     const totalPlaceholder:any={pTotTribFed:0,pTotTribEst:0,pTotTribMun:0};
-    const prest:any={CNPJ:cnpj,...(im?{IM:im}:{}),xNome:String(p.legal_name||''),regTrib:reg};
+    const prest:any={CNPJ:cnpj,...(im?{IM:im}:{}),regTrib:reg};
     const prestCep=digits(p.postal_code),prestMun=digits(p.city_ibge_code);
     if(prestCep.length===8&&prestMun.length===7&&p.street&&p.street_number&&p.district)prest.end={cMun:prestMun,CEP:prestCep,xLgr:String(p.street),nro:String(p.street_number),...(p.complement?{xCpl:String(p.complement)}:{}),xBairro:String(p.district)};
     if(p.phone)prest.fone=digits(p.phone);if(p.email)prest.email=String(p.email);
