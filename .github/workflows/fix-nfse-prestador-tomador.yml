@@ -1,0 +1,56 @@
+name: Fix NFS-e prestador and tomador mapping
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-nfse-prestador-tomador.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch NFS-e mapping
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          backend=Path('supabase/functions/saas-nfse-issue/index.ts')
+          s=backend.read_text()
+          old="const prest:any={CNPJ:cnpj,...(im?{IM:im}:{}),xNome:String(p.legal_name||''),regTrib:reg};"
+          new="const prest:any={CNPJ:cnpj,...(im?{IM:im}:{}),regTrib:reg};"
+          if old not in s:
+              raise SystemExit('prest anchor not found')
+          s=s.replace(old,new,1)
+          backend.write_text(s)
+
+          front=Path('src/components/saas/SaasEmission.tsx')
+          s=front.read_text()
+          replacements={
+            "tomadorNome: customer?.legal_name,":"tomadorNome: form.tomadorNome || customer?.legal_name,",
+            "tomadorDocumento: customer?.tax_id,":"tomadorDocumento: form.tomadorDocumento || customer?.tax_id,",
+            "tomadorInscricaoMunicipal: customer?.municipal_registration,":"tomadorInscricaoMunicipal: form.tomadorInscricaoMunicipal || customer?.municipal_registration,",
+            "tomadorTelefone: customer?.phone || customer?.mobile,":"tomadorTelefone: form.tomadorTelefone || customer?.phone || customer?.mobile,",
+            "tomadorEmail: customer?.email,":"tomadorEmail: form.tomadorEmail || customer?.email,",
+            "tomadorCep: customer?.postal_code,":"tomadorCep: form.tomadorCep || customer?.postal_code,",
+            "tomadorMunicipio: customer?.city,":"tomadorMunicipio: form.tomadorMunicipio || customer?.city,",
+            "tomadorUf: customer?.state,":"tomadorUf: form.tomadorUf || customer?.state,",
+            "tomadorMunicipioIbge: customer?.city_ibge_code,":"tomadorMunicipioIbge: form.tomadorMunicipioIbge || customer?.city_ibge_code,",
+            "tomadorEndereco: [customer?.street, customer?.street_number, customer?.complement, customer?.district].filter(Boolean).join(', '),":"tomadorEndereco: [form.tomadorLogradouro || customer?.street, form.tomadorNumero || customer?.street_number, form.tomadorComplemento || customer?.complement, form.tomadorBairro || customer?.district].filter(Boolean).join(', '),"
+          }
+          for old,new in replacements.items():
+              if old in s:
+                  s=s.replace(old,new,1)
+          front.write_text(s)
+          PY
+      - name: Build
+        run: |
+          npm install --legacy-peer-deps --no-audit --no-fund
+          npm run build
+      - name: Commit
+        run: |
+          git config user.name ws-fiscal-bot
+          git config user.email ws-fiscal-bot@users.noreply.github.com
+          git add supabase/functions/saas-nfse-issue/index.ts src/components/saas/SaasEmission.tsx
+          git commit -m "fix: omit prestador name and keep NADIANA as tomador"
+          git push
