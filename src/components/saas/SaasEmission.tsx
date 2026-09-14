@@ -465,6 +465,26 @@ function EmissionForm({
     setCarriers(ca.data || []);
     const pp = p.data;
     const savedDraft = draftKey ? readEmissionDraft(draftKey) : null;
+    let nfseSuggestedSeries = String(pp?.series_nfse || '1');
+    let nfseSuggestedNumber = Number(pp?.next_number_nfse || 1);
+    if (documentType === 'NFS-e' && !savedDraft) {
+      const { data: latestNfse } = await (supabase as any)
+        .from('saas_fiscal_emissions')
+        .select('series,number,authorized_at,created_at')
+        .eq('organization_id', organizationId)
+        .eq('document_type', 'nfse')
+        .eq('status', 'authorized')
+        .order('authorized_at', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (latestNfse) {
+        const lastNumber = Number(String(latestNfse.number || '').replace(/\D/g, ''));
+        if (Number.isFinite(lastNumber) && lastNumber > 0)
+          nfseSuggestedNumber = Math.max(nfseSuggestedNumber, lastNumber + 1);
+        if (String(latestNfse.series || '').trim()) nfseSuggestedSeries = String(latestNfse.series);
+      }
+    }
     if (pp)
       setForm((f: any) => ({
         ...f,
@@ -476,7 +496,7 @@ function EmissionForm({
             : documentType === 'NFC-e'
             ? pp.series_nfce || '1'
             : documentType === 'NFS-e'
-            ? pp.series_nfse || '1'
+            ? nfseSuggestedSeries
             : documentType === 'CT-e'
             ? pp.series_cte || '1'
             : pp.series_mdfe || '1',
@@ -488,7 +508,7 @@ function EmissionForm({
             : documentType === 'NFC-e'
             ? pp.next_number_nfce || 1
             : documentType === 'NFS-e'
-            ? pp.next_number_nfse || 1
+            ? nfseSuggestedNumber || 1
             : documentType === 'CT-e'
             ? pp.next_number_cte || 1
             : pp.next_number_mdfe || 1
@@ -1237,7 +1257,7 @@ function EmissionForm({
           <Field label="Valor do serviço" value={form.value} onChange={v => set('value', v)} type="number" required />
           <Field label="Descrição do serviço" value={form.description} onChange={v => set('description', v)} wide required />
           <FiscalCodeField kind="service" label="Código de Tributação Nacional" value={form.serviceCode} onChange={v => set('serviceCode', v)} required />
-          <Field label="Código da NBS" value={form.nbsCode} onChange={v => set('nbsCode', v)} required placeholder="1.1404.43.00" hint="Obrigatório para emissão oficial da NFS-e." />
+          <FiscalCodeField kind="nbs" label="Código da NBS" value={form.nbsCode} onChange={v => set('nbsCode', v)} required />
           <div className="fe-info-box"><ReceiptText /><span><b>ISSQN</b><small>{service?.iss_withheld ? 'Retido pelo tomador, conforme cadastro' : 'Não retido, conforme cadastro'}</small></span></div>
         </div>
         <details className="fe-emission-details">

@@ -1131,7 +1131,7 @@ function CatalogEditor({ section, form, set }: { section: CadastroSection; form:
               required
             />
             <Field label="Código de Tributação Municipal" value={form.service_code_municipal} onChange={value => set('service_code_municipal', value)} />
-            <Field label="Código da NBS" value={formatNbs(form.nbs_code)} onChange={value => set('nbs_code', value)} required hint="Obrigatório para emissão oficial da NFS-e. Ex.: 1.1404.43.00" />
+            <FiscalCodeField kind="nbs" label="Código da NBS" value={form.nbs_code} onChange={value => set('nbs_code', value)} required />
             <Field label="CNAE" value={form.cnae} onChange={value => set('cnae', value)} />
             <Field label="ISS (%)" value={form.iss_rate} onChange={value => set('iss_rate', value)} type="number" />
           </Section>
