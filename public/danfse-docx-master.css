@@ -1,0 +1,19 @@
+/* DANFSe v2.0 — layout mestre baseado no DOCX oficial enviado pelo usuário. */
+.nfse-template-master{font-family:Arial,Helvetica,sans-serif!important;background:#fff!important;color:#000!important;width:100%!important;max-width:200mm!important;margin:0 auto!important;padding:1.2mm!important;border:1px solid #000!important;box-shadow:none!important;line-height:1.08!important}
+.nfse-template-master *{box-sizing:border-box!important}
+.nfse-template-master .fiscal-box{border-color:transparent!important;min-height:0!important;padding:1mm 1.25mm!important}
+.nfse-template-master .fiscal-label{font-family:Arial,Helvetica,sans-serif!important;font-size:6.15px!important;line-height:1.04!important;font-weight:700!important;text-transform:none!important;letter-spacing:0!important;color:#000!important}
+.nfse-template-master .fiscal-value{font-family:Arial,Helvetica,sans-serif!important;font-size:7px!important;line-height:1.1!important;font-weight:400!important;color:#000!important}
+.nfse-template-master .fiscal-section{margin:0!important;border:0!important}
+.nfse-template-master .fiscal-section-title{font-family:Arial,Helvetica,sans-serif!important;font-size:7.2px!important;line-height:1!important;font-weight:800!important;text-transform:uppercase!important;letter-spacing:0!important;background:#efefef!important;color:#000!important;border-top:1px solid #000!important;border-bottom:0!important;padding:.8mm 1.25mm!important}
+.nfse-template-master img{max-width:100%!important}
+.nfse-template-master>div,.nfse-template-master section{break-inside:avoid;page-break-inside:avoid}
+@media print{
+ html,body{background:#fff!important}
+ .nfse-template-master{width:200mm!important;max-width:200mm!important;min-height:0!important;margin:0 auto!important;padding:1mm!important;border:1px solid #000!important;box-shadow:none!important;transform:none!important}
+ .nfse-template-master .fiscal-box{padding:.75mm 1.1mm!important}
+ .nfse-template-master .fiscal-label{font-size:5.85px!important}
+ .nfse-template-master .fiscal-value{font-size:6.65px!important;line-height:1.06!important}
+ .nfse-template-master .fiscal-section-title{font-size:6.9px!important;padding:.62mm 1.1mm!important}
+ @page{size:A4 portrait;margin:3mm}
+}
