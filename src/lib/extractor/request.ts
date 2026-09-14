@@ -17,7 +17,7 @@ export async function extractorRequest(body: Record<string, unknown>) {
     const { data, error } = await supabase.functions.invoke('extractor-company-config', {
       body,
       signal: controller.signal,
-    });
+    } as Parameters<typeof supabase.functions.invoke>[1]);
     if (error) {
       let detail = '';
       try {
