@@ -33,3 +33,4 @@ jobs:
           git add supabase/functions/saas-nfse-issue/index.ts
           git commit -m "fix: omit prestador address on self-issued DPS"
           git push
+# trigger 2026-09-14T19:20Z
