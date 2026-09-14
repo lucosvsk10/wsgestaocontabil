@@ -3,7 +3,6 @@ name: Apply SaaS NFS-e model update
 on:
   push:
     paths:
-      - '.github/workflows/saas-nfse-model-update.yml'
       - '.github/scripts/saas_nfse_model_patch.py'
 
 permissions:
@@ -16,10 +15,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Align current SaaS setup target
+      - name: Normalize current setup indentation
         run: |
-          python3 -c "from pathlib import Path; p=Path('.github/scripts/saas_nfse_model_patch.py'); s=p.read_text(); s=s.replace(chr(34)+'    profile?.legal_name &&\\n    profile?.state_registration &&\\n    profile?.city_ibge_code &&'+chr(34), chr(34)+'      profile?.legal_name &&\\n      profile?.state_registration &&\\n      profile?.city_ibge_code &&'+chr(34)); s=s.replace(chr(34)+'    profile?.legal_name &&\\n    profile?.city_ibge_code &&'+chr(34), chr(34)+'      profile?.legal_name &&\\n      profile?.city_ibge_code &&'+chr(34)); p.write_text(s)"
-      - name: Patch SaaS NFS-e only
+          python3 -c "from pathlib import Path; p=Path('src/pages/SaasApp.tsx'); s=p.read_text(); s=s.replace('      profile?.legal_name &&\\n      profile?.state_registration &&\\n      profile?.city_ibge_code &&','    profile?.legal_name &&\\n    profile?.state_registration &&\\n    profile?.city_ibge_code &&'); p.write_text(s)"
+      - name: Apply scoped SaaS NFS-e patch
         run: python3 .github/scripts/saas_nfse_model_patch.py
       - name: Commit scoped update
         run: |
