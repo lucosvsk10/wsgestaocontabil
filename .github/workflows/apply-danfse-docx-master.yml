@@ -1,0 +1,95 @@
+name: Apply DOCX master DANFSe layout
+
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-danfse-docx-master.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply DOCX-master DANFSe layout
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('src/components/saas/SaasDanfePreview.tsx')
+          text = path.read_text()
+
+          text = text.replace('if(officialPdf){', 'if(officialPdf&&!node.classList.contains("nfse-template-master")){', 1)
+          text = text.replace('.danfe-sheet{width:100%!important;max-width:198mm!important;margin:0 auto!important;box-shadow:none!important}', '.danfe-sheet{width:100%!important;max-width:198mm!important;margin:0 auto!important;box-shadow:none!important}.nfse-template-master{width:200mm!important;max-width:200mm!important;margin:0 auto!important;padding:1.2mm!important;font-family:Arial,sans-serif!important;color:#000!important;background:#fff!important;box-shadow:none!important}.nfse-template-master *{box-sizing:border-box}.nfse-template-master .nfse-row{break-inside:avoid;page-break-inside:avoid}.nfse-template-master .nfse-label{font-size:6.1px!important;line-height:1.05!important;font-weight:700!important}.nfse-template-master .nfse-value{font-size:7px!important;line-height:1.08!important}.nfse-template-master .nfse-section-title{font-size:7.2px!important;line-height:1!important;font-weight:800!important}', 1)
+          text = text.replace('@page{size:${receipt?"80mm auto":"A4 portrait"};margin:${receipt?"2mm":"5mm"}}', '@page{size:${receipt?"80mm auto":"A4 portrait"};margin:${receipt?"2mm":"3mm"}}', 1)
+
+          start = text.find('function Nfse(p:any){')
+          if start < 0:
+              raise SystemExit('Nfse function not found')
+
+          new_func = r'''function Nfse(p:any){
+ const profile=p.profile||{},d=p.p||{},fmtNbs=(v:any)=>{const x=digits(v);return x.length===9?`${x.slice(0,1)}.${x.slice(1,5)}.${x.slice(5,7)}.${x.slice(7)}`:(v||"-")},fmtServ=(v:any)=>{const x=digits(v);return x.length===6?`${x.slice(0,2)}.${x.slice(2,4)}.${x.slice(4)}`:(v||"-")},fmtIbge=(v:any)=>{const x=digits(v);return x.length===7?`${x.slice(0,2)}.${x.slice(2)}`:(v||"-")},fmtCep=(v:any)=>{const x=digits(v);return x.length===8?`${x.slice(0,2)}.${x.slice(2,5)}-${x.slice(5)}`:(v||"-")};
+ const dash=(v:any)=>v===undefined||v===null||v===""?"-":v;
+ const emitMunicipality=[profile.city,profile.state].filter(Boolean).join(" / ")||p.emitCity||"-",prestAddress=[profile.street,profile.street_number,profile.complement,profile.district].filter(Boolean).join(", ")||p.emitAddress||"-";
+ const tomaMunicipality=[d.tomadorMunicipio,d.tomadorUf].filter(Boolean).join(" / ")||"-",serviceLocation=[d.municipioPrestacaoNome,d.municipioPrestacaoUf].filter(Boolean).join(" / ")||d.municipioPrestacao||"-",incidenceLocation=[d.municipioIncidenciaNome||profile.city,d.municipioIncidenciaUf||profile.state].filter(Boolean).join(" / ")||"-";
+ const competence=d.competencia||String(p.date||"").split(' ')[0]||"-",status=p.status==="authorized"?"NFS-e Gerada":statusLabel(p.status),serviceOfficial=d.servicoNome||p.item||"-";
+ const ibsUf=d.ibsUf??d.aliquotaIbsUf,ibsMun=d.ibsMun??d.aliquotaIbsMunicipal,cbs=d.cbs??d.aliquotaCbs,ibsTotal=d.valorIbsTotal??d.valorIbs,cbsTotal=d.valorCbsTotal??d.valorCbs,totalIbsCbs=Number(ibsTotal||0)+Number(cbsTotal||0),liquid=Number(d.valorLiquido??p.total??0),liquidWithIbs=liquid+totalIbsCbs;
+ const DCell=({l,v,span=""}:{l:string;v:any;span?:string})=><div className={`min-w-0 px-[1.3mm] py-[.8mm] ${span}`}><div className="nfse-label font-bold leading-none">{l}</div><div className="nfse-value mt-[.5mm] break-words leading-tight">{dash(v)}</div></div>;
+ const STitle=({children}:{children:any})=><div className="nfse-section-title border-t border-black bg-[#efefef] px-[1.3mm] py-[.75mm] font-black">{children}</div>;
+ return <div className="space-y-3">{p.showActions&&<Toolbar id={p.id} title={`DANFSe ${p.number}`} meta={`NFS-e · ${statusLabel(p.status)}`}/>}<div className="saas-preview-shell"><div id={p.id} data-danfse-pdf={p.result?.danfsePdfBase64||undefined} className="danfe-sheet nfse-template-master fiscal-paper mx-auto bg-white text-black shadow-sm">
+  <div className="nfse-row grid grid-cols-[1.05fr_1.4fr_1.05fr] border border-black">
+   <div className="flex items-center gap-1.5 px-[1.3mm] py-[1mm]"><div className="text-[20px] font-black tracking-[-1px] text-[#248f63]">NFS</div><div className="-ml-1 text-[15px] font-black text-[#2564a7]">e</div><div className="text-[6px] leading-[1.05] text-[#666]">Nota Fiscal de<br/>Serviço eletrônica</div></div>
+   <div className="px-[1mm] py-[1mm] text-center"><div className="text-[10px] font-black leading-none">DANFSe v2.0</div><div className="mt-[.7mm] text-[9px] font-bold leading-none">Documento Auxiliar da NFS-e</div></div>
+   <div className="grid grid-cols-[1fr_26mm]"><div className="px-[1mm] py-[1mm] text-[6.2px] leading-[1.15]"><div><b>Município:</b> {profile.city||d.municipioEmissorNome||"-"} - {profile.state||"-"}</div><div><b>Ambiente Gerador:</b> {d.ambienteGerador||"2"}</div><div><b>Tipo de Ambiente:</b> {p.environment==="production"?"1":"2"}</div></div><div className="flex items-start justify-center p-[.8mm]"><Qr value={p.qrValue} size={62}/></div></div>
+  </div>
+  <div className="nfse-row border-x border-black px-[1.3mm] pt-[4mm] pb-[1.2mm]"><div className="nfse-label">CHAVE DE ACESSO DA NFS-e</div><div className="nfse-value mt-[.6mm] break-all">{p.access?digits(p.access):"Disponível após autorização"}</div></div>
+  <div className="nfse-row grid grid-cols-[1fr_1fr_1fr_1.02fr] border-x border-black">
+   <div><DCell l="NÚMERO DA NFS-e" v={p.number}/><DCell l="NÚMERO DA DPS" v={d.numero||p.number}/><div className="bg-[#efefef]"><DCell l="EMITENTE DA NFS-e" v={d.emitenteNfse||"Prestador"}/></div></div>
+   <div><DCell l="COMPETÊNCIA DA NFS-e" v={competence}/><DCell l="SÉRIE DA DPS" v={d.serie||p.series}/><DCell l="SITUAÇÃO DA NFS-e" v={status}/></div>
+   <div><DCell l="DATA E HORA DA EMISSÃO DA NFS-e" v={p.date}/><DCell l="DATA E HORA DA EMISSÃO DA DPS" v={d.dataEmissaoDps||p.date}/><DCell l="FINALIDADE" v={d.finalidade||"-"}/></div>
+   <div className="px-[1.3mm] pt-[1mm] text-[6.1px] leading-[1.18]">A autenticidade desta NFS-e pode ser verificada pela leitura deste código QR ou pela consulta da chave de acesso no portal nacional da NFS-e.</div>
+  </div>
+  <STitle>PRESTADOR / FORNECEDOR</STitle>
+  <div className="nfse-row grid grid-cols-[1fr_1fr_1fr_1fr] border-x border-black">
+   <DCell l="Nome / Nome Empresarial" v={profile.legal_name||p.emitName}/><DCell l="CNPJ / CPF / NIF" v={doc(p.emitDoc)}/><DCell l="Indicador Municipal (Inscrição)" v={profile.municipal_registration||"-"}/><DCell l="Telefone" v={profile.phone||"-"}/>
+   <DCell l="Endereço" v={prestAddress}/><DCell l="Município / Sigla UF" v={emitMunicipality}/><DCell l="Código IBGE / CEP" v={`${fmtIbge(profile.city_ibge_code)} / ${fmtCep(profile.postal_code)}`}/><DCell l="E-mail" v={profile.email||"-"}/>
+  </div>
+  <div className="nfse-row grid grid-cols-[1fr_3fr] border-x border-t border-black"><DCell l="Simples Nacional na Data de Competência" v={String(profile.tax_regime||"").toLowerCase().includes("simples")?"Optante - Microempresa ou Empresa de Pequeno Porte":"-"}/><DCell l="Regime de Apuração Tributária pelo SN" v={String(profile.tax_regime||"").toLowerCase().includes("simples")?"Regime de apuração dos tributos federais e municipal pelo Simples Nacional":"-"}/></div>
+  <STitle>TOMADOR / ADQUIRENTE</STitle>
+  <div className="nfse-row grid grid-cols-4 border-x border-black"><DCell l="CNPJ / CPF / NIF" v={doc(p.recipientDoc)}/><DCell l="Indicador Municipal (Inscrição)" v={d.tomadorInscricaoMunicipal||"-"}/><DCell l="Telefone" v={d.tomadorTelefone||"-"}/><DCell l="Código IBGE / CEP" v={`${fmtIbge(d.tomadorMunicipioIbge)} / ${fmtCep(d.tomadorCep)}`}/><DCell l="Nome / Nome Empresarial" v={p.recipient}/><DCell l="Município / Sigla UF" v={tomaMunicipality}/><DCell l="E-mail" v={d.tomadorEmail||"-"}/><DCell l="Endereço" v={d.tomadorEndereco||"-"}/></div>
+  <div className="nfse-row border-x border-t border-black py-[1.1mm] text-center text-[6.2px] font-medium">DESTINATÁRIO DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e&nbsp;&nbsp;&nbsp; INTERMEDIÁRIO DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e</div>
+  <STitle>SERVIÇO PRESTADO</STitle>
+  <div className="nfse-row grid grid-cols-[1fr_1fr_1fr] border-x border-black"><DCell l="Código de Tributação Nacional/Municipal" v={`${fmtServ(d.codigoTributacao)} / ${d.codigoTributacaoMunicipal||"-"}`}/><DCell l="Código da NBS" v={fmtNbs(d.codigoNbs||d.nbsCode||d.nbs)}/><DCell l="Local da Prestação / Sigla UF / País" v={`${serviceLocation} / ${d.paisPrestacao||"-"}`}/></div>
+  <div className="nfse-row border-x border-black px-[1.3mm] py-[1mm]"><div className="nfse-value font-medium">{serviceOfficial}</div><div className="nfse-label mt-[1mm]">Descrição do Serviço</div><div className="nfse-value mt-[.5mm] whitespace-pre-wrap leading-[1.13]">{d.descricao||p.item||"-"}</div></div>
+  <STitle>TRIBUTAÇÃO MUNICIPAL (ISSQN)</STitle>
+  <div className="nfse-row grid grid-cols-4 border-x border-black"><DCell l="Tipo de Tributação do ISSQN" v={d.tipoTributacaoIssqn||"Operação Tributável"}/><DCell l="Município / Sigla UF / País de Incidência do ISSQN" v={`${incidenceLocation} / ${d.paisIncidencia||"-"}`}/><DCell l="BC ISSQN" v={d.baseIssqn!=null?money(d.baseIssqn):"-"}/><DCell l="Alíquota Aplicada" v={d.aliquotaIssqn!=null?`${d.aliquotaIssqn}%`:"-"}/><DCell l="Retenção do ISSQN" v={d.issRetido?"Retido":"Não Retido"}/><DCell l="ISSQN Apurado" v={d.valorIssqn!=null?money(d.valorIssqn):"-"}/></div>
+  <STitle>TRIBUTAÇÃO FEDERAL (EXCETO CBS)</STitle>
+  <div className="nfse-row grid grid-cols-3 border-x border-black"><DCell l="IRRF" v={d.irrf!=null?money(d.irrf):"-"}/><DCell l="Contribuição Previdenciária - Retida" v={d.inssRetido!=null?money(d.inssRetido):"-"}/><DCell l="Contribuições Sociais - Retidas" v={d.contribuicoesSociaisRetidas!=null?money(d.contribuicoesSociaisRetidas):"-"}/><div className="bg-[#efefef]"><DCell l="PIS - Débito Apuração Própria" v={d.pisDebito!=null?money(d.pisDebito):"-"}/></div><DCell l="COFINS - Débito Apuração Própria" v={d.cofinsDebito!=null?money(d.cofinsDebito):"-"}/><DCell l="Descrição Contrib. Sociais - Retidas" v={d.descricaoContribuicoesSociais||"-"}/></div>
+  <STitle>TRIBUTAÇÃO IBS/CBS</STitle>
+  <div className="nfse-row grid grid-cols-4 border-x border-black"><DCell l="CST / cClassTrib" v={`${d.cstIbsCbs||"-"} / ${d.cClassTrib||"-"}`}/><DCell l="Indicador de Operação / Código IBGE Incidência / Município Incidência / Sigla UF" v={`${d.indicadorOperacao||"-"} / ${d.codigoIbgeIncidencia||d.municipioIncidencia||"-"} / ${d.municipioIncidenciaNome||"-"} / ${d.municipioIncidenciaUf||"-"}`}/><DCell l="Exclusões e Reduções da Base de Cálculo" v={d.exclusoesReducoesBase!=null?money(d.exclusoesReducoesBase):"R$ 0,00"}/><DCell l="Base de Cálculo Após Exclusões e Reduções" v={d.baseIbsCbs!=null?money(d.baseIbsCbs):"-"}/><DCell l="Red. Alíquota IBS / Red. Alíquota CBS" v={`${d.reducaoAliquotaIbs??"-"} / ${d.reducaoAliquotaCbs??"-"}`}/><DCell l="Alíquota - IBS UF / IBS Mun" v={`${ibsUf??"-"} / ${ibsMun??"-"}`}/><DCell l="Alíq. Efetiva Municipal - IBS" v={d.aliquotaEfetivaIbsMun??"-"}/><DCell l="Valor Apurado Municipal - IBS" v={d.valorIbsMun!=null?money(d.valorIbsMun):"-"}/><DCell l="Alíq. Efetiva Estadual - IBS" v={d.aliquotaEfetivaIbsUf??"-"}/><DCell l="Valor Apurado Estadual - IBS" v={d.valorIbsUf!=null?money(d.valorIbsUf):"-"}/><DCell l="Valor Total Apurado - IBS" v={ibsTotal!=null?money(ibsTotal):"-"}/><DCell l="Alíquota - CBS" v={cbs??"-"}/><DCell l="Alíquota Efetiva - CBS" v={d.aliquotaEfetivaCbs??"-"}/><DCell l="Valor Total Apurado - CBS" v={cbsTotal!=null?money(cbsTotal):"-"}/></div>
+  <STitle>VALOR TOTAL DA NFS-e</STitle>
+  <div className="nfse-row grid grid-cols-4 border-x border-black"><DCell l="VALOR DA OPERAÇÃO / SERVIÇO" v={money(p.total)}/><DCell l="Desconto Incondicionado" v={d.descontoIncondicionado!=null?money(d.descontoIncondicionado):"-"}/><DCell l="Desconto Condicionado" v={d.descontoCondicionado!=null?money(d.descontoCondicionado):"-"}/><DCell l="Total das Retenções (ISSQN / Federais)" v={d.totalRetencoes!=null?money(d.totalRetencoes):"-"}/><DCell l="VALOR LÍQUIDO DA NFS-e" v={money(liquid)}/><DCell l="Total do IBS/CBS" v={money(totalIbsCbs)}/><DCell l="VALOR LÍQUIDO DA NFS-e + IBS/CBS" v={money(liquidWithIbs)} span="col-span-2"/></div>
+  <STitle>INFORMAÇÕES COMPLEMENTARES</STitle>
+  <div className="nfse-row border-x border-black px-[1.3mm] py-[1mm] text-[6.3px] leading-[1.15]">Inf. Cont.: {d.informacoesComplementares||"-"}<br/>Totais aproximados dos Tributos cfe. Lei n° 12.741/2012: Federais: {d.tributosFederaisAprox||"-"}; Estaduais: {d.tributosEstaduaisAprox||"-"}; Municipais: {d.tributosMunicipaisAprox||"-"};</div>
+  <div className="nfse-row grid grid-cols-[1fr_1fr_2fr] border border-black text-[6px]"><div className="min-h-[8mm] p-[1mm]"><b>DATA CIENTIFICAÇÃO:</b> {d.dataCientificacao||""}</div><div className="min-h-[8mm] border-x border-black p-[1mm]"><b>IDENTIFICAÇÃO E ASSINATURA</b></div><div className="min-h-[8mm] p-[1mm]"><b>N° NFS-e / CHAVE NFS-e</b><br/>{p.number} / {digits(p.access)||"-"}</div></div>
+ </div></div></div>
+}'''
+          text = text[:start] + new_func + '\n'
+          path.write_text(text)
+          PY
+
+      - name: Build
+        run: |
+          npm install --legacy-peer-deps --no-audit --no-fund
+          npm run build
+
+      - name: Commit changes
+        run: |
+          git config user.name "ws-fiscal-bot"
+          git config user.email "ws-fiscal-bot@users.noreply.github.com"
+          git add src/components/saas/SaasDanfePreview.tsx
+          git commit -m "feat: align DANFSe print layout to DOCX master"
+          git push
