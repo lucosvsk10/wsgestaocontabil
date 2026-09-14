@@ -4920,8 +4920,21 @@ export type Database = {
         Args: { _company_id: string; _end?: string; _start?: string }
         Returns: Json
       }
+      extractor_document_access: {
+        Args: { p_company_id: string; p_user_id: string }
+        Returns: Json
+      }
       extractor_link_company_by_cnpj: { Args: { _cnpj: string }; Returns: Json }
       extractor_queue_sync: { Args: { _company_id?: string }; Returns: Json }
+      extractor_save_verified_certificate: {
+        Args: {
+          p_account_id: string
+          p_actor_id: string
+          p_certificate: Json
+          p_company: Json
+        }
+        Returns: string
+      }
       extractor_workspace_snapshot: { Args: never; Returns: Json }
       foldername: { Args: never; Returns: string }
       get_saas_certificate_bundle: { Args: { _org_id: string }; Returns: Json }
