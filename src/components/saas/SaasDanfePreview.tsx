@@ -69,7 +69,7 @@ function Nfse(p:any){
  const competence=d.competencia||String(p.date||"").split(' ')[0]||"—",status=p.status==="authorized"?"NFS-e Gerada":statusLabel(p.status),serviceOfficial=d.servicoNome||p.item||"—";
  const box="border border-black px-1.5 py-1",label="text-[6.5px] font-bold uppercase leading-tight",value="mt-0.5 text-[7px] leading-tight",dash=(v:any)=>v===undefined||v===null||v===""?"-":v;
  const Mini=({l,v}:{l:string;v:any})=><div className={box}><div className={label}>{l}</div><div className={value}>{dash(v)}</div></div>;
- const ibsUf=d.ibsUf??d.aliquotaIbsUf,ibsMun=d.ibsMun??d.aliquotaIbsMunicipal,cbs=d.cbs??d.aliquotaCbs,ibsTotal=d.valorIbsTotal??d.valorIbs,cbsTotal=d.valorCbsTotal??d.valorCbs,totalIbsCbs=Number(ibsTotal||0)+Number(cbsTotal||0),liquid=Number(d.valorLiquido??p.total||0),liquidWithIbs=liquid+totalIbsCbs;
+ const ibsUf=d.ibsUf??d.aliquotaIbsUf,ibsMun=d.ibsMun??d.aliquotaIbsMunicipal,cbs=d.cbs??d.aliquotaCbs,ibsTotal=d.valorIbsTotal??d.valorIbs,cbsTotal=d.valorCbsTotal??d.valorCbs,totalIbsCbs=Number(ibsTotal||0)+Number(cbsTotal||0),liquid=Number(d.valorLiquido??p.total??0),liquidWithIbs=liquid+totalIbsCbs;
  return <div className="space-y-3">{p.showActions&&<Toolbar id={p.id} title={`DANFSe ${p.number}`} meta={`NFS-e · ${statusLabel(p.status)}`}/>}<div className="saas-preview-shell"><div id={p.id} className="danfe-sheet fiscal-paper mx-auto max-w-[860px] bg-white p-[5px] text-black shadow-sm">
   <div className="grid grid-cols-[1fr_1.45fr_1fr] border-2 border-black">
    <div className="flex items-center gap-2 p-2"><div className="text-[20px] font-black tracking-tight">NFS-e</div><div className="text-[7px] leading-tight">Nota Fiscal de<br/>Serviço eletrônica</div></div>
