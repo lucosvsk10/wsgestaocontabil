@@ -40,14 +40,14 @@ jobs:
               raise SystemExit('load marker not found in SaasEmission.tsx')
           text = text.replace(marker, replacement, 1)
 
-          old_series = '''            : documentType === 'NFS-e'\n            ? pp.series_nfse || '1'\n            : documentType === 'CT-e' '''
-          new_series = '''            : documentType === 'NFS-e'\n            ? nfseSuggestedSeries\n            : documentType === 'CT-e' '''
+          old_series = """            : documentType === 'NFS-e'\n            ? pp.series_nfse || '1'"""
+          new_series = """            : documentType === 'NFS-e'\n            ? nfseSuggestedSeries"""
           if old_series not in text:
               raise SystemExit('series default block not found')
           text = text.replace(old_series, new_series, 1)
 
-          old_number = '''            : documentType === 'NFS-e'\n            ? pp.next_number_nfse || 1\n            : documentType === 'CT-e' '''
-          new_number = '''            : documentType === 'NFS-e'\n            ? nfseSuggestedNumber || 1\n            : documentType === 'CT-e' '''
+          old_number = """            : documentType === 'NFS-e'\n            ? pp.next_number_nfse || 1"""
+          new_number = """            : documentType === 'NFS-e'\n            ? nfseSuggestedNumber || 1"""
           if old_number not in text:
               raise SystemExit('number default block not found')
           text = text.replace(old_number, new_number, 1)
