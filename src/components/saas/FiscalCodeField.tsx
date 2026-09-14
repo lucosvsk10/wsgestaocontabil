@@ -7,7 +7,7 @@ import {searchFiscalRecords} from './FiscalRecordPicker';
 import '@/styles/fiscal-studio.css';
 
 type Code = {code:string;description:string};
-type Kind = 'ncm'|'service'|'nbs';
+type Kind = 'ncm'|'service'|'nbs'|'indop';
 const cache:Partial<Record<Kind,Code[]>>={};
 const requests:Partial<Record<Kind,Promise<Code[]>>>={};
 const NBS_SOURCE='https://raw.githubusercontent.com/OCA/l10n-brazil/77e66cd5afdb885a8a293133b6a96fb9210e554f/l10n_br_fiscal/data/l10n_br_fiscal.nbs.csv';
@@ -15,6 +15,7 @@ const digits=(value:any)=>String(value??'').replace(/\D/g,'');
 const formatNbs=(value:any)=>{const d=digits(value).slice(0,9);return d.length===9?`${d.slice(0,1)}.${d.slice(1,5)}.${d.slice(5,7)}.${d.slice(7,9)}`:d};
 const parseCsvLine=(line:string)=>{const cells:string[]=[];let cell='',quoted=false;for(let i=0;i<line.length;i++){const ch=line[i];if(ch==='"'){if(quoted&&line[i+1]==='"'){cell+='"';i++}else quoted=!quoted}else if(ch===','&&!quoted){cells.push(cell);cell=''}else cell+=ch}cells.push(cell);return cells};
 // Service source: Portal Nacional NFS-e, Anexo B v1.01, 22/01/2026.
+// cIndOp source: tabela local versionada a partir do Anexo de Indicadores vigente no Portal Nacional.
 // NBS source: NBS 2.0 mirrored in OCA/l10n-brazil. Only the public classification table is requested.
 // NCM: BrasilAPI live table; no customer or company data is sent to these services.
 async function loadCodes(kind:Kind):Promise<Code[]>{
@@ -23,6 +24,7 @@ async function loadCodes(kind:Kind):Promise<Code[]>{
  requests[kind]=(async()=>{
   let rows:Code[];
   if(kind==='service') rows=(await import('@/lib/saas/nationalServiceCodes.json')).default;
+  else if(kind==='indop') rows=(await import('@/lib/saas/operationIndicatorCodes.json')).default;
   else if(kind==='nbs'){
    const response=await fetch(NBS_SOURCE,{signal:AbortSignal.timeout(12000)});
    if(!response.ok)throw new Error('Consulta NBS indisponível');
@@ -52,10 +54,10 @@ export default function FiscalCodeField({kind,label,value,onChange,required=fals
  const choose=(code:string)=>{const record=rows.find(row=>row.code===code);onChange(code);if(record&&onResolved){lastResolved.current=record.code;onResolved(record)}};
  const show=()=>{setQuery(value||'');setLimit(8);setOpen(true);void fetchCodes()};
  const maxDigits=kind==='ncm'?8:kind==='nbs'?9:6;
- const placeholder=kind==='ncm'?'8 dígitos':kind==='nbs'?'Ex.: 1.1404.43.00':'6 dígitos';
- const title=kind==='ncm'?'Encontrar um NCM':kind==='nbs'?'Encontrar uma NBS':'Código de Tributação Nacional';
- const hint=kind==='ncm'?'Pesquise na tabela NCM pelo código ou descrição. Não é o código interno / SKU.':kind==='nbs'?'Pesquise a NBS 2.0 pelo código ou pelo nome do serviço.':'Pesquise a classificação nacional pelo código ou nome do serviço. A descrição oficial será aproveitada no cadastro.';
- const source=kind==='ncm'?'Tabela NCM · consulta BrasilAPI':kind==='nbs'?'NBS 2.0 · tabela pública de classificação':'Portal Nacional NFS-e · Anexo B · versão 22/01/2026';
+ const placeholder=kind==='ncm'?'8 dígitos':kind==='nbs'?'Ex.: 1.1404.43.00':kind==='indop'?'Ex.: 100301':'6 dígitos';
+ const title=kind==='ncm'?'Encontrar um NCM':kind==='nbs'?'Encontrar uma NBS':kind==='indop'?'Indicador da operação (cIndOp)':'Código de Tributação Nacional';
+ const hint=kind==='ncm'?'Pesquise na tabela NCM pelo código ou descrição. Não é o código interno / SKU.':kind==='nbs'?'Pesquise a NBS 2.0 pelo código ou pelo nome do serviço.':kind==='indop'?'Pesquise o indicador da operação por código ou pela característica do fornecimento.':'Pesquise a classificação nacional pelo código ou nome do serviço. A descrição oficial será aproveitada no cadastro.';
+ const source=kind==='ncm'?'Tabela NCM · consulta BrasilAPI':kind==='nbs'?'NBS 2.0 · tabela pública de classificação':kind==='indop'?'Portal Nacional NFS-e · indicadores da operação IBS/CBS':'Portal Nacional NFS-e · Anexo B · versão 22/01/2026';
  return <div className="fe-code-field">
   <label htmlFor={id} className="fe-label">{label}{required&&<b aria-hidden="true"> *</b>}</label>
   <div className="fe-code-input"><Input id={id} inputMode="numeric" value={kind==='nbs'?formatNbs(value):value||''} maxLength={kind==='nbs'?12:kind==='ncm'?10:8}
@@ -63,7 +65,7 @@ export default function FiscalCodeField({kind,label,value,onChange,required=fals
    <Button type="button" variant="ghost" aria-label={`Consultar ${label}`} onClick={show}><Search size={16}/><span>Consultar</span></Button></div>
   <small className="fe-field-hint">{exact?.description||hint}</small>
   <Dialog open={open} onOpenChange={setOpen}><DialogContent className="ws-record-dialog" onOpenAutoFocus={event=>{event.preventDefault();input.current?.focus()}}>
-   <header><p className="ws-eyebrow">CLASSIFICAÇÃO FISCAL</p><DialogTitle>{title}</DialogTitle><DialogDescription>{kind==='nbs'?'Escolha o código NBS correspondente ao serviço. Você pode pesquisar pelo código ou por palavras da descrição.':'Escolha o código que corresponde à operação. No cadastro de serviços, a descrição oficial será preenchida automaticamente.'}</DialogDescription></header>
+   <header><p className="ws-eyebrow">CLASSIFICAÇÃO FISCAL</p><DialogTitle>{title}</DialogTitle><DialogDescription>{kind==='nbs'?'Escolha o código NBS correspondente ao serviço. Você pode pesquisar pelo código ou por palavras da descrição.':kind==='indop'?'Escolha o indicador correspondente ao local e à natureza da operação. A descrição fica vinculada à emissão.':'Escolha o código que corresponde à operação. No cadastro de serviços, a descrição oficial será preenchida automaticamente.'}</DialogDescription></header>
    <div className="ws-record-search"><Search size={20}/><Input ref={input} aria-label="Buscar classificação fiscal" placeholder="Código ou palavras da descrição" value={query} onChange={e=>{setQuery(e.target.value);setLimit(8)}}/></div>
    <div className="ws-record-result-count" role="status">{loading?'Consultando tabela…':failed?'A tabela está indisponível. Você pode informar o código manualmente.':`${matches.length} classificações encontradas`}</div>
    <div className="ws-record-results">{!loading&&!failed&&matches.slice(0,limit).map(row=><button type="button" className="ws-record-result" key={row.id} onClick={()=>{choose(row.id);setOpen(false)}}><span className="fe-code-number">{kind==='nbs'?formatNbs(row.code):row.code}</span><span className="ws-record-body"><strong>{row.name}</strong></span><ArrowRight size={16}/></button>)}
