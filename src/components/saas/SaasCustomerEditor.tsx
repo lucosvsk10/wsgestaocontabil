@@ -145,7 +145,7 @@ export default function SaasCustomerEditor({ form, set, hideTaxIdForLegal = fals
     <div className="customer-flow">
       <div className="customer-flow-progress">
         <div className="customer-flow-progress-head">
-          <span>Cadastro do cliente</span>
+          <span>Tomador / Adquirente do Serviço</span>
           <b>{progress}%</b>
         </div>
         <div className="customer-flow-progress-track"><i style={{ width: `${progress}%` }} /></div>
@@ -177,7 +177,7 @@ export default function SaasCustomerEditor({ form, set, hideTaxIdForLegal = fals
                 <div><UserRound /></div>
                 <span>
                   <b>Identificação</b>
-                  <small>Quem é este cliente e como ele será identificado nas emissões.</small>
+                  <small>Dados do tomador/adquirente usados na NFS-e Nacional.</small>
                 </span>
               </div>
 
@@ -202,11 +202,11 @@ export default function SaasCustomerEditor({ form, set, hideTaxIdForLegal = fals
               <div className="customer-flow-grid">
                 <div className="customer-flow-span-2">
                   <Field
-                    label={form.person_type === 'individual' ? 'Nome completo' : 'Razão social / nome'}
+                    label="Nome / Nome Empresarial"
                     value={form.legal_name}
                     onChange={value => set('legal_name', value)}
                     required
-                    placeholder={form.person_type === 'individual' ? 'Nome completo do cliente' : 'Razão social da empresa'}
+                    placeholder={form.person_type === 'individual' ? 'Nome completo do tomador' : 'Nome empresarial do tomador'}
                   />
                 </div>
                 {form.person_type !== 'individual' && (
@@ -214,12 +214,12 @@ export default function SaasCustomerEditor({ form, set, hideTaxIdForLegal = fals
                 )}
                 {(!hideTaxIdForLegal || form.person_type !== 'legal') && (
                   <Field
-                    label={form.person_type === 'individual' ? 'CPF' : form.person_type === 'foreign' ? 'Documento' : 'CNPJ'}
+                    label="CNPJ / CPF / NIF"
                     value={form.person_type === 'foreign' ? form.tax_id : formatTaxId(form.tax_id, form.person_type)}
-                    onChange={value => set('tax_id', onlyDigits(value))}
+                    onChange={value => set('tax_id', form.person_type === 'foreign' ? value : onlyDigits(value))}
                     required
-                    placeholder={form.person_type === 'individual' ? '000.000.000-00' : '00.000.000/0000-00'}
-                    hint={form.person_type === 'foreign' ? 'Documento de identificação do exterior.' : undefined}
+                    placeholder={form.person_type === 'individual' ? '000.000.000-00' : form.person_type === 'foreign' ? 'NIF / documento' : '00.000.000/0000-00'}
+                    hint={form.person_type === 'foreign' ? 'Informe o NIF ou documento de identificação do exterior.' : undefined}
                   />
                 )}
                 <Field label="Nome do contato" value={form.contact_name} onChange={value => set('contact_name', value)} placeholder="Pessoa de referência" />
@@ -237,11 +237,11 @@ export default function SaasCustomerEditor({ form, set, hideTaxIdForLegal = fals
               <div className="customer-flow-subsection">
                 <div className="customer-flow-subsection-title">
                   <b>Dados fiscais</b>
-                  <small>Usados automaticamente quando necessários na nota.</small>
+                  <small>Campos oficiais usados quando aplicáveis na NFS-e.</small>
                 </div>
                 <div className="customer-flow-grid">
-                  <Field label="Inscrição estadual" value={form.state_registration} onChange={value => set('state_registration', value)} />
-                  <Field label="Inscrição municipal" value={form.municipal_registration} onChange={value => set('municipal_registration', value)} />
+                  <Field label="Inscrição Estadual (opcional)" value={form.state_registration} onChange={value => set('state_registration', value)} hint="Prestadores e não contribuintes de ICMS podem não possuir IE." />
+                  <Field label="Indicador Municipal (Inscrição)" value={form.municipal_registration} onChange={value => set('municipal_registration', value)} />
                   <SelectField
                     label="Indicador IE"
                     value={form.ie_indicator}
@@ -280,7 +280,7 @@ export default function SaasCustomerEditor({ form, set, hideTaxIdForLegal = fals
                 <div><MapPin /></div>
                 <span>
                   <b>Endereço</b>
-                  <small>Endereço fiscal usado nos documentos com destinatário identificado.</small>
+                  <small>Endereço do tomador/adquirente apresentado no documento fiscal.</small>
                 </span>
               </div>
               <div className="customer-flow-grid">
@@ -289,9 +289,9 @@ export default function SaasCustomerEditor({ form, set, hideTaxIdForLegal = fals
                 <Field label="Número" value={form.street_number} onChange={value => set('street_number', value)} />
                 <Field label="Complemento" value={form.complement} onChange={value => set('complement', value)} />
                 <Field label="Bairro" value={form.district} onChange={value => set('district', value)} />
-                <Field label="Cidade" value={form.city} onChange={value => set('city', value)} required />
-                <Field label="UF" value={form.state} onChange={value => set('state', value)} required placeholder="AL" />
-                <Field label="Código IBGE" value={form.city_ibge_code} onChange={value => set('city_ibge_code', value)} required hint="Código de 7 dígitos." />
+                <Field label="Município" value={form.city} onChange={value => set('city', value)} required />
+                <Field label="Sigla UF" value={form.state} onChange={value => set('state', value)} required placeholder="AL" />
+                <Field label="Código IBGE" value={form.city_ibge_code} onChange={value => set('city_ibge_code', value)} required hint="Código IBGE de 7 dígitos." />
               </div>
             </section>
           )}
@@ -302,7 +302,7 @@ export default function SaasCustomerEditor({ form, set, hideTaxIdForLegal = fals
                 <div><Mail /></div>
                 <span>
                   <b>Contato e observações</b>
-                  <small>Canais de contato e informações internas para sua equipe.</small>
+                  <small>Telefone e e-mail seguem os nomes usados no documento nacional.</small>
                 </span>
               </div>
               <div className="customer-flow-grid">
@@ -323,22 +323,22 @@ export default function SaasCustomerEditor({ form, set, hideTaxIdForLegal = fals
 
         <aside className="customer-flow-summary">
           <div className="customer-flow-avatar">{initials}</div>
-          <p className="customer-flow-summary-kicker">Cliente em cadastro</p>
+          <p className="customer-flow-summary-kicker">Tomador / Adquirente</p>
           <h4>{displayName}</h4>
           <span className="customer-flow-summary-type">{personLabel}</span>
 
           <div className="customer-flow-summary-facts">
-            <div><span>Documento</span><b>{form.tax_id ? formatTaxId(form.tax_id, form.person_type) : '—'}</b></div>
-            <div><span>Localização</span><b>{[form.city, form.state].filter(Boolean).join(' / ') || '—'}</b></div>
-            <div><span>Contato</span><b>{form.email || form.phone || form.mobile || '—'}</b></div>
-            <div><span>Indicador IE</span><b>{({ '1': 'Contribuinte', '2': 'Isento', '9': 'Não contribuinte' } as any)[form.ie_indicator] || '—'}</b></div>
+            <div><span>CNPJ / CPF / NIF</span><b>{form.tax_id ? formatTaxId(form.tax_id, form.person_type) : '—'}</b></div>
+            <div><span>Município / Sigla UF</span><b>{[form.city, form.state].filter(Boolean).join(' / ') || '—'}</b></div>
+            <div><span>Telefone / E-mail</span><b>{form.email || form.phone || form.mobile || '—'}</b></div>
+            <div><span>Indicador Municipal</span><b>{form.municipal_registration || '—'}</b></div>
           </div>
 
           <div className="customer-flow-summary-status">
             <span>Pronto para salvar</span>
             <b>{identityDone && addressDone ? 'Sim' : 'Ainda não'}</b>
           </div>
-          <p className="customer-flow-summary-note">Preencha identificação, cidade, UF e código IBGE para concluir o cadastro fiscal.</p>
+          <p className="customer-flow-summary-note">Preencha identificação, município, UF e código IBGE para concluir o cadastro fiscal.</p>
         </aside>
       </div>
 
