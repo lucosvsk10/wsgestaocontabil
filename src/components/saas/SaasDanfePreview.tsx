@@ -12,6 +12,15 @@ const auxTitle=(t:string)=>t==="CT-e"?"DACTE":t==="MDF-e"?"DAMDFE":t==="NFS-e"?"
 
 export function printDanfe(elementId:string,title="Documento fiscal"){
  const node=document.getElementById(elementId);if(!node)return;
+ const officialPdf=node.dataset.danfsePdf;
+ if(officialPdf){
+  try{
+   const binary=atob(officialPdf),bytes=new Uint8Array(binary.length);
+   for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+   const url=URL.createObjectURL(new Blob([bytes],{type:"application/pdf"}));
+   const a=document.createElement("a");a.href=url;a.download=`${title.replace(/[^a-z0-9_-]+/gi,"-")||"DANFSe"}.pdf`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);return;
+  }catch(error){console.error("Não foi possível abrir o DANFSe oficial",error)}
+ }
  const w=openPrintWindow("width=1080,height=900");if(!w)return;
  const styles=[...document.head.querySelectorAll('link[rel="stylesheet"],style')].map(el=>el.outerHTML).join("\n");
  const receipt=node.classList.contains("receipt-sheet");
@@ -44,7 +53,7 @@ export default function SaasDanfePreview({id="danfe-preview",documentType="NF-e"
  const qrValue=p.qrCode||p.qrCodMDFe||p.qrCodCTe||result?.qrCode||result?.response?.qrCode||(access?`https://dfe-portal.svrs.rs.gov.br/${documentType.toLowerCase().replace(/[^a-z]/g,"")}/qrcode?ch=${digits(access)}&tpAmb=${environment==="production"?1:2}`:"");
  const imported=emission?.source==="imported";
  if(mode==="receipt"||documentType==="NFC-e")return <Receipt id={id} showActions={showActions} number={number} series={series} environment={environment} status={status} rejection={rejection} emitLogo={emitLogo} emitName={emitName} emitLegal={emitLegal} emitDoc={emitDoc} emitIE={emitIE} emitAddress={emitAddress} emitCity={emitCity} item={item} quantity={quantity} total={total} access={access} protocol={protocol} date={date} qrValue={qrValue}/>;
- if(documentType==="NFS-e")return <Nfse profile={profile} id={id} showActions={showActions} number={number} series={series} environment={environment} status={status} emitLogo={emitLogo} emitName={emitName} emitDoc={emitDoc} emitAddress={emitAddress} emitCity={emitCity} recipient={recipient} recipientDoc={recipientDoc} item={item} total={total} access={access} protocol={protocol} date={date} qrValue={qrValue} p={p}/>;
+ if(documentType==="NFS-e")return <Nfse result={result} profile={profile} id={id} showActions={showActions} number={number} series={series} environment={environment} status={status} emitLogo={emitLogo} emitName={emitName} emitDoc={emitDoc} emitAddress={emitAddress} emitCity={emitCity} recipient={recipient} recipientDoc={recipientDoc} item={item} total={total} access={access} protocol={protocol} date={date} qrValue={qrValue} p={p}/>;
  return <div className="space-y-3">{showActions&&<Toolbar id={id} title={`${auxTitle(documentType)} ${number}`} meta={`${documentType} · série ${series} · ${statusLabel(status)}`}/>}<div className="saas-preview-shell"><div id={id} className="danfe-sheet fiscal-paper mx-auto w-full max-w-[860px] bg-white p-[7px] shadow-sm">
   {environment!=="production"&&<div className="mb-1.5 border-2 border-black px-2 py-1 text-center text-[9px] font-black">SEM VALOR FISCAL — EMITIDO EM AMBIENTE DE HOMOLOGAÇÃO</div>}
   {status==="rejected"&&<div className="mb-1.5 border-2 border-black bg-[#fff1f1] px-2 py-1 text-[9px]"><b>DOCUMENTO REJEITADO</b>{rejection?` — ${rejection}`:""}</div>}
@@ -70,7 +79,7 @@ function Nfse(p:any){
  const box="border border-black px-1.5 py-1",label="text-[6.5px] font-bold uppercase leading-tight",value="mt-0.5 text-[7px] leading-tight",dash=(v:any)=>v===undefined||v===null||v===""?"-":v;
  const Mini=({l,v}:{l:string;v:any})=><div className={box}><div className={label}>{l}</div><div className={value}>{dash(v)}</div></div>;
  const ibsUf=d.ibsUf??d.aliquotaIbsUf,ibsMun=d.ibsMun??d.aliquotaIbsMunicipal,cbs=d.cbs??d.aliquotaCbs,ibsTotal=d.valorIbsTotal??d.valorIbs,cbsTotal=d.valorCbsTotal??d.valorCbs,totalIbsCbs=Number(ibsTotal||0)+Number(cbsTotal||0),liquid=Number(d.valorLiquido??p.total??0),liquidWithIbs=liquid+totalIbsCbs;
- return <div className="space-y-3">{p.showActions&&<Toolbar id={p.id} title={`DANFSe ${p.number}`} meta={`NFS-e · ${statusLabel(p.status)}`}/>}<div className="saas-preview-shell"><div id={p.id} className="danfe-sheet fiscal-paper mx-auto max-w-[860px] bg-white p-[5px] text-black shadow-sm">
+ return <div className="space-y-3">{p.showActions&&<Toolbar id={p.id} title={`DANFSe ${p.number}`} meta={`NFS-e · ${statusLabel(p.status)}`}/>}<div className="saas-preview-shell"><div id={p.id} data-danfse-pdf={p.result?.danfsePdfBase64||undefined} className="danfe-sheet fiscal-paper mx-auto max-w-[860px] bg-white p-[5px] text-black shadow-sm">
   <div className="grid grid-cols-[1fr_1.45fr_1fr] border-2 border-black">
    <div className="flex items-center gap-2 p-2"><div className="text-[20px] font-black tracking-tight">NFS-e</div><div className="text-[7px] leading-tight">Nota Fiscal de<br/>Serviço eletrônica</div></div>
    <div className="border-x border-black p-2 text-center"><div className="text-[11px] font-black">DANFSe v2.0</div><div className="text-[10px] font-bold">Documento Auxiliar da NFS-e</div></div>
