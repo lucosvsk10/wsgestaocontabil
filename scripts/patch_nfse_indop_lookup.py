@@ -1,0 +1,11 @@
+from pathlib import Path
+p=Path('src/components/saas/NfseOfficialFlow.tsx')
+s=p.read_text()
+old='''   <Field label="Indicador da operação (cIndOp)" value={form.ibsCbsIndOp} onChange={v=>setField('ibsCbsIndOp',v)} required hint="Informe o código oficial do Anexo de Indicadores da Operação."/><Field label="Descrição do indicador da operação" value={form.ibsCbsIndOpDescricao} onChange={v=>setField('ibsCbsIndOpDescricao',v)}/><Select label="Operação favorecida ZFM/ALC (indZFMALC)" value={form.indZFMALC} onChange={v=>setField('indZFMALC',v)}><option value="0">0 - Não</option><option value="1">1 - Sim</option></Select><Field label="CST IBS/CBS" value={form.ibsCbsCst} onChange={v=>setField('ibsCbsCst',v)} required/><Field label="Classificação tributária IBS/CBS" value={form.ibsCbsClassTrib} onChange={v=>setField('ibsCbsClassTrib',v)} required/><Field label="Base de cálculo IBS/CBS" type="number" value={form.ibsCbsBase} onChange={v=>setField('ibsCbsBase',v)}/><Field label="Redução IBS (%)" type="number" value={form.ibsReducao} onChange={v=>setField('ibsReducao',v)}/><Field label="Redução CBS (%)" type="number" value={form.cbsReducao} onChange={v=>setField('cbsReducao',v)}/>
+'''
+new='''   <FiscalCodeField kind="indop" label="Indicador da operação (cIndOp)" value={form.ibsCbsIndOp} onChange={v=>setField('ibsCbsIndOp',v)} required onResolved={record=>setField('ibsCbsIndOpDescricao',record.description)}/><Readonly label="Descrição do indicador da operação" value={form.ibsCbsIndOpDescricao}/><Select label="Operação favorecida ZFM/ALC (indZFMALC)" value={form.indZFMALC} onChange={v=>setField('indZFMALC',v)}><option value="0">0 - Não</option><option value="1">1 - Sim</option></Select><Readonly label="CST IBS/CBS" value={digits(form.ibsCbsClassTrib).slice(0,3)}/><Field label="Classificação tributária IBS/CBS (cClassTrib)" value={form.ibsCbsClassTrib} onChange={v=>setForm((p:any)=>({...p,ibsCbsClassTrib:digits(v),ibsCbsCst:digits(v).slice(0,3)}))} required hint="O CST é derivado automaticamente dos 3 primeiros dígitos da classificação tributária."/>
+'''
+if old not in s: raise SystemExit('IBS/CBS anchor not found')
+s=s.replace(old,new,1)
+p.write_text(s)
+print('patched cIndOp lookup and derived CST')
