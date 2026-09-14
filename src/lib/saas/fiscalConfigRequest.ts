@@ -7,7 +7,7 @@ export async function fiscalConfigRequest(body: Record<string, unknown>) {
     const { data, error } = await supabase.functions.invoke('saas-fiscal-config', {
       body,
       signal: controller.signal,
-    });
+    } as Parameters<typeof supabase.functions.invoke>[1]);
     if (error) {
       let detail = '';
       try {
