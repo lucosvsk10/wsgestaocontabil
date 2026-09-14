@@ -3,6 +3,7 @@ on:
   push:
     paths:
       - 'scripts/patch_nfse_official_flow.py'
+      - '.github/workflows/run-nfse-official-flow.yml'
 permissions:
   contents: write
 jobs:
