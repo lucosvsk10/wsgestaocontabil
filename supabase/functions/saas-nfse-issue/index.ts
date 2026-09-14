@@ -67,9 +67,6 @@ Deno.serve(async req=>{
     const tpAmb=environment==="production"?"1":"2",im=digits(p.municipal_registration),cServ:any={cTribNac:code,...(digits(raw.codigoTributacaoMunicipal)?{cTribMun:digits(raw.codigoTributacaoMunicipal)}:{}),xDescServ:String(raw.descricao).trim(),...(nbs?{cNBS:nbs}:{})};
     const totalPlaceholder:any={pTotTribFed:0,pTotTribEst:0,pTotTribMun:0};
     const prest:any={CNPJ:cnpj,...(im?{IM:im}:{}),regTrib:reg};
-    const prestCep=digits(p.postal_code),prestMun=digits(p.city_ibge_code);
-    if(prestCep.length===8&&prestMun.length===7&&p.street&&p.street_number&&p.district)prest.end={cMun:prestMun,CEP:prestCep,xLgr:String(p.street),nro:String(p.street_number),...(p.complement?{xCpl:String(p.complement)}:{}),xBairro:String(p.district)};
-    if(p.phone)prest.fone=digits(p.phone);if(p.email)prest.email=String(p.email);
     const tribMun:any={tribISSQN:String(raw.tributacaoIss||"1"),tpRetISSQN:raw.issRetido?"2":"1"};
     const issAliquota=Number(raw.issAliquota);if(issAliquota>0&&issAliquota<=100)tribMun.pAliq=issAliquota;
     const tribFed:any={};
