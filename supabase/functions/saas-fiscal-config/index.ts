@@ -130,7 +130,7 @@ Deno.serve(async req => {
         const missing = [] as string[];
         if (digits(existing.tax_id).length !== 14) missing.push('CNPJ');
         if (!String(existing.legal_name || '').trim()) missing.push('razão social');
-        if (!digits(existing.state_registration)) missing.push('inscrição estadual');
+        // IE is intentionally optional: service providers may be non-ICMS taxpayers.
         if (digits(existing.city_ibge_code).length !== 7) missing.push('município IBGE');
         if (
           !existing.certificate_secret_id ||
