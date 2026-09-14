@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
 import AnimatedExtractorIcon from '@/components/extractor/AnimatedExtractorIcon';
@@ -20,14 +20,31 @@ const reconToDoc=(r:any):Doc=>({documentKind:'nfe',direction:'saida',accessKey:r
 export default function ExtractorReports({companies,selectedCompanyId,onSelectCompany,allowedFrom,preview=false}:Props){
  const company=companies.find(c=>c.id===selectedCompanyId)||companies[0]||null;const[docs,setDocs]=useState<Doc[]>([]),[loading,setLoading]=useState(false),[error,setError]=useState(''),[effective,setEffective]=useState<{from:string;to:string}|null>(null);
  const start=allowedFrom||iso(new Date(Date.now()-30*86400000)),end=iso(new Date());
- const load=useCallback(async()=>{if(!company){setDocs([]);return}if(preview){setDocs(makePreviewDocs(company));setEffective({from:start,to:end});return}setLoading(true);setError('');const{data,error:e}=await(supabase as any).rpc('extractor_company_documents',{_company_id:company.id,_start:start,_end:end});if(e){setError(e.message||'Não foi possível carregar o relatório.');setDocs([])}else{const base=(data?.documents||[]).map(rowToDoc);const known=new Set(base.map((d:Doc)=>String(d.accessKey||'')).filter(Boolean));const extra=(data?.reconciliation||[]).filter((r:any)=>r.access_key&&!known.has(String(r.access_key))).map(reconToDoc);setDocs([...base,...extra]);setEffective({from:String(data?.effective_from||start),to:String(data?.effective_to||end)})}setLoading(false)},[company?.id,start,end,preview]);
- useEffect(()=>{void load()},[load]);
+ const sequence=useRef(0);
+ const load=useCallback(async()=>{
+   const request=++sequence.current;
+   setDocs([]); setEffective(null); setError('');
+   if(!company){setLoading(false);return}
+   if(preview){setDocs(makePreviewDocs(company));setEffective({from:start,to:end});setLoading(false);return}
+   setLoading(true);
+   try {
+     const {data,error:e}=await(supabase as any).rpc('extractor_company_documents',{_company_id:company.id,_start:start,_end:end}).abortSignal(AbortSignal.timeout(30_000));
+     if(request!==sequence.current)return;
+     if(e)throw e;
+     const base=(data?.documents||[]).map(rowToDoc);
+     const known=new Set(base.map((d:Doc)=>String(d.accessKey||'')).filter(Boolean));
+     const extra=(data?.reconciliation||[]).filter((r:any)=>r.access_key&&!known.has(String(r.access_key))).map(reconToDoc);
+     setDocs([...base,...extra]);setEffective({from:String(data?.effective_from||start),to:String(data?.effective_to||end)});
+   }catch{if(request===sequence.current)setError('Não foi possível carregar o relatório. Tente novamente.')}
+   finally{if(request===sequence.current)setLoading(false)}
+ },[company?.id,start,end,preview]);
+ useEffect(()=>{void load();return()=>{sequence.current++}},[load]);
  const report=useMemo(()=>buildReport(docs),[docs]);
  if(!company)return <div className="extractor-page"><ReportHeading/><div className="extractor-empty">Adicione uma empresa com certificado A1 para gerar relatórios.</div></div>;
  return <div className="extractor-page extractor-report-rich">
   <div className="extractor-page-heading"><div><span className="extractor-eyebrow"><AnimatedExtractorIcon name="report"/>WS Extrator Fiscal</span><h1>Relatórios</h1><p>Análise fiscal da empresa ativa, calculada somente com documentos reais disponíveis no Extrator.</p></div><select className="extractor-company-select" value={company.id} onChange={e=>onSelectCompany(e.target.value)}>{companies.map(c=><option key={c.id} value={c.id}>{c.tradeName}</option>)}</select></div>
   <section className="extractor-report-company"><div><small>Empresa analisada</small><strong>{company.name}</strong>{company.tradeName!==company.name&&<span>{company.tradeName}</span>}<em>{formatCnpj(company.cnpj)}</em></div><div><small>Período disponível</small><strong>{effective?`${dayLabel(effective.from)} — ${dayLabel(effective.to)}`:'Carregando...'}</strong><span>{integer.format(report.total)} documentos considerados</span></div></section>
-  {error&&<div className="extractor-notice error"><span>{error}</span></div>}
+  {error&&<div className="extractor-notice error" role="alert"><span>{error}</span><button disabled={loading} onClick={()=>void load()}>Tentar novamente</button></div>}
   <section className="extractor-kpis extractor-report-kpis">
    <Metric label="Vendas" value={currency.format(report.salesValue)} detail={`${integer.format(report.salesCount)} documento(s) · ticket ${currency.format(report.salesTicket)}`} icon="report"/>
    <Metric label="Compras" value={currency.format(report.purchaseValue)} detail={`${integer.format(report.purchaseCount)} documento(s) · ticket ${currency.format(report.purchaseTicket)}`} icon="document"/>

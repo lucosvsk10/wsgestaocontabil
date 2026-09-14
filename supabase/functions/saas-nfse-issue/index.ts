@@ -1,3 +1,5 @@
+import { consume } from '../_shared/rate-limit.ts';
+import { readJsonLimited, RequestError } from '../_shared/request-guards.ts';
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
 import { Buffer } from "node:buffer";
 import { lerCertificado } from "npm:nfse-node@0.3.2/certificado";
@@ -26,7 +28,7 @@ async function loadCertificate(admin:any,p:any,orgId:string){
 async function ctx(req:Request,orgId:string){
   const admin=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const auth=req.headers.get("Authorization");if(!auth)throw new Error("Não autenticado");
-  const {data:{user}}=await admin.auth.getUser(auth.replace("Bearer ",""));if(!user)throw new Error("Não autenticado");
+  const {data:{user}}=await admin.auth.getUser(auth.replace("Bearer ",""));if(!user)throw new RequestError("Não autenticado",401);const limit=await consume(admin,"saas-nfse-issue",user.id,60,600);if(!limit.allowed)throw new RequestError("Muitas solicitações fiscais. Aguarde antes de tentar novamente.",429);
   const {data:m}=await admin.from("organization_members").select("role").eq("organization_id",orgId).eq("user_id",user.id).eq("status","active").maybeSingle();
   if(!m||!["owner","admin","member"].includes(m.role))throw new Error("Sem permissão para emitir");
   const {data:p}=await admin.from("saas_company_fiscal_profiles").select("*").eq("organization_id",orgId).order("created_at").limit(1).maybeSingle();
@@ -45,7 +47,7 @@ async function bridge(password:string,payload:any){
 Deno.serve(async req=>{
   if(req.method==="OPTIONS")return new Response(null,{headers:cors});
   try{
-    const b=await req.json(),orgId=String(b.organization_id||"");
+    const b=await readJsonLimited(req,524288),orgId=String(b.organization_id||"");
     const {admin,user,p,cert,password}=await ctx(req,orgId),environment=p.fiscal_environment==="production"?"production":"homologation",expected=String(b.expected_environment||"");
     if(expected&&expected!==environment)return out({error:`Ambiente fiscal mudou para ${environment==="production"?"produção":"homologação"}. Recarregue a emissão antes de transmitir.`},409);
     const raw={...(b.data||{}),environment},cnpj=digits(p.tax_id),mun=digits(raw.municipioEmissor||p.city_ibge_code),munPrest=digits(raw.municipioPrestacao||mun),code=digits(raw.codigoTributacao||p.default_nfse_service_code),tomaDoc=digits(raw.tomadorDocumento);
@@ -65,5 +67,5 @@ Deno.serve(async req=>{
     const {data:em,error:emErr}=await admin.from("saas_fiscal_emissions").insert({organization_id:orgId,user_id:user.id,document_type:"nfse",status:"authorized",environment,number:String(raw.numero),series:String(raw.serie),access_key:key,protocol:null,recipient_name:String(raw.tomadorNome||"")||null,recipient_tax_id:tomaDoc||null,total:Number(raw.valor),payload:raw,response:body,xml:nfseXml,authorized_at:new Date().toISOString()}).select().single();if(emErr)throw emErr;
     await admin.from("saas_company_fiscal_profiles").update({next_number_nfse:Number(raw.numero)+1,updated_at:new Date().toISOString()}).eq("id",p.id);
     return out({ok:true,authorized:true,environment,chaveAcesso:key,response:body,emission:em,xml:nfseXml,transport:"vercel-node"});
-  }catch(e){console.error(e);return out({error:e instanceof Error?e.message:String(e)},500)}
+  }catch(e){console.error(e);return out({error:e instanceof Error?e.message:String(e)},e instanceof RequestError?e.status:500)}
 });

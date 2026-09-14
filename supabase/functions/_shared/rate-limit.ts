@@ -41,6 +41,9 @@ export function limited(result: LimitResult): Response | null {
     headers: {
       "Content-Type": "application/json",
       "Cache-Control": "no-store",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+      "Access-Control-Expose-Headers": "Retry-After",
       "Retry-After": String(Math.max(1, result.retry_after_seconds)),
     },
   });

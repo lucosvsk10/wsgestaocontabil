@@ -15,7 +15,7 @@ export function printDanfe(elementId:string,title="Documento fiscal"){
  const w=openPrintWindow("width=1080,height=900");if(!w)return;
  const styles=[...document.head.querySelectorAll('link[rel="stylesheet"],style')].map(el=>el.outerHTML).join("\n");
  const receipt=node.classList.contains("receipt-sheet");
- const escapedTitle=title.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+ const escapedTitle=title.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
  renderPrintableDocument(w,`<!doctype html><html><head><meta charset="utf-8"/><title>${escapedTitle}</title>${styles}<style>*{box-sizing:border-box}html,body{background:#fff!important;color:#000!important}body{margin:0;padding:${receipt?"3mm":"6mm"};font-family:Arial,sans-serif}.danfe-actions,.saas-preview-toolbar{display:none!important}.danfe-sheet{width:100%!important;max-width:198mm!important;margin:0 auto!important;box-shadow:none!important}.receipt-sheet{width:80mm!important;max-width:80mm!important;margin:0 auto!important;box-shadow:none!important;border:0!important;padding:3mm!important}@page{size:${receipt?"80mm auto":"A4 portrait"};margin:${receipt?"2mm":"5mm"}}@media print{body{padding:0!important}.saas-preview-shell{background:#fff!important;border:0!important;padding:0!important}}</style></head><body>${node.outerHTML}</body></html>`);
 }
 

@@ -9,44 +9,9 @@ import {
   CardHeader, 
   CardTitle 
 } from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 
 export const UserSecuritySettings = () => {
   const [showMFASetup, setShowMFASetup] = useState(false);
-  const { toast } = useToast();
-
-  const checkPasswordBreach = async () => {
-    try {
-      // A API atual do Supabase não inclui detectPasswordBreach diretamente
-      // Precisamos buscar informações da sessão atual
-      const { data: sessionData } = await supabase.auth.getSession();
-      
-      if (!sessionData.session) {
-        toast({
-          variant: "destructive",
-          title: "Erro",
-          description: "Você precisa estar logado para verificar sua senha."
-        });
-        return;
-      }
-      
-      // Enviar confirmação simulada, já que não temos o método direto
-      toast({
-        title: "Verificação Concluída",
-        description: "Sua senha não foi encontrada em vazamentos conhecidos."
-      });
-      
-    } catch (error) {
-      console.error('Error checking password security:', error);
-      toast({
-        variant: "destructive",
-        title: "Alerta de Segurança",
-        description: "Ocorreu um erro ao verificar a segurança da sua senha."
-      });
-    }
-  };
-
   return (
     <div className="space-y-6">
       <Card>
@@ -60,11 +25,12 @@ export const UserSecuritySettings = () => {
           <div>
             <Button
               variant="outline"
-              onClick={checkPasswordBreach}
+              disabled
               className="w-full"
             >
-              Verificar Vazamento de Senha
+              Verificação de vazamentos indisponível
             </Button>
+            <p className="mt-2 text-sm text-muted-foreground">Esta tela não consegue consultar a sua senha. Não apresentamos uma confirmação de segurança sem uma verificação real.</p>
           </div>
           
           {!showMFASetup ? (

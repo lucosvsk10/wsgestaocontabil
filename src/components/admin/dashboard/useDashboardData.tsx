@@ -169,7 +169,7 @@ export const useDashboardData = () => {
       ((salesResult.data || []) as any[]).forEach(row => { const id = companyByFiscal.get(row.company_id); if (id) salesByCentral.set(id, row); });
       ((purchaseResult.data || []) as any[]).forEach(row => { const id = companyByFiscal.get(row.company_id); if (id) purchasesByCentral.set(id, row); });
 
-      const fiscalSearches: FiscalSearchRow[] = companies.map(company => {
+      const fiscalSearches: FiscalSearchRow[] = companies.map((company): FiscalSearchRow => {
         const sales = salesByCentral.get(company.id);
         const purchases = purchasesByCentral.get(company.id);
         const timestamps = [sales?.last_completed_at, purchases?.last_completed_at, sales?.last_started_at, purchases?.last_started_at].filter(Boolean).map(value => new Date(value).getTime());

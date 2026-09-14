@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { client, consume, limited, requestKey } from "./_shared/rate-limit.ts";
+import { client, consume, limited, requestKey } from "../_shared/rate-limit.ts";
+import { readJsonLimited, RequestError } from "../_shared/request-guards.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -23,7 +24,7 @@ Deno.serve(async (req) => {
   if (contentLength > 4096) return json({ error: "Credenciais inválidas." }, 413);
 
   try {
-    const body = await req.json().catch(() => ({})) as Record<string, unknown>;
+    const body = await readJsonLimited(req, 4096);
     const email = String(body.email || "").trim().toLowerCase().slice(0, 320);
     const password = String(body.password || "");
     if (!email || password.length < 1 || password.length > 1024) return json({ error: "Credenciais inválidas." }, 400);
@@ -52,6 +53,7 @@ Deno.serve(async (req) => {
       },
     });
   } catch (error) {
+    if (error instanceof RequestError) return json({ error: "Credenciais inválidas." }, error.status);
     console.error("auth-login", error instanceof Error ? error.message : "unknown");
     return json({ error: "Não foi possível concluir o login." }, 500);
   }
