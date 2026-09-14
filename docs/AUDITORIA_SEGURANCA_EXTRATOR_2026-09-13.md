@@ -1,6 +1,6 @@
 # Auditoria de segurança e revisão do Extrator — 13/09/2026
 
-Status: revisão de 13–14/09/2026 em andamento; não é declaração de ausência de vulnerabilidades.
+Status: lote principal publicado em 14/09/2026, commit 9c3402a9056a7f5a70029789788d84dc678bed4f. Auditoria abrangente ainda tem pendências; não é declaração de ausência de vulnerabilidades.
 
 ## Já aplicado no servidor
 
@@ -32,7 +32,7 @@ Status: revisão de 13–14/09/2026 em andamento; não é declaração de ausên
 
 ## Pendências reais para continuidade
 
-- Publicar e verificar a nova interface e as alterações locais posteriores.
+- Lote principal publicado e confirmado no navegador: novo diálogo A1, botão explícito Validar e salvar, validação de envio vazio e edição do nome da conta presentes.
 - Revisar o restante das funções remotas e pontes Vercel, incluindo consumo/segredos.
 - Dependências: aplicado npm audit fix sem --force e sem scripts de instalação, mais correções de compatibilidade de testing-library e eslint-plugin-react. Restaram 11 alertas (3 high, 8 moderate), não zero. Incluem xlsx sem correção no registro npm, migrações maiores de Vite/Vitest/React Router/uuid e brace-expansion. Tarball oficial SheetJS bloqueado pela política allow-remote do npm; proteção não foi desativada. Referência: https://docs.sheetjs.com/docs/getting-started/installation/nodejs/
 - Pontes Vercel: três projetos confirmados READY. Código local da ponte DFe usa HMAC com validade de 5min, comparação constante, TLS validado, body limitado e timeout. Fontes implantadas de SVRS/NFS-e não estão neste repositório; não considerar revisão de código dessas pontes concluída.
@@ -40,3 +40,13 @@ Status: revisão de 13–14/09/2026 em andamento; não é declaração de ausên
 - Proteção de senhas vazadas desativada no Supabase; não habilitada por SQL e não anunciar como ativa. Referência: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
 - pg_net no schema public e quatro RPCs SECURITY DEFINER do extrator são alertas a acompanhar; não abrir RLS de tabelas de serviço para eliminar avisos.
 - Não foram feitos testes de carga, pentest destrutivo, novas emissões, cobranças, troca de credenciais, validação real de cadeia ICP-Brasil ou teste de todos os papéis/tenants.
+
+## Verificação adicional — 14/09
+
+- Testes HTTP reais com chave pública anônima: importador, download, recuperação e quatro endpoints SaaS de emissão recusaram acesso (401). Login vazio recusado (400), corpo excessivo recusado (413), handler legado aposentado retornou410. Não foram enviadas credenciais reais nem dados fiscais para esses testes.
+- Ponte DFe sem assinatura retornou401. Ponte SVRS com corpo vazio retornou400: validação de entrada confirmada, autenticação da ponte NÃO comprovada. Ponte NFS-e apresentou erro de conexão em duas tentativas; não classificar como aprovada ou vulnerável só por isso.
+- Navegador: todas as sete abas principais do extrator abriram. Relatórios e visão geral conferiram2 documentos e R$637,24. Não foi enviado pedido retroativo nem acionada emissão.
+- Descoberta funcional: vendas da empresa selecionada estavam queued desde11/09, sem credencial estadual AL, embora A1 estivesse ativo. O cron ignorava a empresa sem registrar o motivo. fiscal-sales-cron v650 passa a persistir waiting_state_credentials/waiting_certificate. Um status queued foi corrigido para a pendência real, sem alterar certificado, credencial ou cursor. UI distingue fila e credencial pendente.
+- Bloqueio real: concluir consulta de vendas pelo conector AL exige cadastrar a credencial estadual legítima. Não inventada nem solicitada em texto. A falta não afeta a conferência dos XML já armazenados.
+- Mais4 testes do cron passaram: credencial ausente, certificado ausente, empresa pausada e chamada sem token. Nenhum acessou SEFAZ; total69 testes aprovados somando as duas rodadas.
+- Salvamento da conta testado no site: nome temporário salvo e confirmado na tela; restauração do nome original enviada em seguida. Sem mudança em email, senha, CNPJ ou assinatura.

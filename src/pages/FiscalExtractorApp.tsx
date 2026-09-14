@@ -180,7 +180,10 @@ const formatDate = (v?: string | null, withTime = false) => {
 };
 const syncLabel = (v?: string | null) => {
   const x = String(v || '').toLowerCase();
-  if (['running', 'queued', 'reconciling', 'bootstrap_window', 'retrying'].includes(x))
+  if (x === 'queued') return 'Na fila';
+  if (x === 'waiting_state_credentials') return 'Credencial SEFAZ pendente';
+  if (x === 'waiting_certificate') return 'Certificado pendente';
+  if (['running', 'reconciling', 'bootstrap_window', 'retrying'].includes(x))
     return 'Sincronizando';
   if (['idle', 'completed', 'success'].includes(x)) return 'Ativa';
   if (!x) return 'Não iniciada';
@@ -685,7 +688,7 @@ function Overview({ companies, totals, models, daily, onGo }: any) {
       (c: any) =>
         c.pendingXml > 0 ||
         (c.certificateDays != null && c.certificateDays <= 30) ||
-        /retry|error|fail/i.test(`${c.purchaseStatus} ${c.salesStatus}`)
+        /retry|error|fail|waiting/i.test(`${c.purchaseStatus} ${c.salesStatus}`)
     );
   return (
     <div className="extractor-page">

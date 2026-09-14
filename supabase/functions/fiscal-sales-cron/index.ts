@@ -25,7 +25,7 @@ Deno.serve(async req=>{try{
    const {data:state}=await admin.from("fiscal_sales_sync_state").select("*").eq("company_id",c.id).maybeSingle();
    if(state?.paused===true||c?.fiscal_settings?.sales_sync_paused===true){out.push({company_id:c.id,status:"paused"});continue}
    const [{data:cert},{data:cred}]=await Promise.all([admin.from("fiscal_certificates").select("id").eq("company_id",c.id).eq("is_active",true).limit(1).maybeSingle(),admin.from("fiscal_state_credentials").select("id").eq("company_id",c.id).eq("uf","AL").eq("is_active",true).limit(1).maybeSingle()]);
-   if(!cert||!cred){out.push({company_id:c.id,status:!cert?"waiting_certificate":"waiting_state_credentials"});continue}
+   if(!cert||!cred){const waiting=!cert?"waiting_certificate":"waiting_state_credentials";await admin.from("fiscal_sales_sync_state").upsert({company_id:c.id,status:waiting,last_error:null,next_scheduled_at:next.toISOString(),updated_at:now.toISOString()});out.push({company_id:c.id,status:waiting});continue}
    await admin.from("fiscal_sales_sync_state").upsert({company_id:c.id,status:"running",last_started_at:now.toISOString(),last_error:null,next_scheduled_at:next.toISOString(),updated_at:now.toISOString()});
    const nr=await fetch(`${base}/functions/v1/sefaz-al-numbering-report`,{method:"POST",headers:h,body:JSON.stringify({company_id:c.id}),signal:AbortSignal.timeout(45000)});const nd=await nr.json().catch(()=>({}));let parsed=nr.ok?extractLatest(String(nd?.text||"")):0;
    const {data:maxRows}=await admin.from("fiscal_sales_documents").select("document_number").eq("company_id",c.id).order("document_number",{ascending:false}).limit(2000);const maxSaved=Math.max(0,...(maxRows||[]).map((x:any)=>Number(x.document_number)||0));
