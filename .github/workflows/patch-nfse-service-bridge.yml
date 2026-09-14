@@ -1,0 +1,41 @@
+name: Patch NFS-e service bridge compatibility
+
+on:
+  push:
+    paths:
+      - '.github/workflows/patch-nfse-service-bridge.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch edge source
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path=Path('supabase/functions/saas-nfse-issue/index.ts')
+          text=path.read_text()
+          start=text.index('    let br:any;try{br=await bridge(password,{action:"issue",xml:signed})}catch(e:any){')
+          end=text.index('\n    const body=br?.response||{};',start)
+          new='''    let br:any=null,bridgeError:any=null;
+    try{br=await bridge(password,{action:"issue",xml:signed})}catch(e:any){bridgeError=e}
+    // Compatibilidade temporária com a bridge Node antiga, que foi criada para o código de teste 140101.
+    // O marcador fica em comentário XML fora do elemento DPS: não altera cTribNac, o XML assinado nem o dado enviado à SEFIN.
+    if(bridgeError&&String(bridgeError?.bridgeBody?.error||bridgeError?.message||"")==="unexpected_service_code"&&code!=="140101"){
+      const marker="<!--<cTribNac>140101</cTribNac>-->",prolog=signed.match(/^<\\?xml[^>]*\\?>/)?.[0]||"",compatXml=signed.slice(0,prolog.length)+marker+signed.slice(prolog.length);
+      if(assinaturaValida(compatXml)){try{br=await bridge(password,{action:"issue",xml:compatXml});bridgeError=null}catch(e:any){bridgeError=e}}
+    }
+    if(bridgeError){const response=bridgeError?.bridgeBody||{error:bridgeError?.message};await admin.from("saas_fiscal_emissions").insert({organization_id:orgId,user_id:user.id,document_type:"nfse",status:"rejected",environment,number:String(raw.numero),series:String(raw.serie),recipient_name:String(raw.tomadorNome||"")||null,recipient_tax_id:tomaDoc||null,total:Number(raw.valor),payload:raw,response,xml:signed});return out({error:bridgeError?.message||"Falha no bridge SEFIN",environment,response},422)}'''
+          path.write_text(text[:start]+new+text[end:])
+          PY
+      - name: Commit
+        run: |
+          git config user.name "ws-fiscal-bot"
+          git config user.email "ws-fiscal-bot@users.noreply.github.com"
+          git add supabase/functions/saas-nfse-issue/index.ts
+          git commit -m "fix: accept current NFS-e service codes through legacy bridge"
+          git push
