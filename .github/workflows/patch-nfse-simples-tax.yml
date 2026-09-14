@@ -1,0 +1,44 @@
+name: Patch NFS-e Simples tax field
+
+on:
+  push:
+    paths:
+      - '.github/workflows/patch-nfse-simples-tax.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch SaaS NFS-e form
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path=Path('src/components/saas/SaasEmission.tsx')
+          text=path.read_text()
+          text=text.replace("  nbsCode: '',\n", "  nbsCode: '',\n  simplesTaxRate: '',\n", 1)
+          text=text.replace("    nbs: digits(form.nbsCode),\n", "    nbs: digits(form.nbsCode),\n    simplesTaxRate: form.simplesTaxRate === '' ? null : Number(form.simplesTaxRate),\n", 1)
+          needle="""        need(/^\\d{9}$/.test(digits(form.nbsCode)), 'Código da NBS com 9 dígitos');\n        need(String(form.description).trim(), 'descrição do serviço');\n"""
+          replacement="""        need(/^\\d{9}$/.test(digits(form.nbsCode)), 'Código da NBS com 9 dígitos');\n        if (profile?.tax_regime === 'simples') {\n          const simplesRate = Number(form.simplesTaxRate);\n          need(Number.isFinite(simplesRate) && simplesRate > 0 && simplesRate <= 100, 'alíquota total do Simples Nacional (%)');\n        }\n        need(String(form.description).trim(), 'descrição do serviço');\n"""
+          if needle not in text: raise SystemExit('validation anchor not found')
+          text=text.replace(needle,replacement,1)
+          ui="""          <FiscalCodeField kind=\"nbs\" label=\"Código da NBS\" value={form.nbsCode} onChange={v => set('nbsCode', v)} required />\n          {profile?.tax_regime === 'simples' && <Field label=\"Alíquota total do Simples Nacional (%)\" value={form.simplesTaxRate} onChange={v => set('simplesTaxRate', v)} type=\"number\" required hint=\"Informe a alíquota efetiva aplicável. Ela será enviada no campo pTotTribSN da NFS-e.\" />}\n          <div className=\"fe-info-box\"><ReceiptText /><span><b>ISSQN</b><small>{service?.iss_withheld ? 'Retido pelo tomador, conforme cadastro' : 'Não retido, conforme cadastro'}</small></span></div>\n"""
+          old="""          <FiscalCodeField kind=\"nbs\" label=\"Código da NBS\" value={form.nbsCode} onChange={v => set('nbsCode', v)} required />\n          <div className=\"fe-info-box\"><ReceiptText /><span><b>ISSQN</b><small>{service?.iss_withheld ? 'Retido pelo tomador, conforme cadastro' : 'Não retido, conforme cadastro'}</small></span></div>\n"""
+          if old not in text: raise SystemExit('ui anchor not found')
+          text=text.replace(old,ui,1)
+          path.write_text(text)
+          PY
+      - name: Build
+        run: |
+          npm install --legacy-peer-deps --no-audit --no-fund
+          npm run build
+      - name: Commit
+        run: |
+          git config user.name "ws-fiscal-bot"
+          git config user.email "ws-fiscal-bot@users.noreply.github.com"
+          git add src/components/saas/SaasEmission.tsx
+          git commit -m "fix: send Simples total tax rate in NFS-e"
+          git push
