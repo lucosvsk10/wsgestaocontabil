@@ -1,0 +1,35 @@
+name: Fix self-issued NFS-e prestador payload
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-nfse-self-prestador-address.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch backend
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('supabase/functions/saas-nfse-issue/index.ts')
+          s=p.read_text()
+          old='''    const prestCep=digits(p.postal_code),prestMun=digits(p.city_ibge_code);\n    if(prestCep.length===8&&prestMun.length===7&&p.street&&p.street_number&&p.district)prest.end={cMun:prestMun,CEP:prestCep,xLgr:String(p.street),nro:String(p.street_number),...(p.complement?{xCpl:String(p.complement)}:{}),xBairro:String(p.district)};\n    if(p.phone)prest.fone=digits(p.phone);if(p.email)prest.email=String(p.email);\n'''
+          if old not in s:
+              raise SystemExit('prestador contact/address block not found')
+          s=s.replace(old,'',1)
+          p.write_text(s)
+          PY
+      - name: Build
+        run: |
+          npm install --legacy-peer-deps --no-audit --no-fund
+          npm run build
+      - name: Commit
+        run: |
+          git config user.name ws-fiscal-bot
+          git config user.email ws-fiscal-bot@users.noreply.github.com
+          git add supabase/functions/saas-nfse-issue/index.ts
+          git commit -m "fix: omit prestador address on self-issued DPS"
+          git push
