@@ -31,3 +31,4 @@ jobs:
           git add supabase/functions/saas-nfse-issue/index.ts
           git commit -m "fix: use pTotTribSN for ME EPP NFS-e"
           git push
+# trigger 2026-09-14
