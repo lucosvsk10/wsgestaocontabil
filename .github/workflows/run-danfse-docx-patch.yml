@@ -1,0 +1,33 @@
+name: Run DOCX DANFSe patch
+on: push
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, 'feat: align DANFSe print layout to DOCX master') && !contains(github.event.head_commit.message, 'chore: cleanup DOCX DANFSe workflows') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Execute stored patch
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          source=Path('.github/workflows/apply-danfse-docx-master.yml').read_text()
+          marker="          python <<'PY'\n"
+          start=source.index(marker)+len(marker)
+          end=source.index("\n          PY",start)
+          lines=source[start:end].splitlines()
+          code='\n'.join(line[10:] if line.startswith('          ') else line for line in lines)
+          exec(compile(code,'danfse_patch.py','exec'))
+          PY
+      - name: Build
+        run: |
+          npm install --legacy-peer-deps --no-audit --no-fund
+          npm run build
+      - name: Commit
+        run: |
+          git config user.name "ws-fiscal-bot"
+          git config user.email "ws-fiscal-bot@users.noreply.github.com"
+          git add src/components/saas/SaasDanfePreview.tsx
+          git commit -m "feat: align DANFSe print layout to DOCX master"
+          git push
