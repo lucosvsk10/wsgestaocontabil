@@ -5,6 +5,7 @@ import { Buffer } from "node:buffer";
 import { lerCertificado } from "npm:nfse-node@0.3.2/certificado";
 import { assinarXml, assinaturaValida } from "npm:nfse-node@0.3.2/assinatura";
 import { montarXmlDps } from "npm:nfse-node@0.3.2/dps";
+import { gerarDanfse } from "npm:nfse-node@0.3.2/danfse";
 
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type"};
 const out=(b:unknown,s=200)=>new Response(JSON.stringify(b),{status:s,headers:{...cors,"Content-Type":"application/json"}});
@@ -65,8 +66,9 @@ Deno.serve(async req=>{
     let br:any;try{br=await bridge(password,{action:"issue",xml:signed})}catch(e:any){const response=e?.bridgeBody||{error:e?.message};await admin.from("saas_fiscal_emissions").insert({organization_id:orgId,user_id:user.id,document_type:"nfse",status:"rejected",environment,number:String(raw.numero),series:String(raw.serie),recipient_name:String(raw.tomadorNome||"")||null,recipient_tax_id:tomaDoc||null,total:Number(raw.valor),payload:raw,response,xml:signed});return out({error:e?.message||"Falha no bridge SEFIN",environment,response},422)}
     const body=br?.response||{};if(br?.sefinStatus!==201||!body?.chaveAcesso){await admin.from("saas_fiscal_emissions").insert({organization_id:orgId,user_id:user.id,document_type:"nfse",status:"rejected",environment,number:String(raw.numero),series:String(raw.serie),recipient_name:String(raw.tomadorNome||"")||null,recipient_tax_id:tomaDoc||null,total:Number(raw.valor),payload:raw,response:body,xml:signed});return out({error:"SEFIN rejeitou a DPS",environment,sefinStatus:br?.sefinStatus,response:body},422)}
     const key=String(body.chaveAcesso),nfseXml=body.nfseXmlGZipB64?await gunzipB64(String(body.nfseXmlGZipB64)):signed;
+    let danfsePdfBase64:string|null=null;try{const pdf=await gerarDanfse(nfseXml);danfsePdfBase64=Buffer.from(pdf).toString("base64")}catch(error){console.error("DANFSe PDF generation failed",error)}
     const {data:em,error:emErr}=await admin.from("saas_fiscal_emissions").insert({organization_id:orgId,user_id:user.id,document_type:"nfse",status:"authorized",environment,number:String(raw.numero),series:String(raw.serie),access_key:key,protocol:null,recipient_name:String(raw.tomadorNome||"")||null,recipient_tax_id:tomaDoc||null,total:Number(raw.valor),payload:raw,response:body,xml:nfseXml,authorized_at:new Date().toISOString()}).select().single();if(emErr)throw emErr;
     await admin.from("saas_company_fiscal_profiles").update({next_number_nfse:Number(raw.numero)+1,updated_at:new Date().toISOString()}).eq("id",p.id);
-    return out({ok:true,authorized:true,environment,chaveAcesso:key,response:body,emission:em,xml:nfseXml,transport:"vercel-node"});
+    return out({ok:true,authorized:true,environment,chaveAcesso:key,response:body,emission:em,xml:nfseXml,danfsePdfBase64,danfseLayout:"NT-008/2026-v2.0",transport:"vercel-node"});
   }catch(e){console.error(e);return out({error:e instanceof Error?e.message:String(e)},e instanceof RequestError?e.status:500)}
 });
