@@ -3,7 +3,7 @@ name: Apply SaaS NFS-e model update
 on:
   push:
     paths:
-      - '.github/scripts/saas_nfse_model_patch.py'
+      - '.github/scripts/**'
 
 permissions:
   contents: write
