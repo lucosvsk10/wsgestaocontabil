@@ -125,6 +125,7 @@ const blankCatalog = (section: CadastroSection) => ({
   cofins_rate: '',
   service_code_national: '',
   service_code_municipal: '',
+  nbs_code: '',
   cnae: '',
   iss_rate: '',
   iss_withheld: false,
@@ -152,6 +153,11 @@ const formatTaxId = (value: any) => {
   if (d.length === 14)
     return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
   return value || '—';
+};
+const formatNbs = (value: any) => {
+  const d = onlyDigits(value).slice(0, 9);
+  if (d.length !== 9) return d;
+  return `${d.slice(0, 1)}.${d.slice(1, 5)}.${d.slice(5, 7)}.${d.slice(7, 9)}`;
 };
 const singular = (section: CadastroSection) =>
   ({
@@ -320,7 +326,7 @@ export default function SaasCadastros({
     if (!query) return rows;
     return rows.filter(row => {
       const text = isCatalog
-        ? [row.name, row.code, row.description, row.ncm, row.cnae, row.service_code_national]
+        ? [row.name, row.code, row.description, row.ncm, row.cnae, row.service_code_national, row.nbs_code]
         : [
             row.legal_name,
             row.trade_name,
@@ -349,6 +355,7 @@ export default function SaasCadastros({
         'rntrc',
         'service_code_national',
         'service_code_municipal',
+        'nbs_code',
         'cnae',
         'ncm',
         'cest',
@@ -358,6 +365,7 @@ export default function SaasCadastros({
     if (key === 'tax_id') value = value.slice(0, 14);
     if (key === 'postal_code') value = value.slice(0, 8);
     if (key === 'city_ibge_code') value = value.slice(0, 7);
+    if (key === 'nbs_code') value = value.slice(0, 9);
     if (['state', 'vehicle_state'].includes(key))
       value = String(value).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2);
     if (key === 'vehicle_plate')
@@ -435,9 +443,24 @@ export default function SaasCadastros({
     setMessage('');
   };
 
+  const nextServiceCode = () => {
+    const max = rows.reduce((current, row) => {
+      const raw = String(row?.code || '').trim();
+      const value = /^\d+$/.test(raw) ? Number(raw) : 0;
+      return Number.isFinite(value) ? Math.max(current, value) : current;
+    }, 0);
+    return String(max + 1);
+  };
+
   const create = () => {
     resetImageState();
-    setForm(isCatalog ? blankCatalog(section) : blankParty(section));
+    if (isCatalog) {
+      const next = blankCatalog(section);
+      if (section === 'Serviços') next.code = nextServiceCode();
+      setForm(next);
+    } else {
+      setForm(blankParty(section));
+    }
     setMessage('');
   };
 
@@ -481,8 +504,9 @@ export default function SaasCadastros({
           [Number(form.sale_price) > 0, 'valor padrão'],
           ...(section === 'Serviços'
             ? ([
-                [form.service_code_national, 'código nacional do serviço'],
-                [form.description, 'descrição para a NFS-e'],
+                [form.service_code_national, 'Código de Tributação Nacional'],
+                [form.description, 'Descrição do Serviço'],
+                [onlyDigits(form.nbs_code).length === 9, 'Código da NBS'],
               ] as Array<[any, string]>)
             : []),
         ]
@@ -581,7 +605,7 @@ export default function SaasCadastros({
 
   const subtitle =
     section === 'Serviços'
-      ? 'Serviços com preço, classificação, ISS e retenções prontos para reutilizar na NFS-e.'
+      ? 'Serviços com classificação nacional, NBS, ISS e retenções prontos para reutilizar na NFS-e.'
       : section === 'Produtos'
       ? 'Catálogo fiscal com preços, classificação e estoque.'
       : `Dados cadastrais, fiscais e comerciais de ${section.toLowerCase()} disponíveis em todas as emissões.`;
@@ -817,10 +841,10 @@ function primaryLine(section: CadastroSection, row: any) {
 function cardDetails(section: CadastroSection, row: any) {
   if (section === 'Clientes')
     return [
-      { label: 'Documento', value: formatTaxId(row.tax_id) },
-      { label: 'Localização', value: [row.city, row.state].filter(Boolean).join(' / ') },
-      { label: 'Contato', value: row.email || row.phone || row.mobile },
-      { label: 'Inscrição estadual', value: row.state_registration || ({ '1': 'Contribuinte', '2': 'Isento', '9': 'Não contribuinte' } as any)[row.ie_indicator] },
+      { label: 'CNPJ / CPF / NIF', value: formatTaxId(row.tax_id) },
+      { label: 'Município / UF', value: [row.city, row.state].filter(Boolean).join(' / ') },
+      { label: 'Telefone / E-mail', value: row.email || row.phone || row.mobile },
+      { label: 'Indicador Municipal', value: row.municipal_registration || '—' },
     ];
   if (section === 'Fornecedores')
     return [
@@ -838,10 +862,10 @@ function cardDetails(section: CadastroSection, row: any) {
     ];
   if (section === 'Serviços')
     return [
-      { label: 'Código', value: row.code },
+      { label: 'Código interno', value: row.code },
       { label: 'Valor padrão', value: money(row.sale_price) },
-      { label: 'Código nacional', value: row.service_code_national },
-      { label: 'Tributação', value: row.iss_rate != null ? `ISS ${row.iss_rate}%` : row.cnae || '—' },
+      { label: 'Tributação Nacional', value: row.service_code_national },
+      { label: 'NBS', value: formatNbs(row.nbs_code) || '—' },
     ];
   return [
     { label: 'SKU', value: row.code },
@@ -1075,8 +1099,8 @@ function CatalogEditor({ section, form, set }: { section: CadastroSection; form:
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <Section title="Identificação" description="Nome, código e valor que aparecerão durante a emissão.">
-        <Field label={service ? 'Nome do serviço' : 'Nome do produto'} value={form.name} onChange={value => set('name', value)} required />
-        <Field label="Código interno" value={form.code} onChange={value => set('code', value)} required />
+        <Field label={service ? 'Descrição oficial do serviço' : 'Nome do produto'} value={form.name} onChange={value => set('name', value)} required />
+        <Field label="Código interno" value={form.code} onChange={value => set('code', value)} required hint={service ? 'Gerado automaticamente em sequência; você pode ajustar se necessário.' : undefined} />
         <Field label="Valor padrão" value={form.sale_price} onChange={value => set('sale_price', value)} type="number" required />
         <SelectField
           label="Situação"
@@ -1088,15 +1112,26 @@ function CatalogEditor({ section, form, set }: { section: CadastroSection; form:
           ]}
         />
         <div className="md:col-span-2">
-          <Field label={service ? 'Descrição padrão para NFS-e' : 'Descrição'} value={form.description} onChange={value => set('description', value)} required={service} />
+          <Field label={service ? 'Descrição do Serviço / Fornecimento' : 'Descrição'} value={form.description} onChange={value => set('description', value)} required={service} />
         </div>
       </Section>
 
       {service ? (
         <>
-          <Section title="Classificação fiscal" description="Dados aplicados automaticamente na DPS e na NFS-e.">
-            <FiscalCodeField kind="service" label="Código nacional" value={form.service_code_national} onChange={value => set('service_code_national', value)} required />
-            <Field label="Código municipal" value={form.service_code_municipal} onChange={value => set('service_code_municipal', value)} />
+          <Section title="Serviço Prestado" description="Classificação usada na DPS e na NFS-e Nacional.">
+            <FiscalCodeField
+              kind="service"
+              label="Código de Tributação Nacional"
+              value={form.service_code_national}
+              onChange={value => set('service_code_national', value)}
+              onResolved={record => {
+                set('name', record.description);
+                set('description', record.description);
+              }}
+              required
+            />
+            <Field label="Código de Tributação Municipal" value={form.service_code_municipal} onChange={value => set('service_code_municipal', value)} />
+            <Field label="Código da NBS" value={formatNbs(form.nbs_code)} onChange={value => set('nbs_code', value)} required hint="Obrigatório para emissão oficial da NFS-e. Ex.: 1.1404.43.00" />
             <Field label="CNAE" value={form.cnae} onChange={value => set('cnae', value)} />
             <Field label="ISS (%)" value={form.iss_rate} onChange={value => set('iss_rate', value)} type="number" />
           </Section>
