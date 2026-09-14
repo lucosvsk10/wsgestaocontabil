@@ -1,0 +1,22 @@
+name: Run NFS-e official flow patch
+on:
+  push:
+    paths:
+      - 'scripts/patch_nfse_official_flow.py'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python scripts/patch_nfse_official_flow.py
+      - run: npm install --legacy-peer-deps --no-audit --no-fund
+      - run: npm run build
+      - name: Commit patched emitter
+        run: |
+          git config user.name ws-fiscal-bot
+          git config user.email ws-fiscal-bot@users.noreply.github.com
+          git add src/components/saas/SaasEmission.tsx
+          git commit -m "feat: wire official four-step NFS-e form"
+          git push
