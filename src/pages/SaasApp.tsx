@@ -270,9 +270,8 @@ export default function SaasApp() {
     groups.find(x => x.title === title)?.items.some(x => isItemActive(x.label)) || false;
   const setupComplete = Boolean(
     profile?.tax_id &&
-      profile?.legal_name &&
-      profile?.state_registration &&
-      profile?.city_ibge_code &&
+    profile?.legal_name &&
+    profile?.city_ibge_code &&
       profile?.tax_regime &&
       profile?.crt &&
       certificateConfigured

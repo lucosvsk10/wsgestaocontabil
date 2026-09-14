@@ -65,6 +65,7 @@ const initialEmissionForm = {
   description: '',
   value: '',
   serviceCode: '',
+  nbsCode: '',
   municipioPrestacao: '',
   municipioPrestacaoNome: '',
   municipioPrestacaoUf: '',
@@ -366,6 +367,7 @@ function EmissionForm({
       driverCpf: 11,
       chNFe: 44,
       municipioPrestacao: 7,
+      nbsCode: 9,
       munIniCodigo: 7,
       munFimCodigo: 7,
       unloadCode: 7,
@@ -400,6 +402,7 @@ function EmissionForm({
           next.value = String(selected.sale_price ?? '');
           next.description = selected.description || selected.name;
           next.serviceCode = selected.service_code_national || profile?.default_nfse_service_code || '';
+          next.nbsCode = selected.nbs_code || '';
         }
       }
       return next;
@@ -616,7 +619,10 @@ function EmissionForm({
           values.description = String(payload.descricao || '');
           values.value = String(payload.valor || '');
         }
-        if (parts.fiscal) values.serviceCode = String(payload.codigoTributacao || '');
+        if (parts.fiscal) {
+          values.serviceCode = String(payload.codigoTributacao || '');
+          values.nbsCode = String(payload.nbsCode || payload.nbs || '');
+        }
       } else if (documentType === 'CT-e') {
         if (parts.people) {
           values.remetenteId = byTaxId(payload.rem?.CNPJ || payload.rem?.CPF);
@@ -791,11 +797,26 @@ function EmissionForm({
     numero: form.number,
     municipioEmissor: profile?.city_ibge_code,
     municipioPrestacao: form.municipioPrestacao,
+    municipioPrestacaoNome: form.municipioPrestacaoNome,
+    municipioPrestacaoUf: form.municipioPrestacaoUf,
     codigoTributacao: form.serviceCode,
+    codigoTributacaoMunicipal: service?.service_code_municipal || '',
+    nbsCode: digits(form.nbsCode),
+    nbs: digits(form.nbsCode),
+    servicoNome: service?.name || '',
     descricao: form.description,
     valor: Number(form.value),
     tomadorDocumento: customer?.tax_id,
     tomadorNome: customer?.legal_name,
+    tomadorInscricaoMunicipal: customer?.municipal_registration || '',
+    tomadorTelefone: customer?.phone || customer?.mobile || '',
+    tomadorEmail: customer?.email || '',
+    tomadorCep: customer?.postal_code || '',
+    tomadorMunicipio: customer?.city || '',
+    tomadorUf: customer?.state || '',
+    tomadorMunicipioIbge: customer?.city_ibge_code || '',
+    tomadorEndereco: [customer?.street, customer?.street_number, customer?.complement, customer?.district].filter(Boolean).join(', '),
+    informacoesComplementares: service?.fiscal_notes || '',
     simples: profile?.tax_regime === 'simples' ? '1' : '2',
     issRetido: Boolean(service?.iss_withheld),
   });
@@ -960,6 +981,7 @@ function EmissionForm({
       if (index === 1) {
         need(service, 'serviço');
         need(/^\d{6}$/.test(digits(form.serviceCode)), 'código de tributação nacional com 6 dígitos');
+        need(/^\d{9}$/.test(digits(form.nbsCode)), 'Código da NBS com 9 dígitos');
         need(String(form.description).trim(), 'descrição do serviço');
         need(isPositiveAmount(form.value), 'valor do serviço');
         need(isDocumentNumber(form.series, 5, true), 'série DPS numérica');
@@ -1215,6 +1237,7 @@ function EmissionForm({
           <Field label="Valor do serviço" value={form.value} onChange={v => set('value', v)} type="number" required />
           <Field label="Descrição do serviço" value={form.description} onChange={v => set('description', v)} wide required />
           <FiscalCodeField kind="service" label="Código de Tributação Nacional" value={form.serviceCode} onChange={v => set('serviceCode', v)} required />
+          <Field label="Código da NBS" value={form.nbsCode} onChange={v => set('nbsCode', v)} required placeholder="1.1404.43.00" hint="Obrigatório para emissão oficial da NFS-e." />
           <div className="fe-info-box"><ReceiptText /><span><b>ISSQN</b><small>{service?.iss_withheld ? 'Retido pelo tomador, conforme cadastro' : 'Não retido, conforme cadastro'}</small></span></div>
         </div>
         <details className="fe-emission-details">
@@ -1484,6 +1507,7 @@ function EmissionForm({
       ? [
           ['Tomador', customer?.legal_name || '—'],
           ['Serviço', service?.name || '—'],
+          ['NBS', digits(form.nbsCode) || '—'],
           ['Valor', money(form.value)],
           ['ISSQN', service?.iss_withheld ? 'Retido pelo tomador' : 'Não retido'],
           ['Município', form.municipioPrestacao || '—'],
@@ -1785,10 +1809,25 @@ function FiscalPreview({
           serie: form.series,
           numero: form.number,
           descricao: form.description || service?.name,
+          servicoNome: service?.name,
           valor: Number(form.value || 0),
           tomadorNome: customer?.legal_name,
           tomadorDocumento: customer?.tax_id,
+          tomadorInscricaoMunicipal: customer?.municipal_registration,
+          tomadorTelefone: customer?.phone || customer?.mobile,
+          tomadorEmail: customer?.email,
+          tomadorCep: customer?.postal_code,
+          tomadorMunicipio: customer?.city,
+          tomadorUf: customer?.state,
+          tomadorMunicipioIbge: customer?.city_ibge_code,
+          tomadorEndereco: [customer?.street, customer?.street_number, customer?.complement, customer?.district].filter(Boolean).join(', '),
+          municipioPrestacao: form.municipioPrestacao,
+          municipioPrestacaoNome: form.municipioPrestacaoNome,
+          municipioPrestacaoUf: form.municipioPrestacaoUf,
           codigoTributacao: form.serviceCode,
+          codigoTributacaoMunicipal: service?.service_code_municipal,
+          nbsCode: digits(form.nbsCode),
+          informacoesComplementares: service?.fiscal_notes || '',
         }
       : documentType === 'CT-e'
       ? {
