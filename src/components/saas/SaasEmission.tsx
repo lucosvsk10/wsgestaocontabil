@@ -66,6 +66,7 @@ const initialEmissionForm = {
   value: '',
   serviceCode: '',
   nbsCode: '',
+  simplesTaxRate: '',
   municipioPrestacao: '',
   municipioPrestacaoNome: '',
   municipioPrestacaoUf: '',
@@ -823,6 +824,7 @@ function EmissionForm({
     codigoTributacaoMunicipal: service?.service_code_municipal || '',
     nbsCode: digits(form.nbsCode),
     nbs: digits(form.nbsCode),
+    simplesTaxRate: form.simplesTaxRate === '' ? null : Number(form.simplesTaxRate),
     servicoNome: service?.name || '',
     descricao: form.description,
     valor: Number(form.value),
@@ -1002,6 +1004,10 @@ function EmissionForm({
         need(service, 'serviço');
         need(/^\d{6}$/.test(digits(form.serviceCode)), 'código de tributação nacional com 6 dígitos');
         need(/^\d{9}$/.test(digits(form.nbsCode)), 'Código da NBS com 9 dígitos');
+        if (profile?.tax_regime === 'simples') {
+          const simplesRate = Number(form.simplesTaxRate);
+          need(Number.isFinite(simplesRate) && simplesRate > 0 && simplesRate <= 100, 'alíquota total do Simples Nacional (%)');
+        }
         need(String(form.description).trim(), 'descrição do serviço');
         need(isPositiveAmount(form.value), 'valor do serviço');
         need(isDocumentNumber(form.series, 5, true), 'série DPS numérica');
@@ -1258,6 +1264,7 @@ function EmissionForm({
           <Field label="Descrição do serviço" value={form.description} onChange={v => set('description', v)} wide required />
           <FiscalCodeField kind="service" label="Código de Tributação Nacional" value={form.serviceCode} onChange={v => set('serviceCode', v)} required />
           <FiscalCodeField kind="nbs" label="Código da NBS" value={form.nbsCode} onChange={v => set('nbsCode', v)} required />
+          {profile?.tax_regime === 'simples' && <Field label="Alíquota total do Simples Nacional (%)" value={form.simplesTaxRate} onChange={v => set('simplesTaxRate', v)} type="number" required hint="Informe a alíquota efetiva aplicável. Ela será enviada no campo pTotTribSN da NFS-e." />}
           <div className="fe-info-box"><ReceiptText /><span><b>ISSQN</b><small>{service?.iss_withheld ? 'Retido pelo tomador, conforme cadastro' : 'Não retido, conforme cadastro'}</small></span></div>
         </div>
         <details className="fe-emission-details">
