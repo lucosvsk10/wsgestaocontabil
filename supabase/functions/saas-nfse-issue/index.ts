@@ -88,8 +88,9 @@ Deno.serve(async req=>{
     let xmlBeforeSign=mounted.xml;
     if(isMeEpp){xmlBeforeSign=xmlBeforeSign.replace(oldTotTrib,`<pTotTribSN>${simplesTaxRate.toFixed(2)}</pTotTribSN>`);if(!xmlBeforeSign.includes("<pTotTribSN>")||xmlBeforeSign.includes("<indTotTrib>"))throw new Error("Falha ao montar tributação total da ME/EPP");}
     else{xmlBeforeSign=xmlBeforeSign.replace(oldTotTrib,"<indTotTrib>0</indTotTrib>");if(xmlBeforeSign===mounted.xml)throw new Error("Falha ao normalizar o grupo totTrib antes da assinatura");}
-    const deducao=Number(raw.deducaoReducao||0);if(deducao>0){const marker="</vDescCondIncond>";const dedXml=`<vDedRed><vDR>${deducao.toFixed(2)}</vDR></vDedRed>`;if(xmlBeforeSign.includes(marker))xmlBeforeSign=xmlBeforeSign.replace(marker,marker+dedXml);else xmlBeforeSign=xmlBeforeSign.replace("</vServPrest>","</vServPrest>"+dedXml);}
-    const infoCompl=String(raw.informacoesComplementares||"").trim();if(infoCompl){const esc=infoCompl.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;");xmlBeforeSign=xmlBeforeSign.replace("</serv>",`<infoCompl><xInfComp>${esc}</xInfComp></infoCompl></serv>`);}
+    const deducao=Number(raw.deducaoReducao||0),infoCompl=String(raw.informacoesComplementares||"").trim();
+    if(action==="issue"&&deducao>0)return out({error:"Campo ainda não suportado com segurança",errors:["Dedução/Redução exige grupo oficial específico do layout nacional; a emissão foi bloqueada para não gerar XML inválido."]},422);
+    if(action==="issue"&&infoCompl)return out({error:"Campo ainda não suportado com segurança",errors:["Informações complementares ainda não possuem mapeamento seguro no SDK atual; a emissão foi bloqueada para não inserir tag fora do XSD."]},422);
     const signed=assinarXml(xmlBeforeSign,mounted.id,{chavePrivadaPem:cert.chavePrivadaPem,certificadoPem:cert.certificadoPem});const signatureOk=assinaturaValida(signed);if(!signatureOk)throw new Error("Falha na assinatura digital da DPS");
     if(action==="preview")return out({ok:true,environment,idDps:mounted.id,xml:signed,total:Number(raw.valor),assinaturaValida:signatureOk,transport:"vercel-node"});
     if(environment!=="production")return out({error:"Emissão NFS-e via bridge habilitada somente em produção para este fluxo"},409);

@@ -1118,7 +1118,6 @@ function EmissionForm({
         if (form.temIntermediario === 'sim') { need(String(form.intermediarioDocumento).trim(), 'documento do intermediário'); need(String(form.intermediarioNome).trim(), 'nome do intermediário'); }
       }
       if (index === 1) {
-        need(service, 'serviço');
         need(/^\d{6}$/.test(digits(form.serviceCode)), 'código de tributação nacional com 6 dígitos');
         need(/^\d{9}$/.test(digits(form.nbsCode)), 'Código da NBS com 9 dígitos');
         need(digits(form.municipioPrestacao).length === 7, 'local da prestação (IBGE)');
@@ -1784,7 +1783,7 @@ function EmissionForm({
           <div className="fe-sheet-top"><FileText size={25} strokeWidth={1.3}/><span>{documentType}<small>EM PREPARAÇÃO</small></span></div>
           <dl><div><dt>Emitente</dt><dd>{profile?.trade_name || profile?.legal_name || 'Sua empresa'}</dd></div>
           <div><dt>{documentType === 'MDF-e' ? 'Condutor' : 'Destinatário'}</dt><dd>{customer?.legal_name || dest?.legal_name || (documentType === 'MDF-e' ? form.driverName : '') || 'A definir'}</dd></div>
-          <div><dt>{documentType === 'NFS-e' ? 'Serviço' : documentType === 'CT-e' || documentType === 'MDF-e' ? 'Trajeto' : 'Produto'}</dt><dd>{(documentType === 'NFS-e' ? service?.name : documentType === 'CT-e' || documentType === 'MDF-e' ? (form.munFimNome || form.unloadName ? `${form.munIniNome} → ${form.munFimNome || form.unloadName}` : '') : product?.name) || 'A definir'}</dd></div></dl>
+          <div><dt>{documentType === 'NFS-e' ? 'Serviço' : documentType === 'CT-e' || documentType === 'MDF-e' ? 'Trajeto' : 'Produto'}</dt><dd>{(documentType === 'NFS-e' ? (form.description || service?.name) : documentType === 'CT-e' || documentType === 'MDF-e' ? (form.munFimNome || form.unloadName ? `${form.munIniNome} → ${form.munFimNome || form.unloadName}` : '') : product?.name) || 'A definir'}</dd></div></dl>
           <div className="fe-sheet-total"><span>{documentType === 'MDF-e' ? 'Valor da carga' : 'Total da nota'}</span><strong>{money(documentType === 'NF-e' || documentType === 'NFC-e' ? productTotal : documentType === 'NFS-e' ? form.value : documentType === 'CT-e' ? form.vTPrest : form.cargoValue)}</strong><small>Série {form.series} / Nº {form.number}</small></div>
           <p className="fe-sheet-note">Salvamento automático neste navegador. Continue depois em <b>Minhas notas</b>.</p>
         </aside>}
@@ -1941,23 +1940,23 @@ function FiscalPreview({
           descricao: form.description || service?.name,
           servicoNome: service?.name,
           valor: Number(form.value || 0),
-          tomadorNome: customer?.legal_name,
-          tomadorDocumento: customer?.tax_id,
-          tomadorInscricaoMunicipal: customer?.municipal_registration,
-          tomadorTelefone: customer?.phone || customer?.mobile,
-          tomadorEmail: customer?.email,
-          tomadorCep: customer?.postal_code,
-          tomadorMunicipio: customer?.city,
-          tomadorUf: customer?.state,
-          tomadorMunicipioIbge: customer?.city_ibge_code,
-          tomadorEndereco: [customer?.street, customer?.street_number, customer?.complement, customer?.district].filter(Boolean).join(', '),
+          tomadorNome: form.tomadorNome || customer?.legal_name,
+          tomadorDocumento: form.tomadorDocumento || customer?.tax_id,
+          tomadorInscricaoMunicipal: form.tomadorInscricaoMunicipal || customer?.municipal_registration,
+          tomadorTelefone: form.tomadorTelefone || customer?.phone || customer?.mobile,
+          tomadorEmail: form.tomadorEmail || customer?.email,
+          tomadorCep: form.tomadorCep || customer?.postal_code,
+          tomadorMunicipio: form.tomadorMunicipio || customer?.city,
+          tomadorUf: form.tomadorUf || customer?.state,
+          tomadorMunicipioIbge: form.tomadorMunicipioIbge || customer?.city_ibge_code,
+          tomadorEndereco: [form.tomadorLogradouro || customer?.street, form.tomadorNumero || customer?.street_number, form.tomadorComplemento || customer?.complement, form.tomadorBairro || customer?.district].filter(Boolean).join(', '),
           municipioPrestacao: form.municipioPrestacao,
           municipioPrestacaoNome: form.municipioPrestacaoNome,
           municipioPrestacaoUf: form.municipioPrestacaoUf,
           codigoTributacao: form.serviceCode,
-          codigoTributacaoMunicipal: service?.service_code_municipal,
+          codigoTributacaoMunicipal: form.serviceCodeMunicipal || service?.service_code_municipal,
           nbsCode: digits(form.nbsCode),
-          informacoesComplementares: service?.fiscal_notes || '',
+          informacoesComplementares: form.informacoesComplementares || service?.fiscal_notes || '',
         }
       : documentType === 'CT-e'
       ? {
