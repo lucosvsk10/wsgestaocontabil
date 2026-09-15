@@ -33,6 +33,50 @@ async function dec(cipher: string, iv: string) {
     await crypto.subtle.decrypt({ name: 'AES-GCM', iv: B(iv) }, await key(), B(cipher))
   );
 }
+function decodeEntities(v: string) {
+  return v
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&');
+}
+function validXml(v: unknown) {
+  const xml = decodeEntities(String(v ?? '')).trim();
+  return /<(?:\w+:)?(?:nfeProc|procNFe|NFe)\b/i.test(xml) && xml.length > 1000 ? xml : '';
+}
+function parseDownloadPayload(payload: unknown) {
+  const text = String(payload ?? '');
+  const direct = validXml(text);
+  if (direct) return direct;
+  if (/manifesta[cç][aã]o[^<]*(?:necess[aá]ria|obrigat[oó]ria|destinat[aá]rio)|ci[eê]ncia da opera[cç][aã]o/i.test(text))
+    throw new Error('manifestation_required');
+  if (/CNPJ base do certificado digital[^<]*difere/i.test(text) || /certificado digital[^<]*(?:não|nao)[^<]*(?:participa|envolvido|destinat)/i.test(text))
+    throw new Error('certificate_not_involved');
+  const candidates: string[] = [];
+  const variable = text.match(/var\s+stringJson\s*=\s*(\{[\s\S]*?\})\s*;/);
+  if (variable?.[1]) candidates.push(variable[1]);
+  const quoted = text.match(/stringJson\s*[=:]\s*['"]([\s\S]*?)['"]\s*[;,]/i);
+  if (quoted?.[1]) candidates.push(quoted[1].replace(/\\"/g, '"').replace(/\\n/g, ''));
+  candidates.push(text.trim());
+  for (const raw of candidates) {
+    try {
+      const data = JSON.parse(raw);
+      for (const value of [data?.xml, data?.Xml, data?.XML, data?.conteudoXml, data?.documentoXml, data?.body]) {
+        const xml = validXml(value);
+        if (xml) return xml;
+      }
+    } catch {}
+  }
+  const embedded = text.match(/(?:"xml"|"Xml"|"XML"|"conteudoXml")\s*:\s*"((?:\\.|[^"\\])*)"/i);
+  if (embedded?.[1]) {
+    try {
+      const xml = validXml(JSON.parse(`"${embedded[1]}"`));
+      if (xml) return xml;
+    } catch {}
+  }
+  throw new Error('xml_payload_not_found');
+}
 async function downloadXml(pfx: string, password: string, accessKey: string) {
   const r = await fetch('https://ws-svrs-consit.vercel.app/api/download', {
     method: 'POST',
@@ -46,19 +90,16 @@ async function downloadXml(pfx: string, password: string, accessKey: string) {
   });
   if (!r.ok) throw new Error(`bridge_http_${r.status}`);
   const o = (await r.json().catch(() => ({}))) as any;
-  const body = String(o?.body_text || o?.body || '');
-  const match = body.match(/var\s+stringJson\s*=\s*(\{[\s\S]*?\})\s*;/);
-  if (!match) throw new Error('xml_payload_not_found');
-  let data: any;
-  try {
-    data = JSON.parse(match[1]);
-  } catch {
-    throw new Error('xml_payload_invalid_json');
+  for (const value of [o?.xml, o?.body_text, o?.body, o?.data?.xml]) {
+    if (!value) continue;
+    try {
+      return parseDownloadPayload(value);
+    } catch (e) {
+      const code = e instanceof Error ? e.message : String(e);
+      if (code === 'manifestation_required' || code === 'certificate_not_involved') throw e;
+    }
   }
-  const xml = String(data?.xml || '');
-  if (!/<(?:\w+:)?(?:nfeProc|procNFe|NFe)\b/i.test(xml) || xml.length < 1000)
-    throw new Error('xml_not_returned');
-  return xml;
+  return parseDownloadPayload(JSON.stringify(o));
 }
 Deno.serve(async req => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
@@ -181,15 +222,22 @@ Deno.serve(async req => {
       if (updateError) throw updateError;
     } catch (e) {
       const code = e instanceof Error ? e.message : String(e);
+      const companyCnpj = digits(company.cnpj),
+        recipient = digits(doc.recipient_cnpj),
+        issuer = digits(doc.issuer_cnpj),
+        recipientDoc = recipient === companyCnpj && issuer !== companyCnpj,
+        requiresManifestation = code === 'manifestation_required' || (code === 'certificate_not_involved' && recipientDoc),
+        marker = requiresManifestation ? 'xml_requires_manifestation' : `xml_retry:${code}`;
       await admin
         .from('fiscal_dfe_documents')
-        .update({ parse_error: `xml_retry:${code}`, updated_at: now })
+        .update({ parse_error: marker, updated_at: now })
         .eq('id', doc.id);
-      const reason =
-        code === 'xml_not_returned'
+      const reason = requiresManifestation
+        ? 'A SEFAZ exige manifestação do destinatário antes de liberar o XML integral desta NF-e.'
+        : code === 'xml_not_returned'
           ? 'A fonte fiscal ainda não disponibilizou o XML integral para esta chave.'
           : `Não foi possível recuperar o XML agora (${code}).`;
-      return J({ ok: true, ready: false, reason, retryable: true }, 202);
+      return J({ ok: true, ready: false, reason, retryable: !requiresManifestation, requires_manifestation: requiresManifestation }, 202);
     }
     let q2 = admin.from('fiscal_dfe_documents').select('*').eq('id', doc.id);
     ({ data: doc, error } = await q2.maybeSingle());
