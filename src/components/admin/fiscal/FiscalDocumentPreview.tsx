@@ -10,11 +10,22 @@ export type PreviewDocument = {
   statusCode?: string; statusText?: string; model?: string; xml?: string; parseError?: string;
 };
 
+function triggerDownload(url:string,filename:string){
+  const a=document.createElement("a");
+  a.href=url;
+  a.download=filename;
+  a.rel="noopener";
+  a.style.display="none";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
 function downloadXml(doc:PreviewDocument){
   if(!doc.xml)return;
   const blob=new Blob([doc.xml],{type:"application/xml;charset=utf-8"});
-  const url=URL.createObjectURL(blob),a=document.createElement("a");
-  a.href=url;a.download=`${doc.accessKey||doc.nsu||"documento-fiscal"}.xml`;a.click();URL.revokeObjectURL(url);
+  const url=URL.createObjectURL(blob);
+  triggerDownload(url,`${doc.accessKey||doc.nsu||"documento-fiscal"}.xml`);
+  window.setTimeout(()=>URL.revokeObjectURL(url),1500);
 }
 const brl=(v?:number)=>v==null?"—":Number(v).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
 const dateBr=(v?:string)=>{if(!v)return"—";const d=new Date(v);return Number.isNaN(d.getTime())?v:d.toLocaleString("pt-BR")};
@@ -33,8 +44,9 @@ function infoRows(doc:PreviewDocument):[string,string][]{
 function downloadInfo(doc:PreviewDocument){
   const text=infoRows(doc).map(([k,v])=>`${k}: ${v}`).join("\n")+`\n\nModelo: ${doc.model||"—"}\nNSU: ${doc.nsu||"—"}\n`;
   const blob=new Blob([text],{type:"text/plain;charset=utf-8"});
-  const url=URL.createObjectURL(blob),a=document.createElement("a");
-  a.href=url;a.download=`informacoes-${doc.accessKey||doc.nsu||"nota"}.txt`;a.click();URL.revokeObjectURL(url);
+  const url=URL.createObjectURL(blob);
+  triggerDownload(url,`informacoes-${doc.accessKey||doc.nsu||"nota"}.txt`);
+  window.setTimeout(()=>URL.revokeObjectURL(url),1500);
 }
 async function renderPdf(doc:PreviewDocument){
   const{data,error}=await supabase.functions.invoke("dfe-danfe-pdf",{body:{company_id:doc.companyId,document:doc}});
@@ -60,12 +72,12 @@ export function FiscalDocumentPreview({doc,onClose}:{doc:PreviewDocument;onClose
   useEffect(()=>{
     let active=true,url="";
     if(!complete||event)return;
-    setLoading(true);setError("");
+    setLoading(true);setError("");setPdfUrl("");setPdfName("");
     void renderPdf(doc).then(r=>{if(!active)return;url=URL.createObjectURL(r.blob);setPdfUrl(url);setPdfName(r.filename)}).catch(e=>{if(active)setError(e instanceof Error?e.message:String(e))}).finally(()=>{if(active)setLoading(false)});
     return()=>{active=false;if(url)URL.revokeObjectURL(url)};
   },[doc.accessKey,doc.nsu,doc.xml,complete,event]);
 
-  const downloadPdf=()=>{if(!pdfUrl)return;const a=document.createElement("a");a.href=pdfUrl;a.download=pdfName||`${doc.accessKey||doc.nsu||"documento-fiscal"}.pdf`;a.click()};
+  const downloadPdf=()=>{if(!pdfUrl)return;triggerDownload(pdfUrl,pdfName||`${doc.accessKey||doc.nsu||"documento-fiscal"}.pdf`)};
 
   return <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-3" onMouseDown={e=>{if(e.target===e.currentTarget)onClose()}}>
     <div className="flex h-[96vh] w-full max-w-7xl flex-col overflow-hidden rounded-2xl border bg-background shadow-2xl">
