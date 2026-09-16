@@ -20,7 +20,10 @@ const tag = (xml: string, n: string) =>
   xml
     .match(new RegExp(`<(?:\\w+:)?${n}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/(?:\\w+:)?${n}>`, `i`))?.[1]
     ?.trim() || '';
-const cutoff30 = () => Date.now() - 30 * 24 * 60 * 60 * 1000;
+const recoveryWindowStartMs = () => {
+  const n = new Date();
+  return Date.UTC(n.getUTCFullYear(), n.getUTCMonth() - 1, 1, 0, 0, 0, 0);
+};
 async function key() {
   const secret =
     Deno.env.get('ACCOUNTING_ENGINE_SESSION_SECRET') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -134,13 +137,13 @@ Deno.serve(async req => {
     if (!documentInWindow(doc, access)) return J({ error: 'Documento fora do período liberado para esta conta' }, 403);
     if (doc.full_xml && doc.xml) return J({ ok: true, ready: true, document: doc });
     const issueTs = doc.issue_date ? new Date(doc.issue_date).getTime() : NaN;
-    if (!Number.isFinite(issueTs) || issueTs < cutoff30())
+    if (!Number.isFinite(issueTs) || issueTs < recoveryWindowStartMs())
       return J(
         {
           ok: true,
           ready: false,
           retryable: false,
-          reason: 'Recuperação automática limitada aos últimos 30 dias.',
+          reason: 'A recuperação automática obrigatória cobre o mês atual e o mês anterior.',
         },
         202
       );
