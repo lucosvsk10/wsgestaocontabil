@@ -104,6 +104,15 @@ async function downloadXml(pfx: string, password: string, accessKey: string) {
   }
   return parseDownloadPayload(JSON.stringify(o));
 }
+
+function pickBestDocument(rows: any[]) {
+  return rows.find(r => r.full_xml && r.xml) ||
+    rows.find(r => String(r.parse_error || '') === 'xml_requires_manifestation') ||
+    rows.find(r => String(r.parse_error || '') === 'xml_retry:manifestation_sent') ||
+    rows.find(r => r.document_kind === 'nfe') ||
+    rows[0] || null;
+}
+
 Deno.serve(async req => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
   if (req.method !== 'POST') return J({ error: 'Método não permitido' }, 405);
@@ -126,16 +135,40 @@ Deno.serve(async req => {
       nsu = String(b.nsu || '');
     if (!cid || (!accessKey && !nsu)) return J({ error: 'Documento inválido' }, 400);
     const access = await documentAccess(admin, user.id, cid);
-    let q = admin.from('fiscal_dfe_documents').select('*').eq('company_id', cid);
-    q = accessKey ? q.eq('access_key', accessKey) : q.eq('nsu', nsu);
-    let { data: doc, error } = await q
-      .order('full_xml', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+
+    let documents: any[] = [];
+    let error: any = null;
+    if (accessKey) {
+      const result = await admin
+        .from('fiscal_dfe_documents')
+        .select('*')
+        .eq('company_id', cid)
+        .eq('access_key', accessKey)
+        .order('full_xml', { ascending: false })
+        .order('updated_at', { ascending: false })
+        .limit(20);
+      documents = result.data || [];
+      error = result.error;
+    } else {
+      const result = await admin
+        .from('fiscal_dfe_documents')
+        .select('*')
+        .eq('company_id', cid)
+        .eq('nsu', nsu)
+        .order('full_xml', { ascending: false })
+        .order('updated_at', { ascending: false })
+        .limit(20);
+      documents = result.data || [];
+      error = result.error;
+    }
     if (error) throw error;
+    let doc = pickBestDocument(documents);
     if (!doc) return J({ error: 'Documento não encontrado' }, 404);
     if (!documentInWindow(doc, access)) return J({ error: 'Documento fora do período liberado para esta conta' }, 403);
-    if (doc.full_xml && doc.xml) return J({ ok: true, ready: true, document: doc });
+
+    const complete = documents.find(r => r.full_xml && r.xml);
+    if (complete) return J({ ok: true, ready: true, document: complete });
+
     const issueTs = doc.issue_date ? new Date(doc.issue_date).getTime() : NaN;
     if (!Number.isFinite(issueTs) || issueTs < recoveryWindowStartMs())
       return J(
@@ -166,6 +199,23 @@ Deno.serve(async req => {
       .eq('id', cid)
       .maybeSingle();
     if (!company) return J({ error: 'Empresa fiscal não encontrada' }, 404);
+
+    const companyCnpj = digits(company.cnpj);
+    const recipientDoc = documents.some(r =>
+      digits(r.recipient_cnpj) === companyCnpj && digits(r.issuer_cnpj) !== companyCnpj
+    );
+    const manifestationAlreadySent = documents.some(r => String(r.parse_error || '') === 'xml_retry:manifestation_sent');
+    const manifestationRequired = documents.some(r => String(r.parse_error || '') === 'xml_requires_manifestation');
+    if (model === '55' && recipientDoc && manifestationRequired && !manifestationAlreadySent) {
+      return J({
+        ok: true,
+        ready: false,
+        retryable: false,
+        requires_manifestation: true,
+        reason: 'A SEFAZ exige manifestação do destinatário antes de liberar o XML integral desta NF-e.',
+      }, 202);
+    }
+
     const { data: cert } = await admin
       .from('fiscal_certificates')
       .select('certificate_ciphertext,certificate_iv,password_ciphertext,password_iv')
@@ -194,7 +244,6 @@ Deno.serve(async req => {
         total = Number(tag(xml, 'vNF') || 0),
         nn = tag(xml, 'nNF') || doc.note_number,
         serie = tag(xml, 'serie') || doc.series,
-        companyCnpj = digits(company.cnpj),
         issuer = digits(tag(emit, 'CNPJ') || tag(emit, 'CPF')),
         issuerName = tag(emit, 'xNome'),
         recipient = digits(tag(dest, 'CNPJ') || tag(dest, 'CPF')),
@@ -218,23 +267,22 @@ Deno.serve(async req => {
       if (issuer) patch.issuer_cnpj = issuer;
       if (issuerName) patch.issuer_name = issuerName;
       if (recipient) patch.recipient_cnpj = recipient;
-      const { error: updateError } = await admin
-        .from('fiscal_dfe_documents')
-        .update(patch)
-        .eq('id', doc.id);
+      const updateQuery = admin.from('fiscal_dfe_documents').update(patch).eq('company_id', cid);
+      const { error: updateError } = accessKey
+        ? await updateQuery.eq('access_key', accessKey).eq('full_xml', false)
+        : await updateQuery.eq('id', doc.id);
       if (updateError) throw updateError;
     } catch (e) {
       const code = e instanceof Error ? e.message : String(e);
-      const companyCnpj = digits(company.cnpj),
-        recipient = digits(doc.recipient_cnpj),
-        issuer = digits(doc.issuer_cnpj),
-        recipientDoc = recipient === companyCnpj && issuer !== companyCnpj,
-        requiresManifestation = code === 'manifestation_required' || (code === 'certificate_not_involved' && recipientDoc),
+      const requiresManifestation = code === 'manifestation_required' || (code === 'certificate_not_involved' && recipientDoc),
         marker = requiresManifestation ? 'xml_requires_manifestation' : `xml_retry:${code}`;
-      await admin
+      let updateQuery = admin
         .from('fiscal_dfe_documents')
         .update({ parse_error: marker, updated_at: now })
-        .eq('id', doc.id);
+        .eq('company_id', cid);
+      if (accessKey) updateQuery = updateQuery.eq('access_key', accessKey).eq('full_xml', false);
+      else updateQuery = updateQuery.eq('id', doc.id);
+      await updateQuery;
       const reason = requiresManifestation
         ? 'A SEFAZ exige manifestação do destinatário antes de liberar o XML integral desta NF-e.'
         : code === 'xml_not_returned'
@@ -242,9 +290,19 @@ Deno.serve(async req => {
           : `Não foi possível recuperar o XML agora (${code}).`;
       return J({ ok: true, ready: false, reason, retryable: !requiresManifestation, requires_manifestation: requiresManifestation }, 202);
     }
-    let q2 = admin.from('fiscal_dfe_documents').select('*').eq('id', doc.id);
-    ({ data: doc, error } = await q2.maybeSingle());
-    if (error) throw error;
+
+    const { data: latest, error: latestError } = await admin
+      .from('fiscal_dfe_documents')
+      .select('*')
+      .eq('company_id', cid)
+      .eq('access_key', String(doc.access_key))
+      .eq('full_xml', true)
+      .not('xml', 'is', null)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (latestError) throw latestError;
+    doc = latest || doc;
     return J({ ok: true, ready: Boolean(doc?.full_xml && doc?.xml), document: doc });
   } catch (e) {
     return J(
