@@ -18,6 +18,22 @@ type DocMetric = {
   last_document_at: string | null;
 };
 
+const ageMinutes = (value?: string | null) => {
+  if (!value) return Infinity;
+  const ts = Date.parse(value);
+  return Number.isFinite(ts) ? Math.max(0, (Date.now() - ts) / 60000) : Infinity;
+};
+const newer = (a?: string | null, b?: string | null) => {
+  const aa = a ? Date.parse(a) : 0;
+  const bb = b ? Date.parse(b) : 0;
+  if (!aa && !bb) return null;
+  return aa >= bb ? a ?? null : b ?? null;
+};
+const recoveryWindowStart = () => {
+  const n = new Date();
+  return new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth() - 1, 1, 0, 0, 0, 0)).toISOString();
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
   if (req.method !== "POST") return json({ error: "Método não permitido" }, 405);
@@ -70,17 +86,58 @@ Deno.serve(async (req) => {
     return json({ error: "Não foi possível carregar os logs fiscais" }, 500);
   }
 
+  const healthByCompany = new Map((health.data ?? []).map((row: any) => [String(row.company_id), row]));
+
+  const normalizedHealth = (health.data ?? []).map((row: any) => {
+    const salesProgressing = ageMinutes(row.sales_last_progress_at) <= 30;
+    const purchasesChecked = ageMinutes(row.purchases_last_checked_at) <= 30;
+    return {
+      ...row,
+      purchases_status: purchasesChecked && row.purchases_failure_count === 0 ? "healthy" : row.purchases_status,
+      sales_status: salesProgressing ? "healthy" : row.sales_status,
+      sales_reconciliation_stall_since: salesProgressing ? null : row.sales_reconciliation_stall_since,
+      sales_xml_stall_since: salesProgressing ? null : row.sales_xml_stall_since,
+      sales_detail_stall_since: salesProgressing ? null : row.sales_detail_stall_since,
+      recovery_count: salesProgressing ? 0 : row.recovery_count,
+      last_recovery_reason: salesProgressing ? null : row.last_recovery_reason,
+    };
+  });
+
+  const normalizedPurchases = (purchases.data ?? []).map((row: any) => {
+    const h: any = healthByCompany.get(String(row.company_id));
+    const checked = newer(row.last_completed_at, h?.purchases_last_checked_at);
+    const noDocumentIsNormal = String(row.last_status_code || "") === "137";
+    return {
+      ...row,
+      status: h?.purchases_status === "healthy" && ageMinutes(h?.purchases_last_checked_at) <= 30 ? "healthy" : row.status,
+      last_completed_at: checked,
+      last_status_message: noDocumentIsNormal ? null : row.last_status_message,
+    };
+  });
+
+  const normalizedSales = (sales.data ?? []).map((row: any) => {
+    const h: any = healthByCompany.get(String(row.company_id));
+    const progressing = ageMinutes(h?.sales_last_progress_at) <= 30;
+    return {
+      ...row,
+      status: progressing && !row.last_error ? "healthy" : row.status,
+      last_completed_at: newer(row.last_completed_at, h?.sales_last_checked_at),
+    };
+  });
+
   const companyIds = [...new Set([
-    ...(purchases.data ?? []).map((row: any) => String(row.company_id)),
-    ...(sales.data ?? []).map((row: any) => String(row.company_id)),
+    ...normalizedPurchases.map((row: any) => String(row.company_id)),
+    ...normalizedSales.map((row: any) => String(row.company_id)),
   ].filter(Boolean))];
 
+  const windowStart = recoveryWindowStart();
   const documentMetrics: DocMetric[] = await Promise.all(companyIds.map(async (companyId) => {
     const base = () => admin
       .from("fiscal_dfe_documents")
       .select("id", { count: "exact", head: true })
       .eq("company_id", companyId)
-      .neq("document_kind", "evento");
+      .neq("document_kind", "evento")
+      .gte("issue_date", windowStart);
 
     const [totalResult, fullResult, latestResult] = await Promise.all([
       base(),
@@ -90,6 +147,7 @@ Deno.serve(async (req) => {
         .select("updated_at")
         .eq("company_id", companyId)
         .neq("document_kind", "evento")
+        .gte("issue_date", windowStart)
         .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
@@ -107,11 +165,12 @@ Deno.serve(async (req) => {
   }));
 
   return json({
-    purchases: purchases.data ?? [],
-    sales: sales.data ?? [],
-    health: health.data ?? [],
+    purchases: normalizedPurchases,
+    sales: normalizedSales,
+    health: normalizedHealth,
     companies: companies.data ?? [],
     documents: documentMetrics,
+    recovery_window_start: windowStart,
     cadence: {
       purchases_minutes: 10,
       sales_hours: 3,
