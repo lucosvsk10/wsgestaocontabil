@@ -5,6 +5,7 @@ const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"au
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"content-type":"application/json","cache-control":"no-store"}});
 const windowStart=()=>{const n=new Date();return new Date(Date.UTC(n.getUTCFullYear(),n.getUTCMonth()-1,1,3,0,0,0)).toISOString()};
 const terminal=new Set(['ready','requires_manifestation','failed']);
+const sleep=(ms:number)=>new Promise(resolve=>setTimeout(resolve,ms));
 
 function previewDoc(doc:any){return {
   companyId:doc.company_id,nsu:doc.nsu,schema:doc.schema_name,documentKind:doc.document_kind,fullXml:doc.full_xml,
@@ -12,6 +13,15 @@ function previewDoc(doc:any){return {
   issuerName:doc.issuer_name,recipientCnpj:doc.recipient_cnpj,number:doc.note_number,series:doc.series,statusCode:doc.status_code,
   statusText:doc.status_text,model:doc.model,xml:doc.xml,parseError:doc.parse_error
 }}
+
+function candidateScore(doc:any){
+  if(doc?.full_xml&&doc?.xml)return 100;
+  if(String(doc?.parse_error||'')==='xml_requires_manifestation')return 80;
+  if(String(doc?.parse_error||'')==='xml_retry:manifestation_sent')return 70;
+  if(doc?.document_kind==='nfe')return 50;
+  if(doc?.document_kind==='resumo')return 40;
+  return 10;
+}
 
 async function authAdmin(admin:any,req:Request){
   const token=req.headers.get('authorization')?.replace(/^Bearer\s+/i,'');
@@ -47,10 +57,45 @@ async function refreshRun(admin:any,runId:string){
   const {error:ue}=await admin.from('fiscal_document_recovery_runs').update(patch).eq('id',runId); if(ue) throw ue;
 }
 
-async function callFunction(base:string,name:string,authHeader:string,body:any){
-  const r=await fetch(`${base}/functions/v1/${name}`,{method:'POST',headers:{'content-type':'application/json','authorization':authHeader},body:JSON.stringify(body),signal:AbortSignal.timeout(45000)});
+async function callFunction(base:string,name:string,authHeader:string,body:any,timeout=45000){
+  const r=await fetch(`${base}/functions/v1/${name}`,{method:'POST',headers:{'content-type':'application/json','authorization':authHeader},body:JSON.stringify(body),signal:AbortSignal.timeout(timeout)});
   let payload:any={}; try{payload=await r.json()}catch{}
   return {status:r.status,ok:r.ok,payload};
+}
+async function callDebugFunction(base:string,name:string,debugToken:string,body:any,timeout=65000){
+  const r=await fetch(`${base}/functions/v1/${name}`,{method:'POST',headers:{'content-type':'application/json','x-debug-token':debugToken},body:JSON.stringify(body),signal:AbortSignal.timeout(timeout)});
+  let payload:any={}; try{payload=await r.json()}catch{}
+  return {status:r.status,ok:r.ok,payload};
+}
+async function getDebugToken(admin:any){
+  const {data,error}=await admin.from('_fiscal_sales_debug_token').select('token').eq('id',true).maybeSingle();
+  if(error)throw error;
+  return String(data?.token||'');
+}
+async function completeForKey(admin:any,companyId:string,accessKey:string){
+  const {data,error}=await admin.from('fiscal_dfe_documents').select('*').eq('company_id',companyId).eq('access_key',accessKey).eq('full_xml',true).not('xml','is',null).order('updated_at',{ascending:false}).limit(1).maybeSingle();
+  if(error)throw error;
+  return data||null;
+}
+async function tryManifestation(base:string,admin:any,companyId:string,accessKey:string){
+  const debugToken=await getDebugToken(admin);
+  if(!debugToken)return {ok:false,message:'Token interno de manifestação indisponível'};
+  const names=['fiscal-purchases-manifest-native','fiscal-purchases-manifest-signed','fiscal-purchases-manifest'];
+  const errors:string[]=[];
+  for(const name of names){
+    try{
+      const result=await callDebugFunction(base,name,debugToken,{company_id:companyId,access_key:accessKey},65000);
+      if(result.payload?.already_complete)return {ok:true,alreadyComplete:true,message:'XML já estava disponível'};
+      if(result.payload?.ok)return {ok:true,message:result.payload?.xMotivo||'Ciência da Operação registrada'};
+      errors.push(`${name}: ${result.payload?.xMotivo||result.payload?.error||`HTTP ${result.status}`}`);
+    }catch(e){errors.push(`${name}: ${e instanceof Error?e.message:String(e)}`)}
+  }
+  return {ok:false,message:errors.join(' · ').slice(0,900)};
+}
+async function targetedBackfill(base:string,admin:any,companyId:string,accessKey:string){
+  const debugToken=await getDebugToken(admin);
+  if(!debugToken)return null;
+  try{return await callDebugFunction(base,'fiscal-purchases-xml-backfill',debugToken,{company_id:companyId,access_key:accessKey,batch:1},65000)}catch{return null}
 }
 
 Deno.serve(async(req)=>{
@@ -71,11 +116,19 @@ Deno.serve(async(req)=>{
       if(active?.id) return json({ok:true,resumed:true,...await loadRun(admin,user.id,active.id)});
       const start=windowStart(),end=new Date().toISOString();
       const {data:docs,error:de}=await admin.from('fiscal_dfe_documents')
-        .select('id,company_id,access_key,nsu,note_number,series,model,direction,issue_date,full_xml,xml,parse_error,document_kind')
+        .select('id,company_id,access_key,nsu,note_number,series,model,direction,issue_date,full_xml,xml,parse_error,document_kind,updated_at')
         .gte('issue_date',start).lte('issue_date',end).neq('document_kind','evento')
-        .order('issue_date',{ascending:false}).order('created_at',{ascending:false});
+        .order('issue_date',{ascending:false}).order('updated_at',{ascending:false});
       if(de) throw de;
-      const pending=(docs||[]).filter((d:any)=>!(d.full_xml&&d.xml));
+      const grouped=new Map<string,any>();
+      for(const d of docs||[]){
+        if(d.full_xml&&d.xml)continue;
+        const key=String(d.access_key||'').trim();
+        const identity=key?`${d.company_id}:${key}`:`${d.company_id}:id:${d.id}`;
+        const current=grouped.get(identity);
+        if(!current||candidateScore(d)>candidateScore(current))grouped.set(identity,d);
+      }
+      const pending=[...grouped.values()].sort((a:any,b:any)=>Date.parse(b.issue_date||'')-Date.parse(a.issue_date||''));
       const {data:run,error:re}=await admin.from('fiscal_document_recovery_runs').insert({requested_by:user.id,status:pending.length?'running':'completed',window_start:start,window_end:end,total:pending.length,finished_at:pending.length?null:new Date().toISOString()}).select('*').single();
       if(re) throw re;
       if(pending.length){
@@ -95,27 +148,47 @@ Deno.serve(async(req)=>{
       await admin.from('fiscal_document_recovery_items').update({status:'searching_xml',message:'Buscando XML oficial',attempts,started_at:next.started_at||now,updated_at:now}).eq('id',next.id);
       const {data:doc,error:docError}=await admin.from('fiscal_dfe_documents').select('*').eq('id',next.document_id).maybeSingle();
       if(docError||!doc){await admin.from('fiscal_document_recovery_items').update({status:'failed',message:'Documento não encontrado no banco',finished_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',next.id);await refreshRun(admin,runId);return json({ok:true,...await loadRun(admin,user.id,runId)});}
-      let readyDoc=doc;
-      if(!(doc.full_xml&&doc.xml)){
-        const recovery=await callFunction(url,'fiscal-document-recover',authHeader,{company_id:doc.company_id,access_key:doc.access_key,nsu:doc.nsu});
+      const accessKey=String(doc.access_key||next.access_key||'');
+      let readyDoc=accessKey?await completeForKey(admin,doc.company_id,accessKey):null;
+      if(!readyDoc){
+        const recovery=await callFunction(url,'fiscal-document-recover',authHeader,{company_id:doc.company_id,access_key:accessKey,nsu:doc.nsu});
         if(recovery.payload?.ready&&recovery.payload?.document){readyDoc=recovery.payload.document;}
         else if(recovery.payload?.requires_manifestation){
-          await admin.from('fiscal_document_recovery_items').update({status:'requires_manifestation',message:recovery.payload?.reason||'SEFAZ exige manifestação do destinatário',finished_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',next.id);
-          await refreshRun(admin,runId);return json({ok:true,...await loadRun(admin,user.id,runId)});
+          await admin.from('fiscal_document_recovery_items').update({status:'searching_xml',message:'Registrando Ciência da Operação para liberar o XML',updated_at:new Date().toISOString()}).eq('id',next.id);
+          const manifested=await tryManifestation(url,admin,doc.company_id,accessKey);
+          if(!manifested.ok){
+            await admin.from('fiscal_document_recovery_items').update({status:'requires_manifestation',message:`A manifestação automática não foi concluída: ${manifested.message}`,finished_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',next.id);
+            await refreshRun(admin,runId);return json({ok:true,...await loadRun(admin,user.id,runId)});
+          }
+          if(!manifested.alreadyComplete){
+            await admin.from('fiscal_dfe_documents').update({parse_error:'xml_retry:manifestation_sent',updated_at:new Date().toISOString()}).eq('company_id',doc.company_id).eq('access_key',accessKey).eq('full_xml',false);
+            await sleep(1400);
+            await targetedBackfill(url,admin,doc.company_id,accessKey);
+          }
+          readyDoc=await completeForKey(admin,doc.company_id,accessKey);
+          if(!readyDoc){
+            const canRetry=attempts<4;
+            await admin.from('fiscal_document_recovery_items').update({status:canRetry?'retry':'failed',message:canRetry?'Ciência da Operação registrada. Aguardando a SEFAZ liberar o XML integral.':'Ciência da Operação foi registrada, mas a SEFAZ ainda não liberou o XML integral nesta rodada.',finished_at:canRetry?null:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',next.id);
+            await refreshRun(admin,runId);return json({ok:true,...await loadRun(admin,user.id,runId)});
+          }
         }else{
-          const canRetry=Boolean(recovery.payload?.retryable)&&attempts<2; const status=canRetry?'retry':'failed';
-          await admin.from('fiscal_document_recovery_items').update({status,message:recovery.payload?.reason||recovery.payload?.error||`Falha ao recuperar XML (HTTP ${recovery.status})`,finished_at:canRetry?null:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',next.id);
-          await refreshRun(admin,runId);return json({ok:true,...await loadRun(admin,user.id,runId)});
+          await targetedBackfill(url,admin,doc.company_id,accessKey);
+          readyDoc=await completeForKey(admin,doc.company_id,accessKey);
+          if(!readyDoc){
+            const canRetry=Boolean(recovery.payload?.retryable)&&attempts<4; const status=canRetry?'retry':'failed';
+            await admin.from('fiscal_document_recovery_items').update({status,message:recovery.payload?.reason||recovery.payload?.error||`Falha ao recuperar XML (HTTP ${recovery.status})`,finished_at:canRetry?null:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',next.id);
+            await refreshRun(admin,runId);return json({ok:true,...await loadRun(admin,user.id,runId)});
+          }
         }
       }
       await admin.from('fiscal_document_recovery_items').update({status:'generating_danfe',message:'XML obtido. Validando DANFE',updated_at:new Date().toISOString()}).eq('id',next.id);
-      const latest=(await admin.from('fiscal_dfe_documents').select('*').eq('id',next.document_id).maybeSingle()).data||readyDoc;
+      const latest=readyDoc||(accessKey?await completeForKey(admin,doc.company_id,accessKey):doc);
       const pdf=await callFunction(url,'dfe-danfe-pdf',authHeader,{company_id:latest.company_id,document:previewDoc(latest)});
       const pdfOk=Boolean(pdf.ok&&pdf.payload?.pdf_base64);
       if(pdfOk){
         await admin.from('fiscal_document_recovery_items').update({status:'ready',message:'XML integral e DANFE disponíveis',pdf_verified:true,finished_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',next.id);
       }else{
-        const canRetry=attempts<2; await admin.from('fiscal_document_recovery_items').update({status:canRetry?'retry':'failed',message:pdf.payload?.error||`XML obtido, mas o DANFE não pôde ser validado (HTTP ${pdf.status})`,pdf_verified:false,finished_at:canRetry?null:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',next.id);
+        const canRetry=attempts<3; await admin.from('fiscal_document_recovery_items').update({status:canRetry?'retry':'failed',message:pdf.payload?.error||`XML obtido, mas o DANFE não pôde ser validado (HTTP ${pdf.status})`,pdf_verified:false,finished_at:canRetry?null:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',next.id);
       }
       await refreshRun(admin,runId); return json({ok:true,...await loadRun(admin,user.id,runId)});
     }
