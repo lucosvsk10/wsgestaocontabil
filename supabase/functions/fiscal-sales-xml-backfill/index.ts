@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
+import forge from "npm:node-forge@1.3.1";
 
 const E = new TextEncoder();
 const D = new TextDecoder();
@@ -19,6 +20,24 @@ async function K() {
 }
 async function dec(c: string, iv: string) {
   return D.decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: B(iv) }, await K(), B(c)));
+}
+function pfxPem(pfx64: string, password: string) {
+  const der = forge.util.decode64(pfx64);
+  const asn = forge.asn1.fromDer(der);
+  const p12 = forge.pkcs12.pkcs12FromAsn1(asn, false, password);
+  let key: any = null;
+  const certs: any[] = [];
+  for (const sc of p12.safeContents) {
+    for (const bag of sc.safeBags) {
+      if (!key && bag.key) key = bag.key;
+      if (bag.cert) certs.push(bag.cert);
+    }
+  }
+  if (!key || !certs.length) throw new Error("pfx_parse_failed");
+  return {
+    key: forge.pki.privateKeyToPem(key),
+    cert: certs.map(c => forge.pki.certificateToPem(c)).join("\n"),
+  };
 }
 function tag(xml: string, name: string) {
   return xml.match(new RegExp(`<(?:\\w+:)?${name}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/(?:\\w+:)?${name}>`, "i"))?.[1]?.trim() || null;
@@ -58,11 +77,33 @@ function parseDownloadPayload(payload: unknown) {
   }
   throw new Error("xml_payload_not_found");
 }
-async function download(pfx: string, pass: string, key: string) {
+
+async function downloadDirectNfce(pfx: string, pass: string, accessKey: string) {
+  const pem = pfxPem(pfx, pass);
+  const client = Deno.createHttpClient({ cert: pem.cert, key: pem.key, http1: true, http2: false } as any);
+  try {
+    const query = new URLSearchParams({ OrigemSite: "2", Ambiente: "1", ChaveAcessoDfe: accessKey });
+    const url = `https://dfe-portal.svrs.rs.gov.br/NFCESSL/DownloadXMLDFe?${query.toString()}`;
+    const r = await fetch(url, {
+      method: "GET",
+      headers: { "accept": "application/xml,text/xml,text/html,*/*", "user-agent": "Mozilla/5.0 WS-Gestao-Fiscal/2.0" },
+      redirect: "manual",
+      client,
+      signal: AbortSignal.timeout(40000),
+    } as any);
+    const text = await r.text();
+    if (!r.ok) throw new Error(`nfce_direct_http_${r.status}`);
+    return parseDownloadPayload(text);
+  } finally {
+    client.close();
+  }
+}
+
+async function downloadBridge(pfx: string, pass: string, accessKey: string) {
   const r = await fetch("https://ws-svrs-consit.vercel.app/api/download", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ certificate_base64: pfx, certificate_password: pass, access_key: key }),
+    body: JSON.stringify({ certificate_base64: pfx, certificate_password: pass, access_key: accessKey }),
     signal: AbortSignal.timeout(35000),
   });
   const o = await r.json().catch(() => ({})) as any;
@@ -72,6 +113,21 @@ async function download(pfx: string, pass: string, key: string) {
     try { return parseDownloadPayload(value); } catch {}
   }
   return parseDownloadPayload(JSON.stringify(o));
+}
+
+async function download(pfx: string, pass: string, accessKey: string) {
+  let directError = "";
+  try {
+    return await downloadDirectNfce(pfx, pass, accessKey);
+  } catch (e) {
+    directError = e instanceof Error ? e.message : String(e);
+  }
+  try {
+    return await downloadBridge(pfx, pass, accessKey);
+  } catch (e) {
+    const bridgeError = e instanceof Error ? e.message : String(e);
+    throw new Error(`nfce_download_failed:${directError}|${bridgeError}`);
+  }
 }
 
 Deno.serve(async req => {
@@ -150,7 +206,7 @@ Deno.serve(async req => {
             const nnf = tag(xml, "nNF") || String(row.note_number);
             const xmlPatch = {
               schema_name: "procNFe_v4.00", document_kind: "nfe", direction: "saida", full_xml: true, xml,
-              source: "xml_backfill_svrs", source_id: key, parse_error: null, issue_date: issue || row.issue_date || null,
+              source: "xml_backfill_svrs_nfce", source_id: key, parse_error: null, issue_date: issue || row.issue_date || null,
               value: total ? Number(total) : null, issuer_cnpj: company.cnpj, issuer_name: company.razao_social,
               note_number: nnf, series: serie, status_code: row.status === "cancelled" ? "101" : "100",
               model: "65", status_text: row.xmotivo || row.status, updated_at: now,
@@ -158,7 +214,7 @@ Deno.serve(async req => {
             await admin.from("fiscal_sales_documents").upsert({
               company_id: company.id, uf: "AL", model: "65", access_key: key, document_number: nnf, series: serie,
               issue_date: issue || row.issue_date || null, status: row.xmotivo || row.status, total_value: total ? Number(total) : null,
-              xml, source: "xml_backfill_svrs", source_reference: { enumerated_number: row.note_number, backfill: true }, updated_at: now,
+              xml, source: "xml_backfill_svrs_nfce", source_reference: { enumerated_number: row.note_number, backfill: true }, updated_at: now,
             }, { onConflict: "company_id,access_key" });
 
             const { data: updatedRows, error: updateError } = await admin.from("fiscal_dfe_documents")
