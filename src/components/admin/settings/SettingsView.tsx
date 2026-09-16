@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import ThemeToggle from "@/components/ThemeToggle";
 import { AdminPageHeader, AdminSection } from "@/components/admin/ui/AdminPage";
+import { FiscalDocumentRecoveryPanel } from "@/components/admin/settings/FiscalDocumentRecoveryPanel";
 
 export const SettingsView=()=>{
  const {toast}=useToast();const {signOut,user}=useAuth();
@@ -77,6 +78,7 @@ function FiscalHealth(){
     <HealthKpi icon={<Clock3 className="h-4 w-4"/>} label="Buscas de vendas" value={`${model.salesOk}/${model.rows.filter(r=>r.s).length}`} detail="sem atraso ou travamento" good={model.salesOk===model.rows.filter(r=>r.s).length}/>
     <HealthKpi icon={<FileCheck2 className="h-4 w-4"/>} label="Documentos integrais" value={`${model.fullDocs}/${model.totalDocs}`} detail={model.pendingDocs?`${model.pendingDocs} aguardando XML integral`:'nenhum documento pendente'} good={model.pendingDocs===0}/>
    </div>
+   <FiscalDocumentRecoveryPanel onChanged={()=>void load()}/>
    <AdminSection className="p-5"><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[.14em] text-muted-foreground">Por empresa</p><h2 className="mt-1 text-lg font-semibold">Estado das rotinas fiscais</h2></div><p className="text-xs text-muted-foreground">Compras a cada ~{data.cadence?.purchases_minutes||10} min · vendas a cada ~{data.cadence?.sales_hours||3} h · watchdog a cada ~{data.cadence?.watchdog_minutes||10} min</p></div><div className="mt-5 space-y-3">{model.rows.map(row=><CompanyHealth key={row.id} row={row}/>)}</div></AdminSection>
   </>}
  </div>
