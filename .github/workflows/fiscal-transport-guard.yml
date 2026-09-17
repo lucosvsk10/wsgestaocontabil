@@ -1,0 +1,25 @@
+name: Fiscal transport guard
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/**'
+      - 'scripts/check-fiscal-transport.mjs'
+      - '.github/workflows/fiscal-transport-guard.yml'
+  pull_request:
+    paths:
+      - 'supabase/functions/**'
+      - 'scripts/check-fiscal-transport.mjs'
+      - '.github/workflows/fiscal-transport-guard.yml'
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Reject direct fiscal authority transports in Supabase functions
+        run: node scripts/check-fiscal-transport.mjs
