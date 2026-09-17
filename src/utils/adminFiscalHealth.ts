@@ -51,6 +51,37 @@ export type FiscalHealthTimelineItem = {
   status: 'ok' | 'attention' | 'error' | 'neutral';
 };
 
+export type FiscalPurchaseVerification = {
+  source: string;
+  source_checked: boolean;
+  source_error?: string | null;
+  expected_nfe: number | null;
+  stored_nfe: number;
+  nfse_count: number;
+  xml_ready: number;
+  xml_total: number;
+  pending_xml: number;
+  requires_manifestation: number;
+  manifestation_sent: number;
+  missing_count: number;
+  auto_repaired: number;
+  message: string;
+};
+
+export type FiscalSalesVerification = {
+  enabled: boolean;
+  expected: number | null;
+  stored: number;
+  xml_ready: number;
+  pending_xml: number;
+  cancelled?: number;
+  sequence_total: number;
+  sequence_resolved: number;
+  sequence_complete?: boolean;
+  repaired_state?: boolean;
+  message: string;
+};
+
 export type FiscalHealthCompany = {
   office_company_id: string;
   fiscal_company_id: string | null;
@@ -78,11 +109,15 @@ export type FiscalHealthCompany = {
     purchases: FiscalMetric;
     sales: FiscalMetric;
   };
-  technical_window: {
-    purchases: string;
-    sales: string;
-  };
+  technical_window: { purchases: string; sales: string };
   timeline: FiscalHealthTimelineItem[];
+  verification?: {
+    checked_at: string;
+    live: boolean;
+    status: 'ok' | 'repairing' | 'attention' | 'error';
+    purchases: FiscalPurchaseVerification;
+    sales: FiscalSalesVerification;
+  };
 };
 
 export type FiscalHealthResponse = {
@@ -109,66 +144,42 @@ export type FiscalHealthResponse = {
 
 export const FISCAL_HEALTH_STATES: Array<{ value: 'all' | FiscalHealthState; label: string }> = [
   { value: 'all', label: 'Todos os status' },
-  { value: 'healthy', label: 'Saudáveis' },
-  { value: 'ready', label: 'Prontas' },
-  { value: 'attention', label: 'Atenção' },
-  { value: 'error', label: 'Falhas' },
-  { value: 'neutral', label: 'Sem captura' },
+  { value: 'healthy', label: 'Tudo certo' },
+  { value: 'attention', label: 'Atenção / corrigindo' },
+  { value: 'error', label: 'Falha persistente' },
 ];
 
 export const fiscalHealthTone = (state: FiscalHealthState) => {
   switch (state) {
     case 'healthy':
-      return {
-        dot: 'bg-emerald-500',
-        soft: 'border-emerald-500/20 bg-emerald-500/[.07] text-emerald-700 dark:text-emerald-300',
-        text: 'text-emerald-600 dark:text-emerald-400',
-      };
+      return { dot: 'bg-emerald-500', soft: 'border-emerald-500/20 bg-emerald-500/[.07] text-emerald-700 dark:text-emerald-300', text: 'text-emerald-600 dark:text-emerald-400' };
     case 'ready':
-      return {
-        dot: 'bg-sky-500',
-        soft: 'border-sky-500/20 bg-sky-500/[.07] text-sky-700 dark:text-sky-300',
-        text: 'text-sky-600 dark:text-sky-400',
-      };
+      return { dot: 'bg-sky-500', soft: 'border-sky-500/20 bg-sky-500/[.07] text-sky-700 dark:text-sky-300', text: 'text-sky-600 dark:text-sky-400' };
     case 'attention':
-      return {
-        dot: 'bg-amber-500',
-        soft: 'border-amber-500/20 bg-amber-500/[.07] text-amber-700 dark:text-amber-300',
-        text: 'text-amber-600 dark:text-amber-400',
-      };
+      return { dot: 'bg-amber-500', soft: 'border-amber-500/20 bg-amber-500/[.07] text-amber-700 dark:text-amber-300', text: 'text-amber-600 dark:text-amber-400' };
     case 'error':
-      return {
-        dot: 'bg-red-500',
-        soft: 'border-red-500/20 bg-red-500/[.07] text-red-700 dark:text-red-300',
-        text: 'text-red-600 dark:text-red-400',
-      };
+      return { dot: 'bg-red-500', soft: 'border-red-500/20 bg-red-500/[.07] text-red-700 dark:text-red-300', text: 'text-red-600 dark:text-red-400' };
     default:
-      return {
-        dot: 'bg-slate-400',
-        soft: 'border-border/70 bg-muted/30 text-muted-foreground',
-        text: 'text-muted-foreground',
-      };
+      return { dot: 'bg-slate-400', soft: 'border-border/70 bg-muted/30 text-muted-foreground', text: 'text-muted-foreground' };
   }
 };
 
-export const formatFiscalDate = (value?: string | null) =>
-  value
-    ? new Date(value).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
-    : '—';
-
-export const formatFiscalMoney = (value?: number | null) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value || 0));
+export const formatFiscalDate = (value?: string | null) => value ? new Date(value).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—';
+export const formatFiscalMoney = (value?: number | null) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value || 0));
 
 export const fiscalHealthTooltipLines = (company: FiscalHealthCompany) => {
   const lines = [company.state_label];
-  if (company.certificate_status === 'valid') {
-    lines.push(`A1 válido${company.certificate_valid_until ? ` até ${new Date(`${company.certificate_valid_until}T12:00:00`).toLocaleDateString('pt-BR')}` : ''}`);
-  } else if (company.certificate_status === 'expired') {
-    lines.push('Certificado A1 vencido');
-  } else {
-    lines.push('Captura fiscal não configurada');
+  const check = company.verification;
+  if (check) {
+    const p = check.purchases;
+    lines.push(p.expected_nfe != null ? `Compras: ${p.stored_nfe}/${p.expected_nfe} NF-e conferidas` : `Compras: ${p.stored_nfe} NF-e no sistema`);
+    lines.push(`XML compras: ${p.xml_ready}/${p.xml_total}`);
+    if (check.sales.enabled) {
+      lines.push(`Vendas: ${check.sales.stored}/${check.sales.expected ?? check.sales.stored} conferidas`);
+      lines.push(`XML vendas: ${check.sales.xml_ready}/${check.sales.expected ?? check.sales.stored}`);
+    }
+  } else if (company.purchase?.last_completed_at) {
+    lines.push(`Compras: ${formatFiscalDate(company.purchase.last_completed_at)}`);
   }
-  if (company.purchase?.last_completed_at) lines.push(`Compras: ${formatFiscalDate(company.purchase.last_completed_at)}`);
-  if (company.sales?.last_completed_at) lines.push(`Vendas: ${formatFiscalDate(company.sales.last_completed_at)}`);
   return lines;
 };
