@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, BellRing, CheckCircle2, EyeOff, FileText, X } from "lucide-react";
+import { AlertTriangle, BellRing, EyeOff, FileText, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,8 +16,26 @@ type FiscalAlert = {
   data: Record<string, unknown> | null;
   first_seen_at: string;
   last_seen_at: string;
-  resolved_at: string | null;
 };
+
+const SESSION_KEY = "ws_fiscal_health_alerts_hidden";
+
+function readSessionHidden() {
+  try {
+    const value = JSON.parse(window.sessionStorage.getItem(SESSION_KEY) || "[]");
+    return new Set<string>(Array.isArray(value) ? value.map(String) : []);
+  } catch {
+    return new Set<string>();
+  }
+}
+
+function writeSessionHidden(value: Set<string>) {
+  try {
+    window.sessionStorage.setItem(SESSION_KEY, JSON.stringify([...value]));
+  } catch {
+    // Session storage is only a convenience. The persistent dismissal stays in Supabase.
+  }
+}
 
 export function FiscalHealthAlertPopupContainer() {
   const db = supabase as any;
@@ -26,7 +44,9 @@ export function FiscalHealthAlertPopupContainer() {
   const { selectedCompany } = useCompanySelection();
   const fiscalCompanyId = String(selectedCompany?.fiscal_company_id || "");
   const [alerts, setAlerts] = useState<FiscalAlert[]>([]);
-  const [temporaryHidden, setTemporaryHidden] = useState<Set<string>>(new Set());
+  const [temporaryHidden, setTemporaryHidden] = useState<Set<string>>(() =>
+    typeof window === "undefined" ? new Set<string>() : readSessionHidden()
+  );
   const [saving, setSaving] = useState<string>("");
 
   const load = useCallback(async () => {
@@ -34,72 +54,145 @@ export function FiscalHealthAlertPopupContainer() {
       setAlerts([]);
       return;
     }
-    const { data, error } = await db.from("fiscal_health_alerts")
-      .select("id,company_id,issue_code,severity,title,message,data,first_seen_at,last_seen_at,resolved_at")
+
+    const { data, error } = await db
+      .from("fiscal_health_alerts")
+      .select("id,company_id,issue_code,severity,title,message,data,first_seen_at,last_seen_at")
       .eq("company_id", fiscalCompanyId)
-      .order("created_at", { ascending: false })
+      .is("resolved_at", null)
+      .order("last_seen_at", { ascending: false })
       .limit(20);
+
     if (error) return;
     const rows = (data || []) as FiscalAlert[];
     if (!rows.length) {
       setAlerts([]);
       return;
     }
+
     const ids = rows.map((row) => row.id);
-    const { data: dismissed } = await db.from("fiscal_health_alert_dismissals")
+    const { data: dismissed } = await db
+      .from("fiscal_health_alert_dismissals")
       .select("alert_id")
       .eq("user_id", user.id)
       .in("alert_id", ids);
+
     const dismissedIds = new Set((dismissed || []).map((row: any) => String(row.alert_id)));
     setAlerts(rows.filter((row) => !dismissedIds.has(row.id)));
-  }, [user?.id, fiscalCompanyId]);
+  }, [db, user?.id, fiscalCompanyId]);
 
   useEffect(() => {
-    setTemporaryHidden(new Set());
     void load();
     if (!user?.id || !fiscalCompanyId) return;
+
     const onFocus = () => void load();
-    const timer = window.setInterval(() => void load(), 60000);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void load();
+    };
+    const timer = window.setInterval(() => void load(), 5 * 60 * 1000);
+
     window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       window.clearInterval(timer);
       window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [load, user?.id, fiscalCompanyId]);
 
-  const visible = useMemo(() => alerts.filter((alert) => !temporaryHidden.has(alert.id)).slice(0, 5), [alerts, temporaryHidden]);
+  const visible = useMemo(
+    () => alerts.filter((alert) => !temporaryHidden.has(alert.id)).slice(0, 3),
+    [alerts, temporaryHidden]
+  );
+
   if (!visible.length) return null;
 
-  const hideTemporarily = (id: string) => setTemporaryHidden((current) => new Set([...current, id]));
+  const hideTemporarily = (id: string) => {
+    setTemporaryHidden((current) => {
+      const next = new Set(current);
+      next.add(id);
+      writeSessionHidden(next);
+      return next;
+    });
+  };
+
   const neverShowAgain = async (alert: FiscalAlert) => {
     if (!user?.id) return;
     setSaving(alert.id);
-    const { error } = await db.from("fiscal_health_alert_dismissals").upsert({ alert_id: alert.id, user_id: user.id, dismissed_at: new Date().toISOString() }, { onConflict: "alert_id,user_id" });
+    const { error } = await db.from("fiscal_health_alert_dismissals").upsert(
+      { alert_id: alert.id, user_id: user.id, dismissed_at: new Date().toISOString() },
+      { onConflict: "alert_id,user_id" }
+    );
     if (!error) setAlerts((current) => current.filter((item) => item.id !== alert.id));
     setSaving("");
   };
 
   return (
-    <div className="fixed right-5 top-20 z-[170] w-[min(390px,calc(100vw-2rem))] space-y-3">
+    <div className="fixed bottom-5 right-5 z-[170] w-[min(350px,calc(100vw-2rem))] space-y-2">
       {visible.map((alert) => {
-        const resolved = Boolean(alert.resolved_at);
-        const manifestation = alert.issue_code === "MANIFESTATION_REQUIRED" || alert.issue_code === "MANIFESTATION_XML_PENDING";
+        const manifestation =
+          alert.issue_code === "MANIFESTATION_REQUIRED" ||
+          alert.issue_code === "MANIFESTATION_XML_PENDING";
+
         return (
-          <div key={alert.id} className={`rounded-2xl border bg-background p-4 shadow-2xl ${resolved ? "border-emerald-500/25" : alert.severity === "error" ? "border-red-500/30" : "border-amber-500/35"}`}>
-            <div className="flex items-start gap-3">
-              <span className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${resolved ? "bg-emerald-500/10 text-emerald-600" : alert.severity === "error" ? "bg-red-500/10 text-red-600" : "bg-amber-500/10 text-amber-600"}`}>
-                {resolved ? <CheckCircle2 className="h-4 w-4" /> : alert.severity === "error" ? <AlertTriangle className="h-4 w-4" /> : <BellRing className="h-4 w-4" />}
+          <div
+            key={alert.id}
+            className={`rounded-xl border bg-background/95 p-3.5 shadow-xl backdrop-blur-md ${
+              alert.severity === "error" ? "border-red-500/30" : "border-amber-500/30"
+            }`}
+          >
+            <div className="flex items-start gap-2.5">
+              <span
+                className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                  alert.severity === "error"
+                    ? "bg-red-500/10 text-red-600"
+                    : "bg-amber-500/10 text-amber-600"
+                }`}
+              >
+                {alert.severity === "error" ? (
+                  <AlertTriangle className="h-4 w-4" />
+                ) : (
+                  <BellRing className="h-4 w-4" />
+                )}
               </span>
+
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold">{alert.title}</p>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">{alert.message}</p>
-                {resolved && <p className="mt-2 text-[11px] font-medium text-emerald-600">Já não aparece na verificação mais recente, mas este aviso fica salvo até você dispensá-lo.</p>}
+                <p className="text-[13px] font-semibold leading-5">{alert.title}</p>
+                <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">{alert.message}</p>
               </div>
-              <button title="Lembrar depois" onClick={() => hideTemporarily(alert.id)} className="rounded-full p-1.5 text-muted-foreground hover:bg-muted"><X className="h-4 w-4" /></button>
+
+              <button
+                title="Ocultar até a próxima sessão"
+                onClick={() => hideTemporarily(alert.id)}
+                className="rounded-full p-1 text-muted-foreground hover:bg-muted"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
             </div>
-            <div className="mt-3 flex flex-wrap justify-end gap-2">
-              <Button variant="ghost" size="sm" onClick={() => { navigate("/admin/feature"); hideTemporarily(alert.id); }}><FileText className="mr-1.5 h-3.5 w-3.5" />{manifestation ? "Ver manifestação" : "Ver notas"}</Button>
-              <Button variant="outline" size="sm" disabled={saving === alert.id} onClick={() => void neverShowAgain(alert)}><EyeOff className="mr-1.5 h-3.5 w-3.5" />{saving === alert.id ? "Salvando..." : "Não mostrar novamente"}</Button>
+
+            <div className="mt-2.5 flex flex-wrap justify-end gap-1.5">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2.5 text-xs"
+                onClick={() => {
+                  navigate("/admin/feature");
+                  hideTemporarily(alert.id);
+                }}
+              >
+                <FileText className="mr-1.5 h-3.5 w-3.5" />
+                {manifestation ? "Ver manifestação" : "Ver notas"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2.5 text-xs"
+                disabled={saving === alert.id}
+                onClick={() => void neverShowAgain(alert)}
+              >
+                <EyeOff className="mr-1.5 h-3.5 w-3.5" />
+                {saving === alert.id ? "Salvando..." : "Não mostrar novamente"}
+              </Button>
             </div>
           </div>
         );
