@@ -1,0 +1,35 @@
+name: Patch SaaS registry gateway once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/patch-saas-registry-vercel.mjs'
+      - '.github/workflows/patch-saas-registry-vercel-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Patch registry transport
+        run: node scripts/patch-saas-registry-vercel.mjs
+      - name: Commit patch
+        run: |
+          if git diff --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add supabase/functions/saas-registry-lookup/index.ts
+          git commit -m "refactor(fiscal): route SEFAZ AL registry through Vercel"
+          git push origin HEAD:main
