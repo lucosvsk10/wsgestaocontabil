@@ -8,9 +8,9 @@ const win=()=>{const n=new Date();return Date.UTC(n.getUTCFullYear(),n.getUTCMon
 async function vk(){const s=Deno.env.get("ACCOUNTING_ENGINE_SESSION_SECRET")||Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");if(!s)throw Error("secret_missing");const h=await crypto.subtle.digest("SHA-256",E.encode(`ws-fiscal-vault:${s}`));return crypto.subtle.importKey("raw",h,{name:"AES-GCM"},false,["decrypt"])}
 async function dec(c:string,iv:string){return D.decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:B(iv)},await vk(),B(c)))}
 
-async function bridge(body:any){
+async function bridge(token:string,body:any){
   const r=await fetch("https://ws-nfse-sefin-probe.vercel.app/api/nfe-event",{
-    method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body),signal:AbortSignal.timeout(60000),
+    method:"POST",headers:{"content-type":"application/json","authorization":`Bearer ${token}`},body:JSON.stringify(body),signal:AbortSignal.timeout(60000),
   });
   const raw=await r.text();let o:any={};try{o=JSON.parse(raw)}catch{o={raw:raw.slice(0,1200)}}
   return {ok:r.ok,status:r.status,payload:o};
@@ -19,8 +19,12 @@ async function bridge(body:any){
 Deno.serve(async req=>{
   try{
     const admin=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const {data:t}=await admin.from("_fiscal_sales_debug_token").select("token").eq("id",true).maybeSingle();
+    const [{data:t},{data:g}]=await Promise.all([
+      admin.from("_fiscal_sales_debug_token").select("token").eq("id",true).maybeSingle(),
+      admin.from("_fiscal_vercel_gateway_token").select("token").eq("id",true).maybeSingle(),
+    ]);
     if(req.headers.get("x-debug-token")!==String(t?.token||""))return J({error:"unauthorized"},403);
+    const gatewayToken=String(g?.token||"");if(!gatewayToken)return J({error:"gateway_token_missing"},500);
     const b=await req.json().catch(()=>({})) as any;
     const action=String(b.action||"event").toLowerCase();
     const cid=String(b.company_id||"");
@@ -36,7 +40,7 @@ Deno.serve(async req=>{
     const pfx=await dec(ce.certificate_ciphertext,ce.certificate_iv),pass=await dec(ce.password_ciphertext,ce.password_iv);
 
     if(action==="probe"){
-      const out=await bridge({action:"probe",certificate_base64:pfx,certificate_password:pass});
+      const out=await bridge(gatewayToken,{action:"probe",certificate_base64:pfx,certificate_password:pass});
       return J({ok:out.ok,transport:"vercel",probe:out.payload},out.ok?200:502);
     }
     if(action!=="event")return J({error:"invalid_action"},400);
@@ -56,7 +60,7 @@ Deno.serve(async req=>{
     const requires=(rows||[]).some((x:any)=>["xml_requires_manifestation","xml_retry:manifestation_sent"].includes(String(x.parse_error||"")));
     if(!requires)return J({error:"manifestation_not_required"},422);
 
-    const out=await bridge({action:"event",certificate_base64:pfx,certificate_password:pass,access_key:ak,cnpj});
+    const out=await bridge(gatewayToken,{action:"event",certificate_base64:pfx,certificate_password:pass,access_key:ak,cnpj});
     if(!out.ok||!out.payload?.ok)return J({ok:false,error:"manifestation_rejected",bridge:out.payload},out.status||422);
     const now=new Date().toISOString();
     await admin.from("fiscal_dfe_documents").update({parse_error:"xml_retry:manifestation_sent",updated_at:now}).eq("company_id",cid).eq("access_key",ak).eq("full_xml",false);
