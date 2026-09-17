@@ -15,10 +15,10 @@ import {
 } from 'recharts';
 import { extractorRequest, extractorErrorMessage } from '@/lib/extractor/request';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Info, Menu, X } from 'lucide-react';
+import { CalendarDays, Info, Menu, RefreshCw, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { FiscalDocumentPreviewModal } from '@/components/admin/fiscal/FiscalDocumentPreviewModal';
+import ExtractorFiscalDocumentPreviewModal from '@/components/extractor/ExtractorFiscalDocumentPreviewModal';
 import { FiscalDownloadCenter } from '@/components/admin/fiscal/FiscalDownloadCenter';
 import AnimatedExtractorIcon, {
   type ExtractorIconName,
@@ -29,13 +29,14 @@ import ExtractorReports from '@/components/extractor/ExtractorReports';
 import '@/styles/fiscal-extractor.css';
 import '@/styles/fiscal-extractor-polish.css';
 import '@/styles/fiscal-extractor-final.css';
+import '@/styles/fiscal-extractor-redesign.css';
 
 type Section =
   | 'Visão geral'
   | 'Empresas'
   | 'Documentos'
   | 'Relatórios'
-  | 'Certificados'
+  | 'Faturas'
   | 'Histórico'
   | 'Configurações';
 type Filter = 'saida' | 'entrada' | 'todos' | 'cancelada' | 'evento' | 'manifestacao';
@@ -125,7 +126,7 @@ const nav: Array<{ label: Section; icon: ExtractorIconName; group: string }> = [
   { label: 'Empresas', icon: 'company', group: 'Operação' },
   { label: 'Documentos', icon: 'document', group: 'Fiscal' },
   { label: 'Relatórios', icon: 'report', group: 'Fiscal' },
-  { label: 'Certificados', icon: 'certificate', group: 'Gestão' },
+  { label: 'Faturas', icon: 'report', group: 'Gestão' },
   { label: 'Histórico', icon: 'history', group: 'Gestão' },
   { label: 'Configurações', icon: 'settings', group: 'Gestão' },
 ];
@@ -671,26 +672,27 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
             preview={preview}
           />
         )}
-        {active === 'Certificados' && <Certificates companies={companies} onGo={go} />}
+        {active === 'Faturas' && (
+          <BillingSection
+            usage={planUsage}
+            planLabel={planLabel}
+            preview={preview}
+            setNotice={setNotice}
+          />
+        )}
         {active === 'Histórico' && (
           <HistorySection
             companies={companies}
-            selectedCompanyId={selectedCompanyId}
-            setSelectedCompanyId={setSelectedCompanyId}
-            accountId={snapshot?.account?.id}
-            userId={user?.id}
             preview={preview}
             setNotice={setNotice}
           />
         )}
         {active === 'Configurações' && (
           <SettingsSection
-            companies={companies}
-            selectedCompanyId={selectedCompanyId}
-            setSelectedCompanyId={setSelectedCompanyId}
             account={snapshot?.account}
-            usage={planUsage}
-            planLabel={planLabel}
+            user={user}
+            preview={preview}
+            setNotice={setNotice}
           />
         )}
       </main>
@@ -712,7 +714,7 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
           }}
         />
       )}
-      <FiscalDocumentPreviewModal
+      <ExtractorFiscalDocumentPreviewModal
         document={previewDoc}
         companyName={previewCompany?.tradeName || previewCompany?.name || 'Empresa'}
         companyCnpj={previewCompany?.cnpj || ''}
@@ -722,6 +724,13 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
         onDownloadPdf={downloadPreviewPdf}
         onDownloadXml={downloadPreviewXml}
         onManifestation={manifestPreview}
+        onRetry={async document => {
+          const { data } = await supabase.functions.invoke('fiscal-document-recover', {
+            body: { company_id: document.companyId, access_key: document.accessKey, nsu: document.nsu },
+          });
+          if (data?.ready && data.document) setPreviewDoc(rowToDoc(data.document));
+          await load(true);
+        }}
       />
     </div>
   );
@@ -1005,7 +1014,7 @@ function Overview({ companies, totals, models, daily, onGo }: any) {
                   onClick={() =>
                     onGo(
                       c.certificateDays != null && c.certificateDays <= 30
-                        ? 'Certificados'
+                        ? 'Empresas'
                         : 'Empresas'
                     )
                   }
@@ -2248,7 +2257,7 @@ export function AddCompanyModal({ preview, onClose, onDone }: any) {
       }}
     >
       <DialogContent
-        className="max-h-[90vh] overflow-y-auto rounded-2xl sm:max-w-xl"
+        className="extractor-dark-dialog max-h-[90vh] overflow-y-auto rounded-2xl sm:max-w-xl"
         onEscapeKeyDown={e => {
           if (busy) e.preventDefault();
         }}
