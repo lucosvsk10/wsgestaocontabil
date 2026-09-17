@@ -1,7 +1,6 @@
 import { consume, limited } from '../_shared/rate-limit.ts';
 import { readJsonLimited, RequestError } from '../_shared/request-guards.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.0';
-import JSZip from 'npm:jszip@3.10.1';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -324,64 +323,44 @@ async function lookupSintegraWs(cnpj: string, uf: string) {
   }
 }
 
-let alRegistryCache: { expiresAt: number; text: string } | null = null;
-const AL_REGISTRY_URLS = [
-  'https://gcs2.sefaz.al.gov.br/sfz-gcs-web/documentos/visualizarDocumento.action?key=CXzeoQhIvK4%3D',
-  'https://gcs.sefaz.al.gov.br/sfz-gcs-web/documentos/visualizarDocumento.action?key=CXzeoQhIvK4%3D',
-];
-
-async function loadAlRegistryText() {
-  if (alRegistryCache && alRegistryCache.expiresAt > Date.now()) return alRegistryCache.text;
-  let lastError: unknown = null;
-  for (const url of AL_REGISTRY_URLS) {
-    try {
-      const response = await fetch(url, {
-        headers: { 'User-Agent': 'WS-Gestao-Contabil/1.0' },
-        redirect: 'follow',
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const bytes = await response.arrayBuffer();
-      const zip = await JSZip.loadAsync(bytes);
-      const files = Object.values(zip.files).filter(file => !file.dir);
-      if (!files.length) throw new Error('ZIP da SEFAZ/AL sem arquivo de cadastro');
-      const text = await files[0].async('string');
-      if (!text || text.length < 1000) throw new Error('Base SEFAZ/AL vazia ou inválida');
-      alRegistryCache = { expiresAt: Date.now() + 6 * 60 * 60 * 1000, text };
-      return text;
-    } catch (error) {
-      lastError = error;
-      console.warn('SEFAZ/AL registry download failed', url, error);
-    }
-  }
-  throw lastError || new Error('Base SEFAZ/AL indisponível');
-}
-
-async function lookupAlStateRegistration(cnpj: string) {
+async function lookupAlStateRegistration(admin: any, cnpj: string) {
   try {
-    const text = await loadAlRegistryText();
-    const compact = text.replace(/\r/g, '');
-    for (const line of compact.split('\n')) {
-      const match = line.match(/(\d{9})\D*(\d{14})\D*([HN])/i);
-      if (!match || match[2] !== cnpj) continue;
-      return {
-        state_registration: match[1],
-        ie_indicator: '1',
-        icms_taxpayer: true,
-        state_registry_status: match[3].toUpperCase() === 'H' ? 'Habilitado' : 'Não habilitado',
-        state_source: 'SEFAZ/AL - SINTEGRA',
-      };
-    }
+    const { data: gateway } = await admin
+      .from('_fiscal_vercel_gateway_token')
+      .select('token')
+      .eq('id', true)
+      .maybeSingle();
+    const gatewayToken = clean(gateway?.token);
+    if (!gatewayToken) return null;
+    const response = await fetch('https://ws-nfse-sefin-probe.vercel.app/api/sefaz-al-registry', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${gatewayToken}`,
+      },
+      body: JSON.stringify({ cnpj }),
+      signal: AbortSignal.timeout(60000),
+    });
+    const raw = await response.json().catch(() => ({})) as any;
+    if (!response.ok || !raw?.ok || !raw?.found) return null;
+    return {
+      state_registration: digits(raw.state_registration),
+      ie_indicator: clean(raw.ie_indicator || '1'),
+      icms_taxpayer: raw.icms_taxpayer !== false,
+      state_registry_status: clean(raw.state_registry_status),
+      state_source: clean(raw.state_source || 'SEFAZ/AL - SINTEGRA'),
+    };
   } catch (error) {
-    console.warn('SEFAZ/AL IE lookup failed', error);
+    console.warn('SEFAZ/AL IE gateway lookup failed', error);
+    return null;
   }
-  return null;
 }
 
-async function enrichStateRegistry(cnpj: string, base: any) {
+async function enrichStateRegistry(admin: any, cnpj: string, base: any) {
   const uf = clean(base?.state).toUpperCase();
   let stateData: any = null;
   if (uf === 'AL' && !digits(base?.state_registration))
-    stateData = await lookupAlStateRegistration(cnpj);
+    stateData = await lookupAlStateRegistration(admin, cnpj);
   if (!stateData && !digits(base?.state_registration)) stateData = await lookupSintegraWs(cnpj, uf);
   const data = stateData ? { ...base, ...stateData } : base;
   data.registry = {
@@ -432,7 +411,7 @@ Deno.serve(async req => {
     if (!member && !platformAdmin) return out({ error: 'Sem acesso à organização' }, 403);
 
     const federal = await lookupFederal(cnpj);
-    const data = await enrichStateRegistry(cnpj, federal);
+    const data = await enrichStateRegistry(admin, cnpj, federal);
     const filled = [
       'legal_name',
       'trade_name',
