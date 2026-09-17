@@ -4,6 +4,7 @@ import { useSidebarToggle } from "@/hooks/layout/useSidebarToggle";
 import AdminSidebar from "./AdminSidebar";
 import AdminHeader from "./AdminHeader";
 import { NotificationPopupContainer } from "@/components/notifications/NotificationPopupContainer";
+import { FiscalHealthAlertPopupContainer } from "@/components/notifications/FiscalHealthAlertPopupContainer";
 import { Button } from "@/components/ui/button";
 import { Menu, ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -38,6 +39,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
         </main>
       </div>
       <NotificationPopupContainer />
+      <FiscalHealthAlertPopupContainer />
     </div>
   );
 };
