@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
-import { documentAccess } from "../_shared/extractor-access.ts";
+import { documentAccess, documentInWindow } from "../_shared/extractor-access.ts";
 import { consume, limited } from "../_shared/rate-limit.ts";
 
 const cors = {
@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
     if (!companyId || accessKey.length !== 44) return json({ error: "Nota fiscal inválida" }, 400);
     if (body.confirm !== true) return json({ error: "Confirmação explícita necessária para registrar a manifestação." }, 409);
 
-    await documentAccess(admin, auth.user.id, companyId);
+    const access = await documentAccess(admin, auth.user.id, companyId);
     const denied = limited(await consume(admin, "extractor_manifest", auth.user.id, 8, 600));
     if (denied) return denied;
 
@@ -69,6 +69,8 @@ Deno.serve(async (req) => {
       .limit(20);
     if (rowsError) throw rowsError;
     if (!(rows || []).length) return json({ error: "Nota fiscal não encontrada" }, 404);
+    const visible = (rows || []).find((row: any) => documentInWindow(row, access));
+    if (!visible) return json({ error: "Documento fora do período liberado para esta conta" }, 403);
     if ((rows || []).some((row: any) => row.full_xml && row.xml)) return json({ ok: true, registered: true, recovered: true, result: { status: "already_complete" } });
     if (!(rows || []).some((row: any) => row.direction === "entrada")) return json({ error: "A manifestação só pode ser feita para uma nota recebida." }, 422);
     const pending = (rows || []).some((row: any) => String(row.parse_error || "") === "xml_requires_manifestation");
