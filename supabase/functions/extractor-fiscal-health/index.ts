@@ -77,26 +77,37 @@ Deno.serve(async req => {
       const start = access.from && access.from > requestedStart ? access.from : requestedStart;
       const end = access.to && access.to < requestedEnd ? access.to : requestedEnd;
       if (start > end) return J({ ok: true, year, months: {} });
-      const rows = await paged((from, to) => admin.from('fiscal_dfe_documents')
-        .select('id,access_key,source_id,document_kind,direction,issue_date')
-        .eq('company_id', companyId)
-        .neq('document_kind', 'evento')
-        .gte('issue_date', `${start}T00:00:00Z`)
-        .lte('issue_date', `${end}T23:59:59.999Z`)
-        .order('issue_date', { ascending: true })
-        .range(from, to));
+      const [documentRows, reconciliationRows] = await Promise.all([
+        paged((from, to) => admin.from('fiscal_dfe_documents')
+          .select('id,access_key,source_id,nsu,document_kind,direction,issue_date')
+          .eq('company_id', companyId)
+          .neq('document_kind', 'evento')
+          .gte('issue_date', `${start}T00:00:00Z`)
+          .lte('issue_date', `${end}T23:59:59.999Z`)
+          .order('issue_date', { ascending: true })
+          .range(from, to)),
+        paged((from, to) => admin.from('fiscal_sales_reconciliation')
+          .select('access_key,note_number,status,issue_date')
+          .eq('company_id', companyId)
+          .in('status', ['found', 'cancelled'])
+          .gte('issue_date', `${start}T00:00:00Z`)
+          .lte('issue_date', `${end}T23:59:59.999Z`)
+          .order('issue_date', { ascending: true })
+          .range(from, to)),
+      ]);
       const seen = new Set<string>();
       const months: Record<string, { sales: number; purchases: number }> = {};
-      for (const row of rows) {
-        const key = String(row.access_key || row.source_id || row.id);
-        if (seen.has(key)) continue;
-        seen.add(key);
-        const date = new Date(row.issue_date);
-        if (Number.isNaN(date.getTime())) continue;
+      for (const row of [...documentRows, ...reconciliationRows.map((item: any) => ({ ...item, direction: 'saida' }))]) {
+        const date = row.issue_date ? new Date(row.issue_date) : null;
+        if (!date || Number.isNaN(date.getTime())) continue;
         const keyMonth = String(date.getUTCMonth() + 1).padStart(2, '0');
+        const unique = String(row.access_key || row.nsu || row.source_id || row.note_number || row.id || '');
+        const dedupe = `${keyMonth}:${unique}`;
+        if (unique && seen.has(dedupe)) continue;
+        if (unique) seen.add(dedupe);
         months[keyMonth] ||= { sales: 0, purchases: 0 };
-        if (row.direction === 'saida') months[keyMonth].sales += 1;
         if (row.direction === 'entrada') months[keyMonth].purchases += 1;
+        else months[keyMonth].sales += 1;
       }
       return J({ ok: true, year, months });
     }
