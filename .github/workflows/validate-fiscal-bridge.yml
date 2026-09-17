@@ -1,0 +1,31 @@
+name: Validate fiscal Vercel bridge
+
+on:
+  push:
+    paths:
+      - 'infra/ws-nfse-sefin-probe/**'
+      - '.github/workflows/validate-fiscal-bridge.yml'
+  pull_request:
+    paths:
+      - 'infra/ws-nfse-sefin-probe/**'
+      - '.github/workflows/validate-fiscal-bridge.yml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/ws-nfse-sefin-probe
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: infra/ws-nfse-sefin-probe/package.json
+      - name: Install dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Check Node serverless functions
+        run: |
+          node --check api/nfe-event.js
+          node --check api/nfse.js
