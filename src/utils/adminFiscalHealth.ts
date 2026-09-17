@@ -104,7 +104,7 @@ export type FiscalHealthResponse = {
     watchdog_minutes: number;
     xml_backfill_minutes: number;
   };
-  companies: FiscalHealthCompany[];
+  company_health: FiscalHealthCompany[];
 };
 
 export const FISCAL_HEALTH_STATES: Array<{ value: 'all' | FiscalHealthState; label: string }> = [
