@@ -48,22 +48,30 @@ Deno.serve(async req=>{
 
     const ak=digits(b.access_key);
     if(!/^\d{44}$/.test(ak))return J({error:"invalid_target"},400);
-    const {data:rows}=await admin.from("fiscal_dfe_documents")
+    const {data:rows,error:rowsError}=await admin.from("fiscal_dfe_documents")
       .select("id,access_key,issue_date,direction,recipient_cnpj,issuer_cnpj,parse_error,full_xml")
       .eq("company_id",cid).eq("access_key",ak).order("full_xml",{ascending:false}).limit(20);
+    if(rowsError)throw rowsError;
     const d=(rows||[]).find((x:any)=>x.full_xml)||(rows||[]).find((x:any)=>String(x.parse_error||'')==='xml_requires_manifestation')||(rows||[])[0];
     if(!d)return J({error:"document_not_found"},404);
-    if(d.full_xml)return J({ok:true,already_complete:true});
+    if(d.full_xml)return J({ok:true,already_complete:true,registered:true});
     if(!Number.isFinite(Date.parse(d.issue_date||""))||Date.parse(d.issue_date||"")<win())return J({error:"outside_required_window"},422);
     const recipient=(rows||[]).some((x:any)=>x.direction==='entrada'&&digits(x.recipient_cnpj)===cnpj&&digits(x.issuer_cnpj)!==cnpj);
     if(!recipient)return J({error:"not_recipient_document"},422);
+    const alreadyRegistered=(rows||[]).some((x:any)=>String(x.parse_error||"")==="xml_retry:manifestation_sent");
     const requires=(rows||[]).some((x:any)=>["xml_requires_manifestation","xml_retry:manifestation_sent"].includes(String(x.parse_error||"")));
     if(!requires)return J({error:"manifestation_not_required"},422);
+    if(alreadyRegistered)return J({ok:true,registered:true,already_registered:true,transport:"vercel",message:"Manifestação já registrada; XML aguardando liberação da SEFAZ."});
 
     const out=await bridge(gatewayToken,{action:"event",certificate_base64:pfx,certificate_password:pass,access_key:ak,cnpj});
     if(!out.ok||!out.payload?.ok)return J({ok:false,error:"manifestation_rejected",bridge:out.payload},out.status||422);
     const now=new Date().toISOString();
-    await admin.from("fiscal_dfe_documents").update({parse_error:"xml_retry:manifestation_sent",updated_at:now}).eq("company_id",cid).eq("access_key",ak).eq("full_xml",false);
-    return J({ok:true,registered:true,transport:"vercel",cStat:out.payload.event_cStat||out.payload.cStat,xMotivo:out.payload.xMotivo,host:out.payload.host,http:out.payload.http});
+    const {data:updated,error:updateError}=await admin.from("fiscal_dfe_documents")
+      .update({parse_error:"xml_retry:manifestation_sent",updated_at:now})
+      .eq("company_id",cid).eq("access_key",ak).eq("full_xml",false)
+      .select("id");
+    if(updateError)throw updateError;
+    if(!(updated||[]).length)return J({ok:false,error:"manifestation_persist_failed"},500);
+    return J({ok:true,registered:true,persisted:true,transport:"vercel",cStat:out.payload.event_cStat||out.payload.cStat,xMotivo:out.payload.xMotivo,host:out.payload.host,http:out.payload.http});
   }catch(e){return J({error:e instanceof Error?e.message:String(e)},500)}
 });
