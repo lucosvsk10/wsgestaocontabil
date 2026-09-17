@@ -250,32 +250,112 @@ export async function salesVerification(admin: any, companyId: string, start: st
   };
 }
 
-export async function manifestAndRecover(admin: any, base: string, token: string, companyId: string, range: ReturnType<typeof bounds>) {
+async function xmlReady(admin: any, companyId: string, accessKey: string) {
   const { data, error } = await admin.from("fiscal_dfe_documents")
-    .select("access_key")
+    .select("id")
+    .eq("company_id", companyId)
+    .eq("access_key", accessKey)
+    .eq("full_xml", true)
+    .not("xml", "is", null)
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return Boolean(data);
+}
+
+export async function manifestAndRecover(
+  admin: any,
+  base: string,
+  token: string,
+  companyId: string,
+  range: ReturnType<typeof bounds>,
+  targetAccessKey?: string | null,
+) {
+  let query = admin.from("fiscal_dfe_documents")
+    .select("access_key,parse_error")
     .eq("company_id", companyId)
     .eq("direction", "entrada")
     .eq("model", "55")
     .eq("full_xml", false)
-    .eq("parse_error", "xml_requires_manifestation")
+    .in("parse_error", ["xml_requires_manifestation", "xml_retry:manifestation_sent"])
     .gte("issue_date", range.start)
     .lt("issue_date", range.next)
     .not("access_key", "is", null);
+  const normalizedTarget = digits(targetAccessKey);
+  if (normalizedTarget) query = query.eq("access_key", normalizedTarget);
+  const { data, error } = await query;
   if (error) throw error;
 
-  const keys = [...new Set((data || []).map((row) => digits(row.access_key)).filter((key) => key.length === 44))].slice(0, 5);
-  const results: any[] = [];
-  for (const accessKey of keys) {
-    const event = await internalCall(base, "fiscal-purchases-manifest", token, { action: "event", confirm: true, company_id: companyId, access_key: accessKey }, 70000);
-    let recovered = false;
-    if (event.ok && (event.payload?.registered || event.payload?.already_complete || event.payload?.ok)) {
-      await new Promise((resolve) => setTimeout(resolve, 1200));
-      const backfill = await internalCall(base, "fiscal-purchases-xml-backfill", token, { company_id: companyId, access_key: accessKey, batch: 1 }, 70000);
-      recovered = Boolean(backfill.ok && Number(backfill.payload?.companies?.[0]?.saved || 0) > 0);
-      results.push({ access_key: accessKey, event: event.payload, recovered, backfill: backfill.payload });
-    } else {
-      results.push({ access_key: accessKey, event: event.payload, recovered: false });
-    }
+  const byKey = new Map<string, string[]>();
+  for (const row of data || []) {
+    const accessKey = digits(row.access_key);
+    if (accessKey.length !== 44) continue;
+    const states = byKey.get(accessKey) || [];
+    states.push(String(row.parse_error || ""));
+    byKey.set(accessKey, states);
   }
+  const keys = [...byKey.keys()].slice(0, normalizedTarget ? 1 : 5);
+  const results: any[] = [];
+
+  for (const accessKey of keys) {
+    if (await xmlReady(admin, companyId, accessKey)) {
+      results.push({ access_key: accessKey, status: "already_complete", registered: true, recovered: true });
+      continue;
+    }
+
+    const states = byKey.get(accessKey) || [];
+    const alreadyRegistered = states.includes("xml_retry:manifestation_sent");
+    let event: any = { ok: true, status: 200, payload: { ok: true, registered: true, already_registered: true } };
+    if (!alreadyRegistered) {
+      event = await internalCall(base, "fiscal-purchases-manifest", token, {
+        action: "event",
+        confirm: true,
+        company_id: companyId,
+        access_key: accessKey,
+      }, 70000);
+    }
+
+    const eventAccepted = Boolean(event.ok && (event.payload?.registered || event.payload?.already_complete || event.payload?.already_registered || event.payload?.ok));
+    if (!eventAccepted) {
+      results.push({
+        access_key: accessKey,
+        status: "event_failed",
+        registered: false,
+        recovered: false,
+        error: event.payload?.error || event.payload?.bridge?.xMotivo || event.payload?.xMotivo || `HTTP ${event.status}`,
+        event: event.payload,
+      });
+      continue;
+    }
+
+    let recovered = await xmlReady(admin, companyId, accessKey);
+    const attempts: any[] = [];
+    const delays = [1200, 3000, 6000];
+    for (let index = 0; index < delays.length && !recovered; index += 1) {
+      await new Promise((resolve) => setTimeout(resolve, delays[index]));
+      const backfill = await internalCall(base, "fiscal-purchases-xml-backfill", token, {
+        company_id: companyId,
+        access_key: accessKey,
+        batch: 1,
+      }, 70000);
+      attempts.push(backfill.payload);
+      recovered = await xmlReady(admin, companyId, accessKey);
+    }
+
+    results.push({
+      access_key: accessKey,
+      status: recovered ? "recovered" : "registered_pending_xml",
+      registered: true,
+      already_registered: alreadyRegistered || Boolean(event.payload?.already_registered),
+      recovered,
+      event: event.payload,
+      recovery_attempts: attempts.length,
+      backfill: attempts.at(-1) || null,
+      message: recovered
+        ? "Manifestação registrada e XML integral recuperado."
+        : "Manifestação registrada. A SEFAZ ainda não liberou o XML; a recuperação automática continuará tentando.",
+    });
+  }
+
   return results;
 }
