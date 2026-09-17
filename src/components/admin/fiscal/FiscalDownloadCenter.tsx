@@ -20,6 +20,7 @@ type Props = {
   onClose: () => void;
   exportFunction?: string;
   allowAllCompanies?: boolean;
+  appearance?: 'default' | 'extractor';
 };
 
 type PendingDocument = {
@@ -114,6 +115,7 @@ export function FiscalDownloadCenter({
   onClose,
   exportFunction = 'admin-fiscal-export',
   allowAllCompanies = true,
+  appearance = 'default',
 }: Props) {
   const [format, setFormat] = useState<DownloadFormat>('bundle');
   const [scope, setScope] = useState<CompanyScope>('current');
@@ -264,11 +266,11 @@ export function FiscalDownloadCenter({
 
   return (
     <div
-      className="fixed inset-0 z-[185] flex items-center justify-center bg-black/55 p-3 backdrop-blur-md"
+      className={`extractor-download-center fixed inset-0 z-[185] flex items-center justify-center bg-black/55 p-3 backdrop-blur-md ${appearance === 'extractor' ? 'extractor-dark-download' : ''}`}
       onMouseDown={event => event.target === event.currentTarget && !busy && onClose()}
     >
-      <div className="max-h-[92vh] w-full max-w-[980px] overflow-auto rounded-[24px] border border-border bg-background shadow-2xl">
-        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b bg-background/95 px-6 py-5 backdrop-blur">
+      <div className="extractor-download-shell max-h-[92vh] w-full max-w-[980px] overflow-auto rounded-[24px] border border-border bg-background shadow-2xl">
+        <div className="extractor-download-head sticky top-0 z-10 flex items-start justify-between gap-4 border-b bg-background/95 px-6 py-5 backdrop-blur">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[.16em] text-muted-foreground">Central de downloads</p>
             <h2 className="mt-1 text-xl font-semibold">Baixar documentos fiscais</h2>
@@ -279,7 +281,7 @@ export function FiscalDownloadCenter({
           </button>
         </div>
 
-        <div className="space-y-6 p-6">
+        <div className="extractor-download-body space-y-6 p-6">
           <section>
             <p className="text-xs font-semibold">1. O que você quer baixar?</p>
             <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
@@ -292,6 +294,7 @@ export function FiscalDownloadCenter({
                     type="button"
                     disabled={busy}
                     onClick={() => setFormat(item.id)}
+                    data-active={active ? 'true' : undefined}
                     className={`rounded-2xl border p-4 text-left transition disabled:opacity-60 ${active ? 'border-foreground bg-foreground text-background shadow-sm' : 'border-border bg-muted/10 hover:bg-muted/25'}`}
                   >
                     <Icon className="h-4 w-4" />
@@ -349,7 +352,7 @@ export function FiscalDownloadCenter({
           {error && <div className="rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-700">{error}</div>}
 
           {preflight && (
-            <section className={`rounded-2xl border p-5 ${preflight.pending || preflight.too_large ? 'border-amber-500/30 bg-amber-500/7' : 'border-emerald-500/30 bg-emerald-500/7'}`}>
+            <section className={`extractor-download-preflight rounded-2xl border p-5 ${preflight.pending || preflight.too_large ? 'border-amber-500/30 bg-amber-500/7' : 'border-emerald-500/30 bg-emerald-500/7'}`}>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <div><p className="text-2xl font-semibold">{preflight.total}</p><p className="text-[10px] uppercase tracking-wide text-muted-foreground">Documentos</p></div>
                 <div><p className="text-2xl font-semibold text-emerald-600">{preflight.complete}</p><p className="text-[10px] uppercase tracking-wide text-muted-foreground">Íntegros</p></div>
@@ -391,7 +394,7 @@ export function FiscalDownloadCenter({
           )}
         </div>
 
-        <div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-3 border-t bg-background/95 px-6 py-4 backdrop-blur">
+        <div className="extractor-download-footer sticky bottom-0 flex flex-wrap items-center justify-between gap-3 border-t bg-background/95 px-6 py-4 backdrop-blur">
           <p className="text-xs text-muted-foreground">{scope === 'all' ? 'Todas as empresas fiscais' : currentCompany?.name || 'Empresa atual'} · {formatLabel[format]}</p>
           <div className="flex flex-wrap justify-end gap-2">
             {canDownloadPartial && (
