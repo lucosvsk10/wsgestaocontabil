@@ -15,13 +15,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Resolve Vercel token
+        id: token
         run: |
           TOKEN="${TOKEN_A:-${TOKEN_B:-}}"
           if [ -z "$TOKEN" ]; then
-            echo "::error::No Vercel deployment token is configured in GitHub Actions"
-            exit 1
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "Vercel deploy skipped: configure VERCEL_TOKEN or VERCEL_ACCESS_TOKEN in repository Actions secrets."
+            exit 0
           fi
+          echo "available=true" >> "$GITHUB_OUTPUT"
           echo "VERCEL_TOKEN=$TOKEN" >> "$GITHUB_ENV"
       - name: Deploy existing ws-nfse-sefin-probe project
+        if: steps.token.outputs.available == 'true'
         run: |
           npx --yes vercel@latest deploy --prod --yes --cwd infra/ws-nfse-sefin-probe --token "$VERCEL_TOKEN"
