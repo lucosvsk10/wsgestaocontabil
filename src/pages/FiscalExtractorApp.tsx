@@ -385,6 +385,10 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
               salesStatus: 'idle',
               salesXmlPending: 60,
               salesXmlFailed: 0,
+              purchaseLastCompletedAt: new Date().toISOString(),
+              purchaseLastError: null,
+              salesLastCompletedAt: new Date().toISOString(),
+              salesLastError: null,
             },
           ]
         : (snapshot?.companies || []).map(normalizeCompany),
