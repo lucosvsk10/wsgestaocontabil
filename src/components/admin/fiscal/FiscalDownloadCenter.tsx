@@ -18,6 +18,8 @@ type Props = {
   initialEnd: string;
   initialDirection?: Direction;
   onClose: () => void;
+  exportFunction?: string;
+  allowAllCompanies?: boolean;
 };
 
 type PendingDocument = {
@@ -110,6 +112,8 @@ export function FiscalDownloadCenter({
   initialEnd,
   initialDirection = 'todos',
   onClose,
+  exportFunction = 'admin-fiscal-export',
+  allowAllCompanies = true,
 }: Props) {
   const [format, setFormat] = useState<DownloadFormat>('bundle');
   const [scope, setScope] = useState<CompanyScope>('current');
@@ -123,7 +127,7 @@ export function FiscalDownloadCenter({
   const [error, setError] = useState('');
 
   const fiscalCompanies = useMemo(() => companies.filter(item => item.id), [companies]);
-  const canUseAll = fiscalCompanies.length > 1;
+  const canUseAll = allowAllCompanies && fiscalCompanies.length > 1;
   const requiresIntegralFiles = ['bundle', 'pdf', 'xml'].includes(format);
   const invalidPeriod = !start || !end || start > end;
   const busy = checking || downloading;
@@ -167,7 +171,7 @@ export function FiscalDownloadCenter({
   });
 
   const preflightRequest = async () => {
-    const { data, error: invokeError } = await supabase.functions.invoke('admin-fiscal-export', {
+    const { data, error: invokeError } = await supabase.functions.invoke(exportFunction, {
       body: payload('preflight'),
     });
     if (invokeError) throw invokeError;
@@ -182,7 +186,7 @@ export function FiscalDownloadCenter({
     const token = sessionData.session?.access_token;
     if (!token) throw new Error('Sessão expirada. Entre novamente para continuar.');
 
-    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-fiscal-export`, {
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${exportFunction}`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
