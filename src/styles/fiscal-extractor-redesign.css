@@ -1,0 +1,320 @@
+
+/* Extrator SaaS — 2026 redesign. The app keeps its own dark visual language without changing ADM. */
+.extractor-app{
+  --ex-bg:#020817;
+  --ex-surface:#0b0f1c;
+  --ex-surface-2:#101725;
+  --ex-surface-3:#151d2c;
+  --ex-text:#e8eef5;
+  --ex-muted:#7f91a5;
+  --ex-faint:#526276;
+  --ex-gold:#d7b65a;
+  --ex-green:#36c38d;
+  --ex-amber:#dfa844;
+  --ex-red:#cf656d;
+  --ex-blue:#5b83ad;
+  background:var(--ex-bg)!important;
+  color:var(--ex-text)!important;
+}
+.extractor-app,
+.extractor-app *{font-family:'Space Grotesk',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif!important}
+
+/* No bright card outlines. Separation is made by surface, spacing and restrained shadows. */
+.extractor-app :is(
+  .extractor-metric,.extractor-panel,.extractor-active-company,.extractor-period,.extractor-period-v2,
+  .extractor-admin-table,.extractor-company-list,.extractor-history,.extractor-health-hero,
+  .extractor-health-grid article,.extractor-health-timeline,.extractor-settings-overview,
+  .extractor-company-detail,.extractor-company-detail-card,.extractor-billing-hero,.extractor-billing-card,
+  .extractor-profile-card,.extractor-settings-card,.extractor-invoice-list,.extractor-doc-kpis .extractor-metric
+){
+  border:0!important;
+  outline:0!important;
+  background:var(--ex-surface)!important;
+  box-shadow:0 10px 32px rgba(0,0,0,.08)!important;
+}
+.extractor-app .extractor-panel-head{border-bottom:0!important}
+.extractor-app .extractor-company-head,
+.extractor-app .extractor-admin-table thead,
+.extractor-app .extractor-admin-table thead tr,
+.extractor-app .extractor-admin-table thead th{border:0!important;background:var(--ex-surface-2)!important}
+.extractor-app .extractor-company-row,
+.extractor-app .extractor-certificate-row,
+.extractor-app .extractor-admin-table tbody tr{border-color:rgba(255,255,255,.045)!important}
+.extractor-app .extractor-company-row:hover,
+.extractor-app .extractor-admin-table tbody tr:hover{background:var(--ex-surface-3)!important}
+
+/* Documents — same spatial rhythm as ADM reference. */
+.extractor-documents-v2 .extractor-page-heading{margin-bottom:16px}
+.extractor-documents-v2 .extractor-active-company{
+  min-height:96px;padding:18px 22px;margin-bottom:14px;border-radius:5px!important;
+}
+.extractor-documents-v2 .extractor-active-company strong{font-size:14px!important;letter-spacing:.01em}
+.extractor-period-v2{
+  display:grid;grid-template-columns:155px minmax(0,1fr) 170px;gap:18px;
+  align-items:stretch;padding:14px 18px;margin-bottom:12px;border-radius:5px!important;
+}
+.extractor-period-year{
+  display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:102px;
+}
+.extractor-period-year>small{font-size:10px;color:#aeb9c5;font-weight:600}
+.extractor-period-year>div{display:flex;align-items:center;gap:13px;margin-top:8px}
+.extractor-period-year button{width:27px;height:27px;border:0;background:transparent;color:#718397;font-size:20px}
+.extractor-period-year button:hover:not(:disabled){color:#fff}
+.extractor-period-year strong{font-size:21px;font-weight:600;color:#edf3f8}
+.extractor-period-months{
+  display:grid;grid-template-columns:repeat(6,minmax(74px,1fr));gap:6px 8px;align-content:center;
+}
+.extractor-period-month{
+  min-height:48px;border:0;border-radius:4px;background:transparent;color:#a8b5c3;text-align:center;
+  padding:6px 5px;transition:background .15s ease,color .15s ease;
+}
+.extractor-period-month:hover:not(:disabled){background:#111a28;color:#f1f5f9}
+.extractor-period-month.active{background:#030c1d;color:#fff}
+.extractor-period-month:disabled{opacity:.28}
+.extractor-period-month>b{display:block;font-size:11px;font-weight:600}
+.extractor-period-month>span{display:block;margin-top:4px;font-size:8px;line-height:1.2;color:#4cbf99;white-space:nowrap}
+.extractor-period-month>span em{color:#67a2dd;font-style:normal}
+.extractor-period-custom{
+  display:flex;align-items:center;justify-content:center;
+}
+.extractor-period-custom button{
+  display:flex;align-items:center;gap:8px;height:38px;border:0;border-radius:4px;background:transparent;color:#d7dde5;
+  padding:0 10px;font-size:11px;
+}
+.extractor-period-custom button:hover{background:#111a28}
+.extractor-period-custom svg{width:15px;height:15px}
+.extractor-custom-dates{
+  display:flex;align-items:center;justify-content:flex-end;gap:10px;margin:-3px 0 12px;padding:11px 14px;
+  border-radius:4px;background:var(--ex-surface);
+}
+.extractor-custom-dates label{display:flex;align-items:center;gap:7px;color:#718397;font-size:9px}
+.extractor-custom-dates input{
+  height:34px;border:0;border-radius:4px;background:#121927;color:#e1e8ef;padding:0 9px;font-size:10px;color-scheme:dark;
+}
+.extractor-custom-dates button{height:34px;border:0;border-radius:4px;background:#151e2b;color:#b6c2cf;padding:0 10px;font-size:9px}
+.extractor-doc-kpis{gap:8px!important;margin-bottom:12px!important}
+.extractor-doc-kpis .extractor-metric{min-height:102px!important;padding:15px 18px!important;border-radius:5px!important}
+.extractor-doc-kpis .extractor-metric>div svg{display:none}
+.extractor-doc-kpis .extractor-metric>strong{font-size:20px!important}
+.extractor-doc-kpis .extractor-metric>span{font-size:9px!important}
+.extractor-documents-v2 .extractor-admin-table{border-radius:5px!important;overflow:hidden}
+.extractor-documents-v2 .extractor-admin-table tbody tr,
+.extractor-documents-v2 .extractor-admin-table tbody tr>td{min-height:76px!important;height:76px!important}
+.extractor-documents-v2 .extractor-admin-table td{padding-top:12px!important;padding-bottom:12px!important;vertical-align:middle!important}
+.extractor-documents-v2 .extractor-admin-table td:first-child strong{font-size:12px!important}
+.extractor-documents-v2 .extractor-admin-table td strong{font-weight:600}
+.extractor-documents-v2 .extractor-admin-table td .key{display:block;margin-top:5px;color:#8494a6;font-size:8px!important;max-width:240px}
+.extractor-documents-v2 .extractor-view{height:36px!important;padding:0 11px!important}
+.extractor-documents-v2 .extractor-filter-row{border:0!important;background:var(--ex-surface)!important}
+.extractor-documents-v2 .extractor-search-row{border:0!important;background:var(--ex-surface)!important;padding:10px 14px!important}
+.extractor-documents-v2 .extractor-search-row label{border:0!important;background:#111724!important}
+.extractor-documents-v2 .extractor-primary{background:#f5f5f4!important;color:#111827!important}
+
+/* Company center */
+.extractor-company-detail{border-radius:5px!important;overflow:hidden}
+.extractor-company-detail-head{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding:22px 24px;background:var(--ex-surface);
+}
+.extractor-company-detail-head>div:first-child{display:flex;gap:14px;align-items:flex-start}
+.extractor-company-detail-avatar{
+  display:grid;place-items:center;width:44px;height:44px;border-radius:7px;background:#121c2b;color:#cbd6e0;font-size:12px;font-weight:700;
+}
+.extractor-company-detail-head small{display:block;color:#718397;font-size:9px;text-transform:uppercase;letter-spacing:.08em}
+.extractor-company-detail-head h2{margin:4px 0 1px;font-size:19px;font-weight:600}
+.extractor-company-detail-head p{margin:0;color:#95a4b4;font-size:11px}
+.extractor-company-detail-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.extractor-company-detail-actions button{height:36px;border:0;border-radius:4px;background:#151e2b;color:#dbe4ec;padding:0 12px;font-size:10px}
+.extractor-company-detail-actions button.primary{background:#f5f5f4;color:#111827}
+.extractor-company-detail-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:8px;background:#020817}
+.extractor-company-detail-card{min-width:0;padding:17px 18px;border-radius:4px!important}
+.extractor-company-detail-card>small{color:#718397;font-size:9px;text-transform:uppercase;letter-spacing:.07em}
+.extractor-company-detail-card>strong{display:block;margin-top:7px;color:#e8eef5;font-size:14px;font-weight:600}
+.extractor-company-detail-card>span{display:block;margin-top:4px;color:#8495a7;font-size:9px;line-height:1.5}
+.extractor-company-detail-info{display:grid;grid-template-columns:1.15fr .85fr;gap:8px;padding:0 8px 8px;background:#020817}
+.extractor-company-detail-info article{padding:18px;background:var(--ex-surface);border-radius:4px}
+.extractor-company-detail-info h3{margin:0 0 12px;font-size:13px;font-weight:600}
+.extractor-company-detail-info dl{margin:0}
+.extractor-company-detail-info dl>div{display:flex;justify-content:space-between;gap:18px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.045)}
+.extractor-company-detail-info dl>div:last-child{border-bottom:0}
+.extractor-company-detail-info dt{color:#718397;font-size:9px}
+.extractor-company-detail-info dd{margin:0;max-width:65%;color:#d8e1e9;font-size:10px;font-weight:550;text-align:right}
+.extractor-company-back{height:34px;border:0;background:transparent;color:#8fa0b2;font-size:10px;padding:0}
+.extractor-company-back:hover{color:#fff}
+
+/* Health: independent company selector + factual reconciliation */
+.extractor-health-company-picker{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:6px;margin-bottom:10px;
+}
+.extractor-health-company-picker button{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:58px;padding:10px 13px;border:0;border-radius:4px;
+  background:var(--ex-surface);color:#dbe4ec;text-align:left;
+}
+.extractor-health-company-picker button.active{background:#141e2d}
+.extractor-health-company-picker button span{min-width:0}
+.extractor-health-company-picker strong,.extractor-health-company-picker small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.extractor-health-company-picker strong{font-size:10px}.extractor-health-company-picker small{margin-top:2px;color:#718397;font-size:8px}
+.extractor-health-company-picker i{width:7px;height:7px;border-radius:50%;background:#718397}
+.extractor-health-company-picker i.ok{background:var(--ex-green)}.extractor-health-company-picker i.attention{background:var(--ex-amber)}.extractor-health-company-picker i.error{background:var(--ex-red)}
+.extractor-health-v2-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0}
+.extractor-health-v2-kpis article{padding:16px 18px;border:0;border-radius:4px;background:var(--ex-surface)}
+.extractor-health-v2-kpis span{display:block;color:#718397;font-size:9px;text-transform:uppercase;letter-spacing:.07em}
+.extractor-health-v2-kpis strong{display:block;margin-top:8px;font-size:20px;font-weight:600}
+.extractor-health-v2-kpis small{display:block;margin-top:4px;color:#8192a4;font-size:9px}
+.extractor-health-compare{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.extractor-health-compare>article{padding:18px;border:0;border-radius:4px;background:var(--ex-surface)}
+.extractor-health-compare header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.extractor-health-compare h3{margin:0;font-size:13px}.extractor-health-compare header span{font-size:9px;color:#718397}
+.extractor-health-compare-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.extractor-health-compare-grid div{padding:12px;border-radius:3px;background:#101725}
+.extractor-health-compare-grid small{display:block;color:#718397;font-size:8px}.extractor-health-compare-grid strong{display:block;margin-top:4px;font-size:14px}
+.extractor-health-activity{padding:0!important}
+.extractor-health-activity-row{display:grid;grid-template-columns:160px 130px 1fr 170px;gap:14px;align-items:center;padding:12px 18px;border-bottom:1px solid rgba(255,255,255,.045)}
+.extractor-health-activity-row:last-child{border-bottom:0}.extractor-health-activity-row span,.extractor-health-activity-row strong,.extractor-health-activity-row small{font-size:9px}
+.extractor-health-activity-row span{color:#9eadbb}.extractor-health-activity-row strong{color:#dce5ed}.extractor-health-activity-row small{color:#718397;text-align:right}
+
+/* Billing / invoices */
+.extractor-billing-hero{
+  display:grid;grid-template-columns:1.2fr .8fr .8fr;gap:1px;margin-bottom:8px;border-radius:5px!important;overflow:hidden;
+}
+.extractor-billing-hero>div{padding:20px 22px;background:var(--ex-surface)}
+.extractor-billing-hero small{display:block;color:#718397;font-size:9px;text-transform:uppercase;letter-spacing:.07em}
+.extractor-billing-hero strong{display:block;margin-top:6px;font-size:18px;font-weight:600}
+.extractor-billing-hero span{display:block;margin-top:4px;color:#8fa0b2;font-size:10px}
+.extractor-billing-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:8px;margin-bottom:8px}
+.extractor-billing-card{padding:19px 20px;border-radius:5px!important}
+.extractor-billing-card header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.extractor-billing-card h2{margin:0;font-size:14px}.extractor-billing-card header p{margin:3px 0 0;color:#718397;font-size:9px}
+.extractor-billing-card .amount{font-size:25px;font-weight:600;color:#edf3f8}
+.extractor-billing-progress{height:6px;margin:15px 0 7px;background:#182333;border-radius:999px;overflow:hidden}.extractor-billing-progress i{display:block;height:100%;background:#d7b65a}
+.extractor-billing-facts{display:grid;grid-template-columns:1fr 1fr;gap:0 20px;margin-top:12px}
+.extractor-billing-facts div{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.045)}
+.extractor-billing-facts span{font-size:9px;color:#718397}.extractor-billing-facts b{font-size:9px;color:#dbe4ec}
+.extractor-billing-actions{display:flex;gap:7px;margin-top:15px;flex-wrap:wrap}
+.extractor-billing-actions button,.extractor-billing-actions a{display:inline-flex;align-items:center;justify-content:center;height:36px;border:0;border-radius:4px;background:#151e2b;color:#dce5ed;padding:0 12px;text-decoration:none;font-size:10px}
+.extractor-billing-actions .primary{background:#f5f5f4;color:#111827}
+.extractor-invoice-list{overflow:hidden;border-radius:5px!important}
+.extractor-invoice-head,.extractor-invoice-row{display:grid;grid-template-columns:90px minmax(210px,1fr) 115px 100px 120px 115px;gap:12px;align-items:center}
+.extractor-invoice-head{padding:11px 16px;background:var(--ex-surface-2);color:#718397;font-size:8px;text-transform:uppercase;letter-spacing:.07em}
+.extractor-invoice-row{min-height:62px;padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.045);background:var(--ex-surface)}
+.extractor-invoice-row:last-child{border-bottom:0}.extractor-invoice-row strong{font-size:10px}.extractor-invoice-row span,.extractor-invoice-row small{font-size:9px;color:#8a9bad}
+.extractor-invoice-status{display:inline-flex;width:max-content;padding:4px 7px;border-radius:999px;background:#151e2b;color:#aab7c5!important;font-size:8px!important}
+.extractor-invoice-status.paid{background:rgba(54,195,141,.1);color:#61d0a7!important}.extractor-invoice-status.pending{background:rgba(223,168,68,.1);color:#e2b45a!important}.extractor-invoice-status.failed{background:rgba(207,101,109,.1);color:#df8a90!important}
+.extractor-invoice-row a,.extractor-invoice-row button{border:0;background:transparent;color:#d5dee7;font-size:9px;text-decoration:none;text-align:left;padding:0}
+
+/* Settings is now user/account-only. */
+.extractor-settings-v2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.extractor-profile-card,.extractor-settings-card{padding:20px;border-radius:5px!important}
+.extractor-profile-head{display:flex;align-items:center;gap:13px;margin-bottom:16px}
+.extractor-profile-avatar{display:grid;place-items:center;width:46px;height:46px;border-radius:50%;background:#151f2e;color:#e6edf3;font-weight:700}
+.extractor-profile-head h2{margin:0;font-size:15px}.extractor-profile-head p{margin:2px 0 0;color:#718397;font-size:10px}
+.extractor-settings-v2 dl{margin:0}
+.extractor-settings-v2 dl>div{display:flex;justify-content:space-between;gap:18px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.045)}
+.extractor-settings-v2 dl>div:last-child{border-bottom:0}.extractor-settings-v2 dt{font-size:9px;color:#718397}.extractor-settings-v2 dd{margin:0;max-width:62%;font-size:10px;color:#dbe4ec;text-align:right}
+.extractor-settings-card h3{margin:0 0 13px;font-size:13px}
+.extractor-settings-security{display:grid;gap:7px;margin-top:14px}.extractor-settings-security button{height:38px;border:0;border-radius:4px;background:#151e2b;color:#dbe4ec;text-align:left;padding:0 12px;font-size:10px}
+
+/* Native fiscal preview — dark chrome, white paper only. */
+.extractor-fiscal-preview-overlay{position:fixed;inset:0;z-index:260;display:flex;align-items:center;justify-content:center;padding:12px;background:rgba(0,4,10,.76);backdrop-filter:blur(10px)}
+.extractor-fiscal-preview-modal{display:grid;grid-template-columns:minmax(0,1.7fr) 390px;width:min(1600px,98vw);height:min(94vh,980px);overflow:hidden;border-radius:10px;background:#080e18;box-shadow:0 28px 90px rgba(0,0,0,.55)}
+.extractor-fiscal-preview-document{min-width:0;display:flex;flex-direction:column;background:#151b24}
+.extractor-fiscal-preview-toolbar{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:13px 17px;background:#080e18;color:#dbe4ec}
+.extractor-fiscal-preview-toolbar small{display:block;color:#6f8195;font-size:8px;text-transform:uppercase;letter-spacing:.1em}.extractor-fiscal-preview-toolbar strong{display:block;margin-top:2px;font-size:11px}
+.extractor-fiscal-preview-toolbar>span{color:#728497;font-size:8px;text-align:right}
+.extractor-fiscal-paper-stage{min-height:0;flex:1;overflow:auto;padding:18px;background:#202630}
+.extractor-fiscal-preview-summary{min-height:0;display:flex;flex-direction:column;background:#080e18;color:#e8eef5}
+.extractor-fiscal-preview-summary-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:19px 19px 15px;background:#080e18}
+.extractor-fiscal-preview-summary-head small{color:#6f8195;font-size:8px;text-transform:uppercase;letter-spacing:.1em}.extractor-fiscal-preview-summary-head h2{margin:3px 0 7px;font-size:17px}.extractor-fiscal-preview-summary-head span{display:inline-flex;padding:4px 7px;border-radius:999px;background:#131c28;color:#9eacba;font-size:8px}.extractor-fiscal-preview-summary-head span.ok{background:rgba(54,195,141,.1);color:#65d1aa}.extractor-fiscal-preview-summary-head span.error{background:rgba(207,101,109,.1);color:#df8a90}
+.extractor-fiscal-preview-summary-head>button{display:grid;place-items:center;width:32px;height:32px;border:0;border-radius:50%;background:transparent;color:#8394a6}.extractor-fiscal-preview-summary-head>button:hover{background:#121b28;color:#fff}.extractor-fiscal-preview-summary-head svg{width:15px;height:15px}
+.extractor-fiscal-summary-list{min-height:0;overflow:auto;padding:0 19px}
+.extractor-fiscal-summary-line{padding:11px 0;border-bottom:1px solid rgba(255,255,255,.055)}.extractor-fiscal-summary-line small{display:block;color:#6f8195;font-size:8px;text-transform:uppercase;letter-spacing:.08em}.extractor-fiscal-summary-line strong{display:block;margin-top:4px;color:#dce5ed;font-size:10px;line-height:1.5;font-weight:550;word-break:break-word}.extractor-fiscal-summary-line strong.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace!important;font-size:8px}.extractor-fiscal-summary-line button.copy{display:flex;align-items:center;gap:5px;margin-top:5px;border:0;background:transparent;color:#8495a7;padding:0;font-size:8px}.extractor-fiscal-summary-line button.copy svg{width:11px;height:11px}
+.extractor-fiscal-manifest-box{display:flex;gap:10px;margin:12px 19px;padding:12px;border-radius:5px;background:rgba(223,168,68,.1);color:#e2b45a}.extractor-fiscal-manifest-box>svg{width:16px;height:16px;flex:0 0 auto}.extractor-fiscal-manifest-box b{font-size:10px}.extractor-fiscal-manifest-box p{margin:3px 0 0;font-size:8px;line-height:1.55;color:#c59d55}.extractor-fiscal-manifest-box button{margin-top:8px;border:0;border-radius:3px;background:#d7b65a;color:#17130a;padding:7px 9px;font-size:8px;font-weight:700}
+.extractor-fiscal-preview-actions{margin-top:auto;display:grid;gap:7px;padding:15px 19px;background:#080e18}.extractor-fiscal-preview-actions button{border-color:#243143;background:#121a26;color:#e7edf3}.extractor-fiscal-preview-actions button:first-child{background:#f4f4f3;color:#10141a;border-color:#f4f4f3}
+.extractor-fiscal-recovery-card,.extractor-fiscal-unavailable{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:420px;max-width:660px;margin:0 auto;padding:34px;text-align:center;background:#fff;color:#17202b;border-radius:4px}.extractor-fiscal-recovery-card>svg,.extractor-fiscal-unavailable>svg{width:25px;height:25px;color:#c38b2e}.extractor-fiscal-recovery-card h3{margin:12px 0 5px;font-size:17px}.extractor-fiscal-recovery-card p,.extractor-fiscal-unavailable span{max-width:480px;margin:0;color:#667085;font-size:11px;line-height:1.55}.extractor-fiscal-recovery-card button{display:flex;align-items:center;gap:7px;margin-top:16px;border:0;border-radius:4px;background:#111827;color:#fff;padding:9px 12px;font-size:10px}.extractor-fiscal-recovery-card button svg{width:13px;height:13px}
+
+/* Fiscal paper primitives */
+.extractor-danfe-sheet,.extractor-nfse-sheet{width:1060px;max-width:100%;min-height:900px;margin:0 auto;padding:14px;background:#fff;color:#111;font-family:Arial,Helvetica,sans-serif!important;box-shadow:0 12px 35px rgba(0,0,0,.18)}
+.extractor-danfe-sheet *,.extractor-nfce-sheet *,.extractor-nfse-sheet *{font-family:Arial,Helvetica,sans-serif!important}
+.extractor-danfe-receipt{display:grid;grid-template-columns:1.6fr .38fr .55fr 150px;min-height:62px;border:1px solid #111;font-size:7px}.extractor-danfe-receipt>div{padding:5px;border-right:1px solid #111}.extractor-danfe-receipt>div:last-child{border-right:0}.extractor-danfe-receipt small{font-size:6px}.extractor-danfe-number{display:flex;flex-direction:column;align-items:center;justify-content:center}.extractor-danfe-number b{font-size:15px}.extractor-danfe-number span{font-size:9px;font-weight:700}
+.extractor-danfe-head{display:grid;grid-template-columns:1.05fr 155px 1.2fr;margin-top:8px;border:1px solid #111;min-height:135px}.extractor-danfe-head>div{padding:8px;border-right:1px solid #111}.extractor-danfe-head>div:last-child{border-right:0}.extractor-danfe-issuer{text-align:center}.extractor-danfe-issuer small{font-size:6px}.extractor-danfe-issuer h2{margin:11px 0 8px;font-size:15px}.extractor-danfe-issuer p{margin:3px 0;font-size:8px}.extractor-danfe-title{display:flex;flex-direction:column;align-items:center;text-align:center}.extractor-danfe-title>b{font-size:22px}.extractor-danfe-title>span{font-size:7px;line-height:1.3}.extractor-danfe-title>strong{margin:9px 0 5px;border:1px solid #111;padding:4px 7px;font-size:8px}.extractor-danfe-title p{margin:2px 0;font-size:9px;font-weight:700}.extractor-danfe-key{display:flex;flex-direction:column;justify-content:center;text-align:center}.extractor-danfe-key small{margin-top:5px;font-size:6px}.extractor-danfe-key strong{margin-top:4px;font-size:9px}.extractor-danfe-key span{margin-top:7px;font-size:6.5px;line-height:1.3}.extractor-fiscal-barcode{width:100%;height:48px}
+.extractor-danfe-grid{display:grid;border-left:1px solid #111;border-top:1px solid #111}.extractor-danfe-grid-2{grid-template-columns:1fr 1fr}.extractor-danfe-grid-3{grid-template-columns:1.4fr .8fr .6fr}.extractor-danfe-grid-4{grid-template-columns:repeat(4,1fr)}
+.extractor-fiscal-field{min-width:0;padding:5px 6px;border-right:1px solid #111;border-bottom:1px solid #111;min-height:34px}.extractor-fiscal-field small{display:block;font-size:5.5px;text-transform:uppercase}.extractor-fiscal-field strong{display:block;margin-top:3px;font-size:7.5px;font-weight:600;word-break:break-word}
+.extractor-fiscal-section-title{margin-top:5px;padding:3px 4px;background:#ededed;border:1px solid #111;border-bottom:0;font-size:7px;font-weight:700}
+.extractor-danfe-totals{display:grid;grid-template-columns:repeat(6,1fr);border-left:1px solid #111;border-top:1px solid #111}
+.extractor-danfe-products{overflow:auto;border:1px solid #111}.extractor-danfe-products table{width:100%;border-collapse:collapse;font-size:6px}.extractor-danfe-products th{background:#ededed;font-size:5px;padding:4px 2px;border-right:1px solid #111;border-bottom:1px solid #111;white-space:nowrap}.extractor-danfe-products td{padding:4px 3px;border-right:1px solid #aaa;border-bottom:1px solid #bbb;text-align:right;white-space:nowrap}.extractor-danfe-products td.desc{text-align:left;white-space:normal;min-width:190px}.extractor-danfe-additional{display:grid;grid-template-columns:2fr 1fr;border-left:1px solid #111;border-top:1px solid #111}
+
+/* NFC-e paper */
+.extractor-nfce-sheet{width:420px;max-width:100%;margin:0 auto;padding:22px 17px;background:#fff;color:#111;font-family:'Courier New',monospace!important;box-shadow:0 12px 35px rgba(0,0,0,.18)}
+.extractor-nfce-sheet h2{margin:0;text-align:center;font-size:14px}.extractor-nfce-sheet>p{margin:4px 0;text-align:center;font-size:8px;line-height:1.35}.extractor-nfce-sheet>strong{display:block;text-align:center;font-size:9px;line-height:1.4}.extractor-nfce-separator{margin:10px 0;border-top:1px dashed #222}.extractor-nfce-sheet table{width:100%;border-collapse:collapse;font-size:7px}.extractor-nfce-sheet th{padding:4px 2px;border-bottom:1px solid #222;text-align:right}.extractor-nfce-sheet th:first-child,.extractor-nfce-sheet td:first-child{text-align:left}.extractor-nfce-sheet td{padding:6px 2px;border-bottom:1px dotted #aaa;text-align:right;vertical-align:top}.extractor-nfce-totals{display:grid;gap:4px;margin-top:10px;font-size:8px}.extractor-nfce-totals span,.extractor-nfce-totals strong,.extractor-nfce-payment{display:flex;justify-content:space-between;gap:12px}.extractor-nfce-totals strong{font-size:11px}.extractor-nfce-payment{font-size:8px}.extractor-nfce-sheet .center{text-align:center}.extractor-nfce-sheet .key{font-size:7px;font-weight:700}.extractor-nfce-qr-wrap{display:flex;justify-content:center;margin-top:12px}.extractor-fiscal-qr{width:150px;height:150px;object-fit:contain}
+
+/* NFS-e paper */
+.extractor-nfse-sheet>header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding:13px;border:1px solid #111}.extractor-nfse-sheet header small{font-size:7px}.extractor-nfse-sheet header h2{margin:4px 0 0;font-size:18px}.extractor-nfse-sheet header>div:last-child{text-align:right}.extractor-nfse-sheet header b,.extractor-nfse-sheet header span{display:block}.extractor-nfse-sheet header b{font-size:12px}.extractor-nfse-sheet header span{margin-top:4px;font-size:7px}.extractor-nfse-key{display:grid;grid-template-columns:1fr 180px;border-left:1px solid #111;border-top:1px solid #111}.extractor-nfse-service>.extractor-fiscal-field{border-left:1px solid #111;border-top:1px solid #111;min-height:90px}.extractor-nfse-qr{display:flex;justify-content:flex-end;margin-top:18px}
+
+/* Shared dark treatment for extractor-specific modals rendered through portals. */
+.extractor-dark-dialog{background:#080e18!important;color:#e8eef5!important;border:0!important;box-shadow:0 24px 80px rgba(0,0,0,.55)!important}
+.extractor-dark-dialog :is(input,select,textarea){background:#111927!important;color:#e8eef5!important;border-color:#243144!important;color-scheme:dark}
+.extractor-dark-dialog [role="alert"]{border:0!important;background:rgba(207,101,109,.1)!important;color:#e18b92!important}
+.extractor-download-center.extractor-dark-download{color:#e8eef5}
+.extractor-download-center.extractor-dark-download>.extractor-download-shell{border:0!important;background:#080e18!important;color:#e8eef5!important}
+.extractor-download-center.extractor-dark-download .extractor-download-head,
+.extractor-download-center.extractor-dark-download .extractor-download-footer{border-color:rgba(255,255,255,.055)!important;background:rgba(8,14,24,.97)!important}
+.extractor-download-center.extractor-dark-download .extractor-download-body button,
+.extractor-download-center.extractor-dark-download .extractor-download-body select,
+.extractor-download-center.extractor-dark-download .extractor-download-body input{border-color:transparent!important;background:#111927!important;color:#e8eef5!important}
+.extractor-download-center.extractor-dark-download .extractor-download-body button[data-active="true"]{background:#e9ecef!important;color:#111827!important}
+.extractor-download-center.extractor-dark-download .extractor-download-preflight{border:0!important;background:#101725!important}
+
+@media(max-width:1180px){
+  .extractor-period-v2{grid-template-columns:130px 1fr}.extractor-period-custom{grid-column:1/-1;justify-content:flex-end}
+  .extractor-company-detail-grid{grid-template-columns:repeat(2,1fr)}
+  .extractor-health-v2-kpis{grid-template-columns:repeat(2,1fr)}
+  .extractor-billing-hero{grid-template-columns:1fr 1fr}.extractor-billing-hero>div:first-child{grid-column:1/-1}
+  .extractor-fiscal-preview-modal{grid-template-columns:minmax(0,1fr) 340px}
+}
+@media(max-width:900px){
+  .extractor-period-v2{grid-template-columns:1fr}.extractor-period-year{min-height:auto;align-items:flex-start}.extractor-period-months{grid-template-columns:repeat(3,1fr)}
+  .extractor-period-custom{grid-column:auto;justify-content:flex-start}
+  .extractor-company-detail-info,.extractor-health-compare,.extractor-billing-grid,.extractor-settings-v2{grid-template-columns:1fr}
+  .extractor-health-activity-row{grid-template-columns:1fr 1fr}.extractor-health-activity-row small{text-align:left}
+  .extractor-invoice-head,.extractor-invoice-row{grid-template-columns:80px minmax(160px,1fr) 95px 90px 100px}.extractor-invoice-head>*:nth-child(6),.extractor-invoice-row>*:nth-child(6){display:none}
+  .extractor-fiscal-preview-modal{grid-template-columns:1fr;height:96vh}.extractor-fiscal-preview-summary{max-height:42vh}.extractor-fiscal-preview-document{min-height:50vh}
+}
+@media(max-width:620px){
+  .extractor-period-months{grid-template-columns:repeat(2,1fr)}
+  .extractor-company-detail-grid,.extractor-health-v2-kpis,.extractor-health-compare-grid{grid-template-columns:1fr}
+  .extractor-billing-hero{grid-template-columns:1fr}.extractor-billing-hero>div:first-child{grid-column:auto}
+  .extractor-invoice-head{display:none}.extractor-invoice-row{grid-template-columns:1fr 1fr;gap:6px}.extractor-invoice-row>*:nth-child(2){grid-column:1/-1}
+  .extractor-fiscal-preview-overlay{padding:0}.extractor-fiscal-preview-modal{width:100vw;height:100vh;border-radius:0}.extractor-fiscal-paper-stage{padding:8px}
+}
+
+
+/* Remaining Extractor surfaces: remove the old outlined-card language and keep drawers/modals dark. */
+.extractor-app :is(
+  .extractor-report-company,.extractor-report-grid>article,.extractor-report-status,.extractor-report-suppliers,
+  .extractor-report-coverage,.extractor-report-loading,.extractor-toolbar,.extractor-search-row,
+  .extractor-attention-list,.extractor-chart-area,.extractor-chart-company,.extractor-donut,
+  .extractor-account-info,.extractor-account-notice,.extractor-plan-summary,.extractor-plan-usage
+){
+  border-color:transparent!important;
+}
+.extractor-account-overlay{background:rgba(0,4,10,.76)!important;backdrop-filter:blur(7px)}
+.extractor-account-drawer{background:#080e18!important;color:#e8eef5!important;box-shadow:-26px 0 70px rgba(0,0,0,.48)!important}
+.extractor-account-drawer>header,.extractor-account-drawer>footer{background:#080e18!important;border-color:rgba(255,255,255,.055)!important}
+.extractor-account-body>nav{background:#0b111c!important;border-color:rgba(255,255,255,.055)!important}
+.extractor-account-body>nav button{color:#93a3b4!important}
+.extractor-account-body>nav button:hover,.extractor-account-body>nav button.active{background:#151e2b!important;color:#f1f5f9!important}
+.extractor-account-body>main{background:#080e18!important}
+.extractor-account-profile p,.extractor-account-profile>div>span,.extractor-account-section-head p,
+.extractor-account-info span,.extractor-account-notice p,.extractor-plan-summary span,.extractor-plan-usage span{color:#718397!important}
+.extractor-account-info,.extractor-account-notice,.extractor-plan-summary,.extractor-plan-usage{
+  border:0!important;background:#101725!important;color:#e8eef5!important
+}
+.extractor-account-action,.extractor-account-actions button,.extractor-account-drawer>footer button{
+  border:0!important;background:#151e2b!important;color:#dce5ed!important
+}
+.extractor-account-actions button.primary{background:#f5f5f4!important;color:#111827!important}
+.extractor-account-danger{border:0!important;background:rgba(207,101,109,.08)!important;color:#e5a1a6!important}
+.extractor-account-danger p{color:#b8898d!important}
+.extractor-account-danger button{border:0!important;background:#25171b!important;color:#df8a90!important}
+.extractor-report-company{border:0!important;background:transparent!important;gap:8px!important}
+.extractor-report-company>div{border:0!important;border-radius:4px;background:var(--ex-surface)!important}
+.extractor-report-loading{border:0!important;background:var(--ex-surface)!important}

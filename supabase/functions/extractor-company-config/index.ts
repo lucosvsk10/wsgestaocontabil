@@ -151,7 +151,7 @@ Deno.serve(async req => {
       const { data, error } = await ctx.admin
         .from('extractor_companies')
         .select(
-          'id,status,automatic_sync,fiscal_company_id,fiscal_companies(id,cnpj,razao_social,nome_fantasia,inscricao_estadual,uf,municipio,codigo_municipio,last_sync_at,fiscal_certificates(id,certificate_name,holder_cnpj,holder_name,valid_from,valid_until,is_active))'
+          'id,status,automatic_sync,fiscal_company_id,created_at,updated_at,fiscal_companies(id,cnpj,razao_social,nome_fantasia,inscricao_estadual,uf,municipio,codigo_municipio,last_sync_at,status,regime_tributario,ambiente_padrao,endereco,created_at,updated_at,fiscal_certificates(id,certificate_name,holder_cnpj,holder_name,valid_from,valid_until,is_active,created_at))'
         )
         .eq('account_id', ctx.account.id)
         .neq('status', 'removed')
