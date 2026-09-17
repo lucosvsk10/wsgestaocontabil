@@ -29,6 +29,19 @@ async function internalCall(base: string, name: string, token: string, body: any
   return { ok: response.ok, status: response.status, payload };
 }
 
+async function fetchPaged(makeQuery: () => any) {
+  const rows: any[] = [];
+  const pageSize = 1000;
+  for (let from = 0; from < 100000; from += pageSize) {
+    const { data, error } = await makeQuery().range(from, from + pageSize - 1);
+    if (error) throw error;
+    const page = data || [];
+    rows.push(...page);
+    if (page.length < pageSize) break;
+  }
+  return rows;
+}
+
 async function loadRowsForKeys(admin: any, companyId: string, keys: string[]) {
   const rows: any[] = [];
   for (let index = 0; index < keys.length; index += 100) {
@@ -75,17 +88,17 @@ function statsForKeys(keys: string[], rows: any[]) {
 }
 
 async function currentNfseStats(admin: any, companyId: string, range: ReturnType<typeof bounds>) {
-  const { data, error } = await admin.from("fiscal_dfe_documents")
+  const rows = await fetchPaged(() => admin.from("fiscal_dfe_documents")
     .select("access_key,full_xml,xml,issue_date,updated_at")
     .eq("company_id", companyId)
     .eq("direction", "entrada")
     .gte("issue_date", range.start)
     .lt("issue_date", range.next)
     .like("source", "national_nfse%")
-    .neq("document_kind", "evento");
-  if (error) throw error;
+    .neq("document_kind", "evento")
+    .order("issue_date", { ascending: true }));
   const byKey = new Map<string, any[]>();
-  for (const row of data || []) {
+  for (const row of rows) {
     const key = String(row.access_key || `row:${row.issue_date}:${row.updated_at}`);
     const list = byKey.get(key) || [];
     list.push(row);
@@ -134,9 +147,8 @@ export async function purchaseVerification(admin: any, base: string, token: stri
   let keys: string[] = Array.isArray(source?.purchase_keys)
     ? source.purchase_keys.map(digits).filter((key: string) => key.length === 44)
     : [];
-
   if (!keys.length) {
-    const { data, error } = await admin.from("fiscal_dfe_documents")
+    const data = await fetchPaged(() => admin.from("fiscal_dfe_documents")
       .select("access_key")
       .eq("company_id", company.id)
       .eq("direction", "entrada")
@@ -144,21 +156,19 @@ export async function purchaseVerification(admin: any, base: string, token: stri
       .neq("document_kind", "evento")
       .gte("issue_date", range.start)
       .lt("issue_date", range.next)
-      .not("access_key", "is", null);
-    if (error) throw error;
-    keys = [...new Set((data || []).map((row) => digits(row.access_key)).filter((key) => key.length === 44))];
+      .not("access_key", "is", null)
+      .order("issue_date", { ascending: true }));
+    keys = [...new Set(data.map((row) => digits(row.access_key)).filter((key) => key.length === 44))];
   }
 
   let rows = keys.length ? await loadRowsForKeys(admin, company.id, keys) : [];
   let stats = statsForKeys(keys, rows);
-
   if (verify && token && stats.normalPending > 0) {
     const pendingKeys = keys.filter((key) => {
       const matches = rows.filter((row) => digits(row.access_key) === key);
       return !matches.some((row) => row.full_xml && row.xml) &&
         !matches.some((row) => ["xml_requires_manifestation", "xml_retry:manifestation_sent"].includes(String(row.parse_error || "")));
     }).slice(0, 3);
-
     for (const accessKey of pendingKeys) {
       try {
         const recovery = await internalCall(base, "fiscal-purchases-xml-backfill", token, { company_id: company.id, access_key: accessKey, batch: 1 }, 70000);
@@ -192,21 +202,20 @@ export async function purchaseVerification(admin: any, base: string, token: stri
 
 export async function salesVerification(admin: any, companyId: string, start: string, next: string, state: any) {
   const latest = Number(state?.latest_number || 0);
-  const { data, error } = await admin.from("fiscal_sales_reconciliation")
+  const rows = await fetchPaged(() => admin.from("fiscal_sales_reconciliation")
     .select("status,access_key,issue_date,note_number")
     .eq("company_id", companyId)
     .eq("model", "65")
     .eq("series", "1")
-    .lte("note_number", latest || 999999999);
-  if (error) throw error;
+    .lte("note_number", latest || 999999999)
+    .order("note_number", { ascending: true }));
 
-  const rows = data || [];
   const counts: Record<string, number> = { found: 0, cancelled: 0, inutilized: 0, not_authorized: 0, not_found: 0, pending: 0, error: 0 };
   for (const row of rows) counts[row.status] = (counts[row.status] || 0) + 1;
   const pendingSequence = Number(counts.pending || 0) + Number(counts.error || 0);
   const resolved = rows.length - pendingSequence;
   const sequenceComplete = latest > 0 && rows.length === latest && pendingSequence === 0;
-  const staleState = Boolean(state && sequenceComplete && (!state.reconciliation_complete || Number(state.reconciliation_resolved || 0) !== resolved || state.status === "reconciling"));
+  const staleState = Boolean(state && sequenceComplete && (!state.reconciliation_complete || Number(state.reconciliation_resolved || 0) !== resolved || Number(state.reconciliation_total || 0) !== latest || state.status === "reconciling"));
 
   if (staleState) {
     await admin.from("fiscal_sales_sync_state").update({
@@ -228,20 +237,20 @@ export async function salesVerification(admin: any, companyId: string, start: st
 
   const monthFound = rows.filter((row) => row.status === "found" && row.issue_date && row.issue_date >= start && row.issue_date < next);
   const keys = [...new Set(monthFound.map((row) => digits(row.access_key)).filter((key) => key.length === 44))];
-  const { data: documents, error: documentsError } = await admin.from("fiscal_sales_documents")
+  const documents = await fetchPaged(() => admin.from("fiscal_sales_documents")
     .select("access_key,xml,issue_date,total_value,updated_at")
     .eq("company_id", companyId)
     .gte("issue_date", start)
-    .lt("issue_date", next);
-  if (documentsError) throw documentsError;
+    .lt("issue_date", next)
+    .order("issue_date", { ascending: true }));
 
-  const saved = new Set((documents || []).map((row) => digits(row.access_key)).filter(Boolean));
-  const withXml = new Set((documents || []).filter((row) => row.xml).map((row) => digits(row.access_key)).filter(Boolean));
+  const saved = new Set(documents.map((row) => digits(row.access_key)).filter(Boolean));
+  const withXml = new Set(documents.filter((row) => row.xml).map((row) => digits(row.access_key)).filter(Boolean));
   return {
-    expected: keys.length || (documents || []).length,
-    stored: keys.length ? keys.filter((key) => saved.has(key)).length : (documents || []).length,
-    xml_ready: keys.length ? keys.filter((key) => withXml.has(key)).length : (documents || []).filter((row) => row.xml).length,
-    pending_xml: keys.length ? keys.filter((key) => !withXml.has(key)).length : (documents || []).filter((row) => !row.xml).length,
+    expected: keys.length || documents.length,
+    stored: keys.length ? keys.filter((key) => saved.has(key)).length : documents.length,
+    xml_ready: keys.length ? keys.filter((key) => withXml.has(key)).length : documents.filter((row) => row.xml).length,
+    pending_xml: keys.length ? keys.filter((key) => !withXml.has(key)).length : documents.filter((row) => !row.xml).length,
     cancelled: rows.filter((row) => row.status === "cancelled" && row.issue_date && row.issue_date >= start && row.issue_date < next).length,
     sequence_total: latest || rows.length,
     sequence_resolved: resolved,
@@ -302,7 +311,6 @@ export async function manifestAndRecover(
       results.push({ access_key: accessKey, status: "already_complete", registered: true, recovered: true });
       continue;
     }
-
     const states = byKey.get(accessKey) || [];
     const alreadyRegistered = states.includes("xml_retry:manifestation_sent");
     let event: any = { ok: true, status: 200, payload: { ok: true, registered: true, already_registered: true } };
@@ -314,7 +322,6 @@ export async function manifestAndRecover(
         access_key: accessKey,
       }, 70000);
     }
-
     const eventAccepted = Boolean(event.ok && (event.payload?.registered || event.payload?.already_complete || event.payload?.already_registered || event.payload?.ok));
     if (!eventAccepted) {
       results.push({
@@ -327,21 +334,15 @@ export async function manifestAndRecover(
       });
       continue;
     }
-
     let recovered = await xmlReady(admin, companyId, accessKey);
     const attempts: any[] = [];
-    const delays = [1200, 3000, 6000];
-    for (let index = 0; index < delays.length && !recovered; index += 1) {
-      await new Promise((resolve) => setTimeout(resolve, delays[index]));
-      const backfill = await internalCall(base, "fiscal-purchases-xml-backfill", token, {
-        company_id: companyId,
-        access_key: accessKey,
-        batch: 1,
-      }, 70000);
+    for (const delay of [1200, 3000, 6000]) {
+      if (recovered) break;
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      const backfill = await internalCall(base, "fiscal-purchases-xml-backfill", token, { company_id: companyId, access_key: accessKey, batch: 1 }, 70000);
       attempts.push(backfill.payload);
       recovered = await xmlReady(admin, companyId, accessKey);
     }
-
     results.push({
       access_key: accessKey,
       status: recovered ? "recovered" : "registered_pending_xml",
@@ -356,6 +357,5 @@ export async function manifestAndRecover(
         : "Manifestação registrada. A SEFAZ ainda não liberou o XML; a recuperação automática continuará tentando.",
     });
   }
-
   return results;
 }
