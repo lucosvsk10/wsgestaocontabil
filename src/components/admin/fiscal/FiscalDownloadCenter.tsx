@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Archive, Download, FileCode2, FileSpreadsheet, FileText, KeyRound, Loader2, X } from 'lucide-react';
+import { AlertTriangle, Archive, Download, FileCode2, FileSpreadsheet, FileText, KeyRound, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,6 +20,16 @@ type Props = {
   onClose: () => void;
 };
 
+type PendingDocument = {
+  company: string;
+  type: string;
+  number: string;
+  series: string;
+  access_key: string;
+  issue_date?: string | null;
+  reason?: string | null;
+};
+
 type Preflight = {
   total: number;
   complete: number;
@@ -27,6 +37,7 @@ type Preflight = {
   companies: number;
   archive_limit?: number;
   too_large?: boolean;
+  pending_documents?: PendingDocument[];
 };
 
 const formats: Array<{ id: DownloadFormat; title: string; description: string; icon: typeof Archive }> = [
@@ -52,8 +63,16 @@ const triggerBlobDownload = (blob: Blob, filename: string) => {
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+  window.setTimeout(() => URL.revokeObjectURL(url), 2500);
 };
+
+const isZipSignature = (bytes: Uint8Array) =>
+  bytes.length >= 4 &&
+  bytes[0] === 0x50 &&
+  bytes[1] === 0x4b &&
+  ((bytes[2] === 0x03 && bytes[3] === 0x04) ||
+    (bytes[2] === 0x05 && bytes[3] === 0x06) ||
+    (bytes[2] === 0x07 && bytes[3] === 0x08));
 
 const formatLabel: Record<DownloadFormat, string> = {
   bundle: 'Pacote completo',
@@ -62,6 +81,26 @@ const formatLabel: Record<DownloadFormat, string> = {
   keys: 'Chaves das notas',
   report: 'Relatório',
 };
+
+const normalizePreflight = (data: any): Preflight => ({
+  total: Number(data?.total || 0),
+  complete: Number(data?.complete || 0),
+  pending: Number(data?.pending || 0),
+  companies: Number(data?.companies || 0),
+  archive_limit: Number(data?.archive_limit || 0) || undefined,
+  too_large: Boolean(data?.too_large),
+  pending_documents: Array.isArray(data?.pending_documents)
+    ? data.pending_documents.map((item: any) => ({
+        company: String(item?.company || ''),
+        type: String(item?.type || ''),
+        number: String(item?.number || ''),
+        series: String(item?.series || ''),
+        access_key: String(item?.access_key || ''),
+        issue_date: item?.issue_date ? String(item.issue_date) : null,
+        reason: item?.reason ? String(item.reason) : null,
+      }))
+    : [],
+});
 
 export function FiscalDownloadCenter({
   open,
@@ -87,12 +126,13 @@ export function FiscalDownloadCenter({
   const canUseAll = fiscalCompanies.length > 1;
   const requiresIntegralFiles = ['bundle', 'pdf', 'xml'].includes(format);
   const invalidPeriod = !start || !end || start > end;
-  const downloadBlocked = Boolean(
-    !preflight ||
-      preflight.total === 0 ||
-      invalidPeriod ||
-      (requiresIntegralFiles && preflight.pending > 0) ||
-      (requiresIntegralFiles && preflight.too_large)
+  const busy = checking || downloading;
+  const canDownloadPartial = Boolean(
+    preflight &&
+      requiresIntegralFiles &&
+      preflight.pending > 0 &&
+      preflight.complete > 0 &&
+      !preflight.too_large
   );
 
   useEffect(() => {
@@ -114,7 +154,7 @@ export function FiscalDownloadCenter({
 
   if (!open) return null;
 
-  const payload = (action: 'preflight' | 'download') => ({
+  const payload = (action: 'preflight' | 'download', allowPartial = false) => ({
     action,
     format,
     company_id: scope === 'current' ? currentCompany?.id : undefined,
@@ -123,56 +163,93 @@ export function FiscalDownloadCenter({
     end,
     direction,
     document_type: documentType,
+    allow_partial: allowPartial,
   });
 
-  const check = async () => {
-    if (invalidPeriod || !currentCompany) return;
-    setChecking(true);
-    setError('');
-    try {
-      const { data, error: invokeError } = await supabase.functions.invoke('admin-fiscal-export', {
-        body: payload('preflight'),
-      });
-      if (invokeError) throw invokeError;
-      if (data?.error) throw new Error(String(data.error));
-      setPreflight({
-        total: Number(data?.total || 0),
-        complete: Number(data?.complete || 0),
-        pending: Number(data?.pending || 0),
-        companies: Number(data?.companies || 0),
-        archive_limit: Number(data?.archive_limit || 0) || undefined,
-        too_large: Boolean(data?.too_large),
-      });
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
-      setPreflight(null);
-    } finally {
-      setChecking(false);
+  const preflightRequest = async () => {
+    const { data, error: invokeError } = await supabase.functions.invoke('admin-fiscal-export', {
+      body: payload('preflight'),
+    });
+    if (invokeError) throw invokeError;
+    if (data?.error) throw new Error(String(data.error));
+    const next = normalizePreflight(data);
+    setPreflight(next);
+    return next;
+  };
+
+  const performDownload = async (allowPartial = false) => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) throw new Error('Sessão expirada. Entre novamente para continuar.');
+
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-fiscal-export`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Accept: requiresIntegralFiles ? 'application/zip' : 'text/csv,application/octet-stream',
+      },
+      body: JSON.stringify(payload('download', allowPartial)),
+    });
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      if (body && typeof body === 'object') setPreflight(normalizePreflight(body));
+      throw new Error(String(body?.error || `Falha ao preparar o download (${response.status}).`));
+    }
+
+    const fallback = format === 'report'
+      ? 'relatorio-fiscal.csv'
+      : format === 'keys'
+        ? 'chaves-fiscais.csv'
+        : 'documentos-fiscais.zip';
+    const filename = getFilename(response, fallback);
+
+    if (requiresIntegralFiles) {
+      const buffer = await response.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      if (!isZipSignature(bytes)) {
+        const diagnostic = new TextDecoder().decode(bytes.slice(0, 500)).replace(/\s+/g, ' ').trim();
+        throw new Error(
+          diagnostic && diagnostic.startsWith('{')
+            ? 'O servidor retornou uma resposta de erro no lugar do ZIP. Tente novamente.'
+            : 'O arquivo gerado não contém uma estrutura ZIP válida. O download foi interrompido para não salvar um arquivo corrompido.'
+        );
+      }
+      triggerBlobDownload(new Blob([buffer], { type: 'application/zip' }), filename);
+    } else {
+      triggerBlobDownload(await response.blob(), filename);
     }
   };
 
-  const download = async () => {
-    if (downloadBlocked || !currentCompany) return;
+  const handleDownload = async () => {
+    if (invalidPeriod || !currentCompany || busy) return;
+    setChecking(true);
+    setError('');
+    try {
+      const checked = await preflightRequest();
+      if (checked.total === 0) return;
+      if (requiresIntegralFiles && checked.too_large) return;
+      if (requiresIntegralFiles && checked.pending > 0) return;
+
+      setChecking(false);
+      setDownloading(true);
+      await performDownload(false);
+      onClose();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setChecking(false);
+      setDownloading(false);
+    }
+  };
+
+  const handlePartialDownload = async () => {
+    if (!canDownloadPartial || !currentCompany || busy) return;
     setDownloading(true);
     setError('');
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-      if (!token) throw new Error('Sessão expirada. Entre novamente para continuar.');
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-fiscal-export`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload('download')),
-      });
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(String(body?.error || `Falha ao preparar o download (${response.status}).`));
-      }
-      const fallback = `${format === 'report' ? 'relatorio-fiscal.csv' : format === 'keys' ? 'chaves-fiscais.csv' : 'documentos-fiscais.zip'}`;
-      triggerBlobDownload(await response.blob(), getFilename(response, fallback));
+      await performDownload(true);
       onClose();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
@@ -182,15 +259,20 @@ export function FiscalDownloadCenter({
   };
 
   return (
-    <div className="fixed inset-0 z-[185] flex items-center justify-center bg-black/55 p-3 backdrop-blur-md" onMouseDown={event => event.target === event.currentTarget && !downloading && onClose()}>
+    <div
+      className="fixed inset-0 z-[185] flex items-center justify-center bg-black/55 p-3 backdrop-blur-md"
+      onMouseDown={event => event.target === event.currentTarget && !busy && onClose()}
+    >
       <div className="max-h-[92vh] w-full max-w-[980px] overflow-auto rounded-[24px] border border-border bg-background shadow-2xl">
         <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b bg-background/95 px-6 py-5 backdrop-blur">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[.16em] text-muted-foreground">Central de downloads</p>
             <h2 className="mt-1 text-xl font-semibold">Baixar documentos fiscais</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Escolha exatamente o que precisa. O sistema confere a integridade antes de gerar arquivos oficiais.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Escolha o que precisa. Ao clicar em Baixar, o sistema confere a integridade e inicia o download automaticamente.</p>
           </div>
-          <button disabled={downloading} onClick={onClose} className="rounded-full p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-40" aria-label="Fechar"><X className="h-4 w-4" /></button>
+          <button disabled={busy} onClick={onClose} className="rounded-full p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-40" aria-label="Fechar">
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
         <div className="space-y-6 p-6">
@@ -201,7 +283,13 @@ export function FiscalDownloadCenter({
                 const Icon = item.icon;
                 const active = format === item.id;
                 return (
-                  <button key={item.id} type="button" onClick={() => setFormat(item.id)} className={`rounded-2xl border p-4 text-left transition ${active ? 'border-foreground bg-foreground text-background shadow-sm' : 'border-border bg-muted/10 hover:bg-muted/25'}`}>
+                  <button
+                    key={item.id}
+                    type="button"
+                    disabled={busy}
+                    onClick={() => setFormat(item.id)}
+                    className={`rounded-2xl border p-4 text-left transition disabled:opacity-60 ${active ? 'border-foreground bg-foreground text-background shadow-sm' : 'border-border bg-muted/10 hover:bg-muted/25'}`}
+                  >
                     <Icon className="h-4 w-4" />
                     <p className="mt-3 text-sm font-semibold">{item.title}</p>
                     <p className={`mt-1 text-[11px] leading-4 ${active ? 'text-background/70' : 'text-muted-foreground'}`}>{item.description}</p>
@@ -215,11 +303,11 @@ export function FiscalDownloadCenter({
             <div>
               <p className="text-xs font-semibold">2. Empresas</p>
               <div className="mt-3 grid grid-cols-2 gap-2">
-                <button type="button" onClick={() => setScope('current')} className={`rounded-xl border px-4 py-3 text-left ${scope === 'current' ? 'border-foreground bg-muted/35' : 'border-border'}`}>
+                <button type="button" disabled={busy} onClick={() => setScope('current')} className={`rounded-xl border px-4 py-3 text-left disabled:opacity-60 ${scope === 'current' ? 'border-foreground bg-muted/35' : 'border-border'}`}>
                   <p className="text-sm font-semibold">Empresa atual</p>
                   <p className="mt-1 truncate text-xs text-muted-foreground">{currentCompany?.name || '—'}</p>
                 </button>
-                <button type="button" disabled={!canUseAll} onClick={() => canUseAll && setScope('all')} className={`rounded-xl border px-4 py-3 text-left disabled:cursor-not-allowed disabled:opacity-40 ${scope === 'all' ? 'border-foreground bg-muted/35' : 'border-border'}`}>
+                <button type="button" disabled={!canUseAll || busy} onClick={() => canUseAll && setScope('all')} className={`rounded-xl border px-4 py-3 text-left disabled:cursor-not-allowed disabled:opacity-40 ${scope === 'all' ? 'border-foreground bg-muted/35' : 'border-border'}`}>
                   <p className="text-sm font-semibold">Todas as empresas</p>
                   <p className="mt-1 text-xs text-muted-foreground">{fiscalCompanies.length} com perfil fiscal</p>
                 </button>
@@ -229,22 +317,22 @@ export function FiscalDownloadCenter({
             <div>
               <p className="text-xs font-semibold">3. Período</p>
               <div className="mt-3 grid grid-cols-2 gap-3">
-                <label className="text-[11px] font-medium text-muted-foreground">Início<Input className="mt-1.5" type="date" value={start} onChange={event => setStart(event.target.value)} /></label>
-                <label className="text-[11px] font-medium text-muted-foreground">Fim<Input className="mt-1.5" type="date" min={start} value={end} onChange={event => setEnd(event.target.value)} /></label>
+                <label className="text-[11px] font-medium text-muted-foreground">Início<Input disabled={busy} className="mt-1.5" type="date" value={start} onChange={event => setStart(event.target.value)} /></label>
+                <label className="text-[11px] font-medium text-muted-foreground">Fim<Input disabled={busy} className="mt-1.5" type="date" min={start} value={end} onChange={event => setEnd(event.target.value)} /></label>
               </div>
             </div>
           </section>
 
           <section className="grid gap-4 sm:grid-cols-2">
             <label className="text-xs font-semibold">Operação
-              <select value={direction} onChange={event => setDirection(event.target.value as Direction)} className="mt-2 h-11 w-full rounded-xl border bg-background px-3 text-sm font-normal">
+              <select disabled={busy} value={direction} onChange={event => setDirection(event.target.value as Direction)} className="mt-2 h-11 w-full rounded-xl border bg-background px-3 text-sm font-normal disabled:opacity-60">
                 <option value="todos">Compras + vendas</option>
                 <option value="entrada">Somente compras / entradas</option>
                 <option value="saida">Somente vendas / saídas</option>
               </select>
             </label>
             <label className="text-xs font-semibold">Tipo de documento
-              <select value={documentType} onChange={event => setDocumentType(event.target.value as DocumentType)} className="mt-2 h-11 w-full rounded-xl border bg-background px-3 text-sm font-normal">
+              <select disabled={busy} value={documentType} onChange={event => setDocumentType(event.target.value as DocumentType)} className="mt-2 h-11 w-full rounded-xl border bg-background px-3 text-sm font-normal disabled:opacity-60">
                 <option value="todos">Todos</option>
                 <option value="nfe">NF-e</option>
                 <option value="nfce">NFC-e</option>
@@ -264,24 +352,54 @@ export function FiscalDownloadCenter({
                 <div><p className={`text-2xl font-semibold ${preflight.pending ? 'text-amber-600' : 'text-emerald-600'}`}>{preflight.pending}</p><p className="text-[10px] uppercase tracking-wide text-muted-foreground">Pendentes</p></div>
                 <div><p className="text-2xl font-semibold">{preflight.companies}</p><p className="text-[10px] uppercase tracking-wide text-muted-foreground">Empresas</p></div>
               </div>
+
               <p className="mt-4 text-xs leading-5 text-muted-foreground">
                 {preflight.total === 0
                   ? 'Nenhum documento foi encontrado com esses filtros.'
                   : requiresIntegralFiles && preflight.pending > 0
-                    ? `Há ${preflight.pending} documento(s) sem arquivo integral. O ZIP oficial só é liberado quando todos estiverem completos; relatórios e chaves continuam disponíveis normalmente.`
+                    ? `${preflight.pending} documento(s) ainda não têm arquivo integral. Você pode aguardar a recuperação ou baixar agora somente os ${preflight.complete} arquivo(s) disponíveis.`
                     : preflight.too_large
                       ? `O pacote tem documentos demais para uma geração segura de uma só vez. Limite atual: ${preflight.archive_limit || 200}. Reduza o período ou filtre o tipo.`
-                      : `${formatLabel[format]} pronto para ser gerado com os filtros selecionados.`}
+                      : `${formatLabel[format]} conferido e pronto.`}
               </p>
+
+              {requiresIntegralFiles && preflight.pending > 0 && Boolean(preflight.pending_documents?.length) && (
+                <div className="mt-4 overflow-hidden rounded-xl border border-amber-500/20 bg-background/70">
+                  <div className="flex items-center gap-2 border-b px-3 py-2 text-xs font-semibold">
+                    <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                    Arquivos que não foram encontrados
+                  </div>
+                  <div className="max-h-48 divide-y overflow-auto">
+                    {preflight.pending_documents?.slice(0, 20).map((item, index) => (
+                      <div key={`${item.access_key}-${index}`} className="px-3 py-2.5 text-xs">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="font-medium">{item.company || 'Empresa'} · {item.type || 'Documento'} {item.number ? `nº ${item.number}` : ''}</span>
+                          {item.series && <span className="text-[10px] text-muted-foreground">Série {item.series}</span>}
+                        </div>
+                        <p className="mt-1 break-all font-mono text-[10px] text-muted-foreground">{item.access_key || 'Sem chave informada'}</p>
+                        {item.reason && <p className="mt-1 text-[10px] text-amber-700 dark:text-amber-300">{item.reason}</p>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </section>
           )}
         </div>
 
         <div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-3 border-t bg-background/95 px-6 py-4 backdrop-blur">
           <p className="text-xs text-muted-foreground">{scope === 'all' ? 'Todas as empresas fiscais' : currentCompany?.name || 'Empresa atual'} · {formatLabel[format]}</p>
-          <div className="flex gap-2">
-            <Button variant="outline" disabled={checking || downloading || invalidPeriod} onClick={() => void check()}>{checking ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}{checking ? 'Conferindo...' : preflight ? 'Conferir novamente' : 'Conferir'}</Button>
-            <Button disabled={downloading || checking || downloadBlocked} onClick={() => void download()}>{downloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}{downloading ? 'Preparando...' : 'Baixar'}</Button>
+          <div className="flex flex-wrap justify-end gap-2">
+            {canDownloadPartial && (
+              <Button variant="outline" disabled={busy} onClick={() => void handlePartialDownload()}>
+                <Download className="mr-2 h-4 w-4" />
+                Baixar assim mesmo
+              </Button>
+            )}
+            <Button disabled={busy || invalidPeriod || !currentCompany} onClick={() => void handleDownload()}>
+              {checking || downloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+              {checking ? 'Conferindo...' : downloading ? 'Preparando...' : 'Baixar'}
+            </Button>
           </div>
         </div>
       </div>
