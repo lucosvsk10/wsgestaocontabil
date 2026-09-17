@@ -149,6 +149,9 @@ verify_jwt = true
 [functions.admin-fiscal-bootstrap]
 verify_jwt = true
 
+[functions.admin-fiscal-export]
+verify_jwt = true
+
 [functions.saas-fiscal-config]
 verify_jwt = true
 
