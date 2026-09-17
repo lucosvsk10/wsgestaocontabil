@@ -37,6 +37,9 @@ function authorized(req) {
 }
 function stripDecl(xml) { return String(xml || '').replace(/^<\?xml[^>]*\?>\s*/i, ''); }
 function tls(body) {
+  const pfxB64 = String(body.certificate_base64 || '').replace(/\s+/g, '');
+  const password = String(body.certificate_password || '');
+  if (pfxB64) return { pfx: Buffer.from(pfxB64, 'base64'), passphrase: password };
   const cert = String(body.certificate_pem || '');
   const key = String(body.private_key_pem || '');
   const chain = Array.isArray(body.chain_pem) ? body.chain_pem.map(String).filter(Boolean) : [];
@@ -46,7 +49,7 @@ function tls(body) {
 function requestHttps(url, material, { method = 'POST', body = '', contentType = '', accept = '*/*' } = {}) {
   const target = new URL(url);
   return new Promise((resolve, reject) => {
-    const headers = { 'User-Agent': 'WS-Gestao-Fiscal-Gateway/4.0', 'Connection': 'close', 'Accept': accept };
+    const headers = { 'User-Agent': 'WS-Gestao-Fiscal-Gateway/4.1', 'Connection': 'close', 'Accept': accept };
     if (body) {
       headers['Content-Type'] = contentType;
       headers['Content-Length'] = Buffer.byteLength(body);
@@ -56,8 +59,7 @@ function requestHttps(url, material, { method = 'POST', body = '', contentType =
       port: 443,
       path: target.pathname + target.search,
       method,
-      cert: material.cert,
-      key: material.key,
+      ...material,
       minVersion: 'TLSv1.2',
       rejectUnauthorized: true,
       servername: target.hostname,
