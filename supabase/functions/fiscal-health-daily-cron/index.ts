@@ -31,6 +31,19 @@ async function internalCall(base: string, name: string, token: string, body: any
   return { ok: response.ok, status: response.status, payload };
 }
 
+async function fetchPaged(makeQuery: () => any) {
+  const rows: any[] = [];
+  const pageSize = 1000;
+  for (let from = 0; from < 100000; from += pageSize) {
+    const { data, error } = await makeQuery().range(from, from + pageSize - 1);
+    if (error) throw error;
+    const page = data || [];
+    rows.push(...page);
+    if (page.length < pageSize) break;
+  }
+  return rows;
+}
+
 async function auditPurchases(admin: any, base: string, token: string, company: any, purchaseState: any, hasCredential: boolean, range: ReturnType<typeof bounds>) {
   const issues: Issue[] = [];
   let source: any = null;
@@ -43,30 +56,23 @@ async function auditPurchases(admin: any, base: string, token: string, company: 
       if (Number(purchaseState?.consecutive_failures || 0) >= 3) issues.push({ issue_code: "PURCHASE_SOURCE_UNAVAILABLE", severity: "error", title: "Fonte de compras indisponível", message: "A conferência com a fonte fiscal falhou repetidamente. O sistema continuará tentando automaticamente.", data: { error: error instanceof Error ? error.message : String(error) } });
     }
   }
-
   const sourceKeys: string[] = Array.isArray(source?.purchase_keys) ? source.purchase_keys.map(digits).filter((key: string) => key.length === 44) : [];
   let query = admin.from("fiscal_dfe_documents").select("access_key,full_xml,xml,parse_error,updated_at,source").eq("company_id", company.id).eq("direction", "entrada").eq("model", "55").neq("document_kind", "evento").gte("issue_date", range.start).lt("issue_date", range.next);
   if (sourceKeys.length) query = query.in("access_key", sourceKeys);
-  const { data: rows, error } = await query;
-  if (error) throw error;
+  const rows = await fetchPaged(() => query.order("issue_date", { ascending: true }));
   const byKey = new Map<string, any[]>();
-  for (const row of rows || []) { const key = digits(row.access_key); if (key.length !== 44) continue; const list = byKey.get(key) || []; list.push(row); byKey.set(key, list); }
+  for (const row of rows) { const key = digits(row.access_key); if (key.length !== 44) continue; const list = byKey.get(key) || []; list.push(row); byKey.set(key, list); }
   const expectedKeys = sourceKeys.length ? sourceKeys : [...byKey.keys()];
   const stored = expectedKeys.filter((key) => byKey.has(key)).length;
   if (source && stored < Number(source.purchase_unique_keys || 0)) issues.push({ issue_code: "PURCHASE_COUNT_MISMATCH", severity: "error", title: "Compras incompletas", message: `A fonte fiscal apresenta ${Number(source.purchase_unique_keys || 0)} NF-e de compra no mês, mas ${stored} estão salvas no sistema.`, data: { expected: Number(source.purchase_unique_keys || 0), stored } });
-
   const manifestationKeys = expectedKeys.filter((key) => (byKey.get(key) || []).some((row) => String(row.parse_error || "") === "xml_requires_manifestation"));
   if (manifestationKeys.length) issues.push({ issue_code: "MANIFESTATION_REQUIRED", severity: "attention", title: "Manifestação fiscal necessária", message: `${manifestationKeys.length} nota(s) de compra precisam de manifestação para a SEFAZ liberar o XML integral.`, data: { count: manifestationKeys.length, access_keys: manifestationKeys.slice(0, 20) } });
-
   const manifestationSentKeys = expectedKeys.filter((key) => { const matches = byKey.get(key) || []; if (matches.some((row) => row.full_xml && row.xml)) return false; return matches.some((row) => String(row.parse_error || "") === "xml_retry:manifestation_sent" && Number.isFinite(Date.parse(row.updated_at || "")) && Date.now() - Date.parse(row.updated_at) > 30 * 60 * 1000); });
   if (manifestationSentKeys.length) issues.push({ issue_code: "MANIFESTATION_XML_PENDING", severity: "attention", title: "XML ainda aguardando a SEFAZ", message: `${manifestationSentKeys.length} nota(s) já tiveram a manifestação registrada, mas o XML ainda não foi liberado após 30 minutos.`, data: { count: manifestationSentKeys.length, access_keys: manifestationSentKeys.slice(0, 20) } });
-
   const xmlPending = expectedKeys.filter((key) => { const matches = byKey.get(key) || []; if (matches.some((row) => row.full_xml && row.xml)) return false; return !matches.some((row) => ["xml_requires_manifestation", "xml_retry:manifestation_sent"].includes(String(row.parse_error || ""))); });
   if (xmlPending.length) issues.push({ issue_code: "PURCHASE_XML_PENDING", severity: "error", title: "XML de compra pendente", message: `${xmlPending.length} nota(s) de compra continuam sem XML integral após as tentativas automáticas.`, data: { count: xmlPending.length, access_keys: xmlPending.slice(0, 20) } });
-
-  const { data: nfseRows, error: nfseError } = await admin.from("fiscal_dfe_documents").select("full_xml,xml").eq("company_id", company.id).eq("direction", "entrada").like("source", "national_nfse%").neq("document_kind", "evento").gte("issue_date", range.start).lt("issue_date", range.next);
-  if (nfseError) throw nfseError;
-  const nfsePending = (nfseRows || []).filter((row: any) => !(row.full_xml && row.xml)).length;
+  const nfseRows = await fetchPaged(() => admin.from("fiscal_dfe_documents").select("full_xml,xml,issue_date").eq("company_id", company.id).eq("direction", "entrada").like("source", "national_nfse%").neq("document_kind", "evento").gte("issue_date", range.start).lt("issue_date", range.next).order("issue_date", { ascending: true }));
+  const nfsePending = nfseRows.filter((row: any) => !(row.full_xml && row.xml)).length;
   if (nfsePending) issues.push({ issue_code: "PURCHASE_NFSE_XML_PENDING", severity: "error", title: "XML de NFS-e pendente", message: `${nfsePending} NFS-e de compra continua sem documento integral.`, data: { count: nfsePending } });
   return issues;
 }
@@ -75,9 +81,7 @@ async function auditSales(admin: any, companyId: string, salesState: any, health
   const issues: Issue[] = [];
   if (!salesState || String(salesState.status || "").startsWith("waiting_")) return issues;
   const latest = Number(salesState.latest_number || 0);
-  const { data: reconciliation, error: reconciliationError } = await admin.from("fiscal_sales_reconciliation").select("status,access_key,issue_date,note_number").eq("company_id", companyId).eq("model", "65").eq("series", "1").lte("note_number", latest || 999999999);
-  if (reconciliationError) throw reconciliationError;
-  const all = reconciliation || [];
+  const all = await fetchPaged(() => admin.from("fiscal_sales_reconciliation").select("status,access_key,issue_date,note_number").eq("company_id", companyId).eq("model", "65").eq("series", "1").lte("note_number", latest || 999999999).order("note_number", { ascending: true }));
   const counts: Record<string, number> = {};
   for (const row of all) counts[row.status] = (counts[row.status] || 0) + 1;
   const unresolved = Number(counts.pending || 0) + Number(counts.error || 0);
@@ -89,13 +93,11 @@ async function auditSales(admin: any, companyId: string, salesState: any, health
   } else if (latest > 0) {
     issues.push({ issue_code: "SALES_RECONCILIATION_PENDING", severity: Number(health?.sales_failure_count || 0) >= 3 ? "error" : "attention", title: "Conferência de vendas pendente", message: `A sequência de vendas ainda não terminou: ${resolved}/${latest} posições resolvidas.`, data: { total: latest, resolved, unresolved } });
   }
-
   const foundThisMonth = all.filter((row) => row.status === "found" && row.issue_date && row.issue_date >= range.start && row.issue_date < range.next);
   const expectedKeys = [...new Set(foundThisMonth.map((row) => digits(row.access_key)).filter((key) => key.length === 44))];
-  const { data: documents, error: documentsError } = await admin.from("fiscal_sales_documents").select("access_key,xml").eq("company_id", companyId).gte("issue_date", range.start).lt("issue_date", range.next);
-  if (documentsError) throw documentsError;
-  const saved = new Set((documents || []).map((row: any) => digits(row.access_key)).filter(Boolean));
-  const withXml = new Set((documents || []).filter((row: any) => row.xml).map((row: any) => digits(row.access_key)).filter(Boolean));
+  const documents = await fetchPaged(() => admin.from("fiscal_sales_documents").select("access_key,xml,issue_date").eq("company_id", companyId).gte("issue_date", range.start).lt("issue_date", range.next).order("issue_date", { ascending: true }));
+  const saved = new Set(documents.map((row: any) => digits(row.access_key)).filter(Boolean));
+  const withXml = new Set(documents.filter((row: any) => row.xml).map((row: any) => digits(row.access_key)).filter(Boolean));
   const missing = expectedKeys.filter((key) => !saved.has(key));
   if (missing.length) issues.push({ issue_code: "SALES_COUNT_MISMATCH", severity: "error", title: "Vendas incompletas", message: `${missing.length} venda(s) encontradas na sequência fiscal ainda não estão salvas na base de documentos.`, data: { count: missing.length, access_keys: missing.slice(0, 20) } });
   const xmlPending = expectedKeys.filter((key) => saved.has(key) && !withXml.has(key));
