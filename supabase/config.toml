@@ -159,6 +159,12 @@ verify_jwt = true
 [functions.extractor-fiscal-manifest]
 verify_jwt = true
 
+[functions.extractor-fiscal-health]
+verify_jwt = true
+
+[functions.extractor-billing-portal]
+verify_jwt = true
+
 [functions.saas-fiscal-config]
 verify_jwt = true
 
