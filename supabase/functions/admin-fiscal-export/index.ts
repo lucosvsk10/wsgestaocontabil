@@ -5,7 +5,7 @@ import JSZip from 'npm:jszip@3.10.1';
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Expose-Headers': 'Content-Disposition',
+  'Access-Control-Expose-Headers': 'Content-Disposition, Content-Type, Content-Length',
 };
 
 const json = (body: unknown, status = 200) =>
@@ -52,7 +52,16 @@ const documentType = (document: any) => {
   return 'other';
 };
 
+const pendingReason = (document: any) => {
+  const error = String(document.parse_error || '');
+  if (error === 'xml_requires_manifestation') return 'Manifestação do destinatário necessária para liberar o XML.';
+  if (error === 'xml_retry:manifestation_sent') return 'Manifestação registrada; XML ainda aguardando liberação.';
+  if (!document.full_xml) return 'XML integral ainda não foi recuperado.';
+  return error ? clean(error) : 'Arquivo fiscal integral indisponível.';
+};
+
 const toPreview = (document: any) => ({
+  companyId: document.company_id,
   nsu: document.nsu,
   schema: document.schema_name,
   source: document.source,
@@ -66,6 +75,7 @@ const toPreview = (document: any) => ({
   issuerCnpj: document.issuer_cnpj,
   issuerName: document.issuer_name,
   recipientCnpj: document.recipient_cnpj,
+  recipientName: document.recipient_name,
   number: document.note_number,
   series: document.series,
   statusCode: document.status_code,
@@ -142,7 +152,9 @@ Deno.serve(async req => {
     const direction = String(body.direction || 'todos');
     const type = String(body.document_type || 'todos');
     const allCompanies = body.all_companies === true;
+    const allowPartial = body.allow_partial === true;
     const currentCompanyId = String(body.company_id || '');
+
     if (!['preflight', 'download'].includes(action)) return json({ error: 'Ação inválida' }, 400);
     if (!['bundle', 'pdf', 'xml', 'keys', 'report'].includes(format)) return json({ error: 'Formato inválido' }, 400);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end) || start > end) return json({ error: 'Período inválido' }, 400);
@@ -165,7 +177,7 @@ Deno.serve(async req => {
       const companyRows = await fetchPaged(() => {
         let query = admin
           .from('fiscal_dfe_documents')
-          .select('id,company_id,nsu,schema_name,source,document_kind,full_xml,direction,access_key,model,issue_date,value,issuer_cnpj,issuer_name,recipient_cnpj,note_number,series,status_code,status_text,xml,parse_error')
+          .select('id,company_id,nsu,schema_name,source,document_kind,full_xml,direction,access_key,model,issue_date,value,issuer_cnpj,issuer_name,recipient_cnpj,recipient_name,note_number,series,status_code,status_text,xml,parse_error')
           .eq('company_id', company.id)
           .neq('document_kind', 'evento')
           .gte('issue_date', `${start}T00:00:00Z`)
@@ -179,10 +191,25 @@ Deno.serve(async req => {
 
     let documents = dedupe(rows);
     if (type !== 'todos') documents = documents.filter(document => documentType(document) === type);
+
     const complete = documents.filter(validFullXml);
     const pending = documents.filter(document => !validFullXml(document));
     const archiveLimit = 200;
-    const tooLarge = ['bundle', 'pdf', 'xml'].includes(format) && documents.length > archiveLimit;
+    const requiresArchive = ['bundle', 'pdf', 'xml'].includes(format);
+    const tooLarge = requiresArchive && complete.length > archiveLimit;
+    const pendingDocuments = pending.slice(0, 100).map(document => {
+      const company: any = companyById.get(String(document.company_id));
+      return {
+        company: company?.nome_fantasia || company?.razao_social || '',
+        type: documentType(document).toUpperCase(),
+        number: String(document.note_number || ''),
+        series: String(document.series || ''),
+        access_key: String(document.access_key || ''),
+        issue_date: document.issue_date || null,
+        reason: pendingReason(document),
+      };
+    });
+
     const report = {
       ok: true,
       total: documents.length,
@@ -191,6 +218,7 @@ Deno.serve(async req => {
       companies: new Set(documents.map(document => document.company_id)).size,
       archive_limit: archiveLimit,
       too_large: tooLarge,
+      pending_documents: pendingDocuments,
       start,
       end,
       direction,
@@ -228,22 +256,41 @@ Deno.serve(async req => {
           ...cors,
           'content-type': 'text/csv; charset=utf-8',
           'content-disposition': `attachment; filename="${filename}"`,
+          'cache-control': 'no-store',
         },
       });
     }
 
-    if (pending.length) return json({ error: `${pending.length} documento(s) ainda não possuem XML integral. O pacote oficial só é liberado quando todos estiverem completos.`, ...report }, 409);
-    if (tooLarge) return json({ error: `O pacote tem ${documents.length} documentos. O limite seguro por geração é ${archiveLimit}; reduza o período ou aplique filtros.`, ...report }, 422);
-    const xmlSize = documents.reduce((total, document) => total + String(document.xml || '').length, 0);
-    if (xmlSize > 35_000_000) return json({ error: 'Os XMLs excedem o tamanho seguro do pacote. Reduza o período.' }, 422);
+    if (pending.length && !allowPartial) {
+      return json({
+        error: `${pending.length} documento(s) ainda não possuem arquivo integral. Confira a lista e, se quiser, use “Baixar assim mesmo” para baixar somente os disponíveis.`,
+        ...report,
+      }, 409);
+    }
+
+    const archiveDocuments = allowPartial ? complete : documents;
+    if (!archiveDocuments.length) {
+      return json({ error: 'Nenhum documento íntegro está disponível para compor o pacote.', ...report }, 409);
+    }
+    if (archiveDocuments.length > archiveLimit) {
+      return json({
+        error: `O pacote tem ${archiveDocuments.length} documentos íntegros. O limite seguro por geração é ${archiveLimit}; reduza o período ou aplique filtros.`,
+        ...report,
+        too_large: true,
+      }, 422);
+    }
+
+    const xmlSize = archiveDocuments.reduce((total, document) => total + String(document.xml || '').length, 0);
+    if (xmlSize > 35_000_000) return json({ error: 'Os XMLs excedem o tamanho seguro do pacote. Reduza o período.', ...report }, 422);
 
     const zip = new JSZip();
     const manifest: any[] = [];
-    for (let index = 0; index < documents.length; index += 4) {
-      const batch = documents.slice(index, index + 4);
+    for (let index = 0; index < archiveDocuments.length; index += 4) {
+      const batch = archiveDocuments.slice(index, index + 4);
       const pdfBytes = format === 'xml'
         ? batch.map(() => null)
         : await Promise.all(batch.map(document => renderPdf(baseUrl, anon, authorization, document)));
+
       for (let batchIndex = 0; batchIndex < batch.length; batchIndex += 1) {
         const document = batch[batchIndex];
         const company: any = companyById.get(String(document.company_id));
@@ -252,8 +299,10 @@ Deno.serve(async req => {
         const base = safeName(`${typeName}-${document.note_number || 'sem-numero'}-${document.access_key || document.nsu}`);
         const pdfPath = `${companyFolder}/PDF/${base}.pdf`;
         const xmlPath = `${companyFolder}/XML/${base}.xml`;
+
         if (format === 'bundle' || format === 'pdf') zip.file(pdfPath, pdfBytes[batchIndex]!);
         if (format === 'bundle' || format === 'xml') zip.file(xmlPath, String(document.xml || ''));
+
         manifest.push({
           company: company?.nome_fantasia || company?.razao_social || '',
           company_cnpj: company?.cnpj || '',
@@ -276,15 +325,51 @@ Deno.serve(async req => {
       ...manifest.map(item => [item.company, item.company_cnpj, item.access_key, item.note_number, item.series, item.type, item.direction, item.issue_date, item.value, item.status, item.pdf, item.xml].map(csvCell).join(';')),
     ].join('\n');
     zip.file('CONFERENCIA.csv', '\ufeff' + conference);
-    zip.file('MANIFESTO.json', JSON.stringify({ generated_at: new Date().toISOString(), filters: { start, end, direction, document_type: type, format }, documents: manifest }, null, 2));
-    const bytes = await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE', compressionOptions: { level: 6 } });
-    const filename = `documentos-fiscais-${format}-${start}-a-${end}.zip`;
-    return new Response(bytes, {
+
+    if (allowPartial && pending.length) {
+      const pendingCsv = [
+        ['empresa', 'tipo', 'nota', 'serie', 'emissao', 'chave', 'motivo'].map(csvCell).join(';'),
+        ...pendingDocuments.map(item => [item.company, item.type, item.number, item.series, item.issue_date, item.access_key, item.reason].map(csvCell).join(';')),
+      ].join('\n');
+      zip.file('PENDENTES-NAO-INCLUIDOS.csv', '\ufeff' + pendingCsv);
+    }
+
+    zip.file('MANIFESTO.json', JSON.stringify({
+      generated_at: new Date().toISOString(),
+      partial: allowPartial && pending.length > 0,
+      skipped_pending: allowPartial ? pending.length : 0,
+      filters: { start, end, direction, document_type: type, format },
+      documents: manifest,
+    }, null, 2));
+
+    const archive = await zip.generateAsync({
+      type: 'arraybuffer',
+      compression: 'DEFLATE',
+      compressionOptions: { level: 6 },
+    });
+    const signature = new Uint8Array(archive, 0, Math.min(4, archive.byteLength));
+    if (
+      signature.length < 4 ||
+      signature[0] !== 0x50 ||
+      signature[1] !== 0x4b ||
+      !((signature[2] === 0x03 && signature[3] === 0x04) ||
+        (signature[2] === 0x05 && signature[3] === 0x06) ||
+        (signature[2] === 0x07 && signature[3] === 0x08))
+    ) {
+      throw new Error('Falha interna ao finalizar a estrutura ZIP.');
+    }
+
+    const blob = new Blob([archive], { type: 'application/zip' });
+    const filename = `documentos-fiscais-${format}-${start}-a-${end}${allowPartial && pending.length ? '-parcial' : ''}.zip`;
+    return new Response(blob, {
       status: 200,
       headers: {
         ...cors,
         'content-type': 'application/zip',
         'content-disposition': `attachment; filename="${filename}"`,
+        'content-length': String(blob.size),
+        'cache-control': 'no-store',
+        'x-content-type-options': 'nosniff',
       },
     });
   } catch (error) {
