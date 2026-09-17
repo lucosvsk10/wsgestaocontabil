@@ -15,13 +15,11 @@ import {
 } from 'recharts';
 import { extractorRequest, extractorErrorMessage } from '@/lib/extractor/request';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Menu, X } from 'lucide-react';
+import { Info, Menu, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import {
-  FiscalDocumentPreview,
-  type PreviewDocument,
-} from '@/components/admin/fiscal/FiscalDocumentPreview';
+import { FiscalDocumentPreviewModal } from '@/components/admin/fiscal/FiscalDocumentPreviewModal';
+import { FiscalDownloadCenter } from '@/components/admin/fiscal/FiscalDownloadCenter';
 import AnimatedExtractorIcon, {
   type ExtractorIconName,
 } from '@/components/extractor/AnimatedExtractorIcon';
@@ -40,7 +38,7 @@ type Section =
   | 'Certificados'
   | 'Histórico'
   | 'Configurações';
-type Filter = 'saida' | 'entrada' | 'todos' | 'cancelada' | 'evento';
+type Filter = 'saida' | 'entrada' | 'todos' | 'cancelada' | 'evento' | 'manifestacao';
 type TypeFilter = 'todos' | 'nfe' | 'nfce' | 'nfse';
 type Company = {
   id: string;
@@ -62,6 +60,10 @@ type Company = {
   salesStatus: string | null;
   salesXmlPending: number;
   salesXmlFailed: number;
+  purchaseLastCompletedAt: string | null;
+  purchaseLastError: string | null;
+  salesLastCompletedAt: string | null;
+  salesLastError: string | null;
 };
 type Doc = {
   id?: string;
@@ -79,6 +81,7 @@ type Doc = {
   issuerCnpj?: string;
   issuerName?: string;
   recipientCnpj?: string;
+  recipientName?: string;
   number?: string;
   series?: string;
   statusCode?: string;
@@ -240,6 +243,10 @@ const normalizeCompany = (r: Record<string, any>, i: number): Company => ({
   salesStatus: r.sales_status || null,
   salesXmlPending: Number(r.sales_xml_pending || 0),
   salesXmlFailed: Number(r.sales_xml_failed || 0),
+  purchaseLastCompletedAt: r.purchase_last_completed_at || null,
+  purchaseLastError: r.purchase_last_error || null,
+  salesLastCompletedAt: r.sales_last_completed_at || null,
+  salesLastError: r.sales_last_error || null,
 });
 const rowToDoc = (r: any): Doc => ({
   id: r.id,
@@ -262,6 +269,7 @@ const rowToDoc = (r: any): Doc => ({
   issuerCnpj: r.issuer_cnpj || undefined,
   issuerName: r.issuer_name || undefined,
   recipientCnpj: r.recipient_cnpj || undefined,
+  recipientName: r.recipient_name || undefined,
   number: r.note_number == null ? '' : String(r.note_number),
   series: r.series == null ? '' : String(r.series),
   statusCode: r.status_code || undefined,
@@ -309,7 +317,9 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
     [notice, setNotice] = useState<Notice>(null),
     [companyModal, setCompanyModal] = useState(false),
     [selectedCompanyId, setSelectedCompanyId] = useState<string>(''),
-    [previewDoc, setPreviewDoc] = useState<PreviewDocument | null>(null),
+    [previewDoc, setPreviewDoc] = useState<Doc | null>(null),
+    [previewPdfBusy, setPreviewPdfBusy] = useState(false),
+    [previewXmlBusy, setPreviewXmlBusy] = useState(false),
     [usage, setUsage] = useState<Usage>({ used: 0, limit: 0, remaining: 0, percent: 0 });
   const load = useCallback(
     async (quiet = false) => {
@@ -431,6 +441,116 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
     setMobile(false);
     setNotice(null);
   };
+
+  const previewCompany =
+    companies.find(company => company.id === previewDoc?.companyId) ||
+    companies.find(company => company.id === selectedCompanyId) ||
+    companies[0] ||
+    null;
+
+  const triggerBlobDownload = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.rel = 'noopener';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 2000);
+  };
+
+  const downloadPreviewPdf = async (document: Doc) => {
+    if (previewPdfBusy) return;
+    setPreviewPdfBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('dfe-danfe-pdf', {
+        body: { company_id: document.companyId, document },
+      });
+      if (error) throw error;
+      const base64 = String(data?.pdf_base64 || '');
+      if (!base64) throw new Error(String(data?.error || 'PDF não foi gerado.'));
+      const bytes = Uint8Array.from(atob(base64), char => char.charCodeAt(0));
+      triggerBlobDownload(
+        new Blob([bytes], { type: 'application/pdf' }),
+        String(data?.filename || `${document.accessKey || document.nsu || 'documento-fiscal'}.pdf`)
+      );
+    } catch (caught) {
+      setNotice({
+        tone: 'error',
+        text: caught instanceof Error ? caught.message : 'Não foi possível gerar o PDF.',
+      });
+    } finally {
+      setPreviewPdfBusy(false);
+    }
+  };
+
+  const downloadPreviewXml = async (document: Doc) => {
+    if (previewXmlBusy) return;
+    setPreviewXmlBusy(true);
+    try {
+      let current = document;
+      if (!(current.fullXml && current.xml)) {
+        const { data, error } = await supabase.functions.invoke('fiscal-document-recover', {
+          body: { company_id: current.companyId, access_key: current.accessKey, nsu: current.nsu },
+        });
+        if (error) throw error;
+        if (data?.ready && data.document) current = rowToDoc(data.document);
+        else throw new Error(String(data?.reason || 'O XML integral ainda não está disponível.'));
+      }
+      if (!current.xml) throw new Error('O XML integral ainda não está disponível.');
+      triggerBlobDownload(
+        new Blob([current.xml], { type: 'application/xml;charset=utf-8' }),
+        `${current.accessKey || current.nsu || 'documento-fiscal'}.xml`
+      );
+      setPreviewDoc(current);
+    } catch (caught) {
+      setNotice({
+        tone: 'warning',
+        text: caught instanceof Error ? caught.message : 'Não foi possível recuperar o XML.',
+      });
+    } finally {
+      setPreviewXmlBusy(false);
+    }
+  };
+
+  const manifestPreview = async (document: Doc) => {
+    if (!document.accessKey || !document.companyId) return;
+    const confirmed = window.confirm(
+      'Esta ação registra a manifestação do destinatário na SEFAZ para liberar o XML desta NF-e. Deseja continuar?'
+    );
+    if (!confirmed) return;
+    setPreviewXmlBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('extractor-fiscal-manifest', {
+        body: {
+          confirm: true,
+          company_id: document.companyId,
+          access_key: document.accessKey,
+        },
+      });
+      if (error) throw error;
+      const recovered = Boolean(data?.recovered);
+      setNotice({
+        tone: recovered ? 'success' : 'warning',
+        text: recovered
+          ? 'Manifestação registrada e XML integral recuperado.'
+          : String(data?.result?.message || 'Manifestação registrada. A recuperação do XML continuará automaticamente.'),
+      });
+      const { data: refresh } = await supabase.functions.invoke('fiscal-document-recover', {
+        body: { company_id: document.companyId, access_key: document.accessKey, nsu: document.nsu },
+      });
+      if (refresh?.ready && refresh.document) setPreviewDoc(rowToDoc(refresh.document));
+      else setPreviewDoc({ ...document, parseError: recovered ? undefined : 'xml_retry:manifestation_sent' });
+    } catch (caught) {
+      setNotice({
+        tone: 'error',
+        text: caught instanceof Error ? caught.message : 'A SEFAZ não confirmou a manifestação.',
+      });
+    } finally {
+      setPreviewXmlBusy(false);
+    }
+  };
   if (loading) return <Loading />;
   if (!preview && denied) return <AccessPending />;
   return (
@@ -551,6 +671,8 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
         {active === 'Histórico' && (
           <HistorySection
             companies={companies}
+            selectedCompanyId={selectedCompanyId}
+            setSelectedCompanyId={setSelectedCompanyId}
             accountId={snapshot?.account?.id}
             userId={user?.id}
             preview={preview}
@@ -560,6 +682,8 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
         {active === 'Configurações' && (
           <SettingsSection
             companies={companies}
+            selectedCompanyId={selectedCompanyId}
+            setSelectedCompanyId={setSelectedCompanyId}
             account={snapshot?.account}
             usage={planUsage}
             planLabel={planLabel}
@@ -584,7 +708,17 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
           }}
         />
       )}
-      {previewDoc && <FiscalDocumentPreview doc={previewDoc} onClose={() => setPreviewDoc(null)} />}
+      <FiscalDocumentPreviewModal
+        document={previewDoc}
+        companyName={previewCompany?.tradeName || previewCompany?.name || 'Empresa'}
+        companyCnpj={previewCompany?.cnpj || ''}
+        downloadingPdf={previewPdfBusy}
+        downloadingXml={previewXmlBusy}
+        onClose={() => setPreviewDoc(null)}
+        onDownloadPdf={downloadPreviewPdf}
+        onDownloadXml={downloadPreviewXml}
+        onManifestation={manifestPreview}
+      />
     </div>
   );
 }
@@ -1056,7 +1190,8 @@ function Documents({
     [docs, setDocs] = useState<Doc[]>([]),
     [loading, setLoading] = useState(false),
     [page, setPage] = useState(1),
-    [busy, setBusy] = useState('');
+    [busy, setBusy] = useState(''),
+    [downloadOpen, setDownloadOpen] = useState(false);
   const company =
     companies.find((c: Company) => c.id === selectedCompanyId) || companies[0] || null;
   const [customStart, setCustomStart] = useState('');
@@ -1110,6 +1245,9 @@ function Documents({
     purchases = fiscal.filter(d => d.direction === 'entrada'),
     events = docs.filter(d => d.documentKind === 'evento' || d.direction === 'relacionada'),
     cancelledDocs = fiscal.filter(cancelled),
+    manifestationDocs = fiscal.filter(
+      d => d.parseError === 'xml_requires_manifestation' || d.parseError === 'xml_retry:manifestation_sent'
+    ),
     nfe = fiscal.filter(d => type(d) === 'NF-e').length,
     nfce = fiscal.filter(d => type(d) === 'NFC-e').length,
     nfse = fiscal.filter(d => type(d) === 'NFS-e').length;
@@ -1121,6 +1259,11 @@ function Documents({
     if (filter === 'evento' && !(d.documentKind === 'evento' || d.direction === 'relacionada'))
       return false;
     if (filter === 'cancelada' && !cancelled(d)) return false;
+    if (
+      filter === 'manifestacao' &&
+      !['xml_requires_manifestation', 'xml_retry:manifestation_sent'].includes(String(d.parseError || ''))
+    )
+      return false;
     const t = type(d);
     if (typeFilter === 'nfe' && t !== 'NF-e') return false;
     if (typeFilter === 'nfce' && t !== 'NFC-e') return false;
@@ -1160,87 +1303,26 @@ function Documents({
       const { data, error } = await supabase.functions.invoke('fiscal-document-recover', {
         body: { company_id: company.id, access_key: d.accessKey, nsu: d.nsu },
       });
-      if (error) setNotice({ tone: 'error', text: await extractorErrorMessage(error) });
-      else if (!data?.ready || !data.document)
-        setNotice({
-          tone: 'warning',
-          text: data?.reason || 'O XML integral ainda não está disponível.',
-        });
-      else {
-        const r = data.document;
-        onPreview({
-          companyId: r.company_id,
-          nsu: r.nsu,
-          schema: r.schema_name,
-          documentKind: r.document_kind,
-          fullXml: r.full_xml,
-          direction: r.direction,
-          accessKey: r.access_key,
-          issueDate: r.issue_date,
-          value: Number(r.value || 0),
-          issuerCnpj: r.issuer_cnpj,
-          issuerName: r.issuer_name,
-          recipientCnpj: r.recipient_cnpj,
-          number: r.note_number,
-          series: r.series,
-          statusCode: r.status_code,
-          statusText: r.status_text,
-          model: r.model,
-          xml: r.xml,
-          parseError: r.parse_error,
-        });
+      if (error) {
+        setNotice({ tone: 'error', text: await extractorErrorMessage(error) });
+        onPreview(d);
+      } else if (data?.ready && data.document) {
+        onPreview(rowToDoc(data.document));
+      } else {
+        const next = {
+          ...d,
+          parseError: data?.requires_manifestation ? 'xml_requires_manifestation' : d.parseError,
+        };
+        onPreview(next);
+        if (data?.reason)
+          setNotice({
+            tone: data?.requires_manifestation ? 'warning' : 'warning',
+            text: data.reason,
+          });
       }
     } catch {
-      setNotice({ tone: 'error', text: 'Não foi possível abrir o documento. Confira a conexão.' });
-    } finally {
-      setBusy('');
-    }
-  };
-  const download = async () => {
-    if (preview || !company)
-      return setNotice({
-        tone: 'warning',
-        text: 'O download fiscal fica disponível no ambiente autenticado.',
-      });
-    if (busy) return;
-    setBusy('download');
-    try {
-      const payload = {
-        company_id: company.id,
-        start,
-        end,
-        direction: filter === 'entrada' ? 'entrada' : filter === 'saida' ? 'saida' : 'todos',
-      };
-      const pre = await supabase.functions.invoke('fiscal-bulk-download', {
-        body: { ...payload, action: 'preflight' },
-      });
-      if (pre.error) setNotice({ tone: 'error', text: await extractorErrorMessage(pre.error) });
-      else if (!pre.data?.ready)
-        setNotice({
-          tone: 'warning',
-          text: `${pre.data?.pending || 0} documento(s) ainda aguardam XML integral.`,
-        });
-      else {
-        const result = await supabase.functions.invoke('fiscal-bulk-download', { body: payload });
-        if (result.error)
-          setNotice({ tone: 'error', text: await extractorErrorMessage(result.error) });
-        else {
-          const blob =
-              result.data instanceof Blob
-                ? result.data
-                : new Blob([result.data], { type: 'application/zip' }),
-            url = URL.createObjectURL(blob),
-            a = document.createElement('a');
-          a.href = url;
-          a.download = `extrato-fiscal-${company.tradeName
-            .replace(/[^a-z0-9]+/gi, '-')
-            .toLowerCase()}-${start}-${end}.zip`;
-          a.click();
-          setTimeout(() => URL.revokeObjectURL(url), 1000);
-        }
-      }
-    } catch {
-      setNotice({ tone: 'error', text: 'Não foi possível baixar o pacote. Tente novamente.' });
+      onPreview(d);
+      setNotice({ tone: 'error', text: 'Não foi possível atualizar o documento agora. A prévia foi aberta com os dados já disponíveis.' });
     } finally {
       setBusy('');
     }
@@ -1392,6 +1474,11 @@ function Documents({
             <Pill active={filter === 'cancelada'} onClick={() => setFilter('cancelada')}>
               ⊘ Canceladas <b>{cancelledDocs.length}</b>
             </Pill>
+            {manifestationDocs.length > 0 && (
+              <Pill active={filter === 'manifestacao'} onClick={() => setFilter('manifestacao')}>
+                ! Manifestação <b>{manifestationDocs.length}</b>
+              </Pill>
+            )}
             <i />
             <Pill
               active={typeFilter === 'nfe'}
@@ -1427,11 +1514,10 @@ function Documents({
           </label>
           <button
             className="extractor-primary"
-            onClick={() => void download()}
-            disabled={busy === 'download'}
+            onClick={() => setDownloadOpen(true)}
           >
             <AnimatedExtractorIcon name="download" />
-            {busy === 'download' ? 'Gerando...' : 'Download'}
+            Baixar
           </button>
         </div>
         <div className="extractor-table-wrap">
@@ -1482,6 +1568,25 @@ function Documents({
                           <small>/ {d.series || '1'}</small>
                           <TypeTag value={t} />
                           <StatusTag value={st} />
+                          {['xml_requires_manifestation', 'xml_retry:manifestation_sent'].includes(
+                            String(d.parseError || '')
+                          ) && (
+                            <button
+                              type="button"
+                              className="extractor-manifest-info"
+                              title={
+                                d.parseError === 'xml_requires_manifestation'
+                                  ? 'Esta NF-e precisa de manifestação do destinatário.'
+                                  : 'Manifestação registrada; XML aguardando liberação.'
+                              }
+                              onClick={event => {
+                                event.stopPropagation();
+                                void open(d);
+                              }}
+                            >
+                              <Info className="h-3.5 w-3.5" />
+                            </button>
+                          )}
                         </div>
                         <span className="key">{d.accessKey || '—'}</span>
                       </td>
@@ -1560,6 +1665,17 @@ function Documents({
           </div>
         </div>
       </section>
+      <FiscalDownloadCenter
+        open={downloadOpen}
+        currentCompany={{ id: company.id, name: company.tradeName }}
+        companies={companies.map((item: Company) => ({ id: item.id, name: item.tradeName }))}
+        initialStart={start}
+        initialEnd={end}
+        initialDirection={filter === 'entrada' ? 'entrada' : filter === 'saida' ? 'saida' : 'todos'}
+        onClose={() => setDownloadOpen(false)}
+        exportFunction="extractor-fiscal-export"
+        allowAllCompanies={companies.length > 1}
+      />
     </div>
   );
 }
@@ -1721,13 +1837,55 @@ function Certificates({ companies, onGo }: any) {
     </div>
   );
 }
-function HistorySection({ companies, accountId, userId, preview, setNotice }: any) {
-  const now = new Date(),
-    [from, setFrom] = useState(
-      new Date(now.getFullYear(), now.getMonth() - 6, 1).toLocaleDateString('sv-SE').slice(0, 7)
-    ),
-    [to, setTo] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`),
-    [busy, setBusy] = useState(false);
+function HealthState({ label, state }: { label: string; state: 'ok' | 'attention' | 'error' }) {
+  return (
+    <span className={`extractor-health-state ${state}`}>
+      <i />
+      {label}
+    </span>
+  );
+}
+
+function HistorySection({
+  companies,
+  selectedCompanyId,
+  setSelectedCompanyId,
+  accountId,
+  userId,
+  preview,
+  setNotice,
+}: any) {
+  const now = new Date();
+  const company =
+    companies.find((item: Company) => item.id === selectedCompanyId) || companies[0] || null;
+  const [from, setFrom] = useState(
+    new Date(now.getFullYear(), now.getMonth() - 6, 1).toLocaleDateString('sv-SE').slice(0, 7)
+  );
+  const [to, setTo] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
+  const [busy, setBusy] = useState(false);
+
+  const purchaseError = Boolean(
+    company?.purchaseLastError ||
+      /error|fail/i.test(String(company?.purchaseStatus || ''))
+  );
+  const salesError = Boolean(
+    company?.salesLastError ||
+      /error|fail/i.test(String(company?.salesStatus || ''))
+  );
+  const certificateError = company?.certificateDays != null && company.certificateDays < 0;
+  const attention =
+    !certificateError &&
+    (company?.pendingXml > 0 ||
+      (company?.certificateDays != null && company.certificateDays <= 30) ||
+      /retry|waiting|queued|running|reconciling|bootstrap/i.test(
+        `${company?.purchaseStatus || ''} ${company?.salesStatus || ''}`
+      ));
+  const overall = purchaseError || salesError || certificateError
+    ? { label: 'Precisa de atenção', state: 'error' as const }
+    : attention
+      ? { label: 'Acompanhando', state: 'attention' as const }
+      : { label: 'Tudo certo', state: 'ok' as const };
+
   const save = async () => {
     if (preview) return setNotice({ tone: 'warning', text: 'Disponível no ambiente autenticado.' });
     if (
@@ -1749,15 +1907,15 @@ function HistorySection({ companies, accountId, userId, preview, setNotice }: an
         requested_by: userId,
         requested_from: `${from}-01`,
         requested_to: `${to}-${String(endDate.getDate()).padStart(2, '0')}`,
-        metadata: { companies: companies.map((c: Company) => c.id), source: 'extractor_ui' },
+        metadata: {
+          companies: company ? [company.id] : companies.map((item: Company) => item.id),
+          source: 'extractor_health_ui',
+        },
       });
       setNotice(
         error
-          ? {
-              tone: 'error',
-              text: 'Não foi possível registrar. Confira o período e aguarde antes de repetir.',
-            }
-          : { tone: 'success', text: 'Solicitação de histórico registrada.' }
+          ? { tone: 'error', text: 'Não foi possível registrar a solicitação agora.' }
+          : { tone: 'success', text: 'Solicitação de período histórico registrada.' }
       );
     } catch {
       setNotice({ tone: 'error', text: 'Falha de conexão ao registrar o histórico.' });
@@ -1765,27 +1923,126 @@ function HistorySection({ companies, accountId, userId, preview, setNotice }: an
       setBusy(false);
     }
   };
+
+  if (!company)
+    return (
+      <div className="extractor-page">
+        <PageHeading title="Histórico" icon="history" description="Saúde e atividade das extrações." />
+        <Empty>Nenhuma empresa adicionada ao Extrator.</Empty>
+      </div>
+    );
+
   return (
     <div className="extractor-page">
       <PageHeading
         title="Histórico"
         icon="history"
-        description="Solicite períodos anteriores à janela contratada."
+        description="Saúde da extração, últimas rotinas e pendências da empresa selecionada."
+        actions={
+          <select
+            className="extractor-company-select"
+            value={company.id}
+            onChange={event => setSelectedCompanyId(event.target.value)}
+          >
+            {companies.map((item: Company) => (
+              <option key={item.id} value={item.id}>
+                {item.tradeName}
+              </option>
+            ))}
+          </select>
+        }
       />
-      <article className="extractor-history">
+
+      <section className="extractor-health-hero">
+        <div>
+          <p>Saúde da extração</p>
+          <h2>{company.tradeName}</h2>
+          <span>{formatCnpj(company.cnpj)}</span>
+        </div>
+        <HealthState label={overall.label} state={overall.state} />
+      </section>
+
+      <section className="extractor-health-grid">
+        <article>
+          <span>Compras</span>
+          <strong>{syncLabel(company.purchaseStatus)}</strong>
+          <small>
+            {company.purchaseLastCompletedAt
+              ? `Última conclusão: ${formatDate(company.purchaseLastCompletedAt, true)}`
+              : 'Aguardando primeira conclusão'}
+          </small>
+          {company.purchaseLastError && <p>{company.purchaseLastError}</p>}
+        </article>
+        <article>
+          <span>Vendas</span>
+          <strong>{syncLabel(company.salesStatus)}</strong>
+          <small>
+            {company.salesLastCompletedAt
+              ? `Última conclusão: ${formatDate(company.salesLastCompletedAt, true)}`
+              : 'Aguardando primeira conclusão'}
+          </small>
+          {company.salesLastError && <p>{company.salesLastError}</p>}
+        </article>
+        <article>
+          <span>Documentos</span>
+          <strong>{integer.format(company.documents)}</strong>
+          <small>
+            {integer.format(company.fullXml)} com XML · {integer.format(company.pendingXml)} pendente(s)
+          </small>
+          {company.salesXmlPending > 0 && <p>{company.salesXmlPending} XML de vendas aguardando recuperação.</p>}
+        </article>
+        <article>
+          <span>Certificado A1</span>
+          <strong>{company.certificateUntil ? formatDate(company.certificateUntil) : 'Não configurado'}</strong>
+          <small>
+            {company.certificateDays == null
+              ? 'Sem validade disponível'
+              : company.certificateDays < 0
+                ? 'Certificado vencido'
+                : `${company.certificateDays} dia(s) restantes`}
+          </small>
+        </article>
+      </section>
+
+      <article className="extractor-health-timeline">
+        <div className="extractor-health-title">
+          <div>
+            <h2>Última atividade</h2>
+            <p>Resumo das rotinas fiscais sem expor logs técnicos internos.</p>
+          </div>
+          <span>Última busca: {company.lastSync ? formatDate(company.lastSync, true) : '—'}</span>
+        </div>
+        <div className="extractor-health-rows">
+          <div>
+            <span><i className={purchaseError ? 'error' : 'ok'} />Compras</span>
+            <strong>{syncLabel(company.purchaseStatus)}</strong>
+            <small>{company.purchaseLastError || 'Nenhuma falha persistente informada.'}</small>
+          </div>
+          <div>
+            <span><i className={salesError ? 'error' : 'ok'} />Vendas</span>
+            <strong>{syncLabel(company.salesStatus)}</strong>
+            <small>{company.salesLastError || 'Nenhuma falha persistente informada.'}</small>
+          </div>
+          <div>
+            <span><i className={company.pendingXml ? 'attention' : 'ok'} />XML</span>
+            <strong>{company.pendingXml ? `${company.pendingXml} pendente(s)` : 'Completo'}</strong>
+            <small>{company.pendingXml ? 'A recuperação automática continuará tentando.' : 'Arquivos disponíveis no período contratado.'}</small>
+          </div>
+        </div>
+      </article>
+
+      <article className="extractor-history extractor-history-compact">
         <div>
           <h2>Consulta retroativa</h2>
-          <p>
-            Registre o período. A solicitação não gera cobrança nem inicia consulta automaticamente.
-          </p>
+          <p>Precisa analisar um período anterior à janela atual? Registre a solicitação para esta empresa.</p>
           <div className="extractor-form-row">
             <label>
               De
-              <input type="month" value={from} onChange={e => setFrom(e.target.value)} />
+              <input type="month" value={from} onChange={event => setFrom(event.target.value)} />
             </label>
             <label>
               Até
-              <input type="month" value={to} onChange={e => setTo(e.target.value)} />
+              <input type="month" value={to} onChange={event => setTo(event.target.value)} />
             </label>
           </div>
           <button className="extractor-primary" onClick={() => void save()} disabled={busy}>
@@ -1793,102 +2050,152 @@ function HistorySection({ companies, accountId, userId, preview, setNotice }: an
           </button>
         </div>
         <aside>
-          <strong>{companies.length}</strong>
-          <span>empresa(s) nesta carteira</span>
+          <strong>{integer.format(company.documents)}</strong>
+          <span>documentos disponíveis</span>
         </aside>
       </article>
     </div>
   );
 }
-function SettingsSection({ companies, account, usage, planLabel }: any) {
+
+function SettingsSection({
+  companies,
+  selectedCompanyId,
+  setSelectedCompanyId,
+  account,
+  usage,
+  planLabel,
+}: any) {
+  const company =
+    companies.find((item: Company) => item.id === selectedCompanyId) || companies[0] || null;
   const upgrade = () =>
     window.open(
       'https://wa.me/5582999324884?text=Ol%C3%A1%2C%20quero%20fazer%20upgrade%20do%20plano%20do%20Extrator%20Fiscal%20WS.',
       '_blank',
       'noopener,noreferrer'
     );
+
+  if (!company)
+    return (
+      <div className="extractor-page">
+        <PageHeading title="Configurações" icon="settings" description="Configurações do Extrator Fiscal." />
+        <Empty>Adicione uma empresa para configurar o Extrator.</Empty>
+      </div>
+    );
+
+  const certState =
+    company.certificateDays == null
+      ? 'Não configurado'
+      : company.certificateDays < 0
+        ? 'Vencido'
+        : company.certificateDays <= 30
+          ? 'Vence em breve'
+          : 'Válido';
+
   return (
     <div className="extractor-page">
       <PageHeading
         title="Configurações"
         icon="settings"
-        description="Plano, consumo e rotinas da carteira do Extrator."
+        description="Empresa, certificado, sincronização, documentos e plano em um só lugar."
+        actions={
+          <select
+            className="extractor-company-select"
+            value={company.id}
+            onChange={event => setSelectedCompanyId(event.target.value)}
+          >
+            {companies.map((item: Company) => (
+              <option key={item.id} value={item.id}>
+                {item.tradeName}
+              </option>
+            ))}
+          </select>
+        }
       />
-      <div className="extractor-settings-grid">
-        <article className="extractor-panel extractor-plan-card" data-icon-hover>
-          <PanelHead title="Uso do plano" sub="Consumo real do ciclo atual" icon="document" />
-          <div style={{ padding: '20px' }}>
+
+      <section className="extractor-settings-overview">
+        <div>
+          <p>Empresa ativa</p>
+          <h2>{company.tradeName}</h2>
+          <span>{formatCnpj(company.cnpj)} · {company.uf}</span>
+        </div>
+        <div>
+          <span>Última sincronização</span>
+          <strong>{company.lastSync ? formatDate(company.lastSync, true) : 'Ainda não concluída'}</strong>
+        </div>
+      </section>
+
+      <div className="extractor-settings-sections">
+        <article className="extractor-panel">
+          <PanelHead title="Empresa" sub="Identificação fiscal utilizada pelo Extrator" icon="company" />
+          <dl>
+            <div><dt>Razão social</dt><dd>{company.name}</dd></div>
+            <div><dt>Nome fantasia</dt><dd>{company.tradeName}</dd></div>
+            <div><dt>CNPJ</dt><dd>{formatCnpj(company.cnpj)}</dd></div>
+            <div><dt>UF</dt><dd>{company.uf}</dd></div>
+          </dl>
+        </article>
+
+        <article className="extractor-panel">
+          <PanelHead title="Certificado digital" sub="A1 usado nas consultas fiscais" icon="certificate" />
+          <dl>
+            <div><dt>Situação</dt><dd>{certState}</dd></div>
+            <div><dt>Validade</dt><dd>{company.certificateUntil ? formatDate(company.certificateUntil) : '—'}</dd></div>
+            <div><dt>Dias restantes</dt><dd>{company.certificateDays == null ? '—' : String(company.certificateDays)}</dd></div>
+          </dl>
+        </article>
+
+        <article className="extractor-panel">
+          <PanelHead title="Sincronização fiscal" sub="Compras e vendas desta empresa" icon="refresh" />
+          <dl>
+            <div><dt>Automática</dt><dd>{company.automaticSync ? 'Ativada' : 'Desativada'}</dd></div>
+            <div><dt>Compras</dt><dd>{syncLabel(company.purchaseStatus)}</dd></div>
+            <div><dt>Vendas</dt><dd>{syncLabel(company.salesStatus)}</dd></div>
+            <div><dt>Última busca</dt><dd>{company.lastSync ? formatDate(company.lastSync, true) : '—'}</dd></div>
+          </dl>
+        </article>
+
+        <article className="extractor-panel">
+          <PanelHead title="Documentos" sub="Cobertura dos arquivos fiscais" icon="document" />
+          <dl>
+            <div><dt>Documentos</dt><dd>{integer.format(company.documents)}</dd></div>
+            <div><dt>XML integral</dt><dd>{integer.format(company.fullXml)}</dd></div>
+            <div><dt>Pendentes</dt><dd>{integer.format(company.pendingXml)}</dd></div>
+            <div><dt>Compras / vendas</dt><dd>{integer.format(company.entries)} / {integer.format(company.exits)}</dd></div>
+          </dl>
+        </article>
+
+        <article className="extractor-panel extractor-plan-card">
+          <PanelHead title="Plano e consumo" sub="Ciclo atual da conta" icon="report" />
+          <div className="extractor-settings-plan">
             <div className="extractor-plan-usage-header">
               <div>
                 <span>XML processados</span>
-                <strong>
-                  {integer.format(usage.used)} / {integer.format(usage.limit)}
-                </strong>
+                <strong>{integer.format(usage.used)} / {integer.format(usage.limit)}</strong>
               </div>
               <b>{usage.percent}% utilizado</b>
             </div>
             <div className="extractor-plan-progress">
               <i style={{ width: `${Math.min(100, Math.max(0, usage.percent))}%` }} />
             </div>
-            <div className="extractor-plan-details">
-              <div>
-                <span>Restantes</span>
-                <strong>{integer.format(usage.remaining)} XML</strong>
-              </div>
-              <div>
-                <span>Plano</span>
-                <strong>{planLabel}</strong>
-              </div>
-              <div>
-                <span>Ciclo</span>
-                <strong>
-                  {formatDate(usage.period_start)} a {formatDate(usage.period_end)}
-                </strong>
-              </div>
-            </div>
-            <button className="extractor-primary extractor-upgrade" onClick={upgrade}>
-              Fazer upgrade
-            </button>
+            <dl>
+              <div><dt>Plano</dt><dd>{planLabel}</dd></div>
+              <div><dt>Restantes</dt><dd>{integer.format(usage.remaining)} XML</dd></div>
+              <div><dt>Ciclo</dt><dd>{formatDate(usage.period_start)} a {formatDate(usage.period_end)}</dd></div>
+              <div><dt>Janela padrão</dt><dd>{account?.base_lookback_days ? `${account.base_lookback_days} dias` : '—'}</dd></div>
+            </dl>
+            <button className="extractor-primary extractor-upgrade" onClick={upgrade}>Fazer upgrade</button>
           </div>
         </article>
-        <article className="extractor-panel" data-icon-hover>
-          <PanelHead title="Plano e janela fiscal" sub="Configuração atual" icon="settings" />
+
+        <article className="extractor-panel">
+          <PanelHead title="Conta e acesso" sub="Contexto desta assinatura" icon="settings" />
           <dl>
-            <div>
-              <dt>Plano</dt>
-              <dd>{planLabel}</dd>
-            </div>
-            <div>
-              <dt>Janela padrão</dt>
-              <dd>{account?.base_lookback_days ? `${account.base_lookback_days} dias` : '—'}</dd>
-            </div>
-            <div>
-              <dt>Limite mensal</dt>
-              <dd>{usage.limit ? `${integer.format(usage.limit)} XML` : '—'}</dd>
-            </div>
+            <div><dt>Conta</dt><dd>{account?.name || 'Conta Extrator'}</dd></div>
+            <div><dt>Empresas</dt><dd>{companies.length}</dd></div>
+            <div><dt>Período liberado desde</dt><dd>{account?.allowed_from ? formatDate(account.allowed_from) : '—'}</dd></div>
+            <div><dt>Produto</dt><dd>Extrator Fiscal WS</dd></div>
           </dl>
-        </article>
-        <article className="extractor-panel" data-icon-hover>
-          <PanelHead title="Rotinas por empresa" sub="Estado fiscal atual" icon="refresh" />
-          <div className="extractor-settings-companies">
-            {companies.map((c: Company) => (
-              <div key={c.id}>
-                <span>
-                  <strong>{c.tradeName}</strong>
-                  <small>
-                    {c.automaticSync
-                      ? 'Sincronização automática habilitada'
-                      : 'Sincronização automática desabilitada'}
-                  </small>
-                </span>
-                <span>
-                  Compras: {syncLabel(c.purchaseStatus)}
-                  <br />
-                  Vendas: {syncLabel(c.salesStatus)}
-                </span>
-              </div>
-            ))}
-          </div>
         </article>
       </div>
     </div>
