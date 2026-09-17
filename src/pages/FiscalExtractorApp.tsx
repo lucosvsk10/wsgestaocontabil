@@ -2056,7 +2056,7 @@ function BillingSection({ usage, planLabel, preview, setNotice }: any) {
           </section>
 
           <section className="extractor-invoice-list">
-            <div className="extractor-invoice-head"><span>Fatura</span><span>Descrição</span><span>Vencimento</span><span>Valor</span><span>Ação</span></div>
+            <div className="extractor-invoice-head"><span>Fatura</span><span>Descrição</span><span>Vencimento</span><span>Valor</span><span>Pagamento</span><span>Ação</span></div>
             {invoices.length ? invoices.map((invoice: any) => {
               const tone = invoiceTone(invoice.status || invoice.provider_status);
               const paymentUrl = String(invoice.checkout_url || '');
@@ -2066,6 +2066,7 @@ function BillingSection({ usage, planLabel, preview, setNotice }: any) {
                   <span>{invoice.description || 'Extrator Fiscal WS'}</span>
                   <span>{invoice.due_date ? formatDate(invoice.due_date) : '—'}<br /><small className={`extractor-invoice-status ${tone}`}>{billingStatusLabel(invoice.status || invoice.provider_status)}</small></span>
                   <strong>{centsMoney(invoice.total_cents)}</strong>
+                  <span>{invoice.payment_method ? String(invoice.payment_method).replace(/_/g, ' ') : invoice.provider === 'mercado_pago' ? 'Mercado Pago' : '—'}</span>
                   <span>
                     {paymentUrl
                       ? <a href={paymentUrl} target="_blank" rel="noopener noreferrer">{tone === 'paid' ? 'Ver pagamento' : 'Pagar agora'}</a>
