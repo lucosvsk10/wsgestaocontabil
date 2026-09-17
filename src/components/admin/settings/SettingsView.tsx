@@ -1,18 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
-  AlertTriangle,
-  CheckCircle2,
   ChevronRight,
-  CircleDot,
-  FileCheck2,
   Lock,
   LogOut,
   MonitorCog,
   RefreshCw,
   Search,
   ShieldCheck,
-  TriangleAlert,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -124,7 +119,7 @@ function FiscalHealth() {
     else {
       const next = result as FiscalHealthResponse;
       setData(next);
-      setSelected((current) => current ? next.companies.find((company) => company.office_company_id === current.office_company_id) || null : null);
+      setSelected((current) => current ? next.company_health.find((company) => company.office_company_id === current.office_company_id) || null : null);
     }
     if (!silent) setLoading(false);
   };
@@ -138,7 +133,7 @@ function FiscalHealth() {
   const filtered = useMemo(() => {
     if (!data) return [];
     const normalized = query.trim().toLowerCase();
-    return data.companies.filter((company) => {
+    return data.company_health.filter((company) => {
       const matchesState = stateFilter === "all" || company.state === stateFilter;
       const matchesQuery = !normalized || [company.company_name, company.trade_name, company.cnpj, company.state_label]
         .some((value) => String(value || "").toLowerCase().includes(normalized));
