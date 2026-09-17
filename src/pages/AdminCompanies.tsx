@@ -53,7 +53,7 @@ export default function AdminCompanies() {
   const loadFiscalStatus = async (silent = false) => {
     if (!silent) setStatusLoading(true);
     try {
-      const { data, error: functionError } = await supabase.functions.invoke('admin-fiscal-health', { body: { period_days: 30 } });
+      const { data, error: functionError } = await supabase.functions.invoke('admin-fiscal-health-v2', { body: { period_days: 30 } });
       if (functionError) throw functionError;
       if (data?.error) throw new Error(data.error);
       const response = data as FiscalHealthResponse;
