@@ -57,7 +57,7 @@ export default function AdminCompanies() {
       if (functionError) throw functionError;
       if (data?.error) throw new Error(data.error);
       const response = data as FiscalHealthResponse;
-      setFiscalStatuses(Object.fromEntries((response.companies || []).map((row) => [row.office_company_id, row])));
+      setFiscalStatuses(Object.fromEntries((response.company_health || []).map((row) => [row.office_company_id, row])));
     } catch (loadError) {
       console.error('[AdminCompanies] Falha ao carregar saúde fiscal', loadError);
     } finally {
