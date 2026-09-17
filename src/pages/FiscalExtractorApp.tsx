@@ -1712,280 +1712,297 @@ function Reports({ companies, totals, models, daily }: any) {
     </div>
   );
 }
-function Certificates({ companies, onGo }: any) {
-  return (
-    <div className="extractor-page">
-      <PageHeading
-        title="Certificados"
-        icon="certificate"
-        description="A1 utilizado nas consultas fiscais das empresas adicionadas ao Extrator."
-      />
-      <div className="extractor-company-list">
-        <div className="extractor-company-head certificate">
-          <span>Empresa</span>
-          <span>Validade</span>
-          <span>Dias restantes</span>
-          <span>Situação</span>
-          <span>Ação</span>
-        </div>
-        {companies.map((c: Company) => {
-          const state =
-            c.certificateDays == null
-              ? 'Não configurado'
-              : c.certificateDays < 0
-              ? 'Vencido'
-              : c.certificateDays <= 30
-              ? 'Atenção'
-              : 'Válido';
-          return (
-            <div className="extractor-certificate-row" key={c.id}>
-              <div>
-                <strong>{c.tradeName}</strong>
-                <span>{formatCnpj(c.cnpj)}</span>
-              </div>
-              <span>{c.certificateUntil ? formatDate(c.certificateUntil) : '—'}</span>
-              <span>{c.certificateDays == null ? '—' : `${c.certificateDays} dia(s)`}</span>
-              <StatusTag value={state} />
-              <button onClick={() => onGo('Empresas')}>Gerenciar</button>
-            </div>
-          );
-        })}
-        {!companies.length && <Empty>Nenhuma empresa adicionada.</Empty>}
-      </div>
-    </div>
-  );
-}
 function HealthState({ label, state }: { label: string; state: 'ok' | 'attention' | 'error' }) {
-  return (
-    <span className={`extractor-health-state ${state}`}>
-      <i />
-      {label}
-    </span>
-  );
+  return <span className={`extractor-health-state ${state}`}><i />{label}</span>;
 }
 
-function HistorySection({
-  companies,
-  selectedCompanyId,
-  setSelectedCompanyId,
-  accountId,
-  userId,
-  preview,
-  setNotice,
-}: any) {
-  const now = new Date();
-  const company =
-    companies.find((item: Company) => item.id === selectedCompanyId) || companies[0] || null;
-  const [from, setFrom] = useState(
-    new Date(now.getFullYear(), now.getMonth() - 6, 1).toLocaleDateString('sv-SE').slice(0, 7)
-  );
-  const [to, setTo] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
+const extractorHealthTone = (value?: string | null) => {
+  const status = String(value || '').toLowerCase();
+  if (/error|fail|expired|persistent/.test(status)) return 'error' as const;
+  if (/waiting|pending|retry|running|queued|reconciling|attention/.test(status)) return 'attention' as const;
+  return 'ok' as const;
+};
+
+function HistorySection({ companies, preview, setNotice }: any) {
+  const [healthCompanyId, setHealthCompanyId] = useState('');
+  const [health, setHealth] = useState<any>(null);
   const [busy, setBusy] = useState(false);
+  const company =
+    companies.find((item: Company) => item.id === healthCompanyId) || companies[0] || null;
 
-  const purchaseError = Boolean(
-    company?.purchaseLastError ||
-      /error|fail/i.test(String(company?.purchaseStatus || ''))
-  );
-  const salesError = Boolean(
-    company?.salesLastError ||
-      /error|fail/i.test(String(company?.salesStatus || ''))
-  );
-  const certificateError = company?.certificateDays != null && company.certificateDays < 0;
-  const attention =
-    !certificateError &&
-    (company?.pendingXml > 0 ||
-      (company?.certificateDays != null && company.certificateDays <= 30) ||
-      /retry|waiting|queued|running|reconciling|bootstrap/i.test(
-        `${company?.purchaseStatus || ''} ${company?.salesStatus || ''}`
-      ));
-  const overall = purchaseError || salesError || certificateError
-    ? { label: 'Precisa de atenção', state: 'error' as const }
-    : attention
-      ? { label: 'Acompanhando', state: 'attention' as const }
-      : { label: 'Tudo certo', state: 'ok' as const };
+  useEffect(() => {
+    if (!companies.length) {
+      setHealthCompanyId('');
+      setHealth(null);
+      return;
+    }
+    if (!companies.some((item: Company) => item.id === healthCompanyId)) {
+      setHealthCompanyId(companies[0].id);
+    }
+  }, [companies, healthCompanyId]);
 
-  const save = async () => {
-    if (preview) return setNotice({ tone: 'warning', text: 'Disponível no ambiente autenticado.' });
-    if (
-      !accountId ||
-      !userId ||
-      !/^\d{4}-(0[1-9]|1[0-2])$/.test(from) ||
-      !/^\d{4}-(0[1-9]|1[0-2])$/.test(to) ||
-      from > to ||
-      to > now.toLocaleDateString('sv-SE').slice(0, 7) ||
-      !companies.length
-    )
-      return setNotice({ tone: 'error', text: 'Período inválido.' });
-    if (busy) return;
+  const loadHealth = useCallback(async (manual = false) => {
+    if (!company) return;
+    if (preview) {
+      setHealth({
+        state: 'healthy',
+        checked_at: new Date().toISOString(),
+        period: { start: iso(new Date(new Date().getFullYear(), new Date().getMonth(), 1)), end: iso(new Date()) },
+        purchases: { source_checked: true, expected: company.entries, stored: company.entries, xml_ready: Math.max(0, company.entries - company.pendingXml), xml_pending: company.pendingXml, manifestation_required: 0, manifestation_sent: 0, status: company.purchaseStatus, failures: 0 },
+        sales: { expected: company.exits, stored: company.exits, xml_ready: Math.max(0, company.exits - company.salesXmlPending), xml_pending: company.salesXmlPending, sequence_total: company.exits, sequence_resolved: company.exits, reconciliation_complete: true, status: company.salesStatus, failures: 0 },
+        certificate: { valid_until: company.certificateUntil, expired: false },
+        recovery: { count: 0, last_reason: null, last_checked_at: new Date().toISOString() },
+      });
+      return;
+    }
     setBusy(true);
     try {
-      const endDate = new Date(Number(to.slice(0, 4)), Number(to.slice(5, 7)), 0);
-      const { error } = await (supabase as any).from('extractor_history_requests').insert({
-        account_id: accountId,
-        requested_by: userId,
-        requested_from: `${from}-01`,
-        requested_to: `${to}-${String(endDate.getDate()).padStart(2, '0')}`,
-        metadata: {
-          companies: company ? [company.id] : companies.map((item: Company) => item.id),
-          source: 'extractor_health_ui',
-        },
+      const { data, error } = await supabase.functions.invoke('extractor-fiscal-health', {
+        body: { company_id: company.id },
       });
-      setNotice(
-        error
-          ? { tone: 'error', text: 'Não foi possível registrar a solicitação agora.' }
-          : { tone: 'success', text: 'Solicitação de período histórico registrada.' }
-      );
-    } catch {
-      setNotice({ tone: 'error', text: 'Falha de conexão ao registrar o histórico.' });
+      if (error) throw error;
+      if (data?.error) throw new Error(String(data.error));
+      setHealth(data);
+      if (manual) setNotice({ tone: 'success', text: `${company.tradeName}: conferência fiscal atualizada.` });
+    } catch (error) {
+      setNotice({
+        tone: 'error',
+        text: error instanceof Error ? error.message : 'Não foi possível conferir a saúde fiscal agora.',
+      });
     } finally {
       setBusy(false);
     }
-  };
+  }, [company?.id, preview]);
 
-  if (!company)
+  useEffect(() => {
+    setHealth(null);
+    void loadHealth(false);
+  }, [loadHealth]);
+
+  if (!company) {
     return (
       <div className="extractor-page">
-        <PageHeading title="Histórico" icon="history" description="Saúde e atividade das extrações." />
+        <PageHeading title="Histórico" icon="history" description="Saúde fiscal e conferência das extrações." />
         <Empty>Nenhuma empresa adicionada ao Extrator.</Empty>
       </div>
     );
+  }
+
+  const purchase = health?.purchases || {};
+  const sales = health?.sales || {};
+  const cert = health?.certificate || {};
+  const recovery = health?.recovery || {};
+  const overallState: 'ok' | 'attention' | 'error' =
+    health?.state === 'error' ? 'error' : health?.state === 'attention' ? 'attention' : 'ok';
+  const overallLabel =
+    overallState === 'error' ? 'Precisa de intervenção' : overallState === 'attention' ? 'Acompanhando' : 'Tudo certo';
+  const purchaseExpected = purchase.expected == null ? null : Number(purchase.expected);
+  const purchaseStored = Number(purchase.stored ?? company.entries ?? 0);
+  const salesExpected = sales.expected == null ? null : Number(sales.expected);
+  const salesStored = Number(sales.stored ?? company.exits ?? 0);
+  const purchaseXmlReady = Number(purchase.xml_ready ?? 0);
+  const salesXmlReady = Number(sales.xml_ready ?? 0);
+  const periodText = health?.period?.start && health?.period?.end
+    ? `${formatDate(health.period.start)} a ${formatDate(health.period.end)}`
+    : 'Mês atual';
 
   return (
     <div className="extractor-page">
       <PageHeading
-        title="Histórico"
+        title="Saúde fiscal"
         icon="history"
-        description="Saúde da extração, últimas rotinas e pendências da empresa selecionada."
+        description="Conferência individual das empresas, documentos e XML capturados."
         actions={
-          <select
-            className="extractor-company-select"
-            value={company.id}
-            onChange={event => setSelectedCompanyId(event.target.value)}
-          >
-            {companies.map((item: Company) => (
-              <option key={item.id} value={item.id}>
-                {item.tradeName}
-              </option>
-            ))}
-          </select>
+          <button className="extractor-secondary" onClick={() => void loadHealth(true)} disabled={busy}>
+            <RefreshCw className={busy ? 'animate-spin' : ''} />
+            {busy ? 'Conferindo...' : 'Conferir agora'}
+          </button>
         }
       />
 
+      <div className="extractor-health-company-picker" aria-label="Empresas acompanhadas">
+        {companies.map((item: Company) => {
+          const localError =
+            Boolean(item.purchaseLastError || item.salesLastError) ||
+            (item.certificateDays != null && item.certificateDays < 0);
+          const localAttention =
+            !localError &&
+            (item.pendingXml > 0 ||
+              item.salesXmlPending > 0 ||
+              (item.certificateDays != null && item.certificateDays <= 30) ||
+              extractorHealthTone(item.purchaseStatus) === 'attention' ||
+              extractorHealthTone(item.salesStatus) === 'attention');
+          const tone = localError ? 'error' : localAttention ? 'attention' : 'ok';
+          return (
+            <button
+              key={item.id}
+              className={item.id === company.id ? 'active' : ''}
+              onClick={() => setHealthCompanyId(item.id)}
+            >
+              <span><strong>{item.tradeName}</strong><small>{formatCnpj(item.cnpj)}</small></span>
+              <i className={tone} />
+            </button>
+          );
+        })}
+      </div>
+
       <section className="extractor-health-hero">
         <div>
-          <p>Saúde da extração</p>
+          <p>Empresa conferida</p>
           <h2>{company.tradeName}</h2>
-          <span>{formatCnpj(company.cnpj)}</span>
+          <span>{formatCnpj(company.cnpj)} · {periodText}</span>
         </div>
-        <HealthState label={overall.label} state={overall.state} />
+        <HealthState label={overallLabel} state={overallState} />
       </section>
 
-      <section className="extractor-health-grid">
+      <section className="extractor-health-v2-kpis">
         <article>
-          <span>Compras</span>
-          <strong>{syncLabel(company.purchaseStatus)}</strong>
-          <small>
-            {company.purchaseLastCompletedAt
-              ? `Última conclusão: ${formatDate(company.purchaseLastCompletedAt, true)}`
-              : 'Aguardando primeira conclusão'}
-          </small>
-          {company.purchaseLastError && <p>{company.purchaseLastError}</p>}
+          <span>Compras encontradas</span>
+          <strong>{purchaseExpected == null ? '—' : integer.format(purchaseExpected)}</strong>
+          <small>{purchase.source_checked ? 'Conferido na fonte fiscal' : 'Fonte externa não comparada nesta UF'}</small>
         </article>
         <article>
-          <span>Vendas</span>
-          <strong>{syncLabel(company.salesStatus)}</strong>
-          <small>
-            {company.salesLastCompletedAt
-              ? `Última conclusão: ${formatDate(company.salesLastCompletedAt, true)}`
-              : 'Aguardando primeira conclusão'}
-          </small>
-          {company.salesLastError && <p>{company.salesLastError}</p>}
+          <span>Compras no site</span>
+          <strong>{integer.format(purchaseStored)}</strong>
+          <small>{integer.format(purchaseXmlReady)} com XML integral</small>
         </article>
         <article>
-          <span>Documentos</span>
-          <strong>{integer.format(company.documents)}</strong>
-          <small>
-            {integer.format(company.fullXml)} com XML · {integer.format(company.pendingXml)} pendente(s)
-          </small>
-          {company.salesXmlPending > 0 && <p>{company.salesXmlPending} XML de vendas aguardando recuperação.</p>}
+          <span>Vendas encontradas</span>
+          <strong>{salesExpected == null ? '—' : integer.format(salesExpected)}</strong>
+          <small>{sales.sequence_total ? `Sequência: ${sales.sequence_resolved || 0}/${sales.sequence_total}` : 'Base fiscal reconciliada'}</small>
         </article>
         <article>
-          <span>Certificado A1</span>
-          <strong>{company.certificateUntil ? formatDate(company.certificateUntil) : 'Não configurado'}</strong>
-          <small>
-            {company.certificateDays == null
-              ? 'Sem validade disponível'
-              : company.certificateDays < 0
-                ? 'Certificado vencido'
-                : `${company.certificateDays} dia(s) restantes`}
-          </small>
+          <span>Vendas no site</span>
+          <strong>{integer.format(salesStored)}</strong>
+          <small>{integer.format(salesXmlReady)} com XML integral</small>
         </article>
       </section>
 
-      <article className="extractor-health-timeline">
+      <section className="extractor-health-compare">
+        <article>
+          <header>
+            <h3>Compras</h3>
+            <span>{syncLabel(purchase.status || company.purchaseStatus)}</span>
+          </header>
+          <div className="extractor-health-compare-grid">
+            <div><small>Fonte fiscal</small><strong>{purchaseExpected == null ? '—' : integer.format(purchaseExpected)}</strong></div>
+            <div><small>Salvas</small><strong>{integer.format(purchaseStored)}</strong></div>
+            <div><small>XML</small><strong>{integer.format(purchaseXmlReady)}/{integer.format(purchaseStored)}</strong></div>
+            <div><small>XML pendente</small><strong>{integer.format(Number(purchase.xml_pending || 0))}</strong></div>
+            <div><small>Manifestação</small><strong>{integer.format(Number(purchase.manifestation_required || 0))}</strong></div>
+            <div><small>Falhas seguidas</small><strong>{integer.format(Number(purchase.failures || 0))}</strong></div>
+          </div>
+          {purchase.source_error && <p className="extractor-helper">A fonte externa respondeu com indisponibilidade temporária: {purchase.source_error}</p>}
+        </article>
+
+        <article>
+          <header>
+            <h3>Vendas</h3>
+            <span>{syncLabel(sales.status || company.salesStatus)}</span>
+          </header>
+          <div className="extractor-health-compare-grid">
+            <div><small>Esperadas</small><strong>{salesExpected == null ? '—' : integer.format(salesExpected)}</strong></div>
+            <div><small>Salvas</small><strong>{integer.format(salesStored)}</strong></div>
+            <div><small>XML</small><strong>{integer.format(salesXmlReady)}/{integer.format(salesStored)}</strong></div>
+            <div><small>XML pendente</small><strong>{integer.format(Number(sales.xml_pending || 0))}</strong></div>
+            <div><small>Sequência resolvida</small><strong>{integer.format(Number(sales.sequence_resolved || 0))}/{integer.format(Number(sales.sequence_total || 0))}</strong></div>
+            <div><small>Falhas seguidas</small><strong>{integer.format(Number(sales.failures || 0))}</strong></div>
+          </div>
+        </article>
+      </section>
+
+      <article className="extractor-health-timeline extractor-health-activity">
         <div className="extractor-health-title">
-          <div>
-            <h2>Última atividade</h2>
-            <p>Resumo das rotinas fiscais sem expor logs técnicos internos.</p>
-          </div>
-          <span>Última busca: {company.lastSync ? formatDate(company.lastSync, true) : '—'}</span>
+          <div><h2>Últimas verificações</h2><p>Somente informações úteis para acompanhar a captura fiscal.</p></div>
+          <span>Conferido: {health?.checked_at ? formatDate(health.checked_at, true) : '—'}</span>
         </div>
-        <div className="extractor-health-rows">
-          <div>
-            <span><i className={purchaseError ? 'error' : 'ok'} />Compras</span>
-            <strong>{syncLabel(company.purchaseStatus)}</strong>
-            <small>{company.purchaseLastError || 'Nenhuma falha persistente informada.'}</small>
-          </div>
-          <div>
-            <span><i className={salesError ? 'error' : 'ok'} />Vendas</span>
-            <strong>{syncLabel(company.salesStatus)}</strong>
-            <small>{company.salesLastError || 'Nenhuma falha persistente informada.'}</small>
-          </div>
-          <div>
-            <span><i className={company.pendingXml ? 'attention' : 'ok'} />XML</span>
-            <strong>{company.pendingXml ? `${company.pendingXml} pendente(s)` : 'Completo'}</strong>
-            <small>{company.pendingXml ? 'A recuperação automática continuará tentando.' : 'Arquivos disponíveis no período contratado.'}</small>
-          </div>
-        </div>
-      </article>
-
-      <article className="extractor-history extractor-history-compact">
         <div>
-          <h2>Consulta retroativa</h2>
-          <p>Precisa analisar um período anterior à janela atual? Registre a solicitação para esta empresa.</p>
-          <div className="extractor-form-row">
-            <label>
-              De
-              <input type="month" value={from} onChange={event => setFrom(event.target.value)} />
-            </label>
-            <label>
-              Até
-              <input type="month" value={to} onChange={event => setTo(event.target.value)} />
-            </label>
+          <div className="extractor-health-activity-row">
+            <span>Compras</span>
+            <strong>{syncLabel(purchase.status || company.purchaseStatus)}</strong>
+            <span>{purchase.last_error || 'Nenhuma falha persistente'}</span>
+            <small>{purchase.last_completed_at ? formatDate(purchase.last_completed_at, true) : 'Sem conclusão registrada'}</small>
           </div>
-          <button className="extractor-primary" onClick={() => void save()} disabled={busy}>
-            {busy ? 'Registrando' : 'Solicitar análise'}
-          </button>
+          <div className="extractor-health-activity-row">
+            <span>Vendas</span>
+            <strong>{syncLabel(sales.status || company.salesStatus)}</strong>
+            <span>{sales.last_error || 'Nenhuma falha persistente'}</span>
+            <small>{sales.last_completed_at ? formatDate(sales.last_completed_at, true) : 'Sem conclusão registrada'}</small>
+          </div>
+          <div className="extractor-health-activity-row">
+            <span>Certificado A1</span>
+            <strong>{cert.expired ? 'Vencido' : cert.valid_until ? 'Válido' : 'Não configurado'}</strong>
+            <span>{cert.name || 'Certificado ativo da empresa'}</span>
+            <small>{cert.valid_until ? `Validade ${formatDate(cert.valid_until)}` : '—'}</small>
+          </div>
+          <div className="extractor-health-activity-row">
+            <span>Recuperações automáticas</span>
+            <strong>{integer.format(Number(recovery.count || 0))}</strong>
+            <span>{recovery.last_reason || 'Nenhuma correção recente necessária'}</span>
+            <small>{recovery.last_checked_at ? formatDate(recovery.last_checked_at, true) : '—'}</small>
+          </div>
         </div>
-        <aside>
-          <strong>{integer.format(company.documents)}</strong>
-          <span>documentos disponíveis</span>
-        </aside>
       </article>
     </div>
   );
 }
 
-function SettingsSection({
-  companies,
-  selectedCompanyId,
-  setSelectedCompanyId,
-  account,
-  usage,
-  planLabel,
-}: any) {
-  const company =
-    companies.find((item: Company) => item.id === selectedCompanyId) || companies[0] || null;
+const billingStatusLabel = (status?: string | null) => {
+  const value = String(status || '').toLowerCase();
+  if (['active', 'authorized', 'paid', 'approved'].includes(value)) return 'Ativo';
+  if (['trialing'].includes(value)) return 'Período gratuito';
+  if (['past_due', 'pending', 'in_process', 'incomplete'].includes(value)) return 'Pagamento pendente';
+  if (['paused'].includes(value)) return 'Pausado';
+  if (['canceled', 'cancelled', 'rejected'].includes(value)) return 'Encerrado';
+  return status || 'Sem recorrência';
+};
+const invoiceTone = (status?: string | null) => {
+  const value = String(status || '').toLowerCase();
+  if (['paid', 'approved'].includes(value)) return 'paid';
+  if (['failed', 'rejected', 'cancelled', 'canceled'].includes(value)) return 'failed';
+  return 'pending';
+};
+const centsMoney = (cents?: number | null) =>
+  currency.format(Math.max(0, Number(cents || 0)) / 100);
+
+function BillingSection({ usage, planLabel, preview, setNotice }: any) {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(!preview);
+
+  const loadBilling = useCallback(async () => {
+    if (preview) {
+      setData({
+        account: { name: 'Conta demonstração', companies: 1, lifetime_access: false },
+        subscription: { status: 'active', provider: 'mercado_pago', billing_mode: 'recurring', current_period_end: new Date(Date.now() + 20 * 86400000).toISOString(), plan: { name: planLabel, price_cents: 9900 } },
+        invoices: [],
+      });
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const { data: response, error } = await supabase.functions.invoke('extractor-billing-portal', { body: {} });
+      if (error) throw error;
+      if (response?.error) throw new Error(String(response.error));
+      setData(response);
+    } catch (error) {
+      setNotice({ tone: 'error', text: error instanceof Error ? error.message : 'Não foi possível carregar as faturas agora.' });
+    } finally {
+      setLoading(false);
+    }
+  }, [preview, planLabel]);
+
+  useEffect(() => { void loadBilling(); }, [loadBilling]);
+
+  const subscription = data?.subscription || null;
+  const account = data?.account || null;
+  const invoices = Array.isArray(data?.invoices) ? data.invoices : [];
+  const plan = subscription?.plan || null;
+  const statusText = account?.lifetime_access
+    ? 'Acesso vitalício'
+    : billingStatusLabel(subscription?.status || subscription?.provider_status);
+  const nextCharge = subscription?.current_period_end || subscription?.access_expires_at || account?.access_expires_at;
+  const checkoutUrl = String(subscription?.checkout_url || '');
   const upgrade = () =>
     window.open(
       'https://wa.me/5582999324884?text=Ol%C3%A1%2C%20quero%20fazer%20upgrade%20do%20plano%20do%20Extrator%20Fiscal%20WS.',
@@ -1993,129 +2010,174 @@ function SettingsSection({
       'noopener,noreferrer'
     );
 
-  if (!company)
-    return (
-      <div className="extractor-page">
-        <PageHeading title="Configurações" icon="settings" description="Configurações do Extrator Fiscal." />
-        <Empty>Adicione uma empresa para configurar o Extrator.</Empty>
-      </div>
-    );
+  return (
+    <div className="extractor-page">
+      <PageHeading
+        title="Faturas"
+        icon="report"
+        description="Plano, consumo, recorrência e pagamentos do Extrator Fiscal."
+        actions={<button className="extractor-secondary" onClick={() => void loadBilling()} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />Atualizar</button>}
+      />
 
-  const certState =
-    company.certificateDays == null
-      ? 'Não configurado'
-      : company.certificateDays < 0
-        ? 'Vencido'
-        : company.certificateDays <= 30
-          ? 'Vence em breve'
-          : 'Válido';
+      {loading && !data ? <div className="extractor-report-loading">Carregando faturamento...</div> : (
+        <>
+          <section className="extractor-billing-hero">
+            <div><small>Plano atual</small><strong>{plan?.name || planLabel}</strong><span>{statusText}</span></div>
+            <div><small>Consumo no ciclo</small><strong>{integer.format(usage.used)} / {integer.format(usage.limit)} XML</strong><span>{integer.format(usage.remaining)} restantes</span></div>
+            <div><small>{account?.lifetime_access ? 'Acesso' : 'Próxima referência'}</small><strong>{account?.lifetime_access ? 'Sem recorrência' : nextCharge ? formatDate(nextCharge) : '—'}</strong><span>{account?.companies || 0} empresa(s) vinculada(s)</span></div>
+          </section>
+
+          <section className="extractor-billing-grid">
+            <article className="extractor-billing-card">
+              <header><div><h2>Uso do plano</h2><p>XML processados no período atual</p></div><strong className="amount">{usage.percent}%</strong></header>
+              <div className="extractor-billing-progress"><i style={{ width: `${Math.min(100, Math.max(0, usage.percent))}%` }} /></div>
+              <div className="extractor-billing-facts">
+                <div><span>Processados</span><b>{integer.format(usage.used)}</b></div>
+                <div><span>Limite</span><b>{integer.format(usage.limit)}</b></div>
+                <div><span>Restantes</span><b>{integer.format(usage.remaining)}</b></div>
+                <div><span>Ciclo</span><b>{formatDate(usage.period_start)} a {formatDate(usage.period_end)}</b></div>
+              </div>
+              <div className="extractor-billing-actions"><button className="primary" onClick={upgrade}>Fazer upgrade</button></div>
+            </article>
+
+            <article className="extractor-billing-card">
+              <header><div><h2>Assinatura</h2><p>Dados reais da recorrência registrada</p></div><strong className="amount">{plan?.price_cents ? centsMoney(plan.price_cents) : '—'}</strong></header>
+              <div className="extractor-billing-facts">
+                <div><span>Situação</span><b>{statusText}</b></div>
+                <div><span>Cobrança</span><b>{subscription?.billing_mode === 'recurring' ? 'Mensal automática' : subscription ? 'Pagamento único' : '—'}</b></div>
+                <div><span>Provedor</span><b>{subscription?.provider === 'mercado_pago' ? 'Mercado Pago' : subscription?.provider || '—'}</b></div>
+                <div><span>Próximo ciclo</span><b>{nextCharge ? formatDate(nextCharge) : '—'}</b></div>
+              </div>
+              <div className="extractor-billing-actions">
+                {checkoutUrl && <a className="primary" href={checkoutUrl} target="_blank" rel="noopener noreferrer">Continuar pagamento</a>}
+                {!checkoutUrl && subscription?.billing_mode === 'recurring' && <span className="extractor-helper">A recorrência é administrada pelo Mercado Pago. Nenhuma cobrança manual está pendente aqui.</span>}
+              </div>
+            </article>
+          </section>
+
+          <section className="extractor-invoice-list">
+            <div className="extractor-invoice-head"><span>Fatura</span><span>Descrição</span><span>Vencimento</span><span>Valor</span><span>Ação</span></div>
+            {invoices.length ? invoices.map((invoice: any) => {
+              const tone = invoiceTone(invoice.status || invoice.provider_status);
+              const paymentUrl = String(invoice.checkout_url || '');
+              return (
+                <div className="extractor-invoice-row" key={invoice.id}>
+                  <strong>#{invoice.invoice_number || String(invoice.id).slice(0, 8)}</strong>
+                  <span>{invoice.description || 'Extrator Fiscal WS'}</span>
+                  <span>{invoice.due_date ? formatDate(invoice.due_date) : '—'}<br /><small className={`extractor-invoice-status ${tone}`}>{billingStatusLabel(invoice.status || invoice.provider_status)}</small></span>
+                  <strong>{centsMoney(invoice.total_cents)}</strong>
+                  <span>
+                    {paymentUrl
+                      ? <a href={paymentUrl} target="_blank" rel="noopener noreferrer">{tone === 'paid' ? 'Ver pagamento' : 'Pagar agora'}</a>
+                      : invoice.receipt_path
+                        ? 'Comprovante disponível'
+                        : tone === 'paid'
+                          ? 'Pago'
+                          : 'Sem link de cobrança'}
+                  </span>
+                </div>
+              );
+            }) : <Empty>Nenhuma fatura registrada para esta conta.</Empty>}
+          </section>
+        </>
+      )}
+    </div>
+  );
+}
+
+function SettingsSection({ account, user, preview, setNotice }: any) {
+  const [portal, setPortal] = useState<any>(null);
+  const [loading, setLoading] = useState(!preview);
+  const [resetting, setResetting] = useState(false);
+
+  const loadProfile = useCallback(async () => {
+    if (preview) {
+      setPortal({
+        profile: { full_name: 'Usuário demonstração', email: 'demo@wsgestao.com.br', phone: null, created_at: new Date().toISOString(), last_sign_in_at: new Date().toISOString(), email_confirmed_at: new Date().toISOString() },
+        organization: { name: 'Conta demonstração', status: 'active', member_role: 'owner', member_since: new Date().toISOString() },
+        account: { name: account?.name || 'Conta Extrator', status: 'active', access_source: 'subscription', lifetime_access: false, created_at: new Date().toISOString() },
+      });
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('extractor-billing-portal', { body: {} });
+      if (error) throw error;
+      if (data?.error) throw new Error(String(data.error));
+      setPortal(data);
+    } catch (error) {
+      setNotice({ tone: 'error', text: error instanceof Error ? error.message : 'Não foi possível carregar o perfil.' });
+    } finally {
+      setLoading(false);
+    }
+  }, [preview, account?.id]);
+
+  useEffect(() => { void loadProfile(); }, [loadProfile]);
+
+  const profile = portal?.profile || {};
+  const organization = portal?.organization || {};
+  const portalAccount = portal?.account || account || {};
+  const displayName = profile.full_name || String(profile.email || user?.email || 'Usuário').split('@')[0] || 'Usuário';
+  const initials = displayName.split(/\s+/).filter(Boolean).slice(0, 2).map((part: string) => part[0]?.toUpperCase()).join('') || 'WS';
+
+  const sendReset = async () => {
+    const email = String(profile.email || user?.email || '');
+    if (!email || preview || resetting) return;
+    setResetting(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+      if (error) throw error;
+      setNotice({ tone: 'success', text: 'Link de redefinição enviado para o e-mail da conta.' });
+    } catch (error) {
+      setNotice({ tone: 'error', text: error instanceof Error ? error.message : 'Não foi possível enviar o link agora.' });
+    } finally {
+      setResetting(false);
+    }
+  };
 
   return (
     <div className="extractor-page">
       <PageHeading
         title="Configurações"
         icon="settings"
-        description="Empresa, certificado, sincronização, documentos e plano em um só lugar."
-        actions={
-          <select
-            className="extractor-company-select"
-            value={company.id}
-            onChange={event => setSelectedCompanyId(event.target.value)}
-          >
-            {companies.map((item: Company) => (
-              <option key={item.id} value={item.id}>
-                {item.tradeName}
-              </option>
-            ))}
-          </select>
-        }
+        description="Perfil, conta, acesso e segurança do Extrator."
+        actions={<button className="extractor-secondary" onClick={() => void loadProfile()} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />Atualizar</button>}
       />
 
-      <section className="extractor-settings-overview">
-        <div>
-          <p>Empresa ativa</p>
-          <h2>{company.tradeName}</h2>
-          <span>{formatCnpj(company.cnpj)} · {company.uf}</span>
-        </div>
-        <div>
-          <span>Última sincronização</span>
-          <strong>{company.lastSync ? formatDate(company.lastSync, true) : 'Ainda não concluída'}</strong>
-        </div>
-      </section>
-
-      <div className="extractor-settings-sections">
-        <article className="extractor-panel">
-          <PanelHead title="Empresa" sub="Identificação fiscal utilizada pelo Extrator" icon="company" />
-          <dl>
-            <div><dt>Razão social</dt><dd>{company.name}</dd></div>
-            <div><dt>Nome fantasia</dt><dd>{company.tradeName}</dd></div>
-            <div><dt>CNPJ</dt><dd>{formatCnpj(company.cnpj)}</dd></div>
-            <div><dt>UF</dt><dd>{company.uf}</dd></div>
-          </dl>
-        </article>
-
-        <article className="extractor-panel">
-          <PanelHead title="Certificado digital" sub="A1 usado nas consultas fiscais" icon="certificate" />
-          <dl>
-            <div><dt>Situação</dt><dd>{certState}</dd></div>
-            <div><dt>Validade</dt><dd>{company.certificateUntil ? formatDate(company.certificateUntil) : '—'}</dd></div>
-            <div><dt>Dias restantes</dt><dd>{company.certificateDays == null ? '—' : String(company.certificateDays)}</dd></div>
-          </dl>
-        </article>
-
-        <article className="extractor-panel">
-          <PanelHead title="Sincronização fiscal" sub="Compras e vendas desta empresa" icon="refresh" />
-          <dl>
-            <div><dt>Automática</dt><dd>{company.automaticSync ? 'Ativada' : 'Desativada'}</dd></div>
-            <div><dt>Compras</dt><dd>{syncLabel(company.purchaseStatus)}</dd></div>
-            <div><dt>Vendas</dt><dd>{syncLabel(company.salesStatus)}</dd></div>
-            <div><dt>Última busca</dt><dd>{company.lastSync ? formatDate(company.lastSync, true) : '—'}</dd></div>
-          </dl>
-        </article>
-
-        <article className="extractor-panel">
-          <PanelHead title="Documentos" sub="Cobertura dos arquivos fiscais" icon="document" />
-          <dl>
-            <div><dt>Documentos</dt><dd>{integer.format(company.documents)}</dd></div>
-            <div><dt>XML integral</dt><dd>{integer.format(company.fullXml)}</dd></div>
-            <div><dt>Pendentes</dt><dd>{integer.format(company.pendingXml)}</dd></div>
-            <div><dt>Compras / vendas</dt><dd>{integer.format(company.entries)} / {integer.format(company.exits)}</dd></div>
-          </dl>
-        </article>
-
-        <article className="extractor-panel extractor-plan-card">
-          <PanelHead title="Plano e consumo" sub="Ciclo atual da conta" icon="report" />
-          <div className="extractor-settings-plan">
-            <div className="extractor-plan-usage-header">
-              <div>
-                <span>XML processados</span>
-                <strong>{integer.format(usage.used)} / {integer.format(usage.limit)}</strong>
-              </div>
-              <b>{usage.percent}% utilizado</b>
-            </div>
-            <div className="extractor-plan-progress">
-              <i style={{ width: `${Math.min(100, Math.max(0, usage.percent))}%` }} />
+      {loading && !portal ? <div className="extractor-report-loading">Carregando conta...</div> : (
+        <div className="extractor-settings-v2">
+          <article className="extractor-profile-card">
+            <div className="extractor-profile-head">
+              <span className="extractor-profile-avatar">{initials}</span>
+              <div><h2>{displayName}</h2><p>{profile.email || user?.email || '—'}</p></div>
             </div>
             <dl>
-              <div><dt>Plano</dt><dd>{planLabel}</dd></div>
-              <div><dt>Restantes</dt><dd>{integer.format(usage.remaining)} XML</dd></div>
-              <div><dt>Ciclo</dt><dd>{formatDate(usage.period_start)} a {formatDate(usage.period_end)}</dd></div>
-              <div><dt>Janela padrão</dt><dd>{account?.base_lookback_days ? `${account.base_lookback_days} dias` : '—'}</dd></div>
+              <div><dt>E-mail</dt><dd>{profile.email || user?.email || '—'}</dd></div>
+              <div><dt>Telefone</dt><dd>{profile.phone || 'Não informado'}</dd></div>
+              <div><dt>E-mail confirmado</dt><dd>{profile.email_confirmed_at ? 'Sim' : 'Pendente'}</dd></div>
+              <div><dt>Cadastro</dt><dd>{profile.created_at ? formatDate(profile.created_at, true) : '—'}</dd></div>
+              <div><dt>Último acesso</dt><dd>{profile.last_sign_in_at ? formatDate(profile.last_sign_in_at, true) : '—'}</dd></div>
             </dl>
-            <button className="extractor-primary extractor-upgrade" onClick={upgrade}>Fazer upgrade</button>
-          </div>
-        </article>
+          </article>
 
-        <article className="extractor-panel">
-          <PanelHead title="Conta e acesso" sub="Contexto desta assinatura" icon="settings" />
-          <dl>
-            <div><dt>Conta</dt><dd>{account?.name || 'Conta Extrator'}</dd></div>
-            <div><dt>Empresas</dt><dd>{companies.length}</dd></div>
-            <div><dt>Período liberado desde</dt><dd>{account?.allowed_from ? formatDate(account.allowed_from) : '—'}</dd></div>
-            <div><dt>Produto</dt><dd>Extrator Fiscal WS</dd></div>
-          </dl>
-        </article>
-      </div>
+          <article className="extractor-settings-card">
+            <h3>Conta e acesso</h3>
+            <dl>
+              <div><dt>Organização</dt><dd>{organization.name || portalAccount.name || 'Conta Extrator'}</dd></div>
+              <div><dt>Perfil de acesso</dt><dd>{String(organization.member_role || 'membro').replace(/_/g, ' ')}</dd></div>
+              <div><dt>Situação da organização</dt><dd>{organization.status || 'Ativa'}</dd></div>
+              <div><dt>Conta Extrator</dt><dd>{portalAccount.status || 'Ativa'}</dd></div>
+              <div><dt>Origem do acesso</dt><dd>{portalAccount.lifetime_access ? 'Acesso vitalício' : String(portalAccount.access_source || 'assinatura').replace(/_/g, ' ')}</dd></div>
+              <div><dt>Membro desde</dt><dd>{organization.member_since ? formatDate(organization.member_since, true) : '—'}</dd></div>
+            </dl>
+            <div className="extractor-settings-security">
+              <button onClick={() => void sendReset()} disabled={preview || resetting}>{resetting ? 'Enviando...' : 'Enviar link para redefinir senha'}</button>
+              <button onClick={() => void supabase.auth.signOut()}>Sair da conta</button>
+            </div>
+          </article>
+        </div>
+      )}
     </div>
   );
 }
