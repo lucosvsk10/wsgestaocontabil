@@ -285,3 +285,36 @@
   .extractor-invoice-head{display:none}.extractor-invoice-row{grid-template-columns:1fr 1fr;gap:6px}.extractor-invoice-row>*:nth-child(2){grid-column:1/-1}
   .extractor-fiscal-preview-overlay{padding:0}.extractor-fiscal-preview-modal{width:100vw;height:100vh;border-radius:0}.extractor-fiscal-paper-stage{padding:8px}
 }
+
+
+/* Remaining Extractor surfaces: remove the old outlined-card language and keep drawers/modals dark. */
+.extractor-app :is(
+  .extractor-report-company,.extractor-report-grid>article,.extractor-report-status,.extractor-report-suppliers,
+  .extractor-report-coverage,.extractor-report-loading,.extractor-toolbar,.extractor-search-row,
+  .extractor-attention-list,.extractor-chart-area,.extractor-chart-company,.extractor-donut,
+  .extractor-account-info,.extractor-account-notice,.extractor-plan-summary,.extractor-plan-usage
+){
+  border-color:transparent!important;
+}
+.extractor-account-overlay{background:rgba(0,4,10,.76)!important;backdrop-filter:blur(7px)}
+.extractor-account-drawer{background:#080e18!important;color:#e8eef5!important;box-shadow:-26px 0 70px rgba(0,0,0,.48)!important}
+.extractor-account-drawer>header,.extractor-account-drawer>footer{background:#080e18!important;border-color:rgba(255,255,255,.055)!important}
+.extractor-account-body>nav{background:#0b111c!important;border-color:rgba(255,255,255,.055)!important}
+.extractor-account-body>nav button{color:#93a3b4!important}
+.extractor-account-body>nav button:hover,.extractor-account-body>nav button.active{background:#151e2b!important;color:#f1f5f9!important}
+.extractor-account-body>main{background:#080e18!important}
+.extractor-account-profile p,.extractor-account-profile>div>span,.extractor-account-section-head p,
+.extractor-account-info span,.extractor-account-notice p,.extractor-plan-summary span,.extractor-plan-usage span{color:#718397!important}
+.extractor-account-info,.extractor-account-notice,.extractor-plan-summary,.extractor-plan-usage{
+  border:0!important;background:#101725!important;color:#e8eef5!important
+}
+.extractor-account-action,.extractor-account-actions button,.extractor-account-drawer>footer button{
+  border:0!important;background:#151e2b!important;color:#dce5ed!important
+}
+.extractor-account-actions button.primary{background:#f5f5f4!important;color:#111827!important}
+.extractor-account-danger{border:0!important;background:rgba(207,101,109,.08)!important;color:#e5a1a6!important}
+.extractor-account-danger p{color:#b8898d!important}
+.extractor-account-danger button{border:0!important;background:#25171b!important;color:#df8a90!important}
+.extractor-report-company{border:0!important;background:transparent!important;gap:8px!important}
+.extractor-report-company>div{border:0!important;border-radius:4px;background:var(--ex-surface)!important}
+.extractor-report-loading{border:0!important;background:var(--ex-surface)!important}
