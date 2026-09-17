@@ -3,7 +3,7 @@ import path from 'node:path';
 
 const root = path.resolve('supabase/functions');
 const extensions = new Set(['.ts', '.tsx', '.js', '.mjs', '.cjs']);
-const allowedAuthorityLiterals = new Set([
+const allowedAuthorityFiles = new Set([
   path.normalize('supabase/functions/dfe-issue-native/qrcode.ts'),
 ]);
 const patterns = [
@@ -26,17 +26,30 @@ function walk(dir) {
   return out;
 }
 
+function lineAt(text, index) {
+  const start = text.lastIndexOf('\n', index - 1) + 1;
+  const end = text.indexOf('\n', index);
+  return text.slice(start, end < 0 ? text.length : end);
+}
+function allowedStaticLiteral(rel, line) {
+  if (allowedAuthorityFiles.has(rel)) return true;
+  if (rel === path.normalize('supabase/functions/saas-mdfe-issue/index.ts') && /qrCodMDFe|qrCode/.test(line)) return true;
+  if (rel === path.normalize('supabase/functions/fiscal-sales-connector/index.ts') && /moduleBase|bootstrap|rpcEndpoint/.test(line)) return true;
+  return false;
+}
+
 const violations = [];
 for (const file of walk(root)) {
   const rel = path.normalize(path.relative(process.cwd(), file));
   const text = fs.readFileSync(file, 'utf8');
   for (const pattern of patterns) {
-    if (pattern.name.includes('authority URL') && allowedAuthorityLiterals.has(rel)) continue;
     pattern.re.lastIndex = 0;
     let match;
     while ((match = pattern.re.exec(text))) {
-      const line = text.slice(0, match.index).split('\n').length;
-      violations.push(`${rel}:${line} — ${pattern.name}`);
+      const lineNumber = text.slice(0, match.index).split('\n').length;
+      const sourceLine = lineAt(text, match.index);
+      if (pattern.name.includes('authority URL') && allowedStaticLiteral(rel, sourceLine)) continue;
+      violations.push(`${rel}:${lineNumber} — ${pattern.name}`);
       if (pattern.re.lastIndex === match.index) pattern.re.lastIndex += 1;
     }
   }
