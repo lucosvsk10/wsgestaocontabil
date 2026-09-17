@@ -1,10 +1,13 @@
 const https = require('node:https');
+const crypto = require('node:crypto');
 const forge = require('node-forge');
 const { SignedXml } = require('xml-crypto');
 
 const AN_HOST = 'www.nfe.fazenda.gov.br';
 const AN_PATH = '/NFeRecepcaoEvento4/NFeRecepcaoEvento4.asmx';
 const AN_WSDL_PATH = '/NFeRecepcaoEvento4/NFeRecepcaoEvento4.asmx?WSDL';
+const ADN_HOST = 'adn.nfse.gov.br';
+const GATEWAY_TOKEN_SHA256 = '7725295432774011f678a73ced1ae9761a168ba47df4f008f971f90ac0bd2352';
 
 function json(res, status, body) {
   res.statusCode = status;
@@ -31,6 +34,21 @@ function readBody(req) {
 
 function digits(v) {
   return String(v || '').replace(/\D/g, '');
+}
+
+function sha256(value) {
+  return crypto.createHash('sha256').update(String(value || '')).digest('hex');
+}
+
+function safeEqual(a, b) {
+  const aa = Buffer.from(String(a || ''));
+  const bb = Buffer.from(String(b || ''));
+  return aa.length === bb.length && crypto.timingSafeEqual(aa, bb);
+}
+
+function authorized(req) {
+  const supplied = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+  return supplied && safeEqual(sha256(supplied), GATEWAY_TOKEN_SHA256);
 }
 
 function tags(xml, name) {
@@ -100,18 +118,16 @@ function soap(xml) {
   return `<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeRecepcaoEvento4">${xml}</nfeDadosMsg></soap12:Body></soap12:Envelope>`;
 }
 
-function requestHttps({ method, path, pfxB64, password, body = '' }) {
+function requestHttps({ hostname, method, path, pfxB64, password, body = '', headers = {} }) {
   return new Promise((resolve, reject) => {
-    const headers = {
-      'User-Agent': 'WS-Gestao-Fiscal-Bridge/3.0',
+    const finalHeaders = {
+      'User-Agent': 'WS-Gestao-Fiscal-Bridge/3.1',
       'Connection': 'close',
+      ...headers,
     };
-    if (method === 'POST') {
-      headers['Content-Type'] = 'application/soap+xml; charset=utf-8; action="http://www.portalfiscal.inf.br/nfe/wsdl/NFeRecepcaoEvento4/nfeRecepcaoEvento"';
-      headers['Content-Length'] = Buffer.byteLength(body);
-    }
-    const req = https.request({
-      hostname: AN_HOST,
+    if (body) finalHeaders['Content-Length'] = Buffer.byteLength(body);
+    const request = https.request({
+      hostname,
       port: 443,
       path,
       method,
@@ -119,41 +135,80 @@ function requestHttps({ method, path, pfxB64, password, body = '' }) {
       passphrase: String(password || ''),
       minVersion: 'TLSv1.2',
       rejectUnauthorized: true,
-      servername: AN_HOST,
+      servername: hostname,
       timeout: 45000,
-      headers,
+      headers: finalHeaders,
     }, response => {
       const chunks = [];
       response.on('data', chunk => chunks.push(Buffer.from(chunk)));
       response.on('end', () => resolve({
-        host: AN_HOST,
+        host: hostname,
         status: response.statusCode || 0,
         text: Buffer.concat(chunks).toString('utf8'),
       }));
     });
-    req.on('timeout', () => req.destroy(new Error('event_timeout')));
-    req.on('error', reject);
-    if (body) req.write(body);
-    req.end();
+    request.on('timeout', () => request.destroy(new Error('gateway_timeout')));
+    request.on('error', reject);
+    if (body) request.write(body);
+    request.end();
   });
 }
 
 async function probeTransport(pfxB64, password) {
-  return requestHttps({ method: 'GET', path: AN_WSDL_PATH, pfxB64, password });
+  return requestHttps({ hostname: AN_HOST, method: 'GET', path: AN_WSDL_PATH, pfxB64, password });
 }
 
 async function transmitEvent(pfxB64, password, signedXml) {
-  return requestHttps({ method: 'POST', path: AN_PATH, pfxB64, password, body: soap(signedXml) });
+  return requestHttps({
+    hostname: AN_HOST,
+    method: 'POST',
+    path: AN_PATH,
+    pfxB64,
+    password,
+    body: soap(signedXml),
+    headers: {
+      'Content-Type': 'application/soap+xml; charset=utf-8; action="http://www.portalfiscal.inf.br/nfe/wsdl/NFeRecepcaoEvento4/nfeRecepcaoEvento"',
+    },
+  });
+}
+
+async function distributeNfse(pfxB64, password, cnpj, nsu) {
+  const qs = new URLSearchParams({ tipoNSU: 'DISTRIBUICAO', lote: 'true', cnpjConsulta: cnpj });
+  return requestHttps({
+    hostname: ADN_HOST,
+    method: 'GET',
+    path: `/contribuintes/DFe/${Math.max(0, Number(nsu) || 0)}?${qs}`,
+    pfxB64,
+    password,
+    headers: { Accept: 'application/json' },
+  });
 }
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return json(res, 405, { error: 'method_not_allowed' });
+  if (!authorized(req)) return json(res, 401, { error: 'unauthorized' });
   try {
     const body = await readBody(req);
     const action = String(body.action || 'event').toLowerCase();
     const pfx = String(body.certificate_base64 || '');
     const password = String(body.certificate_password || '');
     if (!pfx || !password) return json(res, 400, { error: 'certificate_required' });
+
+    if (action === 'nfse-dfe') {
+      const cnpj = digits(body.cnpj);
+      if (!/^\d{14}$/.test(cnpj)) return json(res, 400, { error: 'invalid_cnpj' });
+      const result = await distributeNfse(pfx, password, cnpj, body.nsu);
+      let parsed;
+      try { parsed = result.text ? JSON.parse(result.text) : {}; }
+      catch { parsed = { raw: result.text.slice(0, 2000) }; }
+      return json(res, 200, {
+        ok: result.status >= 200 && result.status < 300,
+        action: 'nfse-dfe',
+        host: result.host,
+        http: result.status,
+        response: parsed,
+      });
+    }
 
     const { key, cert } = pems(pfx, password);
 
@@ -201,7 +256,7 @@ module.exports = async function handler(req, res) {
       response_excerpt: result.text.replace(/<Signature[\s\S]*?<\/Signature>/gi, '<Signature>...</Signature>').slice(0, 1800),
     });
   } catch (error) {
-    console.error('NFe event bridge error', error);
+    console.error('Fiscal gateway error', error);
     return json(res, 500, { error: error instanceof Error ? error.message : String(error) });
   }
 };
