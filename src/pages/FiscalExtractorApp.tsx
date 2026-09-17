@@ -1045,137 +1045,186 @@ function Overview({ companies, totals, models, daily, onGo }: any) {
 }
 
 function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview }: any) {
-  const [term, setTerm] = useState(''),
-    [busy, setBusy] = useState('');
+  const [term, setTerm] = useState('');
+  const [busy, setBusy] = useState('');
+  const [detailId, setDetailId] = useState('');
+  const [detailRaw, setDetailRaw] = useState<any>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
   const visible = companies.filter(
     (c: Company) =>
       `${c.name} ${c.tradeName} ${c.cnpj}`.toLowerCase().includes(term.toLowerCase().trim()) ||
-      (term.replace(/\D/g, '').length > 0 &&
-        c.cnpj.replace(/\D/g, '').includes(term.replace(/\D/g, '')))
+      (term.replace(/\D/g, '').length > 0 && c.cnpj.replace(/\D/g, '').includes(term.replace(/\D/g, '')))
   );
+  const selected = companies.find((c: Company) => c.id === detailId) || null;
+
+  const loadDetail = useCallback(async (id: string) => {
+    if (!id || preview) {
+      setDetailRaw(null);
+      return;
+    }
+    setDetailLoading(true);
+    try {
+      const data = await extractorRequest({ action: 'list' });
+      const link = (data?.companies || []).find((item: any) => String(item.fiscal_company_id) === id);
+      setDetailRaw(link || null);
+    } catch (error) {
+      setNotice({
+        tone: 'error',
+        text: error instanceof Error ? error.message : 'Não foi possível carregar os dados completos da empresa.',
+      });
+      setDetailRaw(null);
+    } finally {
+      setDetailLoading(false);
+    }
+  }, [preview]);
+
+  useEffect(() => {
+    if (detailId) void loadDetail(detailId);
+  }, [detailId, loadDetail]);
+
   const sync = async (c: Company) => {
     if (preview)
-      return setNotice({
-        tone: 'warning',
-        text: 'A sincronização fica disponível no ambiente autenticado.',
-      });
+      return setNotice({ tone: 'warning', text: 'A sincronização fica disponível no ambiente autenticado.' });
     if (busy) return;
     setBusy(c.id);
     try {
-      const { data, error } = await (supabase as any).rpc('extractor_queue_sync', {
-        _company_id: c.id,
-      });
+      const { data, error } = await (supabase as any).rpc('extractor_queue_sync', { _company_id: c.id });
       if (error || !data?.ok)
-        setNotice({
-          tone: 'error',
-          text: data?.message || 'Não foi possível atualizar esta empresa. Tente novamente.',
-        });
+        setNotice({ tone: 'error', text: data?.message || 'Não foi possível atualizar esta empresa. Tente novamente.' });
       else
-        setNotice({
-          tone: 'success',
-          text: `${c.tradeName}: atualização fiscal colocada na fila.`,
-        });
+        setNotice({ tone: 'success', text: `${c.tradeName}: atualização fiscal colocada na fila.` });
       await onReload();
+      if (detailId === c.id) await loadDetail(c.id);
     } catch {
       setNotice({ tone: 'error', text: 'Falha de conexão ao atualizar. Tente novamente.' });
     } finally {
       setBusy('');
     }
   };
+
+  if (selected) {
+    const fiscal = detailRaw?.fiscal_companies || {};
+    const certs = Array.isArray(fiscal?.fiscal_certificates) ? fiscal.fiscal_certificates : [];
+    const activeCert = certs.find((item: any) => item.is_active) || certs[0] || null;
+    const certLabel =
+      selected.certificateDays == null
+        ? 'Não configurado'
+        : selected.certificateDays < 0
+          ? 'Vencido'
+          : selected.certificateDays <= 30
+            ? 'Vence em breve'
+            : 'Válido';
+    return (
+      <div className="extractor-page">
+        <PageHeading
+          title="Empresas"
+          icon="company"
+          description="Cadastro fiscal, certificado e operação da empresa dentro do Extrator."
+          actions={<button className="extractor-company-back" onClick={() => { setDetailId(''); setDetailRaw(null); }}>← Voltar para empresas</button>}
+        />
+        <section className="extractor-company-detail">
+          <header className="extractor-company-detail-head">
+            <div>
+              <span className="extractor-company-detail-avatar">{selected.tradeName.slice(0, 2).toUpperCase()}</span>
+              <div>
+                <small>Empresa do Extrator</small>
+                <h2>{selected.name}</h2>
+                <p>{selected.tradeName} · {formatCnpj(selected.cnpj)} · {selected.uf}</p>
+              </div>
+            </div>
+            <div className="extractor-company-detail-actions">
+              <button onClick={() => void sync(selected)} disabled={busy === selected.id}>
+                {busy === selected.id ? 'Atualizando...' : 'Sincronizar agora'}
+              </button>
+              <button onClick={onAdd}>Adicionar / substituir A1</button>
+              <button className="primary" onClick={() => onOpen(selected.id)}>Ver documentos</button>
+            </div>
+          </header>
+
+          <div className="extractor-company-detail-grid">
+            <article className="extractor-company-detail-card">
+              <small>Documentos</small><strong>{integer.format(selected.documents)}</strong>
+              <span>{integer.format(selected.entries)} compras · {integer.format(selected.exits)} vendas</span>
+            </article>
+            <article className="extractor-company-detail-card">
+              <small>XML integral</small><strong>{integer.format(selected.fullXml)}</strong>
+              <span>{selected.pendingXml ? `${selected.pendingXml} pendente(s)` : 'Todos os arquivos disponíveis'}</span>
+            </article>
+            <article className="extractor-company-detail-card">
+              <small>Sincronização</small><strong>{syncLabel(selected.purchaseStatus)} / {syncLabel(selected.salesStatus)}</strong>
+              <span>{selected.lastSync ? `Última busca ${formatDate(selected.lastSync, true)}` : 'Primeira busca ainda não concluída'}</span>
+            </article>
+            <article className="extractor-company-detail-card">
+              <small>Certificado A1</small><strong>{certLabel}</strong>
+              <span>{selected.certificateUntil ? `Validade ${formatDate(selected.certificateUntil)}` : 'Adicione um A1 para manter as consultas ativas'}</span>
+            </article>
+          </div>
+
+          <div className="extractor-company-detail-info">
+            <article>
+              <h3>Dados cadastrais</h3>
+              {detailLoading ? <p className="extractor-helper">Carregando dados completos...</p> : (
+                <dl>
+                  <div><dt>Razão social</dt><dd>{fiscal.razao_social || selected.name}</dd></div>
+                  <div><dt>Nome fantasia</dt><dd>{fiscal.nome_fantasia || selected.tradeName}</dd></div>
+                  <div><dt>CNPJ</dt><dd>{formatCnpj(fiscal.cnpj || selected.cnpj)}</dd></div>
+                  <div><dt>Inscrição estadual</dt><dd>{fiscal.inscricao_estadual || '—'}</dd></div>
+                  <div><dt>Município / UF</dt><dd>{[fiscal.municipio, fiscal.uf || selected.uf].filter(Boolean).join(' / ') || '—'}</dd></div>
+                  <div><dt>Regime tributário</dt><dd>{String(fiscal.regime_tributario || '—').replace(/_/g, ' ')}</dd></div>
+                  <div><dt>Ambiente</dt><dd>{fiscal.ambiente_padrao === 'homologacao' ? 'Homologação' : 'Produção'}</dd></div>
+                  <div><dt>Vinculada ao Extrator em</dt><dd>{detailRaw?.created_at ? formatDate(detailRaw.created_at, true) : '—'}</dd></div>
+                  <div><dt>Situação</dt><dd>{detailRaw?.status || fiscal.status || 'Ativa'}</dd></div>
+                </dl>
+              )}
+            </article>
+            <article>
+              <h3>Certificado e captura</h3>
+              <dl>
+                <div><dt>Certificado</dt><dd>{activeCert?.certificate_name || 'Não configurado'}</dd></div>
+                <div><dt>Titular</dt><dd>{activeCert?.holder_name || '—'}</dd></div>
+                <div><dt>CNPJ do titular</dt><dd>{activeCert?.holder_cnpj ? formatCnpj(activeCert.holder_cnpj) : '—'}</dd></div>
+                <div><dt>Validade</dt><dd>{activeCert?.valid_until ? formatDate(activeCert.valid_until) : selected.certificateUntil ? formatDate(selected.certificateUntil) : '—'}</dd></div>
+                <div><dt>Busca automática</dt><dd>{selected.automaticSync ? 'Ativada' : 'Desativada'}</dd></div>
+                <div><dt>Compras</dt><dd>{syncLabel(selected.purchaseStatus)}</dd></div>
+                <div><dt>Vendas</dt><dd>{syncLabel(selected.salesStatus)}</dd></div>
+                <div><dt>Último erro</dt><dd>{selected.purchaseLastError || selected.salesLastError || 'Nenhuma falha persistente'}</dd></div>
+              </dl>
+            </article>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="extractor-page">
       <PageHeading
         title="Empresas"
         icon="company"
-        description="Somente clientes adicionados dentro do Extrator aparecem aqui. O cadastro do ADM não é importado automaticamente."
-        actions={
-          <button className="extractor-primary" onClick={onAdd}>
-            <AnimatedExtractorIcon name="upload" />
-            Adicionar com A1
-          </button>
-        }
+        description="Empresas vinculadas ao Extrator. Clique em uma delas para abrir o cadastro fiscal completo."
+        actions={<button className="extractor-primary" onClick={onAdd}><AnimatedExtractorIcon name="upload" />Adicionar com A1</button>}
       />
       <div className="extractor-toolbar">
-        <label>
-          <AnimatedExtractorIcon name="search" />
-          <input
-            value={term}
-            onChange={e => setTerm(e.target.value)}
-            placeholder="Buscar empresa ou CNPJ"
-          />
-        </label>
+        <label><AnimatedExtractorIcon name="search" /><input value={term} onChange={e => setTerm(e.target.value)} placeholder="Buscar empresa ou CNPJ" /></label>
       </div>
       <div className="extractor-company-list">
         <div className="extractor-company-head">
-          <span>Empresa</span>
-          <span>Documentos</span>
-          <span>XML integral</span>
-          <span>Sincronização</span>
-          <span>Certificado</span>
-          <span>Ações</span>
+          <span>Empresa</span><span>Documentos</span><span>XML integral</span><span>Sincronização</span><span>Certificado</span><span>Ações</span>
         </div>
         {visible.map((c: Company) => (
           <div
-            className="extractor-company-row"
-            key={c.id}
-            role="button"
-            tabIndex={0}
-            data-icon-hover
-            onClick={() => onOpen(c.id)}
-            onKeyDown={e => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onOpen(c.id);
-              }
-            }}
+            className="extractor-company-row" key={c.id} role="button" tabIndex={0} data-icon-hover
+            onClick={() => setDetailId(c.id)}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDetailId(c.id); } }}
           >
-            <div>
-              <strong>{c.tradeName}</strong>
-              <span>
-                {formatCnpj(c.cnpj)} · {c.uf}
-              </span>
-            </div>
-            <div>
-              <strong>{integer.format(c.documents)}</strong>
-              <span>
-                {c.entries} compras · {c.exits} vendas
-              </span>
-            </div>
-            <div>
-              <strong>{integer.format(c.fullXml)}</strong>
-              <span>{c.pendingXml ? `${c.pendingXml} pendente(s)` : 'Completo no período'}</span>
-            </div>
-            <div>
-              <strong>
-                {syncLabel(c.purchaseStatus)} / {syncLabel(c.salesStatus)}
-              </strong>
-              <span>{c.lastSync ? formatDate(c.lastSync, true) : 'Ainda não concluída'}</span>
-            </div>
-            <div>
-              <strong>
-                {c.certificateUntil ? formatDate(c.certificateUntil) : 'Não configurado'}
-              </strong>
-              <span>{c.certificateDays == null ? '—' : `${c.certificateDays} dia(s)`}</span>
-            </div>
+            <div><strong>{c.tradeName}</strong><span>{formatCnpj(c.cnpj)} · {c.uf}</span></div>
+            <div><strong>{integer.format(c.documents)}</strong><span>{c.entries} compras · {c.exits} vendas</span></div>
+            <div><strong>{integer.format(c.fullXml)}</strong><span>{c.pendingXml ? `${c.pendingXml} pendente(s)` : 'Completo no período'}</span></div>
+            <div><strong>{syncLabel(c.purchaseStatus)} / {syncLabel(c.salesStatus)}</strong><span>{c.lastSync ? formatDate(c.lastSync, true) : 'Ainda não concluída'}</span></div>
+            <div><strong>{c.certificateUntil ? formatDate(c.certificateUntil) : 'Não configurado'}</strong><span>{c.certificateDays == null ? '—' : `${c.certificateDays} dia(s)`}</span></div>
             <div className="extractor-row-actions">
-              <button
-                onClick={e => {
-                  e.stopPropagation();
-                  void sync(c);
-                }}
-                disabled={busy === c.id}
-              >
-                <AnimatedExtractorIcon name="refresh" />
-                {busy === c.id ? 'Atualizando' : 'Atualizar'}
-              </button>
-              <button
-                onClick={e => {
-                  e.stopPropagation();
-                  onOpen(c.id);
-                }}
-              >
-                Notas
-              </button>
+              <button onClick={e => { e.stopPropagation(); void sync(c); }} disabled={busy === c.id}><AnimatedExtractorIcon name="refresh" />{busy === c.id ? 'Atualizando' : 'Atualizar'}</button>
+              <button onClick={e => { e.stopPropagation(); setDetailId(c.id); }}>Abrir</button>
             </div>
           </div>
         ))}
