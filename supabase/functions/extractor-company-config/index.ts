@@ -86,7 +86,7 @@ async function extractorContext(req: Request) {
     throw Object.assign(new Error('O pacote Extrator não está ativo para esta conta.'), {
       status: 403,
     });
-  return { admin, user, account, auth, url };
+  return { admin, user, account, auth, url, platformAdmin };
 }
 
 async function registryLookup(ctx: any, cnpj: string) {
@@ -139,9 +139,9 @@ Deno.serve(async req => {
     const denied = limited(
       await consume(
         ctx.admin,
-        'extractor_config_' + (action === 'list' ? 'read' : 'write'),
+        'extractor_config_' + (['list','list_office_clients'].includes(action) ? 'read' : 'write'),
         ctx.user.id,
-        action === 'list' ? 60 : 6,
+        ['list','list_office_clients'].includes(action) ? 60 : 6,
         600
       )
     );
@@ -172,6 +172,194 @@ Deno.serve(async req => {
         .order('created_at');
       if (error) throw error;
       return J({ ok: true, companies: data || [] });
+    }
+
+    if (action === 'list_office_clients') {
+      if (!ctx.platformAdmin) return J({ error: 'Disponível apenas no acesso administrativo da WS.' }, 403);
+
+      const { data: officeCompanies, error: officeError } = await ctx.admin
+        .from('companies')
+        .select('id,cnpj,company_name,trade_name,state_registration,tax_regime,email,phone,postal_code,street,street_number,complement,district,city,state,city_ibge_code,company_size')
+        .order('company_name');
+      if (officeError) throw officeError;
+
+      const officeIds = (officeCompanies || []).map((row: any) => row.id);
+      let fiscalRows: any[] = [];
+      if (officeIds.length) {
+        const { data, error } = await ctx.admin
+          .from('fiscal_companies')
+          .select('id,company_id,cnpj,razao_social,nome_fantasia,inscricao_estadual,uf,municipio,codigo_municipio,status,fiscal_certificates(id,is_active,valid_until)')
+          .in('company_id', officeIds);
+        if (error) throw error;
+        fiscalRows = data || [];
+      }
+
+      const { data: currentLinks, error: linkError } = await ctx.admin
+        .from('extractor_companies')
+        .select('fiscal_company_id,status')
+        .eq('account_id', ctx.account.id)
+        .neq('status', 'removed');
+      if (linkError) throw linkError;
+      const linked = new Set((currentLinks || []).map((row: any) => String(row.fiscal_company_id)));
+      const fiscalByOffice = new Map(fiscalRows.map((row: any) => [String(row.company_id), row]));
+
+      const companies = (officeCompanies || [])
+        .filter((row: any) => digits(row.cnpj).length === 14)
+        .map((row: any) => {
+          const fiscal = fiscalByOffice.get(String(row.id)) || null;
+          const certs = Array.isArray(fiscal?.fiscal_certificates) ? fiscal.fiscal_certificates : [];
+          const activeCert = certs.find((item: any) => item.is_active) || null;
+          return {
+            office_company_id: row.id,
+            company_name: row.company_name,
+            trade_name: row.trade_name,
+            cnpj: digits(row.cnpj),
+            state_registration: row.state_registration,
+            city: row.city,
+            state: row.state,
+            fiscal_company_id: fiscal?.id || null,
+            already_linked: Boolean(fiscal?.id && linked.has(String(fiscal.id))),
+            certificate: activeCert
+              ? { configured: true, valid_until: activeCert.valid_until }
+              : { configured: false, valid_until: null },
+          };
+        });
+
+      return J({ ok: true, companies });
+    }
+
+    if (action === 'import_office_client') {
+      if (!ctx.platformAdmin) return J({ error: 'Disponível apenas no acesso administrativo da WS.' }, 403);
+      const officeCompanyId = String(body.office_company_id || '');
+      if (!officeCompanyId) return J({ error: 'Selecione um cliente do painel.' }, 422);
+
+      const { data: office, error: officeError } = await ctx.admin
+        .from('companies')
+        .select('id,cnpj,company_name,trade_name,state_registration,tax_regime,email,phone,postal_code,street,street_number,complement,district,city,state,city_ibge_code,company_size,registry_payload')
+        .eq('id', officeCompanyId)
+        .maybeSingle();
+      if (officeError) throw officeError;
+      if (!office) return J({ error: 'Cliente não encontrado no painel administrativo.' }, 404);
+
+      const cnpj = digits(office.cnpj);
+      if (cnpj.length !== 14) return J({ error: 'Somente clientes com CNPJ podem ser importados para o Extrator.' }, 422);
+
+      let { data: fiscal, error: fiscalError } = await ctx.admin
+        .from('fiscal_companies')
+        .select('id,company_id,cnpj,razao_social,nome_fantasia,inscricao_estadual,uf,municipio,codigo_municipio,status')
+        .eq('company_id', office.id)
+        .maybeSingle();
+      if (fiscalError) throw fiscalError;
+
+      if (!fiscal) {
+        const byCnpj = await ctx.admin
+          .from('fiscal_companies')
+          .select('id,company_id,cnpj,razao_social,nome_fantasia,inscricao_estadual,uf,municipio,codigo_municipio,status')
+          .eq('cnpj', cnpj)
+          .maybeSingle();
+        if (byCnpj.error) throw byCnpj.error;
+        fiscal = byCnpj.data || null;
+      }
+
+      const fiscalPayload = {
+        company_id: office.id,
+        cnpj,
+        razao_social: office.company_name,
+        nome_fantasia: office.trade_name || office.company_name,
+        inscricao_estadual: office.state_registration || null,
+        endereco: {
+          logradouro: office.street || '',
+          numero: office.street_number || '',
+          bairro: office.district || '',
+          cep: office.postal_code || '',
+          complemento: office.complement || '',
+        },
+        uf: office.state || null,
+        codigo_municipio: office.city_ibge_code || null,
+        municipio: office.city || null,
+        regime_tributario: regime(office.tax_regime),
+        ambiente_padrao: 'producao',
+        status: 'ativa',
+        updated_at: new Date().toISOString(),
+        fiscal_settings: {
+          origin_scope: 'office_client',
+          extractor_account_id: ctx.account.id,
+          imported_from_admin_at: new Date().toISOString(),
+        },
+      };
+
+      if (fiscal?.id) {
+        if (fiscal.company_id && String(fiscal.company_id) !== String(office.id)) {
+          return J({ error: 'Este CNPJ já está vinculado a outro cliente do escritório.' }, 409);
+        }
+        const updated = await ctx.admin
+          .from('fiscal_companies')
+          .update(fiscalPayload)
+          .eq('id', fiscal.id)
+          .select('id,cnpj,razao_social,nome_fantasia,uf,municipio')
+          .single();
+        if (updated.error) throw updated.error;
+        fiscal = updated.data;
+      } else {
+        const created = await ctx.admin
+          .from('fiscal_companies')
+          .insert({ ...fiscalPayload, created_by: ctx.user.id })
+          .select('id,cnpj,razao_social,nome_fantasia,uf,municipio')
+          .single();
+        if (created.error) throw created.error;
+        fiscal = created.data;
+      }
+
+      const { data: existingLink, error: existingLinkError } = await ctx.admin
+        .from('extractor_companies')
+        .select('id,status')
+        .eq('account_id', ctx.account.id)
+        .eq('fiscal_company_id', fiscal.id)
+        .maybeSingle();
+      if (existingLinkError) throw existingLinkError;
+
+      if (existingLink?.id) {
+        const { error } = await ctx.admin
+          .from('extractor_companies')
+          .update({ status: 'active', automatic_sync: true, updated_at: new Date().toISOString() })
+          .eq('id', existingLink.id);
+        if (error) throw error;
+      } else {
+        const { error } = await ctx.admin.from('extractor_companies').insert({
+          account_id: ctx.account.id,
+          fiscal_company_id: fiscal.id,
+          status: 'active',
+          automatic_sync: true,
+          profile_overrides: {},
+        });
+        if (error?.code === 'P0001' && String(error.message || '').includes('extractor_company_limit_reached')) {
+          throw new RequestError('O limite de empresas deste plano foi atingido.', 422);
+        }
+        if (error) throw error;
+      }
+
+      await ctx.admin.from('saas_audit_logs').insert({
+        organization_id: ctx.account.organization_id,
+        actor_user_id: ctx.user.id,
+        action: 'extractor_office_company_imported',
+        resource_type: 'fiscal_company',
+        resource_id: fiscal.id,
+        is_sensitive: false,
+        metadata: { office_company_id: office.id, extractor_account_id: ctx.account.id },
+      });
+
+      return J({
+        ok: true,
+        already_linked: Boolean(existingLink?.id && existingLink.status !== 'removed'),
+        company: {
+          id: fiscal.id,
+          cnpj: fiscal.cnpj,
+          legal_name: fiscal.razao_social,
+          trade_name: fiscal.nome_fantasia,
+          state: fiscal.uf,
+          city: fiscal.municipio,
+        },
+      });
     }
 
     if (action === 'update_profile') {
