@@ -354,7 +354,23 @@ async function importOfficeClient(ctx: any, officeCompanyId: string) {
     if (error) throw error;
   }
 
-  const sync = await queueImportedCompany(ctx, fiscal.id);
+  let sync: any;
+  let syncWarning: string | null = null;
+  try {
+    sync = await queueImportedCompany(ctx, fiscal.id);
+  } catch (error: any) {
+    syncWarning = 'A empresa foi vinculada, mas a fila fiscal não respondeu imediatamente. O sincronizador automático tentará novamente.';
+    sync = {
+      queued: false,
+      queued_at: null,
+      period_from: null,
+      period_to: null,
+      purchase_status: null,
+      sales_status: null,
+      workers_triggered: false,
+    };
+    console.warn('extractor initial queue', error?.code || error?.message || 'queue_failed');
+  }
 
   const audit = await ctx.admin.from('saas_audit_logs').insert({
     organization_id: ctx.account.organization_id,
@@ -384,6 +400,7 @@ async function importOfficeClient(ctx: any, officeCompanyId: string) {
       city: fiscal.municipio,
     },
     sync,
+    warning: syncWarning,
   };
 }
 
