@@ -34,3 +34,39 @@ grant select, insert, update, delete on table public.extractor_fiscal_check_runs
 
 comment on table public.extractor_fiscal_check_runs is
   'Immutable-style audit snapshots shown in Extrator > Histórico. Audit scope is independent from the normal extraction window.';
+
+
+create or replace function public.extractor_document_access(p_user_id uuid,p_company_id uuid)
+returns jsonb
+language plpgsql
+stable
+set search_path to ''
+as $function$
+declare
+  v_account public.extractor_accounts%rowtype;
+begin
+  if p_user_id is null or p_company_id is null then
+    return jsonb_build_object('allowed',false);
+  end if;
+
+  select ea.* into v_account
+  from public.extractor_accounts ea
+  join public.extractor_companies ec on ec.account_id=ea.id
+  where ec.fiscal_company_id=p_company_id
+    and ec.status='active'
+    and private.is_extractor_member(ea.id,p_user_id)
+  order by ea.created_at
+  limit 1;
+
+  if v_account.id is not null then
+    return jsonb_build_object(
+      'allowed',true,
+      'account_id',v_account.id,
+      'from',public.extractor_minimum_history_start(),
+      'to',public.extractor_local_date()
+    );
+  end if;
+
+  return jsonb_build_object('allowed',false);
+end;
+$function$;
