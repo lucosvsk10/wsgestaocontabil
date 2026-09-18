@@ -132,9 +132,13 @@ const companyOverrides = (value: any) => ({
 
 async function queueImportedCompany(ctx: any, fiscalCompanyId: string) {
   const queuedAt = new Date().toISOString();
-  const { data: minimumHistory } = await ctx.admin.rpc('extractor_minimum_history_start');
-  const periodFrom = clean(minimumHistory) || new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).toISOString().slice(0, 10);
-  const periodTo = new Date().toISOString().slice(0, 10);
+  const [{ data: minimumHistory }, { data: localToday }] = await Promise.all([
+    ctx.admin.rpc('extractor_minimum_history_start'),
+    ctx.admin.rpc('extractor_local_date'),
+  ]);
+  const fallbackNow = new Date();
+  const periodFrom = clean(minimumHistory) || new Date(fallbackNow.getFullYear(), fallbackNow.getMonth() - 1, 1).toISOString().slice(0, 10);
+  const periodTo = clean(localToday) || queuedAt.slice(0, 10);
   const backfillDays = Math.max(
     1,
     Math.ceil((new Date(periodTo + 'T00:00:00Z').getTime() - new Date(periodFrom + 'T00:00:00Z').getTime()) / 86400000)
