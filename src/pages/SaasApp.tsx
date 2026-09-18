@@ -125,6 +125,8 @@ const emissionTypeLabel = (emission: any) =>
 
 export default function SaasApp() {
   const { user, isAdmin } = useAuth();
+  const fromAdmin =
+    isAdmin && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('source') === 'admin';
   const [active, setActive] = useState('Início');
   const [organization, setOrganization] = useState<any>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
@@ -421,7 +423,7 @@ export default function SaasApp() {
         <div className="saas-topbar-content flex min-w-0 flex-1 items-center px-6">
           <div className="saas-page-context flex-1">
             <p className="text-[10px] font-semibold uppercase tracking-[.12em]">
-              {isAdmin && new URLSearchParams(window.location.search).get('source') === 'admin' ? (
+              {fromAdmin ? (
                 <a href="/admin" className="transition-opacity hover:opacity-70">
                   ← Painel do administrador
                 </a>
