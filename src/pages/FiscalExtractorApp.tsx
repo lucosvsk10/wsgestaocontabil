@@ -266,6 +266,17 @@ const syncStartedAt = (company: Company) => {
     .filter(value => Number.isFinite(value));
   return values.length ? new Date(Math.min(...values)).toISOString() : null;
 };
+const syncCompletedAt = (company: Company) => {
+  const values = [
+    company.lastSync,
+    company.purchaseLastCompletedAt,
+    company.salesLastCompletedAt,
+  ]
+    .filter(Boolean)
+    .map(value => new Date(String(value)).getTime())
+    .filter(value => Number.isFinite(value));
+  return values.length ? new Date(Math.max(...values)).toISOString() : null;
+};
 const elapsedLabel = (value?: string | null) => {
   if (!value) return 'agora';
   const ms = Math.max(0, Date.now() - new Date(value).getTime());
@@ -1624,8 +1635,8 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview, adm
               <span>
                 {syncIsActive(selected)
                   ? `Busca iniciada ${elapsedLabel(syncStartedAt(selected))} · ${syncPeriodLabel(selected)}`
-                  : selected.lastSync
-                    ? `Última busca ${formatDate(selected.lastSync, true)}`
+                  : syncCompletedAt(selected)
+                    ? `Última consulta concluída ${formatDate(syncCompletedAt(selected), true)}`
                     : 'Primeira busca ainda não concluída'}
               </span>
             </article>
@@ -1737,7 +1748,10 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview, adm
             </div>
             <div><strong>{integer.format(c.documents)}</strong><span>{c.entries} compras · {c.exits} vendas</span></div>
             <div><strong>{integer.format(c.fullXml)}</strong><span>{c.pendingXml ? `${c.pendingXml} pendente(s)` : 'Completo no período'}</span></div>
-            <div><strong>{syncLabel(c.purchaseStatus)} / {syncLabel(c.salesStatus)}</strong><span>{c.lastSync ? formatDate(c.lastSync, true) : 'Ainda não concluída'}</span></div>
+            <div>
+              <strong>{syncLabel(c.purchaseStatus)} / {syncLabel(c.salesStatus)}</strong>
+              <span>{syncCompletedAt(c) ? `Última conclusão ${formatDate(syncCompletedAt(c), true)}` : 'Ainda não concluída'}</span>
+            </div>
             <div><strong>{c.certificateUntil ? formatDate(c.certificateUntil) : 'Não configurado'}</strong><span>{c.certificateDays == null ? '—' : `${c.certificateDays} dia(s)`}</span></div>
             <div className="extractor-row-actions">
               {syncIsActive(c) && (
