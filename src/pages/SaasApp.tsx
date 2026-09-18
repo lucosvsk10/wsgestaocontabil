@@ -125,8 +125,7 @@ const emissionTypeLabel = (emission: any) =>
 
 export default function SaasApp() {
   const { user, isAdmin } = useAuth();
-  const internalAdminEntry =
-    isAdmin && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('source') === 'admin-fiscal';
+  const internalAdminEntry = isAdmin;
   const [active, setActive] = useState('Início');
   const [organization, setOrganization] = useState<any>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
