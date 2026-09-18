@@ -251,6 +251,35 @@ const syncLabel = (v?: string | null) => {
   if (!x) return 'Não iniciada';
   return x.replace(/_/g, ' ');
 };
+const syncIsActive = (company: Company) => {
+  const states = [company.purchaseStatus, company.salesStatus].map(value => String(value || '').toLowerCase());
+  return states.some(value => ['queued', 'running', 'reconciling', 'bootstrap_window', 'retrying'].includes(value));
+};
+const syncStartedAt = (company: Company) => {
+  const values = [
+    company.initialSyncQueuedAt,
+    company.purchaseLastStartedAt,
+    company.salesLastStartedAt,
+  ]
+    .filter(Boolean)
+    .map(value => new Date(String(value)).getTime())
+    .filter(value => Number.isFinite(value));
+  return values.length ? new Date(Math.min(...values)).toISOString() : null;
+};
+const elapsedLabel = (value?: string | null) => {
+  if (!value) return 'agora';
+  const ms = Math.max(0, Date.now() - new Date(value).getTime());
+  const minutes = Math.floor(ms / 60000);
+  if (minutes < 1) return 'há menos de 1 min';
+  if (minutes < 60) return `há ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return `há ${hours}h${rest ? ` ${rest}min` : ''}`;
+};
+const syncPeriodLabel = (company: Company) => {
+  if (!company.initialSyncPeriodFrom || !company.initialSyncPeriodTo) return 'janela fiscal em preparação';
+  return `${formatDate(company.initialSyncPeriodFrom)} → ${formatDate(company.initialSyncPeriodTo)}`;
+};
 const model = (d: Doc) =>
   String(
     d.model || (/^\d{44}$/.test(String(d.accessKey || '')) ? String(d.accessKey).slice(20, 22) : '')
@@ -1586,7 +1615,13 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview, adm
             </article>
             <article className="extractor-company-detail-card">
               <small>Sincronização</small><strong>{syncLabel(selected.purchaseStatus)} / {syncLabel(selected.salesStatus)}</strong>
-              <span>{selected.lastSync ? `Última busca ${formatDate(selected.lastSync, true)}` : 'Primeira busca ainda não concluída'}</span>
+              <span>
+                {syncIsActive(selected)
+                  ? `Busca iniciada ${elapsedLabel(syncStartedAt(selected))} · ${syncPeriodLabel(selected)}`
+                  : selected.lastSync
+                    ? `Última busca ${formatDate(selected.lastSync, true)}`
+                    : 'Primeira busca ainda não concluída'}
+              </span>
             </article>
             <article className="extractor-company-detail-card">
               <small>Certificado A1</small><strong>{certLabel}</strong>
@@ -1695,6 +1730,16 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview, adm
             <div><strong>{syncLabel(c.purchaseStatus)} / {syncLabel(c.salesStatus)}</strong><span>{c.lastSync ? formatDate(c.lastSync, true) : 'Ainda não concluída'}</span></div>
             <div><strong>{c.certificateUntil ? formatDate(c.certificateUntil) : 'Não configurado'}</strong><span>{c.certificateDays == null ? '—' : `${c.certificateDays} dia(s)`}</span></div>
             <div className="extractor-row-actions">
+              {syncIsActive(c) && (
+                <span className="extractor-sync-running" title={`Busca em andamento · ${syncPeriodLabel(c)}`}>
+                  <Loader2 className="extractor-sync-spinner" />
+                  <span>
+                    <b>Buscando</b>
+                    <small>{elapsedLabel(syncStartedAt(c))}</small>
+                    <small>{syncPeriodLabel(c)}</small>
+                  </span>
+                </span>
+              )}
               <button onClick={e => { e.stopPropagation(); setDetailId(c.id); }}>Abrir</button>
               <button className="danger" onClick={e => { e.stopPropagation(); setRemoveTarget(c); }}>Remover</button>
             </div>
