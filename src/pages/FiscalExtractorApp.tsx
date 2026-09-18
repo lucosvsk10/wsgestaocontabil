@@ -332,7 +332,7 @@ const unwrapStoredFiscalXml = (raw: unknown) => {
     }
   }
 
-  return value;
+  return value.startsWith('<') && !/^<!doctype\s+html|^<html\b/i.test(value) ? value : undefined;
 };
 
 const rowToDoc = (r: any): Doc => {
