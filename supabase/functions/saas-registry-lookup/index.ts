@@ -313,15 +313,20 @@ async function lookupCnpjWsViaDatabase(admin: any, cnpj: string) {
   return null;
 }
 
-async function lookupFederal(cnpj: string) {
+async function lookupFederal(admin: any, cnpj: string) {
   const [wsResult, brasilResult] = await Promise.allSettled([
     fetchJson(`https://publica.cnpj.ws/cnpj/${cnpj}`, 15000),
     fetchJson(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`, 15000),
   ]);
 
-  const ws = wsResult.status === 'fulfilled' ? normalizeCnpjWs(wsResult.value, cnpj) : null;
+  let ws = wsResult.status === 'fulfilled' ? normalizeCnpjWs(wsResult.value, cnpj) : null;
   const brasil =
     brasilResult.status === 'fulfilled' ? normalizeBrasilApi(brasilResult.value, cnpj) : null;
+
+  if (!ws?.state_registration) {
+    const dbRaw = await lookupCnpjWsViaDatabase(admin, cnpj);
+    if (dbRaw) ws = normalizeCnpjWs(dbRaw, cnpj);
+  }
   if (wsResult.status === 'rejected') console.warn('CNPJ.ws lookup failed', wsResult.reason);
   if (brasilResult.status === 'rejected')
     console.warn('BrasilAPI lookup failed', brasilResult.reason);
@@ -447,7 +452,7 @@ Deno.serve(async req => {
     );
     if (!member && !platformAdmin) return out({ error: 'Sem acesso à organização' }, 403);
 
-    const federal = await lookupFederal(cnpj);
+    const federal = await lookupFederal(admin, cnpj);
     const data = await enrichStateRegistry(admin, cnpj, federal);
     const filled = [
       'legal_name',
