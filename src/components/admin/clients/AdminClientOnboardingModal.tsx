@@ -4,6 +4,7 @@ import { BadgeCheck, Building2, Check, FileKey2, KeyRound, Loader2, Search, User
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
+import { lookupOfficeCompanyByCnpj, registryToOfficeCompany } from '@/utils/companyRegistry';
 
 type Method = 'certificate' | 'cnpj' | 'manual';
 type DocumentType = 'cnpj' | 'cpf' | 'other';
@@ -242,9 +243,30 @@ export default function AdminClientOnboardingModal({
         certificate_password: certificatePassword,
         certificate_name: certificate.name,
       });
-      applyLookup(result.company || {});
-      setCertificateMeta(result.certificate || null);
-      setMessage('Certificado validado. Dados cadastrais preenchidos automaticamente.');
+      const certificateData = result.certificate || null;
+      setCertificateMeta(certificateData);
+      const certificateCnpj = digits(certificateData?.holder_cnpj || result.company?.cnpj);
+      if (certificateCnpj.length === 14) {
+        try {
+          const registry = await lookupOfficeCompanyByCnpj(certificateCnpj);
+          const normalized = registryToOfficeCompany(registry.data || {}, registry.registry || {});
+          applyLookup({
+            ...normalized,
+            document_type: 'cnpj',
+            document_number: certificateCnpj,
+            cnpj: certificateCnpj,
+          });
+        } catch {
+          applyLookup(result.company || {});
+        }
+      } else {
+        applyLookup(result.company || {});
+      }
+      setMessage(
+        company.state_registration
+          ? 'Certificado validado. Dados cadastrais e IE preenchidos automaticamente.'
+          : 'Certificado validado. Dados cadastrais preenchidos automaticamente.'
+      );
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Não foi possível validar o certificado.');
     } finally {
@@ -258,11 +280,17 @@ export default function AdminClientOnboardingModal({
     setBusyLookup(true);
     setMessage('');
     try {
-      const result = await invokeOnboarding<any>({ action: 'lookup_cnpj', cnpj });
-      applyLookup(result.company || {});
+      const result = await lookupOfficeCompanyByCnpj(cnpj);
+      const normalized = registryToOfficeCompany(result.data || {}, result.registry || {});
+      applyLookup({
+        ...normalized,
+        document_type: 'cnpj',
+        document_number: cnpj,
+        cnpj,
+      });
       setMessage(
-        result.company?.state_registration
-          ? 'Cadastro localizado, incluindo IE ' + result.company.state_registration + '.'
+        normalized.state_registration
+          ? 'Cadastro localizado, incluindo IE ' + normalized.state_registration + '.'
           : 'Cadastro localizado. A inscrição estadual não foi encontrada nas fontes disponíveis.'
       );
     } catch (error) {
