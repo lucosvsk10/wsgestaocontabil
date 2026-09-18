@@ -1595,7 +1595,7 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview, adm
           <DialogContent className="extractor-dark-dialog max-h-[86vh] overflow-y-auto sm:max-w-2xl">
             <DialogTitle>Importar empresa do painel</DialogTitle>
             <DialogDescription>
-              Use um cliente que já existe no Painel do Administrador. O Extrator reaproveita o cadastro fiscal e o certificado A1 quando já estiverem configurados.
+              Use um cliente que já existe no Painel do Administrador. Aqui aparecem somente empresas com certificado A1 ativo e dentro da validade.
             </DialogDescription>
 
             <div className="extractor-admin-import-search">
@@ -1649,7 +1649,7 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview, adm
                     </article>
                   ))}
                 {!adminOfficeCompanies.length && (
-                  <Empty>Nenhum cliente empresarial disponível no Painel do Administrador.</Empty>
+                  <Empty>Nenhuma empresa com certificado A1 válido está disponível para importação.</Empty>
                 )}
               </div>
             )}
