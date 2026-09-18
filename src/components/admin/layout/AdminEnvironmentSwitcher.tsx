@@ -80,7 +80,7 @@ export function AdminEnvironmentSwitcher({
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="mx-3 flex w-[calc(100%-1.5rem)] items-center gap-3 rounded-xl border border-border/70 bg-card/80 px-3 py-3 text-left transition hover:bg-muted/35"
+          className="mx-3 flex w-[calc(100%_-_1.5rem)] items-center gap-3 rounded-xl border border-border/70 bg-card/80 px-3 py-3 text-left transition hover:bg-muted/35"
           aria-label="Trocar ambiente"
         >
           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg" style={{ background: current.soft }}>
