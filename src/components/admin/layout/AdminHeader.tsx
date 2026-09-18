@@ -23,7 +23,7 @@ const AdminHeader = (_props: AdminHeaderProps) => {
           style={{ background: currentEnvironment.soft }}
         >
           <EnvironmentIcon
-            className="h-4.5 w-4.5"
+            className="h-4 w-4"
             style={{ color: currentEnvironment.accent }}
             strokeWidth={1.8}
           />
