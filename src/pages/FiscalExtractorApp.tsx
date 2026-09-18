@@ -158,6 +158,20 @@ type Usage = {
   period_start?: string | null;
   period_end?: string | null;
 };
+type CompanyOverview = {
+  company_id?: string;
+  allowed_from?: string;
+  totals?: {
+    documents?: number;
+    entries?: number;
+    exits?: number;
+    value?: number;
+    full_xml?: number;
+    pending_xml?: number;
+  };
+  models?: { nfe?: number; nfce?: number; nfse?: number; other?: number };
+  daily?: Array<{ day?: string; documents?: number }>;
+};
 
 const nav: Array<{ label: Section; icon: ExtractorIconName; group: string }> = [
   { label: 'Visão geral', icon: 'dashboard', group: 'Operação' },
@@ -360,6 +374,7 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
     [previewPdfBusy, setPreviewPdfBusy] = useState(false),
     [previewXmlBusy, setPreviewXmlBusy] = useState(false),
     [usage, setUsage] = useState<Usage>({ used: 0, limit: 0, remaining: 0, percent: 0 }),
+    [companyOverview, setCompanyOverview] = useState<CompanyOverview | null>(null),
     [importNotifications, setImportNotifications] = useState<ImportNotification[]>([]),
     [documentFocus, setDocumentFocus] = useState<DocumentNotificationFocus | null>(null);
   const load = useCallback(
@@ -495,30 +510,58 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
   useEffect(() => {
     if (!selectedCompanyId && companies.length) setSelectedCompanyId(companies[0].id);
   }, [companies, selectedCompanyId]);
+  const selectedCompany =
+    companies.find(company => company.id === selectedCompanyId) ||
+    companies[0] ||
+    null;
+
+  const loadCompanyOverview = useCallback(async () => {
+    if (preview || !user || !selectedCompany?.id) return;
+    setCompanyOverview(null);
+    try {
+      const { data, error } = await (supabase as any).rpc('extractor_company_overview', {
+        _company_id: selectedCompany.id,
+      });
+      if (error) throw error;
+      setCompanyOverview((data || null) as CompanyOverview | null);
+    } catch {
+      setCompanyOverview(null);
+    }
+  }, [preview, user?.id, selectedCompany?.id]);
+
+  useEffect(() => {
+    void loadCompanyOverview();
+  }, [loadCompanyOverview]);
+
+  useEffect(() => {
+    if (preview || !selectedCompany?.id) return;
+    const timer = window.setInterval(() => void loadCompanyOverview(), 30000);
+    return () => window.clearInterval(timer);
+  }, [preview, selectedCompany?.id, loadCompanyOverview]);
   const totals = preview
     ? { documents: 326, entries: 55, exits: 271, value: 675295.32, fullXml: 266, pendingXml: 60 }
     : {
-        documents: Number(snapshot?.totals?.documents || 0),
-        entries: Number(snapshot?.totals?.entries || 0),
-        exits: Number(snapshot?.totals?.exits || 0),
-        value: Number(snapshot?.totals?.value || 0),
-        fullXml: Number(snapshot?.totals?.full_xml || 0),
-        pendingXml: Number(snapshot?.totals?.pending_xml || 0),
+        documents: Number(companyOverview?.totals?.documents ?? selectedCompany?.documents ?? 0),
+        entries: Number(companyOverview?.totals?.entries ?? selectedCompany?.entries ?? 0),
+        exits: Number(companyOverview?.totals?.exits ?? selectedCompany?.exits ?? 0),
+        value: Number(companyOverview?.totals?.value || 0),
+        fullXml: Number(companyOverview?.totals?.full_xml ?? selectedCompany?.fullXml ?? 0),
+        pendingXml: Number(companyOverview?.totals?.pending_xml ?? selectedCompany?.pendingXml ?? 0),
       };
   const models = preview
     ? { nfe: 149, nfce: 169, nfse: 8, other: 0 }
     : {
-        nfe: Number(snapshot?.models?.nfe || 0),
-        nfce: Number(snapshot?.models?.nfce || 0),
-        nfse: Number(snapshot?.models?.nfse || 0),
-        other: Number(snapshot?.models?.other || 0),
+        nfe: Number(companyOverview?.models?.nfe || 0),
+        nfce: Number(companyOverview?.models?.nfce || 0),
+        nfse: Number(companyOverview?.models?.nfse || 0),
+        other: Number(companyOverview?.models?.other || 0),
       };
   const daily = preview
     ? Array.from({ length: 30 }, (_, i) => ({
         day: iso(new Date(Date.now() - (29 - i) * 86400000)),
         documents: [7, 9, 6, 12, 8, 4, 11, 13, 8, 10][i % 10],
       }))
-    : (snapshot?.daily || []).map(x => ({
+    : (companyOverview?.daily || []).map(x => ({
         day: String(x.day || ''),
         documents: Number(x.documents || 0),
       }));
@@ -730,32 +773,12 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
             </section>
           ))}
         </nav>
-        {planUsage.mode === 'per_company' && planUsage.companies?.length ? (
-          <section className="extractor-usage extractor-usage-enterprise">
-            <button className="extractor-usage-enterprise-head" onClick={() => go('Faturas')}>
-              <small>Uso do plano</small>
-              <strong>Enterprise</strong>
-              <span>{integer.format(planUsage.per_company_limit || 10000)} XML por empresa</span>
-            </button>
-            <div className="extractor-usage-company-list">
-              {planUsage.companies.map(companyUsage => (
-                <button
-                  key={companyUsage.company_id}
-                  className="extractor-usage-company"
-                  onClick={() => go('Faturas')}
-                  title={companyUsage.legal_name || companyUsage.name}
-                >
-                  <span className="extractor-usage-company-head">
-                    <b>{companyUsage.name}</b>
-                    <em>{integer.format(companyUsage.used)} / {integer.format(companyUsage.limit)}</em>
-                  </span>
-                  <span className="usage-track">
-                    <i style={{ width: `${Math.min(100, Math.max(0, companyUsage.percent))}%` }} />
-                  </span>
-                  <small>{integer.format(companyUsage.remaining)} restantes</small>
-                </button>
-              ))}
-            </div>
+        {planUsage.mode === 'per_company' ? (
+          <section className="extractor-usage extractor-usage-enterprise-simple">
+            <small>Plano atual</small>
+            <strong>Enterprise</strong>
+            <span>{integer.format(planUsage.per_company_limit || 10000)} XML por empresa/mês</span>
+            <button onClick={() => go('Faturas')}>Ver plano</button>
           </section>
         ) : (
           <button className="extractor-usage" onClick={() => go('Faturas')} data-icon-hover>
@@ -773,7 +796,7 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
       <main className="extractor-main">
         {notice && <NoticeBar notice={notice} close={() => setNotice(null)} />}
         {active === 'Visão geral' && (
-          <Overview companies={companies} totals={totals} models={models} daily={daily} onGo={go} />
+          <Overview company={selectedCompany} totals={totals} models={models} daily={daily} onGo={go} />
         )}
         {active === 'Empresas' && (
           <Companies
@@ -1014,71 +1037,54 @@ function Tip({ active, payload, label }: any) {
   );
 }
 
-function Overview({ companies, totals, models, daily, onGo }: any) {
-  const xmlRate = totals.documents ? Math.round((totals.fullXml / totals.documents) * 100) : 0,
-    companyData = [...companies].sort((a: any, b: any) => b.documents - a.documents).slice(0, 6),
-    modelData = [
-      { name: 'NF-e', value: models.nfe, color: chart.gold },
-      { name: 'NFC-e', value: models.nfce, color: chart.blue },
-      { name: 'NFS-e', value: models.nfse, color: chart.cyan },
-    ].filter(x => x.value > 0),
-    attention = companies.filter(
-      (c: any) =>
-        c.pendingXml > 0 ||
-        (c.certificateDays != null && c.certificateDays <= 30) ||
-        /retry|error|fail|waiting/i.test(`${c.purchaseStatus} ${c.salesStatus}`)
+function Overview({ company, totals, models, daily, onGo }: any) {
+  if (!company) {
+    return (
+      <div className="extractor-page">
+        <PageHeading
+          title="Visão geral"
+          icon="dashboard"
+          description="Adicione uma empresa para começar a acompanhar a operação fiscal."
+        />
+        <Empty>Nenhuma empresa adicionada ao Extrator.</Empty>
+      </div>
     );
+  }
+
+  const xmlRate = totals.documents ? Math.round((totals.fullXml / totals.documents) * 100) : 0;
+  const modelData = [
+    { name: 'NF-e', value: models.nfe, color: chart.gold },
+    { name: 'NFC-e', value: models.nfce, color: chart.blue },
+    { name: 'NFS-e', value: models.nfse, color: chart.cyan },
+  ].filter(x => x.value > 0);
+  const operationData = [
+    { name: 'Compras', documents: totals.entries },
+    { name: 'Vendas', documents: totals.exits },
+    { name: 'XML integral', documents: totals.fullXml },
+  ];
+  const needsAttention =
+    company.pendingXml > 0 ||
+    (company.certificateDays != null && company.certificateDays <= 30) ||
+    /retry|error|fail|waiting/i.test(`${company.purchaseStatus} ${company.salesStatus}`);
+
   return (
     <div className="extractor-page">
       <PageHeading
-        title="Visão geral"
+        title={`Visão geral · ${company.tradeName}`}
         icon="dashboard"
-        description="Acompanhamento da carteira fiscal do escritório. A sincronização roda por empresa, como no painel fiscal administrativo."
+        description={`${company.name} · ${formatCnpj(company.cnpj)} · panorama somente desta empresa`}
       />
       <section className="extractor-kpis">
-        <Metric
-          label="Documentos"
-          value={integer.format(totals.documents)}
-          detail={`${integer.format(totals.fullXml)} com XML integral`}
-          icon="document"
-          watermark
-        />
-        <Metric
-          label="Compras"
-          value={integer.format(totals.entries)}
-          detail="Entradas fiscais"
-          icon="download"
-          watermark
-        />
-        <Metric
-          label="Vendas"
-          value={integer.format(totals.exits)}
-          detail="Saídas fiscais"
-          icon="upload"
-          watermark
-        />
-        <Metric
-          label="Movimentação"
-          value={currency.format(totals.value)}
-          detail="Valor disponível no período"
-          icon="report"
-          watermark
-        />
-        <Metric
-          label="Cobertura XML"
-          value={`${xmlRate}%`}
-          detail={`${integer.format(totals.pendingXml)} pendente(s)`}
-          icon="certificate"
-          watermark
-        />
+        <Metric label="Documentos" value={integer.format(totals.documents)} detail={`${integer.format(totals.fullXml)} com XML integral`} icon="document" watermark />
+        <Metric label="Compras" value={integer.format(totals.entries)} detail="Entradas fiscais" icon="download" watermark />
+        <Metric label="Vendas" value={integer.format(totals.exits)} detail="Saídas fiscais" icon="upload" watermark />
+        <Metric label="Movimentação" value={currency.format(totals.value)} detail="Valor disponível no período" icon="report" watermark />
+        <Metric label="Cobertura XML" value={`${xmlRate}%`} detail={`${integer.format(totals.pendingXml)} pendente(s)`} icon="certificate" watermark />
       </section>
+
       <section className="extractor-dashboard-grid">
         <article className="extractor-panel extractor-panel-wide">
-          <PanelHead
-            title="Movimento dos últimos 30 dias"
-            sub="Documentos capturados por dia"
-            icon="report"
-          />
+          <PanelHead title="Movimento dos últimos 30 dias" sub={company.tradeName} icon="report" />
           <div className="extractor-chart-area">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={daily} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -1089,149 +1095,76 @@ function Overview({ companies, totals, models, daily, onGo }: any) {
                   </linearGradient>
                 </defs>
                 <CartesianGrid vertical={false} stroke={chart.grid} />
-                <XAxis
-                  dataKey="day"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 10, fill: chart.text }}
-                  minTickGap={28}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 10, fill: chart.text }}
-                />
+                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: chart.text }} minTickGap={28} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: chart.text }} />
                 <Tooltip content={<Tip />} />
-                <Area
-                  type="monotone"
-                  dataKey="documents"
-                  name="Documentos"
-                  stroke={chart.gold}
-                  strokeWidth={2.3}
-                  fill="url(#exFill)"
-                />
+                <Area type="monotone" dataKey="documents" name="Documentos" stroke={chart.gold} strokeWidth={2.3} fill="url(#exFill)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </article>
+
         <article className="extractor-panel">
-          <PanelHead title="Documentos por modelo" sub="Composição da carteira" icon="document" />
+          <PanelHead title="Documentos por modelo" sub={company.tradeName} icon="document" />
           <div className="extractor-donut">
             <ResponsiveContainer>
               <PieChart>
                 <Pie
-                  data={
-                    modelData.length
-                      ? modelData
-                      : [{ name: 'Sem dados', value: 1, color: chart.muted }]
-                  }
+                  data={modelData.length ? modelData : [{ name: 'Sem dados', value: 1, color: chart.muted }]}
                   dataKey="value"
                   innerRadius="65%"
                   outerRadius="86%"
                   paddingAngle={4}
                   stroke="none"
                 >
-                  {(modelData.length
-                    ? modelData
-                    : [{ name: 'Sem dados', value: 1, color: chart.muted }]
-                  ).map((x: any) => (
+                  {(modelData.length ? modelData : [{ name: 'Sem dados', value: 1, color: chart.muted }]).map((x: any) => (
                     <Cell key={x.name} fill={x.color} />
                   ))}
                 </Pie>
                 <Tooltip content={<Tip />} />
               </PieChart>
             </ResponsiveContainer>
-            <div>
-              <strong>{integer.format(totals.documents)}</strong>
-              <span>documentos</span>
-            </div>
+            <div><strong>{integer.format(totals.documents)}</strong><span>documentos</span></div>
           </div>
           <div className="extractor-legend">
-            {modelData.map((x: any) => (
-              <p key={x.name}>
-                <i style={{ background: x.color }} />
-                <span>{x.name}</span>
-                <b>{x.value}</b>
-              </p>
-            ))}
+            {modelData.map((x: any) => <p key={x.name}><i style={{ background: x.color }} /><span>{x.name}</span><b>{x.value}</b></p>)}
           </div>
         </article>
+
         <article className="extractor-panel extractor-panel-wide">
-          <PanelHead
-            title="Empresas por volume"
-            sub="CNPJs adicionados no Extrator"
-            icon="company"
-          />
+          <PanelHead title="Operação da empresa" sub="Compras, vendas e XML disponível" icon="company" />
           <div className="extractor-chart-company">
-            {companyData.length ? (
-              <ResponsiveContainer>
-                <BarChart
-                  data={companyData}
-                  layout="vertical"
-                  margin={{ top: 0, right: 12, left: 6, bottom: 0 }}
-                >
-                  <CartesianGrid horizontal={false} stroke={chart.grid} />
-                  <XAxis
-                    type="number"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 10, fill: chart.text }}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="tradeName"
-                    width={120}
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 10, fill: chart.text }}
-                  />
-                  <Tooltip content={<Tip />} />
-                  <Bar
-                    dataKey="documents"
-                    name="Documentos"
-                    fill={chart.blue}
-                    radius={[0, 4, 4, 0]}
-                    barSize={15}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <Empty>Nenhuma empresa adicionada.</Empty>
-            )}
+            <ResponsiveContainer>
+              <BarChart data={operationData} layout="vertical" margin={{ top: 0, right: 12, left: 6, bottom: 0 }}>
+                <CartesianGrid horizontal={false} stroke={chart.grid} />
+                <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: chart.text }} />
+                <YAxis type="category" dataKey="name" width={120} axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: chart.text }} />
+                <Tooltip content={<Tip />} />
+                <Bar dataKey="documents" name="Documentos" fill={chart.blue} radius={[0, 4, 4, 0]} barSize={15} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </article>
+
         <article className="extractor-panel">
-          <PanelHead title="Pontos de atenção" sub="Ocorrências reais da carteira" icon="warning" />
+          <PanelHead title="Pontos de atenção" sub={company.tradeName} icon="warning" />
           <div className="extractor-attention-list">
-            {attention.length ? (
-              attention.slice(0, 5).map((c: any) => (
-                <button
-                  key={c.id}
-                  onClick={() =>
-                    onGo(
-                      c.certificateDays != null && c.certificateDays <= 30
-                        ? 'Empresas'
-                        : 'Empresas'
-                    )
-                  }
-                >
-                  <span>
-                    <strong>{c.tradeName}</strong>
-                    <small>
-                      {c.certificateDays != null && c.certificateDays <= 30
-                        ? `Certificado vence em ${c.certificateDays} dia(s)`
-                        : c.pendingXml
-                        ? `${c.pendingXml} XML pendente(s)`
-                        : `Compras: ${syncLabel(c.purchaseStatus)} · Vendas: ${syncLabel(
-                            c.salesStatus
-                          )}`}
-                    </small>
-                  </span>
-                  <b>Ver</b>
-                </button>
-              ))
+            {needsAttention ? (
+              <button onClick={() => onGo('Empresas', company.id)}>
+                <span>
+                  <strong>{company.tradeName}</strong>
+                  <small>
+                    {company.certificateDays != null && company.certificateDays <= 30
+                      ? `Certificado vence em ${company.certificateDays} dia(s)`
+                      : company.pendingXml
+                        ? `${company.pendingXml} XML pendente(s)`
+                        : `Compras: ${syncLabel(company.purchaseStatus)} · Vendas: ${syncLabel(company.salesStatus)}`}
+                  </small>
+                </span>
+                <b>Ver</b>
+              </button>
             ) : (
-              <Empty>Nenhuma pendência relevante.</Empty>
+              <Empty>Nenhuma pendência relevante para esta empresa.</Empty>
             )}
           </div>
         </article>
