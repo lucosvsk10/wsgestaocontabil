@@ -39,7 +39,7 @@ export default function AdminAccountingOverview() {
                 {selectedCompany?.trade_name || selectedCompany?.company_name || 'Selecione uma empresa no topo'}
               </strong>
               <span className="mt-1 block text-xs text-muted-foreground">
-                {companies.length} cliente{companies.length === 1 ? '' : 's'} disponível{companies.length === 1 ? '' : 'is'}
+                {companies.length} {companies.length === 1 ? 'cliente disponível' : 'clientes disponíveis'}
               </span>
             </div>
           </div>
