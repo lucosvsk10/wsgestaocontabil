@@ -203,6 +203,10 @@ Deno.serve(async req => {
         email: user.email || null,
         phone: user.user_metadata?.contact_phone || user.phone || null,
         full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+        notifications: user.user_metadata?.notification_preferences || {
+          fiscal_alerts: true,
+          billing_updates: true,
+        },
         created_at: user.created_at || null,
         last_sign_in_at: user.last_sign_in_at || null,
         email_confirmed_at: user.email_confirmed_at || null,
