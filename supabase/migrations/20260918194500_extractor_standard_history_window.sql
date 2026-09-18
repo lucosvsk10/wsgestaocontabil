@@ -152,6 +152,12 @@ with ranked as (
     and fd.access_key is not null
     and fd.access_key<>''
     and fd.document_kind<>'evento'
+    and exists (
+      select 1
+      from public.extractor_companies ec
+      where ec.fiscal_company_id=fd.company_id
+        and ec.status='active'
+    )
 )
 select id duplicate_id,keeper_id
 from ranked
@@ -178,9 +184,103 @@ delete from public.fiscal_dfe_documents fd
 using extractor_dfe_duplicates d
 where fd.id=d.duplicate_id;
 
-drop index if exists public.fiscal_dfe_documents_company_environment_access_key_uidx;
-create unique index fiscal_dfe_documents_company_environment_access_key_uidx
-  on public.fiscal_dfe_documents(company_id,environment,access_key);
+-- Prevent any ingestion path from creating the same fiscal document twice
+-- for an active Extrator company, even if SEFAZ repeats the key under a new NSU.
+create or replace function public.canonicalize_extractor_dfe_insert()
+returns trigger
+language plpgsql
+security definer
+set search_path to ''
+as $function$
+declare
+  v_existing public.fiscal_dfe_documents%rowtype;
+  v_is_extractor boolean := false;
+begin
+  if new.company_id is null or nullif(new.access_key,'') is null then
+    return new;
+  end if;
+
+  select exists(
+    select 1
+    from public.extractor_companies ec
+    where ec.fiscal_company_id=new.company_id
+      and ec.status='active'
+  ) into v_is_extractor;
+
+  if not v_is_extractor then
+    return new;
+  end if;
+
+  select fd.* into v_existing
+  from public.fiscal_dfe_documents fd
+  where fd.company_id=new.company_id
+    and fd.environment=new.environment
+    and fd.access_key=new.access_key
+    and fd.document_kind<>'evento'
+  order by
+    (fd.full_xml=true and fd.xml is not null) desc,
+    (fd.document_kind='nfe') desc,
+    fd.updated_at desc nulls last,
+    fd.received_at desc nulls last
+  limit 1
+  for update;
+
+  if v_existing.id is null then
+    return new;
+  end if;
+
+  update public.fiscal_dfe_documents
+  set
+    nsu=coalesce(nullif(new.nsu,''),v_existing.nsu),
+    source=case
+      when new.full_xml=true and new.xml is not null then coalesce(new.source,v_existing.source)
+      else v_existing.source
+    end,
+    source_id=case
+      when new.full_xml=true and new.xml is not null then coalesce(new.source_id,v_existing.source_id)
+      else v_existing.source_id
+    end,
+    schema_name=case
+      when new.full_xml=true and new.xml is not null then coalesce(new.schema_name,v_existing.schema_name)
+      else v_existing.schema_name
+    end,
+    document_kind=case
+      when new.full_xml=true and new.xml is not null then coalesce(new.document_kind,v_existing.document_kind)
+      when v_existing.document_kind='nfe' then v_existing.document_kind
+      else coalesce(new.document_kind,v_existing.document_kind)
+    end,
+    direction=coalesce(new.direction,v_existing.direction),
+    model=coalesce(nullif(new.model,''),v_existing.model),
+    issue_date=coalesce(new.issue_date,v_existing.issue_date),
+    value=coalesce(new.value,v_existing.value),
+    issuer_cnpj=coalesce(nullif(new.issuer_cnpj,''),v_existing.issuer_cnpj),
+    issuer_name=coalesce(nullif(new.issuer_name,''),v_existing.issuer_name),
+    recipient_cnpj=coalesce(nullif(new.recipient_cnpj,''),v_existing.recipient_cnpj),
+    recipient_name=coalesce(nullif(new.recipient_name,''),v_existing.recipient_name),
+    note_number=coalesce(nullif(new.note_number,''),v_existing.note_number),
+    series=coalesce(nullif(new.series,''),v_existing.series),
+    status_code=coalesce(nullif(new.status_code,''),v_existing.status_code),
+    status_text=coalesce(nullif(new.status_text,''),v_existing.status_text),
+    full_xml=(v_existing.full_xml=true) or (new.full_xml=true),
+    xml=case
+      when new.full_xml=true and new.xml is not null then new.xml
+      else v_existing.xml
+    end,
+    parse_error=case
+      when new.full_xml=true and new.xml is not null then new.parse_error
+      else coalesce(v_existing.parse_error,new.parse_error)
+    end,
+    updated_at=greatest(coalesce(v_existing.updated_at,'epoch'::timestamptz),coalesce(new.updated_at,now()))
+  where id=v_existing.id;
+
+  return null;
+end;
+$function$;
+
+drop trigger if exists trg_canonicalize_extractor_dfe_insert on public.fiscal_dfe_documents;
+create trigger trg_canonicalize_extractor_dfe_insert
+before insert on public.fiscal_dfe_documents
+for each row execute function public.canonicalize_extractor_dfe_insert();
 
 -- Return canonical documents directly from the RPC too; the browser should not
 -- need to repair duplicate storage semantics.
