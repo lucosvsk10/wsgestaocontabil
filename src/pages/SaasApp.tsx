@@ -450,8 +450,8 @@ export default function SaasApp() {
           <div className="saas-page-context flex-1">
             <p className="text-[10px] font-semibold uppercase tracking-[.12em]">
               {internalAdminEntry ? (
-                <a href="/admin/ambientes" className="transition-opacity hover:opacity-70">
-                  ← Ambientes WS
+                <a href="/admin/fiscal" className="transition-opacity hover:opacity-70">
+                  ← Centro Fiscal
                 </a>
               ) : (
                 'WS Gestão Contábil'
