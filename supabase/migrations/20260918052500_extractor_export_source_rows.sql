@@ -54,7 +54,7 @@ raw as (
     fd.issuer_cnpj,
     fd.issuer_name,
     fd.recipient_cnpj,
-    fd.recipient_name,
+    null::text recipient_name,
     fd.note_number,
     fd.series,
     fd.status_code,
