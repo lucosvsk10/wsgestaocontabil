@@ -112,6 +112,31 @@ type Snapshot = {
   daily?: Array<{ day?: string; documents?: number }>;
 };
 type Notice = { tone: 'success' | 'warning' | 'error'; text: string } | null;
+type ImportNotification = {
+  id: string;
+  company_id: string;
+  kind: string;
+  title: string;
+  message: string;
+  metadata?: {
+    company_name?: string;
+    purchase_count?: number;
+    sales_count?: number;
+    total_count?: number;
+    access_keys?: string[];
+    issue_from?: string | null;
+    issue_to?: string | null;
+  };
+  created_at: string;
+};
+type DocumentNotificationFocus = {
+  notificationId: string;
+  companyId: string;
+  keys: string[];
+  issueFrom?: string | null;
+  issueTo?: string | null;
+  label: string;
+};
 type Usage = {
   used: number;
   limit: number;
@@ -321,7 +346,9 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
     [previewDoc, setPreviewDoc] = useState<Doc | null>(null),
     [previewPdfBusy, setPreviewPdfBusy] = useState(false),
     [previewXmlBusy, setPreviewXmlBusy] = useState(false),
-    [usage, setUsage] = useState<Usage>({ used: 0, limit: 0, remaining: 0, percent: 0 });
+    [usage, setUsage] = useState<Usage>({ used: 0, limit: 0, remaining: 0, percent: 0 }),
+    [importNotifications, setImportNotifications] = useState<ImportNotification[]>([]),
+    [documentFocus, setDocumentFocus] = useState<DocumentNotificationFocus | null>(null);
   const load = useCallback(
     async (quiet = false) => {
       if (preview || !user) return;
@@ -362,6 +389,63 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
       window.removeEventListener('focus', f);
     };
   }, [preview, denied, load]);
+
+  const loadImportNotifications = useCallback(async () => {
+    if (preview || denied || !user) return;
+    try {
+      const { data, error } = await supabase.functions.invoke('extractor-notifications', {
+        body: { action: 'list' },
+      });
+      if (error) throw error;
+      setImportNotifications(Array.isArray(data?.notifications) ? data.notifications : []);
+    } catch {
+      // Notification delivery must never interrupt the fiscal workspace.
+    }
+  }, [preview, denied, user?.id]);
+
+  useEffect(() => {
+    if (preview || denied || !user) return;
+    void loadImportNotifications();
+    const timer = window.setInterval(() => void loadImportNotifications(), 60000);
+    const onFocus = () => void loadImportNotifications();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [preview, denied, user?.id, loadImportNotifications]);
+
+  const updateImportNotification = useCallback(async (
+    notification: ImportNotification,
+    action: 'read' | 'dismiss',
+    openDocuments = false
+  ) => {
+    setImportNotifications(current => current.filter(item => item.id !== notification.id));
+    try {
+      await supabase.functions.invoke('extractor-notifications', {
+        body: { action, notification_id: notification.id },
+      });
+    } catch {
+      // Optimistic dismissal keeps the UI quiet; the next successful poll reconciles state.
+    }
+    if (openDocuments) {
+      const keys = Array.isArray(notification.metadata?.access_keys)
+        ? notification.metadata!.access_keys!.map(String).filter(Boolean)
+        : [];
+      setSelectedCompanyId(notification.company_id);
+      setDocumentFocus({
+        notificationId: notification.id,
+        companyId: notification.company_id,
+        keys,
+        issueFrom: notification.metadata?.issue_from || null,
+        issueTo: notification.metadata?.issue_to || null,
+        label: notification.message,
+      });
+      setActive('Documentos');
+      setMobile(false);
+      setNotice(null);
+    }
+  }, []);
   const companies = useMemo(
     () =>
       preview
@@ -428,18 +512,24 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
   const planUsage: Usage = preview
     ? {
         used: 326,
-        limit: 20000,
-        remaining: 19674,
-        percent: 2,
+        limit: 5000,
+        remaining: 4674,
+        percent: 7,
         period_start: null,
         period_end: null,
       }
     : usage;
   const planLabel = preview
-    ? 'Escritório · 20.000 XML/mês'
-    : snapshot?.account?.plan_code === 'office_20000'
-    ? 'Escritório · 20.000 XML/mês'
-    : snapshot?.account?.plan_code || 'Plano Extrator';
+    ? 'Extrator Padrão · 5.000 XML/mês'
+    : snapshot?.account?.plan_code === 'extractor_commercial'
+      ? 'Extrator Padrão · 5.000 XML/mês'
+      : snapshot?.account?.plan_code === 'extractor_pro'
+        ? 'Extrator Pro · 15.000 XML/mês'
+        : snapshot?.account?.plan_code === 'extractor_enterprise'
+          ? 'Extrator Enterprise · 10.000 XML por empresa'
+          : snapshot?.account?.plan_code === 'office_20000'
+            ? 'Escritório · 20.000 XML/mês'
+            : snapshot?.account?.plan_code || 'Plano Extrator';
   const go = (s: Section, companyId?: string) => {
     if (companyId) setSelectedCompanyId(companyId);
     setActive(s);
@@ -496,7 +586,7 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
     try {
       let current = document;
       if (!(current.fullXml && current.xml)) {
-        const { data, error } = await supabase.functions.invoke('fiscal-document-recover', {
+        const { data, error } = await supabase.functions.invoke('extractor-document-preview', {
           body: { company_id: current.companyId, access_key: current.accessKey, nsu: current.nsu },
         });
         if (error) throw error;
@@ -542,7 +632,7 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
           ? 'Manifestação registrada e XML integral recuperado.'
           : String(data?.result?.message || 'Manifestação registrada. A recuperação do XML continuará automaticamente.'),
       });
-      const { data: refresh } = await supabase.functions.invoke('fiscal-document-recover', {
+      const { data: refresh } = await supabase.functions.invoke('extractor-document-preview', {
         body: { company_id: document.companyId, access_key: document.accessKey, nsu: document.nsu },
       });
       if (refresh?.ready && refresh.document) setPreviewDoc(rowToDoc(refresh.document));
@@ -661,6 +751,8 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
             preview={preview}
             setNotice={setNotice}
             onPreview={setPreviewDoc}
+            notificationFocus={documentFocus}
+            onClearNotificationFocus={() => setDocumentFocus(null)}
           />
         )}
         {active === 'Relatórios' && (
@@ -714,6 +806,11 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
           }}
         />
       )}
+      <ImportNotificationStack
+        notifications={importNotifications.slice(0, 3)}
+        onOpen={notification => void updateImportNotification(notification, 'read', true)}
+        onDismiss={notification => void updateImportNotification(notification, 'dismiss', false)}
+      />
       <ExtractorFiscalDocumentPreviewModal
         document={previewDoc}
         companyName={previewCompany?.tradeName || previewCompany?.name || 'Empresa'}
@@ -725,7 +822,7 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
         onDownloadXml={downloadPreviewXml}
         onManifestation={manifestPreview}
         onRetry={async document => {
-          const { data } = await supabase.functions.invoke('fiscal-document-recover', {
+          const { data } = await supabase.functions.invoke('extractor-document-preview', {
             body: { company_id: document.companyId, access_key: document.accessKey, nsu: document.nsu },
           });
           if (data?.ready && data.document) setPreviewDoc(rowToDoc(data.document));
@@ -771,25 +868,77 @@ function NoticeBar({ notice, close }: { notice: NonNullable<Notice>; close: () =
     </div>
   );
 }
+
+function ImportNotificationStack({
+  notifications,
+  onOpen,
+  onDismiss,
+}: {
+  notifications: ImportNotification[];
+  onOpen: (notification: ImportNotification) => void;
+  onDismiss: (notification: ImportNotification) => void;
+}) {
+  if (!notifications.length) return null;
+  return (
+    <aside className="extractor-import-notifications" aria-live="polite">
+      {notifications.map(notification => {
+        const purchases = Number(notification.metadata?.purchase_count || 0);
+        const sales = Number(notification.metadata?.sales_count || 0);
+        const companyName = notification.metadata?.company_name || 'Empresa';
+        return (
+          <article key={notification.id} className="extractor-import-notification">
+            <div className="extractor-import-notification-icon">
+              <AnimatedExtractorIcon name={sales > 0 && purchases === 0 ? 'upload' : 'download'} />
+            </div>
+            <div>
+              <small>{companyName}</small>
+              <strong>{notification.title}</strong>
+              <p>
+                {purchases > 0 && <span>{purchases} compra{purchases === 1 ? '' : 's'}</span>}
+                {sales > 0 && <span>{sales} venda{sales === 1 ? '' : 's'}</span>}
+              </p>
+              <button onClick={() => onOpen(notification)}>Ver documentos</button>
+            </div>
+            <button
+              className="extractor-import-notification-close"
+              onClick={() => onDismiss(notification)}
+              aria-label="Dispensar notificação"
+            >
+              <X />
+            </button>
+          </article>
+        );
+      })}
+    </aside>
+  );
+}
+
 function Metric({
   label,
   value,
   detail,
   icon,
+  watermark = false,
 }: {
   label: string;
   value: string;
   detail: string;
   icon: ExtractorIconName;
+  watermark?: boolean;
 }) {
   return (
-    <article className="extractor-metric" data-icon-hover>
+    <article className={`extractor-metric ${watermark ? 'extractor-metric-visual' : ''}`} data-icon-hover>
       <div>
         <p>{label}</p>
-        <AnimatedExtractorIcon name={icon} />
+        {!watermark && <AnimatedExtractorIcon name={icon} />}
       </div>
       <strong>{value}</strong>
       <span>{detail}</span>
+      {watermark && (
+        <span className="extractor-metric-watermark" aria-hidden="true">
+          <AnimatedExtractorIcon name={icon} />
+        </span>
+      )}
     </article>
   );
 }
@@ -850,30 +999,35 @@ function Overview({ companies, totals, models, daily, onGo }: any) {
           value={integer.format(totals.documents)}
           detail={`${integer.format(totals.fullXml)} com XML integral`}
           icon="document"
+          watermark
         />
         <Metric
           label="Compras"
           value={integer.format(totals.entries)}
           detail="Entradas fiscais"
           icon="download"
+          watermark
         />
         <Metric
           label="Vendas"
           value={integer.format(totals.exits)}
           detail="Saídas fiscais"
           icon="upload"
+          watermark
         />
         <Metric
           label="Movimentação"
           value={currency.format(totals.value)}
           detail="Valor disponível no período"
           icon="report"
+          watermark
         />
         <Metric
           label="Cobertura XML"
           value={`${xmlRate}%`}
           detail={`${integer.format(totals.pendingXml)} pendente(s)`}
           icon="certificate"
+          watermark
         />
       </section>
       <section className="extractor-dashboard-grid">
@@ -1360,6 +1514,8 @@ function Documents({
   preview,
   setNotice,
   onPreview,
+  notificationFocus,
+  onClearNotificationFocus,
 }: any) {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
@@ -1441,6 +1597,21 @@ function Documents({
   useEffect(() => { void loadMonthlyStats(); }, [loadMonthlyStats]);
   useEffect(() => setPage(1), [start, end, filter, typeFilter, query, company?.id]);
 
+  useEffect(() => {
+    if (!notificationFocus || notificationFocus.companyId !== company?.id) return;
+    const from = notificationFocus.issueFrom ? String(notificationFocus.issueFrom).slice(0, 10) : '';
+    const to = notificationFocus.issueTo ? String(notificationFocus.issueTo).slice(0, 10) : '';
+    if (from && to) {
+      setCustomOpen(true);
+      setCustomStart(from);
+      setCustomEnd(to);
+    }
+    setFilter('todos');
+    setTypeFilter('todos');
+    setQuery('');
+    setPage(1);
+  }, [notificationFocus?.notificationId, company?.id]);
+
   const fiscal = docs.filter(d => d.documentKind !== 'evento');
   const sales = fiscal.filter(d => d.direction === 'saida');
   const purchases = fiscal.filter(d => d.direction === 'entrada');
@@ -1454,6 +1625,12 @@ function Documents({
   const nfse = fiscal.filter(d => type(d) === 'NFS-e').length;
 
   const filtered = docs.filter(d => {
+    if (
+      notificationFocus?.companyId === company?.id &&
+      Array.isArray(notificationFocus?.keys) &&
+      notificationFocus.keys.length > 0 &&
+      !notificationFocus.keys.includes(String(d.accessKey || ''))
+    ) return false;
     if (filter === 'saida' && (d.direction !== 'saida' || d.documentKind === 'evento')) return false;
     if (filter === 'entrada' && (d.direction !== 'entrada' || d.documentKind === 'evento')) return false;
     if (filter === 'evento' && !(d.documentKind === 'evento' || d.direction === 'relacionada')) return false;
@@ -1475,10 +1652,14 @@ function Documents({
 
   const open = async (document: Doc) => {
     if (preview) return setNotice({ tone: 'warning', text: 'A visualização completa fica disponível no ambiente autenticado.' });
+    if (document.fullXml && document.xml) {
+      onPreview(document);
+      return;
+    }
     if (busy) return;
     setBusy(`doc:${document.accessKey || document.nsu}`);
     try {
-      const { data, error } = await supabase.functions.invoke('fiscal-document-recover', {
+      const { data, error } = await supabase.functions.invoke('extractor-document-preview', {
         body: { company_id: company.id, access_key: document.accessKey, nsu: document.nsu },
       });
       if (error) {
@@ -1611,6 +1792,16 @@ function Documents({
       </section>
 
       <section className="extractor-admin-table">
+        {notificationFocus?.companyId === company.id && (
+          <div className="extractor-document-focus">
+            <div>
+              <small>Importação recente</small>
+              <strong>{notificationFocus.label}</strong>
+              <span>Mostrando somente os documentos desta importação.</span>
+            </div>
+            <button onClick={onClearNotificationFocus}>Ver todos os documentos</button>
+          </div>
+        )}
         <div className="extractor-filter-row">
           <div>
             <Pill active={filter === 'saida'} onClick={() => setFilter('saida')}>↗ Vendas <b>{sales.length}</b></Pill>
@@ -1655,11 +1846,14 @@ function Documents({
                   const counterpartyCnpj = document.direction === 'saida' ? document.recipientCnpj : document.issuerCnpj;
                   const manifest = ['xml_requires_manifestation', 'xml_retry:manifestation_sent'].includes(String(document.parseError || ''));
                   return (
-                    <tr key={document.accessKey || `${document.nsu}-${index}`} className="ws-zebra-row" onDoubleClick={() => void open(document)}>
-                      <td><strong>{formatDate(document.issueDate)}</strong><span>{issueHour(document.issueDate)}</span></td>
-                      <td>
-                        <strong>{document.number || '—'} <span>/ {document.series || '—'}</span></strong>
-                        <div>
+                    <tr key={document.accessKey || `${document.nsu}-${index}`} className="ws-zebra-row extractor-doc-row" onDoubleClick={() => void open(document)}>
+                      <td className="extractor-doc-emission">
+                        <strong>{formatDate(document.issueDate)}</strong>
+                        <span>{issueHour(document.issueDate)}</span>
+                      </td>
+                      <td className="extractor-doc-note">
+                        <div className="extractor-doc-note-top">
+                          <strong>{document.number || '—'} <span>/ {document.series || '—'}</span></strong>
                           <TypeTag value={documentType} />
                           <StatusTag value={situation} />
                           {manifest && (
@@ -1671,12 +1865,20 @@ function Documents({
                             ><Info /></button>
                           )}
                         </div>
-                        <span className="key">{document.accessKey || document.nsu || 'Sem chave informada'}</span>
+                        <span className="key extractor-doc-key" title={document.accessKey || document.nsu || ''}>
+                          {document.accessKey || document.nsu || 'Sem chave informada'}
+                        </span>
                       </td>
-                      <td><strong>{counterpartyName}</strong><span>{counterpartyCnpj ? formatCnpj(counterpartyCnpj) : '—'}</span></td>
-                      <td><strong>{document.direction === 'saida' ? 'Venda de mercadoria' : document.direction === 'entrada' ? 'Entrada fiscal' : 'Evento fiscal'}</strong><span>{documentType} · {situation}</span></td>
-                      <td><strong>{currency.format(Number(document.value || 0))}</strong></td>
-                      <td>
+                      <td className="extractor-doc-company">
+                        <strong title={counterpartyName}>{counterpartyName}</strong>
+                        <span>{counterpartyCnpj ? formatCnpj(counterpartyCnpj) : '—'}</span>
+                      </td>
+                      <td className="extractor-doc-operation">
+                        <strong>{document.direction === 'saida' ? 'Venda de mercadoria' : document.direction === 'entrada' ? 'Entrada fiscal' : 'Evento fiscal'}</strong>
+                        <span>{documentType} · {situation}</span>
+                      </td>
+                      <td className="extractor-doc-value"><strong>{currency.format(Number(document.value || 0))}</strong></td>
+                      <td className="extractor-doc-actions">
                         <button className="extractor-view" onClick={() => void open(document)} disabled={busy === `doc:${document.accessKey || document.nsu}`}>
                           <AnimatedExtractorIcon name="eye" /> {busy === `doc:${document.accessKey || document.nsu}` ? 'Abrindo...' : 'Visualizar'}
                         </button>
@@ -2092,20 +2294,21 @@ function BillingSection({ usage, planLabel, preview, setNotice }: any) {
           provider: 'mercado_pago',
           billing_mode: 'recurring',
           current_period_end: new Date(Date.now() + 20 * 86400000).toISOString(),
-          plan: { code: 'extractor_commercial', name: 'Extrator Comercial', price_cents: 9900, limits: { monthly_xml: 20000 } },
+          plan: { code: 'extractor_commercial', name: 'Extrator Padrão', price_cents: 9700, limits: { monthly_xml: 5000, companies: 5 } },
         },
         billing_cycle: {
           paid: true,
           status: 'paid',
           paid_at: new Date().toISOString(),
           payment_method: 'pix',
-          amount_cents: 9900,
+          amount_cents: 9700,
           next_charge_at: new Date(Date.now() + 20 * 86400000).toISOString(),
           renewal_mode: 'automatic',
         },
         plans: [
-          { code: 'extractor_commercial', name: 'Extrator Comercial', price_cents: 9900, limits: { monthly_xml: 20000 }, features: {} },
-          { code: 'extractor_enterprise', name: 'Extrator Empresarial', price_cents: 25000, limits: { monthly_xml: null }, features: { unlimited: true } },
+          { code: 'extractor_commercial', name: 'Extrator Padrão', price_cents: 9700, limits: { monthly_xml: 5000, companies: 5 }, features: {} },
+          { code: 'extractor_pro', name: 'Extrator Pro', price_cents: 15000, limits: { monthly_xml: 15000, companies: 10 }, features: {} },
+          { code: 'extractor_enterprise', name: 'Extrator Enterprise', price_cents: 39700, limits: { monthly_xml: 10000, monthly_xml_per_company: 10000, companies: 100 }, features: { enterprise: true, hide_company_limit: true } },
         ],
         invoices: [],
       });
@@ -2144,9 +2347,13 @@ function BillingSection({ usage, planLabel, preview, setNotice }: any) {
     ? String(billingCycle.payment_method).replace(/_/g, ' ')
     : '—';
   const renewalAutomatic = billingCycle?.renewal_mode === 'automatic' || subscription?.billing_mode === 'recurring';
-  const monthlyLimit = plan?.limits?.monthly_xml;
-  const unlimited = plan?.features?.unlimited === true || monthlyLimit == null;
-  const usageLimitLabel = unlimited ? 'Ilimitado' : integer.format(Number(monthlyLimit || usage.limit || 0));
+  const monthlyLimit = Number(plan?.limits?.monthly_xml || usage.limit || 0);
+  const monthlyPerCompany = Number(plan?.limits?.monthly_xml_per_company || 0);
+  const enterpriseCapacity = monthlyPerCompany > 0;
+  const usageLimitLabel = integer.format(Number(usage.limit || monthlyLimit || 0));
+  const planCapacityLabel = enterpriseCapacity
+    ? `${integer.format(monthlyPerCompany)} XML por empresa/mês`
+    : `${integer.format(monthlyLimit)} XML/mês`;
 
   const requestUpgrade = (targetPlan: any) => {
     const message = encodeURIComponent(
@@ -2182,7 +2389,7 @@ function BillingSection({ usage, planLabel, preview, setNotice }: any) {
             <div>
               <small>Plano atual</small>
               <strong>{plan?.name || planLabel}</strong>
-              <span>{unlimited ? 'XML ilimitado' : `${usageLimitLabel} XML/mês`}</span>
+              <span>{planCapacityLabel}</span>
             </div>
             <div>
               <small>{renewalAutomatic ? 'Próxima cobrança' : 'Próxima renovação'}</small>
@@ -2211,13 +2418,13 @@ function BillingSection({ usage, planLabel, preview, setNotice }: any) {
             <article className="extractor-billing-card">
               <header>
                 <div><h2>Uso do plano</h2><p>Consumo de XML no período atual</p></div>
-                <strong className="amount">{unlimited ? '∞' : `${usage.percent}%`}</strong>
+                <strong className="amount">{usage.percent}%</strong>
               </header>
-              {!unlimited && <div className="extractor-billing-progress"><i style={{ width: `${Math.min(100, Math.max(0, usage.percent))}%` }} /></div>}
+              <div className="extractor-billing-progress"><i style={{ width: `${Math.min(100, Math.max(0, usage.percent))}%` }} /></div>
               <div className="extractor-billing-facts">
                 <div><span>Processados</span><b>{integer.format(usage.used)}</b></div>
-                <div><span>Limite</span><b>{usageLimitLabel}</b></div>
-                <div><span>Restantes</span><b>{unlimited ? 'Ilimitado' : integer.format(usage.remaining)}</b></div>
+                <div><span>Limite do ciclo</span><b>{usageLimitLabel}</b></div>
+                <div><span>Restantes</span><b>{integer.format(usage.remaining)}</b></div>
                 <div><span>Ciclo</span><b>{formatDate(usage.period_start)} a {formatDate(usage.period_end)}</b></div>
               </div>
             </article>
@@ -2247,26 +2454,35 @@ function BillingSection({ usage, planLabel, preview, setNotice }: any) {
             </div>
             <div className="extractor-plan-options-grid">
               {plans.map((item: any) => {
-                const itemLimit = item?.limits?.monthly_xml;
-                const itemUnlimited = item?.features?.unlimited === true || itemLimit == null;
+                const itemLimit = Number(item?.limits?.monthly_xml || 0);
+                const itemPerCompany = Number(item?.limits?.monthly_xml_per_company || 0);
                 const current = item.code === currentPlanCode;
-                const canUpgrade = currentPlanCode === 'extractor_commercial' && item.code === 'extractor_enterprise';
+                const order: Record<string, number> = {
+                  extractor_commercial: 1,
+                  extractor_pro: 2,
+                  extractor_enterprise: 3,
+                };
+                const canUpgrade = (order[item.code] || 0) > (order[currentPlanCode] || 0);
+                const capacity = itemPerCompany > 0
+                  ? `${integer.format(itemPerCompany)} XML por empresa/mês`
+                  : `${integer.format(itemLimit)} XML por mês`;
+                const companyCopy = item.code === 'extractor_enterprise'
+                  ? 'Estrutura Enterprise'
+                  : `Até ${integer.format(Number(item?.limits?.companies || 0))} empresas`;
                 return (
                   <article key={item.code} className={`extractor-plan-option ${current ? 'current' : ''}`}>
                     <div>
-                      <small>{current ? 'Plano atual' : item.code === 'extractor_enterprise' ? 'Maior capacidade' : 'Plano padrão'}</small>
+                      <small>{current ? 'Plano atual' : item.code === 'extractor_enterprise' ? 'Enterprise' : 'Plano disponível'}</small>
                       <h3>{item.name}</h3>
                       <strong>{centsMoney(item.price_cents)}<span>/mês</span></strong>
-                      <p>{itemUnlimited ? 'XML ilimitado' : `${integer.format(Number(itemLimit || 0))} XML por mês`}</p>
+                      <p>{capacity} · {companyCopy}</p>
                     </div>
                     {current ? (
                       <span className="extractor-plan-current">Seu plano</span>
                     ) : canUpgrade ? (
                       <button onClick={() => requestUpgrade(item)}>Solicitar upgrade</button>
                     ) : (
-                      <span className="extractor-plan-muted">
-                        {currentPlanCode === 'extractor_enterprise' ? 'Plano inferior ao atual' : 'Disponível para contratação'}
-                      </span>
+                      <span className="extractor-plan-muted">Plano inferior ao atual</span>
                     )}
                   </article>
                 );
@@ -2467,11 +2683,11 @@ function SettingsSection({ account, user, preview, setNotice }: any) {
             <h3>Preferências e segurança</h3>
             <div className="extractor-settings-toggles">
               <label>
-                <span><b>Alertas fiscais</b><small>Avisar sobre falhas persistentes, XML pendente e certificado.</small></span>
+                <span><b>Importações fiscais</b><small>Mostrar um aviso quando a sincronização encontrar novas compras ou vendas.</small></span>
                 <input type="checkbox" checked={Boolean(form.fiscal_alerts)} onChange={e => setForm((v: any) => ({ ...v, fiscal_alerts: e.target.checked }))} />
               </label>
               <label>
-                <span><b>Atualizações de cobrança</b><small>Avisar sobre pagamento, renovação e vencimento.</small></span>
+                <span><b>Atualizações de cobrança</b><small>Avisar sobre pagamento confirmado, renovação e vencimento da mensalidade.</small></span>
                 <input type="checkbox" checked={Boolean(form.billing_updates)} onChange={e => setForm((v: any) => ({ ...v, billing_updates: e.target.checked }))} />
               </label>
             </div>

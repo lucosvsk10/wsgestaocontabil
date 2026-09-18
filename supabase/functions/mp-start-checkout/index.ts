@@ -1,12 +1,13 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.49.4";
 
-const plans = {
-  issuer_monthly: { product: "issuer", name: "Emissor Fiscal WS", cents: 6900, trialDays: 7 },
-  extractor_commercial: { product: "extractor", name: "Extrator Fiscal WS — Comercial", cents: 9900, trialDays: 7 },
-  extractor_enterprise: { product: "extractor", name: "Extrator Fiscal WS — Empresarial", cents: 25000, trialDays: 7 },
+const productByPlan = {
+  issuer_monthly: "issuer",
+  extractor_commercial: "extractor",
+  extractor_pro: "extractor",
+  extractor_enterprise: "extractor",
 } as const;
-type PlanCode = keyof typeof plans;
+type PlanCode = keyof typeof productByPlan;
 type BillingMode = "recurring" | "one_time";
 const testBuyerBySellerId: Record<string, string> = {
   "3683036338": "test_user_4909973592755136737@testuser.com",
@@ -42,9 +43,25 @@ Deno.serve(async (req) => {
   const input = await req.json().catch(() => ({})) as Record<string, unknown>;
   const planCode = String(input.planCode || "") as PlanCode;
   const billingMode = String(input.billingMode || "") as BillingMode;
-  if (!(planCode in plans) || !["recurring", "one_time"].includes(billingMode)) return json({ error: "Plano inválido." }, 400);
+  if (!(planCode in productByPlan) || !["recurring", "one_time"].includes(billingMode)) return json({ error: "Plano inválido." }, 400);
   if (input.termsAccepted !== true) return json({ error: "Aceite os termos para continuar." }, 400);
-  const selected = plans[planCode];
+
+  const { data: plan, error: planError } = await admin
+    .from("saas_plans")
+    .select("id,code,name,product_code,price_cents,trial_days")
+    .eq("code", planCode)
+    .eq("product_code", productByPlan[planCode])
+    .eq("status", "active")
+    .single();
+  if (planError || !plan || !Number.isSafeInteger(Number(plan.price_cents)) || Number(plan.price_cents) <= 0) {
+    return json({ error: "Plano temporariamente indisponível." }, 503);
+  }
+  const selected = {
+    product: String(plan.product_code) as "issuer" | "extractor",
+    name: String(plan.name),
+    cents: Number(plan.price_cents),
+    trialDays: Math.max(0, Number(plan.trial_days || 0)),
+  };
   let payerEmail = user.email;
   const sellerResponse = await fetch("https://api.mercadopago.com/users/me", {
     headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json" },
@@ -68,8 +85,6 @@ Deno.serve(async (req) => {
   }
   const organizationId = member.organization_id;
 
-  const { data: plan, error: planError } = await admin.from("saas_plans").select("id").eq("code", planCode).eq("status", "active").single();
-  if (planError || !plan) return json({ error: "Plano temporariamente indisponível." }, 503);
   const { data: existing } = await admin.from("saas_subscriptions").select("id,status").eq("organization_id", organizationId).eq("product_code", selected.product).in("status", ["trialing","active","past_due","paused","incomplete"]).order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (existing?.status && existing.status !== "incomplete") return json({ error: "Sua empresa já possui acesso a este produto.", destination: selected.product === "issuer" ? "/app" : "/extrator" }, 409);
   if (existing?.id) await admin.from("saas_subscriptions").update({ status: "canceled" }).eq("id", existing.id);
