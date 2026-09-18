@@ -1514,3 +1514,232 @@
   .extractor-history-current>div:last-child{border-bottom:0}
   .extractor-history-scope{width:100%}.extractor-history-scope button{flex:1}
 }
+
+
+/* Histórico — mais respiro e leitura confortável. */
+.extractor-history-table-page{
+  gap:18px!important;
+}
+.extractor-health-toolbar{
+  gap:12px!important;
+  padding:12px 14px!important;
+  border-radius:8px!important;
+}
+.extractor-health-company-search{
+  height:40px!important;
+  padding:0 12px!important;
+}
+.extractor-health-company-search input,
+.extractor-health-toolbar select{
+  height:38px!important;
+  font-size:10px!important;
+}
+.extractor-history-scope{
+  gap:4px!important;
+  padding:3px!important;
+}
+.extractor-history-scope button{
+  height:34px!important;
+  padding:0 13px!important;
+  font-size:9px!important;
+}
+.extractor-history-current{
+  grid-template-columns:minmax(320px,1.45fr) minmax(180px,.72fr) minmax(180px,.72fr) minmax(190px,auto)!important;
+  border-radius:8px!important;
+}
+.extractor-history-current>div{
+  padding:16px 17px!important;
+}
+.extractor-history-current small,
+.extractor-history-current-status>span{
+  font-size:8px!important;
+}
+.extractor-history-current strong{
+  margin:4px 0!important;
+  font-size:14px!important;
+  line-height:1.3!important;
+}
+.extractor-history-current>div:first-child>span{
+  font-size:9px!important;
+  line-height:1.5!important;
+}
+.extractor-history-current-status b{
+  margin:5px 0 8px!important;
+  font-size:18px!important;
+}
+.extractor-history-actions{
+  gap:8px!important;
+  min-width:190px;
+}
+.extractor-history-actions button{
+  height:36px!important;
+  padding:0 13px!important;
+  font-size:9px!important;
+}
+.extractor-history-ledger{
+  border-radius:8px!important;
+}
+.extractor-history-ledger>header{
+  padding:14px 16px!important;
+}
+.extractor-history-ledger>header small{
+  font-size:8px!important;
+}
+.extractor-history-ledger>header h3{
+  margin-top:3px!important;
+  font-size:14px!important;
+}
+.extractor-history-ledger>header>span{
+  font-size:9px!important;
+}
+.extractor-history-table-wrap{
+  max-height:min(55vh,560px);
+  overflow:auto!important;
+}
+.extractor-history-ledger table{
+  min-width:1040px!important;
+}
+.extractor-history-ledger th{
+  position:sticky;
+  top:0;
+  z-index:2;
+  padding:11px 12px!important;
+  background:#0e1623!important;
+  font-size:8.5px!important;
+  line-height:1.3!important;
+}
+.extractor-history-ledger td{
+  padding:12px!important;
+  font-size:10px!important;
+  line-height:1.45!important;
+}
+.extractor-history-ledger td .extractor-health-state{
+  font-size:8px!important;
+}
+.extractor-history-ledger td.empty{
+  padding:34px!important;
+  font-size:10px!important;
+}
+.extractor-health-simple-note{
+  margin-top:0!important;
+  padding:0 2px;
+  font-size:9px!important;
+  line-height:1.6!important;
+}
+
+/* Preview fiscal — documento e resumo rolam de forma independente e as ações ficam sempre acessíveis. */
+.extractor-fiscal-preview-overlay{
+  padding:12px!important;
+  overflow:hidden;
+}
+.extractor-fiscal-preview-modal{
+  width:min(1600px,calc(100vw - 24px))!important;
+  height:min(94dvh,980px)!important;
+  max-height:calc(100dvh - 24px)!important;
+  min-height:0!important;
+}
+.extractor-fiscal-preview-document{
+  min-height:0!important;
+  overflow:hidden!important;
+}
+.extractor-fiscal-preview-toolbar{
+  flex:0 0 auto;
+}
+.extractor-fiscal-paper-stage{
+  flex:1 1 auto!important;
+  min-height:0!important;
+  overflow:auto!important;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+  align-items:flex-start;
+}
+.extractor-fiscal-preview-summary{
+  min-height:0!important;
+  overflow:hidden!important;
+}
+.extractor-fiscal-preview-summary-head{
+  flex:0 0 auto;
+}
+.extractor-fiscal-summary-list{
+  flex:1 1 auto!important;
+  min-height:0!important;
+  overflow:auto!important;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+}
+.extractor-fiscal-manifest-box{
+  flex:0 0 auto;
+}
+.extractor-fiscal-preview-actions{
+  position:sticky;
+  bottom:0;
+  z-index:4;
+  flex:0 0 auto!important;
+  margin-top:0!important;
+  padding:14px 19px 16px!important;
+  border-top:1px solid rgba(255,255,255,.06);
+  box-shadow:0 -12px 26px rgba(3,7,13,.34);
+}
+.extractor-fiscal-preview-actions button{
+  width:100%;
+  min-height:38px;
+  flex:none!important;
+}
+.extractor-danfe-sheet,
+.extractor-nfse-sheet,
+.extractor-nfce-sheet{
+  flex:0 0 auto;
+}
+
+/* Ajuste responsivo para evitar que os blocos do Histórico se espremam. */
+@media(max-width:1320px){
+  .extractor-history-current{
+    grid-template-columns:minmax(280px,1.2fr) minmax(170px,.7fr) minmax(170px,.7fr)!important;
+  }
+  .extractor-history-actions{
+    grid-column:1/-1;
+    justify-content:flex-start!important;
+    border-top:1px solid rgba(255,255,255,.045);
+  }
+}
+@media(max-width:900px){
+  .extractor-history-table-page{gap:14px!important}
+  .extractor-health-toolbar{padding:10px!important}
+  .extractor-history-current{grid-template-columns:1fr 1fr!important}
+  .extractor-history-current>div:first-child{grid-column:1/-1}
+  .extractor-history-current>div:nth-child(2){border-right:1px solid rgba(255,255,255,.045)!important}
+  .extractor-history-actions{grid-column:1/-1}
+  .extractor-fiscal-preview-overlay{padding:6px!important}
+  .extractor-fiscal-preview-modal{
+    width:calc(100vw - 12px)!important;
+    height:calc(100dvh - 12px)!important;
+    max-height:calc(100dvh - 12px)!important;
+    grid-template-columns:1fr!important;
+    grid-template-rows:minmax(0,1fr) minmax(230px,38dvh)!important;
+  }
+  .extractor-fiscal-preview-summary{
+    max-height:none!important;
+    border-top:1px solid rgba(255,255,255,.06);
+  }
+  .extractor-fiscal-preview-document{
+    min-height:0!important;
+  }
+}
+@media(max-width:620px){
+  .extractor-history-current{grid-template-columns:1fr!important}
+  .extractor-history-current>div:first-child{grid-column:auto}
+  .extractor-history-current>div:nth-child(2){border-right:0!important}
+  .extractor-history-actions{grid-column:auto;flex-wrap:wrap}
+  .extractor-history-ledger th{font-size:8px!important}
+  .extractor-history-ledger td{font-size:9.5px!important}
+  .extractor-fiscal-preview-overlay{padding:0!important}
+  .extractor-fiscal-preview-modal{
+    width:100vw!important;
+    height:100dvh!important;
+    max-height:100dvh!important;
+    border-radius:0!important;
+  }
+  .extractor-fiscal-preview-actions{
+    padding:10px 12px calc(10px + env(safe-area-inset-bottom))!important;
+  }
+}
