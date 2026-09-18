@@ -2486,7 +2486,6 @@ function HistorySection({ companies, preview, setNotice }: any) {
 
   useEffect(() => {
     setHealth(null);
-    setCooldownSeconds(0);
     void loadHealth();
   }, [loadHealth]);
 

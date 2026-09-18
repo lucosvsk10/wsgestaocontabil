@@ -141,7 +141,7 @@ Deno.serve(async req => {
       return J({ ok: true, year, months });
     }
 
-    const start = access.from && access.from > monthStart() ? access.from : monthStart();
+    const start = access.from || monthStart();
     const end = access.to && access.to < today() ? access.to : today();
     const [docs, purchaseStateRes, salesStateRes, healthRes, certRes, reconciliation, historyRes] = await Promise.all([
       paged((from, to) => admin.from('fiscal_dfe_documents')
