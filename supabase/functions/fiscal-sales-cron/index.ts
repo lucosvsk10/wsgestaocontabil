@@ -197,23 +197,71 @@ Deno.serve(async req => {
           salesQuery = salesQuery.lte("issue_date", `${companyHistoryEnd}T23:59:59.999-03:00`);
         }
 
-        const [{ data: salesRows }, { data: dfeRows }] = await Promise.all([
+        let priorSalesQuery: any = null;
+        let priorDfeQuery: any = null;
+        if (isExtractor && companyHistoryStart) {
+          priorSalesQuery = admin
+            .from("fiscal_sales_documents")
+            .select("document_number,issue_date")
+            .eq("company_id", company.id)
+            .eq("model", "65")
+            .eq("series", "1")
+            .lt("issue_date", `${companyHistoryStart}T00:00:00-03:00`)
+            .order("issue_date", { ascending: false })
+            .limit(1);
+          priorDfeQuery = admin
+            .from("fiscal_dfe_documents")
+            .select("note_number,issue_date")
+            .eq("company_id", company.id)
+            .eq("direction", "saida")
+            .neq("document_kind", "evento")
+            .eq("model", "65")
+            .eq("series", "1")
+            .lt("issue_date", `${companyHistoryStart}T00:00:00-03:00`)
+            .order("issue_date", { ascending: false })
+            .limit(1);
+        }
+
+        const [
+          { data: salesRows },
+          { data: dfeRows },
+          priorSalesResult,
+          priorDfeResult,
+        ] = await Promise.all([
           salesQuery,
           dfeQuery,
+          priorSalesQuery || Promise.resolve({ data: [] }),
+          priorDfeQuery || Promise.resolve({ data: [] }),
         ]);
 
-        const maxSaved = Math.max(
-          0,
-          ...(salesRows || []).map((row: any) => numericNote(row.document_number))
+        const savedNumbers = (salesRows || [])
+          .map((row: any) => numericNote(row.document_number))
+          .filter((value: number) => value > 0);
+        const dfeNumbers = (dfeRows || [])
+          .map((row: any) => numericNote(row.note_number))
+          .filter((value: number) => value > 0);
+        const maxSaved = Math.max(0, ...savedNumbers);
+        const maxKnownDfe = Math.max(0, ...dfeNumbers);
+        const minKnownWindow = Math.min(
+          ...[...savedNumbers, ...dfeNumbers].filter((value: number) => value > 0),
+          Number.POSITIVE_INFINITY
         );
-        const maxKnownDfe = Math.max(
-          0,
-          ...(dfeRows || []).map((row: any) => numericNote(row.note_number))
-        );
+        const priorNumbers = [
+          ...((priorSalesResult as any)?.data || []).map((row: any) => numericNote(row.document_number)),
+          ...((priorDfeResult as any)?.data || []).map((row: any) => numericNote(row.note_number)),
+        ].filter((value: number) => value > 0);
+        const priorLatest = Math.max(0, ...priorNumbers);
         const oldLatest = Number(state?.latest_number || 0);
-        const baseLatest = Math.max(oldLatest, maxSaved, maxKnownDfe);
+        const baseLatest = Math.max(oldLatest, maxSaved, maxKnownDfe, priorLatest);
+        const scopeStartNumber = isExtractor
+          ? priorLatest > 0
+            ? priorLatest + 1
+            : Number.isFinite(minKnownWindow)
+              ? Math.max(1, minKnownWindow)
+              : 0
+          : 1;
 
-        if (!baseLatest) {
+        if (!baseLatest || (isExtractor && !scopeStartNumber)) {
           await admin
             .from("fiscal_sales_sync_state")
             .upsert({
@@ -226,7 +274,7 @@ Deno.serve(async req => {
           out.push({
             company_id: company.id,
             status: "waiting_sales_reference",
-            reason: "no_known_sale_reference",
+            reason: isExtractor ? "no_reference_inside_standard_window" : "no_known_sale_reference",
           });
           continue;
         }
@@ -271,7 +319,11 @@ Deno.serve(async req => {
           {
             method: "POST",
             headers,
-            body: JSON.stringify({ company_id: company.id, batch: 24 }),
+            body: JSON.stringify({
+              company_id: company.id,
+              batch: 24,
+              ...(isExtractor ? { start_number: scopeStartNumber } : {}),
+            }),
             signal: AbortSignal.timeout(115000),
           }
         );
@@ -324,6 +376,8 @@ Deno.serve(async req => {
           previous_latest: oldLatest,
           seeded_from_saved_sales: maxSaved,
           seeded_from_visible_dfe: maxKnownDfe,
+          scope_start_number: isExtractor ? scopeStartNumber : 1,
+          prior_window_latest: priorLatest,
           discovery,
           reconciliation,
           classification,
