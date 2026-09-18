@@ -162,7 +162,7 @@ serve(async (req) => {
       admin.from("organizations").select("id,name,slug,status,owner_user_id,created_at,updated_at"),
       admin.from("organization_members").select("id,organization_id,user_id,role,status,created_at,updated_at"),
       admin.from("users").select("id,name,email"),
-      admin.from("saas_subscriptions").select("id,organization_id,status,provider,current_period_start,current_period_end,cancel_at_period_end,created_at,updated_at,product_code,billing_mode,trial_started_at,trial_ends_at,access_expires_at,provider_status,saas_plans(id,code,name,product_code,price_cents)"),
+      admin.from("saas_subscriptions").select("id,organization_id,status,provider,current_period_start,current_period_end,cancel_at_period_end,created_at,updated_at,product_code,billing_mode,trial_started_at,trial_ends_at,access_expires_at,provider_status,metadata,saas_plans(id,code,name,product_code,price_cents)"),
       admin.from("saas_invoices").select("id,invoice_number,organization_id,subscription_id,provider,description,period_start,period_end,due_date,total_cents,status,payment_method,paid_at,provider_status,created_at").order("created_at", { ascending: false }),
       admin.from("saas_billing_checkouts").select("id,organization_id,subscription_id,billing_mode,status,failure_code,created_at,updated_at").order("created_at", { ascending: false }),
       admin.from("extractor_accounts").select("id,organization_id,name,status,plan_code,monthly_xml_limit,current_period_start,created_at,updated_at,access_source,access_expires_at,lifetime_access"),
@@ -271,6 +271,10 @@ serve(async (req) => {
     let hiddenTestAccounts = 0;
 
     for (const [orgId, subscription] of issuerLatestByOrg.entries()) {
+      if (
+        subscription?.metadata?.billing_exempt === true ||
+        subscription?.metadata?.access_source === "ws_internal_admin"
+      ) continue;
       const org: any = organizationsMap.get(orgId);
       if (!org) continue;
       const owner = personFor(org.owner_user_id);
