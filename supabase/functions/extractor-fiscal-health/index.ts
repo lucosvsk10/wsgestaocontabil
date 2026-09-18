@@ -40,11 +40,24 @@ const translateFiscalResponse = (code: unknown, message: unknown, status?: unkno
   if (/idle|completed|success/i.test(String(status ?? ''))) return 'Consulta concluída sem erro.';
   return 'Consulta registrada.';
 };
-const monthStart = () => {
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString().slice(0, 10);
+const brazilDateParts = (value = new Date()) => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(value);
+  const pick = (type: string) => parts.find(part => part.type === type)?.value || '';
+  return { year: pick('year'), month: pick('month'), day: pick('day') };
 };
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => {
+  const local = brazilDateParts();
+  return `${local.year}-${local.month}-${local.day}`;
+};
+const monthStart = () => {
+  const local = brazilDateParts();
+  return `${local.year}-${local.month}-01`;
+};
 
 async function paged(makeQuery: (from: number, to: number) => any, cap = 10000) {
   const rows: any[] = [];
@@ -117,16 +130,16 @@ Deno.serve(async req => {
           .select('id,access_key,source_id,nsu,document_kind,direction,issue_date')
           .eq('company_id', companyId)
           .neq('document_kind', 'evento')
-          .gte('issue_date', `${start}T00:00:00Z`)
-          .lte('issue_date', `${end}T23:59:59.999Z`)
+          .gte('issue_date', `${start}T00:00:00-03:00`)
+          .lte('issue_date', `${end}T23:59:59.999-03:00`)
           .order('issue_date', { ascending: true })
           .range(from, to)),
         paged((from, to) => admin.from('fiscal_sales_reconciliation')
           .select('access_key,note_number,status,issue_date')
           .eq('company_id', companyId)
           .in('status', ['found', 'cancelled'])
-          .gte('issue_date', `${start}T00:00:00Z`)
-          .lte('issue_date', `${end}T23:59:59.999Z`)
+          .gte('issue_date', `${start}T00:00:00-03:00`)
+          .lte('issue_date', `${end}T23:59:59.999-03:00`)
           .order('issue_date', { ascending: true })
           .range(from, to)),
       ]);
@@ -135,7 +148,7 @@ Deno.serve(async req => {
       for (const row of [...documentRows, ...reconciliationRows.map((item: any) => ({ ...item, direction: 'saida' }))]) {
         const date = row.issue_date ? new Date(row.issue_date) : null;
         if (!date || Number.isNaN(date.getTime())) continue;
-        const keyMonth = String(date.getUTCMonth() + 1).padStart(2, '0');
+        const keyMonth = brazilDateParts(date).month;
         const unique = String(row.access_key || row.nsu || row.source_id || row.note_number || row.id || '');
         const dedupe = `${keyMonth}:${unique}`;
         if (unique && seen.has(dedupe)) continue;
@@ -159,8 +172,8 @@ Deno.serve(async req => {
       paged((from, to) => admin.from('fiscal_dfe_documents')
         .select('id,access_key,source_id,document_kind,direction,full_xml,xml,parse_error,issue_date,model,status_code,status_text')
         .eq('company_id', companyId)
-        .gte('issue_date', `${start}T00:00:00Z`)
-        .lte('issue_date', `${end}T23:59:59.999Z`)
+        .gte('issue_date', `${start}T00:00:00-03:00`)
+        .lte('issue_date', `${end}T23:59:59.999-03:00`)
         .order('issue_date', { ascending: true })
         .range(from, to)),
       admin.from('fiscal_purchase_sync_state').select('*').eq('company_id', companyId).maybeSingle(),
@@ -170,8 +183,8 @@ Deno.serve(async req => {
       paged((from, to) => admin.from('fiscal_sales_reconciliation')
         .select('access_key,status,issue_date,xml_status,resolved_at')
         .eq('company_id', companyId)
-        .gte('issue_date', `${start}T00:00:00Z`)
-        .lte('issue_date', `${end}T23:59:59.999Z`)
+        .gte('issue_date', `${start}T00:00:00-03:00`)
+        .lte('issue_date', `${end}T23:59:59.999-03:00`)
         .order('note_number', { ascending: true })
         .range(from, to)),
       admin.from('fiscal_sync_logs')
