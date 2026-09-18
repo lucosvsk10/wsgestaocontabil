@@ -15,7 +15,7 @@ import {
 } from 'recharts';
 import { extractorRequest, extractorErrorMessage } from '@/lib/extractor/request';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { CalendarDays, Info, Menu, X } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Info, Menu, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import ExtractorFiscalDocumentPreviewModal from '@/components/extractor/ExtractorFiscalDocumentPreviewModal';
@@ -425,7 +425,8 @@ const chart = {
 };
 
 export default function FiscalExtractorApp({ preview = false }: { preview?: boolean }) {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
+  const fromAdmin = isAdmin && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('source') === 'admin';
   const [active, setActive] = useState<Section>('Visão geral'),
     [mobile, setMobile] = useState(false),
     [snapshot, setSnapshot] = useState<Snapshot | null>(null),
@@ -775,6 +776,12 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
             <Menu />
           </button>
           <img src="/assets/ws-logo.png" alt="WS Gestão Contábil" />
+          {fromAdmin && (
+            <a href="/admin" className="ml-3 hidden items-center gap-1.5 text-[11px] font-semibold text-slate-400 transition hover:text-white sm:inline-flex">
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Painel do administrador
+            </a>
+          )}
         </div>
         <ExtractorCompanySelector
           companies={companies}
