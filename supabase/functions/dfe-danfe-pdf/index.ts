@@ -596,14 +596,14 @@ async function buildNfse(doc: any, xml: string) {
   return pdf.save();
 }
 async function buildNfe(doc: any, xml: string) {
-  const pdf = await PDFDocument.create(),
-    reg = await pdf.embedFont(StandardFonts.Helvetica),
-    bold = await pdf.embedFont(StandardFonts.HelveticaBold),
-    W = 595.28,
-    H = 841.89,
-    M = 5,
-    C = W - M * 2,
-    page = pdf.addPage([W, H]);
+  const pdf = await PDFDocument.create();
+  const reg = await pdf.embedFont(StandardFonts.Helvetica);
+  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const W = 595.28;
+  const H = 841.89;
+  const M = 5;
+  const C = W - M * 2;
+  let page = pdf.addPage([W, H]);
   let y = H - 5;
   const black = rgb(0.02, 0.02, 0.02),
     gray = rgb(0.96, 0.96, 0.96);
@@ -803,7 +803,7 @@ async function buildNfe(doc: any, xml: string) {
     timeOnly(tag(ide, 'dhSaiEnt') || doc.issueDate)
   );
   y -= 22;
-  bar('TOTAIS');
+  bar('CÁLCULO DO IMPOSTO');
   const vals: [[string, any]] | any = [
       ['Base Calc. ICMS', tag(tot, 'vBC')],
       ['Valor ICMS', tag(tot, 'vICMS')],
@@ -847,15 +847,35 @@ async function buildNfe(doc: any, xml: string) {
       'ALÍQ ICMS',
       'ALÍQ IPI',
     ];
-  let x = M;
-  for (let i = 0; i < cols.length; i++) {
-    rect(x, y - 18, cols[i], 18, gray);
-    text(heads[i], x + 1, y - 7, 3.9, true, cols[i] - 2);
-    x += cols[i];
-  }
-  y -= 18;
+  const drawProductHeader = () => {
+    let hx = M;
+    for (let i = 0; i < cols.length; i++) {
+      rect(hx, y - 18, cols[i], 18, gray);
+      text(heads[i], hx + 1, y - 7, 3.9, true, cols[i] - 2);
+      hx += cols[i];
+    }
+    y -= 18;
+  };
+  const addContinuationPage = () => {
+    page = pdf.addPage([W, H]);
+    y = H - 18;
+    text('DANFE - CONTINUAÇÃO', M, y, 8, true, 160);
+    text(
+      `NF-e Nº ${String(doc.number || tag(ide, 'nNF') || '-').padStart(9, '0')} · Série ${String(doc.series || tag(ide, 'serie') || '-').padStart(3, '0')}`,
+      M + 170,
+      y,
+      6.2,
+      true,
+      C - 170
+    );
+    y -= 14;
+    bar('DADOS DOS PRODUTOS / SERVIÇOS');
+    drawProductHeader();
+  };
+
+  drawProductHeader();
   for (const det of items) {
-    if (y < 75) break;
+    if (y < 95) addContinuationPage();
     const p = tag(det, 'prod'),
       imp = tag(det, 'imposto'),
       icms = tag(imp, 'ICMS'),
@@ -875,7 +895,7 @@ async function buildNfe(doc: any, xml: string) {
         tag(icms, 'pICMS') || '0',
         tag(imp, 'pIPI') || '0',
       ];
-    x = M;
+    let x = M;
     for (let i = 0; i < cols.length; i++) {
       rect(x, y - 21, cols[i], 21, undefined, 0.35);
       text(String(row[i] || '-'), x + 1, y - 8, 3.8, i === 1, cols[i] - 2);
@@ -883,6 +903,18 @@ async function buildNfe(doc: any, xml: string) {
     }
     y -= 21;
   }
+
+  const transp = tag(xml, 'transp');
+  const transporta = tag(transp, 'transporta');
+  const vol = tag(transp, 'vol');
+  if (y < 92) addContinuationPage();
+  bar('TRANSPORTADOR / VOLUMES TRANSPORTADOS');
+  field(M, y, C * 0.42, 25, 'RAZÃO SOCIAL', tag(transporta, 'xNome') || '-');
+  field(M + C * 0.42, y, C * 0.12, 25, 'FRETE POR CONTA', tag(transp, 'modFrete') || '-');
+  field(M + C * 0.54, y, C * 0.24, 25, 'CNPJ/CPF', cpfCnpj(tag(transporta, 'CNPJ') || tag(transporta, 'CPF')));
+  field(M + C * 0.78, y, C * 0.22, 25, 'QUANTIDADE / ESPÉCIE', [tag(vol, 'qVol'), tag(vol, 'esp')].filter(Boolean).join(' / ') || '-');
+  y -= 27;
+
   if (y > 60) {
     bar('DADOS ADICIONAIS');
     field(
@@ -903,16 +935,19 @@ async function buildNfe(doc: any, xml: string) {
     );
   }
   const status = doc.statusText || tag(prot, 'xMotivo') || '';
-  if (/cancel/i.test(status) || ['101', '151', '155'].includes(String(doc.statusCode || '')))
-    page.drawText('CANCELADA', {
-      x: 130,
-      y: 430,
-      size: 50,
-      font: bold,
-      color: rgb(0.8, 0.1, 0.1),
-      opacity: 0.16,
-      rotate: degrees(20),
-    });
+  if (/cancel/i.test(status) || ['101', '151', '155'].includes(String(doc.statusCode || ''))) {
+    for (const watermarkPage of pdf.getPages()) {
+      watermarkPage.drawText('CANCELADA', {
+        x: 130,
+        y: 430,
+        size: 50,
+        font: bold,
+        color: rgb(0.8, 0.1, 0.1),
+        opacity: 0.16,
+        rotate: degrees(20),
+      });
+    }
+  }
   return pdf.save();
 }
 Deno.serve(async req => {
