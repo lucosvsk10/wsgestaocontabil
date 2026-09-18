@@ -2,7 +2,7 @@
 -- Fiscal tools remain standalone SaaS products; the WS admin user receives direct membership
 -- in the existing issuer/extractor organizations, without creating a separate "environment" layer.
 
-do $$
+do $rollback$
 declare
   v_admin uuid;
   v_test uuid;
@@ -115,6 +115,6 @@ begin
     alter table public.organizations enable trigger trg_audit_organizations;
     alter table public.organization_members enable trigger trg_audit_organization_members;
   end if;
-end $;
+end $rollback$;
 
 drop table if exists public.admin_product_workspaces;
