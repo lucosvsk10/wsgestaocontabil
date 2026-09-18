@@ -121,6 +121,21 @@ const normalizePreflight = (data: any): Preflight => ({
     : [],
 });
 
+const directFunctionConfig = () => {
+  const client = supabase as any;
+  const projectUrl = String(client.supabaseUrl || import.meta.env.VITE_SUPABASE_URL || '').replace(/\/+$/, '');
+  const publishableKey = String(client.supabaseKey || import.meta.env.VITE_SUPABASE_ANON_KEY || '');
+
+  if (!projectUrl) {
+    throw new Error('Não foi possível localizar o servidor fiscal configurado para esta sessão.');
+  }
+
+  return {
+    baseUrl: `${projectUrl}/functions/v1`,
+    publishableKey,
+  };
+};
+
 export function FiscalDownloadCenter({
   open,
   currentCompany,
@@ -193,14 +208,19 @@ export function FiscalDownloadCenter({
     const token = sessionData.session?.access_token;
     if (!token) throw new Error('Sua sessão expirou. Entre novamente para continuar o download.');
 
-    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${exportFunction}`, {
+    const functionConfig = directFunctionConfig();
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    };
+    if (functionConfig.publishableKey) headers.apikey = functionConfig.publishableKey;
+
+    const response = await fetch(`${functionConfig.baseUrl}/${exportFunction}`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
+      headers,
       body: JSON.stringify(payload('preflight')),
+      cache: 'no-store',
     });
     const body = await response.json().catch(() => ({}));
     if (body && typeof body === 'object') setPreflight(normalizePreflight(body));
@@ -217,14 +237,19 @@ export function FiscalDownloadCenter({
     const token = sessionData.session?.access_token;
     if (!token) throw new Error('Sessão expirada. Entre novamente para continuar.');
 
-    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${exportFunction}`, {
+    const functionConfig = directFunctionConfig();
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      Accept: requiresIntegralFiles ? 'application/zip' : 'text/csv,application/octet-stream',
+    };
+    if (functionConfig.publishableKey) headers.apikey = functionConfig.publishableKey;
+
+    const response = await fetch(`${functionConfig.baseUrl}/${exportFunction}`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        Accept: requiresIntegralFiles ? 'application/zip' : 'text/csv,application/octet-stream',
-      },
+      headers,
       body: JSON.stringify(payload('download', allowPartial)),
+      cache: 'no-store',
     });
 
     if (!response.ok) {
