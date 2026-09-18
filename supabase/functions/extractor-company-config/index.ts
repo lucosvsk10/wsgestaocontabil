@@ -114,6 +114,20 @@ const regime = (value: unknown) => {
   if (v === 'real') return 'lucro_real';
   return v || null;
 };
+const bounded = (value: unknown, max: number) => clean(value).slice(0, max);
+const companyOverrides = (value: any) => ({
+  trade_name: bounded(value?.trade_name, 120) || null,
+  state_registration: digits(value?.state_registration).slice(0, 20) || null,
+  municipality: bounded(value?.municipality, 120) || null,
+  phone: bounded(value?.phone, 24) || null,
+  address: {
+    street: bounded(value?.address?.street, 160) || null,
+    number: bounded(value?.address?.number, 30) || null,
+    district: bounded(value?.address?.district, 100) || null,
+    postal_code: digits(value?.address?.postal_code).slice(0, 8) || null,
+    complement: bounded(value?.address?.complement, 120) || null,
+  },
+});
 
 Deno.serve(async req => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
@@ -151,13 +165,39 @@ Deno.serve(async req => {
       const { data, error } = await ctx.admin
         .from('extractor_companies')
         .select(
-          'id,status,automatic_sync,fiscal_company_id,created_at,updated_at,fiscal_companies(id,cnpj,razao_social,nome_fantasia,inscricao_estadual,uf,municipio,codigo_municipio,last_sync_at,status,regime_tributario,ambiente_padrao,endereco,created_at,updated_at,fiscal_certificates(id,certificate_name,holder_cnpj,holder_name,valid_from,valid_until,is_active,created_at))'
+          'id,status,automatic_sync,fiscal_company_id,profile_overrides,created_at,updated_at,fiscal_companies(id,cnpj,razao_social,nome_fantasia,inscricao_estadual,uf,municipio,codigo_municipio,last_sync_at,status,regime_tributario,ambiente_padrao,endereco,created_at,updated_at,fiscal_certificates(id,certificate_name,holder_cnpj,holder_name,valid_from,valid_until,is_active,created_at))'
         )
         .eq('account_id', ctx.account.id)
         .neq('status', 'removed')
         .order('created_at');
       if (error) throw error;
       return J({ ok: true, companies: data || [] });
+    }
+
+    if (action === 'update_profile') {
+      const companyId = String(body.company_id || '');
+      if (!companyId) return J({ error: 'Empresa inválida.' }, 422);
+      const profile = companyOverrides(body.profile || {});
+      const { data, error } = await ctx.admin
+        .from('extractor_companies')
+        .update({ profile_overrides: profile, updated_at: new Date().toISOString() })
+        .eq('account_id', ctx.account.id)
+        .eq('fiscal_company_id', companyId)
+        .neq('status', 'removed')
+        .select('id,profile_overrides')
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return J({ error: 'Empresa não encontrada nesta conta.' }, 404);
+      await ctx.admin.from('saas_audit_logs').insert({
+        organization_id: ctx.account.organization_id,
+        actor_user_id: ctx.user.id,
+        action: 'extractor_company_profile_updated',
+        resource_type: 'fiscal_company',
+        resource_id: companyId,
+        is_sensitive: false,
+        metadata: { fields: Object.keys(profile) },
+      });
+      return J({ ok: true, profile: data.profile_overrides || {} });
     }
 
     if (action === 'remove') {
@@ -258,7 +298,7 @@ Deno.serve(async req => {
     );
     if (saveError?.code === '42501')
       throw new RequestError(
-        'Não foi possível vincular esta empresa à sua conta. Solicite a conferência do vínculo ao suporte.',
+        'Sua conta não tem permissão para vincular esta empresa ao Extrator.',
         403
       );
     if (saveError || !companyId) throw saveError || new Error('save_failed');

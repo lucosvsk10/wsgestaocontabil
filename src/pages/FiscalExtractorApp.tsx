@@ -15,7 +15,7 @@ import {
 } from 'recharts';
 import { extractorRequest, extractorErrorMessage } from '@/lib/extractor/request';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { CalendarDays, Info, Menu, RefreshCw, X } from 'lucide-react';
+import { CalendarDays, Info, Menu, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import ExtractorFiscalDocumentPreviewModal from '@/components/extractor/ExtractorFiscalDocumentPreviewModal';
@@ -1050,6 +1050,10 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview }: a
   const [detailId, setDetailId] = useState('');
   const [detailRaw, setDetailRaw] = useState<any>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState<any>({});
+  const [removeTarget, setRemoveTarget] = useState<Company | null>(null);
+
   const visible = companies.filter(
     (c: Company) =>
       `${c.name} ${c.tradeName} ${c.cnpj}`.toLowerCase().includes(term.toLowerCase().trim()) ||
@@ -1086,17 +1090,76 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview }: a
     if (preview)
       return setNotice({ tone: 'warning', text: 'A sincronização fica disponível no ambiente autenticado.' });
     if (busy) return;
-    setBusy(c.id);
+    setBusy(`sync:${c.id}`);
     try {
       const { data, error } = await (supabase as any).rpc('extractor_queue_sync', { _company_id: c.id });
       if (error || !data?.ok)
-        setNotice({ tone: 'error', text: data?.message || 'Não foi possível atualizar esta empresa. Tente novamente.' });
+        setNotice({ tone: 'error', text: data?.message || 'Não foi possível sincronizar esta empresa agora.' });
       else
-        setNotice({ tone: 'success', text: `${c.tradeName}: atualização fiscal colocada na fila.` });
+        setNotice({ tone: 'success', text: `${c.tradeName}: sincronização fiscal colocada na fila.` });
       await onReload();
       if (detailId === c.id) await loadDetail(c.id);
     } catch {
-      setNotice({ tone: 'error', text: 'Falha de conexão ao atualizar. Tente novamente.' });
+      setNotice({ tone: 'error', text: 'Falha de conexão ao sincronizar. Tente novamente.' });
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const openEditor = () => {
+    if (!selected) return;
+    const fiscal = detailRaw?.fiscal_companies || {};
+    const profile = detailRaw?.profile_overrides || {};
+    const address = profile?.address || {};
+    const fiscalAddress = fiscal?.endereco || {};
+    setEditForm({
+      trade_name: profile.trade_name ?? fiscal.nome_fantasia ?? selected.tradeName ?? '',
+      state_registration: profile.state_registration ?? fiscal.inscricao_estadual ?? '',
+      municipality: profile.municipality ?? fiscal.municipio ?? '',
+      phone: profile.phone ?? '',
+      address: {
+        street: address.street ?? fiscalAddress.logradouro ?? '',
+        number: address.number ?? fiscalAddress.numero ?? '',
+        district: address.district ?? fiscalAddress.bairro ?? '',
+        postal_code: address.postal_code ?? fiscalAddress.cep ?? '',
+        complement: address.complement ?? fiscalAddress.complemento ?? '',
+      },
+    });
+    setEditOpen(true);
+  };
+
+  const saveProfile = async () => {
+    if (!selected || busy) return;
+    if (preview) return setNotice({ tone: 'warning', text: 'A edição fica disponível no ambiente autenticado.' });
+    setBusy(`edit:${selected.id}`);
+    try {
+      await extractorRequest({ action: 'update_profile', company_id: selected.id, profile: editForm });
+      setEditOpen(false);
+      await loadDetail(selected.id);
+      await onReload();
+      setNotice({ tone: 'success', text: 'Dados de exibição da empresa atualizados.' });
+    } catch (error) {
+      setNotice({ tone: 'error', text: error instanceof Error ? error.message : 'Não foi possível salvar os dados da empresa.' });
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const removeCompany = async () => {
+    if (!removeTarget || busy) return;
+    if (preview) return setNotice({ tone: 'warning', text: 'A remoção fica disponível no ambiente autenticado.' });
+    setBusy(`remove:${removeTarget.id}`);
+    try {
+      await extractorRequest({ action: 'remove', company_id: removeTarget.id });
+      if (detailId === removeTarget.id) {
+        setDetailId('');
+        setDetailRaw(null);
+      }
+      setRemoveTarget(null);
+      await onReload();
+      setNotice({ tone: 'success', text: 'Empresa removida desta conta do Extrator. Os documentos fiscais originais foram preservados.' });
+    } catch (error) {
+      setNotice({ tone: 'error', text: error instanceof Error ? error.message : 'Não foi possível remover a empresa.' });
     } finally {
       setBusy('');
     }
@@ -1104,8 +1167,20 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview }: a
 
   if (selected) {
     const fiscal = detailRaw?.fiscal_companies || {};
+    const profile = detailRaw?.profile_overrides || {};
+    const address = profile?.address || {};
+    const fiscalAddress = fiscal?.endereco || {};
     const certs = Array.isArray(fiscal?.fiscal_certificates) ? fiscal.fiscal_certificates : [];
     const activeCert = certs.find((item: any) => item.is_active) || certs[0] || null;
+    const displayTradeName = profile.trade_name || fiscal.nome_fantasia || selected.tradeName;
+    const displayIE = profile.state_registration || fiscal.inscricao_estadual || '—';
+    const displayMunicipality = profile.municipality || fiscal.municipio || '—';
+    const displayAddress = [
+      address.street || fiscalAddress.logradouro,
+      address.number || fiscalAddress.numero,
+      address.district || fiscalAddress.bairro,
+      address.postal_code || fiscalAddress.cep,
+    ].filter(Boolean).join(' · ') || '—';
     const certLabel =
       selected.certificateDays == null
         ? 'Não configurado'
@@ -1114,6 +1189,7 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview }: a
           : selected.certificateDays <= 30
             ? 'Vence em breve'
             : 'Válido';
+
     return (
       <div className="extractor-page">
         <PageHeading
@@ -1125,17 +1201,18 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview }: a
         <section className="extractor-company-detail">
           <header className="extractor-company-detail-head">
             <div>
-              <span className="extractor-company-detail-avatar">{selected.tradeName.slice(0, 2).toUpperCase()}</span>
+              <span className="extractor-company-detail-avatar">{displayTradeName.slice(0, 2).toUpperCase()}</span>
               <div>
                 <small>Empresa do Extrator</small>
                 <h2>{selected.name}</h2>
-                <p>{selected.tradeName} · {formatCnpj(selected.cnpj)} · {selected.uf}</p>
+                <p>{displayTradeName} · {formatCnpj(selected.cnpj)} · {selected.uf}</p>
               </div>
             </div>
             <div className="extractor-company-detail-actions">
-              <button onClick={() => void sync(selected)} disabled={busy === selected.id}>
-                {busy === selected.id ? 'Atualizando...' : 'Sincronizar agora'}
+              <button onClick={() => void sync(selected)} disabled={busy === `sync:${selected.id}`}>
+                {busy === `sync:${selected.id}` ? 'Sincronizando...' : 'Sincronizar agora'}
               </button>
+              <button onClick={openEditor}>Editar dados</button>
               <button onClick={onAdd}>Adicionar / substituir A1</button>
               <button className="primary" onClick={() => onOpen(selected.id)}>Ver documentos</button>
             </div>
@@ -1162,18 +1239,19 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview }: a
 
           <div className="extractor-company-detail-info">
             <article>
-              <h3>Dados cadastrais</h3>
+              <div className="extractor-detail-title-row"><h3>Dados cadastrais</h3><button onClick={openEditor}>Editar</button></div>
               {detailLoading ? <p className="extractor-helper">Carregando dados completos...</p> : (
                 <dl>
                   <div><dt>Razão social</dt><dd>{fiscal.razao_social || selected.name}</dd></div>
-                  <div><dt>Nome fantasia</dt><dd>{fiscal.nome_fantasia || selected.tradeName}</dd></div>
+                  <div><dt>Nome fantasia</dt><dd>{displayTradeName}</dd></div>
                   <div><dt>CNPJ</dt><dd>{formatCnpj(fiscal.cnpj || selected.cnpj)}</dd></div>
-                  <div><dt>Inscrição estadual</dt><dd>{fiscal.inscricao_estadual || '—'}</dd></div>
-                  <div><dt>Município / UF</dt><dd>{[fiscal.municipio, fiscal.uf || selected.uf].filter(Boolean).join(' / ') || '—'}</dd></div>
+                  <div><dt>Inscrição estadual</dt><dd>{displayIE}</dd></div>
+                  <div><dt>Município / UF</dt><dd>{[displayMunicipality, fiscal.uf || selected.uf].filter(Boolean).join(' / ')}</dd></div>
+                  <div><dt>Telefone</dt><dd>{profile.phone || 'Não informado'}</dd></div>
+                  <div><dt>Endereço</dt><dd>{displayAddress}</dd></div>
                   <div><dt>Regime tributário</dt><dd>{String(fiscal.regime_tributario || '—').replace(/_/g, ' ')}</dd></div>
                   <div><dt>Ambiente</dt><dd>{fiscal.ambiente_padrao === 'homologacao' ? 'Homologação' : 'Produção'}</dd></div>
                   <div><dt>Vinculada ao Extrator em</dt><dd>{detailRaw?.created_at ? formatDate(detailRaw.created_at, true) : '—'}</dd></div>
-                  <div><dt>Situação</dt><dd>{detailRaw?.status || fiscal.status || 'Ativa'}</dd></div>
                 </dl>
               )}
             </article>
@@ -1192,6 +1270,32 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview }: a
             </article>
           </div>
         </section>
+
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent className="extractor-dark-dialog sm:max-w-2xl">
+            <DialogTitle>Editar dados da empresa</DialogTitle>
+            <DialogDescription>
+              CNPJ e razão social fiscal permanecem protegidos. As alterações abaixo valem apenas para a exibição desta empresa dentro da sua conta do Extrator.
+            </DialogDescription>
+            <div className="extractor-edit-company-grid">
+              <label>Nome fantasia<input value={editForm.trade_name || ''} onChange={e => setEditForm((v: any) => ({ ...v, trade_name: e.target.value }))} /></label>
+              <label>Inscrição estadual<input value={editForm.state_registration || ''} onChange={e => setEditForm((v: any) => ({ ...v, state_registration: e.target.value }))} /></label>
+              <label>Município<input value={editForm.municipality || ''} onChange={e => setEditForm((v: any) => ({ ...v, municipality: e.target.value }))} /></label>
+              <label>Telefone<input value={editForm.phone || ''} onChange={e => setEditForm((v: any) => ({ ...v, phone: e.target.value }))} /></label>
+              <label className="wide">Logradouro<input value={editForm.address?.street || ''} onChange={e => setEditForm((v: any) => ({ ...v, address: { ...(v.address || {}), street: e.target.value } }))} /></label>
+              <label>Número<input value={editForm.address?.number || ''} onChange={e => setEditForm((v: any) => ({ ...v, address: { ...(v.address || {}), number: e.target.value } }))} /></label>
+              <label>Bairro<input value={editForm.address?.district || ''} onChange={e => setEditForm((v: any) => ({ ...v, address: { ...(v.address || {}), district: e.target.value } }))} /></label>
+              <label>CEP<input value={editForm.address?.postal_code || ''} onChange={e => setEditForm((v: any) => ({ ...v, address: { ...(v.address || {}), postal_code: e.target.value } }))} /></label>
+              <label className="wide">Complemento<input value={editForm.address?.complement || ''} onChange={e => setEditForm((v: any) => ({ ...v, address: { ...(v.address || {}), complement: e.target.value } }))} /></label>
+            </div>
+            <div className="extractor-dialog-actions">
+              <button className="extractor-secondary" onClick={() => setEditOpen(false)}>Cancelar</button>
+              <button className="extractor-primary" onClick={() => void saveProfile()} disabled={busy === `edit:${selected.id}`}>
+                {busy === `edit:${selected.id}` ? 'Salvando...' : 'Salvar alterações'}
+              </button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
@@ -1223,13 +1327,28 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview }: a
             <div><strong>{syncLabel(c.purchaseStatus)} / {syncLabel(c.salesStatus)}</strong><span>{c.lastSync ? formatDate(c.lastSync, true) : 'Ainda não concluída'}</span></div>
             <div><strong>{c.certificateUntil ? formatDate(c.certificateUntil) : 'Não configurado'}</strong><span>{c.certificateDays == null ? '—' : `${c.certificateDays} dia(s)`}</span></div>
             <div className="extractor-row-actions">
-              <button onClick={e => { e.stopPropagation(); void sync(c); }} disabled={busy === c.id}><AnimatedExtractorIcon name="refresh" />{busy === c.id ? 'Atualizando' : 'Atualizar'}</button>
               <button onClick={e => { e.stopPropagation(); setDetailId(c.id); }}>Abrir</button>
+              <button className="danger" onClick={e => { e.stopPropagation(); setRemoveTarget(c); }}>Remover</button>
             </div>
           </div>
         ))}
         {!visible.length && <Empty>Nenhuma empresa encontrada.</Empty>}
       </div>
+
+      <Dialog open={Boolean(removeTarget)} onOpenChange={open => !open && setRemoveTarget(null)}>
+        <DialogContent className="extractor-dark-dialog sm:max-w-md">
+          <DialogTitle>Remover empresa do Extrator?</DialogTitle>
+          <DialogDescription>
+            {removeTarget ? `${removeTarget.tradeName} será removida desta conta. Os documentos fiscais já armazenados não serão apagados.` : ''}
+          </DialogDescription>
+          <div className="extractor-dialog-actions">
+            <button className="extractor-secondary" onClick={() => setRemoveTarget(null)}>Cancelar</button>
+            <button className="extractor-danger-button" onClick={() => void removeCompany()} disabled={Boolean(busy)}>
+              {busy.startsWith('remove:') ? 'Removendo...' : 'Remover empresa'}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -1716,17 +1835,11 @@ function HealthState({ label, state }: { label: string; state: 'ok' | 'attention
   return <span className={`extractor-health-state ${state}`}><i />{label}</span>;
 }
 
-const extractorHealthTone = (value?: string | null) => {
-  const status = String(value || '').toLowerCase();
-  if (/error|fail|expired|persistent/.test(status)) return 'error' as const;
-  if (/waiting|pending|retry|running|queued|reconciling|attention/.test(status)) return 'attention' as const;
-  return 'ok' as const;
-};
-
 function HistorySection({ companies, preview, setNotice }: any) {
   const [healthCompanyId, setHealthCompanyId] = useState('');
   const [health, setHealth] = useState<any>(null);
   const [busy, setBusy] = useState(false);
+  const [healthSearch, setHealthSearch] = useState('');
   const company =
     companies.find((item: Company) => item.id === healthCompanyId) || companies[0] || null;
 
@@ -1741,7 +1854,7 @@ function HistorySection({ companies, preview, setNotice }: any) {
     }
   }, [companies, healthCompanyId]);
 
-  const loadHealth = useCallback(async (manual = false) => {
+  const loadHealth = useCallback(async () => {
     if (!company) return;
     if (preview) {
       setHealth({
@@ -1763,7 +1876,6 @@ function HistorySection({ companies, preview, setNotice }: any) {
       if (error) throw error;
       if (data?.error) throw new Error(String(data.error));
       setHealth(data);
-      if (manual) setNotice({ tone: 'success', text: `${company.tradeName}: conferência fiscal atualizada.` });
     } catch (error) {
       setNotice({
         tone: 'error',
@@ -1776,7 +1888,7 @@ function HistorySection({ companies, preview, setNotice }: any) {
 
   useEffect(() => {
     setHealth(null);
-    void loadHealth(false);
+    void loadHealth();
   }, [loadHealth]);
 
   if (!company) {
@@ -1811,39 +1923,34 @@ function HistorySection({ companies, preview, setNotice }: any) {
       <PageHeading
         title="Saúde fiscal"
         icon="history"
-        description="Conferência individual das empresas, documentos e XML capturados."
-        actions={
-          <button className="extractor-secondary" onClick={() => void loadHealth(true)} disabled={busy}>
-            <RefreshCw className={busy ? 'animate-spin' : ''} />
-            {busy ? 'Conferindo...' : 'Conferir agora'}
-          </button>
-        }
+        description="Conferência automática de uma empresa por vez, sem alterar a empresa ativa do restante do Extrator."
       />
 
-      <div className="extractor-health-company-picker" aria-label="Empresas acompanhadas">
-        {companies.map((item: Company) => {
-          const localError =
-            Boolean(item.purchaseLastError || item.salesLastError) ||
-            (item.certificateDays != null && item.certificateDays < 0);
-          const localAttention =
-            !localError &&
-            (item.pendingXml > 0 ||
-              item.salesXmlPending > 0 ||
-              (item.certificateDays != null && item.certificateDays <= 30) ||
-              extractorHealthTone(item.purchaseStatus) === 'attention' ||
-              extractorHealthTone(item.salesStatus) === 'attention');
-          const tone = localError ? 'error' : localAttention ? 'attention' : 'ok';
-          return (
-            <button
-              key={item.id}
-              className={item.id === company.id ? 'active' : ''}
-              onClick={() => setHealthCompanyId(item.id)}
-            >
-              <span><strong>{item.tradeName}</strong><small>{formatCnpj(item.cnpj)}</small></span>
-              <i className={tone} />
-            </button>
-          );
-        })}
+      <div className="extractor-health-selector">
+        <label>
+          <AnimatedExtractorIcon name="search" />
+          <input
+            value={healthSearch}
+            onChange={event => setHealthSearch(event.target.value)}
+            placeholder="Buscar empresa ou CNPJ"
+          />
+        </label>
+        <select value={company.id} onChange={event => setHealthCompanyId(event.target.value)}>
+          {companies
+            .filter((item: Company) => {
+              const q = healthSearch.trim().toLowerCase();
+              if (!q || item.id === company.id) return true;
+              return `${item.tradeName} ${item.name} ${item.cnpj}`.toLowerCase().includes(q);
+            })
+            .map((item: Company) => (
+              <option key={item.id} value={item.id}>
+                {item.tradeName} · {formatCnpj(item.cnpj)}
+              </option>
+            ))}
+        </select>
+        <span className={`extractor-health-auto-state ${busy ? 'busy' : ''}`}>
+          {busy ? 'Conferindo automaticamente...' : 'Conferência automática ao abrir ou trocar a empresa'}
+        </span>
       </div>
 
       <section className="extractor-health-hero">
@@ -1962,6 +2069,13 @@ const invoiceTone = (status?: string | null) => {
   if (['failed', 'rejected', 'cancelled', 'canceled'].includes(value)) return 'failed';
   return 'pending';
 };
+const invoiceStatusLabel = (status?: string | null) => {
+  const value = String(status || '').toLowerCase();
+  if (['paid', 'approved'].includes(value)) return 'Pago';
+  if (['failed', 'rejected', 'cancelled', 'canceled'].includes(value)) return 'Falhou';
+  if (['open', 'pending', 'in_process'].includes(value)) return 'Pendente';
+  return status || 'Pendente';
+};
 const centsMoney = (cents?: number | null) =>
   currency.format(Math.max(0, Number(cents || 0)) / 100);
 
@@ -1973,7 +2087,26 @@ function BillingSection({ usage, planLabel, preview, setNotice }: any) {
     if (preview) {
       setData({
         account: { name: 'Conta demonstração', companies: 1, lifetime_access: false },
-        subscription: { status: 'active', provider: 'mercado_pago', billing_mode: 'recurring', current_period_end: new Date(Date.now() + 20 * 86400000).toISOString(), plan: { name: planLabel, price_cents: 9900 } },
+        subscription: {
+          status: 'active',
+          provider: 'mercado_pago',
+          billing_mode: 'recurring',
+          current_period_end: new Date(Date.now() + 20 * 86400000).toISOString(),
+          plan: { code: 'extractor_commercial', name: 'Extrator Comercial', price_cents: 9900, limits: { monthly_xml: 20000 } },
+        },
+        billing_cycle: {
+          paid: true,
+          status: 'paid',
+          paid_at: new Date().toISOString(),
+          payment_method: 'pix',
+          amount_cents: 9900,
+          next_charge_at: new Date(Date.now() + 20 * 86400000).toISOString(),
+          renewal_mode: 'automatic',
+        },
+        plans: [
+          { code: 'extractor_commercial', name: 'Extrator Comercial', price_cents: 9900, limits: { monthly_xml: 20000 }, features: {} },
+          { code: 'extractor_enterprise', name: 'Extrator Empresarial', price_cents: 25000, limits: { monthly_xml: null }, features: { unlimited: true } },
+        ],
         invoices: [],
       });
       setLoading(false);
@@ -1990,91 +2123,186 @@ function BillingSection({ usage, planLabel, preview, setNotice }: any) {
     } finally {
       setLoading(false);
     }
-  }, [preview, planLabel]);
+  }, [preview]);
 
   useEffect(() => { void loadBilling(); }, [loadBilling]);
 
   const subscription = data?.subscription || null;
   const account = data?.account || null;
+  const billingCycle = data?.billing_cycle || {};
   const invoices = Array.isArray(data?.invoices) ? data.invoices : [];
-  const plan = subscription?.plan || null;
+  const plans = Array.isArray(data?.plans) ? data.plans : [];
+  const plan = subscription?.plan || plans.find((item: any) => item.code === account?.plan_code) || null;
+  const currentPlanCode = String(plan?.code || account?.plan_code || '');
   const statusText = account?.lifetime_access
     ? 'Acesso vitalício'
     : billingStatusLabel(subscription?.status || subscription?.provider_status);
-  const nextCharge = subscription?.current_period_end || subscription?.access_expires_at || account?.access_expires_at;
+  const cyclePaid = account?.lifetime_access || billingCycle?.paid === true || billingCycle?.status === 'paid';
+  const nextCharge = billingCycle?.next_charge_at || subscription?.current_period_end || subscription?.access_expires_at || account?.access_expires_at;
   const checkoutUrl = String(subscription?.checkout_url || '');
-  const upgrade = () =>
-    window.open(
-      'https://wa.me/5582999324884?text=Ol%C3%A1%2C%20quero%20fazer%20upgrade%20do%20plano%20do%20Extrator%20Fiscal%20WS.',
-      '_blank',
-      'noopener,noreferrer'
+  const paymentMethod = billingCycle?.payment_method
+    ? String(billingCycle.payment_method).replace(/_/g, ' ')
+    : '—';
+  const renewalAutomatic = billingCycle?.renewal_mode === 'automatic' || subscription?.billing_mode === 'recurring';
+  const monthlyLimit = plan?.limits?.monthly_xml;
+  const unlimited = plan?.features?.unlimited === true || monthlyLimit == null;
+  const usageLimitLabel = unlimited ? 'Ilimitado' : integer.format(Number(monthlyLimit || usage.limit || 0));
+
+  const requestUpgrade = (targetPlan: any) => {
+    const message = encodeURIComponent(
+      `Olá, quero alterar meu plano do Extrator Fiscal WS de ${plan?.name || planLabel} para ${targetPlan.name}.`
     );
+    window.open(`https://wa.me/5582999324884?text=${message}`, '_blank', 'noopener,noreferrer');
+  };
 
   return (
     <div className="extractor-page">
       <PageHeading
         title="Faturas"
         icon="report"
-        description="Plano, consumo, recorrência e pagamentos do Extrator Fiscal."
-        actions={<button className="extractor-secondary" onClick={() => void loadBilling()} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />Atualizar</button>}
+        description="Mensalidade, plano, consumo e documentos de pagamento do Extrator Fiscal."
       />
 
       {loading && !data ? <div className="extractor-report-loading">Carregando faturamento...</div> : (
         <>
-          <section className="extractor-billing-hero">
-            <div><small>Plano atual</small><strong>{plan?.name || planLabel}</strong><span>{statusText}</span></div>
-            <div><small>Consumo no ciclo</small><strong>{integer.format(usage.used)} / {integer.format(usage.limit)} XML</strong><span>{integer.format(usage.remaining)} restantes</span></div>
-            <div><small>{account?.lifetime_access ? 'Acesso' : 'Próxima referência'}</small><strong>{account?.lifetime_access ? 'Sem recorrência' : nextCharge ? formatDate(nextCharge) : '—'}</strong><span>{account?.companies || 0} empresa(s) vinculada(s)</span></div>
+          <section className="extractor-billing-status-hero">
+            <div className="extractor-billing-status-main">
+              <small>Mensalidade do ciclo</small>
+              <strong className={cyclePaid ? 'paid' : 'pending'}>
+                {account?.lifetime_access ? 'Acesso vitalício' : cyclePaid ? 'Mensalidade paga' : 'Pagamento pendente'}
+              </strong>
+              <span>
+                {cyclePaid && billingCycle?.paid_at
+                  ? `Pago em ${formatDate(billingCycle.paid_at, true)}`
+                  : checkoutUrl
+                    ? 'Existe uma cobrança aguardando conclusão.'
+                    : statusText}
+              </span>
+            </div>
+            <div>
+              <small>Plano atual</small>
+              <strong>{plan?.name || planLabel}</strong>
+              <span>{unlimited ? 'XML ilimitado' : `${usageLimitLabel} XML/mês`}</span>
+            </div>
+            <div>
+              <small>{renewalAutomatic ? 'Próxima cobrança' : 'Próxima renovação'}</small>
+              <strong>{account?.lifetime_access ? 'Sem cobrança' : nextCharge ? formatDate(nextCharge) : '—'}</strong>
+              <span>{renewalAutomatic ? 'Cobrança mensal automática' : 'Ciclo mensal com renovação manual'}</span>
+            </div>
+            <div>
+              <small>Valor do plano</small>
+              <strong>{plan?.price_cents ? centsMoney(plan.price_cents) : '—'}</strong>
+              <span>{paymentMethod !== '—' ? `Último pagamento: ${paymentMethod}` : 'Forma de pagamento não informada'}</span>
+            </div>
           </section>
+
+          {!cyclePaid && checkoutUrl && (
+            <section className="extractor-payment-callout pending">
+              <div>
+                <small>Cobrança em aberto</small>
+                <strong>{centsMoney(Number(billingCycle?.amount_cents || plan?.price_cents || 0))}</strong>
+                <span>{nextCharge ? `Referência do ciclo até ${formatDate(nextCharge)}` : 'Pagamento necessário para manter o acesso.'}</span>
+              </div>
+              <a href={checkoutUrl} target="_blank" rel="noopener noreferrer">Continuar pagamento</a>
+            </section>
+          )}
 
           <section className="extractor-billing-grid">
             <article className="extractor-billing-card">
-              <header><div><h2>Uso do plano</h2><p>XML processados no período atual</p></div><strong className="amount">{usage.percent}%</strong></header>
-              <div className="extractor-billing-progress"><i style={{ width: `${Math.min(100, Math.max(0, usage.percent))}%` }} /></div>
+              <header>
+                <div><h2>Uso do plano</h2><p>Consumo de XML no período atual</p></div>
+                <strong className="amount">{unlimited ? '∞' : `${usage.percent}%`}</strong>
+              </header>
+              {!unlimited && <div className="extractor-billing-progress"><i style={{ width: `${Math.min(100, Math.max(0, usage.percent))}%` }} /></div>}
               <div className="extractor-billing-facts">
                 <div><span>Processados</span><b>{integer.format(usage.used)}</b></div>
-                <div><span>Limite</span><b>{integer.format(usage.limit)}</b></div>
-                <div><span>Restantes</span><b>{integer.format(usage.remaining)}</b></div>
+                <div><span>Limite</span><b>{usageLimitLabel}</b></div>
+                <div><span>Restantes</span><b>{unlimited ? 'Ilimitado' : integer.format(usage.remaining)}</b></div>
                 <div><span>Ciclo</span><b>{formatDate(usage.period_start)} a {formatDate(usage.period_end)}</b></div>
               </div>
-              <div className="extractor-billing-actions"><button className="primary" onClick={upgrade}>Fazer upgrade</button></div>
             </article>
 
             <article className="extractor-billing-card">
-              <header><div><h2>Assinatura</h2><p>Dados reais da recorrência registrada</p></div><strong className="amount">{plan?.price_cents ? centsMoney(plan.price_cents) : '—'}</strong></header>
+              <header>
+                <div><h2>Assinatura</h2><p>Situação real registrada no Mercado Pago</p></div>
+                <span className={`extractor-invoice-status ${cyclePaid ? 'paid' : 'pending'}`}>
+                  {cyclePaid ? 'Pago' : invoiceStatusLabel(billingCycle?.status)}
+                </span>
+              </header>
               <div className="extractor-billing-facts">
                 <div><span>Situação</span><b>{statusText}</b></div>
-                <div><span>Cobrança</span><b>{subscription?.billing_mode === 'recurring' ? 'Mensal automática' : subscription ? 'Pagamento único' : '—'}</b></div>
+                <div><span>Periodicidade</span><b>Mensal</b></div>
+                <div><span>Renovação</span><b>{renewalAutomatic ? 'Automática' : 'Manual'}</b></div>
                 <div><span>Provedor</span><b>{subscription?.provider === 'mercado_pago' ? 'Mercado Pago' : subscription?.provider || '—'}</b></div>
-                <div><span>Próximo ciclo</span><b>{nextCharge ? formatDate(nextCharge) : '—'}</b></div>
-              </div>
-              <div className="extractor-billing-actions">
-                {checkoutUrl && <a className="primary" href={checkoutUrl} target="_blank" rel="noopener noreferrer">Continuar pagamento</a>}
-                {!checkoutUrl && subscription?.billing_mode === 'recurring' && <span className="extractor-helper">A recorrência é administrada pelo Mercado Pago. Nenhuma cobrança manual está pendente aqui.</span>}
+                <div><span>Último pagamento</span><b>{billingCycle?.paid_at ? formatDate(billingCycle.paid_at, true) : '—'}</b></div>
+                <div><span>Método</span><b>{paymentMethod}</b></div>
               </div>
             </article>
           </section>
 
+          <section className="extractor-plan-options">
+            <div className="extractor-section-copy">
+              <div><small>Planos do Extrator</small><h2>Escolha conforme o volume do escritório</h2></div>
+              <span>Os limites abaixo vêm da configuração real dos planos.</span>
+            </div>
+            <div className="extractor-plan-options-grid">
+              {plans.map((item: any) => {
+                const itemLimit = item?.limits?.monthly_xml;
+                const itemUnlimited = item?.features?.unlimited === true || itemLimit == null;
+                const current = item.code === currentPlanCode;
+                const canUpgrade = currentPlanCode === 'extractor_commercial' && item.code === 'extractor_enterprise';
+                return (
+                  <article key={item.code} className={`extractor-plan-option ${current ? 'current' : ''}`}>
+                    <div>
+                      <small>{current ? 'Plano atual' : item.code === 'extractor_enterprise' ? 'Maior capacidade' : 'Plano padrão'}</small>
+                      <h3>{item.name}</h3>
+                      <strong>{centsMoney(item.price_cents)}<span>/mês</span></strong>
+                      <p>{itemUnlimited ? 'XML ilimitado' : `${integer.format(Number(itemLimit || 0))} XML por mês`}</p>
+                    </div>
+                    {current ? (
+                      <span className="extractor-plan-current">Seu plano</span>
+                    ) : canUpgrade ? (
+                      <button onClick={() => requestUpgrade(item)}>Solicitar upgrade</button>
+                    ) : (
+                      <span className="extractor-plan-muted">
+                        {currentPlanCode === 'extractor_enterprise' ? 'Plano inferior ao atual' : 'Disponível para contratação'}
+                      </span>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+
           <section className="extractor-invoice-list">
-            <div className="extractor-invoice-head"><span>Fatura</span><span>Descrição</span><span>Vencimento</span><span>Valor</span><span>Pagamento</span><span>Ação</span></div>
+            <div className="extractor-section-copy invoice-copy">
+              <div><small>Histórico financeiro</small><h2>Faturas e comprovantes</h2></div>
+              <span>Documentos oficiais aparecem aqui quando estiverem disponíveis no pagamento ou forem anexados pela WS.</span>
+            </div>
+            <div className="extractor-invoice-head">
+              <span>Fatura</span><span>Descrição</span><span>Vencimento</span><span>Valor</span><span>Pagamento</span><span>Documentos</span>
+            </div>
             {invoices.length ? invoices.map((invoice: any) => {
               const tone = invoiceTone(invoice.status || invoice.provider_status);
               const paymentUrl = String(invoice.checkout_url || '');
+              const receiptUrl = String(invoice.receipt_url || invoice.provider_receipt_url || '');
+              const fiscalNoteUrl = String(invoice.fiscal_note_url || '');
               return (
                 <div className="extractor-invoice-row" key={invoice.id}>
                   <strong>#{invoice.invoice_number || String(invoice.id).slice(0, 8)}</strong>
-                  <span>{invoice.description || 'Extrator Fiscal WS'}</span>
-                  <span>{invoice.due_date ? formatDate(invoice.due_date) : '—'}<br /><small className={`extractor-invoice-status ${tone}`}>{billingStatusLabel(invoice.status || invoice.provider_status)}</small></span>
+                  <span>
+                    {invoice.description || 'Extrator Fiscal WS'}
+                    {invoice.paid_at && <small>Pago em {formatDate(invoice.paid_at, true)}</small>}
+                  </span>
+                  <span>{invoice.due_date ? formatDate(invoice.due_date) : '—'}<br /><small className={`extractor-invoice-status ${tone}`}>{invoiceStatusLabel(invoice.status || invoice.provider_status)}</small></span>
                   <strong>{centsMoney(invoice.total_cents)}</strong>
                   <span>{invoice.payment_method ? String(invoice.payment_method).replace(/_/g, ' ') : invoice.provider === 'mercado_pago' ? 'Mercado Pago' : '—'}</span>
-                  <span>
-                    {paymentUrl
-                      ? <a href={paymentUrl} target="_blank" rel="noopener noreferrer">{tone === 'paid' ? 'Ver pagamento' : 'Pagar agora'}</a>
-                      : invoice.receipt_path
-                        ? 'Comprovante disponível'
-                        : tone === 'paid'
-                          ? 'Pago'
-                          : 'Sem link de cobrança'}
+                  <span className="extractor-invoice-docs">
+                    {tone !== 'paid' && paymentUrl && <a href={paymentUrl} target="_blank" rel="noopener noreferrer">Pagar agora</a>}
+                    {receiptUrl && <a href={receiptUrl} target="_blank" rel="noopener noreferrer">Comprovante</a>}
+                    {fiscalNoteUrl && <a href={fiscalNoteUrl} target="_blank" rel="noopener noreferrer">Nota fiscal</a>}
+                    {tone === 'paid' && !receiptUrl && !fiscalNoteUrl && <small>Pagamento confirmado</small>}
+                    {tone !== 'paid' && !paymentUrl && <small>Sem ação pendente</small>}
                   </span>
                 </div>
               );
@@ -2090,11 +2318,27 @@ function SettingsSection({ account, user, preview, setNotice }: any) {
   const [portal, setPortal] = useState<any>(null);
   const [loading, setLoading] = useState(!preview);
   const [resetting, setResetting] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState<any>({
+    full_name: '',
+    phone: '',
+    account_name: '',
+    fiscal_alerts: true,
+    billing_updates: true,
+  });
 
   const loadProfile = useCallback(async () => {
     if (preview) {
       setPortal({
-        profile: { full_name: 'Usuário demonstração', email: 'demo@wsgestao.com.br', phone: null, created_at: new Date().toISOString(), last_sign_in_at: new Date().toISOString(), email_confirmed_at: new Date().toISOString() },
+        profile: {
+          full_name: 'Usuário demonstração',
+          email: 'demo@wsgestao.com.br',
+          phone: '',
+          notifications: { fiscal_alerts: true, billing_updates: true },
+          created_at: new Date().toISOString(),
+          last_sign_in_at: new Date().toISOString(),
+          email_confirmed_at: new Date().toISOString(),
+        },
         organization: { name: 'Conta demonstração', status: 'active', member_role: 'owner', member_since: new Date().toISOString() },
         account: { name: account?.name || 'Conta Extrator', status: 'active', access_source: 'subscription', lifetime_access: false, created_at: new Date().toISOString() },
       });
@@ -2116,11 +2360,54 @@ function SettingsSection({ account, user, preview, setNotice }: any) {
 
   useEffect(() => { void loadProfile(); }, [loadProfile]);
 
+  useEffect(() => {
+    if (!portal) return;
+    setForm({
+      full_name: portal.profile?.full_name || '',
+      phone: portal.profile?.phone || '',
+      account_name: portal.account?.name || portal.organization?.name || '',
+      fiscal_alerts: portal.profile?.notifications?.fiscal_alerts !== false,
+      billing_updates: portal.profile?.notifications?.billing_updates !== false,
+    });
+  }, [portal]);
+
   const profile = portal?.profile || {};
   const organization = portal?.organization || {};
   const portalAccount = portal?.account || account || {};
   const displayName = profile.full_name || String(profile.email || user?.email || 'Usuário').split('@')[0] || 'Usuário';
   const initials = displayName.split(/\s+/).filter(Boolean).slice(0, 2).map((part: string) => part[0]?.toUpperCase()).join('') || 'WS';
+
+  const saveProfile = async () => {
+    if (preview || saving) return;
+    const name = String(form.full_name || '').trim();
+    const phone = String(form.phone || '').trim();
+    const accountName = String(form.account_name || '').trim();
+    if (name && name.length < 2) return setNotice({ tone: 'error', text: 'Informe um nome com pelo menos 2 caracteres.' });
+    if (accountName && accountName.length < 2) return setNotice({ tone: 'error', text: 'Informe um nome válido para a conta.' });
+    setSaving(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          full_name: name || null,
+          contact_phone: phone || null,
+          notification_preferences: {
+            fiscal_alerts: Boolean(form.fiscal_alerts),
+            billing_updates: Boolean(form.billing_updates),
+          },
+        },
+      });
+      if (error) throw error;
+      if (accountName && accountName !== portalAccount.name) {
+        await extractorRequest({ action: 'save_account', name: accountName });
+      }
+      await loadProfile();
+      setNotice({ tone: 'success', text: 'Perfil e preferências atualizados.' });
+    } catch (error) {
+      setNotice({ tone: 'error', text: error instanceof Error ? error.message : 'Não foi possível salvar o perfil.' });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const sendReset = async () => {
     const email = String(profile.email || user?.email || '');
@@ -2142,35 +2429,59 @@ function SettingsSection({ account, user, preview, setNotice }: any) {
       <PageHeading
         title="Configurações"
         icon="settings"
-        description="Perfil, conta, acesso e segurança do Extrator."
-        actions={<button className="extractor-secondary" onClick={() => void loadProfile()} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />Atualizar</button>}
+        description="Perfil, preferências, conta e segurança do Extrator."
       />
 
       {loading && !portal ? <div className="extractor-report-loading">Carregando conta...</div> : (
-        <div className="extractor-settings-v2">
+        <div className="extractor-settings-v2 extractor-settings-editable">
           <article className="extractor-profile-card">
             <div className="extractor-profile-head">
               <span className="extractor-profile-avatar">{initials}</span>
               <div><h2>{displayName}</h2><p>{profile.email || user?.email || '—'}</p></div>
             </div>
-            <dl>
-              <div><dt>E-mail</dt><dd>{profile.email || user?.email || '—'}</dd></div>
-              <div><dt>Telefone</dt><dd>{profile.phone || 'Não informado'}</dd></div>
-              <div><dt>E-mail confirmado</dt><dd>{profile.email_confirmed_at ? 'Sim' : 'Pendente'}</dd></div>
-              <div><dt>Cadastro</dt><dd>{profile.created_at ? formatDate(profile.created_at, true) : '—'}</dd></div>
-              <div><dt>Último acesso</dt><dd>{profile.last_sign_in_at ? formatDate(profile.last_sign_in_at, true) : '—'}</dd></div>
-            </dl>
+            <div className="extractor-settings-form">
+              <label>
+                Nome
+                <input value={form.full_name || ''} onChange={e => setForm((v: any) => ({ ...v, full_name: e.target.value }))} placeholder="Seu nome" />
+              </label>
+              <label>
+                Telefone de contato
+                <input value={form.phone || ''} onChange={e => setForm((v: any) => ({ ...v, phone: e.target.value }))} placeholder="(82) 99999-9999" />
+              </label>
+              <label>
+                Nome da conta
+                <input value={form.account_name || ''} onChange={e => setForm((v: any) => ({ ...v, account_name: e.target.value }))} placeholder="Nome do escritório ou empresa" />
+              </label>
+              <label className="readonly">
+                E-mail
+                <input value={profile.email || user?.email || ''} readOnly />
+                <small>O e-mail de acesso não é alterado por esta tela.</small>
+              </label>
+            </div>
+            <button className="extractor-primary extractor-save-profile" onClick={() => void saveProfile()} disabled={preview || saving}>
+              {saving ? 'Salvando...' : 'Salvar alterações'}
+            </button>
           </article>
 
           <article className="extractor-settings-card">
-            <h3>Conta e acesso</h3>
+            <h3>Preferências e segurança</h3>
+            <div className="extractor-settings-toggles">
+              <label>
+                <span><b>Alertas fiscais</b><small>Avisar sobre falhas persistentes, XML pendente e certificado.</small></span>
+                <input type="checkbox" checked={Boolean(form.fiscal_alerts)} onChange={e => setForm((v: any) => ({ ...v, fiscal_alerts: e.target.checked }))} />
+              </label>
+              <label>
+                <span><b>Atualizações de cobrança</b><small>Avisar sobre pagamento, renovação e vencimento.</small></span>
+                <input type="checkbox" checked={Boolean(form.billing_updates)} onChange={e => setForm((v: any) => ({ ...v, billing_updates: e.target.checked }))} />
+              </label>
+            </div>
             <dl>
               <div><dt>Organização</dt><dd>{organization.name || portalAccount.name || 'Conta Extrator'}</dd></div>
               <div><dt>Perfil de acesso</dt><dd>{String(organization.member_role || 'membro').replace(/_/g, ' ')}</dd></div>
-              <div><dt>Situação da organização</dt><dd>{organization.status || 'Ativa'}</dd></div>
-              <div><dt>Conta Extrator</dt><dd>{portalAccount.status || 'Ativa'}</dd></div>
+              <div><dt>Situação da conta</dt><dd>{portalAccount.status || organization.status || 'Ativa'}</dd></div>
               <div><dt>Origem do acesso</dt><dd>{portalAccount.lifetime_access ? 'Acesso vitalício' : String(portalAccount.access_source || 'assinatura').replace(/_/g, ' ')}</dd></div>
               <div><dt>Membro desde</dt><dd>{organization.member_since ? formatDate(organization.member_since, true) : '—'}</dd></div>
+              <div><dt>Último acesso</dt><dd>{profile.last_sign_in_at ? formatDate(profile.last_sign_in_at, true) : '—'}</dd></div>
             </dl>
             <div className="extractor-settings-security">
               <button onClick={() => void sendReset()} disabled={preview || resetting}>{resetting ? 'Enviando...' : 'Enviar link para redefinir senha'}</button>

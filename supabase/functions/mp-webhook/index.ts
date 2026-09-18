@@ -72,6 +72,20 @@ const cents = (value: unknown) => {
 
 const safeText = (value: unknown, maxLength: number) => String(value ?? "").trim().slice(0, maxLength);
 
+const safeProviderUrl = (value: unknown) => {
+  try {
+    const url = new URL(String(value || ""));
+    const host = url.hostname.toLowerCase();
+    return url.protocol === "https:" &&
+      (host === "mercadopago.com" || host.endsWith(".mercadopago.com") ||
+       host === "mercadopago.com.br" || host.endsWith(".mercadopago.com.br"))
+      ? url.toString()
+      : "";
+  } catch {
+    return "";
+  }
+};
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
   if (Number(req.headers.get("content-length") || "0") > 65_536) return json({ error: "payload_too_large" }, 413);
@@ -194,6 +208,18 @@ Deno.serve(async (req) => {
   const action = safeText(body.action, 120).toLowerCase();
   const dateApproved = safeText(payment.date_approved, 40);
   const paidAt = dateApproved && !Number.isNaN(new Date(dateApproved).getTime()) ? new Date(dateApproved).toISOString() : null;
+  const transactionDetails = payment.transaction_details && typeof payment.transaction_details === "object"
+    ? payment.transaction_details as Record<string, unknown>
+    : {};
+  const pointOfInteraction = payment.point_of_interaction && typeof payment.point_of_interaction === "object"
+    ? payment.point_of_interaction as Record<string, unknown>
+    : {};
+  const transactionData = pointOfInteraction.transaction_data && typeof pointOfInteraction.transaction_data === "object"
+    ? pointOfInteraction.transaction_data as Record<string, unknown>
+    : {};
+  const providerReceiptUrl =
+    safeProviderUrl(transactionDetails.external_resource_url) ||
+    safeProviderUrl(transactionData.ticket_url);
 
   const { data: directInvoice } = await admin.from("saas_invoices").select("id").eq("id", invoiceId).maybeSingle();
   let invoiceResolved = Boolean(directInvoice);
@@ -239,6 +265,16 @@ Deno.serve(async (req) => {
   if (error) {
     console.error("mp-webhook database error", { paymentId, requestId: providerRequestId, code: error.code });
     return json({ error: "database_update_failed" }, 500);
+  }
+
+  if (providerReceiptUrl) {
+    const { data: invoiceMeta } = await admin.from("saas_invoices").select("metadata").eq("id", invoiceId).maybeSingle();
+    const existingMeta = invoiceMeta?.metadata && typeof invoiceMeta.metadata === "object"
+      ? invoiceMeta.metadata as Record<string, unknown>
+      : {};
+    await admin.from("saas_invoices").update({
+      metadata: { ...existingMeta, provider_receipt_url: providerReceiptUrl },
+    }).eq("id", invoiceId);
   }
 
   if (status === "approved") {
