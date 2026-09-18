@@ -85,6 +85,22 @@ const formatLabel: Record<DownloadFormat, string> = {
   report: 'Relatório',
 };
 
+const humanDownloadError = (value: unknown) => {
+  const raw = value instanceof Error ? value.message : String(value || '');
+  const message = raw.replace(/^FunctionsHttpError:\s*/i, '').trim();
+  if (!message) return 'Não foi possível conferir os documentos agora. Tente novamente.';
+  if (/Edge Function|non-2xx|failed to fetch|network|load failed|fetch failed/i.test(message)) {
+    return 'Não foi possível concluir a conferência com o servidor. Tente novamente em alguns segundos.';
+  }
+  if (/rate.?limit|too many requests|429/i.test(message)) {
+    return 'Foram feitas muitas tentativas em sequência. Aguarde um pouco e tente novamente.';
+  }
+  if (/jwt|token|sess[aã]o|unauthorized|não autenticado/i.test(message)) {
+    return 'Sua sessão expirou. Entre novamente para continuar o download.';
+  }
+  return message;
+};
+
 const normalizePreflight = (data: any): Preflight => ({
   total: Number(data?.total || 0),
   complete: Number(data?.complete || 0),
@@ -173,12 +189,25 @@ export function FiscalDownloadCenter({
   });
 
   const preflightRequest = async () => {
-    const { data, error: invokeError } = await supabase.functions.invoke(exportFunction, {
-      body: payload('preflight'),
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) throw new Error('Sua sessão expirou. Entre novamente para continuar o download.');
+
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${exportFunction}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(payload('preflight')),
     });
-    if (invokeError) throw invokeError;
-    if (data?.error) throw new Error(String(data.error));
-    const next = normalizePreflight(data);
+    const body = await response.json().catch(() => ({}));
+    if (body && typeof body === 'object') setPreflight(normalizePreflight(body));
+    if (!response.ok || body?.error) {
+      throw new Error(humanDownloadError(body?.error || `Falha ao conferir os documentos (${response.status}).`));
+    }
+    const next = normalizePreflight(body);
     setPreflight(next);
     return next;
   };
@@ -201,7 +230,7 @@ export function FiscalDownloadCenter({
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
       if (body && typeof body === 'object') setPreflight(normalizePreflight(body));
-      throw new Error(String(body?.error || `Falha ao preparar o download (${response.status}).`));
+      throw new Error(humanDownloadError(body?.error || `Falha ao preparar o download (${response.status}).`));
     }
 
     const fallback = format === 'report'
@@ -243,7 +272,7 @@ export function FiscalDownloadCenter({
       await performDownload(false);
       onClose();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
+      setError(humanDownloadError(caught));
     } finally {
       setChecking(false);
       setDownloading(false);
@@ -258,7 +287,7 @@ export function FiscalDownloadCenter({
       await performDownload(true);
       onClose();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
+      setError(humanDownloadError(caught));
     } finally {
       setDownloading(false);
     }
@@ -310,11 +339,25 @@ export function FiscalDownloadCenter({
             <div>
               <p className="text-xs font-semibold">2. Empresas</p>
               <div className="mt-3 grid grid-cols-2 gap-2">
-                <button type="button" disabled={busy} onClick={() => setScope('current')} className={`rounded-xl border px-4 py-3 text-left disabled:opacity-60 ${scope === 'current' ? 'border-foreground bg-muted/35' : 'border-border'}`}>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setScope('current')}
+                  data-active={scope === 'current' ? 'true' : undefined}
+                  className={`extractor-download-scope rounded-xl border px-4 py-3 text-left disabled:opacity-60 ${scope === 'current' ? 'border-foreground bg-muted/35' : 'border-border'}`}
+                >
+                  <span className="extractor-download-scope-state">{scope === 'current' ? 'Selecionado' : ''}</span>
                   <p className="text-sm font-semibold">Empresa atual</p>
                   <p className="mt-1 truncate text-xs text-muted-foreground">{currentCompany?.name || '—'}</p>
                 </button>
-                <button type="button" disabled={!canUseAll || busy} onClick={() => canUseAll && setScope('all')} className={`rounded-xl border px-4 py-3 text-left disabled:cursor-not-allowed disabled:opacity-40 ${scope === 'all' ? 'border-foreground bg-muted/35' : 'border-border'}`}>
+                <button
+                  type="button"
+                  disabled={!canUseAll || busy}
+                  onClick={() => canUseAll && setScope('all')}
+                  data-active={scope === 'all' ? 'true' : undefined}
+                  className={`extractor-download-scope rounded-xl border px-4 py-3 text-left disabled:cursor-not-allowed disabled:opacity-40 ${scope === 'all' ? 'border-foreground bg-muted/35' : 'border-border'}`}
+                >
+                  <span className="extractor-download-scope-state">{scope === 'all' ? 'Selecionado' : ''}</span>
                   <p className="text-sm font-semibold">Todas as empresas</p>
                   <p className="mt-1 text-xs text-muted-foreground">{fiscalCompanies.length} com perfil fiscal</p>
                 </button>
@@ -400,7 +443,7 @@ export function FiscalDownloadCenter({
             {canDownloadPartial && (
               <Button variant="outline" disabled={busy} onClick={() => void handlePartialDownload()}>
                 <Download className="mr-2 h-4 w-4" />
-                Baixar assim mesmo
+                Baixar o restante
               </Button>
             )}
             <Button disabled={busy || invalidPeriod || !currentCompany} onClick={() => void handleDownload()}>
