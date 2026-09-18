@@ -156,6 +156,12 @@ verify_jwt = true
 [functions.admin-company-registry-sync]
 verify_jwt = false
 
+[functions.admin-client-access]
+verify_jwt = true
+
+[functions.admin-certificate-batch-import]
+verify_jwt = true
+
 [functions.admin-client-onboarding]
 verify_jwt = true
 
