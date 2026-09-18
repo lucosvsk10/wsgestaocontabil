@@ -700,3 +700,165 @@
 @media(max-width:620px){
   .extractor-import-notifications{right:10px;bottom:10px;width:calc(100vw - 20px)}
 }
+
+
+/* Final document row guard: number, slash and series are one non-breaking unit. */
+.extractor-documents-v2 .extractor-doc-note-top{
+  flex-wrap:nowrap!important;
+  white-space:nowrap!important;
+  overflow:hidden;
+}
+.extractor-documents-v2 .extractor-doc-number{
+  display:inline-block!important;
+  flex:0 0 auto!important;
+  white-space:nowrap!important;
+  word-break:keep-all!important;
+  overflow-wrap:normal!important;
+  line-height:1!important;
+}
+.extractor-documents-v2 .extractor-doc-note-top .extractor-type,
+.extractor-documents-v2 .extractor-doc-note-top .extractor-state,
+.extractor-documents-v2 .extractor-manifest-info{
+  flex:0 0 auto!important;
+}
+@media(min-width:901px){
+  .extractor-documents-v2 .extractor-admin-table th:nth-child(2){width:28%}
+  .extractor-documents-v2 .extractor-admin-table th:nth-child(3){width:23%}
+  .extractor-documents-v2 .extractor-admin-table th:nth-child(4){width:19%}
+}
+
+/* Enterprise quota is per company, never presented as one pooled allowance. */
+.extractor-usage-enterprise{
+  margin:12px 14px 16px;
+  padding:12px 8px 8px;
+  border-top:1px solid #172438;
+}
+.extractor-usage-enterprise-head{
+  width:100%;
+  padding:0 2px 9px;
+  border:0;
+  background:transparent;
+  color:inherit;
+  text-align:left;
+}
+.extractor-usage-enterprise-head small,
+.extractor-usage-enterprise-head span{
+  display:block;
+  color:#617287;
+  font-size:8px;
+}
+.extractor-usage-enterprise-head strong{
+  display:block;
+  margin:2px 0;
+  color:#dce5ed;
+  font-size:13px;
+  font-weight:600;
+}
+.extractor-usage-company-list{
+  display:grid;
+  gap:6px;
+  max-height:250px;
+  overflow:auto;
+  padding-right:2px;
+}
+.extractor-usage-company{
+  width:100%;
+  padding:8px 7px;
+  border:0;
+  border-radius:4px;
+  background:#0b1320;
+  color:#dce5ed;
+  text-align:left;
+}
+.extractor-usage-company:hover{background:#101a29}
+.extractor-usage-company-head{
+  display:flex!important;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  min-width:0;
+}
+.extractor-usage-company-head b{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:#cbd6e0;
+  font-size:8px;
+  font-weight:550;
+}
+.extractor-usage-company-head em{
+  flex:0 0 auto;
+  color:#8192a5;
+  font-size:7px;
+  font-style:normal;
+}
+.extractor-usage-company .usage-track{
+  height:3px;
+  margin:6px 0 4px;
+  overflow:hidden;
+  border-radius:999px;
+  background:#172438;
+}
+.extractor-usage-company .usage-track i{
+  display:block;
+  height:100%;
+  border-radius:999px;
+  background:#d7b65a;
+}
+.extractor-usage-company>small{
+  display:block;
+  color:#596b7e;
+  font-size:7px;
+}
+
+/* Faturas: Enterprise usage follows the same per-company quota semantics. */
+.extractor-billing-company-usage{
+  display:grid;
+  gap:8px;
+  margin-top:14px;
+}
+.extractor-billing-company-usage-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:5px 12px;
+  padding:10px 11px;
+  border-radius:4px;
+  background:#101725;
+}
+.extractor-billing-company-usage-row>div:first-child{min-width:0}
+.extractor-billing-company-usage-row>div:first-child strong,
+.extractor-billing-company-usage-row>div:first-child span{display:block}
+.extractor-billing-company-usage-row>div:first-child strong{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:#dce5ed;
+  font-size:10px;
+  font-weight:600;
+}
+.extractor-billing-company-usage-row>div:first-child span{
+  margin-top:2px;
+  color:#718397;
+  font-size:8px;
+}
+.extractor-billing-company-usage-row>b{
+  align-self:center;
+  color:#aebbc8;
+  font-size:10px;
+  font-weight:600;
+}
+.extractor-billing-company-usage-row>.extractor-billing-progress{
+  grid-column:1 / -1;
+  margin:1px 0 0;
+}
+.extractor-billing-company-usage-row>small{
+  grid-column:1 / -1;
+  color:#607286;
+  font-size:8px;
+}
+.extractor-billing-company-cycle{
+  padding-top:3px;
+  color:#718397;
+  font-size:8px;
+}

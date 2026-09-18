@@ -137,11 +137,24 @@ type DocumentNotificationFocus = {
   issueTo?: string | null;
   label: string;
 };
-type Usage = {
+type UsageCompany = {
+  company_id: string;
+  name: string;
+  legal_name?: string;
+  cnpj?: string;
   used: number;
   limit: number;
   remaining: number;
   percent: number;
+};
+type Usage = {
+  mode?: 'aggregate' | 'per_company';
+  used: number;
+  limit: number;
+  remaining: number;
+  percent: number;
+  per_company_limit?: number;
+  companies?: UsageCompany[];
   period_start?: string | null;
   period_end?: string | null;
 };
@@ -717,16 +730,45 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
             </section>
           ))}
         </nav>
-        <button className="extractor-usage" onClick={() => go('Configurações')} data-icon-hover>
-          <small>Uso do plano</small>
-          <strong>
-            {integer.format(planUsage.used)} <span>/ {integer.format(planUsage.limit)} XML</span>
-          </strong>
-          <div className="usage-track">
-            <i style={{ width: `${Math.min(100, Math.max(0, planUsage.percent))}%` }} />
-          </div>
-          <span>{integer.format(planUsage.remaining)} restantes · ver detalhes</span>
-        </button>
+        {planUsage.mode === 'per_company' && planUsage.companies?.length ? (
+          <section className="extractor-usage extractor-usage-enterprise">
+            <button className="extractor-usage-enterprise-head" onClick={() => go('Faturas')}>
+              <small>Uso do plano</small>
+              <strong>Enterprise</strong>
+              <span>{integer.format(planUsage.per_company_limit || 10000)} XML por empresa</span>
+            </button>
+            <div className="extractor-usage-company-list">
+              {planUsage.companies.map(companyUsage => (
+                <button
+                  key={companyUsage.company_id}
+                  className="extractor-usage-company"
+                  onClick={() => go('Faturas')}
+                  title={companyUsage.legal_name || companyUsage.name}
+                >
+                  <span className="extractor-usage-company-head">
+                    <b>{companyUsage.name}</b>
+                    <em>{integer.format(companyUsage.used)} / {integer.format(companyUsage.limit)}</em>
+                  </span>
+                  <span className="usage-track">
+                    <i style={{ width: `${Math.min(100, Math.max(0, companyUsage.percent))}%` }} />
+                  </span>
+                  <small>{integer.format(companyUsage.remaining)} restantes</small>
+                </button>
+              ))}
+            </div>
+          </section>
+        ) : (
+          <button className="extractor-usage" onClick={() => go('Faturas')} data-icon-hover>
+            <small>Uso do plano</small>
+            <strong>
+              {integer.format(planUsage.used)} <span>/ {integer.format(planUsage.limit)} XML</span>
+            </strong>
+            <div className="usage-track">
+              <i style={{ width: `${Math.min(100, Math.max(0, planUsage.percent))}%` }} />
+            </div>
+            <span>{integer.format(planUsage.remaining)} restantes · ver detalhes</span>
+          </button>
+        )}
       </aside>
       <main className="extractor-main">
         {notice && <NoticeBar notice={notice} close={() => setNotice(null)} />}
@@ -1664,8 +1706,9 @@ function Documents({
       });
       if (error) {
         setNotice({ tone: 'error', text: await extractorErrorMessage(error) });
-        onPreview(document);
-      } else if (data?.ready && data.document) {
+        return;
+      }
+      if (data?.ready && data.document) {
         onPreview(rowToDoc(data.document));
       } else {
         onPreview({
@@ -1675,8 +1718,7 @@ function Documents({
         if (data?.reason) setNotice({ tone: 'warning', text: data.reason });
       }
     } catch {
-      onPreview(document);
-      setNotice({ tone: 'warning', text: 'A nota foi aberta com os dados já disponíveis. A recuperação do XML continuará em segundo plano.' });
+      setNotice({ tone: 'error', text: 'Não foi possível carregar o XML desta nota agora. Tente novamente.' });
     } finally {
       setBusy('');
     }
@@ -1853,7 +1895,7 @@ function Documents({
                       </td>
                       <td className="extractor-doc-note">
                         <div className="extractor-doc-note-top">
-                          <strong>{document.number || '—'} <span>/ {document.series || '—'}</span></strong>
+                          <strong className="extractor-doc-number">{document.number || '—'} / {document.series || '—'}</strong>
                           <TypeTag value={documentType} />
                           <StatusTag value={situation} />
                           {manifest && (
@@ -2417,16 +2459,42 @@ function BillingSection({ usage, planLabel, preview, setNotice }: any) {
           <section className="extractor-billing-grid">
             <article className="extractor-billing-card">
               <header>
-                <div><h2>Uso do plano</h2><p>Consumo de XML no período atual</p></div>
-                <strong className="amount">{usage.percent}%</strong>
+                <div>
+                  <h2>Uso do plano</h2>
+                  <p>{enterpriseCapacity ? 'Consumo separado por empresa no ciclo atual' : 'Consumo de XML no período atual'}</p>
+                </div>
+                <strong className="amount">{enterpriseCapacity ? 'Por empresa' : `${usage.percent}%`}</strong>
               </header>
-              <div className="extractor-billing-progress"><i style={{ width: `${Math.min(100, Math.max(0, usage.percent))}%` }} /></div>
-              <div className="extractor-billing-facts">
-                <div><span>Processados</span><b>{integer.format(usage.used)}</b></div>
-                <div><span>Limite do ciclo</span><b>{usageLimitLabel}</b></div>
-                <div><span>Restantes</span><b>{integer.format(usage.remaining)}</b></div>
-                <div><span>Ciclo</span><b>{formatDate(usage.period_start)} a {formatDate(usage.period_end)}</b></div>
-              </div>
+              {enterpriseCapacity && usage.mode === 'per_company' && usage.companies?.length ? (
+                <div className="extractor-billing-company-usage">
+                  {usage.companies.map((companyUsage: UsageCompany) => (
+                    <div className="extractor-billing-company-usage-row" key={companyUsage.company_id}>
+                      <div>
+                        <strong>{companyUsage.name}</strong>
+                        <span>{integer.format(companyUsage.used)} de {integer.format(companyUsage.limit)} XML</span>
+                      </div>
+                      <b>{companyUsage.percent}%</b>
+                      <div className="extractor-billing-progress">
+                        <i style={{ width: `${Math.min(100, Math.max(0, companyUsage.percent))}%` }} />
+                      </div>
+                      <small>{integer.format(companyUsage.remaining)} restantes</small>
+                    </div>
+                  ))}
+                  <div className="extractor-billing-company-cycle">
+                    Ciclo: {formatDate(usage.period_start)} a {formatDate(usage.period_end)}
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="extractor-billing-progress"><i style={{ width: `${Math.min(100, Math.max(0, usage.percent))}%` }} /></div>
+                  <div className="extractor-billing-facts">
+                    <div><span>Processados</span><b>{integer.format(usage.used)}</b></div>
+                    <div><span>Limite do ciclo</span><b>{usageLimitLabel}</b></div>
+                    <div><span>Restantes</span><b>{integer.format(usage.remaining)}</b></div>
+                    <div><span>Ciclo</span><b>{formatDate(usage.period_start)} a {formatDate(usage.period_end)}</b></div>
+                  </div>
+                </>
+              )}
             </article>
 
             <article className="extractor-billing-card">
