@@ -15,7 +15,7 @@ import {
 } from 'recharts';
 import { extractorRequest, extractorErrorMessage } from '@/lib/extractor/request';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { ArrowLeft, CalendarDays, Info, Menu, X } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Info, Loader2, Menu, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import ExtractorFiscalDocumentPreviewModal from '@/components/extractor/ExtractorFiscalDocumentPreviewModal';
@@ -62,10 +62,15 @@ type Company = {
   salesStatus: string | null;
   salesXmlPending: number;
   salesXmlFailed: number;
+  purchaseLastStartedAt: string | null;
   purchaseLastCompletedAt: string | null;
   purchaseLastError: string | null;
+  salesLastStartedAt: string | null;
   salesLastCompletedAt: string | null;
   salesLastError: string | null;
+  initialSyncQueuedAt: string | null;
+  initialSyncPeriodFrom: string | null;
+  initialSyncPeriodTo: string | null;
 };
 type Doc = {
   id?: string;
@@ -297,10 +302,15 @@ const normalizeCompany = (r: Record<string, any>, i: number): Company => ({
   salesStatus: r.sales_status || null,
   salesXmlPending: Number(r.sales_xml_pending || 0),
   salesXmlFailed: Number(r.sales_xml_failed || 0),
+  purchaseLastStartedAt: r.purchase_last_started_at || null,
   purchaseLastCompletedAt: r.purchase_last_completed_at || null,
   purchaseLastError: r.purchase_last_error || null,
+  salesLastStartedAt: r.sales_last_started_at || null,
   salesLastCompletedAt: r.sales_last_completed_at || null,
   salesLastError: r.sales_last_error || null,
+  initialSyncQueuedAt: r.initial_sync_queued_at || null,
+  initialSyncPeriodFrom: r.initial_sync_period_from || null,
+  initialSyncPeriodTo: r.initial_sync_period_to || null,
 });
 const unwrapStoredFiscalXml = (raw: unknown) => {
   const value = typeof raw === 'string' ? raw.trim() : '';
@@ -475,14 +485,26 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
   }, [load]);
   useEffect(() => {
     if (preview || denied) return;
-    const t = window.setInterval(() => void load(true), 30000),
-      f = () => void load(true);
-    window.addEventListener('focus', f);
+    const refresh = () => void load(true);
+    const t = window.setInterval(refresh, 10000);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+
+    const channel = supabase
+      .channel(`extractor-live-${user?.id || 'anonymous'}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'fiscal_certificates' }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'extractor_companies' }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'fiscal_purchase_sync_state' }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'fiscal_sales_sync_state' }, refresh)
+      .subscribe();
+
     return () => {
       window.clearInterval(t);
-      window.removeEventListener('focus', f);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+      void supabase.removeChannel(channel);
     };
-  }, [preview, denied, load]);
+  }, [preview, denied, load, user?.id]);
 
   const loadImportNotifications = useCallback(async () => {
     if (preview || denied || !user) return;
@@ -564,10 +586,15 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
               salesStatus: 'idle',
               salesXmlPending: 60,
               salesXmlFailed: 0,
+              purchaseLastStartedAt: new Date().toISOString(),
               purchaseLastCompletedAt: new Date().toISOString(),
               purchaseLastError: null,
+              salesLastStartedAt: new Date().toISOString(),
               salesLastCompletedAt: new Date().toISOString(),
               salesLastError: null,
+              initialSyncQueuedAt: new Date().toISOString(),
+              initialSyncPeriodFrom: iso(new Date(Date.now() - 30 * 86400000)),
+              initialSyncPeriodTo: iso(new Date()),
             },
           ]
         : (snapshot?.companies || []).map(normalizeCompany),
