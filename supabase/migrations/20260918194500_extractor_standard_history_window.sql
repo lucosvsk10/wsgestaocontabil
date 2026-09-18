@@ -167,11 +167,21 @@ where rn>1;
 delete from public.fiscal_document_recovery_items ri
 using extractor_dfe_duplicates d
 where ri.document_id=d.duplicate_id
-  and exists (
-    select 1
-    from public.fiscal_document_recovery_items keep
-    where keep.run_id=ri.run_id
-      and keep.document_id=d.keeper_id
+  and (
+    exists (
+      select 1
+      from public.fiscal_document_recovery_items keep
+      where keep.run_id=ri.run_id
+        and keep.document_id=d.keeper_id
+    )
+    or exists (
+      select 1
+      from public.fiscal_document_recovery_items other
+      join extractor_dfe_duplicates d2 on d2.duplicate_id=other.document_id
+      where other.run_id=ri.run_id
+        and d2.keeper_id=d.keeper_id
+        and other.id<ri.id
+    )
   );
 
 update public.fiscal_document_recovery_items ri
