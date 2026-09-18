@@ -2620,6 +2620,7 @@ function HistorySection({ companies, preview, setNotice }: any) {
             <strong>{syncLabel(purchase.status || company.purchaseStatus)}</strong>
             <span>
               {purchase.last_error ||
+                purchase.status_summary ||
                 purchase.status_message ||
                 (purchase.source_checked && purchaseExpected === 0
                   ? 'Consulta concluída · nenhum documento localizado'
