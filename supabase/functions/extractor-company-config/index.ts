@@ -208,7 +208,12 @@ Deno.serve(async req => {
         .map((row: any) => {
           const fiscal = fiscalByOffice.get(String(row.id)) || null;
           const certs = Array.isArray(fiscal?.fiscal_certificates) ? fiscal.fiscal_certificates : [];
-          const activeCert = certs.find((item: any) => item.is_active) || null;
+          const activeCert = certs.find((item: any) => {
+            if (!item?.is_active) return false;
+            if (!item?.valid_until) return true;
+            const end = new Date(`${item.valid_until}T23:59:59`);
+            return !Number.isNaN(end.getTime()) && end.getTime() >= Date.now();
+          }) || null;
           return {
             office_company_id: row.id,
             company_name: row.company_name,
@@ -223,7 +228,8 @@ Deno.serve(async req => {
               ? { configured: true, valid_until: activeCert.valid_until }
               : { configured: false, valid_until: null },
           };
-        });
+        })
+        .filter((row: any) => row.certificate.configured);
 
       return J({ ok: true, companies });
     }
@@ -243,6 +249,25 @@ Deno.serve(async req => {
 
       const cnpj = digits(office.cnpj);
       if (cnpj.length !== 14) return J({ error: 'Somente clientes com CNPJ podem ser importados para o Extrator.' }, 422);
+
+      const { data: eligibleFiscal, error: eligibleError } = await ctx.admin
+        .from('fiscal_companies')
+        .select('id,fiscal_certificates(id,is_active,valid_until)')
+        .eq('company_id', office.id)
+        .maybeSingle();
+      if (eligibleError) throw eligibleError;
+      const eligibleCerts = Array.isArray(eligibleFiscal?.fiscal_certificates)
+        ? eligibleFiscal.fiscal_certificates
+        : [];
+      const validA1 = eligibleCerts.some((item: any) => {
+        if (!item?.is_active) return false;
+        if (!item?.valid_until) return true;
+        const end = new Date(`${item.valid_until}T23:59:59`);
+        return !Number.isNaN(end.getTime()) && end.getTime() >= Date.now();
+      });
+      if (!eligibleFiscal?.id || !validA1) {
+        return J({ error: 'Esta empresa só pode ser importada depois que o certificado A1 estiver ativo e válido no Painel do Administrador.' }, 422);
+      }
 
       let { data: fiscal, error: fiscalError } = await ctx.admin
         .from('fiscal_companies')
