@@ -45,7 +45,53 @@ export default function AdminClientProfile(){
 
  const lookupCnpj=async()=>{if(!client)return;setLookingUp(true);setError('');setNotice('');try{const lookup=await lookupOfficeCompanyByCnpj(client.cnpj);const mapped=registryToOfficeCompany(lookup.data,lookup.registry||{});setClient({...client,...mapped});setNotice(lookup.state_registry_found?'Cadastro encontrado. Razão social, nome fantasia, IE e demais dados foram preenchidos automaticamente.':'Cadastro encontrado. Os dados federais foram preenchidos; a IE não apareceu na fonte estadual e pode ser revisada manualmente.')}catch(e){setError(e instanceof Error?e.message:String(e))}finally{setLookingUp(false)}};
 
- const save=async()=>{if(!client)return;setSaving(true);setError('');setNotice('');try{const cnpj=onlyDigits(certMeta?.holder_cnpj||client.cnpj);if(certMeta&&onlyDigits(certMeta.holder_cnpj)!==onlyDigits(client.cnpj))throw new Error('O certificado A1 pertence a outro CNPJ.');const companyName=String(certMeta?.holder_name||client.company_name).trim().toUpperCase();const tradeName=String(client.trade_name||companyName).trim().toUpperCase();const payload={...client,company_name:companyName,trade_name:tradeName,cnpj,updated_at:new Date().toISOString()};delete (payload as any).id;delete (payload as any).logo_url;const {error:e}=await (supabase as any).from('companies').update(payload).eq('id',client.id);if(e)throw e;if(certFile){const body:Record<string,unknown>={action:'save',company:{id:fiscal?.id||undefined,company_id:client.id,cnpj,razao_social:companyName,nome_fantasia:tradeName,uf:(client.state||fiscal?.uf||'AL').toUpperCase(),municipio:client.city||fiscal?.municipio||'',codigo_municipio:client.city_ibge_code||fiscal?.codigo_municipio||'',inscricao_estadual:client.state_registration||fiscal?.inscricao_estadual||'',regime_tributario:client.tax_regime||fiscal?.regime_tributario||'simples_nacional',ambiente_padrao:'producao',status:'ativa',endereco:{}},certificate_base64:await fileToBase64(certFile),certificate_password:certPassword,certificate_name:certFile.name};await callVault(body)}await refreshCompanies();setCertFile(null);setCertPassword('');setCertMeta(null);await load();setNotice(certFile?'Cadastro salvo e A1 vinculado para extração fiscal.':'Cadastro salvo. O certificado A1 continua opcional.')}catch(e){setError(e instanceof Error?e.message:String(e))}finally{setSaving(false)}};
+ const save=async()=>{
+  if(!client)return;
+  setSaving(true);setError('');setNotice('');
+  let certificateCommitted=false;
+  try{
+    const cnpj=onlyDigits(certMeta?.holder_cnpj||client.cnpj);
+    if(certMeta&&onlyDigits(certMeta.holder_cnpj)!==onlyDigits(client.cnpj))throw new Error('O certificado A1 pertence a outro CNPJ.');
+    const companyName=String(certMeta?.holder_name||client.company_name).trim().toUpperCase();
+    const tradeName=String(client.trade_name||companyName).trim().toUpperCase();
+    const payload={...client,company_name:companyName,trade_name:tradeName,cnpj,updated_at:new Date().toISOString()};
+    delete (payload as any).id;delete (payload as any).logo_url;
+    const {error:e}=await (supabase as any).from('companies').update(payload).eq('id',client.id);
+    if(e)throw e;
+    if(certFile){
+      const body:Record<string,unknown>={
+        action:'save',
+        company:{
+          id:fiscal?.id||undefined,company_id:client.id,cnpj,razao_social:companyName,nome_fantasia:tradeName,
+          uf:(client.state||fiscal?.uf||'AL').toUpperCase(),municipio:client.city||fiscal?.municipio||'',
+          codigo_municipio:client.city_ibge_code||fiscal?.codigo_municipio||'',
+          inscricao_estadual:client.state_registration||fiscal?.inscricao_estadual||'',
+          regime_tributario:client.tax_regime||fiscal?.regime_tributario||'simples_nacional',
+          ambiente_padrao:'producao',status:'ativa',endereco:{}
+        },
+        certificate_base64:await fileToBase64(certFile),
+        certificate_password:certPassword,
+        certificate_name:certFile.name
+      };
+      await callVault(body);
+      certificateCommitted=true;
+    }
+
+    setCertFile(null);setCertPassword('');setCertMeta(null);
+    await Promise.resolve(refreshCompanies()).catch(()=>undefined);
+    await load();
+    setError('');
+    setNotice(certificateCommitted?'Cadastro salvo e A1 vinculado para extração fiscal.':'Cadastro salvo. O certificado A1 continua opcional.');
+  }catch(e){
+    if(certificateCommitted){
+      await Promise.resolve(refreshCompanies()).catch(()=>undefined);
+      setError('');
+      setNotice('O cadastro e o certificado A1 foram salvos. A atualização visual falhou e será reconciliada automaticamente.');
+    }else{
+      setError(e instanceof Error?e.message:String(e));
+    }
+  }finally{setSaving(false)}
+};
 
  const onCertificateMetadata=(m:CertMeta)=>{setCertMeta(m);setClient(current=>current?{...current,company_name:String(m.holder_name||current.company_name).toUpperCase(),cnpj:onlyDigits(m.holder_cnpj||current.cnpj)}:current);setNotice('A1 identificado. Ele será usado apenas se você optar por habilitar a extração fiscal desta empresa.')};
  const uploadLogo=async(file:File)=>{if(!client||!file.type.startsWith('image/'))return;setUploading(true);setError('');try{const ext=file.name.split('.').pop()||'png',path=`companies/${client.id}/${Date.now()}.${ext}`;const up=await supabase.storage.from('carousel-logos').upload(path,file,{upsert:true});if(up.error)throw up.error;const {data:{publicUrl}}=supabase.storage.from('carousel-logos').getPublicUrl(path);const db=await (supabase as any).from('companies').update({logo_url:publicUrl}).eq('id',client.id);if(db.error)throw db.error;await (supabase as any).from('carousel_items').update({logo_url:publicUrl}).eq('company_id',client.id);setClient({...client,logo_url:publicUrl});await refreshCompanies()}catch(e){setError(e instanceof Error?e.message:String(e))}finally{setUploading(false)}};

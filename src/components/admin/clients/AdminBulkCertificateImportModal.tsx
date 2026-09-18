@@ -25,6 +25,38 @@ async function fileToBase64(file: File) {
   return btoa(binary);
 }
 
+const filenameCnpj = (name: string) => {
+  const matches = name.replace(/\D/g, '').match(/\d{14}/g);
+  return matches?.[0] || '';
+};
+
+async function certificateWasCommitted(cnpj: string) {
+  if (!cnpj) return null;
+  const { data: fiscal } = await (supabase as any)
+    .from('fiscal_companies')
+    .select('id,cnpj,razao_social,nome_fantasia')
+    .eq('cnpj', cnpj)
+    .maybeSingle();
+  if (!fiscal?.id) return null;
+
+  const { data: certificate } = await (supabase as any)
+    .from('fiscal_certificates')
+    .select('id,valid_until,is_active')
+    .eq('company_id', fiscal.id)
+    .eq('is_active', true)
+    .order('valid_until', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return certificate?.id
+    ? {
+        companyName: fiscal.nome_fantasia || fiscal.razao_social || undefined,
+        cnpj,
+        validUntil: certificate.valid_until || null,
+      }
+    : null;
+}
+
 async function functionErrorMessage(error: unknown) {
   const fallback = error instanceof Error ? error.message : String(error || 'Erro inesperado');
   try {
@@ -103,15 +135,26 @@ export default function AdminBulkCertificateImportModal({
           cnpj: data?.cnpj || undefined,
         });
       } catch (error) {
-        updateRow(row.id, {
-          status: 'error',
-          message: await functionErrorMessage(error),
-        });
+        const cnpj = filenameCnpj(row.file.name);
+        const committed = await certificateWasCommitted(cnpj).catch(() => null);
+        if (committed) {
+          updateRow(row.id, {
+            status: 'existing',
+            message: 'A1 confirmado no servidor. O retorno da importação falhou, mas o certificado foi salvo.',
+            companyName: committed.companyName,
+            cnpj: committed.cnpj,
+          });
+        } else {
+          updateRow(row.id, {
+            status: 'error',
+            message: await functionErrorMessage(error),
+          });
+        }
       }
     }
 
     setRunning(false);
-    await onCompleted();
+    await Promise.resolve(onCompleted()).catch(() => undefined);
   };
 
   const close = () => {

@@ -15,7 +15,7 @@ import {
 } from 'recharts';
 import { extractorRequest, extractorErrorMessage } from '@/lib/extractor/request';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { ArrowLeft, CalendarDays, Info, Menu, X } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Info, Loader2, Menu, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import ExtractorFiscalDocumentPreviewModal from '@/components/extractor/ExtractorFiscalDocumentPreviewModal';
@@ -62,10 +62,15 @@ type Company = {
   salesStatus: string | null;
   salesXmlPending: number;
   salesXmlFailed: number;
+  purchaseLastStartedAt: string | null;
   purchaseLastCompletedAt: string | null;
   purchaseLastError: string | null;
+  salesLastStartedAt: string | null;
   salesLastCompletedAt: string | null;
   salesLastError: string | null;
+  initialSyncQueuedAt: string | null;
+  initialSyncPeriodFrom: string | null;
+  initialSyncPeriodTo: string | null;
 };
 type Doc = {
   id?: string;
@@ -246,6 +251,35 @@ const syncLabel = (v?: string | null) => {
   if (!x) return 'Não iniciada';
   return x.replace(/_/g, ' ');
 };
+const syncIsActive = (company: Company) => {
+  const states = [company.purchaseStatus, company.salesStatus].map(value => String(value || '').toLowerCase());
+  return states.some(value => ['queued', 'running', 'reconciling', 'bootstrap_window', 'retrying'].includes(value));
+};
+const syncStartedAt = (company: Company) => {
+  const values = [
+    company.initialSyncQueuedAt,
+    company.purchaseLastStartedAt,
+    company.salesLastStartedAt,
+  ]
+    .filter(Boolean)
+    .map(value => new Date(String(value)).getTime())
+    .filter(value => Number.isFinite(value));
+  return values.length ? new Date(Math.min(...values)).toISOString() : null;
+};
+const elapsedLabel = (value?: string | null) => {
+  if (!value) return 'agora';
+  const ms = Math.max(0, Date.now() - new Date(value).getTime());
+  const minutes = Math.floor(ms / 60000);
+  if (minutes < 1) return 'há menos de 1 min';
+  if (minutes < 60) return `há ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return `há ${hours}h${rest ? ` ${rest}min` : ''}`;
+};
+const syncPeriodLabel = (company: Company) => {
+  if (!company.initialSyncPeriodFrom || !company.initialSyncPeriodTo) return 'janela fiscal em preparação';
+  return `${formatDate(company.initialSyncPeriodFrom)} → ${formatDate(company.initialSyncPeriodTo)}`;
+};
 const model = (d: Doc) =>
   String(
     d.model || (/^\d{44}$/.test(String(d.accessKey || '')) ? String(d.accessKey).slice(20, 22) : '')
@@ -297,10 +331,15 @@ const normalizeCompany = (r: Record<string, any>, i: number): Company => ({
   salesStatus: r.sales_status || null,
   salesXmlPending: Number(r.sales_xml_pending || 0),
   salesXmlFailed: Number(r.sales_xml_failed || 0),
+  purchaseLastStartedAt: r.purchase_last_started_at || null,
   purchaseLastCompletedAt: r.purchase_last_completed_at || null,
   purchaseLastError: r.purchase_last_error || null,
+  salesLastStartedAt: r.sales_last_started_at || null,
   salesLastCompletedAt: r.sales_last_completed_at || null,
   salesLastError: r.sales_last_error || null,
+  initialSyncQueuedAt: r.initial_sync_queued_at || null,
+  initialSyncPeriodFrom: r.initial_sync_period_from || null,
+  initialSyncPeriodTo: r.initial_sync_period_to || null,
 });
 const unwrapStoredFiscalXml = (raw: unknown) => {
   const value = typeof raw === 'string' ? raw.trim() : '';
@@ -475,14 +514,26 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
   }, [load]);
   useEffect(() => {
     if (preview || denied) return;
-    const t = window.setInterval(() => void load(true), 30000),
-      f = () => void load(true);
-    window.addEventListener('focus', f);
+    const refresh = () => void load(true);
+    const t = window.setInterval(refresh, 10000);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+
+    const channel = supabase
+      .channel(`extractor-live-${user?.id || 'anonymous'}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'fiscal_certificates' }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'extractor_companies' }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'fiscal_purchase_sync_state' }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'fiscal_sales_sync_state' }, refresh)
+      .subscribe();
+
     return () => {
       window.clearInterval(t);
-      window.removeEventListener('focus', f);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+      void supabase.removeChannel(channel);
     };
-  }, [preview, denied, load]);
+  }, [preview, denied, load, user?.id]);
 
   const loadImportNotifications = useCallback(async () => {
     if (preview || denied || !user) return;
@@ -564,10 +615,15 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
               salesStatus: 'idle',
               salesXmlPending: 60,
               salesXmlFailed: 0,
+              purchaseLastStartedAt: new Date().toISOString(),
               purchaseLastCompletedAt: new Date().toISOString(),
               purchaseLastError: null,
+              salesLastStartedAt: new Date().toISOString(),
               salesLastCompletedAt: new Date().toISOString(),
               salesLastError: null,
+              initialSyncQueuedAt: new Date().toISOString(),
+              initialSyncPeriodFrom: iso(new Date(Date.now() - 30 * 86400000)),
+              initialSyncPeriodTo: iso(new Date()),
             },
           ]
         : (snapshot?.companies || []).map(normalizeCompany),
@@ -1250,6 +1306,7 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview, adm
   const [adminImportError, setAdminImportError] = useState('');
   const [adminImportTerm, setAdminImportTerm] = useState('');
   const [adminOfficeCompanies, setAdminOfficeCompanies] = useState<any[]>([]);
+  const [adminImportSelected, setAdminImportSelected] = useState<string[]>([]);
 
   const loadAdminOfficeCompanies = useCallback(async () => {
     if (!adminAccess || preview) return;
@@ -1268,34 +1325,122 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview, adm
   const openAdminImport = async () => {
     setAdminImportOpen(true);
     setAdminImportTerm('');
+    setAdminImportSelected([]);
     await loadAdminOfficeCompanies();
   };
 
-  const importOfficeClient = async (row: any) => {
-    if (adminImportBusy || row?.already_linked) return;
-    setAdminImportBusy(String(row.office_company_id));
+  useEffect(() => {
+    if (!adminImportOpen || preview || !adminAccess) return;
+    const refresh = () => void loadAdminOfficeCompanies();
+    const timer = window.setInterval(refresh, 5000);
+    const channel = supabase
+      .channel('extractor-admin-import-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'fiscal_certificates' }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'fiscal_companies' }, refresh)
+      .subscribe();
+    return () => {
+      window.clearInterval(timer);
+      void supabase.removeChannel(channel);
+    };
+  }, [adminImportOpen, preview, adminAccess, loadAdminOfficeCompanies]);
+
+  const importSelectedOfficeClients = async () => {
+    if (adminImportBusy || !adminImportSelected.length) return;
+    const selectedIds = [...adminImportSelected];
+    setAdminImportBusy('bulk');
     setAdminImportError('');
+
+    const verifyCommittedImports = async () => {
+      try {
+        const verify = await extractorRequest({ action: 'list_office_clients' });
+        const rows = Array.isArray(verify?.companies) ? verify.companies : [];
+        return selectedIds.filter(id =>
+          rows.some((row: any) => String(row.office_company_id) === id && row.already_linked)
+        );
+      } catch {
+        return [];
+      }
+    };
+
     try {
       const data = await extractorRequest({
-        action: 'import_office_client',
-        office_company_id: row.office_company_id,
+        action: 'import_office_clients_bulk',
+        office_company_ids: selectedIds,
       });
-      const fiscalId = String(data?.company?.id || '');
-      await onReload();
-      if (fiscalId) {
-        await (supabase as any).rpc('extractor_queue_sync', { _company_id: fiscalId }).catch(() => null);
-        setDetailId(fiscalId);
+      const imported = Number(data?.imported || 0);
+      const failed = Number(data?.failed || 0);
+      const queuePending = Number(data?.queue_pending || 0);
+
+      void Promise.resolve(onReload()).catch(() => null);
+      void loadAdminOfficeCompanies();
+
+      if (imported > 0) {
+        setNotice({
+          tone: failed || queuePending ? 'warning' : 'success',
+          text: failed
+            ? `${imported} empresa(s) importada(s). ${failed} não puderam ser importadas.`
+            : queuePending
+              ? `${imported} empresa(s) vinculada(s). ${queuePending} aguardam o próximo ciclo automático da fila fiscal.`
+              : `${imported} empresa(s) importada(s). A busca fiscal inicial já começou automaticamente.`,
+        });
       }
-      setAdminImportOpen(false);
-      setNotice({
-        tone: 'success',
-        text: `${row.trade_name || row.company_name} foi vinculada ao Extrator usando o cadastro do painel administrativo.`,
-      });
+
+      if (failed > 0) {
+        const messages = (data?.results || [])
+          .filter((item: any) => !item?.ok)
+          .map((item: any) => item?.error)
+          .filter(Boolean);
+        setAdminImportError(messages.slice(0, 3).join(' · ') || 'Algumas empresas não puderam ser importadas.');
+        setAdminImportSelected(
+          selectedIds.filter(id =>
+            (data?.results || []).some((item: any) => String(item.office_company_id) === id && !item.ok)
+          )
+        );
+      } else {
+        setAdminImportSelected([]);
+        setAdminImportOpen(false);
+      }
     } catch (error) {
-      setAdminImportError(error instanceof Error ? error.message : 'Não foi possível importar esta empresa.');
+      const committed = await verifyCommittedImports();
+      if (committed.length) {
+        void Promise.resolve(onReload()).catch(() => null);
+        setAdminImportSelected(selectedIds.filter(id => !committed.includes(id)));
+        setNotice({
+          tone: 'success',
+          text: `${committed.length} empresa(s) foram importadas com sucesso. O retorno da tela falhou, mas o vínculo foi confirmado no servidor.`,
+        });
+        if (committed.length === selectedIds.length) setAdminImportOpen(false);
+      } else {
+        setAdminImportError(error instanceof Error ? error.message : 'Não foi possível importar as empresas selecionadas.');
+      }
     } finally {
       setAdminImportBusy('');
     }
+  };
+
+  const filteredAdminOfficeCompanies = adminOfficeCompanies.filter((row: any) => {
+    const value = adminImportTerm.trim().toLowerCase();
+    if (!value) return true;
+    return `${row.company_name || ''} ${row.trade_name || ''} ${row.cnpj || ''}`
+      .toLowerCase()
+      .includes(value);
+  });
+  const selectableAdminOfficeCompanies = filteredAdminOfficeCompanies.filter((row: any) => !row.already_linked);
+  const allVisibleSelected =
+    selectableAdminOfficeCompanies.length > 0 &&
+    selectableAdminOfficeCompanies.every((row: any) => adminImportSelected.includes(String(row.office_company_id)));
+  const toggleAdminImport = (id: string) => {
+    setAdminImportSelected(current =>
+      current.includes(id) ? current.filter(value => value !== id) : [...current, id]
+    );
+  };
+  const toggleAllAdminImports = () => {
+    const visibleIds = selectableAdminOfficeCompanies.map((row: any) => String(row.office_company_id));
+    setAdminImportSelected(current =>
+      allVisibleSelected
+        ? current.filter(id => !visibleIds.includes(id))
+        : [...new Set([...current, ...visibleIds])]
+    );
   };
 
   const visible = companies.filter(
@@ -1327,7 +1472,10 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview, adm
   }, [preview]);
 
   useEffect(() => {
-    if (detailId) void loadDetail(detailId);
+    if (!detailId) return;
+    void loadDetail(detailId);
+    const timer = window.setInterval(() => void loadDetail(detailId), 10000);
+    return () => window.clearInterval(timer);
   }, [detailId, loadDetail]);
 
   const sync = async (c: Company) => {
@@ -1473,7 +1621,13 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview, adm
             </article>
             <article className="extractor-company-detail-card">
               <small>Sincronização</small><strong>{syncLabel(selected.purchaseStatus)} / {syncLabel(selected.salesStatus)}</strong>
-              <span>{selected.lastSync ? `Última busca ${formatDate(selected.lastSync, true)}` : 'Primeira busca ainda não concluída'}</span>
+              <span>
+                {syncIsActive(selected)
+                  ? `Busca iniciada ${elapsedLabel(syncStartedAt(selected))} · ${syncPeriodLabel(selected)}`
+                  : selected.lastSync
+                    ? `Última busca ${formatDate(selected.lastSync, true)}`
+                    : 'Primeira busca ainda não concluída'}
+              </span>
             </article>
             <article className="extractor-company-detail-card">
               <small>Certificado A1</small><strong>{certLabel}</strong>
@@ -1582,6 +1736,16 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview, adm
             <div><strong>{syncLabel(c.purchaseStatus)} / {syncLabel(c.salesStatus)}</strong><span>{c.lastSync ? formatDate(c.lastSync, true) : 'Ainda não concluída'}</span></div>
             <div><strong>{c.certificateUntil ? formatDate(c.certificateUntil) : 'Não configurado'}</strong><span>{c.certificateDays == null ? '—' : `${c.certificateDays} dia(s)`}</span></div>
             <div className="extractor-row-actions">
+              {syncIsActive(c) && (
+                <span className="extractor-sync-running" title={`Busca em andamento · ${syncPeriodLabel(c)}`}>
+                  <Loader2 className="extractor-sync-spinner" />
+                  <span>
+                    <b>Buscando</b>
+                    <small>{elapsedLabel(syncStartedAt(c))}</small>
+                    <small>{syncPeriodLabel(c)}</small>
+                  </span>
+                </span>
+              )}
               <button onClick={e => { e.stopPropagation(); setDetailId(c.id); }}>Abrir</button>
               <button className="danger" onClick={e => { e.stopPropagation(); setRemoveTarget(c); }}>Remover</button>
             </div>
@@ -1614,16 +1778,34 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview, adm
               <p className="extractor-helper">Carregando clientes do painel...</p>
             ) : (
               <div className="extractor-admin-import-list">
-                {adminOfficeCompanies
-                  .filter(row => {
-                    const term = adminImportTerm.trim().toLowerCase();
-                    if (!term) return true;
-                    return `${row.company_name || ''} ${row.trade_name || ''} ${row.cnpj || ''}`
-                      .toLowerCase()
-                      .includes(term);
-                  })
-                  .map(row => (
-                    <article key={row.office_company_id} className="extractor-admin-import-row">
+                {selectableAdminOfficeCompanies.length > 0 && (
+                  <label className="extractor-admin-import-select-all">
+                    <input
+                      type="checkbox"
+                      checked={allVisibleSelected}
+                      onChange={toggleAllAdminImports}
+                      disabled={Boolean(adminImportBusy)}
+                    />
+                    <span>Selecionar todas as empresas visíveis</span>
+                  </label>
+                )}
+                {filteredAdminOfficeCompanies.map((row: any) => {
+                  const id = String(row.office_company_id);
+                  const checked = adminImportSelected.includes(id);
+                  return (
+                    <article
+                      key={id}
+                      className={`extractor-admin-import-row ${checked ? 'is-selected' : ''}`}
+                      onClick={() => !row.already_linked && !adminImportBusy && toggleAdminImport(id)}
+                    >
+                      <label className="extractor-admin-import-check" onClick={event => event.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          disabled={row.already_linked || Boolean(adminImportBusy)}
+                          onChange={() => toggleAdminImport(id)}
+                        />
+                      </label>
                       <div>
                         <strong>{row.trade_name || row.company_name}</strong>
                         <span>{row.company_name}</span>
@@ -1632,22 +1814,15 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview, adm
                           {row.state ? ` · ${row.state}` : ''}
                           {row.certificate?.configured
                             ? ` · A1 até ${formatDate(row.certificate.valid_until)}`
-                            : ' · sem A1'}
+                            : ''}
                         </small>
                       </div>
-                      <button
-                        type="button"
-                        disabled={row.already_linked || adminImportBusy === String(row.office_company_id)}
-                        onClick={() => void importOfficeClient(row)}
-                      >
-                        {row.already_linked
-                          ? 'Já vinculada'
-                          : adminImportBusy === String(row.office_company_id)
-                            ? 'Importando...'
-                            : 'Importar'}
-                      </button>
+                      <span className="extractor-admin-import-status">
+                        {row.already_linked ? 'Já vinculada' : checked ? 'Selecionada' : 'Disponível'}
+                      </span>
                     </article>
-                  ))}
+                  );
+                })}
                 {!adminOfficeCompanies.length && (
                   <Empty>Nenhuma empresa com certificado A1 válido está disponível para importação.</Empty>
                 )}
@@ -1655,8 +1830,15 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview, adm
             )}
 
             <div className="extractor-dialog-actions">
-              <button className="extractor-secondary" onClick={() => setAdminImportOpen(false)}>
+              <button className="extractor-secondary" onClick={() => setAdminImportOpen(false)} disabled={Boolean(adminImportBusy)}>
                 Fechar
+              </button>
+              <button
+                className="extractor-primary"
+                disabled={!adminImportSelected.length || Boolean(adminImportBusy)}
+                onClick={() => void importSelectedOfficeClients()}
+              >
+                {adminImportBusy ? 'Importando e iniciando busca...' : `Importar selecionadas (${adminImportSelected.length})`}
               </button>
             </div>
           </DialogContent>

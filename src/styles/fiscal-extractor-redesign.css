@@ -1213,3 +1213,103 @@
   .extractor-admin-import-row{align-items:flex-start;flex-direction:column}
   .extractor-admin-import-row>button{width:100%}
 }
+
+
+/* Multi-select admin import and live first-sync feedback. */
+.extractor-admin-import-select-all{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  min-height:36px;
+  padding:0 10px;
+  border-radius:6px;
+  background:#0b121d;
+  color:#93a3b4;
+  font-size:9px;
+  cursor:pointer;
+}
+.extractor-admin-import-select-all input,
+.extractor-admin-import-check input{
+  width:15px;
+  height:15px;
+  margin:0;
+  accent-color:#dbe5ee;
+}
+.extractor-admin-import-row{
+  cursor:pointer;
+  transition:background .15s ease,box-shadow .15s ease;
+}
+.extractor-admin-import-row.is-selected{
+  background:#142131;
+  box-shadow:inset 2px 0 0 #b9c8d8;
+}
+.extractor-admin-import-check{
+  display:grid;
+  place-items:center;
+  flex:0 0 auto;
+}
+.extractor-admin-import-row>div{
+  flex:1 1 auto;
+}
+.extractor-admin-import-status{
+  flex:0 0 auto;
+  margin:0!important;
+  padding:5px 7px;
+  border-radius:999px;
+  background:#172131;
+  color:#8293a5!important;
+  font-size:8px!important;
+  font-weight:600;
+}
+.extractor-admin-import-row.is-selected .extractor-admin-import-status{
+  background:#e5ebf0;
+  color:#101827!important;
+}
+.extractor-row-actions{
+  flex-wrap:wrap;
+}
+.extractor-sync-running{
+  display:flex!important;
+  align-items:center;
+  gap:6px;
+  max-width:145px;
+  margin-right:2px;
+  padding:5px 7px;
+  border-radius:5px;
+  background:#111f2d;
+  color:#9fb5c9!important;
+}
+.extractor-sync-running>span{
+  display:block!important;
+  min-width:0;
+  margin:0!important;
+}
+.extractor-sync-running b{
+  display:block;
+  color:#dce7ef;
+  font-size:8px;
+  font-weight:650;
+  line-height:1.2;
+}
+.extractor-sync-running small{
+  display:block;
+  max-width:112px;
+  margin-top:1px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:#72879b;
+  font-size:7px;
+  line-height:1.25;
+}
+.extractor-sync-spinner{
+  width:14px;
+  height:14px;
+  flex:0 0 14px;
+  animation:extractor-spin .8s linear infinite;
+}
+@media(max-width:720px){
+  .extractor-sync-running{max-width:none}
+  .extractor-admin-import-row{align-items:center!important;flex-direction:row!important}
+  .extractor-admin-import-status{margin-left:auto!important}
+}
