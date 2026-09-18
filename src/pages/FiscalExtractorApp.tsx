@@ -1846,6 +1846,7 @@ function HistorySection({ companies, preview, setNotice }: any) {
   const [healthCompanyId, setHealthCompanyId] = useState('');
   const [health, setHealth] = useState<any>(null);
   const [busy, setBusy] = useState(false);
+  const [healthSearch, setHealthSearch] = useState('');
   const company =
     companies.find((item: Company) => item.id === healthCompanyId) || companies[0] || null;
 
@@ -1860,7 +1861,7 @@ function HistorySection({ companies, preview, setNotice }: any) {
     }
   }, [companies, healthCompanyId]);
 
-  const loadHealth = useCallback(async (manual = false) => {
+  const loadHealth = useCallback(async () => {
     if (!company) return;
     if (preview) {
       setHealth({
@@ -1882,7 +1883,6 @@ function HistorySection({ companies, preview, setNotice }: any) {
       if (error) throw error;
       if (data?.error) throw new Error(String(data.error));
       setHealth(data);
-      if (manual) setNotice({ tone: 'success', text: `${company.tradeName}: conferência fiscal atualizada.` });
     } catch (error) {
       setNotice({
         tone: 'error',
@@ -1895,7 +1895,7 @@ function HistorySection({ companies, preview, setNotice }: any) {
 
   useEffect(() => {
     setHealth(null);
-    void loadHealth(false);
+    void loadHealth();
   }, [loadHealth]);
 
   if (!company) {
@@ -1930,39 +1930,34 @@ function HistorySection({ companies, preview, setNotice }: any) {
       <PageHeading
         title="Saúde fiscal"
         icon="history"
-        description="Conferência individual das empresas, documentos e XML capturados."
-        actions={
-          <button className="extractor-secondary" onClick={() => void loadHealth(true)} disabled={busy}>
-            <RefreshCw className={busy ? 'animate-spin' : ''} />
-            {busy ? 'Conferindo...' : 'Conferir agora'}
-          </button>
-        }
+        description="Conferência automática de uma empresa por vez, sem alterar a empresa ativa do restante do Extrator."
       />
 
-      <div className="extractor-health-company-picker" aria-label="Empresas acompanhadas">
-        {companies.map((item: Company) => {
-          const localError =
-            Boolean(item.purchaseLastError || item.salesLastError) ||
-            (item.certificateDays != null && item.certificateDays < 0);
-          const localAttention =
-            !localError &&
-            (item.pendingXml > 0 ||
-              item.salesXmlPending > 0 ||
-              (item.certificateDays != null && item.certificateDays <= 30) ||
-              extractorHealthTone(item.purchaseStatus) === 'attention' ||
-              extractorHealthTone(item.salesStatus) === 'attention');
-          const tone = localError ? 'error' : localAttention ? 'attention' : 'ok';
-          return (
-            <button
-              key={item.id}
-              className={item.id === company.id ? 'active' : ''}
-              onClick={() => setHealthCompanyId(item.id)}
-            >
-              <span><strong>{item.tradeName}</strong><small>{formatCnpj(item.cnpj)}</small></span>
-              <i className={tone} />
-            </button>
-          );
-        })}
+      <div className="extractor-health-selector">
+        <label>
+          <AnimatedExtractorIcon name="search" />
+          <input
+            value={healthSearch}
+            onChange={event => setHealthSearch(event.target.value)}
+            placeholder="Buscar empresa ou CNPJ"
+          />
+        </label>
+        <select value={company.id} onChange={event => setHealthCompanyId(event.target.value)}>
+          {companies
+            .filter((item: Company) => {
+              const q = healthSearch.trim().toLowerCase();
+              if (!q || item.id === company.id) return true;
+              return `${item.tradeName} ${item.name} ${item.cnpj}`.toLowerCase().includes(q);
+            })
+            .map((item: Company) => (
+              <option key={item.id} value={item.id}>
+                {item.tradeName} · {formatCnpj(item.cnpj)}
+              </option>
+            ))}
+        </select>
+        <span className={`extractor-health-auto-state ${busy ? 'busy' : ''}`}>
+          {busy ? 'Conferindo automaticamente...' : 'Conferência automática ao abrir ou trocar a empresa'}
+        </span>
       </div>
 
       <section className="extractor-health-hero">
