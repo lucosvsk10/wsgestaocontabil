@@ -1504,6 +1504,8 @@ function Documents({
   preview,
   setNotice,
   onPreview,
+  notificationFocus,
+  onClearNotificationFocus,
 }: any) {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
@@ -1585,6 +1587,21 @@ function Documents({
   useEffect(() => { void loadMonthlyStats(); }, [loadMonthlyStats]);
   useEffect(() => setPage(1), [start, end, filter, typeFilter, query, company?.id]);
 
+  useEffect(() => {
+    if (!notificationFocus || notificationFocus.companyId !== company?.id) return;
+    const from = notificationFocus.issueFrom ? String(notificationFocus.issueFrom).slice(0, 10) : '';
+    const to = notificationFocus.issueTo ? String(notificationFocus.issueTo).slice(0, 10) : '';
+    if (from && to) {
+      setCustomOpen(true);
+      setCustomStart(from);
+      setCustomEnd(to);
+    }
+    setFilter('todos');
+    setTypeFilter('todos');
+    setQuery('');
+    setPage(1);
+  }, [notificationFocus?.notificationId, company?.id]);
+
   const fiscal = docs.filter(d => d.documentKind !== 'evento');
   const sales = fiscal.filter(d => d.direction === 'saida');
   const purchases = fiscal.filter(d => d.direction === 'entrada');
@@ -1598,6 +1615,12 @@ function Documents({
   const nfse = fiscal.filter(d => type(d) === 'NFS-e').length;
 
   const filtered = docs.filter(d => {
+    if (
+      notificationFocus?.companyId === company?.id &&
+      Array.isArray(notificationFocus?.keys) &&
+      notificationFocus.keys.length > 0 &&
+      !notificationFocus.keys.includes(String(d.accessKey || ''))
+    ) return false;
     if (filter === 'saida' && (d.direction !== 'saida' || d.documentKind === 'evento')) return false;
     if (filter === 'entrada' && (d.direction !== 'entrada' || d.documentKind === 'evento')) return false;
     if (filter === 'evento' && !(d.documentKind === 'evento' || d.direction === 'relacionada')) return false;
@@ -1619,6 +1642,10 @@ function Documents({
 
   const open = async (document: Doc) => {
     if (preview) return setNotice({ tone: 'warning', text: 'A visualização completa fica disponível no ambiente autenticado.' });
+    if (document.fullXml && document.xml) {
+      onPreview(document);
+      return;
+    }
     if (busy) return;
     setBusy(`doc:${document.accessKey || document.nsu}`);
     try {
@@ -1755,6 +1782,16 @@ function Documents({
       </section>
 
       <section className="extractor-admin-table">
+        {notificationFocus?.companyId === company.id && (
+          <div className="extractor-document-focus">
+            <div>
+              <small>Importação recente</small>
+              <strong>{notificationFocus.label}</strong>
+              <span>Mostrando somente os documentos desta importação.</span>
+            </div>
+            <button onClick={onClearNotificationFocus}>Ver todos os documentos</button>
+          </div>
+        )}
         <div className="extractor-filter-row">
           <div>
             <Pill active={filter === 'saida'} onClick={() => setFilter('saida')}>↗ Vendas <b>{sales.length}</b></Pill>
@@ -1799,11 +1836,14 @@ function Documents({
                   const counterpartyCnpj = document.direction === 'saida' ? document.recipientCnpj : document.issuerCnpj;
                   const manifest = ['xml_requires_manifestation', 'xml_retry:manifestation_sent'].includes(String(document.parseError || ''));
                   return (
-                    <tr key={document.accessKey || `${document.nsu}-${index}`} className="ws-zebra-row" onDoubleClick={() => void open(document)}>
-                      <td><strong>{formatDate(document.issueDate)}</strong><span>{issueHour(document.issueDate)}</span></td>
-                      <td>
-                        <strong>{document.number || '—'} <span>/ {document.series || '—'}</span></strong>
-                        <div>
+                    <tr key={document.accessKey || `${document.nsu}-${index}`} className="ws-zebra-row extractor-doc-row" onDoubleClick={() => void open(document)}>
+                      <td className="extractor-doc-emission">
+                        <strong>{formatDate(document.issueDate)}</strong>
+                        <span>{issueHour(document.issueDate)}</span>
+                      </td>
+                      <td className="extractor-doc-note">
+                        <div className="extractor-doc-note-top">
+                          <strong>{document.number || '—'} <span>/ {document.series || '—'}</span></strong>
                           <TypeTag value={documentType} />
                           <StatusTag value={situation} />
                           {manifest && (
@@ -1815,12 +1855,20 @@ function Documents({
                             ><Info /></button>
                           )}
                         </div>
-                        <span className="key">{document.accessKey || document.nsu || 'Sem chave informada'}</span>
+                        <span className="key extractor-doc-key" title={document.accessKey || document.nsu || ''}>
+                          {document.accessKey || document.nsu || 'Sem chave informada'}
+                        </span>
                       </td>
-                      <td><strong>{counterpartyName}</strong><span>{counterpartyCnpj ? formatCnpj(counterpartyCnpj) : '—'}</span></td>
-                      <td><strong>{document.direction === 'saida' ? 'Venda de mercadoria' : document.direction === 'entrada' ? 'Entrada fiscal' : 'Evento fiscal'}</strong><span>{documentType} · {situation}</span></td>
-                      <td><strong>{currency.format(Number(document.value || 0))}</strong></td>
-                      <td>
+                      <td className="extractor-doc-company">
+                        <strong title={counterpartyName}>{counterpartyName}</strong>
+                        <span>{counterpartyCnpj ? formatCnpj(counterpartyCnpj) : '—'}</span>
+                      </td>
+                      <td className="extractor-doc-operation">
+                        <strong>{document.direction === 'saida' ? 'Venda de mercadoria' : document.direction === 'entrada' ? 'Entrada fiscal' : 'Evento fiscal'}</strong>
+                        <span>{documentType} · {situation}</span>
+                      </td>
+                      <td className="extractor-doc-value"><strong>{currency.format(Number(document.value || 0))}</strong></td>
+                      <td className="extractor-doc-actions">
                         <button className="extractor-view" onClick={() => void open(document)} disabled={busy === `doc:${document.accessKey || document.nsu}`}>
                           <AnimatedExtractorIcon name="eye" /> {busy === `doc:${document.accessKey || document.nsu}` ? 'Abrindo...' : 'Visualizar'}
                         </button>
