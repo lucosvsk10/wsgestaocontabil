@@ -26,7 +26,7 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ icon: Icon, label, active, to
         <Icon
           size={64}
           strokeWidth={1.25}
-          className="pointer-events-none absolute -bottom-6 right-3 text-foreground opacity-[.11] transition duration-300 group-hover:-translate-x-1 group-hover:-translate-y-1 group-hover:opacity-[.16]"
+          className="pointer-events-none absolute -bottom-5 right-8 text-foreground opacity-[.13] transition duration-300 group-hover:-translate-x-1 group-hover:-translate-y-1 group-hover:opacity-[.18]"
         />
       </>
     ) : (
