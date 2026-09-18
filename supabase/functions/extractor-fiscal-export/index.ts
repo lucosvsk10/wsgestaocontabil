@@ -34,8 +34,36 @@ const csvCell = (value: unknown) => {
 
 const digits = (value: unknown) => String(value ?? '').replace(/\D/g, '');
 
+const unwrapStoredFiscalXml = (raw: unknown) => {
+  const value = typeof raw === 'string' ? raw.trim() : '';
+  if (!value) return '';
+  if (/^<\?xml\b/i.test(value) || /^<(?:\w+:)?(?:nfeProc|NFe|procNFe|CompNfse|NFSe|DPS)\b/i.test(value)) {
+    return value;
+  }
+  const objectMatch = value.match(/var\s+stringJson\s*=\s*(\{[\s\S]*?\})\s*;/i);
+  if (objectMatch?.[1]) {
+    try {
+      const parsed = JSON.parse(objectMatch[1]);
+      if (typeof parsed?.xml === 'string' && parsed.xml.trim().startsWith('<')) return parsed.xml.trim();
+    } catch {}
+  }
+  const xmlStringMatch = value.match(/["']xml["']\s*:\s*("(?:\\.|[^"\\])*")/i);
+  if (xmlStringMatch?.[1]) {
+    try {
+      const parsed = JSON.parse(xmlStringMatch[1]);
+      if (typeof parsed === 'string' && parsed.trim().startsWith('<')) return parsed.trim();
+    } catch {}
+  }
+  return '';
+};
+
+const normalizeDocumentXml = (document: any) => {
+  const xml = unwrapStoredFiscalXml(document?.xml);
+  return xml ? { ...document, xml, full_xml: true } : document;
+};
+
 const validFullXml = (document: any) => {
-  const xml = String(document.xml || '').trim();
+  const xml = unwrapStoredFiscalXml(document?.xml);
   if (!document.full_xml || xml.length < 80) return false;
   const kind = String(document.document_kind || '').toLowerCase();
   const model = String(document.model || '');
@@ -119,7 +147,8 @@ async function fetchPaged(makeQuery: () => any, cap = 10000) {
 
 function dedupe(rows: any[]) {
   const map = new Map<string, any>();
-  for (const row of rows) {
+  for (const raw of rows) {
+    const row = normalizeDocumentXml(raw);
     const key = `${row.company_id}:${row.access_key || row.nsu || row.id}`;
     const previous = map.get(key);
     if (!previous || (validFullXml(row) && !validFullXml(previous))) map.set(key, row);
