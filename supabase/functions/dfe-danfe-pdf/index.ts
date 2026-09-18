@@ -252,221 +252,358 @@ async function buildNfce(doc: any, xml: string) {
   return pdf.save();
 }
 async function buildNfse(doc: any, xml: string) {
-  const pdf = await PDFDocument.create(),
-    reg = await pdf.embedFont(StandardFonts.Helvetica),
-    bold = await pdf.embedFont(StandardFonts.HelveticaBold),
-    W = 595.28,
-    H = 841.89,
-    M = 14,
-    C = W - M * 2,
-    page = pdf.addPage([W, H]);
-  let y = H - M;
-  const black = rgb(0.05, 0.05, 0.05),
-    gray = rgb(0.94, 0.94, 0.94);
-  const text = (s: string, x: number, yy: number, size = 6.5, b = false, max = 999) => {
-    let v = clean(s) || '-',
-      f = b ? bold : reg;
-    while (f.widthOfTextAtSize(v, size) > max && v.length > 2) v = v.slice(0, -2) + '…';
-    page.drawText(v, { x, y: yy, size, font: f, color: black });
+  const pdf = await PDFDocument.create();
+  const reg = await pdf.embedFont(StandardFonts.Helvetica);
+  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const W = 595;
+  const H = 842;
+  const page = pdf.addPage([W, H]);
+  const black = rgb(0.03, 0.03, 0.03);
+  const lineGray = rgb(0.45, 0.45, 0.45);
+  const fillGray = rgb(0.94, 0.94, 0.94);
+  const M = 5.5;
+  const R = W - M;
+  const C = R - M;
+  const y = (top: number) => H - top;
+
+  const raw = (value: unknown) => String(value ?? '').replace(/\r/g, '').trim();
+  const val = (value: unknown) => clean(value) || '-';
+  const fmtPhone = (value: unknown) => {
+    const d = dg(value);
+    if (d.length === 11) return d.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3');
+    if (d.length === 10) return d.replace(/^(\d{2})(\d{4})(\d{4})$/, '($1) $2-$3');
+    return d || '-';
   };
-  const rect = (x: number, yy: number, w: number, h: number, fill?: any) =>
-    page.drawRectangle({
-      x,
-      y: yy,
-      width: w,
-      height: h,
-      borderWidth: 0.7,
-      borderColor: black,
-      color: fill,
+  const fmtIbge = (value: unknown) => {
+    const d = dg(value);
+    return d.length === 7 ? d.replace(/^(\d{2})(\d{5})$/, '$1.$2') : d || '-';
+  };
+  const ufFromIbge = (value: unknown) => {
+    const code = dg(value).slice(0, 2);
+    return ({
+      '11':'RO','12':'AC','13':'AM','14':'RR','15':'PA','16':'AP','17':'TO',
+      '21':'MA','22':'PI','23':'CE','24':'RN','25':'PB','26':'PE','27':'AL',
+      '28':'SE','29':'BA','31':'MG','32':'ES','33':'RJ','35':'SP','41':'PR',
+      '42':'SC','43':'RS','50':'MS','51':'MT','52':'GO','53':'DF'
+    } as Record<string,string>)[code] || '-';
+  };
+  const fmtTrib = (value: unknown) => {
+    const d = dg(value);
+    return d.length === 6 ? d.replace(/^(\d{2})(\d{2})(\d{2})$/, '$1.$2.$3') : d || '-';
+  };
+  const fmtNbs = (value: unknown) => {
+    const d = dg(value);
+    return d.length === 9 ? `${d.slice(0,1)}.${d.slice(1,5)}.${d.slice(5,7)}.${d.slice(7)}` : d || '-';
+  };
+  const moneyOrDash = (value: unknown, zero = false) => {
+    const s = String(value ?? '').trim();
+    if (!s) return zero ? 'R$ 0,00' : '-';
+    const n = Number(s.replace(',', '.'));
+    if (!Number.isFinite(n)) return '-';
+    if (!zero && n === 0) return '-';
+    return money(n);
+  };
+  const drawText = (
+    textValue: unknown,
+    x: number,
+    top: number,
+    size = 6.3,
+    isBold = false,
+    maxWidth = 999,
+    align: 'left'|'center'|'right' = 'left'
+  ) => {
+    const font = isBold ? bold : reg;
+    let textValueClean = val(textValue);
+    while (font.widthOfTextAtSize(textValueClean, size) > maxWidth && textValueClean.length > 2) {
+      textValueClean = textValueClean.slice(0, -4) + '...';
+    }
+    const width = font.widthOfTextAtSize(textValueClean, size);
+    const dx = align === 'center' ? x + Math.max(0, (maxWidth - width) / 2)
+      : align === 'right' ? x + Math.max(0, maxWidth - width)
+      : x;
+    page.drawText(textValueClean, { x: dx, y: y(top) - size, size, font, color: black });
+  };
+  const wrapLines = (textValue: unknown, width: number, size: number, isBold = false) => {
+    const font = isBold ? bold : reg;
+    const source = raw(textValue).replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n');
+    const result: string[] = [];
+    for (const paragraph of source.split(/\n/)) {
+      if (!paragraph.trim()) {
+        result.push('');
+        continue;
+      }
+      let current = '';
+      for (const word of paragraph.trim().split(/\s+/)) {
+        const next = current ? `${current} ${word}` : word;
+        if (font.widthOfTextAtSize(next, size) <= width || !current) current = next;
+        else {
+          result.push(current);
+          current = word;
+        }
+      }
+      if (current) result.push(current);
+    }
+    return result;
+  };
+  const drawWrapped = (
+    textValue: unknown,
+    x: number,
+    top: number,
+    width: number,
+    size = 6.1,
+    lineHeight = 7.1,
+    maxLines = 99,
+    isBold = false
+  ) => {
+    const lines = wrapLines(textValue, width, size, isBold).slice(0, maxLines);
+    lines.forEach((line, index) => {
+      if (line) page.drawText(line, {
+        x,
+        y: y(top + index * lineHeight) - size,
+        size,
+        font: isBold ? bold : reg,
+        color: black,
+      });
     });
-  const field = (x: number, top: number, w: number, h: number, l: string, v: string, b = false) => {
-    rect(x, top - h, w, h);
-    text(l, x + 3, top - 7, 4.8, true, w - 6);
-    text(v, x + 3, top - h + 6, 6.1, b, w - 6);
+    return lines.length * lineHeight;
   };
-  const bar = (s: string) => {
-    rect(M, y - 15, C, 15, gray);
-    text(s, M + 4, y - 10, 6.1, true, C - 8);
-    y -= 18;
+  const hLine = (top: number, x1 = M, x2 = R, thickness = 0.55, color = black) =>
+    page.drawLine({ start:{x:x1,y:y(top)}, end:{x:x2,y:y(top)}, thickness, color });
+  const vLine = (xv: number, top1: number, top2: number, thickness = 0.4, color = lineGray) =>
+    page.drawLine({ start:{x:xv,y:y(top1)}, end:{x:xv,y:y(top2)}, thickness, color });
+  const band = (top: number, label: string, height = 11) => {
+    page.drawRectangle({ x:M, y:y(top + height), width:C, height, color:fillGray });
+    hLine(top, M, R, 0.55);
+    drawText(label, M + 4, top + 2.2, 6.3, true, C - 8);
   };
-  const inf = tag(xml, 'infNFSe') || xml,
-    emit = tag(inf, 'emit'),
-    dps = tag(inf, 'DPS'),
-    toma = tag(dps, 'toma'),
-    serv = tag(dps, 'serv'),
-    vals = tag(inf, 'valores'),
-    dpsVals = tag(dps, 'valores'),
-    trib = tag(dpsVals, 'trib'),
-    endE = tag(emit, 'enderNac'),
-    endT = tag(toma, 'end'),
-    endTN = tag(endT, 'endNac'),
-    key = doc.accessKey || String(tag(inf, 'Id') || '').replace(/^NFS/, '');
-  rect(M, y - 42, C, 42);
-  text('NFSe', M + 80, y - 20, 18, true);
-  text('Nota Fiscal de Serviço eletrônica', M + 56, y - 31, 5.7);
-  text('DANFSe v1.0', M + 350, y - 18, 13, true);
-  text('Documento Auxiliar da NFS-e', M + 338, y - 31, 6.4);
-  y -= 46;
-  rect(M, y - 54, C, 54);
-  text('Chave de Acesso da NFS-e', M + 4, y - 8, 5, true);
-  text(fmtKey(key), M + 4, y - 20, 7, true, C - 115);
-  text(
-    'A autenticidade desta NFS-e pode ser verificada pela leitura deste código QR ou pela consulta da chave no Portal Nacional da NFS-e',
-    M + 4,
-    y - 33,
-    4.8,
-    false,
-    C - 115
-  );
-  const qi = await qr(pdf, key);
-  page.drawImage(qi, { x: W - 88, y: y - 49, width: 44, height: 44 });
-  y -= 58;
-  const n = tag(inf, 'nNFSe') || doc.number || '-',
-    comp = tag(dps, 'dCompet') || doc.issueDate,
-    dh = tag(inf, 'dhProc') || tag(dps, 'dhEmi') || doc.issueDate;
-  field(M, y, C * 0.17, 31, 'Número da NFS-e', n, true);
-  field(M + C * 0.17, y, C * 0.17, 31, 'Competência da NFS-e', dateOnly(comp));
-  field(M + C * 0.34, y, C * 0.34, 31, 'Data e Hora da emissão da NFS-e', dt(dh));
-  field(M + C * 0.68, y, C * 0.16, 31, 'Número da DPS', tag(dps, 'nDPS') || n);
-  field(M + C * 0.84, y, C * 0.16, 31, 'Série da DPS', tag(dps, 'serie') || doc.series || '-');
-  y -= 35;
-  bar('EMITENTE DA NFS-E / PRESTADOR DO SERVIÇO');
-  field(M, y, C * 0.25, 29, 'CNPJ / CPF / NIF', cnpj(tag(emit, 'CNPJ') || doc.issuerCnpj), true);
-  field(M + C * 0.25, y, C * 0.25, 29, 'Inscrição Municipal', tag(emit, 'IM') || '-');
-  field(M + C * 0.5, y, C * 0.25, 29, 'Telefone', '-');
-  field(M + C * 0.75, y, C * 0.25, 29, 'E-mail', tag(emit, 'email') || '-');
-  y -= 33;
-  field(M, y, C, 29, 'Nome / Nome Empresarial', tag(emit, 'xNome') || doc.issuerName || '-', true);
-  y -= 33;
-  field(
-    M,
-    y,
-    C * 0.5,
-    29,
-    'Endereço',
-    `${tag(endE, 'xLgr') || '-'}, ${tag(endE, 'nro') || '-'}, ${tag(endE, 'xBairro') || '-'}`
-  );
-  field(
-    M + C * 0.5,
-    y,
-    C * 0.3,
-    29,
-    'Município',
-    `${tag(inf, 'xLocEmi') || '-'} - ${tag(endE, 'UF') || '-'}`
-  );
-  field(M + C * 0.8, y, C * 0.2, 29, 'CEP', cep(tag(endE, 'CEP')));
-  y -= 33;
-  bar('TOMADOR DO SERVIÇO');
-  field(
-    M,
-    y,
-    C * 0.32,
-    29,
-    'CNPJ / CPF / NIF',
-    cpfCnpj(tag(toma, 'CNPJ') || tag(toma, 'CPF') || doc.recipientCnpj),
-    true
-  );
-  field(M + C * 0.32, y, C * 0.25, 29, 'Inscrição Municipal', '-');
-  field(M + C * 0.57, y, C * 0.18, 29, 'Telefone', '-');
-  field(M + C * 0.75, y, C * 0.25, 29, 'E-mail', tag(toma, 'email') || '-');
-  y -= 33;
-  field(M, y, C, 29, 'Nome / Nome Empresarial', tag(toma, 'xNome') || '-', true);
-  y -= 33;
-  field(
-    M,
-    y,
-    C * 0.7,
-    29,
-    'Endereço',
-    `${tag(endT, 'xLgr') || '-'}, ${tag(endT, 'nro') || '-'}, ${tag(endT, 'xBairro') || '-'}`
-  );
-  field(M + C * 0.7, y, C * 0.3, 29, 'CEP', cep(tag(endTN, 'CEP')));
-  y -= 33;
-  bar('SERVIÇO PRESTADO');
+  const labelValue = (
+    label: string,
+    value: unknown,
+    x: number,
+    top: number,
+    width: number,
+    options: {labelSize?:number;valueSize?:number;boldValue?:boolean;wrap?:boolean;maxLines?:number} = {}
+  ) => {
+    drawText(label, x, top, options.labelSize ?? 5.7, true, width);
+    if (options.wrap) drawWrapped(value, x, top + 9, width, options.valueSize ?? 6.2, 7.2, options.maxLines ?? 2, options.boldValue ?? false);
+    else drawText(value, x, top + 9, options.valueSize ?? 6.3, options.boldValue ?? false, width);
+  };
+
+  const inf = tag(xml, 'infNFSe') || xml;
+  const emit = tag(inf, 'emit');
+  const endE = tag(emit, 'enderNac');
+  const dps = tag(inf, 'DPS');
+  const infDps = tag(dps, 'infDPS') || dps;
+  const prest = tag(infDps, 'prest');
+  const regTrib = tag(prest, 'regTrib');
+  const toma = tag(infDps, 'toma');
+  const endT = tag(toma, 'end');
+  const endTN = tag(endT, 'endNac');
+  const serv = tag(infDps, 'serv');
+  const locPrest = tag(serv, 'locPrest');
   const cServ = tag(serv, 'cServ');
-  field(M, y, C * 0.25, 31, 'Código de Tributação Nacional', tag(cServ, 'cTribNac') || '-');
-  field(
-    M + C * 0.25,
-    y,
-    C * 0.25,
-    31,
-    'Código de Tributação Municipal',
-    tag(cServ, 'cTribMun') || '-'
+  const infoCompl = tag(serv, 'infoCompl');
+  const dpsVals = tag(infDps, 'valores');
+  const vServPrest = tag(dpsVals, 'vServPrest');
+  const trib = tag(dpsVals, 'trib');
+  const tribMun = tag(trib, 'tribMun');
+  const tribFed = tag(trib, 'tribFed');
+  const pisCofins = tag(tribFed, 'piscofins');
+  const totTrib = tag(trib, 'totTrib');
+  const vals = tag(inf, 'valores');
+  const key = dg(doc.accessKey || String(tag(inf, 'Id') || '').replace(/^NFS/i, ''));
+  const issue = tag(infDps, 'dhEmi') || tag(inf, 'dhProc') || doc.issueDate;
+  const comp = tag(infDps, 'dCompet') || issue;
+  const issueCityCode = tag(endE, 'cMun') || tag(infDps, 'cLocEmi');
+  const tomaCityCode = tag(endTN, 'cMun');
+  const prestCityCode = tag(locPrest, 'cLocPrestacao');
+  const incidenceCode = tag(inf, 'cLocIncid');
+  const issueUf = tag(endE, 'UF') || ufFromIbge(issueCityCode);
+  const tomaUf = tag(endT, 'UF') || ufFromIbge(tomaCityCode);
+  const prestUf = ufFromIbge(prestCityCode);
+  const incidenceUf = ufFromIbge(incidenceCode);
+  const serviceValue = tag(vServPrest, 'vServ') || doc.value || tag(vals, 'vLiq');
+  const liquidValue = tag(vals, 'vLiq') || serviceValue;
+  const qrv = `https://www.nfse.gov.br/ConsultaPublica?tpc=1&chave=${key}`;
+  const municipalityName = async (code: string, fallback = '') => {
+    if (clean(fallback)) return clean(fallback);
+    const numeric = dg(code);
+    if (numeric.length !== 7) return '-';
+    try {
+      const response = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/municipios/${numeric}`, {
+        headers: { accept: 'application/json' },
+        signal: AbortSignal.timeout(2500),
+      });
+      if (!response.ok) return '-';
+      const payload = await response.json().catch(() => ({})) as any;
+      return clean(payload?.nome) || '-';
+    } catch {
+      return '-';
+    }
+  };
+  const tomaCityName = await municipalityName(tomaCityCode, tag(toma,'xMun'));
+
+  page.drawRectangle({ x:M, y:y(837), width:C, height:832, borderWidth:0.7, borderColor:black });
+
+  const logo = await pdf.embedPng(Uint8Array.from(atob('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'), ch => ch.charCodeAt(0)));
+  page.drawImage(logo, { x:11, y:y(33.5), width:119, height:23.6 });
+  drawText('DANFSe v2.0', 225, 11.5, 10.5, true, 145, 'center');
+  drawText('Documento Auxiliar da NFS-e', 215, 22, 9.3, true, 165, 'center');
+  drawText(`Município: ${tag(inf,'xLocEmi') || '-'} - ${issueUf}`, 445, 10.5, 7.1, false, 140);
+  drawText(`Ambiente Gerador: ${tag(inf,'ambGer') || '-'}`, 445, 20.5, 5.5, false, 140);
+  drawText(`Tipo de Ambiente: ${tag(infDps,'tpAmb') || '-'}`, 445, 27.2, 5.5, false, 140);
+  hLine(39.5);
+
+  labelValue('CHAVE DE ACESSO DA NFS-e', key, 11, 44, 335, {valueSize:6.3});
+  labelValue('NÚMERO DA NFS-e', tag(inf,'nNFSe') || doc.number || '-', 11, 64, 125);
+  labelValue('COMPETÊNCIA DA NFS-e', dateOnly(comp), 156, 64, 125);
+  labelValue('DATA E HORA DA EMISSÃO DA NFS-e', `${dateOnly(issue)} ${timeOnly(issue)}`, 301, 64, 140);
+  labelValue('NÚMERO DA DPS', tag(infDps,'nDPS') || '-', 11, 84, 125);
+  labelValue('SÉRIE DA DPS', tag(infDps,'serie') || doc.series || '-', 156, 84, 125);
+  labelValue('DATA E HORA DA EMISSÃO DA DPS', `${dateOnly(issue)} ${timeOnly(issue)}`, 301, 84, 140);
+  labelValue('EMITENTE DA NFS-e', 'Prestador', 11, 104, 125);
+  labelValue('SITUAÇÃO DA NFS-e', tag(inf,'cStat') === '100' ? 'NFS-e Gerada' : tag(inf,'cStat') || '-', 156, 104, 125);
+  labelValue('FINALIDADE', tag(infDps,'finNFSe') || '-', 301, 104, 140);
+
+  if (key) {
+    const qi = await qr(pdf, qrv);
+    page.drawImage(qi, { x:493, y:y(88), width:54, height:54 });
+  }
+  drawWrapped(
+    'A autenticidade desta NFS-e pode ser verificada pela leitura deste código QR ou pela consulta da chave de acesso no portal nacional da NFS-e',
+    445, 92, 135, 5.35, 6.1, 5
   );
-  field(M + C * 0.5, y, C * 0.25, 31, 'Local da Prestação', tag(inf, 'xLocPrestacao') || '-');
-  field(M + C * 0.75, y, C * 0.25, 31, 'País da Prestação', '-');
-  y -= 35;
-  field(
-    M,
-    y,
-    C,
-    34,
-    'Descrição do Serviço',
-    tag(cServ, 'xDescServ') || tag(inf, 'xTribNac') || '-',
-    true
+
+  band(126, 'PRESTADOR / FORNECEDOR', 11);
+  vLine(152,126,203); vLine(296,126,203); vLine(441,126,203);
+  labelValue('CNPJ / CPF / NIF', cpfCnpj(tag(emit,'CNPJ') || tag(emit,'CPF') || doc.issuerCnpj), 156, 129, 132, {boldValue:false});
+  labelValue('Indicador Municipal (Inscrição)', tag(emit,'IM') || tag(prest,'IM') || '-', 301, 129, 132);
+  labelValue('Telefone', fmtPhone(tag(emit,'fone') || tag(prest,'fone')), 445, 129, 135);
+  labelValue('Nome / Nome Empresarial', tag(emit,'xNome') || doc.issuerName || '-', 11, 151, 272);
+  labelValue('Município / Sigla UF', `${tag(inf,'xLocEmi') || '-'} / ${issueUf}`, 301, 151, 132);
+  labelValue('Código IBGE / CEP', `${fmtIbge(issueCityCode)} / ${cep(tag(endE,'CEP'))}`, 445, 151, 135);
+  labelValue('Endereço', [tag(endE,'xLgr'),tag(endE,'nro'),tag(endE,'xCpl'),tag(endE,'xBairro')].filter(Boolean).join(', ') || '-', 11, 173, 275);
+  labelValue('E-mail', tag(emit,'email') || tag(prest,'email') || '-', 301, 173, 279);
+  labelValue('Simples Nacional na Data de Competência',
+    tag(regTrib,'opSimpNac') === '3' ? 'Optante - Microempresa ou Empresa de Pequeno Porte'
+      : tag(regTrib,'opSimpNac') === '2' ? 'Optante - Microempreendedor Individual (MEI)'
+      : tag(regTrib,'opSimpNac') === '1' ? 'Não Optante' : '-',
+    11, 192, 136, {valueSize:5.8});
+  labelValue('Regime de Apuração Tributária pelo SN',
+    tag(regTrib,'regApTribSN') === '1'
+      ? 'Regime de apuração dos tributos federais e municipal pelo Simples Nacional'
+      : tag(regTrib,'regApTribSN') || '-',
+    156, 192, 285, {valueSize:5.8});
+  hLine(203);
+
+  band(203, 'TOMADOR / ADQUIRENTE', 11);
+  vLine(152,203,267); vLine(296,203,267); vLine(441,203,267);
+  labelValue('CNPJ / CPF / NIF', cpfCnpj(tag(toma,'CNPJ') || tag(toma,'CPF') || doc.recipientCnpj), 156, 206, 132);
+  labelValue('Indicador Municipal (Inscrição)', tag(toma,'IM') || '-', 301, 206, 132);
+  labelValue('Telefone', fmtPhone(tag(toma,'fone')), 445, 206, 135);
+  labelValue('Nome / Nome Empresarial', tag(toma,'xNome') || doc.recipientName || '-', 11, 228, 275);
+  labelValue('Município / Sigla UF', `${tomaCityName} / ${tomaUf}`, 301, 228, 132);
+  labelValue('Código IBGE / CEP', `${fmtIbge(tomaCityCode)} / ${cep(tag(endTN,'CEP'))}`, 445, 228, 135);
+  labelValue('Endereço', [tag(endT,'xLgr'),tag(endT,'nro'),tag(endT,'xCpl'),tag(endT,'xBairro')].filter(Boolean).join(', ') || '-', 11, 250, 275);
+  labelValue('E-mail', tag(toma,'email') || '-', 301, 250, 279);
+  hLine(267);
+
+  hLine(268.5); drawText('DESTINATÁRIO DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e', M, 269, 5.8, true, C, 'center');
+  hLine(277.5); drawText('INTERMEDIÁRIO DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e', M, 278, 5.8, true, C, 'center');
+  hLine(286.5);
+
+  band(286.5, 'SERVIÇO PRESTADO', 11);
+  vLine(152,286.5,438); vLine(296,286.5,317); vLine(441,286.5,317);
+  labelValue('Código de Tributação Nacional/Municipal', `${fmtTrib(tag(cServ,'cTribNac'))} / ${fmtTrib(tag(cServ,'cTribMun'))}`, 156, 289.5, 132);
+  labelValue('Código da NBS', fmtNbs(tag(cServ,'cNBS')), 301, 289.5, 132);
+  labelValue('Local da Prestação / Sigla UF / País', `${tag(inf,'xLocPrestacao') || '-'} / ${prestUf} / -`, 445, 289.5, 135);
+  drawText(tag(inf,'xTribNac') || '-', 11, 310, 6.1, false, 275);
+  drawText('Descrição do Serviço', 11, 326, 5.8, true, 180);
+  drawWrapped(tag(cServ,'xDescServ') || '-', 11, 337, 569, 6.0, 7.15, 13);
+  hLine(438);
+
+  band(438, 'TRIBUTAÇÃO MUNICIPAL (ISSQN)', 11);
+  vLine(152,438,478); vLine(296,438,478); vLine(441,438,478);
+  labelValue('Tipo de Tributação do ISSQN', tag(tribMun,'tribISSQN') === '1' ? 'Operação Tributável' : tag(tribMun,'tribISSQN') || '-', 156, 441, 132);
+  labelValue('Município / Sigla UF / País de Incidência do ISSQN', `${tag(inf,'xLocIncid') || '-'} / ${incidenceUf} / -`, 301, 441, 279);
+  labelValue('BC ISSQN', moneyOrDash(tag(tribMun,'vBC')), 11, 461, 132);
+  labelValue('Alíquota Aplicada', tag(tribMun,'pAliq') ? `${tag(tribMun,'pAliq')}%` : '-', 156, 461, 132);
+  labelValue('Retenção do ISSQN',
+    tag(tribMun,'tpRetISSQN') === '1' ? 'Não Retido' : tag(tribMun,'tpRetISSQN') === '2' ? 'Retido pelo Tomador' : tag(tribMun,'tpRetISSQN') || '-',
+    301, 461, 132);
+  labelValue('ISSQN Apurado', moneyOrDash(tag(tribMun,'vISSQN')), 445, 461, 135);
+  hLine(478);
+
+  band(478, 'TRIBUTAÇÃO FEDERAL (EXCETO CBS)', 11);
+  vLine(152,478,518); vLine(296,478,518); vLine(441,478,498);
+  labelValue('IRRF', moneyOrDash(tag(tribFed,'vIRRF') || tag(tribFed,'vRetIRRF')), 156, 481, 132);
+  labelValue('Contribuição Previdenciária - Retida', moneyOrDash(tag(tribFed,'vCP')), 301, 481, 132);
+  labelValue('Contribuições Sociais - Retidas', moneyOrDash(tag(tribFed,'vCSLL') || tag(tribFed,'vRetCSLL')), 445, 481, 135);
+  labelValue('PIS - Débito Apuração Própria', moneyOrDash(tag(pisCofins,'vPIS') || tag(pisCofins,'vPis')), 11, 501, 132);
+  labelValue('COFINS - Débito Apuração Própria', moneyOrDash(tag(pisCofins,'vCOFINS') || tag(pisCofins,'vCofins')), 156, 501, 132);
+  labelValue('Descrição Contrib. Sociais - Retidas', tag(tribFed,'xDescRet') || '-', 301, 501, 279);
+  hLine(518);
+
+  band(518, 'TRIBUTAÇÃO IBS/CBS', 11);
+  vLine(152,518,602); vLine(296,518,602); vLine(441,518,602);
+  labelValue('CST / cClassTrib', `${tag(trib,'CST') || '-'} / ${tag(trib,'cClassTrib') || '-'}`, 156, 521, 132);
+  labelValue('Indicador de Operação / Código IBGE Incidência / Município Incidência / Sigla UF',
+    `- / ${fmtIbge(incidenceCode)} / ${tag(inf,'xLocIncid') || '-'} / ${incidenceUf}`, 301, 521, 279, {valueSize:5.7});
+  labelValue('Exclusões e Reduções da Base de Cálculo', 'R$ 0,00', 11, 543, 132);
+  labelValue('Base de Cálculo Após Exclusões e Reduções', moneyOrDash(tag(trib,'vBCIBSCBS')), 156, 543, 132);
+  labelValue('Red. Alíquota IBS / Red. Alíquota CBS', '- / - / -', 301, 543, 132);
+  labelValue('Alíquota - IBS UF / IBS Mun', '- / -', 445, 543, 135);
+  labelValue('Alíq. Efetiva Municipal - IBS', '-', 11, 566, 132);
+  labelValue('Valor Apurado Municipal - IBS', '-', 156, 566, 132);
+  labelValue('Alíq. Efetiva Estadual - IBS', '-', 301, 566, 132);
+  labelValue('Valor Apurado Estadual - IBS', '-', 445, 566, 135);
+  labelValue('Valor Total Apurado - IBS', '-', 11, 589, 132);
+  labelValue('Alíquota - CBS', '-', 156, 589, 132);
+  labelValue('Alíquota Efetiva - CBS', '-', 301, 589, 132);
+  labelValue('Valor Total Apurado - CBS', '-', 445, 589, 135);
+  hLine(602);
+
+  band(602, 'VALOR TOTAL DA NFS-e', 11);
+  vLine(152,602,642); vLine(296,602,642); vLine(441,602,642);
+  labelValue('VALOR DA OPERAÇÃO / SERVIÇO', money(serviceValue), 156, 605, 132);
+  labelValue('Desconto Incondicionado', moneyOrDash(tag(dpsVals,'vDescIncond')), 301, 605, 132);
+  labelValue('Desconto Condicionado', moneyOrDash(tag(dpsVals,'vDescCond')), 445, 605, 135);
+  labelValue('Total das Retenções (ISSQN / Federais)', moneyOrDash(tag(vals,'vTotRet') || tag(vals,'vTotalRet')), 11, 625, 132);
+  labelValue('VALOR LÍQUIDO DA NFS-e', money(liquidValue), 156, 625, 132);
+  labelValue('Total do IBS/CBS', 'R$ 0,00', 301, 625, 132);
+  page.drawRectangle({x:441,y:y(642),width:R-441,height:20,color:fillGray});
+  labelValue('VALOR LÍQUIDO DA NFS-e + IBS/CBS', 'R$ 0,00', 445, 625, 135);
+  hLine(642);
+
+  band(642, 'INFORMAÇÕES COMPLEMENTARES', 11);
+  const info = tag(infoCompl,'xInfComp');
+  drawWrapped(`Inf. Cont.: ${info || '-'}`, 11, 656, 568, 6.1, 7.2, 3);
+  const approxFederal = tag(totTrib,'vTotTribFed');
+  const approxState = tag(totTrib,'vTotTribEst');
+  const approxMunicipal = tag(totTrib,'vTotTribMun');
+  drawWrapped(
+    `Totais aproximados dos Tributos cfe. Lei n° 12.741/2012: Federais: ${approxFederal ? money(approxFederal) : '-'}; Estaduais: ${approxState ? money(approxState) : '-'}; Municipais: ${approxMunicipal ? money(approxMunicipal) : '-'};`,
+    11, 678, 568, 6.1, 7.2, 2
   );
-  y -= 38;
-  bar('TRIBUTAÇÃO MUNICIPAL');
-  const mun = tag(trib, 'tribMun'),
-    w = C / 4;
-  field(
-    M,
-    y,
-    w,
-    32,
-    'Tributação do ISSQN',
-    tag(mun, 'tribISSQN') === '1' ? 'Operação Tributável' : '-'
-  );
-  field(M + w, y, w, 32, 'Município de Incidência do ISSQN', tag(inf, 'xLocIncid') || '-');
-  field(
-    M + w * 2,
-    y,
-    w,
-    32,
-    'Alíquota Aplicada',
-    tag(vals, 'pAliqAplic')
-      ? `${tag(vals, 'pAliqAplic')}%`
-      : tag(mun, 'pAliq')
-        ? `${tag(mun, 'pAliq')}%`
-        : '-'
-  );
-  field(M + w * 3, y, w, 32, 'ISSQN Apurado', money(tag(vals, 'vISSQN')));
-  y -= 36;
-  bar('TRIBUTAÇÃO FEDERAL');
-  const fed = tag(trib, 'tribFed'),
-    pc = tag(fed, 'piscofins');
-  field(M, y, w, 32, 'IRRF', money(tag(fed, 'vRetIRRF')));
-  field(M + w, y, w, 32, 'CSLL', money(tag(fed, 'vRetCSLL')));
-  field(M + w * 2, y, w, 32, 'PIS', money(tag(pc, 'vPis')));
-  field(M + w * 3, y, w, 32, 'COFINS', money(tag(pc, 'vCofins')));
-  y -= 36;
-  bar('VALOR TOTAL DA NFS-E');
-  field(
-    M,
-    y,
-    w,
-    32,
-    'Valor do Serviço',
-    money(tag(dpsVals, 'vServ') || tag(vals, 'vLiq') || doc.value),
-    true
-  );
-  field(M + w, y, w, 32, 'Total Retenções', money(tag(vals, 'vTotalRet')));
-  field(M + w * 2, y, w, 32, 'ISSQN', money(tag(vals, 'vISSQN')));
-  field(M + w * 3, y, w, 32, 'Valor Líquido da NFS-e', money(tag(vals, 'vLiq') || doc.value), true);
-  y -= 36;
-  bar('INFORMAÇÕES COMPLEMENTARES');
-  field(M, y, C, 30, 'NBS', tag(cServ, 'cNBS') || '-');
+
+  hLine(811);
+  vLine(151,811,833); vLine(296,811,833);
+  drawText('DATA CIENTIFICAÇÃO:', 11, 814, 5.7, true, 132);
+  drawText('IDENTIFICAÇÃO E ASSINATURA', 156, 814, 5.7, true, 132);
+  labelValue('N° NFS-e / CHAVE NFS-e', `${tag(inf,'nNFSe') || doc.number || '-'} / ${key}`, 301, 814, 279, {valueSize:5.8});
+  hLine(833);
+
   return pdf.save();
 }
 async function buildNfe(doc: any, xml: string) {
-  const pdf = await PDFDocument.create(),
-    reg = await pdf.embedFont(StandardFonts.Helvetica),
-    bold = await pdf.embedFont(StandardFonts.HelveticaBold),
-    W = 595.28,
-    H = 841.89,
-    M = 5,
-    C = W - M * 2,
-    page = pdf.addPage([W, H]);
+  const pdf = await PDFDocument.create();
+  const reg = await pdf.embedFont(StandardFonts.Helvetica);
+  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const W = 595.28;
+  const H = 841.89;
+  const M = 5;
+  const C = W - M * 2;
+  let page = pdf.addPage([W, H]);
   let y = H - 5;
   const black = rgb(0.02, 0.02, 0.02),
     gray = rgb(0.96, 0.96, 0.96);
@@ -666,7 +803,7 @@ async function buildNfe(doc: any, xml: string) {
     timeOnly(tag(ide, 'dhSaiEnt') || doc.issueDate)
   );
   y -= 22;
-  bar('TOTAIS');
+  bar('CÁLCULO DO IMPOSTO');
   const vals: [[string, any]] | any = [
       ['Base Calc. ICMS', tag(tot, 'vBC')],
       ['Valor ICMS', tag(tot, 'vICMS')],
@@ -710,15 +847,35 @@ async function buildNfe(doc: any, xml: string) {
       'ALÍQ ICMS',
       'ALÍQ IPI',
     ];
-  let x = M;
-  for (let i = 0; i < cols.length; i++) {
-    rect(x, y - 18, cols[i], 18, gray);
-    text(heads[i], x + 1, y - 7, 3.9, true, cols[i] - 2);
-    x += cols[i];
-  }
-  y -= 18;
+  const drawProductHeader = () => {
+    let hx = M;
+    for (let i = 0; i < cols.length; i++) {
+      rect(hx, y - 18, cols[i], 18, gray);
+      text(heads[i], hx + 1, y - 7, 3.9, true, cols[i] - 2);
+      hx += cols[i];
+    }
+    y -= 18;
+  };
+  const addContinuationPage = () => {
+    page = pdf.addPage([W, H]);
+    y = H - 18;
+    text('DANFE - CONTINUAÇÃO', M, y, 8, true, 160);
+    text(
+      `NF-e Nº ${String(doc.number || tag(ide, 'nNF') || '-').padStart(9, '0')} · Série ${String(doc.series || tag(ide, 'serie') || '-').padStart(3, '0')}`,
+      M + 170,
+      y,
+      6.2,
+      true,
+      C - 170
+    );
+    y -= 14;
+    bar('DADOS DOS PRODUTOS / SERVIÇOS');
+    drawProductHeader();
+  };
+
+  drawProductHeader();
   for (const det of items) {
-    if (y < 75) break;
+    if (y < 95) addContinuationPage();
     const p = tag(det, 'prod'),
       imp = tag(det, 'imposto'),
       icms = tag(imp, 'ICMS'),
@@ -738,7 +895,7 @@ async function buildNfe(doc: any, xml: string) {
         tag(icms, 'pICMS') || '0',
         tag(imp, 'pIPI') || '0',
       ];
-    x = M;
+    let x = M;
     for (let i = 0; i < cols.length; i++) {
       rect(x, y - 21, cols[i], 21, undefined, 0.35);
       text(String(row[i] || '-'), x + 1, y - 8, 3.8, i === 1, cols[i] - 2);
@@ -746,6 +903,18 @@ async function buildNfe(doc: any, xml: string) {
     }
     y -= 21;
   }
+
+  const transp = tag(xml, 'transp');
+  const transporta = tag(transp, 'transporta');
+  const vol = tag(transp, 'vol');
+  if (y < 92) addContinuationPage();
+  bar('TRANSPORTADOR / VOLUMES TRANSPORTADOS');
+  field(M, y, C * 0.42, 25, 'RAZÃO SOCIAL', tag(transporta, 'xNome') || '-');
+  field(M + C * 0.42, y, C * 0.12, 25, 'FRETE POR CONTA', tag(transp, 'modFrete') || '-');
+  field(M + C * 0.54, y, C * 0.24, 25, 'CNPJ/CPF', cpfCnpj(tag(transporta, 'CNPJ') || tag(transporta, 'CPF')));
+  field(M + C * 0.78, y, C * 0.22, 25, 'QUANTIDADE / ESPÉCIE', [tag(vol, 'qVol'), tag(vol, 'esp')].filter(Boolean).join(' / ') || '-');
+  y -= 27;
+
   if (y > 60) {
     bar('DADOS ADICIONAIS');
     field(
@@ -766,16 +935,19 @@ async function buildNfe(doc: any, xml: string) {
     );
   }
   const status = doc.statusText || tag(prot, 'xMotivo') || '';
-  if (/cancel/i.test(status) || ['101', '151', '155'].includes(String(doc.statusCode || '')))
-    page.drawText('CANCELADA', {
-      x: 130,
-      y: 430,
-      size: 50,
-      font: bold,
-      color: rgb(0.8, 0.1, 0.1),
-      opacity: 0.16,
-      rotate: degrees(20),
-    });
+  if (/cancel/i.test(status) || ['101', '151', '155'].includes(String(doc.statusCode || ''))) {
+    for (const watermarkPage of pdf.getPages()) {
+      watermarkPage.drawText('CANCELADA', {
+        x: 130,
+        y: 430,
+        size: 50,
+        font: bold,
+        color: rgb(0.8, 0.1, 0.1),
+        opacity: 0.16,
+        rotate: degrees(20),
+      });
+    }
+  }
   return pdf.save();
 }
 Deno.serve(async req => {
@@ -818,7 +990,7 @@ Deno.serve(async req => {
     let bytes: Uint8Array, kind: string;
     if (isNFSe) {
       bytes = await buildNfse(doc, xml);
-      kind = 'danfse';
+      kind = 'danfse-v2';
     } else if (model === '65') {
       bytes = await buildNfce(doc, xml);
       kind = 'nfce';
@@ -831,6 +1003,8 @@ Deno.serve(async req => {
       pdf_base64: pdfBase64(bytes),
       filename: `${kind}-${doc.accessKey || doc.nsu || doc.number || 'documento'}.pdf`,
       document_model: isNFSe ? 'NFS-e' : model === '65' ? 'NFC-e' : 'NF-e',
+      pdf_standard: isNFSe ? 'DANFSe v2.0 / NT 008-2026' : model === '65' ? 'DANFC-e' : 'DANFE',
+      pdf_source: 'xml_authorized',
     });
   } catch (e) {
     return J(
