@@ -156,6 +156,107 @@ function dedupe(rows: any[]) {
   return [...map.values()].sort((a, b) => String(a.issue_date || '').localeCompare(String(b.issue_date || '')));
 }
 
+const localDayStart = (value: string) => new Date(`${value}T00:00:00-03:00`).toISOString();
+const nextLocalDayStart = (value: string) =>
+  new Date(new Date(`${value}T00:00:00-03:00`).getTime() + 86_400_000).toISOString();
+
+async function directExportRows(
+  admin: any,
+  companyIds: string[],
+  accessByCompany: Map<string, { from: string | null; to: string }>,
+  start: string,
+  end: string,
+  direction: string,
+) {
+  const rows: any[] = [];
+
+  for (const companyId of companyIds) {
+    const access = accessByCompany.get(companyId);
+    if (!access) continue;
+
+    const effectiveStart = access.from && access.from > start ? access.from : start;
+    const effectiveEnd = access.to && access.to < end ? access.to : end;
+    if (effectiveStart > effectiveEnd) continue;
+
+    const fromIso = localDayStart(effectiveStart);
+    const toExclusiveIso = nextLocalDayStart(effectiveEnd);
+    const applyDirection = (query: any) => {
+      if (direction === 'entrada') return query.in('direction', ['entrada', 'inbound']);
+      if (direction === 'saida') return query.in('direction', ['saida', 'outbound']);
+      return query;
+    };
+
+    const dated = await fetchPaged(() => {
+      let query = admin
+        .from('fiscal_dfe_documents')
+        .select('id,company_id,nsu,schema_name,source,document_kind,full_xml,direction,access_key,model,issue_date,value,issuer_cnpj,issuer_name,recipient_cnpj,note_number,series,status_code,status_text,xml,parse_error,updated_at')
+        .eq('company_id', companyId)
+        .neq('document_kind', 'evento')
+        .gte('issue_date', fromIso)
+        .lt('issue_date', toExclusiveIso)
+        .order('issue_date', { ascending: true });
+      query = applyDirection(query);
+      return query;
+    });
+    rows.push(...dated);
+
+    const undated = await fetchPaged(() => {
+      let query = admin
+        .from('fiscal_dfe_documents')
+        .select('id,company_id,nsu,schema_name,source,document_kind,full_xml,direction,access_key,model,issue_date,value,issuer_cnpj,issuer_name,recipient_cnpj,note_number,series,status_code,status_text,xml,parse_error,updated_at,received_at')
+        .eq('company_id', companyId)
+        .neq('document_kind', 'evento')
+        .is('issue_date', null)
+        .gte('received_at', fromIso)
+        .lt('received_at', toExclusiveIso)
+        .order('received_at', { ascending: true });
+      query = applyDirection(query);
+      return query;
+    });
+    rows.push(...undated);
+
+    if (direction !== 'entrada') {
+      const sales = await fetchPaged(() =>
+        admin
+          .from('fiscal_sales_documents')
+          .select('id,company_id,access_key,model,issue_date,total_value,recipient_document,recipient_name,document_number,series,status,xml,source,updated_at')
+          .eq('company_id', companyId)
+          .gte('issue_date', fromIso)
+          .lt('issue_date', toExclusiveIso)
+          .order('issue_date', { ascending: true })
+      );
+
+      rows.push(...sales.map((sale: any) => ({
+        id: sale.id,
+        company_id: sale.company_id,
+        nsu: null,
+        schema_name: 'procNFe_v4.00',
+        source: sale.source || 'fiscal_sales_documents',
+        document_kind: 'nfe',
+        full_xml: Boolean(sale.xml && String(sale.xml).length > 80),
+        direction: 'saida',
+        access_key: sale.access_key,
+        model: sale.model,
+        issue_date: sale.issue_date,
+        value: sale.total_value,
+        issuer_cnpj: null,
+        issuer_name: null,
+        recipient_cnpj: sale.recipient_document,
+        recipient_name: sale.recipient_name,
+        note_number: sale.document_number,
+        series: sale.series,
+        status_code: /cancel/i.test(String(sale.status || '')) ? '101' : '100',
+        status_text: sale.status || 'Autorizada',
+        xml: sale.xml,
+        parse_error: null,
+        updated_at: sale.updated_at,
+      })));
+    }
+  }
+
+  return dedupe(rows);
+}
+
 Deno.serve(async req => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
   if (req.method !== 'POST') return json({ error: 'Método não permitido' }, 405);
@@ -272,7 +373,15 @@ Deno.serve(async req => {
     });
     if (sourceError) throw new Error(`export_source_unavailable: ${sourceError.message}`);
 
-    let documents = (sourceRows || []).map((row: any) => normalizeDocumentXml(row));
+    let exportRows = Array.isArray(sourceRows) ? sourceRows : [];
+    if (!exportRows.length) {
+      // Safety fallback: use the already-authorized company list and the same Brazil-local
+      // date window as the Documents screen. This prevents an empty preflight caused by
+      // an RPC/cache mismatch from hiding documents that are already visible in the app.
+      exportRows = await directExportRows(admin, allowedCompanyIds, accessByCompany, start, end, direction);
+    }
+
+    let documents = exportRows.map((row: any) => normalizeDocumentXml(row));
     if (type !== 'todos') documents = documents.filter(document => documentType(document) === type);
 
     const complete = action === 'preflight' || !needsXmlPayload
