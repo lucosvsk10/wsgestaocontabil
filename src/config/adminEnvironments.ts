@@ -77,6 +77,7 @@ export const resolveAdminEnvironment = (pathname: string): AdminEnvironmentId =>
   ) {
     return 'contabil';
   }
+  if (pathname.startsWith('/admin/fiscal/empresas')) return 'administrativo';
   if (pathname.startsWith('/admin/fiscal')) return 'fiscal';
   if (pathname.startsWith('/admin/pessoal')) return 'pessoal';
   return 'administrativo';
