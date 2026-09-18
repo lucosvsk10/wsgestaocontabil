@@ -256,7 +256,6 @@ begin
     issuer_cnpj=coalesce(nullif(new.issuer_cnpj,''),v_existing.issuer_cnpj),
     issuer_name=coalesce(nullif(new.issuer_name,''),v_existing.issuer_name),
     recipient_cnpj=coalesce(nullif(new.recipient_cnpj,''),v_existing.recipient_cnpj),
-    recipient_name=coalesce(nullif(new.recipient_name,''),v_existing.recipient_name),
     note_number=coalesce(nullif(new.note_number,''),v_existing.note_number),
     series=coalesce(nullif(new.series,''),v_existing.series),
     status_code=coalesce(nullif(new.status_code,''),v_existing.status_code),
