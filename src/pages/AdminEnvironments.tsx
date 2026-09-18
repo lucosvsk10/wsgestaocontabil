@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { adminEnvironments } from '@/config/adminEnvironments';
 import { supabase } from '@/integrations/supabase/client';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 const STANDARD_LOGO = '/lovable-uploads/fecb5c37-c321-44e3-89ca-58de7e59e59d.png';
 const LIGHT_LOGO = '/lovable-uploads/f7fdf0cf-f16c-4df7-a92c-964aadea9539.png';
@@ -14,6 +15,7 @@ const LIGHT_LOGO = '/lovable-uploads/f7fdf0cf-f16c-4df7-a92c-964aadea9539.png';
 export default function AdminEnvironments({ fiscalModal = false }: { fiscalModal?: boolean }) {
   const navigate = useNavigate();
   const { theme } = useTheme();
+  const { user } = useAuth();
   const [openingIssuer, setOpeningIssuer] = useState(false);
   const logo = theme === 'light' ? LIGHT_LOGO : STANDARD_LOGO;
 
@@ -21,22 +23,34 @@ export default function AdminEnvironments({ fiscalModal = false }: { fiscalModal
     if (openingIssuer) return;
     setOpeningIssuer(true);
     try {
-      const { data } = await (supabase as any)
-        .from('saas_subscriptions')
-        .select('organization_id,status,trial_ends_at,access_expires_at,saas_plans(product_code)')
-        .in('status', ['trialing', 'active', 'past_due'])
-        .order('created_at', { ascending: false });
+      const { data: memberships } = await (supabase as any)
+        .from('organization_members')
+        .select('organization_id')
+        .eq('user_id', user?.id || '')
+        .eq('status', 'active');
+      const organizationIds = (memberships || [])
+        .map((row: any) => String(row.organization_id || ''))
+        .filter(Boolean);
 
-      const now = Date.now();
-      const issuer = (data || []).find((row: any) => {
-        const plan = Array.isArray(row.saas_plans) ? row.saas_plans[0] : row.saas_plans;
-        if (plan?.product_code !== 'issuer') return false;
-        const boundary = row.status === 'trialing' ? row.trial_ends_at : row.access_expires_at;
-        return !boundary || new Date(boundary).getTime() > now;
-      });
+      if (organizationIds.length) {
+        const { data } = await (supabase as any)
+          .from('saas_subscriptions')
+          .select('organization_id,status,trial_ends_at,access_expires_at,saas_plans(product_code)')
+          .in('organization_id', organizationIds)
+          .in('status', ['trialing', 'active', 'past_due'])
+          .order('created_at', { ascending: false });
 
-      if (issuer?.organization_id) {
-        localStorage.setItem('ws_saas_selected_organization', String(issuer.organization_id));
+        const now = Date.now();
+        const issuer = (data || []).find((row: any) => {
+          const plan = Array.isArray(row.saas_plans) ? row.saas_plans[0] : row.saas_plans;
+          if (plan?.product_code !== 'issuer') return false;
+          const boundary = row.status === 'trialing' ? row.trial_ends_at : row.access_expires_at;
+          return !boundary || new Date(boundary).getTime() > now;
+        });
+
+        if (issuer?.organization_id) {
+          localStorage.setItem('ws_saas_selected_organization', String(issuer.organization_id));
+        }
       }
     } finally {
       navigate('/app?source=admin-fiscal');
