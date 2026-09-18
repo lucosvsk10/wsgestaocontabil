@@ -172,105 +172,100 @@ export default function AdminCompanies() {
             <AdminEmptyState title="Nenhum cliente encontrado" />
           ) : (
             <TooltipProvider delayDuration={150}>
-              <div>
-                {filtered.map((company, index) => {
-                  const name = company.trade_name || company.company_name;
-                  const fiscal = fiscalStatuses[company.id];
-                  return (
-                    <div
-                      key={company.id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => openCompany(company)}
-                      onKeyDown={(event) => { if (event.key === 'Enter') openCompany(company); }}
-                      className={`w-full cursor-pointer border-b border-border/45 px-5 py-5 text-left transition last:border-b-0 hover:bg-muted/20 ${index % 2 ? 'bg-muted/[.04]' : 'bg-card'}`}
-                    >
-                      <div className="flex items-start gap-4">
-                        <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border/50 bg-muted/35 text-sm font-semibold text-muted-foreground">
-                          {company.logo_url ? <img src={company.logo_url} alt="" className="h-full w-full object-contain" /> : initial(name)}
-                        </span>
-
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="truncate text-sm font-semibold">{name}</span>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[920px] border-collapse text-left">
+                  <thead>
+                    <tr className="border-b border-border/70 bg-muted/15">
+                      <th className="px-5 py-3 text-[10px] font-semibold uppercase tracking-[.1em] text-muted-foreground">Empresa</th>
+                      <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[.1em] text-muted-foreground">Documento</th>
+                      <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[.1em] text-muted-foreground">Acesso</th>
+                      <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[.1em] text-muted-foreground">Senha</th>
+                      <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[.1em] text-muted-foreground">Certificado A1</th>
+                      <th className="px-4 py-3 text-center text-[10px] font-semibold uppercase tracking-[.1em] text-muted-foreground">Fiscal</th>
+                      <th className="w-10 px-3 py-3" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((company) => {
+                      const name = company.trade_name || company.company_name;
+                      const fiscal = fiscalStatuses[company.id];
+                      const certificateValid =
+                        company.certificate_status === 'valid' ||
+                        Boolean(company.certificate_valid_until && new Date(`${company.certificate_valid_until}T23:59:59`).getTime() >= Date.now());
+                      return (
+                        <tr
+                          key={company.id}
+                          tabIndex={0}
+                          onClick={() => openCompany(company)}
+                          onKeyDown={(event) => { if (event.key === 'Enter') openCompany(company); }}
+                          className="cursor-pointer border-b border-border/45 bg-card transition hover:bg-muted/20"
+                        >
+                          <td className="px-5 py-4">
+                            <div className="flex items-center gap-3">
+                              <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border/50 bg-muted/35 text-xs font-semibold text-muted-foreground">
+                                {company.logo_url ? <img src={company.logo_url} alt="" className="h-full w-full object-contain" /> : initial(name)}
+                              </span>
+                              <div className="min-w-0">
+                                <p className="max-w-[260px] truncate text-sm font-semibold">{name}</p>
+                                <p className="mt-0.5 max-w-[260px] truncate text-[11px] text-muted-foreground">
+                                  {company.trade_name ? company.company_name : ([company.city, company.state].filter(Boolean).join(' / ') || 'Cadastro empresarial')}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 text-xs text-muted-foreground">{formatCompanyDocument(company)}</td>
+                          <td className="px-4 py-4">
                             {company.portal_username ? (
-                              <span className="rounded-full border border-border/70 bg-muted/35 px-2.5 py-1 font-mono text-[10px] font-semibold text-foreground">
-                                @{company.portal_username}
-                              </span>
+                              <span className="font-mono text-xs font-semibold text-foreground">@{company.portal_username}</span>
                             ) : (
-                              <span className="rounded-full border border-dashed border-border px-2.5 py-1 text-[10px] text-muted-foreground">
-                                sem usuário vinculado
-                              </span>
+                              <span className="text-xs text-muted-foreground">Sem usuário</span>
                             )}
-                          </div>
-                          <span className="mt-1 block truncate text-xs text-muted-foreground">
-                            {company.trade_name ? company.company_name : formatCompanyDocument(company)}
-                          </span>
-
-                          <div className="mt-4 grid gap-x-6 gap-y-3 text-xs sm:grid-cols-2 xl:grid-cols-5">
-                            <CompanyMeta label="Documento" value={formatCompanyDocument(company)} />
-                            <CompanyMeta label="Inscrição estadual" value={company.state_registration || 'Não informada'} />
-                            <CompanyMeta
-                              label="Localização"
-                              value={[company.city, company.state].filter(Boolean).join(' / ') || 'Não informada'}
-                            />
-                            <CompanyMeta label="Porte / regime" value={[company.company_size, taxRegimeLabel(company.tax_regime)].filter(Boolean).join(' · ')} />
-                            <CompanyMeta
-                              label="Cadastro sincronizado"
-                              value={company.registry_updated_at ? formatDate(company.registry_updated_at) : 'Ainda não sincronizado'}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="hidden min-w-[170px] shrink-0 text-right lg:block">
-                          {company.portal_user_id ? (
-                            <>
-                              <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold ${
-                                company.portal_must_change_password === false
-                                  ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                                  : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
-                              }`}>
-                                {company.portal_must_change_password === false ? 'Senha alterada' : 'Senha padrão'}
-                              </span>
-                              <span className="mt-1.5 block text-[10px] text-muted-foreground">
-                                {company.portal_must_change_password === false
-                                  ? `alterada em ${formatDate(company.portal_password_changed_at)}`
-                                  : 'aguardando primeiro acesso'}
-                              </span>
-                            </>
-                          ) : (
-                            <span className="text-[10px] text-muted-foreground">Sem acesso do portal</span>
-                          )}
-                        </div>
-
-                        <FiscalHealthIndicator
-                          company={fiscal}
-                          loading={statusLoading && !fiscal}
-                          onReady={() => setBootstrapCompany(company)}
-                        />
-
-                        <span className="text-lg text-muted-foreground/50">›</span>
-                      </div>
-
-                      {company.portal_user_id && (
-                        <div className="mt-3 flex flex-wrap items-center gap-2 pl-[60px] lg:hidden">
-                          <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${
-                            company.portal_must_change_password === false
-                              ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                              : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
-                          }`}>
-                            {company.portal_must_change_password === false ? 'Senha alterada' : 'Senha padrão'}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground">
-                            {company.portal_must_change_password === false
-                              ? `desde ${formatDate(company.portal_password_changed_at)}`
-                              : 'troca obrigatória no primeiro acesso'}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                          </td>
+                          <td className="px-4 py-4">
+                            {company.portal_user_id ? (
+                              <div>
+                                <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold ${
+                                  company.portal_must_change_password === false
+                                    ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                                    : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                                }`}>
+                                  {company.portal_must_change_password === false ? 'Alterada' : 'Padrão'}
+                                </span>
+                                {company.portal_must_change_password === false && (
+                                  <span className="mt-1 block text-[9px] text-muted-foreground">{formatDate(company.portal_password_changed_at)}</span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-4">
+                            {certificateValid ? (
+                              <div>
+                                <span className="inline-flex rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">Configurado</span>
+                                {company.certificate_valid_until && <span className="mt-1 block text-[9px] text-muted-foreground">até {formatDate(company.certificate_valid_until)}</span>}
+                              </div>
+                            ) : company.certificate_status === 'expired' ? (
+                              <span className="inline-flex rounded-full bg-destructive/10 px-2.5 py-1 text-[10px] font-semibold text-destructive">Vencido</span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">Sem A1</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-4 text-center">
+                            <div className="inline-flex">
+                              <FiscalHealthIndicator
+                                company={fiscal}
+                                loading={statusLoading && !fiscal}
+                                onReady={() => setBootstrapCompany(company)}
+                              />
+                            </div>
+                          </td>
+                          <td className="px-3 py-4 text-right text-lg text-muted-foreground/50">›</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </TooltipProvider>
           )}
