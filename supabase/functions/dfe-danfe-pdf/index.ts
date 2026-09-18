@@ -109,8 +109,21 @@ const fmtKey = (v: unknown) =>
     .trim();
 const bytesFromDataUrl = (u: string) =>
   Uint8Array.from(atob(u.split(',')[1] || ''), c => c.charCodeAt(0));
-async function qr(pdf: PDFDocument, value: string) {
-  const data = await QRCode.toDataURL(value, { margin: 0, width: 320, errorCorrectionLevel: 'M' });
+const xmlDecode = (value: unknown) =>
+  String(value ?? '')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&apos;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>');
+const mm = (value: number) => (value * 72) / 25.4;
+async function qr(pdf: PDFDocument, value: string, margin = 4) {
+  const data = await QRCode.toDataURL(xmlDecode(value), {
+    margin,
+    width: 640,
+    errorCorrectionLevel: 'M',
+    color: { dark: '#000000', light: '#FFFFFF' },
+  });
   return pdf.embedPng(bytesFromDataUrl(data));
 }
 async function barcode(pdf: PDFDocument, value: string) {
