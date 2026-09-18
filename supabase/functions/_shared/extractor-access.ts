@@ -9,14 +9,25 @@ export async function documentAccess(admin: any, userId: string, companyId: stri
   if (!data?.allowed) throw new RequestError('Empresa não autorizada para esta conta', 403);
   return data as { allowed: true; from: string | null; to: string };
 }
+const brazilDate = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const part = (type: string) => parts.find(item => item.type === type)?.value || '';
+  const year = part('year'), month = part('month'), day = part('day');
+  return year && month && day ? `${year}-${month}-${day}` : '';
+};
+
 export function documentInWindow(
   doc: { issue_date?: string; received_at?: string },
   access: { from: string | null; to: string }
 ) {
-  const timestamp = Date.parse(doc.issue_date || doc.received_at || '');
-  if (!Number.isFinite(timestamp)) return false;
-  return (
-    (!access.from || timestamp >= Date.parse(access.from + 'T00:00:00Z')) &&
-    timestamp < Date.parse(access.to + 'T00:00:00Z') + 86400000
-  );
+  const localDate = brazilDate(doc.issue_date || doc.received_at || '');
+  if (!localDate) return false;
+  return (!access.from || localDate >= access.from) && localDate <= access.to;
 }
