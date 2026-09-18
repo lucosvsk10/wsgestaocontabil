@@ -142,7 +142,7 @@ export default function AdminCompanies() {
 
         <div className="mt-5 flex gap-2 border-b border-border pb-3">
           <button className="rounded-md bg-foreground px-4 py-2 text-sm font-semibold text-background">Clientes do escritório</button>
-          <button onClick={() => navigate('/admin/assinantes')} className="rounded-md px-4 py-2 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground">Assinantes do emissor fiscal</button>
+          <button onClick={() => navigate('/admin/assinantes')} className="rounded-md px-4 py-2 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground">Assinantes dos SaaS</button>
         </div>
 
         {error && !open && <div className="mt-5 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">{error}</div>}
