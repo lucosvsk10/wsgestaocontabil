@@ -1388,3 +1388,129 @@
   .extractor-admin-import-row{align-items:center!important;flex-direction:row!important}
   .extractor-admin-import-status{margin-left:auto!important}
 }
+
+
+/* Histórico fiscal — tabela de conferências comparáveis. */
+.extractor-history-table-page{gap:10px}
+.extractor-health-toolbar{
+  display:grid;grid-template-columns:minmax(220px,1fr) minmax(300px,1.35fr) auto;gap:8px;align-items:center;
+  padding:8px 10px;background:#0b121e;border:1px solid rgba(255,255,255,.05);border-radius:6px
+}
+.extractor-health-company-search{display:flex;align-items:center;gap:8px;padding:0 10px;height:36px;background:#101825;border:1px solid rgba(255,255,255,.055);border-radius:4px}
+.extractor-health-company-search svg{width:13px;height:13px;color:#718397;flex:0 0 auto}
+.extractor-health-company-search input,.extractor-health-toolbar select{
+  width:100%;height:34px;border:0;outline:0;background:transparent;color:#dce5ed;font-size:9px
+}
+.extractor-health-toolbar select{padding:0 10px;background:#101825;border:1px solid rgba(255,255,255,.055);border-radius:4px;color-scheme:dark}
+.extractor-history-scope{display:flex;gap:2px;padding:2px;background:#101825;border-radius:4px}
+.extractor-history-scope button{
+  height:30px;padding:0 10px;border:0;border-radius:3px;background:transparent;color:#718397;font-size:8px;white-space:nowrap
+}
+.extractor-history-scope button.active{background:#e9ecef;color:#111827}
+.extractor-history-current{
+  display:grid;grid-template-columns:minmax(260px,1.4fr) minmax(160px,.65fr) minmax(160px,.65fr) auto;
+  gap:0;border:1px solid rgba(255,255,255,.055);border-radius:6px;overflow:hidden;background:#0b121e
+}
+.extractor-history-current>div{min-width:0;padding:12px 14px;border-right:1px solid rgba(255,255,255,.045)}
+.extractor-history-current>div:last-child{border-right:0}
+.extractor-history-current small,.extractor-history-current-status>span{
+  display:block;color:#66798d;font-size:7px;text-transform:uppercase;letter-spacing:.075em
+}
+.extractor-history-current strong{display:block;margin:3px 0;color:#edf2f7;font-size:12px}
+.extractor-history-current>div:first-child>span{color:#8091a3;font-size:8px}
+.extractor-history-current-status b{display:block;margin:4px 0 6px;color:#edf2f7;font-size:15px;font-weight:600}
+.extractor-history-actions{display:flex!important;align-items:center;justify-content:flex-end;gap:6px;white-space:nowrap}
+.extractor-history-actions button{
+  height:31px;padding:0 11px;border:0;border-radius:4px;background:#e9ecef;color:#111827;font-size:8px;font-weight:600
+}
+.extractor-history-actions button.secondary{background:#111b29;color:#dce5ed;border:1px solid #263447}
+.extractor-history-actions button:disabled{opacity:.45;cursor:not-allowed}
+.extractor-history-ledger{overflow:hidden;border:1px solid rgba(255,255,255,.055);border-radius:6px;background:#0b121e}
+.extractor-history-ledger>header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.05)}
+.extractor-history-ledger>header small{color:#66798d;font-size:7px;text-transform:uppercase;letter-spacing:.075em}
+.extractor-history-ledger>header h3{margin:2px 0 0;color:#e8eef5;font-size:12px;font-weight:600}
+.extractor-history-ledger>header>span{color:#718397;font-size:8px}
+.extractor-history-table-wrap{overflow:auto}
+.extractor-history-ledger table{width:100%;min-width:920px;border-collapse:collapse}
+.extractor-history-ledger th{
+  padding:8px 10px;background:#0e1623;color:#6f8195;font-size:7px;font-weight:600;text-align:left;text-transform:uppercase;letter-spacing:.06em;
+  border-bottom:1px solid rgba(255,255,255,.05);white-space:nowrap
+}
+.extractor-history-ledger td{
+  padding:9px 10px;color:#b8c5d1;font-size:8px;border-bottom:1px solid rgba(255,255,255,.04);white-space:nowrap
+}
+.extractor-history-ledger tbody tr:last-child td{border-bottom:0}
+.extractor-history-ledger td:nth-child(4),.extractor-history-ledger td:nth-child(5),
+.extractor-history-ledger td:nth-child(6),.extractor-history-ledger td:nth-child(7){font-variant-numeric:tabular-nums}
+.extractor-history-ledger td.empty{padding:24px;text-align:center;color:#637386}
+.extractor-health-state{font-size:7px!important}
+
+/* DANFE: garante contraste dos itens mesmo dentro do tema escuro do modal. */
+.extractor-danfe-products table,.extractor-danfe-products thead,.extractor-danfe-products tbody,
+.extractor-danfe-products tr,.extractor-danfe-products td,.extractor-danfe-products th{
+  background:#fff!important;color:#111!important
+}
+.extractor-danfe-products th{background:#ededed!important}
+
+/* DANFSe v2.0 — estrutura baseada no documento nacional oficial fornecido. */
+.extractor-nfse-sheet.extractor-nfse-official{
+  width:794px;max-width:100%;min-height:1123px;padding:7px 8px 10px;background:#fff;color:#111;
+  font-family:Arial,Helvetica,sans-serif!important;box-shadow:0 12px 35px rgba(0,0,0,.18);display:flex;flex-direction:column
+}
+.extractor-nfse-official *{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif!important}
+.extractor-nfse-top{
+  display:grid;grid-template-columns:210px 1fr 190px;align-items:center;min-height:48px;border:1px solid #222;border-bottom:0;padding:3px 6px
+}
+.extractor-nfse-brand{display:flex;align-items:center;gap:5px}
+.extractor-nfse-brand>strong{font-size:24px;line-height:1;font-style:italic;letter-spacing:-2px}
+.extractor-nfse-brand>strong i{color:#4f8f43;font-style:normal}.extractor-nfse-brand>strong span{color:#1f6a8c}
+.extractor-nfse-brand>strong em{color:#518b42;font-style:normal}.extractor-nfse-brand>strong u{color:#2f6c91;text-decoration:none;font-size:17px}
+.extractor-nfse-brand small{font-size:6px;line-height:1.15;color:#333}
+.extractor-nfse-title{text-align:center}.extractor-nfse-title b,.extractor-nfse-title strong{display:block}
+.extractor-nfse-title b{font-size:9px}.extractor-nfse-title strong{font-size:10px}
+.extractor-nfse-environment{font-size:5.5px;line-height:1.25}.extractor-nfse-environment b,.extractor-nfse-environment span{display:block}
+.extractor-nfse-identification{display:grid;grid-template-columns:1fr 130px;border:1px solid #222}
+.extractor-nfse-identification-main{min-width:0;border-right:1px solid #222}
+.extractor-nfse-auth{padding:4px;text-align:center;font-size:5px;line-height:1.25}
+.extractor-nfse-auth p{margin:3px 0 0}.extractor-nfse-qr-box{display:flex;justify-content:center;align-items:center;height:76px}
+.extractor-nfse-qr-box .extractor-fiscal-qr{width:68px;height:68px}
+.extractor-nfse-grid{display:grid;border-left:0;border-top:0}
+.extractor-nfse-grid.cols-3{grid-template-columns:repeat(3,1fr)}
+.extractor-nfse-grid.cols-4{grid-template-columns:repeat(4,1fr)}
+.extractor-nfse-grid.service-head{grid-template-columns:1.1fr .8fr 1.15fr;border:1px solid #222;border-top:0}
+.extractor-nfse-cell{min-width:0;min-height:31px;padding:3px 4px;border-right:1px solid #aaa;border-bottom:1px solid #aaa}
+.extractor-nfse-identification .extractor-nfse-cell{border-color:#b3b3b3}
+.extractor-nfse-cell b{display:block;font-size:5.5px;line-height:1.1;text-transform:none}
+.extractor-nfse-cell span{display:block;margin-top:2px;font-size:6.5px;line-height:1.25;word-break:break-word;white-space:normal}
+.extractor-nfse-cell.wide{min-height:29px}.extractor-nfse-cell.full{border:1px solid #222;border-top:0}
+.extractor-nfse-cell.span-2{grid-column:span 2}.extractor-nfse-cell.span-3{grid-column:span 3}
+.extractor-nfse-band{
+  min-height:15px;padding:2px 4px;border:1px solid #222;border-bottom:0;background:#f0f0f0;color:#111;font-size:6.5px;font-weight:700;line-height:1.2
+}
+.extractor-nfse-band+.extractor-nfse-grid{border:1px solid #222;border-top:0}
+.extractor-nfse-centered-line{
+  height:13px;border-left:1px solid #222;border-right:1px solid #222;border-bottom:1px solid #222;text-align:center;font-size:5.8px;font-weight:700;line-height:12px
+}
+.extractor-nfse-service-name{padding:4px;border-left:1px solid #222;border-right:1px solid #222;font-size:6px}
+.extractor-nfse-service-description{min-height:145px!important}
+.extractor-nfse-multiline{white-space:pre-line!important;line-height:1.25!important}
+.extractor-nfse-ibscbs .extractor-nfse-cell{min-height:30px}
+.extractor-nfse-values .extractor-nfse-cell{min-height:32px}
+.extractor-nfse-values .extractor-nfse-cell span{font-weight:600}
+.extractor-nfse-complement{min-height:54px;padding:4px;border:1px solid #222;font-size:5.8px;line-height:1.35}
+.extractor-nfse-spacer{flex:1;min-height:110px}
+.extractor-nfse-footer{display:grid;grid-template-columns:1fr 1fr 2.1fr;border:1px solid #222}
+.extractor-nfse-footer .extractor-nfse-cell{min-height:28px;border-bottom:0}.extractor-nfse-footer .extractor-nfse-cell:last-child{border-right:0}
+
+@media(max-width:900px){
+  .extractor-health-toolbar{grid-template-columns:1fr}
+  .extractor-history-current{grid-template-columns:1fr 1fr}
+  .extractor-history-current>div:nth-child(2){border-right:0}
+  .extractor-history-actions{grid-column:1/-1;justify-content:flex-start!important}
+}
+@media(max-width:620px){
+  .extractor-history-current{grid-template-columns:1fr}
+  .extractor-history-current>div{border-right:0;border-bottom:1px solid rgba(255,255,255,.045)}
+  .extractor-history-current>div:last-child{border-bottom:0}
+  .extractor-history-scope{width:100%}.extractor-history-scope button{flex:1}
+}
