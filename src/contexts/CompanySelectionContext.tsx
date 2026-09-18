@@ -14,6 +14,20 @@ export type OfficeCompanySelection = {
   portal_user_id?: string | null;
   certificate_status?: 'valid' | 'expired' | 'missing';
   certificate_valid_until?: string | null;
+  company_size?: string | null;
+  state_registration?: string | null;
+  registration_status?: string | null;
+  tax_regime?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  postal_code?: string | null;
+  city?: string | null;
+  state?: string | null;
+  registry_updated_at?: string | null;
+  portal_username?: string | null;
+  portal_email?: string | null;
+  portal_must_change_password?: boolean | null;
+  portal_password_changed_at?: string | null;
 };
 
 type CompanySelectionContextValue = {
@@ -125,7 +139,7 @@ export function CompanySelectionProvider({ children }: { children: React.ReactNo
     try {
       const companiesResult = await (supabase as any)
         .from('companies')
-        .select('id,company_name,trade_name,cnpj,document_type,document_number,logo_url')
+        .select('id,company_name,trade_name,cnpj,document_type,document_number,logo_url,company_size,state_registration,registration_status,tax_regime,email,phone,postal_code,city,state,registry_updated_at')
         .order('company_name');
 
       if (companiesResult.error) {
@@ -136,6 +150,9 @@ export function CompanySelectionProvider({ children }: { children: React.ReactNo
       const baseCompanies = ((companiesResult.data || []) as unknown as Array<{
         id: string; company_name: string; trade_name: string | null; cnpj: string | null;
         document_type?: 'cnpj' | 'cpf' | 'other' | null; document_number?: string | null; logo_url?: string | null;
+        company_size?: string | null; state_registration?: string | null; registration_status?: string | null;
+        tax_regime?: string | null; email?: string | null; phone?: string | null; postal_code?: string | null;
+        city?: string | null; state?: string | null; registry_updated_at?: string | null;
       }>);
 
       let next: OfficeCompanySelection[] = baseCompanies.map(company => ({
@@ -144,19 +161,37 @@ export function CompanySelectionProvider({ children }: { children: React.ReactNo
         portal_user_id: null,
         certificate_status: 'missing',
         certificate_valid_until: null,
+        portal_username: null,
+        portal_email: null,
+        portal_must_change_password: null,
+        portal_password_changed_at: null,
       }));
       setCompanies(next);
 
       const [fiscalResult, portalResult, certificateResult] = await Promise.all([
         supabase.from('fiscal_companies').select('id,company_id,cnpj,razao_social,nome_fantasia'),
-        supabase.from('company_user_links' as never).select('company_id,user_id'),
+        supabase.from('company_user_links' as never).select('company_id,user_id,is_primary'),
         supabase.from('fiscal_certificates').select('company_id,valid_until,is_active').eq('is_active', true),
       ]);
 
       const fiscalRows = fiscalResult.error ? [] : ((fiscalResult.data || []) as FiscalIdentityRow[]);
-      const portalRows = portalResult.error ? [] : ((portalResult.data || []) as unknown as Array<{ company_id: string; user_id: string }>);
+      const portalRows = portalResult.error ? [] : ((portalResult.data || []) as unknown as Array<{ company_id: string; user_id: string; is_primary: boolean }>);
       const certificateRows = certificateResult.error ? [] : ((certificateResult.data || []) as unknown as Array<{ company_id: string; valid_until: string | null; is_active: boolean }>);
-      const portalByCompany = new Map(portalRows.map(item => [item.company_id, item.user_id]));
+      const portalUserIds = [...new Set(portalRows.map(item => item.user_id).filter(Boolean))];
+      let portalUsers: Array<{ id: string; username: string | null; email: string | null; must_change_password: boolean | null; password_changed_at: string | null }> = [];
+      if (portalUserIds.length) {
+        const usersResult = await (supabase as any)
+          .from('users')
+          .select('id,username,email,must_change_password,password_changed_at')
+          .in('id', portalUserIds);
+        if (!usersResult.error) portalUsers = usersResult.data || [];
+      }
+      const portalUserById = new Map(portalUsers.map(item => [item.id, item]));
+      const portalByCompany = new Map<string, { user_id: string; is_primary: boolean }>();
+      for (const item of portalRows) {
+        const current = portalByCompany.get(item.company_id);
+        if (!current || item.is_primary) portalByCompany.set(item.company_id, item);
+      }
       const certificateByFiscalCompany = new Map(certificateRows.map(item => [item.company_id, item]));
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -169,10 +204,16 @@ export function CompanySelectionProvider({ children }: { children: React.ReactNo
         const certificateStatus: OfficeCompanySelection['certificate_status'] = !certificate
           ? 'missing'
           : expiry && expiry.getTime() >= today.getTime() ? 'valid' : 'expired';
+        const portalLink = portalByCompany.get(company.id);
+        const portalUser = portalLink ? portalUserById.get(portalLink.user_id) : undefined;
         return {
           ...company,
           fiscal_company_id: fiscalCompanyId,
-          portal_user_id: portalByCompany.get(company.id) || null,
+          portal_user_id: portalLink?.user_id || null,
+          portal_username: portalUser?.username || null,
+          portal_email: portalUser?.email || null,
+          portal_must_change_password: portalUser?.must_change_password ?? null,
+          portal_password_changed_at: portalUser?.password_changed_at || null,
           certificate_status: certificateStatus,
           certificate_valid_until: validUntil,
         };
@@ -210,6 +251,8 @@ export function CompanySelectionProvider({ children }: { children: React.ReactNo
       .on('postgres_changes', { event: '*', schema: 'public', table: 'companies' }, refresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'fiscal_companies' }, refresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'fiscal_certificates' }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'company_user_links' }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, refresh)
       .subscribe();
 
     window.addEventListener('focus', refresh);

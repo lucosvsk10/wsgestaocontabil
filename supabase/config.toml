@@ -153,6 +153,9 @@ verify_jwt = true
 verify_jwt = true
 
 
+[functions.admin-company-registry-sync]
+verify_jwt = false
+
 [functions.admin-client-onboarding]
 verify_jwt = true
 

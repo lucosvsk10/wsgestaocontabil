@@ -77,14 +77,26 @@ function normalizeSecondaryCnaes(items: any[]) {
     .filter((item: any) => item.code || item.description);
 }
 
+const stateRegistrationValue = (item: any) =>
+  digits(
+    item?.inscricao_estadual ??
+    item?.inscricao ??
+    item?.numero ??
+    item?.ie ??
+    item?.value
+  );
+
+const stateRegistrationUf = (item: any) =>
+  clean(item?.estado?.sigla ?? item?.uf ?? item?.estado).toUpperCase();
+
 function normalizeCnpjWs(raw: any, cnpj: string) {
   const e = raw?.estabelecimento || {};
-  const state = clean(e?.estado?.sigla).toUpperCase();
+  const state = clean(e?.estado?.sigla ?? e?.uf).toUpperCase();
   const activeIes = Array.isArray(e?.inscricoes_estaduais)
-    ? e.inscricoes_estaduais.filter((item: any) => item?.ativo !== false)
+    ? e.inscricoes_estaduais.filter((item: any) => item?.ativo !== false && stateRegistrationValue(item))
     : [];
   const preferredIe =
-    activeIes.find((item: any) => clean(item?.estado?.sigla).toUpperCase() === state) ||
+    activeIes.find((item: any) => stateRegistrationUf(item) === state) ||
     activeIes[0] ||
     null;
   const phone = [clean(e?.ddd1), clean(e?.telefone1)].filter(Boolean).join('');
@@ -112,8 +124,8 @@ function normalizeCnpjWs(raw: any, cnpj: string) {
     tax_regime_year: regime.year,
     state_registrations: activeIes
       .map((item: any) => ({
-        state: clean(item?.estado?.sigla).toUpperCase(),
-        ie: digits(item?.inscricao_estadual),
+        state: stateRegistrationUf(item),
+        ie: stateRegistrationValue(item),
         active: item?.ativo !== false,
       }))
       .filter((item: any) => item.ie),
@@ -122,7 +134,7 @@ function normalizeCnpjWs(raw: any, cnpj: string) {
     legal_name: clean(raw?.razao_social),
     trade_name: clean(e?.nome_fantasia),
     tax_id: cnpj,
-    state_registration: digits(preferredIe?.inscricao_estadual),
+    state_registration: stateRegistrationValue(preferredIe),
     ie_indicator: preferredIe ? '1' : '',
     icms_taxpayer: Boolean(preferredIe),
     tax_regime: regime.value,
@@ -276,15 +288,45 @@ async function fetchJson(url: string, timeoutMs = 12000) {
   }
 }
 
-async function lookupFederal(cnpj: string) {
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function lookupCnpjWsViaDatabase(admin: any, cnpj: string) {
+  try {
+    const { data: requestId, error: requestError } = await admin.rpc(
+      'internal_company_registry_request',
+      { _cnpj: cnpj }
+    );
+    if (requestError || !requestId) return null;
+
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      if (attempt) await sleep(250);
+      const { data, error } = await admin.rpc(
+        'internal_company_registry_response',
+        { _request_id: Number(requestId) }
+      );
+      if (error) return null;
+      if (data && !data?._error) return data;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+async function lookupFederal(admin: any, cnpj: string) {
   const [wsResult, brasilResult] = await Promise.allSettled([
     fetchJson(`https://publica.cnpj.ws/cnpj/${cnpj}`, 15000),
     fetchJson(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`, 15000),
   ]);
 
-  const ws = wsResult.status === 'fulfilled' ? normalizeCnpjWs(wsResult.value, cnpj) : null;
+  let ws = wsResult.status === 'fulfilled' ? normalizeCnpjWs(wsResult.value, cnpj) : null;
   const brasil =
     brasilResult.status === 'fulfilled' ? normalizeBrasilApi(brasilResult.value, cnpj) : null;
+
+  if (!ws?.state_registration) {
+    const dbRaw = await lookupCnpjWsViaDatabase(admin, cnpj);
+    if (dbRaw) ws = normalizeCnpjWs(dbRaw, cnpj);
+  }
   if (wsResult.status === 'rejected') console.warn('CNPJ.ws lookup failed', wsResult.reason);
   if (brasilResult.status === 'rejected')
     console.warn('BrasilAPI lookup failed', brasilResult.reason);
@@ -410,7 +452,7 @@ Deno.serve(async req => {
     );
     if (!member && !platformAdmin) return out({ error: 'Sem acesso à organização' }, 403);
 
-    const federal = await lookupFederal(cnpj);
+    const federal = await lookupFederal(admin, cnpj);
     const data = await enrichStateRegistry(admin, cnpj, federal);
     const filled = [
       'legal_name',

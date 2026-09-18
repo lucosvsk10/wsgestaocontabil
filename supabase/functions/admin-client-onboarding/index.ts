@@ -67,18 +67,24 @@ async function fetchJson(url: string, timeoutMs = 15000) {
     clearTimeout(timer);
   }
 }
+const ieValue = (item: any) =>
+  digits(item?.inscricao_estadual ?? item?.inscricao ?? item?.numero ?? item?.ie ?? item?.value);
+const ieUf = (item: any) => clean(item?.estado?.sigla ?? item?.uf ?? item?.estado).toUpperCase();
+
 function normalizeCnpjWs(raw: any, cnpj: string) {
   const e = raw?.estabelecimento || {};
-  const state = clean(e?.estado?.sigla).toUpperCase();
-  const ies = Array.isArray(e?.inscricoes_estaduais) ? e.inscricoes_estaduais.filter((x:any)=>x?.ativo !== false) : [];
-  const ie = ies.find((x:any)=>clean(x?.estado?.sigla).toUpperCase() === state) || ies[0] || null;
+  const state = clean(e?.estado?.sigla ?? e?.uf).toUpperCase();
+  const ies = Array.isArray(e?.inscricoes_estaduais)
+    ? e.inscricoes_estaduais.filter((x:any)=>x?.ativo !== false && ieValue(x))
+    : [];
+  const ie = ies.find((x:any)=>ieUf(x) === state) || ies[0] || null;
   const primary = e?.atividade_principal || {};
   const regime = detectTaxRegime(raw);
   return {
     company_name: clean(raw?.razao_social),
     trade_name: clean(e?.nome_fantasia),
     cnpj,
-    state_registration: digits(ie?.inscricao_estadual),
+    state_registration: ieValue(ie),
     registration_status: clean(e?.situacao_cadastral),
     tax_regime: regime,
     email: clean(e?.email),
@@ -98,7 +104,7 @@ function normalizeCnpjWs(raw: any, cnpj: string) {
       legal_nature: clean(raw?.natureza_juridica?.descricao || raw?.natureza_juridica),
       share_capital: Number(raw?.capital_social || 0) || null,
       primary_cnae_description: clean(primary?.descricao),
-      state_registrations: ies.map((x:any)=>({ state: clean(x?.estado?.sigla).toUpperCase(), ie: digits(x?.inscricao_estadual), active: x?.ativo !== false })).filter((x:any)=>x.ie),
+      state_registrations: ies.map((x:any)=>({ state: ieUf(x), ie: ieValue(x), active: x?.ativo !== false })).filter((x:any)=>x.ie),
       source: 'CNPJ.ws',
     },
   };
@@ -170,13 +176,44 @@ async function lookupSintegra(cnpj: string) {
     return '';
   }
 }
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function lookupCnpjWsViaDatabase(admin: any, cnpj: string) {
+  try {
+    const { data: requestId, error: requestError } = await admin.rpc(
+      'internal_company_registry_request',
+      { _cnpj: cnpj }
+    );
+    if (requestError || !requestId) return null;
+
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      if (attempt) await sleep(250);
+      const { data, error } = await admin.rpc(
+        'internal_company_registry_response',
+        { _request_id: Number(requestId) }
+      );
+      if (error) return null;
+      if (data && !data?._error) return data;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 async function lookupRegistry(admin: any, cnpj: string) {
   const [ws, brasil] = await Promise.allSettled([
     fetchJson(`https://publica.cnpj.ws/cnpj/${cnpj}`),
     fetchJson(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`),
   ]);
-  const a = ws.status === 'fulfilled' ? normalizeCnpjWs(ws.value, cnpj) : null;
+  let a = ws.status === 'fulfilled' ? normalizeCnpjWs(ws.value, cnpj) : null;
   const b = brasil.status === 'fulfilled' ? normalizeBrasilApi(brasil.value, cnpj) : null;
+
+  if (!a?.state_registration) {
+    const dbRaw = await lookupCnpjWsViaDatabase(admin, cnpj);
+    if (dbRaw) a = normalizeCnpjWs(dbRaw, cnpj);
+  }
+
   const company = mergeCompany(a, b, cnpj);
   if (!company.state_registration) {
     company.state_registration = company.state === 'AL' ? await lookupAlIe(admin, cnpj) : '';
@@ -314,6 +351,36 @@ Deno.serve(async req => {
     });
     if (profileError) throw profileError;
 
+    const registryManagedValues = {
+      company_name: companyName,
+      trade_name: tradeName || '',
+      company_size: clean(source.company_size),
+      state_registration: clean(source.state_registration),
+      registration_status: clean(source.registration_status),
+      tax_regime: clean(source.tax_regime),
+      email: clean(source.email),
+      phone: digits(source.phone),
+      postal_code: digits(source.postal_code),
+      street: clean(source.street),
+      street_number: clean(source.street_number),
+      complement: clean(source.complement),
+      district: clean(source.district),
+      city: clean(source.city),
+      state: clean(source.state).toUpperCase().slice(0,2),
+      city_ibge_code: digits(source.city_ibge_code),
+      cnae_primary: digits(source.cnae_primary),
+    };
+    const registryPayload = source.registry_payload && typeof source.registry_payload === 'object'
+      ? {
+          ...source.registry_payload,
+          _sync: {
+            managed_values: registryManagedValues,
+            last_source_sync_at: new Date().toISOString(),
+            mode: 'registry_safe_merge',
+          },
+        }
+      : {};
+
     const companyPayload = {
       company_name: companyName,
       trade_name: tradeName || null,
@@ -336,8 +403,8 @@ Deno.serve(async req => {
       state: clean(source.state).toUpperCase().slice(0,2) || null,
       city_ibge_code: digits(source.city_ibge_code) || null,
       cnae_primary: digits(source.cnae_primary) || null,
-      registry_payload: source.registry_payload && typeof source.registry_payload === 'object' ? source.registry_payload : {},
-      registry_updated_at: source.registry_payload ? new Date().toISOString() : null,
+      registry_payload: registryPayload,
+      registry_updated_at: Object.keys(registryPayload).length ? new Date().toISOString() : null,
     };
     const { data: officeCompany, error: officeError } = await admin.from('companies').insert(companyPayload).select('id').single();
     if (officeError || !officeCompany) throw officeError || new Error('Não foi possível criar o cliente.');
