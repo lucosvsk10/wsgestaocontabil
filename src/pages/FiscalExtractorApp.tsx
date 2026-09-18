@@ -1050,6 +1050,10 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview }: a
   const [detailId, setDetailId] = useState('');
   const [detailRaw, setDetailRaw] = useState<any>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState<any>({});
+  const [removeTarget, setRemoveTarget] = useState<Company | null>(null);
+
   const visible = companies.filter(
     (c: Company) =>
       `${c.name} ${c.tradeName} ${c.cnpj}`.toLowerCase().includes(term.toLowerCase().trim()) ||
@@ -1086,17 +1090,76 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview }: a
     if (preview)
       return setNotice({ tone: 'warning', text: 'A sincronização fica disponível no ambiente autenticado.' });
     if (busy) return;
-    setBusy(c.id);
+    setBusy(`sync:${c.id}`);
     try {
       const { data, error } = await (supabase as any).rpc('extractor_queue_sync', { _company_id: c.id });
       if (error || !data?.ok)
-        setNotice({ tone: 'error', text: data?.message || 'Não foi possível atualizar esta empresa. Tente novamente.' });
+        setNotice({ tone: 'error', text: data?.message || 'Não foi possível sincronizar esta empresa agora.' });
       else
-        setNotice({ tone: 'success', text: `${c.tradeName}: atualização fiscal colocada na fila.` });
+        setNotice({ tone: 'success', text: `${c.tradeName}: sincronização fiscal colocada na fila.` });
       await onReload();
       if (detailId === c.id) await loadDetail(c.id);
     } catch {
-      setNotice({ tone: 'error', text: 'Falha de conexão ao atualizar. Tente novamente.' });
+      setNotice({ tone: 'error', text: 'Falha de conexão ao sincronizar. Tente novamente.' });
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const openEditor = () => {
+    if (!selected) return;
+    const fiscal = detailRaw?.fiscal_companies || {};
+    const profile = detailRaw?.profile_overrides || {};
+    const address = profile?.address || {};
+    const fiscalAddress = fiscal?.endereco || {};
+    setEditForm({
+      trade_name: profile.trade_name ?? fiscal.nome_fantasia ?? selected.tradeName ?? '',
+      state_registration: profile.state_registration ?? fiscal.inscricao_estadual ?? '',
+      municipality: profile.municipality ?? fiscal.municipio ?? '',
+      phone: profile.phone ?? '',
+      address: {
+        street: address.street ?? fiscalAddress.logradouro ?? '',
+        number: address.number ?? fiscalAddress.numero ?? '',
+        district: address.district ?? fiscalAddress.bairro ?? '',
+        postal_code: address.postal_code ?? fiscalAddress.cep ?? '',
+        complement: address.complement ?? fiscalAddress.complemento ?? '',
+      },
+    });
+    setEditOpen(true);
+  };
+
+  const saveProfile = async () => {
+    if (!selected || busy) return;
+    if (preview) return setNotice({ tone: 'warning', text: 'A edição fica disponível no ambiente autenticado.' });
+    setBusy(`edit:${selected.id}`);
+    try {
+      await extractorRequest({ action: 'update_profile', company_id: selected.id, profile: editForm });
+      setEditOpen(false);
+      await loadDetail(selected.id);
+      await onReload();
+      setNotice({ tone: 'success', text: 'Dados de exibição da empresa atualizados.' });
+    } catch (error) {
+      setNotice({ tone: 'error', text: error instanceof Error ? error.message : 'Não foi possível salvar os dados da empresa.' });
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const removeCompany = async () => {
+    if (!removeTarget || busy) return;
+    if (preview) return setNotice({ tone: 'warning', text: 'A remoção fica disponível no ambiente autenticado.' });
+    setBusy(`remove:${removeTarget.id}`);
+    try {
+      await extractorRequest({ action: 'remove', company_id: removeTarget.id });
+      if (detailId === removeTarget.id) {
+        setDetailId('');
+        setDetailRaw(null);
+      }
+      setRemoveTarget(null);
+      await onReload();
+      setNotice({ tone: 'success', text: 'Empresa removida desta conta do Extrator. Os documentos fiscais originais foram preservados.' });
+    } catch (error) {
+      setNotice({ tone: 'error', text: error instanceof Error ? error.message : 'Não foi possível remover a empresa.' });
     } finally {
       setBusy('');
     }
@@ -1104,8 +1167,20 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview }: a
 
   if (selected) {
     const fiscal = detailRaw?.fiscal_companies || {};
+    const profile = detailRaw?.profile_overrides || {};
+    const address = profile?.address || {};
+    const fiscalAddress = fiscal?.endereco || {};
     const certs = Array.isArray(fiscal?.fiscal_certificates) ? fiscal.fiscal_certificates : [];
     const activeCert = certs.find((item: any) => item.is_active) || certs[0] || null;
+    const displayTradeName = profile.trade_name || fiscal.nome_fantasia || selected.tradeName;
+    const displayIE = profile.state_registration || fiscal.inscricao_estadual || '—';
+    const displayMunicipality = profile.municipality || fiscal.municipio || '—';
+    const displayAddress = [
+      address.street || fiscalAddress.logradouro,
+      address.number || fiscalAddress.numero,
+      address.district || fiscalAddress.bairro,
+      address.postal_code || fiscalAddress.cep,
+    ].filter(Boolean).join(' · ') || '—';
     const certLabel =
       selected.certificateDays == null
         ? 'Não configurado'
@@ -1114,6 +1189,7 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview }: a
           : selected.certificateDays <= 30
             ? 'Vence em breve'
             : 'Válido';
+
     return (
       <div className="extractor-page">
         <PageHeading
@@ -1125,17 +1201,18 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview }: a
         <section className="extractor-company-detail">
           <header className="extractor-company-detail-head">
             <div>
-              <span className="extractor-company-detail-avatar">{selected.tradeName.slice(0, 2).toUpperCase()}</span>
+              <span className="extractor-company-detail-avatar">{displayTradeName.slice(0, 2).toUpperCase()}</span>
               <div>
                 <small>Empresa do Extrator</small>
                 <h2>{selected.name}</h2>
-                <p>{selected.tradeName} · {formatCnpj(selected.cnpj)} · {selected.uf}</p>
+                <p>{displayTradeName} · {formatCnpj(selected.cnpj)} · {selected.uf}</p>
               </div>
             </div>
             <div className="extractor-company-detail-actions">
-              <button onClick={() => void sync(selected)} disabled={busy === selected.id}>
-                {busy === selected.id ? 'Atualizando...' : 'Sincronizar agora'}
+              <button onClick={() => void sync(selected)} disabled={busy === `sync:${selected.id}`}>
+                {busy === `sync:${selected.id}` ? 'Sincronizando...' : 'Sincronizar agora'}
               </button>
+              <button onClick={openEditor}>Editar dados</button>
               <button onClick={onAdd}>Adicionar / substituir A1</button>
               <button className="primary" onClick={() => onOpen(selected.id)}>Ver documentos</button>
             </div>
@@ -1162,18 +1239,19 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview }: a
 
           <div className="extractor-company-detail-info">
             <article>
-              <h3>Dados cadastrais</h3>
+              <div className="extractor-detail-title-row"><h3>Dados cadastrais</h3><button onClick={openEditor}>Editar</button></div>
               {detailLoading ? <p className="extractor-helper">Carregando dados completos...</p> : (
                 <dl>
                   <div><dt>Razão social</dt><dd>{fiscal.razao_social || selected.name}</dd></div>
-                  <div><dt>Nome fantasia</dt><dd>{fiscal.nome_fantasia || selected.tradeName}</dd></div>
+                  <div><dt>Nome fantasia</dt><dd>{displayTradeName}</dd></div>
                   <div><dt>CNPJ</dt><dd>{formatCnpj(fiscal.cnpj || selected.cnpj)}</dd></div>
-                  <div><dt>Inscrição estadual</dt><dd>{fiscal.inscricao_estadual || '—'}</dd></div>
-                  <div><dt>Município / UF</dt><dd>{[fiscal.municipio, fiscal.uf || selected.uf].filter(Boolean).join(' / ') || '—'}</dd></div>
+                  <div><dt>Inscrição estadual</dt><dd>{displayIE}</dd></div>
+                  <div><dt>Município / UF</dt><dd>{[displayMunicipality, fiscal.uf || selected.uf].filter(Boolean).join(' / ')}</dd></div>
+                  <div><dt>Telefone</dt><dd>{profile.phone || 'Não informado'}</dd></div>
+                  <div><dt>Endereço</dt><dd>{displayAddress}</dd></div>
                   <div><dt>Regime tributário</dt><dd>{String(fiscal.regime_tributario || '—').replace(/_/g, ' ')}</dd></div>
                   <div><dt>Ambiente</dt><dd>{fiscal.ambiente_padrao === 'homologacao' ? 'Homologação' : 'Produção'}</dd></div>
                   <div><dt>Vinculada ao Extrator em</dt><dd>{detailRaw?.created_at ? formatDate(detailRaw.created_at, true) : '—'}</dd></div>
-                  <div><dt>Situação</dt><dd>{detailRaw?.status || fiscal.status || 'Ativa'}</dd></div>
                 </dl>
               )}
             </article>
@@ -1192,6 +1270,32 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview }: a
             </article>
           </div>
         </section>
+
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent className="extractor-dark-dialog sm:max-w-2xl">
+            <DialogTitle>Editar dados da empresa</DialogTitle>
+            <DialogDescription>
+              CNPJ e razão social fiscal permanecem protegidos. As alterações abaixo valem apenas para a exibição desta empresa dentro da sua conta do Extrator.
+            </DialogDescription>
+            <div className="extractor-edit-company-grid">
+              <label>Nome fantasia<input value={editForm.trade_name || ''} onChange={e => setEditForm((v: any) => ({ ...v, trade_name: e.target.value }))} /></label>
+              <label>Inscrição estadual<input value={editForm.state_registration || ''} onChange={e => setEditForm((v: any) => ({ ...v, state_registration: e.target.value }))} /></label>
+              <label>Município<input value={editForm.municipality || ''} onChange={e => setEditForm((v: any) => ({ ...v, municipality: e.target.value }))} /></label>
+              <label>Telefone<input value={editForm.phone || ''} onChange={e => setEditForm((v: any) => ({ ...v, phone: e.target.value }))} /></label>
+              <label className="wide">Logradouro<input value={editForm.address?.street || ''} onChange={e => setEditForm((v: any) => ({ ...v, address: { ...(v.address || {}), street: e.target.value } }))} /></label>
+              <label>Número<input value={editForm.address?.number || ''} onChange={e => setEditForm((v: any) => ({ ...v, address: { ...(v.address || {}), number: e.target.value } }))} /></label>
+              <label>Bairro<input value={editForm.address?.district || ''} onChange={e => setEditForm((v: any) => ({ ...v, address: { ...(v.address || {}), district: e.target.value } }))} /></label>
+              <label>CEP<input value={editForm.address?.postal_code || ''} onChange={e => setEditForm((v: any) => ({ ...v, address: { ...(v.address || {}), postal_code: e.target.value } }))} /></label>
+              <label className="wide">Complemento<input value={editForm.address?.complement || ''} onChange={e => setEditForm((v: any) => ({ ...v, address: { ...(v.address || {}), complement: e.target.value } }))} /></label>
+            </div>
+            <div className="extractor-dialog-actions">
+              <button className="extractor-secondary" onClick={() => setEditOpen(false)}>Cancelar</button>
+              <button className="extractor-primary" onClick={() => void saveProfile()} disabled={busy === `edit:${selected.id}`}>
+                {busy === `edit:${selected.id}` ? 'Salvando...' : 'Salvar alterações'}
+              </button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
@@ -1223,13 +1327,28 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview }: a
             <div><strong>{syncLabel(c.purchaseStatus)} / {syncLabel(c.salesStatus)}</strong><span>{c.lastSync ? formatDate(c.lastSync, true) : 'Ainda não concluída'}</span></div>
             <div><strong>{c.certificateUntil ? formatDate(c.certificateUntil) : 'Não configurado'}</strong><span>{c.certificateDays == null ? '—' : `${c.certificateDays} dia(s)`}</span></div>
             <div className="extractor-row-actions">
-              <button onClick={e => { e.stopPropagation(); void sync(c); }} disabled={busy === c.id}><AnimatedExtractorIcon name="refresh" />{busy === c.id ? 'Atualizando' : 'Atualizar'}</button>
               <button onClick={e => { e.stopPropagation(); setDetailId(c.id); }}>Abrir</button>
+              <button className="danger" onClick={e => { e.stopPropagation(); setRemoveTarget(c); }}>Remover</button>
             </div>
           </div>
         ))}
         {!visible.length && <Empty>Nenhuma empresa encontrada.</Empty>}
       </div>
+
+      <Dialog open={Boolean(removeTarget)} onOpenChange={open => !open && setRemoveTarget(null)}>
+        <DialogContent className="extractor-dark-dialog sm:max-w-md">
+          <DialogTitle>Remover empresa do Extrator?</DialogTitle>
+          <DialogDescription>
+            {removeTarget ? `${removeTarget.tradeName} será removida desta conta. Os documentos fiscais já armazenados não serão apagados.` : ''}
+          </DialogDescription>
+          <div className="extractor-dialog-actions">
+            <button className="extractor-secondary" onClick={() => setRemoveTarget(null)}>Cancelar</button>
+            <button className="extractor-danger-button" onClick={() => void removeCompany()} disabled={Boolean(busy)}>
+              {busy.startsWith('remove:') ? 'Removendo...' : 'Remover empresa'}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
