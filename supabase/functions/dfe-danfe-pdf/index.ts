@@ -566,7 +566,7 @@ async function buildNfse(doc: any, xml: string) {
 
   if (key) {
     const qi = await qr(pdf, qrv, 4);
-    page.drawImage(qi, { x:493, y:y(91), width:mm(19), height:mm(19) });
+    page.drawImage(qi, { x:493, y:y(84), width:mm(15.2), height:mm(15.2) });
   }
   drawWrapped(
     'A autenticidade desta NFS-e pode ser verificada pela leitura deste código QR ou pela consulta da chave de acesso no portal nacional da NFS-e',
