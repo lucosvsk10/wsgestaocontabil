@@ -123,7 +123,7 @@ export function CompanySelectionProvider({ children }: { children: React.ReactNo
 
     setLoading(true);
     try {
-      const companiesResult = await supabase
+      const companiesResult = await (supabase as any)
         .from('companies')
         .select('id,company_name,trade_name,cnpj,document_type,document_number,logo_url')
         .order('company_name');
