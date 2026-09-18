@@ -338,7 +338,6 @@ export default function SaasApp() {
         section={active as CadastroSection}
         autoCreate={pendingCadastroCreate === active}
         onAutoCreateConsumed={() => setPendingCadastroCreate(null)}
-        allowOfficeImport={fromAdmin && active === 'Clientes'}
       />
     );
   else if (active === 'Emissão')

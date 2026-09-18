@@ -153,6 +153,12 @@ verify_jwt = true
 verify_jwt = true
 
 
+[functions.admin-client-onboarding]
+verify_jwt = true
+
+[functions.extractor-company-config]
+verify_jwt = true
+
 [functions.extractor-fiscal-export]
 verify_jwt = true
 
