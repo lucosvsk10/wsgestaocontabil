@@ -918,22 +918,27 @@ function Metric({
   value,
   detail,
   icon,
+  watermark = false,
 }: {
   label: string;
   value: string;
   detail: string;
   icon: ExtractorIconName;
+  watermark?: boolean;
 }) {
   return (
-    <article className="extractor-metric extractor-metric-visual" data-icon-hover>
+    <article className={`extractor-metric ${watermark ? 'extractor-metric-visual' : ''}`} data-icon-hover>
       <div>
         <p>{label}</p>
+        {!watermark && <AnimatedExtractorIcon name={icon} />}
       </div>
       <strong>{value}</strong>
       <span>{detail}</span>
-      <span className="extractor-metric-watermark" aria-hidden="true">
-        <AnimatedExtractorIcon name={icon} />
-      </span>
+      {watermark && (
+        <span className="extractor-metric-watermark" aria-hidden="true">
+          <AnimatedExtractorIcon name={icon} />
+        </span>
+      )}
     </article>
   );
 }
@@ -994,30 +999,35 @@ function Overview({ companies, totals, models, daily, onGo }: any) {
           value={integer.format(totals.documents)}
           detail={`${integer.format(totals.fullXml)} com XML integral`}
           icon="document"
+          watermark
         />
         <Metric
           label="Compras"
           value={integer.format(totals.entries)}
           detail="Entradas fiscais"
           icon="download"
+          watermark
         />
         <Metric
           label="Vendas"
           value={integer.format(totals.exits)}
           detail="Saídas fiscais"
           icon="upload"
+          watermark
         />
         <Metric
           label="Movimentação"
           value={currency.format(totals.value)}
           detail="Valor disponível no período"
           icon="report"
+          watermark
         />
         <Metric
           label="Cobertura XML"
           value={`${xmlRate}%`}
           detail={`${integer.format(totals.pendingXml)} pendente(s)`}
           icon="certificate"
+          watermark
         />
       </section>
       <section className="extractor-dashboard-grid">
