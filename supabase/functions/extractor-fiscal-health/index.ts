@@ -55,11 +55,6 @@ const daysAgo = (days: number) => {
   const base = new Date(`${today()}T12:00:00-03:00`);
   return brazilDate(new Date(base.getTime() - Math.max(0, days) * 86400000));
 };
-const dateOnly = (value: unknown) => {
-  const text = String(value || '');
-  return /^\d{4}-\d{2}-\d{2}/.test(text) ? text.slice(0, 10) : '';
-};
-
 async function paged(makeQuery: (from: number, to: number) => any, cap = 10000) {
   const rows: any[] = [];
   const size = 1000;
@@ -210,32 +205,12 @@ Deno.serve(async req => {
       });
     }
 
-    const end = today();
-    let start = scope === 'last_30_days' ? daysAgo(29) : '';
-    if (scope === 'full') {
-      const [oldestDocument, oldestReconciliation] = await Promise.all([
-        admin.from('fiscal_dfe_documents')
-          .select('issue_date')
-          .eq('company_id', companyId)
-          .neq('document_kind', 'evento')
-          .not('issue_date', 'is', null)
-          .order('issue_date', { ascending: true })
-          .limit(1)
-          .maybeSingle(),
-        admin.from('fiscal_sales_reconciliation')
-          .select('issue_date')
-          .eq('company_id', companyId)
-          .not('issue_date', 'is', null)
-          .order('issue_date', { ascending: true })
-          .limit(1)
-          .maybeSingle(),
-      ]);
-      const candidates = [
-        dateOnly(oldestDocument.data?.issue_date),
-        dateOnly(oldestReconciliation.data?.issue_date),
-      ].filter(Boolean).sort();
-      start = candidates[0] || access.from || end;
-    }
+    const end = access.to && access.to < today() ? access.to : today();
+    const fullStart = access.from || end;
+    const last30Start = daysAgo(29);
+    const start = scope === 'last_30_days'
+      ? (fullStart > last30Start ? fullStart : last30Start)
+      : fullStart;
 
     const [docs, purchaseStateRes, salesStateRes, healthRes, certRes, reconciliation, syncHistoryRes] = await Promise.all([
       paged((from, to) => admin.from('fiscal_dfe_documents')
