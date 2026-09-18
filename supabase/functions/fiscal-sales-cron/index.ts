@@ -30,6 +30,21 @@ Deno.serve(async req => {
 
     const now = new Date();
     const next = new Date(now.getTime() + 3 * 60 * 60 * 1000);
+    const [{ data: minimumHistory }, { data: localToday }] = await Promise.all([
+      admin.rpc("extractor_minimum_history_start"),
+      admin.rpc("extractor_local_date"),
+    ]);
+    const brazilNow = new Date(Date.now() - 3 * 60 * 60 * 1000);
+    const fallbackStart = new Date(Date.UTC(brazilNow.getUTCFullYear(), brazilNow.getUTCMonth() - 1, 1))
+      .toISOString()
+      .slice(0, 10);
+    const historyStart = /^\d{4}-\d{2}-\d{2}$/.test(String(minimumHistory || ""))
+      ? String(minimumHistory)
+      : fallbackStart;
+    const historyEnd = /^\d{4}-\d{2}-\d{2}$/.test(String(localToday || ""))
+      ? String(localToday)
+      : brazilNow.toISOString().slice(0, 10);
+    const historyStartMonth = historyStart.slice(2, 4) + historyStart.slice(5, 7);
     const base = Deno.env.get("SUPABASE_URL")!;
     const headers = {
       "content-type": "application/json",
@@ -111,10 +126,25 @@ Deno.serve(async req => {
           updated_at: now.toISOString(),
         });
 
-        const configuredStart = String(company?.fiscal_settings?.history_start_date || "");
-        const historyStart = /^\d{4}-\d{2}-\d{2}$/.test(configuredStart)
-          ? configuredStart
-          : null;
+        if (
+          state?.history_start_month !== historyStartMonth ||
+          Number(state?.backfill_days || 0) !== Math.max(1, Math.ceil(
+            (new Date(`${historyEnd}T00:00:00-03:00`).getTime() -
+              new Date(`${historyStart}T00:00:00-03:00`).getTime()) / 86400000
+          ) + 1)
+        ) {
+          await admin
+            .from("fiscal_sales_sync_state")
+            .update({
+              history_start_month: historyStartMonth,
+              backfill_days: Math.max(1, Math.ceil(
+                (new Date(`${historyEnd}T00:00:00-03:00`).getTime() -
+                  new Date(`${historyStart}T00:00:00-03:00`).getTime()) / 86400000
+              ) + 1),
+              updated_at: new Date().toISOString(),
+            })
+            .eq("company_id", company.id);
+        }
 
         let dfeQuery = admin
           .from("fiscal_dfe_documents")
@@ -126,9 +156,9 @@ Deno.serve(async req => {
           .eq("series", "1")
           .order("issue_date", { ascending: false })
           .limit(2000);
-        if (historyStart) {
-          dfeQuery = dfeQuery.gte("issue_date", `${historyStart}T00:00:00Z`);
-        }
+        dfeQuery = dfeQuery
+          .gte("issue_date", `${historyStart}T00:00:00-03:00`)
+          .lte("issue_date", `${historyEnd}T23:59:59.999-03:00`);
 
         const [{ data: salesRows }, { data: dfeRows }] = await Promise.all([
           admin
@@ -137,6 +167,8 @@ Deno.serve(async req => {
             .eq("company_id", company.id)
             .eq("model", "65")
             .eq("series", "1")
+            .gte("issue_date", `${historyStart}T00:00:00-03:00`)
+            .lte("issue_date", `${historyEnd}T23:59:59.999-03:00`)
             .order("document_number", { ascending: false })
             .limit(2000),
           dfeQuery,
