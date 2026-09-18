@@ -97,8 +97,24 @@ begin
       raise exception 'Workspace interno possui dados fiscais e não pode ser removido automaticamente';
     end if;
 
+    delete from public.admin_product_workspaces
+    where organization_id=v_internal_org;
+
+    delete from public.extractor_accounts
+    where organization_id=v_internal_org;
+
+    update public.saas_audit_logs
+    set organization_id=null
+    where organization_id=v_internal_org;
+
+    alter table public.organization_members disable trigger trg_audit_organization_members;
+    alter table public.organizations disable trigger trg_audit_organizations;
+
     delete from public.organizations where id=v_internal_org;
+
+    alter table public.organizations enable trigger trg_audit_organizations;
+    alter table public.organization_members enable trigger trg_audit_organization_members;
   end if;
-end $$;
+end $;
 
 drop table if exists public.admin_product_workspaces;
