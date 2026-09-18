@@ -426,11 +426,7 @@ const chart = {
 
 export default function FiscalExtractorApp({ preview = false }: { preview?: boolean }) {
   const { user, isAdmin } = useAuth();
-  const internalAdminEntry =
-    !preview &&
-    isAdmin &&
-    typeof window !== 'undefined' &&
-    new URLSearchParams(window.location.search).get('source') === 'admin-fiscal';
+  const internalAdminEntry = !preview && isAdmin;
   const [active, setActive] = useState<Section>('Visão geral'),
     [mobile, setMobile] = useState(false),
     [snapshot, setSnapshot] = useState<Snapshot | null>(null),
