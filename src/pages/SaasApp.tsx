@@ -124,7 +124,7 @@ const emissionTypeLabel = (emission: any) =>
   )[String(emission?.document_type || '').toLowerCase()] || null;
 
 export default function SaasApp() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [active, setActive] = useState('Início');
   const [organization, setOrganization] = useState<any>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
@@ -165,9 +165,37 @@ export default function SaasApp() {
         .eq('user_id', user.id)
         .eq('status', 'active');
       if (requestId !== organizationRequest.current) return;
-      const choices = (data || [])
+      const membershipChoices = (data || [])
         .map((row: any) => row.organizations || null)
         .filter((value: any) => Boolean(value?.id));
+      const organizationIds = membershipChoices.map((value: any) => String(value.id));
+
+      let choices = membershipChoices;
+      if (organizationIds.length) {
+        const { data: subscriptions, error: subscriptionsError } = await (supabase as any)
+          .from('saas_subscriptions')
+          .select('organization_id,status,trial_ends_at,access_expires_at,saas_plans(product_code)')
+          .in('organization_id', organizationIds)
+          .in('status', ['trialing', 'active', 'past_due']);
+
+        if (!subscriptionsError) {
+          const now = Date.now();
+          const issuerOrganizations = new Set(
+            (subscriptions || [])
+              .filter((row: any) => {
+                const plan = Array.isArray(row.saas_plans) ? row.saas_plans[0] : row.saas_plans;
+                if (plan?.product_code !== 'issuer') return false;
+                const boundary = row.status === 'trialing' ? row.trial_ends_at : row.access_expires_at;
+                return !boundary || new Date(boundary).getTime() > now;
+              })
+              .map((row: any) => String(row.organization_id))
+          );
+          choices = membershipChoices.filter((value: any) =>
+            issuerOrganizations.has(String(value.id))
+          );
+        }
+      }
+
       setOrganizationChoices(choices);
       const storedId =
         preferredOrganizationId || localStorage.getItem('ws_saas_selected_organization');
@@ -393,7 +421,13 @@ export default function SaasApp() {
         <div className="saas-topbar-content flex min-w-0 flex-1 items-center px-6">
           <div className="saas-page-context flex-1">
             <p className="text-[10px] font-semibold uppercase tracking-[.12em]">
-              WS Gestão Contábil
+              {isAdmin && new URLSearchParams(window.location.search).get('source') === 'admin' ? (
+                <a href="/admin" className="transition-opacity hover:opacity-70">
+                  ← Painel do administrador
+                </a>
+              ) : (
+                'WS Gestão Contábil'
+              )}
             </p>
             <span>
               {active === 'Emissão' && selectedDocument ? `Emissão de ${selectedDocument}` : active}
@@ -426,7 +460,7 @@ export default function SaasApp() {
             <AccountDrawer
               darkTrigger
               avatarUrl={logoUrl}
-              accessLabel="Assinante do emissor fiscal"
+              accessLabel={isAdmin ? 'Administrador' : 'Assinante do emissor fiscal'}
               planLabel={planLabel}
               notifications={accountNotifications}
               usageRows={[
