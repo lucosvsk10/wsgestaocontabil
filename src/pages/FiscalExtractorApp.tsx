@@ -1469,7 +1469,10 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview, adm
   }, [preview]);
 
   useEffect(() => {
-    if (detailId) void loadDetail(detailId);
+    if (!detailId) return;
+    void loadDetail(detailId);
+    const timer = window.setInterval(() => void loadDetail(detailId), 10000);
+    return () => window.clearInterval(timer);
   }, [detailId, loadDetail]);
 
   const sync = async (c: Company) => {
