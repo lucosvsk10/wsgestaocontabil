@@ -6,11 +6,14 @@ import {
   Mail,
   MapPin,
   Package2,
+  Download,
+  Loader2,
   Phone,
   Plus,
   Search,
   Truck,
   UsersRound,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +35,7 @@ type Props = {
   section: CadastroSection;
   autoCreate?: boolean;
   onAutoCreateConsumed?: () => void;
+  allowOfficeImport?: boolean;
 };
 
 const partyTypeBySection: Record<string, string> = {
@@ -267,6 +271,7 @@ export default function SaasCadastros({
   section,
   autoCreate = false,
   onAutoCreateConsumed,
+  allowOfficeImport = false,
 }: Props) {
   const isCatalog = section === 'Produtos' || section === 'Serviços';
   const [rows, setRows] = useState<any[]>([]);
@@ -278,6 +283,98 @@ export default function SaasCadastros({
   const [pendingImage, setPendingImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageRemoved, setImageRemoved] = useState(false);
+  const [officeImportOpen, setOfficeImportOpen] = useState(false);
+  const [officeClients, setOfficeClients] = useState<any[]>([]);
+  const [officeImportLoading, setOfficeImportLoading] = useState(false);
+  const [officeImportBusy, setOfficeImportBusy] = useState('');
+  const [officeImportQuery, setOfficeImportQuery] = useState('');
+
+
+  const loadOfficeClients = async () => {
+    if (!allowOfficeImport || section !== 'Clientes') return;
+    setOfficeImportLoading(true);
+    setMessage('');
+    try {
+      const { data, error } = await (supabase as any)
+        .from('companies')
+        .select('id,company_name,trade_name,cnpj,document_type,document_number,state_registration,tax_regime,email,phone,postal_code,street,street_number,complement,district,city,state,city_ibge_code,registry_payload')
+        .order('company_name');
+      if (error) throw error;
+      setOfficeClients(data || []);
+      setOfficeImportOpen(true);
+    } catch (error: any) {
+      setMessage(error?.message || 'Não foi possível carregar os clientes do escritório.');
+    } finally {
+      setOfficeImportLoading(false);
+    }
+  };
+
+  const importOfficeClient = async (office: any) => {
+    if (!organizationId || officeImportBusy) return;
+    setOfficeImportBusy(office.id);
+    setMessage('');
+    try {
+      const documentType = String(office.document_type || (office.cnpj ? 'cnpj' : 'other'));
+      const taxId = onlyDigits(office.document_number || office.cnpj);
+      if (!taxId) throw new Error('Este cliente não possui CPF/CNPJ informado.');
+
+      const payload: any = {
+        organization_id: organizationId,
+        party_type: 'customer',
+        status: 'active',
+        person_type: documentType === 'cpf' ? 'individual' : 'legal',
+        legal_name: office.company_name,
+        trade_name: office.trade_name || null,
+        tax_id: taxId,
+        state_registration: office.state_registration || null,
+        ie_indicator: office.state_registration ? '1' : null,
+        tax_regime: office.tax_regime || null,
+        email: office.email || null,
+        phone: office.phone || null,
+        postal_code: office.postal_code || null,
+        street: office.street || null,
+        street_number: office.street_number || null,
+        complement: office.complement || null,
+        district: office.district || null,
+        city: office.city || null,
+        state: office.state || null,
+        city_ibge_code: office.city_ibge_code || null,
+        final_consumer: true,
+        icms_taxpayer: Boolean(office.state_registration),
+        metadata: {
+          source: 'office_client',
+          office_company_id: office.id,
+          registry_lookup: office.registry_payload || {},
+          imported_from_office_at: new Date().toISOString(),
+          card_color: '#ffffff',
+        },
+        updated_at: new Date().toISOString(),
+      };
+
+      const { data: existing, error: findError } = await (supabase as any)
+        .from('saas_fiscal_parties')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .eq('party_type', 'customer')
+        .eq('tax_id', taxId)
+        .maybeSingle();
+      if (findError) throw findError;
+
+      const { error } = existing?.id
+        ? await (supabase as any).from('saas_fiscal_parties').update(payload).eq('id', existing.id)
+        : await (supabase as any).from('saas_fiscal_parties').insert(payload);
+      if (error) throw error;
+
+      await load();
+      setOfficeImportOpen(false);
+      setOfficeImportQuery('');
+      setMessage(existing?.id ? 'Cliente atualizado com os dados do escritório.' : 'Cliente importado do escritório.');
+    } catch (error: any) {
+      setMessage(error?.message || 'Não foi possível importar o cliente.');
+    } finally {
+      setOfficeImportBusy('');
+    }
+  };
 
   const hydrateImages = async (data: any[]) => {
     const paths = Array.from(
@@ -704,6 +801,12 @@ export default function SaasCadastros({
           <p className="mt-1 max-w-3xl text-sm text-[#667085]">{subtitle}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {allowOfficeImport && section === 'Clientes' && (
+            <Button variant="outline" onClick={() => void loadOfficeClients()} disabled={officeImportLoading} className="saas-action-secondary">
+              {officeImportLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Building2 className="mr-2 h-4 w-4" />}
+              Importar do escritório
+            </Button>
+          )}
           <SaasRegistryImport
             organizationId={organizationId}
             defaultDestination={section}
@@ -759,6 +862,58 @@ export default function SaasCadastros({
           </div>
         )}
       </section>
+
+      {officeImportOpen && allowOfficeImport && section === 'Clientes' && (
+        <div className="fixed inset-0 z-[180] grid place-items-center bg-black/45 p-4" onMouseDown={event => {
+          if (event.target === event.currentTarget && !officeImportBusy) setOfficeImportOpen(false);
+        }}>
+          <div className="w-full max-w-3xl overflow-hidden rounded-2xl border border-[#dce2e9] bg-white shadow-2xl">
+            <header className="flex items-start justify-between gap-4 border-b border-[#e5e9ee] px-5 py-4">
+              <div>
+                <p className="text-[9px] font-semibold uppercase tracking-[.12em] text-[#7a8698]">Clientes do escritório</p>
+                <h2 className="mt-1 text-lg font-semibold text-[#17233b]">Importar cliente</h2>
+                <p className="mt-1 text-[11px] text-[#7a8698]">Escolha um cliente já cadastrado no painel administrativo. Os dados serão copiados para esta organização do Emissor.</p>
+              </div>
+              <button type="button" onClick={() => setOfficeImportOpen(false)} disabled={Boolean(officeImportBusy)} className="grid h-9 w-9 place-items-center rounded-lg text-[#667085] hover:bg-[#f3f5f7]">
+                <X className="h-4 w-4" />
+              </button>
+            </header>
+            <div className="p-5">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#98a2b3]" />
+                <Input value={officeImportQuery} onChange={event => setOfficeImportQuery(event.target.value)} placeholder="Buscar por nome, CNPJ ou CPF..." className="h-10 border-[#d8dfe7] bg-[#fbfcfd] pl-9 text-sm" />
+              </div>
+              <div className="mt-4 max-h-[430px] divide-y divide-[#edf0f3] overflow-y-auto rounded-xl border border-[#e0e5ea]">
+                {officeClients
+                  .filter(office => {
+                    const q = officeImportQuery.trim().toLowerCase();
+                    if (!q) return true;
+                    return [office.company_name, office.trade_name, office.cnpj, office.document_number].some(value => String(value || '').toLowerCase().includes(q));
+                  })
+                  .map(office => (
+                    <button
+                      type="button"
+                      key={office.id}
+                      onClick={() => void importOfficeClient(office)}
+                      disabled={Boolean(officeImportBusy)}
+                      className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-[#f7f9fb] disabled:opacity-60"
+                    >
+                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[#edf1f4] text-xs font-semibold text-[#536077]">
+                        {String(office.trade_name || office.company_name || '?').trim().charAt(0).toUpperCase()}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <strong className="block truncate text-sm text-[#17233b]">{office.trade_name || office.company_name}</strong>
+                        <span className="mt-0.5 block truncate text-[10px] text-[#7a8698]">{office.company_name} · {formatTaxId(office.document_number || office.cnpj)}</span>
+                      </span>
+                      {officeImportBusy === office.id ? <Loader2 className="h-4 w-4 animate-spin text-[#536077]" /> : <Download className="h-4 w-4 text-[#7a8698]" />}
+                    </button>
+                  ))}
+                {!officeClients.length && <p className="px-4 py-10 text-center text-xs text-[#7a8698]">Nenhum cliente disponível no painel administrativo.</p>}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
