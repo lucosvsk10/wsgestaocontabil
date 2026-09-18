@@ -181,18 +181,9 @@ async function queueImportedCompany(ctx: any, fiscalCompanyId: string) {
     );
   if (purchaseError) throw purchaseError;
 
-  const { data: stateCredential } = await ctx.admin
-    .from('fiscal_state_credentials')
-    .select('id')
-    .eq('company_id', fiscalCompanyId)
-    .eq('uf', 'AL')
-    .eq('is_active', true)
-    .limit(1)
-    .maybeSingle();
-
-  const salesStatus = clean(fiscal?.uf).toUpperCase() === 'AL' && !stateCredential?.id
-    ? 'waiting_state_credentials'
-    : 'queued';
+  // The active sales flow uses the A1 certificate + SVRS/Vercel reconciliation.
+  // State portal credentials are optional legacy data and must not block the Extrator.
+  const salesStatus = 'queued';
 
   const { error: salesError } = await ctx.admin
     .from('fiscal_sales_sync_state')
