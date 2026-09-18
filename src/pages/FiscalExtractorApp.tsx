@@ -1277,6 +1277,7 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview, adm
   const [adminImportError, setAdminImportError] = useState('');
   const [adminImportTerm, setAdminImportTerm] = useState('');
   const [adminOfficeCompanies, setAdminOfficeCompanies] = useState<any[]>([]);
+  const [adminImportSelected, setAdminImportSelected] = useState<string[]>([]);
 
   const loadAdminOfficeCompanies = useCallback(async () => {
     if (!adminAccess || preview) return;
@@ -1295,34 +1296,119 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview, adm
   const openAdminImport = async () => {
     setAdminImportOpen(true);
     setAdminImportTerm('');
+    setAdminImportSelected([]);
     await loadAdminOfficeCompanies();
   };
 
-  const importOfficeClient = async (row: any) => {
-    if (adminImportBusy || row?.already_linked) return;
-    setAdminImportBusy(String(row.office_company_id));
+  useEffect(() => {
+    if (!adminImportOpen || preview || !adminAccess) return;
+    const refresh = () => void loadAdminOfficeCompanies();
+    const timer = window.setInterval(refresh, 5000);
+    const channel = supabase
+      .channel('extractor-admin-import-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'fiscal_certificates' }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'fiscal_companies' }, refresh)
+      .subscribe();
+    return () => {
+      window.clearInterval(timer);
+      void supabase.removeChannel(channel);
+    };
+  }, [adminImportOpen, preview, adminAccess, loadAdminOfficeCompanies]);
+
+  const importSelectedOfficeClients = async () => {
+    if (adminImportBusy || !adminImportSelected.length) return;
+    const selectedIds = [...adminImportSelected];
+    setAdminImportBusy('bulk');
     setAdminImportError('');
+
+    const verifyCommittedImports = async () => {
+      try {
+        const verify = await extractorRequest({ action: 'list_office_clients' });
+        const rows = Array.isArray(verify?.companies) ? verify.companies : [];
+        return selectedIds.filter(id =>
+          rows.some((row: any) => String(row.office_company_id) === id && row.already_linked)
+        );
+      } catch {
+        return [];
+      }
+    };
+
     try {
       const data = await extractorRequest({
-        action: 'import_office_client',
-        office_company_id: row.office_company_id,
+        action: 'import_office_clients_bulk',
+        office_company_ids: selectedIds,
       });
-      const fiscalId = String(data?.company?.id || '');
-      await onReload();
-      if (fiscalId) {
-        await (supabase as any).rpc('extractor_queue_sync', { _company_id: fiscalId }).catch(() => null);
-        setDetailId(fiscalId);
+      const imported = Number(data?.imported || 0);
+      const failed = Number(data?.failed || 0);
+
+      void Promise.resolve(onReload()).catch(() => null);
+      void loadAdminOfficeCompanies();
+
+      if (imported > 0) {
+        setNotice({
+          tone: failed ? 'warning' : 'success',
+          text: failed
+            ? `${imported} empresa(s) importada(s) e colocada(s) na fila. ${failed} não puderam ser importadas.`
+            : `${imported} empresa(s) importada(s). A busca fiscal inicial já começou automaticamente.`,
+        });
       }
-      setAdminImportOpen(false);
-      setNotice({
-        tone: 'success',
-        text: `${row.trade_name || row.company_name} foi vinculada ao Extrator usando o cadastro do painel administrativo.`,
-      });
+
+      if (failed > 0) {
+        const messages = (data?.results || [])
+          .filter((item: any) => !item?.ok)
+          .map((item: any) => item?.error)
+          .filter(Boolean);
+        setAdminImportError(messages.slice(0, 3).join(' · ') || 'Algumas empresas não puderam ser importadas.');
+        setAdminImportSelected(
+          selectedIds.filter(id =>
+            (data?.results || []).some((item: any) => String(item.office_company_id) === id && !item.ok)
+          )
+        );
+      } else {
+        setAdminImportSelected([]);
+        setAdminImportOpen(false);
+      }
     } catch (error) {
-      setAdminImportError(error instanceof Error ? error.message : 'Não foi possível importar esta empresa.');
+      const committed = await verifyCommittedImports();
+      if (committed.length) {
+        void Promise.resolve(onReload()).catch(() => null);
+        setAdminImportSelected(selectedIds.filter(id => !committed.includes(id)));
+        setNotice({
+          tone: 'success',
+          text: `${committed.length} empresa(s) foram importadas com sucesso. O retorno da tela falhou, mas o vínculo foi confirmado no servidor.`,
+        });
+        if (committed.length === selectedIds.length) setAdminImportOpen(false);
+      } else {
+        setAdminImportError(error instanceof Error ? error.message : 'Não foi possível importar as empresas selecionadas.');
+      }
     } finally {
       setAdminImportBusy('');
     }
+  };
+
+  const filteredAdminOfficeCompanies = adminOfficeCompanies.filter((row: any) => {
+    const value = adminImportTerm.trim().toLowerCase();
+    if (!value) return true;
+    return `${row.company_name || ''} ${row.trade_name || ''} ${row.cnpj || ''}`
+      .toLowerCase()
+      .includes(value);
+  });
+  const selectableAdminOfficeCompanies = filteredAdminOfficeCompanies.filter((row: any) => !row.already_linked);
+  const allVisibleSelected =
+    selectableAdminOfficeCompanies.length > 0 &&
+    selectableAdminOfficeCompanies.every((row: any) => adminImportSelected.includes(String(row.office_company_id)));
+  const toggleAdminImport = (id: string) => {
+    setAdminImportSelected(current =>
+      current.includes(id) ? current.filter(value => value !== id) : [...current, id]
+    );
+  };
+  const toggleAllAdminImports = () => {
+    const visibleIds = selectableAdminOfficeCompanies.map((row: any) => String(row.office_company_id));
+    setAdminImportSelected(current =>
+      allVisibleSelected
+        ? current.filter(id => !visibleIds.includes(id))
+        : [...new Set([...current, ...visibleIds])]
+    );
   };
 
   const visible = companies.filter(
@@ -1641,16 +1727,34 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview, adm
               <p className="extractor-helper">Carregando clientes do painel...</p>
             ) : (
               <div className="extractor-admin-import-list">
-                {adminOfficeCompanies
-                  .filter(row => {
-                    const term = adminImportTerm.trim().toLowerCase();
-                    if (!term) return true;
-                    return `${row.company_name || ''} ${row.trade_name || ''} ${row.cnpj || ''}`
-                      .toLowerCase()
-                      .includes(term);
-                  })
-                  .map(row => (
-                    <article key={row.office_company_id} className="extractor-admin-import-row">
+                {selectableAdminOfficeCompanies.length > 0 && (
+                  <label className="extractor-admin-import-select-all">
+                    <input
+                      type="checkbox"
+                      checked={allVisibleSelected}
+                      onChange={toggleAllAdminImports}
+                      disabled={Boolean(adminImportBusy)}
+                    />
+                    <span>Selecionar todas as empresas visíveis</span>
+                  </label>
+                )}
+                {filteredAdminOfficeCompanies.map((row: any) => {
+                  const id = String(row.office_company_id);
+                  const checked = adminImportSelected.includes(id);
+                  return (
+                    <article
+                      key={id}
+                      className={`extractor-admin-import-row ${checked ? 'is-selected' : ''}`}
+                      onClick={() => !row.already_linked && !adminImportBusy && toggleAdminImport(id)}
+                    >
+                      <label className="extractor-admin-import-check" onClick={event => event.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          disabled={row.already_linked || Boolean(adminImportBusy)}
+                          onChange={() => toggleAdminImport(id)}
+                        />
+                      </label>
                       <div>
                         <strong>{row.trade_name || row.company_name}</strong>
                         <span>{row.company_name}</span>
@@ -1659,22 +1763,15 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview, adm
                           {row.state ? ` · ${row.state}` : ''}
                           {row.certificate?.configured
                             ? ` · A1 até ${formatDate(row.certificate.valid_until)}`
-                            : ' · sem A1'}
+                            : ''}
                         </small>
                       </div>
-                      <button
-                        type="button"
-                        disabled={row.already_linked || adminImportBusy === String(row.office_company_id)}
-                        onClick={() => void importOfficeClient(row)}
-                      >
-                        {row.already_linked
-                          ? 'Já vinculada'
-                          : adminImportBusy === String(row.office_company_id)
-                            ? 'Importando...'
-                            : 'Importar'}
-                      </button>
+                      <span className="extractor-admin-import-status">
+                        {row.already_linked ? 'Já vinculada' : checked ? 'Selecionada' : 'Disponível'}
+                      </span>
                     </article>
-                  ))}
+                  );
+                })}
                 {!adminOfficeCompanies.length && (
                   <Empty>Nenhuma empresa com certificado A1 válido está disponível para importação.</Empty>
                 )}
@@ -1682,8 +1779,15 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview, adm
             )}
 
             <div className="extractor-dialog-actions">
-              <button className="extractor-secondary" onClick={() => setAdminImportOpen(false)}>
+              <button className="extractor-secondary" onClick={() => setAdminImportOpen(false)} disabled={Boolean(adminImportBusy)}>
                 Fechar
+              </button>
+              <button
+                className="extractor-primary"
+                disabled={!adminImportSelected.length || Boolean(adminImportBusy)}
+                onClick={() => void importSelectedOfficeClients()}
+              >
+                {adminImportBusy ? 'Importando e iniciando busca...' : `Importar selecionadas (${adminImportSelected.length})`}
               </button>
             </div>
           </DialogContent>
