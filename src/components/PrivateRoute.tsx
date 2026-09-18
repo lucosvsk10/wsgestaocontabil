@@ -51,7 +51,14 @@ const PrivateRoute = ({ children, requiredRole }: PrivateRouteProps) => {
     return children;
   }
 
-  if (admin) return <Navigate to="/admin" replace />;
+  // The WS administrator uses the same authenticated session to access the
+  // complete fiscal SaaS products. Do not bounce admin users back to /admin
+  // when they intentionally open the Emissor or Extrator.
+  if (admin) {
+    if (pathname.startsWith('/app') || pathname.startsWith('/extrator')) return children;
+    return <Navigate to="/admin" replace />;
+  }
+
   if (access === null) return <AppLoadingScreen mode={loadingMode} />;
 
 
