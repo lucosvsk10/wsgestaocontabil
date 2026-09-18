@@ -146,6 +146,13 @@ Deno.serve(async (req) => {
 
     if (!current.profile?.id) return json({ error: 'Esta empresa ainda não possui usuário.' }, 404);
 
+    if (action === 'update_username' || action === 'reset_password') {
+      const confirmationPassword = clean(body.confirm_password);
+      if (!confirmationPassword || confirmationPassword !== DEFAULT_CLIENT_PASSWORD) {
+        return json({ error: 'Senha de confirmação incorreta.' }, 403);
+      }
+    }
+
     if (action === 'update_username') {
       const username = normalizeUsername(body.username);
       if (!validUsername(username)) {
@@ -177,6 +184,19 @@ Deno.serve(async (req) => {
         updated_at: new Date().toISOString(),
       }).eq('id', current.profile.id);
       if (profileError) throw profileError;
+
+      await admin.from('saas_audit_logs').insert({
+        actor_user_id: actor.id,
+        action: 'office_client_username_changed',
+        resource_type: 'company',
+        resource_id: companyId,
+        is_sensitive: true,
+        metadata: {
+          user_id: current.profile.id,
+          previous_username: current.profile.username,
+          username,
+        },
+      }).catch(() => null);
 
       return json({ ok: true, username });
     }
