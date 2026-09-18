@@ -69,7 +69,9 @@ Deno.serve(async req => {
         return J({ ok: true, enabled: false, notifications: [] });
       }
 
-      const since = new Date(Date.now() - 45 * 86400000).toISOString();
+      // Import alerts are intentionally short-lived: they only announce a just-finished
+      // search that actually inserted new fiscal documents.
+      const since = new Date(Date.now() - 30 * 60 * 1000).toISOString();
       const { data: rows, error } = await ctx.admin
         .from('extractor_import_notifications')
         .select('id,company_id,kind,title,message,metadata,created_at')
@@ -98,9 +100,26 @@ Deno.serve(async req => {
         })
         .slice(0, 10);
 
+      // "read_at" means the popup was delivered to this user. Mark it before returning
+      // so a refresh/focus/poll cannot replay the same informational alert forever.
+      if (visible.length) {
+        const deliveredAt = new Date().toISOString();
+        const deliveryRows = visible.map((row: any) => ({
+          notification_id: String(row.id),
+          user_id: ctx.user.id,
+          read_at: deliveredAt,
+          dismissed_at: null,
+        }));
+        const { error: deliveryError } = await ctx.admin
+          .from('extractor_notification_user_state')
+          .upsert(deliveryRows, { onConflict: 'notification_id,user_id' });
+        if (deliveryError) throw deliveryError;
+      }
+
       return J({
         ok: true,
         enabled: true,
+        ttl_minutes: 30,
         notifications: visible,
       });
     }
