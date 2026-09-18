@@ -544,11 +544,13 @@ Deno.serve(async req => {
       }
 
       const imported = results.filter(item => item.ok).length;
+      const queuePending = results.filter(item => item.ok && item.warning).length;
       return J({
         ok: imported > 0,
         partial: imported > 0 && imported < results.length,
         imported,
         failed: results.length - imported,
+        queue_pending: queuePending,
         results,
       });
     }
