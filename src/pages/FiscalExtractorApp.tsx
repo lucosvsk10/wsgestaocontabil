@@ -425,7 +425,12 @@ const chart = {
 };
 
 export default function FiscalExtractorApp({ preview = false }: { preview?: boolean }) {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
+  const internalAdminEntry =
+    !preview &&
+    isAdmin &&
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('source') === 'admin-fiscal';
   const [active, setActive] = useState<Section>('Visão geral'),
     [mobile, setMobile] = useState(false),
     [snapshot, setSnapshot] = useState<Snapshot | null>(null),
@@ -783,6 +788,14 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
           preview={preview}
         />
         <div className="extractor-account">
+          {internalAdminEntry && (
+            <a
+              href="/admin/ambientes"
+              style={{ marginRight: 12, color: '#94a3b8', fontSize: 11, fontWeight: 600, textDecoration: 'none' }}
+            >
+              ← Ambientes
+            </a>
+          )}
           {preview ? (
             <span className="extractor-account-avatar">PR</span>
           ) : (
