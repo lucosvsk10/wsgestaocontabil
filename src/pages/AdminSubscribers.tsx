@@ -16,7 +16,6 @@ import {
   UsersRound,
   X,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/admin/layout/AdminLayout";
 import {
   AdminEmptyState,
@@ -172,7 +171,6 @@ const initials = (value?: string | null) =>
     .join("") || "?";
 
 export default function AdminSubscribers() {
-  const navigate = useNavigate();
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [token, setToken] = useState("");
   const [password, setPassword] = useState("");
@@ -351,13 +349,6 @@ export default function AdminSubscribers() {
             />
 
             <div className="flex flex-wrap items-center gap-2 border-b border-border pb-3">
-              <button
-                type="button"
-                onClick={() => navigate("/admin/clientes")}
-                className="rounded-md px-4 py-2 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
-              >
-                Clientes do escritório
-              </button>
               <button
                 type="button"
                 onClick={() => setProduct("issuer")}
