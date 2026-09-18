@@ -19,7 +19,9 @@ import {
 const digits = (value: string | null | undefined) => String(value || '').replace(/\D/g, '');
 const formatCnpj = (value: string | null | undefined) => {
   const d = digits(value);
-  return d.length === 14 ? d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : 'Cadastro pendente';
+  if (d.length === 14) return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+  if (d.length === 11) return d.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
+  return 'Cadastro pendente';
 };
 const initial = (name: string) => name.trim().charAt(0).toUpperCase() || '?';
 
