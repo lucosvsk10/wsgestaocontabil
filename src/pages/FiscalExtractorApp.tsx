@@ -243,7 +243,7 @@ const formatDate = (v?: string | null, withTime = false) => {
 const syncLabel = (v?: string | null) => {
   const x = String(v || '').toLowerCase();
   if (x === 'queued') return 'Na fila';
-  if (x === 'waiting_state_credentials') return 'Credencial SEFAZ pendente';
+  if (x === 'waiting_state_credentials') return 'Vendas: credencial estadual pendente';
   if (x === 'waiting_certificate') return 'Certificado pendente';
   if (['running', 'reconciling', 'bootstrap_window', 'retrying'].includes(x))
     return 'Sincronizando';
@@ -2487,6 +2487,16 @@ function HistorySection({ companies, preview, setNotice }: any) {
   const periodText = health?.period?.start && health?.period?.end
     ? `${formatDate(health.period.start)} a ${formatDate(health.period.end)}`
     : 'Mês atual';
+  const searchHistory = Array.isArray(health?.history) ? health.history : [];
+  const historyResultLabel = (row: any) => {
+    if (row.response_code === '137') return 'Nenhum documento';
+    if (row.response_code === '138') return 'Documento(s) localizado(s)';
+    if (row.response_code === '656') return 'Aguardando intervalo da SEFAZ';
+    if (row.status === 'erro') return 'Falha';
+    if (row.status === 'aguardando') return 'Aguardando';
+    if (Number(row.found || 0) > 0) return 'Com retorno';
+    return 'Consulta executada';
+  };
 
   return (
     <div className="extractor-page">
@@ -2538,7 +2548,7 @@ function HistorySection({ companies, preview, setNotice }: any) {
           <strong>{purchaseExpected == null ? '—' : integer.format(purchaseExpected)}</strong>
           <small>
             {purchase.source_checked
-              ? (purchase.status_message || 'Consulta concluída na fonte fiscal')
+              ? (purchase.status_summary || purchase.status_message || 'Consulta concluída na fonte fiscal')
               : (purchase.source_error ? 'Fonte fiscal indisponível nesta conferência' : 'Consulta ainda não concluída')}
           </small>
         </article>
@@ -2610,6 +2620,7 @@ function HistorySection({ companies, preview, setNotice }: any) {
             <strong>{syncLabel(purchase.status || company.purchaseStatus)}</strong>
             <span>
               {purchase.last_error ||
+                purchase.status_summary ||
                 purchase.status_message ||
                 (purchase.source_checked && purchaseExpected === 0
                   ? 'Consulta concluída · nenhum documento localizado'
@@ -2657,6 +2668,51 @@ function HistorySection({ companies, preview, setNotice }: any) {
             <span>{recovery.last_reason || 'Nenhuma correção recente necessária'}</span>
             <small>{recovery.last_checked_at ? formatDate(recovery.last_checked_at, true) : '—'}</small>
           </div>
+        </div>
+      </article>
+
+      <article className="extractor-health-search-history">
+        <div className="extractor-health-title">
+          <div>
+            <h2>Últimas buscas fiscais</h2>
+            <p>Horário da execução e retorno da SEFAZ/Receita traduzido para leitura rápida.</p>
+          </div>
+          <span>{searchHistory.length ? `${searchHistory.length} registro(s)` : 'Sem histórico ainda'}</span>
+        </div>
+        <div className="extractor-health-search-head">
+          <span>Data e hora</span>
+          <span>Rotina</span>
+          <span>Resultado</span>
+          <span>Retorno traduzido</span>
+        </div>
+        <div className="extractor-health-search-body">
+          {searchHistory.map((row: any) => (
+            <div className="extractor-health-search-row" key={row.id}>
+              <span>
+                <strong>{formatDate(row.event_at || row.completed_at || row.started_at, true)}</strong>
+                <small>{row.completed_at ? 'concluída' : 'último estado registrado'}</small>
+              </span>
+              <span>
+                <strong>{row.type === 'compras' ? 'Compras' : 'Vendas'}</strong>
+                <small>{row.source || 'Fonte fiscal'}</small>
+              </span>
+              <span>
+                <strong>{historyResultLabel(row)}</strong>
+                <small>{row.response_code ? `Código ${row.response_code}` : row.status || '—'}</small>
+              </span>
+              <span className="extractor-health-search-response">
+                <strong>{row.response_summary || 'Consulta registrada.'}</strong>
+                {row.response_raw && row.response_raw !== row.response_summary && (
+                  <small title={row.response_raw}>Retorno original disponível</small>
+                )}
+              </span>
+            </div>
+          ))}
+          {!searchHistory.length && (
+            <div className="extractor-health-search-empty">
+              As próximas consultas desta empresa aparecerão aqui automaticamente.
+            </div>
+          )}
         </div>
       </article>
     </div>

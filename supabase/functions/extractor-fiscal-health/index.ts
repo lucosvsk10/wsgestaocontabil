@@ -11,6 +11,32 @@ const cors = {
 const J = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'content-type': 'application/json', 'cache-control': 'no-store' } });
 const digits = (value: unknown) => String(value ?? '').replace(/\D/g, '');
+const fiscalResponseCode = (code: unknown, message: unknown) => {
+  const direct = String(code ?? '').trim();
+  if (/^\d{3}$/.test(direct)) return direct;
+  const match = String(message ?? '').match(/(?:SEFAZ\s*)?(\d{3})\b/i);
+  return match?.[1] || '';
+};
+const translateFiscalResponse = (code: unknown, message: unknown, status?: unknown) => {
+  const c = fiscalResponseCode(code, message);
+  const raw = String(message ?? '').trim();
+  if (c === '137') return 'Busca concluída: nenhum documento novo foi localizado.';
+  if (c === '138') return 'Busca concluída: a SEFAZ localizou documento(s).';
+  if (c === '656') return 'A SEFAZ aplicou um intervalo de segurança por excesso de consultas. A rotina aguardará antes de tentar novamente.';
+  if (c === '100') return 'Documento autorizado.';
+  if (c === '101') return 'Documento cancelado.';
+  if (c === '110') return 'Uso do documento denegado.';
+  if (c === '217') return 'Documento não consta na base consultada.';
+  if (c === '637') return 'Rejeição: falha na validação do DF-e com o schema XML informado.';
+  if (/waiting_state_credentials/i.test(String(status ?? ''))) {
+    return 'Vendas aguardando a credencial estadual do portal SEFAZ. O certificado A1 continua válido para as rotinas que usam certificado.';
+  }
+  if (/waiting_certificate/i.test(String(status ?? ''))) return 'A consulta aguarda um certificado A1 válido.';
+  if (/cooldown/i.test(String(status ?? ''))) return 'Consulta concluída e colocada em espera temporária para respeitar o intervalo da SEFAZ.';
+  if (raw) return raw;
+  if (/idle|completed|success/i.test(String(status ?? ''))) return 'Consulta concluída sem erro.';
+  return 'Consulta registrada.';
+};
 const monthStart = () => {
   const now = new Date();
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString().slice(0, 10);
@@ -114,7 +140,7 @@ Deno.serve(async req => {
 
     const start = access.from && access.from > monthStart() ? access.from : monthStart();
     const end = access.to && access.to < today() ? access.to : today();
-    const [docs, purchaseStateRes, salesStateRes, healthRes, certRes, reconciliation] = await Promise.all([
+    const [docs, purchaseStateRes, salesStateRes, healthRes, certRes, reconciliation, historyRes] = await Promise.all([
       paged((from, to) => admin.from('fiscal_dfe_documents')
         .select('id,access_key,source_id,document_kind,direction,full_xml,xml,parse_error,issue_date,model,status_code,status_text')
         .eq('company_id', companyId)
@@ -133,6 +159,11 @@ Deno.serve(async req => {
         .lte('issue_date', `${end}T23:59:59.999Z`)
         .order('note_number', { ascending: true })
         .range(from, to)),
+      admin.from('fiscal_sync_logs')
+        .select('id,sync_type,source,response_code,response_message,status,mensagem_erro,documentos_encontrados,documentos_processados,documentos_erro,created_at,completed_at,tempo_duracao,details')
+        .eq('company_id', companyId)
+        .order('created_at', { ascending: false })
+        .limit(24),
     ]);
 
     const purchases = uniqueDocs(docs, 'entrada');
@@ -219,6 +250,34 @@ Deno.serve(async req => {
         ? 'attention'
         : 'healthy';
 
+    const history = (historyRes.data || []).map((row: any) => {
+      const responseCode = fiscalResponseCode(row.response_code, row.response_message || row.mensagem_erro);
+      const responseRaw = String(row.response_message || row.mensagem_erro || '').trim() || null;
+      const startedAt = row.created_at ? new Date(row.created_at).getTime() : 0;
+      const completedAt = row.completed_at ? new Date(row.completed_at).getTime() : 0;
+      const eventAt = Math.max(
+        Number.isFinite(startedAt) ? startedAt : 0,
+        Number.isFinite(completedAt) ? completedAt : 0
+      );
+      return {
+        id: row.id,
+        type: row.sync_type,
+        source: row.source || (row.sync_type === 'compras' ? 'Ambiente Nacional / SEFAZ' : 'Sincronização de vendas'),
+        status: row.status,
+        started_at: row.created_at,
+        completed_at: row.completed_at,
+        event_at: eventAt ? new Date(eventAt).toISOString() : row.completed_at || row.created_at || null,
+        duration_seconds: row.tempo_duracao,
+        response_code: responseCode || null,
+        response_raw: responseRaw,
+        response_summary: translateFiscalResponse(responseCode, responseRaw, row.details?.state_status || row.status),
+        found: Number(row.documentos_encontrados || 0),
+        processed: Number(row.documentos_processados || 0),
+        errors: Number(row.documentos_erro || 0),
+        details: row.details || {},
+      };
+    });
+
     return J({
       ok: true,
       checked_at: new Date().toISOString(),
@@ -244,6 +303,11 @@ Deno.serve(async req => {
         status: purchaseState.status || null,
         status_code: purchaseState.last_status_code || null,
         status_message: purchaseState.last_status_message || null,
+        status_summary: translateFiscalResponse(
+          purchaseState.last_status_code,
+          purchaseState.last_status_message || purchaseState.last_error,
+          purchaseState.status
+        ),
         last_started_at: purchaseState.last_started_at || null,
         last_completed_at: purchaseState.last_completed_at || null,
         last_error: purchaseState.last_error || null,
@@ -253,7 +317,7 @@ Deno.serve(async req => {
         source_checked: salesSourceChecked,
         source_reason:
           salesStatus === 'waiting_state_credentials'
-            ? 'Credenciais estaduais necessárias para consultar as vendas desta empresa.'
+            ? 'O A1 está configurado, mas a consulta das vendas emitidas aguarda a credencial do portal estadual da SEFAZ/AL. As compras pelo Ambiente Nacional continuam independentes desta credencial.'
             : salesStatus === 'waiting_certificate'
               ? 'Certificado A1 necessário para iniciar a consulta de vendas.'
               : !salesSourceChecked
@@ -282,6 +346,7 @@ Deno.serve(async req => {
         last_reason: healthRes.data?.last_recovery_reason || null,
         last_checked_at: healthRes.data?.last_checked_at || null,
       },
+      history,
     });
   } catch (error: any) {
     const status = Number(error?.status || 500);
