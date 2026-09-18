@@ -508,7 +508,7 @@ async function buildNfse(doc: any, xml: string) {
   const vals = tag(inf, 'valores');
   const key = dg(doc.accessKey || String(tag(inf, 'Id') || '').replace(/^NFS/i, ''));
   const dpsIssue = tag(infDps, 'dhEmi') || doc.issueDate;
-  const nfseIssue = tag(inf, 'dhProc') || dpsIssue;
+  const nfseIssue = tag(infDps, 'dhEmi') || tag(inf, 'dhProc') || doc.issueDate;
   const comp = tag(infDps, 'dCompet') || dpsIssue;
   const issueCityCode = tag(endE, 'cMun') || tag(infDps, 'cLocEmi');
   const tomaCityCode = tag(endTN, 'cMun');
