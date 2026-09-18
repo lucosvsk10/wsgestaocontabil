@@ -221,6 +221,10 @@ begin
     return new;
   end if;
 
+  perform pg_advisory_xact_lock(
+    hashtextextended(new.company_id::text||':'||coalesce(new.environment,'')||':'||new.access_key,0)
+  );
+
   select fd.* into v_existing
   from public.fiscal_dfe_documents fd
   where fd.company_id=new.company_id
@@ -241,7 +245,7 @@ begin
 
   update public.fiscal_dfe_documents
   set
-    nsu=coalesce(nullif(new.nsu,''),v_existing.nsu),
+    nsu=v_existing.nsu,
     source=case
       when new.full_xml=true and new.xml is not null then coalesce(new.source,v_existing.source)
       else v_existing.source
