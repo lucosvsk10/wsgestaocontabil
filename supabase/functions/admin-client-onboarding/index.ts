@@ -176,6 +176,31 @@ async function lookupSintegra(cnpj: string) {
     return '';
   }
 }
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function lookupCnpjWsViaDatabase(admin: any, cnpj: string) {
+  try {
+    const { data: requestId, error: requestError } = await admin.rpc(
+      'internal_company_registry_request',
+      { _cnpj: cnpj }
+    );
+    if (requestError || !requestId) return null;
+
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      if (attempt) await sleep(250);
+      const { data, error } = await admin.rpc(
+        'internal_company_registry_response',
+        { _request_id: Number(requestId) }
+      );
+      if (error) return null;
+      if (data && !data?._error) return data;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 async function lookupRegistry(admin: any, cnpj: string) {
   const [ws, brasil] = await Promise.allSettled([
     fetchJson(`https://publica.cnpj.ws/cnpj/${cnpj}`),
