@@ -320,6 +320,36 @@ Deno.serve(async req => {
     });
     if (profileError) throw profileError;
 
+    const registryManagedValues = {
+      company_name: companyName,
+      trade_name: tradeName || '',
+      company_size: clean(source.company_size),
+      state_registration: clean(source.state_registration),
+      registration_status: clean(source.registration_status),
+      tax_regime: clean(source.tax_regime),
+      email: clean(source.email),
+      phone: digits(source.phone),
+      postal_code: digits(source.postal_code),
+      street: clean(source.street),
+      street_number: clean(source.street_number),
+      complement: clean(source.complement),
+      district: clean(source.district),
+      city: clean(source.city),
+      state: clean(source.state).toUpperCase().slice(0,2),
+      city_ibge_code: digits(source.city_ibge_code),
+      cnae_primary: digits(source.cnae_primary),
+    };
+    const registryPayload = source.registry_payload && typeof source.registry_payload === 'object'
+      ? {
+          ...source.registry_payload,
+          _sync: {
+            managed_values: registryManagedValues,
+            last_source_sync_at: new Date().toISOString(),
+            mode: 'registry_safe_merge',
+          },
+        }
+      : {};
+
     const companyPayload = {
       company_name: companyName,
       trade_name: tradeName || null,
@@ -342,8 +372,8 @@ Deno.serve(async req => {
       state: clean(source.state).toUpperCase().slice(0,2) || null,
       city_ibge_code: digits(source.city_ibge_code) || null,
       cnae_primary: digits(source.cnae_primary) || null,
-      registry_payload: source.registry_payload && typeof source.registry_payload === 'object' ? source.registry_payload : {},
-      registry_updated_at: source.registry_payload ? new Date().toISOString() : null,
+      registry_payload: registryPayload,
+      registry_updated_at: Object.keys(registryPayload).length ? new Date().toISOString() : null,
     };
     const { data: officeCompany, error: officeError } = await admin.from('companies').insert(companyPayload).select('id').single();
     if (officeError || !officeCompany) throw officeError || new Error('Não foi possível criar o cliente.');
