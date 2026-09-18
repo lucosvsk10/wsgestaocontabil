@@ -188,7 +188,7 @@ Deno.serve(async req => {
       if (officeIds.length) {
         const { data, error } = await ctx.admin
           .from('fiscal_companies')
-          .select('id,company_id,cnpj,razao_social,nome_fantasia,inscricao_estadual,uf,municipio,codigo_municipio,status,fiscal_certificates(id,is_active,valid_until)')
+          .select('id,company_id,cnpj,razao_social,nome_fantasia,inscricao_estadual,uf,municipio,codigo_municipio,status,fiscal_certificates(id,is_active,valid_from,valid_until)')
           .in('company_id', officeIds);
         if (error) throw error;
         fiscalRows = data || [];
@@ -203,12 +203,19 @@ Deno.serve(async req => {
       const linked = new Set((currentLinks || []).map((row: any) => String(row.fiscal_company_id)));
       const fiscalByOffice = new Map(fiscalRows.map((row: any) => [String(row.company_id), row]));
 
+      const now = Date.now();
       const companies = (officeCompanies || [])
         .filter((row: any) => digits(row.cnpj).length === 14)
         .map((row: any) => {
           const fiscal = fiscalByOffice.get(String(row.id)) || null;
           const certs = Array.isArray(fiscal?.fiscal_certificates) ? fiscal.fiscal_certificates : [];
-          const activeCert = certs.find((item: any) => item.is_active) || null;
+          const activeCert = certs.find((item: any) => {
+            if (!item?.is_active || !item?.valid_until) return false;
+            const validFrom = item.valid_from ? new Date(`${item.valid_from}T00:00:00`).getTime() : 0;
+            const validUntil = new Date(`${item.valid_until}T23:59:59`).getTime();
+            return Number.isFinite(validUntil) && validUntil >= now && (!validFrom || validFrom <= now);
+          }) || null;
+          if (!fiscal?.id || !activeCert) return null;
           return {
             office_company_id: row.id,
             company_name: row.company_name,
@@ -217,13 +224,15 @@ Deno.serve(async req => {
             state_registration: row.state_registration,
             city: row.city,
             state: row.state,
-            fiscal_company_id: fiscal?.id || null,
-            already_linked: Boolean(fiscal?.id && linked.has(String(fiscal.id))),
-            certificate: activeCert
-              ? { configured: true, valid_until: activeCert.valid_until }
-              : { configured: false, valid_until: null },
+            fiscal_company_id: fiscal.id,
+            already_linked: linked.has(String(fiscal.id)),
+            certificate: {
+              configured: true,
+              valid_until: activeCert.valid_until,
+            },
           };
-        });
+        })
+        .filter(Boolean);
 
       return J({ ok: true, companies });
     }
@@ -259,6 +268,30 @@ Deno.serve(async req => {
           .maybeSingle();
         if (byCnpj.error) throw byCnpj.error;
         fiscal = byCnpj.data || null;
+      }
+
+      if (!fiscal?.id) {
+        return J({ error: 'Esta empresa ainda não possui perfil fiscal com certificado A1 válido.' }, 422);
+      }
+
+      const { data: certificates, error: certificateError } = await ctx.admin
+        .from('fiscal_certificates')
+        .select('id,is_active,valid_from,valid_until')
+        .eq('company_id', fiscal.id)
+        .eq('is_active', true)
+        .order('valid_until', { ascending: false });
+      if (certificateError) throw certificateError;
+
+      const now = Date.now();
+      const validCertificate = (certificates || []).find((item: any) => {
+        if (!item?.valid_until) return false;
+        const validFrom = item.valid_from ? new Date(`${item.valid_from}T00:00:00`).getTime() : 0;
+        const validUntil = new Date(`${item.valid_until}T23:59:59`).getTime();
+        return Number.isFinite(validUntil) && validUntil >= now && (!validFrom || validFrom <= now);
+      });
+
+      if (!validCertificate) {
+        return J({ error: 'Somente empresas com certificado A1 ativo e dentro da validade podem ser importadas para o Extrator.' }, 422);
       }
 
       const fiscalPayload = {
