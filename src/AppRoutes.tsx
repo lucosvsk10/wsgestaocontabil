@@ -25,13 +25,11 @@ import AdminLancamentos from './pages/AdminLancamentos';
 import AdminBalancete from './pages/AdminBalancete';
 import AdminPlanoContas from './pages/AdminPlanoContas';
 import AdminEngine from './pages/AdminEngine';
-import AdminFeature from './pages/AdminFeature';
 import AdminCompanies from './pages/AdminCompanies';
 import AdminClientProfile from './pages/AdminClientProfile';
 import AdminClientDocuments from './pages/AdminClientDocuments';
 import AdminClientFiscalSetup from './pages/AdminClientFiscalSetup';
 import AdminFiscalCompanies from './pages/AdminFiscalCompanies';
-import AdminFiscalNotes from './pages/AdminFiscalNotes';
 import AdminSubscribers from './pages/AdminSubscribers';
 import SaasApp from './pages/SaasApp';
 import SaasCheckout from './pages/SaasCheckout';
@@ -308,27 +306,10 @@ const AppRoutes = () => (
         </PrivateRoute>
       }
     />
-    <Route
-      path="/admin/feature"
-      element={
-        <PrivateRoute requiredRole="admin">
-          <AdminFiscalNotes />
-        </PrivateRoute>
-      }
-    />
-    <Route
-      path="/admin/fiscal/emissao"
-      element={
-        <PrivateRoute requiredRole="admin">
-          <AdminFeature />
-        </PrivateRoute>
-      }
-    />
-    <Route path="/admin/fiscal/cte" element={<Navigate to="/admin/fiscal/emissao" replace />} />
-    <Route
-      path="/admin/fiscal/laboratorio"
-      element={<Navigate to="/admin/fiscal/emissao" replace />}
-    />
+    <Route path="/admin/feature" element={<Navigate to="/extrator?source=admin" replace />} />
+    <Route path="/admin/fiscal/emissao" element={<Navigate to="/app?source=admin" replace />} />
+    <Route path="/admin/fiscal/cte" element={<Navigate to="/app?source=admin" replace />} />
+    <Route path="/admin/fiscal/laboratorio" element={<Navigate to="/app?source=admin" replace />} />
     <Route path="/admin-dashboard" element={<Navigate to="/admin" replace />} />
     <Route path="/admin/tax-simulations" element={<Navigate to="/admin/simulations" replace />} />
     <Route
@@ -377,7 +358,7 @@ const AppRoutes = () => (
     />
     <Route
       path="/admin/lancamentos/feature"
-      element={<Navigate to="/admin/fiscal/emissao" replace />}
+      element={<Navigate to="/app?source=admin" replace />}
     />
     <Route
       path="/extrator/*"
