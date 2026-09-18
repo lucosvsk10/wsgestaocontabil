@@ -342,56 +342,268 @@ function NfceView({ document }: { document: FiscalDocumentLike }) {
   );
 }
 
+const formatTribCode = (value?: string | null) => {
+  const digits = String(value || '').replace(/\D/g, '');
+  return digits.length === 6 ? `${digits.slice(0, 2)}.${digits.slice(2, 4)}.${digits.slice(4)}` : value || '—';
+};
+const formatNbs = (value?: string | null) => {
+  const digits = String(value || '').replace(/\D/g, '');
+  return digits.length === 9
+    ? `${digits.slice(0, 1)}.${digits.slice(1, 5)}.${digits.slice(5, 7)}.${digits.slice(7)}`
+    : value || '—';
+};
+const formatIbge = (value?: string | null) => {
+  const digits = String(value || '').replace(/\D/g, '');
+  return digits.length === 7 ? `${digits.slice(0, 2)}.${digits.slice(2)}` : value || '—';
+};
+const ufFromIbge = (value?: string | null) => {
+  const code = String(value || '').replace(/\D/g, '').slice(0, 2);
+  return ({
+    '11': 'RO', '12': 'AC', '13': 'AM', '14': 'RR', '15': 'PA', '16': 'AP', '17': 'TO',
+    '21': 'MA', '22': 'PI', '23': 'CE', '24': 'RN', '25': 'PB', '26': 'PE', '27': 'AL',
+    '28': 'SE', '29': 'BA', '31': 'MG', '32': 'ES', '33': 'RJ', '35': 'SP', '41': 'PR',
+    '42': 'SC', '43': 'RS', '50': 'MS', '51': 'MT', '52': 'GO', '53': 'DF',
+  } as Record<string, string>)[code] || '—';
+};
+const nfseAddress = (root: ParentNode | null | undefined) => {
+  if (!root) return '—';
+  const values = [
+    txt(root, 'xLgr'),
+    txt(root, 'nro'),
+    txt(root, 'xCpl'),
+    txt(root, 'xBairro'),
+  ].filter(Boolean);
+  return values.length ? values.join(', ') : '—';
+};
+const nfseStatus = (code: string) =>
+  code === '100' ? 'NFS-e Gerada' : code ? `cStat ${code}` : '—';
+const simpleStatus = (code: string) => {
+  if (code === '1') return 'Não Optante';
+  if (code === '2') return 'Optante - Microempreendedor Individual (MEI)';
+  if (code === '3') return 'Optante - Microempresa ou Empresa de Pequeno Porte';
+  return '—';
+};
+const simpleAssessment = (code: string) =>
+  code === '1'
+    ? 'Regime de apuração dos tributos federais e municipal pelo Simples Nacional'
+    : code || '—';
+const issRetention = (code: string) =>
+  code === '1' ? 'Não Retido' : code === '2' ? 'Retido pelo Tomador' : code === '3' ? 'Retido pelo Intermediário' : '—';
+
+function NfseCell({
+  label,
+  value,
+  className = '',
+}: {
+  label: string;
+  value?: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={`extractor-nfse-cell ${className}`}>
+      <b>{label}</b>
+      <span>{value === '' || value == null ? '—' : value}</span>
+    </div>
+  );
+}
+function NfseBand({ children }: { children: React.ReactNode }) {
+  return <div className="extractor-nfse-band">{children}</div>;
+}
+
 function NfseView({ document }: { document: FiscalDocumentLike }) {
   const xml = xmlDoc(document.xml);
   if (!xml) return <DocumentUnavailable />;
+
   const preview = parseFiscalPreview(document);
   const inf = one(xml, 'infNFSe') || one(xml, 'NFSe') || xml;
-  const prest = one(xml, 'prest') || one(xml, 'prestador') || one(xml, 'emit');
-  const toma = one(xml, 'toma') || one(xml, 'tomador') || one(xml, 'dest');
-  const serv = one(xml, 'serv') || one(xml, 'Servico') || one(xml, 'servico');
-  const values = one(xml, 'valores') || one(xml, 'Valores') || inf;
-  const key = String(document.accessKey || txt(inf, 'chNFSe', 'chaveAcesso') || '').replace(/\D/g, '');
+  const dps = one(inf, 'DPS');
+  const infDps = one(dps, 'infDPS') || dps || inf;
+  const emit = one(inf, 'emit');
+  const emitAddress = one(emit, 'enderNac');
+  const prest = one(infDps, 'prest');
+  const prestReg = one(prest, 'regTrib');
+  const toma = one(infDps, 'toma');
+  const tomaAddress = one(toma, 'end');
+  const tomaEndNac = one(tomaAddress, 'endNac');
+  const serv = one(infDps, 'serv');
+  const locPrest = one(serv, 'locPrest');
+  const serviceCode = one(serv, 'cServ');
+  const serviceInfo = one(serv, 'infoCompl');
+  const dpsValues = one(infDps, 'valores');
+  const serviceValues = one(dpsValues, 'vServPrest');
+  const trib = one(dpsValues, 'trib');
+  const tribMun = one(trib, 'tribMun');
+  const tribFed = one(trib, 'tribFed');
+  const pisCofins = one(tribFed, 'piscofins');
+  const totalTax = one(trib, 'totTrib');
+  const nfseValues = one(inf, 'valores');
+
+  const key = String(document.accessKey || txt(inf, 'chNFSe', 'chaveAcesso') || '')
+    .replace(/\D/g, '');
+  const issue = txt(infDps, 'dhEmi') || txt(inf, 'dhProc') || preview.issueDate;
+  const competence = txt(infDps, 'dCompet') || issue;
+  const emitCityCode = txt(emitAddress, 'cMun') || txt(infDps, 'cLocEmi');
+  const tomaCityCode = txt(tomaEndNac, 'cMun');
+  const serviceCityCode = txt(locPrest, 'cLocPrestacao');
+  const incidenceCode = txt(inf, 'cLocIncid');
+  const emitUf = txt(emitAddress, 'UF') || ufFromIbge(emitCityCode);
+  const tomaUf = txt(tomaAddress, 'UF') || ufFromIbge(tomaCityCode);
+  const serviceUf = ufFromIbge(serviceCityCode);
+  const incidenceUf = ufFromIbge(incidenceCode);
+  const serviceValue = txt(serviceValues, 'vServ') || document.value;
+  const liquidValue = txt(nfseValues, 'vLiq') || serviceValue;
+  const pTotTrib = txt(totalTax, 'pTotTribSN');
+  const qrValue = key;
+
   return (
-    <div className="extractor-nfse-sheet">
-      <header>
-        <div><small>DOCUMENTO AUXILIAR DA NFS-e</small><h2>Nota Fiscal de Serviço Eletrônica</h2></div>
-        <div><b>NFS-e nº {preview.number}</b><span>Emissão {formatDate(preview.issueDate)} · {formatTime(preview.issueDate)}</span></div>
-      </header>
-      <section className="extractor-nfse-key">
-        <Field label="CHAVE / IDENTIFICAÇÃO" value={key ? formatAccessKey(key) : document.accessKey || '—'} />
-        <Field label="SITUAÇÃO" value={fiscalStatusLabel(document)} />
-      </section>
-      <SectionTitle>PRESTADOR DO SERVIÇO</SectionTitle>
-      <section className="extractor-danfe-grid extractor-danfe-grid-3">
-        <Field label="NOME / RAZÃO SOCIAL" value={txt(prest, 'xNome', 'razaoSocial') || preview.issuerName} />
-        <Field label="CNPJ/CPF" value={fmtCpfCnpj(txt(prest, 'CNPJ', 'CPF') || preview.issuerCnpj)} />
-        <Field label="INSCRIÇÃO MUNICIPAL" value={txt(prest, 'IM', 'inscricaoMunicipal') || '—'} />
-      </section>
-      <SectionTitle>TOMADOR DO SERVIÇO</SectionTitle>
-      <section className="extractor-danfe-grid extractor-danfe-grid-2">
-        <Field label="NOME / RAZÃO SOCIAL" value={txt(toma, 'xNome', 'razaoSocial') || preview.recipientName} />
-        <Field label="CNPJ/CPF" value={fmtCpfCnpj(txt(toma, 'CNPJ', 'CPF') || preview.recipientCnpj)} />
-      </section>
-      <SectionTitle>SERVIÇO PRESTADO</SectionTitle>
-      <section className="extractor-nfse-service">
-        <Field label="DESCRIÇÃO / DISCRIMINAÇÃO" value={txt(serv, 'xDescServ', 'Discriminacao', 'discriminacao') || preview.serviceDescription || '—'} />
-        <div className="extractor-danfe-grid extractor-danfe-grid-3">
-          <Field label="CÓDIGO DE TRIBUTAÇÃO" value={txt(serv, 'cTribNac', 'cTribMun', 'itemListaServico') || '—'} />
-          <Field label="MUNICÍPIO DE INCIDÊNCIA" value={txt(serv, 'xMun', 'municipioIncidencia') || preview.city || '—'} />
-          <Field label="COMPETÊNCIA" value={txt(inf, 'Competencia', 'competencia') || formatDate(preview.issueDate)} />
+    <div className="extractor-nfse-sheet extractor-nfse-official">
+      <div className="extractor-nfse-top">
+        <div className="extractor-nfse-brand" aria-label="NFS-e">
+          <strong><i>N</i><span>F</span><em>S</em><u>e</u></strong>
+          <small>Nota Fiscal de<br />Serviço eletrônica</small>
         </div>
-      </section>
-      <SectionTitle>VALORES</SectionTitle>
-      <section className="extractor-danfe-totals">
-        <Field label="VALOR DOS SERVIÇOS" value={brl(txt(values, 'vServ', 'vServPrest', 'valorServicos') || document.value)} />
-        <Field label="DEDUÇÕES" value={brl(txt(values, 'vDed', 'valorDeducoes'))} />
-        <Field label="DESCONTO" value={brl(txt(values, 'vDescIncond', 'vDescCond', 'desconto'))} />
-        <Field label="BASE DE CÁLCULO" value={brl(txt(values, 'vBC', 'baseCalculo'))} />
-        <Field label="ISS" value={brl(txt(values, 'vISS', 'valorIss'))} />
-        <Field label="VALOR LÍQUIDO" value={brl(txt(values, 'vLiq', 'valorLiquidoNfse') || document.value)} />
-      </section>
-      {key && <div className="extractor-nfse-qr"><Qr value={key} /></div>}
+        <div className="extractor-nfse-title">
+          <b>DANFSe v2.0</b>
+          <strong>Documento Auxiliar da NFS-e</strong>
+        </div>
+        <div className="extractor-nfse-environment">
+          <b>Município: {txt(inf, 'xLocEmi') || '—'} - {emitUf}</b>
+          <span>Ambiente Gerador: {txt(inf, 'ambGer') || '—'}</span>
+          <span>Tipo de Ambiente: {txt(infDps, 'tpAmb') || '—'}</span>
+        </div>
+      </div>
+
+      <div className="extractor-nfse-identification">
+        <div className="extractor-nfse-identification-main">
+          <NfseCell label="CHAVE DE ACESSO DA NFS-e" value={key || '—'} className="wide" />
+          <div className="extractor-nfse-grid cols-3">
+            <NfseCell label="NÚMERO DA NFS-e" value={txt(inf, 'nNFSe') || preview.number} />
+            <NfseCell label="COMPETÊNCIA DA NFS-e" value={formatDate(competence)} />
+            <NfseCell label="DATA E HORA DA EMISSÃO DA NFS-e" value={`${formatDate(issue)} ${formatTime(issue)}`} />
+            <NfseCell label="NÚMERO DA DPS" value={txt(infDps, 'nDPS') || '—'} />
+            <NfseCell label="SÉRIE DA DPS" value={txt(infDps, 'serie') || preview.series} />
+            <NfseCell label="DATA E HORA DA EMISSÃO DA DPS" value={`${formatDate(issue)} ${formatTime(issue)}`} />
+            <NfseCell label="EMITENTE DA NFS-e" value="Prestador" />
+            <NfseCell label="SITUAÇÃO DA NFS-e" value={nfseStatus(txt(inf, 'cStat'))} />
+            <NfseCell label="FINALIDADE" value={txt(infDps, 'finNFSe', 'finalidade') || '—'} />
+          </div>
+        </div>
+        <div className="extractor-nfse-auth">
+          <div className="extractor-nfse-qr-box">{qrValue && <Qr value={qrValue} />}</div>
+          <p>A autenticidade desta NFS-e pode ser verificada pela leitura deste código QR ou pela consulta da chave de acesso no portal nacional da NFS-e</p>
+        </div>
+      </div>
+
+      <NfseBand>PRESTADOR / FORNECEDOR</NfseBand>
+      <div className="extractor-nfse-grid cols-4">
+        <NfseCell label="Nome / Nome Empresarial" value={txt(emit, 'xNome') || preview.issuerName} className="span-2" />
+        <NfseCell label="CNPJ / CPF / NIF" value={fmtCpfCnpj(txt(emit, 'CNPJ', 'CPF') || preview.issuerCnpj)} />
+        <NfseCell label="Indicador Municipal (Inscrição)" value={txt(emit, 'IM') || txt(prest, 'IM') || '—'} />
+        <NfseCell label="Endereço" value={nfseAddress(emitAddress)} className="span-2" />
+        <NfseCell label="Município / Sigla UF" value={`${txt(inf, 'xLocEmi') || '—'} / ${emitUf}`} />
+        <NfseCell label="Código IBGE / CEP" value={`${formatIbge(emitCityCode)} / ${fmtCep(txt(emitAddress, 'CEP'))}`} />
+        <NfseCell label="Simples Nacional na Data de Competência" value={simpleStatus(txt(prestReg, 'opSimpNac'))} className="span-2" />
+        <NfseCell label="Regime de Apuração Tributária pelo SN" value={simpleAssessment(txt(prestReg, 'regApTribSN'))} />
+        <NfseCell label="Telefone" value={txt(emit, 'fone') || txt(prest, 'fone') || '—'} />
+        <NfseCell label="E-mail" value={txt(emit, 'email') || txt(prest, 'email') || '—'} className="span-2" />
+      </div>
+
+      <NfseBand>TOMADOR / ADQUIRENTE</NfseBand>
+      <div className="extractor-nfse-grid cols-4">
+        <NfseCell label="Nome / Nome Empresarial" value={txt(toma, 'xNome') || preview.recipientName} className="span-2" />
+        <NfseCell label="CNPJ / CPF / NIF" value={fmtCpfCnpj(txt(toma, 'CNPJ', 'CPF') || preview.recipientCnpj)} />
+        <NfseCell label="Indicador Municipal (Inscrição)" value={txt(toma, 'IM') || '—'} />
+        <NfseCell label="Endereço" value={nfseAddress(tomaAddress)} className="span-2" />
+        <NfseCell label="Município / Sigla UF" value={`${txt(toma, 'xMun') || '—'} / ${tomaUf}`} />
+        <NfseCell label="Código IBGE / CEP" value={`${formatIbge(tomaCityCode)} / ${fmtCep(txt(tomaEndNac, 'CEP'))}`} />
+        <NfseCell label="E-mail" value={txt(toma, 'email') || '—'} className="span-2" />
+        <NfseCell label="Telefone" value={txt(toma, 'fone') || '—'} />
+      </div>
+
+      <div className="extractor-nfse-centered-line">DESTINATÁRIO DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e</div>
+      <div className="extractor-nfse-centered-line">INTERMEDIÁRIO DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e</div>
+
+      <NfseBand>SERVIÇO PRESTADO</NfseBand>
+      <div className="extractor-nfse-grid service-head">
+        <NfseCell label="Código de Tributação Nacional/Municipal" value={`${formatTribCode(txt(serviceCode, 'cTribNac'))} / ${formatTribCode(txt(serviceCode, 'cTribMun'))}`} />
+        <NfseCell label="Código da NBS" value={formatNbs(txt(serviceCode, 'cNBS'))} />
+        <NfseCell
+          label="Local da Prestação / Sigla UF / País"
+          value={`${txt(inf, 'xLocPrestacao') || '—'} / ${serviceUf} / —`}
+        />
+      </div>
+      <div className="extractor-nfse-service-name">{txt(inf, 'xTribNac') || '—'}</div>
+      <NfseCell
+        label="Descrição do Serviço"
+        value={<span className="extractor-nfse-multiline">{txt(serviceCode, 'xDescServ') || preview.serviceDescription || '—'}</span>}
+        className="full service-description"
+      />
+
+      <NfseBand>TRIBUTAÇÃO MUNICIPAL (ISSQN)</NfseBand>
+      <div className="extractor-nfse-grid cols-4">
+        <NfseCell label="Tipo de Tributação do ISSQN" value={txt(tribMun, 'tribISSQN') === '1' ? 'Operação Tributável' : txt(tribMun, 'tribISSQN') || '—'} />
+        <NfseCell label="Município / Sigla UF / País de Incidência do ISSQN" value={`${txt(inf, 'xLocIncid') || '—'} / ${incidenceUf} / —`} className="span-2" />
+        <NfseCell label="BC ISSQN" value={txt(tribMun, 'vBC') ? brl(txt(tribMun, 'vBC')) : '—'} />
+        <NfseCell label="Alíquota Aplicada" value={txt(tribMun, 'pAliq') || '—'} />
+        <NfseCell label="Retenção do ISSQN" value={issRetention(txt(tribMun, 'tpRetISSQN'))} />
+        <NfseCell label="ISSQN Apurado" value={txt(tribMun, 'vISSQN') ? brl(txt(tribMun, 'vISSQN')) : '—'} />
+      </div>
+
+      <NfseBand>TRIBUTAÇÃO FEDERAL (EXCETO CBS)</NfseBand>
+      <div className="extractor-nfse-grid cols-4">
+        <NfseCell label="IRRF" value={txt(tribFed, 'vIRRF') ? brl(txt(tribFed, 'vIRRF')) : '—'} />
+        <NfseCell label="Contribuição Previdenciária - Retida" value={txt(tribFed, 'vCP') ? brl(txt(tribFed, 'vCP')) : '—'} />
+        <NfseCell label="Contribuições Sociais - Retidas" value={txt(tribFed, 'vCSLL') ? brl(txt(tribFed, 'vCSLL')) : '—'} />
+        <NfseCell label="PIS - Débito Apuração Própria" value={txt(pisCofins, 'vPIS') ? brl(txt(pisCofins, 'vPIS')) : '—'} />
+        <NfseCell label="COFINS - Débito Apuração Própria" value={txt(pisCofins, 'vCOFINS') ? brl(txt(pisCofins, 'vCOFINS')) : '—'} />
+        <NfseCell label="Descrição Contrib. Sociais - Retidas" value={txt(tribFed, 'xDescRet') || '—'} className="span-2" />
+      </div>
+
+      <NfseBand>TRIBUTAÇÃO IBS/CBS</NfseBand>
+      <div className="extractor-nfse-grid cols-4 extractor-nfse-ibscbs">
+        <NfseCell label="CST / cClassTrib" value={`${txt(trib, 'CST') || '—'} / ${txt(trib, 'cClassTrib') || '—'}`} />
+        <NfseCell label="Indicador de Operação / Código IBGE Incidência / Município Incidência / Sigla UF" value={`— / ${formatIbge(incidenceCode)} / ${txt(inf, 'xLocIncid') || '—'} / ${incidenceUf}`} className="span-3" />
+        <NfseCell label="Exclusões e Reduções da Base de Cálculo" value="R$ 0,00" />
+        <NfseCell label="Base de Cálculo Após Exclusões e Reduções" value="—" />
+        <NfseCell label="Red. Alíquota IBS / Red. Alíquota CBS" value="— / — / —" />
+        <NfseCell label="Alíquota - IBS UF / IBS Mun" value="— / —" />
+        <NfseCell label="Alíq. Efetiva Municipal - IBS" value="—" />
+        <NfseCell label="Valor Apurado Municipal - IBS" value="—" />
+        <NfseCell label="Alíq. Efetiva Estadual - IBS" value="—" />
+        <NfseCell label="Valor Apurado Estadual - IBS" value="—" />
+        <NfseCell label="Valor Total Apurado - IBS" value="—" />
+        <NfseCell label="Alíquota - CBS" value="—" />
+        <NfseCell label="Alíquota Efetiva - CBS" value="—" />
+        <NfseCell label="Valor Total Apurado - CBS" value="—" />
+      </div>
+
+      <NfseBand>VALOR TOTAL DA NFS-e</NfseBand>
+      <div className="extractor-nfse-grid cols-4 extractor-nfse-values">
+        <NfseCell label="VALOR DA OPERAÇÃO / SERVIÇO" value={brl(serviceValue)} />
+        <NfseCell label="Desconto Incondicionado" value={txt(dpsValues, 'vDescIncond') ? brl(txt(dpsValues, 'vDescIncond')) : '—'} />
+        <NfseCell label="Desconto Condicionado" value={txt(dpsValues, 'vDescCond') ? brl(txt(dpsValues, 'vDescCond')) : '—'} />
+        <NfseCell label="Total das Retenções (ISSQN / Federais)" value={txt(dpsValues, 'vTotRet') ? brl(txt(dpsValues, 'vTotRet')) : '—'} />
+        <NfseCell label="VALOR LÍQUIDO DA NFS-e" value={brl(liquidValue)} />
+        <NfseCell label="Total do IBS/CBS" value="R$ 0,00" />
+        <NfseCell label="VALOR LÍQUIDO DA NFS-e + IBS/CBS" value="R$ 0,00" />
+      </div>
+
+      <NfseBand>INFORMAÇÕES COMPLEMENTARES</NfseBand>
+      <div className="extractor-nfse-complement">
+        <div>Inf. Cont.: {txt(serviceInfo, 'xInfComp') || '—'}</div>
+        <div>
+          Totais aproximados dos Tributos cfe. Lei n° 12.741/2012:
+          {pTotTrib ? ` percentual informado pelo Simples Nacional: ${q(pTotTrib)}%` : ' Federais: -; Estaduais: -; Municipais: -;'}
+        </div>
+      </div>
+
+      <div className="extractor-nfse-spacer" />
+
+      <div className="extractor-nfse-footer">
+        <NfseCell label="DATA CIENTIFICAÇÃO:" value="" />
+        <NfseCell label="IDENTIFICAÇÃO E ASSINATURA" value="" />
+        <NfseCell label="N° NFS-e / CHAVE NFS-e" value={`${txt(inf, 'nNFSe') || preview.number} / ${key || '—'}`} />
+      </div>
     </div>
   );
 }
