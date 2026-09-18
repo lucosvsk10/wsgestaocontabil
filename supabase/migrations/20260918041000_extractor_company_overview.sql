@@ -79,7 +79,7 @@ begin
     order by identity_key,full_xml desc,source_rank asc,issue_date desc
   ),
   days as (
-    select gs::date day
+    select gs::date as calendar_day
     from generate_series(
       public.extractor_local_date()-29,
       public.extractor_local_date(),
@@ -105,18 +105,18 @@ begin
     ),
     'daily',(
       select coalesce(jsonb_agg(jsonb_build_object(
-        'day',d.day,
+        'day',d.calendar_day,
         'documents',coalesce(x.documents,0)
-      ) order by d.day),'[]'::jsonb)
+      ) order by d.calendar_day),'[]'::jsonb)
       from days d
       left join (
         select
-          (timezone('America/Sao_Paulo',issue_date))::date day,
+          (timezone('America/Sao_Paulo',issue_date))::date as calendar_day,
           count(*)::integer documents
         from docs
         where issue_date >= ((public.extractor_local_date()-29)::timestamp at time zone 'America/Sao_Paulo')
         group by 1
-      ) x on x.day=d.day
+      ) x on x.calendar_day=d.calendar_day
     )
   ) into v_result;
 
