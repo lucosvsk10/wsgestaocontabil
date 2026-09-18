@@ -295,10 +295,6 @@ async function buildNfse(doc: any, xml: string) {
     const d = dg(value);
     return d.length === 9 ? `${d.slice(0,1)}.${d.slice(1,5)}.${d.slice(5,7)}.${d.slice(7)}` : d || '-';
   };
-  const isZero = (value: unknown) => {
-    const n = Number(String(value ?? '').replace(',', '.'));
-    return Number.isFinite(n) && n === 0;
-  };
   const moneyOrDash = (value: unknown, zero = false) => {
     const s = String(value ?? '').trim();
     if (!s) return zero ? 'R$ 0,00' : '-';
@@ -319,7 +315,7 @@ async function buildNfse(doc: any, xml: string) {
     const font = isBold ? bold : reg;
     let textValueClean = val(textValue);
     while (font.widthOfTextAtSize(textValueClean, size) > maxWidth && textValueClean.length > 2) {
-      textValueClean = textValueClean.slice(0, -2) + '…';
+      textValueClean = textValueClean.slice(0, -4) + '...';
     }
     const width = font.widthOfTextAtSize(textValueClean, size);
     const dx = align === 'center' ? x + Math.max(0, (maxWidth - width) / 2)
@@ -429,6 +425,23 @@ async function buildNfse(doc: any, xml: string) {
   const serviceValue = tag(vServPrest, 'vServ') || doc.value || tag(vals, 'vLiq');
   const liquidValue = tag(vals, 'vLiq') || serviceValue;
   const qrv = `https://www.nfse.gov.br/ConsultaPublica?tpc=1&chave=${key}`;
+  const municipalityName = async (code: string, fallback = '') => {
+    if (clean(fallback)) return clean(fallback);
+    const numeric = dg(code);
+    if (numeric.length !== 7) return '-';
+    try {
+      const response = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/municipios/${numeric}`, {
+        headers: { accept: 'application/json' },
+        signal: AbortSignal.timeout(2500),
+      });
+      if (!response.ok) return '-';
+      const payload = await response.json().catch(() => ({})) as any;
+      return clean(payload?.nome) || '-';
+    } catch {
+      return '-';
+    }
+  };
+  const tomaCityName = await municipalityName(tomaCityCode, tag(toma,'xMun'));
 
   page.drawRectangle({ x:M, y:y(837), width:C, height:832, borderWidth:0.7, borderColor:black });
 
@@ -489,14 +502,14 @@ async function buildNfse(doc: any, xml: string) {
   labelValue('Indicador Municipal (Inscrição)', tag(toma,'IM') || '-', 301, 206, 132);
   labelValue('Telefone', fmtPhone(tag(toma,'fone')), 445, 206, 135);
   labelValue('Nome / Nome Empresarial', tag(toma,'xNome') || doc.recipientName || '-', 11, 228, 275);
-  labelValue('Município / Sigla UF', `${tag(toma,'xMun') || '-'} / ${tomaUf}`, 301, 228, 132);
+  labelValue('Município / Sigla UF', `${tomaCityName} / ${tomaUf}`, 301, 228, 132);
   labelValue('Código IBGE / CEP', `${fmtIbge(tomaCityCode)} / ${cep(tag(endTN,'CEP'))}`, 445, 228, 135);
   labelValue('Endereço', [tag(endT,'xLgr'),tag(endT,'nro'),tag(endT,'xCpl'),tag(endT,'xBairro')].filter(Boolean).join(', ') || '-', 11, 250, 275);
   labelValue('E-mail', tag(toma,'email') || '-', 301, 250, 279);
   hLine(267);
 
-  hLine(268.5); drawText('DESTINATÁRIO DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e', M, 269, C, 5.8, true, C, 'center');
-  hLine(277.5); drawText('INTERMEDIÁRIO DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e', M, 278, C, 5.8, true, C, 'center');
+  hLine(268.5); drawText('DESTINATÁRIO DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e', M, 269, 5.8, true, C, 'center');
+  hLine(277.5); drawText('INTERMEDIÁRIO DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e', M, 278, 5.8, true, C, 'center');
   hLine(286.5);
 
   band(286.5, 'SERVIÇO PRESTADO', 11);
@@ -565,18 +578,18 @@ async function buildNfse(doc: any, xml: string) {
   band(642, 'INFORMAÇÕES COMPLEMENTARES', 11);
   const info = tag(infoCompl,'xInfComp');
   drawWrapped(`Inf. Cont.: ${info || '-'}`, 11, 656, 568, 6.1, 7.2, 3);
-  const pTot = tag(totTrib,'pTotTribSN');
+  const approxFederal = tag(totTrib,'vTotTribFed');
+  const approxState = tag(totTrib,'vTotTribEst');
+  const approxMunicipal = tag(totTrib,'vTotTribMun');
   drawWrapped(
-    pTot
-      ? `Totais aproximados dos Tributos cfe. Lei n° 12.741/2012: percentual informado pelo Simples Nacional: ${pTot}%`
-      : 'Totais aproximados dos Tributos cfe. Lei n° 12.741/2012: Federais: -; Estaduais: -; Municipais: -;',
+    `Totais aproximados dos Tributos cfe. Lei n° 12.741/2012: Federais: ${approxFederal ? money(approxFederal) : '-'}; Estaduais: ${approxState ? money(approxState) : '-'}; Municipais: ${approxMunicipal ? money(approxMunicipal) : '-'};`,
     11, 678, 568, 6.1, 7.2, 2
   );
 
   hLine(811);
   vLine(151,811,833); vLine(296,811,833);
-  labelValue('DATA CIENTIFICAÇÃO:', '', 11, 814, 132);
-  labelValue('IDENTIFICAÇÃO E ASSINATURA', '', 156, 814, 132);
+  drawText('DATA CIENTIFICAÇÃO:', 11, 814, 5.7, true, 132);
+  drawText('IDENTIFICAÇÃO E ASSINATURA', 156, 814, 5.7, true, 132);
   labelValue('N° NFS-e / CHAVE NFS-e', `${tag(inf,'nNFSe') || doc.number || '-'} / ${key}`, 301, 814, 279, {valueSize:5.8});
   hLine(833);
 
