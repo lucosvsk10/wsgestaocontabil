@@ -237,7 +237,20 @@ Deno.serve(async req => {
     if (action === 'inspect_certificate') {
       const cert = parseCertificate(clean(body.certificate_base64), clean(body.certificate_password), clean(body.certificate_name));
       if (cert.cnpj.length !== 14) return json({ error: 'O certificado não possui um CNPJ empresarial válido.' }, 422);
-      const company = await lookupRegistry(admin, cert.cnpj);
+      let company: any;
+      try {
+        company = await lookupRegistry(admin, cert.cnpj);
+      } catch {
+        company = {
+          company_name: cert.holder_name || '',
+          trade_name: '',
+          cnpj: cert.cnpj,
+          document_type: 'cnpj',
+          document_number: cert.cnpj,
+          state_registration: '',
+          registry_payload: { certificate_only: true },
+        };
+      }
       return json({
         ok: true,
         company,
@@ -255,8 +268,10 @@ Deno.serve(async req => {
     const method = ['certificate','cnpj','manual'].includes(body.method) ? body.method : 'manual';
     const source = body.company || {};
     const documentType = source.document_type === 'cpf' ? 'cpf' : source.document_type === 'other' ? 'other' : 'cnpj';
-    const documentNumber = digits(source.document_number || source.cnpj);
-    const cnpj = documentType === 'cnpj' ? documentNumber : '';
+    const documentNumber = documentType === 'other'
+      ? clean(source.document_number || source.cnpj)
+      : digits(source.document_number || source.cnpj);
+    const cnpj = documentType === 'cnpj' ? digits(documentNumber) : '';
     const companyName = clean(source.company_name || source.legal_name);
     const tradeName = clean(source.trade_name);
     const username = normalizeUsername(body.username);
