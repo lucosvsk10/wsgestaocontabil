@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { AlertTriangle, ArrowLeft, FileKey2, ImagePlus, KeyRound, Loader2, Pencil, RotateCcw, Save, Search, ShieldCheck, UserRound } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Database, FileKey2, Files, ImagePlus, KeyRound, Loader2, Pencil, ReceiptText, RotateCcw, Save, Search, ShieldCheck, UserRound } from 'lucide-react';
 import { AdminLayout } from '@/components/admin/layout/AdminLayout';
 import { AdminPage, AdminPageHeader, AdminSection } from '@/components/admin/ui/AdminPage';
 import { SmartCertificateInput } from '@/components/admin/fiscal/CertificateImportTools';
@@ -16,20 +16,24 @@ const initial=(name?:string|null)=>String(name||'?').trim().charAt(0).toUpperCas
 async function fileToBase64(file:File){const bytes=new Uint8Array(await file.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=0x8000)binary+=String.fromCharCode(...bytes.subarray(i,i+0x8000));return btoa(binary)}
 async function callVault(body:Record<string,unknown>){const{data,error}=await supabase.functions.invoke('fiscal-company-vault',{body});if(!error)return data;let message=error.message;try{const context=(error as {context?:Response}).context;if(context)message=(await context.clone().json())?.error||message}catch{}throw new Error(message)}
 async function callAccess(body:Record<string,unknown>){const{data,error}=await supabase.functions.invoke('admin-client-access',{body});if(!error&&!data?.error)return data;let message=data?.error||error?.message||'Não foi possível gerenciar o acesso.';try{const context=(error as {context?:Response})?.context;if(context)message=(await context.clone().json())?.error||message}catch{}throw new Error(message)}
+async function callOverview(companyId:string){const{data,error}=await supabase.functions.invoke('admin-client-overview',{body:{company_id:companyId}});if(error||data?.error){console.error('[AdminClientProfile] Falha ao carregar resumo operacional',error||data?.error);return null}return data}
 async function confirmAccessPassword(password:string){const{data,error}=await supabase.functions.invoke('admin-client-access-confirm',{body:{password}});if(!error&&!data?.error)return true;let message=data?.error||error?.message||'Senha de confirmação inválida.';try{const context=(error as {context?:Response})?.context;if(context)message=(await context.clone().json())?.error||message}catch{}throw new Error(message)}
 const formatAccessDate=(value?:string|null)=>{if(!value)return '—';const date=new Date(value);return Number.isNaN(date.getTime())?'—':new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(date)}
+const formatNumber=(value?:number|null)=>new Intl.NumberFormat('pt-BR').format(Number(value||0));
+const formatShortDate=(value?:string|null)=>{if(!value)return '—';const date=new Date(value);return Number.isNaN(date.getTime())?'—':new Intl.DateTimeFormat('pt-BR',{dateStyle:'short'}).format(date)}
 
 type Client={id:string;company_name:string;trade_name:string|null;cnpj:string;address:string|null;company_size:string|null;logo_url?:string|null;state_registration?:string|null;registration_status?:string|null;tax_regime?:string|null;email?:string|null;phone?:string|null;postal_code?:string|null;street?:string|null;street_number?:string|null;complement?:string|null;district?:string|null;city?:string|null;state?:string|null;city_ibge_code?:string|null;cnae_primary?:string|null;registry_payload?:any;registry_updated_at?:string|null};
 type Fiscal={id:string;cnpj:string;razao_social:string;nome_fantasia:string|null;uf:string|null;municipio:string|null;codigo_municipio?:string|null;inscricao_estadual:string|null;regime_tributario?:string|null};
 type Cert={certificate_name:string;holder_name:string|null;holder_cnpj:string|null;valid_until:string;is_active:boolean};
 type CertMeta={holder_cnpj:string;holder_name:string;valid_from?:string;valid_until?:string};
 type ClientAccess={user_id:string;username:string|null;email:string|null;must_change_password:boolean|null;password_changed_at:string|null};
+type ClientOverview={certificate:{configured:boolean;valid_until:string|null;certificate_name:string|null};documents:{dfe:number;sales:number;total:number;full_xml:number;last_activity_at:string|null};extractor:{configured:boolean;links:number;automatic_sync:boolean;accounts:Array<{account_id:string;name:string|null;plan_code:string|null;lifetime_access:boolean}>;documents:number;full_xml:number;last_activity_at:string|null};issuer:{configured:boolean;organization_id:string|null;profile_id?:string|null;subscription_status?:string|null;emissions:number;last_emission_at:string|null;last_document_type:string|null;enabled_documents:string[];environment:string|null}};
 
 export default function AdminClientProfile(){
  const {companyId}=useParams();const navigate=useNavigate();const {selectCompany,refreshCompanies}=useCompanySelection();
- const [client,setClient]=useState<Client|null>(null),[fiscal,setFiscal]=useState<Fiscal|null>(null),[cert,setCert]=useState<Cert|null>(null),[certFile,setCertFile]=useState<File|null>(null),[certPassword,setCertPassword]=useState(''),[certMeta,setCertMeta]=useState<CertMeta|null>(null),[access,setAccess]=useState<ClientAccess|null>(null),[accessUsername,setAccessUsername]=useState(''),[accessBusy,setAccessBusy]=useState(false),[accessEditing,setAccessEditing]=useState(false),[confirmAction,setConfirmAction]=useState<'username'|'reset'|null>(null),[confirmPassword,setConfirmPassword]=useState(''),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[lookingUp,setLookingUp]=useState(false),[uploading,setUploading]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
+ const [client,setClient]=useState<Client|null>(null),[fiscal,setFiscal]=useState<Fiscal|null>(null),[overview,setOverview]=useState<ClientOverview|null>(null),[cert,setCert]=useState<Cert|null>(null),[certFile,setCertFile]=useState<File|null>(null),[certPassword,setCertPassword]=useState(''),[certMeta,setCertMeta]=useState<CertMeta|null>(null),[access,setAccess]=useState<ClientAccess|null>(null),[accessUsername,setAccessUsername]=useState(''),[accessBusy,setAccessBusy]=useState(false),[accessEditing,setAccessEditing]=useState(false),[confirmAction,setConfirmAction]=useState<'username'|'reset'|null>(null),[confirmPassword,setConfirmPassword]=useState(''),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[lookingUp,setLookingUp]=useState(false),[uploading,setUploading]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
 
- const load=async()=>{if(!companyId)return;setLoading(true);setError('');try{const c=await (supabase as any).from('companies').select('*').eq('id',companyId).single();if(c.error)throw c.error;setClient(c.data);selectCompany(companyId);const [fResult,accessResult]=await Promise.all([(supabase as any).from('fiscal_companies').select('id,cnpj,razao_social,nome_fantasia,uf,municipio,codigo_municipio,inscricao_estadual,regime_tributario').eq('company_id',companyId).maybeSingle(),callAccess({action:'status',company_id:companyId})]);if(fResult.error)throw fResult.error;const f=fResult;setFiscal(f.data||null);setAccess(accessResult?.access||null);setAccessUsername(accessResult?.access?.username||'');setAccessEditing(false);if(f.data){const ce=await (supabase as any).from('fiscal_certificates').select('certificate_name,holder_name,holder_cnpj,valid_until,is_active').eq('company_id',f.data.id).eq('is_active',true).order('created_at',{ascending:false}).limit(1).maybeSingle();if(ce.error)throw ce.error;setCert(ce.data||null)}else setCert(null)}catch(e){setError(e instanceof Error?e.message:String(e))}finally{setLoading(false)}};
+ const load=async()=>{if(!companyId)return;setLoading(true);setError('');try{const c=await (supabase as any).from('companies').select('*').eq('id',companyId).single();if(c.error)throw c.error;setClient(c.data);selectCompany(companyId);const [fResult,accessResult,overviewResult]=await Promise.all([(supabase as any).from('fiscal_companies').select('id,cnpj,razao_social,nome_fantasia,uf,municipio,codigo_municipio,inscricao_estadual,regime_tributario').eq('company_id',companyId).maybeSingle(),callAccess({action:'status',company_id:companyId}),callOverview(companyId)]);if(fResult.error)throw fResult.error;const f=fResult;setFiscal(f.data||null);setOverview(overviewResult||null);setAccess(accessResult?.access||null);setAccessUsername(accessResult?.access?.username||'');setAccessEditing(false);if(f.data){const ce=await (supabase as any).from('fiscal_certificates').select('certificate_name,holder_name,holder_cnpj,valid_until,is_active').eq('company_id',f.data.id).eq('is_active',true).order('created_at',{ascending:false}).limit(1).maybeSingle();if(ce.error)throw ce.error;setCert(ce.data||null)}else setCert(null)}catch(e){setError(e instanceof Error?e.message:String(e))}finally{setLoading(false)}};
  useEffect(()=>{void load()},[companyId]);
 
  const createAccess=async()=>{if(!companyId||accessBusy)return;setAccessBusy(true);setError('');setNotice('');try{const result=await callAccess({action:'create',company_id:companyId,username:accessUsername});setNotice(`Acesso criado para @${result.username}. A senha inicial padrão da WS será exigida apenas no primeiro acesso e deverá ser alterada.`);await refreshCompanies();await load()}catch(e){setError(e instanceof Error?e.message:String(e))}finally{setAccessBusy(false)}};
@@ -53,7 +57,44 @@ export default function AdminClientProfile(){
   <Button variant="ghost" className="mb-4 -ml-2" onClick={()=>navigate('/admin/clientes')}><ArrowLeft className="mr-2 h-4 w-4"/>Clientes</Button>
   <AdminPageHeader eyebrow="Cadastro central" title={name} description="Cadastro empresarial completo. O CNPJ preenche os dados automaticamente; o A1 é opcional e só é necessário para extração fiscal." actions={<Button onClick={()=>void save()} disabled={saving}><Save className="mr-2 h-4 w-4"/>{saving?'Salvando...':'Salvar alterações'}</Button>}/>
   {(error||notice)&&<div className={`mt-5 rounded-xl border px-4 py-3 text-sm ${error?'border-destructive/20 bg-destructive/5 text-destructive':'border-border/60 bg-muted/20 text-muted-foreground'}`}>{error||notice}</div>}
-  <div className="mt-6 grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
+
+  <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <OperationalCard
+      icon={Files}
+      label="Documentos fiscais"
+      value={overview ? formatNumber(overview.documents.total) : '—'}
+      detail={overview ? `${formatNumber(overview.documents.dfe)} DF-e · ${formatNumber(overview.documents.sales)} vendas · ${formatNumber(overview.documents.full_xml)} XML completos` : 'Carregando histórico fiscal'}
+    />
+    <OperationalCard
+      icon={Database}
+      label="Extrator Fiscal"
+      value={overview?.extractor.configured ? 'Ativo' : 'Não vinculado'}
+      detail={overview?.extractor.configured
+        ? `${formatNumber(overview.extractor.documents)} documentos · ${overview.extractor.automatic_sync ? 'sincronização automática' : 'sincronização manual'}`
+        : overview?.documents.total ? 'Há histórico fiscal, mas sem vínculo ativo no Extrator.' : 'Nenhum uso registrado no Extrator.'}
+      tone={overview?.extractor.configured ? 'success' : 'neutral'}
+    />
+    <OperationalCard
+      icon={ReceiptText}
+      label="Emissor Fiscal"
+      value={overview?.issuer.configured ? 'Configurado' : 'Não vinculado'}
+      detail={overview?.issuer.configured
+        ? `${formatNumber(overview.issuer.emissions)} emissão(ões)${overview.issuer.last_emission_at ? ` · última em ${formatShortDate(overview.issuer.last_emission_at)}` : ''}`
+        : 'Nenhum perfil do Emissor associado a este CNPJ.'}
+      tone={overview?.issuer.configured ? 'success' : 'neutral'}
+    />
+    <OperationalCard
+      icon={FileKey2}
+      label="Certificado A1"
+      value={overview?.certificate.configured ? 'Vinculado' : 'Sem A1'}
+      detail={overview?.certificate.configured && overview.certificate.valid_until
+        ? `Válido até ${formatShortDate(overview.certificate.valid_until)}`
+        : 'Nenhum certificado ativo neste cadastro.'}
+      tone={overview?.certificate.configured ? 'success' : 'neutral'}
+    />
+  </div>
+
+  <div className="mt-5 grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
    <div className="space-y-5">
     <AdminSection className="p-6"><div className="flex flex-col items-center text-center"><div className="flex h-32 w-32 items-center justify-center overflow-hidden rounded-3xl border border-border/60 bg-muted/25 text-3xl font-semibold text-muted-foreground">{client.logo_url?<img src={client.logo_url} alt="" className="h-full w-full object-contain"/>:initial(name)}</div><p className="mt-4 font-semibold">{name}</p><p className="mt-1 text-xs text-muted-foreground">{formatCnpj(client.cnpj)}</p><label className="mt-5 inline-flex cursor-pointer items-center rounded-lg border border-border/60 px-3 py-2 text-xs font-medium hover:bg-muted/35"><ImagePlus className="mr-2 h-4 w-4"/>{uploading?'Enviando...':'Alterar logo'}<input className="hidden" type="file" accept="image/*" disabled={uploading} onChange={e=>{const f=e.target.files?.[0];if(f)void uploadLogo(f);e.currentTarget.value=''}}/></label></div></AdminSection>
     <AdminSection className="p-5">
@@ -84,6 +125,22 @@ export default function AdminClientProfile(){
    </div>
    <div className="space-y-5">
     <AdminSection className="p-6"><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-semibold">Dados da empresa</h2><p className="mt-1 text-xs text-muted-foreground">Digite o CNPJ e consulte. O sistema busca razão social, nome fantasia, IE, endereço, regime, CNAE e situação cadastral.</p></div><Button variant="outline" onClick={()=>void lookupCnpj()} disabled={lookingUp||onlyDigits(client.cnpj).length!==14}><Search className="mr-2 h-4 w-4"/>{lookingUp?'Consultando...':'Buscar pelo CNPJ'}</Button></div><div className="mt-5 grid gap-4 sm:grid-cols-2"><Field label="Razão social"><Input value={client.company_name} onChange={e=>setClient({...client,company_name:e.target.value.toUpperCase()})}/></Field><Field label="Nome fantasia"><Input value={client.trade_name||''} onChange={e=>setClient({...client,trade_name:e.target.value.toUpperCase()})}/></Field><Field label="CNPJ"><Input value={client.cnpj} onChange={e=>setClient({...client,cnpj:e.target.value})}/></Field><Field label="Inscrição estadual"><Input value={client.state_registration||''} onChange={e=>setClient({...client,state_registration:e.target.value})}/></Field><Field label="Situação cadastral"><Input value={client.registration_status||''} onChange={e=>setClient({...client,registration_status:e.target.value.toUpperCase()})}/></Field><Field label="Porte"><Input value={client.company_size||''} onChange={e=>setClient({...client,company_size:e.target.value.toUpperCase()})}/></Field><Field label="Regime tributário"><Input value={client.tax_regime||''} onChange={e=>setClient({...client,tax_regime:e.target.value})}/></Field><Field label="CNAE principal"><Input value={client.cnae_primary||''} onChange={e=>setClient({...client,cnae_primary:e.target.value})}/></Field><Field label="E-mail cadastral"><Input value={client.email||''} onChange={e=>setClient({...client,email:e.target.value})}/></Field><Field label="Telefone"><Input value={client.phone||''} onChange={e=>setClient({...client,phone:e.target.value})}/></Field><Field label="CEP"><Input value={client.postal_code||''} onChange={e=>setClient({...client,postal_code:e.target.value})}/></Field><Field label="UF"><Input value={client.state||''} onChange={e=>setClient({...client,state:e.target.value.toUpperCase()})}/></Field><Field label="Município"><Input value={client.city||''} onChange={e=>setClient({...client,city:e.target.value.toUpperCase()})}/></Field><Field label="Código IBGE"><Input value={client.city_ibge_code||''} onChange={e=>setClient({...client,city_ibge_code:e.target.value})}/></Field><div className="sm:col-span-2"><Field label="Endereço"><Input value={client.address||''} onChange={e=>setClient({...client,address:e.target.value.toUpperCase()})}/></Field></div></div></AdminSection>
+    <AdminSection className="p-6">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="font-semibold">Atividade fiscal</h2>
+          <p className="mt-1 text-xs text-muted-foreground">Resumo do que este cliente já usa no Extrator e no Emissor Fiscal.</p>
+        </div>
+      </div>
+      <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <ActivityMeta label="DF-e armazenados" value={overview ? formatNumber(overview.documents.dfe) : '—'} />
+        <ActivityMeta label="Documentos de venda" value={overview ? formatNumber(overview.documents.sales) : '—'} />
+        <ActivityMeta label="XML completos" value={overview ? formatNumber(overview.documents.full_xml) : '—'} />
+        <ActivityMeta label="Última atividade fiscal" value={overview?.documents.last_activity_at ? formatAccessDate(overview.documents.last_activity_at) : 'Sem atividade'} />
+        <ActivityMeta label="Extrator" value={overview?.extractor.configured ? (overview.extractor.accounts.map(account=>account.name).filter(Boolean).join(', ') || 'Vinculado') : 'Não vinculado'} />
+        <ActivityMeta label="Emissor" value={overview?.issuer.configured ? `${formatNumber(overview.issuer.emissions)} emissão(ões)` : 'Não vinculado'} />
+      </div>
+    </AdminSection>
     <AdminSection className="p-6"><div className="flex items-start justify-between gap-4"><div><h2 className="font-semibold">Certificado digital A1 <span className="font-normal text-muted-foreground">(opcional)</span></h2><p className="mt-1 text-xs text-muted-foreground">Só adicione o .pfx/.p12 se o escritório quiser habilitar a extração fiscal desta empresa. O cadastro empresarial funciona normalmente sem certificado.</p></div>{cert&&<span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400"><ShieldCheck className="h-4 w-4"/>Ativo</span>}</div>{cert&&<div className="mt-4 flex items-center gap-3 rounded-xl border border-border/50 bg-muted/20 p-4"><div className="rounded-lg bg-background p-2"><FileKey2 className="h-5 w-5"/></div><div><p className="text-sm font-medium">{cert.certificate_name}</p><p className="text-xs text-muted-foreground">{cert.holder_name||'Titular não informado'} · válido até {new Date(`${cert.valid_until}T12:00:00`).toLocaleDateString('pt-BR')}</p></div></div>}<div className="mt-5"><SmartCertificateInput editing={Boolean(cert)} onFile={setCertFile} onPassword={setCertPassword} onMetadata={onCertificateMetadata}/></div></AdminSection>
    </div>
   </div>
@@ -130,3 +187,15 @@ export default function AdminClientProfile(){
  </AdminPage></AdminLayout>
 }
 function Field({label,children}:{label:string;children:React.ReactNode}){return <label className="block space-y-2"><span className="text-xs font-medium text-muted-foreground">{label}</span>{children}</label>}
+
+function OperationalCard({icon:Icon,label,value,detail,tone='neutral'}:{icon:React.ComponentType<{className?:string}>;label:string;value:string;detail:string;tone?:'neutral'|'success'}){
+ return <AdminSection className="p-4">
+  <div className="flex items-start gap-3">
+   <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${tone==='success'?'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300':'bg-muted/35 text-muted-foreground'}`}><Icon className="h-4 w-4"/></span>
+   <div className="min-w-0"><p className="text-[10px] font-semibold uppercase tracking-[.1em] text-muted-foreground">{label}</p><p className="mt-1 text-sm font-semibold">{value}</p><p className="mt-1 text-[10px] leading-4 text-muted-foreground">{detail}</p></div>
+  </div>
+ </AdminSection>
+}
+function ActivityMeta({label,value}:{label:string;value:string}){
+ return <div className="rounded-xl border border-border/55 bg-muted/10 p-3"><p className="text-[9px] font-semibold uppercase tracking-[.09em] text-muted-foreground">{label}</p><p className="mt-1.5 text-xs font-medium text-foreground">{value}</p></div>
+}
