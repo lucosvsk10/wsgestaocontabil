@@ -266,6 +266,17 @@ const syncStartedAt = (company: Company) => {
     .filter(value => Number.isFinite(value));
   return values.length ? new Date(Math.min(...values)).toISOString() : null;
 };
+const syncCompletedAt = (company: Company) => {
+  const values = [
+    company.lastSync,
+    company.purchaseLastCompletedAt,
+    company.salesLastCompletedAt,
+  ]
+    .filter(Boolean)
+    .map(value => new Date(String(value)).getTime())
+    .filter(value => Number.isFinite(value));
+  return values.length ? new Date(Math.max(...values)).toISOString() : null;
+};
 const elapsedLabel = (value?: string | null) => {
   if (!value) return 'agora';
   const ms = Math.max(0, Date.now() - new Date(value).getTime());
@@ -1624,8 +1635,8 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview, adm
               <span>
                 {syncIsActive(selected)
                   ? `Busca iniciada ${elapsedLabel(syncStartedAt(selected))} · ${syncPeriodLabel(selected)}`
-                  : selected.lastSync
-                    ? `Última busca ${formatDate(selected.lastSync, true)}`
+                  : syncCompletedAt(selected)
+                    ? `Última consulta concluída ${formatDate(syncCompletedAt(selected), true)}`
                     : 'Primeira busca ainda não concluída'}
               </span>
             </article>
@@ -1730,10 +1741,17 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview, adm
             onClick={() => setDetailId(c.id)}
             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDetailId(c.id); } }}
           >
-            <div><strong>{c.tradeName}</strong><span>{formatCnpj(c.cnpj)} · {c.uf}</span></div>
+            <div>
+              <strong>{c.name}</strong>
+              <span>{c.tradeName}</span>
+              <span>{formatCnpj(c.cnpj)} · {c.uf}</span>
+            </div>
             <div><strong>{integer.format(c.documents)}</strong><span>{c.entries} compras · {c.exits} vendas</span></div>
             <div><strong>{integer.format(c.fullXml)}</strong><span>{c.pendingXml ? `${c.pendingXml} pendente(s)` : 'Completo no período'}</span></div>
-            <div><strong>{syncLabel(c.purchaseStatus)} / {syncLabel(c.salesStatus)}</strong><span>{c.lastSync ? formatDate(c.lastSync, true) : 'Ainda não concluída'}</span></div>
+            <div>
+              <strong>{syncLabel(c.purchaseStatus)} / {syncLabel(c.salesStatus)}</strong>
+              <span>{syncCompletedAt(c) ? `Última conclusão ${formatDate(syncCompletedAt(c), true)}` : 'Ainda não concluída'}</span>
+            </div>
             <div><strong>{c.certificateUntil ? formatDate(c.certificateUntil) : 'Não configurado'}</strong><span>{c.certificateDays == null ? '—' : `${c.certificateDays} dia(s)`}</span></div>
             <div className="extractor-row-actions">
               {syncIsActive(c) && (
@@ -2496,7 +2514,7 @@ function HistorySection({ companies, preview, setNotice }: any) {
             })
             .map((item: Company) => (
               <option key={item.id} value={item.id}>
-                {item.tradeName} · {formatCnpj(item.cnpj)}
+                {item.name} · {item.tradeName} · {formatCnpj(item.cnpj)}
               </option>
             ))}
         </select>
@@ -2508,8 +2526,8 @@ function HistorySection({ companies, preview, setNotice }: any) {
       <section className="extractor-health-hero">
         <div>
           <p>Empresa conferida</p>
-          <h2>{company.tradeName}</h2>
-          <span>{formatCnpj(company.cnpj)} · {periodText}</span>
+          <h2>{company.name}</h2>
+          <span>{company.tradeName} · {formatCnpj(company.cnpj)} · {periodText}</span>
         </div>
         <HealthState label={overallLabel} state={overallState} />
       </section>
@@ -2518,7 +2536,11 @@ function HistorySection({ companies, preview, setNotice }: any) {
         <article>
           <span>Compras encontradas</span>
           <strong>{purchaseExpected == null ? '—' : integer.format(purchaseExpected)}</strong>
-          <small>{purchase.source_checked ? 'Conferido na fonte fiscal' : 'Fonte externa não comparada nesta UF'}</small>
+          <small>
+            {purchase.source_checked
+              ? (purchase.status_message || 'Consulta concluída na fonte fiscal')
+              : (purchase.source_error ? 'Fonte fiscal indisponível nesta conferência' : 'Consulta ainda não concluída')}
+          </small>
         </article>
         <article>
           <span>Compras no site</span>
@@ -2528,7 +2550,11 @@ function HistorySection({ companies, preview, setNotice }: any) {
         <article>
           <span>Vendas encontradas</span>
           <strong>{salesExpected == null ? '—' : integer.format(salesExpected)}</strong>
-          <small>{sales.sequence_total ? `Sequência: ${sales.sequence_resolved || 0}/${sales.sequence_total}` : 'Base fiscal reconciliada'}</small>
+          <small>
+            {sales.source_checked
+              ? (sales.sequence_total ? `Sequência: ${sales.sequence_resolved || 0}/${sales.sequence_total}` : 'Consulta de vendas concluída')
+              : (sales.source_reason || 'Consulta de vendas ainda não concluída')}
+          </small>
         </article>
         <article>
           <span>Vendas no site</span>
@@ -2567,6 +2593,9 @@ function HistorySection({ companies, preview, setNotice }: any) {
             <div><small>Sequência resolvida</small><strong>{integer.format(Number(sales.sequence_resolved || 0))}/{integer.format(Number(sales.sequence_total || 0))}</strong></div>
             <div><small>Falhas seguidas</small><strong>{integer.format(Number(sales.failures || 0))}</strong></div>
           </div>
+          {!sales.source_checked && sales.source_reason && (
+            <p className="extractor-helper">{sales.source_reason}</p>
+          )}
         </article>
       </section>
 
@@ -2579,14 +2608,42 @@ function HistorySection({ companies, preview, setNotice }: any) {
           <div className="extractor-health-activity-row">
             <span>Compras</span>
             <strong>{syncLabel(purchase.status || company.purchaseStatus)}</strong>
-            <span>{purchase.last_error || 'Nenhuma falha persistente'}</span>
-            <small>{purchase.last_completed_at ? formatDate(purchase.last_completed_at, true) : 'Sem conclusão registrada'}</small>
+            <span>
+              {purchase.last_error ||
+                purchase.status_message ||
+                (purchase.source_checked && purchaseExpected === 0
+                  ? 'Consulta concluída · nenhum documento localizado'
+                  : purchase.source_checked
+                    ? 'Consulta concluída sem falhas'
+                    : 'Consulta ainda não concluída')}
+            </span>
+            <small>
+              {purchase.last_completed_at
+                ? `Concluída ${formatDate(purchase.last_completed_at, true)}`
+                : purchase.last_started_at
+                  ? `Iniciada ${formatDate(purchase.last_started_at, true)}`
+                  : 'Não iniciada'}
+            </small>
           </div>
           <div className="extractor-health-activity-row">
             <span>Vendas</span>
             <strong>{syncLabel(sales.status || company.salesStatus)}</strong>
-            <span>{sales.last_error || 'Nenhuma falha persistente'}</span>
-            <small>{sales.last_completed_at ? formatDate(sales.last_completed_at, true) : 'Sem conclusão registrada'}</small>
+            <span>
+              {sales.last_error ||
+                sales.source_reason ||
+                (sales.source_checked && salesExpected === 0
+                  ? 'Consulta concluída · nenhum documento localizado'
+                  : sales.source_checked
+                    ? 'Consulta concluída sem falhas'
+                    : 'Consulta ainda não concluída')}
+            </span>
+            <small>
+              {sales.last_completed_at
+                ? `Concluída ${formatDate(sales.last_completed_at, true)}`
+                : sales.last_started_at
+                  ? `Iniciada ${formatDate(sales.last_started_at, true)}`
+                  : 'Não iniciada'}
+            </small>
           </div>
           <div className="extractor-health-activity-row">
             <span>Certificado A1</span>
