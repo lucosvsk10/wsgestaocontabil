@@ -251,6 +251,8 @@ export function CompanySelectionProvider({ children }: { children: React.ReactNo
       .on('postgres_changes', { event: '*', schema: 'public', table: 'companies' }, refresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'fiscal_companies' }, refresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'fiscal_certificates' }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'company_user_links' }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, refresh)
       .subscribe();
 
     window.addEventListener('focus', refresh);
