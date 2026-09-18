@@ -868,6 +868,51 @@ function NoticeBar({ notice, close }: { notice: NonNullable<Notice>; close: () =
     </div>
   );
 }
+
+function ImportNotificationStack({
+  notifications,
+  onOpen,
+  onDismiss,
+}: {
+  notifications: ImportNotification[];
+  onOpen: (notification: ImportNotification) => void;
+  onDismiss: (notification: ImportNotification) => void;
+}) {
+  if (!notifications.length) return null;
+  return (
+    <aside className="extractor-import-notifications" aria-live="polite">
+      {notifications.map(notification => {
+        const purchases = Number(notification.metadata?.purchase_count || 0);
+        const sales = Number(notification.metadata?.sales_count || 0);
+        const companyName = notification.metadata?.company_name || 'Empresa';
+        return (
+          <article key={notification.id} className="extractor-import-notification">
+            <div className="extractor-import-notification-icon">
+              <AnimatedExtractorIcon name={sales > 0 && purchases === 0 ? 'upload' : 'download'} />
+            </div>
+            <div>
+              <small>{companyName}</small>
+              <strong>{notification.title}</strong>
+              <p>
+                {purchases > 0 && <span>{purchases} compra{purchases === 1 ? '' : 's'}</span>}
+                {sales > 0 && <span>{sales} venda{sales === 1 ? '' : 's'}</span>}
+              </p>
+              <button onClick={() => onOpen(notification)}>Ver documentos</button>
+            </div>
+            <button
+              className="extractor-import-notification-close"
+              onClick={() => onDismiss(notification)}
+              aria-label="Dispensar notificação"
+            >
+              <X />
+            </button>
+          </article>
+        );
+      })}
+    </aside>
+  );
+}
+
 function Metric({
   label,
   value,
@@ -880,13 +925,15 @@ function Metric({
   icon: ExtractorIconName;
 }) {
   return (
-    <article className="extractor-metric" data-icon-hover>
+    <article className="extractor-metric extractor-metric-visual" data-icon-hover>
       <div>
         <p>{label}</p>
-        <AnimatedExtractorIcon name={icon} />
       </div>
       <strong>{value}</strong>
       <span>{detail}</span>
+      <span className="extractor-metric-watermark" aria-hidden="true">
+        <AnimatedExtractorIcon name={icon} />
+      </span>
     </article>
   );
 }
