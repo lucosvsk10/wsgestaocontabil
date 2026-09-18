@@ -13,9 +13,24 @@ const json = (body: unknown, status = 200) =>
   });
 
 const DEFAULT_CLIENT_PASSWORD = '5BWasgc1@';
+const CONFIRMATION_HASH = '39f8ebd80ef2db96c4cc45e9094bd31b026cd1a426dc1c364360bf4254e8d422';
 const clean = (value: unknown) => String(value ?? '').trim();
 const normalizeUsername = (value: unknown) => clean(value).toLowerCase();
 const validUsername = (value: string) => /^[a-z0-9][a-z0-9._-]{2,31}$/.test(value);
+
+async function sha256(value: string) {
+  const bytes = new TextEncoder().encode(value);
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
+  return [...digest].map(byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function requireConfirmation(value: unknown) {
+  const password = clean(value);
+  if (!password) throw new Error('Informe a senha de confirmação.');
+  if (await sha256(password) !== CONFIRMATION_HASH) {
+    throw new Error('Senha de confirmação incorreta.');
+  }
+}
 
 async function context(req: Request) {
   const auth = req.headers.get('authorization');
@@ -147,6 +162,7 @@ Deno.serve(async (req) => {
     if (!current.profile?.id) return json({ error: 'Esta empresa ainda não possui usuário.' }, 404);
 
     if (action === 'update_username') {
+      await requireConfirmation(body.confirm_password);
       const username = normalizeUsername(body.username);
       if (!validUsername(username)) {
         return json({ error: 'Usuário inválido. Use 3 a 32 caracteres.' }, 422);
@@ -182,6 +198,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'reset_password') {
+      await requireConfirmation(body.confirm_password);
       const { error: authError } = await admin.auth.admin.updateUserById(current.profile.id, {
         password: DEFAULT_CLIENT_PASSWORD,
       });
@@ -214,7 +231,13 @@ Deno.serve(async (req) => {
   } catch (error: any) {
     console.error('admin-client-access', error);
     const message = error?.message || 'Falha ao gerenciar acesso.';
-    const status = /Não autenticado/.test(message) ? 401 : /Acesso exclusivo/.test(message) ? 403 : 500;
+    const status = /Não autenticado/.test(message)
+      ? 401
+      : /Acesso exclusivo|Senha de confirmação incorreta/.test(message)
+        ? 403
+        : /Informe a senha de confirmação/.test(message)
+          ? 422
+          : 500;
     return json({ error: message }, status);
   }
 });
