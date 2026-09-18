@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, FileKey2, ImagePlus, KeyRound, RotateCcw, Save, Search, ShieldCheck, UserRound } from 'lucide-react';
+import { ArrowLeft, FileKey2, ImagePlus, KeyRound, Loader2, RotateCcw, Save, Search, ShieldCheck, UserRound } from 'lucide-react';
 import { AdminLayout } from '@/components/admin/layout/AdminLayout';
 import { AdminPage, AdminPageHeader, AdminSection } from '@/components/admin/ui/AdminPage';
 import { SmartCertificateInput } from '@/components/admin/fiscal/CertificateImportTools';
