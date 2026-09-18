@@ -111,6 +111,8 @@ const bytesFromDataUrl = (u: string) =>
   Uint8Array.from(atob(u.split(',')[1] || ''), c => c.charCodeAt(0));
 const xmlDecode = (value: unknown) =>
   String(value ?? '')
+    .trim()
+    .replace(/^<!\[CDATA\[([\s\S]*?)\]\]>$/i, '$1')
     .replace(/&amp;/gi, '&')
     .replace(/&quot;/gi, '"')
     .replace(/&apos;/gi, "'")
