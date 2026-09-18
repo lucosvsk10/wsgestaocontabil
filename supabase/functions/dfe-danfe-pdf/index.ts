@@ -557,7 +557,7 @@ async function buildNfse(doc: any, xml: string) {
   labelValue('DATA E HORA DA EMISSÃO DA NFS-e', `${dateOnly(nfseIssue)} ${timeOnly(nfseIssue)}`, 301, 64, 140);
   labelValue('NÚMERO DA DPS', tag(infDps,'nDPS') || '-', 11, 84, 125);
   labelValue('SÉRIE DA DPS', tag(infDps,'serie') || doc.series || '-', 156, 84, 125);
-  labelValue('DATA E HORA DA EMISSÃO DA DPS', `${dateOnly(issue)} ${timeOnly(issue)}`, 301, 84, 140);
+  labelValue('DATA E HORA DA EMISSÃO DA DPS', `${dateOnly(dpsIssue)} ${timeOnly(dpsIssue)}`, 301, 84, 140);
   labelValue('EMITENTE DA NFS-e', 'Prestador', 11, 104, 125);
   labelValue('SITUAÇÃO DA NFS-e', tag(inf,'cStat') === '100' ? 'NFS-e Gerada' : tag(inf,'cStat') || '-', 156, 104, 125);
   labelValue('FINALIDADE', tag(infDps,'finNFSe') || '-', 301, 104, 140);
