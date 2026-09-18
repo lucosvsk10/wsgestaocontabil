@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Activity, Loader2, Play, Plus, Search, X } from 'lucide-react';
+import { AdminClientOnboardingDialog } from '@/components/admin/company/AdminClientOnboardingDialog';
 import { AdminLayout } from '@/components/admin/layout/AdminLayout';
 import { AdminEmptyState, AdminLoadingState, AdminPage, AdminPageHeader, AdminSection } from '@/components/admin/ui/AdminPage';
 import { Button } from '@/components/ui/button';
@@ -15,9 +16,6 @@ import {
   fiscalHealthTooltipLines,
 } from '@/utils/adminFiscalHealth';
 
-type Form = { company_name: string; trade_name: string; cnpj: string; address: string; company_size: string };
-
-const blank = (): Form => ({ company_name: '', trade_name: '', cnpj: '', address: '', company_size: '' });
 const digits = (value: string | null | undefined) => String(value || '').replace(/\D/g, '');
 const formatCnpj = (value: string | null | undefined) => {
   const d = digits(value);
@@ -42,8 +40,6 @@ export default function AdminCompanies() {
   const { companies, loading: companiesLoading, refreshCompanies, selectCompany } = useCompanySelection();
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<Form>(blank());
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [fiscalStatuses, setFiscalStatuses] = useState<Record<string, FiscalHealthCompany>>({});
   const [statusLoading, setStatusLoading] = useState(true);
@@ -82,31 +78,6 @@ export default function AdminCompanies() {
       ? companies
       : companies.filter((company) => [company.company_name, company.trade_name, company.cnpj].some((value) => String(value || '').toLowerCase().includes(normalized)));
   }, [companies, query]);
-
-  const save = async () => {
-    const cnpj = digits(form.cnpj);
-    if (!form.company_name.trim() || cnpj.length !== 14) {
-      setError('Informe a razão social e um CNPJ válido.');
-      return;
-    }
-    setSaving(true);
-    setError('');
-    const { error: insertError } = await (supabase as any).from('companies').insert({
-      company_name: form.company_name.trim(),
-      trade_name: form.trade_name.trim() || null,
-      cnpj,
-      address: form.address.trim() || null,
-      company_size: form.company_size.trim() || null,
-    });
-    if (insertError) setError(insertError.message);
-    else {
-      setOpen(false);
-      setForm(blank());
-      await refreshCompanies();
-      await loadFiscalStatus();
-    }
-    setSaving(false);
-  };
 
   const openCompany = (company: OfficeCompanySelection) => {
     selectCompany(company.id);
@@ -219,25 +190,14 @@ export default function AdminCompanies() {
           </div>
         )}
 
-        {open && (
-          <div className="fixed inset-0 z-[130] flex justify-end bg-black/45" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
-            <aside className="h-full w-full max-w-lg overflow-y-auto bg-card shadow-2xl">
-              <div className="sticky top-0 flex items-center justify-between border-b border-border bg-card px-6 py-5">
-                <div><p className="text-[10px] uppercase tracking-[.16em] text-muted-foreground">Cliente do escritório</p><h2 className="mt-1 text-xl font-semibold">Novo cliente</h2></div>
-                <Button variant="ghost" size="icon" onClick={() => setOpen(false)}><X className="h-4 w-4" /></Button>
-              </div>
-              <div className="space-y-4 p-6">
-                <Field label="Razão social"><Input value={form.company_name} onChange={(event) => setForm({ ...form, company_name: event.target.value })} /></Field>
-                <Field label="Nome fantasia"><Input value={form.trade_name} onChange={(event) => setForm({ ...form, trade_name: event.target.value })} /></Field>
-                <Field label="CNPJ"><Input value={form.cnpj} onChange={(event) => setForm({ ...form, cnpj: event.target.value })} /></Field>
-                <Field label="Porte"><Input value={form.company_size} onChange={(event) => setForm({ ...form, company_size: event.target.value })} /></Field>
-                <Field label="Endereço"><Input value={form.address} onChange={(event) => setForm({ ...form, address: event.target.value })} /></Field>
-                {error && <p className="text-sm text-destructive">{error}</p>}
-                <Button className="w-full" disabled={saving} onClick={() => void save()}>{saving ? 'Salvando...' : 'Criar cliente'}</Button>
-              </div>
-            </aside>
-          </div>
-        )}
+        <AdminClientOnboardingDialog
+          open={open}
+          onOpenChange={setOpen}
+          onCreated={async () => {
+            await refreshCompanies();
+            await loadFiscalStatus();
+          }}
+        />}
       </AdminPage>
     </AdminLayout>
   );
@@ -283,8 +243,4 @@ function FiscalHealthIndicator({ company, loading, onReady }: { company?: Fiscal
       </TooltipContent>
     </Tooltip>
   );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <label className="block space-y-2"><span className="text-xs font-medium text-muted-foreground">{label}</span>{children}</label>;
 }
