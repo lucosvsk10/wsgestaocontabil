@@ -538,6 +538,8 @@ async function buildNfse(doc: any, xml: string) {
     }
   };
   const tomaCityName = await municipalityName(tomaCityCode, tag(toma,'xMun'));
+  const emitTypeCode = tag(inf,'tpEmit') || tag(infDps,'tpEmit') || '1';
+  const emitType = emitTypeCode === '2' ? 'Tomador' : emitTypeCode === '3' ? 'Intermediário' : 'Prestador';
   const homolog = tag(infDps,'tpAmb') === '2';
 
   page.drawRectangle({ x:M, y:y(837), width:C, height:832, borderWidth:1, borderColor:black });
@@ -560,7 +562,7 @@ async function buildNfse(doc: any, xml: string) {
   labelValue('NÚMERO DA DPS', tag(infDps,'nDPS') || '-', 11, 84, 125);
   labelValue('SÉRIE DA DPS', tag(infDps,'serie') || doc.series || '-', 156, 84, 125);
   labelValue('DATA E HORA DA EMISSÃO DA DPS', `${dateOnly(dpsIssue)} ${timeOnly(dpsIssue)}`, 301, 84, 140);
-  labelValue('EMITENTE DA NFS-e', 'Prestador', 11, 104, 125);
+  labelValue('EMITENTE DA NFS-e', emitType, 11, 104, 125);
   labelValue('SITUAÇÃO DA NFS-e', tag(inf,'cStat') === '100' ? 'NFS-e Gerada' : tag(inf,'cStat') || '-', 156, 104, 125);
   labelValue('FINALIDADE', tag(infDps,'finNFSe') || '-', 301, 104, 140);
 
