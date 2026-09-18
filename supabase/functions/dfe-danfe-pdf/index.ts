@@ -151,119 +151,199 @@ function pdfBase64(bytes: Uint8Array) {
   return btoa(bin);
 }
 async function buildNfce(doc: any, xml: string) {
-  const pdf = await PDFDocument.create(),
-    reg = await pdf.embedFont(StandardFonts.Courier),
-    bold = await pdf.embedFont(StandardFonts.CourierBold);
-  const emit = tag(xml, 'emit'),
-    ide = tag(xml, 'ide'),
-    tot = tag(xml, 'ICMSTot'),
-    prot = tag(xml, 'infProt'),
-    items = sections(xml, 'det'),
-    pag = tag(xml, 'pag'),
-    end = tag(emit, 'enderEmit');
-  const W = 226.77,
-    M = 9,
-    line = W - M * 2,
-    access = doc.accessKey || tag(prot, 'chNFe'),
-    qrv = clean(tag(xml, 'qrCode')) || access;
-  const H = Math.max(430, 260 + items.length * 33),
-    page = pdf.addPage([W, H]);
-  let y = H - 15;
-  const t = (s: string, size = 6.7, b = false, center = false) => {
-    const f = b ? bold : reg,
-      v = clean(s) || '-',
-      w = f.widthOfTextAtSize(v, size);
-    page.drawText(v, {
-      x: center ? Math.max(M, (W - w) / 2) : M,
-      y,
-      size,
-      font: f,
-      color: rgb(0.02, 0.02, 0.02),
-    });
-    y -= size + 3;
+  const pdf = await PDFDocument.create();
+  const reg = await pdf.embedFont(StandardFonts.Helvetica);
+  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+
+  const emit = tag(xml, 'emit');
+  const endEmit = tag(emit, 'enderEmit');
+  const dest = tag(xml, 'dest');
+  const endDest = tag(dest, 'enderDest');
+  const ide = tag(xml, 'ide');
+  const tot = tag(xml, 'ICMSTot');
+  const prot = tag(xml, 'infProt');
+  const infAdic = tag(xml, 'infAdic');
+  const items = sections(xml, 'det');
+  const pag = tag(xml, 'pag');
+  const tpAmb = tag(ide, 'tpAmb');
+  const access = dg(doc.accessKey || tag(prot, 'chNFe'));
+  const qrv = xmlDecode(tag(xml, 'qrCode'));
+  const homolog = tpAmb === '2';
+
+  const W = mm(80);
+  const M = mm(3.2);
+  const usable = W - M * 2;
+  const extraInfo = clean(tag(infAdic, 'infCpl'));
+  const baseH = mm(151);
+  const H = Math.max(baseH, baseH + Math.max(0, items.length - 2) * 18 + Math.min(60, extraInfo.length / 8));
+  const page = pdf.addPage([W, H]);
+  const black = rgb(0, 0, 0);
+  let y = H - mm(4);
+
+  const widthOf = (s: string, size: number, b = false) => (b ? bold : reg).widthOfTextAtSize(s, size);
+  const draw = (s: unknown, size = 7, b = false, align: 'left'|'center'|'right' = 'left', x = M, width = usable) => {
+    const value = clean(s) || '-';
+    const font = b ? bold : reg;
+    let out = value;
+    while (font.widthOfTextAtSize(out, size) > width && out.length > 4) out = out.slice(0, -4) + '...';
+    const tw = font.widthOfTextAtSize(out, size);
+    const dx = align === 'center' ? x + Math.max(0, (width - tw) / 2)
+      : align === 'right' ? x + Math.max(0, width - tw)
+      : x;
+    page.drawText(out, { x: dx, y, size, font, color: black });
+    y -= size + 2.3;
   };
-  const wrap = (s: string, size = 6.7, b = false, center = false) => {
-    const f = b ? bold : reg;
-    let l = '';
-    for (const w of clean(s).split(' ')) {
-      const n = l ? `${l} ${w}` : w;
-      if (f.widthOfTextAtSize(n, size) > line && l) {
-        t(l, size, b, center);
-        l = w;
-      } else l = n;
+  const wrapped = (s: unknown, size = 7, b = false, align: 'left'|'center' = 'left', width = usable) => {
+    const value = clean(s);
+    if (!value) { draw('-', size, b, align, M, width); return; }
+    const font = b ? bold : reg;
+    const words = value.split(/\s+/);
+    let line = '';
+    for (const word of words) {
+      const next = line ? `${line} ${word}` : word;
+      if (font.widthOfTextAtSize(next, size) <= width || !line) line = next;
+      else {
+        draw(line, size, b, align, M, width);
+        line = word;
+      }
     }
-    if (l) t(l, size, b, center);
+    if (line) draw(line, size, b, align, M, width);
   };
-  const sep = () => {
-    y -= 2;
-    page.drawLine({ start: { x: M, y }, end: { x: W - M, y }, thickness: 0.6 });
+  const dash = () => {
+    y -= 1.5;
+    const dashW = 3.2, gap = 2.3;
+    for (let x=M; x < W-M; x += dashW + gap) {
+      page.drawLine({start:{x,y},end:{x:Math.min(W-M,x+dashW),y},thickness:.55,color:black});
+    }
     y -= 6;
   };
-  t(tag(emit, 'xNome') || doc.issuerName || 'EMITENTE', 9, true, true);
-  t(
-    `CNPJ: ${cnpj(tag(emit, 'CNPJ') || doc.issuerCnpj)} - I.E.: ${tag(emit, 'IE') || '-'}`,
-    6.5,
-    false,
-    true
+  const leftRight = (label: string, value: unknown, boldValue = false, size = 7) => {
+    const v = clean(value) || '-';
+    page.drawText(label,{x:M,y,size,font:reg,color:black});
+    const f = boldValue ? bold : reg;
+    const tw = f.widthOfTextAtSize(v,size);
+    page.drawText(v,{x:Math.max(M,W-M-tw),y,size,font:f,color:black});
+    y -= size + 2.5;
+  };
+  const paymentName = (code: string) => ({
+    '01':'Dinheiro','02':'Cheque','03':'Cartão de Crédito','04':'Cartão de Débito','05':'Crédito Loja',
+    '10':'Vale Alimentação','11':'Vale Refeição','12':'Vale Presente','13':'Vale Combustível',
+    '15':'Boleto Bancário','16':'Depósito Bancário','17':'Pagamento Instantâneo (PIX)',
+    '18':'Transferência bancária','19':'Programa fidelidade','90':'Sem pagamento','99':'Outros'
+  } as Record<string,string>)[code] || `Forma ${code || '-'}`;
+
+  if (homolog) {
+    draw('NF-E EMITIDA EM AMBIENTE DE', 8.7, false, 'center');
+    draw('HOMOLOGAÇÃO - SEM VALOR FISCAL', 8.7, false, 'center');
+  } else {
+    wrapped(tag(emit,'xNome') || doc.issuerName || 'EMITENTE', 9, true, 'center');
+  }
+  draw(`CNPJ:${cnpj(tag(emit,'CNPJ') || doc.issuerCnpj)} IE:${tag(emit,'IE') || '-'}`, 6.8, false, 'center');
+  wrapped(
+    [tag(endEmit,'xLgr'), tag(endEmit,'nro'), tag(endEmit,'xBairro'), tag(endEmit,'xMun'), tag(endEmit,'UF')]
+      .filter(Boolean).join(', '),
+    6.4,false,'center'
   );
-  wrap(`${tag(end, 'xLgr') || ''}, Nº ${tag(end, 'nro') || ''}`, 6.3, false, true);
-  wrap(`${tag(end, 'xBairro') || ''} - ${cep(tag(end, 'CEP'))}`, 6.3, false, true);
-  t(`${tag(end, 'xMun') || ''} - ${tag(end, 'UF') || ''}`, 6.3, false, true);
-  sep();
-  t('DOCUMENTO AUXILIAR DA NOTA FISCAL DE CONSUMIDOR', 7.2, true, true);
-  t('ELETRÔNICA', 7.2, true, true);
-  sep();
-  t('CÓDIGO | DESCRIÇÃO        QTDE | UN | VL.UNIT | VL.TOTAL', 5.5, true);
+  dash();
+
+  draw('Documento Auxiliar da Nota Fiscal Eletrônica para', 7.2, false, 'center');
+  draw('Consumidor Final', 7.2, false, 'center');
+  dash();
+  draw('DETALHE DA VENDA', 7.2, false, 'center');
+  dash();
+
+  const c1=M, c2=M+26, c3=W-M-94, c4=W-M-66, c5=W-M-35;
+  page.drawText('CÓDIGO',{x:c1,y,size:5.5,font:bold,color:black});
+  page.drawText('DESCRIÇÃO',{x:c2,y,size:5.5,font:bold,color:black});
+  page.drawText('QTD',{x:c3,y,size:5.5,font:bold,color:black});
+  page.drawText('UN',{x:c4,y,size:5.5,font:bold,color:black});
+  page.drawText('VL.UN',{x:c5-20,y,size:5.5,font:bold,color:black});
+  page.drawText('VL.TOT',{x:W-M-22,y,size:5.5,font:bold,color:black});
+  y -= 9;
+
   for (const det of items) {
-    const p = tag(det, 'prod');
-    wrap(`${tag(p, 'cProd') || '-'} | ${tag(p, 'xProd') || 'PRODUTO'}`, 6.2, true);
-    t(
-      `${tag(p, 'qCom') || '-'} | ${tag(p, 'uCom') || '-'} | ${num(tag(p, 'vUnCom'))} | ${num(tag(p, 'vProd'))}`,
-      6.2
-    );
+    const p = tag(det,'prod');
+    const code = clean(tag(p,'cProd')) || '-';
+    const desc = clean(tag(p,'xProd')) || '-';
+    const qty = clean(tag(p,'qCom')) || '-';
+    const unit = clean(tag(p,'uCom')) || '-';
+    const unitValue = num(tag(p,'vUnCom'));
+    const totalValue = num(tag(p,'vProd'));
+
+    page.drawText(code,{x:M,y,size:5.8,font:reg,color:black});
+    const descMax=88;
+    let short=desc;
+    while(widthOf(short,5.8)>descMax && short.length>4) short=short.slice(0,-4)+'...';
+    page.drawText(short,{x:M+25,y,size:5.8,font:reg,color:black});
+    const qtyText=num(qty);
+    page.drawText(qtyText,{x:W-M-112,y,size:5.8,font:reg,color:black});
+    page.drawText(unit,{x:W-M-78,y,size:5.8,font:reg,color:black});
+    const uv=unitValue, tv=totalValue;
+    page.drawText(uv,{x:W-M-48-widthOf(uv,5.8),y,size:5.8,font:reg,color:black});
+    page.drawText(tv,{x:W-M-widthOf(tv,5.8),y,size:5.8,font:reg,color:black});
+    y -= 10;
   }
-  sep();
-  t(`Qtde. Total de Itens ${items.length}`, 6.5, true);
-  t(`Valor Total R$ ${num(tag(tot, 'vProd'))}`, 7, true);
-  t(`Valor a Pagar R$ ${num(tag(tot, 'vNF') || doc.value)}`, 8, true);
-  sep();
-  t('FORMAS PAGAMENTOS                 VALOR PAGO', 6, true);
-  for (const p of sections(pag, 'detPag')) {
-    const tp = tag(p, 'tPag'),
-      name =
-        tp === '01'
-          ? 'DINHEIRO'
-          : tp === '03'
-            ? 'CARTÃO CRÉDITO'
-            : tp === '04'
-              ? 'CARTÃO DÉBITO'
-              : tp === '17'
-                ? 'PIX'
-                : tp === '16'
-                  ? 'DEPÓSITO BANCÁRIO'
-                  : `FORMA ${tp || '-'}`;
-    t(`${name} ${num(tag(p, 'vPag'))}`, 6.4);
+
+  dash();
+  leftRight('QTD. TOTAL DE ITENS', String(items.length), false, 6.8);
+  leftRight('VALOR DOS PRODUTOS', num(tag(tot,'vProd')), false, 6.8);
+  leftRight('VALOR TOTAL R$', num(tag(tot,'vNF') || doc.value), true, 8.7);
+  dash();
+
+  draw('FORMAS DE PAGAMENTO',6.4,false,'left');
+  draw('Valor Pago',6.4,false,'right',M,usable);
+  for (const p of sections(pag,'detPag')) {
+    const code=tag(p,'tPag');
+    leftRight(paymentName(code), num(tag(p,'vPag')), false,6.5);
   }
-  sep();
-  t('Consulte pela Chave de Acesso em', 6.2, true, true);
-  t(clean(tag(xml, 'urlChave')) || 'Portal da SEFAZ autorizadora', 5.6, false, true);
-  wrap(fmtKey(access), 6.1, true, true);
-  t('CONSUMIDOR - NÃO INFORMADO', 6.4, true, true);
-  t(
-    `NFC-e n. ${doc.number || tag(ide, 'nNF') || '-'} Série ${doc.series || tag(ide, 'serie') || '-'} ${dt(doc.issueDate || tag(ide, 'dhEmi'))}`,
-    5.8,
-    true,
-    true
-  );
-  t(`Protocolo de Autorização ${tag(prot, 'nProt') || '-'}`, 5.8, false, true);
-  t(`Data de Autorização ${dt(tag(prot, 'dhRecbto') || doc.issueDate)}`, 5.8, false, true);
-  y -= 3;
-  const qi = await qr(pdf, qrv);
-  page.drawImage(qi, { x: (W - 105) / 2, y: y - 105, width: 105, height: 105 });
-  y -= 111;
-  t('QR CODE OFICIAL DA NFC-e', 5.8, true, true);
+  dash();
+
+  draw('Consulta pela chave de acesso em',6.3,false,'center');
+  const urlChave = xmlDecode(tag(xml,'urlChave')) || 'https://www.nfe.fazenda.gov.br/portal/consulta.aspx';
+  wrapped(urlChave,5.5,false,'center');
+  draw('CHAVE DE ACESSO',6.0,true,'center');
+  wrapped(fmtKey(access),5.9,false,'center');
+  dash();
+
+  const consumerDoc = cpfCnpj(tag(dest,'CNPJ') || tag(dest,'CPF'));
+  const consumerName = clean(tag(dest,'xNome'));
+  if (consumerName || (consumerDoc && consumerDoc !== '-')) {
+    wrapped(consumerName || consumerDoc,6.5,true,'center');
+    if (consumerName && consumerDoc !== '-') draw(consumerDoc,6.2,false,'center');
+    const consumerAddress=[tag(endDest,'xLgr'),tag(endDest,'nro'),tag(endDest,'xMun'),tag(endDest,'UF')].filter(Boolean).join(', ');
+    if (consumerAddress) wrapped(consumerAddress,5.8,false,'center');
+  } else {
+    draw('CONSUMIDOR NÃO IDENTIFICADO',7.0,false,'center');
+  }
+  dash();
+
+  draw(`Nº ${doc.number || tag(ide,'nNF') || '-'} Série ${doc.series || tag(ide,'serie') || '-'}`,11,true,'center');
+  draw(`${dateOnly(doc.issueDate || tag(ide,'dhEmi'))} ${timeOnly(doc.issueDate || tag(ide,'dhEmi'))} - Via Consumidor`,6.3,false,'center');
+  draw(`PROTOCOLO DE AUTORIZAÇÃO ${tag(prot,'nProt') || '-'} ${dateOnly(tag(prot,'dhRecbto'))} ${timeOnly(tag(prot,'dhRecbto'))}`,5.6,false,'center');
+  dash();
+
+  draw('Consulta via leitor de QR Code',6.3,false,'center');
+  if (qrv) {
+    const qi=await qr(pdf,qrv,4);
+    const qrSize=mm(39);
+    page.drawImage(qi,{x:(W-qrSize)/2,y:y-qrSize-3,width:qrSize,height:qrSize});
+    y-=qrSize+9;
+  } else {
+    draw('QR Code indisponível no XML autorizado',5.8,false,'center');
+  }
+
+  if (homolog) {
+    draw('EMITIDA EM AMBIENTE DE HOMOLOGAÇÃO - SEM',7.1,false,'center');
+    draw('VALOR FISCAL',7.1,false,'center');
+  }
+  const taxTotal=Number(tag(tot,'vTotTrib')||0);
+  draw('ÁREA DE MENSAGEM DE INTERESSE DO CONTRIBUINTE',5.4,false,'center');
+  leftRight('Tributos Totais Incidentes (Lei Federal 12.741/2012)', taxTotal ? num(taxTotal) : '0,00', false,5.5);
+  if (extraInfo) wrapped(extraInfo,5.6,false,'left');
+
   return pdf.save();
 }
+
 async function buildNfse(doc: any, xml: string) {
   const pdf = await PDFDocument.create();
   const reg = await pdf.embedFont(StandardFonts.Helvetica);
