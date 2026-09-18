@@ -76,13 +76,49 @@ Deno.serve(async (req) => {
     if (companyError) throw companyError;
 
     const settings = (company.fiscal_settings || {}) as any;
-    const configuredStart = String(settings.history_window_mode === "previous_full_month_plus_current" ? settings.history_start_date || "" : "");
-    const defaultStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+    const [{ data: extractorLink }, { data: minimumHistory }, { data: extractorToday }] = await Promise.all([
+      admin.from("extractor_companies")
+        .select("id")
+        .eq("fiscal_company_id", companyId)
+        .eq("status", "active")
+        .limit(1)
+        .maybeSingle(),
+      admin.rpc("extractor_minimum_history_start"),
+      admin.rpc("extractor_local_date"),
+    ]);
+    const isExtractor = Boolean(extractorLink?.id);
+    const standardStart = /^\d{4}-\d{2}-\d{2}$/.test(String(minimumHistory || ""))
+      ? String(minimumHistory)
+      : (() => {
+          const local = new Date(Date.now() - 3 * 60 * 60 * 1000);
+          return new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth() - 1, 1)).toISOString().slice(0, 10);
+        })();
+    const today = /^\d{4}-\d{2}-\d{2}$/.test(String(extractorToday || ""))
+      ? String(extractorToday)
+      : localToday();
+    const legacyConfiguredStart = String(
+      settings.history_window_mode === "previous_full_month_plus_current"
+        ? settings.history_start_date || ""
+        : ""
+    );
+    const configuredStart = isExtractor ? standardStart : legacyConfiguredStart;
+    const defaultStart = isExtractor
+      ? standardStart
+      : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
     let start = String(body.start || defaultStart);
-    let end = String(body.end || localToday());
-    if (configuredStart && /^\d{4}-\d{2}-\d{2}$/.test(configuredStart) && start < configuredStart) start = configuredStart;
-    if (end > localToday()) end = localToday();
-    if (start > end) return json({ error: "period_outside_company_history_window", start, end, configured_start: configuredStart }, 422);
+    let end = String(body.end || today);
+    if (configuredStart && /^\d{4}-\d{2}-\d{2}$/.test(configuredStart) && start < configuredStart) {
+      start = configuredStart;
+    }
+    if (end > today) end = today;
+    if (start > end) {
+      return json({
+        error: "period_outside_company_history_window",
+        start,
+        end,
+        configured_start: configuredStart || null,
+      }, 422);
+    }
 
     const dryRun = Boolean(body.dry_run);
     const includeKeys = Boolean(body.include_keys);
