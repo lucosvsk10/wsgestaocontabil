@@ -258,34 +258,29 @@ Deno.serve(async req => {
     if (!companies?.length) return json({ error: 'Nenhuma empresa fiscal encontrada' }, 404);
 
     const companyById = new Map(companies.map(company => [String(company.id), company]));
-    const rows: any[] = [];
-    for (const company of companies) {
-      const access = accessByCompany.get(String(company.id));
-      if (!access) continue;
-      const effectiveStart = access.from && access.from > start ? access.from : start;
-      const effectiveEnd = access.to && access.to < end ? access.to : end;
-      if (effectiveStart > effectiveEnd) continue;
 
-      const companyRows = await fetchPaged(() => {
-        let query = admin
-          .from('fiscal_dfe_documents')
-          .select('id,company_id,nsu,schema_name,source,document_kind,full_xml,direction,access_key,model,issue_date,value,issuer_cnpj,issuer_name,recipient_cnpj,recipient_name,note_number,series,status_code,status_text,xml,parse_error')
-          .eq('company_id', company.id)
-          .neq('document_kind', 'evento')
-          .gte('issue_date', `${effectiveStart}T00:00:00Z`)
-          .lte('issue_date', `${effectiveEnd}T23:59:59.999Z`)
-          .order('issue_date', { ascending: true });
-        if (direction === 'entrada' || direction === 'saida') query = query.eq('direction', direction);
-        return query;
-      });
-      rows.push(...companyRows);
-    }
+    // Use the same database source/window rules as the document screen.
+    // This avoids drift between what the user sees and what the exporter counts.
+    const needsXmlPayload = action === 'download' && ['bundle', 'pdf', 'xml'].includes(format);
+    const { data: sourceRows, error: sourceError } = await admin.rpc('extractor_export_rows', {
+      p_user_id: auth.user.id,
+      p_company_ids: allowedCompanyIds,
+      p_start: start,
+      p_end: end,
+      p_direction: direction,
+      p_include_xml: needsXmlPayload,
+    });
+    if (sourceError) throw new Error(`export_source_unavailable: ${sourceError.message}`);
 
-    let documents = dedupe(rows);
+    let documents = (sourceRows || []).map((row: any) => normalizeDocumentXml(row));
     if (type !== 'todos') documents = documents.filter(document => documentType(document) === type);
 
-    const complete = documents.filter(validFullXml);
-    const pending = documents.filter(document => !validFullXml(document));
+    const complete = action === 'preflight' || !needsXmlPayload
+      ? documents.filter(document => document.full_xml === true)
+      : documents.filter(validFullXml);
+    const pending = action === 'preflight' || !needsXmlPayload
+      ? documents.filter(document => document.full_xml !== true)
+      : documents.filter(document => !validFullXml(document));
     const archiveLimit = 200;
     const requiresArchive = ['bundle', 'pdf', 'xml'].includes(format);
     const tooLarge = requiresArchive && complete.length > archiveLimit;
@@ -355,7 +350,7 @@ Deno.serve(async req => {
 
     if (pending.length && !allowPartial) {
       return json({
-        error: `${pending.length} documento(s) ainda não possuem arquivo integral. Confira a lista e, se quiser, use “Baixar assim mesmo” para baixar somente os disponíveis.`,
+        error: `${pending.length} documento(s) ainda não possuem arquivo integral. Você pode baixar agora os ${complete.length} documento(s) disponíveis.`,
         ...report,
       }, 409);
     }
@@ -466,6 +461,12 @@ Deno.serve(async req => {
     });
   } catch (error) {
     console.error('extractor-fiscal-export', error);
-    return json({ error: error instanceof Error ? error.message : 'Não foi possível preparar a exportação fiscal.' }, 500);
+    const raw = error instanceof Error ? error.message : String(error || '');
+    const message = /export_source_unavailable/i.test(raw)
+      ? 'Não foi possível ler os documentos fiscais para esta exportação. Tente novamente em alguns segundos.'
+      : /document_access_unavailable/i.test(raw)
+        ? 'Não foi possível validar o acesso às empresas selecionadas. Atualize a página e tente novamente.'
+        : raw || 'Não foi possível preparar a exportação fiscal.';
+    return json({ error: message }, 500);
   }
 });
