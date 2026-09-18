@@ -2689,7 +2689,7 @@ function HistorySection({ companies, preview, setNotice }: any) {
           {searchHistory.map((row: any) => (
             <div className="extractor-health-search-row" key={row.id}>
               <span>
-                <strong>{formatDate(row.completed_at || row.started_at, true)}</strong>
+                <strong>{formatDate(row.event_at || row.completed_at || row.started_at, true)}</strong>
                 <small>{row.completed_at ? 'concluída' : 'último estado registrado'}</small>
               </span>
               <span>
