@@ -301,35 +301,99 @@ const normalizeCompany = (r: Record<string, any>, i: number): Company => ({
   salesLastCompletedAt: r.sales_last_completed_at || null,
   salesLastError: r.sales_last_error || null,
 });
-const rowToDoc = (r: any): Doc => ({
-  id: r.id,
-  companyId: String(r.company_id || ''),
-  nsu: r.nsu || undefined,
-  schema: r.schema_name || undefined,
-  source: r.source || undefined,
-  documentKind: r.document_kind || undefined,
-  fullXml: Boolean(r.full_xml),
-  direction:
-    r.direction === 'saida' || r.direction === 'outbound'
-      ? 'saida'
-      : r.direction === 'entrada' || r.direction === 'inbound'
-      ? 'entrada'
-      : 'relacionada',
-  accessKey: r.access_key || undefined,
-  model: r.model || undefined,
-  issueDate: r.issue_date || undefined,
-  value: r.value == null ? undefined : Number(r.value),
-  issuerCnpj: r.issuer_cnpj || undefined,
-  issuerName: r.issuer_name || undefined,
-  recipientCnpj: r.recipient_cnpj || undefined,
-  recipientName: r.recipient_name || undefined,
-  number: r.note_number == null ? '' : String(r.note_number),
-  series: r.series == null ? '' : String(r.series),
-  statusCode: r.status_code || undefined,
-  statusText: r.status_text || undefined,
-  parseError: r.parse_error || undefined,
-  xml: r.xml || undefined,
-});
+const unwrapStoredFiscalXml = (raw: unknown) => {
+  const value = typeof raw === 'string' ? raw.trim() : '';
+  if (!value) return undefined;
+  if (/^<\?xml\b/i.test(value) || /^<(?:\w+:)?(?:nfeProc|NFe|procNFe|CompNfse|NFSe|DPS)\b/i.test(value)) {
+    return value;
+  }
+
+  // Some SEFAZ endpoints return an HTML download page whose JavaScript contains
+  // the actual authorized XML in: var stringJson = { "xml": "<nfeProc ...>" }.
+  const objectMatch = value.match(/var\s+stringJson\s*=\s*(\{[\s\S]*?\})\s*;/i);
+  if (objectMatch?.[1]) {
+    try {
+      const parsed = JSON.parse(objectMatch[1]);
+      if (typeof parsed?.xml === 'string' && parsed.xml.trim().startsWith('<')) {
+        return parsed.xml.trim();
+      }
+    } catch {
+      // Fall through to the isolated JSON-string extraction below.
+    }
+  }
+
+  const xmlStringMatch = value.match(/["']xml["']\s*:\s*("(?:\\.|[^"\\])*")/i);
+  if (xmlStringMatch?.[1]) {
+    try {
+      const parsed = JSON.parse(xmlStringMatch[1]);
+      if (typeof parsed === 'string' && parsed.trim().startsWith('<')) return parsed.trim();
+    } catch {
+      // Keep the original payload only as a last resort.
+    }
+  }
+
+  return value.startsWith('<') && !/^<!doctype\s+html|^<html\b/i.test(value) ? value : undefined;
+};
+
+const rowToDoc = (r: any): Doc => {
+  const xml = unwrapStoredFiscalXml(r.xml);
+  return {
+    id: r.id,
+    companyId: String(r.company_id || ''),
+    nsu: r.nsu || undefined,
+    schema: r.schema_name || undefined,
+    source: r.source || undefined,
+    documentKind: r.document_kind || undefined,
+    fullXml: Boolean(r.full_xml && xml),
+    direction:
+      r.direction === 'saida' || r.direction === 'outbound'
+        ? 'saida'
+        : r.direction === 'entrada' || r.direction === 'inbound'
+        ? 'entrada'
+        : 'relacionada',
+    accessKey: r.access_key || undefined,
+    model: r.model || undefined,
+    issueDate: r.issue_date || undefined,
+    value: r.value == null ? undefined : Number(r.value),
+    issuerCnpj: r.issuer_cnpj || undefined,
+    issuerName: r.issuer_name || undefined,
+    recipientCnpj: r.recipient_cnpj || undefined,
+    recipientName: r.recipient_name || undefined,
+    number: r.note_number == null ? '' : String(r.note_number),
+    series: r.series == null ? '' : String(r.series),
+    statusCode: r.status_code || undefined,
+    statusText: r.status_text || undefined,
+    parseError: r.parse_error || undefined,
+    xml,
+  };
+};
+
+const resolveExtractorPreview = async (document: Doc) => {
+  const { data: stored, error: storedError } = await (supabase as any).rpc(
+    'extractor_document_preview_data',
+    {
+      _company_id: document.companyId,
+      _access_key: document.accessKey || null,
+      _nsu: document.nsu || null,
+    }
+  );
+  if (storedError) throw storedError;
+  if (stored?.ready && stored.document) return stored;
+
+  // Only ask the recovery pipeline when the DB genuinely has no complete payload.
+  const { data: recovered, error: recoveryError } = await supabase.functions.invoke(
+    'extractor-document-preview',
+    {
+      body: {
+        company_id: document.companyId,
+        access_key: document.accessKey,
+        nsu: document.nsu,
+      },
+    }
+  );
+  if (recoveryError) throw recoveryError;
+  return recovered || stored;
+};
 const reconciliationToDoc = (r: any, companyId: string): Doc => ({
   companyId,
   documentKind: 'nfe',
@@ -642,10 +706,7 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
     try {
       let current = document;
       if (!(current.fullXml && current.xml)) {
-        const { data, error } = await supabase.functions.invoke('extractor-document-preview', {
-          body: { company_id: current.companyId, access_key: current.accessKey, nsu: current.nsu },
-        });
-        if (error) throw error;
+        const data = await resolveExtractorPreview(current);
         if (data?.ready && data.document) current = rowToDoc(data.document);
         else throw new Error(String(data?.reason || 'O XML integral ainda não está disponível.'));
       }
@@ -688,9 +749,7 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
           ? 'Manifestação registrada e XML integral recuperado.'
           : String(data?.result?.message || 'Manifestação registrada. A recuperação do XML continuará automaticamente.'),
       });
-      const { data: refresh } = await supabase.functions.invoke('extractor-document-preview', {
-        body: { company_id: document.companyId, access_key: document.accessKey, nsu: document.nsu },
-      });
+      const refresh = await resolveExtractorPreview(document);
       if (refresh?.ready && refresh.document) setPreviewDoc(rowToDoc(refresh.document));
       else setPreviewDoc({ ...document, parseError: recovered ? undefined : 'xml_retry:manifestation_sent' });
     } catch (caught) {
@@ -887,9 +946,7 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
         onDownloadXml={downloadPreviewXml}
         onManifestation={manifestPreview}
         onRetry={async document => {
-          const { data } = await supabase.functions.invoke('extractor-document-preview', {
-            body: { company_id: document.companyId, access_key: document.accessKey, nsu: document.nsu },
-          });
+          const data = await resolveExtractorPreview(document as Doc);
           if (data?.ready && data.document) setPreviewDoc(rowToDoc(data.document));
           await load(true);
         }}
@@ -1634,13 +1691,7 @@ function Documents({
     if (busy) return;
     setBusy(`doc:${document.accessKey || document.nsu}`);
     try {
-      const { data, error } = await supabase.functions.invoke('extractor-document-preview', {
-        body: { company_id: company.id, access_key: document.accessKey, nsu: document.nsu },
-      });
-      if (error) {
-        setNotice({ tone: 'error', text: await extractorErrorMessage(error) });
-        return;
-      }
+      const data = await resolveExtractorPreview({ ...document, companyId: company.id });
       if (data?.ready && data.document) {
         onPreview(rowToDoc(data.document));
       } else {

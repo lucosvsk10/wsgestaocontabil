@@ -16,6 +16,38 @@ const J = (body: unknown, status = 200) =>
   });
 const digits = (value: unknown) => String(value ?? '').replace(/\D/g, '');
 
+const unwrapStoredFiscalXml = (raw: unknown) => {
+  const value = typeof raw === 'string' ? raw.trim() : '';
+  if (!value) return '';
+  if (/^<\?xml\b/i.test(value) || /^<(?:\w+:)?(?:nfeProc|NFe|procNFe|CompNfse|NFSe|DPS)\b/i.test(value)) {
+    return value;
+  }
+
+  const objectMatch = value.match(/var\s+stringJson\s*=\s*(\{[\s\S]*?\})\s*;/i);
+  if (objectMatch?.[1]) {
+    try {
+      const parsed = JSON.parse(objectMatch[1]);
+      if (typeof parsed?.xml === 'string' && parsed.xml.trim().startsWith('<')) {
+        return parsed.xml.trim();
+      }
+    } catch {
+      // Try isolated JSON string below.
+    }
+  }
+
+  const xmlStringMatch = value.match(/["']xml["']\s*:\s*("(?:\\.|[^"\\])*")/i);
+  if (xmlStringMatch?.[1]) {
+    try {
+      const parsed = JSON.parse(xmlStringMatch[1]);
+      if (typeof parsed === 'string' && parsed.trim().startsWith('<')) return parsed.trim();
+    } catch {
+      // No usable embedded XML.
+    }
+  }
+
+  return '';
+};
+
 Deno.serve(async req => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
   if (req.method !== 'POST') return J({ error: 'Método não permitido' }, 405);
@@ -57,7 +89,17 @@ Deno.serve(async req => {
     if (completeError) throw completeError;
 
     const complete = (completeRows || []).find((row: any) => documentInWindow(row, access));
-    if (complete) return J({ ok: true, ready: true, document: complete, source: 'stored_xml' });
+    if (complete) {
+      const xml = unwrapStoredFiscalXml(complete.xml);
+      if (xml) {
+        return J({
+          ok: true,
+          ready: true,
+          document: { ...complete, xml, full_xml: true },
+          source: 'stored_xml',
+        });
+      }
+    }
 
     // Some outbound documents are persisted first in the dedicated sales table.
     // Use that official XML before attempting any network recovery.
@@ -95,7 +137,7 @@ Deno.serve(async req => {
             source: sale.source || 'fiscal_sales_documents',
             document_kind: 'nfe',
             full_xml: true,
-            xml: sale.xml,
+            xml: unwrapStoredFiscalXml(sale.xml) || sale.xml,
             direction: 'saida',
             access_key: sale.access_key,
             model: sale.model || accessKey.slice(20, 22),
