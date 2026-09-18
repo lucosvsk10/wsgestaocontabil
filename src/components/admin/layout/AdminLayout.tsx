@@ -1,71 +1,40 @@
-import { ReactNode } from 'react';
-import { useAdminLayout } from '@/hooks/layout/useAdminLayout';
-import { useSidebarToggle } from '@/hooks/layout/useSidebarToggle';
-import { useAdminSidebarNavigation } from '@/hooks/layout/useAdminSidebarNavigation';
-import { getAdminEnvironment } from '@/config/adminEnvironments';
-import AdminSidebar from './AdminSidebar';
-import AdminHeader from './AdminHeader';
-import { NotificationPopupContainer } from '@/components/notifications/NotificationPopupContainer';
-import { FiscalHealthAlertPopupContainer } from '@/components/notifications/FiscalHealthAlertPopupContainer';
-import { Button } from '@/components/ui/button';
-import { Menu, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ReactNode } from "react";
+import { useAdminLayout } from "@/hooks/layout/useAdminLayout";
+import { useSidebarToggle } from "@/hooks/layout/useSidebarToggle";
+import AdminSidebar from "./AdminSidebar";
+import AdminHeader from "./AdminHeader";
+import { NotificationPopupContainer } from "@/components/notifications/NotificationPopupContainer";
+import { FiscalHealthAlertPopupContainer } from "@/components/notifications/FiscalHealthAlertPopupContainer";
+import { Button } from "@/components/ui/button";
+import { Menu, ChevronLeft, ChevronRight } from "lucide-react";
 
-interface AdminLayoutProps {
-  children: ReactNode;
-}
+interface AdminLayoutProps { children: ReactNode; }
 
 export const AdminLayout = ({ children }: AdminLayoutProps) => {
   const { isMobile, sidebarOpen, setSidebarOpen, handleSidebarClose } = useAdminLayout();
-  const { toggleSidebar, getToggleButtonProps } = useSidebarToggle({
-    isMobile,
-    sidebarOpen,
-    setSidebarOpen,
-  });
-  const { environment } = useAdminSidebarNavigation();
-  const currentEnvironment = getAdminEnvironment(environment);
+  const { toggleSidebar, getToggleButtonProps } = useSidebarToggle({ isMobile, sidebarOpen, setSidebarOpen });
   const toggleButtonProps = getToggleButtonProps();
 
   return (
-    <div
-      className="pro-ui flex min-h-screen text-foreground transition-colors duration-200"
-      data-environment={environment}
-      style={{
-        background: `linear-gradient(180deg, ${currentEnvironment.soft} 0px, hsl(var(--background)) 270px)`,
-      }}
-    >
+    <div className="pro-ui flex min-h-screen bg-background text-foreground transition-colors duration-200">
       <AdminSidebar open={sidebarOpen} onClose={handleSidebarClose} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <AdminHeader
-          sidebarOpen={sidebarOpen}
-          setSidebarOpen={setSidebarOpen}
-          toggleSidebar={toggleSidebar}
-        />
+        <AdminHeader sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} toggleSidebar={toggleSidebar} />
 
         <Button
           variant="ghost"
           size="icon"
           className={toggleButtonProps.className}
           onClick={toggleSidebar}
-          data-sidebar-toggle={isMobile ? 'true' : undefined}
+          data-sidebar-toggle={isMobile ? "true" : undefined}
           aria-label={toggleButtonProps['aria-label']}
         >
-          {isMobile ? (
-            <Menu size={19} />
-          ) : sidebarOpen ? (
-            <ChevronLeft size={19} />
-          ) : (
-            <ChevronRight size={19} />
-          )}
+          {isMobile ? <Menu size={19} /> : sidebarOpen ? <ChevronLeft size={19} /> : <ChevronRight size={19} />}
         </Button>
 
-        {isMobile && sidebarOpen && (
-          <div
-            className="fixed inset-0 z-30 bg-black/50"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
+        {isMobile && sidebarOpen && <div className="fixed inset-0 z-30 bg-black/50" onClick={() => setSidebarOpen(false)} />}
 
-        <main className="flex-1 overflow-auto bg-transparent transition-colors duration-200">
+        <main className="flex-1 overflow-auto bg-background transition-colors duration-200">
           {children}
         </main>
       </div>
