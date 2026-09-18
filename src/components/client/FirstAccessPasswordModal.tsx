@@ -42,7 +42,6 @@ export function FirstAccessPasswordModal() {
   const [confirm, setConfirm] = useState('');
   const [show, setShow] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
   const [error, setError] = useState('');
   const required = Boolean((userData as any)?.role === 'client' && (userData as any)?.must_change_password);
   const strength = useMemo(() => passwordStrength(password), [password]);
@@ -68,7 +67,6 @@ export function FirstAccessPasswordModal() {
       await refreshUserData();
       setPassword('');
       setConfirm('');
-      setDismissed(false);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Não foi possível alterar a senha.');
     } finally {
@@ -77,19 +75,14 @@ export function FirstAccessPasswordModal() {
   };
 
   return <Dialog
-    open={required && !dismissed}
-    onOpenChange={(open) => {
-      if (!open) {
-        setDismissed(true);
-        setError('');
-      }
-    }}
+    open={required}
+    onOpenChange={() => {}}
   >
-    <DialogContent className="sm:max-w-md">
+    <DialogContent className="sm:max-w-md" onEscapeKeyDown={(event) => event.preventDefault()} onPointerDownOutside={(event) => event.preventDefault()} onInteractOutside={(event) => event.preventDefault()}>
       <DialogHeader>
         <DialogTitle>Altere sua senha de primeiro acesso</DialogTitle>
         <DialogDescription>
-          Você entrou com a senha padrão fornecida pela WS. Recomendamos criar uma senha exclusiva agora. Se preferir, pode fechar esta janela e fazer isso depois.
+          Você entrou com a senha padrão fornecida pela WS. Para continuar, crie agora uma senha exclusiva para este acesso.
         </DialogDescription>
       </DialogHeader>
 
@@ -155,7 +148,7 @@ export function FirstAccessPasswordModal() {
           {saving ? 'Alterando...' : 'Salvar nova senha'}
         </Button>
         <p className="text-center text-[11px] leading-5 text-muted-foreground">
-          A partir do nível Normal a senha já pode ser salva. Enquanto a senha padrão continuar ativa, este aviso voltará a aparecer em um novo acesso.
+          A partir do nível Normal a senha já pode ser salva. O acesso ao portal continua protegido até a troca da senha padrão.
         </p>
       </div>
     </DialogContent>
