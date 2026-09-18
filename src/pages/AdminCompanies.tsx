@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity, Loader2, Play, Plus, Search, X } from 'lucide-react';
+import { Activity, FileKey2, Loader2, Play, Plus, Search, X } from 'lucide-react';
 import AdminClientOnboardingModal from '@/components/admin/clients/AdminClientOnboardingModal';
+import AdminBulkCertificateImportModal from '@/components/admin/clients/AdminBulkCertificateImportModal';
 import { AdminLayout } from '@/components/admin/layout/AdminLayout';
 import { AdminEmptyState, AdminLoadingState, AdminPage, AdminPageHeader, AdminSection } from '@/components/admin/ui/AdminPage';
 import { Button } from '@/components/ui/button';
@@ -69,6 +70,7 @@ export default function AdminCompanies() {
   const { companies, loading: companiesLoading, refreshCompanies, selectCompany } = useCompanySelection();
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
+  const [bulkCertificatesOpen, setBulkCertificatesOpen] = useState(false);
   const [error, setError] = useState('');
   const [fiscalStatuses, setFiscalStatuses] = useState<Record<string, FiscalHealthCompany>>({});
   const [statusLoading, setStatusLoading] = useState(true);
@@ -137,7 +139,18 @@ export default function AdminCompanies() {
           eyebrow="Clientes"
           title="Clientes"
           description="Gerencie os clientes do escritório. A saúde fiscal aparece de forma compacta e só sinaliza erro quando existe uma captura configurada com problema."
-          actions={<Button className="ws-stage4-primary-action" onClick={() => setOpen(true)}><Plus className="mr-2 h-4 w-4" />Novo cliente</Button>}
+          actions={
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" onClick={() => setBulkCertificatesOpen(true)}>
+                <FileKey2 className="mr-2 h-4 w-4" />
+                Importar A1 em massa
+              </Button>
+              <Button className="ws-stage4-primary-action" onClick={() => setOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Novo cliente
+              </Button>
+            </div>
+          }
         />
 
         <div className="mt-5 flex gap-2 border-b border-border pb-3">
@@ -281,6 +294,15 @@ export default function AdminCompanies() {
             </div>
           </div>
         )}
+
+        <AdminBulkCertificateImportModal
+          open={bulkCertificatesOpen}
+          onOpenChange={setBulkCertificatesOpen}
+          onCompleted={async () => {
+            await refreshCompanies();
+            await loadFiscalStatus();
+          }}
+        />
 
         <AdminClientOnboardingModal
           open={open}
