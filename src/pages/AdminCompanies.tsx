@@ -165,112 +165,111 @@ export default function AdminCompanies() {
           <span className="whitespace-nowrap text-xs text-muted-foreground">{filtered.length} cliente(s)</span>
         </div>
 
-        <AdminSection className="mt-4">
+        <AdminSection className="mt-4 overflow-hidden p-0">
           {companiesLoading ? (
             <AdminLoadingState label="Carregando clientes..." />
           ) : filtered.length === 0 ? (
             <AdminEmptyState title="Nenhum cliente encontrado" />
           ) : (
             <TooltipProvider delayDuration={150}>
-              <div>
-                {filtered.map((company, index) => {
-                  const name = company.trade_name || company.company_name;
-                  const fiscal = fiscalStatuses[company.id];
-                  return (
-                    <div
-                      key={company.id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => openCompany(company)}
-                      onKeyDown={(event) => { if (event.key === 'Enter') openCompany(company); }}
-                      className={`w-full cursor-pointer border-b border-border/45 px-5 py-5 text-left transition last:border-b-0 hover:bg-muted/20 ${index % 2 ? 'bg-muted/[.04]' : 'bg-card'}`}
-                    >
-                      <div className="flex items-start gap-4">
-                        <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border/50 bg-muted/35 text-sm font-semibold text-muted-foreground">
-                          {company.logo_url ? <img src={company.logo_url} alt="" className="h-full w-full object-contain" /> : initial(name)}
-                        </span>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[980px] border-collapse">
+                  <thead>
+                    <tr className="border-b border-border/60 bg-muted/20 text-left">
+                      <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[.1em] text-muted-foreground">Cliente</th>
+                      <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[.1em] text-muted-foreground">Documento</th>
+                      <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[.1em] text-muted-foreground">Localidade</th>
+                      <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[.1em] text-muted-foreground">Certificado A1</th>
+                      <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[.1em] text-muted-foreground">Acesso</th>
+                      <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[.1em] text-muted-foreground">Extrator</th>
+                      <th className="w-16 px-4 py-3 text-center text-[10px] font-semibold uppercase tracking-[.1em] text-muted-foreground">Saúde</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((company) => {
+                      const name = company.trade_name || company.company_name;
+                      const fiscal = fiscalStatuses[company.id];
+                      const hasExtractorHistory = Boolean(
+                        (fiscal?.metrics?.purchases?.count || 0) + (fiscal?.metrics?.sales?.count || 0),
+                      );
+                      const extractorLabel = fiscal?.capture_enabled
+                        ? 'Ativo'
+                        : fiscal?.can_start
+                          ? 'Pronto'
+                          : hasExtractorHistory
+                            ? 'Histórico'
+                            : '—';
 
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="truncate text-sm font-semibold">{name}</span>
-                            {company.portal_username ? (
-                              <span className="rounded-full border border-border/70 bg-muted/35 px-2.5 py-1 font-mono text-[10px] font-semibold text-foreground">
-                                @{company.portal_username}
+                      return (
+                        <tr
+                          key={company.id}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => openCompany(company)}
+                          onKeyDown={(event) => { if (event.key === 'Enter') openCompany(company); }}
+                          className="cursor-pointer border-b border-border/45 bg-card transition last:border-b-0 hover:bg-muted/25 focus:outline-none focus-visible:bg-muted/30"
+                        >
+                          <td className="px-4 py-3.5">
+                            <div className="flex min-w-[230px] items-center gap-3">
+                              <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border/50 bg-muted/35 text-xs font-semibold text-muted-foreground">
+                                {company.logo_url ? <img src={company.logo_url} alt="" className="h-full w-full object-contain" /> : initial(name)}
                               </span>
+                              <div className="min-w-0">
+                                <p className="max-w-[260px] truncate text-xs font-semibold text-foreground">{name}</p>
+                                <p className="mt-0.5 max-w-[260px] truncate text-[10px] text-muted-foreground">{company.company_name}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <p className="whitespace-nowrap text-xs font-medium">{formatCompanyDocument(company)}</p>
+                            {company.state_registration && <p className="mt-0.5 text-[10px] text-muted-foreground">IE {company.state_registration}</p>}
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <p className="text-xs">{[company.city, company.state].filter(Boolean).join(' / ') || '—'}</p>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            {company.certificate_status === 'valid' ? (
+                              <div>
+                                <span className="inline-flex rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">A1 ativo</span>
+                                <p className="mt-1 text-[10px] text-muted-foreground">até {formatDate(company.certificate_valid_until)}</p>
+                              </div>
+                            ) : company.certificate_status === 'expired' ? (
+                              <span className="inline-flex rounded-full bg-red-500/10 px-2 py-1 text-[10px] font-semibold text-red-700 dark:text-red-300">Vencido</span>
                             ) : (
-                              <span className="rounded-full border border-dashed border-border px-2.5 py-1 text-[10px] text-muted-foreground">
-                                sem usuário vinculado
-                              </span>
+                              <span className="text-[11px] text-muted-foreground">Sem A1</span>
                             )}
-                          </div>
-                          <span className="mt-1 block truncate text-xs text-muted-foreground">
-                            {company.trade_name ? company.company_name : formatCompanyDocument(company)}
-                          </span>
-
-                          <div className="mt-4 grid gap-x-6 gap-y-3 text-xs sm:grid-cols-2 xl:grid-cols-5">
-                            <CompanyMeta label="Documento" value={formatCompanyDocument(company)} />
-                            <CompanyMeta label="Inscrição estadual" value={company.state_registration || 'Não informada'} />
-                            <CompanyMeta
-                              label="Localização"
-                              value={[company.city, company.state].filter(Boolean).join(' / ') || 'Não informada'}
-                            />
-                            <CompanyMeta label="Porte / regime" value={[company.company_size, taxRegimeLabel(company.tax_regime)].filter(Boolean).join(' · ')} />
-                            <CompanyMeta
-                              label="Cadastro sincronizado"
-                              value={company.registry_updated_at ? formatDate(company.registry_updated_at) : 'Ainda não sincronizado'}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="hidden min-w-[170px] shrink-0 text-right lg:block">
-                          {company.portal_user_id ? (
-                            <>
-                              <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold ${
-                                company.portal_must_change_password === false
-                                  ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                                  : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
-                              }`}>
-                                {company.portal_must_change_password === false ? 'Senha alterada' : 'Senha padrão'}
-                              </span>
-                              <span className="mt-1.5 block text-[10px] text-muted-foreground">
-                                {company.portal_must_change_password === false
-                                  ? `alterada em ${formatDate(company.portal_password_changed_at)}`
-                                  : 'aguardando primeiro acesso'}
-                              </span>
-                            </>
-                          ) : (
-                            <span className="text-[10px] text-muted-foreground">Sem acesso do portal</span>
-                          )}
-                        </div>
-
-                        <FiscalHealthIndicator
-                          company={fiscal}
-                          loading={statusLoading && !fiscal}
-                          onReady={() => setBootstrapCompany(company)}
-                        />
-
-                        <span className="text-lg text-muted-foreground/50">›</span>
-                      </div>
-
-                      {company.portal_user_id && (
-                        <div className="mt-3 flex flex-wrap items-center gap-2 pl-[60px] lg:hidden">
-                          <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${
-                            company.portal_must_change_password === false
-                              ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                              : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
-                          }`}>
-                            {company.portal_must_change_password === false ? 'Senha alterada' : 'Senha padrão'}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground">
-                            {company.portal_must_change_password === false
-                              ? `desde ${formatDate(company.portal_password_changed_at)}`
-                              : 'troca obrigatória no primeiro acesso'}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                          </td>
+                          <td className="px-4 py-3.5">
+                            {company.portal_username ? (
+                              <div>
+                                <p className="font-mono text-[11px] font-semibold text-foreground">@{company.portal_username}</p>
+                                <p className={`mt-1 text-[10px] font-medium ${company.portal_must_change_password === false ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'}`}>
+                                  {company.portal_must_change_password === false ? 'Senha alterada' : 'Senha padrão'}
+                                </p>
+                              </div>
+                            ) : (
+                              <span className="text-[11px] text-muted-foreground">Sem usuário</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <span className={`text-[11px] font-medium ${fiscal?.capture_enabled ? 'text-emerald-700 dark:text-emerald-300' : 'text-muted-foreground'}`}>
+                              {extractorLabel}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3.5 text-center">
+                            <div className="flex justify-center">
+                              <FiscalHealthIndicator
+                                company={fiscal}
+                                loading={statusLoading && !fiscal}
+                                onReady={() => setBootstrapCompany(company)}
+                              />
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </TooltipProvider>
           )}
@@ -361,11 +360,3 @@ function FiscalHealthIndicator({ company, loading, onReady }: { company?: Fiscal
   );
 }
 
-function CompanyMeta({ label, value }: { label: string; value: string }) {
-  return (
-    <span className="min-w-0">
-      <span className="block text-[9px] font-semibold uppercase tracking-[.08em] text-muted-foreground/75">{label}</span>
-      <span className="mt-1 block truncate text-[11px] font-medium text-foreground/85">{value || 'Não informado'}</span>
-    </span>
-  );
-}
