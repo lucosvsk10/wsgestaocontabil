@@ -55,11 +55,6 @@ const daysAgo = (days: number) => {
   const base = new Date(`${today()}T12:00:00-03:00`);
   return brazilDate(new Date(base.getTime() - Math.max(0, days) * 86400000));
 };
-const dateOnly = (value: unknown) => {
-  const text = String(value || '');
-  return /^\d{4}-\d{2}-\d{2}/.test(text) ? text.slice(0, 10) : '';
-};
-
 async function paged(makeQuery: (from: number, to: number) => any, cap = 10000) {
   const rows: any[] = [];
   const size = 1000;
