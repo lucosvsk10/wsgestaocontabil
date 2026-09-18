@@ -873,6 +873,7 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
             onReload={() => load(true)}
             setNotice={setNotice}
             preview={preview}
+            adminAccess={isAdmin}
           />
         )}
         {active === 'Documentos' && (
@@ -1234,7 +1235,7 @@ function Overview({ company, totals, models, daily, onGo }: any) {
   );
 }
 
-function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview }: any) {
+function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview, adminAccess }: any) {
   const [term, setTerm] = useState('');
   const [busy, setBusy] = useState('');
   const [detailId, setDetailId] = useState('');
@@ -1243,6 +1244,59 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview }: a
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState<any>({});
   const [removeTarget, setRemoveTarget] = useState<Company | null>(null);
+  const [adminImportOpen, setAdminImportOpen] = useState(false);
+  const [adminImportLoading, setAdminImportLoading] = useState(false);
+  const [adminImportBusy, setAdminImportBusy] = useState('');
+  const [adminImportError, setAdminImportError] = useState('');
+  const [adminImportTerm, setAdminImportTerm] = useState('');
+  const [adminOfficeCompanies, setAdminOfficeCompanies] = useState<any[]>([]);
+
+  const loadAdminOfficeCompanies = useCallback(async () => {
+    if (!adminAccess || preview) return;
+    setAdminImportLoading(true);
+    setAdminImportError('');
+    try {
+      const data = await extractorRequest({ action: 'list_office_clients' });
+      setAdminOfficeCompanies(Array.isArray(data?.companies) ? data.companies : []);
+    } catch (error) {
+      setAdminImportError(error instanceof Error ? error.message : 'Não foi possível carregar os clientes do painel.');
+    } finally {
+      setAdminImportLoading(false);
+    }
+  }, [adminAccess, preview]);
+
+  const openAdminImport = async () => {
+    setAdminImportOpen(true);
+    setAdminImportTerm('');
+    await loadAdminOfficeCompanies();
+  };
+
+  const importOfficeClient = async (row: any) => {
+    if (adminImportBusy || row?.already_linked) return;
+    setAdminImportBusy(String(row.office_company_id));
+    setAdminImportError('');
+    try {
+      const data = await extractorRequest({
+        action: 'import_office_client',
+        office_company_id: row.office_company_id,
+      });
+      const fiscalId = String(data?.company?.id || '');
+      await onReload();
+      if (fiscalId) {
+        await (supabase as any).rpc('extractor_queue_sync', { _company_id: fiscalId }).catch(() => null);
+        setDetailId(fiscalId);
+      }
+      setAdminImportOpen(false);
+      setNotice({
+        tone: 'success',
+        text: `${row.trade_name || row.company_name} foi vinculada ao Extrator usando o cadastro do painel administrativo.`,
+      });
+    } catch (error) {
+      setAdminImportError(error instanceof Error ? error.message : 'Não foi possível importar esta empresa.');
+    } finally {
+      setAdminImportBusy('');
+    }
+  };
 
   const visible = companies.filter(
     (c: Company) =>
@@ -1496,7 +1550,18 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview }: a
         title="Empresas"
         icon="company"
         description="Empresas vinculadas ao Extrator. Clique em uma delas para abrir o cadastro fiscal completo."
-        actions={<button className="extractor-primary" onClick={onAdd}><AnimatedExtractorIcon name="upload" />Adicionar com A1</button>}
+        actions={
+          <div className="extractor-company-heading-actions">
+            {adminAccess && (
+              <button className="extractor-secondary" onClick={() => void openAdminImport()}>
+                Importar do painel
+              </button>
+            )}
+            <button className="extractor-primary" onClick={onAdd}>
+              <AnimatedExtractorIcon name="upload" />Adicionar com A1
+            </button>
+          </div>
+        }
       />
       <div className="extractor-toolbar">
         <label><AnimatedExtractorIcon name="search" /><input value={term} onChange={e => setTerm(e.target.value)} placeholder="Buscar empresa ou CNPJ" /></label>
@@ -1524,6 +1589,79 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview }: a
         ))}
         {!visible.length && <Empty>Nenhuma empresa encontrada.</Empty>}
       </div>
+
+      {adminAccess && (
+        <Dialog open={adminImportOpen} onOpenChange={setAdminImportOpen}>
+          <DialogContent className="extractor-dark-dialog max-h-[86vh] overflow-y-auto sm:max-w-2xl">
+            <DialogTitle>Importar empresa do painel</DialogTitle>
+            <DialogDescription>
+              Use um cliente que já existe no Painel do Administrador. O Extrator reaproveita o cadastro fiscal e o certificado A1 quando já estiverem configurados.
+            </DialogDescription>
+
+            <div className="extractor-admin-import-search">
+              <input
+                value={adminImportTerm}
+                onChange={event => setAdminImportTerm(event.target.value)}
+                placeholder="Buscar por empresa ou CNPJ"
+              />
+            </div>
+
+            {adminImportError && (
+              <p className="extractor-admin-import-error">{adminImportError}</p>
+            )}
+
+            {adminImportLoading ? (
+              <p className="extractor-helper">Carregando clientes do painel...</p>
+            ) : (
+              <div className="extractor-admin-import-list">
+                {adminOfficeCompanies
+                  .filter(row => {
+                    const term = adminImportTerm.trim().toLowerCase();
+                    if (!term) return true;
+                    return `${row.company_name || ''} ${row.trade_name || ''} ${row.cnpj || ''}`
+                      .toLowerCase()
+                      .includes(term);
+                  })
+                  .map(row => (
+                    <article key={row.office_company_id} className="extractor-admin-import-row">
+                      <div>
+                        <strong>{row.trade_name || row.company_name}</strong>
+                        <span>{row.company_name}</span>
+                        <small>
+                          {formatCnpj(row.cnpj)}
+                          {row.state ? ` · ${row.state}` : ''}
+                          {row.certificate?.configured
+                            ? ` · A1 até ${formatDate(row.certificate.valid_until)}`
+                            : ' · sem A1'}
+                        </small>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={row.already_linked || adminImportBusy === String(row.office_company_id)}
+                        onClick={() => void importOfficeClient(row)}
+                      >
+                        {row.already_linked
+                          ? 'Já vinculada'
+                          : adminImportBusy === String(row.office_company_id)
+                            ? 'Importando...'
+                            : 'Importar'}
+                      </button>
+                    </article>
+                  ))}
+                {!adminOfficeCompanies.length && (
+                  <Empty>Nenhum cliente empresarial disponível no Painel do Administrador.</Empty>
+                )}
+              </div>
+            )}
+
+            <div className="extractor-dialog-actions">
+              <button className="extractor-secondary" onClick={() => setAdminImportOpen(false)}>
+                Fechar
+              </button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       <Dialog open={Boolean(removeTarget)} onOpenChange={open => !open && setRemoveTarget(null)}>
         <DialogContent className="extractor-dark-dialog sm:max-w-md">
