@@ -538,9 +538,10 @@
   font-size:12px!important;
   font-weight:500!important;
 }
-.extractor-doc-note-top .extractor-type-tag,
-.extractor-doc-note-top .extractor-status-tag{
+.extractor-doc-note-top .extractor-type,
+.extractor-doc-note-top .extractor-state{
   flex:0 0 auto;
+  white-space:nowrap;
 }
 .extractor-doc-key{
   display:block!important;
