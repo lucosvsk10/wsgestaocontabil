@@ -8,7 +8,36 @@ import { Button } from "@/components/ui/button";
 import { LucideIcon } from "lucide-react";
 
 interface SidebarItemProps { icon: LucideIcon; label: string; active: boolean; to: string; external?: boolean; onClick?: () => void; }
-const SidebarItem: React.FC<SidebarItemProps> = ({ icon: Icon, label, active, to, external, onClick }) => <Link to={to} className={`group flex items-center gap-3 rounded-md border-l-2 px-4 py-2.5 transition-colors duration-200 ${external ? "border border-border/60 bg-muted/20 hover:bg-muted/45" : active ? "border-foreground/60 bg-muted text-foreground" : "border-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground"}`} onClick={onClick}><Icon size={17} strokeWidth={1.75} /><span className="min-w-0 flex-1 text-sm font-medium tracking-tight">{label}</span>{external&&<ExternalLink size={13} className="shrink-0 text-muted-foreground/70 transition group-hover:text-foreground" />}</Link>;
+const SidebarItem: React.FC<SidebarItemProps> = ({ icon: Icon, label, active, to, external, onClick }) => (
+  <Link
+    to={to}
+    className={`group relative flex items-center gap-3 overflow-hidden rounded-md px-4 py-2.5 transition-colors duration-200 ${
+      external
+        ? "bg-muted/30 text-foreground hover:bg-muted/50"
+        : active
+          ? "border-l-2 border-foreground/60 bg-muted text-foreground"
+          : "border-l-2 border-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+    }`}
+    onClick={onClick}
+  >
+    {external ? (
+      <>
+        <span className="relative z-10 min-w-0 flex-1 text-sm font-medium tracking-tight">{label}</span>
+        <ExternalLink size={13} className="relative z-10 shrink-0 text-muted-foreground/70 transition group-hover:text-foreground" />
+        <Icon
+          size={58}
+          strokeWidth={1.25}
+          className="pointer-events-none absolute -bottom-7 -right-5 text-foreground opacity-[.08] transition duration-300 group-hover:-translate-x-1 group-hover:-translate-y-1 group-hover:opacity-[.12]"
+        />
+      </>
+    ) : (
+      <>
+        <Icon size={17} strokeWidth={1.75} />
+        <span className="min-w-0 flex-1 text-sm font-medium tracking-tight">{label}</span>
+      </>
+    )}
+  </Link>
+);
 interface AdminSidebarProps { open: boolean; onClose: () => void; }
 
 const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
@@ -26,7 +55,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
       {sidebarSections.map((section, sectionIndex) => <section key={section.title} className={!open && !isMobile && sectionIndex > 0 ? "border-t border-border/60 pt-3" : undefined}>
         {(open || isMobile) && <p className="mb-2 px-4 text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/90">{section.title}</p>}
         <div className="space-y-1">{section.items.map(item => { const isLaunches = item.to === "/admin/lancamentos"; const keepOpen = currentPath.startsWith("/admin/lancamentos"); return <div key={item.label} className={isLaunches ? "group/lancamentos" : undefined}>
-          {(open || isMobile) ? <SidebarItem icon={item.icon} label={item.label} active={item.active} to={item.to} external={item.to.startsWith("/app")||item.to.startsWith("/extrator")} onClick={isMobile ? onClose : undefined} /> : <div className={`flex justify-center rounded-lg p-3 transition-colors ${item.active ? "bg-muted text-foreground" : "hover:bg-muted/60"}`} title={item.label}><Link to={item.to} className={item.active ? "text-foreground" : "relative text-muted-foreground hover:text-foreground"}><item.icon size={19} />{(item.to.startsWith("/app")||item.to.startsWith("/extrator"))&&<ExternalLink size={9} className="absolute -right-2 -top-1" />}</Link></div>}
+          {(open || isMobile) ? <SidebarItem icon={item.icon} label={item.label} active={item.active} to={item.to} external={item.to.startsWith("/app")||item.to.startsWith("/extrator")} onClick={isMobile ? onClose : undefined} /> : <div className={`flex justify-center overflow-hidden rounded-lg p-3 transition-colors ${(item.to.startsWith("/app")||item.to.startsWith("/extrator")) ? "bg-muted/30 hover:bg-muted/50" : item.active ? "bg-muted text-foreground" : "hover:bg-muted/60"}`} title={item.label}><Link to={item.to} className={item.active ? "text-foreground" : "relative text-muted-foreground hover:text-foreground"}><item.icon size={19} />{(item.to.startsWith("/app")||item.to.startsWith("/extrator"))&&<ExternalLink size={9} className="absolute -right-2 -top-1" />}</Link></div>}
           {isLaunches && (open || isMobile) && <div className={`ml-7 overflow-hidden border-l border-border pl-3 transition-all duration-200 ${keepOpen ? "mt-1 max-h-44 opacity-100" : "max-h-0 opacity-0 group-hover/lancamentos:mt-1 group-hover/lancamentos:max-h-44 group-hover/lancamentos:opacity-100"}`}>{[["Lançamentos mensais","/admin/lancamentos"],["Balancete","/admin/lancamentos/balancete"],["Plano de contas","/admin/lancamentos/plano-contas"]].map(([label,to]) => <Link key={to} to={to} onClick={isMobile ? onClose : undefined} className={`block rounded-sm px-3 py-2 text-xs transition-colors ${currentPath === to ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"}`}>{label}</Link>)}<Link to="/admin/lancamentos/engine" onClick={isMobile ? onClose : undefined} className={`flex items-center justify-between rounded-sm px-3 py-2 text-xs transition-colors ${currentPath === "/admin/lancamentos/engine" ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"}`}><span className="inline-flex items-center gap-2"><Settings2 className="h-3.5 w-3.5"/>Engine</span><LockKeyhole className="h-3 w-3"/></Link></div>}
         </div>; })}</div>
       </section>)}

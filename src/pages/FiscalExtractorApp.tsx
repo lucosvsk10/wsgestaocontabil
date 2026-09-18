@@ -26,6 +26,7 @@ import AnimatedExtractorIcon, {
 import ExtractorAccountDrawer from '@/components/extractor/ExtractorAccountDrawer';
 import ExtractorCompanySelector from '@/components/extractor/ExtractorCompanySelector';
 import ExtractorReports from '@/components/extractor/ExtractorReports';
+import AppLoadingScreen from '@/components/AppLoadingScreen';
 import '@/styles/fiscal-extractor.css';
 import '@/styles/fiscal-extractor-polish.css';
 import '@/styles/fiscal-extractor-final.css';
@@ -965,7 +966,6 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
 function PageHeading({
   title,
   description,
-  icon,
   actions,
 }: {
   title: string;
@@ -976,10 +976,7 @@ function PageHeading({
   return (
     <div className="extractor-page-heading">
       <div>
-        <span className="extractor-eyebrow">
-          <AnimatedExtractorIcon name={icon} />
-          WS Extrator Fiscal
-        </span>
+        <span className="extractor-eyebrow">WS Extrator Fiscal</span>
         <h1>{title}</h1>
         <p>{description}</p>
       </div>
@@ -2905,13 +2902,7 @@ export function AddCompanyModal({ preview, onClose, onDone }: any) {
   );
 }
 function Loading() {
-  return (
-    <div className="extractor-loading">
-      <img src="/assets/ws-logo.png" alt="WS Gestão Contábil" />
-      <span />
-      <p>Carregando dados fiscais...</p>
-    </div>
-  );
+  return <AppLoadingScreen mode="standard" />;
 }
 function AccessPending() {
   return (
