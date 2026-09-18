@@ -761,10 +761,20 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
         String(data?.filename || `${document.accessKey || document.nsu || 'documento-fiscal'}.pdf`)
       );
     } catch (caught) {
-      setNotice({
-        tone: 'error',
-        text: caught instanceof Error ? caught.message : 'Não foi possível gerar o PDF.',
-      });
+      let message = caught instanceof Error ? caught.message : 'Não foi possível gerar o PDF.';
+      const response = (caught as any)?.context;
+      if (response && typeof response.json === 'function') {
+        try {
+          const payload = await response.clone().json();
+          if (payload?.error) message = String(payload.error);
+        } catch {
+          // Mantém uma mensagem amigável mesmo quando o gateway não devolve JSON.
+        }
+      }
+      if (/Edge Function returned a non-2xx status code|FunctionsHttpError|Failed to fetch/i.test(message)) {
+        message = 'Não foi possível gerar o documento fiscal agora. Tente novamente em alguns instantes.';
+      }
+      setNotice({ tone: 'error', text: message });
     } finally {
       setPreviewPdfBusy(false);
     }
