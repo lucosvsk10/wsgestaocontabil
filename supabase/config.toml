@@ -168,6 +168,9 @@ verify_jwt = true
 [functions.extractor-notifications]
 verify_jwt = true
 
+[functions.extractor-document-preview]
+verify_jwt = true
+
 [functions.saas-fiscal-config]
 verify_jwt = true
 
