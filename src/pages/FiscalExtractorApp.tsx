@@ -112,6 +112,31 @@ type Snapshot = {
   daily?: Array<{ day?: string; documents?: number }>;
 };
 type Notice = { tone: 'success' | 'warning' | 'error'; text: string } | null;
+type ImportNotification = {
+  id: string;
+  company_id: string;
+  kind: string;
+  title: string;
+  message: string;
+  metadata?: {
+    company_name?: string;
+    purchase_count?: number;
+    sales_count?: number;
+    total_count?: number;
+    access_keys?: string[];
+    issue_from?: string | null;
+    issue_to?: string | null;
+  };
+  created_at: string;
+};
+type DocumentNotificationFocus = {
+  notificationId: string;
+  companyId: string;
+  keys: string[];
+  issueFrom?: string | null;
+  issueTo?: string | null;
+  label: string;
+};
 type Usage = {
   used: number;
   limit: number;
@@ -321,7 +346,9 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
     [previewDoc, setPreviewDoc] = useState<Doc | null>(null),
     [previewPdfBusy, setPreviewPdfBusy] = useState(false),
     [previewXmlBusy, setPreviewXmlBusy] = useState(false),
-    [usage, setUsage] = useState<Usage>({ used: 0, limit: 0, remaining: 0, percent: 0 });
+    [usage, setUsage] = useState<Usage>({ used: 0, limit: 0, remaining: 0, percent: 0 }),
+    [importNotifications, setImportNotifications] = useState<ImportNotification[]>([]),
+    [documentFocus, setDocumentFocus] = useState<DocumentNotificationFocus | null>(null);
   const load = useCallback(
     async (quiet = false) => {
       if (preview || !user) return;
@@ -362,6 +389,63 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
       window.removeEventListener('focus', f);
     };
   }, [preview, denied, load]);
+
+  const loadImportNotifications = useCallback(async () => {
+    if (preview || denied || !user) return;
+    try {
+      const { data, error } = await supabase.functions.invoke('extractor-notifications', {
+        body: { action: 'list' },
+      });
+      if (error) throw error;
+      setImportNotifications(Array.isArray(data?.notifications) ? data.notifications : []);
+    } catch {
+      // Notification delivery must never interrupt the fiscal workspace.
+    }
+  }, [preview, denied, user?.id]);
+
+  useEffect(() => {
+    if (preview || denied || !user) return;
+    void loadImportNotifications();
+    const timer = window.setInterval(() => void loadImportNotifications(), 60000);
+    const onFocus = () => void loadImportNotifications();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [preview, denied, user?.id, loadImportNotifications]);
+
+  const updateImportNotification = useCallback(async (
+    notification: ImportNotification,
+    action: 'read' | 'dismiss',
+    openDocuments = false
+  ) => {
+    setImportNotifications(current => current.filter(item => item.id !== notification.id));
+    try {
+      await supabase.functions.invoke('extractor-notifications', {
+        body: { action, notification_id: notification.id },
+      });
+    } catch {
+      // Optimistic dismissal keeps the UI quiet; the next successful poll reconciles state.
+    }
+    if (openDocuments) {
+      const keys = Array.isArray(notification.metadata?.access_keys)
+        ? notification.metadata!.access_keys!.map(String).filter(Boolean)
+        : [];
+      setSelectedCompanyId(notification.company_id);
+      setDocumentFocus({
+        notificationId: notification.id,
+        companyId: notification.company_id,
+        keys,
+        issueFrom: notification.metadata?.issue_from || null,
+        issueTo: notification.metadata?.issue_to || null,
+        label: notification.message,
+      });
+      setActive('Documentos');
+      setMobile(false);
+      setNotice(null);
+    }
+  }, []);
   const companies = useMemo(
     () =>
       preview
@@ -428,18 +512,24 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
   const planUsage: Usage = preview
     ? {
         used: 326,
-        limit: 20000,
-        remaining: 19674,
-        percent: 2,
+        limit: 5000,
+        remaining: 4674,
+        percent: 7,
         period_start: null,
         period_end: null,
       }
     : usage;
   const planLabel = preview
-    ? 'Escritório · 20.000 XML/mês'
-    : snapshot?.account?.plan_code === 'office_20000'
-    ? 'Escritório · 20.000 XML/mês'
-    : snapshot?.account?.plan_code || 'Plano Extrator';
+    ? 'Extrator Padrão · 5.000 XML/mês'
+    : snapshot?.account?.plan_code === 'extractor_commercial'
+      ? 'Extrator Padrão · 5.000 XML/mês'
+      : snapshot?.account?.plan_code === 'extractor_pro'
+        ? 'Extrator Pro · 15.000 XML/mês'
+        : snapshot?.account?.plan_code === 'extractor_enterprise'
+          ? 'Extrator Enterprise · 10.000 XML por empresa'
+          : snapshot?.account?.plan_code === 'office_20000'
+            ? 'Escritório · 20.000 XML/mês'
+            : snapshot?.account?.plan_code || 'Plano Extrator';
   const go = (s: Section, companyId?: string) => {
     if (companyId) setSelectedCompanyId(companyId);
     setActive(s);
@@ -661,6 +751,8 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
             preview={preview}
             setNotice={setNotice}
             onPreview={setPreviewDoc}
+            notificationFocus={documentFocus}
+            onClearNotificationFocus={() => setDocumentFocus(null)}
           />
         )}
         {active === 'Relatórios' && (
@@ -714,6 +806,11 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
           }}
         />
       )}
+      <ImportNotificationStack
+        notifications={importNotifications.slice(0, 3)}
+        onOpen={notification => void updateImportNotification(notification, 'read', true)}
+        onDismiss={notification => void updateImportNotification(notification, 'dismiss', false)}
+      />
       <ExtractorFiscalDocumentPreviewModal
         document={previewDoc}
         companyName={previewCompany?.tradeName || previewCompany?.name || 'Empresa'}
