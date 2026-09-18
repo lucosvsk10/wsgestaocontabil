@@ -77,14 +77,26 @@ function normalizeSecondaryCnaes(items: any[]) {
     .filter((item: any) => item.code || item.description);
 }
 
+const stateRegistrationValue = (item: any) =>
+  digits(
+    item?.inscricao_estadual ??
+    item?.inscricao ??
+    item?.numero ??
+    item?.ie ??
+    item?.value
+  );
+
+const stateRegistrationUf = (item: any) =>
+  clean(item?.estado?.sigla ?? item?.uf ?? item?.estado).toUpperCase();
+
 function normalizeCnpjWs(raw: any, cnpj: string) {
   const e = raw?.estabelecimento || {};
-  const state = clean(e?.estado?.sigla).toUpperCase();
+  const state = clean(e?.estado?.sigla ?? e?.uf).toUpperCase();
   const activeIes = Array.isArray(e?.inscricoes_estaduais)
-    ? e.inscricoes_estaduais.filter((item: any) => item?.ativo !== false)
+    ? e.inscricoes_estaduais.filter((item: any) => item?.ativo !== false && stateRegistrationValue(item))
     : [];
   const preferredIe =
-    activeIes.find((item: any) => clean(item?.estado?.sigla).toUpperCase() === state) ||
+    activeIes.find((item: any) => stateRegistrationUf(item) === state) ||
     activeIes[0] ||
     null;
   const phone = [clean(e?.ddd1), clean(e?.telefone1)].filter(Boolean).join('');
@@ -112,8 +124,8 @@ function normalizeCnpjWs(raw: any, cnpj: string) {
     tax_regime_year: regime.year,
     state_registrations: activeIes
       .map((item: any) => ({
-        state: clean(item?.estado?.sigla).toUpperCase(),
-        ie: digits(item?.inscricao_estadual),
+        state: stateRegistrationUf(item),
+        ie: stateRegistrationValue(item),
         active: item?.ativo !== false,
       }))
       .filter((item: any) => item.ie),
@@ -122,7 +134,7 @@ function normalizeCnpjWs(raw: any, cnpj: string) {
     legal_name: clean(raw?.razao_social),
     trade_name: clean(e?.nome_fantasia),
     tax_id: cnpj,
-    state_registration: digits(preferredIe?.inscricao_estadual),
+    state_registration: stateRegistrationValue(preferredIe),
     ie_indicator: preferredIe ? '1' : '',
     icms_taxpayer: Boolean(preferredIe),
     tax_regime: regime.value,
