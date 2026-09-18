@@ -159,6 +159,9 @@ verify_jwt = false
 [functions.admin-client-access]
 verify_jwt = true
 
+[functions.admin-client-access-confirm]
+verify_jwt = true
+
 [functions.admin-certificate-batch-import]
 verify_jwt = true
 
