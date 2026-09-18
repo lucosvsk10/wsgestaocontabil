@@ -246,10 +246,12 @@ export default function AdminClientOnboardingModal({
       const certificateData = result.certificate || null;
       setCertificateMeta(certificateData);
       const certificateCnpj = digits(certificateData?.holder_cnpj || result.company?.cnpj);
+      let resolvedIe = digits(result.company?.state_registration);
       if (certificateCnpj.length === 14) {
         try {
           const registry = await lookupOfficeCompanyByCnpj(certificateCnpj);
           const normalized = registryToOfficeCompany(registry.data || {}, registry.registry || {});
+          resolvedIe = digits(normalized.state_registration);
           applyLookup({
             ...normalized,
             document_type: 'cnpj',
@@ -263,8 +265,8 @@ export default function AdminClientOnboardingModal({
         applyLookup(result.company || {});
       }
       setMessage(
-        company.state_registration
-          ? 'Certificado validado. Dados cadastrais e IE preenchidos automaticamente.'
+        resolvedIe
+          ? 'Certificado validado. Dados cadastrais e IE ' + resolvedIe + ' preenchidos automaticamente.'
           : 'Certificado validado. Dados cadastrais preenchidos automaticamente.'
       );
     } catch (error) {
