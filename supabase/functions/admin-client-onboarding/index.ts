@@ -206,8 +206,14 @@ async function lookupRegistry(admin: any, cnpj: string) {
     fetchJson(`https://publica.cnpj.ws/cnpj/${cnpj}`),
     fetchJson(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`),
   ]);
-  const a = ws.status === 'fulfilled' ? normalizeCnpjWs(ws.value, cnpj) : null;
+  let a = ws.status === 'fulfilled' ? normalizeCnpjWs(ws.value, cnpj) : null;
   const b = brasil.status === 'fulfilled' ? normalizeBrasilApi(brasil.value, cnpj) : null;
+
+  if (!a?.state_registration) {
+    const dbRaw = await lookupCnpjWsViaDatabase(admin, cnpj);
+    if (dbRaw) a = normalizeCnpjWs(dbRaw, cnpj);
+  }
+
   const company = mergeCompany(a, b, cnpj);
   if (!company.state_registration) {
     company.state_registration = company.state === 'AL' ? await lookupAlIe(admin, cnpj) : '';
