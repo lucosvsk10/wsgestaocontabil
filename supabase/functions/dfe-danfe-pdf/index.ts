@@ -353,7 +353,7 @@ async function buildNfse(doc: any, xml: string) {
   const page = pdf.addPage([W, H]);
   const black = rgb(0.03, 0.03, 0.03);
   const lineGray = rgb(0.45, 0.45, 0.45);
-  const fillGray = rgb(0.94, 0.94, 0.94);
+  const fillGray = rgb(0.95, 0.95, 0.95);
   const M = 5.5;
   const R = W - M;
   const C = R - M;
@@ -460,14 +460,14 @@ async function buildNfse(doc: any, xml: string) {
     });
     return lines.length * lineHeight;
   };
-  const hLine = (top: number, x1 = M, x2 = R, thickness = 0.55, color = black) =>
+  const hLine = (top: number, x1 = M, x2 = R, thickness = 0.5, color = black) =>
     page.drawLine({ start:{x:x1,y:y(top)}, end:{x:x2,y:y(top)}, thickness, color });
-  const vLine = (xv: number, top1: number, top2: number, thickness = 0.4, color = lineGray) =>
+  const vLine = (xv: number, top1: number, top2: number, thickness = 0.5, color = lineGray) =>
     page.drawLine({ start:{x:xv,y:y(top1)}, end:{x:xv,y:y(top2)}, thickness, color });
   const band = (top: number, label: string, height = 11) => {
     page.drawRectangle({ x:M, y:y(top + height), width:C, height, color:fillGray });
-    hLine(top, M, R, 0.55);
-    drawText(label, M + 4, top + 2.2, 6.3, true, C - 8);
+    hLine(top, M, R, 0.5);
+    drawText(label, M + 4, top + 2.2, 7, true, C - 8);
   };
   const labelValue = (
     label: string,
@@ -477,9 +477,9 @@ async function buildNfse(doc: any, xml: string) {
     width: number,
     options: {labelSize?:number;valueSize?:number;boldValue?:boolean;wrap?:boolean;maxLines?:number} = {}
   ) => {
-    drawText(label, x, top, options.labelSize ?? 5.7, true, width);
-    if (options.wrap) drawWrapped(value, x, top + 9, width, options.valueSize ?? 6.2, 7.2, options.maxLines ?? 2, options.boldValue ?? false);
-    else drawText(value, x, top + 9, options.valueSize ?? 6.3, options.boldValue ?? false, width);
+    drawText(label, x, top, options.labelSize ?? 6, true, width);
+    if (options.wrap) drawWrapped(value, x, top + 9, width, options.valueSize ?? 7, 7.2, options.maxLines ?? 2, options.boldValue ?? false);
+    else drawText(value, x, top + 9, options.valueSize ?? 7, options.boldValue ?? false, width);
   };
 
   const inf = tag(xml, 'infNFSe') || xml;
@@ -505,8 +505,9 @@ async function buildNfse(doc: any, xml: string) {
   const totTrib = tag(trib, 'totTrib');
   const vals = tag(inf, 'valores');
   const key = dg(doc.accessKey || String(tag(inf, 'Id') || '').replace(/^NFS/i, ''));
-  const issue = tag(infDps, 'dhEmi') || tag(inf, 'dhProc') || doc.issueDate;
-  const comp = tag(infDps, 'dCompet') || issue;
+  const dpsIssue = tag(infDps, 'dhEmi') || doc.issueDate;
+  const nfseIssue = tag(inf, 'dhProc') || dpsIssue;
+  const comp = tag(infDps, 'dCompet') || dpsIssue;
   const issueCityCode = tag(endE, 'cMun') || tag(infDps, 'cLocEmi');
   const tomaCityCode = tag(endTN, 'cMun');
   const prestCityCode = tag(locPrest, 'cLocPrestacao');
@@ -517,7 +518,7 @@ async function buildNfse(doc: any, xml: string) {
   const incidenceUf = ufFromIbge(incidenceCode);
   const serviceValue = tag(vServPrest, 'vServ') || doc.value || tag(vals, 'vLiq');
   const liquidValue = tag(vals, 'vLiq') || serviceValue;
-  const qrv = `https://www.nfse.gov.br/ConsultaPublica?tpc=1&chave=${key}`;
+  const qrv = `https://www.nfse.gov.br/ConsultaPublica/?tpc=1&chave=${key}`;
   const municipalityName = async (code: string, fallback = '') => {
     if (clean(fallback)) return clean(fallback);
     const numeric = dg(code);
@@ -535,22 +536,25 @@ async function buildNfse(doc: any, xml: string) {
     }
   };
   const tomaCityName = await municipalityName(tomaCityCode, tag(toma,'xMun'));
+  const homolog = tag(infDps,'tpAmb') === '2';
 
-  page.drawRectangle({ x:M, y:y(837), width:C, height:832, borderWidth:0.7, borderColor:black });
+  page.drawRectangle({ x:M, y:y(837), width:C, height:832, borderWidth:1, borderColor:black });
+  page.drawRectangle({ x:M, y:y(39.5), width:C, height:34.5, color:fillGray });
 
-  const logo = await pdf.embedPng(Uint8Array.from(atob('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'), ch => ch.charCodeAt(0)));
-  page.drawImage(logo, { x:11, y:y(33.5), width:119, height:23.6 });
-  drawText('DANFSe v2.0', 225, 11.5, 10.5, true, 145, 'center');
-  drawText('Documento Auxiliar da NFS-e', 215, 22, 9.3, true, 165, 'center');
+  const logo = await pdf.embedPng(Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAhwAAABrCAYAAAA8RlssAAAQzUlEQVR42u2dTWxdRxXHz73vPcdxYidOauw45KMpoXVbiYYKAYtAsQRIrYRaIVUqUFXiY0EXBSkSIFRYRFWlLiIqPoJURLOIoohISN0kyyhkAxK0YYEwrTBNmthx69r5cOIkL37vskhf4zjv3Xc/ZubOzP39JC/s9+69M2fGc/73zJmZIIoiAQAAANBJiAkAAABAN1VMAL7y6KvP5g7fvfnjgwGWBADIT+DilMrY+D4jhQ6qTZFqM/Y79Sub7/rbf09+ByflqMBAhAAA6KGqc/B+fP1l+dSaa7Jj9TUZW3tJ1lRuKir297UZpBJE0ohu+ZNoKRRZip91qlYuShRVJIpWSTPqccZpmkK3cy7CXsufifgAAEj4Et8uwqFrEH98/WX51qZp2d53Jdd9nnz12/LehdXKy1erNOVmI3taS7PZJ41mf+YIh29iQ6dTttFWiA8AgJgXdJMD+bGLA3Ls4oC8dO9ZeWzD+5nvMzp4VbngqIZRLrEhIhKGixIE2cznq9gog9BYWTaEBwBAGx9ZxGD+4rtb5MT8cObr+1fVlZcpq1C4S7isv0Cv0uTMXRFliEcAgC6CwyQvvrtFJhYGM117/yZ7nXrtk+nL5ruDyls/F+2D6AAAsERwiIj8bPJeudqopb5u9wOnLbVmJOF979OrFDptlx03ogMAwBLBMdcI5U/Tm1Nft3P4fKzbfdM6Y1Y3X6JH4awBAMA2wSEi8voH98hsvTf1dU/tOm2f4BhGcCA2AADASsEhInI4Q5Tj6S/8yy5D9t+QcJSEUcQGAABYKziOzA2mTiAdWTcn3/zsGWsM2XPfh/QmAAAAmwWHiMjB85tSX/O9x96yIpcjHLgh4dZZelNOiG4AACA4tHNyoS9TlOOHXyl2aiUIIun5zFl6EmIDAABcEBwiIvvPZcjl+Pyb8tWx6cLKXH1wRsLBK/QkAAAAVwTHqcXeTDuQ/uLJE/LQqPkVIrUdc1Jj342udNvqm+gGAACCwzgHpkZSX7O2d1F+/9xRo6KjtmNOag8zleK6EOLcEwAAM1RtK9BkvSYn5odTH+7WEh0/+dPX5G//u0db+YIgktrOWak+ME3vUYCp6EacsOj0GZEXAACPBYfIrSjH59bNy5pKuhUoa3sXZf9zb8jrf/mi/Pb4Q8rLFa5ektojZ6UyxAZfKhy97c9ffi3iAwDAQ8ExWa/J0dkReXok25TFd7/8V3n8kXdk7xu71UQ7wkh6ts1LdWxapNrA2Zew/ogPAAAPBYeIyKGZIXliaCZ1lKPFyLo52f/cG3LqzHY59s+d8ue3tqXXGb1LUt06L9XtH4r01uktitHpuHWKrda9ER4AAB4IjrlGmCvK0WLXttOya9tp+dHX++TUmS1y6vSI/GdmUCbOr5NL1+48qTbsvyHhmrqEG65IuPEqy10dxVRkB+EBAOCB4BDJH+VYztreRdl9/9uy+/63234+sTAoP3jnPnoEKBMerIABAHBEcMw1Qvnj2a3ywvZJWgpSOf+yPRsAwHZC2wt4ZG4w0/H1AAAAgOBIRZbj68FuyHsAAEBwWAdRDgAAAASHEX51egetBQAAgOC4jY7kuSzH1wMAAIDHgkMXB89vosUAAAAQHLchygFFQDIqAEDJBIcuiHIAAAAgOO54y9QV5TgxP0zLQdf+BwAAngsO3RyYGlF+z9UKtk+H5OjelRPRAQBQMsGhw7FM1mvKoxzb+ziozTcQHQAAJRIcutAR5QA/RQfCAwAAwZGZyXpNjsxsoQUhsfDACgAAngsOXfP1h2aG5GqjRitCYtGB8AAA8Fhw6GKuEcrRWaZWXKWo49wRHgAAHgsOohxgGwgPAAAPBYcuiHIAwgMAAMFxB7qiHL+eGub4ekcpalolTnggPgAA1FP1pSKHpzfLC9snaVFQJj5sE0QrGRvfd5cwmji+J6D1AADB8dEAruMN8sjcoDwz2itDPddpVcfQ1Sd8ER7thEXa7yJEAKB0gkOngyHKgejwRXikERlp7ofwAB/46S/3f/z/8cre5wNTzzLxPASHIxyZG5RvfGIt25SvcJJFighfbaqrbqqFhi3CI+ugXfbBfmX9k7DcRiYdM0A3ClulomvAfu3cVlrVUVwSKKqTS8fG90W6xUaRz1PhSCGfjbE5lFZw6OLkQp9MLAzSsogOY8JDVdShCIp8ts2OuvWDNQDUUeiUiq55+4PnN8nL/RdoXQuccRYBYXs+RyfRkaWuNjj8IqdZbAvz2ywy8tqKKRUoteDQRSvKMYbocBbXREdagWVjZGFsfF+E6PAH7Aq2UfiUiq4Q+v5zm2ldD0SHa2VOIpKYxgCAMlL1tWKnFnvlxPywPLbhfVrZcdHhc6QjC0miEFlFjU9Rjtb0iMk3fddXheS1WZb622IzleVgKa3FgkOXUzkwNYLg8ER0JI0e2C468kQ30giB1nezPE+36Hhl7/OBjlyJTvdMMvgnvXbl9XH1KELwZHF67eqQxmEmsd3K67NcY8JGedtO9f18I/S5cpP1mpyYH8ZjeyY8XBIdKsTGxPE9QVYBkOfaIp2jzutViZ2k97F5xUuScsUJlSz1SmO3ouuuuo3LvvLJGsGhy5kcmOIkWd9Eh2v7deQVGyrKkfY+uvNM0kQZsg7ir+x9PkjzVq+rXi6JvDibJbVf0nsU2U5xfUZ3/yuz6Kj6XsHJek2Ozo7KE0PTeGsPox0uTLPcKuMjhQiNlfdMey6L7VMr3aY8lv/ezUm2+06cA2qVP+nz8uaq5IlGpBVLae/T7vvdbJe0DUwJLVXlaNcfVPcFIhwWRzlemxqRq40aXpqIRzFct6fv2T69ktfZpBnEVTi2tE7VVvLYTYU4KdJunZ6XJdKT514IDk+Ya4RydJapFYRHMTQrkVQ3XLNGFNgkOkyGnBn09YovH8tGn1GLdVMqulasHJoZkieGZmRN5SatbrAti3qmLVMtQSQSNgKpPXxOlk7udC4CUcQyWRedgwmnaOpU1LT5Fy4LHdU2ZTv8eMKyVJQoR/nEjg0Rj0bz1r9Y0FuXns2XaJiEg76ujH8dDsZVJ5Nl9YnKFT5F2A1BgOAw9mZ8aGZIZuu9HT/f1XedHuGp8ChKfFSWbv+LVUcvWhPdsC1q4fImWb6JPd2iAKdfXqxdpaJjamWuEcrh6c3ywvbJtp/3V5r0CIsFo6pymZpuCSKRKFpmisErEg7ckOblVXSShI5J9SZhOvfgcHUJZLdVGSpXVPhkNx9EM4JDM0fmBuWZ0V4Z6vE/muHiWSQ+CY9GM7wrhFgdvSj1y2o2o+u0xFV19MJUHkdacaFrx9KyOpuky4eXf55XjBSxIkXn3h6IjniszuHQ5TAPT3OwGxjI82je/e9VHbwqKkRC3H4aY+P7oiT7bdiYDJp0C2yd0YuyY8pp2uCcu/UZ+lSJBIfOKEdcLgeUM+KhmrYzdP3XJKjmm7pLunlXGU+lTXK2CZh12mmvc7md6GOOCw5dzuAPZ7fS+qC1n92Rv7FciAzc0C42yvKGnXT+P2nuQJ4Ii2vOx5XcmKLskHVnV6ImnamWteLHLg7IUwuDMtZ/AW8Ld4gOFbkdzSjoqObD/msi86uN1MlVgZJ3rr3btVl31jR95oduJ5t1aXFSUWej3TptNU6kgwiH1ijHwfOb6AGgpb+FccNNrXHHr0lzKco4RaI6IpLl+7ru4bJ9s9bfFrupLAeJop4JDl2cXOiTiYVBegGYpcrya9UDedITSlV9J8n30p6aaqNtu50Vk6V+tpylorovIDy6E0TR7ZcmlcsEdUQldCxj/FL/orz86X+LiMjP33lQTi70Ga+7ruWZLIstsL8tVUSWOuj5C2tl8e/bnIpwuLK9OQDYS1h2A5xc6JN/XLqHngAINgAABIdeB/Cb99iXA+yHKAMAIDgcZ7JekxPzwxgCAKEDAJpwblmsruPrD0yNyEC1QY8AJTSDqKOabyxl1/kTx/cEaXI5EAsAYAtEOD5isl6TU4vsPgqK/rGCzpogWsjXz5KKCMQGACA4ckIyH/hEltUnE8f3BO0ERevviA0AsA1ndxrVNbUCoJvosrpIGsICXGPlLpy+7F+RZEdaBAcAqCdmq9HG9R4cTgw+DtY4o3L16aKOqre9nzmdw8HUirs8+uqz0cofG8uY5/pmh97ZvLyqtINykjMmfDuHQve5HQCu9DOSRsEaR+7bFFnbxNELaxkMASwUuqr7Nn3eQ8FBlMM/MWKD8FBShjbTKksX2m+dX8aD2VrnT5TtHAqmVPwQGu1Excq2NSk6XOhXRDgA4aFDbIiIhHcf0rb0wUApB/52QiNOgPgqMBAb/gvJItvY9r7mRdIoK1b8Fh6tNnZKbIjcFeGIrveUNn8DZ4TQKFO72iI6EBwAOYWALvGhRbSG0cfZo40zG2O/Oja+L2KZKwD4ijeCgygH4sMakbGMZqUpYbMi0VJFbk6tp/EUkXVpbbvpnU7z8Gn3i9B1nzR1THKtijdgU0ubszwnTRJnuzZK2255bJGkP2a9X5I2yNJf8pSPHA5wXnykXVprciluWLmVx9F4b6NECc5QKUPyaN5EOpVLa21bSaBbbJi0v03tXGQd05TRVJ2ztE+a+nb6nldTKkQ5wMb2b0aB3Dy90VqbxYkcXVM8WTdGSjt4q5zPjrufKidg6loT9jdlCx3tbIu9i7btyiTUvO1PDgeAZoKrvYmiG8sFgKlcjm4RFRVl6TRQ5Q3/JnnLTzPQr/xengE2rXOJC/erujbvbphZnpPF0SZ5Tlxdsk5lJW1LE/ZOU19T/azb95OU0bspFfblANt466Xfpe6TJqZWkj5DRVmS5C3EOfekzkOVUyn6jTNPeUytnDBls05LqE08N8lzTPRFXfVVJTaS3oscDgBL0Sk60t5blehQlTBpatBN8nar+jCyPFEHFdEEEzZTUR8XlhoXuRGY7n6aBS8FB1EOsK0vZp2WGBvfF6kWHkUnpnYTHnkH5TQDadn2x8haXxe26VZZxjSrnIoSvzbYe+VPt2vI4QAwJHwnju8Jsjp7FbkUtq2A6TTX3vqbTlEC9jh314UObZ8cb6dUiHKAb/2vFe1IIxyyXFOE8LA50hAXFi9yOgXANaHpdYSDZbJgm9jIE+VYKSSwNAAUKTbS5qgwpQIIQUNiQ7XoMImJZbpplqHaGAlQtYOni8mQrj8H8ouNJHi/SoWpFdrFxjpxZkqyQc1WB2vi6POy2Zg+6w5ZhWAplsUiOmgX3fXIUhdXRAfiyB0nlvZaVRtRlcWh5112bFPEpgjbsg8HTtRJZ+1Le08c3xPY7NBVlC1JNCDtgVC279eR9746zlRRbTMdbZDHFkU5WFP2ttm2Se9VmhwOEkhpH5uFpQ15HbqFT9YzHJLcT/V21ra/gXY746L1e1xeTJZdJuOeo/OtfuVzkjwjrrx5ymXK3qb7WdzJuXHXpPm/1hLhsPWNVXe5st5fR7lcjBq0oh02l11n+YqIdrSeqfOQNlWRhG77chT1RqnCkehyRqqdX5wDUtUGWdrZdNvrPMSvqL7azrbtBGWe+oaqnZTtjk6Hw1BxT5Vl8mFaxybhYVoImRAepsSNyrMaWp8X+aao89l5p2Wy5mPYZAPV7WxDe9m2z0zW8uQ5V6ZFEEXxAiVJmJu8BT0knWIok/1NTbvYaNM8Uy425YmoDrmrCJPbSN6liN3eTm1tT13P0d1PXO6HeU5uTlPXroIDwHcRgmAGH5wAgO0gOAAALBYbiA5AcAAAgFHhgegAl/k/nzc5AKCHgZIAAAAASUVORK5CYII='), ch => ch.charCodeAt(0)));
+  page.drawImage(logo, { x:13.9, y:y(32.2), width:113.4, height:22.7 });
+  drawText('DANFSe v2.0', 225, 10.4, 11.5, true, 145, 'center');
+  drawText('Documento Auxiliar da NFS-e', 215, 22.1, 9.6, true, 165, 'center');
   drawText(`Município: ${tag(inf,'xLocEmi') || '-'} - ${issueUf}`, 445, 10.5, 7.1, false, 140);
   drawText(`Ambiente Gerador: ${tag(inf,'ambGer') || '-'}`, 445, 20.5, 5.5, false, 140);
   drawText(`Tipo de Ambiente: ${tag(infDps,'tpAmb') || '-'}`, 445, 27.2, 5.5, false, 140);
+  if (homolog) drawText('NFS-e SEM VALIDADE JURÍDICA', 210, 31, 7, true, 175, 'center');
   hLine(39.5);
 
   labelValue('CHAVE DE ACESSO DA NFS-e', key, 11, 44, 335, {valueSize:6.3});
   labelValue('NÚMERO DA NFS-e', tag(inf,'nNFSe') || doc.number || '-', 11, 64, 125);
   labelValue('COMPETÊNCIA DA NFS-e', dateOnly(comp), 156, 64, 125);
-  labelValue('DATA E HORA DA EMISSÃO DA NFS-e', `${dateOnly(issue)} ${timeOnly(issue)}`, 301, 64, 140);
+  labelValue('DATA E HORA DA EMISSÃO DA NFS-e', `${dateOnly(nfseIssue)} ${timeOnly(nfseIssue)}`, 301, 64, 140);
   labelValue('NÚMERO DA DPS', tag(infDps,'nDPS') || '-', 11, 84, 125);
   labelValue('SÉRIE DA DPS', tag(infDps,'serie') || doc.series || '-', 156, 84, 125);
   labelValue('DATA E HORA DA EMISSÃO DA DPS', `${dateOnly(issue)} ${timeOnly(issue)}`, 301, 84, 140);
@@ -559,12 +563,12 @@ async function buildNfse(doc: any, xml: string) {
   labelValue('FINALIDADE', tag(infDps,'finNFSe') || '-', 301, 104, 140);
 
   if (key) {
-    const qi = await qr(pdf, qrv);
-    page.drawImage(qi, { x:493, y:y(88), width:54, height:54 });
+    const qi = await qr(pdf, qrv, 4);
+    page.drawImage(qi, { x:493, y:y(91), width:mm(19), height:mm(19) });
   }
   drawWrapped(
     'A autenticidade desta NFS-e pode ser verificada pela leitura deste código QR ou pela consulta da chave de acesso no portal nacional da NFS-e',
-    445, 92, 135, 5.35, 6.1, 5
+    445, 92.5, 135, 6, 6.5, 4
   );
 
   band(126, 'PRESTADOR / FORNECEDOR', 11);
