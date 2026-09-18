@@ -2311,7 +2311,6 @@ function BillingSection({ usage, planLabel, preview, setNotice }: any) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(!preview);
   const [usageOpen, setUsageOpen] = useState(false);
-  const [receiptUploading, setReceiptUploading] = useState('');
 
   const loadBilling = useCallback(async () => {
     if (preview) {
@@ -2397,49 +2396,6 @@ function BillingSection({ usage, planLabel, preview, setNotice }: any) {
       `Olá, quero alterar meu plano do Extrator Fiscal WS de ${plan?.name || planLabel} para ${targetPlan.name}.`
     );
     window.open(`https://wa.me/5582999324884?text=${message}`, '_blank', 'noopener,noreferrer');
-  };
-
-  const uploadReceipt = async (invoice: any, file?: File | null) => {
-    if (!file || preview || receiptUploading) return;
-    if (!['application/pdf', 'image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
-      setNotice({ tone: 'warning', text: 'Envie o comprovante em PDF, PNG, JPG ou WEBP.' });
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setNotice({ tone: 'warning', text: 'O comprovante deve ter no máximo 5 MB.' });
-      return;
-    }
-
-    setReceiptUploading(String(invoice.id));
-    try {
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onerror = () => reject(new Error('Não foi possível ler o arquivo.'));
-        reader.onload = () => resolve(String(reader.result || '').split(',')[1] || '');
-        reader.readAsDataURL(file);
-      });
-      const { data: response, error } = await supabase.functions.invoke('extractor-billing-receipt', {
-        body: {
-          invoice_id: invoice.id,
-          filename: file.name,
-          content_type: file.type,
-          base64,
-        },
-      });
-      if (error) throw error;
-      if (response?.error) throw new Error(String(response.error));
-      setNotice({ tone: 'success', text: 'Comprovante armazenado com segurança nesta fatura.' });
-      await loadBilling();
-    } catch (error) {
-      setNotice({
-        tone: 'error',
-        text: error instanceof Error && !/Edge Function/i.test(error.message)
-          ? error.message
-          : 'Não foi possível armazenar o comprovante agora.',
-      });
-    } finally {
-      setReceiptUploading('');
-    }
   };
 
   return (
@@ -2565,7 +2521,7 @@ function BillingSection({ usage, planLabel, preview, setNotice }: any) {
             <div className="extractor-section-copy invoice-copy">
               <div><small>Histórico financeiro</small><h2>Faturas e comprovantes</h2></div>
               <span>
-                Comprovantes oficiais aparecem quando o provedor disponibiliza. Você também pode anexar um documento de apoio à fatura.
+                Comprovantes oficiais aparecem aqui somente quando o provedor de pagamento ou a WS disponibiliza um documento oficial.
               </span>
             </div>
             <div className="extractor-invoice-head">
@@ -2575,9 +2531,7 @@ function BillingSection({ usage, planLabel, preview, setNotice }: any) {
               const tone = invoiceTone(invoice.status || invoice.provider_status);
               const paymentUrl = String(invoice.checkout_url || '');
               const officialReceiptUrl = String(invoice.receipt_url || invoice.provider_receipt_url || '');
-              const manualReceiptUrl = String(invoice.manual_receipt_url || '');
               const fiscalNoteUrl = String(invoice.fiscal_note_url || '');
-              const uploading = receiptUploading === String(invoice.id);
               return (
                 <div className="extractor-invoice-row" key={invoice.id}>
                   <strong>#{invoice.invoice_number || String(invoice.id).slice(0, 8)}</strong>
@@ -2591,28 +2545,9 @@ function BillingSection({ usage, planLabel, preview, setNotice }: any) {
                   <span className="extractor-invoice-docs">
                     {tone !== 'paid' && paymentUrl && <a href={paymentUrl} target="_blank" rel="noopener noreferrer">Pagar agora</a>}
                     {officialReceiptUrl && <a href={officialReceiptUrl} target="_blank" rel="noopener noreferrer">Comprovante oficial</a>}
-                    {manualReceiptUrl && (
-                      <a href={manualReceiptUrl} target="_blank" rel="noopener noreferrer" title={invoice.manual_receipt_name || ''}>
-                        Comprovante enviado
-                      </a>
-                    )}
                     {fiscalNoteUrl && <a href={fiscalNoteUrl} target="_blank" rel="noopener noreferrer">Nota fiscal</a>}
-                    <label className={`extractor-receipt-upload ${uploading ? 'busy' : ''}`}>
-                      {uploading ? 'Enviando...' : manualReceiptUrl ? 'Substituir comprovante' : 'Anexar comprovante'}
-                      <input
-                        type="file"
-                        accept="application/pdf,image/png,image/jpeg,image/webp"
-                        disabled={preview || uploading}
-                        onChange={event => {
-                          const file = event.target.files?.[0] || null;
-                          event.currentTarget.value = '';
-                          void uploadReceipt(invoice, file);
-                        }}
-                      />
-                    </label>
-                    {manualReceiptUrl && <small className="extractor-receipt-helper">Documento de apoio enviado pelo usuário</small>}
-                    {tone === 'paid' && !officialReceiptUrl && !manualReceiptUrl && !fiscalNoteUrl && <small>Pagamento confirmado</small>}
-                    {tone !== 'paid' && !paymentUrl && !officialReceiptUrl && !manualReceiptUrl && <small>Sem ação pendente</small>}
+                    {tone === 'paid' && !officialReceiptUrl && !fiscalNoteUrl && <small>Pagamento confirmado · comprovante oficial não fornecido pelo provedor</small>}
+                    {tone !== 'paid' && !paymentUrl && !officialReceiptUrl && <small>Sem ação pendente</small>}
                   </span>
                 </div>
               );

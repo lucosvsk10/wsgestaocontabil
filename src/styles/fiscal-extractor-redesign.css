@@ -1065,20 +1065,6 @@
   font-size:9px;
   font-weight:700;
 }
-.extractor-receipt-upload{
-  display:inline-flex;
-  align-items:center;
-  min-height:26px;
-  padding:5px 7px;
-  border-radius:3px;
-  background:#151e2b;
-  color:#dbe4ec!important;
-  font-size:8px!important;
-  cursor:pointer;
-}
-.extractor-receipt-upload.busy{opacity:.55;pointer-events:none}
-.extractor-receipt-upload input{display:none}
-.extractor-receipt-helper{flex-basis:100%;font-size:7px!important;color:#65778a!important}
 
 /* Extractor download selection must remain readable and obvious in dark mode. */
 .extractor-download-center.extractor-dark-download .extractor-download-body button[data-active="true"]{

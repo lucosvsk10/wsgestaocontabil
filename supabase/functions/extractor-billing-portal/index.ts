@@ -167,7 +167,7 @@ Deno.serve(async req => {
 
     const invoices = await Promise.all(relevantRows.map(async (invoice: any, index: number) => {
       const metadata = invoice.metadata && typeof invoice.metadata === 'object' ? invoice.metadata : {};
-      let providerReceipt =
+      const providerReceipt =
         safeProviderUrl(metadata?.provider_receipt_url) ||
         safeProviderUrl(metadata?.mercado_pago?.receipt_url);
       let paymentMethod = invoice.payment_method || null;
@@ -179,7 +179,7 @@ Deno.serve(async req => {
         mpAccessToken &&
         invoice.provider === 'mercado_pago' &&
         invoice.provider_payment_id &&
-        (!providerReceipt || !paymentMethod)
+        !paymentMethod
       ) {
         try {
           const response = await fetch(
@@ -202,17 +202,11 @@ Deno.serve(async req => {
                   : paymentType === 'ticket'
                     ? 'boleto'
                     : null);
-            providerReceipt =
-              providerReceipt ||
-              safeProviderUrl(payment?.transaction_details?.external_resource_url) ||
-              safeProviderUrl(payment?.point_of_interaction?.transaction_data?.ticket_url);
-
-            if ((paymentMethod && !invoice.payment_method) || providerReceipt) {
+            // Mercado Pago's ticket/external_resource URLs are payment/instruction
+            // pages, not guaranteed post-payment receipts. Never label them as receipts.
+            if (paymentMethod && !invoice.payment_method) {
               await admin.from('saas_invoices').update({
-                ...(paymentMethod && !invoice.payment_method ? { payment_method: paymentMethod } : {}),
-                metadata: providerReceipt
-                  ? { ...metadata, provider_receipt_url: providerReceipt }
-                  : metadata,
+                payment_method: paymentMethod,
               }).eq('id', invoice.id);
             }
           }
@@ -221,10 +215,6 @@ Deno.serve(async req => {
         }
       }
 
-      const manualReceipt =
-        metadata?.manual_receipt && typeof metadata.manual_receipt === 'object'
-          ? metadata.manual_receipt as Record<string, unknown>
-          : null;
       return {
         ...invoice,
         payment_method: paymentMethod,
@@ -232,11 +222,6 @@ Deno.serve(async req => {
         receipt_url: await signedBillingFile(admin, organizationId, invoice.receipt_path),
         fiscal_note_url: await signedBillingFile(admin, organizationId, invoice.fiscal_note_path),
         provider_receipt_url: providerReceipt,
-        manual_receipt_url: manualReceipt?.path
-          ? await signedBillingFile(admin, organizationId, manualReceipt.path)
-          : '',
-        manual_receipt_name: manualReceipt?.filename ? String(manualReceipt.filename) : '',
-        manual_receipt_uploaded_at: manualReceipt?.uploaded_at ? String(manualReceipt.uploaded_at) : null,
         metadata: undefined,
       };
     }));
