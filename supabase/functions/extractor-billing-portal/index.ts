@@ -57,6 +57,7 @@ Deno.serve(async req => {
 
     const url = Deno.env.get('SUPABASE_URL')!;
     const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const mpAccessToken = Deno.env.get('MERCADO_PAGO_ACCESS_TOKEN') || '';
     const admin = createClient(url, service, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
@@ -164,13 +165,65 @@ Deno.serve(async req => {
       invoice.status !== 'paid' && (!subscription?.id || invoice.subscription_id === subscription.id)
     ) || null;
 
-    const invoices = await Promise.all(relevantRows.map(async (invoice: any) => {
+    const invoices = await Promise.all(relevantRows.map(async (invoice: any, index: number) => {
       const metadata = invoice.metadata && typeof invoice.metadata === 'object' ? invoice.metadata : {};
-      const providerReceipt =
+      let providerReceipt =
         safeProviderUrl(metadata?.provider_receipt_url) ||
         safeProviderUrl(metadata?.mercado_pago?.receipt_url);
+      let paymentMethod = invoice.payment_method || null;
+
+      // Older payments may predate receipt/method persistence. Enrich only a few
+      // recent Mercado Pago records and persist the official provider reference.
+      if (
+        index < 5 &&
+        mpAccessToken &&
+        invoice.provider === 'mercado_pago' &&
+        invoice.provider_payment_id &&
+        (!providerReceipt || !paymentMethod)
+      ) {
+        try {
+          const response = await fetch(
+            `https://api.mercadopago.com/v1/payments/${encodeURIComponent(String(invoice.provider_payment_id))}`,
+            {
+              headers: { Authorization: `Bearer ${mpAccessToken}`, Accept: 'application/json' },
+              signal: AbortSignal.timeout(6000),
+            }
+          );
+          if (response.ok) {
+            const payment = await response.json().catch(() => ({})) as any;
+            const paymentType = String(payment?.payment_type_id || '').toLowerCase();
+            const paymentMethodId = String(payment?.payment_method_id || '').toLowerCase();
+            paymentMethod =
+              paymentMethod ||
+              (paymentMethodId === 'pix'
+                ? 'pix'
+                : ['credit_card', 'debit_card', 'prepaid_card'].includes(paymentType)
+                  ? 'card'
+                  : paymentType === 'ticket'
+                    ? 'boleto'
+                    : null);
+            providerReceipt =
+              providerReceipt ||
+              safeProviderUrl(payment?.transaction_details?.external_resource_url) ||
+              safeProviderUrl(payment?.point_of_interaction?.transaction_data?.ticket_url);
+
+            if ((paymentMethod && !invoice.payment_method) || providerReceipt) {
+              await admin.from('saas_invoices').update({
+                ...(paymentMethod && !invoice.payment_method ? { payment_method: paymentMethod } : {}),
+                metadata: providerReceipt
+                  ? { ...metadata, provider_receipt_url: providerReceipt }
+                  : metadata,
+              }).eq('id', invoice.id);
+            }
+          }
+        } catch {
+          // Billing remains available even when the provider is temporarily unavailable.
+        }
+      }
+
       return {
         ...invoice,
+        payment_method: paymentMethod,
         checkout_url: safeProviderUrl(invoice.checkout_url),
         receipt_url: await signedBillingFile(admin, organizationId, invoice.receipt_path),
         fiscal_note_url: await signedBillingFile(admin, organizationId, invoice.fiscal_note_path),
