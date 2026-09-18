@@ -9,6 +9,8 @@ import { useAuth } from './contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminEnvironments from './pages/AdminEnvironments';
+import AdminAccountingOverview from './pages/AdminAccountingOverview';
+import AdminFiscalOverview from './pages/AdminFiscalOverview';
 import AdminPersonalEnvironment from './pages/AdminPersonalEnvironment';
 import ClientDashboard from './pages/ClientDashboard';
 import PollPage from './pages/PollPage';
@@ -187,19 +189,28 @@ const AppRoutes = () => (
         </PrivateRoute>
       }
     />
-    <Route
-      path="/admin/ambientes/fiscal"
-      element={
-        <PrivateRoute requiredRole="admin">
-          <AdminEnvironments fiscalModal />
-        </PrivateRoute>
-      }
-    />
+    <Route path="/admin/ambientes/fiscal" element={<Navigate to="/admin/fiscal" replace />} />
     <Route
       path="/admin/administrativo"
       element={
         <PrivateRoute requiredRole="admin">
           <AdminDashboard activeTab="dashboard" />
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/admin/contabil"
+      element={
+        <PrivateRoute requiredRole="admin">
+          <AdminAccountingOverview />
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/admin/fiscal"
+      element={
+        <PrivateRoute requiredRole="admin">
+          <AdminFiscalOverview />
         </PrivateRoute>
       }
     />
@@ -333,10 +344,10 @@ const AppRoutes = () => (
         </PrivateRoute>
       }
     />
-    <Route path="/admin/feature" element={<Navigate to="/admin/ambientes/fiscal" replace />} />
-    <Route path="/admin/fiscal/emissao" element={<Navigate to="/admin/ambientes/fiscal" replace />} />
-    <Route path="/admin/fiscal/cte" element={<Navigate to="/admin/ambientes/fiscal" replace />} />
-    <Route path="/admin/fiscal/laboratorio" element={<Navigate to="/admin/ambientes/fiscal" replace />} />
+    <Route path="/admin/feature" element={<Navigate to="/admin/fiscal" replace />} />
+    <Route path="/admin/fiscal/emissao" element={<Navigate to="/admin/fiscal" replace />} />
+    <Route path="/admin/fiscal/cte" element={<Navigate to="/admin/fiscal" replace />} />
+    <Route path="/admin/fiscal/laboratorio" element={<Navigate to="/admin/fiscal" replace />} />
     <Route path="/admin-dashboard" element={<Navigate to="/admin/ambientes" replace />} />
     <Route path="/admin/tax-simulations" element={<Navigate to="/admin/simulations" replace />} />
     <Route
@@ -385,7 +396,7 @@ const AppRoutes = () => (
     />
     <Route
       path="/admin/lancamentos/feature"
-      element={<Navigate to="/admin/ambientes/fiscal" replace />}
+      element={<Navigate to="/admin/fiscal" replace />}
     />
     <Route
       path="/extrator/*"

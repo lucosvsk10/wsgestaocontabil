@@ -125,8 +125,7 @@ const emissionTypeLabel = (emission: any) =>
 
 export default function SaasApp() {
   const { user, isAdmin } = useAuth();
-  const internalAdminEntry =
-    isAdmin && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('source') === 'admin-fiscal';
+  const internalAdminEntry = isAdmin;
   const [active, setActive] = useState('Início');
   const [organization, setOrganization] = useState<any>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
@@ -161,6 +160,7 @@ export default function SaasApp() {
       setProfile(null);
       setCertificateConfigured(false);
       setLogoUrl(null);
+
       const { data } = await (supabase as any)
         .from('organization_members')
         .select('organization_id, organizations(id,name,slug)')
@@ -174,7 +174,23 @@ export default function SaasApp() {
       const organizationIds = membershipChoices.map((value: any) => String(value.id));
 
       let choices = membershipChoices;
-      if (organizationIds.length) {
+
+      if (internalAdminEntry) {
+        const { data: internalWorkspace, error: internalError } = await (supabase as any)
+          .from('admin_product_workspaces')
+          .select('organization_id,status')
+          .eq('product_code', 'issuer')
+          .eq('status', 'active')
+          .maybeSingle();
+
+        if (!internalError && internalWorkspace?.organization_id) {
+          choices = membershipChoices.filter(
+            (value: any) => String(value.id) === String(internalWorkspace.organization_id)
+          );
+        } else {
+          choices = [];
+        }
+      } else if (organizationIds.length) {
         const { data: subscriptions, error: subscriptionsError } = await (supabase as any)
           .from('saas_subscriptions')
           .select('organization_id,status,trial_ends_at,access_expires_at,saas_plans(product_code)')
@@ -205,16 +221,29 @@ export default function SaasApp() {
         (choices.length === 1 ? choices[0] : null);
       setOrganization(org);
       if (!org?.id) {
-        setPlanLabel('Plano fiscal');
+        setPlanLabel(internalAdminEntry ? 'Uso interno WS' : 'Plano fiscal');
         return;
       }
+
       localStorage.setItem('ws_saas_selected_organization', org.id);
       const testTransport = org?.id === TEST_TRANSPORT_ORG_ID;
       setOrganization({ ...org, name: testTransport ? TEST_TRANSPORT_ORG_NAME : org.name });
       setSetupDismissed(localStorage.getItem(`ws_fiscal_setup_dismissed_${org.id}`) === '1');
+
       await supabase.functions
         .invoke('saas-sales-history-sync', { body: { organization_id: org.id, mode: 'auto' } })
         .catch(() => null);
+
+      const subscriptionPromise = internalAdminEntry
+        ? Promise.resolve({ data: null })
+        : (supabase as any)
+            .from('saas_subscriptions')
+            .select('status,saas_plans(name)')
+            .eq('organization_id', org.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
       const [{ data: config }, { data: e }, { data: s }] = await Promise.all([
         supabase.functions.invoke('saas-fiscal-config', {
           body: { action: 'get', organization_id: org.id },
@@ -225,14 +254,9 @@ export default function SaasApp() {
           .eq('organization_id', org.id)
           .order('created_at', { ascending: false })
           .limit(800),
-        (supabase as any)
-          .from('saas_subscriptions')
-          .select('status,saas_plans(name)')
-          .eq('organization_id', org.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle(),
+        subscriptionPromise,
       ]);
+
       if (requestId !== organizationRequest.current) return;
       setEmissions(e || []);
       const p = config?.profile || null;
@@ -241,13 +265,16 @@ export default function SaasApp() {
       if (testTransport) setOrganization((x: any) => ({ ...x, name: TEST_TRANSPORT_ORG_NAME }));
       else if (p?.trade_name || p?.legal_name)
         setOrganization((x: any) => ({ ...x, name: p.trade_name || p.legal_name }));
+
       if (p?.logo_path) {
         const { data: signed } = await supabase.storage
           .from('saas-private')
           .createSignedUrl(p.logo_path, 3600);
         setLogoUrl(signed?.signedUrl || null);
       }
-      if (s?.saas_plans?.name) setPlanLabel(s.saas_plans.name);
+
+      if (internalAdminEntry) setPlanLabel('Uso interno WS');
+      else if (s?.saas_plans?.name) setPlanLabel(s.saas_plans.name);
     } finally {
       if (requestId === organizationRequest.current) setOrganizationLoading(false);
     }
@@ -255,7 +282,7 @@ export default function SaasApp() {
 
   useEffect(() => {
     void loadOrg();
-  }, [user?.id]);
+  }, [user?.id, internalAdminEntry]);
 
   const chooseNav = (item: string) => {
     setMobileMenuOpen(false);
@@ -423,8 +450,8 @@ export default function SaasApp() {
           <div className="saas-page-context flex-1">
             <p className="text-[10px] font-semibold uppercase tracking-[.12em]">
               {internalAdminEntry ? (
-                <a href="/admin/ambientes" className="transition-opacity hover:opacity-70">
-                  ← Ambientes WS
+                <a href="/admin/fiscal" className="transition-opacity hover:opacity-70">
+                  ← Centro Fiscal
                 </a>
               ) : (
                 'WS Gestão Contábil'
@@ -461,7 +488,7 @@ export default function SaasApp() {
             <AccountDrawer
               darkTrigger
               avatarUrl={logoUrl}
-              accessLabel="Assinante do emissor fiscal"
+              accessLabel={internalAdminEntry ? 'Administrador interno' : 'Assinante do emissor fiscal'}
               planLabel={planLabel}
               notifications={accountNotifications}
               usageRows={[

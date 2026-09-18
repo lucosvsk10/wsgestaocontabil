@@ -17,6 +17,7 @@ type Props = {
   planLabel: string;
   usage: Usage;
   companies: number;
+  internal?: boolean;
   onSaved?: () => void;
   onOpenSettings: () => void;
 };
@@ -42,6 +43,7 @@ export default function ExtractorAccountDrawer({
   planLabel,
   usage,
   companies,
+  internal = false,
   onOpenSettings,
   onSaved,
 }: Props) {
@@ -49,6 +51,7 @@ export default function ExtractorAccountDrawer({
   const { handleLogout } = useNavigation();
   const [open, setOpen] = useState(false),
     [section, setSection] = useState<Section>('Configurações gerais');
+  const visibleSections = internal ? sections.filter(item => item !== 'Meu plano') : sections;
   const email = user?.email || 'usuario@email.com',
     name =
       accountName ||
@@ -102,7 +105,7 @@ export default function ExtractorAccountDrawer({
                     <small>Minha conta</small>
                     <h2>{name}</h2>
                     <p>{email}</p>
-                    <span>Assinante do Extrator Fiscal</span>
+                    <span>{internal ? 'Administrador interno · Extrator Fiscal' : 'Assinante do Extrator Fiscal'}</span>
                   </div>
                 </div>
                 <button onClick={() => setOpen(false)} aria-label="Fechar perfil">
@@ -112,7 +115,7 @@ export default function ExtractorAccountDrawer({
               <div className="extractor-account-body">
                 <nav>
                   <span>Conta</span>
-                  {sections.map(item => (
+                  {visibleSections.map(item => (
                     <button
                       key={item}
                       className={section === item ? 'active' : ''}
@@ -144,7 +147,7 @@ export default function ExtractorAccountDrawer({
                     <div className="extractor-account-grid">
                       <ExtractorAccountName name={name} onSaved={onSaved} />
                       <Info label="E-mail" value={email} />
-                      <Info label="Tipo de acesso" value="Extrator Fiscal" />
+                      <Info label="Tipo de acesso" value={internal ? 'Uso interno WS' : 'Extrator Fiscal'} />
                       <Info label="Status" value="Ativo" />
                       <button className="extractor-account-action" onClick={openSettings}>
                         Abrir configurações do Extrator

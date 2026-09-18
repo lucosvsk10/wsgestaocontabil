@@ -12,6 +12,9 @@ import {
   Images,
   FileStack,
   Building2,
+  ReceiptText,
+  Send,
+  UsersRound,
   type LucideIcon,
 } from 'lucide-react';
 import { resolveAdminEnvironment, type AdminEnvironmentId } from '@/config/adminEnvironments';
@@ -36,60 +39,33 @@ export const useAdminSidebarNavigation = () => {
 
   const administrativeSections: SidebarSection[] = [
     {
-      title: 'Ambiente Administrativo',
+      title: 'Administrativo',
       items: [
-        {
-          icon: LayoutDashboard,
-          label: 'Dashboard',
-          active: active('/admin/administrativo'),
-          to: '/admin/administrativo',
-        },
+        { icon: LayoutDashboard, label: 'Visão geral', active: active('/admin/administrativo'), to: '/admin/administrativo' },
         { icon: Calendar, label: 'Agenda', active: active('/admin/agenda'), to: '/admin/agenda' },
-        {
-          icon: Calculator,
-          label: 'Histórico de simulações',
-          active: active('/admin/simulations'),
-          to: '/admin/simulations',
-        },
+        { icon: Calculator, label: 'Histórico de simulações', active: active('/admin/simulations'), to: '/admin/simulations' },
         {
           icon: Building2,
           label: 'Clientes',
-          active:
-            active('/admin/clientes') ||
-            active('/admin/assinantes') ||
-            active('/admin/fiscal/empresas'),
+          active: active('/admin/clientes') || active('/admin/assinantes') || active('/admin/fiscal/empresas'),
           to: '/admin/clientes',
         },
         { icon: HardDrive, label: 'Armazenamento', active: active('/admin/storage'), to: '/admin/storage' },
-        {
-          icon: Megaphone,
-          label: 'Anúncios',
-          active: active('/admin/announcements'),
-          to: '/admin/announcements',
-        },
+        { icon: Megaphone, label: 'Anúncios', active: active('/admin/announcements'), to: '/admin/announcements' },
         { icon: PieChart, label: 'Enquetes', active: active('/admin/polls'), to: '/admin/polls' },
         { icon: Images, label: 'Carrossel', active: active('/admin/carousel'), to: '/admin/carousel' },
         { icon: Wrench, label: 'Ferramentas', active: active('/admin/tools'), to: '/admin/tools' },
-        {
-          icon: Settings,
-          label: 'Configurações',
-          active: active('/admin/settings'),
-          to: '/admin/settings',
-        },
+        { icon: Settings, label: 'Configurações', active: active('/admin/settings'), to: '/admin/settings' },
       ],
     },
   ];
 
   const accountingSections: SidebarSection[] = [
     {
-      title: 'Ambiente Contábil',
+      title: 'Contábil',
       items: [
-        {
-          icon: FileStack,
-          label: 'Lançamentos',
-          active: active('/admin/lancamentos'),
-          to: '/admin/lancamentos',
-        },
+        { icon: LayoutDashboard, label: 'Visão geral', active: active('/admin/contabil'), to: '/admin/contabil' },
+        { icon: FileStack, label: 'Lançamentos', active: active('/admin/lancamentos'), to: '/admin/lancamentos' },
         {
           icon: FileText,
           label: 'Documentos do cliente',
@@ -100,12 +76,34 @@ export const useAdminSidebarNavigation = () => {
     },
   ];
 
+  const fiscalSections: SidebarSection[] = [
+    {
+      title: 'Fiscal',
+      items: [
+        { icon: LayoutDashboard, label: 'Visão geral', active: active('/admin/fiscal'), to: '/admin/fiscal' },
+        { icon: Send, label: 'Emissor Fiscal', active: false, to: '/app?source=admin-fiscal' },
+        { icon: ReceiptText, label: 'Extrator Fiscal', active: false, to: '/extrator?source=admin-fiscal' },
+      ],
+    },
+  ];
+
+  const personalSections: SidebarSection[] = [
+    {
+      title: 'Pessoal',
+      items: [
+        { icon: UsersRound, label: 'Visão geral', active: active('/admin/pessoal'), to: '/admin/pessoal' },
+      ],
+    },
+  ];
+
   const sidebarSections =
     environment === 'contabil'
       ? accountingSections
-      : environment === 'administrativo'
-        ? administrativeSections
-        : [];
+      : environment === 'fiscal'
+        ? fiscalSections
+        : environment === 'pessoal'
+          ? personalSections
+          : administrativeSections;
 
   return {
     sidebarSections,
