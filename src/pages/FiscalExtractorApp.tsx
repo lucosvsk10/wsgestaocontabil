@@ -586,7 +586,7 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
     try {
       let current = document;
       if (!(current.fullXml && current.xml)) {
-        const { data, error } = await supabase.functions.invoke('fiscal-document-recover', {
+        const { data, error } = await supabase.functions.invoke('extractor-document-preview', {
           body: { company_id: current.companyId, access_key: current.accessKey, nsu: current.nsu },
         });
         if (error) throw error;
@@ -632,7 +632,7 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
           ? 'Manifestação registrada e XML integral recuperado.'
           : String(data?.result?.message || 'Manifestação registrada. A recuperação do XML continuará automaticamente.'),
       });
-      const { data: refresh } = await supabase.functions.invoke('fiscal-document-recover', {
+      const { data: refresh } = await supabase.functions.invoke('extractor-document-preview', {
         body: { company_id: document.companyId, access_key: document.accessKey, nsu: document.nsu },
       });
       if (refresh?.ready && refresh.document) setPreviewDoc(rowToDoc(refresh.document));
@@ -822,7 +822,7 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
         onDownloadXml={downloadPreviewXml}
         onManifestation={manifestPreview}
         onRetry={async document => {
-          const { data } = await supabase.functions.invoke('fiscal-document-recover', {
+          const { data } = await supabase.functions.invoke('extractor-document-preview', {
             body: { company_id: document.companyId, access_key: document.accessKey, nsu: document.nsu },
           });
           if (data?.ready && data.document) setPreviewDoc(rowToDoc(data.document));
@@ -1659,7 +1659,7 @@ function Documents({
     if (busy) return;
     setBusy(`doc:${document.accessKey || document.nsu}`);
     try {
-      const { data, error } = await supabase.functions.invoke('fiscal-document-recover', {
+      const { data, error } = await supabase.functions.invoke('extractor-document-preview', {
         body: { company_id: company.id, access_key: document.accessKey, nsu: document.nsu },
       });
       if (error) {
