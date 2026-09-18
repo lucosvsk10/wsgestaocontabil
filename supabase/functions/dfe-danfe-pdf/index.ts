@@ -707,7 +707,7 @@ async function buildNfe(doc: any, xml: string) {
   const text = (s: string, x: number, yy: number, size = 5.5, b = false, max = 999) => {
     let v = clean(s) || '-',
       f = b ? bold : reg;
-    while (f.widthOfTextAtSize(v, size) > max && v.length > 2) v = v.slice(0, -2) + '…';
+    while (f.widthOfTextAtSize(v, size) > max && v.length > 4) v = v.slice(0, -4) + '...';
     page.drawText(v, { x, y: yy, size, font: f, color: black });
   };
   const rect = (x: number, yy: number, w: number, h: number, fill?: any, th = 0.65) =>
@@ -738,7 +738,8 @@ async function buildNfe(doc: any, xml: string) {
     endE = tag(emit, 'enderEmit'),
     endD = tag(dest, 'enderDest'),
     items = sections(xml, 'det'),
-    access = doc.accessKey || tag(prot, 'chNFe');
+    access = doc.accessKey || tag(prot, 'chNFe'),
+    homolog = tag(ide, 'tpAmb') === '2';
   rect(M, y - 42, C, 42);
   text(
     `RECEBEMOS DE ${tag(emit, 'xNome') || doc.issuerName || '-'} OS PRODUTOS E/OU SERVIÇOS CONSTANTES DA NOTA FISCAL ELETRÔNICA INDICADA ABAIXO. EMISSÃO: ${dateOnly(doc.issueDate || tag(ide, 'dhEmi'))} VALOR TOTAL: ${money(tag(tot, 'vNF') || doc.value)}`,
@@ -750,7 +751,7 @@ async function buildNfe(doc: any, xml: string) {
   );
   text('DATA DE RECEBIMENTO', M + 3, y - 27, 4.2, true);
   text('ASSINATURA DO RECEBEDOR', M + 120, y - 27, 4.2, true);
-  text('NFe', W - 75, y - 14, 14, true);
+  text('NF-e', W - 75, y - 14, 14, true);
   text(
     `Nº. ${String(doc.number || tag(ide, 'nNF') || '-').padStart(9, '0')}`,
     W - 92,
@@ -769,6 +770,7 @@ async function buildNfe(doc: any, xml: string) {
   rect(M, y - 92, C, 92);
   rect(M, y - 92, 235, 92);
   text('IDENTIFICAÇÃO DO EMITENTE', M + 70, y - 7, 4.6, true);
+  if (homolog) text('NF-E EMITIDA EM AMBIENTE DE HOMOLOGAÇÃO - SEM VALOR FISCAL', M + 12, y - 18, 5.0, true, 210);
   text(tag(emit, 'xNome') || doc.issuerName || '-', M + 10, y - 34, 10, true, 215);
   text(`${tag(endE, 'xLgr') || '-'}, Nº${tag(endE, 'nro') || '-'}`, M + 45, y - 46, 5.5, true, 170);
   text(`${tag(endE, 'xBairro') || '-'} - ${tag(endE, 'CEP') || '-'}`, M + 65, y - 57, 5.5, true);
@@ -926,8 +928,32 @@ async function buildNfe(doc: any, xml: string) {
     field(M + cw * i, y, cw, 24, vals[i + 8][0], num(vals[i + 8][1]), i === 6);
   field(M + cw * 7, y, cw, 24, 'VALOR TOTAL NF-e', num(tag(tot, 'vNF') || doc.value), true);
   y -= 26;
+  bar('TRANSPORTADOR / VOLUMES TRANSPORTADOS');
+  const transp = tag(xml, 'transp');
+  const transporta = tag(transp, 'transporta');
+  const vol = tag(transp, 'vol');
+  field(M, y, C * 0.40, 23, 'RAZÃO SOCIAL', tag(transporta, 'xNome') || '-');
+  field(M + C * 0.40, y, C * 0.12, 23, 'FRETE POR CONTA', tag(transp, 'modFrete') || '-');
+  field(M + C * 0.52, y, C * 0.14, 23, 'CÓDIGO ANTT', tag(transporta, 'RNTC') || '-');
+  field(M + C * 0.66, y, C * 0.16, 23, 'PLACA DO VEÍCULO', tag(tag(transp, 'veicTransp'), 'placa') || '-');
+  field(M + C * 0.82, y, C * 0.18, 23, 'CNPJ/CPF', cpfCnpj(tag(transporta, 'CNPJ') || tag(transporta, 'CPF')));
+  y -= 24;
+  field(M, y, C * 0.40, 22, 'ENDEREÇO', tag(transporta, 'xEnder') || '-');
+  field(M + C * 0.40, y, C * 0.28, 22, 'MUNICÍPIO', tag(transporta, 'xMun') || '-');
+  field(M + C * 0.68, y, C * 0.08, 22, 'UF', tag(transporta, 'UF') || '-');
+  field(M + C * 0.76, y, C * 0.24, 22, 'INSCRIÇÃO ESTADUAL', tag(transporta, 'IE') || '-');
+  y -= 23;
+  field(M, y, C * 0.24, 22, 'QUANTIDADE', tag(vol, 'qVol') || '-');
+  field(M + C * 0.24, y, C * 0.20, 22, 'ESPÉCIE', tag(vol, 'esp') || '-');
+  field(M + C * 0.44, y, C * 0.20, 22, 'MARCA', tag(vol, 'marca') || '-');
+  field(M + C * 0.64, y, C * 0.18, 22, 'NUMERAÇÃO', tag(vol, 'nVol') || '-');
+  field(M + C * 0.82, y, C * 0.09, 22, 'PESO BRUTO', num(tag(vol, 'pesoB')));
+  field(M + C * 0.91, y, C * 0.09, 22, 'PESO LÍQUIDO', num(tag(vol, 'pesoL')));
+  y -= 24;
   bar('DADOS DOS PRODUTOS / SERVIÇOS');
-  const cols = [55, 145, 43, 28, 28, 27, 35, 38, 38, 34, 34, 30, 30, 30],
+  const rawCols = [50, 145, 42, 26, 27, 25, 34, 39, 39, 33, 33, 30, 30, 32],
+    rawTotal = rawCols.reduce((sum, value) => sum + value, 0),
+    cols = rawCols.map(value => value * C / rawTotal),
     heads = [
       'CÓDIGO PRODUTO',
       'DESCRIÇÃO DO PRODUTO / SERVIÇO',
@@ -1001,18 +1027,18 @@ async function buildNfe(doc: any, xml: string) {
     y -= 21;
   }
 
-  const transp = tag(xml, 'transp');
-  const transporta = tag(transp, 'transporta');
-  const vol = tag(transp, 'vol');
-  if (y < 92) addContinuationPage();
-  bar('TRANSPORTADOR / VOLUMES TRANSPORTADOS');
-  field(M, y, C * 0.42, 25, 'RAZÃO SOCIAL', tag(transporta, 'xNome') || '-');
-  field(M + C * 0.42, y, C * 0.12, 25, 'FRETE POR CONTA', tag(transp, 'modFrete') || '-');
-  field(M + C * 0.54, y, C * 0.24, 25, 'CNPJ/CPF', cpfCnpj(tag(transporta, 'CNPJ') || tag(transporta, 'CPF')));
-  field(M + C * 0.78, y, C * 0.22, 25, 'QUANTIDADE / ESPÉCIE', [tag(vol, 'qVol'), tag(vol, 'esp')].filter(Boolean).join(' / ') || '-');
-  y -= 27;
+  if (y < 82) addContinuationPage();
+  if (y > 62) {
+    const blankHeight = y - 62;
+    let gx = M;
+    for (let i = 0; i < cols.length; i++) {
+      rect(gx, 62, cols[i], blankHeight, undefined, 0.35);
+      gx += cols[i];
+    }
+    y = 60;
+  }
 
-  if (y > 60) {
+  if (y >= 55) {
     bar('DADOS ADICIONAIS');
     field(
       M,
@@ -1030,6 +1056,16 @@ async function buildNfe(doc: any, xml: string) {
       'RESERVADO AO FISCO',
       tag(tag(xml, 'infAdic'), 'infAdFisco') || '-'
     );
+  }
+  if (homolog) {
+    for (const watermarkPage of pdf.getPages()) {
+      watermarkPage.drawText('SEM VALOR FISCAL', {
+        x: 55, y: 265, size: 44, font: bold, color: rgb(0.32,0.32,0.32), opacity: 0.88,
+      });
+      watermarkPage.drawText('AMBIENTE DE HOMOLOGAÇÃO', {
+        x: 55, y: 232, size: 27, font: bold, color: rgb(0.32,0.32,0.32), opacity: 0.88,
+      });
+    }
   }
   const status = doc.statusText || tag(prot, 'xMotivo') || '';
   if (/cancel/i.test(status) || ['101', '151', '155'].includes(String(doc.statusCode || ''))) {
