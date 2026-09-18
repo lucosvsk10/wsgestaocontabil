@@ -112,6 +112,7 @@ function Field(props: {
   disabled?: boolean;
   required?: boolean;
   inputMode?: 'text' | 'numeric' | 'email' | 'tel';
+  type?: string;
 }) {
   return (
     <label className="block space-y-1.5">
@@ -119,6 +120,7 @@ function Field(props: {
         {props.label}{props.required ? ' *' : ''}
       </span>
       <Input
+        type={props.type || 'text'}
         value={props.value}
         disabled={props.disabled}
         inputMode={props.inputMode}
@@ -359,7 +361,7 @@ export default function AdminClientOnboardingModal({
                     setMessage('');
                   }} className="block h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-xs file:mr-3 file:border-0 file:bg-transparent file:text-xs file:font-semibold" />
                 </label>
-                <Field label="Senha do A1" value={certificatePassword} onChange={value => { setCertificatePassword(value); setLookupComplete(false); }} placeholder="Senha do certificado" required />
+                <Field label="Senha do A1" type="password" value={certificatePassword} onChange={value => { setCertificatePassword(value); setLookupComplete(false); }} placeholder="Senha do certificado" required />
                 <Button onClick={() => void inspectCertificate()} disabled={busyLookup || !certificate || !certificatePassword} className="h-11">
                   {busyLookup ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileKey2 className="mr-2 h-4 w-4" />}
                   {busyLookup ? 'Validando...' : 'Validar e preencher'}
