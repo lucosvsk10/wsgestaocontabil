@@ -966,7 +966,6 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
 function PageHeading({
   title,
   description,
-  icon,
   actions,
 }: {
   title: string;
