@@ -197,7 +197,7 @@ export default function AdminCompanies() {
             await refreshCompanies();
             await loadFiscalStatus();
           }}
-        />}
+        />
       </AdminPage>
     </AdminLayout>
   );
