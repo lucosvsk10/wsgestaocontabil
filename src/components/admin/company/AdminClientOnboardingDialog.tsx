@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   BadgeCheck,
   Building2,
@@ -9,7 +9,6 @@ import {
   PenLine,
   Search,
   UserRound,
-  X,
 } from 'lucide-react';
 import { SmartCertificateInput } from '@/components/admin/fiscal/CertificateImportTools';
 import { Button } from '@/components/ui/button';
