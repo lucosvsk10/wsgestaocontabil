@@ -13,13 +13,35 @@ interface AdminHeaderProps {
 const AdminHeader = (_props: AdminHeaderProps) => {
   const { environment } = useAdminSidebarNavigation();
   const currentEnvironment = getAdminEnvironment(environment);
+  const EnvironmentIcon = currentEnvironment.icon;
 
   return (
-    <header className="relative flex h-20 shrink-0 items-center border-b border-border/60 bg-background px-4 text-foreground transition-colors sm:px-5 lg:px-6">
-      <div className="hidden flex-1 lg:block" />
+    <header className="relative flex h-20 shrink-0 items-center border-b border-border/60 bg-background/90 px-4 text-foreground backdrop-blur-sm transition-colors sm:px-5 lg:px-6">
+      <div className="hidden flex-1 items-center gap-3 lg:flex">
+        <span
+          className="grid h-9 w-9 place-items-center rounded-lg"
+          style={{ background: currentEnvironment.soft }}
+        >
+          <EnvironmentIcon
+            className="h-4.5 w-4.5"
+            style={{ color: currentEnvironment.accent }}
+            strokeWidth={1.8}
+          />
+        </span>
+        <span className="min-w-0">
+          <small className="block text-[9px] font-semibold uppercase tracking-[.14em] text-muted-foreground">
+            Painel WS
+          </small>
+          <strong className="block truncate text-sm font-semibold">
+            {currentEnvironment.shortLabel}
+          </strong>
+        </span>
+      </div>
+
       <div className="min-w-0 flex-1 lg:flex lg:justify-center">
         <AdminCompanySelector />
       </div>
+
       <div className="flex flex-1 shrink-0 items-center justify-end gap-2">
         <ThemeToggle />
         <AccountDrawer
