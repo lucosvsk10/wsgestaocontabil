@@ -243,8 +243,8 @@ const formatDate = (v?: string | null, withTime = false) => {
 const syncLabel = (v?: string | null) => {
   const x = String(v || '').toLowerCase();
   if (x === 'queued') return 'Na fila';
-  if (x === 'waiting_state_credentials') return 'Vendas aguardando atualização';
-  if (x === 'waiting_sales_reference') return 'Aguardando primeira referência de venda';
+  if (x === 'waiting_state_credentials') return 'Ativa';
+  if (x === 'waiting_sales_reference') return 'Ativa';
   if (x === 'waiting_certificate') return 'Certificado pendente';
   if (['running', 'reconciling', 'bootstrap_window', 'retrying'].includes(x))
     return 'Sincronizando';
@@ -1195,7 +1195,7 @@ function Overview({ company, totals, models, daily, onGo }: any) {
   const needsAttention =
     company.pendingXml > 0 ||
     (company.certificateDays != null && company.certificateDays <= 30) ||
-    /retry|error|fail|waiting/i.test(`${company.purchaseStatus} ${company.salesStatus}`);
+    /retry|error|fail|waiting_certificate/i.test(`${company.purchaseStatus} ${company.salesStatus}`);
 
   return (
     <div className="extractor-page">
