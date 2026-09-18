@@ -905,3 +905,219 @@
   font-weight:600;
 }
 .extractor-usage-enterprise-simple>button:hover{background:#172335;color:#fff}
+
+
+/* Final billing organization */
+.extractor-billing-grid-compact{
+  grid-template-columns:.78fr 1.22fr;
+  align-items:stretch;
+}
+.extractor-billing-usage-compact{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  min-height:104px;
+  width:100%;
+  padding:18px 20px;
+  border:0;
+  border-radius:5px;
+  background:var(--ex-surface);
+  color:#e8eef5;
+  text-align:left;
+}
+.extractor-billing-usage-compact:hover{background:#111a28}
+.extractor-billing-usage-compact span{min-width:0}
+.extractor-billing-usage-compact small,
+.extractor-billing-usage-compact strong,
+.extractor-billing-usage-compact em{display:block}
+.extractor-billing-usage-compact small{
+  color:#718397;
+  font-size:8px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+.extractor-billing-usage-compact strong{
+  margin-top:5px;
+  color:#edf3f8;
+  font-size:15px;
+  font-weight:600;
+}
+.extractor-billing-usage-compact em{
+  margin-top:4px;
+  color:#8798aa;
+  font-size:9px;
+  font-style:normal;
+}
+.extractor-billing-usage-compact>b{
+  flex:0 0 auto;
+  padding:7px 9px;
+  border-radius:4px;
+  background:#151e2b;
+  color:#cdd7e0;
+  font-size:8px;
+  font-weight:600;
+}
+.extractor-plan-usage-modal{max-width:720px!important}
+.extractor-plan-usage-modal-list{display:grid;gap:8px;max-height:55vh;overflow:auto;margin-top:10px}
+.extractor-plan-usage-modal-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:6px 12px;
+  padding:12px 13px;
+  border-radius:5px;
+  background:#101725;
+}
+.extractor-plan-usage-modal-row>div:first-child strong,
+.extractor-plan-usage-modal-row>div:first-child span{display:block}
+.extractor-plan-usage-modal-row>div:first-child strong{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:#e6edf3;
+  font-size:10px;
+}
+.extractor-plan-usage-modal-row>div:first-child span,
+.extractor-plan-usage-modal-row>small{
+  color:#718397;
+  font-size:8px;
+}
+.extractor-plan-usage-modal-row>b{
+  align-self:center;
+  color:#aebbc8;
+  font-size:10px;
+}
+.extractor-plan-usage-modal-row>.extractor-billing-progress{grid-column:1/-1;margin:1px 0}
+.extractor-plan-usage-modal-row>small{grid-column:1/-1}
+.extractor-plan-usage-modal-summary{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:0 18px;
+  margin-top:10px;
+}
+.extractor-plan-usage-modal-summary>div:not(.extractor-billing-progress){
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  padding:10px 0;
+  border-bottom:1px solid rgba(255,255,255,.05);
+}
+.extractor-plan-usage-modal-summary span{color:#718397;font-size:9px}
+.extractor-plan-usage-modal-summary b{color:#dce5ed;font-size:9px}
+.extractor-plan-usage-modal-summary>.extractor-billing-progress{grid-column:1/-1}
+.extractor-plan-usage-modal-cycle{margin-top:10px;color:#718397;font-size:8px}
+
+.extractor-upgrade-section{margin:8px 0}
+.extractor-upgrade-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,280px));
+  gap:8px;
+  align-items:stretch;
+}
+.extractor-upgrade-grid.count-1{grid-template-columns:minmax(0,280px)}
+.extractor-upgrade-card{
+  display:flex;
+  min-height:248px;
+  flex-direction:column;
+  padding:19px;
+  border-radius:6px;
+  background:var(--ex-surface);
+}
+.extractor-upgrade-card>small{
+  color:#718397;
+  font-size:8px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+.extractor-upgrade-card h3{margin:5px 0 10px;font-size:16px}
+.extractor-upgrade-card>strong{font-size:23px;font-weight:600;color:#edf3f8}
+.extractor-upgrade-card>strong span{margin-left:3px;color:#718397;font-size:9px;font-weight:500}
+.extractor-upgrade-card ul{
+  display:grid;
+  gap:7px;
+  margin:15px 0 18px;
+  padding:0;
+  list-style:none;
+}
+.extractor-upgrade-card li{
+  position:relative;
+  padding-left:13px;
+  color:#8ea0b2;
+  font-size:9px;
+}
+.extractor-upgrade-card li:before{
+  content:'';
+  position:absolute;
+  left:0;
+  top:5px;
+  width:4px;
+  height:4px;
+  border-radius:50%;
+  background:#d7b65a;
+}
+.extractor-upgrade-card>button{
+  margin-top:auto;
+  height:36px;
+  border:0;
+  border-radius:4px;
+  background:#f5f5f4;
+  color:#111827;
+  font-size:9px;
+  font-weight:700;
+}
+.extractor-receipt-upload{
+  display:inline-flex;
+  align-items:center;
+  min-height:26px;
+  padding:5px 7px;
+  border-radius:3px;
+  background:#151e2b;
+  color:#dbe4ec!important;
+  font-size:8px!important;
+  cursor:pointer;
+}
+.extractor-receipt-upload.busy{opacity:.55;pointer-events:none}
+.extractor-receipt-upload input{display:none}
+.extractor-receipt-helper{flex-basis:100%;font-size:7px!important;color:#65778a!important}
+
+/* Extractor download selection must remain readable and obvious in dark mode. */
+.extractor-download-center.extractor-dark-download .extractor-download-body button[data-active="true"]{
+  position:relative;
+  background:#f4f4f2!important;
+  color:#101827!important;
+  box-shadow:0 0 0 1px rgba(255,255,255,.18)!important;
+}
+.extractor-download-center.extractor-dark-download .extractor-download-body button[data-active="true"] *{
+  color:#101827!important;
+}
+.extractor-download-center.extractor-dark-download .extractor-download-scope{
+  position:relative;
+  min-height:72px;
+}
+.extractor-download-scope-state{
+  position:absolute;
+  top:7px;
+  right:8px;
+  min-height:14px;
+  color:transparent;
+  font-size:7px;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+.extractor-download-center.extractor-dark-download .extractor-download-scope[data-active="true"] .extractor-download-scope-state{
+  color:#55606d!important;
+}
+.extractor-download-center.extractor-dark-download .extractor-download-preflight .text-muted-foreground{
+  color:#91a1b1!important;
+}
+.extractor-download-center.extractor-dark-download .extractor-download-preflight .text-amber-700{
+  color:#e2b45a!important;
+}
+
+@media(max-width:900px){
+  .extractor-billing-grid-compact{grid-template-columns:1fr}
+  .extractor-upgrade-grid,.extractor-upgrade-grid.count-1{grid-template-columns:1fr}
+}
+@media(max-width:620px){
+  .extractor-plan-usage-modal-summary{grid-template-columns:1fr}
+}
