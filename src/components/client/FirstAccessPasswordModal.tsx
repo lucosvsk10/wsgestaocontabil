@@ -78,7 +78,7 @@ export function FirstAccessPasswordModal() {
     open={required}
     onOpenChange={() => {}}
   >
-    <DialogContent className="sm:max-w-md" onEscapeKeyDown={(event) => event.preventDefault()} onPointerDownOutside={(event) => event.preventDefault()} onInteractOutside={(event) => event.preventDefault()}>
+    <DialogContent className="sm:max-w-md [&>button]:hidden" onEscapeKeyDown={(event) => event.preventDefault()} onPointerDownOutside={(event) => event.preventDefault()} onInteractOutside={(event) => event.preventDefault()}>
       <DialogHeader>
         <DialogTitle>Altere sua senha de primeiro acesso</DialogTitle>
         <DialogDescription>
