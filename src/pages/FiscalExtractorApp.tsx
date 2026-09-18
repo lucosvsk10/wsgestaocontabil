@@ -1369,16 +1369,19 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview, adm
       });
       const imported = Number(data?.imported || 0);
       const failed = Number(data?.failed || 0);
+      const queuePending = Number(data?.queue_pending || 0);
 
       void Promise.resolve(onReload()).catch(() => null);
       void loadAdminOfficeCompanies();
 
       if (imported > 0) {
         setNotice({
-          tone: failed ? 'warning' : 'success',
+          tone: failed || queuePending ? 'warning' : 'success',
           text: failed
-            ? `${imported} empresa(s) importada(s) e colocada(s) na fila. ${failed} não puderam ser importadas.`
-            : `${imported} empresa(s) importada(s). A busca fiscal inicial já começou automaticamente.`,
+            ? `${imported} empresa(s) importada(s). ${failed} não puderam ser importadas.`
+            : queuePending
+              ? `${imported} empresa(s) vinculada(s). ${queuePending} aguardam o próximo ciclo automático da fila fiscal.`
+              : `${imported} empresa(s) importada(s). A busca fiscal inicial já começou automaticamente.`,
         });
       }
 
