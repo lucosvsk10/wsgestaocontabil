@@ -7,6 +7,8 @@ export type OfficeCompanySelection = {
   company_name: string;
   trade_name: string | null;
   cnpj: string | null;
+  document_type?: 'cnpj' | 'cpf' | 'other' | null;
+  document_number?: string | null;
   logo_url?: string | null;
   fiscal_company_id?: string | null;
   portal_user_id?: string | null;
@@ -121,9 +123,9 @@ export function CompanySelectionProvider({ children }: { children: React.ReactNo
 
     setLoading(true);
     try {
-      const companiesResult = await supabase
+      const companiesResult = await (supabase as any)
         .from('companies')
-        .select('id,company_name,trade_name,cnpj,logo_url')
+        .select('id,company_name,trade_name,cnpj,document_type,document_number,logo_url')
         .order('company_name');
 
       if (companiesResult.error) {
@@ -132,7 +134,8 @@ export function CompanySelectionProvider({ children }: { children: React.ReactNo
       }
 
       const baseCompanies = ((companiesResult.data || []) as unknown as Array<{
-        id: string; company_name: string; trade_name: string | null; cnpj: string | null; logo_url?: string | null;
+        id: string; company_name: string; trade_name: string | null; cnpj: string | null;
+        document_type?: 'cnpj' | 'cpf' | 'other' | null; document_number?: string | null; logo_url?: string | null;
       }>);
 
       let next: OfficeCompanySelection[] = baseCompanies.map(company => ({
