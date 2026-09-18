@@ -2442,8 +2442,10 @@ function HealthState({ label, state }: { label: string; state: 'ok' | 'attention
 
 function HistorySection({ companies, preview, setNotice }: any) {
   const [healthCompanyId, setHealthCompanyId] = useState('');
+  const [scope, setScope] = useState<'last_30_days' | 'full'>('full');
   const [health, setHealth] = useState<any>(null);
   const [busy, setBusy] = useState(false);
+  const [checking, setChecking] = useState(false);
   const [repairing, setRepairing] = useState(false);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const [healthSearch, setHealthSearch] = useState('');
@@ -2470,66 +2472,100 @@ function HistorySection({ companies, preview, setNotice }: any) {
     return () => window.clearInterval(timer);
   }, [cooldownSeconds > 0]);
 
-  const loadHealth = useCallback(async () => {
-    if (!company) return;
+  const loadHealth = useCallback(async (
+    record = false,
+    origin: 'manual_check' | 'post_sync' | 'automatic' = 'automatic'
+  ) => {
+    if (!company) return null;
     if (preview) {
-      setHealth({
+      const now = new Date();
+      const start = scope === 'last_30_days'
+        ? iso(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29))
+        : iso(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+      const mock = {
         state: 'healthy',
-        checked_at: new Date().toISOString(),
-        period: {
-          start: iso(new Date(new Date().getFullYear(), new Date().getMonth(), 1)),
-          end: iso(new Date()),
-        },
-        purchases: {
-          source_checked: true,
-          expected: company.entries,
-          stored: company.entries,
-          status: company.purchaseStatus,
-          last_completed_at: new Date().toISOString(),
-        },
-        sales: {
-          source_checked: true,
-          expected: company.exits,
-          stored: company.exits,
-          status: company.salesStatus,
-          last_completed_at: new Date().toISOString(),
-        },
-      });
-      return;
+        checked_at: now.toISOString(),
+        scope,
+        period: { start, end: iso(now) },
+        purchases: { expected: company.entries, stored: company.entries },
+        sales: { expected: company.exits, stored: company.exits },
+        history: [{
+          id: 'preview',
+          scope,
+          period_start: start,
+          period_end: iso(now),
+          purchases_expected: company.entries,
+          purchases_present: company.entries,
+          sales_expected: company.exits,
+          sales_present: company.exits,
+          state: 'healthy',
+          origin: 'automatic',
+          checked_at: now.toISOString(),
+        }],
+      };
+      setHealth(mock);
+      return mock;
     }
-    setBusy(true);
+
+    if (record) setChecking(true);
+    else setBusy(true);
     try {
       const { data, error } = await supabase.functions.invoke('extractor-fiscal-health', {
-        body: { company_id: company.id },
+        body: {
+          action: record ? 'check' : 'health',
+          company_id: company.id,
+          scope,
+          origin,
+        },
       });
       if (error) throw error;
       if (data?.error) throw new Error(String(data.error));
       setHealth(data);
+      return data;
     } catch (error) {
       setNotice({
         tone: 'error',
-        text:
-          error instanceof Error
-            ? error.message
-            : 'Não foi possível conferir os documentos desta empresa agora.',
+        text: error instanceof Error
+          ? error.message
+          : 'Não foi possível conferir os documentos desta empresa agora.',
       });
+      return null;
     } finally {
       setBusy(false);
+      setChecking(false);
     }
-  }, [company?.id, preview]);
+  }, [company?.id, preview, scope]);
 
   useEffect(() => {
+    let alive = true;
     setHealth(null);
-    void loadHealth();
+    void (async () => {
+      const data = await loadHealth(false);
+      if (!alive || !data) return;
+      if (!Array.isArray(data.history) || data.history.length === 0) {
+        await loadHealth(true, 'automatic');
+      }
+    })();
+    return () => { alive = false; };
   }, [loadHealth]);
+
+  const requestCheck = async () => {
+    if (!company || checking) return;
+    const result = await loadHealth(true, 'manual_check');
+    if (result) {
+      setNotice({
+        tone: result.state === 'healthy' ? 'success' : 'warning',
+        text: result.state === 'healthy'
+          ? 'Conferência concluída. As quantidades esperadas e presentes estão alinhadas.'
+          : 'Conferência registrada. Revise as diferenças indicadas na tabela.',
+      });
+    }
+  };
 
   const requestRepair = async () => {
     if (!company || repairing || cooldownSeconds > 0) return;
     if (preview) {
-      setNotice({
-        tone: 'warning',
-        text: 'A busca manual fica disponível no ambiente autenticado.',
-      });
+      setNotice({ tone: 'warning', text: 'A busca manual fica disponível no ambiente autenticado.' });
       return;
     }
     setRepairing(true);
@@ -2550,9 +2586,9 @@ function HistorySection({ companies, preview, setNotice }: any) {
       setCooldownSeconds(300);
       setNotice({
         tone: 'success',
-        text: `${company.tradeName}: uma nova busca foi colocada na fila. Os números serão atualizados automaticamente.`,
+        text: `${company.tradeName}: nova busca iniciada. A conferência será registrada quando a primeira atualização chegar.`,
       });
-      window.setTimeout(() => void loadHealth(), 5000);
+      window.setTimeout(() => void loadHealth(true, 'post_sync'), 10000);
     } catch {
       setNotice({
         tone: 'error',
@@ -2566,60 +2602,61 @@ function HistorySection({ companies, preview, setNotice }: any) {
   if (!company) {
     return (
       <div className="extractor-page">
-        <PageHeading
-          title="Histórico"
-          icon="history"
-          description="Conferência das últimas buscas fiscais."
-        />
+        <PageHeading title="Histórico" icon="history" description="Conferência das buscas fiscais." />
         <Empty>Nenhuma empresa adicionada ao Extrator.</Empty>
       </div>
     );
   }
 
-  const purchase = health?.purchases || {};
-  const sales = health?.sales || {};
-  const purchaseExpected = purchase.expected == null ? null : Number(purchase.expected);
-  const purchaseStored = Number(purchase.stored ?? company.entries ?? 0);
-  const salesExpected = sales.expected == null ? null : Number(sales.expected);
-  const salesStored = Number(sales.stored ?? company.exits ?? 0);
-  const periodText =
-    health?.period?.start && health?.period?.end
-      ? `${formatDate(health.period.start)} a ${formatDate(health.period.end)}`
-      : 'Período atual';
+  const expected = (value: unknown) => value == null ? null : Number(value);
+  const present = (value: unknown) => Number(value || 0);
+  const purchaseExpected = expected(health?.purchases?.expected);
+  const purchasePresent = present(health?.purchases?.stored ?? company.entries);
+  const salesExpected = expected(health?.sales?.expected);
+  const salesPresent = present(health?.sales?.stored ?? company.exits);
 
-  const compare = (expected: number | null, stored: number) => {
-    if (expected == null) {
-      return {
-        state: 'attention' as const,
-        label: 'Aguardando conferência',
-        missing: null as number | null,
-      };
-    }
-    const missing = Math.max(0, expected - stored);
-    return missing > 0
-      ? { state: 'error' as const, label: `Faltam ${integer.format(missing)}`, missing }
-      : { state: 'ok' as const, label: 'Tudo certo', missing: 0 };
+  const compare = (exp: number | null, got: number) => {
+    if (exp == null) return { state: 'attention' as const, label: 'Sem referência', delta: null as number | null };
+    const delta = got - exp;
+    if (delta === 0) return { state: 'ok' as const, label: 'Conferido', delta: 0 };
+    return delta < 0
+      ? { state: 'error' as const, label: `Faltam ${integer.format(Math.abs(delta))}`, delta }
+      : { state: 'attention' as const, label: `${integer.format(delta)} a mais`, delta };
   };
-
-  const purchaseCompare = compare(purchaseExpected, purchaseStored);
-  const salesCompare = compare(salesExpected, salesStored);
-  const hasDifference = purchaseCompare.missing != null && purchaseCompare.missing > 0
-    || salesCompare.missing != null && salesCompare.missing > 0;
-  const awaitingCheck = purchaseExpected == null || salesExpected == null;
+  const purchaseCompare = compare(purchaseExpected, purchasePresent);
+  const salesCompare = compare(salesExpected, salesPresent);
+  const missingDocuments =
+    (purchaseCompare.delta != null && purchaseCompare.delta < 0) ||
+    (salesCompare.delta != null && salesCompare.delta < 0);
   const cooldownText = cooldownSeconds > 0
     ? `${String(Math.floor(cooldownSeconds / 60)).padStart(2, '0')}:${String(cooldownSeconds % 60).padStart(2, '0')}`
     : '';
+  const rows = Array.isArray(health?.history) ? health.history : [];
+  const originLabel = (value: string) =>
+    value === 'post_sync' ? 'Após busca' : value === 'automatic' ? 'Automática' : 'Manual';
+  const rowState = (row: any) => {
+    const pe = expected(row.purchases_expected);
+    const pp = present(row.purchases_present);
+    const se = expected(row.sales_expected);
+    const sp = present(row.sales_present);
+    if (pe == null || se == null) return { label: 'Parcial', state: 'attention' as const };
+    if (pe === pp && se === sp) return { label: 'Conferido', state: 'ok' as const };
+    return { label: 'Diferença', state: 'error' as const };
+  };
+  const periodText = health?.period?.start && health?.period?.end
+    ? `${formatDate(health.period.start)} a ${formatDate(health.period.end)}`
+    : scope === 'last_30_days' ? 'Últimos 30 dias' : 'Período completo';
 
   return (
-    <div className="extractor-page extractor-history-simple">
+    <div className="extractor-page extractor-history-table-page">
       <PageHeading
         title="Histórico"
         icon="history"
-        description="Confira se o que foi encontrado nas fontes fiscais chegou corretamente ao Extrator."
+        description="Cada conferência fica registrada para você comparar o que a fonte fiscal esperava com o que chegou ao Extrator."
       />
 
-      <div className="extractor-health-selector">
-        <label>
+      <div className="extractor-health-toolbar">
+        <label className="extractor-health-company-search">
           <AnimatedExtractorIcon name="search" />
           <input
             value={healthSearch}
@@ -2640,119 +2677,112 @@ function HistorySection({ companies, preview, setNotice }: any) {
               </option>
             ))}
         </select>
-        <span className={`extractor-health-auto-state ${busy ? 'busy' : ''}`}>
-          {busy
-            ? 'Conferindo...'
-            : health?.checked_at
-              ? `Verificado ${formatDate(health.checked_at, true)}`
-              : 'Aguardando conferência'}
-        </span>
-      </div>
-
-      <section className="extractor-health-simple-summary">
-        <div>
-          <small>Empresa conferida</small>
-          <h2>{company.tradeName}</h2>
-          <span>{company.name} · {formatCnpj(company.cnpj)} · {periodText}</span>
-        </div>
-        <div className="extractor-health-manual">
-          <span>
-            {hasDifference
-              ? 'Há diferença entre o que foi localizado e o que está salvo.'
-              : awaitingCheck
-                ? 'Uma das buscas ainda não conseguiu confirmar a quantidade esperada.'
-                : 'As quantidades conferidas estão corretas.'}
-          </span>
+        <div className="extractor-history-scope" role="group" aria-label="Período da conferência">
           <button
             type="button"
-            onClick={() => void requestRepair()}
-            disabled={repairing || cooldownSeconds > 0}
+            className={scope === 'last_30_days' ? 'active' : ''}
+            onClick={() => setScope('last_30_days')}
           >
-            {repairing
-              ? 'Iniciando busca...'
-              : cooldownSeconds > 0
-                ? `Nova tentativa em ${cooldownText}`
-                : 'Buscar novamente'}
+            Últimos 30 dias
+          </button>
+          <button
+            type="button"
+            className={scope === 'full' ? 'active' : ''}
+            onClick={() => setScope('full')}
+          >
+            Período completo
           </button>
         </div>
-      </section>
+      </div>
 
-      <section className="extractor-health-simple-grid">
-        <article className="extractor-health-simple-card">
-          <header>
-            <div>
-              <small>Compras</small>
-              <h3>Documentos de entrada</h3>
-            </div>
-            <HealthState label={purchaseCompare.label} state={purchaseCompare.state} />
-          </header>
-          <div className="extractor-health-counts">
-            <div>
-              <span>Esperado</span>
-              <strong>{purchaseExpected == null ? '—' : integer.format(purchaseExpected)}</strong>
-            </div>
-            <div>
-              <span>No Extrator</span>
-              <strong>{integer.format(purchaseStored)}</strong>
-            </div>
-          </div>
-          <p>
-            {purchaseExpected == null
-              ? 'A fonte de compras ainda não confirmou uma quantidade para comparação.'
-              : purchaseCompare.missing
-                ? `A busca localizou mais ${integer.format(purchaseCompare.missing)} documento(s) do que o Extrator possui agora.`
-                : 'Tudo o que foi localizado na conferência está salvo no Extrator.'}
-          </p>
-          <small className="extractor-health-last-run">
-            Última busca: {purchase.last_completed_at
-              ? formatDate(purchase.last_completed_at, true)
-              : purchase.last_started_at
-                ? `iniciada ${formatDate(purchase.last_started_at, true)}`
-                : 'ainda não concluída'}
-          </small>
-        </article>
+      <div className="extractor-history-current">
+        <div>
+          <small>Empresa conferida</small>
+          <strong>{company.tradeName}</strong>
+          <span>{company.name} · {formatCnpj(company.cnpj)} · {periodText}</span>
+        </div>
+        <div className="extractor-history-current-status">
+          <span>Entradas</span>
+          <b>{purchaseExpected == null ? '—' : integer.format(purchaseExpected)} / {integer.format(purchasePresent)}</b>
+          <HealthState label={purchaseCompare.label} state={purchaseCompare.state} />
+        </div>
+        <div className="extractor-history-current-status">
+          <span>Saídas</span>
+          <b>{salesExpected == null ? '—' : integer.format(salesExpected)} / {integer.format(salesPresent)}</b>
+          <HealthState label={salesCompare.label} state={salesCompare.state} />
+        </div>
+        <div className="extractor-history-actions">
+          <button type="button" onClick={() => void requestCheck()} disabled={checking || busy}>
+            {checking ? 'Conferindo...' : 'Conferir agora'}
+          </button>
+          {missingDocuments && (
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => void requestRepair()}
+              disabled={repairing || cooldownSeconds > 0}
+            >
+              {repairing
+                ? 'Iniciando busca...'
+                : cooldownSeconds > 0
+                  ? `Nova busca em ${cooldownText}`
+                  : 'Buscar documentos'}
+            </button>
+          )}
+        </div>
+      </div>
 
-        <article className="extractor-health-simple-card">
-          <header>
-            <div>
-              <small>Vendas</small>
-              <h3>Documentos de saída</h3>
-            </div>
-            <HealthState label={salesCompare.label} state={salesCompare.state} />
-          </header>
-          <div className="extractor-health-counts">
-            <div>
-              <span>Esperado</span>
-              <strong>{salesExpected == null ? '—' : integer.format(salesExpected)}</strong>
-            </div>
-            <div>
-              <span>No Extrator</span>
-              <strong>{integer.format(salesStored)}</strong>
-            </div>
+      <section className="extractor-history-ledger">
+        <header>
+          <div>
+            <small>Registro de conferências</small>
+            <h3>Últimas buscas</h3>
           </div>
-          <p>
-            {salesExpected == null
-              ? salesStored > 0
-                ? `O Extrator já possui ${integer.format(salesStored)} venda(s), mas a conferência completa ainda está sendo formada.`
-                : 'Ainda não há uma referência suficiente para confirmar a quantidade de vendas.'
-              : salesCompare.missing
-                ? `A conferência encontrou mais ${integer.format(salesCompare.missing)} venda(s) do que o Extrator possui agora.`
-                : 'Tudo o que foi localizado na conferência está salvo no Extrator.'}
-          </p>
-          <small className="extractor-health-last-run">
-            Última busca: {sales.last_completed_at
-              ? formatDate(sales.last_completed_at, true)
-              : sales.last_started_at
-                ? `iniciada ${formatDate(sales.last_started_at, true)}`
-                : 'ainda não concluída'}
-          </small>
-        </article>
+          <span>{busy ? 'Atualizando...' : `${rows.length} registro${rows.length === 1 ? '' : 's'}`}</span>
+        </header>
+        <div className="extractor-history-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Data / hora</th>
+                <th>Tipo</th>
+                <th>Período</th>
+                <th>Entradas esperadas</th>
+                <th>Entradas presentes</th>
+                <th>Saídas esperadas</th>
+                <th>Saídas presentes</th>
+                <th>Resultado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.length ? rows.map((row: any) => {
+                const state = rowState(row);
+                return (
+                  <tr key={row.id}>
+                    <td>{formatDate(row.checked_at, true)}</td>
+                    <td>{originLabel(String(row.origin || 'manual_check'))}</td>
+                    <td>{formatDate(row.period_start)} a {formatDate(row.period_end)}</td>
+                    <td>{row.purchases_expected == null ? '—' : integer.format(Number(row.purchases_expected))}</td>
+                    <td>{integer.format(Number(row.purchases_present || 0))}</td>
+                    <td>{row.sales_expected == null ? '—' : integer.format(Number(row.sales_expected))}</td>
+                    <td>{integer.format(Number(row.sales_present || 0))}</td>
+                    <td><HealthState label={state.label} state={state.state} /></td>
+                  </tr>
+                );
+              }) : (
+                <tr>
+                  <td colSpan={8} className="empty">Nenhuma conferência registrada neste período.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <p className="extractor-health-simple-note">
-        A busca automática continua funcionando em segundo plano. O botão acima deve ser usado somente
-        quando houver diferença ou quando você quiser solicitar uma nova conferência; depois de uma
-        tentativa ele entra em espera por alguns minutos para proteger a consulta fiscal.
+        “Esperado” e “presente” sempre usam o mesmo período e o mesmo tipo de documento. A conferência soma
+        as NF-e/NFC-e verificáveis nas fontes fiscais e os demais modelos já confirmados no Extrator, evitando
+        comparar, por exemplo, apenas NFC-e esperada contra todas as vendas armazenadas.
       </p>
     </div>
   );
