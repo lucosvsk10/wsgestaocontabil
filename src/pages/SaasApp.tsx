@@ -124,7 +124,9 @@ const emissionTypeLabel = (emission: any) =>
   )[String(emission?.document_type || '').toLowerCase()] || null;
 
 export default function SaasApp() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
+  const internalAdminEntry =
+    isAdmin && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('source') === 'admin-fiscal';
   const [active, setActive] = useState('Início');
   const [organization, setOrganization] = useState<any>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
@@ -420,7 +422,13 @@ export default function SaasApp() {
         <div className="saas-topbar-content flex min-w-0 flex-1 items-center px-6">
           <div className="saas-page-context flex-1">
             <p className="text-[10px] font-semibold uppercase tracking-[.12em]">
-              WS Gestão Contábil
+              {internalAdminEntry ? (
+                <a href="/admin/ambientes" className="transition-opacity hover:opacity-70">
+                  ← Ambientes WS
+                </a>
+              ) : (
+                'WS Gestão Contábil'
+              )}
             </p>
             <span>
               {active === 'Emissão' && selectedDocument ? `Emissão de ${selectedDocument}` : active}
