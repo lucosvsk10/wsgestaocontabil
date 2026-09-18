@@ -41,18 +41,6 @@ const formatDate = (value?: string | null) => {
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' }).format(date);
 };
 
-const taxRegimeLabel = (value?: string | null) => {
-  const labels: Record<string, string> = {
-    simples: 'Simples Nacional',
-    simples_nacional: 'Simples Nacional',
-    mei: 'MEI',
-    presumido: 'Lucro Presumido',
-    lucro_presumido: 'Lucro Presumido',
-    real: 'Lucro Real',
-    lucro_real: 'Lucro Real',
-  };
-  return labels[String(value || '').toLowerCase()] || value || 'Não informado';
-};
 async function functionErrorMessage(error: unknown) {
   const fallback = error instanceof Error ? error.message : String(error || 'Erro inesperado');
   try {
@@ -356,11 +344,3 @@ function FiscalHealthIndicator({ company, loading, onReady }: { company?: Fiscal
   );
 }
 
-function CompanyMeta({ label, value }: { label: string; value: string }) {
-  return (
-    <span className="min-w-0">
-      <span className="block text-[9px] font-semibold uppercase tracking-[.08em] text-muted-foreground/75">{label}</span>
-      <span className="mt-1 block truncate text-[11px] font-medium text-foreground/85">{value || 'Não informado'}</span>
-    </span>
-  );
-}
