@@ -301,7 +301,7 @@ async function buildNfce(doc: any, xml: string) {
   dash();
 
   draw('Consulta pela chave de acesso em',6.3,false,'center');
-  const urlChave = xmlDecode(tag(xml,'urlChave')) || 'https://www.nfe.fazenda.gov.br/portal/consulta.aspx';
+  const urlChave = xmlDecode(tag(xml,'urlChave')) || 'Consulte a chave no portal fiscal indicado pela UF emissora';
   wrapped(urlChave,5.5,false,'center');
   draw('CHAVE DE ACESSO',6.0,true,'center');
   wrapped(fmtKey(access),5.9,false,'center');
