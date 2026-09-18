@@ -67,18 +67,24 @@ async function fetchJson(url: string, timeoutMs = 15000) {
     clearTimeout(timer);
   }
 }
+const ieValue = (item: any) =>
+  digits(item?.inscricao_estadual ?? item?.inscricao ?? item?.numero ?? item?.ie ?? item?.value);
+const ieUf = (item: any) => clean(item?.estado?.sigla ?? item?.uf ?? item?.estado).toUpperCase();
+
 function normalizeCnpjWs(raw: any, cnpj: string) {
   const e = raw?.estabelecimento || {};
-  const state = clean(e?.estado?.sigla).toUpperCase();
-  const ies = Array.isArray(e?.inscricoes_estaduais) ? e.inscricoes_estaduais.filter((x:any)=>x?.ativo !== false) : [];
-  const ie = ies.find((x:any)=>clean(x?.estado?.sigla).toUpperCase() === state) || ies[0] || null;
+  const state = clean(e?.estado?.sigla ?? e?.uf).toUpperCase();
+  const ies = Array.isArray(e?.inscricoes_estaduais)
+    ? e.inscricoes_estaduais.filter((x:any)=>x?.ativo !== false && ieValue(x))
+    : [];
+  const ie = ies.find((x:any)=>ieUf(x) === state) || ies[0] || null;
   const primary = e?.atividade_principal || {};
   const regime = detectTaxRegime(raw);
   return {
     company_name: clean(raw?.razao_social),
     trade_name: clean(e?.nome_fantasia),
     cnpj,
-    state_registration: digits(ie?.inscricao_estadual),
+    state_registration: ieValue(ie),
     registration_status: clean(e?.situacao_cadastral),
     tax_regime: regime,
     email: clean(e?.email),
@@ -98,7 +104,7 @@ function normalizeCnpjWs(raw: any, cnpj: string) {
       legal_nature: clean(raw?.natureza_juridica?.descricao || raw?.natureza_juridica),
       share_capital: Number(raw?.capital_social || 0) || null,
       primary_cnae_description: clean(primary?.descricao),
-      state_registrations: ies.map((x:any)=>({ state: clean(x?.estado?.sigla).toUpperCase(), ie: digits(x?.inscricao_estadual), active: x?.ativo !== false })).filter((x:any)=>x.ie),
+      state_registrations: ies.map((x:any)=>({ state: ieUf(x), ie: ieValue(x), active: x?.ativo !== false })).filter((x:any)=>x.ie),
       source: 'CNPJ.ws',
     },
   };
