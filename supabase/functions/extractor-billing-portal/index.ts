@@ -221,6 +221,10 @@ Deno.serve(async req => {
         }
       }
 
+      const manualReceipt =
+        metadata?.manual_receipt && typeof metadata.manual_receipt === 'object'
+          ? metadata.manual_receipt as Record<string, unknown>
+          : null;
       return {
         ...invoice,
         payment_method: paymentMethod,
@@ -228,6 +232,11 @@ Deno.serve(async req => {
         receipt_url: await signedBillingFile(admin, organizationId, invoice.receipt_path),
         fiscal_note_url: await signedBillingFile(admin, organizationId, invoice.fiscal_note_path),
         provider_receipt_url: providerReceipt,
+        manual_receipt_url: manualReceipt?.path
+          ? await signedBillingFile(admin, organizationId, manualReceipt.path)
+          : '',
+        manual_receipt_name: manualReceipt?.filename ? String(manualReceipt.filename) : '',
+        manual_receipt_uploaded_at: manualReceipt?.uploaded_at ? String(manualReceipt.uploaded_at) : null,
         metadata: undefined,
       };
     }));

@@ -2310,6 +2310,8 @@ const centsMoney = (cents?: number | null) =>
 function BillingSection({ usage, planLabel, preview, setNotice }: any) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(!preview);
+  const [usageOpen, setUsageOpen] = useState(false);
+  const [receiptUploading, setReceiptUploading] = useState('');
 
   const loadBilling = useCallback(async () => {
     if (preview) {
@@ -2381,11 +2383,63 @@ function BillingSection({ usage, planLabel, preview, setNotice }: any) {
     ? `${integer.format(monthlyPerCompany)} XML por empresa/mês`
     : `${integer.format(monthlyLimit)} XML/mês`;
 
+  const order: Record<string, number> = {
+    extractor_commercial: 1,
+    extractor_pro: 2,
+    extractor_enterprise: 3,
+  };
+  const upgradePlans = plans.filter(
+    (item: any) => (order[String(item?.code || '')] || 0) > (order[currentPlanCode] || 0)
+  );
+
   const requestUpgrade = (targetPlan: any) => {
     const message = encodeURIComponent(
       `Olá, quero alterar meu plano do Extrator Fiscal WS de ${plan?.name || planLabel} para ${targetPlan.name}.`
     );
     window.open(`https://wa.me/5582999324884?text=${message}`, '_blank', 'noopener,noreferrer');
+  };
+
+  const uploadReceipt = async (invoice: any, file?: File | null) => {
+    if (!file || preview || receiptUploading) return;
+    if (!['application/pdf', 'image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+      setNotice({ tone: 'warning', text: 'Envie o comprovante em PDF, PNG, JPG ou WEBP.' });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setNotice({ tone: 'warning', text: 'O comprovante deve ter no máximo 5 MB.' });
+      return;
+    }
+
+    setReceiptUploading(String(invoice.id));
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('Não foi possível ler o arquivo.'));
+        reader.onload = () => resolve(String(reader.result || '').split(',')[1] || '');
+        reader.readAsDataURL(file);
+      });
+      const { data: response, error } = await supabase.functions.invoke('extractor-billing-receipt', {
+        body: {
+          invoice_id: invoice.id,
+          filename: file.name,
+          content_type: file.type,
+          base64,
+        },
+      });
+      if (error) throw error;
+      if (response?.error) throw new Error(String(response.error));
+      setNotice({ tone: 'success', text: 'Comprovante armazenado com segurança nesta fatura.' });
+      await loadBilling();
+    } catch (error) {
+      setNotice({
+        tone: 'error',
+        text: error instanceof Error && !/Edge Function/i.test(error.message)
+          ? error.message
+          : 'Não foi possível armazenar o comprovante agora.',
+      });
+    } finally {
+      setReceiptUploading('');
+    }
   };
 
   return (
@@ -2440,46 +2494,19 @@ function BillingSection({ usage, planLabel, preview, setNotice }: any) {
             </section>
           )}
 
-          <section className="extractor-billing-grid">
-            <article className="extractor-billing-card">
-              <header>
-                <div>
-                  <h2>Uso do plano</h2>
-                  <p>{enterpriseCapacity ? 'Consumo separado por empresa no ciclo atual' : 'Consumo de XML no período atual'}</p>
-                </div>
-                <strong className="amount">{enterpriseCapacity ? 'Por empresa' : `${usage.percent}%`}</strong>
-              </header>
-              {enterpriseCapacity && usage.mode === 'per_company' && usage.companies?.length ? (
-                <div className="extractor-billing-company-usage">
-                  {usage.companies.map((companyUsage: UsageCompany) => (
-                    <div className="extractor-billing-company-usage-row" key={companyUsage.company_id}>
-                      <div>
-                        <strong>{companyUsage.name}</strong>
-                        <span>{integer.format(companyUsage.used)} de {integer.format(companyUsage.limit)} XML</span>
-                      </div>
-                      <b>{companyUsage.percent}%</b>
-                      <div className="extractor-billing-progress">
-                        <i style={{ width: `${Math.min(100, Math.max(0, companyUsage.percent))}%` }} />
-                      </div>
-                      <small>{integer.format(companyUsage.remaining)} restantes</small>
-                    </div>
-                  ))}
-                  <div className="extractor-billing-company-cycle">
-                    Ciclo: {formatDate(usage.period_start)} a {formatDate(usage.period_end)}
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div className="extractor-billing-progress"><i style={{ width: `${Math.min(100, Math.max(0, usage.percent))}%` }} /></div>
-                  <div className="extractor-billing-facts">
-                    <div><span>Processados</span><b>{integer.format(usage.used)}</b></div>
-                    <div><span>Limite do ciclo</span><b>{usageLimitLabel}</b></div>
-                    <div><span>Restantes</span><b>{integer.format(usage.remaining)}</b></div>
-                    <div><span>Ciclo</span><b>{formatDate(usage.period_start)} a {formatDate(usage.period_end)}</b></div>
-                  </div>
-                </>
-              )}
-            </article>
+          <section className="extractor-billing-grid extractor-billing-grid-compact">
+            <button
+              type="button"
+              className="extractor-billing-usage-compact"
+              onClick={() => setUsageOpen(true)}
+            >
+              <span>
+                <small>Uso do plano</small>
+                <strong>{enterpriseCapacity ? 'Consumo por empresa' : `${integer.format(usage.used)} de ${usageLimitLabel} XML`}</strong>
+                <em>{enterpriseCapacity ? `${integer.format(monthlyPerCompany)} XML por empresa/mês` : `${usage.percent}% do ciclo utilizado`}</em>
+              </span>
+              <b>Ver detalhes</b>
+            </button>
 
             <article className="extractor-billing-card">
               <header>
@@ -2499,53 +2526,47 @@ function BillingSection({ usage, planLabel, preview, setNotice }: any) {
             </article>
           </section>
 
-          <section className="extractor-plan-options">
-            <div className="extractor-section-copy">
-              <div><small>Planos do Extrator</small><h2>Escolha conforme o volume do escritório</h2></div>
-              <span>Os limites abaixo vêm da configuração real dos planos.</span>
-            </div>
-            <div className="extractor-plan-options-grid">
-              {plans.map((item: any) => {
-                const itemLimit = Number(item?.limits?.monthly_xml || 0);
-                const itemPerCompany = Number(item?.limits?.monthly_xml_per_company || 0);
-                const current = item.code === currentPlanCode;
-                const order: Record<string, number> = {
-                  extractor_commercial: 1,
-                  extractor_pro: 2,
-                  extractor_enterprise: 3,
-                };
-                const canUpgrade = (order[item.code] || 0) > (order[currentPlanCode] || 0);
-                const capacity = itemPerCompany > 0
-                  ? `${integer.format(itemPerCompany)} XML por empresa/mês`
-                  : `${integer.format(itemLimit)} XML por mês`;
-                const companyCopy = item.code === 'extractor_enterprise'
-                  ? 'Estrutura Enterprise'
-                  : `Até ${integer.format(Number(item?.limits?.companies || 0))} empresas`;
-                return (
-                  <article key={item.code} className={`extractor-plan-option ${current ? 'current' : ''}`}>
-                    <div>
-                      <small>{current ? 'Plano atual' : item.code === 'extractor_enterprise' ? 'Enterprise' : 'Plano disponível'}</small>
+          {upgradePlans.length > 0 && (
+            <section className="extractor-upgrade-section">
+              <div className="extractor-section-copy">
+                <div><small>Upgrade</small><h2>Mais capacidade para o escritório</h2></div>
+                <span>Seu plano atual continua ativo até você solicitar uma alteração.</span>
+              </div>
+              <div className={`extractor-upgrade-grid count-${upgradePlans.length}`}>
+                {upgradePlans.map((item: any) => {
+                  const itemLimit = Number(item?.limits?.monthly_xml || 0);
+                  const itemPerCompany = Number(item?.limits?.monthly_xml_per_company || 0);
+                  const capacity = itemPerCompany > 0
+                    ? `${integer.format(itemPerCompany)} XML por empresa/mês`
+                    : `${integer.format(itemLimit)} XML por mês`;
+                  const companyCopy = item.code === 'extractor_enterprise'
+                    ? 'Estrutura Enterprise'
+                    : `Até ${integer.format(Number(item?.limits?.companies || 0))} empresas`;
+                  return (
+                    <article key={item.code} className="extractor-upgrade-card">
+                      <small>{item.code === 'extractor_enterprise' ? 'Maior capacidade' : 'Próximo nível'}</small>
                       <h3>{item.name}</h3>
                       <strong>{centsMoney(item.price_cents)}<span>/mês</span></strong>
-                      <p>{capacity} · {companyCopy}</p>
-                    </div>
-                    {current ? (
-                      <span className="extractor-plan-current">Seu plano</span>
-                    ) : canUpgrade ? (
-                      <button onClick={() => requestUpgrade(item)}>Solicitar upgrade</button>
-                    ) : (
-                      <span className="extractor-plan-muted">Plano inferior ao atual</span>
-                    )}
-                  </article>
-                );
-              })}
-            </div>
-          </section>
+                      <ul>
+                        <li>{capacity}</li>
+                        <li>{companyCopy}</li>
+                        <li>Compras e vendas</li>
+                        <li>XML e documentos fiscais</li>
+                      </ul>
+                      <button onClick={() => requestUpgrade(item)}>Fazer upgrade</button>
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
           <section className="extractor-invoice-list">
             <div className="extractor-section-copy invoice-copy">
               <div><small>Histórico financeiro</small><h2>Faturas e comprovantes</h2></div>
-              <span>Documentos oficiais aparecem aqui quando estiverem disponíveis no pagamento ou forem anexados pela WS.</span>
+              <span>
+                Comprovantes oficiais aparecem quando o provedor disponibiliza. Você também pode anexar um documento de apoio à fatura.
+              </span>
             </div>
             <div className="extractor-invoice-head">
               <span>Fatura</span><span>Descrição</span><span>Vencimento</span><span>Valor</span><span>Pagamento</span><span>Documentos</span>
@@ -2553,8 +2574,10 @@ function BillingSection({ usage, planLabel, preview, setNotice }: any) {
             {invoices.length ? invoices.map((invoice: any) => {
               const tone = invoiceTone(invoice.status || invoice.provider_status);
               const paymentUrl = String(invoice.checkout_url || '');
-              const receiptUrl = String(invoice.receipt_url || invoice.provider_receipt_url || '');
+              const officialReceiptUrl = String(invoice.receipt_url || invoice.provider_receipt_url || '');
+              const manualReceiptUrl = String(invoice.manual_receipt_url || '');
               const fiscalNoteUrl = String(invoice.fiscal_note_url || '');
+              const uploading = receiptUploading === String(invoice.id);
               return (
                 <div className="extractor-invoice-row" key={invoice.id}>
                   <strong>#{invoice.invoice_number || String(invoice.id).slice(0, 8)}</strong>
@@ -2567,10 +2590,29 @@ function BillingSection({ usage, planLabel, preview, setNotice }: any) {
                   <span>{invoice.payment_method ? String(invoice.payment_method).replace(/_/g, ' ') : invoice.provider === 'mercado_pago' ? 'Mercado Pago' : '—'}</span>
                   <span className="extractor-invoice-docs">
                     {tone !== 'paid' && paymentUrl && <a href={paymentUrl} target="_blank" rel="noopener noreferrer">Pagar agora</a>}
-                    {receiptUrl && <a href={receiptUrl} target="_blank" rel="noopener noreferrer">Comprovante</a>}
+                    {officialReceiptUrl && <a href={officialReceiptUrl} target="_blank" rel="noopener noreferrer">Comprovante oficial</a>}
+                    {manualReceiptUrl && (
+                      <a href={manualReceiptUrl} target="_blank" rel="noopener noreferrer" title={invoice.manual_receipt_name || ''}>
+                        Comprovante enviado
+                      </a>
+                    )}
                     {fiscalNoteUrl && <a href={fiscalNoteUrl} target="_blank" rel="noopener noreferrer">Nota fiscal</a>}
-                    {tone === 'paid' && !receiptUrl && !fiscalNoteUrl && <small>Pagamento confirmado</small>}
-                    {tone !== 'paid' && !paymentUrl && <small>Sem ação pendente</small>}
+                    <label className={`extractor-receipt-upload ${uploading ? 'busy' : ''}`}>
+                      {uploading ? 'Enviando...' : manualReceiptUrl ? 'Substituir comprovante' : 'Anexar comprovante'}
+                      <input
+                        type="file"
+                        accept="application/pdf,image/png,image/jpeg,image/webp"
+                        disabled={preview || uploading}
+                        onChange={event => {
+                          const file = event.target.files?.[0] || null;
+                          event.currentTarget.value = '';
+                          void uploadReceipt(invoice, file);
+                        }}
+                      />
+                    </label>
+                    {manualReceiptUrl && <small className="extractor-receipt-helper">Documento de apoio enviado pelo usuário</small>}
+                    {tone === 'paid' && !officialReceiptUrl && !manualReceiptUrl && !fiscalNoteUrl && <small>Pagamento confirmado</small>}
+                    {tone !== 'paid' && !paymentUrl && !officialReceiptUrl && !manualReceiptUrl && <small>Sem ação pendente</small>}
                   </span>
                 </div>
               );
@@ -2578,6 +2620,46 @@ function BillingSection({ usage, planLabel, preview, setNotice }: any) {
           </section>
         </>
       )}
+
+      <Dialog open={usageOpen} onOpenChange={setUsageOpen}>
+        <DialogContent className="extractor-dark-dialog extractor-plan-usage-modal">
+          <DialogTitle>Uso do plano</DialogTitle>
+          <DialogDescription>
+            {enterpriseCapacity
+              ? `${integer.format(monthlyPerCompany)} XML por empresa no ciclo atual.`
+              : `Consumo compartilhado do ${plan?.name || planLabel}.`}
+          </DialogDescription>
+
+          {enterpriseCapacity && usage.mode === 'per_company' && usage.companies?.length ? (
+            <div className="extractor-plan-usage-modal-list">
+              {usage.companies.map((companyUsage: UsageCompany) => (
+                <div className="extractor-plan-usage-modal-row" key={companyUsage.company_id}>
+                  <div>
+                    <strong>{companyUsage.name}</strong>
+                    <span>{integer.format(companyUsage.used)} de {integer.format(companyUsage.limit)} XML</span>
+                  </div>
+                  <b>{companyUsage.percent}%</b>
+                  <div className="extractor-billing-progress">
+                    <i style={{ width: `${Math.min(100, Math.max(0, companyUsage.percent))}%` }} />
+                  </div>
+                  <small>{integer.format(companyUsage.remaining)} restantes</small>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="extractor-plan-usage-modal-summary">
+              <div><span>Processados</span><b>{integer.format(usage.used)}</b></div>
+              <div><span>Limite do ciclo</span><b>{usageLimitLabel}</b></div>
+              <div><span>Restantes</span><b>{integer.format(usage.remaining)}</b></div>
+              <div><span>Consumo</span><b>{usage.percent}%</b></div>
+              <div className="extractor-billing-progress"><i style={{ width: `${Math.min(100, Math.max(0, usage.percent))}%` }} /></div>
+            </div>
+          )}
+          <div className="extractor-plan-usage-modal-cycle">
+            Ciclo: {formatDate(usage.period_start)} a {formatDate(usage.period_end)}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
