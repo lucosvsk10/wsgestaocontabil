@@ -24,7 +24,7 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ icon: Icon, label, active, to
       <>
         <span className="relative z-10 min-w-0 flex-1 text-sm font-medium tracking-tight">{label}</span>
         <Icon
-          size={64}
+          size={54}
           strokeWidth={1.25}
           className="pointer-events-none absolute -bottom-5 right-8 text-foreground opacity-[.13] transition duration-300 group-hover:-translate-x-1 group-hover:-translate-y-1 group-hover:opacity-[.18]"
         />
