@@ -29,7 +29,10 @@ const translateFiscalResponse = (code: unknown, message: unknown, status?: unkno
   if (c === '217') return 'Documento não consta na base consultada.';
   if (c === '637') return 'Rejeição: falha na validação do DF-e com o schema XML informado.';
   if (/waiting_state_credentials/i.test(String(status ?? ''))) {
-    return 'Vendas aguardando a credencial estadual do portal SEFAZ. O certificado A1 continua válido para as rotinas que usam certificado.';
+    return 'A conferência de vendas ainda não foi concluída. A rotina atual usa o certificado A1 e tentará novamente automaticamente.';
+  }
+  if (/waiting_sales_reference/i.test(String(status ?? ''))) {
+    return 'Ainda não existe uma venda de referência suficiente para conferir a sequência deste período.';
   }
   if (/waiting_certificate/i.test(String(status ?? ''))) return 'A consulta aguarda um certificado A1 válido.';
   if (/cooldown/i.test(String(status ?? ''))) return 'Consulta concluída e colocada em espera temporária para respeitar o intervalo da SEFAZ.';
@@ -233,7 +236,7 @@ Deno.serve(async req => {
     const purchaseStatus = String(purchaseState.status || '').toLowerCase();
     const salesStatus = String(salesState.status || '').toLowerCase();
     const purchaseBlocked = ['waiting_certificate', 'cooldown', 'error', 'failed', 'retry'].some(value => purchaseStatus.includes(value));
-    const salesBlocked = ['waiting_state_credentials', 'waiting_certificate', 'error', 'failed', 'retry'].some(value => salesStatus.includes(value));
+    const salesBlocked = ['waiting_certificate', 'error', 'failed', 'retry'].some(value => salesStatus.includes(value));
     const hasAttention =
       purchaseMismatch ||
       salesMismatch ||
@@ -316,8 +319,8 @@ Deno.serve(async req => {
       sales: {
         source_checked: salesSourceChecked,
         source_reason:
-          salesStatus === 'waiting_state_credentials'
-            ? 'O A1 está configurado, mas a consulta das vendas emitidas aguarda a credencial do portal estadual da SEFAZ/AL. As compras pelo Ambiente Nacional continuam independentes desta credencial.'
+          salesStatus === 'waiting_sales_reference' || salesStatus === 'waiting_state_credentials'
+            ? 'A rotina já possui o certificado A1, mas ainda precisa formar uma referência de vendas para confirmar a sequência do período.'
             : salesStatus === 'waiting_certificate'
               ? 'Certificado A1 necessário para iniciar a consulta de vendas.'
               : !salesSourceChecked
