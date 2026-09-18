@@ -209,7 +209,8 @@ export default function AdminCompanies() {
             await loadFiscalStatus();
             selectCompany(company_id);
           }}
-        />      </AdminPage>
+        />
+      </AdminPage>
     </AdminLayout>
   );
 }
