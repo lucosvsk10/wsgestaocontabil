@@ -1907,6 +1907,7 @@ function Documents({
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
   const [monthlyStats, setMonthlyStats] = useState<Record<string, { sales: number; purchases: number }>>({});
+  const [availableFrom, setAvailableFrom] = useState<string>('');
   const requestSequence = useRef(0);
   const company = companies.find((c: Company) => c.id === selectedCompanyId) || companies[0] || null;
 
@@ -1955,11 +1956,15 @@ function Documents({
 
   const loadMonthlyStats = useCallback(async () => {
     if (preview || !company) return;
+    setAvailableFrom('');
     try {
       const { data, error } = await supabase.functions.invoke('extractor-fiscal-health', {
         body: { action: 'monthly_stats', company_id: company.id, year },
       });
-      if (!error && data?.months) setMonthlyStats(data.months);
+      if (!error && data?.months) {
+        setMonthlyStats(data.months);
+        setAvailableFrom(String(data?.available_from || ''));
+      }
     } catch {
       // Os documentos continuam disponíveis mesmo se os contadores mensais não atualizarem.
     }
@@ -1970,6 +1975,11 @@ function Documents({
     return () => { requestSequence.current++; };
   }, [loadDocs]);
   useEffect(() => { void loadMonthlyStats(); }, [loadMonthlyStats]);
+  useEffect(() => {
+    if (!availableFrom) return;
+    const minimumYear = Number(availableFrom.slice(0, 4));
+    if (Number.isFinite(minimumYear) && year < minimumYear) setYear(minimumYear);
+  }, [availableFrom, year]);
   useEffect(() => setPage(1), [start, end, filter, typeFilter, query, company?.id]);
 
   useEffect(() => {
@@ -2069,6 +2079,7 @@ function Documents({
     }
     return monthlyStats[String(MONTH_INDEX[label] + 1).padStart(2, '0')] || { sales: 0, purchases: 0 };
   };
+  const minimumHistoryYear = availableFrom ? Number(availableFrom.slice(0, 4)) : now.getFullYear();
   const issueHour = (value?: string | null) => {
     if (!value) return '—';
     const date = new Date(value);
@@ -2104,7 +2115,10 @@ function Documents({
         <div className="extractor-period-year">
           <small>Ano</small>
           <div>
-            <button onClick={() => setYear(value => value - 1)}>‹</button>
+            <button
+              disabled={year <= minimumHistoryYear}
+              onClick={() => setYear(value => value - 1)}
+            >‹</button>
             <strong>{year}</strong>
             <button disabled={year >= now.getFullYear()} onClick={() => setYear(value => value + 1)}>›</button>
           </div>
@@ -2112,16 +2126,29 @@ function Documents({
         <div className="extractor-period-months">
           {MONTHS.filter(item => item !== 'Ano').map(item => {
             const future = year === now.getFullYear() && MONTH_INDEX[item] > now.getMonth();
+            const periodStart = iso(new Date(year, MONTH_INDEX[item], 1));
+            const periodEnd = iso(new Date(year, MONTH_INDEX[item] + 1, 0));
+            const unavailable = Boolean(availableFrom && periodEnd < availableFrom);
+            const partial = Boolean(availableFrom && periodStart < availableFrom && periodEnd >= availableFrom);
             const stat = statsFor(item);
             return (
               <button
                 key={item}
-                disabled={future}
+                disabled={future || unavailable}
+                title={unavailable
+                  ? `Histórico disponível a partir de ${formatDate(availableFrom)}`
+                  : partial
+                    ? `Período parcial: disponível desde ${formatDate(availableFrom)}`
+                    : undefined}
                 className={`extractor-period-month ${!customOpen && month === item ? 'active' : ''}`}
                 onClick={() => { setMonth(item); setCustomOpen(false); setCustomStart(''); setCustomEnd(''); }}
               >
                 <b>{item}</b>
-                <span>{stat.sales}V · <em>{stat.purchases}C</em></span>
+                <span>
+                  {unavailable
+                    ? '—'
+                    : <>{stat.sales}V · <em>{stat.purchases}C</em>{partial ? ' *' : ''}</>}
+                </span>
               </button>
             );
           })}
@@ -2140,9 +2167,16 @@ function Documents({
         </div>
       </section>
 
+      {availableFrom && (
+        <div className="extractor-history-window-note">
+          Histórico fiscal disponível neste Extrator desde <strong>{formatDate(availableFrom)}</strong>.
+          {availableFrom.slice(8, 10) !== '01' ? ' O primeiro mês exibido é parcial.' : ''}
+        </div>
+      )}
+
       {customOpen && (
         <section className="extractor-custom-dates">
-          <label>De <input type="date" value={customStart} max={customEnd || undefined} onChange={event => setCustomStart(event.target.value)} /></label>
+          <label>De <input type="date" value={customStart} min={availableFrom || undefined} max={customEnd || undefined} onChange={event => setCustomStart(event.target.value)} /></label>
           <label>Até <input type="date" value={customEnd} min={customStart || undefined} onChange={event => setCustomEnd(event.target.value)} /></label>
           <button onClick={() => { setCustomOpen(false); setCustomStart(''); setCustomEnd(''); }}>Voltar ao mês</button>
         </section>

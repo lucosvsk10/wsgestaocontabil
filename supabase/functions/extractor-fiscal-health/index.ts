@@ -105,7 +105,13 @@ Deno.serve(async req => {
       const requestedEnd = `${year}-12-31`;
       const start = access.from && access.from > requestedStart ? access.from : requestedStart;
       const end = access.to && access.to < requestedEnd ? access.to : requestedEnd;
-      if (start > end) return J({ ok: true, year, months: {} });
+      if (start > end) return J({
+        ok: true,
+        year,
+        months: {},
+        available_from: access.from,
+        available_to: access.to,
+      });
       const [documentRows, reconciliationRows] = await Promise.all([
         paged((from, to) => admin.from('fiscal_dfe_documents')
           .select('id,access_key,source_id,nsu,document_kind,direction,issue_date')
@@ -138,7 +144,13 @@ Deno.serve(async req => {
         if (row.direction === 'entrada') months[keyMonth].purchases += 1;
         else months[keyMonth].sales += 1;
       }
-      return J({ ok: true, year, months });
+      return J({
+        ok: true,
+        year,
+        months,
+        available_from: access.from,
+        available_to: access.to,
+      });
     }
 
     const start = access.from || monthStart();
