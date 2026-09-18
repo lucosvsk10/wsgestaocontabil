@@ -7,7 +7,7 @@ export async function documentAccess(admin: any, userId: string, companyId: stri
   });
   if (error) throw new Error('document_access_unavailable');
   if (!data?.allowed) throw new RequestError('Empresa não autorizada para esta conta', 403);
-  return data as { allowed: true; from: string | null; to: string };
+  return data as { allowed: true; account_id: string; from: string | null; to: string };
 }
 const brazilDate = (value: string) => {
   const date = new Date(value);

@@ -76,6 +76,7 @@ Deno.serve(async (req) => {
     if (companyError) throw companyError;
 
     const settings = (company.fiscal_settings || {}) as any;
+    const audit = Boolean(body.audit);
     const [{ data: extractorLink }, { data: minimumHistory }, { data: extractorToday }] = await Promise.all([
       admin.from("extractor_companies")
         .select("id")
@@ -101,7 +102,9 @@ Deno.serve(async (req) => {
         ? settings.history_start_date || ""
         : ""
     );
-    const configuredStart = isExtractor ? standardStart : legacyConfiguredStart;
+    const configuredStart = isExtractor
+      ? (audit ? "" : standardStart)
+      : legacyConfiguredStart;
     const defaultStart = isExtractor
       ? standardStart
       : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
@@ -194,6 +197,7 @@ Deno.serve(async (req) => {
     }
 
     const keys = [...new Set(parsed.map((row) => row.access_key))];
+    const purchaseAllKeys = [...new Set(parsed.filter((row) => row.direction === "entrada").map((row) => row.access_key))];
     const purchaseKeys = [...new Set(parsed.filter((row) => row.direction === "entrada" && row.status_code !== "101").map((row) => row.access_key))];
     const selfIssuedKeys = [...new Set(parsed.filter((row) => row.direction === "saida").map((row) => row.access_key))];
     const existing = new Map<string, any[]>();
@@ -268,6 +272,8 @@ Deno.serve(async (req) => {
       total_report: parsed.length,
       unique_keys: keys.length,
       purchase_unique_keys: purchaseKeys.length,
+      purchase_all_unique_keys: purchaseAllKeys.length,
+      purchase_cancelled_unique_keys: Math.max(0, purchaseAllKeys.length - purchaseKeys.length),
       purchase_existing_keys: Math.min(purchaseKeys.length, purchaseExistingKeys),
       self_issued_unique_keys: selfIssuedKeys.length,
       existing_keys: existing.size,
@@ -276,7 +282,7 @@ Deno.serve(async (req) => {
       duplicates_touched: duplicatesTouched,
       by_status: byStatus,
       by_model: byModel,
-      ...(includeKeys ? { purchase_keys: purchaseKeys } : {}),
+      ...(includeKeys ? { purchase_keys: purchaseKeys, purchase_all_keys: purchaseAllKeys } : {}),
       transport: "vercel-node",
     });
   } catch (error) {
