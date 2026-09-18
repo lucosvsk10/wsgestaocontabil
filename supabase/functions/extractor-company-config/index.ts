@@ -301,6 +301,14 @@ Deno.serve(async req => {
         'Sua conta não tem permissão para vincular esta empresa ao Extrator.',
         403
       );
+    if (
+      saveError?.code === 'P0001' &&
+      String(saveError?.message || '').includes('extractor_company_limit_reached')
+    )
+      throw new RequestError(
+        'Você atingiu o limite de empresas do seu plano. Faça upgrade para adicionar outra empresa.',
+        422
+      );
     if (saveError || !companyId) throw saveError || new Error('save_failed');
     // Scheduled workers pick up the committed queue, preserving save certainty.
     return J({
