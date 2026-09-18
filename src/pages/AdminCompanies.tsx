@@ -34,6 +34,13 @@ const formatCompanyDocument = (company: OfficeCompanySelection) =>
       ? company.document_number || 'Cadastro pendente'
       : formatCnpj(company.cnpj || company.document_number);
 
+const establishmentLabel = (company: OfficeCompanySelection) => {
+  const value = digits(company.cnpj || company.document_number);
+  if (value.length !== 14) return '';
+  const order = value.slice(8, 12);
+  return order === '0001' ? 'Matriz' : `Filial ${Number(order) || order}`;
+};
+
 const formatDate = (value?: string | null) => {
   if (!value) return '—';
   const date = new Date(value);
@@ -222,7 +229,9 @@ export default function AdminCompanies() {
                           </td>
                           <td className="px-4 py-3.5">
                             <p className="whitespace-nowrap text-xs font-medium">{formatCompanyDocument(company)}</p>
-                            {company.state_registration && <p className="mt-0.5 text-[10px] text-muted-foreground">IE {company.state_registration}</p>}
+                            <p className="mt-0.5 text-[10px] text-muted-foreground">
+                              {[establishmentLabel(company), company.state_registration ? `IE ${company.state_registration}` : ''].filter(Boolean).join(' · ')}
+                            </p>
                           </td>
                           <td className="px-4 py-3.5">
                             <p className="text-xs">{[company.city, company.state].filter(Boolean).join(' / ') || '—'}</p>
