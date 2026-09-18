@@ -654,7 +654,9 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
           ? 'Extrator Enterprise · 10.000 XML por empresa'
           : snapshot?.account?.plan_code === 'office_20000'
             ? 'Escritório · 20.000 XML/mês'
-            : snapshot?.account?.plan_code || 'Plano Extrator';
+            : snapshot?.account?.plan_code === 'internal_ws'
+              ? 'Uso interno WS'
+              : snapshot?.account?.plan_code || 'Plano Extrator';
   const go = (s: Section, companyId?: string) => {
     if (companyId) setSelectedCompanyId(companyId);
     setActive(s);
@@ -805,6 +807,7 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
               planLabel={planLabel}
               usage={planUsage}
               companies={companies.length}
+              internal={internalAdminEntry}
               onOpenSettings={() => go('Configurações')}
             />
           )}
@@ -830,7 +833,7 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
             <section key={group}>
               <p>{group}</p>
               {nav
-                .filter(n => n.group === group)
+                .filter(n => n.group === group && !(internalAdminEntry && n.label === 'Faturas'))
                 .map(n => (
                   <button
                     key={n.label}
@@ -845,7 +848,13 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
             </section>
           ))}
         </nav>
-        {planUsage.mode === 'per_company' ? (
+        {internalAdminEntry ? (
+          <section className="extractor-usage extractor-usage-enterprise-simple">
+            <small>Acesso</small>
+            <strong>Uso interno WS</strong>
+            <span>Sem cobrança comercial · acesso integral</span>
+          </section>
+        ) : planUsage.mode === 'per_company' ? (
           <section className="extractor-usage extractor-usage-enterprise-simple">
             <small>Plano atual</small>
             <strong>Enterprise</strong>
