@@ -167,19 +167,52 @@ Deno.serve(async req => {
       }
     }
 
+    const purchaseState = purchaseStateRes.data || {};
+    const salesState = salesStateRes.data || {};
+
+    if (
+      purchaseExpected == null &&
+      purchaseState.last_completed_at &&
+      String(purchaseState.last_status_code || '') === '137'
+    ) {
+      purchaseExpected = 0;
+      purchaseSourceChecked = true;
+    }
+
     const reconFound = reconciliation.filter(row => row.status === 'found').length;
-    const salesExpected = reconFound || sales.length;
+    const salesSourceChecked = Boolean(
+      salesState.last_completed_at ||
+      salesState.reconciliation_complete ||
+      Number(salesState.reconciliation_total || 0) > 0 ||
+      Number(salesState.scanned_numbers || 0) > 0 ||
+      Number(salesState.found_documents || 0) > 0
+    );
+    const salesExpected = salesSourceChecked ? (reconFound || sales.length) : null;
     const purchaseStored = purchases.length;
     const salesStored = sales.length;
     const purchaseMismatch = purchaseExpected != null && purchaseStored < purchaseExpected;
-    const salesMismatch = salesExpected > salesStored;
-    const purchaseFailures = Number(purchaseStateRes.data?.consecutive_failures || healthRes.data?.purchases_failure_count || 0);
+    const salesMismatch = salesExpected != null && salesExpected > salesStored;
+    const purchaseFailures = Number(purchaseState.consecutive_failures || healthRes.data?.purchases_failure_count || 0);
     const salesFailures = Number(healthRes.data?.sales_failure_count || 0);
     const certUntil = certRes.data?.valid_until || null;
     const certExpired = Boolean(certUntil && new Date(certUntil + 'T23:59:59Z').getTime() < Date.now());
     const pendingXml = Math.max(0, purchaseStored - purchaseXml) + Math.max(0, salesStored - salesXml);
     const persistent = purchaseFailures >= 3 || salesFailures >= 3;
-    const hasAttention = purchaseMismatch || salesMismatch || pendingXml > 0 || manifestationRequired > 0 || manifestationSent > 0;
+
+    const purchaseStatus = String(purchaseState.status || '').toLowerCase();
+    const salesStatus = String(salesState.status || '').toLowerCase();
+    const purchaseBlocked = ['waiting_certificate', 'cooldown', 'error', 'failed', 'retry'].some(value => purchaseStatus.includes(value));
+    const salesBlocked = ['waiting_state_credentials', 'waiting_certificate', 'error', 'failed', 'retry'].some(value => salesStatus.includes(value));
+    const hasAttention =
+      purchaseMismatch ||
+      salesMismatch ||
+      pendingXml > 0 ||
+      manifestationRequired > 0 ||
+      manifestationSent > 0 ||
+      purchaseBlocked ||
+      salesBlocked ||
+      !salesSourceChecked;
+
     const state = certExpired || (persistent && (purchaseMismatch || salesMismatch || pendingXml > 0))
       ? 'error'
       : hasAttention
@@ -208,12 +241,24 @@ Deno.serve(async req => {
         xml_pending: Math.max(0, purchaseStored - purchaseXml),
         manifestation_required: manifestationRequired,
         manifestation_sent: manifestationSent,
-        status: purchaseStateRes.data?.status || null,
-        last_completed_at: purchaseStateRes.data?.last_completed_at || null,
-        last_error: purchaseStateRes.data?.last_error || null,
+        status: purchaseState.status || null,
+        status_code: purchaseState.last_status_code || null,
+        status_message: purchaseState.last_status_message || null,
+        last_started_at: purchaseState.last_started_at || null,
+        last_completed_at: purchaseState.last_completed_at || null,
+        last_error: purchaseState.last_error || null,
         failures: purchaseFailures,
       },
       sales: {
+        source_checked: salesSourceChecked,
+        source_reason:
+          salesStatus === 'waiting_state_credentials'
+            ? 'Credenciais estaduais necessárias para consultar as vendas desta empresa.'
+            : salesStatus === 'waiting_certificate'
+              ? 'Certificado A1 necessário para iniciar a consulta de vendas.'
+              : !salesSourceChecked
+                ? 'A consulta de vendas ainda não foi concluída.'
+                : null,
         expected: salesExpected,
         stored: salesStored,
         xml_ready: salesXml,
@@ -221,9 +266,10 @@ Deno.serve(async req => {
         sequence_total: Number(salesStateRes.data?.reconciliation_total || 0),
         sequence_resolved: Number(salesStateRes.data?.reconciliation_resolved || 0),
         reconciliation_complete: Boolean(salesStateRes.data?.reconciliation_complete),
-        status: salesStateRes.data?.status || null,
-        last_completed_at: salesStateRes.data?.last_completed_at || null,
-        last_error: salesStateRes.data?.last_error || null,
+        status: salesState.status || null,
+        last_started_at: salesState.last_started_at || null,
+        last_completed_at: salesState.last_completed_at || null,
+        last_error: salesState.last_error || null,
         failures: salesFailures,
       },
       certificate: {
