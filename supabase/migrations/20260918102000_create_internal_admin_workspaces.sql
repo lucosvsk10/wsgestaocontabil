@@ -160,47 +160,6 @@ begin
         metadata = excluded.metadata,
         updated_at = now();
 
-  -- The admin now uses only the clean internal organization for SaaS tools.
-  -- Legacy/test organizations remain untouched for their own test users and histories.
-  delete from public.organization_members om
-  where om.user_id = v_admin
-    and om.organization_id <> v_internal_org
-    and (
-      exists (
-        select 1
-        from public.extractor_accounts ea
-        where ea.organization_id = om.organization_id
-      )
-      or exists (
-        select 1
-        from public.saas_subscriptions ss
-        where ss.organization_id = om.organization_id
-          and ss.product_code in ('issuer','extractor')
-      )
-    );
-
-  -- Undo the temporary ownership transfer made during the first environment prototype
-  -- when the legacy issuer test account still has its own active owner member.
-  update public.organizations o
-  set owner_user_id = candidate.user_id,
-      updated_at = now()
-  from lateral (
-    select om.user_id
-    from public.organization_members om
-    join auth.users u on u.id = om.user_id
-    where om.organization_id = o.id
-      and om.status = 'active'
-      and om.role = 'owner'
-      and om.user_id <> v_admin
-      and lower(coalesce(u.email,'')) = 'wsteste@gmail.com'
-    limit 1
-  ) candidate
-  where o.owner_user_id = v_admin
-    and o.id <> v_internal_org
-    and exists (
-      select 1
-      from public.saas_subscriptions ss
-      where ss.organization_id = o.id
-        and ss.product_code = 'issuer'
-    );
+  -- Keep legacy/test memberships untouched for now. Internal routing is resolved
+  -- explicitly through admin_product_workspaces, so old test histories remain intact.
 end $$;
