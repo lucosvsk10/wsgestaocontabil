@@ -788,10 +788,10 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
         <div className="extractor-account">
           {internalAdminEntry && (
             <a
-              href="/admin/ambientes"
+              href="/admin/fiscal"
               style={{ marginRight: 12, color: '#94a3b8', fontSize: 11, fontWeight: 600, textDecoration: 'none' }}
             >
-              ← Ambientes
+              ← Centro Fiscal
             </a>
           )}
           {preview ? (
