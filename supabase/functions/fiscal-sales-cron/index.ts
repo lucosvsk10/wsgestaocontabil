@@ -51,17 +51,35 @@ Deno.serve(async req => {
       "x-debug-token": String(internal.token),
     };
 
-    const { data: companies, error } = await admin
-      .from("fiscal_companies")
-      .select("id,status,uf,fiscal_settings")
-      .eq("status", "ativa")
-      .eq("uf", "AL");
+    const [{ data: companies, error }, { data: extractorLinks }] = await Promise.all([
+      admin
+        .from("fiscal_companies")
+        .select("id,status,uf,fiscal_settings")
+        .eq("status", "ativa")
+        .eq("uf", "AL"),
+      admin
+        .from("extractor_companies")
+        .select("fiscal_company_id")
+        .eq("status", "active"),
+    ]);
     if (error) throw error;
+    const extractorCompanyIds = new Set(
+      (extractorLinks || []).map((row: any) => String(row.fiscal_company_id || ""))
+    );
 
     const out: any[] = [];
 
     for (const company of companies || []) {
       try {
+        const isExtractor = extractorCompanyIds.has(String(company.id));
+        const configuredStart = String(company?.fiscal_settings?.history_start_date || "");
+        const companyHistoryStart = isExtractor
+          ? historyStart
+          : /^\d{4}-\d{2}-\d{2}$/.test(configuredStart)
+            ? configuredStart
+            : null;
+        const companyHistoryEnd = isExtractor ? historyEnd : null;
+
         const { data: state } = await admin
           .from("fiscal_sales_sync_state")
           .select("*")
@@ -127,11 +145,12 @@ Deno.serve(async req => {
         });
 
         if (
-          state?.history_start_month !== historyStartMonth ||
+          isExtractor &&
+          (state?.history_start_month !== historyStartMonth ||
           Number(state?.backfill_days || 0) !== Math.max(1, Math.ceil(
             (new Date(`${historyEnd}T00:00:00-03:00`).getTime() -
               new Date(`${historyStart}T00:00:00-03:00`).getTime()) / 86400000
-          ) + 1)
+          ) + 1))
         ) {
           await admin
             .from("fiscal_sales_sync_state")
@@ -156,21 +175,30 @@ Deno.serve(async req => {
           .eq("series", "1")
           .order("issue_date", { ascending: false })
           .limit(2000);
-        dfeQuery = dfeQuery
-          .gte("issue_date", `${historyStart}T00:00:00-03:00`)
-          .lte("issue_date", `${historyEnd}T23:59:59.999-03:00`);
+        if (companyHistoryStart) {
+          dfeQuery = dfeQuery.gte("issue_date", `${companyHistoryStart}T00:00:00-03:00`);
+        }
+        if (companyHistoryEnd) {
+          dfeQuery = dfeQuery.lte("issue_date", `${companyHistoryEnd}T23:59:59.999-03:00`);
+        }
+
+        let salesQuery = admin
+          .from("fiscal_sales_documents")
+          .select("document_number")
+          .eq("company_id", company.id)
+          .eq("model", "65")
+          .eq("series", "1")
+          .order("document_number", { ascending: false })
+          .limit(2000);
+        if (companyHistoryStart) {
+          salesQuery = salesQuery.gte("issue_date", `${companyHistoryStart}T00:00:00-03:00`);
+        }
+        if (companyHistoryEnd) {
+          salesQuery = salesQuery.lte("issue_date", `${companyHistoryEnd}T23:59:59.999-03:00`);
+        }
 
         const [{ data: salesRows }, { data: dfeRows }] = await Promise.all([
-          admin
-            .from("fiscal_sales_documents")
-            .select("document_number")
-            .eq("company_id", company.id)
-            .eq("model", "65")
-            .eq("series", "1")
-            .gte("issue_date", `${historyStart}T00:00:00-03:00`)
-            .lte("issue_date", `${historyEnd}T23:59:59.999-03:00`)
-            .order("document_number", { ascending: false })
-            .limit(2000),
+          salesQuery,
           dfeQuery,
         ]);
 
