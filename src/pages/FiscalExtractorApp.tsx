@@ -2325,11 +2325,27 @@ function SettingsSection({ account, user, preview, setNotice }: any) {
   const [portal, setPortal] = useState<any>(null);
   const [loading, setLoading] = useState(!preview);
   const [resetting, setResetting] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState<any>({
+    full_name: '',
+    phone: '',
+    account_name: '',
+    fiscal_alerts: true,
+    billing_updates: true,
+  });
 
   const loadProfile = useCallback(async () => {
     if (preview) {
       setPortal({
-        profile: { full_name: 'Usuário demonstração', email: 'demo@wsgestao.com.br', phone: null, created_at: new Date().toISOString(), last_sign_in_at: new Date().toISOString(), email_confirmed_at: new Date().toISOString() },
+        profile: {
+          full_name: 'Usuário demonstração',
+          email: 'demo@wsgestao.com.br',
+          phone: '',
+          notifications: { fiscal_alerts: true, billing_updates: true },
+          created_at: new Date().toISOString(),
+          last_sign_in_at: new Date().toISOString(),
+          email_confirmed_at: new Date().toISOString(),
+        },
         organization: { name: 'Conta demonstração', status: 'active', member_role: 'owner', member_since: new Date().toISOString() },
         account: { name: account?.name || 'Conta Extrator', status: 'active', access_source: 'subscription', lifetime_access: false, created_at: new Date().toISOString() },
       });
@@ -2351,11 +2367,54 @@ function SettingsSection({ account, user, preview, setNotice }: any) {
 
   useEffect(() => { void loadProfile(); }, [loadProfile]);
 
+  useEffect(() => {
+    if (!portal) return;
+    setForm({
+      full_name: portal.profile?.full_name || '',
+      phone: portal.profile?.phone || '',
+      account_name: portal.account?.name || portal.organization?.name || '',
+      fiscal_alerts: portal.profile?.notifications?.fiscal_alerts !== false,
+      billing_updates: portal.profile?.notifications?.billing_updates !== false,
+    });
+  }, [portal]);
+
   const profile = portal?.profile || {};
   const organization = portal?.organization || {};
   const portalAccount = portal?.account || account || {};
   const displayName = profile.full_name || String(profile.email || user?.email || 'Usuário').split('@')[0] || 'Usuário';
   const initials = displayName.split(/\s+/).filter(Boolean).slice(0, 2).map((part: string) => part[0]?.toUpperCase()).join('') || 'WS';
+
+  const saveProfile = async () => {
+    if (preview || saving) return;
+    const name = String(form.full_name || '').trim();
+    const phone = String(form.phone || '').trim();
+    const accountName = String(form.account_name || '').trim();
+    if (name && name.length < 2) return setNotice({ tone: 'error', text: 'Informe um nome com pelo menos 2 caracteres.' });
+    if (accountName && accountName.length < 2) return setNotice({ tone: 'error', text: 'Informe um nome válido para a conta.' });
+    setSaving(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          full_name: name || null,
+          contact_phone: phone || null,
+          notification_preferences: {
+            fiscal_alerts: Boolean(form.fiscal_alerts),
+            billing_updates: Boolean(form.billing_updates),
+          },
+        },
+      });
+      if (error) throw error;
+      if (accountName && accountName !== portalAccount.name) {
+        await extractorRequest({ action: 'save_account', name: accountName });
+      }
+      await loadProfile();
+      setNotice({ tone: 'success', text: 'Perfil e preferências atualizados.' });
+    } catch (error) {
+      setNotice({ tone: 'error', text: error instanceof Error ? error.message : 'Não foi possível salvar o perfil.' });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const sendReset = async () => {
     const email = String(profile.email || user?.email || '');
@@ -2377,35 +2436,59 @@ function SettingsSection({ account, user, preview, setNotice }: any) {
       <PageHeading
         title="Configurações"
         icon="settings"
-        description="Perfil, conta, acesso e segurança do Extrator."
-        actions={<button className="extractor-secondary" onClick={() => void loadProfile()} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />Atualizar</button>}
+        description="Perfil, preferências, conta e segurança do Extrator."
       />
 
       {loading && !portal ? <div className="extractor-report-loading">Carregando conta...</div> : (
-        <div className="extractor-settings-v2">
+        <div className="extractor-settings-v2 extractor-settings-editable">
           <article className="extractor-profile-card">
             <div className="extractor-profile-head">
               <span className="extractor-profile-avatar">{initials}</span>
               <div><h2>{displayName}</h2><p>{profile.email || user?.email || '—'}</p></div>
             </div>
-            <dl>
-              <div><dt>E-mail</dt><dd>{profile.email || user?.email || '—'}</dd></div>
-              <div><dt>Telefone</dt><dd>{profile.phone || 'Não informado'}</dd></div>
-              <div><dt>E-mail confirmado</dt><dd>{profile.email_confirmed_at ? 'Sim' : 'Pendente'}</dd></div>
-              <div><dt>Cadastro</dt><dd>{profile.created_at ? formatDate(profile.created_at, true) : '—'}</dd></div>
-              <div><dt>Último acesso</dt><dd>{profile.last_sign_in_at ? formatDate(profile.last_sign_in_at, true) : '—'}</dd></div>
-            </dl>
+            <div className="extractor-settings-form">
+              <label>
+                Nome
+                <input value={form.full_name || ''} onChange={e => setForm((v: any) => ({ ...v, full_name: e.target.value }))} placeholder="Seu nome" />
+              </label>
+              <label>
+                Telefone de contato
+                <input value={form.phone || ''} onChange={e => setForm((v: any) => ({ ...v, phone: e.target.value }))} placeholder="(82) 99999-9999" />
+              </label>
+              <label>
+                Nome da conta
+                <input value={form.account_name || ''} onChange={e => setForm((v: any) => ({ ...v, account_name: e.target.value }))} placeholder="Nome do escritório ou empresa" />
+              </label>
+              <label className="readonly">
+                E-mail
+                <input value={profile.email || user?.email || ''} readOnly />
+                <small>O e-mail de acesso não é alterado por esta tela.</small>
+              </label>
+            </div>
+            <button className="extractor-primary extractor-save-profile" onClick={() => void saveProfile()} disabled={preview || saving}>
+              {saving ? 'Salvando...' : 'Salvar alterações'}
+            </button>
           </article>
 
           <article className="extractor-settings-card">
-            <h3>Conta e acesso</h3>
+            <h3>Preferências e segurança</h3>
+            <div className="extractor-settings-toggles">
+              <label>
+                <span><b>Alertas fiscais</b><small>Avisar sobre falhas persistentes, XML pendente e certificado.</small></span>
+                <input type="checkbox" checked={Boolean(form.fiscal_alerts)} onChange={e => setForm((v: any) => ({ ...v, fiscal_alerts: e.target.checked }))} />
+              </label>
+              <label>
+                <span><b>Atualizações de cobrança</b><small>Avisar sobre pagamento, renovação e vencimento.</small></span>
+                <input type="checkbox" checked={Boolean(form.billing_updates)} onChange={e => setForm((v: any) => ({ ...v, billing_updates: e.target.checked }))} />
+              </label>
+            </div>
             <dl>
               <div><dt>Organização</dt><dd>{organization.name || portalAccount.name || 'Conta Extrator'}</dd></div>
               <div><dt>Perfil de acesso</dt><dd>{String(organization.member_role || 'membro').replace(/_/g, ' ')}</dd></div>
-              <div><dt>Situação da organização</dt><dd>{organization.status || 'Ativa'}</dd></div>
-              <div><dt>Conta Extrator</dt><dd>{portalAccount.status || 'Ativa'}</dd></div>
+              <div><dt>Situação da conta</dt><dd>{portalAccount.status || organization.status || 'Ativa'}</dd></div>
               <div><dt>Origem do acesso</dt><dd>{portalAccount.lifetime_access ? 'Acesso vitalício' : String(portalAccount.access_source || 'assinatura').replace(/_/g, ' ')}</dd></div>
               <div><dt>Membro desde</dt><dd>{organization.member_since ? formatDate(organization.member_since, true) : '—'}</dd></div>
+              <div><dt>Último acesso</dt><dd>{profile.last_sign_in_at ? formatDate(profile.last_sign_in_at, true) : '—'}</dd></div>
             </dl>
             <div className="extractor-settings-security">
               <button onClick={() => void sendReset()} disabled={preview || resetting}>{resetting ? 'Enviando...' : 'Enviar link para redefinir senha'}</button>
