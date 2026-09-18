@@ -147,6 +147,10 @@ Deno.serve(async (req) => {
     if (!current.profile?.id) return json({ error: 'Esta empresa ainda não possui usuário.' }, 404);
 
     if (action === 'update_username') {
+      const confirmationPassword = clean(body.confirmation_password);
+      if (confirmationPassword !== DEFAULT_CLIENT_PASSWORD) {
+        return json({ error: 'Senha de confirmação inválida.' }, 403);
+      }
       const username = normalizeUsername(body.username);
       if (!validUsername(username)) {
         return json({ error: 'Usuário inválido. Use 3 a 32 caracteres.' }, 422);
@@ -182,6 +186,10 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'reset_password') {
+      const confirmationPassword = clean(body.confirmation_password);
+      if (confirmationPassword !== DEFAULT_CLIENT_PASSWORD) {
+        return json({ error: 'Senha de confirmação inválida.' }, 403);
+      }
       const { error: authError } = await admin.auth.admin.updateUserById(current.profile.id, {
         password: DEFAULT_CLIENT_PASSWORD,
       });
