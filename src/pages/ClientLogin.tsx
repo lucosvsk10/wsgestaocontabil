@@ -45,7 +45,7 @@ const ClientLogin = () => {
     )
       return statePath;
     const { data: roles } = await supabase.from('user_roles').select('role').eq('user_id', userId);
-    if (roles?.some(({ role }) => role === 'admin')) return '/admin';
+    if (roles?.some(({ role }) => role === 'admin')) return '/admin/ambientes';
     const access = await getCurrentProductAccess();
     if (access.saas) return '/app';
     if (access.extractor) return '/extrator';
