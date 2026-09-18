@@ -165,6 +165,9 @@ verify_jwt = true
 [functions.extractor-billing-portal]
 verify_jwt = true
 
+[functions.extractor-billing-receipt]
+verify_jwt = true
+
 [functions.extractor-notifications]
 verify_jwt = true
 
