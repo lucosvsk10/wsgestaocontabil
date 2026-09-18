@@ -15,7 +15,7 @@ import {
 } from 'recharts';
 import { extractorRequest, extractorErrorMessage } from '@/lib/extractor/request';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { CalendarDays, Info, Menu, RefreshCw, X } from 'lucide-react';
+import { CalendarDays, Info, Menu, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import ExtractorFiscalDocumentPreviewModal from '@/components/extractor/ExtractorFiscalDocumentPreviewModal';
@@ -1834,13 +1834,6 @@ function Reports({ companies, totals, models, daily }: any) {
 function HealthState({ label, state }: { label: string; state: 'ok' | 'attention' | 'error' }) {
   return <span className={`extractor-health-state ${state}`}><i />{label}</span>;
 }
-
-const extractorHealthTone = (value?: string | null) => {
-  const status = String(value || '').toLowerCase();
-  if (/error|fail|expired|persistent/.test(status)) return 'error' as const;
-  if (/waiting|pending|retry|running|queued|reconciling|attention/.test(status)) return 'attention' as const;
-  return 'ok' as const;
-};
 
 function HistorySection({ companies, preview, setNotice }: any) {
   const [healthCompanyId, setHealthCompanyId] = useState('');
