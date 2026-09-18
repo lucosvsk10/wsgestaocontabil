@@ -58,6 +58,29 @@ Deno.serve(async req => {
           continue;
         }
 
+        const lastStartedAt = state?.last_started_at ? new Date(state.last_started_at).getTime() : 0;
+        if (
+          state?.status === "running" &&
+          Number.isFinite(lastStartedAt) &&
+          lastStartedAt > 0 &&
+          Date.now() - lastStartedAt < 15 * 60 * 1000
+        ) {
+          out.push({ company_id: company.id, status: "already_running" });
+          continue;
+        }
+
+        const nextScheduledAt = state?.next_scheduled_at
+          ? new Date(state.next_scheduled_at).getTime()
+          : 0;
+        if (
+          state?.status !== "queued" &&
+          Number.isFinite(nextScheduledAt) &&
+          nextScheduledAt > Date.now()
+        ) {
+          out.push({ company_id: company.id, status: "not_due" });
+          continue;
+        }
+
         const { data: cert } = await admin
           .from("fiscal_certificates")
           .select("id")
@@ -99,6 +122,8 @@ Deno.serve(async req => {
           .eq("company_id", company.id)
           .eq("direction", "saida")
           .neq("document_kind", "evento")
+          .eq("model", "65")
+          .eq("series", "1")
           .order("issue_date", { ascending: false })
           .limit(2000);
         if (historyStart) {
@@ -110,6 +135,8 @@ Deno.serve(async req => {
             .from("fiscal_sales_documents")
             .select("document_number")
             .eq("company_id", company.id)
+            .eq("model", "65")
+            .eq("series", "1")
             .order("document_number", { ascending: false })
             .limit(2000),
           dfeQuery,
