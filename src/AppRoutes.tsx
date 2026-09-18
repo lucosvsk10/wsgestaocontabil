@@ -8,10 +8,6 @@ import PrivateRoute from './components/PrivateRoute';
 import { useAuth } from './contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import AdminDashboard from './pages/AdminDashboard';
-import AdminEnvironments from './pages/AdminEnvironments';
-import AdminAccountingOverview from './pages/AdminAccountingOverview';
-import AdminFiscalOverview from './pages/AdminFiscalOverview';
-import AdminPersonalEnvironment from './pages/AdminPersonalEnvironment';
 import ClientDashboard from './pages/ClientDashboard';
 import PollPage from './pages/PollPage';
 import NumericalPollPage from './pages/NumericalPollPage';
@@ -29,11 +25,13 @@ import AdminLancamentos from './pages/AdminLancamentos';
 import AdminBalancete from './pages/AdminBalancete';
 import AdminPlanoContas from './pages/AdminPlanoContas';
 import AdminEngine from './pages/AdminEngine';
+import AdminFeature from './pages/AdminFeature';
 import AdminCompanies from './pages/AdminCompanies';
 import AdminClientProfile from './pages/AdminClientProfile';
 import AdminClientDocuments from './pages/AdminClientDocuments';
 import AdminClientFiscalSetup from './pages/AdminClientFiscalSetup';
 import AdminFiscalCompanies from './pages/AdminFiscalCompanies';
+import AdminFiscalNotes from './pages/AdminFiscalNotes';
 import AdminSubscribers from './pages/AdminSubscribers';
 import SaasApp from './pages/SaasApp';
 import SaasCheckout from './pages/SaasCheckout';
@@ -108,7 +106,7 @@ const DashboardRouter = () => {
       active = false;
     };
   }, [user?.id, admin]);
-  if (admin) return <Navigate to="/admin/ambientes" replace />;
+  if (admin) return <Navigate to="/admin" replace />;
   if (access === null) return <AppLoadingScreen mode="light" />;
   if (access.extractor && access.saas) return <Navigate to="/escolher-produto" replace />;
   if (access.extractor && !access.saas) return <Navigate to="/extrator" replace />;
@@ -180,45 +178,11 @@ const AppRoutes = () => (
     <Route path="/changelog" element={<ChangeLog />} />
     <Route path="/termos-de-servico" element={<LegalPage />} />
     <Route path="/politica-de-privacidade" element={<LegalPage />} />
-    <Route path="/admin" element={<Navigate to="/admin/ambientes" replace />} />
     <Route
-      path="/admin/ambientes"
-      element={
-        <PrivateRoute requiredRole="admin">
-          <AdminEnvironments />
-        </PrivateRoute>
-      }
-    />
-    <Route path="/admin/ambientes/fiscal" element={<Navigate to="/admin/fiscal" replace />} />
-    <Route
-      path="/admin/administrativo"
+      path="/admin"
       element={
         <PrivateRoute requiredRole="admin">
           <AdminDashboard activeTab="dashboard" />
-        </PrivateRoute>
-      }
-    />
-    <Route
-      path="/admin/contabil"
-      element={
-        <PrivateRoute requiredRole="admin">
-          <AdminAccountingOverview />
-        </PrivateRoute>
-      }
-    />
-    <Route
-      path="/admin/fiscal"
-      element={
-        <PrivateRoute requiredRole="admin">
-          <AdminFiscalOverview />
-        </PrivateRoute>
-      }
-    />
-    <Route
-      path="/admin/pessoal"
-      element={
-        <PrivateRoute requiredRole="admin">
-          <AdminPersonalEnvironment />
         </PrivateRoute>
       }
     />
@@ -344,11 +308,28 @@ const AppRoutes = () => (
         </PrivateRoute>
       }
     />
-    <Route path="/admin/feature" element={<Navigate to="/admin/fiscal" replace />} />
-    <Route path="/admin/fiscal/emissao" element={<Navigate to="/admin/fiscal" replace />} />
-    <Route path="/admin/fiscal/cte" element={<Navigate to="/admin/fiscal" replace />} />
-    <Route path="/admin/fiscal/laboratorio" element={<Navigate to="/admin/fiscal" replace />} />
-    <Route path="/admin-dashboard" element={<Navigate to="/admin/ambientes" replace />} />
+    <Route
+      path="/admin/feature"
+      element={
+        <PrivateRoute requiredRole="admin">
+          <AdminFiscalNotes />
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/admin/fiscal/emissao"
+      element={
+        <PrivateRoute requiredRole="admin">
+          <AdminFeature />
+        </PrivateRoute>
+      }
+    />
+    <Route path="/admin/fiscal/cte" element={<Navigate to="/admin/fiscal/emissao" replace />} />
+    <Route
+      path="/admin/fiscal/laboratorio"
+      element={<Navigate to="/admin/fiscal/emissao" replace />}
+    />
+    <Route path="/admin-dashboard" element={<Navigate to="/admin" replace />} />
     <Route path="/admin/tax-simulations" element={<Navigate to="/admin/simulations" replace />} />
     <Route
       path="/admin/carousel"
@@ -396,7 +377,7 @@ const AppRoutes = () => (
     />
     <Route
       path="/admin/lancamentos/feature"
-      element={<Navigate to="/admin/fiscal" replace />}
+      element={<Navigate to="/admin/fiscal/emissao" replace />}
     />
     <Route
       path="/extrator/*"
