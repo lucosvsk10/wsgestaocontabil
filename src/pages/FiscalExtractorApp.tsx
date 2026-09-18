@@ -777,9 +777,9 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
           </button>
           <img src="/assets/ws-logo.png" alt="WS Gestão Contábil" />
           {fromAdmin && (
-            <a href="/admin" className="ml-3 hidden items-center gap-1.5 text-[11px] font-semibold text-slate-400 transition hover:text-white sm:inline-flex">
+            <a href="/admin" title="Voltar ao painel do administrador" className="ml-1 hidden items-center gap-1.5 rounded-md border border-white/10 px-2 py-1.5 text-[10px] font-semibold text-slate-400 transition hover:bg-white/5 hover:text-white sm:inline-flex">
               <ArrowLeft className="h-3.5 w-3.5" />
-              Painel do administrador
+              Painel
             </a>
           )}
         </div>
