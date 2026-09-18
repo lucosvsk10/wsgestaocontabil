@@ -2284,20 +2284,21 @@ function BillingSection({ usage, planLabel, preview, setNotice }: any) {
           provider: 'mercado_pago',
           billing_mode: 'recurring',
           current_period_end: new Date(Date.now() + 20 * 86400000).toISOString(),
-          plan: { code: 'extractor_commercial', name: 'Extrator Comercial', price_cents: 9900, limits: { monthly_xml: 20000 } },
+          plan: { code: 'extractor_commercial', name: 'Extrator Padrão', price_cents: 9700, limits: { monthly_xml: 5000, companies: 5 } },
         },
         billing_cycle: {
           paid: true,
           status: 'paid',
           paid_at: new Date().toISOString(),
           payment_method: 'pix',
-          amount_cents: 9900,
+          amount_cents: 9700,
           next_charge_at: new Date(Date.now() + 20 * 86400000).toISOString(),
           renewal_mode: 'automatic',
         },
         plans: [
-          { code: 'extractor_commercial', name: 'Extrator Comercial', price_cents: 9900, limits: { monthly_xml: 20000 }, features: {} },
-          { code: 'extractor_enterprise', name: 'Extrator Empresarial', price_cents: 25000, limits: { monthly_xml: null }, features: { unlimited: true } },
+          { code: 'extractor_commercial', name: 'Extrator Padrão', price_cents: 9700, limits: { monthly_xml: 5000, companies: 5 }, features: {} },
+          { code: 'extractor_pro', name: 'Extrator Pro', price_cents: 15000, limits: { monthly_xml: 15000, companies: 10 }, features: {} },
+          { code: 'extractor_enterprise', name: 'Extrator Enterprise', price_cents: 39700, limits: { monthly_xml: 10000, monthly_xml_per_company: 10000, companies: 100 }, features: { enterprise: true, hide_company_limit: true } },
         ],
         invoices: [],
       });
@@ -2336,9 +2337,13 @@ function BillingSection({ usage, planLabel, preview, setNotice }: any) {
     ? String(billingCycle.payment_method).replace(/_/g, ' ')
     : '—';
   const renewalAutomatic = billingCycle?.renewal_mode === 'automatic' || subscription?.billing_mode === 'recurring';
-  const monthlyLimit = plan?.limits?.monthly_xml;
-  const unlimited = plan?.features?.unlimited === true || monthlyLimit == null;
-  const usageLimitLabel = unlimited ? 'Ilimitado' : integer.format(Number(monthlyLimit || usage.limit || 0));
+  const monthlyLimit = Number(plan?.limits?.monthly_xml || usage.limit || 0);
+  const monthlyPerCompany = Number(plan?.limits?.monthly_xml_per_company || 0);
+  const enterpriseCapacity = monthlyPerCompany > 0;
+  const usageLimitLabel = integer.format(Number(usage.limit || monthlyLimit || 0));
+  const planCapacityLabel = enterpriseCapacity
+    ? `${integer.format(monthlyPerCompany)} XML por empresa/mês`
+    : `${integer.format(monthlyLimit)} XML/mês`;
 
   const requestUpgrade = (targetPlan: any) => {
     const message = encodeURIComponent(
@@ -2374,7 +2379,7 @@ function BillingSection({ usage, planLabel, preview, setNotice }: any) {
             <div>
               <small>Plano atual</small>
               <strong>{plan?.name || planLabel}</strong>
-              <span>{unlimited ? 'XML ilimitado' : `${usageLimitLabel} XML/mês`}</span>
+              <span>{planCapacityLabel}</span>
             </div>
             <div>
               <small>{renewalAutomatic ? 'Próxima cobrança' : 'Próxima renovação'}</small>
@@ -2403,13 +2408,13 @@ function BillingSection({ usage, planLabel, preview, setNotice }: any) {
             <article className="extractor-billing-card">
               <header>
                 <div><h2>Uso do plano</h2><p>Consumo de XML no período atual</p></div>
-                <strong className="amount">{unlimited ? '∞' : `${usage.percent}%`}</strong>
+                <strong className="amount">{usage.percent}%</strong>
               </header>
-              {!unlimited && <div className="extractor-billing-progress"><i style={{ width: `${Math.min(100, Math.max(0, usage.percent))}%` }} /></div>}
+              <div className="extractor-billing-progress"><i style={{ width: `${Math.min(100, Math.max(0, usage.percent))}%` }} /></div>
               <div className="extractor-billing-facts">
                 <div><span>Processados</span><b>{integer.format(usage.used)}</b></div>
-                <div><span>Limite</span><b>{usageLimitLabel}</b></div>
-                <div><span>Restantes</span><b>{unlimited ? 'Ilimitado' : integer.format(usage.remaining)}</b></div>
+                <div><span>Limite do ciclo</span><b>{usageLimitLabel}</b></div>
+                <div><span>Restantes</span><b>{integer.format(usage.remaining)}</b></div>
                 <div><span>Ciclo</span><b>{formatDate(usage.period_start)} a {formatDate(usage.period_end)}</b></div>
               </div>
             </article>
@@ -2439,26 +2444,35 @@ function BillingSection({ usage, planLabel, preview, setNotice }: any) {
             </div>
             <div className="extractor-plan-options-grid">
               {plans.map((item: any) => {
-                const itemLimit = item?.limits?.monthly_xml;
-                const itemUnlimited = item?.features?.unlimited === true || itemLimit == null;
+                const itemLimit = Number(item?.limits?.monthly_xml || 0);
+                const itemPerCompany = Number(item?.limits?.monthly_xml_per_company || 0);
                 const current = item.code === currentPlanCode;
-                const canUpgrade = currentPlanCode === 'extractor_commercial' && item.code === 'extractor_enterprise';
+                const order: Record<string, number> = {
+                  extractor_commercial: 1,
+                  extractor_pro: 2,
+                  extractor_enterprise: 3,
+                };
+                const canUpgrade = (order[item.code] || 0) > (order[currentPlanCode] || 0);
+                const capacity = itemPerCompany > 0
+                  ? `${integer.format(itemPerCompany)} XML por empresa/mês`
+                  : `${integer.format(itemLimit)} XML por mês`;
+                const companyCopy = item.code === 'extractor_enterprise'
+                  ? 'Estrutura Enterprise'
+                  : `Até ${integer.format(Number(item?.limits?.companies || 0))} empresas`;
                 return (
                   <article key={item.code} className={`extractor-plan-option ${current ? 'current' : ''}`}>
                     <div>
-                      <small>{current ? 'Plano atual' : item.code === 'extractor_enterprise' ? 'Maior capacidade' : 'Plano padrão'}</small>
+                      <small>{current ? 'Plano atual' : item.code === 'extractor_enterprise' ? 'Enterprise' : 'Plano disponível'}</small>
                       <h3>{item.name}</h3>
                       <strong>{centsMoney(item.price_cents)}<span>/mês</span></strong>
-                      <p>{itemUnlimited ? 'XML ilimitado' : `${integer.format(Number(itemLimit || 0))} XML por mês`}</p>
+                      <p>{capacity} · {companyCopy}</p>
                     </div>
                     {current ? (
                       <span className="extractor-plan-current">Seu plano</span>
                     ) : canUpgrade ? (
                       <button onClick={() => requestUpgrade(item)}>Solicitar upgrade</button>
                     ) : (
-                      <span className="extractor-plan-muted">
-                        {currentPlanCode === 'extractor_enterprise' ? 'Plano inferior ao atual' : 'Disponível para contratação'}
-                      </span>
+                      <span className="extractor-plan-muted">Plano inferior ao atual</span>
                     )}
                   </article>
                 );
@@ -2659,11 +2673,11 @@ function SettingsSection({ account, user, preview, setNotice }: any) {
             <h3>Preferências e segurança</h3>
             <div className="extractor-settings-toggles">
               <label>
-                <span><b>Alertas fiscais</b><small>Avisar sobre falhas persistentes, XML pendente e certificado.</small></span>
+                <span><b>Importações fiscais</b><small>Mostrar um aviso quando a sincronização encontrar novas compras ou vendas.</small></span>
                 <input type="checkbox" checked={Boolean(form.fiscal_alerts)} onChange={e => setForm((v: any) => ({ ...v, fiscal_alerts: e.target.checked }))} />
               </label>
               <label>
-                <span><b>Atualizações de cobrança</b><small>Avisar sobre pagamento, renovação e vencimento.</small></span>
+                <span><b>Atualizações de cobrança</b><small>Avisar sobre pagamento confirmado, renovação e vencimento da mensalidade.</small></span>
                 <input type="checkbox" checked={Boolean(form.billing_updates)} onChange={e => setForm((v: any) => ({ ...v, billing_updates: e.target.checked }))} />
               </label>
             </div>
