@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, FileKey2, ImagePlus, KeyRound, Loader2, RotateCcw, Save, Search, ShieldCheck, UserRound } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, FileKey2, ImagePlus, KeyRound, Loader2, Pencil, RotateCcw, Save, Search, ShieldCheck, UserRound } from 'lucide-react';
 import { AdminLayout } from '@/components/admin/layout/AdminLayout';
 import { AdminPage, AdminPageHeader, AdminSection } from '@/components/admin/ui/AdminPage';
 import { SmartCertificateInput } from '@/components/admin/fiscal/CertificateImportTools';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useCompanySelection } from '@/contexts/CompanySelectionContext';
 import { lookupOfficeCompanyByCnpj, registryToOfficeCompany, onlyDigits } from '@/utils/companyRegistry';
@@ -15,6 +16,7 @@ const initial=(name?:string|null)=>String(name||'?').trim().charAt(0).toUpperCas
 async function fileToBase64(file:File){const bytes=new Uint8Array(await file.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=0x8000)binary+=String.fromCharCode(...bytes.subarray(i,i+0x8000));return btoa(binary)}
 async function callVault(body:Record<string,unknown>){const{data,error}=await supabase.functions.invoke('fiscal-company-vault',{body});if(!error)return data;let message=error.message;try{const context=(error as {context?:Response}).context;if(context)message=(await context.clone().json())?.error||message}catch{}throw new Error(message)}
 async function callAccess(body:Record<string,unknown>){const{data,error}=await supabase.functions.invoke('admin-client-access',{body});if(!error&&!data?.error)return data;let message=data?.error||error?.message||'Não foi possível gerenciar o acesso.';try{const context=(error as {context?:Response})?.context;if(context)message=(await context.clone().json())?.error||message}catch{}throw new Error(message)}
+async function confirmAccessPassword(password:string){const{data,error}=await supabase.functions.invoke('admin-client-access-confirm',{body:{password}});if(!error&&!data?.error)return true;let message=data?.error||error?.message||'Senha de confirmação inválida.';try{const context=(error as {context?:Response})?.context;if(context)message=(await context.clone().json())?.error||message}catch{}throw new Error(message)}
 const formatAccessDate=(value?:string|null)=>{if(!value)return '—';const date=new Date(value);return Number.isNaN(date.getTime())?'—':new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(date)}
 
 type Client={id:string;company_name:string;trade_name:string|null;cnpj:string;address:string|null;company_size:string|null;logo_url?:string|null;state_registration?:string|null;registration_status?:string|null;tax_regime?:string|null;email?:string|null;phone?:string|null;postal_code?:string|null;street?:string|null;street_number?:string|null;complement?:string|null;district?:string|null;city?:string|null;state?:string|null;city_ibge_code?:string|null;cnae_primary?:string|null;registry_payload?:any;registry_updated_at?:string|null};
@@ -25,14 +27,17 @@ type ClientAccess={user_id:string;username:string|null;email:string|null;must_ch
 
 export default function AdminClientProfile(){
  const {companyId}=useParams();const navigate=useNavigate();const {selectCompany,refreshCompanies}=useCompanySelection();
- const [client,setClient]=useState<Client|null>(null),[fiscal,setFiscal]=useState<Fiscal|null>(null),[cert,setCert]=useState<Cert|null>(null),[certFile,setCertFile]=useState<File|null>(null),[certPassword,setCertPassword]=useState(''),[certMeta,setCertMeta]=useState<CertMeta|null>(null),[access,setAccess]=useState<ClientAccess|null>(null),[accessUsername,setAccessUsername]=useState(''),[accessBusy,setAccessBusy]=useState(false),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[lookingUp,setLookingUp]=useState(false),[uploading,setUploading]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
+ const [client,setClient]=useState<Client|null>(null),[fiscal,setFiscal]=useState<Fiscal|null>(null),[cert,setCert]=useState<Cert|null>(null),[certFile,setCertFile]=useState<File|null>(null),[certPassword,setCertPassword]=useState(''),[certMeta,setCertMeta]=useState<CertMeta|null>(null),[access,setAccess]=useState<ClientAccess|null>(null),[accessUsername,setAccessUsername]=useState(''),[accessBusy,setAccessBusy]=useState(false),[accessEditing,setAccessEditing]=useState(false),[confirmAction,setConfirmAction]=useState<'username'|'reset'|null>(null),[confirmPassword,setConfirmPassword]=useState(''),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[lookingUp,setLookingUp]=useState(false),[uploading,setUploading]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
 
- const load=async()=>{if(!companyId)return;setLoading(true);setError('');try{const c=await (supabase as any).from('companies').select('*').eq('id',companyId).single();if(c.error)throw c.error;setClient(c.data);selectCompany(companyId);const [fResult,accessResult]=await Promise.all([(supabase as any).from('fiscal_companies').select('id,cnpj,razao_social,nome_fantasia,uf,municipio,codigo_municipio,inscricao_estadual,regime_tributario').eq('company_id',companyId).maybeSingle(),callAccess({action:'status',company_id:companyId})]);if(fResult.error)throw fResult.error;const f=fResult;setFiscal(f.data||null);setAccess(accessResult?.access||null);setAccessUsername(accessResult?.access?.username||'');if(f.data){const ce=await (supabase as any).from('fiscal_certificates').select('certificate_name,holder_name,holder_cnpj,valid_until,is_active').eq('company_id',f.data.id).eq('is_active',true).order('created_at',{ascending:false}).limit(1).maybeSingle();if(ce.error)throw ce.error;setCert(ce.data||null)}else setCert(null)}catch(e){setError(e instanceof Error?e.message:String(e))}finally{setLoading(false)}};
+ const load=async()=>{if(!companyId)return;setLoading(true);setError('');try{const c=await (supabase as any).from('companies').select('*').eq('id',companyId).single();if(c.error)throw c.error;setClient(c.data);selectCompany(companyId);const [fResult,accessResult]=await Promise.all([(supabase as any).from('fiscal_companies').select('id,cnpj,razao_social,nome_fantasia,uf,municipio,codigo_municipio,inscricao_estadual,regime_tributario').eq('company_id',companyId).maybeSingle(),callAccess({action:'status',company_id:companyId})]);if(fResult.error)throw fResult.error;const f=fResult;setFiscal(f.data||null);setAccess(accessResult?.access||null);setAccessUsername(accessResult?.access?.username||'');setAccessEditing(false);if(f.data){const ce=await (supabase as any).from('fiscal_certificates').select('certificate_name,holder_name,holder_cnpj,valid_until,is_active').eq('company_id',f.data.id).eq('is_active',true).order('created_at',{ascending:false}).limit(1).maybeSingle();if(ce.error)throw ce.error;setCert(ce.data||null)}else setCert(null)}catch(e){setError(e instanceof Error?e.message:String(e))}finally{setLoading(false)}};
  useEffect(()=>{void load()},[companyId]);
 
  const createAccess=async()=>{if(!companyId||accessBusy)return;setAccessBusy(true);setError('');setNotice('');try{const result=await callAccess({action:'create',company_id:companyId,username:accessUsername});setNotice(`Acesso criado para @${result.username}. A senha inicial padrão da WS será exigida apenas no primeiro acesso e deverá ser alterada.`);await refreshCompanies();await load()}catch(e){setError(e instanceof Error?e.message:String(e))}finally{setAccessBusy(false)}};
- const updateAccessUsername=async()=>{if(!companyId||!access||accessBusy)return;setAccessBusy(true);setError('');setNotice('');try{const result=await callAccess({action:'update_username',company_id:companyId,username:accessUsername});setNotice(`Usuário atualizado para @${result.username}.`);await refreshCompanies();await load()}catch(e){setError(e instanceof Error?e.message:String(e))}finally{setAccessBusy(false)}};
- const resetAccessPassword=async()=>{if(!companyId||!access||accessBusy)return;setAccessBusy(true);setError('');setNotice('');try{await callAccess({action:'reset_password',company_id:companyId});setNotice('Senha redefinida para a senha padrão da WS. A troca será obrigatória no próximo acesso.');await refreshCompanies();await load()}catch(e){setError(e instanceof Error?e.message:String(e))}finally{setAccessBusy(false)}};
+ const updateAccessUsername=async()=>{if(!companyId||!access||accessBusy||!confirmPassword)return;setAccessBusy(true);setError('');setNotice('');try{await confirmAccessPassword(confirmPassword);const result=await callAccess({action:'update_username',company_id:companyId,username:accessUsername});setConfirmAction(null);setConfirmPassword('');setAccessEditing(false);setNotice(`Usuário atualizado para @${result.username}. O login anterior deixou de funcionar.`);await refreshCompanies();await load()}catch(e){setError(e instanceof Error?e.message:String(e))}finally{setAccessBusy(false)}};
+ const resetAccessPassword=async()=>{if(!companyId||!access||accessBusy||!confirmPassword)return;setAccessBusy(true);setError('');setNotice('');try{await confirmAccessPassword(confirmPassword);await callAccess({action:'reset_password',company_id:companyId});setConfirmAction(null);setConfirmPassword('');setNotice('Senha redefinida para a senha padrão da WS. A senha anterior deixou de funcionar e a troca será obrigatória no próximo acesso.');await refreshCompanies();await load()}catch(e){setError(e instanceof Error?e.message:String(e))}finally{setAccessBusy(false)}};
+ const requestUsernameChange=()=>{if(!access||accessBusy)return;if(accessUsername.trim().toLowerCase()===(access.username||'').trim().toLowerCase()){setAccessEditing(false);return}setConfirmPassword('');setConfirmAction('username')};
+ const requestPasswordReset=()=>{if(!access||accessBusy)return;setConfirmPassword('');setConfirmAction('reset')};
+ const closeAccessConfirmation=()=>{if(accessBusy)return;setConfirmAction(null);setConfirmPassword('')};
 
  const lookupCnpj=async()=>{if(!client)return;setLookingUp(true);setError('');setNotice('');try{const lookup=await lookupOfficeCompanyByCnpj(client.cnpj);const mapped=registryToOfficeCompany(lookup.data,lookup.registry||{});setClient({...client,...mapped});setNotice(lookup.state_registry_found?'Cadastro encontrado. Razão social, nome fantasia, IE e demais dados foram preenchidos automaticamente.':'Cadastro encontrado. Os dados federais foram preenchidos; a IE não apareceu na fonte estadual e pode ser revisada manualmente.')}catch(e){setError(e instanceof Error?e.message:String(e))}finally{setLookingUp(false)}};
 
@@ -54,15 +59,22 @@ export default function AdminClientProfile(){
     <AdminSection className="p-5">
       <div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-muted/35"><UserRound className="h-5 w-5"/></span><div><h2 className="text-sm font-semibold">Acesso do cliente</h2><p className="text-[11px] text-muted-foreground">{access?'Gerencie o login deste cliente.':'Nenhum usuário vinculado.'}</p></div></div>
       <div className="mt-5 space-y-3">
-        <Field label="Nome de usuário"><Input value={accessUsername} disabled={accessBusy} onChange={e=>setAccessUsername(e.target.value.toLowerCase())} placeholder="ex.: empresaexemplo"/></Field>
+        <Field label="Nome de usuário"><Input value={accessUsername} disabled={accessBusy||Boolean(access&&!accessEditing)} onChange={e=>setAccessUsername(e.target.value.toLowerCase())} placeholder="ex.: empresaexemplo"/></Field>
         {access ? (
           <>
             <div className="rounded-xl border border-border/55 bg-muted/15 p-3">
               <div className="flex items-center justify-between gap-2"><span className="text-[10px] font-semibold uppercase tracking-[.1em] text-muted-foreground">Senha</span><span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${access.must_change_password===false?'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300':'bg-amber-500/10 text-amber-700 dark:text-amber-300'}`}>{access.must_change_password===false?'Alterada':'Padrão'}</span></div>
               <p className="mt-2 text-[11px] text-muted-foreground">{access.must_change_password===false?`Alterada em ${formatAccessDate(access.password_changed_at)}`:'Troca obrigatória no próximo acesso.'}</p>
             </div>
-            <Button className="w-full" variant="outline" disabled={accessBusy||!accessUsername.trim()} onClick={()=>void updateAccessUsername()}><Save className="mr-2 h-4 w-4"/>Salvar usuário</Button>
-            <Button className="w-full" variant="ghost" disabled={accessBusy} onClick={()=>void resetAccessPassword()}><RotateCcw className="mr-2 h-4 w-4"/>Redefinir senha padrão</Button>
+            {accessEditing ? (
+              <div className="grid grid-cols-2 gap-2">
+                <Button variant="ghost" disabled={accessBusy} onClick={()=>{setAccessEditing(false);setAccessUsername(access.username||'')}}>Cancelar</Button>
+                <Button disabled={accessBusy||!accessUsername.trim()} onClick={requestUsernameChange}><Save className="mr-2 h-4 w-4"/>Salvar</Button>
+              </div>
+            ) : (
+              <Button className="w-full" variant="outline" disabled={accessBusy} onClick={()=>setAccessEditing(true)}><Pencil className="mr-2 h-4 w-4"/>Alterar usuário</Button>
+            )}
+            <Button className="w-full" variant="ghost" disabled={accessBusy} onClick={requestPasswordReset}><RotateCcw className="mr-2 h-4 w-4"/>Redefinir senha padrão</Button>
           </>
         ) : (
           <Button className="w-full" disabled={accessBusy||!accessUsername.trim()} onClick={()=>void createAccess()}>{accessBusy?<Loader2 className="mr-2 h-4 w-4 animate-spin"/>:<KeyRound className="mr-2 h-4 w-4"/>}Criar acesso</Button>
@@ -75,6 +87,46 @@ export default function AdminClientProfile(){
     <AdminSection className="p-6"><div className="flex items-start justify-between gap-4"><div><h2 className="font-semibold">Certificado digital A1 <span className="font-normal text-muted-foreground">(opcional)</span></h2><p className="mt-1 text-xs text-muted-foreground">Só adicione o .pfx/.p12 se o escritório quiser habilitar a extração fiscal desta empresa. O cadastro empresarial funciona normalmente sem certificado.</p></div>{cert&&<span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400"><ShieldCheck className="h-4 w-4"/>Ativo</span>}</div>{cert&&<div className="mt-4 flex items-center gap-3 rounded-xl border border-border/50 bg-muted/20 p-4"><div className="rounded-lg bg-background p-2"><FileKey2 className="h-5 w-5"/></div><div><p className="text-sm font-medium">{cert.certificate_name}</p><p className="text-xs text-muted-foreground">{cert.holder_name||'Titular não informado'} · válido até {new Date(`${cert.valid_until}T12:00:00`).toLocaleDateString('pt-BR')}</p></div></div>}<div className="mt-5"><SmartCertificateInput editing={Boolean(cert)} onFile={setCertFile} onPassword={setCertPassword} onMetadata={onCertificateMetadata}/></div></AdminSection>
    </div>
   </div>
+
+  <Dialog open={Boolean(confirmAction)} onOpenChange={open=>{if(!open)closeAccessConfirmation()}}>
+    <DialogContent className="sm:max-w-md">
+      <div className="flex items-start gap-3">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-500/10 text-amber-700 dark:text-amber-300"><AlertTriangle className="h-5 w-5"/></span>
+        <div>
+          <DialogTitle>{confirmAction==='reset'?'Redefinir senha do cliente':'Alterar nome de usuário'}</DialogTitle>
+          <DialogDescription className="mt-2 leading-6">
+            {confirmAction==='reset'
+              ? 'Ao confirmar, a senha atual deixa de funcionar imediatamente. O cliente deverá entrar novamente usando a senha padrão da WS e será obrigado a criar uma nova senha.'
+              : `O login atual @${access?.username||''} deixará de funcionar. O cliente deverá usar @${accessUsername||''} a partir da alteração. A senha dele não será modificada.`}
+          </DialogDescription>
+        </div>
+      </div>
+      <div className="mt-3 rounded-xl border border-border/60 bg-muted/15 p-4">
+        <Field label="Senha de confirmação">
+          <Input
+            type="password"
+            autoComplete="off"
+            value={confirmPassword}
+            disabled={accessBusy}
+            onChange={e=>setConfirmPassword(e.target.value)}
+            placeholder="Digite a senha padrão da WS"
+            onKeyDown={e=>{if(e.key==='Enter'&&confirmPassword&&!accessBusy){void (confirmAction==='reset'?resetAccessPassword():updateAccessUsername())}}}
+          />
+        </Field>
+        <p className="mt-2 text-[11px] leading-5 text-muted-foreground">Esta confirmação protege alterações que interrompem o acesso atual do cliente.</p>
+      </div>
+      <div className="mt-4 flex justify-end gap-2">
+        <Button variant="ghost" disabled={accessBusy} onClick={closeAccessConfirmation}>Cancelar</Button>
+        <Button
+          disabled={accessBusy||!confirmPassword}
+          onClick={()=>void (confirmAction==='reset'?resetAccessPassword():updateAccessUsername())}
+        >
+          {accessBusy&&<Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+          {confirmAction==='reset'?'Redefinir senha':'Confirmar alteração'}
+        </Button>
+      </div>
+    </DialogContent>
+  </Dialog>
  </AdminPage></AdminLayout>
 }
 function Field({label,children}:{label:string;children:React.ReactNode}){return <label className="block space-y-2"><span className="text-xs font-medium text-muted-foreground">{label}</span>{children}</label>}
