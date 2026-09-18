@@ -30,23 +30,56 @@ Deno.serve(async req => {
 
     const now = new Date();
     const next = new Date(now.getTime() + 3 * 60 * 60 * 1000);
+    const [{ data: minimumHistory }, { data: localToday }] = await Promise.all([
+      admin.rpc("extractor_minimum_history_start"),
+      admin.rpc("extractor_local_date"),
+    ]);
+    const brazilNow = new Date(Date.now() - 3 * 60 * 60 * 1000);
+    const fallbackStart = new Date(Date.UTC(brazilNow.getUTCFullYear(), brazilNow.getUTCMonth() - 1, 1))
+      .toISOString()
+      .slice(0, 10);
+    const historyStart = /^\d{4}-\d{2}-\d{2}$/.test(String(minimumHistory || ""))
+      ? String(minimumHistory)
+      : fallbackStart;
+    const historyEnd = /^\d{4}-\d{2}-\d{2}$/.test(String(localToday || ""))
+      ? String(localToday)
+      : brazilNow.toISOString().slice(0, 10);
+    const historyStartMonth = historyStart.slice(2, 4) + historyStart.slice(5, 7);
     const base = Deno.env.get("SUPABASE_URL")!;
     const headers = {
       "content-type": "application/json",
       "x-debug-token": String(internal.token),
     };
 
-    const { data: companies, error } = await admin
-      .from("fiscal_companies")
-      .select("id,status,uf,fiscal_settings")
-      .eq("status", "ativa")
-      .eq("uf", "AL");
+    const [{ data: companies, error }, { data: extractorLinks }] = await Promise.all([
+      admin
+        .from("fiscal_companies")
+        .select("id,status,uf,fiscal_settings")
+        .eq("status", "ativa")
+        .eq("uf", "AL"),
+      admin
+        .from("extractor_companies")
+        .select("fiscal_company_id")
+        .eq("status", "active"),
+    ]);
     if (error) throw error;
+    const extractorCompanyIds = new Set(
+      (extractorLinks || []).map((row: any) => String(row.fiscal_company_id || ""))
+    );
 
     const out: any[] = [];
 
     for (const company of companies || []) {
       try {
+        const isExtractor = extractorCompanyIds.has(String(company.id));
+        const configuredStart = String(company?.fiscal_settings?.history_start_date || "");
+        const companyHistoryStart = isExtractor
+          ? historyStart
+          : /^\d{4}-\d{2}-\d{2}$/.test(configuredStart)
+            ? configuredStart
+            : null;
+        const companyHistoryEnd = isExtractor ? historyEnd : null;
+
         const { data: state } = await admin
           .from("fiscal_sales_sync_state")
           .select("*")
@@ -111,10 +144,26 @@ Deno.serve(async req => {
           updated_at: now.toISOString(),
         });
 
-        const configuredStart = String(company?.fiscal_settings?.history_start_date || "");
-        const historyStart = /^\d{4}-\d{2}-\d{2}$/.test(configuredStart)
-          ? configuredStart
-          : null;
+        if (
+          isExtractor &&
+          (state?.history_start_month !== historyStartMonth ||
+          Number(state?.backfill_days || 0) !== Math.max(1, Math.ceil(
+            (new Date(`${historyEnd}T00:00:00-03:00`).getTime() -
+              new Date(`${historyStart}T00:00:00-03:00`).getTime()) / 86400000
+          ) + 1))
+        ) {
+          await admin
+            .from("fiscal_sales_sync_state")
+            .update({
+              history_start_month: historyStartMonth,
+              backfill_days: Math.max(1, Math.ceil(
+                (new Date(`${historyEnd}T00:00:00-03:00`).getTime() -
+                  new Date(`${historyStart}T00:00:00-03:00`).getTime()) / 86400000
+              ) + 1),
+              updated_at: new Date().toISOString(),
+            })
+            .eq("company_id", company.id);
+        }
 
         let dfeQuery = admin
           .from("fiscal_dfe_documents")
@@ -126,34 +175,93 @@ Deno.serve(async req => {
           .eq("series", "1")
           .order("issue_date", { ascending: false })
           .limit(2000);
-        if (historyStart) {
-          dfeQuery = dfeQuery.gte("issue_date", `${historyStart}T00:00:00Z`);
+        if (companyHistoryStart) {
+          dfeQuery = dfeQuery.gte("issue_date", `${companyHistoryStart}T00:00:00-03:00`);
+        }
+        if (companyHistoryEnd) {
+          dfeQuery = dfeQuery.lte("issue_date", `${companyHistoryEnd}T23:59:59.999-03:00`);
         }
 
-        const [{ data: salesRows }, { data: dfeRows }] = await Promise.all([
-          admin
+        let salesQuery = admin
+          .from("fiscal_sales_documents")
+          .select("document_number")
+          .eq("company_id", company.id)
+          .eq("model", "65")
+          .eq("series", "1")
+          .order("document_number", { ascending: false })
+          .limit(2000);
+        if (companyHistoryStart) {
+          salesQuery = salesQuery.gte("issue_date", `${companyHistoryStart}T00:00:00-03:00`);
+        }
+        if (companyHistoryEnd) {
+          salesQuery = salesQuery.lte("issue_date", `${companyHistoryEnd}T23:59:59.999-03:00`);
+        }
+
+        let priorSalesQuery: any = null;
+        let priorDfeQuery: any = null;
+        if (isExtractor && companyHistoryStart) {
+          priorSalesQuery = admin
             .from("fiscal_sales_documents")
-            .select("document_number")
+            .select("document_number,issue_date")
             .eq("company_id", company.id)
             .eq("model", "65")
             .eq("series", "1")
-            .order("document_number", { ascending: false })
-            .limit(2000),
+            .lt("issue_date", `${companyHistoryStart}T00:00:00-03:00`)
+            .order("issue_date", { ascending: false })
+            .limit(1);
+          priorDfeQuery = admin
+            .from("fiscal_dfe_documents")
+            .select("note_number,issue_date")
+            .eq("company_id", company.id)
+            .eq("direction", "saida")
+            .neq("document_kind", "evento")
+            .eq("model", "65")
+            .eq("series", "1")
+            .lt("issue_date", `${companyHistoryStart}T00:00:00-03:00`)
+            .order("issue_date", { ascending: false })
+            .limit(1);
+        }
+
+        const [
+          { data: salesRows },
+          { data: dfeRows },
+          priorSalesResult,
+          priorDfeResult,
+        ] = await Promise.all([
+          salesQuery,
           dfeQuery,
+          priorSalesQuery || Promise.resolve({ data: [] }),
+          priorDfeQuery || Promise.resolve({ data: [] }),
         ]);
 
-        const maxSaved = Math.max(
-          0,
-          ...(salesRows || []).map((row: any) => numericNote(row.document_number))
+        const savedNumbers = (salesRows || [])
+          .map((row: any) => numericNote(row.document_number))
+          .filter((value: number) => value > 0);
+        const dfeNumbers = (dfeRows || [])
+          .map((row: any) => numericNote(row.note_number))
+          .filter((value: number) => value > 0);
+        const maxSaved = Math.max(0, ...savedNumbers);
+        const maxKnownDfe = Math.max(0, ...dfeNumbers);
+        const minKnownWindow = Math.min(
+          ...[...savedNumbers, ...dfeNumbers].filter((value: number) => value > 0),
+          Number.POSITIVE_INFINITY
         );
-        const maxKnownDfe = Math.max(
-          0,
-          ...(dfeRows || []).map((row: any) => numericNote(row.note_number))
-        );
+        const priorNumbers = [
+          ...((priorSalesResult as any)?.data || []).map((row: any) => numericNote(row.document_number)),
+          ...((priorDfeResult as any)?.data || []).map((row: any) => numericNote(row.note_number)),
+        ].filter((value: number) => value > 0);
+        const priorLatest = Math.max(0, ...priorNumbers);
         const oldLatest = Number(state?.latest_number || 0);
-        const baseLatest = Math.max(oldLatest, maxSaved, maxKnownDfe);
+        const baseLatest = Math.max(oldLatest, maxSaved, maxKnownDfe, priorLatest);
+        const scopeStartNumber = isExtractor
+          ? priorLatest > 0
+            ? priorLatest + 1
+            : Number.isFinite(minKnownWindow)
+              ? Math.max(1, minKnownWindow)
+              : 0
+          : 1;
 
-        if (!baseLatest) {
+        if (!baseLatest || (isExtractor && !scopeStartNumber)) {
           await admin
             .from("fiscal_sales_sync_state")
             .upsert({
@@ -166,7 +274,7 @@ Deno.serve(async req => {
           out.push({
             company_id: company.id,
             status: "waiting_sales_reference",
-            reason: "no_known_sale_reference",
+            reason: isExtractor ? "no_reference_inside_standard_window" : "no_known_sale_reference",
           });
           continue;
         }
@@ -211,7 +319,11 @@ Deno.serve(async req => {
           {
             method: "POST",
             headers,
-            body: JSON.stringify({ company_id: company.id, batch: 24 }),
+            body: JSON.stringify({
+              company_id: company.id,
+              batch: 24,
+              ...(isExtractor ? { start_number: scopeStartNumber } : {}),
+            }),
             signal: AbortSignal.timeout(115000),
           }
         );
@@ -264,6 +376,8 @@ Deno.serve(async req => {
           previous_latest: oldLatest,
           seeded_from_saved_sales: maxSaved,
           seeded_from_visible_dfe: maxKnownDfe,
+          scope_start_number: isExtractor ? scopeStartNumber : 1,
+          prior_window_latest: priorLatest,
           discovery,
           reconciliation,
           classification,
