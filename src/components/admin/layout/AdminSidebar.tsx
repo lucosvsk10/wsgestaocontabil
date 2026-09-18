@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useSidebarHandlers } from "@/hooks/layout/useSidebarHandlers";
 import { useAdminSidebarNavigation } from "@/hooks/layout/useAdminSidebarNavigation";
-import { LockKeyhole, Settings2, X } from "lucide-react";
+import { LockKeyhole, PanelsTopLeft, Settings2, X } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
 import { LucideIcon } from "lucide-react";
@@ -31,6 +31,26 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
         </div>; })}</div>
       </section>)}
     </nav>
+    <div className="shrink-0 border-t border-border/60 p-3">
+      {(open || isMobile) ? (
+        <Link
+          to="/admin/ambientes"
+          onClick={isMobile ? onClose : undefined}
+          className="flex items-center gap-3 rounded-md px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+        >
+          <PanelsTopLeft size={17} strokeWidth={1.75} />
+          <span>Trocar ambiente</span>
+        </Link>
+      ) : (
+        <Link
+          to="/admin/ambientes"
+          className="flex justify-center rounded-lg p-3 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+          title="Trocar ambiente"
+        >
+          <PanelsTopLeft size={19} />
+        </Link>
+      )}
+    </div>
   </aside>;
 };
 export default AdminSidebar;
