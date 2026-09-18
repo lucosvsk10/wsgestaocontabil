@@ -2076,6 +2076,13 @@ const invoiceTone = (status?: string | null) => {
   if (['failed', 'rejected', 'cancelled', 'canceled'].includes(value)) return 'failed';
   return 'pending';
 };
+const invoiceStatusLabel = (status?: string | null) => {
+  const value = String(status || '').toLowerCase();
+  if (['paid', 'approved'].includes(value)) return 'Pago';
+  if (['failed', 'rejected', 'cancelled', 'canceled'].includes(value)) return 'Falhou';
+  if (['open', 'pending', 'in_process'].includes(value)) return 'Pendente';
+  return status || 'Pendente';
+};
 const centsMoney = (cents?: number | null) =>
   currency.format(Math.max(0, Number(cents || 0)) / 100);
 
@@ -2087,7 +2094,26 @@ function BillingSection({ usage, planLabel, preview, setNotice }: any) {
     if (preview) {
       setData({
         account: { name: 'Conta demonstração', companies: 1, lifetime_access: false },
-        subscription: { status: 'active', provider: 'mercado_pago', billing_mode: 'recurring', current_period_end: new Date(Date.now() + 20 * 86400000).toISOString(), plan: { name: planLabel, price_cents: 9900 } },
+        subscription: {
+          status: 'active',
+          provider: 'mercado_pago',
+          billing_mode: 'recurring',
+          current_period_end: new Date(Date.now() + 20 * 86400000).toISOString(),
+          plan: { code: 'extractor_commercial', name: 'Extrator Comercial', price_cents: 9900, limits: { monthly_xml: 20000 } },
+        },
+        billing_cycle: {
+          paid: true,
+          status: 'paid',
+          paid_at: new Date().toISOString(),
+          payment_method: 'pix',
+          amount_cents: 9900,
+          next_charge_at: new Date(Date.now() + 20 * 86400000).toISOString(),
+          renewal_mode: 'automatic',
+        },
+        plans: [
+          { code: 'extractor_commercial', name: 'Extrator Comercial', price_cents: 9900, limits: { monthly_xml: 20000 }, features: {} },
+          { code: 'extractor_enterprise', name: 'Extrator Empresarial', price_cents: 25000, limits: { monthly_xml: null }, features: { unlimited: true } },
+        ],
         invoices: [],
       });
       setLoading(false);
@@ -2104,91 +2130,186 @@ function BillingSection({ usage, planLabel, preview, setNotice }: any) {
     } finally {
       setLoading(false);
     }
-  }, [preview, planLabel]);
+  }, [preview]);
 
   useEffect(() => { void loadBilling(); }, [loadBilling]);
 
   const subscription = data?.subscription || null;
   const account = data?.account || null;
+  const billingCycle = data?.billing_cycle || {};
   const invoices = Array.isArray(data?.invoices) ? data.invoices : [];
-  const plan = subscription?.plan || null;
+  const plans = Array.isArray(data?.plans) ? data.plans : [];
+  const plan = subscription?.plan || plans.find((item: any) => item.code === account?.plan_code) || null;
+  const currentPlanCode = String(plan?.code || account?.plan_code || '');
   const statusText = account?.lifetime_access
     ? 'Acesso vitalício'
     : billingStatusLabel(subscription?.status || subscription?.provider_status);
-  const nextCharge = subscription?.current_period_end || subscription?.access_expires_at || account?.access_expires_at;
+  const cyclePaid = account?.lifetime_access || billingCycle?.paid === true || billingCycle?.status === 'paid';
+  const nextCharge = billingCycle?.next_charge_at || subscription?.current_period_end || subscription?.access_expires_at || account?.access_expires_at;
   const checkoutUrl = String(subscription?.checkout_url || '');
-  const upgrade = () =>
-    window.open(
-      'https://wa.me/5582999324884?text=Ol%C3%A1%2C%20quero%20fazer%20upgrade%20do%20plano%20do%20Extrator%20Fiscal%20WS.',
-      '_blank',
-      'noopener,noreferrer'
+  const paymentMethod = billingCycle?.payment_method
+    ? String(billingCycle.payment_method).replace(/_/g, ' ')
+    : '—';
+  const renewalAutomatic = billingCycle?.renewal_mode === 'automatic' || subscription?.billing_mode === 'recurring';
+  const monthlyLimit = plan?.limits?.monthly_xml;
+  const unlimited = plan?.features?.unlimited === true || monthlyLimit == null;
+  const usageLimitLabel = unlimited ? 'Ilimitado' : integer.format(Number(monthlyLimit || usage.limit || 0));
+
+  const requestUpgrade = (targetPlan: any) => {
+    const message = encodeURIComponent(
+      `Olá, quero alterar meu plano do Extrator Fiscal WS de ${plan?.name || planLabel} para ${targetPlan.name}.`
     );
+    window.open(`https://wa.me/5582999324884?text=${message}`, '_blank', 'noopener,noreferrer');
+  };
 
   return (
     <div className="extractor-page">
       <PageHeading
         title="Faturas"
         icon="report"
-        description="Plano, consumo, recorrência e pagamentos do Extrator Fiscal."
-        actions={<button className="extractor-secondary" onClick={() => void loadBilling()} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />Atualizar</button>}
+        description="Mensalidade, plano, consumo e documentos de pagamento do Extrator Fiscal."
       />
 
       {loading && !data ? <div className="extractor-report-loading">Carregando faturamento...</div> : (
         <>
-          <section className="extractor-billing-hero">
-            <div><small>Plano atual</small><strong>{plan?.name || planLabel}</strong><span>{statusText}</span></div>
-            <div><small>Consumo no ciclo</small><strong>{integer.format(usage.used)} / {integer.format(usage.limit)} XML</strong><span>{integer.format(usage.remaining)} restantes</span></div>
-            <div><small>{account?.lifetime_access ? 'Acesso' : 'Próxima referência'}</small><strong>{account?.lifetime_access ? 'Sem recorrência' : nextCharge ? formatDate(nextCharge) : '—'}</strong><span>{account?.companies || 0} empresa(s) vinculada(s)</span></div>
+          <section className="extractor-billing-status-hero">
+            <div className="extractor-billing-status-main">
+              <small>Mensalidade do ciclo</small>
+              <strong className={cyclePaid ? 'paid' : 'pending'}>
+                {account?.lifetime_access ? 'Acesso vitalício' : cyclePaid ? 'Mensalidade paga' : 'Pagamento pendente'}
+              </strong>
+              <span>
+                {cyclePaid && billingCycle?.paid_at
+                  ? `Pago em ${formatDate(billingCycle.paid_at, true)}`
+                  : checkoutUrl
+                    ? 'Existe uma cobrança aguardando conclusão.'
+                    : statusText}
+              </span>
+            </div>
+            <div>
+              <small>Plano atual</small>
+              <strong>{plan?.name || planLabel}</strong>
+              <span>{unlimited ? 'XML ilimitado' : `${usageLimitLabel} XML/mês`}</span>
+            </div>
+            <div>
+              <small>{renewalAutomatic ? 'Próxima cobrança' : 'Próxima renovação'}</small>
+              <strong>{account?.lifetime_access ? 'Sem cobrança' : nextCharge ? formatDate(nextCharge) : '—'}</strong>
+              <span>{renewalAutomatic ? 'Cobrança mensal automática' : 'Ciclo mensal com renovação manual'}</span>
+            </div>
+            <div>
+              <small>Valor do plano</small>
+              <strong>{plan?.price_cents ? centsMoney(plan.price_cents) : '—'}</strong>
+              <span>{paymentMethod !== '—' ? `Último pagamento: ${paymentMethod}` : 'Forma de pagamento não informada'}</span>
+            </div>
           </section>
+
+          {!cyclePaid && checkoutUrl && (
+            <section className="extractor-payment-callout pending">
+              <div>
+                <small>Cobrança em aberto</small>
+                <strong>{centsMoney(Number(billingCycle?.amount_cents || plan?.price_cents || 0))}</strong>
+                <span>{nextCharge ? `Referência do ciclo até ${formatDate(nextCharge)}` : 'Pagamento necessário para manter o acesso.'}</span>
+              </div>
+              <a href={checkoutUrl} target="_blank" rel="noopener noreferrer">Continuar pagamento</a>
+            </section>
+          )}
 
           <section className="extractor-billing-grid">
             <article className="extractor-billing-card">
-              <header><div><h2>Uso do plano</h2><p>XML processados no período atual</p></div><strong className="amount">{usage.percent}%</strong></header>
-              <div className="extractor-billing-progress"><i style={{ width: `${Math.min(100, Math.max(0, usage.percent))}%` }} /></div>
+              <header>
+                <div><h2>Uso do plano</h2><p>Consumo de XML no período atual</p></div>
+                <strong className="amount">{unlimited ? '∞' : `${usage.percent}%`}</strong>
+              </header>
+              {!unlimited && <div className="extractor-billing-progress"><i style={{ width: `${Math.min(100, Math.max(0, usage.percent))}%` }} /></div>}
               <div className="extractor-billing-facts">
                 <div><span>Processados</span><b>{integer.format(usage.used)}</b></div>
-                <div><span>Limite</span><b>{integer.format(usage.limit)}</b></div>
-                <div><span>Restantes</span><b>{integer.format(usage.remaining)}</b></div>
+                <div><span>Limite</span><b>{usageLimitLabel}</b></div>
+                <div><span>Restantes</span><b>{unlimited ? 'Ilimitado' : integer.format(usage.remaining)}</b></div>
                 <div><span>Ciclo</span><b>{formatDate(usage.period_start)} a {formatDate(usage.period_end)}</b></div>
               </div>
-              <div className="extractor-billing-actions"><button className="primary" onClick={upgrade}>Fazer upgrade</button></div>
             </article>
 
             <article className="extractor-billing-card">
-              <header><div><h2>Assinatura</h2><p>Dados reais da recorrência registrada</p></div><strong className="amount">{plan?.price_cents ? centsMoney(plan.price_cents) : '—'}</strong></header>
+              <header>
+                <div><h2>Assinatura</h2><p>Situação real registrada no Mercado Pago</p></div>
+                <span className={`extractor-invoice-status ${cyclePaid ? 'paid' : 'pending'}`}>
+                  {cyclePaid ? 'Pago' : invoiceStatusLabel(billingCycle?.status)}
+                </span>
+              </header>
               <div className="extractor-billing-facts">
                 <div><span>Situação</span><b>{statusText}</b></div>
-                <div><span>Cobrança</span><b>{subscription?.billing_mode === 'recurring' ? 'Mensal automática' : subscription ? 'Pagamento único' : '—'}</b></div>
+                <div><span>Periodicidade</span><b>Mensal</b></div>
+                <div><span>Renovação</span><b>{renewalAutomatic ? 'Automática' : 'Manual'}</b></div>
                 <div><span>Provedor</span><b>{subscription?.provider === 'mercado_pago' ? 'Mercado Pago' : subscription?.provider || '—'}</b></div>
-                <div><span>Próximo ciclo</span><b>{nextCharge ? formatDate(nextCharge) : '—'}</b></div>
-              </div>
-              <div className="extractor-billing-actions">
-                {checkoutUrl && <a className="primary" href={checkoutUrl} target="_blank" rel="noopener noreferrer">Continuar pagamento</a>}
-                {!checkoutUrl && subscription?.billing_mode === 'recurring' && <span className="extractor-helper">A recorrência é administrada pelo Mercado Pago. Nenhuma cobrança manual está pendente aqui.</span>}
+                <div><span>Último pagamento</span><b>{billingCycle?.paid_at ? formatDate(billingCycle.paid_at, true) : '—'}</b></div>
+                <div><span>Método</span><b>{paymentMethod}</b></div>
               </div>
             </article>
           </section>
 
+          <section className="extractor-plan-options">
+            <div className="extractor-section-copy">
+              <div><small>Planos do Extrator</small><h2>Escolha conforme o volume do escritório</h2></div>
+              <span>Os limites abaixo vêm da configuração real dos planos.</span>
+            </div>
+            <div className="extractor-plan-options-grid">
+              {plans.map((item: any) => {
+                const itemLimit = item?.limits?.monthly_xml;
+                const itemUnlimited = item?.features?.unlimited === true || itemLimit == null;
+                const current = item.code === currentPlanCode;
+                const canUpgrade = currentPlanCode === 'extractor_commercial' && item.code === 'extractor_enterprise';
+                return (
+                  <article key={item.code} className={`extractor-plan-option ${current ? 'current' : ''}`}>
+                    <div>
+                      <small>{current ? 'Plano atual' : item.code === 'extractor_enterprise' ? 'Maior capacidade' : 'Plano padrão'}</small>
+                      <h3>{item.name}</h3>
+                      <strong>{centsMoney(item.price_cents)}<span>/mês</span></strong>
+                      <p>{itemUnlimited ? 'XML ilimitado' : `${integer.format(Number(itemLimit || 0))} XML por mês`}</p>
+                    </div>
+                    {current ? (
+                      <span className="extractor-plan-current">Seu plano</span>
+                    ) : canUpgrade ? (
+                      <button onClick={() => requestUpgrade(item)}>Solicitar upgrade</button>
+                    ) : (
+                      <span className="extractor-plan-muted">
+                        {currentPlanCode === 'extractor_enterprise' ? 'Plano inferior ao atual' : 'Disponível para contratação'}
+                      </span>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+
           <section className="extractor-invoice-list">
-            <div className="extractor-invoice-head"><span>Fatura</span><span>Descrição</span><span>Vencimento</span><span>Valor</span><span>Pagamento</span><span>Ação</span></div>
+            <div className="extractor-section-copy invoice-copy">
+              <div><small>Histórico financeiro</small><h2>Faturas e comprovantes</h2></div>
+              <span>Documentos oficiais aparecem aqui quando estiverem disponíveis no pagamento ou forem anexados pela WS.</span>
+            </div>
+            <div className="extractor-invoice-head">
+              <span>Fatura</span><span>Descrição</span><span>Vencimento</span><span>Valor</span><span>Pagamento</span><span>Documentos</span>
+            </div>
             {invoices.length ? invoices.map((invoice: any) => {
               const tone = invoiceTone(invoice.status || invoice.provider_status);
               const paymentUrl = String(invoice.checkout_url || '');
+              const receiptUrl = String(invoice.receipt_url || invoice.provider_receipt_url || '');
+              const fiscalNoteUrl = String(invoice.fiscal_note_url || '');
               return (
                 <div className="extractor-invoice-row" key={invoice.id}>
                   <strong>#{invoice.invoice_number || String(invoice.id).slice(0, 8)}</strong>
-                  <span>{invoice.description || 'Extrator Fiscal WS'}</span>
-                  <span>{invoice.due_date ? formatDate(invoice.due_date) : '—'}<br /><small className={`extractor-invoice-status ${tone}`}>{billingStatusLabel(invoice.status || invoice.provider_status)}</small></span>
+                  <span>
+                    {invoice.description || 'Extrator Fiscal WS'}
+                    {invoice.paid_at && <small>Pago em {formatDate(invoice.paid_at, true)}</small>}
+                  </span>
+                  <span>{invoice.due_date ? formatDate(invoice.due_date) : '—'}<br /><small className={`extractor-invoice-status ${tone}`}>{invoiceStatusLabel(invoice.status || invoice.provider_status)}</small></span>
                   <strong>{centsMoney(invoice.total_cents)}</strong>
                   <span>{invoice.payment_method ? String(invoice.payment_method).replace(/_/g, ' ') : invoice.provider === 'mercado_pago' ? 'Mercado Pago' : '—'}</span>
-                  <span>
-                    {paymentUrl
-                      ? <a href={paymentUrl} target="_blank" rel="noopener noreferrer">{tone === 'paid' ? 'Ver pagamento' : 'Pagar agora'}</a>
-                      : invoice.receipt_path
-                        ? 'Comprovante disponível'
-                        : tone === 'paid'
-                          ? 'Pago'
-                          : 'Sem link de cobrança'}
+                  <span className="extractor-invoice-docs">
+                    {tone !== 'paid' && paymentUrl && <a href={paymentUrl} target="_blank" rel="noopener noreferrer">Pagar agora</a>}
+                    {receiptUrl && <a href={receiptUrl} target="_blank" rel="noopener noreferrer">Comprovante</a>}
+                    {fiscalNoteUrl && <a href={fiscalNoteUrl} target="_blank" rel="noopener noreferrer">Nota fiscal</a>}
+                    {tone === 'paid' && !receiptUrl && !fiscalNoteUrl && <small>Pagamento confirmado</small>}
+                    {tone !== 'paid' && !paymentUrl && <small>Sem ação pendente</small>}
                   </span>
                 </div>
               );
