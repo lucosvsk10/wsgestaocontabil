@@ -253,6 +253,12 @@ Deno.serve(async req => {
     const history = (historyRes.data || []).map((row: any) => {
       const responseCode = fiscalResponseCode(row.response_code, row.response_message || row.mensagem_erro);
       const responseRaw = String(row.response_message || row.mensagem_erro || '').trim() || null;
+      const startedAt = row.created_at ? new Date(row.created_at).getTime() : 0;
+      const completedAt = row.completed_at ? new Date(row.completed_at).getTime() : 0;
+      const eventAt = Math.max(
+        Number.isFinite(startedAt) ? startedAt : 0,
+        Number.isFinite(completedAt) ? completedAt : 0
+      );
       return {
         id: row.id,
         type: row.sync_type,
@@ -260,6 +266,7 @@ Deno.serve(async req => {
         status: row.status,
         started_at: row.created_at,
         completed_at: row.completed_at,
+        event_at: eventAt ? new Date(eventAt).toISOString() : row.completed_at || row.created_at || null,
         duration_seconds: row.tempo_duracao,
         response_code: responseCode || null,
         response_raw: responseRaw,
