@@ -862,3 +862,46 @@
   color:#718397;
   font-size:8px;
 }
+
+
+/* Enterprise sidebar stays compact regardless of company count. Detailed per-company
+   consumption remains in Faturas. */
+.extractor-usage-enterprise-simple{
+  margin:12px 14px 16px;
+  padding:13px 10px;
+  border-top:1px solid #172438;
+}
+.extractor-usage-enterprise-simple>small,
+.extractor-usage-enterprise-simple>strong,
+.extractor-usage-enterprise-simple>span{
+  display:block;
+}
+.extractor-usage-enterprise-simple>small{
+  color:#617287;
+  font-size:8px;
+  text-transform:uppercase;
+  letter-spacing:.07em;
+}
+.extractor-usage-enterprise-simple>strong{
+  margin-top:4px;
+  color:#dce5ed;
+  font-size:14px;
+  font-weight:600;
+}
+.extractor-usage-enterprise-simple>span{
+  margin-top:3px;
+  color:#718397;
+  font-size:8px;
+}
+.extractor-usage-enterprise-simple>button{
+  width:100%;
+  height:31px;
+  margin-top:9px;
+  border:0;
+  border-radius:4px;
+  background:#121c2b;
+  color:#cbd6e0;
+  font-size:9px;
+  font-weight:600;
+}
+.extractor-usage-enterprise-simple>button:hover{background:#172335;color:#fff}
