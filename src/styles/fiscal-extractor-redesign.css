@@ -171,6 +171,19 @@
 .extractor-health-activity-row{display:grid;grid-template-columns:160px 130px 1fr 170px;gap:14px;align-items:center;padding:12px 18px;border-bottom:1px solid rgba(255,255,255,.045)}
 .extractor-health-activity-row:last-child{border-bottom:0}.extractor-health-activity-row span,.extractor-health-activity-row strong,.extractor-health-activity-row small{font-size:9px}
 .extractor-health-activity-row span{color:#9eadbb}.extractor-health-activity-row strong{color:#dce5ed}.extractor-health-activity-row small{color:#718397;text-align:right}
+.extractor-health-search-history{margin-bottom:8px;border-radius:4px;background:var(--ex-surface);overflow:hidden}
+.extractor-health-search-head,
+.extractor-health-search-row{display:grid;grid-template-columns:150px 160px 170px minmax(0,1fr);gap:14px;align-items:center}
+.extractor-health-search-head{padding:10px 18px;background:var(--ex-surface-2);color:#718397;font-size:8px;text-transform:uppercase;letter-spacing:.07em}
+.extractor-health-search-row{padding:12px 18px;border-bottom:1px solid rgba(255,255,255,.045)}
+.extractor-health-search-row:last-child{border-bottom:0}
+.extractor-health-search-row>span{min-width:0}
+.extractor-health-search-row strong{display:block;color:#dce5ed;font-size:9px;font-weight:600;line-height:1.45}
+.extractor-health-search-row small{display:block;margin-top:3px;color:#718397;font-size:8px;line-height:1.4}
+.extractor-health-search-response strong{white-space:normal}
+.extractor-health-search-response small{cursor:help}
+.extractor-health-search-empty{padding:22px 18px;color:#718397;font-size:9px;text-align:center}
+
 
 /* Billing / invoices */
 .extractor-billing-hero{
@@ -275,12 +288,14 @@
   .extractor-period-custom{grid-column:auto;justify-content:flex-start}
   .extractor-company-detail-info,.extractor-health-compare,.extractor-billing-grid,.extractor-settings-v2{grid-template-columns:1fr}
   .extractor-health-activity-row{grid-template-columns:1fr 1fr}.extractor-health-activity-row small{text-align:left}
+  .extractor-health-search-head{display:none}.extractor-health-search-row{grid-template-columns:1fr 1fr}.extractor-health-search-response{grid-column:1/-1}
   .extractor-invoice-head,.extractor-invoice-row{grid-template-columns:80px minmax(160px,1fr) 95px 90px 100px}.extractor-invoice-head>*:nth-child(6),.extractor-invoice-row>*:nth-child(6){display:none}
   .extractor-fiscal-preview-modal{grid-template-columns:1fr;height:96vh}.extractor-fiscal-preview-summary{max-height:42vh}.extractor-fiscal-preview-document{min-height:50vh}
 }
 @media(max-width:620px){
   .extractor-period-months{grid-template-columns:repeat(2,1fr)}
   .extractor-company-detail-grid,.extractor-health-v2-kpis,.extractor-health-compare-grid{grid-template-columns:1fr}
+  .extractor-health-search-row{grid-template-columns:1fr}
   .extractor-billing-hero{grid-template-columns:1fr}.extractor-billing-hero>div:first-child{grid-column:auto}
   .extractor-invoice-head{display:none}.extractor-invoice-row{grid-template-columns:1fr 1fr;gap:6px}.extractor-invoice-row>*:nth-child(2){grid-column:1/-1}
   .extractor-fiscal-preview-overlay{padding:0}.extractor-fiscal-preview-modal{width:100vw;height:100vh;border-radius:0}.extractor-fiscal-paper-stage{padding:8px}
