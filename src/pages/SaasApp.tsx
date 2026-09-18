@@ -165,9 +165,36 @@ export default function SaasApp() {
         .eq('user_id', user.id)
         .eq('status', 'active');
       if (requestId !== organizationRequest.current) return;
-      const choices = (data || [])
+
+      const membershipChoices = (data || [])
         .map((row: any) => row.organizations || null)
         .filter((value: any) => Boolean(value?.id));
+      const organizationIds = membershipChoices.map((value: any) => String(value.id));
+
+      let choices = membershipChoices;
+      if (organizationIds.length) {
+        const { data: subscriptions, error: subscriptionsError } = await (supabase as any)
+          .from('saas_subscriptions')
+          .select('organization_id,status,trial_ends_at,access_expires_at,saas_plans(product_code)')
+          .in('organization_id', organizationIds)
+          .in('status', ['trialing', 'active', 'past_due']);
+
+        if (!subscriptionsError) {
+          const now = Date.now();
+          const issuerOrganizations = new Set(
+            (subscriptions || [])
+              .filter((row: any) => {
+                const plan = Array.isArray(row.saas_plans) ? row.saas_plans[0] : row.saas_plans;
+                if (plan?.product_code !== 'issuer') return false;
+                const boundary = row.status === 'trialing' ? row.trial_ends_at : row.access_expires_at;
+                return !boundary || new Date(boundary).getTime() > now;
+              })
+              .map((row: any) => String(row.organization_id))
+          );
+          choices = membershipChoices.filter((value: any) => issuerOrganizations.has(String(value.id)));
+        }
+      }
+
       setOrganizationChoices(choices);
       const storedId =
         preferredOrganizationId || localStorage.getItem('ws_saas_selected_organization');
