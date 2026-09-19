@@ -1,8 +1,8 @@
 import { PDFDocument, rgb } from "https://esm.sh/pdf-lib@1.17.1?target=deno";
 import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1?target=deno";
 import qrcode from "https://esm.sh/qrcode-generator@1.4.4?target=deno";
-import { createFont } from "https://esm.sh/fonteditor-core@2.3.2?target=deno";
-import { inflate } from "https://esm.sh/pako@2.1.0?target=deno";
+import { createFont } from "npm:fonteditor-core@2.3.2";
+import { inflate } from "npm:pako@2.1.0";
 import type { DanfseData } from "./types.ts";
 import { DANFSE_OFFICIAL_TEMPLATE } from "./danfse-official-template.ts";
 
