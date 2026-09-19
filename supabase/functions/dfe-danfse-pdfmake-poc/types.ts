@@ -18,8 +18,9 @@ export type DanfseData = {
   service: Record<string,string>;
   municipalTax: Record<string,string>;
   federalTax: Record<string,string>;
-  ibsCbsRows: string[][];
+  ibsCbs: Record<string,string>;
   totals: Record<string,string>;
   additionalInfo: string;
+  approximateTaxes: string;
   qrValue: string;
 };
