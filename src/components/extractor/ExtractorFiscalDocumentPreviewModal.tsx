@@ -702,6 +702,114 @@ function OfficialNfseHtmlFrame({ html }: { html: string }) {
   );
 }
 
+
+function OfficialNfeHtmlFrame({ html }: { html: string }) {
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    const resize = () => {
+      const availableWidth = Math.max(360, wrap.clientWidth - 12);
+      setScale(Math.max(0.55, Math.min(1.45, availableWidth / 680.32)));
+    };
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(wrap);
+    return () => observer.disconnect();
+  }, []);
+
+  const scaledWidth = 680.32 * scale;
+  const scaledHeight = 1122.67 * scale;
+
+  return (
+    <div
+      ref={wrapRef}
+      style={{
+        width: '100%',
+        height: '100%',
+        minHeight: '100%',
+        overflow: 'auto',
+        padding: '6px',
+        boxSizing: 'border-box',
+        background: '#fff',
+      }}
+    >
+      <div style={{ width: scaledWidth, height: scaledHeight, margin: '0 auto', position: 'relative' }}>
+        <iframe
+          title="DANFE oficial"
+          sandbox=""
+          srcDoc={html}
+          style={{
+            width: 680.32,
+            height: 1122.67,
+            border: 0,
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left',
+            background: '#fff',
+            display: 'block',
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function NfceZoomFrame({ children }: { children: React.ReactNode }) {
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  const [scale, setScale] = useState(1.35);
+  const [baseHeight, setBaseHeight] = useState(700);
+
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    const content = contentRef.current;
+    if (!wrap || !content) return;
+    const resize = () => {
+      const availableWidth = Math.max(320, wrap.clientWidth - 28);
+      const nextScale = Math.max(1, Math.min(1.7, availableWidth / 420));
+      setScale(nextScale);
+      setBaseHeight(Math.max(200, content.scrollHeight));
+    };
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(wrap);
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={wrapRef}
+      style={{
+        width: '100%',
+        minHeight: baseHeight * scale + 24,
+        overflow: 'auto',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'flex-start',
+        background: '#fff',
+        padding: '12px',
+        boxSizing: 'border-box',
+      }}
+    >
+      <div style={{ width: 420 * scale, height: baseHeight * scale, flex: '0 0 auto' }}>
+        <div
+          ref={contentRef}
+          style={{
+            width: 420,
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left',
+          }}
+        >
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ExtractorFiscalDocumentPreviewModal({
   document,
   companyName,
@@ -717,6 +825,8 @@ export default function ExtractorFiscalDocumentPreviewModal({
   const [copied, setCopied] = useState(false);
   const [nfseHtml, setNfseHtml] = useState('');
   const [nfseHtmlLoading, setNfseHtmlLoading] = useState(false);
+  const [nfeHtml, setNfeHtml] = useState('');
+  const [nfeHtmlLoading, setNfeHtmlLoading] = useState(false);
   const previewType = document ? docType(document) : '';
   const previewComplete = Boolean(document?.fullXml && document?.xml);
   const data = useMemo(
@@ -756,6 +866,32 @@ export default function ExtractorFiscalDocumentPreviewModal({
     return () => { alive = false; };
   }, [document, previewType, previewComplete]);
 
+  useEffect(() => {
+    let alive = true;
+    setNfeHtml('');
+    if (!document || previewType !== 'NF-e' || !previewComplete) {
+      setNfeHtmlLoading(false);
+      return () => { alive = false; };
+    }
+    setNfeHtmlLoading(true);
+    void supabase.functions
+      .invoke('dfe-nfe-html-template', {
+        body: { company_id: document.companyId, document },
+      })
+      .then(({ data: result, error }) => {
+        if (!alive) return;
+        if (error) throw error;
+        setNfeHtml(String(result?.html_preview || ''));
+      })
+      .catch(() => {
+        if (alive) setNfeHtml('');
+      })
+      .finally(() => {
+        if (alive) setNfeHtmlLoading(false);
+      });
+    return () => { alive = false; };
+  }, [document, previewType, previewComplete]);
+
   if (!document || !data) return null;
   const needsManifestation = document.parseError === 'xml_requires_manifestation';
   const manifestationSent = document.parseError === 'xml_retry:manifestation_sent';
@@ -783,14 +919,19 @@ export default function ExtractorFiscalDocumentPreviewModal({
           </div>
           <div className="extractor-fiscal-paper-stage">
             {complete ? (
-              type === 'NFC-e' ? <NfceView document={document} /> :
+              type === 'NFC-e' ? <NfceZoomFrame><NfceView document={document} /></NfceZoomFrame> :
               type === 'NFS-e' ? (
                 nfseHtml ? <OfficialNfseHtmlFrame html={nfseHtml} /> :
                 nfseHtmlLoading ? (
                   <div className="extractor-fiscal-recovery-card"><Loader2 className="h-5 w-5 animate-spin" /><p>Carregando DANFSe oficial...</p></div>
                 ) : <NfseView document={document} />
               ) :
-              type === 'NF-e' ? <DanfeView document={document} /> :
+              type === 'NF-e' ? (
+                nfeHtml ? <OfficialNfeHtmlFrame html={nfeHtml} /> :
+                nfeHtmlLoading ? (
+                  <div className="extractor-fiscal-recovery-card"><Loader2 className="h-5 w-5 animate-spin" /><p>Carregando DANFE em HTML...</p></div>
+                ) : <DanfeView document={document} />
+              ) :
               <DocumentUnavailable />
             ) : (
               <div className="extractor-fiscal-recovery-card">
