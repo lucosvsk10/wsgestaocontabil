@@ -2,6 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.49.0";
 import { parseDanfse } from "./xml-parser.ts";
 import { buildDanfseFromOfficialTemplate } from "./pdf-official-template.ts";
+import { renderDanfseOfficialHtml } from "./html-preview.ts";
 
 
 const cors={
@@ -82,6 +83,9 @@ Deno.serve(async(req)=>{
     }
 
     const data=await parseDanfse(xml,doc);
+    if(String(body?.action||"").toLowerCase()==="preview-html"){
+      return J({ok:true,engine:"official-html-template-preview",html_preview:renderDanfseOfficialHtml(data),access_key:data.accessKey,number:data.number});
+    }
     const bytes=await buildDanfseFromOfficialTemplate(data);
     const base64=bytesToBase64(bytes);
     const safe=(v:unknown)=>String(v||"")
