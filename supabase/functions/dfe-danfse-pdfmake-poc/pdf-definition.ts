@@ -7,7 +7,7 @@ const tbl=(widths:any[],body:any[],margin:any=[0,0,0,0])=>({table:{widths,body,d
 export function buildDanfseDefinition(d:DanfseData){
   return {
     pageSize:"A4", pageMargins:[6,6,6,6],
-    defaultStyle:{font:"Roboto",fontSize:6.05,color:"#111",lineHeight:1.02},
+    defaultStyle:{font:"Helvetica",fontSize:6.05,color:"#111",lineHeight:1.02},
     content:[
       tbl([135,170,"*"],[[
         {image:NFSE_LOGO,width:120,alignment:"left",margin:[4,2,0,2]},
