@@ -1,0 +1,25 @@
+export type DanfseData = {
+  accessKey: string;
+  number: string;
+  competency: string;
+  issueDate: string;
+  dpsNumber: string;
+  dpsSeries: string;
+  dpsIssueDate: string;
+  emitterType: string;
+  status: string;
+  purpose: string;
+  issueCity: string;
+  issueUf: string;
+  generatorEnvironment: string;
+  environmentType: string;
+  prestador: Record<string,string>;
+  tomador: Record<string,string>;
+  service: Record<string,string>;
+  municipalTax: Record<string,string>;
+  federalTax: Record<string,string>;
+  ibsCbsRows: string[][];
+  totals: Record<string,string>;
+  additionalInfo: string;
+  qrValue: string;
+};
