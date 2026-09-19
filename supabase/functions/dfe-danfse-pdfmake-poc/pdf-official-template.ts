@@ -1,4 +1,4 @@
-import { PDFDocument, rgb } from "https://esm.sh/pdf-lib@1.17.1?target=deno";
+import { PDFDocument, StandardFonts, rgb } from "https://esm.sh/pdf-lib@1.17.1?target=deno";
 import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1?target=deno";
 import qrcode from "https://esm.sh/qrcode-generator@1.4.4?target=deno";
 import type { DanfseData } from "./types.ts";
@@ -190,12 +190,25 @@ function drawField(page:any,font:any,text:string,x:number,y:number,width:number,
   }
 }
 function drawQr(page:any,value:string){
-  const qr=qrcode(6,"M");qr.addData(value);qr.make();
-  const n=qr.getModuleCount(),quiet=2,size=45,cell=size/(n+quiet*2),x=655.98*S,top=59.69*S;
+  const qr=qrcode(0,"M");qr.addData(value);qr.make();
+  const n=qr.getModuleCount(),quiet=4,size=45,cell=size/(n+quiet*2),x=655.98*S,top=59.69*S;
   const y0=H-top-size;
   page.drawRectangle({x,y:y0,width:size,height:size,color:rgb(1,1,1)});
-  for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(qr.isDark(r,c)){
-    page.drawRectangle({x:x+(c+quiet)*cell,y:y0+size-(r+quiet+1)*cell,width:cell+.01,height:cell+.01,color:rgb(0,0,0)});
+  for(let r=0;r<n;r++){
+    let c=0;
+    while(c<n){
+      if(!qr.isDark(r,c)){c++;continue;}
+      const start=c;
+      while(c<n&&qr.isDark(r,c)) c++;
+      const run=c-start;
+      page.drawRectangle({
+        x:x+(start+quiet)*cell,
+        y:y0+size-(r+quiet+1)*cell,
+        width:run*cell,
+        height:cell,
+        color:rgb(0,0,0)
+      });
+    }
   }
 }
 export async function buildDanfseFromOfficialTemplate(d:DanfseData){
@@ -203,6 +216,7 @@ export async function buildDanfseFromOfficialTemplate(d:DanfseData){
   const page=pdf.addPage([595,842]);
   const f0=await pdf.embedFont(await woffToTtf(fontBase64("f0")),{subset:false});
   const f1=await pdf.embedFont(await woffToTtf(fontBase64("f1")),{subset:false});
+  const dyn=await pdf.embedFont(StandardFonts.Helvetica);
 
   for(const p of PRIMITIVES){
     if(p.kind==="line"){
@@ -211,6 +225,17 @@ export async function buildDanfseFromOfficialTemplate(d:DanfseData){
       page.drawRectangle({x:p.x,y:p.y,width:p.w,height:p.h,color:p.fill?hex(p.fill):undefined,borderColor:p.stroke?hex(p.stroke):undefined,borderWidth:p.width||0});
     }
   }
+  // Linhas horizontais explícitas do template oficial: evita perdas na conversão dos vetores.
+  const drawTemplateH=(yPx:number,x1Px=11.3,x2Px=782.4,widthPx=.67)=>page.drawLine({
+    start:{x:x1Px*S,y:H-yPx*S},
+    end:{x:x2Px*S,y:H-yPx*S},
+    thickness:widthPx*S,
+    color:rgb(0,0,0)
+  });
+  [53.2,167.4,269.8,346.8,358,369.3,574.4,625.9,677.4,779.8,831.3].forEach(y=>drawTemplateH(y));
+  drawTemplateH(1061.1,11.3,783.7,1.33);
+  drawTemplateH(1087.8,11.3,783.7,1.33);
+
   const logo=await pdf.embedPng(b64bytes(logoBase64()));
   page.drawImage(logo,{x:15.87*S,y:H-(13.76+30.56)*S,width:154.2*S,height:30.56*S});
 
@@ -219,12 +244,12 @@ export async function buildDanfseFromOfficialTemplate(d:DanfseData){
     drawTextTop(page,info.font==="f0"?f0:f1,t.text,t.x,t.y,info.size,{fontKind:info.font});
   }
 
-  drawTextTop(page,f1,d.issueCity+" - "+d.issueUf,645.18,15.15,8);
-  drawTextTop(page,f1,d.generatorEnvironment,663.81,27.22,6);
-  drawTextTop(page,f1,d.environmentType,661.09,36.27,6);
+  drawTextTop(page,dyn,d.issueCity+" - "+d.issueUf,645.18,15.15,8);
+  drawTextTop(page,dyn,d.generatorEnvironment,663.81,27.22,6);
+  drawTextTop(page,dyn,d.environmentType,661.09,36.27,6);
   drawQr(page,d.qrValue);
 
-  const F=(text:any,x:number,y:number,w:number,opts:any={})=>drawField(page,f1,String(text??"-"),x,y,w,opts);
+  const F=(text:any,x:number,y:number,w:number,opts:any={})=>drawField(page,dyn,String(text??"-"),x,y,w,opts);
   F(d.accessKey,15.87,69.98,560);
   F(d.number,15.87,96.95,170); F(d.competency,208.63,96.95,170); F(d.issueDate,401.39,96.95,175);
   F(d.dpsNumber,15.87,123.91,170); F(d.dpsSeries,208.63,123.91,170); F(d.dpsIssueDate,401.39,123.91,175);
@@ -240,14 +265,14 @@ export async function buildDanfseFromOfficialTemplate(d:DanfseData){
   F(d.tomador.address,15.87,330.24,365); F(d.tomador.email,401.39,330.24,365);
 
   F(d.service.nationalMunicipalCode,208.63,378.80,180); F(d.service.nbs,401.39,378.80,180); F(d.service.location,594.14,378.80,180);
-  const classLines=drawField(page,f1,String(d.service.classification||"-"),15.87,395.03,190,{wrap:true,lineGap:1.13});
+  const classLines=drawField(page,dyn,String(d.service.classification||"-"),15.87,395.03,190,{wrap:true,lineGap:1.13});
   const classStep=(7/S)*1.13;
   const descriptionLabelY=411.53+Math.max(0,classLines-1)*classStep;
   drawTextTop(page,f0,"Descrição",15.87,descriptionLabelY,6,{fontKind:"f0"});
   drawTextTop(page,f0,"do",56.34,descriptionLabelY,6,{fontKind:"f0"});
   drawTextTop(page,f0,"Serviço",68.34,descriptionLabelY,6,{fontKind:"f0"});
   const descriptionY=descriptionLabelY+8.93;
-  drawField(page,f1,String(d.service.description||"-"),15.87,descriptionY,752,{wrap:true,lineGap:1.13});
+  drawField(page,dyn,String(d.service.description||"-"),15.87,descriptionY,752,{wrap:true,lineGap:1.13});
 
   F(d.municipalTax.type,208.63,583.89,180); F(d.municipalTax.incidence,401.39,583.89,365);
   F(d.municipalTax.base,15.87,609.32,180); F(d.municipalTax.rate,208.63,609.32,180); F(d.municipalTax.retention,401.39,609.32,180); F(d.municipalTax.amount,594.14,609.32,180);
