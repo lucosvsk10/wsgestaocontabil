@@ -86,6 +86,9 @@ export function ClientOverviewSection({ documents, categories = [], setActiveTab
     .sort((a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime())
     .slice(0, 6);
 
+  const currentHour = new Date().getHours();
+  const greeting = currentHour < 12 ? "Bom dia" : currentHour < 18 ? "Boa tarde" : "Boa noite";
+
   const displayName = String(
     company?.trade_name || company?.company_name || userData?.name || userData?.fullname || user?.email?.split("@")[0] || "cliente"
   ).trim();
@@ -102,7 +105,7 @@ export function ClientOverviewSection({ documents, categories = [], setActiveTab
       <section className="client-overview-intro">
         <div>
           <span className="client-overview-kicker">Portal do cliente</span>
-          <h1>Boa tarde, {displayName}.</h1>
+          <h1>{greeting}, {displayName}.</h1>
           <p>{company?.cnpj ? formatCnpj(company.cnpj) + " · " : ""}Competência {monthLabel()}.</p>
         </div>
         <button className="client-overview-company-link" onClick={() => setActiveTab("company")}>
