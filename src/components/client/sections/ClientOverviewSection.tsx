@@ -86,6 +86,9 @@ export function ClientOverviewSection({ documents, categories = [], setActiveTab
     .sort((a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime())
     .slice(0, 6);
 
+  const currentHour = new Date().getHours();
+  const greeting = currentHour < 12 ? "Bom dia" : currentHour < 18 ? "Boa tarde" : "Boa noite";
+
   const displayName = String(
     company?.trade_name || company?.company_name || userData?.name || userData?.fullname || user?.email?.split("@")[0] || "cliente"
   ).trim();
@@ -102,7 +105,7 @@ export function ClientOverviewSection({ documents, categories = [], setActiveTab
       <section className="client-overview-intro">
         <div>
           <span className="client-overview-kicker">Portal do cliente</span>
-          <h1>Boa tarde, {displayName}.</h1>
+          <h1>{greeting}, {displayName}.</h1>
           <p>{company?.cnpj ? formatCnpj(company.cnpj) + " · " : ""}Competência {monthLabel()}.</p>
         </div>
         <button className="client-overview-company-link" onClick={() => setActiveTab("company")}>
@@ -175,6 +178,21 @@ export function ClientOverviewSection({ documents, categories = [], setActiveTab
           </section>
         </aside>
       </div>
+
+      <section className="client-help-panel">
+        <div>
+          <span className="client-overview-kicker">Suporte</span>
+          <h2>Precisa de ajuda?</h2>
+          <p>Fale com a equipe da WS pelo WhatsApp para tirar dúvidas sobre documentos, obrigações ou acesso ao portal.</p>
+        </div>
+        <a
+          href="https://wa.me/5582999324884?text=Ol%C3%A1%2C%20preciso%20de%20ajuda%20no%20Portal%20do%20Cliente%20da%20WS."
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Falar com a WS no WhatsApp
+        </a>
+      </section>
 
       {loading && <span className="client-overview-loading">Atualizando informações…</span>}
     </div>

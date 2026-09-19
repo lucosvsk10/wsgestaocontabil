@@ -8,6 +8,7 @@ const CONTACT_EMAIL = 'contabilie2010@hotmail.com';
 export default function LegalPage() {
   const { pathname } = useLocation();
   const isPrivacy = pathname === '/politica-de-privacidade';
+  const isCookies = pathname === '/politica-de-cookies';
 
   return (
     <div className="legal-page">
@@ -15,27 +16,30 @@ export default function LegalPage() {
         <Link to="/" className="legal-brand" aria-label="Ir para o início">
           <img src={WS_LOGO} alt="WS Gestão Contábil" />
         </Link>
-        <span>Documentos legais do Emissor Fiscal</span>
+        <span>Documentos legais da WS Gestão Contábil</span>
       </header>
 
       <main className="legal-main">
         <div className="legal-heading">
           <span>WS Gestão Contábil</span>
-          <h1>{isPrivacy ? 'Política de Privacidade' : 'Termos de Serviço'}</h1>
-          <p>Última atualização: 5 de setembro de 2026</p>
+          <h1>{isCookies ? 'Política de Cookies' : isPrivacy ? 'Política de Privacidade' : 'Termos de Serviço'}</h1>
+          <p>Última atualização: {isCookies ? '19 de setembro de 2026' : '5 de setembro de 2026'}</p>
         </div>
 
         <nav className="legal-tabs" aria-label="Documentos legais">
-          <Link className={!isPrivacy ? 'is-active' : ''} to="/termos-de-servico">
+          <Link className={!isPrivacy && !isCookies ? 'is-active' : ''} to="/termos-de-servico">
             Termos de Serviço
           </Link>
           <Link className={isPrivacy ? 'is-active' : ''} to="/politica-de-privacidade">
             Política de Privacidade
           </Link>
+          <Link className={isCookies ? 'is-active' : ''} to="/politica-de-cookies">
+            Política de Cookies
+          </Link>
         </nav>
 
         <article className="legal-document">
-          {isPrivacy ? <PrivacyPolicy /> : <TermsOfService />}
+          {isCookies ? <CookiePolicy /> : isPrivacy ? <PrivacyPolicy /> : <TermsOfService />}
         </article>
       </main>
 
@@ -373,6 +377,84 @@ function PrivacyPolicy() {
           <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>, pelo telefone (82) 99932-4884 ou
           para o endereço Loteamento Terra do Leite, 29, Quadra 1, Centro, Major Isidoro/AL, CEP
           57.580-000.
+        </p>
+      </LegalSection>
+    </>
+  );
+}
+
+
+function CookiePolicy() {
+  return (
+    <>
+      <LegalIntro>
+        Esta Política explica como a WS Gestão Contábil utiliza cookies, armazenamento local e
+        tecnologias semelhantes em seus sites, portais e sistemas.
+      </LegalIntro>
+
+      <LegalSection title="1. O que são cookies e tecnologias semelhantes">
+        <p>
+          Cookies são pequenos arquivos ou identificadores utilizados pelo navegador para manter
+          sessões, preferências e informações necessárias ao funcionamento de um serviço. Também
+          podemos utilizar armazenamento local do navegador para finalidades equivalentes.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="2. Recursos essenciais">
+        <p>
+          O Portal do Cliente utiliza recursos essenciais de sessão e armazenamento local para
+          autenticação, segurança, manutenção do acesso, preferências de interface e funcionamento
+          de recursos solicitados pelo usuário. Esses recursos são necessários para a prestação do
+          serviço e não dependem de consentimento quando utilizados apenas para essa finalidade.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="3. Recursos opcionais">
+        <p>
+          Caso a WS adote ferramentas opcionais de análise, medição, publicidade ou personalização
+          que não sejam estritamente necessárias, elas poderão ser condicionadas à preferência
+          escolhida no aviso de cookies, quando aplicável.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="4. Preferências de cookies">
+        <p>
+          No Portal do Cliente, o usuário pode escolher entre permitir todos os recursos disponíveis
+          ou manter apenas os recursos essenciais. A preferência é armazenada localmente no
+          navegador para evitar que o aviso seja exibido repetidamente.
+        </p>
+        <p>
+          A exclusão dos dados do navegador ou o uso de outro dispositivo poderá fazer com que a
+          preferência precise ser informada novamente.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="5. Como alterar ou excluir cookies">
+        <p>
+          O usuário pode apagar cookies e dados locais nas configurações do navegador. A remoção de
+          recursos essenciais poderá encerrar a sessão, redefinir preferências ou exigir novo login.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="6. Dados pessoais e privacidade">
+        <p>
+          Quando cookies ou tecnologias semelhantes envolverem dados pessoais, o tratamento seguirá
+          a Política de Privacidade da WS Gestão Contábil e a legislação aplicável, incluindo a
+          LGPD.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="7. Alterações desta Política">
+        <p>
+          Esta Política poderá ser atualizada para refletir mudanças técnicas, legais ou de
+          fornecedores. Alterações relevantes serão indicadas pela atualização da data desta página.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="8. Contato">
+        <p>
+          Dúvidas sobre cookies e privacidade podem ser enviadas para{' '}
+          <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> ou pelo telefone (82) 99932-4884.
         </p>
       </LegalSection>
     </>

@@ -20,33 +20,49 @@ export const DocumentCard = ({
   daysUntilExpiration,
   loadingDocumentIds,
   handleDownload,
+  categoryColor = "#dbe7f4",
   categories = [],
 }: DocumentCardProps) => {
   const expired = isDocumentExpired(doc.expires_at);
+  const expirationText = daysUntilExpiration(doc.expires_at);
   const categoryName = categories.find(cat => cat.id === doc.category)?.name || "Documento";
   const isLoading = loadingDocumentIds.has(doc.id);
   const status = expired ? "Expirado" : !doc.viewed ? "Novo" : "Visualizado";
 
   return (
-    <article className={"client-document-row " + (expired ? "is-expired" : !doc.viewed ? "is-new" : "")}>
-      <div className="client-document-row-main">
-        <span className="client-document-row-marker" />
+    <article className={"client-document-modern-card " + (expired ? "is-expired" : !doc.viewed ? "is-new" : "")}>
+      <div className="client-document-modern-topline">
+        <span className="client-document-modern-category" style={{ color: categoryColor }}>
+          {categoryName}
+        </span>
+        <span className={"client-document-modern-status " + (expired ? "is-expired" : !doc.viewed ? "is-new" : "is-viewed")}>
+          {status}
+        </span>
+      </div>
+
+      <div className="client-document-modern-body">
+        <h3>{doc.name}</h3>
+        {doc.observations && <p>{doc.observations}</p>}
+      </div>
+
+      <div className="client-document-modern-meta">
         <div>
-          <strong>{doc.name}</strong>
-          {doc.observations && <span>{doc.observations}</span>}
+          <span>Enviado</span>
+          <strong>{formatDate(doc.uploaded_at)}</strong>
+        </div>
+        <div>
+          <span>Validade</span>
+          <strong>{expired ? "Expirado" : expirationText || "Sem expiração"}</strong>
         </div>
       </div>
-      <span className="client-document-row-category">{categoryName}</span>
-      <time>{formatDate(doc.uploaded_at)}</time>
-      <span className={"client-document-row-status " + (expired ? "is-expired" : !doc.viewed ? "is-new" : "is-viewed")}>{status}</span>
+
       <button
-        className="client-document-row-action"
+        className="client-document-modern-action"
         onClick={() => void handleDownload(doc)}
         disabled={expired || isLoading}
-        aria-label={"Baixar " + doc.name}
       >
         <Download className="h-4 w-4" />
-        <span>{isLoading ? "Preparando" : expired ? "Indisponível" : "Baixar"}</span>
+        <span>{isLoading ? "Preparando..." : expired ? "Indisponível" : doc.viewed ? "Baixar novamente" : "Visualizar e baixar"}</span>
       </button>
     </article>
   );

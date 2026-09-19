@@ -8,8 +8,11 @@ import { CompanyDataSection } from "@/components/client/sections/CompanyDataSect
 import { DocumentTable } from "@/components/client/DocumentTable";
 import { FirstAccessPasswordModal } from "@/components/client/FirstAccessPasswordModal";
 import { ClientOverviewSection } from "@/components/client/sections/ClientOverviewSection";
+import { ClientPortalFooter } from "@/components/client/ClientPortalFooter";
+import { ClientCookieConsent } from "@/components/client/ClientCookieConsent";
 import "@/styles/client-portal-redesign.css";
 import "@/styles/client-visual-round.css";
+import "@/styles/client-portal-navy.css";
 
 const ClientDashboard = () => {
   const { user, documents, commonCategories, fetchUserDocuments } = useClientDashboardLogic();
@@ -40,6 +43,8 @@ const ClientDashboard = () => {
     <FirstAccessPasswordModal />
     <ClientDashboardLayout activeTab={activeTab} setActiveTab={setActiveTab}>
       {renderContent()}
+      <ClientPortalFooter />
+      <ClientCookieConsent />
     </ClientDashboardLayout>
   </div>;
 };

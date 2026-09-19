@@ -1,4 +1,3 @@
-import ThemeToggle from "@/components/ThemeToggle";
 import AccountDrawer from "@/components/account/AccountDrawer";
 
 const labels: Record<string, string> = {
@@ -18,7 +17,6 @@ const ClientHeader = ({ activeTab }: { activeTab: string }) => {
         <strong>{labels[activeTab] || "Portal"}</strong>
       </div>
       <div className="client-portal-header-actions">
-        <ThemeToggle />
         <AccountDrawer accessLabel="Cliente do escritório" planLabel="Portal do cliente" usageRows={[{label:"Área",value:"Portal contábil"}]} />
       </div>
     </header>
