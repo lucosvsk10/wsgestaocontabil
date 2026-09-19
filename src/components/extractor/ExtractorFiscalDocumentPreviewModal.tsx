@@ -30,11 +30,9 @@ type Props = {
   companyName: string;
   companyCnpj: string;
   downloadingPdf?: boolean;
-  downloadingTestPdf?: boolean;
   downloadingXml?: boolean;
   onClose: () => void;
   onDownloadPdf: (document: FiscalDocumentLike) => Promise<void> | void;
-  onDownloadTestPdf?: (document: FiscalDocumentLike) => Promise<void> | void;
   onDownloadXml: (document: FiscalDocumentLike) => Promise<void> | void;
   onManifestation?: (document: FiscalDocumentLike) => void;
   onRetry?: (document: FiscalDocumentLike) => Promise<void> | void;
@@ -645,11 +643,9 @@ export default function ExtractorFiscalDocumentPreviewModal({
   companyName,
   companyCnpj,
   downloadingPdf,
-  downloadingTestPdf,
   downloadingXml,
   onClose,
   onDownloadPdf,
-  onDownloadTestPdf,
   onDownloadXml,
   onManifestation,
   onRetry,
@@ -753,16 +749,6 @@ export default function ExtractorFiscalDocumentPreviewModal({
               {downloadingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
               {downloadingPdf ? 'Preparando...' : 'Baixar PDF oficial'}
             </Button>
-            {type === 'NFS-e' && onDownloadTestPdf && (
-              <Button
-                variant="outline"
-                onClick={() => void onDownloadTestPdf(document)}
-                disabled={Boolean(downloadingTestPdf) || !complete}
-              >
-                {downloadingTestPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                {downloadingTestPdf ? 'Gerando teste...' : 'Testar novo PDF'}
-              </Button>
-            )}
             <Button variant="outline" onClick={() => void onDownloadXml(document)} disabled={Boolean(downloadingXml) || (needsManifestation && !complete)}>
               {downloadingXml ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileCode2 className="mr-2 h-4 w-4" />}
               {downloadingXml ? 'Preparando XML...' : complete ? 'Baixar XML' : 'Recuperar XML'}
