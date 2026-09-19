@@ -641,15 +641,22 @@ function DocumentUnavailable() {
 
 function OfficialNfseHtmlFrame({ html }: { html: string }) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
-  const [scale, setScale] = useState(0.82);
+  const [scale, setScale] = useState(1);
 
   useEffect(() => {
     const wrap = wrapRef.current;
     if (!wrap) return;
+
     const resize = () => {
-      const availableWidth = Math.max(320, wrap.clientWidth - 36);
-      setScale(Math.min(0.82, Math.max(0.38, availableWidth / 793.33)));
+      const availableWidth = Math.max(320, wrap.clientWidth - 20);
+      const availableHeight = Math.max(420, wrap.clientHeight - 20);
+      const widthScale = availableWidth / 793.33;
+      const heightScale = availableHeight / 1122.67;
+
+      // Preenche o máximo possível da área do preview sem cortar a página.
+      setScale(Math.max(0.48, Math.min(widthScale, heightScale, 1.18)));
     };
+
     resize();
     const observer = new ResizeObserver(resize);
     observer.observe(wrap);
@@ -664,11 +671,13 @@ function OfficialNfseHtmlFrame({ html }: { html: string }) {
       ref={wrapRef}
       style={{
         width: '100%',
-        minHeight: scaledHeight,
+        height: '100%',
+        minHeight: '100%',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'flex-start',
-        padding: '8px 18px 24px',
+        overflow: 'auto',
+        padding: '10px',
         boxSizing: 'border-box',
         background: '#fff',
       }}
