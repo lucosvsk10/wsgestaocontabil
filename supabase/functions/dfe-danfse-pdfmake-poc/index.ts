@@ -2,6 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.49.0";
 import { parseDanfse } from "./xml-parser.ts";
 import qrcode from "https://esm.sh/qrcode-generator@1.4.4?target=deno";
+import { DANFSE_OFFICIAL_TEMPLATE } from "./danfse-official-template.ts";
 
 
 const cors={
@@ -49,9 +50,7 @@ async function canAccessCompany(admin:any,userId:string,companyId:string){
 }
 
 const esc=(v:unknown)=>String(v??"-").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-const templateUrl=new URL("./danfse-official-template.html",import.meta.url);
-let templateCache="";
-const loadTemplate=async()=>templateCache||(templateCache=await Deno.readTextFile(templateUrl));
+const loadTemplate=async()=>DANFSE_OFFICIAL_TEMPLATE;
 const qrDataUrl=(value:string)=>{
   const qr=qrcode(0,"M"); qr.addData(value); qr.make();
   return qr.createDataURL(4,0);
