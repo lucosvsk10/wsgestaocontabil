@@ -19,6 +19,20 @@ const dateOnly=(v:unknown)=>{const d=new Date(String(v||""));return Number.isNaN
 const timeOnly=(v:unknown)=>{const d=new Date(String(v||""));return Number.isNaN(d.getTime())?"-":d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit",second:"2-digit",timeZone:"America/Maceio"});};
 const dateTime=(v:unknown)=>{const d=new Date(String(v||""));return Number.isNaN(d.getTime())?clean(v)||"-":d.toLocaleString("pt-BR",{timeZone:"America/Maceio"});};
 const fmtKey=(v:unknown)=>dg(v).replace(/(\d{4})(?=\d)/g,"$1 ").trim();
+const unwrapStoredFiscalXml=(raw:unknown)=>{
+  const value=String(raw||"").trim();
+  if(!value)return "";
+  if(/^<\?xml\b/i.test(value)||/^<(?:\w+:)?(?:nfeProc|NFe|procNFe)\b/i.test(value))return value;
+  const objectMatch=value.match(/var\s+stringJson\s*=\s*(\{[\s\S]*?\})\s*;/i);
+  if(objectMatch?.[1]){
+    try{const parsed=JSON.parse(objectMatch[1]);if(typeof parsed?.xml==="string"&&parsed.xml.trim().startsWith("<"))return parsed.xml.trim();}catch{}
+  }
+  const xmlStringMatch=value.match(/["']xml["']\s*:\s*("(?:\\.|[^"\\])*")/i);
+  if(xmlStringMatch?.[1]){
+    try{const parsed=JSON.parse(xmlStringMatch[1]);if(typeof parsed==="string"&&parsed.trim().startsWith("<"))return parsed.trim();}catch{}
+  }
+  return value;
+};
 
 let templateCache="";
 async function loadTemplate(){
@@ -101,7 +115,7 @@ Deno.serve(async req=>{
     const admin=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const {data:{user}}=await admin.auth.getUser(auth.replace(/^Bearer\s+/i,""));if(!user)return J({error:"Não autenticado"},401);
     const denied=limited(await consume(admin,"dfe-nfe-html-template",user.id,360,600));if(denied)return denied;
-    const body=await readJsonLimited(req,2900000),doc=body.document||{},companyId=String(body.company_id||""),xml=String(doc.xml||"");
+    const body=await readJsonLimited(req,2900000),doc=body.document||{},companyId=String(body.company_id||""),xml=unwrapStoredFiscalXml(doc.xml||"");
     if(!(await canAccessCompany(admin,user.id,companyId)))return J({error:"Empresa não autorizada para esta conta"},403);
     if(!xml)return J({error:"XML completo não disponível",code:"XML_REQUIRED"},422);
     const model=String(doc.model||tag(tag(xml,"ide"),"mod")||"");if(model!=="55")return J({error:"Este template é exclusivo para NF-e modelo 55"},422);
