@@ -113,6 +113,23 @@ export function renderDanfseOfficialHtml(d:DanfseData){
     html=html.replaceAll("{{"+key+"}}",key==="qrDataUrl"?value:esc(value));
   }
 
+  // Remove os dois textos absolutos da área de serviço e o rótulo estático original.
+  html=html
+    .replace(/<div class="t c1 dyn" data-bind="serviceClassification"[^>]*>[\\s\\S]*?<\\/div>/i,"")
+    .replace(/<div class="t c1 dyn" data-bind="serviceDescription"[^>]*>[\\s\\S]*?<\\/div>/i,"")
+    .replace(/<div class="t c0"[^>]*transform:matrix\\(1,0,0,1,15\\.87,411\\.53\\)[^>]*>Descrição<\\/div>/i,"")
+    .replace(/<div class="t c0"[^>]*transform:matrix\\(1,0,0,1,56\\.34,411\\.53\\)[^>]*>do<\\/div>/i,"")
+    .replace(/<div class="t c0"[^>]*transform:matrix\\(1,0,0,1,68\\.34,411\\.53\\)[^>]*>Serviço<\\/div>/i,"");
+
+  const serviceFlow =
+    '<div id="ws-service-flow" style="position:absolute;z-index:6000;left:15.87px;top:395.03px;width:752px;font-family:Arial,Helvetica,sans-serif;color:#000;box-sizing:border-box;">' +
+      '<div style="width:190px;font-size:9.33px;line-height:10.56px;white-space:normal;margin:0 0 5px 0;">' + esc(d.service.classification||"-") + '</div>' +
+      '<div style="font-size:8px;line-height:9px;font-weight:700;margin:0 0 2px 0;">Descrição do Serviço</div>' +
+      '<div style="width:752px;font-size:9.33px;line-height:10.56px;white-space:pre-wrap;margin:0;">' + esc(d.service.description||"-") + '</div>' +
+    '</div>';
+
+  html=html.replace("</div></body>",serviceFlow+"</div></body>");
+
   const previewPatch = [
     '<style id="ws-danfse-preview-patch">',
     'html,body{margin:0!important;padding:0!important;background:#fff!important;width:793.33px!important;height:1122.67px!important;overflow:hidden!important}',
@@ -121,17 +138,7 @@ export function renderDanfseOfficialHtml(d:DanfseData){
     '[data-bind="prestadorSimpleNational"]{white-space:nowrap!important;text-overflow:clip!important;height:12px!important}',
     '[data-bind="prestadorTaxRegime"]{white-space:nowrap!important;height:12px!important}',
     '[data-bind="prestadorAddress"],[data-bind="prestadorEmail"],[data-bind="tomadorAddress"],[data-bind="tomadorEmail"]{white-space:nowrap!important}',
-    '[data-bind="serviceClassification"]{white-space:normal!important;line-height:10.56px!important;height:auto!important;min-height:0!important;overflow:visible!important;display:block!important}',
-    '[data-bind="serviceDescription"]{white-space:pre-wrap!important;line-height:10.56px!important;height:auto!important;min-height:0!important;overflow:visible!important;display:block!important}',
-    '</style>',
-    '<script>',
-    '(function(){',
-    'function setY(el,y){if(!el)return;var s=el.getAttribute("style")||"";s=s.replace(/transform:matrix\\(1,0,0,1,([-\\d.]+),([-\\d.]+)\\)/,"transform:matrix(1,0,0,1,$1,"+y+")");el.setAttribute("style",s);}',
-    'function adjustService(){var cls=document.querySelector(\'[data-bind="serviceClassification"]\');var desc=document.querySelector(\'[data-bind="serviceDescription"]\');var page=document.querySelector(".page");if(!cls||!desc||!page)return;cls.style.height="auto";desc.style.height="auto";var pageTop=page.getBoundingClientRect().top;var clsRect=cls.getBoundingClientRect();var clsBottom=clsRect.bottom-pageTop;var labelY=Math.max(411.53,clsBottom+8);var descY=labelY+12;var labels=Array.from(document.querySelectorAll(".t.c0")).filter(function(el){var style=el.getAttribute("style")||"";var t=(el.textContent||"").trim();return style.indexOf(",411.53)")>=0&&(t==="Descrição"||t==="do"||t==="Serviço");});labels.forEach(function(el){setY(el,labelY);});setY(desc,descY);}',
-    'function scheduleAdjust(){requestAnimationFrame(function(){requestAnimationFrame(adjustService);});setTimeout(adjustService,80);setTimeout(adjustService,220);setTimeout(adjustService,400);}',
-    'if(document.fonts&&document.fonts.ready){document.fonts.ready.then(scheduleAdjust);}else{scheduleAdjust();}',
-    '})();',
-    '<\/script>'
+    '</style>'
   ].join("");
 
   html=html.replace("</head>",previewPatch+"</head>");
