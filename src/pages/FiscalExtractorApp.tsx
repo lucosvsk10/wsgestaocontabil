@@ -490,7 +490,6 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
     [selectedCompanyId, setSelectedCompanyId] = useState<string>(''),
     [previewDoc, setPreviewDoc] = useState<Doc | null>(null),
     [previewPdfBusy, setPreviewPdfBusy] = useState(false),
-    [previewTestPdfBusy, setPreviewTestPdfBusy] = useState(false),
     [previewXmlBusy, setPreviewXmlBusy] = useState(false),
     [usage, setUsage] = useState<Usage>({ used: 0, limit: 0, remaining: 0, percent: 0 }),
     [companyOverview, setCompanyOverview] = useState<CompanyOverview | null>(null),
@@ -751,7 +750,13 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
     if (previewPdfBusy) return;
     setPreviewPdfBusy(true);
     try {
-      const { data, error } = await supabase.functions.invoke('dfe-danfe-pdf', {
+      const modelHint = `${document.model || ''} ${document.documentKind || ''} ${document.schema || ''}`.toLowerCase();
+      const isNfse =
+        modelHint.includes('nfse') ||
+        modelHint.includes('nfs-e') ||
+        String(document.accessKey || '').replace(/\D/g, '').length > 44;
+      const functionName = isNfse ? 'dfe-danfse-pdfmake-poc' : 'dfe-danfe-pdf';
+      const { data, error } = await supabase.functions.invoke(functionName, {
         body: { company_id: document.companyId, document },
       });
       if (error) throw error;
@@ -779,44 +784,6 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
       setNotice({ tone: 'error', text: message });
     } finally {
       setPreviewPdfBusy(false);
-    }
-  };
-
-  const downloadPreviewTestPdf = async (document: Doc) => {
-    if (previewTestPdfBusy) return;
-    setPreviewTestPdfBusy(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('dfe-danfse-pdfmake-poc', {
-        body: { company_id: document.companyId, document },
-      });
-      if (error) throw error;
-      const base64 = String(data?.pdf_base64 || '');
-      if (!base64) throw new Error(String(data?.error || 'PDF de teste não foi gerado.'));
-      const bytes = Uint8Array.from(atob(base64), char => char.charCodeAt(0));
-      triggerBlobDownload(
-        new Blob([bytes], { type: 'application/pdf' }),
-        String(
-          data?.filename ||
-            'danfse-html-oficial-teste-' +
-              (document.accessKey || document.nsu || 'documento') +
-              '.pdf'
-        )
-      );
-      setNotice({ tone: 'success', text: 'PDF de teste gerado pelo template oficial do DANFSe.' });
-    } catch (caught) {
-      let message = caught instanceof Error ? caught.message : 'Não foi possível gerar o PDF de teste.';
-      const response = (caught as any)?.context;
-      if (response && typeof response.json === 'function') {
-        try {
-          const payload = await response.clone().json();
-          if (payload?.error) message = String(payload.error);
-        } catch {
-          // Mantém a mensagem original.
-        }
-      }
-      setNotice({ tone: 'error', text: message });
-    } finally {
-      setPreviewTestPdfBusy(false);
     }
   };
 
@@ -1067,11 +1034,9 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
         companyName={previewCompany?.tradeName || previewCompany?.name || 'Empresa'}
         companyCnpj={previewCompany?.cnpj || ''}
         downloadingPdf={previewPdfBusy}
-        downloadingTestPdf={previewTestPdfBusy}
         downloadingXml={previewXmlBusy}
         onClose={() => setPreviewDoc(null)}
         onDownloadPdf={downloadPreviewPdf}
-        onDownloadTestPdf={downloadPreviewTestPdf}
         onDownloadXml={downloadPreviewXml}
         onManifestation={manifestPreview}
         onRetry={async document => {
