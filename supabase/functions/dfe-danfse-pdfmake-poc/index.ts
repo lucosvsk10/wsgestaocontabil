@@ -1,35 +1,30 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.49.0";
-import PdfPrinterImport from "npm:pdfmake@0.2.20/src/printer.js";
-import { Buffer } from "node:buffer";
+import pdfMake from "https://esm.sh/pdfmake@0.2.20/build/pdfmake.js?target=deno";
+import pdfFonts from "https://esm.sh/pdfmake@0.2.20/build/vfs_fonts.js?target=deno";
 import { parseDanfse } from "./xml-parser.ts";
 import { buildDanfseDefinition } from "./pdf-definition.ts";
 
-const PdfPrinter:any=(PdfPrinterImport as any).default??PdfPrinterImport;
-const fonts={
-  Helvetica:{
-    normal:"Helvetica",
-    bold:"Helvetica-Bold",
-    italics:"Helvetica-Oblique",
-    bolditalics:"Helvetica-BoldOblique"
+(pdfMake as any).addVirtualFileSystem(pdfFonts as any);
+(pdfMake as any).fonts={
+  Roboto:{
+    normal:"Roboto-Regular.ttf",
+    bold:"Roboto-Medium.ttf",
+    italics:"Roboto-Italic.ttf",
+    bolditalics:"Roboto-MediumItalic.ttf"
   }
 };
+
 const J=(body:any,status=200)=>new Response(JSON.stringify(body),{
   status,
   headers:{"content-type":"application/json","cache-control":"no-store"}
 });
 
-async function makePdfBase64(definition:any){
-  const printer=new PdfPrinter(fonts);
-  const doc=printer.createPdfKitDocument(definition);
-  const chunks:any[]=[];
-  return await new Promise<string>((resolve,reject)=>{
-    doc.on("data",(chunk:any)=>chunks.push(chunk));
-    doc.on("end",()=>resolve(Buffer.concat(chunks).toString("base64")));
-    doc.on("error",(error:any)=>reject(error));
-    doc.end();
-  });
-}
+const pdfBase64=async(def:any)=>await new Promise<string>((resolve,reject)=>{
+  try{
+    (pdfMake as any).createPdf(def).getBase64((value:string)=>resolve(value));
+  }catch(e){ reject(e); }
+});
 
 Deno.serve(async(req)=>{
   try{
@@ -46,10 +41,11 @@ Deno.serve(async(req)=>{
 
     const data=parseDanfse(xml,doc);
     const definition=buildDanfseDefinition(data);
-    const base64=await makePdfBase64(definition);
+    const base64=await pdfBase64(definition);
+
     return J({
       ok:true,
-      engine:"pdfmake-server",
+      engine:"pdfmake-esm-deno",
       filename:"danfse-pdfmake-"+(doc.accessKey||doc.number||"documento")+".pdf",
       pdf_base64:base64,
       bytes_estimate:Math.floor(base64.length*0.75),
