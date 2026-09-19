@@ -421,8 +421,8 @@ async function buildNfse(doc: any, xml: string) {
   const H = 842;
   const page = pdf.addPage([W, H]);
   const black = rgb(0.03, 0.03, 0.03);
-  const lineGray = rgb(0.45, 0.45, 0.45);
-  const fillGray = rgb(0.95, 0.95, 0.95);
+  const lineGray = rgb(0.38, 0.38, 0.38);
+  const fillGray = rgb(0.965, 0.965, 0.965);
   const M = 5.5;
   const R = W - M;
   const C = R - M;
@@ -536,7 +536,7 @@ async function buildNfse(doc: any, xml: string) {
   const band = (top: number, label: string, height = 11) => {
     page.drawRectangle({ x:M, y:y(top + height), width:C, height, color:fillGray });
     hLine(top, M, R, 0.5);
-    drawText(label, M + 4, top + 2.2, 7, true, C - 8);
+    drawText(label, M + 4, top + 2.5, 6.25, true, C - 8);
   };
   const labelValue = (
     label: string,
@@ -546,9 +546,9 @@ async function buildNfse(doc: any, xml: string) {
     width: number,
     options: {labelSize?:number;valueSize?:number;boldValue?:boolean;wrap?:boolean;maxLines?:number} = {}
   ) => {
-    drawText(label, x, top, options.labelSize ?? 6, true, width);
-    if (options.wrap) drawWrapped(value, x, top + 9, width, options.valueSize ?? 7, 7.2, options.maxLines ?? 2, options.boldValue ?? false);
-    else drawText(value, x, top + 9, options.valueSize ?? 7, options.boldValue ?? false, width);
+    drawText(label, x, top, options.labelSize ?? 5.45, true, width);
+    if (options.wrap) drawWrapped(value, x, top + 9, width, options.valueSize ?? 6.25, 6.9, options.maxLines ?? 2, options.boldValue ?? false);
+    else drawText(value, x, top + 9, options.valueSize ?? 6.25, options.boldValue ?? false, width);
   };
 
   const inf = tag(xml, 'infNFSe') || xml;
@@ -610,15 +610,14 @@ async function buildNfse(doc: any, xml: string) {
   const homolog = tag(infDps,'tpAmb') === '2';
 
   page.drawRectangle({ x:M, y:y(837), width:C, height:832, borderWidth:1, borderColor:black });
-  page.drawRectangle({ x:M, y:y(39.5), width:C, height:34.5, color:fillGray });
 
-  const logo = await pdf.embedPng(Uint8Array.from(atob('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'), ch => ch.charCodeAt(0)));
-  page.drawImage(logo, { x:13.9, y:y(32.2), width:113.4, height:22.7 });
-  drawText('DANFSe v2.0', 225, 10.4, 11.5, true, 145, 'center');
-  drawText('Documento Auxiliar da NFS-e', 215, 22.1, 9.6, true, 165, 'center');
-  drawText(`Município: ${tag(inf,'xLocEmi') || '-'} - ${issueUf}`, 445, 10.5, 7.1, false, 140);
-  drawText(`Ambiente Gerador: ${tag(inf,'ambGer') || '-'}`, 445, 20.5, 5.5, false, 140);
-  drawText(`Tipo de Ambiente: ${tag(infDps,'tpAmb') || '-'}`, 445, 27.2, 5.5, false, 140);
+  const logo = await pdf.embedPng(Uint8Array.from(atob('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'), ch => ch.charCodeAt(0)));
+  page.drawImage(logo, { x:13.5, y:y(31.4), width:121.5, height:24.1 });
+  drawText('DANFSe v2.0', 220, 9.7, 11.2, true, 155, 'center');
+  drawText('Documento Auxiliar da NFS-e', 210, 21.3, 9.2, true, 175, 'center');
+  drawText(`Município: ${tag(inf,'xLocEmi') || '-'} - ${issueUf}`, 448, 10.3, 5.9, false, 136);
+  drawText(`Ambiente Gerador: ${tag(inf,'ambGer') || '-'}`, 448, 18.7, 5.2, false, 136);
+  drawText(`Tipo de Ambiente: ${tag(infDps,'tpAmb') || '-'}`, 448, 26.0, 5.2, false, 136);
   if (homolog) drawText('NFS-e SEM VALIDADE JURÍDICA', 210, 31, 7, true, 175, 'center');
   hLine(39.5);
 
@@ -635,13 +634,13 @@ async function buildNfse(doc: any, xml: string) {
 
   if (key) {
     const qi = await qr(pdf, qrv, 4);
-    const qrSize=mm(15.2), qrPad=mm(1.2), qrX=493, qrY=y(84);
+    const qrSize=mm(16.2), qrPad=mm(1.4), qrX=497, qrY=y(84);
     page.drawRectangle({x:qrX-qrPad,y:qrY-qrPad,width:qrSize+qrPad*2,height:qrSize+qrPad*2,color:rgb(1,1,1)});
     page.drawImage(qi, { x:qrX, y:qrY, width:qrSize, height:qrSize });
   }
   drawWrapped(
     'A autenticidade desta NFS-e pode ser verificada pela leitura deste código QR ou pela consulta da chave de acesso no portal nacional da NFS-e',
-    445, 92.5, 135, 6, 6.5, 4
+    447, 93.0, 137, 5.25, 6.0, 4
   );
 
   band(126, 'PRESTADOR / FORNECEDOR', 11);
@@ -649,21 +648,21 @@ async function buildNfse(doc: any, xml: string) {
   labelValue('CNPJ / CPF / NIF', cpfCnpj(tag(emit,'CNPJ') || tag(emit,'CPF') || doc.issuerCnpj), 156, 129, 132, {boldValue:false});
   labelValue('Indicador Municipal (Inscrição)', tag(emit,'IM') || tag(prest,'IM') || '-', 301, 129, 132);
   labelValue('Telefone', fmtPhone(tag(emit,'fone') || tag(prest,'fone')), 445, 129, 135);
-  labelValue('Nome / Nome Empresarial', tag(emit,'xNome') || doc.issuerName || '-', 11, 151, 272, {wrap:true,maxLines:2,valueSize:6.6});
+  labelValue('Nome / Nome Empresarial', tag(emit,'xNome') || doc.issuerName || '-', 11, 151, 272, {wrap:true,maxLines:2,valueSize:6.0});
   labelValue('Município / Sigla UF', `${tag(inf,'xLocEmi') || '-'} / ${issueUf}`, 301, 151, 132);
   labelValue('Código IBGE / CEP', `${fmtIbge(issueCityCode)} / ${cep(tag(endE,'CEP'))}`, 445, 151, 135);
-  labelValue('Endereço', cleanParts(tag(endE,'xLgr'),tag(endE,'nro'),tag(endE,'xCpl'),tag(endE,'xBairro')) || '-', 11, 173, 275, {wrap:true,maxLines:2,valueSize:6.4});
-  labelValue('E-mail', tag(emit,'email') || tag(prest,'email') || '-', 301, 173, 279, {wrap:true,maxLines:2,valueSize:6.2});
+  labelValue('Endereço', cleanParts(tag(endE,'xLgr'),tag(endE,'nro'),tag(endE,'xCpl'),tag(endE,'xBairro')) || '-', 11, 173, 275, {wrap:true,maxLines:2,valueSize:5.9});
+  labelValue('E-mail', tag(emit,'email') || tag(prest,'email') || '-', 301, 173, 279, {wrap:true,maxLines:2,valueSize:5.75});
   labelValue('Simples Nacional na Data de Competência',
     tag(regTrib,'opSimpNac') === '3' ? 'Optante - Microempresa ou Empresa de Pequeno Porte'
       : tag(regTrib,'opSimpNac') === '2' ? 'Optante - Microempreendedor Individual (MEI)'
       : tag(regTrib,'opSimpNac') === '1' ? 'Não Optante' : '-',
-    11, 192, 136, {valueSize:5.8});
+    11, 192, 136, {valueSize:5.1,wrap:true,maxLines:2});
   labelValue('Regime de Apuração Tributária pelo SN',
     tag(regTrib,'regApTribSN') === '1'
       ? 'Regime de apuração dos tributos federais e municipal pelo Simples Nacional'
       : tag(regTrib,'regApTribSN') || '-',
-    156, 192, 285, {valueSize:5.8});
+    156, 192, 285, {valueSize:5.1,wrap:true,maxLines:2});
   hLine(203);
 
   band(203, 'TOMADOR / ADQUIRENTE', 11);
@@ -687,15 +686,15 @@ async function buildNfse(doc: any, xml: string) {
   labelValue('Código de Tributação Nacional/Municipal', `${fmtTrib(tag(cServ,'cTribNac'))} / ${fmtTrib(tag(cServ,'cTribMun'))}`, 156, 289.5, 132);
   labelValue('Código da NBS', fmtNbs(tag(cServ,'cNBS')), 301, 289.5, 132);
   labelValue('Local da Prestação / Sigla UF / País', `${tag(inf,'xLocPrestacao') || '-'} / ${prestUf} / -`, 445, 289.5, 135);
-  drawWrapped(tag(inf,'xTribNac') || '-', 11, 310, 275, 6.0, 7.0, 2);
-  drawText('Descrição do Serviço', 11, 326, 5.8, true, 180);
-  drawWrapped(tag(cServ,'xDescServ') || '-', 11, 337, 569, 6.0, 7.15, 13);
+  drawWrapped(tag(inf,'xTribNac') || '-', 11, 309.5, 275, 5.6, 6.6, 3);
+  drawText('Descrição do Serviço', 11, 333, 5.4, true, 180);
+  drawWrapped(tag(cServ,'xDescServ') || '-', 11, 343, 569, 5.7, 6.8, 13);
   hLine(438);
 
   band(438, 'TRIBUTAÇÃO MUNICIPAL (ISSQN)', 11);
   vLine(152,438,478); vLine(296,438,478); vLine(441,438,478);
   labelValue('Tipo de Tributação do ISSQN', tag(tribMun,'tribISSQN') === '1' ? 'Operação Tributável' : tag(tribMun,'tribISSQN') || '-', 156, 441, 132);
-  labelValue('Município / Sigla UF / País de Incidência do ISSQN', `${tag(inf,'xLocIncid') || '-'} / ${incidenceUf} / -`, 301, 441, 279);
+  labelValue('Município / Sigla UF / País de Incidência do ISSQN', `${tag(inf,'xLocIncid') || '-'} / ${incidenceUf} / -`, 301, 441, 279, {labelSize:5.0,valueSize:5.9});
   labelValue('BC ISSQN', moneyOrDash(tag(tribMun,'vBC')), 11, 461, 132);
   labelValue('Alíquota Aplicada', tag(tribMun,'pAliq') ? `${tag(tribMun,'pAliq')}%` : '-', 156, 461, 132);
   labelValue('Retenção do ISSQN',
@@ -718,7 +717,7 @@ async function buildNfse(doc: any, xml: string) {
   vLine(152,518,602); vLine(296,518,602); vLine(441,518,602);
   labelValue('CST / cClassTrib', `${tag(trib,'CST') || '-'} / ${tag(trib,'cClassTrib') || '-'}`, 156, 521, 132);
   labelValue('Indicador de Operação / Código IBGE Incidência / Município Incidência / Sigla UF',
-    `- / ${fmtIbge(incidenceCode)} / ${tag(inf,'xLocIncid') || '-'} / ${incidenceUf}`, 301, 521, 279, {valueSize:5.7});
+    `- / ${fmtIbge(incidenceCode)} / ${tag(inf,'xLocIncid') || '-'} / ${incidenceUf}`, 301, 521, 279, {labelSize:4.75,valueSize:5.4,wrap:true,maxLines:2});
   labelValue('Exclusões e Reduções da Base de Cálculo', 'R$ 0,00', 11, 543, 132);
   labelValue('Base de Cálculo Após Exclusões e Reduções', moneyOrDash(tag(trib,'vBCIBSCBS')), 156, 543, 132);
   labelValue('Red. Alíquota IBS / Red. Alíquota CBS', '- / - / -', 301, 543, 132);
@@ -735,14 +734,14 @@ async function buildNfse(doc: any, xml: string) {
 
   band(602, 'VALOR TOTAL DA NFS-e', 11);
   vLine(152,602,642); vLine(296,602,642); vLine(441,602,642);
-  labelValue('VALOR DA OPERAÇÃO / SERVIÇO', money(serviceValue), 156, 605, 132);
+  labelValue('VALOR DA OPERAÇÃO / SERVIÇO', money(serviceValue), 156, 605, 132, {labelSize:5.05,valueSize:6.15});
   labelValue('Desconto Incondicionado', moneyOrDash(tag(dpsVals,'vDescIncond')), 301, 605, 132);
   labelValue('Desconto Condicionado', moneyOrDash(tag(dpsVals,'vDescCond')), 445, 605, 135);
-  labelValue('Total das Retenções (ISSQN / Federais)', moneyOrDash(tag(vals,'vTotRet') || tag(vals,'vTotalRet')), 11, 625, 132);
+  labelValue('Total das Retenções (ISSQN / Federais)', moneyOrDash(tag(vals,'vTotRet') || tag(vals,'vTotalRet')), 11, 625, 132, {labelSize:4.85,valueSize:6.0});
   labelValue('VALOR LÍQUIDO DA NFS-e', money(liquidValue), 156, 625, 132);
   labelValue('Total do IBS/CBS', 'R$ 0,00', 301, 625, 132);
   page.drawRectangle({x:441,y:y(642),width:R-441,height:20,color:fillGray});
-  labelValue('VALOR LÍQUIDO DA NFS-e + IBS/CBS', 'R$ 0,00', 445, 625, 135);
+  labelValue('VALOR LÍQUIDO DA NFS-e + IBS/CBS', 'R$ 0,00', 445, 625, 135, {labelSize:4.75,valueSize:6.0});
   hLine(642);
 
   band(642, 'INFORMAÇÕES COMPLEMENTARES', 11);
@@ -758,9 +757,9 @@ async function buildNfse(doc: any, xml: string) {
 
   hLine(811);
   vLine(151,811,833); vLine(296,811,833);
-  drawText('DATA CIENTIFICAÇÃO:', 11, 814, 5.7, true, 132);
-  drawText('IDENTIFICAÇÃO E ASSINATURA', 156, 814, 5.7, true, 132);
-  labelValue('N° NFS-e / CHAVE NFS-e', `${tag(inf,'nNFSe') || doc.number || '-'} / ${key}`, 301, 814, 279, {valueSize:5.8});
+  drawText('DATA CIENTIFICAÇÃO:', 11, 815, 5.0, true, 132);
+  drawText('IDENTIFICAÇÃO E ASSINATURA', 156, 815, 5.0, true, 132);
+  labelValue('N° NFS-e / CHAVE NFS-e', `${tag(inf,'nNFSe') || doc.number || '-'} / ${key}`, 301, 815, 279, {labelSize:5.0,valueSize:4.9});
   hLine(833);
 
   return pdf.save();
