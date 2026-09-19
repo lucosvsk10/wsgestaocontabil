@@ -1,6 +1,15 @@
 import type { DanfseData } from "./types.ts";
 
-const clean=(v:unknown)=>String(v??"").replace(/[\r\n\t]+/g," ").replace(/\s+/g," ").trim();
+const decodeXml=(v:unknown)=>String(v??"")
+  .replace(/&#xA;|&#10;/gi,"\n")
+  .replace(/&#xD;|&#13;/gi,"")
+  .replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">")
+  .replace(/&quot;/g,'"').replace(/&apos;/g,"'");
+const clean=(v:unknown)=>decodeXml(v).replace(/[\r\n\t]+/g," ").replace(/\s+/g," ").trim();
+const rawTag=(xml:string,name:string)=>{
+  const m=xml.match(new RegExp("<(?:[A-Za-z0-9_]+:)?"+name+"\\b[^>]*>([\\s\\S]*?)<\\/(?:[A-Za-z0-9_]+:)?"+name+">","i"));
+  return decodeXml(m?.[1]??"").replace(/\r/g,"").replace(/[ \t]+\n/g,"\n").replace(/\n[ \t]+/g,"\n").trim();
+};
 const tag=(xml:string,name:string)=>{
   const m=xml.match(new RegExp("<(?:[A-Za-z0-9_]+:)?"+name+"\\b[^>]*>([\\s\\S]*?)<\\/(?:[A-Za-z0-9_]+:)?"+name+">","i"));
   return clean(m?.[1]??"");
@@ -14,7 +23,7 @@ const dg=(v:unknown)=>String(v??"").replace(/\D/g,"");
 const money=(v:unknown)=>{const n=Number(String(v??"0").replace(",","."));return Number.isFinite(n)?new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(n):"-";};
 const moneyOrDash=(v:unknown)=>{const s=clean(v);if(!s)return "-";const n=Number(s.replace(",","."));return !Number.isFinite(n)||n===0?"-":money(n);};
 const cnpjCpf=(v:unknown)=>{const d=dg(v);if(d.length===14)return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,"$1.$2.$3/$4-$5");if(d.length===11)return d.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/,"$1.$2.$3-$4");return d||"-";};
-const cep=(v:unknown)=>{const d=dg(v);return d.length===8?d.replace(/^(\d{5})(\d{3})$/,"$1-$2"):d||"-";};
+const cep=(v:unknown)=>{const d=dg(v);return d.length===8?d.replace(/^(\d{2})(\d{3})(\d{3})$/,"$1.$2-$3"):d||"-";};
 const phone=(v:unknown)=>{const d=dg(v);if(d.length===11)return d.replace(/^(\d{2})(\d{5})(\d{4})$/,"($1) $2-$3");if(d.length===10)return d.replace(/^(\d{2})(\d{4})(\d{4})$/,"($1) $2-$3");return d||"-";};
 const fmtDate=(v:unknown)=>{const s=clean(v);if(!s)return "-";const d=new Date(s);return Number.isNaN(d.getTime())?s:d.toLocaleDateString("pt-BR",{timeZone:"America/Maceio"});};
 const fmtDateTime=(v:unknown)=>{const s=clean(v);if(!s)return "-";const d=new Date(s);return Number.isNaN(d.getTime())?s:d.toLocaleString("pt-BR",{timeZone:"America/Maceio",hour12:false}).replace(",","");};
@@ -75,10 +84,10 @@ export async function parseDanfse(xml:string,doc:any):Promise<DanfseData>{
     issueCity,issueUf,generatorEnvironment:tag(inf,"ambGer")||"-",environmentType:tag(infDps,"tpAmb")||tag(inf,"tpAmb")||"-",
     prestador:{name:tag(emit,"xNome")||doc?.issuerName||"-",doc:cnpjCpf(tag(emit,"CNPJ")||tag(emit,"CPF")||doc?.issuerCnpj),municipalRegistration:tag(emit,"IM")||tag(prest,"IM")||"-",phone:phone(tag(emit,"fone")||tag(prest,"fone")),address:cleanParts(tag(endE,"xLgr"),tag(endE,"nro"),tag(endE,"xCpl"),tag(endE,"xBairro")),cityUf:issueCity+" / "+issueUf,ibgeCep:fmtIbge(issueCode)+" / "+cep(tag(endE,"CEP")),email:tag(emit,"email")||tag(prest,"email")||"-",simpleNational:simpleLabel(tag(regTrib,"opSimpNac")),taxRegime:regimeLabel(tag(regTrib,"regApTribSN"))},
     tomador:{name:tag(toma,"xNome")||doc?.recipientName||"-",doc:cnpjCpf(tag(toma,"CNPJ")||tag(toma,"CPF")||doc?.recipientCnpj),municipalRegistration:tag(toma,"IM")||"-",phone:phone(tag(toma,"fone")),address:cleanParts(tag(endT,"xLgr"),tag(endT,"nro"),tag(endT,"xCpl"),tag(endT,"xBairro")),cityUf:tomaCity+" / "+tomaUf,ibgeCep:fmtIbge(tomaCode)+" / "+cep(tag(endTN,"CEP")),email:tag(toma,"email")||"-"},
-    service:{nationalMunicipalCode:fmtTrib(tag(cServ,"cTribNac"))+" / "+(tag(cServ,"cTribMun")||""),nbs:fmtNbs(tag(cServ,"cNBS")),location:prestCity+" / "+prestUf+" / "+(tag(locPrest,"cPaisPrestacao")||""),classification:tagAny(inf,["xTribNac"])||tagAny(cServ,["xTribNac"])||"-",description:tag(cServ,"xDescServ")||"-"},
-    municipalTax:{type:tag(tribMun,"tribISSQN")==="1"?"Operação Tributável":tag(tribMun,"tribISSQN")||"-",incidence:incidCity+" / "+incidUf+" / ",base:moneyOrDash(tag(tribMun,"vBC")),rate:tag(tribMun,"pAliq")||"-",amount:moneyOrDash(tag(tribMun,"vISSQN")),retention:retentionLabel(tag(tribMun,"tpRetISSQN"))},
+    service:{nationalMunicipalCode:fmtTrib(tag(cServ,"cTribNac"))+" / "+(tag(cServ,"cTribMun")||"-"),nbs:fmtNbs(tag(cServ,"cNBS")),location:prestCity+" / "+prestUf+" / "+(tag(locPrest,"cPaisPrestacao")||"-"),classification:tagAny(inf,["xTribNac"])||tagAny(cServ,["xTribNac"])||"-",description:rawTag(cServ,"xDescServ")||"-"},
+    municipalTax:{type:tag(tribMun,"tribISSQN")==="1"?"Operação Tributável":tag(tribMun,"tribISSQN")||"-",incidence:incidCity+" / "+incidUf+" / -",base:moneyOrDash(tag(tribMun,"vBC")),rate:tag(tribMun,"pAliq")||"-",amount:moneyOrDash(tag(tribMun,"vISSQN")),retention:retentionLabel(tag(tribMun,"tpRetISSQN"))},
     federalTax:{irrf:moneyOrDash(tag(tribFed,"vRetIRRF")),previdencia:moneyOrDash(tag(tribFed,"vRetCP")),sociais:moneyOrDash(tag(tribFed,"vRetCSLL")),pis:moneyOrDash(tag(pisCofins,"vPis")),cofins:moneyOrDash(tag(pisCofins,"vCofins")),retainedDescription:tag(tribFed,"xRet")||"-"},
-    ibsCbs:{cstClass:(tag(inf,"CST")||"")+" / "+(tag(inf,"cClassTrib")||""),operationIncidence:(tag(inf,"indOp")||"")+" / "+fmtIbge(incidCode)+" / "+incidCity+" / "+incidUf,exclusions:"R$ 0,00",base:"-",reduction:" / - / ",rateUfMun:" / ",effectiveMunicipal:"-",amountMunicipal:"-",effectiveState:"-",amountState:"-",totalIbs:"-",cbsRate:"-",cbsEffective:"-",cbsTotal:"-"},
+    ibsCbs:{cstClass:(tag(inf,"CST")||"-")+" / "+(tag(inf,"cClassTrib")||"-"),operationIncidence:(tag(inf,"indOp")||"-")+" / "+(tag(inf,"cLocIncid")?fmtIbge(incidCode):"-")+" / "+(tag(inf,"cLocIncid")?incidCity:"-")+" / "+(tag(inf,"cLocIncid")?incidUf:"-"),exclusions:"R$ 0,00",base:"-",reduction:"- / - / -",rateUfMun:"- / -",effectiveMunicipal:"-",amountMunicipal:"-",effectiveState:"-",amountState:"-",totalIbs:"-",cbsRate:"-",cbsEffective:"-",cbsTotal:"-"},
     totals:{operation:money(serviceValue),unconditionalDiscount:moneyOrDash(tag(vals,"vDescIncond")),conditionalDiscount:moneyOrDash(tag(vals,"vDescCond")),retentions:moneyOrDash(tag(vals,"vTotRet")||tag(vals,"vTotalRet")),net:money(liquidValue),ibsCbs:"R$ 0,00",netPlusIbsCbs:"R$ 0,00"},
     additionalInfo:additional||"-",approximateTaxes:"Totais aproximados dos Tributos cfe. Lei n° 12.741/2012: Federais: -; Estaduais: -; Municipais: -;",
     qrValue:"https://www.nfse.gov.br/ConsultaPublica/?tpc=1&chave="+key

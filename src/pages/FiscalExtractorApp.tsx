@@ -466,6 +466,7 @@ const reconciliationToDoc = (r: any, companyId: string): Doc => ({
       : r.status || 'Fiscal'),
 });
 
+
 const chart = {
   gold: '#d7b65a',
   blue: '#5b83ad',
@@ -794,9 +795,14 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
       const bytes = Uint8Array.from(atob(base64), char => char.charCodeAt(0));
       triggerBlobDownload(
         new Blob([bytes], { type: 'application/pdf' }),
-        String(data?.filename || `danfse-pdfmake-teste-${document.accessKey || document.nsu || 'documento'}.pdf`)
+        String(
+          data?.filename ||
+            'danfse-html-oficial-teste-' +
+              (document.accessKey || document.nsu || 'documento') +
+              '.pdf'
+        )
       );
-      setNotice({ tone: 'success', text: 'PDF de teste gerado com o novo motor pdfmake.' });
+      setNotice({ tone: 'success', text: 'PDF de teste gerado pelo template oficial do DANFSe.' });
     } catch (caught) {
       let message = caught instanceof Error ? caught.message : 'Não foi possível gerar o PDF de teste.';
       const response = (caught as any)?.context;

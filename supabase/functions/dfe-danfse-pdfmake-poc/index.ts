@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.49.0";
 import { parseDanfse } from "./xml-parser.ts";
-import { buildDanfsePdf } from "./pdf-builder.ts";
+import { buildDanfseFromOfficialTemplate } from "./pdf-official-template.ts";
 
 
 const cors={
@@ -48,8 +48,7 @@ async function canAccessCompany(admin:any,userId:string,companyId:string){
   return Boolean(members?.length);
 }
 
-const bytesToBase64=(bytes:Uint8Array)=>{ let s=""; const chunk=0x8000; for(let i=0;i<bytes.length;i+=chunk){ s+=String.fromCharCode(...bytes.subarray(i,i+chunk)); } return btoa(s); };
-
+const bytesToBase64=(bytes:Uint8Array)=>{let s="";const chunk=0x8000;for(let i=0;i<bytes.length;i+=chunk)s+=String.fromCharCode(...bytes.subarray(i,i+chunk));return btoa(s);};
 Deno.serve(async(req)=>{
   if(req.method==="OPTIONS") return new Response("ok",{headers:cors});
   try{
@@ -83,13 +82,13 @@ Deno.serve(async(req)=>{
     }
 
     const data=await parseDanfse(xml,doc);
-    const bytes=await buildDanfsePdf(data);
+    const bytes=await buildDanfseFromOfficialTemplate(data);
     const base64=bytesToBase64(bytes);
-    const filename="danfse-pdfmake-teste-"+(doc.accessKey||doc.number||"documento")+".pdf";
+    const filename="danfse-html-oficial-teste-"+(doc.accessKey||doc.number||"documento")+".pdf";
 
     return J({
       ok:true,
-      engine:"pdf-lib-helvetica-parity",
+      engine:"official-html-template-pdf",
       filename,
       pdf_base64:base64,
       bytes_estimate:Math.floor(base64.length*0.75),
