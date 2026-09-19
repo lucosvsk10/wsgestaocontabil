@@ -355,7 +355,15 @@ async function buildNfce(doc: any, xml: string) {
   separator(5, 7);
   leftRight('QTD. TOTAL DE ITENS', String(items.length), false, 6.8);
   leftRight('VALOR DOS PRODUTOS', num(tag(tot,'vProd')), false, 6.8);
-  leftRight('VALOR TOTAL R
+  leftRight('VALOR TOTAL R$', num(tag(tot,'vNF') || doc.value), true, 8.7);
+
+  separator(5.5, 7.5);
+  paymentHeader();
+  for (const p of sections(pag,'detPag')) {
+    const code=tag(p,'tPag');
+    leftRight(paymentName(code), num(tag(p,'vPag')), false,6.5);
+  }
+  separator(5.5, 8);
 
   draw('Consulta pela chave de acesso em',6.3,false,'center');
   const urlChave = xmlDecode(tag(xml,'urlChave')) || 'Consulte a chave no portal fiscal indicado pela UF emissora';
