@@ -648,13 +648,9 @@ function OfficialNfseHtmlFrame({ html }: { html: string }) {
     if (!wrap) return;
 
     const resize = () => {
-      const availableWidth = Math.max(320, wrap.clientWidth - 20);
-      const availableHeight = Math.max(420, wrap.clientHeight - 20);
-      const widthScale = availableWidth / 793.33;
-      const heightScale = availableHeight / 1122.67;
-
-      // Preenche o máximo possível da área do preview sem cortar a página.
-      setScale(Math.max(0.48, Math.min(widthScale, heightScale, 1.18)));
+      // Fit-to-width de verdade: ocupa a largura útil e deixa a rolagem vertical cuidar da altura.
+      const availableWidth = Math.max(320, wrap.clientWidth - 12);
+      setScale(Math.max(0.55, Math.min(1.6, availableWidth / 793.33)));
     };
 
     resize();
@@ -673,21 +669,18 @@ function OfficialNfseHtmlFrame({ html }: { html: string }) {
         width: '100%',
         height: '100%',
         minHeight: '100%',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'flex-start',
         overflow: 'auto',
-        padding: '10px',
-        boxSizing: 'border-box',
         background: '#fff',
+        boxSizing: 'border-box',
+        padding: '6px',
       }}
     >
       <div
         style={{
           width: scaledWidth,
           height: scaledHeight,
+          margin: '0 auto',
           position: 'relative',
-          flex: '0 0 auto',
         }}
       >
         <iframe
