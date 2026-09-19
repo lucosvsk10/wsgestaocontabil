@@ -176,6 +176,7 @@ const AppRoutes = () => (
     <Route path="/changelog" element={<ChangeLog />} />
     <Route path="/termos-de-servico" element={<LegalPage />} />
     <Route path="/politica-de-privacidade" element={<LegalPage />} />
+    <Route path="/politica-de-cookies" element={<LegalPage />} />
     <Route
       path="/admin"
       element={
