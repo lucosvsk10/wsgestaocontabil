@@ -16,8 +16,8 @@ const moneyOrDash=(v:unknown)=>{const s=clean(v);if(!s)return "-";const n=Number
 const cnpjCpf=(v:unknown)=>{const d=dg(v);if(d.length===14)return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,"$1.$2.$3/$4-$5");if(d.length===11)return d.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/,"$1.$2.$3-$4");return d||"-";};
 const cep=(v:unknown)=>{const d=dg(v);return d.length===8?d.replace(/^(\d{5})(\d{3})$/,"$1-$2"):d||"-";};
 const phone=(v:unknown)=>{const d=dg(v);if(d.length===11)return d.replace(/^(\d{2})(\d{5})(\d{4})$/,"($1) $2-$3");if(d.length===10)return d.replace(/^(\d{2})(\d{4})(\d{4})$/,"($1) $2-$3");return d||"-";};
-const fmtDate=(v:unknown)=>{const s=clean(v);if(!s)return "-";const m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);return m?m[3]+"/"+m[2]+"/"+m[1]:s;};
-const fmtDateTime=(v:unknown)=>{const s=clean(v);if(!s)return "-";const m=s.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})/);return m?m[3]+"/"+m[2]+"/"+m[1]+" "+m[4]+":"+m[5]+":"+m[6]:fmtDate(s);};
+const fmtDate=(v:unknown)=>{const s=clean(v);if(!s)return "-";const d=new Date(s);return Number.isNaN(d.getTime())?s:d.toLocaleDateString("pt-BR",{timeZone:"America/Maceio"});};
+const fmtDateTime=(v:unknown)=>{const s=clean(v);if(!s)return "-";const d=new Date(s);return Number.isNaN(d.getTime())?s:d.toLocaleString("pt-BR",{timeZone:"America/Maceio",hour12:false}).replace(",","");};
 const cleanParts=(...xs:unknown[])=>xs.map(clean).filter(Boolean).filter(v=>!/^(null|undefined)$/i.test(v)).join(", ");
 const ufFromIbge=(v:unknown)=>{const code=dg(v).slice(0,2);const map:Record<string,string>={11:"RO",12:"AC",13:"AM",14:"RR",15:"PA",16:"AP",17:"TO",21:"MA",22:"PI",23:"CE",24:"RN",25:"PB",26:"PE",27:"AL",28:"SE",29:"BA",31:"MG",32:"ES",33:"RJ",35:"SP",41:"PR",42:"SC",43:"RS",50:"MS",51:"MT",52:"GO",53:"DF"};return map[code]||"-";};
 const fmtIbge=(v:unknown)=>{const d=dg(v);return d.length===7?d.replace(/^(\d{2})(\d{5})$/,"$1.$2"):d||"-";};
