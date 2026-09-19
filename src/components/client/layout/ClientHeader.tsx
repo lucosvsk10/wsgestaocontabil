@@ -1,17 +1,23 @@
 import ThemeToggle from "@/components/ThemeToggle";
 import AccountDrawer from "@/components/account/AccountDrawer";
-import { ChevronRight, ShieldCheck } from "lucide-react";
 
-const ClientHeader = () => {
+const labels: Record<string, string> = {
+  overview: "Início",
+  documents: "Documentos",
+  calendar: "Obrigações",
+  announcements: "Comunicados",
+  simulations: "Ferramentas",
+  company: "Minha empresa",
+};
+
+const ClientHeader = ({ activeTab }: { activeTab: string }) => {
   return (
-    <header className="client-portal-header">
-      <div className="client-portal-breadcrumb" aria-label="Localização atual">
+    <header className="client-portal-header client-portal-header-redesign">
+      <div className="client-portal-header-context">
         <span>Portal do cliente</span>
-        <ChevronRight aria-hidden="true" className="h-3.5 w-3.5" />
-        <strong>Documentos</strong>
+        <strong>{labels[activeTab] || "Portal"}</strong>
       </div>
       <div className="client-portal-header-actions">
-        <span className="client-portal-secure"><ShieldCheck aria-hidden="true" className="h-3.5 w-3.5" />Acesso protegido</span>
         <ThemeToggle />
         <AccountDrawer accessLabel="Cliente do escritório" planLabel="Portal do cliente" usageRows={[{label:"Área",value:"Portal contábil"}]} />
       </div>
