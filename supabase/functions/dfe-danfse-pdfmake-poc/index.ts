@@ -43,10 +43,20 @@ Deno.serve(async(req)=>{
     const definition=buildDanfseDefinition(data);
     const base64=await pdfBase64(definition);
 
+    const filename="danfse-pdfmake-"+(doc.accessKey||doc.number||"documento")+".pdf";
+    if(body?.debug_store===true){
+      const bytes=Uint8Array.from(atob(base64),c=>c.charCodeAt(0));
+      const path="debug-fiscal-pdfmake/"+Date.now()+"-"+filename;
+      const {error:uploadError}=await admin.storage.from("saas-private").upload(path,bytes,{contentType:"application/pdf",upsert:true});
+      if(uploadError) throw uploadError;
+      const {data:signed,error:signedError}=await admin.storage.from("saas-private").createSignedUrl(path,1800);
+      if(signedError) throw signedError;
+      return J({ok:true,engine:"pdfmake-esm-deno",filename,bytes_estimate:bytes.length,access_key:data.accessKey,number:data.number,debug_path:path,signed_url:signed.signedUrl});
+    }
     return J({
       ok:true,
       engine:"pdfmake-esm-deno",
-      filename:"danfse-pdfmake-"+(doc.accessKey||doc.number||"documento")+".pdf",
+      filename,
       pdf_base64:base64,
       bytes_estimate:Math.floor(base64.length*0.75),
       access_key:data.accessKey,
