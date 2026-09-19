@@ -1743,3 +1743,91 @@
     padding:10px 12px calc(10px + env(safe-area-inset-bottom))!important;
   }
 }
+
+
+/* NFC-e preview: isolate fiscal paper from the dark app theme. */
+.extractor-nfce-sheet,
+.extractor-nfce-sheet table,
+.extractor-nfce-sheet thead,
+.extractor-nfce-sheet tbody,
+.extractor-nfce-sheet tr,
+.extractor-nfce-sheet th,
+.extractor-nfce-sheet td,
+.extractor-nfce-sheet b,
+.extractor-nfce-sheet span{
+  color:#111!important;
+}
+.extractor-nfce-sheet table,
+.extractor-nfce-sheet thead,
+.extractor-nfce-sheet tbody,
+.extractor-nfce-sheet tr,
+.extractor-nfce-sheet td{
+  background:#fff!important;
+}
+.extractor-nfce-sheet tr:hover,
+.extractor-nfce-sheet tr:focus,
+.extractor-nfce-sheet tr[data-state="selected"]{
+  background:#fff!important;
+}
+.extractor-nfce-sheet th{
+  background:#fff!important;
+  color:#111!important;
+}
+.extractor-nfce-products-table{
+  table-layout:fixed!important;
+  width:100%!important;
+  border-collapse:collapse!important;
+}
+.extractor-nfce-products-table .extractor-nfce-col-description{width:48%}
+.extractor-nfce-products-table .extractor-nfce-col-qty{width:12%}
+.extractor-nfce-products-table .extractor-nfce-col-unit{width:9%}
+.extractor-nfce-products-table .extractor-nfce-col-unit-value{width:15%}
+.extractor-nfce-products-table .extractor-nfce-col-total{width:16%}
+.extractor-nfce-products-table th,
+.extractor-nfce-products-table td{
+  box-sizing:border-box;
+  overflow:hidden;
+}
+.extractor-nfce-products-table th{
+  padding:5px 2px!important;
+  font-size:6.2px!important;
+  line-height:1.15!important;
+  vertical-align:bottom!important;
+  white-space:normal!important;
+}
+.extractor-nfce-products-table td{
+  padding:7px 2px!important;
+  font-size:7px!important;
+  line-height:1.25!important;
+  vertical-align:top!important;
+  white-space:nowrap!important;
+  text-overflow:ellipsis;
+}
+.extractor-nfce-product-description{
+  text-align:left!important;
+  white-space:normal!important;
+  overflow-wrap:anywhere!important;
+  word-break:break-word!important;
+}
+.extractor-nfce-product-description b{
+  display:block!important;
+  margin-bottom:2px!important;
+  font-size:6.8px!important;
+  line-height:1.15!important;
+}
+.extractor-nfce-product-description span{
+  display:-webkit-box!important;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+  overflow:hidden!important;
+  font-size:6.8px!important;
+  line-height:1.25!important;
+}
+.extractor-nfce-products-table th:not(:first-child),
+.extractor-nfce-products-table td:not(:first-child){
+  text-align:right!important;
+}
+.extractor-nfce-products-table th:nth-child(3),
+.extractor-nfce-products-table td:nth-child(3){
+  text-align:center!important;
+}

@@ -305,15 +305,35 @@ function NfceView({ document }: { document: FiscalDocumentLike }) {
       <div className="extractor-nfce-separator" />
       <strong>DOCUMENTO AUXILIAR DA NOTA FISCAL DE CONSUMIDOR ELETRÔNICA</strong>
       <div className="extractor-nfce-separator" />
-      <table>
-        <thead><tr><th>CÓDIGO / DESCRIÇÃO</th><th>QTDE</th><th>UN</th><th>VL.UNIT</th><th>TOTAL</th></tr></thead>
+      <table className="extractor-nfce-products-table">
+        <colgroup>
+          <col className="extractor-nfce-col-description" />
+          <col className="extractor-nfce-col-qty" />
+          <col className="extractor-nfce-col-unit" />
+          <col className="extractor-nfce-col-unit-value" />
+          <col className="extractor-nfce-col-total" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th>CÓDIGO / DESCRIÇÃO</th>
+            <th>QTDE</th>
+            <th>UN</th>
+            <th>VL.UNIT</th>
+            <th>TOTAL</th>
+          </tr>
+        </thead>
         <tbody>
           {items.map((det, index) => {
             const prod = one(det, 'prod') || det;
             return <tr key={index}>
-              <td><b>{txt(prod, 'cProd') || '—'}</b><br />{txt(prod, 'xProd') || 'Item fiscal'}</td>
-              <td>{q(txt(prod, 'qCom'))}</td><td>{txt(prod, 'uCom') || '—'}</td>
-              <td>{brl(txt(prod, 'vUnCom'))}</td><td>{brl(txt(prod, 'vProd'))}</td>
+              <td className="extractor-nfce-product-description">
+                <b>{txt(prod, 'cProd') || '—'}</b>
+                <span>{txt(prod, 'xProd') || 'Item fiscal'}</span>
+              </td>
+              <td>{q(txt(prod, 'qCom'))}</td>
+              <td>{txt(prod, 'uCom') || '—'}</td>
+              <td>{brl(txt(prod, 'vUnCom'))}</td>
+              <td>{brl(txt(prod, 'vProd'))}</td>
             </tr>;
           })}
         </tbody>
