@@ -668,6 +668,7 @@ function OfficialNfseHtmlFrame({ html }: { html: string }) {
       <iframe
         ref={iframeRef}
         title="DANFSe oficial"
+        sandbox="allow-scripts"
         srcDoc={html}
         style={{
           width: 793.33,
