@@ -115,11 +115,11 @@ export function renderDanfseOfficialHtml(d:DanfseData){
 
   // Remove os dois textos absolutos da área de serviço e o rótulo estático original.
   html=html
-    .replace(/<div class="t c1 dyn" data-bind="serviceClassification"[^>]*>[\\s\\S]*?<\\/div>/i,"")
-    .replace(/<div class="t c1 dyn" data-bind="serviceDescription"[^>]*>[\\s\\S]*?<\\/div>/i,"")
-    .replace(/<div class="t c0"[^>]*transform:matrix\\(1,0,0,1,15\\.87,411\\.53\\)[^>]*>Descrição<\\/div>/i,"")
-    .replace(/<div class="t c0"[^>]*transform:matrix\\(1,0,0,1,56\\.34,411\\.53\\)[^>]*>do<\\/div>/i,"")
-    .replace(/<div class="t c0"[^>]*transform:matrix\\(1,0,0,1,68\\.34,411\\.53\\)[^>]*>Serviço<\\/div>/i,"");
+    .replace(/<div class="t c1 dyn" data-bind="serviceClassification"[^>]*>[\s\S]*?<\/div>/i,"")
+    .replace(/<div class="t c1 dyn" data-bind="serviceDescription"[^>]*>[\s\S]*?<\/div>/i,"")
+    .replace(/<div class="t c0"[^>]*transform:matrix\(1,0,0,1,15\.87,411\.53\)[^>]*>Descrição<\/div>/i,"")
+    .replace(/<div class="t c0"[^>]*transform:matrix\(1,0,0,1,56\.34,411\.53\)[^>]*>do<\/div>/i,"")
+    .replace(/<div class="t c0"[^>]*transform:matrix\(1,0,0,1,68\.34,411\.53\)[^>]*>Serviço<\/div>/i,"");
 
   const serviceFlow =
     '<div id="ws-service-flow" style="position:absolute;z-index:6000;left:15.87px;top:395.03px;width:752px;font-family:Arial,Helvetica,sans-serif;color:#000;box-sizing:border-box;">' +
