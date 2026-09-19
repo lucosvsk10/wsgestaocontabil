@@ -1,6 +1,8 @@
 import { PDFDocument, rgb } from "https://esm.sh/pdf-lib@1.17.1?target=deno";
 import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1?target=deno";
 import qrcode from "https://esm.sh/qrcode-generator@1.4.4?target=deno";
+import { createFont } from "https://esm.sh/fonteditor-core@2.3.2?target=deno";
+import { inflate } from "https://esm.sh/pako@2.1.0?target=deno";
 import type { DanfseData } from "./types.ts";
 import { DANFSE_OFFICIAL_TEMPLATE } from "./danfse-official-template.ts";
 
@@ -20,6 +22,13 @@ const fontBase64=(family:string)=>{
   const end=DANFSE_OFFICIAL_TEMPLATE.indexOf(")",from);
   if(end<0) throw new Error("Fonte oficial "+family+" incompleta no template");
   return DANFSE_OFFICIAL_TEMPLATE.slice(from,end);
+};
+const woffToTtf=(base64:string)=>{
+  const bytes=b64bytes(base64);
+  const buffer=bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength);
+  const font=createFont(buffer,{type:"woff",hinting:true,kerning:true,inflate});
+  const out=font.write({type:"ttf",hinting:true,kerning:true});
+  return new Uint8Array(out);
 };
 const logoBase64=()=>{
   const m=DANFSE_OFFICIAL_TEMPLATE.match(/<img class="im" src="data:image\/png;base64,([^"]+)" style="z-index:127;[^"]+"/);
@@ -66,7 +75,8 @@ const VECTORS=staticVectors(), STATIC_TEXTS=staticTexts();
 
 function drawTextTop(page:any,font:any,text:string,xPx:number,yPx:number,size:number,opts:any={}){
   const x=xPx*S;
-  const baseline=H-yPx*S-size*1.07;
+  const ascent=opts.fontKind==="f0"?.905:.922;
+  const baseline=H-yPx*S-size*ascent;
   page.drawText(text,{x,y:baseline,size,font,color:rgb(0,0,0),maxWidth:opts.maxWidth});
 }
 function wrap(font:any,text:string,size:number,maxWidth:number){
@@ -107,8 +117,8 @@ function drawQr(page:any,value:string){
 export async function buildDanfseFromOfficialTemplate(d:DanfseData){
   const pdf=await PDFDocument.create(); pdf.registerFontkit(fontkit as any);
   const page=pdf.addPage([595,842]);
-  const f0=await pdf.embedFont(b64bytes(fontBase64("f0")),{subset:false});
-  const f1=await pdf.embedFont(b64bytes(fontBase64("f1")),{subset:false});
+  const f0=await pdf.embedFont(woffToTtf(fontBase64("f0")),{subset:false});
+  const f1=await pdf.embedFont(woffToTtf(fontBase64("f1")),{subset:false});
 
   for(const v of VECTORS){
     page.drawSvgPath(v.d,{
@@ -122,7 +132,7 @@ export async function buildDanfseFromOfficialTemplate(d:DanfseData){
 
   for(const t of STATIC_TEXTS){
     const info=CLASS_INFO[t.cls];if(!info)continue;
-    drawTextTop(page,info.font==="f0"?f0:f1,t.text,t.x,t.y,info.size);
+    drawTextTop(page,info.font==="f0"?f0:f1,t.text,t.x,t.y,info.size,{fontKind:info.font});
   }
 
   drawTextTop(page,f1,d.issueCity+" - "+d.issueUf,645.18,15.15,8);
