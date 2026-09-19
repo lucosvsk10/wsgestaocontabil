@@ -3,7 +3,7 @@ import qrcode from "https://esm.sh/qrcode-generator@1.4.4?target=deno";
 import type { DanfseData } from "./types.ts";
 import { NFS_LOGO_PNG_BASE64 } from "./logo-data.ts";
 
-const W=595,H=842;
+const W=595,H=842;\nconst X0=8.5,X1=153.07,X2=297.64,X3=442.20,X4=586.77;
 const BLACK=rgb(.03,.03,.03), MID=rgb(.45,.45,.45), GRAY=rgb(.95,.95,.95), WHITE=rgb(1,1,1);
 
 const b64bytes=(s:string)=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
@@ -39,12 +39,13 @@ function rect(page:any,x:number,top:number,w:number,h:number,opts:any={}){
   page.drawRectangle({x,y:H-top-h,width:w,height:h,borderWidth:opts.borderWidth??0,borderColor:opts.borderColor??BLACK,color:opts.fill});
 }
 function section(page:any,bold:any,title:string,top:number){
-  rect(page,5.5,top,584,11,{fill:GRAY});
-  drawTop(page,bold,title,9.5,top+1.71,7);
+  line(page,X0,top,X4,top,.5,BLACK);
+  rect(page,X0,top+.25,X1-X0,19.08,{fill:GRAY});
+  drawTop(page,bold,title,11.91,top+.48,7);
 }
 function field(page:any,normal:any,bold:any,x:number,top:number,label:string,value:string,opts:any={}){
   drawTop(page,bold,label,x,top,opts.labelSize??6,{maxWidth:opts.labelWidth});
-  drawTop(page,normal,value||"-",x,top+(opts.valueOffset??8.9),opts.valueSize??7,{maxWidth:opts.valueWidth,lineGap:opts.lineGap});
+  drawTop(page,normal,value||"-",x,top+(opts.valueOffset??6.7),opts.valueSize??7,{maxWidth:opts.valueWidth,lineGap:opts.lineGap});
 }
 function drawQr(page:any,value:string,x:number,top:number,size:number){
   const qr=qrcode(6,"M");
@@ -72,109 +73,108 @@ export async function buildDanfsePdf(d:DanfseData){
   const bold=await pdf.embedFont(StandardFonts.HelveticaBold);
   const logo=await pdf.embedPng(b64bytes(NFS_LOGO_PNG_BASE64));
 
-  // Moldura e faixas exatamente nas coordenadas do DANFSe oficial de referência.
-  rect(page,5.5,5,584,832,{borderWidth:1,borderColor:BLACK});
-  rect(page,5.5,5,584,34.5,{fill:GRAY});
-  line(page,5.5,39.5,589.5,39.5,.5,BLACK);
+  // Geometria copiada das coordenadas vetoriais do DANFSe oficial.
+  rect(page,5,5,585,832,{borderWidth:1,borderColor:BLACK});
+  rect(page,X0,5.67,X1-X0,34.01,{fill:GRAY});
+  rect(page,X1,5.67,X3-X1,34.01,{fill:GRAY});
+  rect(page,X3,5.67,X4-X3,34.01,{fill:GRAY});
+  line(page,X0,39.93,X4,39.93,.5,BLACK);
+  rect(page,X0,105.11,X1-X0,20.22,{fill:GRAY});
 
-  section(page,bold,"PRESTADOR / FORNECEDOR",126);
-  [152,296,441].forEach(x=>line(page,x,126,x,203,.5,MID));
-  line(page,5.5,203,589.5,203,.5,BLACK);
+  section(page,bold,"PRESTADOR / FORNECEDOR",125.58);
+  [X1,X2,X3].forEach(x=>line(page,x,125.58,x,202.38,.5,MID));
 
-  section(page,bold,"TOMADOR / ADQUIRENTE",203);
-  [152,296,441].forEach(x=>line(page,x,203,x,267,.5,MID));
-  line(page,5.5,267,589.5,267,.5,BLACK);
-  line(page,5.5,268.5,589.5,268.5,.5,BLACK);
-  line(page,5.5,277.5,589.5,277.5,.5,BLACK);
-  line(page,5.5,286.5,589.5,286.5,.5,BLACK);
+  section(page,bold,"TOMADOR / ADQUIRENTE",202.38);
+  [X1,X2,X3].forEach(x=>line(page,x,202.38,x,260.10,.5,MID));
+  line(page,X0,260.10,X4,260.10,.5,BLACK);
+  line(page,X0,268.53,X4,268.53,.5,BLACK);
+  line(page,X0,276.95,X4,276.95,.5,BLACK);
 
-  section(page,bold,"SERVIÇO PRESTADO",286.5);
-  line(page,152,286.5,152,438,.5,MID);
-  line(page,296,286.5,296,317,.5,MID);
-  line(page,441,286.5,441,317,.5,MID);
-  line(page,5.5,438,589.5,438,.5,BLACK);
+  section(page,bold,"SERVIÇO PRESTADO",276.95);
+  line(page,X1,276.95,X1,430.77,.5,MID);
+  line(page,X2,276.95,X2,296.27,.5,MID);
+  line(page,X3,276.95,X3,296.27,.5,MID);
 
-  section(page,bold,"TRIBUTAÇÃO MUNICIPAL (ISSQN)",438);
-  [152,296,441].forEach(x=>line(page,x,438,x,478,.5,MID));
-  line(page,5.5,478,589.5,478,.5,BLACK);
+  section(page,bold,"TRIBUTAÇÃO MUNICIPAL (ISSQN)",430.77);
+  [X1,X2,X3].forEach(x=>line(page,x,430.77,x,469.42,.5,MID));
 
-  section(page,bold,"TRIBUTAÇÃO FEDERAL (EXCETO CBS)",478);
-  line(page,152,478,152,518,.5,MID);
-  line(page,296,478,296,518,.5,MID);
-  line(page,441,478,441,498,.5,MID);
-  line(page,5.5,518,589.5,518,.5,BLACK);
+  section(page,bold,"TRIBUTAÇÃO FEDERAL (EXCETO CBS)",469.42);
+  [X1,X2,X3].forEach(x=>line(page,x,469.42,x,508.07,.5,MID));
 
-  section(page,bold,"TRIBUTAÇÃO IBS/CBS",518);
-  [152,296,441].forEach(x=>line(page,x,518,x,602,.5,MID));
-  line(page,5.5,602,589.5,602,.5,BLACK);
+  section(page,bold,"TRIBUTAÇÃO IBS/CBS",508.07);
+  [X1,X2,X3].forEach(x=>line(page,x,508.07,x,584.86,.5,MID));
 
-  section(page,bold,"VALOR TOTAL DA NFS-e",602);
-  [152,296,441].forEach(x=>line(page,x,602,x,642,.5,MID));
-  rect(page,441,622,148.5,20,{fill:GRAY});
-  line(page,5.5,642,589.5,642,.5,BLACK);
+  section(page,bold,"VALOR TOTAL DA NFS-e",584.86);
+  [X1,X2,X3].forEach(x=>line(page,x,584.86,x,623.51,.5,MID));
+  rect(page,X3,604.19,X4-X3,19.07,{fill:GRAY});
 
-  section(page,bold,"INFORMAÇÕES COMPLEMENTARES",642);
-  line(page,5.5,811,589.5,811,.5,BLACK);
-  line(page,151,811,151,833,.5,MID);
-  line(page,296,811,296,833,.5,MID);
-  line(page,5.5,833,589.5,833,.5,BLACK);
+  line(page,X0,623.51,X4,623.51,.5,BLACK);
+  drawTop(page,bold,"INFORMAÇÕES COMPLEMENTARES",11.91,623.99,7);
 
-  page.drawImage(logo,{x:13.9,y:H-9.5-22.7,width:113.4,height:22.7});
-  drawTop(page,bold,"DANFSe v2.0",261.94,9.6,11.5);
-  drawTop(page,bold,"Documento Auxiliar da NFS-e",230.17,21.43,9.6);
-  drawTop(page,normal,"Município: "+d.issueCity+" - "+d.issueUf,445,9.97,7.1);
-  drawTop(page,normal,"Ambiente Gerador: "+d.generatorEnvironment,445,20.09,5.5);
-  drawTop(page,normal,"Tipo de Ambiente: "+d.environmentType,445,26.79,5.5);
+  // Rodapé oficial: caixa menor e mais alta que a versão anterior.
+  line(page,9.00,795.80,587.77,795.80,1,BLACK);
+  line(page,9.00,816.38,587.77,816.38,1,BLACK);
+  line(page,9.00,795.80,9.00,816.38,1,BLACK);
+  line(page,153.57,795.80,153.57,816.38,1,BLACK);
+  line(page,298.14,795.80,298.14,816.38,1,BLACK);
+  line(page,587.77,795.80,587.77,816.38,1,BLACK);
 
-  drawQr(page,d.qrValue,493,40.9134,43.0866);
-  field(page,normal,bold,11,43.58,"CHAVE DE ACESSO DA NFS-e",d.accessKey,{valueSize:6.3,valueOffset:8.95});
-  field(page,normal,bold,11,63.58,"NÚMERO DA NFS-e",d.number);
-  field(page,normal,bold,156,63.58,"COMPETÊNCIA DA NFS-e",d.competency);
-  field(page,normal,bold,301,63.58,"DATA E HORA DA EMISSÃO DA NFS-e",d.issueDate);
-  field(page,normal,bold,11,83.58,"NÚMERO DA DPS",d.dpsNumber);
-  field(page,normal,bold,156,83.58,"SÉRIE DA DPS",d.dpsSeries);
-  field(page,normal,bold,301,83.58,"DATA E HORA DA EMISSÃO DA DPS",d.dpsIssueDate);
-  field(page,normal,bold,11,103.58,"EMITENTE DA NFS-e",d.emitterType);
-  field(page,normal,bold,156,103.58,"SITUAÇÃO DA NFS-e",d.status);
-  field(page,normal,bold,301,103.58,"FINALIDADE",d.purpose);
-  drawTop(page,normal,"A autenticidade desta NFS-e pode ser verificada",445,92.05,6);
-  drawTop(page,normal,"pela leitura deste código QR ou pela consulta da",445,98.55,6);
-  drawTop(page,normal,"chave de acesso no portal nacional da NFS-e",445,105.05,6);
+  page.drawImage(logo,{x:11.91,y:H-10.32-22.92,width:115.65,height:22.92});
+  drawTop(page,bold,"DANFSe v2.0",269.63,12.62,9);
+  drawTop(page,bold,"Documento Auxiliar da NFS-e",234.38,22.97,9);
+  drawTop(page,normal,"Município: "+d.issueCity+" - "+d.issueUf,445.61,11.36,8);
+  drawTop(page,normal,"Ambiente Gerador: "+d.generatorEnvironment,445.61,20.41,6);
+  drawTop(page,normal,"Tipo de Ambiente: "+d.environmentType,445.61,27.20,6);
 
-  field(page,normal,bold,156,128.58,"CNPJ / CPF / NIF",d.prestador.doc);
-  field(page,normal,bold,301,128.58,"Indicador Municipal (Inscrição)",d.prestador.municipalRegistration);
-  field(page,normal,bold,445,128.58,"Telefone",d.prestador.phone);
-  field(page,normal,bold,11,150.58,"Nome / Nome Empresarial",d.prestador.name,{valueSize:6.6,valueOffset:8.92,valueWidth:270});
-  field(page,normal,bold,301,150.58,"Município / Sigla UF",d.prestador.cityUf);
-  field(page,normal,bold,445,150.58,"Código IBGE / CEP",d.prestador.ibgeCep);
-  field(page,normal,bold,11,172.58,"Endereço",d.prestador.address,{valueSize:6.4,valueOffset:8.94,valueWidth:280});
-  field(page,normal,bold,301,172.58,"E-mail",d.prestador.email,{valueSize:6.2,valueOffset:8.96,valueWidth:280});
-  drawTop(page,bold,"Simples Nacional na Data de Competência",11,191.58,6);
+  drawQr(page,d.qrValue,491.99,44.76,45);
+  field(page,normal,bold,11.91,44.67,"CHAVE DE ACESSO DA NFS-e",d.accessKey,{labelSize:7,valueSize:7,valueOffset:7.82});
+  field(page,normal,bold,11.91,64.89,"NÚMERO DA NFS-e",d.number,{labelSize:7,valueOffset:7.82});
+  field(page,normal,bold,156.47,64.89,"COMPETÊNCIA DA NFS-e",d.competency,{labelSize:7,valueOffset:7.82});
+  field(page,normal,bold,301.04,64.89,"DATA E HORA DA EMISSÃO DA NFS-e",d.issueDate,{labelSize:7,valueOffset:7.82});
+  field(page,normal,bold,11.91,85.12,"NÚMERO DA DPS",d.dpsNumber,{labelSize:7,valueOffset:7.82});
+  field(page,normal,bold,156.47,85.12,"SÉRIE DA DPS",d.dpsSeries,{labelSize:7,valueOffset:7.82});
+  field(page,normal,bold,301.04,85.12,"DATA E HORA DA EMISSÃO DA DPS",d.dpsIssueDate,{labelSize:7,valueOffset:7.82});
+  field(page,normal,bold,11.91,105.34,"EMITENTE DA NFS-e",d.emitterType,{labelSize:7,valueOffset:7.82});
+  field(page,normal,bold,156.47,105.34,"SITUAÇÃO DA NFS-e",d.status,{labelSize:7,valueOffset:7.82});
+  field(page,normal,bold,301.04,105.34,"FINALIDADE",d.purpose,{labelSize:7,valueOffset:7.82});
+  drawTop(page,normal,"A autenticidade desta NFS-e pode ser verificada",445.61,91.88,6);
+  drawTop(page,normal,"pela leitura deste código QR ou pela consulta da",445.61,98.67,6);
+  drawTop(page,normal,"chave de acesso no portal nacional da NFS-e",445.61,105.46,6);
+
+  field(page,normal,bold,156.47,126.03,"CNPJ / CPF / NIF",d.prestador.doc);
+  field(page,normal,bold,301.04,126.03,"Indicador Municipal (Inscrição)",d.prestador.municipalRegistration);
+  field(page,normal,bold,445.61,126.03,"Telefone",d.prestador.phone);
+  field(page,normal,bold,11.91,145.11,"Nome / Nome Empresarial",d.prestador.name,{valueWidth:270});
+  field(page,normal,bold,301.04,145.11,"Município / Sigla UF",d.prestador.cityUf);
+  field(page,normal,bold,445.61,145.11,"Código IBGE / CEP",d.prestador.ibgeCep);
+  field(page,normal,bold,11.91,164.18,"Endereço",d.prestador.address,{valueWidth:280});
+  field(page,normal,bold,301.04,164.18,"E-mail",d.prestador.email,{valueWidth:280});
+  drawTop(page,bold,"Simples Nacional na Data de Competência",11.91,183.25,6);
   const sn=String(d.prestador.simpleNational||"-").replace("Porte","...");
-  drawTop(page,normal,sn,11,200.56,5.8,{maxWidth:140});
-  drawTop(page,bold,"Regime de Apuração Tributária pelo SN",156,191.58,6);
-  drawTop(page,normal,d.prestador.taxRegime||"-",156,200.56,5.8,{maxWidth:280});
+  drawTop(page,normal,sn,11.91,189.96,7,{maxWidth:140});
+  drawTop(page,bold,"Regime de Apuração Tributária pelo SN",156.47,183.25,6);
+  drawTop(page,normal,d.prestador.taxRegime||"-",156.47,189.96,7,{maxWidth:280});
 
-  field(page,normal,bold,156,205.58,"CNPJ / CPF / NIF",d.tomador.doc);
-  field(page,normal,bold,301,205.58,"Indicador Municipal (Inscrição)",d.tomador.municipalRegistration);
-  field(page,normal,bold,445,205.58,"Telefone",d.tomador.phone);
-  field(page,normal,bold,11,227.58,"Nome / Nome Empresarial",d.tomador.name,{valueSize:6.6,valueOffset:8.92,valueWidth:270});
-  field(page,normal,bold,301,227.58,"Município / Sigla UF",d.tomador.cityUf);
-  field(page,normal,bold,445,227.58,"Código IBGE / CEP",d.tomador.ibgeCep);
-  field(page,normal,bold,11,249.58,"Endereço",d.tomador.address,{valueSize:6.4,valueOffset:8.94,valueWidth:280});
-  field(page,normal,bold,301,249.58,"E-mail",d.tomador.email,{valueSize:6.2,valueOffset:8.96,valueWidth:280});
+  field(page,normal,bold,156.47,202.83,"CNPJ / CPF / NIF",d.tomador.doc);
+  field(page,normal,bold,301.04,202.83,"Indicador Municipal (Inscrição)",d.tomador.municipalRegistration);
+  field(page,normal,bold,445.61,202.83,"Telefone",d.tomador.phone);
+  field(page,normal,bold,11.91,221.90,"Nome / Nome Empresarial",d.tomador.name,{valueWidth:270});
+  field(page,normal,bold,301.04,221.90,"Município / Sigla UF",d.tomador.cityUf);
+  field(page,normal,bold,445.61,221.90,"Código IBGE / CEP",d.tomador.ibgeCep);
+  field(page,normal,bold,11.91,240.98,"Endereço",d.tomador.address,{valueWidth:280});
+  field(page,normal,bold,301.04,240.98,"E-mail",d.tomador.email,{valueWidth:280});
 
   const dst="DESTINATÁRIO DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e";
   const intm="INTERMEDIÁRIO DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e";
-  drawTop(page,bold,dst,211.32,268.59,5.8);
-  drawTop(page,bold,intm,209.35,277.59,5.8);
+  drawTop(page,normal,dst,194.24,260.35,7);
+  drawTop(page,normal,intm,192.30,268.78,7);
 
-  field(page,normal,bold,156,289.08,"Código de Tributação Nacional/Municipal",d.service.nationalMunicipalCode);
-  field(page,normal,bold,301,289.08,"Código da NBS",d.service.nbs);
-  field(page,normal,bold,445,289.08,"Local da Prestação / Sigla UF / País",d.service.location);
-  drawTop(page,normal,d.service.classification||"-",11,309.55,6,{maxWidth:276,lineGap:1});
-  drawTop(page,bold,"Descrição do Serviço",11,325.59,5.8);
-  drawTop(page,normal,d.service.description||"-",11,336.55,6,{maxWidth:420,lineGap:1});
+  field(page,normal,bold,156.47,277.40,"Código de Tributação Nacional/Municipal",d.service.nationalMunicipalCode);
+  field(page,normal,bold,301.04,277.40,"Código da NBS",d.service.nbs);
+  field(page,normal,bold,445.61,277.40,"Local da Prestação / Sigla UF / País",d.service.location);
+  drawTop(page,normal,d.service.classification||"-",11.91,296.27,7,{maxWidth:276,lineGap:1});
+  drawTop(page,bold,"Descrição do Serviço",11.91,308.65,6);
+  drawTop(page,normal,d.service.description||"-",11.91,315.35,7,{maxWidth:560,lineGap:1.0});
 
   field(page,normal,bold,156,440.58,"Tipo de Tributação do ISSQN",d.municipalTax.type);
   field(page,normal,bold,301,440.58,"Município / Sigla UF / País de Incidência do ISSQN",d.municipalTax.incidence,{labelWidth:145});
@@ -216,10 +216,10 @@ export async function buildDanfsePdf(d:DanfseData){
 
   drawTop(page,normal,"Inf. Cont.: "+(d.additionalInfo||"-"),11,655.54,6.1,{maxWidth:565});
   drawTop(page,normal,d.approximateTaxes||"-",11,677.54,6.1,{maxWidth:565});
-  drawTop(page,bold,"DATA CIENTIFICAÇÃO:",11,813.6,5.7);
-  drawTop(page,bold,"IDENTIFICAÇÃO E ASSINATURA",156,813.6,5.7);
-  drawTop(page,bold,"N° NFS-e / CHAVE NFS-e",301,813.58,6);
-  drawTop(page,normal,d.number+" / "+d.accessKey,301,822.57,5.8,{maxWidth:280});
+  drawTop(page,bold,"DATA CIENTIFICAÇÃO:",12.91,796.50,6);
+  drawTop(page,bold,"IDENTIFICAÇÃO E ASSINATURA",157.48,796.50,6);
+  drawTop(page,bold,"N° NFS-e / CHAVE NFS-e",302.04,796.50,6);
+  drawTop(page,normal,d.number+" / "+d.accessKey,302.04,803.20,7,{maxWidth:280});
 
   return await pdf.save({useObjectStreams:false});
 }
