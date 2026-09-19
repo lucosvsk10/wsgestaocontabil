@@ -641,45 +641,61 @@ function DocumentUnavailable() {
 
 function OfficialNfseHtmlFrame({ html }: { html: string }) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
-  const iframeRef = useRef<HTMLIFrameElement | null>(null);
-  const [scale, setScale] = useState(1);
+  const [scale, setScale] = useState(0.82);
 
   useEffect(() => {
     const wrap = wrapRef.current;
     if (!wrap) return;
-    const resize = () => setScale(Math.min(1, Math.max(0.2, wrap.clientWidth / 793.33)));
+    const resize = () => {
+      const availableWidth = Math.max(320, wrap.clientWidth - 36);
+      setScale(Math.min(0.82, Math.max(0.38, availableWidth / 793.33)));
+    };
     resize();
     const observer = new ResizeObserver(resize);
     observer.observe(wrap);
     return () => observer.disconnect();
   }, []);
 
+  const scaledWidth = 793.33 * scale;
+  const scaledHeight = 1122.67 * scale;
+
   return (
     <div
       ref={wrapRef}
       style={{
         width: '100%',
-        height: 1122.67 * scale,
-        position: 'relative',
-        overflow: 'hidden',
+        minHeight: scaledHeight,
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'flex-start',
+        padding: '8px 18px 24px',
+        boxSizing: 'border-box',
         background: '#fff',
       }}
     >
-      <iframe
-        ref={iframeRef}
-        title="DANFSe oficial"
-        sandbox="allow-scripts"
-        srcDoc={html}
+      <div
         style={{
-          width: 793.33,
-          height: 1122.67,
-          border: 0,
-          transform: `scale(${scale})`,
-          transformOrigin: 'top left',
-          background: '#fff',
-          display: 'block',
+          width: scaledWidth,
+          height: scaledHeight,
+          position: 'relative',
+          flex: '0 0 auto',
         }}
-      />
+      >
+        <iframe
+          title="DANFSe oficial"
+          sandbox="allow-scripts"
+          srcDoc={html}
+          style={{
+            width: 793.33,
+            height: 1122.67,
+            border: 0,
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left',
+            background: '#fff',
+            display: 'block',
+          }}
+        />
+      </div>
     </div>
   );
 }
