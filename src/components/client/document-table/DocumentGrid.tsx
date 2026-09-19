@@ -13,12 +13,36 @@ interface DocumentGridProps {
   categories?: Array<{ id: string; name: string; color?: string }>;
 }
 
-export const DocumentGrid = ({ documents, formatDate, isDocumentExpired, daysUntilExpiration, refreshDocuments, loadingDocumentIds, handleDownload, categoryColor, categories = [] }: DocumentGridProps) => {
-  const getCategoryColor = (doc: Document) => categoryColor || categories.find(cat => cat.id === doc.category)?.color || "#efc349";
-  return <div className="client-document-list">
-    <div className="client-document-list-head" aria-hidden="true">
-      <span>Documento</span><span>Categoria</span><span>Enviado</span><span>Status</span><span />
+export const DocumentGrid = ({
+  documents,
+  formatDate,
+  isDocumentExpired,
+  daysUntilExpiration,
+  refreshDocuments,
+  loadingDocumentIds,
+  handleDownload,
+  categoryColor,
+  categories = []
+}: DocumentGridProps) => {
+  const getCategoryColor = (doc: Document) =>
+    categoryColor || categories.find(cat => cat.id === doc.category)?.color || "#dbe7f4";
+
+  return (
+    <div className="client-document-card-grid">
+      {documents.map(doc => (
+        <DocumentCard
+          key={doc.id}
+          doc={doc}
+          formatDate={formatDate}
+          isDocumentExpired={isDocumentExpired}
+          daysUntilExpiration={daysUntilExpiration}
+          refreshDocuments={refreshDocuments}
+          loadingDocumentIds={loadingDocumentIds}
+          handleDownload={handleDownload}
+          categoryColor={getCategoryColor(doc)}
+          categories={categories}
+        />
+      ))}
     </div>
-    {documents.map(doc => <DocumentCard key={doc.id} doc={doc} formatDate={formatDate} isDocumentExpired={isDocumentExpired} daysUntilExpiration={daysUntilExpiration} refreshDocuments={refreshDocuments} loadingDocumentIds={loadingDocumentIds} handleDownload={handleDownload} categoryColor={getCategoryColor(doc)} categories={categories} />)}
-  </div>;
+  );
 };
