@@ -23,7 +23,7 @@ export default function LegalPage() {
         <div className="legal-heading">
           <span>WS Gestão Contábil</span>
           <h1>{isCookies ? 'Política de Cookies' : isPrivacy ? 'Política de Privacidade' : 'Termos de Serviço'}</h1>
-          <p>Última atualização: 5 de setembro de 2026</p>
+          <p>Última atualização: {isCookies ? '19 de setembro de 2026' : '5 de setembro de 2026'}</p>
         </div>
 
         <nav className="legal-tabs" aria-label="Documentos legais">
