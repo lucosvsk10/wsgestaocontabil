@@ -176,6 +176,21 @@ export function ClientOverviewSection({ documents, categories = [], setActiveTab
         </aside>
       </div>
 
+      <section className="client-help-panel">
+        <div>
+          <span className="client-overview-kicker">Suporte</span>
+          <h2>Precisa de ajuda?</h2>
+          <p>Fale com a equipe da WS pelo WhatsApp para tirar dúvidas sobre documentos, obrigações ou acesso ao portal.</p>
+        </div>
+        <a
+          href="https://wa.me/5582999324884?text=Ol%C3%A1%2C%20preciso%20de%20ajuda%20no%20Portal%20do%20Cliente%20da%20WS."
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Falar com a WS no WhatsApp
+        </a>
+      </section>
+
       {loading && <span className="client-overview-loading">Atualizando informações…</span>}
     </div>
   );
