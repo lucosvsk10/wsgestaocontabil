@@ -1,8 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.49.0";
 import { parseDanfse } from "./xml-parser.ts";
-import qrcode from "https://esm.sh/qrcode-generator@1.4.4?target=deno";
-import { DANFSE_OFFICIAL_TEMPLATE } from "./danfse-official-template.ts";
+import { buildDanfseFromOfficialTemplate } from "./pdf-official-template.ts";
 
 
 const cors={
@@ -49,59 +48,7 @@ async function canAccessCompany(admin:any,userId:string,companyId:string){
   return Boolean(members?.length);
 }
 
-const esc=(v:unknown)=>String(v??"-").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-const loadTemplate=async()=>DANFSE_OFFICIAL_TEMPLATE;
-const qrDataUrl=(value:string)=>{
-  const qr=qrcode(0,"M"); qr.addData(value); qr.make();
-  return qr.createDataURL(4,0);
-};
-const renderHtml=async(data:any)=>{
-  let html=await loadTemplate();
-  const vals:Record<string,string>={
-    issueCityUf:`${data.issueCity} - ${data.issueUf}`,
-    generatorEnvironment:data.generatorEnvironment,
-    environmentType:data.environmentType,
-    qrDataUrl:qrDataUrl(data.qrValue),
-    accessKey:data.accessKey, number:data.number, competency:data.competency, issueDate:data.issueDate,
-    dpsNumber:data.dpsNumber, dpsSeries:data.dpsSeries, dpsIssueDate:data.dpsIssueDate,
-    emitterType:data.emitterType, status:data.status, purpose:data.purpose,
-    prestadorDoc:data.prestador.doc, prestadorMunicipalRegistration:data.prestador.municipalRegistration,
-    prestadorPhone:data.prestador.phone, prestadorName:data.prestador.name, prestadorCityUf:data.prestador.cityUf,
-    prestadorIbgeCep:data.prestador.ibgeCep, prestadorAddress:data.prestador.address, prestadorEmail:data.prestador.email,
-    prestadorSimpleNational:String(data.prestador.simpleNational||"-").replace("Porte","..."),
-    prestadorTaxRegime:data.prestador.taxRegime,
-    tomadorDoc:data.tomador.doc, tomadorMunicipalRegistration:data.tomador.municipalRegistration,
-    tomadorPhone:data.tomador.phone, tomadorName:data.tomador.name, tomadorCityUf:data.tomador.cityUf,
-    tomadorIbgeCep:data.tomador.ibgeCep, tomadorAddress:data.tomador.address, tomadorEmail:data.tomador.email,
-    serviceNationalMunicipalCode:data.service.nationalMunicipalCode, serviceNbs:data.service.nbs,
-    serviceLocation:data.service.location, serviceClassification:data.service.classification,
-    serviceDescription:data.service.description,
-    municipalType:data.municipalTax.type, municipalIncidence:data.municipalTax.incidence,
-    municipalBase:data.municipalTax.base, municipalRate:data.municipalTax.rate,
-    municipalRetention:data.municipalTax.retention, municipalAmount:data.municipalTax.amount,
-    federalIrrf:data.federalTax.irrf, federalPrevidencia:data.federalTax.previdencia,
-    federalSociais:data.federalTax.sociais, federalPis:data.federalTax.pis,
-    federalCofins:data.federalTax.cofins, federalRetainedDescription:data.federalTax.retainedDescription,
-    ibsCstClass:data.ibsCbs.cstClass, ibsOperationIncidence:data.ibsCbs.operationIncidence,
-    ibsExclusions:data.ibsCbs.exclusions, ibsBase:data.ibsCbs.base, ibsReduction:data.ibsCbs.reduction,
-    ibsRateUfMun:data.ibsCbs.rateUfMun, ibsEffectiveMunicipal:data.ibsCbs.effectiveMunicipal,
-    ibsAmountMunicipal:data.ibsCbs.amountMunicipal, ibsEffectiveState:data.ibsCbs.effectiveState,
-    ibsAmountState:data.ibsCbs.amountState, ibsTotal:data.ibsCbs.totalIbs,
-    cbsRate:data.ibsCbs.cbsRate, cbsEffective:data.ibsCbs.cbsEffective, cbsTotal:data.ibsCbs.cbsTotal,
-    totalOperation:data.totals.operation, totalUnconditionalDiscount:data.totals.unconditionalDiscount,
-    totalConditionalDiscount:data.totals.conditionalDiscount, totalRetentions:data.totals.retentions,
-    totalNet:data.totals.net, totalIbsCbs:data.totals.ibsCbs, totalNetPlusIbsCbs:data.totals.netPlusIbsCbs,
-    additionalInfoLine:"Inf. Cont.: "+(data.additionalInfo||"-"),
-    approximateTaxes:data.approximateTaxes,
-    footerNumberKey:`${data.number} / ${data.accessKey}`
-  };
-  for(const [k,v] of Object.entries(vals)){
-    const safe=k==="qrDataUrl"?String(v):esc(v);
-    html=html.replaceAll(`{{${k}}}`,safe);
-  }
-  return html;
-};
-
+const bytesToBase64=(bytes:Uint8Array)=>{let s="";const chunk=0x8000;for(let i=0;i<bytes.length;i+=chunk)s+=String.fromCharCode(...bytes.subarray(i,i+chunk));return btoa(s);};
 Deno.serve(async(req)=>{
   if(req.method==="OPTIONS") return new Response("ok",{headers:cors});
   try{
@@ -135,16 +82,16 @@ Deno.serve(async(req)=>{
     }
 
     const data=await parseDanfse(xml,doc);
-    const html=await renderHtml(data);
+    const bytes=await buildDanfseFromOfficialTemplate(data);
+    const base64=bytesToBase64(bytes);
     const filename="danfse-html-oficial-teste-"+(doc.accessKey||doc.number||"documento")+".pdf";
 
     return J({
       ok:true,
-      engine:"official-html-template",
+      engine:"official-html-template-pdf",
       filename,
-      html_template:html,
-      page_width:793.33,
-      page_height:1122.67,
+      pdf_base64:base64,
+      bytes_estimate:Math.floor(base64.length*0.75),
       access_key:data.accessKey,
       number:data.number
     });
