@@ -613,7 +613,7 @@ async function buildNfse(doc: any, xml: string) {
   top+=28;
   cell(M,top,276,28,'Endereço',cleanParts(tag(endE,'xLgr'),tag(endE,'nro'),tag(endE,'xCpl'),tag(endE,'xBairro')),{valueSize:5.3});
   cell(M+276,top,145,28,'Município / Sigla UF',`${tag(inf,'xLocEmi')||'-'} / ${issueUf}`,{valueSize:5.25});
-  cell(M+421,top,C-421,28,'Telefone / Código IBGE / CEP',`${fmtPhone(tag(emit,'fone')||tag(prest,'fone'))} / ${fmtIbge(issueCityCode)} / ${zip(tag(endE,'CEP'))}`,{valueSize:4.85});
+  cell(M+421,top,C-421,28,'Telefone / Código IBGE / CEP',`${fmtPhone(tag(emit,'fone')||tag(prest,'fone'))} / ${fmtIbge(issueCityCode)} / ${cep(tag(endE,'CEP'))}`,{valueSize:4.85});
   top+=28;
   cell(M,top,276,28,'Simples Nacional na Data de Competência',tag(regTrib,'opSimpNac')==='1'?'Optante - Microempresa ou Empresa de Pequeno Porte':tag(regTrib,'opSimpNac')||'-',{valueSize:5.15});
   cell(M+276,top,C-276,28,'Regime de Apuração Tributária pelo SN',tag(regTrib,'regApTribSN')||'Regime de apuração dos tributos federais e municipal pelo Simples Nacional',{valueSize:5.15});
@@ -627,7 +627,7 @@ async function buildNfse(doc: any, xml: string) {
   top+=26;
   cell(M,top,276,26,'Endereço',cleanParts(tag(endT,'xLgr'),tag(endT,'nro'),tag(endT,'xCpl'),tag(endT,'xBairro')),{valueSize:5.25});
   cell(M+276,top,145,26,'Município / Sigla UF',`${tomaCityName} / ${tomaUf}`,{valueSize:5.2});
-  cell(M+421,top,C-421,26,'E-mail / Telefone / Código IBGE / CEP',`${tag(toma,'email')||'-'} / ${fmtPhone(tag(toma,'fone'))} / ${fmtIbge(tomaCityCode)} / ${zip(tag(endTN,'CEP'))}`,{valueSize:4.6});
+  cell(M+421,top,C-421,26,'E-mail / Telefone / Código IBGE / CEP',`${tag(toma,'email')||'-'} / ${fmtPhone(tag(toma,'fone'))} / ${fmtIbge(tomaCityCode)} / ${cep(tag(endTN,'CEP'))}`,{valueSize:4.6});
   top+=26;
 
   centerNote(top,18,'DESTINATÁRIO DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e · INTERMEDIÁRIO DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e'); top+=18;
