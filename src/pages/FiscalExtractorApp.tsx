@@ -466,6 +466,131 @@ const reconciliationToDoc = (r: any, companyId: string): Doc => ({
       : r.status || 'Fiscal'),
 });
 
+
+const pdfAscii = (value: string) => new TextEncoder().encode(value);
+
+const buildSingleImagePdf = (jpeg: Uint8Array, pixelWidth: number, pixelHeight: number) => {
+  const chunks: Uint8Array[] = [];
+  const offsets: number[] = [0];
+  let length = 0;
+  const pushBytes = (bytes: Uint8Array) => {
+    chunks.push(bytes);
+    length += bytes.length;
+  };
+  const pushText = (text: string) => pushBytes(pdfAscii(text));
+  const beginObject = (id: number) => {
+    offsets[id] = length;
+    pushText(String(id) + ' 0 obj\n');
+  };
+
+  pushText('%PDF-1.4\n%PDFGEN\n');
+
+  beginObject(1);
+  pushText('<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+
+  beginObject(2);
+  pushText('<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n');
+
+  beginObject(3);
+  pushText(
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] ' +
+      '/Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>\nendobj\n'
+  );
+
+  beginObject(4);
+  pushText(
+    '<< /Type /XObject /Subtype /Image /Width ' + pixelWidth + ' /Height ' + pixelHeight + ' ' +
+      '/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + jpeg.length + ' >>\nstream\n'
+  );
+  pushBytes(jpeg);
+  pushText('\nendstream\nendobj\n');
+
+  const content = pdfAscii('q\n595 0 0 842 0 0 cm\n/Im0 Do\nQ\n');
+  beginObject(5);
+  pushText('<< /Length ' + content.length + ' >>\nstream\n');
+  pushBytes(content);
+  pushText('endstream\nendobj\n');
+
+  const xrefOffset = length;
+  pushText('xref\n0 6\n0000000000 65535 f \n');
+  for (let id = 1; id <= 5; id += 1) {
+    pushText(String(offsets[id]).padStart(10, '0') + ' 00000 n \n');
+  }
+  pushText('trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n' + xrefOffset + '\n%%EOF');
+
+  return new Blob(chunks, { type: 'application/pdf' });
+};
+
+const renderOfficialHtmlTemplatePdf = async (
+  html: string,
+  width = 793.33,
+  height = 1122.67
+) => {
+  const parsed = new DOMParser().parseFromString(html, 'text/html');
+  if (!parsed) throw new Error('Não foi possível interpretar o template oficial do DANFSe.');
+
+  const page = parsed.querySelector('.page');
+  if (!page) throw new Error('A página do template oficial do DANFSe não foi encontrada.');
+
+  const wrapper = document.createElementNS('http://www.w3.org/1999/xhtml', 'div');
+  wrapper.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
+  wrapper.setAttribute(
+    'style',
+    'width:' + width + 'px;height:' + height + 'px;margin:0;padding:0;background:#fff;'
+  );
+
+  const style = document.createElementNS('http://www.w3.org/1999/xhtml', 'style');
+  style.textContent = Array.from(parsed.querySelectorAll('style'))
+    .map(node => node.textContent || '')
+    .join('\n');
+  wrapper.appendChild(style);
+
+  const pageClone = page.cloneNode(true) as HTMLElement;
+  pageClone.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
+  wrapper.appendChild(pageClone);
+
+  const serialized = new XMLSerializer().serializeToString(wrapper);
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height + '" ' +
+    'viewBox="0 0 ' + width + ' ' + height + '"><foreignObject x="0" y="0" width="' + width +
+    '" height="' + height + '">' + serialized + '</foreignObject></svg>';
+
+  const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+  const svgUrl = URL.createObjectURL(svgBlob);
+  const image = new Image();
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = () => reject(new Error('O navegador não conseguiu renderizar o template oficial.'));
+      image.src = svgUrl;
+    });
+
+    const scale = 3;
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(width * scale);
+    canvas.height = Math.round(height * scale);
+    const context = canvas.getContext('2d', { alpha: false });
+    if (!context) throw new Error('Canvas indisponível para gerar o DANFSe.');
+
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    const jpegBlob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        blob => (blob ? resolve(blob) : reject(new Error('Falha ao rasterizar o DANFSe oficial.'))),
+        'image/jpeg',
+        1
+      );
+    });
+    const jpeg = new Uint8Array(await jpegBlob.arrayBuffer());
+    return buildSingleImagePdf(jpeg, canvas.width, canvas.height);
+  } finally {
+    URL.revokeObjectURL(svgUrl);
+  }
+};
+
 const chart = {
   gold: '#d7b65a',
   blue: '#5b83ad',
@@ -789,14 +914,26 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
         body: { company_id: document.companyId, document },
       });
       if (error) throw error;
-      const base64 = String(data?.pdf_base64 || '');
-      if (!base64) throw new Error(String(data?.error || 'PDF de teste não foi gerado.'));
-      const bytes = Uint8Array.from(atob(base64), char => char.charCodeAt(0));
-      triggerBlobDownload(
-        new Blob([bytes], { type: 'application/pdf' }),
-        String(data?.filename || `danfse-pdfmake-teste-${document.accessKey || document.nsu || 'documento'}.pdf`)
+      const htmlTemplate = String(data?.html_template || '');
+      if (!htmlTemplate) throw new Error(String(data?.error || 'Template oficial de teste não foi gerado.'));
+      const pdfBlob = await renderOfficialHtmlTemplatePdf(
+        htmlTemplate,
+        Number(data?.page_width || 793.33),
+        Number(data?.page_height || 1122.67)
       );
-      setNotice({ tone: 'success', text: 'PDF de teste gerado com o novo motor pdfmake.' });
+      triggerBlobDownload(
+        pdfBlob,
+        String(
+          data?.filename ||
+            'danfse-html-oficial-teste-' +
+              (document.accessKey || document.nsu || 'documento') +
+              '.pdf'
+        )
+      );
+      setNotice({
+        tone: 'success',
+        text: 'PDF de teste gerado a partir do template oficial do DANFSe.',
+      });
     } catch (caught) {
       let message = caught instanceof Error ? caught.message : 'Não foi possível gerar o PDF de teste.';
       const response = (caught as any)?.context;
