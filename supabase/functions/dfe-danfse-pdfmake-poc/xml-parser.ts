@@ -18,7 +18,7 @@ const cep=(v:unknown)=>{const d=dg(v);return d.length===8?d.replace(/^(\d{5})(\d
 const phone=(v:unknown)=>{const d=dg(v);if(d.length===11)return d.replace(/^(\d{2})(\d{5})(\d{4})$/,"($1) $2-$3");if(d.length===10)return d.replace(/^(\d{2})(\d{4})(\d{4})$/,"($1) $2-$3");return d||"-";};
 const fmtDate=(v:unknown)=>{const s=clean(v);if(!s)return "-";const d=new Date(s);return Number.isNaN(d.getTime())?s:d.toLocaleDateString("pt-BR",{timeZone:"America/Maceio"});};
 const fmtDateTime=(v:unknown)=>{const s=clean(v);if(!s)return "-";const d=new Date(s);return Number.isNaN(d.getTime())?s:d.toLocaleString("pt-BR",{timeZone:"America/Maceio",hour12:false}).replace(",","");};
-const cleanParts=(...xs:unknown[])=>xs.map(clean).filter(Boolean).filter(v=>!/^(null|undefined)$/i.test(v)).join(", ");
+const cleanParts=(...xs:unknown[])=>xs.map(clean).filter(Boolean).filter(v=>!/^(null|undefined)$/i.test(v)).join(", ");\nconst uniqueParts=(...xs:unknown[])=>[...new Set(xs.map(clean).filter(Boolean).filter(v=>!/^(null|undefined)$/i.test(v)))].join(", ");
 const ufFromIbge=(v:unknown)=>{const code=dg(v).slice(0,2);const map:Record<string,string>={11:"RO",12:"AC",13:"AM",14:"RR",15:"PA",16:"AP",17:"TO",21:"MA",22:"PI",23:"CE",24:"RN",25:"PB",26:"PE",27:"AL",28:"SE",29:"BA",31:"MG",32:"ES",33:"RJ",35:"SP",41:"PR",42:"SC",43:"RS",50:"MS",51:"MT",52:"GO",53:"DF"};return map[code]||"-";};
 const fmtIbge=(v:unknown)=>{const d=dg(v);return d.length===7?d.replace(/^(\d{2})(\d{5})$/,"$1.$2"):d||"-";};
 const fmtTrib=(v:unknown)=>{const d=dg(v);return d.length===6?d.replace(/^(\d{2})(\d{2})(\d{2})$/,"$1.$2.$3"):d||"-";};
@@ -64,7 +64,7 @@ export async function parseDanfse(xml:string,doc:any):Promise<DanfseData>{
   const incidCity=await cityName(incidCode,tagAny(inf,["xLocIncid"]));
   const serviceValue=tag(vServPrest,"vServ")||doc?.value||tag(vals,"vLiq"),liquidValue=tag(vals,"vLiq")||serviceValue;
   const emitCode=tag(inf,"tpEmit")||tag(infDps,"tpEmit")||"1";
-  const additional=cleanParts(tagAny(infDps,["infCpl","xInfComp","xInfCpl"]),tagAny(inf,["infCpl","xInfComp","xInfCpl"]),tagAny(serv,["infCpl","xInfComp","xInfCpl"]));
+  const infoCompl=section(serv,"infoCompl")||section(serv,"infCompl")||serv;\n  const additional=uniqueParts(tagAny(infoCompl,["xInfComp","infCpl","xInfCpl"]),tagAny(infDps,["infCpl","xInfComp","xInfCpl"]),tagAny(inf,["infCpl","xInfComp","xInfCpl"]));
   return {
     accessKey:key,number:tag(inf,"nNFSe")||String(doc?.number||"-"),competency:fmtDate(comp),issueDate:fmtDateTime(issue),
     dpsNumber:tag(infDps,"nDPS")||"-",dpsSeries:tag(infDps,"serie")||String(doc?.series||"-"),dpsIssueDate:fmtDateTime(issue),
@@ -78,7 +78,7 @@ export async function parseDanfse(xml:string,doc:any):Promise<DanfseData>{
     federalTax:{irrf:moneyOrDash(tag(tribFed,"vRetIRRF")),previdencia:moneyOrDash(tag(tribFed,"vRetCP")),sociais:moneyOrDash(tag(tribFed,"vRetCSLL")),pis:moneyOrDash(tag(pisCofins,"vPis")),cofins:moneyOrDash(tag(pisCofins,"vCofins")),retainedDescription:tag(tribFed,"xRet")||"-"},
     ibsCbs:{cstClass:(tag(inf,"CST")||"")+" / "+(tag(inf,"cClassTrib")||""),operationIncidence:(tag(inf,"indOp")||"")+" / "+fmtIbge(incidCode)+" / "+incidCity+" / "+incidUf,exclusions:"R$ 0,00",base:"-",reduction:" / - / ",rateUfMun:" / ",effectiveMunicipal:"-",amountMunicipal:"-",effectiveState:"-",amountState:"-",totalIbs:"-",cbsRate:"-",cbsEffective:"-",cbsTotal:"-"},
     totals:{operation:money(serviceValue),unconditionalDiscount:moneyOrDash(tag(vals,"vDescIncond")),conditionalDiscount:moneyOrDash(tag(vals,"vDescCond")),retentions:moneyOrDash(tag(vals,"vTotRet")||tag(vals,"vTotalRet")),net:money(liquidValue),ibsCbs:"R$ 0,00",netPlusIbsCbs:"R$ 0,00"},
-    additionalInfo:additional||"-",approximateTaxes:tagAny(inf,["xTribTot","xTotTrib","infTrib"])||"Totais aproximados dos Tributos cfe. Lei nº 12.741/2012: Federais: -; Estaduais: -; Municipais:",
+    additionalInfo:additional||"-",approximateTaxes:"Totais aproximados dos Tributos cfe. Lei n° 12.741/2012: Federais: -; Estaduais: -; Municipais: -;",
     qrValue:"https://www.nfse.gov.br/ConsultaPublica/?tpc=1&chave="+key
   };
 }
