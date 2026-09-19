@@ -176,6 +176,14 @@ function wrap(font:any,text:string,size:number,maxWidth:number){
   }
   return lines.length?lines:["-"];
 }
+function fitEllipsis(font:any,text:string,size:number,maxWidth:number){
+  const raw=String(text||"-").replace(/\s+/g," ").trim();
+  if(font.widthOfTextAtSize(raw,size)<=maxWidth) return raw;
+  const ellipsis="...";
+  let out=raw;
+  while(out && font.widthOfTextAtSize(out+ellipsis,size)>maxWidth) out=out.slice(0,-1).trimEnd();
+  return (out||"")+ellipsis;
+}
 function drawField(page:any,font:any,text:string,x:number,y:number,width:number,opts:any={}){
   const size=opts.size||7;
   const maxWidth=width*S;
@@ -185,7 +193,8 @@ function drawField(page:any,font:any,text:string,x:number,y:number,width:number,
     lines.forEach((ln:string,i:number)=>drawTextTop(page,font,ln,x,y+i*(size/S*gap),size));
     return lines.length;
   }else{
-    drawTextTop(page,font,String(text||"-"),x,y,size,{maxWidth});
+    const value=opts.ellipsis?fitEllipsis(font,String(text||"-"),size,maxWidth):String(text||"-");
+    drawTextTop(page,font,value,x,y,size,{maxWidth});
     return 1;
   }
 }
@@ -235,6 +244,22 @@ export async function buildDanfseFromOfficialTemplate(d:DanfseData){
   [53.2,167.4,269.8,346.8,358,369.3,574.4,625.9,677.4,779.8,831.3].forEach(y=>drawTemplateH(y));
   drawTemplateH(1061.1,11.3,783.7,1.33);
   drawTemplateH(1087.8,11.3,783.7,1.33);
+  const drawTemplateV=(xPx:number,y1Px:number,y2Px:number,widthPx=1.33)=>page.drawLine({
+    start:{x:xPx*S,y:H-y1Px*S},
+    end:{x:xPx*S,y:H-y2Px*S},
+    thickness:widthPx*S,
+    color:rgb(0,0,0)
+  });
+  [11.3,204.1,396.9,783.7].forEach(x=>drawTemplateV(x,1061.1,1087.8,1.33));
+  // Moldura externa completa da página, garantindo topo/direita/base em todos os leitores.
+  page.drawRectangle({
+    x:6.7*S,
+    y:H-1116*S,
+    width:(786.7-6.7)*S,
+    height:(1116-6.7)*S,
+    borderWidth:1.33*S,
+    borderColor:rgb(0,0,0)
+  });
 
   const logo=await pdf.embedPng(b64bytes(logoBase64()));
   page.drawImage(logo,{x:15.87*S,y:H-(13.76+30.56)*S,width:154.2*S,height:30.56*S});
@@ -258,7 +283,9 @@ export async function buildDanfseFromOfficialTemplate(d:DanfseData){
   F(d.prestador.doc,208.63,176.98,175); F(d.prestador.municipalRegistration,401.39,176.98,175); F(d.prestador.phone,594.14,176.98,180);
   F(d.prestador.name,15.87,202.41,365); F(d.prestador.cityUf,401.39,202.41,175); F(d.prestador.ibgeCep,594.14,202.41,180);
   F(d.prestador.address,15.87,227.84,365); F(d.prestador.email,401.39,227.84,365);
-  F(String(d.prestador.simpleNational||"-").replace("Porte","..."),15.87,253.27,185); F(d.prestador.taxRegime,208.63,253.27,370);
+  const simpleNational=String(d.prestador.simpleNational||"-").replace(/Pequeno Porte/i,"").trim().replace(/\s+$/,"");
+  F(simpleNational.endsWith("de")?simpleNational+" ...":simpleNational,15.87,253.27,185,{ellipsis:true});
+  F(d.prestador.taxRegime,208.63,253.27,370,{ellipsis:true});
 
   F(d.tomador.doc,208.63,279.37,175); F(d.tomador.municipalRegistration,401.39,279.37,175); F(d.tomador.phone,594.14,279.37,180);
   F(d.tomador.name,15.87,304.81,365); F(d.tomador.cityUf,401.39,304.81,175); F(d.tomador.ibgeCep,594.14,304.81,180);
