@@ -3,7 +3,8 @@ import qrcode from "https://esm.sh/qrcode-generator@1.4.4?target=deno";
 import type { DanfseData } from "./types.ts";
 import { NFS_LOGO_PNG_BASE64 } from "./logo-data.ts";
 
-const W=595,H=842;\nconst X0=8.5,X1=153.07,X2=297.64,X3=442.20,X4=586.77;
+const W=595,H=842;
+const X0=8.5,X1=153.07,X2=297.64,X3=442.20,X4=586.77;
 const BLACK=rgb(.03,.03,.03), MID=rgb(.45,.45,.45), GRAY=rgb(.95,.95,.95), WHITE=rgb(1,1,1);
 
 const b64bytes=(s:string)=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
