@@ -1,19 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.49.0";
-import pdfMake from "https://esm.sh/pdfmake@0.2.20/build/pdfmake.js?target=deno";
-import pdfFonts from "https://esm.sh/pdfmake@0.2.20/build/vfs_fonts.js?target=deno";
 import { parseDanfse } from "./xml-parser.ts";
-import { buildDanfseDefinition } from "./pdf-definition.ts";
+import { buildDanfsePdf } from "./pdf-builder.ts";
 
-(pdfMake as any).addVirtualFileSystem(pdfFonts as any);
-(pdfMake as any).fonts={
-  Roboto:{
-    normal:"Roboto-Regular.ttf",
-    bold:"Roboto-Medium.ttf",
-    italics:"Roboto-Italic.ttf",
-    bolditalics:"Roboto-MediumItalic.ttf"
-  }
-};
 
 const cors={
   "Access-Control-Allow-Origin":"*",
@@ -59,11 +48,7 @@ async function canAccessCompany(admin:any,userId:string,companyId:string){
   return Boolean(members?.length);
 }
 
-const pdfBase64=async(def:any)=>await new Promise<string>((resolve,reject)=>{
-  try{
-    (pdfMake as any).createPdf(def).getBase64((value:string)=>resolve(value));
-  }catch(e){reject(e);}
-});
+const bytesToBase64=(bytes:Uint8Array)=>{ let s=""; const chunk=0x8000; for(let i=0;i<bytes.length;i+=chunk){ s+=String.fromCharCode(...bytes.subarray(i,i+chunk)); } return btoa(s); };
 
 Deno.serve(async(req)=>{
   if(req.method==="OPTIONS") return new Response("ok",{headers:cors});
@@ -98,13 +83,13 @@ Deno.serve(async(req)=>{
     }
 
     const data=await parseDanfse(xml,doc);
-    const definition=buildDanfseDefinition(data);
-    const base64=await pdfBase64(definition);
+    const bytes=await buildDanfsePdf(data);
+    const base64=bytesToBase64(bytes);
     const filename="danfse-pdfmake-teste-"+(doc.accessKey||doc.number||"documento")+".pdf";
 
     return J({
       ok:true,
-      engine:"pdfmake-esm-deno",
+      engine:"pdf-lib-helvetica-parity",
       filename,
       pdf_base64:base64,
       bytes_estimate:Math.floor(base64.length*0.75),
