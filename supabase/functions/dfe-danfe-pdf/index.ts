@@ -585,7 +585,7 @@ async function buildNfse(doc: any, xml: string) {
   rect(M,idTop,leftW,idH);
   rect(M+leftW,idTop,rightW,idH);
   const c1=145,c2=145,c3=leftW-c1-c2;
-  cell(M,idTop,c1,24,'CHAVE DE ACESSO DA NFS-e',key,{valueSize:5.3,wrap:false});
+  cell(M,idTop,leftW,24,'CHAVE DE ACESSO DA NFS-e',key,{valueSize:5.3,wrap:false});
   cell(M,idTop+24,c1,20,'NÚMERO DA NFS-e',tag(inf,'nNFSe')||doc.number||'-',{wrap:false});
   cell(M+c1,idTop+24,c2,20,'COMPETÊNCIA DA NFS-e',dateOnly(comp),{wrap:false});
   cell(M+c1+c2,idTop+24,c3,20,'DATA E HORA DA EMISSÃO DA NFS-e',`${dateOnly(issue)} ${timeOnly(issue)}`,{valueSize:5.15,wrap:false});
@@ -613,7 +613,7 @@ async function buildNfse(doc: any, xml: string) {
   top+=28;
   cell(M,top,276,28,'Endereço',cleanParts(tag(endE,'xLgr'),tag(endE,'nro'),tag(endE,'xCpl'),tag(endE,'xBairro')),{valueSize:5.3});
   cell(M+276,top,145,28,'Município / Sigla UF',`${tag(inf,'xLocEmi')||'-'} / ${issueUf}`,{valueSize:5.25});
-  cell(M+421,top,C-421,28,'Telefone / Código IBGE / CEP',`${fmtPhone(tag(emit,'fone')||tag(prest,'fone'))} / ${fmtIbge(issueCityCode)} / ${cep(tag(endE,'CEP'))}`,{valueSize:4.85});
+  cell(M+421,top,C-421,28,'E-mail / Telefone / Código IBGE / CEP',`${tag(emit,'email')||tag(prest,'email')||'-'} / ${fmtPhone(tag(emit,'fone')||tag(prest,'fone'))} / ${fmtIbge(issueCityCode)} / ${cep(tag(endE,'CEP'))}`,{labelSize:4.05,valueSize:4.25});
   top+=28;
   cell(M,top,276,28,'Simples Nacional na Data de Competência',tag(regTrib,'opSimpNac')==='1'?'Optante - Microempresa ou Empresa de Pequeno Porte':tag(regTrib,'opSimpNac')||'-',{valueSize:5.15});
   cell(M+276,top,C-276,28,'Regime de Apuração Tributária pelo SN',tag(regTrib,'regApTribSN')||'Regime de apuração dos tributos federais e municipal pelo Simples Nacional',{valueSize:5.15});
