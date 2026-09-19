@@ -1,63 +1,66 @@
 import type { DanfseData } from "./types.ts";
-const borderLayout={hLineWidth:()=>0.55,vLineWidth:()=>0.55,hLineColor:()=>"#222",vLineColor:()=>"#222",paddingLeft:()=>3,paddingRight:()=>3,paddingTop:()=>2.4,paddingBottom:()=>2.4};
-const section=(title:string)=>({table:{widths:["*"],body:[[{text:title,bold:true,fontSize:7,fillColor:"#f4f4f4",margin:[1,1,1,1]}]]},layout:borderLayout});
-const field=(label:string,value:string,opts:any={})=>({stack:[{text:label,bold:true,fontSize:opts.labelSize??5.5,margin:[0,0,0,1]},{text:value||"-",fontSize:opts.valueSize??6.15,bold:!!opts.bold,noWrap:!!opts.noWrap,lineHeight:1.03}],margin:[0,0,0,0]});
-const tbl=(widths:any[],body:any[],margin:any=[0,0,0,0])=>({table:{widths,body,dontBreakRows:true},layout:borderLayout,margin});
+
+const LOGO="data:image/png;base64,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";
+const BLACK="#080808",GRAY="#f2f2f2";
+const oneLine=(v:unknown,max=120)=>{const s=String(v??"-").replace(/\s+/g," ").trim()||"-";return s.length<=max?s:s.slice(0,Math.max(1,max-3)).trimEnd()+"...";};
+const txt=(text:string,x:number,y:number,fontSize:number,bold=false,extra:any={})=>({text,fontSize,bold,color:BLACK,absolutePosition:{x,y},margin:[0,0,0,0],lineHeight:1,...extra});
+const boxed=(text:string,x:number,y:number,width:number,fontSize:number,bold=false,extra:any={})=>({table:{widths:[width],body:[[{text,fontSize,bold,color:BLACK,margin:[0,0,0,0],lineHeight:extra.lineHeight??1.05,alignment:extra.alignment??"left",noWrap:extra.noWrap??false}]]},layout:{hLineWidth:()=>0,vLineWidth:()=>0,paddingLeft:()=>0,paddingRight:()=>0,paddingTop:()=>0,paddingBottom:()=>0},absolutePosition:{x,y}});
+const field=(x:number,y:number,width:number,label:string,value:string,opts:any={})=>[boxed(label,x,y,width,opts.labelSize??6,true),boxed(value||"-",x,y+(opts.valueOffset??8.9),width,opts.valueSize??7,false,{noWrap:opts.noWrap??false,lineHeight:opts.lineHeight??1.02})];
+const add=(a:any[],v:any)=>Array.isArray(v)?a.push(...v):a.push(v);
+
 export function buildDanfseDefinition(d:DanfseData){
-  return {
-    pageSize:"A4", pageMargins:[6,6,6,6],
-    defaultStyle:{font:"Roboto",fontSize:6.05,color:"#111",lineHeight:1.02},
-    content:[
-      tbl([135,170,"*"],[[
-        {stack:[{text:"NFS-e",bold:true,fontSize:17,color:"#278b5b"},{text:"Padrão Nacional",fontSize:6.5,color:"#5f6873"}],alignment:"left",margin:[6,6,0,3]},
-        {stack:[{text:"DANFSe v2.0",bold:true,fontSize:12,alignment:"center",margin:[0,3,0,1]},{text:"Documento Auxiliar da NFS-e",bold:true,fontSize:9,alignment:"center"}]},
-        {stack:[{text:"Município: "+d.issueCity+" - "+d.issueUf,fontSize:5.4},{text:"Ambiente Gerador: "+d.generatorEnvironment,fontSize:5.1},{text:"Tipo de Ambiente: "+d.environmentType,fontSize:5.1}],margin:[2,2,2,2]}
-      ]]),
-      tbl([430,"*"],[[
-        {stack:[
-          tbl(["*"],[[field("CHAVE DE ACESSO DA NFS-e",d.accessKey,{valueSize:5.55,noWrap:true})]]),
-          tbl([145,145,"*"],[[
-            field("NÚMERO DA NFS-e",d.number),field("COMPETÊNCIA DA NFS-e",d.competency),field("DATA E HORA DA EMISSÃO DA NFS-e",d.issueDate,{valueSize:5.45})
-          ],[
-            field("NÚMERO DA DPS",d.dpsNumber),field("SÉRIE DA DPS",d.dpsSeries),field("DATA E HORA DA EMISSÃO DA DPS",d.dpsIssueDate,{valueSize:5.45})
-          ],[
-            field("EMITENTE DA NFS-e",d.emitterType),field("SITUAÇÃO DA NFS-e",d.status),field("FINALIDADE",d.purpose)
-          ]])
-        ]},
-        {stack:[{qr:d.qrValue,fit:62,alignment:"center",margin:[0,3,0,3]},{text:"A autenticidade desta NFS-e pode ser verificada pela leitura deste código QR ou pela consulta da chave de acesso no portal nacional da NFS-e",fontSize:4.7,alignment:"center",margin:[2,0,2,2]}]}
-      ]]),
-      section("PRESTADOR / FORNECEDOR"),
-      tbl([275,145,"*"],[[
-        field("Nome / Nome Empresarial",d.prestador.name),field("CNPJ / CPF / NIF",d.prestador.doc),field("Indicador Municipal (Inscrição)",d.prestador.municipalRegistration)
-      ],[
-        field("Endereço",d.prestador.address,{valueSize:5.6}),field("Município / Sigla UF",d.prestador.cityUf),field("E-mail / Telefone / Código IBGE / CEP",d.prestador.emailPhoneIbgeCep,{labelSize:4.6,valueSize:4.8})
-      ],[
-        field("Simples Nacional na Data de Competência",d.prestador.simpleNational,{valueSize:5.25}),{colSpan:2,...field("Regime de Apuração Tributária pelo SN",d.prestador.taxRegime,{valueSize:5.25})},{}
-      ]]),
-      section("TOMADOR / ADQUIRENTE"),
-      tbl([275,145,"*"],[[
-        field("Nome / Nome Empresarial",d.tomador.name),field("CNPJ / CPF / NIF",d.tomador.doc),field("Indicador Municipal (Inscrição)",d.tomador.municipalRegistration)
-      ],[
-        field("Endereço",d.tomador.address,{valueSize:5.6}),field("Município / Sigla UF",d.tomador.cityUf),field("E-mail / Telefone / Código IBGE / CEP",d.tomador.emailPhoneIbgeCep,{labelSize:4.6,valueSize:4.8})
-      ]]),
-      tbl(["*"],[[{text:"DESTINATÁRIO DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e · INTERMEDIÁRIO DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e",bold:true,fontSize:5.55,alignment:"center",margin:[3,3,3,3]}]]),
-      section("SERVIÇO PRESTADO"),
-      tbl([200,155,"*"],[[field("Código de Tributação Nacional/Municipal",d.service.nationalMunicipalCode),field("Código da NBS",d.service.nbs),field("Local da Prestação / Sigla UF / País",d.service.location,{valueSize:5.3})]]),
-      tbl(["*"],[[field("Classificação do Serviço",d.service.classification,{valueSize:5.6})]]),
-      tbl(["*"],[[{...field("Descrição do Serviço",d.service.description,{valueSize:5.9}),margin:[0,1,0,4]}]]),
-      section("TRIBUTAÇÃO MUNICIPAL (ISSQN)"),
-      tbl([145,220,72,72,"*"],[[field("Tipo de Tributação do ISSQN",d.municipalTax.type,{valueSize:5.1}),field("Município / Sigla UF / País de Incidência",d.municipalTax.incidence,{valueSize:4.9}),field("BC ISSQN",d.municipalTax.base),field("Alíquota",d.municipalTax.rate),field("ISSQN Apurado",d.municipalTax.amount)]]),
-      tbl([145,"*"],[[field("Retenção do ISSQN",d.municipalTax.retention),field("Observação",d.municipalTax.observation)]]),
-      section("TRIBUTAÇÃO FEDERAL (EXCETO CBS)"),
-      tbl(["*","*","*","*","*"],[[field("IRRF",d.federalTax.irrf),field("Contrib. Previdenciária - Retida",d.federalTax.previdencia,{labelSize:4.35}),field("Contribuições Sociais - Retidas",d.federalTax.sociais,{labelSize:4.35}),field("PIS - Débito Apuração Própria",d.federalTax.pis,{labelSize:4.25}),field("COFINS - Débito Apuração Própria",d.federalTax.cofins,{labelSize:4.15})]]),
-      tbl(["*"],[[field("Descrição Contrib. Sociais - Retidas",d.federalTax.retainedDescription)]]),
-      section("TRIBUTAÇÃO IBS/CBS"),
-      ...d.ibsCbsRows.map(row=>tbl(["*","*","*","*"],[[field(row[0],row[1],{labelSize:4.15,valueSize:4.8}),field(row[2],row[3],{labelSize:4.05,valueSize:4.8}),field(row[4],row[5],{labelSize:4.05,valueSize:4.8}),field(row[6],row[7],{labelSize:4.05,valueSize:4.8})]])),
-      section("VALOR TOTAL DA NFS-e"),
-      tbl(["*","*","*","*"],[[field("VALOR DA OPERAÇÃO / SERVIÇO",d.totals.operation,{bold:true,labelSize:4.5}),field("Desconto Incondicionado",d.totals.unconditionalDiscount),field("Desconto Condicionado",d.totals.conditionalDiscount),field("Total das Retenções",d.totals.retentions)],[field("VALOR LÍQUIDO DA NFS-e",d.totals.net,{bold:true,labelSize:4.5}),field("Total do IBS/CBS",d.totals.ibsCbs),{colSpan:2,...field("VALOR LÍQUIDO DA NFS-e + IBS/CBS",d.totals.netPlusIbsCbs,{labelSize:4.5})},{}]]),
-      section("INFORMAÇÕES COMPLEMENTARES"),
-      tbl(["*"],[[field("Inf. Cont.",d.additionalInfo,{valueSize:5.0})]]),
-      tbl([145,145,"*"],[[field("DATA CIENTIFICAÇÃO:","",{labelSize:4.5}),field("IDENTIFICAÇÃO E ASSINATURA","",{labelSize:4.5}),field("N° NFS-e / CHAVE NFS-e",d.number+" / "+d.accessKey,{labelSize:4.5,valueSize:4.8})]])
-    ]
-  };
+  const content:any[]=[];
+  const canvas:any[]=[
+    {type:"rect",x:5.5,y:5,w:584,h:832,lineWidth:1,lineColor:BLACK},{type:"rect",x:5.5,y:5,w:584,h:34.5,lineWidth:0,color:GRAY},{type:"line",x1:5.5,y1:39.5,x2:589.5,y2:39.5,lineWidth:.5,lineColor:BLACK},
+    {type:"rect",x:5.5,y:126,w:584,h:11,lineWidth:0,color:GRAY},{type:"line",x1:5.5,y1:126,x2:589.5,y2:126,lineWidth:.5,lineColor:BLACK},{type:"line",x1:152,y1:126,x2:152,y2:203,lineWidth:.5,lineColor:BLACK},{type:"line",x1:296,y1:126,x2:296,y2:203,lineWidth:.5,lineColor:BLACK},{type:"line",x1:441,y1:126,x2:441,y2:203,lineWidth:.5,lineColor:BLACK},{type:"line",x1:5.5,y1:203,x2:589.5,y2:203,lineWidth:.5,lineColor:BLACK},
+    {type:"rect",x:5.5,y:203,w:584,h:11,lineWidth:0,color:GRAY},{type:"line",x1:152,y1:203,x2:152,y2:267,lineWidth:.5,lineColor:BLACK},{type:"line",x1:296,y1:203,x2:296,y2:267,lineWidth:.5,lineColor:BLACK},{type:"line",x1:441,y1:203,x2:441,y2:267,lineWidth:.5,lineColor:BLACK},{type:"line",x1:5.5,y1:267,x2:589.5,y2:267,lineWidth:.5,lineColor:BLACK},{type:"line",x1:5.5,y1:268.5,x2:589.5,y2:268.5,lineWidth:.5,lineColor:BLACK},{type:"line",x1:5.5,y1:277.5,x2:589.5,y2:277.5,lineWidth:.5,lineColor:BLACK},{type:"line",x1:5.5,y1:286.5,x2:589.5,y2:286.5,lineWidth:.5,lineColor:BLACK},
+    {type:"rect",x:5.5,y:286.5,w:584,h:11,lineWidth:0,color:GRAY},{type:"line",x1:152,y1:286.5,x2:152,y2:438,lineWidth:.5,lineColor:BLACK},{type:"line",x1:296,y1:286.5,x2:296,y2:317,lineWidth:.5,lineColor:BLACK},{type:"line",x1:441,y1:286.5,x2:441,y2:317,lineWidth:.5,lineColor:BLACK},{type:"line",x1:5.5,y1:438,x2:589.5,y2:438,lineWidth:.5,lineColor:BLACK},
+    {type:"rect",x:5.5,y:438,w:584,h:11,lineWidth:0,color:GRAY},{type:"line",x1:152,y1:438,x2:152,y2:478,lineWidth:.5,lineColor:BLACK},{type:"line",x1:296,y1:438,x2:296,y2:478,lineWidth:.5,lineColor:BLACK},{type:"line",x1:441,y1:438,x2:441,y2:478,lineWidth:.5,lineColor:BLACK},{type:"line",x1:5.5,y1:478,x2:589.5,y2:478,lineWidth:.5,lineColor:BLACK},
+    {type:"rect",x:5.5,y:478,w:584,h:11,lineWidth:0,color:GRAY},{type:"line",x1:152,y1:478,x2:152,y2:518,lineWidth:.5,lineColor:BLACK},{type:"line",x1:296,y1:478,x2:296,y2:518,lineWidth:.5,lineColor:BLACK},{type:"line",x1:441,y1:478,x2:441,y2:498,lineWidth:.5,lineColor:BLACK},{type:"line",x1:5.5,y1:518,x2:589.5,y2:518,lineWidth:.5,lineColor:BLACK},
+    {type:"rect",x:5.5,y:518,w:584,h:11,lineWidth:0,color:GRAY},{type:"line",x1:152,y1:518,x2:152,y2:602,lineWidth:.5,lineColor:BLACK},{type:"line",x1:296,y1:518,x2:296,y2:602,lineWidth:.5,lineColor:BLACK},{type:"line",x1:441,y1:518,x2:441,y2:602,lineWidth:.5,lineColor:BLACK},{type:"line",x1:5.5,y1:602,x2:589.5,y2:602,lineWidth:.5,lineColor:BLACK},
+    {type:"rect",x:5.5,y:602,w:584,h:11,lineWidth:0,color:GRAY},{type:"line",x1:152,y1:602,x2:152,y2:642,lineWidth:.5,lineColor:BLACK},{type:"line",x1:296,y1:602,x2:296,y2:642,lineWidth:.5,lineColor:BLACK},{type:"line",x1:441,y1:602,x2:441,y2:642,lineWidth:.5,lineColor:BLACK},{type:"rect",x:441,y:622,w:148.5,h:20,lineWidth:0,color:GRAY},{type:"line",x1:5.5,y1:642,x2:589.5,y2:642,lineWidth:.5,lineColor:BLACK},
+    {type:"rect",x:5.5,y:642,w:584,h:11,lineWidth:0,color:GRAY},{type:"line",x1:5.5,y1:811,x2:589.5,y2:811,lineWidth:.5,lineColor:BLACK},{type:"line",x1:151,y1:811,x2:151,y2:833,lineWidth:.5,lineColor:BLACK},{type:"line",x1:296,y1:811,x2:296,y2:833,lineWidth:.5,lineColor:BLACK},{type:"line",x1:5.5,y1:833,x2:589.5,y2:833,lineWidth:.5,lineColor:BLACK}
+  ];
+  content.push({canvas,absolutePosition:{x:0,y:0}});
+  content.push({image:LOGO,width:113.4,height:22.7,absolutePosition:{x:13.9,y:9.5}});
+  content.push(txt("DANFSe v2.0",261.9,9.6,11.5,true),txt("Documento Auxiliar da NFS-e",230.2,21.4,9.6,true));
+  content.push(txt("Município: "+d.issueCity+" - "+d.issueUf,445,10,7.1),txt("Ambiente Gerador: "+d.generatorEnvironment,445,20.1,5.5),txt("Tipo de Ambiente: "+d.environmentType,445,26.8,5.5));
+  content.push({qr:d.qrValue,fit:43.1,absolutePosition:{x:493,y:40.9},margin:[0,0,0,0]});
+  add(content,field(11,43.6,420,"CHAVE DE ACESSO DA NFS-e",d.accessKey,{valueSize:6.3,valueOffset:8.9,noWrap:true}));
+  add(content,field(11,63.6,130,"NÚMERO DA NFS-e",d.number));add(content,field(156,63.6,130,"COMPETÊNCIA DA NFS-e",d.competency));add(content,field(301,63.6,135,"DATA E HORA DA EMISSÃO DA NFS-e",d.issueDate));
+  add(content,field(11,83.6,130,"NÚMERO DA DPS",d.dpsNumber));add(content,field(156,83.6,130,"SÉRIE DA DPS",d.dpsSeries));add(content,field(301,83.6,135,"DATA E HORA DA EMISSÃO DA DPS",d.dpsIssueDate));
+  add(content,field(11,103.6,130,"EMITENTE DA NFS-e",d.emitterType));add(content,field(156,103.6,130,"SITUAÇÃO DA NFS-e",d.status));add(content,field(301,103.6,135,"FINALIDADE",d.purpose));
+  content.push(boxed("A autenticidade desta NFS-e pode ser verificada\npela leitura deste código QR ou pela consulta da\nchave de acesso no portal nacional da NFS-e",445,92.1,139,6,false,{lineHeight:1.08}));
+
+  content.push(txt("PRESTADOR / FORNECEDOR",9.5,127.7,7,true));add(content,field(156,128.6,130,"CNPJ / CPF / NIF",d.prestador.doc));add(content,field(301,128.6,130,"Indicador Municipal (Inscrição)",d.prestador.municipalRegistration));add(content,field(445,128.6,135,"Telefone",d.prestador.phone));
+  add(content,field(11,150.6,136,"Nome / Nome Empresarial",d.prestador.name,{valueSize:6.6}));add(content,field(301,150.6,130,"Município / Sigla UF",d.prestador.cityUf));add(content,field(445,150.6,135,"Código IBGE / CEP",d.prestador.ibgeCep));
+  add(content,field(11,172.6,136,"Endereço",oneLine(d.prestador.address,48),{valueSize:6.4}));add(content,field(301,172.6,130,"E-mail",oneLine(d.prestador.email,40),{valueSize:6.2}));
+  add(content,field(11,191.6,136,"Simples Nacional na Data de Competência",oneLine(d.prestador.simpleNational,48),{valueSize:5.8}));add(content,field(156,191.6,280,"Regime de Apuração Tributária pelo SN",oneLine(d.prestador.taxRegime,76),{valueSize:5.8}));
+
+  content.push(txt("TOMADOR / ADQUIRENTE",9.5,204.7,7,true));add(content,field(156,205.6,130,"CNPJ / CPF / NIF",d.tomador.doc));add(content,field(301,205.6,130,"Indicador Municipal (Inscrição)",d.tomador.municipalRegistration));add(content,field(445,205.6,135,"Telefone",d.tomador.phone));
+  add(content,field(11,227.6,136,"Nome / Nome Empresarial",d.tomador.name,{valueSize:6.6}));add(content,field(301,227.6,130,"Município / Sigla UF",d.tomador.cityUf));add(content,field(445,227.6,135,"Código IBGE / CEP",d.tomador.ibgeCep));
+  add(content,field(11,249.6,136,"Endereço",oneLine(d.tomador.address,48),{valueSize:6.4}));add(content,field(301,249.6,135,"E-mail",oneLine(d.tomador.email,44),{valueSize:6.2}));
+  content.push(boxed("DESTINATÁRIO DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e",160,268.6,275,5.8,true,{alignment:"center"}),boxed("INTERMEDIÁRIO DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e",160,277.6,275,5.8,true,{alignment:"center"}));
+
+  content.push(txt("SERVIÇO PRESTADO",9.5,288.2,7,true));add(content,field(156,289.1,135,"Código de Tributação Nacional/Municipal",d.service.nationalMunicipalCode));add(content,field(301,289.1,135,"Código da NBS",d.service.nbs));add(content,field(445,289.1,138,"Local da Prestação / Sigla UF / País",d.service.location));
+  content.push(boxed(oneLine(d.service.classification,115),11,309.5,136,6,false,{lineHeight:1.08}),txt("Descrição do Serviço",11,325.6,5.8,true),boxed(oneLine(d.service.description,220),11,336.5,136,6,false,{lineHeight:1.08}));
+
+  content.push(txt("TRIBUTAÇÃO MUNICIPAL (ISSQN)",9.5,439.7,7,true));add(content,field(156,440.6,135,"Tipo de Tributação do ISSQN",d.municipalTax.type));add(content,field(301,440.6,135,"Município / Sigla UF / País de Incidência do ISSQN",d.municipalTax.incidence,{labelSize:5.8}));
+  add(content,field(11,459.6,136,"BC ISSQN",d.municipalTax.base));add(content,field(156,459.6,135,"Alíquota Aplicada",d.municipalTax.rate));add(content,field(301,459.6,135,"Retenção do ISSQN",d.municipalTax.retention));add(content,field(445,459.6,135,"ISSQN Apurado",d.municipalTax.amount));
+
+  content.push(txt("TRIBUTAÇÃO FEDERAL (EXCETO CBS)",9.5,479.7,7,true));add(content,field(156,480.6,135,"IRRF",d.federalTax.irrf));add(content,field(301,480.6,135,"Contribuição Previdenciária - Retida",d.federalTax.previdencia,{labelSize:5.5}));add(content,field(445,480.6,135,"Contribuições Sociais - Retidas",d.federalTax.sociais,{labelSize:5.5}));
+  add(content,field(11,499.6,136,"PIS - Débito Apuração Própria",d.federalTax.pis,{labelSize:5.6}));add(content,field(156,499.6,135,"COFINS - Débito Apuração Própria",d.federalTax.cofins,{labelSize:5.6}));add(content,field(301,499.6,280,"Descrição Contrib. Sociais - Retidas",d.federalTax.retainedDescription,{labelSize:5.6}));
+
+  content.push(txt("TRIBUTAÇÃO IBS/CBS",9.5,519.7,7,true));add(content,field(156,520.6,135,"CST / cClassTrib",d.ibsCbs.cstClass,{labelSize:5.5}));add(content,field(301,520.6,280,"Indicador de Operação / Código IBGE Incidência / Município Incidência / Sigla UF",d.ibsCbs.operationIncidence,{labelSize:5.2,valueSize:6}));
+  add(content,field(11,539.6,136,"Exclusões e Reduções da Base de Cálculo",d.ibsCbs.exclusions,{labelSize:5.4}));add(content,field(156,539.6,135,"Base de Cálculo Após Exclusões e Reduções",d.ibsCbs.base,{labelSize:5.2}));add(content,field(301,539.6,135,"Red. Alíquota IBS / Red. Alíquota CBS",d.ibsCbs.reduction,{labelSize:5.3}));add(content,field(445,539.6,135,"Alíquota - IBS UF / IBS Mun",d.ibsCbs.rateUfMun,{labelSize:5.4}));
+  add(content,field(11,559.6,136,"Alíq. Efetiva Municipal - IBS",d.ibsCbs.effectiveMunicipal,{labelSize:5.4}));add(content,field(156,559.6,135,"Valor Apurado Municipal - IBS",d.ibsCbs.amountMunicipal,{labelSize:5.4}));add(content,field(301,559.6,135,"Alíq. Efetiva Estadual - IBS",d.ibsCbs.effectiveState,{labelSize:5.4}));add(content,field(445,559.6,135,"Valor Apurado Estadual - IBS",d.ibsCbs.amountState,{labelSize:5.4}));
+  add(content,field(11,579.6,136,"Valor Total Apurado - IBS",d.ibsCbs.totalIbs,{labelSize:5.4}));add(content,field(156,579.6,135,"Alíquota - CBS",d.ibsCbs.cbsRate,{labelSize:5.4}));add(content,field(301,579.6,135,"Alíquota Efetiva - CBS",d.ibsCbs.cbsEffective,{labelSize:5.4}));add(content,field(445,579.6,135,"Valor Total Apurado - CBS",d.ibsCbs.cbsTotal,{labelSize:5.4}));
+
+  content.push(txt("VALOR TOTAL DA NFS-e",9.5,603.7,7,true));add(content,field(156,604.6,135,"VALOR DA OPERAÇÃO / SERVIÇO",d.totals.operation,{labelSize:5.6}));add(content,field(301,604.6,135,"Desconto Incondicionado",d.totals.unconditionalDiscount,{labelSize:5.6}));add(content,field(445,604.6,135,"Desconto Condicionado",d.totals.conditionalDiscount,{labelSize:5.6}));
+  add(content,field(11,624.6,136,"Total das Retenções (ISSQN / Federais)",d.totals.retentions,{labelSize:5.4}));add(content,field(156,624.6,135,"VALOR LÍQUIDO DA NFS-e",d.totals.net,{labelSize:5.6}));add(content,field(301,624.6,135,"Total do IBS/CBS",d.totals.ibsCbs,{labelSize:5.6}));add(content,field(445,624.6,135,"VALOR LÍQUIDO DA NFS-e + IBS/CBS",d.totals.netPlusIbsCbs,{labelSize:5.4}));
+
+  content.push(txt("INFORMAÇÕES COMPLEMENTARES",9.5,643.7,7,true),boxed("Inf. Cont.: "+d.additionalInfo,11,655,565,6,false,{lineHeight:1.08}),boxed(d.approximateTaxes,11,677,565,6,false,{lineHeight:1.08}));
+  content.push(txt("DATA CIENTIFICAÇÃO:",11,813.2,5.4,true),txt("IDENTIFICAÇÃO E ASSINATURA",156,813.2,5.4,true),txt("N° NFS-e / CHAVE NFS-e",301,813.2,5.4,true),txt(d.number+" / "+d.accessKey,301,821.2,5.5));
+
+  return {pageSize:"A4",pageMargins:[0,0,0,0],defaultStyle:{font:"Roboto",fontSize:6,color:BLACK,lineHeight:1},content};
 }
