@@ -97,7 +97,7 @@ Deno.serve(async(req)=>{
       if(!(await canAccessCompany(admin,user.id,companyId))) return J({error:"Empresa não autorizada para esta conta"},403);
     }
 
-    const data=parseDanfse(xml,doc);
+    const data=await parseDanfse(xml,doc);
     const definition=buildDanfseDefinition(data);
     const base64=await pdfBase64(definition);
     const filename="danfse-pdfmake-teste-"+(doc.accessKey||doc.number||"documento")+".pdf";
