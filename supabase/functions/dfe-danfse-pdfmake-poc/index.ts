@@ -84,7 +84,15 @@ Deno.serve(async(req)=>{
     const data=await parseDanfse(xml,doc);
     const bytes=await buildDanfseFromOfficialTemplate(data);
     const base64=bytesToBase64(bytes);
-    const filename="danfse-html-oficial-teste-"+(doc.accessKey||doc.number||"documento")+".pdf";
+    const safe=(v:unknown)=>String(v||"")
+      .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+      .replace(/[^A-Za-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,48);
+    const filename=[
+      "DANFSe",
+      safe(data.number||doc.number||"SN"),
+      safe(data.prestador?.name||doc.issuerName||"Prestador"),
+      safe(data.accessKey||doc.accessKey||"")
+    ].filter(Boolean).join("_")+".pdf";
 
     return J({
       ok:true,
