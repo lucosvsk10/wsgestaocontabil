@@ -12,6 +12,7 @@ import {
   X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
 import {
   FiscalDocumentLike,
   docModel,
@@ -638,6 +639,51 @@ function DocumentUnavailable() {
   return <div className="extractor-fiscal-unavailable"><Info /><b>XML integral ainda indisponível</b><span>O sistema continua tentando recuperar o documento fiscal completo.</span></div>;
 }
 
+function OfficialNfseHtmlFrame({ html }: { html: string }) {
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    const resize = () => setScale(Math.min(1, Math.max(0.2, wrap.clientWidth / 793.33)));
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(wrap);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={wrapRef}
+      style={{
+        width: '100%',
+        height: 1122.67 * scale,
+        position: 'relative',
+        overflow: 'hidden',
+        background: '#fff',
+      }}
+    >
+      <iframe
+        ref={iframeRef}
+        title="DANFSe oficial"
+        sandbox="allow-scripts"
+        srcDoc={html}
+        style={{
+          width: 793.33,
+          height: 1122.67,
+          border: 0,
+          transform: `scale(${scale})`,
+          transformOrigin: 'top left',
+          background: '#fff',
+          display: 'block',
+        }}
+      />
+    </div>
+  );
+}
+
 export default function ExtractorFiscalDocumentPreviewModal({
   document,
   companyName,
@@ -651,6 +697,10 @@ export default function ExtractorFiscalDocumentPreviewModal({
   onRetry,
 }: Props) {
   const [copied, setCopied] = useState(false);
+  const [nfseHtml, setNfseHtml] = useState('');
+  const [nfseHtmlLoading, setNfseHtmlLoading] = useState(false);
+  const previewType = document ? docType(document) : '';
+  const previewComplete = Boolean(document?.fullXml && document?.xml);
   const data = useMemo(
     () => (document ? parseFiscalPreview(document, companyName, companyCnpj) : null),
     [document, companyName, companyCnpj]
@@ -662,6 +712,31 @@ export default function ExtractorFiscalDocumentPreviewModal({
     return () => window.removeEventListener('keydown', onKey);
   }, [document, onClose]);
   useEffect(() => setCopied(false), [document?.accessKey]);
+  useEffect(() => {
+    let alive = true;
+    setNfseHtml('');
+    if (!document || previewType !== 'NFS-e' || !previewComplete) {
+      setNfseHtmlLoading(false);
+      return () => { alive = false; };
+    }
+    setNfseHtmlLoading(true);
+    void supabase.functions
+      .invoke('dfe-danfse-pdfmake-poc', {
+        body: { action: 'preview-html', company_id: document.companyId, document },
+      })
+      .then(({ data: result, error }) => {
+        if (!alive) return;
+        if (error) throw error;
+        setNfseHtml(String(result?.html_preview || ''));
+      })
+      .catch(() => {
+        if (alive) setNfseHtml('');
+      })
+      .finally(() => {
+        if (alive) setNfseHtmlLoading(false);
+      });
+    return () => { alive = false; };
+  }, [document, previewType, previewComplete]);
 
   if (!document || !data) return null;
   const needsManifestation = document.parseError === 'xml_requires_manifestation';
@@ -691,7 +766,12 @@ export default function ExtractorFiscalDocumentPreviewModal({
           <div className="extractor-fiscal-paper-stage">
             {complete ? (
               type === 'NFC-e' ? <NfceView document={document} /> :
-              type === 'NFS-e' ? <NfseView document={document} /> :
+              type === 'NFS-e' ? (
+                nfseHtml ? <OfficialNfseHtmlFrame html={nfseHtml} /> :
+                nfseHtmlLoading ? (
+                  <div className="extractor-fiscal-recovery-card"><Loader2 className="h-5 w-5 animate-spin" /><p>Carregando DANFSe oficial...</p></div>
+                ) : <NfseView document={document} />
+              ) :
               type === 'NF-e' ? <DanfeView document={document} /> :
               <DocumentUnavailable />
             ) : (
