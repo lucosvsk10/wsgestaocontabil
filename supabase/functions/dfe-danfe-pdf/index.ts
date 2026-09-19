@@ -187,7 +187,7 @@ async function buildNfce(doc: any, xml: string) {
   const M = mm(3.2);
   const usable = W - M * 2;
   const extraInfo = clean(tag(infAdic, 'infCpl'));
-  const baseH = mm(151);
+  const baseH = mm(170);
   const H = Math.max(baseH, baseH + Math.max(0, items.length - 2) * 18 + Math.min(60, extraInfo.length / 8));
   const page = pdf.addPage([W, H]);
   const black = rgb(0, 0, 0);
@@ -253,13 +253,18 @@ async function buildNfce(doc: any, xml: string) {
     }
     if (line) draw(line, size, b, align, M, width);
   };
-  const dash = () => {
-    y -= 1.5;
+  const dash = (before = 5, after = 8) => {
+    y -= before;
     const dashW = 3.2, gap = 2.3;
     for (let x=M; x < W-M; x += dashW + gap) {
-      page.drawLine({start:{x,y},end:{x:Math.min(W-M,x+dashW),y},thickness:.55,color:black});
+      page.drawLine({
+        start:{x,y},
+        end:{x:Math.min(W-M,x+dashW),y},
+        thickness:.55,
+        color:black
+      });
     }
-    y -= 6;
+    y -= after;
   };
   const leftRight = (label: string, value: unknown, boldValue = false, size = 7) => {
     const v = clean(value) || '-';
@@ -336,10 +341,16 @@ async function buildNfce(doc: any, xml: string) {
   leftRight('QTD. TOTAL DE ITENS', String(items.length), false, 6.8);
   leftRight('VALOR DOS PRODUTOS', num(tag(tot,'vProd')), false, 6.8);
   leftRight('VALOR TOTAL R$', num(tag(tot,'vNF') || doc.value), true, 8.7);
-  dash();
+  dash(6, 9);
 
-  draw('FORMAS DE PAGAMENTO',6.4,false,'left');
-  draw('Valor Pago',6.4,false,'right',M,usable);
+  {
+    const size=6.4;
+    const label='Valor Pago';
+    page.drawText('FORMAS DE PAGAMENTO',{x:M,y,size,font:reg,color:black});
+    const tw=reg.widthOfTextAtSize(label,size);
+    page.drawText(label,{x:W-M-tw,y,size,font:reg,color:black});
+    y -= size + 6;
+  }
   for (const p of sections(pag,'detPag')) {
     const code=tag(p,'tPag');
     leftRight(paymentName(code), num(tag(p,'vPag')), false,6.5);
@@ -349,9 +360,10 @@ async function buildNfce(doc: any, xml: string) {
   draw('Consulta pela chave de acesso em',6.3,false,'center');
   const urlChave = xmlDecode(tag(xml,'urlChave')) || 'Consulte a chave no portal fiscal indicado pela UF emissora';
   wrapped(urlChave,5.5,false,'center');
+  y -= 2;
   draw('CHAVE DE ACESSO',6.0,true,'center');
   wrapped(fmtKey(access),5.9,false,'center');
-  dash();
+  dash(6, 9);
 
   const consumerDoc = cpfCnpj(tag(dest,'CNPJ') || tag(dest,'CPF'));
   const consumerName = clean(tag(dest,'xNome'));
@@ -365,15 +377,17 @@ async function buildNfce(doc: any, xml: string) {
   }
   dash();
 
-  y -= 3;
+  y -= 5;
   draw(`Nº ${doc.number || tag(ide,'nNF') || '-'} Série ${doc.series || tag(ide,'serie') || '-'}`,10.2,true,'center');
-  y -= 1;
+  y -= 3;
   draw(`${dateOnly(doc.issueDate || tag(ide,'dhEmi'))} ${timeOnly(doc.issueDate || tag(ide,'dhEmi'))} - Via Consumidor`,6.1,false,'center');
-  wrapped(`PROTOCOLO DE AUTORIZAÇÃO ${tag(prot,'nProt') || '-'} ${dateOnly(tag(prot,'dhRecbto'))} ${timeOnly(tag(prot,'dhRecbto'))}`,5.4,false,'center');
   y -= 2;
-  dash();
+  wrapped(`PROTOCOLO DE AUTORIZAÇÃO ${tag(prot,'nProt') || '-'} ${dateOnly(tag(prot,'dhRecbto'))} ${timeOnly(tag(prot,'dhRecbto'))}`,5.4,false,'center');
+  y -= 3;
+  dash(6, 9);
 
   draw('Consulta via leitor de QR Code',6.3,false,'center');
+  y -= 3;
   if (qrv) {
     const qi=await qr(pdf,qrv,4);
     const qrSize=mm(36);
@@ -381,7 +395,7 @@ async function buildNfce(doc: any, xml: string) {
     const qrX=(W-qrSize)/2;
     page.drawRectangle({x:qrX-qrPad,y:y-qrSize-qrPad-3,width:qrSize+qrPad*2,height:qrSize+qrPad*2,color:rgb(1,1,1)});
     page.drawImage(qi,{x:qrX,y:y-qrSize-3,width:qrSize,height:qrSize});
-    y-=qrSize+12;
+    y-=qrSize+18;
   } else {
     draw('QR Code indisponível no XML autorizado',5.8,false,'center');
   }
@@ -390,6 +404,7 @@ async function buildNfce(doc: any, xml: string) {
     draw('EMITIDA EM AMBIENTE DE HOMOLOGAÇÃO - SEM',7.1,false,'center');
     draw('VALOR FISCAL',7.1,false,'center');
   }
+  y -= 4;
   const taxTotal=Number(tag(tot,'vTotTrib')||0);
   draw('ÁREA DE MENSAGEM DE INTERESSE DO CONTRIBUINTE',5.4,false,'center');
   leftRight('Tributos Totais Incidentes (Lei Federal 12.741/2012)', taxTotal ? num(taxTotal) : '0,00', false,5.5);
