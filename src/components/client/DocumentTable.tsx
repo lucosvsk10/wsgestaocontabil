@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { FileCheck2, FileClock, Files, Sparkles } from "lucide-react";
 import { Document } from "@/utils/auth/types";
 import { useDocumentActions } from "@/hooks/document/useDocumentActions";
 import { DocumentSearchAndFilter } from "./document-table/DocumentSearchAndFilter";
@@ -59,21 +58,21 @@ export const DocumentTable = ({ documents, formatDate, isDocumentExpired, daysUn
   }, [sortedDocuments]);
 
   const stats = [
-    { label: "Disponíveis", value: activeDocuments.length, icon: Files },
-    { label: "Novos para você", value: newCount, icon: Sparkles },
-    { label: "Já visualizados", value: viewedCount, icon: FileCheck2 },
-    { label: "Vencem em breve", value: expiringCount, icon: FileClock },
+    { label: "Disponíveis", value: activeDocuments.length },
+    { label: "Novos", value: newCount },
+    { label: "Visualizados", value: viewedCount },
+    { label: "Vencem em breve", value: expiringCount },
   ];
 
   return <div className="client-documents space-y-5">
-    <section className="client-documents-hero">
+    <section className="client-documents-hero client-documents-hero-redesign">
       <div className="client-documents-hero-copy">
-        <p className="client-eyebrow">Visão geral</p>
-        <h2>O que precisa da sua atenção.</h2>
-        <p>Veja os documentos mais recentes, identifique novidades e acesse seus arquivos quando precisar.</p>
+        <p className="client-eyebrow">Documentos</p>
+        <h2>Arquivos da sua empresa</h2>
+        <p>Consulte documentos enviados pelo escritório, organizados por competência e status.</p>
       </div>
-      <div className="client-document-stats">
-        {stats.map(({ label, value, icon: Icon }) => <div key={label} className="client-document-stat"><span className="client-document-stat-icon"><Icon className="h-4 w-4" /></span><div><strong>{value}</strong><span>{label}</span></div></div>)}
+      <div className="client-document-stats client-document-stats-redesign">
+        {stats.map(({ label, value }) => <div key={label} className="client-document-stat client-document-stat-redesign"><span>{label}</span><strong>{value}</strong></div>)}
       </div>
     </section>
 
