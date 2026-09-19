@@ -10,9 +10,9 @@ import { FirstAccessPasswordModal } from "@/components/client/FirstAccessPasswor
 import { ClientOverviewSection } from "@/components/client/sections/ClientOverviewSection";
 import { ClientPortalFooter } from "@/components/client/ClientPortalFooter";
 import { ClientCookieConsent } from "@/components/client/ClientCookieConsent";
-import "@/styles/client-portal-navy.css";
 import "@/styles/client-portal-redesign.css";
 import "@/styles/client-visual-round.css";
+import "@/styles/client-portal-navy.css";
 
 const ClientDashboard = () => {
   const { user, documents, commonCategories, fetchUserDocuments } = useClientDashboardLogic();
