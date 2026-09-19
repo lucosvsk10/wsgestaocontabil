@@ -14,11 +14,22 @@ const J = (b: unknown, s = 200) =>
     status: s,
     headers: { ...cors, 'content-type': 'application/json' },
   });
-const clean = (v: unknown) =>
-  String(v ?? '')
+const clean = (v: unknown) => {
+  const text = String(v ?? '')
     .replace(/[\r\n\t]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+  if (!text || /^(null|undefined|n\/a|nan)$/i.test(text)) return '';
+  return text
+    .replace(/(^|[\s,;/|-])(?:null|undefined)(?=($|[\s,;/|-]))/gi, '$1')
+    .replace(/\s+,/g, ',')
+    .replace(/,\s*,+/g, ',')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+    .replace(/^[,;\s-]+|[,;\s-]+$/g, '');
+};
+const cleanParts = (...values: unknown[]) =>
+  values.map(clean).filter(Boolean).join(', ');
 async function canAccessCompany(admin: any, userId: string, companyId: string) {
   const { data: roles } = await admin.from('user_roles').select('role').eq('user_id', userId);
   if (roles?.some((r: any) => r.role === 'admin')) return true;
@@ -183,6 +194,37 @@ async function buildNfce(doc: any, xml: string) {
   let y = H - mm(4);
 
   const widthOf = (s: string, size: number, b = false) => (b ? bold : reg).widthOfTextAtSize(s, size);
+  const fit = (value: unknown, width: number, size: number, b = false) => {
+    const font = b ? bold : reg;
+    let out = clean(value) || '-';
+    while (font.widthOfTextAtSize(out, size) > width && out.length > 4) out = out.slice(0, -4) + '...';
+    return out;
+  };
+  const wrapFixed = (value: unknown, width: number, size: number, maxLines = 2, b = false) => {
+    const font = b ? bold : reg;
+    const words = (clean(value) || '-').split(/\s+/);
+    const lines: string[] = [];
+    let line = '';
+    for (const word of words) {
+      const next = line ? `${line} ${word}` : word;
+      if (!line || font.widthOfTextAtSize(next, size) <= width) line = next;
+      else {
+        lines.push(line);
+        line = word;
+        if (lines.length === maxLines - 1) break;
+      }
+    }
+    if (line && lines.length < maxLines) lines.push(line);
+    if (lines.length === maxLines) {
+      const consumed = lines.join(' ').split(/\s+/).length;
+      if (consumed < words.length) {
+        let last = lines[maxLines - 1];
+        while (font.widthOfTextAtSize(last + '...', size) > width && last.length > 4) last = last.slice(0, -1);
+        lines[maxLines - 1] = last.replace(/[.,;:]?$/, '') + '...';
+      }
+    }
+    return lines;
+  };
   const draw = (s: unknown, size = 7, b = false, align: 'left'|'center'|'right' = 'left', x = M, width = usable) => {
     const value = clean(s) || '-';
     const font = b ? bold : reg;
@@ -242,8 +284,7 @@ async function buildNfce(doc: any, xml: string) {
   }
   draw(`CNPJ:${cnpj(tag(emit,'CNPJ') || doc.issuerCnpj)} IE:${tag(emit,'IE') || '-'}`, 6.8, false, 'center');
   wrapped(
-    [tag(endEmit,'xLgr'), tag(endEmit,'nro'), tag(endEmit,'xBairro'), tag(endEmit,'xMun'), tag(endEmit,'UF')]
-      .filter(Boolean).join(', '),
+    cleanParts(tag(endEmit,'xLgr'), tag(endEmit,'nro'), tag(endEmit,'xBairro'), tag(endEmit,'xMun'), tag(endEmit,'UF')),
     6.4,false,'center'
   );
   dash();
@@ -265,25 +306,30 @@ async function buildNfce(doc: any, xml: string) {
 
   for (const det of items) {
     const p = tag(det,'prod');
-    const code = clean(tag(p,'cProd')) || '-';
+    const code = fit(tag(p,'cProd'), 24, 5.6);
     const desc = clean(tag(p,'xProd')) || '-';
-    const qty = clean(tag(p,'qCom')) || '-';
-    const unit = clean(tag(p,'uCom')) || '-';
+    const qtyText = num(tag(p,'qCom'));
+    const unit = fit(tag(p,'uCom'), 16, 5.6);
     const unitValue = num(tag(p,'vUnCom'));
     const totalValue = num(tag(p,'vProd'));
 
-    page.drawText(code,{x:M,y,size:5.8,font:reg,color:black});
-    const descMax=88;
-    let short=desc;
-    while(widthOf(short,5.8)>descMax && short.length>4) short=short.slice(0,-4)+'...';
-    page.drawText(short,{x:M+25,y,size:5.8,font:reg,color:black});
-    const qtyText=num(qty);
-    page.drawText(qtyText,{x:W-M-112,y,size:5.8,font:reg,color:black});
-    page.drawText(unit,{x:W-M-78,y,size:5.8,font:reg,color:black});
-    const uv=unitValue, tv=totalValue;
-    page.drawText(uv,{x:W-M-48-widthOf(uv,5.8),y,size:5.8,font:reg,color:black});
-    page.drawText(tv,{x:W-M-widthOf(tv,5.8),y,size:5.8,font:reg,color:black});
-    y -= 10;
+    const codeX=M;
+    const descX=M+25;
+    const qtyX=W-M-113;
+    const unitX=W-M-82;
+    const unitValueRight=W-M-34;
+    const totalRight=W-M;
+    const descWidth=Math.max(42, qtyX-descX-5);
+    const descLines=wrapFixed(desc,descWidth,5.6,2);
+    const rowHeight=descLines.length > 1 ? 17 : 10;
+
+    page.drawText(code,{x:codeX,y,size:5.6,font:reg,color:black});
+    descLines.forEach((line,index)=>page.drawText(line,{x:descX,y:y-index*7,size:5.6,font:reg,color:black}));
+    page.drawText(qtyText,{x:Math.max(qtyX,unitX-4-widthOf(qtyText,5.6)),y,size:5.6,font:reg,color:black});
+    page.drawText(unit,{x:unitX,y,size:5.6,font:reg,color:black});
+    page.drawText(unitValue,{x:Math.max(unitX+15,unitValueRight-widthOf(unitValue,5.6)),y,size:5.6,font:reg,color:black});
+    page.drawText(totalValue,{x:Math.max(unitValueRight+3,totalRight-widthOf(totalValue,5.6)),y,size:5.6,font:reg,color:black});
+    y -= rowHeight;
   }
 
   dash();
@@ -312,24 +358,30 @@ async function buildNfce(doc: any, xml: string) {
   if (consumerName || (consumerDoc && consumerDoc !== '-')) {
     wrapped(consumerName || consumerDoc,6.5,true,'center');
     if (consumerName && consumerDoc !== '-') draw(consumerDoc,6.2,false,'center');
-    const consumerAddress=[tag(endDest,'xLgr'),tag(endDest,'nro'),tag(endDest,'xMun'),tag(endDest,'UF')].filter(Boolean).join(', ');
+    const consumerAddress=cleanParts(tag(endDest,'xLgr'),tag(endDest,'nro'),tag(endDest,'xMun'),tag(endDest,'UF'));
     if (consumerAddress) wrapped(consumerAddress,5.8,false,'center');
   } else {
     draw('CONSUMIDOR NÃO IDENTIFICADO',7.0,false,'center');
   }
   dash();
 
-  draw(`Nº ${doc.number || tag(ide,'nNF') || '-'} Série ${doc.series || tag(ide,'serie') || '-'}`,11,true,'center');
-  draw(`${dateOnly(doc.issueDate || tag(ide,'dhEmi'))} ${timeOnly(doc.issueDate || tag(ide,'dhEmi'))} - Via Consumidor`,6.3,false,'center');
-  draw(`PROTOCOLO DE AUTORIZAÇÃO ${tag(prot,'nProt') || '-'} ${dateOnly(tag(prot,'dhRecbto'))} ${timeOnly(tag(prot,'dhRecbto'))}`,5.6,false,'center');
+  y -= 3;
+  draw(`Nº ${doc.number || tag(ide,'nNF') || '-'} Série ${doc.series || tag(ide,'serie') || '-'}`,10.2,true,'center');
+  y -= 1;
+  draw(`${dateOnly(doc.issueDate || tag(ide,'dhEmi'))} ${timeOnly(doc.issueDate || tag(ide,'dhEmi'))} - Via Consumidor`,6.1,false,'center');
+  wrapped(`PROTOCOLO DE AUTORIZAÇÃO ${tag(prot,'nProt') || '-'} ${dateOnly(tag(prot,'dhRecbto'))} ${timeOnly(tag(prot,'dhRecbto'))}`,5.4,false,'center');
+  y -= 2;
   dash();
 
   draw('Consulta via leitor de QR Code',6.3,false,'center');
   if (qrv) {
     const qi=await qr(pdf,qrv,4);
-    const qrSize=mm(39);
-    page.drawImage(qi,{x:(W-qrSize)/2,y:y-qrSize-3,width:qrSize,height:qrSize});
-    y-=qrSize+9;
+    const qrSize=mm(36);
+    const qrPad=mm(2);
+    const qrX=(W-qrSize)/2;
+    page.drawRectangle({x:qrX-qrPad,y:y-qrSize-qrPad-3,width:qrSize+qrPad*2,height:qrSize+qrPad*2,color:rgb(1,1,1)});
+    page.drawImage(qi,{x:qrX,y:y-qrSize-3,width:qrSize,height:qrSize});
+    y-=qrSize+12;
   } else {
     draw('QR Code indisponível no XML autorizado',5.8,false,'center');
   }
@@ -361,7 +413,7 @@ async function buildNfse(doc: any, xml: string) {
   const C = R - M;
   const y = (top: number) => H - top;
 
-  const raw = (value: unknown) => String(value ?? '').replace(/\r/g, '').trim();
+  const raw = (value: unknown) => clean(String(value ?? '').replace(/\r/g, ''));
   const val = (value: unknown) => clean(value) || '-';
   const fmtPhone = (value: unknown) => {
     const d = dg(value);
@@ -568,7 +620,9 @@ async function buildNfse(doc: any, xml: string) {
 
   if (key) {
     const qi = await qr(pdf, qrv, 4);
-    page.drawImage(qi, { x:493, y:y(84), width:mm(15.2), height:mm(15.2) });
+    const qrSize=mm(15.2), qrPad=mm(1.2), qrX=493, qrY=y(84);
+    page.drawRectangle({x:qrX-qrPad,y:qrY-qrPad,width:qrSize+qrPad*2,height:qrSize+qrPad*2,color:rgb(1,1,1)});
+    page.drawImage(qi, { x:qrX, y:qrY, width:qrSize, height:qrSize });
   }
   drawWrapped(
     'A autenticidade desta NFS-e pode ser verificada pela leitura deste código QR ou pela consulta da chave de acesso no portal nacional da NFS-e',
@@ -580,11 +634,11 @@ async function buildNfse(doc: any, xml: string) {
   labelValue('CNPJ / CPF / NIF', cpfCnpj(tag(emit,'CNPJ') || tag(emit,'CPF') || doc.issuerCnpj), 156, 129, 132, {boldValue:false});
   labelValue('Indicador Municipal (Inscrição)', tag(emit,'IM') || tag(prest,'IM') || '-', 301, 129, 132);
   labelValue('Telefone', fmtPhone(tag(emit,'fone') || tag(prest,'fone')), 445, 129, 135);
-  labelValue('Nome / Nome Empresarial', tag(emit,'xNome') || doc.issuerName || '-', 11, 151, 272);
+  labelValue('Nome / Nome Empresarial', tag(emit,'xNome') || doc.issuerName || '-', 11, 151, 272, {wrap:true,maxLines:2,valueSize:6.6});
   labelValue('Município / Sigla UF', `${tag(inf,'xLocEmi') || '-'} / ${issueUf}`, 301, 151, 132);
   labelValue('Código IBGE / CEP', `${fmtIbge(issueCityCode)} / ${cep(tag(endE,'CEP'))}`, 445, 151, 135);
-  labelValue('Endereço', [tag(endE,'xLgr'),tag(endE,'nro'),tag(endE,'xCpl'),tag(endE,'xBairro')].filter(Boolean).join(', ') || '-', 11, 173, 275);
-  labelValue('E-mail', tag(emit,'email') || tag(prest,'email') || '-', 301, 173, 279);
+  labelValue('Endereço', cleanParts(tag(endE,'xLgr'),tag(endE,'nro'),tag(endE,'xCpl'),tag(endE,'xBairro')) || '-', 11, 173, 275, {wrap:true,maxLines:2,valueSize:6.4});
+  labelValue('E-mail', tag(emit,'email') || tag(prest,'email') || '-', 301, 173, 279, {wrap:true,maxLines:2,valueSize:6.2});
   labelValue('Simples Nacional na Data de Competência',
     tag(regTrib,'opSimpNac') === '3' ? 'Optante - Microempresa ou Empresa de Pequeno Porte'
       : tag(regTrib,'opSimpNac') === '2' ? 'Optante - Microempreendedor Individual (MEI)'
@@ -602,11 +656,11 @@ async function buildNfse(doc: any, xml: string) {
   labelValue('CNPJ / CPF / NIF', cpfCnpj(tag(toma,'CNPJ') || tag(toma,'CPF') || doc.recipientCnpj), 156, 206, 132);
   labelValue('Indicador Municipal (Inscrição)', tag(toma,'IM') || '-', 301, 206, 132);
   labelValue('Telefone', fmtPhone(tag(toma,'fone')), 445, 206, 135);
-  labelValue('Nome / Nome Empresarial', tag(toma,'xNome') || doc.recipientName || '-', 11, 228, 275);
+  labelValue('Nome / Nome Empresarial', tag(toma,'xNome') || doc.recipientName || '-', 11, 228, 275, {wrap:true,maxLines:2,valueSize:6.6});
   labelValue('Município / Sigla UF', `${tomaCityName} / ${tomaUf}`, 301, 228, 132);
   labelValue('Código IBGE / CEP', `${fmtIbge(tomaCityCode)} / ${cep(tag(endTN,'CEP'))}`, 445, 228, 135);
-  labelValue('Endereço', [tag(endT,'xLgr'),tag(endT,'nro'),tag(endT,'xCpl'),tag(endT,'xBairro')].filter(Boolean).join(', ') || '-', 11, 250, 275);
-  labelValue('E-mail', tag(toma,'email') || '-', 301, 250, 279);
+  labelValue('Endereço', cleanParts(tag(endT,'xLgr'),tag(endT,'nro'),tag(endT,'xCpl'),tag(endT,'xBairro')) || '-', 11, 250, 275, {wrap:true,maxLines:2,valueSize:6.4});
+  labelValue('E-mail', tag(toma,'email') || '-', 301, 250, 279, {wrap:true,maxLines:2,valueSize:6.2});
   hLine(267);
 
   hLine(268.5); drawText('DESTINATÁRIO DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e', M, 269, 5.8, true, C, 'center');
@@ -618,7 +672,7 @@ async function buildNfse(doc: any, xml: string) {
   labelValue('Código de Tributação Nacional/Municipal', `${fmtTrib(tag(cServ,'cTribNac'))} / ${fmtTrib(tag(cServ,'cTribMun'))}`, 156, 289.5, 132);
   labelValue('Código da NBS', fmtNbs(tag(cServ,'cNBS')), 301, 289.5, 132);
   labelValue('Local da Prestação / Sigla UF / País', `${tag(inf,'xLocPrestacao') || '-'} / ${prestUf} / -`, 445, 289.5, 135);
-  drawText(tag(inf,'xTribNac') || '-', 11, 310, 6.1, false, 275);
+  drawWrapped(tag(inf,'xTribNac') || '-', 11, 310, 275, 6.0, 7.0, 2);
   drawText('Descrição do Serviço', 11, 326, 5.8, true, 180);
   drawWrapped(tag(cServ,'xDescServ') || '-', 11, 337, 569, 6.0, 7.15, 13);
   hLine(438);
