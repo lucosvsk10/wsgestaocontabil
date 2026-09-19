@@ -1,8 +1,6 @@
 import { PDFDocument, rgb } from "https://esm.sh/pdf-lib@1.17.1?target=deno";
 import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1?target=deno";
 import qrcode from "https://esm.sh/qrcode-generator@1.4.4?target=deno";
-import { createFont } from "npm:fonteditor-core@2.3.2";
-import { inflate } from "npm:pako@2.1.0";
 import type { DanfseData } from "./types.ts";
 import { DANFSE_OFFICIAL_TEMPLATE } from "./danfse-official-template.ts";
 
@@ -23,12 +21,52 @@ const fontBase64=(family:string)=>{
   if(end<0) throw new Error("Fonte oficial "+family+" incompleta no template");
   return DANFSE_OFFICIAL_TEMPLATE.slice(from,end);
 };
-const woffToTtf=(base64:string)=>{
-  const bytes=b64bytes(base64);
-  const buffer=bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength);
-  const font=createFont(buffer,{type:"woff",hinting:true,kerning:true,inflate});
-  const out=font.write({type:"ttf",hinting:true,kerning:true});
-  return new Uint8Array(out);
+const readU16=(b:Uint8Array,o:number)=>(b[o]<<8)|b[o+1];
+const readU32=(b:Uint8Array,o:number)=>((b[o]*0x1000000)+(b[o+1]<<16)+(b[o+2]<<8)+b[o+3])>>>0;
+const writeU16=(b:Uint8Array,o:number,v:number)=>{b[o]=(v>>>8)&255;b[o+1]=v&255;};
+const writeU32=(b:Uint8Array,o:number,v:number)=>{b[o]=(v>>>24)&255;b[o+1]=(v>>>16)&255;b[o+2]=(v>>>8)&255;b[o+3]=v&255;};
+const align4=(n:number)=>(n+3)&~3;
+const inflateDeflate=async(bytes:Uint8Array)=>{
+  const ds=new DecompressionStream("deflate");
+  const stream=new Blob([bytes]).stream().pipeThrough(ds);
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+};
+const woffToTtf=async(base64:string)=>{
+  const woff=b64bytes(base64);
+  if(String.fromCharCode(...woff.subarray(0,4))!=="wOFF") throw new Error("Fonte WOFF oficial inválida");
+  const flavor=readU32(woff,4);
+  const numTables=readU16(woff,12);
+  const records:{tag:Uint8Array,offset:number,compLength:number,origLength:number,checksum:number,data?:Uint8Array}[]=[];
+  for(let i=0;i<numTables;i++){
+    const o=44+i*20;
+    records.push({
+      tag:woff.slice(o,o+4),
+      offset:readU32(woff,o+4),
+      compLength:readU32(woff,o+8),
+      origLength:readU32(woff,o+12),
+      checksum:readU32(woff,o+16)
+    });
+  }
+  for(const r of records){
+    const raw=woff.slice(r.offset,r.offset+r.compLength);
+    r.data=r.compLength<r.origLength?await inflateDeflate(raw):raw;
+    if(r.data.length!==r.origLength) throw new Error("Falha ao expandir tabela da fonte oficial");
+  }
+  const maxPow=2**Math.floor(Math.log2(Math.max(1,numTables)));
+  const searchRange=maxPow*16;
+  const entrySelector=Math.floor(Math.log2(maxPow));
+  const rangeShift=numTables*16-searchRange;
+  let dataOffset=12+numTables*16;
+  const tableOffsets:number[]=[];
+  for(const r of records){dataOffset=align4(dataOffset);tableOffsets.push(dataOffset);dataOffset+=align4(r.origLength);}
+  const out=new Uint8Array(dataOffset);
+  writeU32(out,0,flavor);writeU16(out,4,numTables);writeU16(out,6,searchRange);writeU16(out,8,entrySelector);writeU16(out,10,rangeShift);
+  records.forEach((r,i)=>{
+    const o=12+i*16;
+    out.set(r.tag,o);writeU32(out,o+4,r.checksum);writeU32(out,o+8,tableOffsets[i]);writeU32(out,o+12,r.origLength);
+    out.set(r.data!,tableOffsets[i]);
+  });
+  return out;
 };
 const logoBase64=()=>{
   const m=DANFSE_OFFICIAL_TEMPLATE.match(/<img class="im" src="data:image\/png;base64,([^"]+)" style="z-index:127;[^"]+"/);
@@ -117,8 +155,8 @@ function drawQr(page:any,value:string){
 export async function buildDanfseFromOfficialTemplate(d:DanfseData){
   const pdf=await PDFDocument.create(); pdf.registerFontkit(fontkit as any);
   const page=pdf.addPage([595,842]);
-  const f0=await pdf.embedFont(woffToTtf(fontBase64("f0")),{subset:false});
-  const f1=await pdf.embedFont(woffToTtf(fontBase64("f1")),{subset:false});
+  const f0=await pdf.embedFont(await woffToTtf(fontBase64("f0")),{subset:false});
+  const f1=await pdf.embedFont(await woffToTtf(fontBase64("f1")),{subset:false});
 
   for(const v of VECTORS){
     page.drawSvgPath(v.d,{
