@@ -1,37 +1,35 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.49.0";
+import PdfPrinterImport from "npm:pdfmake@0.2.20/src/printer.js";
+import { Buffer } from "node:buffer";
 import { parseDanfse } from "./xml-parser.ts";
 import { buildDanfseDefinition } from "./pdf-definition.ts";
 
+const PdfPrinter:any=(PdfPrinterImport as any).default??PdfPrinterImport;
+const fonts={
+  Helvetica:{
+    normal:"Helvetica",
+    bold:"Helvetica-Bold",
+    italics:"Helvetica-Oblique",
+    bolditalics:"Helvetica-BoldOblique"
+  }
+};
 const J=(body:any,status=200)=>new Response(JSON.stringify(body),{
   status,
   headers:{"content-type":"application/json","cache-control":"no-store"}
 });
 
-async function loadPdfMake(){
-  const mod:any=await import("npm:pdfmake@0.2.20/build/pdfmake.js");
-  const fontsMod:any=await import("npm:pdfmake@0.2.20/build/vfs_fonts.js");
-  const pdfMake:any=mod?.default??mod;
-  const pdfFonts:any=fontsMod?.default??fontsMod;
-  const vfs=pdfFonts?.pdfMake?.vfs??pdfFonts;
-  if(typeof pdfMake?.addVirtualFileSystem==="function") pdfMake.addVirtualFileSystem(vfs);
-  else pdfMake.vfs=vfs;
-  pdfMake.fonts={
-    Roboto:{
-      normal:"Roboto-Regular.ttf",
-      bold:"Roboto-Medium.ttf",
-      italics:"Roboto-Italic.ttf",
-      bolditalics:"Roboto-MediumItalic.ttf"
-    }
-  };
-  return pdfMake;
+async function makePdfBase64(definition:any){
+  const printer=new PdfPrinter(fonts);
+  const doc=printer.createPdfKitDocument(definition);
+  const chunks:any[]=[];
+  return await new Promise<string>((resolve,reject)=>{
+    doc.on("data",(chunk:any)=>chunks.push(chunk));
+    doc.on("end",()=>resolve(Buffer.concat(chunks).toString("base64")));
+    doc.on("error",(error:any)=>reject(error));
+    doc.end();
+  });
 }
-
-const pdfBase64=async(pdfMake:any,def:any)=>await new Promise<string>((resolve,reject)=>{
-  try{
-    pdfMake.createPdf(def).getBase64((value:string)=>resolve(value));
-  }catch(e){ reject(e); }
-});
 
 Deno.serve(async(req)=>{
   try{
@@ -46,14 +44,12 @@ Deno.serve(async(req)=>{
     const xml=String(doc?.xml??"");
     if(!xml) return J({error:"XML ausente"},400);
 
-    const pdfMake=await loadPdfMake();
     const data=parseDanfse(xml,doc);
     const definition=buildDanfseDefinition(data);
-    const base64=await pdfBase64(pdfMake,definition);
-
+    const base64=await makePdfBase64(definition);
     return J({
       ok:true,
-      engine:"pdfmake",
+      engine:"pdfmake-server",
       filename:"danfse-pdfmake-"+(doc.accessKey||doc.number||"documento")+".pdf",
       pdf_base64:base64,
       bytes_estimate:Math.floor(base64.length*0.75),
