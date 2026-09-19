@@ -1,7 +1,7 @@
 import { PDFDocument, StandardFonts, rgb } from "https://esm.sh/pdf-lib@1.17.1?target=deno";
 import qrcode from "https://esm.sh/qrcode-generator@1.4.4?target=deno";
 import type { DanfseData } from "./types.ts";
-import { NFS_LOGO_JPEG_BASE64 } from "./logo-data.ts";
+import { NFS_LOGO_PNG_BASE64 } from "./logo-data.ts";
 
 const W=595,H=842;
 const BLACK=rgb(.03,.03,.03), MID=rgb(.45,.45,.45), GRAY=rgb(.95,.95,.95), WHITE=rgb(1,1,1);
@@ -70,7 +70,7 @@ export async function buildDanfsePdf(d:DanfseData){
   const page=pdf.addPage([W,H]);
   const normal=await pdf.embedFont(StandardFonts.Helvetica);
   const bold=await pdf.embedFont(StandardFonts.HelveticaBold);
-  const logo=await pdf.embedJpg(b64bytes(NFS_LOGO_JPEG_BASE64));
+  const logo=await pdf.embedPng(b64bytes(NFS_LOGO_PNG_BASE64));
 
   // Moldura e faixas exatamente nas coordenadas do DANFSe oficial de referência.
   rect(page,5.5,5,584,832,{borderWidth:1,borderColor:BLACK});
