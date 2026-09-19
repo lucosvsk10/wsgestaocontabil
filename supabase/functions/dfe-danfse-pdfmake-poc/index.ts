@@ -7,6 +7,12 @@ import { buildDanfseDefinition } from "./pdf-definition.ts";
 
 (pdfMake as any).addVirtualFileSystem(pdfFonts as any);
 (pdfMake as any).fonts={
+  Helvetica:{
+    normal:"Helvetica",
+    bold:"Helvetica-Bold",
+    italics:"Helvetica-Oblique",
+    bolditalics:"Helvetica-BoldOblique"
+  },
   Roboto:{
     normal:"Roboto-Regular.ttf",
     bold:"Roboto-Medium.ttf",
