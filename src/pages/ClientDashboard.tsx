@@ -1,22 +1,18 @@
 import { useState } from "react";
 import { useClientDashboardLogic } from "@/components/client/dashboard/ClientDashboardContainer";
 import { ClientDashboardLayout } from "@/components/client/dashboard/ClientDashboardLayout";
+import { WelcomeHeader } from "@/components/client/dashboard/WelcomeHeader";
 import { SimulationsSection } from "@/components/client/sections/SimulationsSection";
 import { AnnouncementsSection } from "@/components/client/sections/AnnouncementsSection";
 import { FiscalCalendarSection } from "@/components/client/sections/FiscalCalendarSection";
 import { CompanyDataSection } from "@/components/client/sections/CompanyDataSection";
 import { DocumentTable } from "@/components/client/DocumentTable";
 import { FirstAccessPasswordModal } from "@/components/client/FirstAccessPasswordModal";
-import { ClientOverviewSection } from "@/components/client/sections/ClientOverviewSection";
-import { ClientPortalFooter } from "@/components/client/ClientPortalFooter";
-import { ClientCookieConsent } from "@/components/client/ClientCookieConsent";
-import "@/styles/client-portal-redesign.css";
 import "@/styles/client-visual-round.css";
-import "@/styles/client-portal-navy.css";
 
 const ClientDashboard = () => {
   const { user, documents, commonCategories, fetchUserDocuments } = useClientDashboardLogic();
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("documents");
   const refreshDocuments = () => { if (user?.id) fetchUserDocuments(user.id); };
   const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString("pt-BR");
   const isDocumentExpired = (expiresAt: string | null) => Boolean(expiresAt && new Date(expiresAt) < new Date());
@@ -31,7 +27,6 @@ const ClientDashboard = () => {
   const documentView = <DocumentTable documents={documents} formatDate={formatDate} isDocumentExpired={isDocumentExpired} daysUntilExpiration={daysUntilExpiration} refreshDocuments={refreshDocuments} categories={commonCategories} />;
 
   const renderContent = () => {
-    if (activeTab === "overview") return <ClientOverviewSection documents={documents} categories={commonCategories} setActiveTab={setActiveTab} />;
     if (activeTab === "simulations") return <SimulationsSection />;
     if (activeTab === "announcements") return <AnnouncementsSection />;
     if (activeTab === "calendar") return <FiscalCalendarSection />;
@@ -42,9 +37,8 @@ const ClientDashboard = () => {
   return <div className="client-stage5 min-h-screen">
     <FirstAccessPasswordModal />
     <ClientDashboardLayout activeTab={activeTab} setActiveTab={setActiveTab}>
+      <WelcomeHeader />
       {renderContent()}
-      <ClientPortalFooter />
-      <ClientCookieConsent />
     </ClientDashboardLayout>
   </div>;
 };

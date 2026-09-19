@@ -1,4 +1,5 @@
-import { Home, FileText, MessageSquareText, CalendarDays, Wrench, Building2, LucideIcon } from "lucide-react";
+
+import { FileText, Calculator, Bell, Calendar, Building2, LucideIcon } from "lucide-react";
 
 interface SidebarItem {
   icon: LucideIcon;
@@ -14,30 +15,52 @@ interface UseClientSidebarNavigationProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export const useClientSidebarNavigation = ({
-  activeTab,
-  setActiveTab,
-  isMobile,
-  onOpenChange
+export const useClientSidebarNavigation = ({ 
+  activeTab, 
+  setActiveTab, 
+  isMobile, 
+  onOpenChange 
 }: UseClientSidebarNavigationProps) => {
-  const items = [
-    { icon: Home, label: "Início", id: "overview" },
-    { icon: FileText, label: "Documentos", id: "documents" },
-    { icon: CalendarDays, label: "Obrigações", id: "calendar" },
-    { icon: MessageSquareText, label: "Comunicados", id: "announcements" },
-    { icon: Wrench, label: "Ferramentas", id: "simulations" },
-    { icon: Building2, label: "Minha empresa", id: "company" },
+  const sidebarItems: SidebarItem[] = [
+    {
+      icon: FileText,
+      label: "Documentos",
+      id: "documents",
+      active: activeTab === "documents"
+    },
+    {
+      icon: Calculator,
+      label: "Simulações",
+      id: "simulations",
+      active: activeTab === "simulations"
+    },
+    {
+      icon: Bell,
+      label: "Comunicados",
+      id: "announcements",
+      active: activeTab === "announcements"
+    },
+    {
+      icon: Calendar,
+      label: "Agenda",
+      id: "calendar",
+      active: activeTab === "calendar"
+    },
+    {
+      icon: Building2,
+      label: "Empresa",
+      id: "company",
+      active: activeTab === "company"
+    }
   ];
-
-  const sidebarItems: SidebarItem[] = items.map(item => ({
-    ...item,
-    active: activeTab === item.id,
-  }));
 
   const handleItemClick = (itemId: string) => {
     setActiveTab(itemId);
     if (isMobile) onOpenChange(false);
   };
 
-  return { sidebarItems, handleItemClick };
+  return {
+    sidebarItems,
+    handleItemClick
+  };
 };
