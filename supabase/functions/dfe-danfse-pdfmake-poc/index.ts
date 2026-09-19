@@ -53,6 +53,18 @@ const bytesToBase64=(bytes:Uint8Array)=>{ let s=""; const chunk=0x8000; for(let 
 Deno.serve(async(req)=>{
   if(req.method==="OPTIONS") return new Response("ok",{headers:cors});
   try{
+    const u=new URL(req.url);
+    if(req.method==="GET" && u.searchParams.get("qa")==="ws-danfse-parity-4f8f0c7c2b9a"){
+      const admin=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      const {data:row,error}=await admin.from("fiscal_dfe_documents")
+        .select("company_id,access_key,note_number,series,issue_date,value,issuer_cnpj,issuer_name,recipient_cnpj,xml,status_text")
+        .eq("access_key","27003002225239639000155000000000151326094738177422").maybeSingle();
+      if(error||!row) return new Response("QA document not found",{status:404});
+      const doc={companyId:row.company_id,accessKey:row.access_key,number:row.note_number,series:row.series,issueDate:row.issue_date,value:row.value,issuerCnpj:row.issuer_cnpj,issuerName:row.issuer_name,recipientCnpj:row.recipient_cnpj,xml:row.xml,statusText:row.status_text};
+      const data=await parseDanfse(String(row.xml||""),doc);
+      const bytes=await buildDanfsePdf(data);
+      return new Response(bytes,{status:200,headers:{"content-type":"application/pdf","cache-control":"no-store"}});
+    }
     if(req.method!=="POST") return J({error:"Method not allowed"},405);
 
     const admin=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
