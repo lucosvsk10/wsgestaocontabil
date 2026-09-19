@@ -13,9 +13,13 @@ const b64bytes=(s:string)=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 const decode=(s:string)=>s.replace(/&nbsp;/g," ").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'");
 const hex=(v:string)=>{const h=v.replace("#","");return rgb(parseInt(h.slice(0,2),16)/255,parseInt(h.slice(2,4),16)/255,parseInt(h.slice(4,6),16)/255);};
 const fontBase64=(family:string)=>{
-  const m=DANFSE_OFFICIAL_TEMPLATE.match(new RegExp('@font-face\\\\{font-family:"'+family+'";src:url\\\\(data:font/woff;base64,([^\\\\)]+)\\\\)'));
-  if(!m) throw new Error("Fonte oficial "+family+" não encontrada no template");
-  return m[1];
+  const marker='@font-face{font-family:"'+family+'";src:url(data:font/woff;base64,';
+  const start=DANFSE_OFFICIAL_TEMPLATE.indexOf(marker);
+  if(start<0) throw new Error("Fonte oficial "+family+" não encontrada no template");
+  const from=start+marker.length;
+  const end=DANFSE_OFFICIAL_TEMPLATE.indexOf(")",from);
+  if(end<0) throw new Error("Fonte oficial "+family+" incompleta no template");
+  return DANFSE_OFFICIAL_TEMPLATE.slice(from,end);
 };
 const logoBase64=()=>{
   const m=DANFSE_OFFICIAL_TEMPLATE.match(/<img class="im" src="data:image\/png;base64,([^"]+)" style="z-index:127;[^"]+"/);
