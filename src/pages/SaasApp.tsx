@@ -142,6 +142,7 @@ export default function SaasApp() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [organizationChoices, setOrganizationChoices] = useState<any[]>([]);
   const [organizationLoading, setOrganizationLoading] = useState(true);
+  const [organizationError, setOrganizationError] = useState('');
   const [reusableEmission, setReusableEmission] = useState<any>(null);
   const [pendingCadastroCreate, setPendingCadastroCreate] = useState<CadastroSection | null>(null);
   const organizationRequest = useRef(0);
@@ -239,6 +240,7 @@ export default function SaasApp() {
     if (!user) return;
     const requestId = ++organizationRequest.current;
     setOrganizationLoading(true);
+    setOrganizationError('');
     try {
       setEmissions([]);
       setProfile(null);
@@ -331,6 +333,14 @@ export default function SaasApp() {
         return;
       }
       await hydrateOrganization(org, requestId);
+    } catch (error: any) {
+      console.error('[AdminIssuer] Falha ao carregar emitente:', error);
+      if (requestId === organizationRequest.current) {
+        setOrganization(null);
+        setOrganizationError(
+          error?.message || 'Não foi possível preparar esta empresa para emissão agora.',
+        );
+      }
     } finally {
       if (requestId === organizationRequest.current) setOrganizationLoading(false);
     }
@@ -398,7 +408,39 @@ export default function SaasApp() {
   let content: any;
   if (organizationLoading) return <AppLoadingScreen mode="light" />;
 
-  if (active === 'Início')
+  if (fromAdmin && !organization) {
+    content = (
+      <section className="mx-auto max-w-4xl rounded-xl border border-[#cfd6de] bg-white p-8 shadow-sm">
+        <p className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#697586]">
+          Emissão pelo escritório
+        </p>
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[#172033]">
+          Selecione a empresa emitente
+        </h1>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-[#667085]">
+          No acesso administrativo, a WS não é o emitente. Escolha no topo um cliente do escritório
+          com certificado A1 válido. Todos os dados, numeração, cadastros e histórico ficarão
+          isolados na empresa selecionada.
+        </p>
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <span className="rounded-full border border-[#d6dce3] bg-[#f5f7f9] px-3 py-1.5 text-xs font-medium text-[#475467]">
+            {adminIssuerCompanies.length} empresa{adminIssuerCompanies.length === 1 ? '' : 's'} com A1 válido
+          </span>
+          <a
+            href="/admin/clientes"
+            className="text-xs font-semibold text-[#344054] underline decoration-[#98a2b3] underline-offset-4"
+          >
+            Gerenciar clientes e certificados
+          </a>
+        </div>
+        {organizationError && (
+          <p className="mt-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs font-medium text-red-700">
+            {organizationError}
+          </p>
+        )}
+      </section>
+    );
+  } else if (active === 'Início')
     content = (
       <SaasDashboard
         organizationId={organization?.id || null}
