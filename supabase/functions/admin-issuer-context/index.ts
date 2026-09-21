@@ -210,17 +210,32 @@ async function selectCompany(admin: any, user: any, officeCompanyId: string) {
     organization = updated.data;
   }
 
-  const membership = await admin.from("organization_members").upsert(
-    {
+  const { data: existingMembership, error: membershipLookupError } = await admin
+    .from("organization_members")
+    .select("id,role,status")
+    .eq("organization_id", organization.id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (membershipLookupError) throw membershipLookupError;
+
+  if (!existingMembership) {
+    const insertedMembership = await admin.from("organization_members").insert({
       organization_id: organization.id,
       user_id: user.id,
       role: "admin",
       status: "active",
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "organization_id,user_id" },
-  );
-  if (membership.error) throw membership.error;
+    });
+    if (insertedMembership.error) throw insertedMembership.error;
+  } else if (existingMembership.status !== "active") {
+    const updatedMembership = await admin
+      .from("organization_members")
+      .update({
+        status: "active",
+        role: existingMembership.role || "admin",
+      })
+      .eq("id", existingMembership.id);
+    if (updatedMembership.error) throw updatedMembership.error;
+  }
 
   const { data: existingProfile, error: profileError } = await admin
     .from("saas_company_fiscal_profiles")
