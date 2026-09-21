@@ -1,5 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
+import { Buffer } from "node:buffer";
+import { lerCertificado } from "npm:nfse-node@0.3.2/certificado";
 
 const E=new TextEncoder(),D=new TextDecoder(),B=(v:string)=>Uint8Array.from(atob(v),c=>c.charCodeAt(0));
 const J=(b:unknown,s=200)=>new Response(JSON.stringify(b),{status:s,headers:{"content-type":"application/json","cache-control":"no-store"}});
@@ -30,6 +32,8 @@ Deno.serve(async req=>{try{
   ]);
   if(cerror||!cert)throw Error("certificate_missing");const gatewayToken=String(g?.token||"");if(!gatewayToken)throw Error("gateway_token_missing");
   const pfx=await dec(cert.certificate_ciphertext,cert.certificate_iv),pass=await dec(cert.password_ciphertext,cert.password_iv);
+  const parsedCertificate=lerCertificado(Buffer.from(pfx,"base64"),pass);
+  const gatewayCertificate={certificate_pem:parsedCertificate.certificadoPem,private_key_pem:parsedCertificate.chavePrivadaPem,chain_pem:parsedCertificate.cadeiaPem||[]};
   const now=new Date(),maxStart=new Date(now.getTime()-99*86400000),configured=/^\d{4}-\d{2}-\d{2}$/.test(String(minHistory||""))?new Date(String(minHistory)+"T00:00:00-03:00"):maxStart;
   const initialStart=configured>maxStart?configured:maxStart;
   const lastDone=state?.last_completed_at?new Date(new Date(state.last_completed_at).getTime()-24*3600000):initialStart;
@@ -38,7 +42,7 @@ Deno.serve(async req=>{try{
   const keys=new Set<string>(),segments:any[]=[];let cursor=new Date(start);
   while(cursor<end){
     const segmentEnd=new Date(Math.min(end.getTime(),cursor.getTime()+14*86400000));
-    const text=await gateway(gatewayToken,{action:"sp-nfce-list",environment:c.ambiente_padrao==="homologacao"?"homologation":"production",certificate_base64:pfx,certificate_password:pass,start:dtLocal(cursor),end:dtLocal(segmentEnd)});
+    const text=await gateway(gatewayToken,{action:"sp-nfce-list",environment:c.ambiente_padrao==="homologacao"?"homologation":"production",...gatewayCertificate,start:dtLocal(cursor),end:dtLocal(segmentEnd)});
     const cStat=tag(text,"cStat"),xMotivo=tag(text,"xMotivo");for(const m of text.matchAll(/<(?:\w+:)?chNFCe>(\d{44})<\/(?:\w+:)?chNFCe>/g))keys.add(m[1]);
     segments.push({start:dtLocal(cursor),end:dtLocal(segmentEnd),cStat,xMotivo,keys:keys.size});
     if(cStat==="656")throw Error("SEFAZ_SP_656");
@@ -48,7 +52,7 @@ Deno.serve(async req=>{try{
   for(let i=0;i<all.length;i+=300){const {data:rows}=await admin.from("fiscal_sales_documents").select("access_key").eq("company_id",companyId).in("access_key",all.slice(i,i+300));for(const r of rows||[])existing.add(dg(r.access_key))}
   const missing=all.filter(k=>!existing.has(k));let saved=0,failed=0;const maxDownload=Math.min(120,Math.max(1,Number(b.max_download||60)));
   for(const key of missing.slice(0,maxDownload)){try{
-    const raw=await gateway(gatewayToken,{action:"sp-nfce-download",environment:c.ambiente_padrao==="homologacao"?"homologation":"production",certificate_base64:pfx,certificate_password:pass,access_key:key});
+    const raw=await gateway(gatewayToken,{action:"sp-nfce-download",environment:c.ambiente_padrao==="homologacao"?"homologation":"production",...gatewayCertificate,access_key:key});
     const xml=extractProc(raw);if(!xml)throw Error("xml_missing:"+tag(raw,"cStat")+":"+tag(raw,"xMotivo"));
     const issue=tag(xml,"dhEmi")||tag(xml,"dEmi"),total=Number(tag(xml,"vNF")||0),number=tag(xml,"nNF")||String(Number(key.slice(25,34))),series=tag(xml,"serie")||String(Number(key.slice(22,25))),status=tag(xml,"xMotivo")||"Autorizado";
     const nowIso=new Date().toISOString();
