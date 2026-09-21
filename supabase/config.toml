@@ -228,7 +228,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.fiscal-state-credential]
-verify_jwt = true
+verify_jwt = false
 
 [functions.fiscal-sales-reconcile]
 verify_jwt = false
