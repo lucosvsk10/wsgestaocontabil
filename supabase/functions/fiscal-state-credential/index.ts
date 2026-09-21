@@ -121,10 +121,12 @@ async function queueRecovery(admin:any,fiscalId:string){
   }).eq("company_id",fiscalId).in("document_type",["sale_nfe55","sale_nfce65"]).eq("status","blocked");
 }
 async function audit(admin:any,userId:string,fiscalId:string,action:string,status:string){
-  await admin.from("saas_audit_logs").insert({
-    organization_id:null,actor_user_id:userId,action,resource_type:"fiscal_state_credential",resource_id:fiscalId,is_sensitive:true,
-    metadata:{uf:"AL",verification_status:status}
-  }).catch(()=>undefined);
+  try{
+    await admin.from("saas_audit_logs").insert({
+      organization_id:null,actor_user_id:userId,action,resource_type:"fiscal_state_credential",resource_id:fiscalId,is_sensitive:true,
+      metadata:{uf:"AL",verification_status:status}
+    });
+  }catch{}
 }
 
 Deno.serve(async req=>{
