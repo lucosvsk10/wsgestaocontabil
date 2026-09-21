@@ -168,7 +168,7 @@ Deno.serve(async req=>{
         .select("id,company_id,uf,username_ciphertext,username_iv,password_ciphertext,password_iv,last_verified_at")
         .eq("uf","AL").eq("is_active",true)
         .order("last_verified_at",{ascending:true,nullsFirst:true})
-        .limit(5);
+        .limit(6);
       if(error)throw error;
       const results=await Promise.all((rows||[]).map(async(cred:any)=>{
         try{

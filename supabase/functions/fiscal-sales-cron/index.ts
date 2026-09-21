@@ -173,6 +173,42 @@ Deno.serve(async req => {
           continue;
         }
 
+        if (isExtractor) {
+          const { data: stateCredential, error: credentialError } = await admin
+            .from("fiscal_state_credentials")
+            .select("id,last_verification_status,last_verified_at")
+            .eq("company_id", company.id)
+            .eq("uf", "AL")
+            .eq("is_active", true)
+            .maybeSingle();
+          if (credentialError) throw credentialError;
+
+          if (!stateCredential || stateCredential.last_verification_status !== "valid") {
+            const verificationStatus = stateCredential?.last_verification_status || "not_configured";
+            const reason =
+              verificationStatus === "invalid_credentials"
+                ? "Usuário ou senha inválidos no portal estadual."
+                : verificationStatus === "valid_without_report_permission"
+                  ? "Login estadual válido, mas sem permissão suficiente para o relatório fiscal."
+                  : verificationStatus === "portal_unavailable"
+                    ? "A última validação do portal estadual não foi concluída."
+                    : "Credencial estadual SEFAZ/AL ainda não configurada e validada.";
+            await admin.from("fiscal_sales_sync_state").upsert({
+              company_id: company.id,
+              status: "waiting_state_credentials",
+              last_error: reason,
+              next_scheduled_at: null,
+              updated_at: now.toISOString(),
+            }, { onConflict: "company_id" });
+            out.push({
+              company_id: company.id,
+              status: "waiting_state_credentials",
+              verification_status: verificationStatus,
+            });
+            continue;
+          }
+        }
+
         await admin.from("fiscal_sales_sync_state").upsert({
           company_id: company.id,
           status: "running",
