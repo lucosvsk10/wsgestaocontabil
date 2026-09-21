@@ -224,6 +224,9 @@ verify_jwt = false
 [functions.fiscal-sales-cron]
 verify_jwt = false
 
+[functions.fiscal-sales-sp-sync]
+verify_jwt = false
+
 [functions.fiscal-sales-reconcile]
 verify_jwt = false
 
