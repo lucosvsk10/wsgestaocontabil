@@ -55,8 +55,7 @@ Deno.serve(async req => {
       admin
         .from("fiscal_companies")
         .select("id,status,uf,fiscal_settings")
-        .eq("status", "ativa")
-        .eq("uf", "AL"),
+        .eq("status", "ativa"),
       admin
         .from("extractor_companies")
         .select("fiscal_company_id")
@@ -127,11 +126,49 @@ Deno.serve(async req => {
           await admin.from("fiscal_sales_sync_state").upsert({
             company_id: company.id,
             status: "waiting_certificate",
-            last_error: null,
+            last_error: "Certificado A1 ativo não encontrado",
             next_scheduled_at: next.toISOString(),
             updated_at: now.toISOString(),
           });
           out.push({ company_id: company.id, status: "waiting_certificate" });
+          continue;
+        }
+
+        const companyUf = String(company.uf || "").toUpperCase();
+
+        if (companyUf === "SP") {
+          await admin.from("fiscal_sales_sync_state").upsert({
+            company_id: company.id,
+            status: "running",
+            last_started_at: now.toISOString(),
+            last_error: null,
+            next_scheduled_at: next.toISOString(),
+            updated_at: now.toISOString(),
+          });
+          const spResponse = await fetch(`${base}/functions/v1/fiscal-sales-sp-sync`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({ company_id: company.id }),
+            signal: AbortSignal.timeout(115000),
+          });
+          const spSync = await spResponse.json().catch(() => ({}));
+          if (!spResponse.ok) {
+            throw new Error(spSync?.error || "Falha na sincronização oficial NFC-e/SP");
+          }
+          out.push({ company_id: company.id, status: "ok", source: "sefaz_sp_sae_nfce", sync: spSync });
+          continue;
+        }
+
+        if (companyUf !== "AL") {
+          const reason = `Conector automático de vendas ainda não disponível para UF ${companyUf || "não informada"}`;
+          await admin.from("fiscal_sales_sync_state").upsert({
+            company_id: company.id,
+            status: "unsupported_source",
+            last_error: reason,
+            next_scheduled_at: null,
+            updated_at: now.toISOString(),
+          });
+          out.push({ company_id: company.id, status: "unsupported_source", reason });
           continue;
         }
 
@@ -252,8 +289,8 @@ Deno.serve(async req => {
         ].filter((value: number) => value > 0);
         const priorLatest = Math.max(0, ...priorNumbers);
         const oldLatest = Number(state?.latest_number || 0);
-        const baseLatest = Math.max(oldLatest, maxSaved, maxKnownDfe, priorLatest);
-        const scopeStartNumber = isExtractor
+        let baseLatest = Math.max(oldLatest, maxSaved, maxKnownDfe, priorLatest);
+        let scopeStartNumber = isExtractor
           ? priorLatest > 0
             ? priorLatest + 1
             : Number.isFinite(minKnownWindow)
@@ -261,26 +298,51 @@ Deno.serve(async req => {
               : 0
           : 1;
 
+        let bootstrap: any = null;
+        if (!baseLatest || (isExtractor && !scopeStartNumber)) {
+          try {
+            const bootstrapResponse = await fetch(`${base}/functions/v1/fiscal-sales-discover-latest`, {
+              method: "POST",
+              headers,
+              body: JSON.stringify({
+                company_id: company.id,
+                base_number: 0,
+                bootstrap_start: 1,
+                lookahead: 12,
+              }),
+              signal: AbortSignal.timeout(60000),
+            });
+            bootstrap = await bootstrapResponse.json().catch(() => ({}));
+            if (bootstrapResponse.ok && !bootstrap?.cooldown && Number(bootstrap?.latest || 0) > 0) {
+              baseLatest = Number(bootstrap.latest);
+              scopeStartNumber = 1;
+            }
+          } catch (err) {
+            bootstrap = { error: err instanceof Error ? err.message : String(err) };
+          }
+        }
+
         if (!baseLatest || (isExtractor && !scopeStartNumber)) {
           await admin
             .from("fiscal_sales_sync_state")
             .upsert({
               company_id: company.id,
               status: "waiting_sales_reference",
-              last_error: null,
-              next_scheduled_at: next.toISOString(),
+              last_error: bootstrap?.error || "Ainda não foi encontrada uma referência inicial de NFC-e. O bootstrap automático continuará tentando.",
+              next_scheduled_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
               updated_at: new Date().toISOString(),
             });
           out.push({
             company_id: company.id,
             status: "waiting_sales_reference",
-            reason: isExtractor ? "no_reference_inside_standard_window" : "no_known_sale_reference",
+            reason: isExtractor ? "automatic_bootstrap_pending" : "no_known_sale_reference",
+            bootstrap,
           });
           continue;
         }
 
         let discovered = baseLatest;
-        let discovery: any = null;
+        let discovery: any = bootstrap;
         try {
           const response = await fetch(`${base}/functions/v1/fiscal-sales-discover-latest`, {
             method: "POST",
