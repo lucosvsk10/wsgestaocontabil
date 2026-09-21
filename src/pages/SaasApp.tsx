@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCompanySelection } from '@/contexts/CompanySelectionContext';
 import SaasCadastros, { CadastroSection } from '@/components/saas/SaasCadastros';
 import SaasEmission from '@/components/saas/SaasEmission';
 import SaasCompanyProfile from '@/components/saas/SaasCompanyProfile';
@@ -125,6 +126,7 @@ const emissionTypeLabel = (emission: any) =>
 
 export default function SaasApp() {
   const { user, isAdmin } = useAuth();
+  const { companies: officeCompanies, loading: officeCompaniesLoading } = useCompanySelection();
   const fromAdmin =
     isAdmin && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('source') === 'admin';
   const [active, setActive] = useState('Início');
@@ -140,11 +142,30 @@ export default function SaasApp() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [organizationChoices, setOrganizationChoices] = useState<any[]>([]);
   const [organizationLoading, setOrganizationLoading] = useState(true);
+  const [organizationError, setOrganizationError] = useState('');
   const [reusableEmission, setReusableEmission] = useState<any>(null);
   const [pendingCadastroCreate, setPendingCadastroCreate] = useState<CadastroSection | null>(null);
   const organizationRequest = useRef(0);
   const drafts = useEmissionDrafts(organization?.id || null);
   const [notesView, setNotesView] = useState<'issued' | 'drafts'>('issued');
+  const adminIssuerCompanies = fromAdmin
+    ? officeCompanies
+        .filter(
+          company =>
+            String(company.cnpj || company.document_number || '').replace(/\D/g, '').length === 14 &&
+            Boolean(company.fiscal_company_id) &&
+            company.certificate_status === 'valid',
+        )
+        .map(company => ({
+          id: company.id,
+          office_company_id: company.id,
+          name: company.trade_name || company.company_name,
+          legal_name: company.company_name,
+          cnpj: company.cnpj || company.document_number || '',
+          fiscal_company_id: company.fiscal_company_id,
+        }))
+    : [];
+
   const resumeDraft = (document: string) => {
     setReusableEmission(null);
     setSelectedDocument(document);
@@ -152,27 +173,128 @@ export default function SaasApp() {
   };
   const openDrafts = () => { setNotesView('drafts'); setActive('Minhas notas'); setSelectedDocument(null); };
 
-  const loadOrg = async (preferredOrganizationId?: string) => {
+  const hydrateOrganization = async (org: any, requestId: number) => {
+    if (!org?.id) return;
+    setOrganization(org);
+    const storageKey = fromAdmin ? 'ws_admin_issuer_organization_id' : 'ws_saas_selected_organization';
+    localStorage.setItem(storageKey, org.id);
+
+    const testTransport = !fromAdmin && org?.id === TEST_TRANSPORT_ORG_ID;
+    if (testTransport) setOrganization({ ...org, name: TEST_TRANSPORT_ORG_NAME });
+    setSetupDismissed(localStorage.getItem(`ws_fiscal_setup_dismissed_${org.id}`) === '1');
+
+    await supabase.functions
+      .invoke('saas-sales-history-sync', { body: { organization_id: org.id, mode: 'auto' } })
+      .catch(() => null);
+
+    const subscriptionPromise = fromAdmin
+      ? Promise.resolve({ data: null })
+      : (supabase as any)
+          .from('saas_subscriptions')
+          .select('status,saas_plans(name)')
+          .eq('organization_id', org.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+    const [{ data: config }, { data: e }, { data: s }] = await Promise.all([
+      supabase.functions.invoke('saas-fiscal-config', {
+        body: { action: 'get', organization_id: org.id },
+      }),
+      (supabase as any)
+        .from('saas_fiscal_emissions')
+        .select('*')
+        .eq('organization_id', org.id)
+        .order('created_at', { ascending: false })
+        .limit(800),
+      subscriptionPromise,
+    ]);
+    if (requestId !== organizationRequest.current) return;
+
+    setEmissions(e || []);
+    const p = config?.profile || null;
+    setProfile(p);
+    setCertificateConfigured(Boolean(config?.certificate_configured));
+
+    if (testTransport) {
+      setOrganization((current: any) => ({ ...current, name: TEST_TRANSPORT_ORG_NAME }));
+    } else if (p?.trade_name || p?.legal_name) {
+      setOrganization((current: any) => ({
+        ...current,
+        name: p.trade_name || p.legal_name,
+      }));
+    }
+
+    if (p?.logo_path) {
+      const { data: signed } = await supabase.storage
+        .from('saas-private')
+        .createSignedUrl(p.logo_path, 3600);
+      setLogoUrl(signed?.signedUrl || null);
+    }
+
+    if (fromAdmin) setPlanLabel('Emissão pelo escritório');
+    else if (s?.saas_plans?.name) setPlanLabel(s.saas_plans.name);
+  };
+
+  const loadOrg = async (preferredSelectionId?: string) => {
     if (!user) return;
     const requestId = ++organizationRequest.current;
     setOrganizationLoading(true);
+    setOrganizationError('');
     try {
       setEmissions([]);
       setProfile(null);
       setCertificateConfigured(false);
       setLogoUrl(null);
+
+      if (fromAdmin) {
+        const choices = adminIssuerCompanies;
+        setOrganizationChoices(choices);
+        const storedCompanyId =
+          preferredSelectionId || localStorage.getItem('ws_admin_issuer_company_id') || '';
+        const selectedCompany =
+          choices.find((value: any) => value.id === storedCompanyId) ||
+          (choices.length === 1 ? choices[0] : null);
+
+        if (!selectedCompany) {
+          setOrganization(null);
+          setPlanLabel('Emissão pelo escritório');
+          return;
+        }
+
+        const { data: issuerContext, error: issuerError } = await supabase.functions.invoke(
+          'admin-issuer-context',
+          { body: { company_id: selectedCompany.id } },
+        );
+        if (issuerError) throw issuerError;
+        if (!issuerContext?.organization?.id) {
+          throw new Error(issuerContext?.error || 'Não foi possível preparar o emitente.');
+        }
+
+        localStorage.setItem('ws_admin_issuer_company_id', selectedCompany.id);
+        const org = {
+          ...issuerContext.organization,
+          office_company_id: selectedCompany.id,
+          name: selectedCompany.name,
+          cnpj: selectedCompany.cnpj,
+        };
+        await hydrateOrganization(org, requestId);
+        return;
+      }
+
       const { data } = await (supabase as any)
         .from('organization_members')
         .select('organization_id, organizations(id,name,slug)')
         .eq('user_id', user.id)
         .eq('status', 'active');
       if (requestId !== organizationRequest.current) return;
+
       const membershipChoices = (data || [])
         .map((row: any) => row.organizations || null)
         .filter((value: any) => Boolean(value?.id));
       const organizationIds = membershipChoices.map((value: any) => String(value.id));
-
       let choices = membershipChoices;
+
       if (organizationIds.length) {
         const { data: subscriptions, error: subscriptionsError } = await (supabase as any)
           .from('saas_subscriptions')
@@ -187,76 +309,47 @@ export default function SaasApp() {
               .filter((row: any) => {
                 const plan = Array.isArray(row.saas_plans) ? row.saas_plans[0] : row.saas_plans;
                 if (plan?.product_code !== 'issuer') return false;
-                const boundary = row.status === 'trialing' ? row.trial_ends_at : row.access_expires_at;
+                const boundary =
+                  row.status === 'trialing' ? row.trial_ends_at : row.access_expires_at;
                 return !boundary || new Date(boundary).getTime() > now;
               })
-              .map((row: any) => String(row.organization_id))
+              .map((row: any) => String(row.organization_id)),
           );
           choices = membershipChoices.filter((value: any) =>
-            issuerOrganizations.has(String(value.id))
+            issuerOrganizations.has(String(value.id)),
           );
         }
       }
 
       setOrganizationChoices(choices);
       const storedId =
-        preferredOrganizationId || localStorage.getItem('ws_saas_selected_organization');
+        preferredSelectionId || localStorage.getItem('ws_saas_selected_organization');
       const org =
         choices.find((value: any) => value.id === storedId) ||
         (choices.length === 1 ? choices[0] : null);
-      setOrganization(org);
       if (!org?.id) {
+        setOrganization(null);
         setPlanLabel('Plano fiscal');
         return;
       }
-      localStorage.setItem('ws_saas_selected_organization', org.id);
-      const testTransport = org?.id === TEST_TRANSPORT_ORG_ID;
-      setOrganization({ ...org, name: testTransport ? TEST_TRANSPORT_ORG_NAME : org.name });
-      setSetupDismissed(localStorage.getItem(`ws_fiscal_setup_dismissed_${org.id}`) === '1');
-      await supabase.functions
-        .invoke('saas-sales-history-sync', { body: { organization_id: org.id, mode: 'auto' } })
-        .catch(() => null);
-      const [{ data: config }, { data: e }, { data: s }] = await Promise.all([
-        supabase.functions.invoke('saas-fiscal-config', {
-          body: { action: 'get', organization_id: org.id },
-        }),
-        (supabase as any)
-          .from('saas_fiscal_emissions')
-          .select('*')
-          .eq('organization_id', org.id)
-          .order('created_at', { ascending: false })
-          .limit(800),
-        (supabase as any)
-          .from('saas_subscriptions')
-          .select('status,saas_plans(name)')
-          .eq('organization_id', org.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-      ]);
-      if (requestId !== organizationRequest.current) return;
-      setEmissions(e || []);
-      const p = config?.profile || null;
-      setProfile(p);
-      setCertificateConfigured(Boolean(config?.certificate_configured));
-      if (testTransport) setOrganization((x: any) => ({ ...x, name: TEST_TRANSPORT_ORG_NAME }));
-      else if (p?.trade_name || p?.legal_name)
-        setOrganization((x: any) => ({ ...x, name: p.trade_name || p.legal_name }));
-      if (p?.logo_path) {
-        const { data: signed } = await supabase.storage
-          .from('saas-private')
-          .createSignedUrl(p.logo_path, 3600);
-        setLogoUrl(signed?.signedUrl || null);
+      await hydrateOrganization(org, requestId);
+    } catch (error: any) {
+      console.error('[AdminIssuer] Falha ao carregar emitente:', error);
+      if (requestId === organizationRequest.current) {
+        setOrganization(null);
+        setOrganizationError(
+          error?.message || 'Não foi possível preparar esta empresa para emissão agora.',
+        );
       }
-      if (s?.saas_plans?.name) setPlanLabel(s.saas_plans.name);
     } finally {
       if (requestId === organizationRequest.current) setOrganizationLoading(false);
     }
   };
 
   useEffect(() => {
+    if (fromAdmin && officeCompaniesLoading) return;
     void loadOrg();
-  }, [user?.id]);
+  }, [user?.id, fromAdmin, officeCompaniesLoading, adminIssuerCompanies.length]);
 
   const chooseNav = (item: string) => {
     setMobileMenuOpen(false);
@@ -315,7 +408,39 @@ export default function SaasApp() {
   let content: any;
   if (organizationLoading) return <AppLoadingScreen mode="light" />;
 
-  if (active === 'Início')
+  if (fromAdmin && !organization) {
+    content = (
+      <section className="mx-auto max-w-4xl rounded-xl border border-[#cfd6de] bg-white p-8 shadow-sm">
+        <p className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#697586]">
+          Emissão pelo escritório
+        </p>
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[#172033]">
+          Selecione a empresa emitente
+        </h1>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-[#667085]">
+          No acesso administrativo, a WS não é o emitente. Escolha no topo um cliente do escritório
+          com certificado A1 válido. Todos os dados, numeração, cadastros e histórico ficarão
+          isolados na empresa selecionada.
+        </p>
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <span className="rounded-full border border-[#d6dce3] bg-[#f5f7f9] px-3 py-1.5 text-xs font-medium text-[#475467]">
+            {adminIssuerCompanies.length} empresa{adminIssuerCompanies.length === 1 ? '' : 's'} com A1 válido
+          </span>
+          <a
+            href="/admin/clientes"
+            className="text-xs font-semibold text-[#344054] underline decoration-[#98a2b3] underline-offset-4"
+          >
+            Gerenciar clientes e certificados
+          </a>
+        </div>
+        {organizationError && (
+          <p className="mt-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs font-medium text-red-700">
+            {organizationError}
+          </p>
+        )}
+      </section>
+    );
+  } else if (active === 'Início')
     content = (
       <SaasDashboard
         organizationId={organization?.id || null}
@@ -439,21 +564,24 @@ export default function SaasApp() {
             {organizationChoices.length > 1 ? (
               <select
                 aria-label="Empresa selecionada"
-                value={organization?.id || ''}
+                value={fromAdmin ? organization?.office_company_id || '' : organization?.id || ''}
                 onChange={event => void loadOrg(event.target.value)}
               >
                 <option value="" disabled>
-                  Selecione a empresa
+                  {fromAdmin ? 'Selecione o emitente' : 'Selecione a empresa'}
                 </option>
                 {organizationChoices.map((choice: any) => (
-                  <option key={choice.id} value={choice.id}>
-                    {choice.name}
+                  <option
+                    key={choice.office_company_id || choice.id}
+                    value={fromAdmin ? choice.office_company_id || choice.id : choice.id}
+                  >
+                    {choice.name}{fromAdmin && choice.cnpj ? ` · ${formatCnpj(choice.cnpj)}` : ''}
                   </option>
                 ))}
               </select>
             ) : (
               <p className="truncate text-sm font-medium">
-                {organization?.name || 'Nenhuma empresa selecionada'}
+                {organization?.name || (fromAdmin ? 'Selecione uma empresa emitente' : 'Nenhuma empresa selecionada')}
               </p>
             )}
             <p className="saas-company-tax-id mt-0.5 text-[10px] tracking-[.06em]">{profile?.tax_id ? formatCnpj(profile.tax_id) : 'CNPJ não informado'}</p>

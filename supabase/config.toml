@@ -172,6 +172,9 @@ verify_jwt = true
 [functions.admin-client-onboarding]
 verify_jwt = true
 
+[functions.admin-issuer-context]
+verify_jwt = true
+
 [functions.extractor-company-config]
 verify_jwt = true
 
