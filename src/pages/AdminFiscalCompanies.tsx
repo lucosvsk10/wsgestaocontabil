@@ -24,6 +24,13 @@ async function callVault(body:Record<string,unknown>) {
   try { const ctx=(error as {context?:Response}).context; if(ctx) message=(await ctx.clone().json())?.error||message; } catch {}
   throw new Error(message);
 }
+async function callStateCredential(body:Record<string,unknown>) {
+  const { data, error } = await supabase.functions.invoke("fiscal-state-credential", { body });
+  if (!error && !data?.error) return data;
+  let message = data?.error || error?.message || "Não foi possível validar o acesso estadual.";
+  try { const ctx=(error as {context?:Response})?.context; if(ctx) message=(await ctx.clone().json())?.error||message; } catch {}
+  throw new Error(message);
+}
 function digits(v:string){ return String(v||"").replace(/\D/g,""); }
 function formatCnpj(v:string){ const d=digits(v); return d.length===14?d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5"):v; }
 function date(v?:string){ if(!v)return "—"; const d=new Date(v.includes("T")?v:v+"T12:00:00"); return Number.isNaN(d.getTime())?v:d.toLocaleDateString("pt-BR"); }
@@ -57,14 +64,23 @@ export default function AdminFiscalCompanies(){
     try{
       const body:any={ action:"save", company:{...form,id:editing?.id||undefined,cnpj:digits(form.cnpj)} };
       if(certificateFile){ body.certificate_base64=await fileToBase64(certificateFile); body.certificate_password=certificatePassword; body.certificate_name=certificateFile.name; }
-      if(stateUsername||statePassword){ body.state_username=stateUsername; body.state_password=statePassword; body.state_uf=String(form.uf||"AL").toUpperCase(); body.state_portal_name=form.uf==="AL"?"Portal do Contribuinte SEFAZ/AL":"Portal SEFAZ Estadual"; }
-      await callVault(body); close(); await load();
+      if((stateUsername&&!statePassword)||(!stateUsername&&statePassword)) throw new Error("Informe usuário e senha da SEFAZ juntos.");
+      const saved=await callVault(body);
+      if(stateUsername&&statePassword){
+        await callStateCredential({
+          action:"save_verify",
+          fiscal_company_id:saved.id,
+          username:stateUsername,
+          password:statePassword,
+        });
+      }
+      close(); await load();
     }catch(e){setError(e instanceof Error?e.message:String(e));}finally{setSaving(false);}
   };
   const removeStateCredential=async()=>{
     if(!editing?.id||!form.uf)return;
     setSaving(true);setError("");
-    try{await callVault({action:"delete_state_credential",company_id:editing.id,uf:String(form.uf).toUpperCase()});await load();const data=await callVault({action:"list"});const refreshed=(data.companies||[]).find((c:FiscalCompany)=>c.id===editing.id);if(refreshed){setEditing(refreshed);setForm({...blankCompany(),...refreshed,endereco:{...blankCompany().endereco,...(refreshed.endereco||{})}});}}catch(e){setError(e instanceof Error?e.message:String(e));}finally{setSaving(false);}
+    try{await callStateCredential({action:"delete",fiscal_company_id:editing.id});await load();const data=await callVault({action:"list"});const refreshed=(data.companies||[]).find((c:FiscalCompany)=>c.id===editing.id);if(refreshed){setEditing(refreshed);setForm({...blankCompany(),...refreshed,endereco:{...blankCompany().endereco,...(refreshed.endereco||{})}});}}catch(e){setError(e instanceof Error?e.message:String(e));}finally{setSaving(false);}
   };
   const selectCompany=(c:FiscalCompany)=>{ localStorage.setItem("ws_fiscal_company_id",c.id); localStorage.setItem("ws_fiscal_company_name",c.razao_social); navigate("/admin/feature"); };
 
@@ -89,7 +105,7 @@ export default function AdminFiscalCompanies(){
           return <div key={c.id} className="group grid gap-4 px-5 py-5 transition hover:bg-muted/10 lg:grid-cols-[minmax(280px,1.35fr)_1fr_1fr_auto] lg:items-center">
             <div className="flex min-w-0 items-center gap-4"><div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-muted/30"><Building2 className="h-5 w-5"/></div><div className="min-w-0"><p className="truncate font-semibold">{c.razao_social}</p><p className="mt-1 text-xs text-muted-foreground">{formatCnpj(c.cnpj)}{c.municipio?` · ${c.municipio}/${c.uf||""}`:""}</p></div></div>
             <div><p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Certificado A1</p>{cert?<div className="mt-1 flex items-center gap-2 text-sm"><span className={`h-2 w-2 rounded-full ${certValid?"bg-emerald-500":"bg-destructive"}`}/><span>{certValid?"Válido":"Vencido"}</span><span className="text-xs text-muted-foreground">até {date(cert.valid_until)}</span></div>:<p className="mt-1 text-sm text-muted-foreground">Não configurado</p>}</div>
-            <div><p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Fontes fiscais</p><div className="mt-1 flex flex-wrap gap-1.5"><Chip>Entradas DF-e</Chip>{stateCred?<Chip active>Saídas {stateCred.uf}</Chip>:<Chip>Saídas pendentes</Chip>}</div></div>
+            <div><p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Fontes fiscais</p><div className="mt-1 flex flex-wrap gap-1.5"><Chip>Entradas DF-e</Chip>{stateCred?.last_verification_status==="valid"?<Chip active>SEFAZ {stateCred.uf} validada</Chip>:stateCred?<Chip>SEFAZ {stateCred.uf} pendente</Chip>:<Chip>Saídas pendentes</Chip>}</div></div>
             <div className="flex items-center justify-end gap-2"><Button variant="ghost" onClick={()=>openEdit(c)}>Configurar</Button><Button onClick={()=>selectCompany(c)}>Notas <ChevronRight className="ml-1 h-4 w-4"/></Button></div>
           </div>;
         }):<div className="p-14 text-center"><Building2 className="mx-auto h-8 w-8 text-muted-foreground"/><p className="mt-3 font-medium">Nenhuma empresa fiscal cadastrada</p><p className="mt-1 text-sm text-muted-foreground">Cadastre a primeira empresa e vincule o certificado A1.</p></div>}
@@ -110,7 +126,7 @@ export default function AdminFiscalCompanies(){
           </Section>
 
           <Section title={`SEFAZ Estadual · ${form.uf||"UF"}`} subtitle="Credenciais usadas somente no backend para buscar notas emitidas no portal estadual.">
-            {activeStateCredential&&<div className="mb-4 flex items-center justify-between rounded-xl bg-emerald-500/7 p-4"><div className="flex items-center gap-3"><div className="rounded-lg bg-background p-2"><KeyRound className="h-5 w-5"/></div><div><p className="text-sm font-medium">{activeStateCredential.portal_name}</p><p className="text-xs text-muted-foreground">Credencial configurada para {activeStateCredential.uf}{activeStateCredential.last_verified_at?` · verificada em ${date(activeStateCredential.last_verified_at)}`:" · aguardando validação"}</p></div></div><span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Criptografada</span></div>}
+            {activeStateCredential&&<div className="mb-4 flex items-center justify-between rounded-xl bg-emerald-500/7 p-4"><div className="flex items-center gap-3"><div className="rounded-lg bg-background p-2"><KeyRound className="h-5 w-5"/></div><div><p className="text-sm font-medium">{activeStateCredential.portal_name}</p><p className="text-xs text-muted-foreground">Credencial configurada para {activeStateCredential.uf}{activeStateCredential.last_verified_at?` · verificada em ${date(activeStateCredential.last_verified_at)}`:" · aguardando validação"}{activeStateCredential.last_verification_status?` · ${activeStateCredential.last_verification_status}`:""}</p></div></div><span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">{activeStateCredential.last_verification_status==="valid"?"Validada":"Criptografada"}</span></div>}
             <div className="grid gap-4 sm:grid-cols-2"><Field label={activeStateCredential?"Novo usuário (deixe vazio para manter)":"Usuário do Portal do Contribuinte"}><Input autoComplete="off" value={stateUsername} onChange={e=>setStateUsername(e.target.value)} placeholder={activeStateCredential?"Manter atual":"Usuário SEFAZ"}/></Field><Field label={activeStateCredential?"Nova senha (deixe vazio para manter)":"Senha do portal"}><Input type="password" autoComplete="new-password" value={statePassword} onChange={e=>setStatePassword(e.target.value)} placeholder={activeStateCredential?"Manter atual":"Senha SEFAZ"}/></Field></div>
             <div className="mt-4 flex items-start justify-between gap-4 rounded-xl bg-muted/15 p-3 text-xs text-muted-foreground"><div className="flex items-start gap-2"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0"/><span>Usuário e senha são criptografados com AES-GCM. A interface nunca recebe os valores salvos de volta.</span></div>{activeStateCredential&&<Button variant="ghost" size="sm" className="shrink-0 text-destructive hover:text-destructive" onClick={()=>void removeStateCredential()} disabled={saving}>Remover</Button>}</div>
           </Section>

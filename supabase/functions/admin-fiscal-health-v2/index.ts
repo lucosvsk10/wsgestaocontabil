@@ -79,7 +79,10 @@ Deno.serve(async (req) => {
       const purchaseState: any = purchaseByFiscal.get(fiscalId);
       let salesState: any = salesByFiscal.get(fiscalId);
       const oldHealth: any = healthByFiscal.get(fiscalId);
-      const hasStateCredentials = String(fiscal.uf || "").toUpperCase() !== "AL" || credentialByFiscal.has(fiscalId);
+      const stateCredential: any = credentialByFiscal.get(fiscalId) || null;
+      const stateCredentialStatus = stateCredential?.last_verification_status || (stateCredential ? "pending_verification" : "not_configured");
+      const stateCredentialReady = stateCredentialStatus === "valid";
+      const hasStateCredentials = String(fiscal.uf || "").toUpperCase() !== "AL" || stateCredentialReady;
       const expired = Boolean(cert?.valid_until && Date.parse(`${cert.valid_until}T23:59:59Z`) < Date.now());
 
       let purchase: any;
@@ -90,7 +93,7 @@ Deno.serve(async (req) => {
       }
 
       const salesStatus = String(salesState?.status || "");
-      const salesBlocked = ["waiting_sales_reference","waiting_certificate","unsupported_source"].includes(salesStatus);
+      const salesBlocked = ["waiting_sales_reference","waiting_certificate","waiting_state_credentials","unsupported_source"].includes(salesStatus);
       const salesEnabled = Boolean(salesState && !salesBlocked && ["AL","SP"].includes(String(fiscal.uf || "").toUpperCase()));
       let sales: any = null;
       if (salesEnabled) {
@@ -145,6 +148,14 @@ Deno.serve(async (req) => {
       let reasonCode = "VERIFIED_OK";
       if (expired) {
         state = "error"; stateLabel = "Certificado vencido"; stateDetail = "A extração parou porque o certificado A1 venceu."; reasonCode = "CERTIFICATE_EXPIRED";
+      } else if (String(fiscal.uf || "").toUpperCase() === "AL" && stateCredentialStatus === "invalid_credentials") {
+        state = "error"; stateLabel = "Acesso SEFAZ inválido"; stateDetail = "O usuário ou a senha estadual precisam ser atualizados para conferir as vendas."; reasonCode = "STATE_CREDENTIAL_INVALID";
+      } else if (String(fiscal.uf || "").toUpperCase() === "AL" && stateCredentialStatus === "valid_without_report_permission") {
+        state = "attention"; stateLabel = "SEFAZ sem permissão"; stateDetail = "O login estadual funciona, mas não possui permissão suficiente para o relatório fiscal necessário."; reasonCode = "STATE_CREDENTIAL_NO_PERMISSION";
+      } else if (String(fiscal.uf || "").toUpperCase() === "AL" && stateCredentialStatus === "portal_unavailable") {
+        state = "attention"; stateLabel = "SEFAZ indisponível"; stateDetail = "A última validação do acesso estadual não conseguiu confirmar a fonte oficial."; reasonCode = "STATE_CREDENTIAL_PORTAL_UNAVAILABLE";
+      } else if (String(fiscal.uf || "").toUpperCase() === "AL" && !stateCredentialReady) {
+        state = "attention"; stateLabel = "Acesso SEFAZ pendente"; stateDetail = "Cadastre e valide o acesso estadual para a conferência completa das vendas."; reasonCode = "STATE_CREDENTIAL_REQUIRED";
       } else if (salesStatus === "waiting_sales_reference") {
         state = "error"; stateLabel = "Vendas sem referência"; stateDetail = "O sistema ainda não encontrou a sequência inicial de NFC-e. O bootstrap automático continuará tentando."; reasonCode = "SALES_REFERENCE_MISSING";
       } else if (salesStatus === "unsupported_source") {
@@ -194,6 +205,8 @@ Deno.serve(async (req) => {
         certificate_status: expired ? "expired" : "valid",
         certificate_valid_until: cert?.valid_until || null,
         has_state_credentials: hasStateCredentials,
+        state_credential_status: String(fiscal.uf || "").toUpperCase() === "AL" ? stateCredentialStatus : "not_required",
+        state_credential_last_verified_at: stateCredential?.last_verified_at || null,
         last_checked_at: new Date().toISOString(),
         purchase: purchaseState ? { status: purchaseState.status || null, label: purchase.source_checked && purchaseCountOk ? "Quantidade conferida" : purchaseFresh && !purchaseState.last_error ? "Em dia" : "Verificando", last_started_at: purchaseState.last_started_at || null, last_completed_at: purchaseState.last_completed_at || purchaseState.updated_at || null, last_failed_at: purchaseState.last_failed_at || null, next_scheduled_at: purchaseState.next_scheduled_at || null, last_error: purchaseState.last_error || null, error_scope: null, failure_count: Number(purchaseState.consecutive_failures || 0), fresh: purchaseFresh, paused: Boolean(purchaseState.paused), last_status_code: purchaseState.last_status_code || null, last_status_message: purchaseState.last_status_message || null } : null,
         sales: salesState ? { status: salesState.status || null, label: salesBlocked ? "Bloqueada" : !salesEnabled ? "Não suportada" : salesCountOk && salesXmlOk ? "Quantidade conferida" : "Verificando", last_started_at: salesState.last_started_at || null, last_completed_at: salesState.last_completed_at || salesState.updated_at || null, next_scheduled_at: salesState.next_scheduled_at || null, last_error: salesState.last_error || null, error_scope: null, failure_count: 0, fresh: salesFresh, paused: Boolean(salesState.paused), latest_number: salesState.latest_number ?? null, cursor_number: salesState.cursor_number ?? null, reconciliation_total: sales?.sequence_total ?? salesState.reconciliation_total ?? null, reconciliation_resolved: sales?.sequence_resolved ?? salesState.reconciliation_resolved ?? null, reconciliation_pending: sales?.sequence_complete ? 0 : salesState.reconciliation_pending ?? null, xml_expected: sales?.expected ?? null, xml_saved: sales?.xml_ready ?? null, xml_pending: sales?.pending_xml ?? null, detail_expected: salesState.detail_expected ?? null, detail_saved: salesState.detail_saved ?? null, detail_pending: salesState.detail_pending ?? null } : null,

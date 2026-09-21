@@ -4,6 +4,7 @@ import { AlertTriangle, ArrowLeft, Database, FileKey2, Files, ImagePlus, KeyRoun
 import { AdminLayout } from '@/components/admin/layout/AdminLayout';
 import { AdminPage, AdminPageHeader, AdminSection } from '@/components/admin/ui/AdminPage';
 import { SmartCertificateInput } from '@/components/admin/fiscal/CertificateImportTools';
+import { StateCredentialPanel } from '@/components/fiscal/StateCredentialPanel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
@@ -188,6 +189,14 @@ export default function AdminClientProfile(){
       </div>
     </AdminSection>
     <AdminSection className="p-6"><div className="flex items-start justify-between gap-4"><div><h2 className="font-semibold">Certificado digital A1 <span className="font-normal text-muted-foreground">(opcional)</span></h2><p className="mt-1 text-xs text-muted-foreground">Só adicione o .pfx/.p12 se o escritório quiser habilitar a extração fiscal desta empresa. O cadastro empresarial funciona normalmente sem certificado.</p></div>{cert&&<span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400"><ShieldCheck className="h-4 w-4"/>Ativo</span>}</div>{cert&&<div className="mt-4 flex items-center gap-3 rounded-xl border border-border/50 bg-muted/20 p-4"><div className="rounded-lg bg-background p-2"><FileKey2 className="h-5 w-5"/></div><div><p className="text-sm font-medium">{cert.certificate_name}</p><p className="text-xs text-muted-foreground">{cert.holder_name||'Titular não informado'} · válido até {new Date(`${cert.valid_until}T12:00:00`).toLocaleDateString('pt-BR')}</p></div></div>}<div className="mt-5"><SmartCertificateInput editing={Boolean(cert)} onFile={setCertFile} onPassword={setCertPassword} onMetadata={onCertificateMetadata}/></div></AdminSection>
+    {fiscal && (
+      <StateCredentialPanel
+        officeCompanyId={client.id}
+        state={client.state || fiscal.uf}
+        allowDelete
+        onChanged={() => void load()}
+      />
+    )}
    </div>
   </div>
 

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Building2, Calendar, CreditCard, Mail, MapPin, Phone } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { StateCredentialPanel } from '@/components/fiscal/StateCredentialPanel';
 
 type OfficeCompany = {
   id: string;
@@ -180,6 +181,14 @@ export const CompanyDataSection = () => {
               <Row icon={MapPin} label="Endereço" value={fullAddress(company)} />
             </div>
           </section>
+
+          {digits(company.cnpj || company.document_number).length === 14 && (
+            <StateCredentialPanel
+              officeCompanyId={company.id}
+              state={company.state}
+              portal
+            />
+          )}
         </div>
       )}
     </motion.div>

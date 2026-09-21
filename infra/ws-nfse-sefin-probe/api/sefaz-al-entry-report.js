@@ -84,7 +84,7 @@ async function getToken(username, password) {
   return token;
 }
 
-async function getEntryReport(username, password, cnpj, start, end) {
+async function getEntryReport(username, password, cnpj, start, end, verifyOnly = false) {
   const token = await getToken(username, password);
   const query = new URLSearchParams({ numeroCnpj: cnpj, dataInicial: start, dataFinal: end, tipo: 'xlsx' });
   const url = `https://${HOST}/malhafiscal/sfz-malhafiscal-api/api/relatorios/notas-fiscais-entrada?${query}`;
@@ -99,19 +99,23 @@ async function getEntryReport(username, password, cnpj, start, end) {
   const ok = response.status >= 200 && response.status < 300 && response.body.length > 100;
   if (!ok) {
     return {
-      ok: false,
+      ok: verifyOnly,
+      login_valid: true,
+      report_access: false,
       http: response.status,
       content_type: contentType,
-      error: 'entry_report_failed',
+      error: response.status === 401 || response.status === 403 ? 'report_permission_denied' : 'entry_report_failed',
       response_excerpt: response.body.toString('utf8').replace(/\s+/g, ' ').slice(0, 500),
     };
   }
   return {
     ok: true,
+    login_valid: true,
+    report_access: true,
     http: response.status,
     content_type: contentType,
     bytes: response.body.length,
-    xlsx_base64: response.body.toString('base64'),
+    ...(verifyOnly ? {} : { xlsx_base64: response.body.toString('base64') }),
   };
 }
 
@@ -128,10 +132,16 @@ module.exports = async function handler(req, res) {
     if (!username || !password || !/^\d{14}$/.test(cnpj) || !/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end) || start > end) {
       return json(res, 400, { error: 'invalid_payload' });
     }
-    const result = await getEntryReport(username, password, cnpj, start, end);
+    const verifyOnly = Boolean(body.verify_only);
+    const result = await getEntryReport(username, password, cnpj, start, end, verifyOnly);
     return json(res, result.ok ? 200 : 502, result);
   } catch (error) {
     console.error('SEFAZ AL entry report gateway error', error);
-    return json(res, 500, { error: error instanceof Error ? error.message : String(error) });
+    const message = error instanceof Error ? error.message : String(error);
+    const invalidLogin = /^sefaz_login_(400|401|403)$/.test(message);
+    return json(res, invalidLogin ? 422 : 500, {
+      error: invalidLogin ? 'invalid_credentials' : message,
+      login_valid: invalidLogin ? false : null,
+    });
   }
 };

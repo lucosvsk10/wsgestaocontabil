@@ -180,7 +180,7 @@ export default function AdminCompanies() {
           ) : (
             <TooltipProvider delayDuration={150}>
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[980px] border-collapse">
+                <table className="w-full min-w-[1080px] border-collapse">
                   <thead>
                     <tr className="border-b border-border/60 bg-muted/20 text-left">
                       <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[.1em] text-muted-foreground">Cliente</th>
@@ -189,6 +189,7 @@ export default function AdminCompanies() {
                       <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[.1em] text-muted-foreground">Certificado A1</th>
                       <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[.1em] text-muted-foreground">Acesso</th>
                       <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[.1em] text-muted-foreground">Extrator</th>
+                      <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[.1em] text-muted-foreground">SEFAZ estadual</th>
                       <th className="w-16 px-4 py-3 text-center text-[10px] font-semibold uppercase tracking-[.1em] text-muted-foreground">Saúde</th>
                     </tr>
                   </thead>
@@ -264,6 +265,9 @@ export default function AdminCompanies() {
                             <span className={`text-[11px] font-medium ${fiscal?.capture_enabled ? 'text-emerald-700 dark:text-emerald-300' : 'text-muted-foreground'}`}>
                               {extractorLabel}
                             </span>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <StateCredentialBadge company={company} fiscal={fiscal} />
                           </td>
                           <td className="px-4 py-3.5 text-center">
                             <div className="flex justify-center">
@@ -369,3 +373,20 @@ function FiscalHealthIndicator({ company, loading, onReady }: { company?: Fiscal
   );
 }
 
+
+function StateCredentialBadge({ company, fiscal }: { company: OfficeCompanySelection; fiscal?: FiscalHealthCompany }) {
+  const uf = String(company.state || fiscal?.uf || '').toUpperCase();
+  if (uf && uf !== 'AL') return <span className="text-[10px] text-muted-foreground">Não exigido</span>;
+  const status = fiscal?.state_credential_status || (fiscal?.has_state_credentials ? 'valid' : 'not_configured');
+  const map: Record<string, { label: string; cls: string }> = {
+    valid: { label: 'Validado', cls: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' },
+    valid_without_report_permission: { label: 'Sem permissão', cls: 'bg-amber-500/10 text-amber-700 dark:text-amber-300' },
+    invalid_credentials: { label: 'Inválido', cls: 'bg-red-500/10 text-red-700 dark:text-red-300' },
+    portal_unavailable: { label: 'SEFAZ indisponível', cls: 'bg-amber-500/10 text-amber-700 dark:text-amber-300' },
+    pending_verification: { label: 'Pendente', cls: 'bg-amber-500/10 text-amber-700 dark:text-amber-300' },
+    not_required: { label: 'Não exigido', cls: 'bg-muted/35 text-muted-foreground' },
+    not_configured: { label: 'Não configurado', cls: 'bg-muted/35 text-muted-foreground' },
+  };
+  const item = map[status] || map.not_configured;
+  return <span className={`inline-flex whitespace-nowrap rounded-full px-2 py-1 text-[10px] font-semibold ${item.cls}`}>{item.label}</span>;
+}
