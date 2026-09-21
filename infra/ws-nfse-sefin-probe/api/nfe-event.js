@@ -75,6 +75,7 @@ function pems(pfxB64, password) {
   return {
     key: forge.pki.privateKeyToPem(key),
     cert: forge.pki.certificateToPem(certs[0]),
+    chain: certs.slice(1).map(cert => forge.pki.certificateToPem(cert)),
   };
 }
 
@@ -127,9 +128,22 @@ function requestHttps({ hostname, method, path, pfxB64, password, certPem, priva
     };
     if (body) finalHeaders['Content-Length'] = Buffer.byteLength(body);
     const pemMode = Boolean(certPem && privateKeyPem);
-    const material = pemMode
-      ? { cert: [String(certPem), ...(Array.isArray(chainPem) ? chainPem.map(String).filter(Boolean) : [])].join('\n'), key: String(privateKeyPem) }
-      : { pfx: Buffer.from(String(pfxB64 || '').replace(/\s+/g, ''), 'base64'), passphrase: String(password || '') };
+    let material;
+    if (pemMode) {
+      material = {
+        cert: [String(certPem), ...(Array.isArray(chainPem) ? chainPem.map(String).filter(Boolean) : [])].join('\n'),
+        key: String(privateKeyPem),
+      };
+    } else {
+      // Normalize legacy PKCS#12 in userland with node-forge before OpenSSL sees it.
+      // This avoids Unsupported PKCS12 PFX data on older A1 containers while
+      // keeping the original encrypted vault material unchanged.
+      const normalized = pems(String(pfxB64 || ''), String(password || ''));
+      material = {
+        cert: [normalized.cert, ...(normalized.chain || [])].join('\n'),
+        key: normalized.key,
+      };
+    }
     const request = https.request({
       hostname,
       port: 443,
