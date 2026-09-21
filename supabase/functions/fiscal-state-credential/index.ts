@@ -116,9 +116,30 @@ async function queueRecovery(admin:any,fiscalId:string){
   await admin.from("fiscal_sales_sync_state").upsert({
     company_id:fiscalId,status:"queued",paused:false,next_scheduled_at:now,last_error:null,updated_at:now
   },{onConflict:"company_id"});
-  await admin.from("fiscal_source_reconciliation").update({
-    status:"pending",reason:"Credencial estadual validada; aguardando nova reconciliação.",checked_at:now,updated_at:now
-  }).eq("company_id",fiscalId).in("document_type",["sale_nfe55","sale_nfce65"]).eq("status","blocked");
+  try{
+    await admin.from("fiscal_source_reconciliation").update({
+      status:"pending",reason:"Credencial estadual validada; aguardando nova reconciliação.",checked_at:now,updated_at:now
+    }).eq("company_id",fiscalId).in("document_type",["sale_nfe55","sale_nfce65"]).eq("status","blocked");
+  }catch{}
+}
+async function applyVerificationState(admin:any,fiscalId:string,code:string){
+  const now=new Date().toISOString();
+  if(code==="valid"){
+    await queueRecovery(admin,fiscalId);
+    return;
+  }
+  if(code==="invalid_credentials"||code==="valid_without_report_permission"){
+    await admin.from("fiscal_sales_sync_state").upsert({
+      company_id:fiscalId,
+      status:"waiting_state_credentials",
+      paused:false,
+      next_scheduled_at:null,
+      last_error:code==="invalid_credentials"
+        ?"Usuário ou senha inválidos no portal estadual."
+        :"Login estadual válido, mas sem permissão suficiente para o relatório fiscal.",
+      updated_at:now
+    },{onConflict:"company_id"});
+  }
 }
 async function audit(admin:any,userId:string,fiscalId:string,action:string,status:string){
   try{
@@ -135,9 +156,41 @@ Deno.serve(async req=>{
   try{
     const length=Number(req.headers.get("content-length")||0);
     if(length>32_000)return J({error:"Payload muito grande."},413);
-    const ctx=await authContext(req);
+    const admin=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,{auth:{persistSession:false,autoRefreshToken:false}});
     const body=await req.json().catch(()=>({})) as any;
     const action=clean(body.action)||"status";
+
+    if(action==="verify_due_internal"){
+      const supplied=req.headers.get("x-debug-token")||"";
+      const {data:internal}=await admin.from("_fiscal_sales_debug_token").select("token").eq("id",true).maybeSingle();
+      if(!supplied||supplied!==String(internal?.token||""))return J({error:"unauthorized"},403);
+      const {data:rows,error}=await admin.from("fiscal_state_credentials")
+        .select("id,company_id,uf,username_ciphertext,username_iv,password_ciphertext,password_iv,last_verified_at")
+        .eq("uf","AL").eq("is_active",true)
+        .order("last_verified_at",{ascending:true,nullsFirst:true})
+        .limit(5);
+      if(error)throw error;
+      const results=await Promise.all((rows||[]).map(async(cred:any)=>{
+        try{
+          const {data:fiscal,error:fiscalError}=await admin.from("fiscal_companies").select("id,cnpj,status").eq("id",cred.company_id).maybeSingle();
+          if(fiscalError||!fiscal||fiscal.status!=="ativa")return{company_id:cred.company_id,skipped:true};
+          const username=await decrypt(cred.username_ciphertext,cred.username_iv);
+          const password=await decrypt(cred.password_ciphertext,cred.password_iv);
+          const verification=await verifyAl(admin,username,password,digits(fiscal.cnpj));
+          const now=new Date().toISOString();
+          await admin.from("fiscal_state_credentials").update({
+            last_verified_at:now,last_verification_status:verification.code,updated_at:now
+          }).eq("id",cred.id);
+          await applyVerificationState(admin,fiscal.id,verification.code);
+          return{company_id:fiscal.id,status:verification.code};
+        }catch(error){
+          return{company_id:cred.company_id,status:"portal_unavailable",error:error instanceof Error?error.message:String(error)};
+        }
+      }));
+      return J({ok:true,checked:results.length,results});
+    }
+
+    const ctx=await authContext(req);
     const {fiscal}=await resolveCompany(ctx,body);
     const uf=String(fiscal.uf||"").toUpperCase();
     const {data:cred,error:credError}=await ctx.admin.from("fiscal_state_credentials")
@@ -165,7 +218,7 @@ Deno.serve(async req=>{
       };
       const {data:saved,error}=await ctx.admin.from("fiscal_state_credentials").upsert(payload,{onConflict:"company_id,uf"}).select("id,portal_name,last_verified_at,last_verification_status").single();
       if(error)throw error;
-      if(verification.code==="valid")await queueRecovery(ctx.admin,fiscal.id);
+      await applyVerificationState(ctx.admin,fiscal.id,verification.code);
       await audit(ctx.admin,ctx.user.id,fiscal.id,"state_credential_saved",verification.code);
       return J({ok:true,status:publicStatus(saved,fiscal),verification:verification.details},verification.code==="portal_unavailable"?202:200);
     }
@@ -180,7 +233,7 @@ Deno.serve(async req=>{
         last_verified_at:now,last_verification_status:verification.code,updated_at:now
       }).eq("id",cred.id).select("id,portal_name,last_verified_at,last_verification_status").single();
       if(error)throw error;
-      if(verification.code==="valid")await queueRecovery(ctx.admin,fiscal.id);
+      await applyVerificationState(ctx.admin,fiscal.id,verification.code);
       await audit(ctx.admin,ctx.user.id,fiscal.id,"state_credential_verified",verification.code);
       return J({ok:true,status:publicStatus(updated,fiscal),verification:verification.details});
     }
