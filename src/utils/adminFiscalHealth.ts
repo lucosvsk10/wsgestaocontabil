@@ -98,6 +98,8 @@ export type FiscalHealthCompany = {
   certificate_status: 'missing' | 'valid' | 'expired';
   certificate_valid_until: string | null;
   has_state_credentials: boolean;
+  state_credential_status?: string | null;
+  state_credential_last_verified_at?: string | null;
   last_checked_at: string | null;
   purchase: FiscalSyncSnapshot | null;
   sales: FiscalSyncSnapshot | null;
