@@ -48,7 +48,7 @@ async function upsert(admin:any,companyId:string,start:string,end:string,type:Do
   const xmlPending=Number(input.xmlPending||0);
   let status="pending";
   if(!input.sourceConfirmed)status=input.blocked?"blocked":"pending";
-  else if(d.missing.length||d.extra.length)status="error";
+  else if(d.missing.length||d.extra.length||Number(input.duplicateCount||0)>0)status="error";
   else if(xmlPending>0)status="pending";
   else status="ok";
   const row={
@@ -64,7 +64,7 @@ async function upsert(admin:any,companyId:string,start:string,end:string,type:Do
     extra_keys:d.extra,
     status,
     reason:input.reason||null,
-    details:input.details||{},
+    details:{...(input.details||{}),duplicate_count:Number(input.duplicateCount||0)},
     checked_at:new Date().toISOString(),
     updated_at:new Date().toISOString(),
   };
@@ -137,7 +137,7 @@ Deno.serve(async req=>{
           await upsert(admin,companyId,start,end,"purchase_nfe55",{
             sourceName:"SEFAZ/AL relatório NF-e",
             sourceConfirmed:true,sourceKeys:source,siteKeys:keySet(nfe55In),
-            xmlPending:nfe55In.filter(r=>!r.full_xml||!r.xml).length,
+            xmlPending:nfe55In.filter(r=>!r.full_xml||!r.xml).length,duplicateCount:nfe55In.length-keySet(nfe55In).size,
             details:{cancelled:Number(alReport.purchase_cancelled_unique_keys||0),portal_credential:true},
           });
         }else{
@@ -146,7 +146,7 @@ Deno.serve(async req=>{
           await upsert(admin,companyId,start,end,"purchase_nfe55",{
             sourceName:"NFeDistribuicaoDFe",
             sourceConfirmed:caughtUp,sourceKeys:site,siteKeys:site,
-            xmlPending:nfe55In.filter(r=>!r.full_xml||!r.xml).length,
+            xmlPending:nfe55In.filter(r=>!r.full_xml||!r.xml).length,duplicateCount:nfe55In.length-keySet(nfe55In).size,
             blocked:!caughtUp,
             reason:caughtUp?null:"Distribuição nacional ainda não está comprovadamente em dia.",
             details:{ult_nsu:dfe?.ult_nsu||null,max_nsu:dfe?.max_nsu||null,cstat:dfe?.last_status_code||null},
@@ -159,7 +159,7 @@ Deno.serve(async req=>{
           await upsert(admin,companyId,start,end,"sale_nfe55",{
             sourceName:"SEFAZ/AL relatório NF-e emitidas",
             sourceConfirmed:true,sourceKeys:source55,siteKeys:keySet(nfe55Out),
-            xmlPending:nfe55Out.filter(r=>!r.full_xml||!r.xml).length,
+            xmlPending:nfe55Out.filter(r=>!r.full_xml||!r.xml).length,duplicateCount:nfe55Out.length-keySet(nfe55Out).size,
             details:{portal_credential:true},
           });
         }else{
@@ -183,7 +183,7 @@ Deno.serve(async req=>{
           await upsert(admin,companyId,start,end,"sale_nfce65",{
             sourceName:"SEFAZ/SP SAE-NFC-e",sourceConfirmed:confirmed,
             sourceKeys:keySet(src),siteKeys:keySet(nfce65Out),
-            xmlPending:nfce65Out.filter(r=>!r.full_xml||!r.xml).length,
+            xmlPending:nfce65Out.filter(r=>!r.full_xml||!r.xml).length,duplicateCount:nfce65Out.length-keySet(nfce65Out).size,
             blocked:!confirmed,reason:confirmed?null:(sState?.last_error||"Consulta SAE-NFC-e não concluída."),
             details:{sync_status:sState?.status||null,last_completed_at:sState?.last_completed_at||null},
           });
@@ -197,7 +197,7 @@ Deno.serve(async req=>{
           await upsert(admin,companyId,start,end,"sale_nfce65",{
             sourceName:"SVRS/SEFAZ NFC-e reconciliation",sourceConfirmed:confirmed,
             sourceKeys:keySet(rec),siteKeys:keySet(nfce65Out),
-            xmlPending:nfce65Out.filter(r=>!r.full_xml||!r.xml).length,
+            xmlPending:nfce65Out.filter(r=>!r.full_xml||!r.xml).length,duplicateCount:nfce65Out.length-keySet(nfce65Out).size,
             blocked:!confirmed,
             reason:confirmed?null:(sState?.last_error||"Reconciliação de NFC-e ainda não foi concluída."),
             details:{
@@ -217,14 +217,14 @@ Deno.serve(async req=>{
         await upsert(admin,companyId,start,end,"purchase_nfse",{
           sourceName:"ADN NFS-e Nacional",sourceConfirmed:adnConfirmed,
           sourceKeys:adnIn,siteKeys:keySet(nfseIn),
-          xmlPending:nfseIn.filter(r=>!r.full_xml||!r.xml).length,
+          xmlPending:nfseIn.filter(r=>!r.full_xml||!r.xml).length,duplicateCount:nfseIn.length-keySet(nfseIn).size,
           blocked:!adnConfirmed,reason:adnConfirmed?null:(nState?.last_error||"Sincronização ADN não concluída."),
           details:{last_nsu:nState?.last_nsu||null,last_completed_at:nState?.last_completed_at||null},
         });
         await upsert(admin,companyId,start,end,"sale_nfse",{
           sourceName:"ADN NFS-e Nacional",sourceConfirmed:adnConfirmed,
           sourceKeys:adnOut,siteKeys:keySet(nfseOut),
-          xmlPending:nfseOut.filter(r=>!r.full_xml||!r.xml).length,
+          xmlPending:nfseOut.filter(r=>!r.full_xml||!r.xml).length,duplicateCount:nfseOut.length-keySet(nfseOut).size,
           blocked:!adnConfirmed,reason:adnConfirmed?null:(nState?.last_error||"Sincronização ADN não concluída."),
           details:{last_nsu:nState?.last_nsu||null,last_completed_at:nState?.last_completed_at||null},
         });
