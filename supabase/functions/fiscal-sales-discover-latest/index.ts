@@ -107,19 +107,23 @@ Deno.serve(async req => {
     ]);
     const maxSaved = Math.max(0, ...(savedRows || []).map((row: any) => Number(row.document_number) || 0));
     const requestedBase = Number(body.base_number || 0);
-    const baseNumber = requestedBase > 0 ? requestedBase : Math.max(Number(state?.latest_number || 0), maxSaved);
-    if (!baseNumber) return json({ ok: true, skipped: "base_number_missing", latest: 0 });
+    const knownBase = Math.max(Number(state?.latest_number || 0), maxSaved);
+    const baseNumber = requestedBase > 0 ? requestedBase : knownBase;
+    const bootstrap = baseNumber <= 0;
+    const bootstrapStart = Math.max(1, Number(body.bootstrap_start || 1));
 
     const pfx = await decrypt(cert.certificate_ciphertext, cert.certificate_iv);
     const password = await decrypt(cert.password_ciphertext, cert.password_iv);
     const cnpj = digits(company.cnpj);
     const months = monthCodes();
-    let latest = baseNumber;
+    let latest = bootstrap ? 0 : baseNumber;
     let cooldown = false;
     const hits: Array<{ note_number: number; access_key: string; month: string }> = [];
     let probes = 0;
+    const firstNumber = bootstrap ? bootstrapStart : baseNumber + 1;
+    const lastNumber = firstNumber + lookahead - 1;
 
-    for (let noteNumber = baseNumber + 1; noteNumber <= baseNumber + lookahead && !cooldown; noteNumber += 1) {
+    for (let noteNumber = firstNumber; noteNumber <= lastNumber && !cooldown; noteNumber += 1) {
       for (const month of months) {
         const result = await consult(pfx, password, syntheticKey(cnpj, month, noteNumber));
         probes += 1;
@@ -137,7 +141,7 @@ Deno.serve(async req => {
       await sleep(300);
     }
 
-    return json({ ok: true, company_id: companyId, base_number: baseNumber, latest, advanced: latest > baseNumber, hits, probes, months, cooldown });
+    return json({ ok: true, company_id: companyId, base_number: baseNumber, bootstrap, bootstrap_start: bootstrapStart, latest, advanced: bootstrap ? latest > 0 : latest > baseNumber, hits, probes, months, cooldown });
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : String(error) }, 500);
   }

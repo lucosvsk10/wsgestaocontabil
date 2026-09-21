@@ -89,14 +89,39 @@ Deno.serve(async (req) => {
         purchase = { source: "Base fiscal", source_checked: false, source_error: error instanceof Error ? error.message : String(error), expected_nfe: null, stored_nfe: 0, nfse_count: 0, xml_ready: 0, xml_total: 0, pending_xml: 0, requires_manifestation: 0, manifestation_sent: 0, missing_count: 0, auto_repaired: 0 };
       }
 
-      const salesEnabled = Boolean(salesState && hasStateCredentials && !String(salesState.status || "").startsWith("waiting_"));
+      const salesStatus = String(salesState?.status || "");
+      const salesBlocked = ["waiting_sales_reference","waiting_certificate","unsupported_source"].includes(salesStatus);
+      const salesEnabled = Boolean(salesState && !salesBlocked && ["AL","SP"].includes(String(fiscal.uf || "").toUpperCase()));
       let sales: any = null;
       if (salesEnabled) {
         try {
-          sales = await salesVerification(admin, fiscalId, range.start, range.next, salesState);
-          if (sales.repaired_state) {
-            const { data } = await admin.from("fiscal_sales_sync_state").select("*").eq("company_id", fiscalId).maybeSingle();
-            if (data) salesState = data;
+          if (String(fiscal.uf || "").toUpperCase() === "SP") {
+            const { data: spRows, error: spError } = await admin
+              .from("fiscal_sales_documents")
+              .select("access_key,xml,issue_date")
+              .eq("company_id", fiscalId)
+              .eq("model", "65")
+              .gte("issue_date", range.start)
+              .lt("issue_date", range.next)
+              .order("issue_date", { ascending: true });
+            if (spError) throw spError;
+            const rows = spRows || [];
+            sales = {
+              expected: rows.length,
+              stored: rows.length,
+              xml_ready: rows.filter((row: any) => Boolean(row.xml)).length,
+              pending_xml: rows.filter((row: any) => !row.xml).length,
+              sequence_total: Number(salesState?.latest_number || rows.length),
+              sequence_resolved: Number(salesState?.latest_number || rows.length),
+              sequence_complete: Boolean(salesState?.last_completed_at && !salesState?.last_error),
+              source: "SEFAZ/SP SAE-NFC-e",
+            };
+          } else {
+            sales = await salesVerification(admin, fiscalId, range.start, range.next, salesState);
+            if (sales.repaired_state) {
+              const { data } = await admin.from("fiscal_sales_sync_state").select("*").eq("company_id", fiscalId).maybeSingle();
+              if (data) salesState = data;
+            }
           }
         } catch (error) {
           sales = { expected: null, stored: 0, xml_ready: 0, pending_xml: 0, sequence_total: Number(salesState?.latest_number || 0), sequence_resolved: Number(salesState?.reconciliation_resolved || 0), sequence_complete: false, error: error instanceof Error ? error.message : String(error) };
@@ -120,6 +145,12 @@ Deno.serve(async (req) => {
       let reasonCode = "VERIFIED_OK";
       if (expired) {
         state = "error"; stateLabel = "Certificado vencido"; stateDetail = "A extração parou porque o certificado A1 venceu."; reasonCode = "CERTIFICATE_EXPIRED";
+      } else if (salesStatus === "waiting_sales_reference") {
+        state = "error"; stateLabel = "Vendas sem referência"; stateDetail = "O sistema ainda não encontrou a sequência inicial de NFC-e. O bootstrap automático continuará tentando."; reasonCode = "SALES_REFERENCE_MISSING";
+      } else if (salesStatus === "unsupported_source") {
+        state = "error"; stateLabel = "Fonte de vendas não suportada"; stateDetail = salesState?.last_error || "Ainda não há conector automático para esta UF/modelo."; reasonCode = "SALES_CONNECTOR_UNSUPPORTED";
+      } else if (salesStatus === "waiting_certificate") {
+        state = "error"; stateLabel = "Certificado necessário"; stateDetail = "A busca de vendas está bloqueada por ausência de A1 válido."; reasonCode = "SALES_CERTIFICATE_MISSING";
       } else if (persistentPurchase || persistentSales) {
         state = "error"; stateLabel = "Falha persistente"; stateDetail = "O sistema tentou corrigir automaticamente, mas a divergência continua."; reasonCode = "PERSISTENT_FAILURE";
       } else if (needsManifestation) {
@@ -165,16 +196,16 @@ Deno.serve(async (req) => {
         has_state_credentials: hasStateCredentials,
         last_checked_at: new Date().toISOString(),
         purchase: purchaseState ? { status: purchaseState.status || null, label: purchase.source_checked && purchaseCountOk ? "Quantidade conferida" : purchaseFresh && !purchaseState.last_error ? "Em dia" : "Verificando", last_started_at: purchaseState.last_started_at || null, last_completed_at: purchaseState.last_completed_at || purchaseState.updated_at || null, last_failed_at: purchaseState.last_failed_at || null, next_scheduled_at: purchaseState.next_scheduled_at || null, last_error: purchaseState.last_error || null, error_scope: null, failure_count: Number(purchaseState.consecutive_failures || 0), fresh: purchaseFresh, paused: Boolean(purchaseState.paused), last_status_code: purchaseState.last_status_code || null, last_status_message: purchaseState.last_status_message || null } : null,
-        sales: salesState ? { status: salesState.status || null, label: !salesEnabled ? "Não configurada" : salesCountOk && salesXmlOk ? "Quantidade conferida" : "Verificando", last_started_at: salesState.last_started_at || null, last_completed_at: salesState.last_completed_at || salesState.updated_at || null, next_scheduled_at: salesState.next_scheduled_at || null, last_error: salesState.last_error || null, error_scope: null, failure_count: 0, fresh: salesFresh, paused: Boolean(salesState.paused), latest_number: salesState.latest_number ?? null, cursor_number: salesState.cursor_number ?? null, reconciliation_total: sales?.sequence_total ?? salesState.reconciliation_total ?? null, reconciliation_resolved: sales?.sequence_resolved ?? salesState.reconciliation_resolved ?? null, reconciliation_pending: sales?.sequence_complete ? 0 : salesState.reconciliation_pending ?? null, xml_expected: sales?.expected ?? null, xml_saved: sales?.xml_ready ?? null, xml_pending: sales?.pending_xml ?? null, detail_expected: salesState.detail_expected ?? null, detail_saved: salesState.detail_saved ?? null, detail_pending: salesState.detail_pending ?? null } : null,
+        sales: salesState ? { status: salesState.status || null, label: salesBlocked ? "Bloqueada" : !salesEnabled ? "Não suportada" : salesCountOk && salesXmlOk ? "Quantidade conferida" : "Verificando", last_started_at: salesState.last_started_at || null, last_completed_at: salesState.last_completed_at || salesState.updated_at || null, next_scheduled_at: salesState.next_scheduled_at || null, last_error: salesState.last_error || null, error_scope: null, failure_count: 0, fresh: salesFresh, paused: Boolean(salesState.paused), latest_number: salesState.latest_number ?? null, cursor_number: salesState.cursor_number ?? null, reconciliation_total: sales?.sequence_total ?? salesState.reconciliation_total ?? null, reconciliation_resolved: sales?.sequence_resolved ?? salesState.reconciliation_resolved ?? null, reconciliation_pending: sales?.sequence_complete ? 0 : salesState.reconciliation_pending ?? null, xml_expected: sales?.expected ?? null, xml_saved: sales?.xml_ready ?? null, xml_pending: sales?.pending_xml ?? null, detail_expected: salesState.detail_expected ?? null, detail_saved: salesState.detail_saved ?? null, detail_pending: salesState.detail_pending ?? null } : null,
         metrics: { period_days: 30, period_start: range.start, period_end: range.next, previous_start: range.previous, purchases: purchaseMetric, sales: salesMetric },
-        technical_window: { purchases: purchase.source_checked ? `Conferência atual pela SEFAZ/AL · ${purchase.expected_nfe ?? 0} NF-e de terceiros na fonte` : "Conferência pela rotina fiscal e documentos já capturados", sales: salesEnabled ? `Sequência fiscal ${sales?.sequence_resolved ?? 0}/${sales?.sequence_total ?? 0}` : "Busca de vendas não configurada para esta empresa" },
+        technical_window: { purchases: purchase.source_checked ? `Conferência atual pela SEFAZ/AL · ${purchase.expected_nfe ?? 0} NF-e de terceiros na fonte` : "Conferência pela rotina fiscal e documentos já capturados", sales: salesEnabled ? (String(fiscal.uf || "").toUpperCase() === "SP" ? "Fonte oficial SEFAZ/SP SAE-NFC-e" : `Sequência fiscal ${sales?.sequence_resolved ?? 0}/${sales?.sequence_total ?? 0}`) : (salesState?.last_error || "Busca de vendas bloqueada ou sem conector") },
         timeline: [],
         verification: {
           checked_at: new Date().toISOString(),
           live,
           status: state === "healthy" ? "ok" : state === "error" ? "error" : repairing ? "repairing" : "attention",
           purchases: { ...purchase, message: needsManifestation ? `${purchase.requires_manifestation} XML aguardam manifestação.` : purchaseCountOk && purchaseXmlOk ? "Quantidade e XML conferidos." : "O sistema identificou uma diferença e iniciou a correção." },
-          sales: salesEnabled ? { ...sales, enabled: true, message: salesCountOk && salesXmlOk ? "Quantidade e XML conferidos." : "A conferência encontrou uma diferença." } : { enabled: false, expected: null, stored: 0, xml_ready: 0, pending_xml: 0, sequence_total: 0, sequence_resolved: 0, message: "A extração de vendas não está configurada para esta empresa." },
+          sales: salesEnabled ? { ...sales, enabled: true, message: salesCountOk && salesXmlOk ? "Quantidade e XML conferidos." : "A conferência encontrou uma diferença." } : { enabled: false, expected: null, stored: 0, xml_ready: 0, pending_xml: 0, sequence_total: 0, sequence_resolved: 0, message: salesState?.last_error || (salesStatus === "waiting_sales_reference" ? "Aguardando descoberta automática da sequência inicial de vendas." : "A extração de vendas está bloqueada ou sem conector para esta empresa.") },
         },
       });
     }

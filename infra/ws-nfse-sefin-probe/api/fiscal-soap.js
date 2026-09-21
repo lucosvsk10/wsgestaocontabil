@@ -104,6 +104,85 @@ module.exports = async function handler(req, res) {
     if (action === 'cte-probe') return json(res, 200, await probe(`${cteBase(env)}/CTeStatusServicoV4/CTeStatusServicoV4.asmx`, material));
     if (action === 'mdfe-probe') return json(res, 200, await probe(`${mdfeBase(env)}/MDFeStatusServico/MDFeStatusServico.asmx`, material));
 
+    // Redundant transport for the national DF-e distribution service. This is used by the
+    // extractor as a fallback when the dedicated bridge is unavailable.
+    if (action === 'nfe-distribution') {
+      const cnpj = String(b.cnpj || '').replace(/\D/g, '');
+      const ufCode = String(b.uf_code || b.ufCode || '').replace(/\D/g, '').padStart(2, '0');
+      const ultNSU = String(b.ult_nsu || b.ultNSU || '0').replace(/\D/g, '').padStart(15, '0');
+      if (!/^\d{14}$/.test(cnpj) || !/^\d{2}$/.test(ufCode)) {
+        return json(res, 400, { error: 'invalid_distribution_target' });
+      }
+      const endpoint = env === 'production'
+        ? 'https://www1.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx'
+        : 'https://hom.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx';
+      const inner = `<distDFeInt xmlns="http://www.portalfiscal.inf.br/nfe" versao="1.01"><tpAmb>${env === 'production' ? '1' : '2'}</tpAmb><cUFAutor>${ufCode}</cUFAutor><CNPJ>${cnpj}</CNPJ><distNSU><ultNSU>${ultNSU}</ultNSU></distNSU></distDFeInt>`;
+      const ns = 'http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe';
+      const soap = envelope('nfeDadosMsg', ns, inner);
+      const result = await requestHttps(endpoint, material, {
+        body: soap,
+        contentType: `application/soap+xml; charset=utf-8; action="${ns}/nfeDistDFeInteresse"`,
+        accept: 'application/soap+xml, text/xml, */*',
+      });
+      return json(res, result.status >= 200 && result.status < 300 ? 200 : 502, {
+        ok: result.status >= 200 && result.status < 300,
+        http: result.status,
+        endpoint,
+        text: result.text,
+      });
+    }
+
+    // SEFAZ/SP SAE-NFC-e: official A1-authenticated listing and XML download service.
+    if (action === 'sp-nfce-list') {
+      const start = String(b.start || b.dataHoraInicial || '').trim();
+      const end = String(b.end || b.dataHoraFinal || '').trim();
+      if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(start)) {
+        return json(res, 400, { error: 'invalid_start_datetime' });
+      }
+      if (end && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(end)) {
+        return json(res, 400, { error: 'invalid_end_datetime' });
+      }
+      const endpoint = env === 'production'
+        ? 'https://nfce.fazenda.sp.gov.br/ws/NFCeListagemChaves.asmx'
+        : 'https://homologacao.nfce.fazenda.sp.gov.br/ws/NFCeListagemChaves.asmx';
+      const inner = `<nfceListagemChaves xmlns="http://www.portalfiscal.inf.br/nfe" versao="1.00"><tpAmb>${env === 'production' ? '1' : '2'}</tpAmb><dataHoraInicial>${start}</dataHoraInicial>${end ? `<dataHoraFinal>${end}</dataHoraFinal>` : ''}</nfceListagemChaves>`;
+      const ns = 'http://www.portalfiscal.inf.br/nfe/wsdl/NFCeListagemChaves';
+      const soap = envelope('nfeDadosMsg', ns, inner);
+      const result = await requestHttps(endpoint, material, {
+        body: soap,
+        contentType: `application/soap+xml; charset=utf-8; action="${ns}/nfceListagemChaves"`,
+        accept: 'application/soap+xml, text/xml, */*',
+      });
+      return json(res, result.status >= 200 && result.status < 300 ? 200 : 502, {
+        ok: result.status >= 200 && result.status < 300,
+        http: result.status,
+        endpoint,
+        text: result.text,
+      });
+    }
+
+    if (action === 'sp-nfce-download') {
+      const accessKey = String(b.access_key || b.chNFCe || '').replace(/\D/g, '');
+      if (!/^\d{44}$/.test(accessKey)) return json(res, 400, { error: 'invalid_access_key' });
+      const endpoint = env === 'production'
+        ? 'https://nfce.fazenda.sp.gov.br/ws/NFCeDownloadXML.asmx'
+        : 'https://homologacao.nfce.fazenda.sp.gov.br/ws/NFCeDownloadXML.asmx';
+      const inner = `<nfceDownloadXML xmlns="http://www.portalfiscal.inf.br/nfe" versao="1.00"><tpAmb>${env === 'production' ? '1' : '2'}</tpAmb><chNFCe>${accessKey}</chNFCe></nfceDownloadXML>`;
+      const ns = 'http://www.portalfiscal.inf.br/nfe/wsdl/NFCeDownloadXML';
+      const soap = envelope('nfeDadosMsg', ns, inner);
+      const result = await requestHttps(endpoint, material, {
+        body: soap,
+        contentType: `application/soap+xml; charset=utf-8; action="${ns}/nfceDownloadXML"`,
+        accept: 'application/soap+xml, text/xml, */*',
+      });
+      return json(res, result.status >= 200 && result.status < 300 ? 200 : 502, {
+        ok: result.status >= 200 && result.status < 300,
+        http: result.status,
+        endpoint,
+        text: result.text,
+      });
+    }
+
     let endpoint = '', soap = '', contentType = 'application/soap+xml; charset=utf-8';
     if (action === 'nfe-authorize') {
       const model = String(b.model) === '65' ? '65' : '55';
