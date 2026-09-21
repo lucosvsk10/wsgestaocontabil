@@ -1,5 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
+import { Buffer } from "node:buffer";
+import { lerCertificado } from "npm:nfse-node@0.3.2/certificado";
 const J=(b:unknown,s=200)=>new Response(JSON.stringify(b),{status:s,headers:{"content-type":"application/json"}}),E=new TextEncoder(),D=new TextDecoder(),B=(v:string)=>Uint8Array.from(atob(v),c=>c.charCodeAt(0)),dg=(v:unknown)=>String(v??"").replace(/\D/g,"");
 const tag=(x:string,n:string)=>x.match(new RegExp(`<(?:\\w+:)?${n}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/(?:\\w+:)?${n}>`,`i`))?.[1]?.trim()||"",at=(x:string,n:string)=>x.match(new RegExp(`${n}=["']([^"']+)["']`,`i`))?.[1]||"";
 const UF:Record<string,string>={AC:"12",AL:"27",AP:"16",AM:"13",BA:"29",CE:"23",DF:"53",ES:"32",GO:"52",MA:"21",MT:"51",MS:"50",MG:"31",PA:"15",PB:"25",PR:"41",PE:"26",PI:"22",RJ:"33",RN:"24",RS:"43",RO:"11",RR:"14",SC:"42",SP:"35",SE:"28",TO:"17"};
@@ -23,7 +25,9 @@ async function fetchDistribution(admin:any,pfx:string,pass:string,cnpj:string,uf
   }catch(e){primaryError=e instanceof Error?e.message:String(e)}
   const {data:g}=await admin.from("_fiscal_vercel_gateway_token").select("token").eq("id",true).maybeSingle();
   const token=String(g?.token||"");if(!token)throw Error(primaryError+"; fallback_token_missing");
-  const r=await fetch("https://ws-nfse-sefin-probe.vercel.app/api/fiscal-soap",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+token},body:JSON.stringify({action:"nfe-distribution",environment:env==="homologacao"?"homologation":"production",certificate_base64:pfx,certificate_password:pass,cnpj,uf_code:uf,ult_nsu:cur}),signal:AbortSignal.timeout(60000)});
+  let certificate:any;
+  try{certificate=lerCertificado(Buffer.from(pfx,"base64"),pass)}catch(e){throw Error(primaryError+"; local_pfx_parse_failed")}
+  const r=await fetch("https://ws-nfse-sefin-probe.vercel.app/api/fiscal-soap",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+token},body:JSON.stringify({action:"nfe-distribution",environment:env==="homologacao"?"homologation":"production",certificate_pem:certificate.certificadoPem,private_key_pem:certificate.chavePrivadaPem,chain_pem:certificate.cadeiaPem||[],cnpj,uf_code:uf,ult_nsu:cur}),signal:AbortSignal.timeout(60000)});
   const o=await r.json().catch(()=>({})) as any;
   if(!r.ok||!o?.ok||!o?.text)throw Error(primaryError+"; fallback_"+r.status+":"+String(o?.error||"erro"));
   return{raw:String(o.text),response:null,transport:"fiscal_soap_fallback"};
