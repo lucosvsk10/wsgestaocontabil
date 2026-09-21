@@ -266,7 +266,19 @@ export default function SaasApp() {
           'admin-issuer-context',
           { body: { company_id: selectedCompany.id } },
         );
-        if (issuerError) throw issuerError;
+        if (issuerError) {
+          let issuerMessage = issuerError.message || 'Não foi possível preparar o emitente.';
+          try {
+            const response = (issuerError as any)?.context;
+            if (response?.clone && response?.json) {
+              const payload = await response.clone().json();
+              if (payload?.error) issuerMessage = String(payload.error);
+            }
+          } catch {
+            // Mantém a mensagem original quando o corpo da resposta não estiver disponível.
+          }
+          throw new Error(issuerMessage);
+        }
         if (!issuerContext?.organization?.id) {
           throw new Error(issuerContext?.error || 'Não foi possível preparar o emitente.');
         }
