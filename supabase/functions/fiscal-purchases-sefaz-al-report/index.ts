@@ -132,8 +132,14 @@ Deno.serve(async (req) => {
       .eq("uf", "AL")
       .eq("is_active", true)
       .limit(1)
-      .single();
+      .maybeSingle();
     if (credentialError) throw credentialError;
+    if (!credential) {
+      return json({
+        error: "state_credentials_missing",
+        message: "Credencial estadual de Alagoas não cadastrada para esta empresa."
+      }, 422);
+    }
 
     const { data: gatewayRow } = await admin.from("_fiscal_vercel_gateway_token").select("token").eq("id", true).maybeSingle();
     const gatewayToken = String(gatewayRow?.token || "");
