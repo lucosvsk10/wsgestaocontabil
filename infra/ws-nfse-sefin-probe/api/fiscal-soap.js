@@ -1,4 +1,5 @@
 const https = require('node:https');
+const tls = require('node:tls');
 const crypto = require('node:crypto');
 const zlib = require('node:zlib');
 
@@ -91,6 +92,52 @@ async function probe(url, material) {
   return { ok: result.status >= 200 && result.status < 500, http: result.status, endpoint: result.endpoint, wsdl_detected: /wsdl|definitions|schema/i.test(result.text), response_excerpt: result.text.slice(0, 350) };
 }
 
+function peerCertificateInfo(hostname) {
+  return new Promise((resolve, reject) => {
+    const socket = tls.connect({
+      host: hostname,
+      port: 443,
+      servername: hostname,
+      rejectUnauthorized: false,
+      minVersion: 'TLSv1.2',
+    }, () => {
+      try {
+        const chain = [];
+        const seen = new Set();
+        let cert = socket.getPeerCertificate(true);
+        while (cert && cert.raw && !seen.has(cert.fingerprint256)) {
+          seen.add(cert.fingerprint256);
+          chain.push({
+            subject: cert.subject || null,
+            issuer: cert.issuer || null,
+            fingerprint256: cert.fingerprint256 || null,
+            valid_from: cert.valid_from || null,
+            valid_to: cert.valid_to || null,
+            info_access: cert.infoAccess || null,
+            raw_base64: cert.raw.toString('base64'),
+          });
+          if (!cert.issuerCertificate || cert.issuerCertificate === cert) break;
+          cert = cert.issuerCertificate;
+        }
+        const result = {
+          authorized: socket.authorized,
+          authorization_error: socket.authorizationError || null,
+          protocol: socket.getProtocol(),
+          cipher: socket.getCipher(),
+          chain,
+        };
+        socket.end();
+        resolve(result);
+      } catch (error) {
+        socket.destroy();
+        reject(error);
+      }
+    });
+    socket.setTimeout(15000, () => socket.destroy(new Error('tls_peer_timeout')));
+    socket.on('error', reject);
+  });
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return json(res, 405, { error: 'method_not_allowed' });
   if (!authorized(req)) return json(res, 401, { error: 'unauthorized' });
@@ -103,6 +150,14 @@ module.exports = async function handler(req, res) {
     if (action === 'nfe-probe') return json(res, 200, await probe(nfeEndpoint(String(b.model) === '65' ? '65' : '55', env), material));
     if (action === 'cte-probe') return json(res, 200, await probe(`${cteBase(env)}/CTeStatusServicoV4/CTeStatusServicoV4.asmx`, material));
     if (action === 'mdfe-probe') return json(res, 200, await probe(`${mdfeBase(env)}/MDFeStatusServico/MDFeStatusServico.asmx`, material));
+
+    if (action === 'sp-tls-peer-info') {
+      return json(res, 200, {
+        ok: true,
+        host: 'nfce.fazenda.sp.gov.br',
+        tls: await peerCertificateInfo('nfce.fazenda.sp.gov.br'),
+      });
+    }
 
     // Redundant transport for the national DF-e distribution service. This is used by the
     // extractor as a fallback when the dedicated bridge is unavailable.
@@ -230,6 +285,10 @@ module.exports = async function handler(req, res) {
     return json(res, result.status >= 200 && result.status < 300 ? 200 : 502, { ok: result.status >= 200 && result.status < 300, http: result.status, endpoint, text: result.text });
   } catch (error) {
     console.error('Fiscal SOAP gateway error', error);
-    return json(res, 500, { error: error instanceof Error ? error.message : String(error) });
+    return json(res, 500, {
+      error: error instanceof Error ? error.message : String(error),
+      code: error && typeof error === 'object' && 'code' in error ? error.code : null,
+      cause: error && typeof error === 'object' && error.cause ? String(error.cause) : null,
+    });
   }
 };
