@@ -77,9 +77,45 @@ async function auditPurchases(admin: any, base: string, token: string, company: 
   return issues;
 }
 
-async function auditSales(admin: any, companyId: string, salesState: any, health: any, range: ReturnType<typeof bounds>) {
+async function auditSales(admin: any, company: any, salesState: any, health: any, range: ReturnType<typeof bounds>) {
   const issues: Issue[] = [];
-  if (!salesState || String(salesState.status || "").startsWith("waiting_")) return issues;
+  const companyId = String(company.id);
+  if (!salesState) {
+    issues.push({ issue_code: "SALES_STATE_MISSING", severity: "error", title: "Busca de vendas não inicializada", message: "A empresa está ativa no Extrator, mas não possui estado de sincronização de vendas." });
+    return issues;
+  }
+  const status = String(salesState.status || "");
+  const lastStarted = salesState.last_started_at ? Date.parse(salesState.last_started_at) : 0;
+  const lastCompleted = salesState.last_completed_at ? Date.parse(salesState.last_completed_at) : 0;
+
+  if (status === "waiting_sales_reference") {
+    issues.push({ issue_code: "SALES_REFERENCE_MISSING", severity: "error", title: "Vendas sem referência inicial", message: "A rotina ainda não conseguiu descobrir a sequência inicial de vendas. O bootstrap automático continuará tentando.", data: { last_started_at: salesState.last_started_at, latest_number: salesState.latest_number } });
+    return issues;
+  }
+  if (status === "waiting_certificate") {
+    issues.push({ issue_code: "SALES_CERTIFICATE_MISSING", severity: "error", title: "Vendas bloqueadas por certificado", message: "A busca de vendas aguarda um certificado A1 ativo e válido." });
+    return issues;
+  }
+  if (status === "unsupported_source") {
+    issues.push({ issue_code: "SALES_CONNECTOR_UNSUPPORTED", severity: "error", title: "Fonte de vendas sem conector", message: salesState.last_error || "Ainda não existe conector automático de vendas para esta UF/modelo." });
+    return issues;
+  }
+  if (status === "queued" && !lastStarted && Date.now() - Date.parse(salesState.updated_at || "1970-01-01") > 30 * 60 * 1000) {
+    issues.push({ issue_code: "SALES_WORKER_NOT_STARTED", severity: "error", title: "Worker de vendas não iniciou", message: "A empresa está na fila de vendas, mas o worker não iniciou dentro da janela esperada." });
+  }
+  if (salesState.last_error && Number(health?.sales_failure_count || 0) >= 3) {
+    issues.push({ issue_code: "SALES_SYNC_FAILURE", severity: "error", title: "Falha persistente na busca de vendas", message: "A rotina de vendas falhou repetidamente e precisa de atenção.", data: { error: salesState.last_error } });
+  }
+
+  if (String(company.uf || "").toUpperCase() === "SP") {
+    const rows = await fetchPaged(() => admin.from("fiscal_sales_documents").select("access_key,xml,issue_date").eq("company_id", companyId).eq("model","65").gte("issue_date", range.start).lt("issue_date", range.next).order("issue_date",{ascending:true}));
+    const withoutXml = rows.filter((row:any)=>!row.xml).length;
+    if (withoutXml) issues.push({ issue_code:"SALES_XML_PENDING", severity:"error", title:"XML de venda pendente", message: withoutXml+" NFC-e de SP continuam sem XML integral.", data:{count:withoutXml} });
+    if (!lastCompleted || Date.now()-lastCompleted > 4*60*60*1000) issues.push({ issue_code:"SALES_SYNC_STALE", severity:"error", title:"Busca de vendas atrasada", message:"A consulta oficial de NFC-e/SP não concluiu nas últimas 4 horas.", data:{last_completed_at:salesState.last_completed_at} });
+    return issues;
+  }
+
+  if (String(company.uf || "").toUpperCase() !== "AL") return issues;
   const latest = Number(salesState.latest_number || 0);
   const all = await fetchPaged(() => admin.from("fiscal_sales_reconciliation").select("status,access_key,issue_date,note_number").eq("company_id", companyId).eq("model", "65").eq("series", "1").lte("note_number", latest || 999999999).order("note_number", { ascending: true }));
   const counts: Record<string, number> = {};
@@ -102,7 +138,6 @@ async function auditSales(admin: any, companyId: string, salesState: any, health
   if (missing.length) issues.push({ issue_code: "SALES_COUNT_MISMATCH", severity: "error", title: "Vendas incompletas", message: `${missing.length} venda(s) encontradas na sequência fiscal ainda não estão salvas na base de documentos.`, data: { count: missing.length, access_keys: missing.slice(0, 20) } });
   const xmlPending = expectedKeys.filter((key) => saved.has(key) && !withXml.has(key));
   if (xmlPending.length) issues.push({ issue_code: "SALES_XML_PENDING", severity: "error", title: "XML de venda pendente", message: `${xmlPending.length} venda(s) continuam sem XML integral após a reconciliação.`, data: { count: xmlPending.length, access_keys: xmlPending.slice(0, 20) } });
-  if (salesState.last_error && Number(health?.sales_failure_count || 0) >= 3) issues.push({ issue_code: "SALES_SYNC_FAILURE", severity: "error", title: "Falha persistente na busca de vendas", message: "A rotina de vendas falhou repetidamente e precisa de atenção.", data: { error: salesState.last_error } });
   return issues;
 }
 
@@ -156,7 +191,7 @@ Deno.serve(async (req) => {
       try {
         let issues: Issue[] = [];
         if (cert?.valid_until && Date.parse(`${cert.valid_until}T23:59:59Z`) < Date.now()) issues = [{ issue_code: "CERTIFICATE_EXPIRED", severity: "error", title: "Certificado A1 vencido", message: "A extração fiscal desta empresa está bloqueada porque o certificado A1 venceu.", data: { valid_until: cert.valid_until } }];
-        else issues = [...await auditPurchases(admin, base, token, company, purchaseByCompany.get(id), String(company.uf || "").toUpperCase() !== "AL" || credentialSet.has(id), range), ...await auditSales(admin, id, salesByCompany.get(id), healthByCompany.get(id), range)];
+        else issues = [...await auditPurchases(admin, base, token, company, purchaseByCompany.get(id), String(company.uf || "").toUpperCase() !== "AL" || credentialSet.has(id), range), ...await auditSales(admin, company, salesByCompany.get(id), healthByCompany.get(id), range)];
         const persistence = await persistIssues(admin, id, issues);
         results.push({ company_id: id, issues: issues.map((issue) => issue.issue_code), ...persistence });
       } catch (error) {
