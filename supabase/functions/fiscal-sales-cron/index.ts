@@ -67,6 +67,7 @@ Deno.serve(async req => {
     );
 
     const out: any[] = [];
+    let bootstrapAttempted = false;
 
     for (const company of companies || []) {
       try {
@@ -300,6 +301,18 @@ Deno.serve(async req => {
 
         let bootstrap: any = null;
         if (!baseLatest || (isExtractor && !scopeStartNumber)) {
+          if (bootstrapAttempted) {
+            await admin.from("fiscal_sales_sync_state").upsert({
+              company_id: company.id,
+              status: "waiting_sales_reference",
+              last_error: "Aguardando turno do bootstrap automático de vendas.",
+              next_scheduled_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+              updated_at: new Date().toISOString(),
+            });
+            out.push({ company_id: company.id, status: "waiting_sales_reference", reason: "bootstrap_queue" });
+            continue;
+          }
+          bootstrapAttempted = true;
           try {
             const bootstrapResponse = await fetch(`${base}/functions/v1/fiscal-sales-discover-latest`, {
               method: "POST",
