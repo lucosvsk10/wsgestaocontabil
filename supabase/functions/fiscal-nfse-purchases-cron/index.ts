@@ -1,5 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
+import { Buffer } from "node:buffer";
+import { lerCertificado } from "npm:nfse-node@0.3.2/certificado";
 
 const E=new TextEncoder(),D=new TextDecoder(),B=(v:string)=>Uint8Array.from(atob(v),c=>c.charCodeAt(0));
 const J=(b:unknown,s=200)=>new Response(JSON.stringify(b),{status:s,headers:{"content-type":"application/json"}}),digits=(v:unknown)=>String(v??"").replace(/\D/g,"");
@@ -9,8 +11,8 @@ async function dec(c:string,i:string){return D.decode(await crypto.subtle.decryp
 async function gun(v:string){const bytes=Uint8Array.from(atob(v.replace(/\s/g,"")),c=>c.charCodeAt(0)),stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));return D.decode(await new Response(stream).arrayBuffer())}
 function parseNFSe(xml:string,companyCnpj:string){const inf=section(xml,"infNFSe")||xml,emit=section(inf,"emit"),dps=section(inf,"DPS"),infDps=section(dps,"infDPS")||dps,toma=section(infDps,"toma"),issuer=digits(tag(emit,"CNPJ")||tag(emit,"CPF")),recipient=digits(tag(toma,"CNPJ")||tag(toma,"CPF")),direction=issuer===companyCnpj?"saida":recipient===companyCnpj?"entrada":"relacionada",status=tag(inf,"cStat");return{direction,issuer,issuerName:tag(emit,"xNome"),recipient,number:tag(inf,"nNFSe")||tag(infDps,"nDPS"),series:tag(infDps,"serie"),issue:tag(infDps,"dhEmi")||tag(inf,"dhProc")||null,value:Number(tag(inf,"vLiq")||tag(infDps,"vServ")||0),status,statusText:status==="100"?"Autorizada":status?`cStat ${status}`:"Fiscal"}}
 
-async function fetchAdnBatch(gatewayToken:string,pfx:string,pass:string,cnpj:string,nsu:number){
- const r=await fetch("https://ws-nfse-sefin-probe.vercel.app/api/nfe-event",{method:"POST",headers:{"content-type":"application/json","authorization":`Bearer ${gatewayToken}`},body:JSON.stringify({action:"nfse-dfe",certificate_base64:pfx,certificate_password:pass,cnpj,nsu}),signal:AbortSignal.timeout(60000)});
+async function fetchAdnBatch(gatewayToken:string,material:any,cnpj:string,nsu:number){
+ const r=await fetch("https://ws-nfse-sefin-probe.vercel.app/api/nfe-event",{method:"POST",headers:{"content-type":"application/json","authorization":`Bearer ${gatewayToken}`},body:JSON.stringify({action:"nfse-dfe",...material,cnpj,nsu}),signal:AbortSignal.timeout(60000)});
  const o=await r.json().catch(()=>({})) as any;
  if(!r.ok)throw Error(`gateway_http_${r.status}:${String(o?.error||"").slice(0,120)}`);
  const status=Number(o?.http||0),data=o?.response||{};
@@ -34,10 +36,10 @@ Deno.serve(async req=>{const admin=createClient(Deno.env.get("SUPABASE_URL")!,De
   if(state?.next_scheduled_at&&!body.force&&new Date(state.next_scheduled_at)>now){out.push({company_id:c.id,status:"not_due",last_nsu:Number(state.last_nsu||0)});continue}
   await admin.from("fiscal_nfse_sync_state").upsert({company_id:c.id,status:"running",last_started_at:now.toISOString(),last_error:null,updated_at:now.toISOString()});
   const{data:fc}=await admin.from("fiscal_certificates").select("certificate_ciphertext,certificate_iv,password_ciphertext,password_iv").eq("company_id",c.id).eq("is_active",true).order("created_at",{ascending:false}).limit(1).maybeSingle();if(!fc)throw Error("certificate_missing");
-  const pfx=await dec(fc.certificate_ciphertext,fc.certificate_iv),pass=await dec(fc.password_ciphertext,fc.password_iv),settings=(c.fiscal_settings||{})as any,historyStart=String(settings.history_window_mode==="previous_full_month_plus_current"?settings.history_start_date||"":"");
+  const pfx=await dec(fc.certificate_ciphertext,fc.certificate_iv),pass=await dec(fc.password_ciphertext,fc.password_iv),parsedCertificate=lerCertificado(Buffer.from(pfx,"base64"),pass),gatewayMaterial={certificate_pem:parsedCertificate.certificadoPem,private_key_pem:parsedCertificate.chavePrivadaPem,chain_pem:parsedCertificate.cadeiaPem||[]},settings=(c.fiscal_settings||{})as any,historyStart=String(settings.history_window_mode==="previous_full_month_plus_current"?settings.history_start_date||"":"");
   let current=Number(state?.last_nsu||0),saved=0,events=0,batches=0,skippedOlder=0;
   for(let i=0;i<maxBatches;i++){
-   const {status,data}=await fetchAdnBatch(gatewayToken,pfx,pass,digits(c.cnpj),current);if(status===404)break;
+   const {status,data}=await fetchAdnBatch(gatewayToken,gatewayMaterial,digits(c.cnpj),current);if(status===404)break;
    const lote=Array.isArray(data?.LoteDFe)?data.LoteDFe:[];batches++;if(!lote.length)break;let advanced=false;
    for(const item of lote){const nsu=Number(item.NSU||0);if(nsu>current){current=nsu;advanced=true}const key=String(item.ChaveAcesso||""),raw=String(item.ArquivoXml||"");let xml="";try{xml=await gun(raw)}catch{try{xml=atob(raw)}catch{continue}}const tipo=String(item.TipoDocumento||"").toUpperCase();
     if(tipo==="NFSE"||/<NFSe\b/i.test(xml)){const d=parseNFSe(xml,digits(c.cnpj));if(historyStart&&d.issue&&d.issue.slice(0,10)<historyStart){skippedOlder++;continue}if(d.direction!=="relacionada"){const{error}=await admin.from("fiscal_dfe_documents").upsert({user_id:c.created_by,company_id:c.id,cnpj:digits(c.cnpj),environment:"producao",uf_code:"00",nsu:`NFSE-${String(nsu).padStart(15,"0")}`,source:"national_nfse_adn",source_id:key||String(nsu),schema_name:"NFSe_Nacional",document_kind:"nfse",direction:d.direction,access_key:key||null,model:"NFS-e",issue_date:d.issue,value:d.value,issuer_cnpj:d.issuer||null,issuer_name:d.issuerName||null,recipient_cnpj:d.recipient||null,note_number:d.number||null,series:d.series||null,status_code:d.status||null,status_text:d.statusText,full_xml:true,xml,updated_at:new Date().toISOString()},{onConflict:"user_id,cnpj,environment,uf_code,nsu"});if(error)throw error;saved++}}
