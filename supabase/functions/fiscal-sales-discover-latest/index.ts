@@ -39,6 +39,17 @@ function syntheticKey(cnpj: string, monthCode: string, noteNumber: number) {
   return base + dv(base);
 }
 
+function matchesCandidateKey(realKey: string, cnpj: string, monthCode: string, noteNumber: number) {
+  const key = digits(realKey);
+  return key.length === 44 &&
+    key.slice(0, 2) === "27" &&
+    key.slice(2, 6) === monthCode &&
+    key.slice(6, 20) === cnpj &&
+    key.slice(20, 22) === "65" &&
+    key.slice(22, 25) === "001" &&
+    Number(key.slice(25, 34)) === noteNumber;
+}
+
 function monthCodes() {
   const now = new Date();
   const result: string[] = [];
@@ -131,7 +142,7 @@ Deno.serve(async req => {
           cooldown = true;
           break;
         }
-        if (result.realKey) {
+        if (result.realKey && matchesCandidateKey(result.realKey, cnpj, month, noteNumber)) {
           latest = Math.max(latest, noteNumber);
           hits.push({ note_number: noteNumber, access_key: result.realKey, month });
           break;
