@@ -282,7 +282,12 @@ Deno.serve(async (req) => {
       duplicates_touched: duplicatesTouched,
       by_status: byStatus,
       by_model: byModel,
-      ...(includeKeys ? { purchase_keys: purchaseKeys, purchase_all_keys: purchaseAllKeys } : {}),
+      ...(includeKeys ? {
+        purchase_keys: purchaseKeys,
+        purchase_all_keys: purchaseAllKeys,
+        self_issued_keys: selfIssuedKeys,
+        all_keys: keys,
+      } : {}),
       transport: "vercel-node",
     });
   } catch (error) {
