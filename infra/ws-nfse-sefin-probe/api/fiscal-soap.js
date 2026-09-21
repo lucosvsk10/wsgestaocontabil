@@ -214,7 +214,7 @@ module.exports = async function handler(req, res) {
         : 'https://hom.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx';
       const inner = `<distDFeInt xmlns="http://www.portalfiscal.inf.br/nfe" versao="1.01"><tpAmb>${env === 'production' ? '1' : '2'}</tpAmb><cUFAutor>${ufCode}</cUFAutor><CNPJ>${cnpj}</CNPJ><distNSU><ultNSU>${ultNSU}</ultNSU></distNSU></distDFeInt>`;
       const ns = 'http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe';
-      const soap = envelope('nfeDadosMsg', ns, inner);
+      const soap = `<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDistDFeInteresse xmlns="${ns}"><nfeDadosMsg>${inner}</nfeDadosMsg></nfeDistDFeInteresse></soap12:Body></soap12:Envelope>`;
       const result = await requestHttps(endpoint, material, {
         body: soap,
         contentType: `application/soap+xml; charset=utf-8; action="${ns}/nfeDistDFeInteresse"`,
