@@ -329,10 +329,21 @@ Deno.serve(async req => {
       Number(salesState.reconciliation_total || 0) > 0 ||
       Number(salesState.scanned_numbers || 0) > 0;
 
-    const salesSourceChecked = hasNfceContext
-      ? expectedNfce > 0 || Boolean(salesState.reconciliation_complete)
-      : true;
-    const salesExpected = salesSourceChecked ? expectedNfce + salesOtherStored : null;
+    const salesStatus = String(salesState.status || '').toLowerCase();
+    const salesPipelineUnavailable =
+      !salesState.company_id ||
+      salesStatus === 'waiting_sales_reference' ||
+      salesStatus === 'waiting_certificate' ||
+      salesStatus === 'unsupported_source' ||
+      (salesStatus === 'queued' && !salesState.last_started_at);
+    const salesSourceChecked = salesPipelineUnavailable
+      ? false
+      : hasNfceContext
+        ? expectedNfce > 0 || Boolean(salesState.reconciliation_complete)
+        : String(company.uf || '').toUpperCase() === 'SP' && Boolean(salesState.last_completed_at);
+    const salesExpected = salesSourceChecked
+      ? (String(company.uf || '').toUpperCase() === 'SP' ? salesStored : expectedNfce + salesOtherStored)
+      : null;
 
     const purchaseMismatch = purchaseExpected != null && purchaseStored !== purchaseExpected;
     const salesMismatch = salesExpected != null && salesStored !== salesExpected;
@@ -344,9 +355,10 @@ Deno.serve(async req => {
     const persistent = purchaseFailures >= 3 || salesFailures >= 3;
 
     const purchaseStatus = String(purchaseState.status || '').toLowerCase();
-    const salesStatus = String(salesState.status || '').toLowerCase();
     const purchaseBlocked = ['waiting_certificate', 'cooldown', 'error', 'failed', 'retry'].some(value => purchaseStatus.includes(value));
-    const salesBlocked = ['waiting_certificate', 'error', 'failed', 'retry'].some(value => salesStatus.includes(value));
+    const salesBlocked =
+      ['waiting_certificate', 'waiting_sales_reference', 'unsupported_source', 'error', 'failed', 'retry'].some(value => salesStatus.includes(value)) ||
+      (salesStatus === 'queued' && !salesState.last_started_at);
     const hasAttention =
       purchaseMismatch ||
       salesMismatch ||
@@ -377,7 +389,10 @@ Deno.serve(async req => {
       },
       sales: {
         source_checked: salesSourceChecked,
-        expected_nfce: expectedNfce,
+        pipeline_status: salesStatus || null,
+        pipeline_error: salesState.last_error || null,
+        supported_uf: ['AL','SP'].includes(String(company.uf || '').toUpperCase()),
+        expected_nfce: String(company.uf || '').toUpperCase() === 'SP' ? null : expectedNfce,
         present_nfce: salesNfceStored,
         present_other_models: salesOtherStored,
         xml_ready: salesXml,
