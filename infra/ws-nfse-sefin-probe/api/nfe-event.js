@@ -118,21 +118,24 @@ function soap(xml) {
   return `<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeRecepcaoEvento4">${xml}</nfeDadosMsg></soap12:Body></soap12:Envelope>`;
 }
 
-function requestHttps({ hostname, method, path, pfxB64, password, body = '', headers = {} }) {
+function requestHttps({ hostname, method, path, pfxB64, password, certPem, privateKeyPem, chainPem = [], body = '', headers = {} }) {
   return new Promise((resolve, reject) => {
     const finalHeaders = {
-      'User-Agent': 'WS-Gestao-Fiscal-Bridge/3.1',
+      'User-Agent': 'WS-Gestao-Fiscal-Bridge/3.2',
       'Connection': 'close',
       ...headers,
     };
     if (body) finalHeaders['Content-Length'] = Buffer.byteLength(body);
+    const pemMode = Boolean(certPem && privateKeyPem);
+    const material = pemMode
+      ? { cert: [String(certPem), ...(Array.isArray(chainPem) ? chainPem.map(String).filter(Boolean) : [])].join('\n'), key: String(privateKeyPem) }
+      : { pfx: Buffer.from(String(pfxB64 || '').replace(/\s+/g, ''), 'base64'), passphrase: String(password || '') };
     const request = https.request({
       hostname,
       port: 443,
       path,
       method,
-      pfx: Buffer.from(String(pfxB64).replace(/\s+/g, ''), 'base64'),
-      passphrase: String(password || ''),
+      ...material,
       minVersion: 'TLSv1.2',
       rejectUnauthorized: true,
       servername: hostname,
@@ -172,14 +175,13 @@ async function transmitEvent(pfxB64, password, signedXml) {
   });
 }
 
-async function distributeNfse(pfxB64, password, cnpj, nsu) {
+async function distributeNfse(material, cnpj, nsu) {
   const qs = new URLSearchParams({ tipoNSU: 'DISTRIBUICAO', lote: 'true', cnpjConsulta: cnpj });
   return requestHttps({
     hostname: ADN_HOST,
     method: 'GET',
     path: `/contribuintes/DFe/${Math.max(0, Number(nsu) || 0)}?${qs}`,
-    pfxB64,
-    password,
+    ...material,
     headers: { Accept: 'application/json' },
   });
 }
@@ -192,12 +194,18 @@ module.exports = async function handler(req, res) {
     const action = String(body.action || 'event').toLowerCase();
     const pfx = String(body.certificate_base64 || '');
     const password = String(body.certificate_password || '');
-    if (!pfx || !password) return json(res, 400, { error: 'certificate_required' });
+    const certPem = String(body.certificate_pem || '');
+    const privateKeyPem = String(body.private_key_pem || '');
+    const chainPem = Array.isArray(body.chain_pem) ? body.chain_pem.map(String).filter(Boolean) : [];
+    const hasPfx = Boolean(pfx && password);
+    const hasPem = Boolean(certPem && privateKeyPem);
+    if (!hasPfx && !hasPem) return json(res, 400, { error: 'certificate_required' });
 
     if (action === 'nfse-dfe') {
       const cnpj = digits(body.cnpj);
       if (!/^\d{14}$/.test(cnpj)) return json(res, 400, { error: 'invalid_cnpj' });
-      const result = await distributeNfse(pfx, password, cnpj, body.nsu);
+      const material = hasPem ? { certPem, privateKeyPem, chainPem } : { pfxB64: pfx, password };
+      const result = await distributeNfse(material, cnpj, body.nsu);
       let parsed;
       try { parsed = result.text ? JSON.parse(result.text) : {}; }
       catch { parsed = { raw: result.text.slice(0, 2000) }; }
@@ -210,6 +218,7 @@ module.exports = async function handler(req, res) {
       });
     }
 
+    if (!hasPfx) return json(res, 400, { error: 'pfx_required_for_event' });
     const { key, cert } = pems(pfx, password);
 
     if (action === 'probe') {
