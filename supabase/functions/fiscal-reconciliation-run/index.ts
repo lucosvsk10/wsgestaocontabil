@@ -102,13 +102,6 @@ Deno.serve(async req=>{
     for(const company of companies||[]){
       const companyId=String(company.id),uf=String(company.uf||"").toUpperCase(),cnpj=dg(company.cnpj);
       try{
-        const docs=await siteRows(admin,companyId,start,end);
-        const nfe55In=docs.filter(r=>r.direction==="entrada"&&String(r.model)==="55");
-        const nfe55Out=docs.filter(r=>r.direction==="saida"&&String(r.model)==="55");
-        const nfce65Out=docs.filter(r=>r.direction==="saida"&&String(r.model)==="65");
-        const nfseIn=docs.filter(r=>r.direction==="entrada"&&r.document_kind==="nfse");
-        const nfseOut=docs.filter(r=>r.direction==="saida"&&r.document_kind==="nfse");
-
         const [purchaseState,salesState,nfseState,dfeStates,credRows]=await Promise.all([
           admin.from("fiscal_purchase_sync_state").select("*").eq("company_id",companyId).maybeSingle(),
           admin.from("fiscal_sales_sync_state").select("*").eq("company_id",companyId).maybeSingle(),
@@ -130,6 +123,15 @@ Deno.serve(async req=>{
           alReport=await rr.json().catch(()=>({}));
           if(!rr.ok||!alReport?.ok)alReport={error:alReport?.error||("http_"+rr.status)};
         }
+
+        // Take the site snapshot only after official source enrichment/backfill has run.
+        // This prevents false missing keys caused by the audit itself inserting metadata.
+        const docs=await siteRows(admin,companyId,start,end);
+        const nfe55In=docs.filter(r=>r.direction==="entrada"&&String(r.model)==="55");
+        const nfe55Out=docs.filter(r=>r.direction==="saida"&&String(r.model)==="55");
+        const nfce65Out=docs.filter(r=>r.direction==="saida"&&String(r.model)==="65");
+        const nfseIn=docs.filter(r=>r.direction==="entrada"&&r.document_kind==="nfse");
+        const nfseOut=docs.filter(r=>r.direction==="saida"&&r.document_kind==="nfse");
 
         // NF-e purchases: exact AL portal when available, otherwise national DFe cursor completeness.
         if(uf==="AL"&&alReport?.ok&&Array.isArray(alReport.purchase_all_keys)){
