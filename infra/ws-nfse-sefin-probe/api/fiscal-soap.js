@@ -145,7 +145,7 @@ module.exports = async function handler(req, res) {
     const b = await readBody(req);
     const action = String(b.action || '');
     const env = b.environment === 'production' ? 'production' : 'homologation';
-    const material = tls(b);
+    const material = action === 'sp-tls-peer-info' ? null : tls(b);
 
     if (action === 'nfe-probe') return json(res, 200, await probe(nfeEndpoint(String(b.model) === '65' ? '65' : '55', env), material));
     if (action === 'cte-probe') return json(res, 200, await probe(`${cteBase(env)}/CTeStatusServicoV4/CTeStatusServicoV4.asmx`, material));
