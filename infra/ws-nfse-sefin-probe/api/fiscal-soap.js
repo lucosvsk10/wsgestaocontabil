@@ -1,5 +1,5 @@
 const https = require('node:https');
-const tls = require('node:tls');
+const tlsModule = require('node:tls');
 const crypto = require('node:crypto');
 const zlib = require('node:zlib');
 
@@ -94,7 +94,7 @@ async function probe(url, material) {
 
 function peerCertificateInfo(hostname) {
   return new Promise((resolve, reject) => {
-    const socket = tls.connect({
+    const socket = tlsModule.connect({
       host: hostname,
       port: 443,
       servername: hostname,
