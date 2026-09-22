@@ -253,3 +253,8 @@ verify_jwt = true
 
 [functions.mp-webhook]
 verify_jwt = false
+[functions.fiscal-coverage-refresh]
+verify_jwt = false
+
+[functions.fiscal-reconciliation-run]
+verify_jwt = false
