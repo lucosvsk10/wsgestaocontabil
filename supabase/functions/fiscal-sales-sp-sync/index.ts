@@ -19,6 +19,73 @@ async function gateway(token:string,body:any){
   if(!r.ok||!o?.ok)throw new Error("gateway_"+r.status+":"+String(o?.error||o?.response_excerpt||"failed").slice(0,300));
   return String(o.text||"");
 }
+async function gatewayObject(token:string,body:any){
+  const r=await fetch("https://ws-nfse-sefin-probe.vercel.app/api/fiscal-soap",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+token},body:JSON.stringify(body),signal:AbortSignal.timeout(70000)});
+  const o=await r.json().catch(()=>({})) as any;
+  if(!r.ok||!o?.ok)throw new Error("gateway_"+r.status+":"+String(o?.error||o?.xMotivo||"failed").slice(0,300));
+  return o;
+}
+function keyInfo(v:unknown){const k=dg(v);if(k.length!==44)return null;return{key:k,month:Number("20"+k.slice(2,6)),issuer:k.slice(6,20),model:k.slice(20,22),series:Number(k.slice(22,25)),number:Number(k.slice(25,34))}}
+function crtFor(regime:unknown){return String(regime||"").toLowerCase().includes("simples")?"1":"3"}
+async function recoverSpNfe55Numbers(admin:any,c:any,gatewayToken:string,gatewayCertificate:any,historyStart:string,batch=12,lookahead=15){
+  const cnpj=dg(c.cnpj),historyMonth=Number(historyStart.slice(0,4)+historyStart.slice(5,7));
+  const [{data:events,error:ee},{data:rec,error:re}]=await Promise.all([
+    admin.from("fiscal_dfe_events").select("access_key").eq("company_id",c.id).not("access_key","is",null).limit(10000),
+    admin.from("fiscal_sales_reconciliation").select("series,note_number,status,access_key").eq("company_id",c.id).eq("model","55").limit(10000)
+  ]);
+  if(ee)throw ee;if(re)throw re;
+  const infos:any[]=[];
+  for(const row of [...(events||[]),...(rec||[])]){const i=keyInfo((row as any).access_key);if(i&&i.issuer===cnpj&&i.model==="55")infos.push(i)}
+  const seriesList=[...new Set(infos.map(i=>i.series))].sort((a,b)=>a-b);
+  if(!seriesList.length)return{complete:false,reason:"series_not_discovered",processed:0};
+  const maps=new Map<number,Map<number,any>>();
+  for(const row of rec||[]){const s=Number(row.series),n=Number(row.note_number);if(!maps.has(s))maps.set(s,new Map());maps.get(s)!.set(n,row)}
+  const scopes:any[]=[],candidates:any[]=[];
+  for(const series of seriesList){
+    const si=infos.filter(i=>i.series===series),before=si.filter(i=>i.month<historyMonth),inside=si.filter(i=>i.month>=historyMonth);
+    const prior=before.length?Math.max(...before.map(i=>i.number)):0,minInside=inside.length?Math.min(...inside.map(i=>i.number)):0,maxInside=inside.length?Math.max(...inside.map(i=>i.number)):prior;
+    if(!maxInside)continue;
+    const floor=prior?prior+1:Math.max(1,minInside-30),end=maxInside+lookahead,map=maps.get(series)||new Map();
+    scopes.push({series,floor,max_known:maxInside,end});
+    for(let n=floor;n<=end;n++){const row=map.get(n),st=String(row?.status||"");if(!row||["pending","error","not_found"].includes(st))candidates.push({series,n,priority:n<=maxInside?0:1})}
+  }
+  candidates.sort((a,b)=>a.priority-b.priority||a.series-b.series||a.n-b.n);
+  let found=0,cancelled=0,unused=0,failed=0;const failures:any[]=[];
+  for(const item of candidates.slice(0,Math.max(1,Math.min(20,batch)))){
+    const now=new Date().toISOString();
+    try{
+      const recovery=await gatewayObject(gatewayToken,{action:"sp-nfe-recover-key",environment:"production",...gatewayCertificate,
+        issuer_cnpj:c.cnpj,issuer_ie:c.inscricao_estadual,issuer_name:c.razao_social,issuer_trade_name:c.nome_fantasia,
+        issuer_city_code:c.codigo_municipio,issuer_city:c.municipio,issuer_street:c.endereco?.logradouro,issuer_number:c.endereco?.numero,
+        issuer_district:c.endereco?.bairro,issuer_zip:c.endereco?.cep,crt:crtFor(c.regime_tributario),series:item.series,note_number:item.n});
+      if(recovery.exists&&/^\d{44}$/.test(String(recovery.access_key||""))){
+        const key=String(recovery.access_key),info=keyInfo(key);if(!info||info.issuer!==cnpj||info.model!=="55"||info.series!==item.series||info.number!==item.n)throw Error("recovery_key_identity_mismatch");
+        const text=await gateway(gatewayToken,{action:"sp-nfe-consult",environment:"production",...gatewayCertificate,access_key:key});
+        const stats=[...text.matchAll(/<(?:\w+:)?cStat>(\d+)<\/(?:\w+:)?cStat>/g)].map(m=>m[1]),motives=[...text.matchAll(/<(?:\w+:)?xMotivo>([\s\S]*?)<\/(?:\w+:)?xMotivo>/g)].map(m=>m[1].trim());
+        const isCancelled=/<(?:\w+:)?tpEvento>110111<\/(?:\w+:)?tpEvento>/i.test(text)||stats.includes("101"),status=isCancelled?"Cancelada":(motives.find(m=>/autorizado o uso/i.test(m))||motives[0]||"Autorizada"),issue=tag(text,"dhRecbto")||null,series=String(info.series),number=String(info.number);
+        const source="sefaz_sp_nfe55_539_recovery",sourceReference={service:"NFeAutorizacao4_recovery_539",recovery_cstat:recovery.cStat,protocol:tag(text,"nProt")||null,official:true,xml_pending:true};
+        const {error:se}=await admin.from("fiscal_sales_documents").upsert({company_id:c.id,uf:"SP",model:"55",access_key:key,document_number:number,series,issue_date:issue,status,total_value:null,recipient_document:null,recipient_name:null,xml:null,source,source_reference:sourceReference,updated_at:now},{onConflict:"company_id,access_key"});if(se)throw se;
+        const {error:de}=await admin.from("fiscal_dfe_documents").upsert({user_id:c.created_by,company_id:c.id,cnpj:c.cnpj,environment:"producao",uf_code:"35",nsu:"SP-NFE55-"+key,schema_name:"retConsSitNFe_v4.00",document_kind:"nfe",direction:"saida",access_key:key,issue_date:issue,value:null,issuer_cnpj:c.cnpj,issuer_name:c.razao_social,note_number:number,series,status_code:isCancelled?"101":"100",full_xml:false,xml:null,source,source_id:key,model:"55",status_text:status,updated_at:now},{onConflict:"user_id,cnpj,environment,uf_code,nsu"});if(de)throw de;
+        const {error:rr}=await admin.from("fiscal_sales_reconciliation").upsert({company_id:c.id,model:"55",series,note_number:info.number,status:isCancelled?"cancelled":"found",access_key:key,issue_date:issue,cstat:isCancelled?"101":"100",xmotivo:status,attempts:1,last_checked_at:now,resolved_at:now,updated_at:now,xml_status:"pending",xml_attempts:0,detail_status:"pending",detail_attempts:0,event_status:isCancelled?"pending":"not_applicable",event_attempts:0},{onConflict:"company_id,model,series,note_number"});if(rr)throw rr;
+        if(isCancelled)cancelled++;else found++;
+      }else{
+        const {error:ue}=await admin.from("fiscal_sales_reconciliation").upsert({company_id:c.id,model:"55",series:String(item.series),note_number:item.n,status:"not_authorized",access_key:null,issue_date:null,cstat:String(recovery.cStat||"SP_NO_AUTHORIZATION"),xmotivo:String(recovery.xMotivo||"Numeração sem NF-e autorizada na SEFAZ/SP"),attempts:1,tried_months:[],last_checked_at:now,resolved_at:now,updated_at:now,xml_status:"not_applicable",xml_attempts:0,detail_status:"not_applicable",detail_attempts:0,event_status:"not_applicable",event_attempts:0},{onConflict:"company_id,model,series,note_number"});if(ue)throw ue;unused++;
+      }
+    }catch(e){failed++;failures.push({series:item.series,note_number:item.n,error:e instanceof Error?e.message:String(e)})}
+    await new Promise(r=>setTimeout(r,180));
+  }
+  const {data:after,error:ae}=await admin.from("fiscal_sales_reconciliation").select("series,note_number,status,access_key").eq("company_id",c.id).eq("model","55").limit(10000);if(ae)throw ae;
+  let total=0,resolved=0,pending=0,foundTotal=0,cancelTotal=0,notAuthTotal=0;const finalScopes:any[]=[];
+  for(const scope of scopes){
+    const rows=(after||[]).filter((r:any)=>Number(r.series)===scope.series),recoveredMax=Math.max(scope.max_known,...rows.filter((r:any)=>["found","cancelled"].includes(String(r.status))).map((r:any)=>Number(r.note_number)||0)),end=recoveredMax+lookahead,byN=new Map(rows.map((r:any)=>[Number(r.note_number),r]));let localPending=0;
+    for(let n=scope.floor;n<=end;n++){total++;const st=String((byN.get(n) as any)?.status||"");if(["found","cancelled","not_authorized","inutilized"].includes(st)){resolved++;if(st==="found")foundTotal++;if(st==="cancelled")cancelTotal++;if(st==="not_authorized")notAuthTotal++;}else{pending++;localPending++;}}
+    finalScopes.push({...scope,max_known:recoveredMax,end,pending:localPending});
+  }
+  const complete=total>0&&pending===0&&failed===0,now=new Date().toISOString();
+  await admin.from("fiscal_sales_sync_state").update({status:complete?"idle":"queued",reconciliation_total:total,reconciliation_resolved:resolved,reconciliation_found:foundTotal,reconciliation_cancelled:cancelTotal,reconciliation_not_authorized:notAuthTotal,reconciliation_pending:pending,reconciliation_complete:complete,reconciliation_completed_at:complete?now:null,last_error:failed?String(failed)+" falha(s) NF-e 55/SP":null,next_scheduled_at:new Date(Date.now()+(complete?30:5)*60000).toISOString(),updated_at:now}).eq("company_id",c.id);
+  return{processed:Math.min(batch,candidates.length),found,cancelled,unused,failed,pending,complete,scopes:finalScopes,failures:failures.slice(0,6)};
+}
+
 async function syncSpNfe55FromIssuerEvents(admin:any,c:any,gatewayToken:string,gatewayCertificate:any,historyStart:string){
   const cnpj=dg(c.cnpj),historyMonth=String(historyStart||"").slice(0,7).replace("-","");
   const {data:events,error:eventError}=await admin.from("fiscal_dfe_events").select("nsu,access_key,event_type,event_description,event_at,xml,updated_at").eq("company_id",c.id).not("access_key","is",null).order("event_at",{ascending:true}).limit(5000);
@@ -115,7 +182,8 @@ Deno.serve(async req=>{try{
   const {data:maxRow}=await admin.from("fiscal_sales_documents").select("document_number").eq("company_id",companyId).eq("model","65").order("document_number",{ascending:false}).limit(1).maybeSingle();
   await admin.from("fiscal_sales_sync_state").upsert({company_id:companyId,paused:false,status:pending?"queued":"idle",latest_number:Number(maxRow?.document_number||0)||null,cursor_number:Number(maxRow?.document_number||0)||null,initial_backfill_done:pending===0,last_started_at:state?.last_started_at||completedAt,last_completed_at:completedAt,next_scheduled_at:new Date(Date.now()+30*60000).toISOString(),last_error:failed?String(failed)+" XML(s) falharam; retry automático":null,updated_at:completedAt},{onConflict:"company_id"});
   await admin.from("fiscal_companies").update({last_sync_at:completedAt}).eq("id",companyId);
-  return J({ok:true,company_id:companyId,nfe55,nfce65:{period:{start:start.toISOString(),end:end.toISOString()},listed:all.length,already_saved:existing.size,missing:missing.length,saved,failed,pending,segments}});
+  const nfe55Recovery=await recoverSpNfe55Numbers(admin,c,gatewayToken,gatewayCertificate,historyStart,Number(b.nfe55_batch||12),Number(b.nfe55_lookahead||15));
+  return J({ok:true,company_id:companyId,nfe55:{events:nfe55,recovery:nfe55Recovery},nfce65:{period:{start:start.toISOString(),end:end.toISOString()},listed:all.length,already_saved:existing.size,missing:missing.length,saved,failed,pending,segments}});
 }catch(e){
   const msg=e instanceof Error?e.message:String(e);console.error("fiscal-sales-sp-sync",msg);return J({error:msg},500)
 }});
