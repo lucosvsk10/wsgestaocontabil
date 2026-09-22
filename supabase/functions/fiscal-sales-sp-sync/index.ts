@@ -12,6 +12,7 @@ async function K(){const s=Deno.env.get("ACCOUNTING_ENGINE_SESSION_SECRET")||Den
 async function dec(c:string,i:string){return D.decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:B(i)},await K(),B(c)))}
 function extractProc(raw:string){const text=decodeEntities(raw);const m=text.match(/<(?:\w+:)?nfeProc\b[\s\S]*?<\/(?:\w+:)?nfeProc>/i);return m?.[0]?.replace(/<(\/?)\w+:/g,"<$1")||""}
 function dtLocal(v:Date){const parts=new Intl.DateTimeFormat("sv-SE",{timeZone:"America/Sao_Paulo",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false}).format(v);return parts.replace(" ","T").slice(0,16)}
+async function gzDoc(v:string){const b=Uint8Array.from(atob(v.replace(/\\s/g,"")),c=>c.charCodeAt(0));return D.decode(await new Response(new Blob([b]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer())}
 
 async function gateway(token:string,body:any){
   const r=await fetch("https://ws-nfse-sefin-probe.vercel.app/api/fiscal-soap",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+token},body:JSON.stringify(body),signal:AbortSignal.timeout(70000)});
@@ -86,6 +87,46 @@ async function recoverSpNfe55Numbers(admin:any,c:any,gatewayToken:string,gateway
   const complete=total>0&&pending===0&&failed===0,now=new Date().toISOString();
   await admin.from("fiscal_sales_sync_state").update({status:complete?"idle":"queued",reconciliation_total:total,reconciliation_resolved:resolved,reconciliation_found:foundTotal,reconciliation_cancelled:cancelTotal,reconciliation_not_authorized:notAuthTotal,reconciliation_pending:pending,reconciliation_complete:complete,reconciliation_completed_at:complete?now:null,last_error:failed?String(failed)+" falha(s) NF-e 55/SP":null,next_scheduled_at:new Date(Date.now()+(complete?30:5)*60000).toISOString(),updated_at:now}).eq("company_id",c.id);
   return{processed:Math.min(batch,candidates.length),found,cancelled,unused,failed,pending,complete,scopes:finalScopes,failures:failures.slice(0,6)};
+}
+
+
+async function backfillSpNfe55Xml(admin:any,c:any,gatewayToken:string,gatewayCertificate:any,historyStart:string,batch=20){
+  const cnpj=dg(c.cnpj),monthFloor=String(historyStart||"").slice(0,7).replace("-","");
+  const {data:rows,error}=await admin.from("fiscal_sales_documents")
+    .select("access_key,document_number,series,issue_date,status,xml,source")
+    .eq("company_id",c.id).eq("model","55").is("xml",null)
+    .order("issue_date",{ascending:false}).limit(Math.max(20,Math.min(100,batch*4)));
+  if(error)throw error;
+  let saved=0,summaryOnly=0,failed=0;const failures:any[]=[];
+  for(const row of rows||[]){
+    if(saved+summaryOnly+failed>=batch)break;
+    const key=dg(row.access_key);if(key.length!==44||key.slice(6,20)!==cnpj||key.slice(20,22)!=="55")continue;
+    const keyMonth="20"+key.slice(2,6);if(monthFloor&&keyMonth<monthFloor)continue;
+    const now=new Date().toISOString();
+    try{
+      const o=await gatewayObject(gatewayToken,{action:"nfe-distribution",environment:c.ambiente_padrao==="homologacao"?"homologation":"production",...gatewayCertificate,cnpj,uf_code:"35",access_key:key});
+      const raw=String(o.text||""),docs:any[]=[];const re=/<docZip\b([^>]*)>([\s\S]*?)<\/docZip>/gi;let m;
+      while((m=re.exec(raw)))try{
+        const xml=await gzDoc(m[2]);
+        const sm=String(m[1]||"").match(/schema=["']([^"']+)["']/i),schema=sm?.[1]||"";
+        const access=tag(xml,"chNFe")||xml.match(/Id=["']NFe(\d{44})/i)?.[1]||"";
+        if(access===key)docs.push({xml,schema,full:/(?:procNFe|nfeProc)/i.test(schema)||/<(?:\w+:)?NFe\b/i.test(xml)});
+      }catch{}
+      const full=docs.find(d=>d.full);
+      if(!full){
+        if(docs.length){summaryOnly++;failures.push({key,error:"distribution_summary_only",schemas:docs.map(d=>d.schema)});continue}
+        throw Error("distribution_no_document:"+String(tag(raw,"cStat")||"")+":"+String(tag(raw,"xMotivo")||""));
+      }
+      const xml=String(full.xml),issue=tag(xml,"dhEmi")||tag(xml,"dEmi")||row.issue_date||null,totalText=tag(xml,"vNF"),total=totalText?Number(totalText):null,series=tag(xml,"serie")||row.series||String(Number(key.slice(22,25))),number=tag(xml,"nNF")||row.document_number||String(Number(key.slice(25,34))),dest=tag(xml,"dest")||"",recipient=dg(tag(dest,"CNPJ")||tag(dest,"CPF"))||null,status=tag(xml,"xMotivo")||row.status||"Autorizada";
+      const {error:se}=await admin.from("fiscal_sales_documents").update({document_number:number,series,issue_date:issue,status,total_value:total,recipient_document:recipient,xml,source:"sefaz_sp_nfe55_distribution_xml",source_reference:{service:"NFeDistribuicaoDFe_consChNFe",official:true,xml_pending:false},updated_at:now}).eq("company_id",c.id).eq("access_key",key);if(se)throw se;
+      const {data:du,error:de}=await admin.from("fiscal_dfe_documents").update({schema_name:full.schema||"procNFe_v4.00",document_kind:"nfe",direction:"saida",issue_date:issue,value:total,recipient_cnpj:recipient,note_number:number,series,status_code:"100",full_xml:true,xml,source:"sefaz_sp_nfe55_distribution_xml",source_id:key,model:"55",status_text:status,parse_error:null,updated_at:now}).eq("company_id",c.id).eq("access_key",key).select("id");if(de)throw de;
+      if(!du?.length){const {error:ie}=await admin.from("fiscal_dfe_documents").upsert({user_id:c.created_by,company_id:c.id,cnpj:c.cnpj,environment:c.ambiente_padrao==="homologacao"?"homologacao":"producao",uf_code:"35",nsu:"SP-NFE55-"+key,schema_name:full.schema||"procNFe_v4.00",document_kind:"nfe",direction:"saida",access_key:key,issue_date:issue,value:total,issuer_cnpj:c.cnpj,issuer_name:c.razao_social,recipient_cnpj:recipient,note_number:number,series,status_code:"100",full_xml:true,xml,source:"sefaz_sp_nfe55_distribution_xml",source_id:key,model:"55",status_text:status,updated_at:now},{onConflict:"user_id,cnpj,environment,uf_code,nsu"});if(ie)throw ie}
+      await admin.from("fiscal_sales_reconciliation").update({xml_status:"saved",xml_attempts:1,xml_last_error:null,xml_last_checked_at:now,detail_status:"saved",detail_attempts:1,detail_last_error:null,detail_last_checked_at:now,issue_date:issue,updated_at:now}).eq("company_id",c.id).eq("model","55").eq("series",String(Number(series))).eq("note_number",Number(number));
+      saved++;
+    }catch(e){failed++;const msg=e instanceof Error?e.message:String(e);failures.push({key,error:msg});await admin.from("fiscal_sales_reconciliation").update({xml_status:"retrying",xml_attempts:1,xml_last_error:msg,xml_last_checked_at:now,updated_at:now}).eq("company_id",c.id).eq("access_key",key)}
+    await new Promise(r=>setTimeout(r,220));
+  }
+  return{saved,summary_only:summaryOnly,failed,failures:failures.slice(0,10)};
 }
 
 async function syncSpNfe55FromIssuerEvents(admin:any,c:any,gatewayToken:string,gatewayCertificate:any,historyStart:string){
@@ -185,7 +226,8 @@ Deno.serve(async req=>{try{
   await admin.from("fiscal_sales_sync_state").upsert({company_id:companyId,paused:false,status:pending?"queued":"idle",latest_number:Number(maxRow?.document_number||0)||null,cursor_number:Number(maxRow?.document_number||0)||null,initial_backfill_done:pending===0,last_started_at:state?.last_started_at||completedAt,last_completed_at:completedAt,next_scheduled_at:new Date(Date.now()+30*60000).toISOString(),last_error:failed?String(failed)+" XML(s) falharam; retry automático":null,updated_at:completedAt},{onConflict:"company_id"});
   await admin.from("fiscal_companies").update({last_sync_at:completedAt}).eq("id",companyId);
   const nfe55Recovery=await recoverSpNfe55Numbers(admin,c,gatewayToken,gatewayCertificate,historyStart,Number(b.nfe55_batch||12),Number(b.nfe55_lookahead||15));
-  return J({ok:true,company_id:companyId,nfe55:{events:nfe55,recovery:nfe55Recovery},nfce65:{period:{start:start.toISOString(),end:end.toISOString()},listed:all.length,already_saved:existing.size,missing:missing.length,saved,failed,pending,segments}});
+  const nfe55Xml=await backfillSpNfe55Xml(admin,c,gatewayToken,gatewayCertificate,historyStart,Number(b.nfe55_xml_batch||20));
+  return J({ok:true,company_id:companyId,nfe55:{events:nfe55,recovery:nfe55Recovery,xml:nfe55Xml},nfce65:{period:{start:start.toISOString(),end:end.toISOString()},listed:all.length,already_saved:existing.size,missing:missing.length,saved,failed,pending,segments}});
 }catch(e){
   const msg=e instanceof Error?e.message:String(e);console.error("fiscal-sales-sp-sync",msg);return J({error:msg},500)
 }});
