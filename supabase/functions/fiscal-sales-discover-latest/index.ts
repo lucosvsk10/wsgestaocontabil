@@ -34,8 +34,8 @@ function dv(base: string) {
   return String(result);
 }
 
-function syntheticKey(cnpj: string, monthCode: string, noteNumber: number) {
-  const base = `27${monthCode}${cnpj}65${"001"}${String(noteNumber).padStart(9, "0")}1${"00000000"}`;
+function syntheticKey(cnpj: string, monthCode: string, noteNumber: number, ufCode = "27", model = "65", series = "001") {
+  const base = `${ufCode}${monthCode}${cnpj}${model}${String(series).padStart(3,"0")}${String(noteNumber).padStart(9, "0")}1${"00000000"}`;
   return base + dv(base);
 }
 
@@ -49,22 +49,36 @@ function monthCodes() {
   return result;
 }
 
-async function consult(pfx: string, password: string, accessKey: string) {
-  const payload = `<consSitNFe versao="4.00" xmlns="http://www.portalfiscal.inf.br/nfe"><tpAmb>1</tpAmb><xServ>CONSULTAR</xServ><chNFe>${accessKey}</chNFe></consSitNFe>`;
-  const soap = `<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeConsultaProtocolo4">${payload}</nfeDadosMsg></soap12:Body></soap12:Envelope>`;
-  const response = await fetch("https://ws-svrs-consit.vercel.app/api/consit", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ certificate_base64: pfx, certificate_password: password, soap_body: soap }),
-    signal: AbortSignal.timeout(25000),
-  });
-  if (!response.ok) throw new Error(`consit_http_${response.status}`);
-  const parsed = await response.json().catch(() => ({})) as any;
-  const text = String(parsed?.body || "");
+async function consult(pfx: string, password: string, accessKey: string, uf: string, gatewayToken: string) {
+  let text = "";
+  if (uf === "SP") {
+    const response = await fetch("https://ws-nfse-sefin-probe.vercel.app/api/fiscal-soap", {
+      method: "POST",
+      headers: { "content-type": "application/json", "authorization": "Bearer " + gatewayToken },
+      body: JSON.stringify({ action: "sp-nfe-consult", environment: "production", certificate_base64: pfx, certificate_password: password, access_key: accessKey }),
+      signal: AbortSignal.timeout(30000),
+    });
+    const parsed = await response.json().catch(() => ({})) as any;
+    if (!response.ok || !parsed?.ok) throw new Error(`sp_consult_http_${response.status}:${String(parsed?.error || "failed")}`);
+    text = String(parsed?.text || "");
+  } else {
+    const payload = `<consSitNFe versao="4.00" xmlns="http://www.portalfiscal.inf.br/nfe"><tpAmb>1</tpAmb><xServ>CONSULTAR</xServ><chNFe>${accessKey}</chNFe></consSitNFe>`;
+    const soap = `<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeConsultaProtocolo4">${payload}</nfeDadosMsg></soap12:Body></soap12:Envelope>`;
+    const response = await fetch("https://ws-svrs-consit.vercel.app/api/consit", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ certificate_base64: pfx, certificate_password: password, soap_body: soap }),
+      signal: AbortSignal.timeout(25000),
+    });
+    if (!response.ok) throw new Error(`consit_http_${response.status}`);
+    const parsed = await response.json().catch(() => ({})) as any;
+    text = String(parsed?.body || "");
+  }
   if (!text) throw new Error("consit_empty");
-  const cStat = text.match(/<cStat>(\d+)<\/cStat>/)?.[1] || null;
-  const xMotivo = text.match(/<xMotivo>([\s\S]*?)<\/xMotivo>/)?.[1] || null;
-  const realKey = xMotivo?.match(/\[(\d{44})\]/)?.[1] || null;
+  const cStat = text.match(/<(?:\w+:)?cStat>(\d+)<\/(?:\w+:)?cStat>/)?.[1] || null;
+  const xMotivo = text.match(/<(?:\w+:)?xMotivo>([\s\S]*?)<\/(?:\w+:)?xMotivo>/)?.[1] || null;
+  const all44 = [...String(xMotivo || "").matchAll(/(\d{44})/g)].map(m => m[1]);
+  const realKey = all44.find(k => k !== accessKey) || null;
   return { cStat, xMotivo, realKey };
 }
 
@@ -78,7 +92,7 @@ Deno.serve(async req => {
     const body = await req.json().catch(() => ({})) as any;
     const companyId = String(body.company_id || "");
     if (!companyId) return json({ error: "company_id_required" }, 400);
-    const lookahead = Math.min(12, Math.max(1, Number(body.lookahead || 6)));
+    const lookahead = Math.min(60, Math.max(1, Number(body.lookahead || 12)));
 
     const { data: company, error: companyError } = await admin
       .from("fiscal_companies")
@@ -86,7 +100,8 @@ Deno.serve(async req => {
       .eq("id", companyId)
       .maybeSingle();
     if (companyError) throw companyError;
-    if (!company || company.status !== "ativa" || String(company.uf || "").toUpperCase() !== "AL") {
+    const uf = String(company?.uf || "").toUpperCase();
+    if (!company || company.status !== "ativa" || !["AL","SP"].includes(uf)) {
       return json({ ok: true, skipped: "company_not_eligible" });
     }
 
@@ -101,10 +116,13 @@ Deno.serve(async req => {
     if (certError) throw certError;
     if (!cert) return json({ ok: true, skipped: "certificate_missing" });
 
-    const [{ data: state }, { data: savedRows }] = await Promise.all([
+    const [{ data: state }, { data: savedRows }, { data: gatewayRow }] = await Promise.all([
       admin.from("fiscal_sales_sync_state").select("latest_number").eq("company_id", companyId).maybeSingle(),
       admin.from("fiscal_sales_documents").select("document_number").eq("company_id", companyId).order("document_number", { ascending: false }).limit(100),
+      admin.from("_fiscal_vercel_gateway_token").select("token").eq("id", true).maybeSingle(),
     ]);
+    const gatewayToken = String(gatewayRow?.token || "");
+    if (uf === "SP" && !gatewayToken) throw new Error("gateway_token_missing");
     const maxSaved = Math.max(0, ...(savedRows || []).map((row: any) => Number(row.document_number) || 0));
     const requestedBase = Number(body.base_number || 0);
     const knownBase = Math.max(Number(state?.latest_number || 0), maxSaved);
@@ -125,7 +143,9 @@ Deno.serve(async req => {
 
     for (let noteNumber = firstNumber; noteNumber <= lastNumber && !cooldown; noteNumber += 1) {
       for (const month of months) {
-        const result = await consult(pfx, password, syntheticKey(cnpj, month, noteNumber));
+        const ufCode = uf === "SP" ? "35" : "27", model = uf === "SP" ? "55" : "65";
+        const synthetic = syntheticKey(cnpj, month, noteNumber, ufCode, model, String(body.series || 1));
+        const result = await consult(pfx, password, synthetic, uf, gatewayToken);
         probes += 1;
         if (result.cStat === "656") {
           cooldown = true;
