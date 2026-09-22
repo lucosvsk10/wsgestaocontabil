@@ -1,0 +1,69 @@
+name: Deploy production site
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: production-site
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_TEAM_ID: team_wy1aZsYtGjyJSKvARyUBSEzS
+      TOKEN_A: ${{ secrets.VERCEL_TOKEN }}
+      TOKEN_B: ${{ secrets.VERCEL_ACCESS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Resolve Vercel access
+        run: |
+          TOKEN="${TOKEN_A:-${TOKEN_B:-}}"
+          if [ -z "$TOKEN" ]; then
+            echo "Configure VERCEL_TOKEN or VERCEL_ACCESS_TOKEN in repository Actions secrets."
+            exit 1
+          fi
+          echo "VERCEL_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+
+      - name: Link the project that owns the production domain
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const token = process.env.VERCEL_TOKEN;
+          const teamId = process.env.VERCEL_TEAM_ID;
+          const headers = { authorization: `Bearer ${token}` };
+          const api = async path => {
+            const response = await fetch(`https://api.vercel.com${path}${path.includes('?') ? '&' : '?'}teamId=${teamId}`, { headers });
+            if (!response.ok) throw new Error(`${path}: ${response.status}`);
+            return response.json();
+          };
+          const projects = (await api('/v9/projects?limit=100')).projects || [];
+          let match = null;
+          for (const project of projects) {
+            const domains = (await api(`/v9/projects/${project.id}/domains?limit=100`)).domains || [];
+            if (domains.some(domain => domain.name === 'wsgestaocontabil.com')) {
+              match = project;
+              break;
+            }
+          }
+          if (!match) throw new Error('Projeto responsável por wsgestaocontabil.com não encontrado.');
+          fs.mkdirSync('.vercel', { recursive: true });
+          fs.writeFileSync('.vercel/project.json', JSON.stringify({ orgId: teamId, projectId: match.id }));
+          console.log(`Projeto localizado: ${match.name}`);
+          NODE
+
+      - name: Pull production configuration
+        run: npx --yes vercel@latest pull --yes --environment=production --token "$VERCEL_TOKEN"
+
+      - name: Build production artifact
+        run: npx --yes vercel@latest build --prod --token "$VERCEL_TOKEN"
+
+      - name: Publish production artifact
+        run: npx --yes vercel@latest deploy --prebuilt --prod --token "$VERCEL_TOKEN"
