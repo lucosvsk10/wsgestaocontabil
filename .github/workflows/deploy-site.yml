@@ -39,24 +39,39 @@ jobs:
           const token = process.env.VERCEL_TOKEN;
           const teamId = process.env.VERCEL_TEAM_ID;
           const headers = { authorization: `Bearer ${token}` };
-          const api = async path => {
-            const response = await fetch(`https://api.vercel.com${path}${path.includes('?') ? '&' : '?'}teamId=${teamId}`, { headers });
+          const api = async (path, scope = '') => {
+            const suffix = scope ? `${path.includes('?') ? '&' : '?'}teamId=${scope}` : '';
+            const response = await fetch(`https://api.vercel.com${path}${suffix}`, { headers });
             if (!response.ok) throw new Error(`${path}: ${response.status}`);
             return response.json();
           };
-          const projects = (await api('/v9/projects?limit=100')).projects || [];
           let match = null;
-          for (const project of projects) {
-            const domains = (await api(`/v9/projects/${project.id}/domains?limit=100`)).domains || [];
-            if (domains.some(domain => domain.name === 'wsgestaocontabil.com')) {
-              match = project;
-              break;
+          for (const scope of ['', teamId]) {
+            let projects = [];
+            try {
+              projects = (await api('/v9/projects?limit=100', scope)).projects || [];
+            } catch (error) {
+              console.log(`Escopo ${scope || 'pessoal'} indisponível: ${error.message}`);
+              continue;
             }
+            for (const project of projects) {
+              let domains = [];
+              try {
+                domains = (await api(`/v9/projects/${project.id}/domains?limit=100`, scope)).domains || [];
+              } catch {
+                continue;
+              }
+              if (domains.some(domain => domain.name === 'wsgestaocontabil.com')) {
+                match = { project, scope: scope || project.accountId };
+                break;
+              }
+            }
+            if (match) break;
           }
           if (!match) throw new Error('Projeto responsável por wsgestaocontabil.com não encontrado.');
           fs.mkdirSync('.vercel', { recursive: true });
-          fs.writeFileSync('.vercel/project.json', JSON.stringify({ orgId: teamId, projectId: match.id }));
-          console.log(`Projeto localizado: ${match.name}`);
+          fs.writeFileSync('.vercel/project.json', JSON.stringify({ orgId: match.scope, projectId: match.project.id }));
+          console.log(`Projeto localizado: ${match.project.name}`);
           NODE
 
       - name: Pull production configuration
