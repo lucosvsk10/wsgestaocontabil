@@ -66,6 +66,7 @@ function readBody(req) {
     req.on('error', reject);
   });
 }
+function digits(v) { return String(v ?? '').replace(/\\D/g, ''); }
 function sha256(v) { return crypto.createHash('sha256').update(String(v || '')).digest('hex'); }
 function safeEqual(a, b) {
   const aa = Buffer.from(String(a || ''));
