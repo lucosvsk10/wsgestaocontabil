@@ -12,9 +12,6 @@ async function K(){const s=Deno.env.get("ACCOUNTING_ENGINE_SESSION_SECRET")||Den
 async function dec(c:string,i:string){return D.decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:B(i)},await K(),B(c)))}
 function extractProc(raw:string){const text=decodeEntities(raw);const m=text.match(/<(?:\w+:)?nfeProc\b[\s\S]*?<\/(?:\w+:)?nfeProc>/i);return m?.[0]?.replace(/<(\/?)\w+:/g,"<$1")||""}
 function dtLocal(v:Date){const parts=new Intl.DateTimeFormat("sv-SE",{timeZone:"America/Sao_Paulo",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false}).format(v);return parts.replace(" ","T").slice(0,16)}
-function nfeDv(base:string){let sum=0,weight=2;for(let i=base.length-1;i>=0;i--){sum+=Number(base[i])*weight;weight=weight===9?2:weight+1}let result=11-(sum%11);if(result>=10)result=0;return String(result)}
-function syntheticSpNfe55Key(cnpj:string,month:string,noteNumber:number,series=1){const base="35"+month+dg(cnpj)+"55"+String(series).padStart(3,"0")+String(noteNumber).padStart(9,"0")+"1"+"00000000";return base+nfeDv(base)}
-function recentMonthCodes(){const now=new Date(),out:string[]=[];for(let offset=0;offset<2;offset++){const d=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth()-offset,1));out.push(String(d.getUTCFullYear()).slice(-2)+String(d.getUTCMonth()+1).padStart(2,"0"))}return out}
 
 async function gateway(token:string,body:any){
   const r=await fetch("https://ws-nfse-sefin-probe.vercel.app/api/fiscal-soap",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+token},body:JSON.stringify(body),signal:AbortSignal.timeout(70000)});
@@ -87,27 +84,6 @@ Deno.serve(async req=>{try{
   const pfx=await dec(cert.certificate_ciphertext,cert.certificate_iv),pass=await dec(cert.password_ciphertext,cert.password_iv);
   const parsedCertificate=lerCertificado(Buffer.from(pfx,"base64"),pass);
   const gatewayCertificate={certificate_pem:parsedCertificate.certificadoPem,private_key_pem:parsedCertificate.chavePrivadaPem,chain_pem:parsedCertificate.cadeiaPem||[]};
-  if(Number(b.scan_nfe55_start)>0){
-    const scanStart=Math.max(1,Number(b.scan_nfe55_start)),scanEnd=Math.min(scanStart+59,Math.max(scanStart,Number(b.scan_nfe55_end||scanStart+20))),series=Math.max(1,Number(b.scan_nfe55_series||1));
-    const months=Array.isArray(b.scan_nfe55_months)&&b.scan_nfe55_months.length?b.scan_nfe55_months.map((v:any)=>dg(v).slice(-4)).filter((v:string)=>v.length===4):recentMonthCodes();
-    const hits:any[]=[],results:any[]=[];
-    for(let noteNumber=scanStart;noteNumber<=scanEnd;noteNumber++){
-      let found:any=null;
-      for(const month of months){
-        const synthetic=syntheticSpNfe55Key(c.cnpj,month,noteNumber,series);
-        const text=await gateway(gatewayToken,{action:"sp-nfe-consult",environment:c.ambiente_padrao==="homologacao"?"homologation":"production",...gatewayCertificate,access_key:synthetic});
-        const cStat=tag(text,"cStat"),xMotivo=tag(text,"xMotivo");
-        const candidates=[...String(xMotivo||"").matchAll(/(\d{44})/g)].map(m=>m[1]);
-        const realKey=candidates.find(k=>k!==synthetic)||(cStat==="100"?synthetic:null);
-        results.push({note_number:noteNumber,month,cStat,xMotivo,real_key:realKey});
-        if(realKey){found={note_number:noteNumber,month,access_key:realKey,cStat,xMotivo};hits.push(found);break}
-        if(cStat==="656")return J({ok:false,cooldown:true,hits,results},429);
-        await new Promise(r=>setTimeout(r,180));
-      }
-      await new Promise(r=>setTimeout(r,180));
-    }
-    return J({ok:true,scan:{start:scanStart,end:scanEnd,series,months},hits,results});
-  }
   const historyStart=/^\d{4}-\d{2}-\d{2}$/.test(String(minHistory||""))?String(minHistory):new Date(Date.now()-99*86400000).toISOString().slice(0,10);
   const nfe55=await syncSpNfe55FromIssuerEvents(admin,c,gatewayToken,gatewayCertificate,historyStart);
   const now=new Date(),maxStart=new Date(now.getTime()-99*86400000),configured=/^\d{4}-\d{2}-\d{2}$/.test(String(minHistory||""))?new Date(String(minHistory)+"T00:00:00-03:00"):maxStart;
