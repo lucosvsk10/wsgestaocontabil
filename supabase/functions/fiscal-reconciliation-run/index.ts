@@ -168,15 +168,16 @@ Deno.serve(async req=>{
           const official55=await paged<any>((from,to)=>admin.from("fiscal_sales_documents")
             .select("access_key,issue_date,xml,source,source_reference,status")
             .eq("company_id",companyId).eq("model","55")
-            .eq("source","sefaz_sp_nfe55_issuer_event")
+            .in("source",["sefaz_sp_nfe55_issuer_event","sefaz_sp_nfe55_539_recovery","national_dfe_issuer_event"])
             .gte("issue_date",startTs(start)).lte("issue_date",endTs(end)).range(from,to));
+          const confirmed=Boolean(sState?.reconciliation_complete&&Number(sState?.reconciliation_pending||0)===0);
           await upsert(admin,companyId,start,end,"sale_nfe55",{
-            sourceName:"NFeDistribuicaoDFe eventos do emitente + SEFAZ/SP Consulta Protocolo",
-            sourceConfirmed:false,siteKeys:keySet(nfe55Out),blocked:false,
+            sourceName:"SEFAZ/SP NF-e 55 — eventos oficiais + reconciliação de numeração",
+            sourceConfirmed:confirmed,sourceKeys:keySet(official55),siteKeys:keySet(nfe55Out),blocked:!confirmed,
             xmlPending:nfe55Out.filter(r=>!r.full_xml||!r.xml).length,
             duplicateCount:nfe55Out.length-keySet(nfe55Out).size,
-            reason:"As chaves oficiais encontradas são capturadas e validadas, porém o serviço não enumera exaustivamente todas as NF-e 55 emitidas por período.",
-            details:{uf,official_keys_captured:keySet(official55).size,official_event_rows:official55.length,exhaustive_enumeration:false},
+            reason:confirmed?null:(sState?.last_error||"Reconciliação integral da numeração NF-e 55/SP ainda está em andamento."),
+            details:{uf,official_keys_captured:keySet(official55).size,official_rows:official55.length,reconciliation_total:sState?.reconciliation_total||0,reconciliation_resolved:sState?.reconciliation_resolved||0,reconciliation_pending:sState?.reconciliation_pending||0,exhaustive_enumeration:confirmed},
           });
         }else{
           await upsert(admin,companyId,start,end,"sale_nfe55",{
