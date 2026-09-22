@@ -32,7 +32,7 @@ async function recoverSpNfe55Numbers(admin:any,c:any,gatewayToken:string,gateway
   const cnpj=dg(c.cnpj),historyMonth=Number(historyStart.slice(0,4)+historyStart.slice(5,7));
   const [{data:events,error:ee},{data:rec,error:re}]=await Promise.all([
     admin.from("fiscal_dfe_events").select("access_key").eq("company_id",c.id).not("access_key","is",null).limit(10000),
-    admin.from("fiscal_sales_reconciliation").select("series,note_number,status,access_key").eq("company_id",c.id).eq("model","55").limit(10000)
+    admin.from("fiscal_sales_reconciliation").select("series,note_number,status,access_key,cstat").eq("company_id",c.id).eq("model","55").limit(10000)
   ]);
   if(ee)throw ee;if(re)throw re;
   const infos:any[]=[];
@@ -48,7 +48,7 @@ async function recoverSpNfe55Numbers(admin:any,c:any,gatewayToken:string,gateway
     if(!maxInside)continue;
     const floor=prior?prior+1:Math.max(1,minInside-30),end=maxInside+lookahead,map=maps.get(series)||new Map();
     scopes.push({series,floor,max_known:maxInside,end});
-    for(let n=floor;n<=end;n++){const row=map.get(n),st=String(row?.status||"");if(!row||["pending","error","not_found"].includes(st))candidates.push({series,n,priority:n<=maxInside?0:1})}
+    for(let n=floor;n<=end;n++){const row=map.get(n),st=String(row?.status||"");if(!row||["pending","error","not_found"].includes(st)||(st==="not_authorized"&&String(row?.cstat||"")!=="481"))candidates.push({series,n,priority:n<=maxInside?0:1})}
   }
   candidates.sort((a,b)=>a.priority-b.priority||a.series-b.series||a.n-b.n);
   let found=0,cancelled=0,unused=0,failed=0;const failures:any[]=[];
@@ -71,7 +71,7 @@ async function recoverSpNfe55Numbers(admin:any,c:any,gatewayToken:string,gateway
         if(isCancelled)cancelled++;else found++;
       }else{
         const probeStat=String(recovery.cStat||"");
-        if(["","108","109","215","225","242","243"].includes(probeStat))throw Error("sp_recovery_probe_invalid:"+probeStat+":"+String(recovery.xMotivo||""));
+        if(probeStat!=="481")throw Error("sp_recovery_probe_invalid:"+probeStat+":"+String(recovery.xMotivo||""));
         const {error:ue}=await admin.from("fiscal_sales_reconciliation").upsert({company_id:c.id,model:"55",series:String(item.series),note_number:item.n,status:"not_authorized",access_key:null,issue_date:null,cstat:probeStat||"SP_NO_AUTHORIZATION",xmotivo:String(recovery.xMotivo||"Numeração sem NF-e autorizada na SEFAZ/SP"),attempts:1,tried_months:[],last_checked_at:now,resolved_at:now,updated_at:now,xml_status:"not_applicable",xml_attempts:0,detail_status:"not_applicable",detail_attempts:0,event_status:"not_applicable",event_attempts:0},{onConflict:"company_id,model,series,note_number"});if(ue)throw ue;unused++;
       }
     }catch(e){failed++;failures.push({series:item.series,note_number:item.n,error:e instanceof Error?e.message:String(e)})}
