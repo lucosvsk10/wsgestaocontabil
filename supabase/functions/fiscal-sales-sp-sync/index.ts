@@ -124,7 +124,7 @@ async function backfillSpNfe55Xml(admin:any,c:any,gatewayToken:string,gatewayCer
     .eq("company_id",c.id).eq("model","55").is("xml",null)
     .order("issue_date",{ascending:false}).limit(Math.max(20,Math.min(100,batch*4)));
   if(error)throw error;
-  let saved=0,summaryOnly=0,failed=0;const failures:any[]=[];
+  let saved=0,summaryOnly=0,failed=0,cooldown=false;const failures:any[]=[];
   for(const row of rows||[]){
     if(saved+summaryOnly+failed>=batch)break;
     const key=dg(row.access_key);if(key.length!==44||key.slice(6,20)!==cnpj||key.slice(20,22)!=="55")continue;
@@ -150,10 +150,14 @@ async function backfillSpNfe55Xml(admin:any,c:any,gatewayToken:string,gatewayCer
       if(!du?.length){const {error:ie}=await admin.from("fiscal_dfe_documents").upsert({user_id:c.created_by,company_id:c.id,cnpj:c.cnpj,environment:c.ambiente_padrao==="homologacao"?"homologacao":"producao",uf_code:"35",nsu:"SP-NFE55-"+key,schema_name:full.schema||"procNFe_v4.00",document_kind:"nfe",direction:"saida",access_key:key,issue_date:issue,value:total,issuer_cnpj:c.cnpj,issuer_name:c.razao_social,recipient_cnpj:recipient,note_number:number,series,status_code:"100",full_xml:true,xml,source:"sefaz_sp_nfe55_distribution_xml",source_id:key,model:"55",status_text:status,updated_at:now},{onConflict:"user_id,cnpj,environment,uf_code,nsu"});if(ie)throw ie}
       await admin.from("fiscal_sales_reconciliation").update({xml_status:"saved",xml_attempts:1,xml_last_error:null,xml_last_checked_at:now,detail_status:"saved",detail_attempts:1,detail_last_error:null,detail_last_checked_at:now,issue_date:issue,updated_at:now}).eq("company_id",c.id).eq("model","55").eq("series",String(Number(series))).eq("note_number",Number(number));
       saved++;
-    }catch(e){failed++;const msg=e instanceof Error?e.message:String(e);failures.push({key,error:msg});await admin.from("fiscal_sales_reconciliation").update({xml_status:"retrying",xml_attempts:1,xml_last_error:msg,xml_last_checked_at:now,updated_at:now}).eq("company_id",c.id).eq("access_key",key)}
+    }catch(e){
+      failed++;const msg=e instanceof Error?e.message:String(e);failures.push({key,error:msg});
+      await admin.from("fiscal_sales_reconciliation").update({xml_status:"retrying",xml_attempts:1,xml_last_error:msg,xml_last_checked_at:now,updated_at:now}).eq("company_id",c.id).eq("access_key",key);
+      if(msg.includes("656")||/Consumo Indevido/i.test(msg)){cooldown=true;break}
+    }
     await new Promise(r=>setTimeout(r,220));
   }
-  return{saved,summary_only:summaryOnly,failed,failures:failures.slice(0,10)};
+  return{saved,summary_only:summaryOnly,failed,cooldown,failures:failures.slice(0,10)};
 }
 
 async function syncSpNfe55FromIssuerEvents(admin:any,c:any,gatewayToken:string,gatewayCertificate:any,historyStart:string){
@@ -253,7 +257,11 @@ Deno.serve(async req=>{try{
   await admin.from("fiscal_sales_sync_state").upsert({company_id:companyId,paused:false,status:pending?"queued":"idle",latest_number:Number(maxRow?.document_number||0)||null,cursor_number:Number(maxRow?.document_number||0)||null,initial_backfill_done:pending===0,last_started_at:state?.last_started_at||completedAt,last_completed_at:completedAt,next_scheduled_at:new Date(Date.now()+30*60000).toISOString(),last_error:failed?String(failed)+" XML(s) falharam; retry automático":null,updated_at:completedAt},{onConflict:"company_id"});
   await admin.from("fiscal_companies").update({last_sync_at:completedAt}).eq("id",companyId);
   const nfe55Recovery=b.skip_nfe55_recovery?{skipped:true}:await recoverSpNfe55Numbers(admin,c,gatewayToken,gatewayCertificate,historyStart,Number(b.nfe55_batch||12),Number(b.nfe55_lookahead||15));
-  const nfe55Xml=b.skip_nfe55_xml?{skipped:true}:await backfillSpNfe55Xml(admin,c,gatewayToken,gatewayCertificate,historyStart,Number(b.nfe55_xml_batch||20));
+  const nfe55Xml=(b.skip_nfe55_xml||nfe55Recovery?.cooldown)?{skipped:true,reason:nfe55Recovery?.cooldown?"recovery_cooldown":"requested"}:await backfillSpNfe55Xml(admin,c,gatewayToken,gatewayCertificate,historyStart,Number(b.nfe55_xml_batch||1));
+  if(nfe55Xml?.cooldown){
+    const coolUntil=new Date(Date.now()+65*60000).toISOString();
+    await admin.from("fiscal_sales_sync_state").update({status:"cooldown",last_error:"SEFAZ 656: cooldown automático",next_scheduled_at:coolUntil,updated_at:new Date().toISOString()}).eq("company_id",companyId);
+  }
   return J({ok:true,company_id:companyId,nfe55:{events:nfe55,recovery:nfe55Recovery,xml:nfe55Xml},nfce65:{period:{start:start.toISOString(),end:end.toISOString()},listed:all.length,already_saved:existing.size,missing:missing.length,saved,failed,pending,segments}});
 }catch(e){
   const msg=e instanceof Error?e.message:String(e);console.error("fiscal-sales-sp-sync",msg);return J({error:msg},500)
