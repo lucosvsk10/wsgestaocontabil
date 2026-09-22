@@ -2,6 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
 import { Buffer } from "node:buffer";
 import { lerCertificado } from "npm:nfse-node@0.3.2/certificado";
+import { SignedXml } from "npm:xml-crypto@6.1.2";
 
 const E=new TextEncoder(),D=new TextDecoder(),B=(v:string)=>Uint8Array.from(atob(v),c=>c.charCodeAt(0));
 const J=(b:unknown,s=200)=>new Response(JSON.stringify(b),{status:s,headers:{"content-type":"application/json","cache-control":"no-store"}});
@@ -15,6 +16,18 @@ function dtLocal(v:Date){const parts=new Intl.DateTimeFormat("sv-SE",{timeZone:"
 function nfeDv(base:string){let sum=0,weight=2;for(let i=base.length-1;i>=0;i--){sum+=Number(base[i])*weight;weight=weight===9?2:weight+1}let result=11-(sum%11);if(result>=10)result=0;return String(result)}
 function syntheticSpNfe55Key(cnpj:string,month:string,noteNumber:number,series=1){const base="35"+month+dg(cnpj)+"55"+String(series).padStart(3,"0")+String(noteNumber).padStart(9,"0")+"1"+"00000000";return base+nfeDv(base)}
 function recentMonthCodes(){const now=new Date(),out:string[]=[];for(let offset=0;offset<2;offset++){const d=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth()-offset,1));out.push(String(d.getUTCFullYear()).slice(-2)+String(d.getUTCMonth()+1).padStart(2,"0"))}return out}
+const xmlEsc=(v:unknown)=>String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&apos;");
+function spNowIso(){const p=new Intl.DateTimeFormat("sv-SE",{timeZone:"America/Sao_Paulo",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).format(new Date()).replace(" ","T");return p+"-03:00"}
+function buildKnownDuplicateProbe(company:any,noteNumber:number,series:number,lateRuleTest:string){
+  const dh=spNowIso(),month=dh.slice(2,4)+dh.slice(5,7),cnpj=dg(company.cnpj),ser=String(series).padStart(3,"0"),nn=String(noteNumber).padStart(9,"0"),cNF=String((Math.abs(noteNumber*2654435761+Date.now())%99999999)+1).padStart(8,"0");
+  const base="35"+month+cnpj+"55"+ser+nn+"1"+cNF,key=base+nfeDv(base),end=company.endereco||{},ie=dg(company.inscricao_estadual),cMun=dg(company.codigo_municipio),cep=dg(end.cep),crt=String(company.regime_tributario||"").includes("simples")?"1":"3";
+  const destIe=lateRuleTest==="invalid_recipient_ie"?"123":"";
+  const indIEDest=lateRuleTest==="invalid_recipient_ie"?"1":"9";
+  const xml=`<NFe xmlns="http://www.portalfiscal.inf.br/nfe"><infNFe Id="NFe${key}" versao="4.00"><ide><cUF>35</cUF><cNF>${cNF}</cNF><natOp>VENDA</natOp><mod>55</mod><serie>${series}</serie><nNF>${noteNumber}</nNF><dhEmi>${dh}</dhEmi><tpNF>1</tpNF><idDest>1</idDest><cMunFG>${cMun}</cMunFG><tpImp>1</tpImp><tpEmis>1</tpEmis><cDV>${key.slice(-1)}</cDV><tpAmb>1</tpAmb><finNFe>1</finNFe><indFinal>1</indFinal><indPres>1</indPres><procEmi>0</procEmi><verProc>WS-RECOVERY</verProc></ide><emit><CNPJ>${cnpj}</CNPJ><xNome>${xmlEsc(company.razao_social)}</xNome><xFant>${xmlEsc(company.nome_fantasia||company.razao_social)}</xFant><enderEmit><xLgr>${xmlEsc(end.logradouro||"RUA AFONSO MILENA")}</xLgr><nro>${xmlEsc(end.numero||"45")}</nro><xBairro>${xmlEsc(end.bairro||"JARDIM FLORESTAN FERNANDES")}</xBairro><cMun>${cMun}</cMun><xMun>${xmlEsc(company.municipio||"RIBEIRAO PRETO")}</xMun><UF>SP</UF><CEP>${cep}</CEP><cPais>1058</cPais><xPais>BRASIL</xPais></enderEmit><IE>${ie}</IE><CRT>${crt}</CRT></emit><dest><CPF>52998224725</CPF><xNome>CONSUMIDOR FINAL</xNome><enderDest><xLgr>RUA TESTE</xLgr><nro>1</nro><xBairro>CENTRO</xBairro><cMun>${cMun}</cMun><xMun>${xmlEsc(company.municipio||"RIBEIRAO PRETO")}</xMun><UF>SP</UF><CEP>${cep}</CEP><cPais>1058</cPais><xPais>BRASIL</xPais></enderDest><indIEDest>${indIEDest}</indIEDest>${destIe?`<IE>${destIe}</IE>`:""}</dest><det nItem="1"><prod><cProd>1</cProd><cEAN>SEM GTIN</cEAN><xProd>PRODUTO</xProd><NCM>72142000</NCM><CFOP>5102</CFOP><uCom>UN</uCom><qCom>1.0000</qCom><vUnCom>1.0000000000</vUnCom><vProd>1.00</vProd><cEANTrib>SEM GTIN</cEANTrib><uTrib>UN</uTrib><qTrib>1.0000</qTrib><vUnTrib>1.0000000000</vUnTrib><indTot>1</indTot></prod><imposto><vTotTrib>0.00</vTotTrib><ICMS><ICMSSN102><orig>0</orig><CSOSN>102</CSOSN></ICMSSN102></ICMS><PIS><PISOutr><CST>49</CST><vBC>0.00</vBC><pPIS>0.00</pPIS><vPIS>0.00</vPIS></PISOutr></PIS><COFINS><COFINSOutr><CST>49</CST><vBC>0.00</vBC><pCOFINS>0.00</pCOFINS><vCOFINS>0.00</vCOFINS></COFINSOutr></COFINS></imposto></det><total><ICMSTot><vBC>0.00</vBC><vICMS>0.00</vICMS><vICMSDeson>0.00</vICMSDeson><vFCP>0.00</vFCP><vBCST>0.00</vBCST><vST>0.00</vST><vFCPST>0.00</vFCPST><vFCPSTRet>0.00</vFCPSTRet><vProd>1.00</vProd><vFrete>0.00</vFrete><vSeg>0.00</vSeg><vDesc>0.00</vDesc><vII>0.00</vII><vIPI>0.00</vIPI><vIPIDevol>0.00</vIPIDevol><vPIS>0.00</vPIS><vCOFINS>0.00</vCOFINS><vOutro>0.00</vOutro><vNF>1.00</vNF><vTotTrib>0.00</vTotTrib></ICMSTot></total><transp><modFrete>9</modFrete></transp><pag><detPag><indPag>0</indPag><tPag>01</tPag><vPag>1.00</vPag></detPag></pag><infAdic><infCpl>TESTE CONTROLADO DE RECUPERACAO DE CHAVE</infCpl></infAdic></infNFe></NFe>`;
+  return {xml,key};
+}
+function signKnownDuplicateProbe(xml:string,keyPem:string,certPem:string){const s=new SignedXml({privateKey:keyPem,publicCert:certPem,canonicalizationAlgorithm:"http://www.w3.org/TR/2001/REC-xml-c14n-20010315",signatureAlgorithm:"http://www.w3.org/2000/09/xmldsig#rsa-sha1"});s.addReference({xpath:"//*[local-name(.)='infNFe']",transforms:["http://www.w3.org/2000/09/xmldsig#enveloped-signature","http://www.w3.org/TR/2001/REC-xml-c14n-20010315"],digestAlgorithm:"http://www.w3.org/2000/09/xmldsig#sha1"});s.getKeyInfoContent=SignedXml.getKeyInfoContent;s.computeSignature(xml,{location:{reference:"//*[local-name(.)='infNFe']",action:"after"}});return s.getSignedXml()}
+
 async function gateway(token:string,body:any){
   const r=await fetch("https://ws-nfse-sefin-probe.vercel.app/api/fiscal-soap",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+token},body:JSON.stringify(body),signal:AbortSignal.timeout(70000)});
   const o=await r.json().catch(()=>({})) as any;
@@ -86,6 +99,16 @@ Deno.serve(async req=>{try{
   const pfx=await dec(cert.certificate_ciphertext,cert.certificate_iv),pass=await dec(cert.password_ciphertext,cert.password_iv);
   const parsedCertificate=lerCertificado(Buffer.from(pfx,"base64"),pass);
   const gatewayCertificate={certificate_pem:parsedCertificate.certificadoPem,private_key_pem:parsedCertificate.chavePrivadaPem,chain_pem:parsedCertificate.cadeiaPem||[]};
+  if(Number(b.known_duplicate_probe_number)>0){
+    const noteNumber=Number(b.known_duplicate_probe_number),series=Math.max(1,Number(b.known_duplicate_probe_series||1));
+    const {data:known}=await admin.from("fiscal_sales_documents").select("access_key").eq("company_id",companyId).eq("model","55").eq("series",String(series)).eq("document_number",String(noteNumber)).maybeSingle();
+    if(!known?.access_key)return J({error:"probe_refused_number_not_known_existing"},409);
+    const built=buildKnownDuplicateProbe(c,noteNumber,series,String(b.late_rule_test||"")),signed=signKnownDuplicateProbe(built.xml,parsedCertificate.chavePrivadaPem,parsedCertificate.certificadoPem);
+    const text=await gateway(gatewayToken,{action:"sp-nfe-authorize",environment:"production",...gatewayCertificate,signed_xml:signed});
+    const stats=[...text.matchAll(/<(?:\w+:)?cStat>(\d+)<\/(?:\w+:)?cStat>/g)].map(m=>m[1]);
+    const reasons=[...text.matchAll(/<(?:\w+:)?xMotivo>([\s\S]*?)<\/(?:\w+:)?xMotivo>/g)].map(m=>m[1].trim());
+    return J({ok:true,known_access_key:known.access_key,synthetic_key:built.key,cStats:stats,xMotivos:reasons});
+  }
   if(Number(b.scan_nfe55_start)>0){
     const scanStart=Math.max(1,Number(b.scan_nfe55_start)),scanEnd=Math.min(scanStart+59,Math.max(scanStart,Number(b.scan_nfe55_end||scanStart+20))),series=Math.max(1,Number(b.scan_nfe55_series||1));
     const months=Array.isArray(b.scan_nfe55_months)&&b.scan_nfe55_months.length?b.scan_nfe55_months.map((v:any)=>dg(v).slice(-4)).filter((v:string)=>v.length===4):recentMonthCodes();
