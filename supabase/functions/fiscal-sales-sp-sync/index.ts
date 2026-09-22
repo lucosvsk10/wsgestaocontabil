@@ -225,8 +225,8 @@ Deno.serve(async req=>{try{
   const {data:maxRow}=await admin.from("fiscal_sales_documents").select("document_number").eq("company_id",companyId).eq("model","65").order("document_number",{ascending:false}).limit(1).maybeSingle();
   await admin.from("fiscal_sales_sync_state").upsert({company_id:companyId,paused:false,status:pending?"queued":"idle",latest_number:Number(maxRow?.document_number||0)||null,cursor_number:Number(maxRow?.document_number||0)||null,initial_backfill_done:pending===0,last_started_at:state?.last_started_at||completedAt,last_completed_at:completedAt,next_scheduled_at:new Date(Date.now()+30*60000).toISOString(),last_error:failed?String(failed)+" XML(s) falharam; retry automático":null,updated_at:completedAt},{onConflict:"company_id"});
   await admin.from("fiscal_companies").update({last_sync_at:completedAt}).eq("id",companyId);
-  const nfe55Recovery=await recoverSpNfe55Numbers(admin,c,gatewayToken,gatewayCertificate,historyStart,Number(b.nfe55_batch||12),Number(b.nfe55_lookahead||15));
-  const nfe55Xml=await backfillSpNfe55Xml(admin,c,gatewayToken,gatewayCertificate,historyStart,Number(b.nfe55_xml_batch||20));
+  const nfe55Recovery=b.skip_nfe55_recovery?{skipped:true}:await recoverSpNfe55Numbers(admin,c,gatewayToken,gatewayCertificate,historyStart,Number(b.nfe55_batch||12),Number(b.nfe55_lookahead||15));
+  const nfe55Xml=b.skip_nfe55_xml?{skipped:true}:await backfillSpNfe55Xml(admin,c,gatewayToken,gatewayCertificate,historyStart,Number(b.nfe55_xml_batch||20));
   return J({ok:true,company_id:companyId,nfe55:{events:nfe55,recovery:nfe55Recovery,xml:nfe55Xml},nfce65:{period:{start:start.toISOString(),end:end.toISOString()},listed:all.length,already_saved:existing.size,missing:missing.length,saved,failed,pending,segments}});
 }catch(e){
   const msg=e instanceof Error?e.message:String(e);console.error("fiscal-sales-sp-sync",msg);return J({error:msg},500)
