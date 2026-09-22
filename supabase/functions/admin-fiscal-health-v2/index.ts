@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
       return json({ ok: true, attempted: results.length, recovered: results.filter((item: any) => item.recovered).length, results });
     }
 
-    const [offices, fiscals, certs, credentials, purchaseStates, salesStates, healthRows] = await Promise.all([
+    const [offices, fiscals, certs, credentials, purchaseStates, salesStates, healthRows, coverageRows] = await Promise.all([
       admin.from("companies").select("id,company_name,trade_name,cnpj").order("company_name"),
       admin.from("fiscal_companies").select("id,company_id,cnpj,razao_social,nome_fantasia,status,uf,last_sync_at").order("updated_at", { ascending: false }),
       admin.from("fiscal_certificates").select("company_id,valid_until,is_active,created_at").eq("is_active", true).order("created_at", { ascending: false }),
@@ -55,8 +55,9 @@ Deno.serve(async (req) => {
       admin.from("fiscal_purchase_sync_state").select("*"),
       admin.from("fiscal_sales_sync_state").select("*"),
       admin.from("fiscal_sync_health").select("*"),
+      admin.from("fiscal_extractor_coverage").select("*"),
     ]);
-    for (const result of [offices, fiscals, certs, credentials, purchaseStates, salesStates, healthRows]) if (result.error) throw result.error;
+    for (const result of [offices, fiscals, certs, credentials, purchaseStates, salesStates, healthRows, coverageRows]) if (result.error) throw result.error;
 
     const officeById = new Map((offices.data || []).map((row: any) => [String(row.id), row]));
     const certByFiscal = new Map<string, any>();
@@ -65,6 +66,13 @@ Deno.serve(async (req) => {
     const purchaseByFiscal = new Map((purchaseStates.data || []).map((row: any) => [String(row.company_id), row]));
     const salesByFiscal = new Map((salesStates.data || []).map((row: any) => [String(row.company_id), row]));
     const healthByFiscal = new Map((healthRows.data || []).map((row: any) => [String(row.company_id), row]));
+    const coverageByFiscal = new Map<string, any[]>();
+    for (const row of coverageRows.data || []) {
+      const key = String(row.company_id);
+      const list = coverageByFiscal.get(key) || [];
+      list.push(row);
+      coverageByFiscal.set(key, list);
+    }
 
     const monitored = (fiscals.data || []).filter((fiscal: any) => {
       const id = String(fiscal.id);
@@ -172,6 +180,20 @@ Deno.serve(async (req) => {
         state = "attention"; stateLabel = "Fonte indisponível agora"; stateDetail = "Os dados locais estão consistentes, mas a conferência ao vivo com a fonte fiscal não respondeu nesta tentativa."; reasonCode = "SOURCE_UNAVAILABLE";
       }
 
+      const coverage = coverageByFiscal.get(fiscalId) || [];
+      const coverageBlocking = coverage.filter((row: any) =>
+        row.applicability !== "not_applicable" && row.coverage_status !== "covered"
+      );
+      if (state === "healthy" && coverageBlocking.length > 0) {
+        const required = coverageBlocking.find((row: any) => row.applicability === "required" || row.applicability === "observed");
+        state = "attention";
+        stateLabel = required ? "Cobertura fiscal incompleta" : "Cobertura ainda não mapeada";
+        stateDetail = required
+          ? `Falta cobertura comprovada para ${required.document_type} · ${required.direction}.`
+          : "Ainda existem tipos de DF-e cuja aplicabilidade/fonte precisa ser confirmada.";
+        reasonCode = required ? "DOCUMENT_COVERAGE_BLOCKED" : "DOCUMENT_COVERAGE_UNKNOWN";
+      }
+
       if (state === "healthy" && salesEnabled && oldHealth && (Number(oldHealth.sales_failure_count || 0) > 0 || oldHealth.sales_xml_stall_since || oldHealth.sales_reconciliation_stall_since)) {
         await admin.from("fiscal_sync_health").update({ sales_status: "healthy", sales_failure_count: 0, sales_xml_stall_since: null, sales_reconciliation_stall_since: null, sales_detail_stall_since: null, last_checked_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("company_id", fiscalId);
       }
@@ -207,6 +229,20 @@ Deno.serve(async (req) => {
         has_state_credentials: hasStateCredentials,
         state_credential_status: String(fiscal.uf || "").toUpperCase() === "AL" ? stateCredentialStatus : "not_required",
         state_credential_last_verified_at: stateCredential?.last_verified_at || null,
+        coverage: {
+          complete: coverageBlocking.length === 0,
+          total: coverage.length,
+          covered: coverage.filter((row: any) => row.coverage_status === "covered").length,
+          blocked: coverageBlocking.length,
+          rows: coverage.map((row: any) => ({
+            document_type: row.document_type,
+            direction: row.direction,
+            applicability: row.applicability,
+            status: row.coverage_status,
+            source_name: row.source_name,
+            reason: row.last_error,
+          })),
+        },
         last_checked_at: new Date().toISOString(),
         purchase: purchaseState ? { status: purchaseState.status || null, label: purchase.source_checked && purchaseCountOk ? "Quantidade conferida" : purchaseFresh && !purchaseState.last_error ? "Em dia" : "Verificando", last_started_at: purchaseState.last_started_at || null, last_completed_at: purchaseState.last_completed_at || purchaseState.updated_at || null, last_failed_at: purchaseState.last_failed_at || null, next_scheduled_at: purchaseState.next_scheduled_at || null, last_error: purchaseState.last_error || null, error_scope: null, failure_count: Number(purchaseState.consecutive_failures || 0), fresh: purchaseFresh, paused: Boolean(purchaseState.paused), last_status_code: purchaseState.last_status_code || null, last_status_message: purchaseState.last_status_message || null } : null,
         sales: salesState ? { status: salesState.status || null, label: salesBlocked ? "Bloqueada" : !salesEnabled ? "Não suportada" : salesCountOk && salesXmlOk ? "Quantidade conferida" : "Verificando", last_started_at: salesState.last_started_at || null, last_completed_at: salesState.last_completed_at || salesState.updated_at || null, next_scheduled_at: salesState.next_scheduled_at || null, last_error: salesState.last_error || null, error_scope: null, failure_count: 0, fresh: salesFresh, paused: Boolean(salesState.paused), latest_number: salesState.latest_number ?? null, cursor_number: salesState.cursor_number ?? null, reconciliation_total: sales?.sequence_total ?? salesState.reconciliation_total ?? null, reconciliation_resolved: sales?.sequence_resolved ?? salesState.reconciliation_resolved ?? null, reconciliation_pending: sales?.sequence_complete ? 0 : salesState.reconciliation_pending ?? null, xml_expected: sales?.expected ?? null, xml_saved: sales?.xml_ready ?? null, xml_pending: sales?.pending_xml ?? null, detail_expected: salesState.detail_expected ?? null, detail_saved: salesState.detail_saved ?? null, detail_pending: salesState.detail_pending ?? null } : null,
