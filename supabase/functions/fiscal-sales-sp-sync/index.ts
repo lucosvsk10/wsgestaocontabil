@@ -18,11 +18,60 @@ async function gateway(token:string,body:any){
   if(!r.ok||!o?.ok)throw new Error("gateway_"+r.status+":"+String(o?.error||o?.response_excerpt||"failed").slice(0,300));
   return String(o.text||"");
 }
+async function syncSpNfe55FromIssuerEvents(admin:any,c:any,gatewayToken:string,gatewayCertificate:any,historyStart:string){
+  const cnpj=dg(c.cnpj),historyMonth=String(historyStart||"").slice(0,7).replace("-","");
+  const {data:events,error:eventError}=await admin.from("fiscal_dfe_events").select("nsu,access_key,event_type,event_description,event_at,xml,updated_at").eq("company_id",c.id).not("access_key","is",null).order("event_at",{ascending:true}).limit(5000);
+  if(eventError)throw eventError;
+  const byKey=new Map<string,any>();
+  for(const ev of events||[]){
+    const key=dg(ev.access_key);
+    if(key.length!==44||key.slice(6,20)!==cnpj||key.slice(20,22)!=="55")continue;
+    const keyMonth="20"+key.slice(2,6);
+    if(historyMonth&&keyMonth<historyMonth)continue;
+    const current=byKey.get(key)||{key,events:[],nsus:[],recipient:null,last_event_at:null};
+    current.events.push(String(ev.event_type||""));
+    current.nsus.push(String(ev.nsu||""));
+    current.last_event_at=ev.event_at||current.last_event_at;
+    const actor=dg(tag(String(ev.xml||""),"CNPJ")||tag(String(ev.xml||""),"CPF"));
+    if(actor&&actor!==cnpj)current.recipient=actor;
+    byKey.set(key,current);
+  }
+  const keys=[...byKey.keys()],existing=new Map<string,any>();
+  for(let i=0;i<keys.length;i+=300){
+    const {data:rows,error}=await admin.from("fiscal_sales_documents").select("access_key,status,xml,updated_at").eq("company_id",c.id).in("access_key",keys.slice(i,i+300));
+    if(error)throw error;
+    for(const row of rows||[])existing.set(dg(row.access_key),row);
+  }
+  const pending=keys.filter(k=>!existing.has(k));
+  let saved=0,failed=0;
+  const failures:any[]=[];
+  for(const key of pending.slice(0,250)){
+    const meta=byKey.get(key);
+    try{
+      const text=await gateway(gatewayToken,{action:"sp-nfe-consult",environment:c.ambiente_padrao==="homologacao"?"homologation":"production",...gatewayCertificate,access_key:key});
+      const stats=[...text.matchAll(/<(?:\w+:)?cStat>(\d+)<\/(?:\w+:)?cStat>/g)].map(m=>m[1]);
+      const reasons=[...text.matchAll(/<(?:\w+:)?xMotivo>([\s\S]*?)<\/(?:\w+:)?xMotivo>/g)].map(m=>m[1].trim());
+      const cancelled=/<(?:\w+:)?tpEvento>110111<\/(?:\w+:)?tpEvento>/i.test(text)||stats.includes("101");
+      const rootStat=stats[0]||"",protocol=tag(text,"nProt"),received=tag(text,"dhRecbto");
+      if(!["100","101"].includes(rootStat)&&!stats.includes("100"))throw new Error("sp_consult_"+(rootStat||"unknown")+":"+(reasons[0]||"sem_motivo"));
+      const status=cancelled?"Cancelada":(reasons[0]||"Autorizada");
+      const series=String(Number(key.slice(22,25))),number=String(Number(key.slice(25,34))),nowIso=new Date().toISOString(),issue=received||meta?.last_event_at||null;
+      const {error:se}=await admin.from("fiscal_sales_documents").upsert({company_id:c.id,uf:"SP",model:"55",access_key:key,document_number:number,series,issue_date:issue,status,total_value:null,recipient_document:meta?.recipient||null,recipient_name:null,xml:null,source:"sefaz_sp_nfe55_issuer_event",source_reference:{service:"NFeDistribuicaoDFe+NFeConsultaProtocolo4",event_nsus:meta?.nsus||[],event_types:meta?.events||[],protocol:protocol||null,xml_pending:true},updated_at:nowIso},{onConflict:"company_id,access_key"});
+      if(se)throw se;
+      const {error:de}=await admin.from("fiscal_dfe_documents").upsert({user_id:c.created_by,company_id:c.id,cnpj:c.cnpj,environment:c.ambiente_padrao==="homologacao"?"homologacao":"producao",uf_code:"35",nsu:"SP-NFE55-"+key,schema_name:"retConsSitNFe_v4.00",document_kind:"nfe",direction:"saida",access_key:key,issue_date:issue,value:null,issuer_cnpj:c.cnpj,issuer_name:c.razao_social,recipient_cnpj:meta?.recipient||null,note_number:number,series,status_code:cancelled?"101":"100",full_xml:false,xml:null,source:"sefaz_sp_nfe55_issuer_event",source_id:key,model:"55",status_text:status,updated_at:nowIso},{onConflict:"user_id,cnpj,environment,uf_code,nsu"});
+      if(de)throw de;
+      const {error:re}=await admin.from("fiscal_sales_reconciliation").upsert({company_id:c.id,model:"55",series,note_number:Number(number),status:cancelled?"cancelled":"found",access_key:key,issue_date:issue,cstat:cancelled?"101":"100",xmotivo:status,attempts:1,last_checked_at:nowIso,resolved_at:nowIso,updated_at:nowIso,xml_status:"pending",xml_attempts:0,detail_status:"pending",detail_attempts:0,event_status:cancelled?"pending":"not_applicable",event_attempts:0},{onConflict:"company_id,model,series,note_number"});
+      if(re)throw re;
+      saved++;
+    }catch(e){failed++;failures.push({key,error:e instanceof Error?e.message:String(e)})}
+  }
+  return {discovered:keys.length,already:keys.length-pending.length,saved,failed,pending_after:Math.max(0,pending.length-saved),failures:failures.slice(0,10)};
+}
 Deno.serve(async req=>{try{
   const admin=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const tok=req.headers.get("x-debug-token")||"";const {data:t}=await admin.from("_fiscal_sales_debug_token").select("token").eq("id",true).maybeSingle();if(!tok||tok!==String(t?.token||""))return J({error:"unauthorized"},403);
   const b=await req.json().catch(()=>({})) as any,companyId=String(b.company_id||"");
-  const {data:c,error:ce}=await admin.from("fiscal_companies").select("id,cnpj,razao_social,uf,status,ambiente_padrao,created_by,fiscal_settings").eq("id",companyId).single();
+  const {data:c,error:ce}=await admin.from("fiscal_companies").select("id,cnpj,razao_social,nome_fantasia,inscricao_estadual,uf,codigo_municipio,municipio,regime_tributario,endereco,status,ambiente_padrao,created_by,fiscal_settings").eq("id",companyId).single();
   if(ce||!c)throw Error("company_missing");if(c.status!=="ativa"||String(c.uf).toUpperCase()!=="SP")return J({ok:true,skipped:"company_not_sp"});
   const [{data:cert,error:cerror},{data:g},{data:state},{data:minHistory}]=await Promise.all([
     admin.from("fiscal_certificates").select("certificate_ciphertext,certificate_iv,password_ciphertext,password_iv,valid_until").eq("company_id",companyId).eq("is_active",true).order("created_at",{ascending:false}).limit(1).single(),
@@ -34,6 +83,8 @@ Deno.serve(async req=>{try{
   const pfx=await dec(cert.certificate_ciphertext,cert.certificate_iv),pass=await dec(cert.password_ciphertext,cert.password_iv);
   const parsedCertificate=lerCertificado(Buffer.from(pfx,"base64"),pass);
   const gatewayCertificate={certificate_pem:parsedCertificate.certificadoPem,private_key_pem:parsedCertificate.chavePrivadaPem,chain_pem:parsedCertificate.cadeiaPem||[]};
+  const historyStart=/^\d{4}-\d{2}-\d{2}$/.test(String(minHistory||""))?String(minHistory):new Date(Date.now()-99*86400000).toISOString().slice(0,10);
+  const nfe55=await syncSpNfe55FromIssuerEvents(admin,c,gatewayToken,gatewayCertificate,historyStart);
   const now=new Date(),maxStart=new Date(now.getTime()-99*86400000),configured=/^\d{4}-\d{2}-\d{2}$/.test(String(minHistory||""))?new Date(String(minHistory)+"T00:00:00-03:00"):maxStart;
   const initialStart=configured>maxStart?configured:maxStart;
   const lastDone=state?.last_completed_at?new Date(new Date(state.last_completed_at).getTime()-24*3600000):initialStart;
@@ -63,7 +114,7 @@ Deno.serve(async req=>{try{
   const {data:maxRow}=await admin.from("fiscal_sales_documents").select("document_number").eq("company_id",companyId).eq("model","65").order("document_number",{ascending:false}).limit(1).maybeSingle();
   await admin.from("fiscal_sales_sync_state").upsert({company_id:companyId,paused:false,status:pending?"queued":"idle",latest_number:Number(maxRow?.document_number||0)||null,cursor_number:Number(maxRow?.document_number||0)||null,initial_backfill_done:pending===0,last_started_at:state?.last_started_at||completedAt,last_completed_at:completedAt,next_scheduled_at:new Date(Date.now()+30*60000).toISOString(),last_error:failed?String(failed)+" XML(s) falharam; retry automático":null,updated_at:completedAt},{onConflict:"company_id"});
   await admin.from("fiscal_companies").update({last_sync_at:completedAt}).eq("id",companyId);
-  return J({ok:true,company_id:companyId,period:{start:start.toISOString(),end:end.toISOString()},listed:all.length,already_saved:existing.size,missing:missing.length,saved,failed,pending,segments});
+  return J({ok:true,company_id:companyId,nfe55,nfce65:{period:{start:start.toISOString(),end:end.toISOString()},listed:all.length,already_saved:existing.size,missing:missing.length,saved,failed,pending,segments}});
 }catch(e){
   const msg=e instanceof Error?e.message:String(e);console.error("fiscal-sales-sp-sync",msg);return J({error:msg},500)
 }});
