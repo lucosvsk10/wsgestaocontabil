@@ -206,15 +206,13 @@ module.exports = async function handler(req, res) {
       const cnpj = String(b.cnpj || '').replace(/\D/g, '');
       const ufCode = String(b.uf_code || b.ufCode || '').replace(/\D/g, '').padStart(2, '0');
       const ultNSU = String(b.ult_nsu || b.ultNSU || '0').replace(/\D/g, '').padStart(15, '0');
-      const accessKey = String(b.access_key || b.chNFe || '').replace(/\D/g, '');
-      if (!/^\d{14}$/.test(cnpj) || !/^\d{2}$/.test(ufCode) || (accessKey && !/^\d{44}$/.test(accessKey))) {
+      if (!/^\d{14}$/.test(cnpj) || !/^\d{2}$/.test(ufCode)) {
         return json(res, 400, { error: 'invalid_distribution_target' });
       }
       const endpoint = env === 'production'
         ? 'https://www1.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx'
         : 'https://hom.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx';
-      const query = accessKey ? `<consChNFe><chNFe>${accessKey}</chNFe></consChNFe>` : `<distNSU><ultNSU>${ultNSU}</ultNSU></distNSU>`;
-      const inner = `<distDFeInt xmlns="http://www.portalfiscal.inf.br/nfe" versao="1.01"><tpAmb>${env === 'production' ? '1' : '2'}</tpAmb><cUFAutor>${ufCode}</cUFAutor><CNPJ>${cnpj}</CNPJ>${query}</distDFeInt>`;
+      const inner = `<distDFeInt xmlns="http://www.portalfiscal.inf.br/nfe" versao="1.01"><tpAmb>${env === 'production' ? '1' : '2'}</tpAmb><cUFAutor>${ufCode}</cUFAutor><CNPJ>${cnpj}</CNPJ><distNSU><ultNSU>${ultNSU}</ultNSU></distNSU></distDFeInt>`;
       const ns = 'http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe';
       const soap = `<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDistDFeInteresse xmlns="${ns}"><nfeDadosMsg>${inner}</nfeDadosMsg></nfeDistDFeInteresse></soap12:Body></soap12:Envelope>`;
       const result = await requestHttps(endpoint, material, {
