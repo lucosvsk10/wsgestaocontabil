@@ -78,6 +78,7 @@ function authorized(req) {
   return token && safeEqual(sha256(token), GATEWAY_TOKEN_SHA256);
 }
 function stripDecl(xml) { return String(xml || '').replace(/^<\?xml[^>]*\?>\s*/i, ''); }
+function decodeXmlEntities(v) { return String(v || '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&'); }
 function tls(body) {
   const pfxB64 = String(body.certificate_base64 || '').replace(/\s+/g, '');
   const password = String(body.certificate_password || '');
@@ -311,7 +312,7 @@ module.exports = async function handler(req, res) {
         ok: result.status >= 200 && result.status < 300,
         http: result.status,
         endpoint,
-        text: result.text,
+        text: decodeXmlEntities(result.text),
       });
     }
 
