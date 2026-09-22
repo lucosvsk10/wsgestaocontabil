@@ -2,6 +2,7 @@ const https = require('node:https');
 const tlsModule = require('node:tls');
 const crypto = require('node:crypto');
 const zlib = require('node:zlib');
+const { SignedXml } = require('xml-crypto');
 
 const ICP_BRASIL_V10_ROOT = `-----BEGIN CERTIFICATE-----
 MIIGrDCCBJSgAwIBAgIJANLVi0S/gZNCMA0GCSqGSIb3DQEBDQUAMIGYMQswCQYD
@@ -179,6 +180,82 @@ function peerCertificateInfo(hostname) {
   });
 }
 
+
+function xmlEscape(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+}
+function nfeDv(base) {
+  let sum = 0, weight = 2;
+  for (let i = base.length - 1; i >= 0; i -= 1) {
+    sum += Number(base[i]) * weight;
+    weight = weight === 9 ? 2 : weight + 1;
+  }
+  const result = 11 - (sum % 11);
+  return result >= 10 ? 0 : result;
+}
+function saoPauloNowIso() {
+  const p = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+  }).formatToParts(new Date()).reduce((acc, x) => (acc[x.type] = x.value, acc), {});
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}-03:00`;
+}
+function buildSpNfeRecoveryProbe(body) {
+  const cnpj = digits(body.issuer_cnpj);
+  const ie = digits(body.issuer_ie);
+  const cMun = digits(body.issuer_city_code);
+  const cep = digits(body.issuer_zip || '01001000');
+  const series = digits(body.series || '1').padStart(3, '0').slice(-3);
+  const nNF = digits(body.note_number).padStart(9, '0').slice(-9);
+  if (!/^\d{14}$/.test(cnpj) || !ie || !/^35\d{5}$/.test(cMun) || !/^\d{9}$/.test(nNF)) {
+    throw new Error('invalid_sp_recovery_issuer');
+  }
+  const dhEmi = saoPauloNowIso();
+  const aamm = dhEmi.slice(2, 4) + dhEmi.slice(5, 7);
+  const seedHex = sha256(`${cnpj}|${series}|${nNF}|${dhEmi}`).slice(0, 12);
+  const cNF = String(Number(BigInt('0x' + seedHex) % 100000000n)).padStart(8, '0');
+  const base = `35${aamm}${cnpj}55${series}${nNF}1${cNF}`;
+  const accessKey = base + String(nfeDv(base));
+  const crtInput = digits(body.crt);
+  const crt = ['1', '2', '3', '4'].includes(crtInput) ? crtInput : '1';
+  const issuerName = xmlEscape(body.issuer_name || 'EMITENTE');
+  const tradeName = xmlEscape(body.issuer_trade_name || body.issuer_name || 'EMITENTE');
+  const street = xmlEscape(body.issuer_street || 'RUA TESTE');
+  const number = xmlEscape(body.issuer_number || 'S/N');
+  const district = xmlEscape(body.issuer_district || 'CENTRO');
+  const city = xmlEscape(body.issuer_city || 'SAO PAULO');
+  const tax = crt === '1'
+    ? '<ICMS><ICMSSN102><orig>0</orig><CSOSN>102</CSOSN></ICMSSN102></ICMS>'
+    : '<ICMS><ICMS00><orig>0</orig><CST>00</CST><modBC>3</modBC><vBC>0.00</vBC><pICMS>0.00</pICMS><vICMS>0.00</vICMS></ICMS00></ICMS>';
+  // Safety invariant: the destination is deliberately identical to the issuer.
+  // An unused number is therefore rejected (rule 220); an already-authorized
+  // natural key is detected first as duplicate 539 and reveals the real key.
+  const xml = `<?xml version="1.0" encoding="UTF-8"?><NFe xmlns="http://www.portalfiscal.inf.br/nfe"><infNFe Id="NFe${accessKey}" versao="4.00"><ide><cUF>35</cUF><cNF>${cNF}</cNF><natOp>VENDA</natOp><mod>55</mod><serie>${Number(series)}</serie><nNF>${Number(nNF)}</nNF><dhEmi>${dhEmi}</dhEmi><tpNF>1</tpNF><idDest>1</idDest><cMunFG>${cMun}</cMunFG><tpImp>1</tpImp><tpEmis>1</tpEmis><cDV>${accessKey.slice(-1)}</cDV><tpAmb>1</tpAmb><finNFe>1</finNFe><indFinal>0</indFinal><indPres>0</indPres><procEmi>0</procEmi><verProc>WS-EXTRATOR-RECOVERY-1</verProc></ide><emit><CNPJ>${cnpj}</CNPJ><xNome>${issuerName}</xNome><xFant>${tradeName}</xFant><enderEmit><xLgr>${street}</xLgr><nro>${number}</nro><xBairro>${district}</xBairro><cMun>${cMun}</cMun><xMun>${city}</xMun><UF>SP</UF><CEP>${cep}</CEP><cPais>1058</cPais><xPais>BRASIL</xPais></enderEmit><IE>${ie}</IE><CRT>${crt}</CRT></emit><dest><CNPJ>${cnpj}</CNPJ><xNome>${issuerName}</xNome><enderDest><xLgr>${street}</xLgr><nro>${number}</nro><xBairro>${district}</xBairro><cMun>${cMun}</cMun><xMun>${city}</xMun><UF>SP</UF><CEP>${cep}</CEP><cPais>1058</cPais><xPais>BRASIL</xPais></enderDest><indIEDest>1</indIEDest><IE>${ie}</IE></dest><det nItem="1"><prod><cProd>WSRECOVERY</cProd><cEAN>SEM GTIN</cEAN><xProd>CONSULTA TECNICA DE CHAVE NF-E</xProd><NCM>01012100</NCM><CFOP>5102</CFOP><uCom>UN</uCom><qCom>1.0000</qCom><vUnCom>1.0000000000</vUnCom><vProd>1.00</vProd><cEANTrib>SEM GTIN</cEANTrib><uTrib>UN</uTrib><qTrib>1.0000</qTrib><vUnTrib>1.0000000000</vUnTrib><indTot>1</indTot></prod><imposto>${tax}<PIS><PISOutr><CST>49</CST><vBC>0.00</vBC><pPIS>0.00</pPIS><vPIS>0.00</vPIS></PISOutr></PIS><COFINS><COFINSOutr><CST>49</CST><vBC>0.00</vBC><pCOFINS>0.00</pCOFINS><vCOFINS>0.00</vCOFINS></COFINSOutr></COFINS></imposto></det><total><ICMSTot><vBC>0.00</vBC><vICMS>0.00</vICMS><vICMSDeson>0.00</vICMSDeson><vFCP>0.00</vFCP><vBCST>0.00</vBCST><vST>0.00</vST><vFCPST>0.00</vFCPST><vFCPSTRet>0.00</vFCPSTRet><vProd>1.00</vProd><vFrete>0.00</vFrete><vSeg>0.00</vSeg><vDesc>0.00</vDesc><vII>0.00</vII><vIPI>0.00</vIPI><vIPIDevol>0.00</vIPIDevol><vPIS>0.00</vPIS><vCOFINS>0.00</vCOFINS><vOutro>0.00</vOutro><vNF>1.00</vNF></ICMSTot></total><transp><modFrete>9</modFrete></transp><pag><detPag><indPag>0</indPag><tPag>01</tPag><vPag>1.00</vPag></detPag></pag></infNFe></NFe>`;
+  const privateKey = String(body.private_key_pem || '');
+  const cert = String(body.certificate_pem || '');
+  if (!privateKey || !cert) throw new Error('pem_required_for_sp_recovery');
+  const signer = new SignedXml({
+    privateKey,
+    publicCert: cert,
+    canonicalizationAlgorithm: 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315',
+    signatureAlgorithm: 'http://www.w3.org/2000/09/xmldsig#rsa-sha1',
+  });
+  signer.addReference({
+    xpath: "//*[local-name(.)='infNFe']",
+    transforms: [
+      'http://www.w3.org/2000/09/xmldsig#enveloped-signature',
+      'http://www.w3.org/TR/2001/REC-xml-c14n-20010315',
+    ],
+    digestAlgorithm: 'http://www.w3.org/2000/09/xmldsig#sha1',
+  });
+  signer.getKeyInfoContent = SignedXml.getKeyInfoContent;
+  signer.computeSignature(xml, { location: { reference: "//*[local-name(.)='infNFe']", action: 'after' } });
+  return { signedXml: signer.getSignedXml(), probeKey: accessKey };
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return json(res, 405, { error: 'method_not_allowed' });
   if (!authorized(req)) return json(res, 401, { error: 'unauthorized' });
@@ -226,6 +303,35 @@ module.exports = async function handler(req, res) {
         endpoint,
         text: result.text,
       });
+    }
+
+
+    if (action === 'sp-nfe-recover-key') {
+      if (env !== 'production') return json(res, 400, { error: 'sp_recovery_requires_production' });
+      const { signedXml, probeKey } = buildSpNfeRecoveryProbe(b);
+      const endpoint = 'https://nfe.fazenda.sp.gov.br/ws/nfeautorizacao4.asmx';
+      const idLote = String(Date.now()).slice(-15).padStart(15, '0');
+      const inner = `<enviNFe xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><idLote>${idLote}</idLote><indSinc>1</indSinc>${stripDecl(signedXml)}</enviNFe>`;
+      const ns = 'http://www.portalfiscal.inf.br/nfe/wsdl/NFeAutorizacao4';
+      const soap = envelope('nfeDadosMsg', ns, inner);
+      const result = await requestHttps(endpoint, material, {
+        body: soap,
+        contentType: `application/soap+xml; charset=utf-8; action="${ns}/nfeAutorizacaoLote"`,
+        accept: 'application/soap+xml, text/xml, */*',
+      });
+      const cStats = [...String(result.text || '').matchAll(/<(?:\\w+:)?cStat>(\\d+)<\\/(?:\\w+:)?cStat>/g)].map(m => m[1]);
+      const motives = [...String(result.text || '').matchAll(/<(?:\\w+:)?xMotivo>([\\s\\S]*?)<\\/(?:\\w+:)?xMotivo>/g)].map(m => m[1].trim());
+      const cStat = cStats[cStats.length - 1] || '';
+      const xMotivo = motives[motives.length - 1] || '';
+      const recoveredKey = [...xMotivo.matchAll(/(\\d{44})/g)].map(m => m[1]).find(k => k !== probeKey) || '';
+      if (cStat === '539' && /^\\d{44}$/.test(recoveredKey)) {
+        return json(res, 200, { ok: true, exists: true, cStat, xMotivo, access_key: recoveredKey });
+      }
+      if (cStat === '100') {
+        console.error('CRITICAL: SP recovery probe unexpectedly authorized', { note_number: String(b.note_number || ''), series: String(b.series || '') });
+        return json(res, 500, { error: 'sp_recovery_probe_unexpected_authorization', critical: true, cStat, xMotivo });
+      }
+      return json(res, 200, { ok: true, exists: false, cStat, xMotivo });
     }
 
     // SEFAZ/SP NF-e 55: direct status consultation and authorization endpoint.
