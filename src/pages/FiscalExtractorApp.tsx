@@ -1697,6 +1697,19 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview, adm
               </dl>
             </article>
           </div>
+          {String(fiscal.uf || selected.uf || '').toUpperCase() === 'AL' && (
+            <div className="extractor-company-state-access">
+              <StateCredentialPanel
+                fiscalCompanyId={selected.id}
+                state={fiscal.uf || selected.uf}
+                portal
+                onChanged={() => {
+                  void loadDetail(selected.id);
+                  void Promise.resolve(onReload()).catch(() => null);
+                }}
+              />
+            </div>
+          )}
         </section>
 
         <Dialog open={editOpen} onOpenChange={setEditOpen}>
